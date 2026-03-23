@@ -1,0 +1,120 @@
+5eed48e4d3879bfdc48394373b2589b6
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _cotizacionesworkflowservice = require("../cotizaciones-workflow.service");
+describe("cotizaciones-workflow.service", ()=>{
+    it("calcula un componente a partir de costo proveedor y margen", ()=>{
+        const item = (0, _cotizacionesworkflowservice.calculateComponentItem)({
+            codigo: "V1",
+            tipo: "Ventana",
+            vidrio: "Incoloro monolitico 5mm",
+            nombre: "Ventana living",
+            descripcion: "Ventana corredera color negro",
+            ancho: 1800,
+            alto: 2200,
+            cantidad: 2,
+            costoProveedorUnitario: 300000,
+            margenPct: 100
+        });
+        expect(item.areaM2).toBe(3.96);
+        expect(item.vidrio).toBe("Incoloro monolitico 5mm");
+        expect(item.costoProveedorTotal).toBe(600000);
+        expect(item.precioUnitario).toBe(600000);
+        expect(item.precioTotal).toBe(1200000);
+    });
+    it("debe fallar si el margen es negativo", ()=>{
+        expect(()=>(0, _cotizacionesworkflowservice.calculateComponentItem)({
+                codigo: "V1",
+                tipo: "Ventana",
+                nombre: "Ventana living",
+                costoProveedorUnitario: 100000,
+                margenPct: -10
+            })).toThrow("El margen no puede ser negativo");
+    });
+    it("crea una cotizacion preservando id y codigo existentes", ()=>{
+        const item = (0, _cotizacionesworkflowservice.calculateComponentItem)({
+            codigo: "P1",
+            tipo: "Puerta",
+            nombre: "Puerta terraza",
+            descripcion: "Puerta de aluminio",
+            cantidad: 1,
+            costoProveedorUnitario: 250000,
+            margenPct: 80
+        });
+        const record = (0, _cotizacionesworkflowservice.createCotizacionRecord)({
+            draft: {
+                clienteNombre: "Maria Gonzalez",
+                clienteTelefono: "+56 9 7123 4567",
+                obra: "Oficina La Serena",
+                direccion: "Amunategui 150",
+                validez: "15 dias",
+                descuentoPct: 10,
+                observaciones: "Revisar acceso",
+                items: [
+                    item
+                ]
+            },
+            estado: "borrador",
+            existingId: "cot-123",
+            existingCode: "COT-123456",
+            createdAt: "2026-03-10T10:00:00.000Z",
+            now: new Date("2026-03-11T08:00:00.000Z")
+        });
+        expect(record.id).toBe("cot-123");
+        expect(record.codigo).toBe("COT-123456");
+        expect(record.estado).toBe("borrador");
+        expect(record.createdAt).toBe("2026-03-10T10:00:00.000Z");
+        expect(record.updatedAt).toBe("2026-03-11T08:00:00.000Z");
+        expect(record.total).toBeGreaterThan(record.neto);
+    });
+    it("duplica una cotizacion final como nuevo borrador", ()=>{
+        const item = (0, _cotizacionesworkflowservice.calculateComponentItem)({
+            codigo: "C1",
+            tipo: "Cierre",
+            nombre: "Cierre terraza",
+            descripcion: "Cierre plegable",
+            cantidad: 1,
+            costoProveedorUnitario: 420000,
+            margenPct: 65
+        });
+        const original = (0, _cotizacionesworkflowservice.createCotizacionRecord)({
+            draft: {
+                clienteNombre: "Pedro Soto",
+                clienteTelefono: "+56 9 6543 2109",
+                obra: "Depto. Los Aromos",
+                direccion: "Av. Pacifico 670",
+                validez: "15 dias",
+                descuentoPct: 0,
+                observaciones: "",
+                items: [
+                    item
+                ]
+            },
+            estado: "creada",
+            existingId: "cot-original",
+            existingCode: "COT-654321",
+            createdAt: "2026-03-01T12:00:00.000Z",
+            now: new Date("2026-03-01T12:00:00.000Z")
+        });
+        const copia = (0, _cotizacionesworkflowservice.cloneCotizacionAsDraft)(original, new Date("2026-03-12T09:30:00.000Z"));
+        const totals = (0, _cotizacionesworkflowservice.calculateCotizacionWorkflowTotals)(copia.items, copia.descuentoPct);
+        expect(copia.id).not.toBe(original.id);
+        expect(copia.codigo).not.toBe(original.codigo);
+        expect(copia.estado).toBe("borrador");
+        expect(copia.obra).toContain("copia");
+        expect(copia.total).toBe(totals.total);
+    });
+    it("debe dejar vidrio vacio cuando no viene informado", ()=>{
+        const item = (0, _cotizacionesworkflowservice.calculateComponentItem)({
+            codigo: "V2",
+            tipo: "Ventana",
+            nombre: "Ventana cocina",
+            costoProveedorUnitario: 180000
+        });
+        expect(item.vidrio).toBe("");
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxzZXJ2aWNlc1xcX190ZXN0c19fXFxjb3RpemFjaW9uZXMtd29ya2Zsb3cuc2VydmljZS50ZXN0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7XG4gIGNhbGN1bGF0ZUNvbXBvbmVudEl0ZW0sXG4gIGNhbGN1bGF0ZUNvdGl6YWNpb25Xb3JrZmxvd1RvdGFscyxcbiAgY2xvbmVDb3RpemFjaW9uQXNEcmFmdCxcbiAgY3JlYXRlQ290aXphY2lvblJlY29yZCxcbn0gZnJvbSBcIi4uL2NvdGl6YWNpb25lcy13b3JrZmxvdy5zZXJ2aWNlXCI7XG5cbmRlc2NyaWJlKFwiY290aXphY2lvbmVzLXdvcmtmbG93LnNlcnZpY2VcIiwgKCkgPT4ge1xuICBpdChcImNhbGN1bGEgdW4gY29tcG9uZW50ZSBhIHBhcnRpciBkZSBjb3N0byBwcm92ZWVkb3IgeSBtYXJnZW5cIiwgKCkgPT4ge1xuICAgIGNvbnN0IGl0ZW0gPSBjYWxjdWxhdGVDb21wb25lbnRJdGVtKHtcbiAgICAgIGNvZGlnbzogXCJWMVwiLFxuICAgICAgdGlwbzogXCJWZW50YW5hXCIsXG4gICAgICB2aWRyaW86IFwiSW5jb2xvcm8gbW9ub2xpdGljbyA1bW1cIixcbiAgICAgIG5vbWJyZTogXCJWZW50YW5hIGxpdmluZ1wiLFxuICAgICAgZGVzY3JpcGNpb246IFwiVmVudGFuYSBjb3JyZWRlcmEgY29sb3IgbmVncm9cIixcbiAgICAgIGFuY2hvOiAxODAwLFxuICAgICAgYWx0bzogMjIwMCxcbiAgICAgIGNhbnRpZGFkOiAyLFxuICAgICAgY29zdG9Qcm92ZWVkb3JVbml0YXJpbzogMzAwMDAwLFxuICAgICAgbWFyZ2VuUGN0OiAxMDAsXG4gICAgfSk7XG5cbiAgICBleHBlY3QoaXRlbS5hcmVhTTIpLnRvQmUoMy45Nik7XG4gICAgZXhwZWN0KGl0ZW0udmlkcmlvKS50b0JlKFwiSW5jb2xvcm8gbW9ub2xpdGljbyA1bW1cIik7XG4gICAgZXhwZWN0KGl0ZW0uY29zdG9Qcm92ZWVkb3JUb3RhbCkudG9CZSg2MDAwMDApO1xuICAgIGV4cGVjdChpdGVtLnByZWNpb1VuaXRhcmlvKS50b0JlKDYwMDAwMCk7XG4gICAgZXhwZWN0KGl0ZW0ucHJlY2lvVG90YWwpLnRvQmUoMTIwMDAwMCk7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBmYWxsYXIgc2kgZWwgbWFyZ2VuIGVzIG5lZ2F0aXZvXCIsICgpID0+IHtcbiAgICBleHBlY3QoKCkgPT5cbiAgICAgIGNhbGN1bGF0ZUNvbXBvbmVudEl0ZW0oe1xuICAgICAgICBjb2RpZ286IFwiVjFcIixcbiAgICAgICAgdGlwbzogXCJWZW50YW5hXCIsXG4gICAgICAgIG5vbWJyZTogXCJWZW50YW5hIGxpdmluZ1wiLFxuICAgICAgICBjb3N0b1Byb3ZlZWRvclVuaXRhcmlvOiAxMDAwMDAsXG4gICAgICAgIG1hcmdlblBjdDogLTEwLFxuICAgICAgfSlcbiAgICApLnRvVGhyb3coXCJFbCBtYXJnZW4gbm8gcHVlZGUgc2VyIG5lZ2F0aXZvXCIpO1xuICB9KTtcblxuICBpdChcImNyZWEgdW5hIGNvdGl6YWNpb24gcHJlc2VydmFuZG8gaWQgeSBjb2RpZ28gZXhpc3RlbnRlc1wiLCAoKSA9PiB7XG4gICAgY29uc3QgaXRlbSA9IGNhbGN1bGF0ZUNvbXBvbmVudEl0ZW0oe1xuICAgICAgY29kaWdvOiBcIlAxXCIsXG4gICAgICB0aXBvOiBcIlB1ZXJ0YVwiLFxuICAgICAgbm9tYnJlOiBcIlB1ZXJ0YSB0ZXJyYXphXCIsXG4gICAgICBkZXNjcmlwY2lvbjogXCJQdWVydGEgZGUgYWx1bWluaW9cIixcbiAgICAgIGNhbnRpZGFkOiAxLFxuICAgICAgY29zdG9Qcm92ZWVkb3JVbml0YXJpbzogMjUwMDAwLFxuICAgICAgbWFyZ2VuUGN0OiA4MCxcbiAgICB9KTtcblxuICAgIGNvbnN0IHJlY29yZCA9IGNyZWF0ZUNvdGl6YWNpb25SZWNvcmQoe1xuICAgICAgZHJhZnQ6IHtcbiAgICAgICAgY2xpZW50ZU5vbWJyZTogXCJNYXJpYSBHb256YWxlelwiLFxuICAgICAgICBjbGllbnRlVGVsZWZvbm86IFwiKzU2IDkgNzEyMyA0NTY3XCIsXG4gICAgICAgIG9icmE6IFwiT2ZpY2luYSBMYSBTZXJlbmFcIixcbiAgICAgICAgZGlyZWNjaW9uOiBcIkFtdW5hdGVndWkgMTUwXCIsXG4gICAgICAgIHZhbGlkZXo6IFwiMTUgZGlhc1wiLFxuICAgICAgICBkZXNjdWVudG9QY3Q6IDEwLFxuICAgICAgICBvYnNlcnZhY2lvbmVzOiBcIlJldmlzYXIgYWNjZXNvXCIsXG4gICAgICAgIGl0ZW1zOiBbaXRlbV0sXG4gICAgICB9LFxuICAgICAgZXN0YWRvOiBcImJvcnJhZG9yXCIsXG4gICAgICBleGlzdGluZ0lkOiBcImNvdC0xMjNcIixcbiAgICAgIGV4aXN0aW5nQ29kZTogXCJDT1QtMTIzNDU2XCIsXG4gICAgICBjcmVhdGVkQXQ6IFwiMjAyNi0wMy0xMFQxMDowMDowMC4wMDBaXCIsXG4gICAgICBub3c6IG5ldyBEYXRlKFwiMjAyNi0wMy0xMVQwODowMDowMC4wMDBaXCIpLFxuICAgIH0pO1xuXG4gICAgZXhwZWN0KHJlY29yZC5pZCkudG9CZShcImNvdC0xMjNcIik7XG4gICAgZXhwZWN0KHJlY29yZC5jb2RpZ28pLnRvQmUoXCJDT1QtMTIzNDU2XCIpO1xuICAgIGV4cGVjdChyZWNvcmQuZXN0YWRvKS50b0JlKFwiYm9ycmFkb3JcIik7XG4gICAgZXhwZWN0KHJlY29yZC5jcmVhdGVkQXQpLnRvQmUoXCIyMDI2LTAzLTEwVDEwOjAwOjAwLjAwMFpcIik7XG4gICAgZXhwZWN0KHJlY29yZC51cGRhdGVkQXQpLnRvQmUoXCIyMDI2LTAzLTExVDA4OjAwOjAwLjAwMFpcIik7XG4gICAgZXhwZWN0KHJlY29yZC50b3RhbCkudG9CZUdyZWF0ZXJUaGFuKHJlY29yZC5uZXRvKTtcbiAgfSk7XG5cbiAgaXQoXCJkdXBsaWNhIHVuYSBjb3RpemFjaW9uIGZpbmFsIGNvbW8gbnVldm8gYm9ycmFkb3JcIiwgKCkgPT4ge1xuICAgIGNvbnN0IGl0ZW0gPSBjYWxjdWxhdGVDb21wb25lbnRJdGVtKHtcbiAgICAgIGNvZGlnbzogXCJDMVwiLFxuICAgICAgdGlwbzogXCJDaWVycmVcIixcbiAgICAgIG5vbWJyZTogXCJDaWVycmUgdGVycmF6YVwiLFxuICAgICAgZGVzY3JpcGNpb246IFwiQ2llcnJlIHBsZWdhYmxlXCIsXG4gICAgICBjYW50aWRhZDogMSxcbiAgICAgIGNvc3RvUHJvdmVlZG9yVW5pdGFyaW86IDQyMDAwMCxcbiAgICAgIG1hcmdlblBjdDogNjUsXG4gICAgfSk7XG5cbiAgICBjb25zdCBvcmlnaW5hbCA9IGNyZWF0ZUNvdGl6YWNpb25SZWNvcmQoe1xuICAgICAgZHJhZnQ6IHtcbiAgICAgICAgY2xpZW50ZU5vbWJyZTogXCJQZWRybyBTb3RvXCIsXG4gICAgICAgIGNsaWVudGVUZWxlZm9ubzogXCIrNTYgOSA2NTQzIDIxMDlcIixcbiAgICAgICAgb2JyYTogXCJEZXB0by4gTG9zIEFyb21vc1wiLFxuICAgICAgICBkaXJlY2Npb246IFwiQXYuIFBhY2lmaWNvIDY3MFwiLFxuICAgICAgICB2YWxpZGV6OiBcIjE1IGRpYXNcIixcbiAgICAgICAgZGVzY3VlbnRvUGN0OiAwLFxuICAgICAgICBvYnNlcnZhY2lvbmVzOiBcIlwiLFxuICAgICAgICBpdGVtczogW2l0ZW1dLFxuICAgICAgfSxcbiAgICAgIGVzdGFkbzogXCJjcmVhZGFcIixcbiAgICAgIGV4aXN0aW5nSWQ6IFwiY290LW9yaWdpbmFsXCIsXG4gICAgICBleGlzdGluZ0NvZGU6IFwiQ09ULTY1NDMyMVwiLFxuICAgICAgY3JlYXRlZEF0OiBcIjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWlwiLFxuICAgICAgbm93OiBuZXcgRGF0ZShcIjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWlwiKSxcbiAgICB9KTtcblxuICAgIGNvbnN0IGNvcGlhID0gY2xvbmVDb3RpemFjaW9uQXNEcmFmdChvcmlnaW5hbCwgbmV3IERhdGUoXCIyMDI2LTAzLTEyVDA5OjMwOjAwLjAwMFpcIikpO1xuICAgIGNvbnN0IHRvdGFscyA9IGNhbGN1bGF0ZUNvdGl6YWNpb25Xb3JrZmxvd1RvdGFscyhjb3BpYS5pdGVtcywgY29waWEuZGVzY3VlbnRvUGN0KTtcblxuICAgIGV4cGVjdChjb3BpYS5pZCkubm90LnRvQmUob3JpZ2luYWwuaWQpO1xuICAgIGV4cGVjdChjb3BpYS5jb2RpZ28pLm5vdC50b0JlKG9yaWdpbmFsLmNvZGlnbyk7XG4gICAgZXhwZWN0KGNvcGlhLmVzdGFkbykudG9CZShcImJvcnJhZG9yXCIpO1xuICAgIGV4cGVjdChjb3BpYS5vYnJhKS50b0NvbnRhaW4oXCJjb3BpYVwiKTtcbiAgICBleHBlY3QoY29waWEudG90YWwpLnRvQmUodG90YWxzLnRvdGFsKTtcbiAgfSk7XG5cbiAgaXQoXCJkZWJlIGRlamFyIHZpZHJpbyB2YWNpbyBjdWFuZG8gbm8gdmllbmUgaW5mb3JtYWRvXCIsICgpID0+IHtcbiAgICBjb25zdCBpdGVtID0gY2FsY3VsYXRlQ29tcG9uZW50SXRlbSh7XG4gICAgICBjb2RpZ286IFwiVjJcIixcbiAgICAgIHRpcG86IFwiVmVudGFuYVwiLFxuICAgICAgbm9tYnJlOiBcIlZlbnRhbmEgY29jaW5hXCIsXG4gICAgICBjb3N0b1Byb3ZlZWRvclVuaXRhcmlvOiAxODAwMDAsXG4gICAgfSk7XG5cbiAgICBleHBlY3QoaXRlbS52aWRyaW8pLnRvQmUoXCJcIik7XG4gIH0pO1xufSk7XG4iXSwibmFtZXMiOlsiZGVzY3JpYmUiLCJpdCIsIml0ZW0iLCJjYWxjdWxhdGVDb21wb25lbnRJdGVtIiwiY29kaWdvIiwidGlwbyIsInZpZHJpbyIsIm5vbWJyZSIsImRlc2NyaXBjaW9uIiwiYW5jaG8iLCJhbHRvIiwiY2FudGlkYWQiLCJjb3N0b1Byb3ZlZWRvclVuaXRhcmlvIiwibWFyZ2VuUGN0IiwiZXhwZWN0IiwiYXJlYU0yIiwidG9CZSIsImNvc3RvUHJvdmVlZG9yVG90YWwiLCJwcmVjaW9Vbml0YXJpbyIsInByZWNpb1RvdGFsIiwidG9UaHJvdyIsInJlY29yZCIsImNyZWF0ZUNvdGl6YWNpb25SZWNvcmQiLCJkcmFmdCIsImNsaWVudGVOb21icmUiLCJjbGllbnRlVGVsZWZvbm8iLCJvYnJhIiwiZGlyZWNjaW9uIiwidmFsaWRleiIsImRlc2N1ZW50b1BjdCIsIm9ic2VydmFjaW9uZXMiLCJpdGVtcyIsImVzdGFkbyIsImV4aXN0aW5nSWQiLCJleGlzdGluZ0NvZGUiLCJjcmVhdGVkQXQiLCJub3ciLCJEYXRlIiwiaWQiLCJ1cGRhdGVkQXQiLCJ0b3RhbCIsInRvQmVHcmVhdGVyVGhhbiIsIm5ldG8iLCJvcmlnaW5hbCIsImNvcGlhIiwiY2xvbmVDb3RpemFjaW9uQXNEcmFmdCIsInRvdGFscyIsImNhbGN1bGF0ZUNvdGl6YWNpb25Xb3JrZmxvd1RvdGFscyIsIm5vdCIsInRvQ29udGFpbiJdLCJtYXBwaW5ncyI6Ijs7Ozs2Q0FLTztBQUVQQSxTQUFTLGlDQUFpQztJQUN4Q0MsR0FBRyw4REFBOEQ7UUFDL0QsTUFBTUMsT0FBT0MsSUFBQUEsbURBQXNCLEVBQUM7WUFDbENDLFFBQVE7WUFDUkMsTUFBTTtZQUNOQyxRQUFRO1lBQ1JDLFFBQVE7WUFDUkMsYUFBYTtZQUNiQyxPQUFPO1lBQ1BDLE1BQU07WUFDTkMsVUFBVTtZQUNWQyx3QkFBd0I7WUFDeEJDLFdBQVc7UUFDYjtRQUVBQyxPQUFPWixLQUFLYSxNQUFNLEVBQUVDLElBQUksQ0FBQztRQUN6QkYsT0FBT1osS0FBS0ksTUFBTSxFQUFFVSxJQUFJLENBQUM7UUFDekJGLE9BQU9aLEtBQUtlLG1CQUFtQixFQUFFRCxJQUFJLENBQUM7UUFDdENGLE9BQU9aLEtBQUtnQixjQUFjLEVBQUVGLElBQUksQ0FBQztRQUNqQ0YsT0FBT1osS0FBS2lCLFdBQVcsRUFBRUgsSUFBSSxDQUFDO0lBQ2hDO0lBRUFmLEdBQUcsd0NBQXdDO1FBQ3pDYSxPQUFPLElBQ0xYLElBQUFBLG1EQUFzQixFQUFDO2dCQUNyQkMsUUFBUTtnQkFDUkMsTUFBTTtnQkFDTkUsUUFBUTtnQkFDUkssd0JBQXdC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

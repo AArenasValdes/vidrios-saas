@@ -1,0 +1,17 @@
+326e488ccd3d7a5d3e9913e0d5ae4114
+/* Para componentes client  */ /* */ "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "createClient", {
+    enumerable: true,
+    get: function() {
+        return createClient;
+    }
+});
+const _ssr = require("@supabase/ssr");
+function createClient() {
+    return (0, _ssr.createBrowserClient)(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxsaWJcXHN1cGFiYXNlXFxjbGllbnQudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyogUGFyYSBjb21wb25lbnRlcyBjbGllbnQgICovXHJcbi8qICovXHJcbmltcG9ydCB7IGNyZWF0ZUJyb3dzZXJDbGllbnQgfSBmcm9tIFwiQHN1cGFiYXNlL3NzclwiO1xyXG5cclxuZXhwb3J0IGZ1bmN0aW9uIGNyZWF0ZUNsaWVudCgpIHtcclxuICByZXR1cm4gY3JlYXRlQnJvd3NlckNsaWVudChcclxuICAgIHByb2Nlc3MuZW52Lk5FWFRfUFVCTElDX1NVUEFCQVNFX1VSTCEsXHJcbiAgICBwcm9jZXNzLmVudi5ORVhUX1BVQkxJQ19TVVBBQkFTRV9BTk9OX0tFWSFcclxuICApO1xyXG59Il0sIm5hbWVzIjpbImNyZWF0ZUNsaWVudCIsImNyZWF0ZUJyb3dzZXJDbGllbnQiLCJwcm9jZXNzIiwiZW52IiwiTkVYVF9QVUJMSUNfU1VQQUJBU0VfVVJMIiwiTkVYVF9QVUJMSUNfU1VQQUJBU0VfQU5PTl9LRVkiXSwibWFwcGluZ3MiOiJBQUFBLDRCQUE0QixHQUM1QixHQUFHOzs7OytCQUdhQTs7O2VBQUFBOzs7cUJBRm9CO0FBRTdCLFNBQVNBO0lBQ2QsT0FBT0MsSUFBQUEsd0JBQW1CLEVBQ3hCQyxRQUFRQyxHQUFHLENBQUNDLHdCQUF3QixFQUNwQ0YsUUFBUUMsR0FBRyxDQUFDRSw2QkFBNkI7QUFFN0MifQ==

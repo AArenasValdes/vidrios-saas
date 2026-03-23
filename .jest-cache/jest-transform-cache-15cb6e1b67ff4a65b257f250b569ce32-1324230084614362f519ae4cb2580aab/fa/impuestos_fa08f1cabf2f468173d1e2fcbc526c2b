@@ -1,0 +1,16 @@
+ded0f41540d2775fcc09e0d890aee18b
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "impuestos", {
+    enumerable: true,
+    get: function() {
+        return impuestos;
+    }
+});
+const impuestos = {
+    iva: 0.19
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxjb25zdGFudHNcXGltcHVlc3Rvcy50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgY29uc3QgaW1wdWVzdG9zID0ge1xuICBpdmE6IDAuMTksXG59IGFzIGNvbnN0O1xyXG4iXSwibmFtZXMiOlsiaW1wdWVzdG9zIiwiaXZhIl0sIm1hcHBpbmdzIjoiOzs7OytCQUFhQTs7O2VBQUFBOzs7QUFBTixNQUFNQSxZQUFZO0lBQ3ZCQyxLQUFLO0FBQ1AifQ==

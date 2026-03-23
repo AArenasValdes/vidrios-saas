@@ -1,0 +1,57 @@
+3027ea5c186c06b69853c243e48b8b4b
+/** @jest-environment jsdom */ "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _pdf = require("../pdf");
+const records = [
+    {
+        id: "cot-1",
+        codigo: "COT-123456",
+        clientId: 1,
+        projectId: 1,
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "Casa Coquimbo",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        observaciones: "",
+        estado: "creada",
+        createdAt: "2026-03-14T10:00:00.000Z",
+        updatedAt: "2026-03-14T10:00:00.000Z",
+        items: [],
+        subtotal: 100000,
+        descuentoValor: 0,
+        neto: 100000,
+        iva: 19000,
+        flete: 0,
+        total: 119000
+    }
+];
+describe("pdf utils", ()=>{
+    afterEach(()=>{
+        jest.restoreAllMocks();
+    });
+    it("debe abrir una ventana imprimible con el listado de cotizaciones", ()=>{
+        const write = jest.fn();
+        const close = jest.fn();
+        const openSpy = jest.spyOn(window, "open").mockReturnValue({
+            document: {
+                write,
+                close
+            }
+        });
+        (0, _pdf.openCotizacionesListPdf)(records, "Exportacion");
+        expect(openSpy).toHaveBeenCalled();
+        expect(write).toHaveBeenCalledWith(expect.stringContaining("COT-123456"));
+        expect(write).toHaveBeenCalledWith(expect.stringContaining("Roberto Fuentes"));
+        expect(close).toHaveBeenCalled();
+    });
+    it("debe fallar si el navegador bloquea la ventana de impresion", ()=>{
+        jest.spyOn(window, "open").mockReturnValue(null);
+        expect(()=>(0, _pdf.openCotizacionesListPdf)(records)).toThrow("No se pudo abrir la ventana de impresion");
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFxwZGYudGVzdC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKiogQGplc3QtZW52aXJvbm1lbnQganNkb20gKi9cblxuaW1wb3J0IHsgb3BlbkNvdGl6YWNpb25lc0xpc3RQZGYgfSBmcm9tIFwiLi4vcGRmXCI7XG5cbmNvbnN0IHJlY29yZHMgPSBbXG4gIHtcbiAgICBpZDogXCJjb3QtMVwiLFxuICAgIGNvZGlnbzogXCJDT1QtMTIzNDU2XCIsXG4gICAgY2xpZW50SWQ6IDEsXG4gICAgcHJvamVjdElkOiAxLFxuICAgIGNsaWVudGVOb21icmU6IFwiUm9iZXJ0byBGdWVudGVzXCIsXG4gICAgY2xpZW50ZVRlbGVmb25vOiBcIis1NiA5IDgyMzQgNTY3OFwiLFxuICAgIG9icmE6IFwiQ2FzYSBDb3F1aW1ib1wiLFxuICAgIGRpcmVjY2lvbjogXCJMb3MgUGVzY2Fkb3JlcyAyMjFcIixcbiAgICB2YWxpZGV6OiBcIjE1IGRpYXNcIixcbiAgICBkZXNjdWVudG9QY3Q6IDAsXG4gICAgb2JzZXJ2YWNpb25lczogXCJcIixcbiAgICBlc3RhZG86IFwiY3JlYWRhXCIgYXMgY29uc3QsXG4gICAgY3JlYXRlZEF0OiBcIjIwMjYtMDMtMTRUMTA6MDA6MDAuMDAwWlwiLFxuICAgIHVwZGF0ZWRBdDogXCIyMDI2LTAzLTE0VDEwOjAwOjAwLjAwMFpcIixcbiAgICBpdGVtczogW10sXG4gICAgc3VidG90YWw6IDEwMDAwMCxcbiAgICBkZXNjdWVudG9WYWxvcjogMCxcbiAgICBuZXRvOiAxMDAwMDAsXG4gICAgaXZhOiAxOTAwMCxcbiAgICBmbGV0ZTogMCxcbiAgICB0b3RhbDogMTE5MDAwLFxuICB9LFxuXTtcblxuZGVzY3JpYmUoXCJwZGYgdXRpbHNcIiwgKCkgPT4ge1xuICBhZnRlckVhY2goKCkgPT4ge1xuICAgIGplc3QucmVzdG9yZUFsbE1vY2tzKCk7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBhYnJpciB1bmEgdmVudGFuYSBpbXByaW1pYmxlIGNvbiBlbCBsaXN0YWRvIGRlIGNvdGl6YWNpb25lc1wiLCAoKSA9PiB7XG4gICAgY29uc3Qgd3JpdGUgPSBqZXN0LmZuKCk7XG4gICAgY29uc3QgY2xvc2UgPSBqZXN0LmZuKCk7XG4gICAgY29uc3Qgb3BlblNweSA9IGplc3Quc3B5T24od2luZG93LCBcIm9wZW5cIikubW9ja1JldHVyblZhbHVlKHtcbiAgICAgIGRvY3VtZW50OiB7XG4gICAgICAgIHdyaXRlLFxuICAgICAgICBjbG9zZSxcbiAgICAgIH0sXG4gICAgfSBhcyB1bmtub3duIGFzIFdpbmRvdyk7XG5cbiAgICBvcGVuQ290aXphY2lvbmVzTGlzdFBkZihyZWNvcmRzLCBcIkV4cG9ydGFjaW9uXCIpO1xuXG4gICAgZXhwZWN0KG9wZW5TcHkpLnRvSGF2ZUJlZW5DYWxsZWQoKTtcbiAgICBleHBlY3Qod3JpdGUpLnRvSGF2ZUJlZW5DYWxsZWRXaXRoKGV4cGVjdC5zdHJpbmdDb250YWluaW5nKFwiQ09ULTEyMzQ1NlwiKSk7XG4gICAgZXhwZWN0KHdyaXRlKS50b0hhdmVCZWVuQ2FsbGVkV2l0aChleHBlY3Quc3RyaW5nQ29udGFpbmluZyhcIlJvYmVydG8gRnVlbnRlc1wiKSk7XG4gICAgZXhwZWN0KGNsb3NlKS50b0hhdmVCZWVuQ2FsbGVkKCk7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBmYWxsYXIgc2kgZWwgbmF2ZWdhZG9yIGJsb3F1ZWEgbGEgdmVudGFuYSBkZSBpbXByZXNpb25cIiwgKCkgPT4ge1xuICAgIGplc3Quc3B5T24od2luZG93LCBcIm9wZW5cIikubW9ja1JldHVyblZhbHVlKG51bGwpO1xuXG4gICAgZXhwZWN0KCgpID0+IG9wZW5Db3RpemFjaW9uZXNMaXN0UGRmKHJlY29yZHMpKS50b1Rocm93KFxuICAgICAgXCJObyBzZSBwdWRvIGFicmlyIGxhIHZlbnRhbmEgZGUgaW1wcmVzaW9uXCJcbiAgICApO1xuICB9KTtcbn0pO1xuIl0sIm5hbWVzIjpbInJlY29yZHMiLCJpZCIsImNvZGlnbyIsImNsaWVudElkIiwicHJvamVjdElkIiwiY2xpZW50ZU5vbWJyZSIsImNsaWVudGVUZWxlZm9ubyIsIm9icmEiLCJkaXJlY2Npb24iLCJ2YWxpZGV6IiwiZGVzY3VlbnRvUGN0Iiwib2JzZXJ2YWNpb25lcyIsImVzdGFkbyIsImNyZWF0ZWRBdCIsInVwZGF0ZWRBdCIsIml0ZW1zIiwic3VidG90YWwiLCJkZXNjdWVudG9WYWxvciIsIm5ldG8iLCJpdmEiLCJmbGV0ZSIsInRvdGFsIiwiZGVzY3JpYmUiLCJhZnRlckVhY2giLCJqZXN0IiwicmVzdG9yZUFsbE1vY2tzIiwiaXQiLCJ3cml0ZSIsImZuIiwiY2xvc2UiLCJvcGVuU3B5Iiwic3B5T24iLCJ3aW5kb3ciLCJtb2NrUmV0dXJuVmFsdWUiLCJkb2N1bWVudCIsIm9wZW5Db3RpemFjaW9uZXNMaXN0UGRmIiwiZXhwZWN0IiwidG9IYXZlQmVlbkNhbGxlZCIsInRvSGF2ZUJlZW5DYWxsZWRXaXRoIiwic3RyaW5nQ29udGFpbmluZyIsInRvVGhyb3ciXSwibWFwcGluZ3MiOiJBQUFBLDRCQUE0Qjs7OztxQkFFWTtBQUV4QyxNQUFNQSxVQUFVO0lBQ2Q7UUFDRUMsSUFBSTtRQUNKQyxRQUFRO1FBQ1JDLFVBQVU7UUFDVkMsV0FBVztRQUNYQyxlQUFlO1FBQ2ZDLGlCQUFpQjtRQUNqQkMsTUFBTTtRQUNOQyxXQUFXO1FBQ1hDLFNBQVM7UUFDVEMsY0FBYztRQUNkQyxlQUFlO1FBQ2ZDLFFBQVE7UUFDUkMsV0FBVztRQUNYQyxXQUFXO1FBQ1hDLE9BQU8sRUFBRTtRQUNUQyxVQUFVO1FBQ1ZDLGdCQUFnQjtRQUNoQkMsTUFBTTtRQUNOQyxLQUFLO1FBQ0xDLE9BQU87UUFDUEMsT0FBTztJQUNUO0NBQ0Q7QUFFREMsU0FBUyxhQUFhO0lBQ3BCQyxVQUFVO1FBQ1JDLEtBQUtDLGVBQWU7SUFDdEI7SUFFQUMsR0FBRyxvRUFBb0U7UUFDckUsTUFBTUMsUUFBUUgsS0FBS0ksRUFBRTtRQUNyQixNQUFNQyxRQUFRTCxLQUFLSSxFQUFFO1FBQ3JCLE1BQU1FLFVBQVVOLEtBQUtPLEtBQUssQ0FBQ0MsUUFBUSxRQUFRQyxlQUFlLENBQUM7WUFDekRDLFVBQVU7Z0JBQ1JQO2dCQUNBRTtZQUNGO1FBQ0Y7UUFFQU0sSUFBQUEsNEJBQXVCLEVBQUNuQyxTQUFTO1FBRWpDb0MsT0FBT04sU0FBU08sZ0JBQWdCO1FBQ2hDRCxPQUFPVCxPQUFPVyxvQkFBb0IsQ0FBQ0YsT0FBT0csZ0JBQWdCLENBQUM7UUFDM0RILE9BQU9ULE9BQU9XLG9CQUFvQixDQUFDRixPQUFPRyxnQkFBZ0IsQ0FBQztRQUMzREgsT0FBT1AsT0FBT1EsZ0JBQWdCO0lBQ2hDO0lBRUFYLEdBQUcsK0RBQStEO1FBQ2hFRixLQUFLTyxLQUFLLENBQUNDLFFBQVEsUUFBUUMsZUFBZSxDQUFDO1FBRTNDRyxPQUFPLElBQU1ELElBQUFBLDRCQUF1QixFQUFDbkMsVUFBVXdDLE9BQU8sQ0FDcEQ7SUFFSjtBQUNGIn0=

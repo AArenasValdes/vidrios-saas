@@ -1,0 +1,71 @@
+9daebbba677e3fd437eabcdee68f91e8
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _cotizacionpdf = require("../cotizacion-pdf");
+describe("cotizacion-pdf paginacion", ()=>{
+    it("debe cortar antes de un bloque protegido para no partirlo", ()=>{
+        const slices = (0, _cotizacionpdf.planPdfPageSlices)({
+            canvasHeight: 3000,
+            pageHeight: 1000,
+            protectedBlocks: [
+                {
+                    top: 920,
+                    bottom: 1220
+                }
+            ]
+        });
+        expect(slices[0]).toEqual({
+            start: 0,
+            end: 920
+        });
+        expect(slices[1]).toEqual({
+            start: 920,
+            end: 1920
+        });
+    });
+    it("debe seguir usando el alto completo cuando no hay bloques protegidos", ()=>{
+        const slices = (0, _cotizacionpdf.planPdfPageSlices)({
+            canvasHeight: 2500,
+            pageHeight: 1000,
+            protectedBlocks: []
+        });
+        expect(slices).toEqual([
+            {
+                start: 0,
+                end: 1000
+            },
+            {
+                start: 1000,
+                end: 2000
+            },
+            {
+                start: 2000,
+                end: 2500
+            }
+        ]);
+    });
+    it("debe adelantar el salto si un bloque queda demasiado pegado al borde inferior", ()=>{
+        const slices = (0, _cotizacionpdf.planPdfPageSlices)({
+            canvasHeight: 2600,
+            pageHeight: 1000,
+            protectedBlocks: [
+                {
+                    top: 680,
+                    bottom: 955
+                }
+            ]
+        });
+        expect(slices[0]).toEqual({
+            start: 0,
+            end: 680
+        });
+        expect(slices[1]).toEqual({
+            start: 680,
+            end: 1680
+        });
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFxjb3RpemFjaW9uLXBkZi1wYWdpbmF0aW9uLnRlc3QudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgcGxhblBkZlBhZ2VTbGljZXMgfSBmcm9tIFwiLi4vY290aXphY2lvbi1wZGZcIjtcblxuZGVzY3JpYmUoXCJjb3RpemFjaW9uLXBkZiBwYWdpbmFjaW9uXCIsICgpID0+IHtcbiAgaXQoXCJkZWJlIGNvcnRhciBhbnRlcyBkZSB1biBibG9xdWUgcHJvdGVnaWRvIHBhcmEgbm8gcGFydGlybG9cIiwgKCkgPT4ge1xuICAgIGNvbnN0IHNsaWNlcyA9IHBsYW5QZGZQYWdlU2xpY2VzKHtcbiAgICAgIGNhbnZhc0hlaWdodDogMzAwMCxcbiAgICAgIHBhZ2VIZWlnaHQ6IDEwMDAsXG4gICAgICBwcm90ZWN0ZWRCbG9ja3M6IFt7IHRvcDogOTIwLCBib3R0b206IDEyMjAgfV0sXG4gICAgfSk7XG5cbiAgICBleHBlY3Qoc2xpY2VzWzBdKS50b0VxdWFsKHsgc3RhcnQ6IDAsIGVuZDogOTIwIH0pO1xuICAgIGV4cGVjdChzbGljZXNbMV0pLnRvRXF1YWwoeyBzdGFydDogOTIwLCBlbmQ6IDE5MjAgfSk7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBzZWd1aXIgdXNhbmRvIGVsIGFsdG8gY29tcGxldG8gY3VhbmRvIG5vIGhheSBibG9xdWVzIHByb3RlZ2lkb3NcIiwgKCkgPT4ge1xuICAgIGNvbnN0IHNsaWNlcyA9IHBsYW5QZGZQYWdlU2xpY2VzKHtcbiAgICAgIGNhbnZhc0hlaWdodDogMjUwMCxcbiAgICAgIHBhZ2VIZWlnaHQ6IDEwMDAsXG4gICAgICBwcm90ZWN0ZWRCbG9ja3M6IFtdLFxuICAgIH0pO1xuXG4gICAgZXhwZWN0KHNsaWNlcykudG9FcXVhbChbXG4gICAgICB7IHN0YXJ0OiAwLCBlbmQ6IDEwMDAgfSxcbiAgICAgIHsgc3RhcnQ6IDEwMDAsIGVuZDogMjAwMCB9LFxuICAgICAgeyBzdGFydDogMjAwMCwgZW5kOiAyNTAwIH0sXG4gICAgXSk7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBhZGVsYW50YXIgZWwgc2FsdG8gc2kgdW4gYmxvcXVlIHF1ZWRhIGRlbWFzaWFkbyBwZWdhZG8gYWwgYm9yZGUgaW5mZXJpb3JcIiwgKCkgPT4ge1xuICAgIGNvbnN0IHNsaWNlcyA9IHBsYW5QZGZQYWdlU2xpY2VzKHtcbiAgICAgIGNhbnZhc0hlaWdodDogMjYwMCxcbiAgICAgIHBhZ2VIZWlnaHQ6IDEwMDAsXG4gICAgICBwcm90ZWN0ZWRCbG9ja3M6IFt7IHRvcDogNjgwLCBib3R0b206IDk1NSB9XSxcbiAgICB9KTtcblxuICAgIGV4cGVjdChzbGljZXNbMF0pLnRvRXF1YWwoeyBzdGFydDogMCwgZW5kOiA2ODAgfSk7XG4gICAgZXhwZWN0KHNsaWNlc1sxXSkudG9FcXVhbCh7IHN0YXJ0OiA2ODAsIGVuZDogMTY4MCB9KTtcbiAgfSk7XG59KTtcbiJdLCJuYW1lcyI6WyJkZXNjcmliZSIsIml0Iiwic2xpY2VzIiwicGxhblBkZlBhZ2VTbGljZXMiLCJjYW52YXNIZWlnaHQiLCJwYWdlSGVpZ2h0IiwicHJvdGVjdGVkQmxvY2tzIiwidG9wIiwiYm90dG9tIiwiZXhwZWN0IiwidG9FcXVhbCIsInN0YXJ0IiwiZW5kIl0sIm1hcHBpbmdzIjoiOzs7OytCQUFrQztBQUVsQ0EsU0FBUyw2QkFBNkI7SUFDcENDLEdBQUcsNkRBQTZEO1FBQzlELE1BQU1DLFNBQVNDLElBQUFBLGdDQUFpQixFQUFDO1lBQy9CQyxjQUFjO1lBQ2RDLFlBQVk7WUFDWkMsaUJBQWlCO2dCQUFDO29CQUFFQyxLQUFLO29CQUFLQyxRQUFRO2dCQUFLO2FBQUU7UUFDL0M7UUFFQUMsT0FBT1AsTUFBTSxDQUFDLEVBQUUsRUFBRVEsT0FBTyxDQUFDO1lBQUVDLE9BQU87WUFBR0MsS0FBSztRQUFJO1FBQy9DSCxPQUFPUCxNQUFNLENBQUMsRUFBRSxFQUFFUSxPQUFPLENBQUM7WUFBRUMsT0FBTztZQUFLQyxLQUFLO1FBQUs7SUFDcEQ7SUFFQVgsR0FBRyx3RUFBd0U7UUFDekUsTUFBTUMsU0FBU0MsSUFBQUEsZ0NBQWlCLEVBQUM7WUFDL0JDLGNBQWM7WUFDZEMsWUFBWTtZQUNaQyxpQkFBaUIsRUFBRTtRQUNyQjtRQUVBRyxPQUFPUCxRQUFRUSxPQUFPLENBQUM7WUFDckI7Z0JBQUVDLE9BQU87Z0JBQUdDLEtBQUs7WUFBSztZQUN0QjtnQkFBRUQsT0FBTztnQkFBTUMsS0FBSztZQUFLO1lBQ3pCO2dCQUFFRCxPQUFPO2dCQUFNQyxLQUFLO1lBQUs7U0FDMUI7SUFDSDtJQUVBWCxHQUFHLGlGQUFpRjtRQUNsRixNQUFNQyxTQUFTQyxJQUFBQSxnQ0FBaUIsRUFBQztZQUMvQkMsY0FBYztZQUNkQyxZQUFZO1lBQ1pDLGlCQUFpQjtnQkFBQztvQkFBRUMsS0FBSztvQkFBS0MsUUFBUTtnQkFBSTthQUFFO1FBQzlDO1FBRUFDLE9BQU9QLE1BQU0sQ0FBQyxFQUFFLEVBQUVRLE9BQU8sQ0FBQztZQUFFQyxPQUFPO1lBQUdDLEtBQUs7UUFBSTtRQUMvQ0gsT0FBT1AsTUFBTSxDQUFDLEVBQUUsRUFBRVEsT0FBTyxDQUFDO1lBQUVDLE9BQU87WUFBS0MsS0FBSztRQUFLO0lBQ3BEO0FBQ0YifQ==

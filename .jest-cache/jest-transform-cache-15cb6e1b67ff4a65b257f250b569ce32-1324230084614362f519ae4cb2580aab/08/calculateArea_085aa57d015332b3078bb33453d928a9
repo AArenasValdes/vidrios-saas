@@ -1,0 +1,19 @@
+6e425d41209a641f98f3e69cb1d40836
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "calculateArea", {
+    enumerable: true,
+    get: function() {
+        return calculateArea;
+    }
+});
+const calculateArea = (width, height)=>{
+    if (width < 0 || height < 0) {
+        throw new Error("Las dimensiones no pueden ser negativas");
+    }
+    return width * height;
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxzZXJ2aWNlc1xcY290aXphZG9yLWVuZ2luZVxcY2FsY3VsYXRlQXJlYS50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJleHBvcnQgY29uc3QgY2FsY3VsYXRlQXJlYSA9ICh3aWR0aDogbnVtYmVyLCBoZWlnaHQ6IG51bWJlcikgPT4ge1xuICBpZiAod2lkdGggPCAwIHx8IGhlaWdodCA8IDApIHtcbiAgICB0aHJvdyBuZXcgRXJyb3IoXCJMYXMgZGltZW5zaW9uZXMgbm8gcHVlZGVuIHNlciBuZWdhdGl2YXNcIik7XG4gIH1cblxuICByZXR1cm4gd2lkdGggKiBoZWlnaHQ7XG59O1xuIl0sIm5hbWVzIjpbImNhbGN1bGF0ZUFyZWEiLCJ3aWR0aCIsImhlaWdodCIsIkVycm9yIl0sIm1hcHBpbmdzIjoiOzs7OytCQUFhQTs7O2VBQUFBOzs7QUFBTixNQUFNQSxnQkFBZ0IsQ0FBQ0MsT0FBZUM7SUFDM0MsSUFBSUQsUUFBUSxLQUFLQyxTQUFTLEdBQUc7UUFDM0IsTUFBTSxJQUFJQyxNQUFNO0lBQ2xCO0lBRUEsT0FBT0YsUUFBUUM7QUFDakIifQ==

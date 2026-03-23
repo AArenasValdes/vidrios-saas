@@ -1,0 +1,19 @@
+d858877a2ef6d6d7b02ec6fcb68738bb
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "formatCurrency", {
+    enumerable: true,
+    get: function() {
+        return formatCurrency;
+    }
+});
+const formatCurrency = (value, locale = "es-CL", currency = "CLP")=>{
+    return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency
+    }).format(value);
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcZm9ybWF0Q3VycmVuY3kudHMiXSwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IGNvbnN0IGZvcm1hdEN1cnJlbmN5ID0gKFxuICB2YWx1ZTogbnVtYmVyLFxuICBsb2NhbGUgPSBcImVzLUNMXCIsXG4gIGN1cnJlbmN5ID0gXCJDTFBcIlxuKSA9PiB7XG4gIHJldHVybiBuZXcgSW50bC5OdW1iZXJGb3JtYXQobG9jYWxlLCB7XG4gICAgc3R5bGU6IFwiY3VycmVuY3lcIixcbiAgICBjdXJyZW5jeSxcbiAgfSkuZm9ybWF0KHZhbHVlKTtcbn07XHJcbiJdLCJuYW1lcyI6WyJmb3JtYXRDdXJyZW5jeSIsInZhbHVlIiwibG9jYWxlIiwiY3VycmVuY3kiLCJJbnRsIiwiTnVtYmVyRm9ybWF0Iiwic3R5bGUiLCJmb3JtYXQiXSwibWFwcGluZ3MiOiI7Ozs7K0JBQWFBOzs7ZUFBQUE7OztBQUFOLE1BQU1BLGlCQUFpQixDQUM1QkMsT0FDQUMsU0FBUyxPQUFPLEVBQ2hCQyxXQUFXLEtBQUs7SUFFaEIsT0FBTyxJQUFJQyxLQUFLQyxZQUFZLENBQUNILFFBQVE7UUFDbkNJLE9BQU87UUFDUEg7SUFDRixHQUFHSSxNQUFNLENBQUNOO0FBQ1oifQ==

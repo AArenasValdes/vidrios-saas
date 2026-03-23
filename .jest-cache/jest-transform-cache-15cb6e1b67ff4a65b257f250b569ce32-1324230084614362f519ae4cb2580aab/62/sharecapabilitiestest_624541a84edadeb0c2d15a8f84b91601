@@ -1,0 +1,32 @@
+8c9ac2891a66fa545cad8046a1286db5
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _sharecapabilities = require("../share-capabilities");
+describe("share-capabilities utils", ()=>{
+    it("debe detectar un dispositivo movil por user agent", ()=>{
+        expect((0, _sharecapabilities.detectLikelyMobileDevice)({
+            userAgent: "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36",
+            maxTouchPoints: 5,
+            screenWidth: 412
+        })).toBe(true);
+    });
+    it("debe resolver el CTA de WhatsApp con PDF cuando el navegador puede compartir archivos", ()=>{
+        expect((0, _sharecapabilities.resolveCotizacionShareExperience)({
+            canSharePdf: true,
+            isLikelyMobile: true
+        })).toMatchObject({
+            actionLabel: "WhatsApp + PDF",
+            canSharePdf: true
+        });
+    });
+    it("debe usar el fallback de escritorio cuando no puede compartir archivos", ()=>{
+        expect((0, _sharecapabilities.resolveCotizacionShareExperience)({
+            canSharePdf: false,
+            isLikelyMobile: false
+        })).toEqual(_sharecapabilities.DEFAULT_COTIZACION_SHARE_EXPERIENCE);
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFxzaGFyZS1jYXBhYmlsaXRpZXMudGVzdC50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQge1xuICBERUZBVUxUX0NPVElaQUNJT05fU0hBUkVfRVhQRVJJRU5DRSxcbiAgZGV0ZWN0TGlrZWx5TW9iaWxlRGV2aWNlLFxuICByZXNvbHZlQ290aXphY2lvblNoYXJlRXhwZXJpZW5jZSxcbn0gZnJvbSBcIi4uL3NoYXJlLWNhcGFiaWxpdGllc1wiO1xuXG5kZXNjcmliZShcInNoYXJlLWNhcGFiaWxpdGllcyB1dGlsc1wiLCAoKSA9PiB7XG4gIGl0KFwiZGViZSBkZXRlY3RhciB1biBkaXNwb3NpdGl2byBtb3ZpbCBwb3IgdXNlciBhZ2VudFwiLCAoKSA9PiB7XG4gICAgZXhwZWN0KFxuICAgICAgZGV0ZWN0TGlrZWx5TW9iaWxlRGV2aWNlKHtcbiAgICAgICAgdXNlckFnZW50OlxuICAgICAgICAgIFwiTW96aWxsYS81LjAgKExpbnV4OyBBbmRyb2lkIDE0OyBTTS1TOTE4QikgQXBwbGVXZWJLaXQvNTM3LjM2IENocm9tZS8xMjMuMCBNb2JpbGUgU2FmYXJpLzUzNy4zNlwiLFxuICAgICAgICBtYXhUb3VjaFBvaW50czogNSxcbiAgICAgICAgc2NyZWVuV2lkdGg6IDQxMixcbiAgICAgIH0pXG4gICAgKS50b0JlKHRydWUpO1xuICB9KTtcblxuICBpdChcImRlYmUgcmVzb2x2ZXIgZWwgQ1RBIGRlIFdoYXRzQXBwIGNvbiBQREYgY3VhbmRvIGVsIG5hdmVnYWRvciBwdWVkZSBjb21wYXJ0aXIgYXJjaGl2b3NcIiwgKCkgPT4ge1xuICAgIGV4cGVjdChcbiAgICAgIHJlc29sdmVDb3RpemFjaW9uU2hhcmVFeHBlcmllbmNlKHtcbiAgICAgICAgY2FuU2hhcmVQZGY6IHRydWUsXG4gICAgICAgIGlzTGlrZWx5TW9iaWxlOiB0cnVlLFxuICAgICAgfSlcbiAgICApLnRvTWF0Y2hPYmplY3Qoe1xuICAgICAgYWN0aW9uTGFiZWw6IFwiV2hhdHNBcHAgKyBQREZcIixcbiAgICAgIGNhblNoYXJlUGRmOiB0cnVlLFxuICAgIH0pO1xuICB9KTtcblxuICBpdChcImRlYmUgdXNhciBlbCBmYWxsYmFjayBkZSBlc2NyaXRvcmlvIGN1YW5kbyBubyBwdWVkZSBjb21wYXJ0aXIgYXJjaGl2b3NcIiwgKCkgPT4ge1xuICAgIGV4cGVjdChcbiAgICAgIHJlc29sdmVDb3RpemFjaW9uU2hhcmVFeHBlcmllbmNlKHtcbiAgICAgICAgY2FuU2hhcmVQZGY6IGZhbHNlLFxuICAgICAgICBpc0xpa2VseU1vYmlsZTogZmFsc2UsXG4gICAgICB9KVxuICAgICkudG9FcXVhbChERUZBVUxUX0NPVElaQUNJT05fU0hBUkVfRVhQRVJJRU5DRSk7XG4gIH0pO1xufSk7XG4iXSwibmFtZXMiOlsiZGVzY3JpYmUiLCJpdCIsImV4cGVjdCIsImRldGVjdExpa2VseU1vYmlsZURldmljZSIsInVzZXJBZ2VudCIsIm1heFRvdWNoUG9pbnRzIiwic2NyZWVuV2lkdGgiLCJ0b0JlIiwicmVzb2x2ZUNvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2UiLCJjYW5TaGFyZVBkZiIsImlzTGlrZWx5TW9iaWxlIiwidG9NYXRjaE9iamVjdCIsImFjdGlvbkxhYmVsIiwidG9FcXVhbCIsIkRFRkFVTFRfQ09USVpBQ0lPTl9TSEFSRV9FWFBFUklFTkNFIl0sIm1hcHBpbmdzIjoiOzs7O21DQUlPO0FBRVBBLFNBQVMsNEJBQTRCO0lBQ25DQyxHQUFHLHFEQUFxRDtRQUN0REMsT0FDRUMsSUFBQUEsMkNBQXdCLEVBQUM7WUFDdkJDLFdBQ0U7WUFDRkMsZ0JBQWdCO1lBQ2hCQyxhQUFhO1FBQ2YsSUFDQUMsSUFBSSxDQUFDO0lBQ1Q7SUFFQU4sR0FBRyx5RkFBeUY7UUFDMUZDLE9BQ0VNLElBQUFBLG1EQUFnQyxFQUFDO1lBQy9CQyxhQUFhO1lBQ2JDLGdCQUFnQjtRQUNsQixJQUNBQyxhQUFhLENBQUM7WUFDZEMsYUFBYTtZQUNiSCxhQUFhO1FBQ2Y7SUFDRjtJQUVBUixHQUFHLDBFQUEwRTtRQUMzRUMsT0FDRU0sSUFBQUEsbURBQWdDLEVBQUM7WUFDL0JDLGFBQWE7WUFDYkMsZ0JBQWdCO1FBQ2xCLElBQ0FHLE9BQU8sQ0FBQ0Msc0RBQW1DO0lBQy9DO0FBQ0YifQ==

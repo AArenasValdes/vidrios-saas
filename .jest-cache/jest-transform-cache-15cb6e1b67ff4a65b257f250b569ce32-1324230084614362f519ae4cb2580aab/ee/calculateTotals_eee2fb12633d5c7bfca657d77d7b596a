@@ -1,0 +1,27 @@
+dca259bb5a9324e2b2e9b916dc0004c6
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "calculateTotals", {
+    enumerable: true,
+    get: function() {
+        return calculateTotals;
+    }
+});
+const calculateTotals = ({ subtotal, ivaRate })=>{
+    if (subtotal < 0) {
+        throw new Error("El subtotal no puede ser negativo");
+    }
+    if (ivaRate < 0) {
+        throw new Error("La tasa de IVA no puede ser negativa");
+    }
+    const iva = subtotal * ivaRate;
+    return {
+        subtotal,
+        iva,
+        total: subtotal + iva
+    };
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxzZXJ2aWNlc1xcY290aXphZG9yLWVuZ2luZVxcY2FsY3VsYXRlVG90YWxzLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCB0eXBlIFRvdGFsc0lucHV0ID0ge1xuICBzdWJ0b3RhbDogbnVtYmVyO1xuICBpdmFSYXRlOiBudW1iZXI7XG59O1xuXG5leHBvcnQgY29uc3QgY2FsY3VsYXRlVG90YWxzID0gKHsgc3VidG90YWwsIGl2YVJhdGUgfTogVG90YWxzSW5wdXQpID0+IHtcbiAgaWYgKHN1YnRvdGFsIDwgMCkge1xuICAgIHRocm93IG5ldyBFcnJvcihcIkVsIHN1YnRvdGFsIG5vIHB1ZWRlIHNlciBuZWdhdGl2b1wiKTtcbiAgfVxuXG4gIGlmIChpdmFSYXRlIDwgMCkge1xuICAgIHRocm93IG5ldyBFcnJvcihcIkxhIHRhc2EgZGUgSVZBIG5vIHB1ZWRlIHNlciBuZWdhdGl2YVwiKTtcbiAgfVxuXG4gIGNvbnN0IGl2YSA9IHN1YnRvdGFsICogaXZhUmF0ZTtcblxuICByZXR1cm4ge1xuICAgIHN1YnRvdGFsLFxuICAgIGl2YSxcbiAgICB0b3RhbDogc3VidG90YWwgKyBpdmEsXG4gIH07XG59O1xyXG4iXSwibmFtZXMiOlsiY2FsY3VsYXRlVG90YWxzIiwic3VidG90YWwiLCJpdmFSYXRlIiwiRXJyb3IiLCJpdmEiLCJ0b3RhbCJdLCJtYXBwaW5ncyI6Ijs7OzsrQkFLYUE7OztlQUFBQTs7O0FBQU4sTUFBTUEsa0JBQWtCLENBQUMsRUFBRUMsUUFBUSxFQUFFQyxPQUFPLEVBQWU7SUFDaEUsSUFBSUQsV0FBVyxHQUFHO1FBQ2hCLE1BQU0sSUFBSUUsTUFBTTtJQUNsQjtJQUVBLElBQUlELFVBQVUsR0FBRztRQUNmLE1BQU0sSUFBSUMsTUFBTTtJQUNsQjtJQUVBLE1BQU1DLE1BQU1ILFdBQVdDO0lBRXZCLE9BQU87UUFDTEQ7UUFDQUc7UUFDQUMsT0FBT0osV0FBV0c7SUFDcEI7QUFDRiJ9

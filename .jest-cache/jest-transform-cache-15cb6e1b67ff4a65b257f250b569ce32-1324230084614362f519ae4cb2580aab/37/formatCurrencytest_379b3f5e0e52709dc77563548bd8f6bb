@@ -1,0 +1,19 @@
+39c684efb6d46556858edcd9aabc9950
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _formatCurrency = require("../formatCurrency");
+describe("formatCurrency", ()=>{
+    it("debe formatear pesos chilenos por defecto", ()=>{
+        expect((0, _formatCurrency.formatCurrency)(125000)).toContain("$");
+    });
+    it("debe respetar locale y moneda configurados", ()=>{
+        expect((0, _formatCurrency.formatCurrency)(1000, "en-US", "USD")).toBe("$1,000.00");
+    });
+    it("debe manejar valores cero", ()=>{
+        expect((0, _formatCurrency.formatCurrency)(0)).toContain("0");
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFxmb3JtYXRDdXJyZW5jeS50ZXN0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IGZvcm1hdEN1cnJlbmN5IH0gZnJvbSBcIi4uL2Zvcm1hdEN1cnJlbmN5XCI7XG5cbmRlc2NyaWJlKFwiZm9ybWF0Q3VycmVuY3lcIiwgKCkgPT4ge1xuICBpdChcImRlYmUgZm9ybWF0ZWFyIHBlc29zIGNoaWxlbm9zIHBvciBkZWZlY3RvXCIsICgpID0+IHtcbiAgICBleHBlY3QoZm9ybWF0Q3VycmVuY3koMTI1MDAwKSkudG9Db250YWluKFwiJFwiKTtcbiAgfSk7XG5cbiAgaXQoXCJkZWJlIHJlc3BldGFyIGxvY2FsZSB5IG1vbmVkYSBjb25maWd1cmFkb3NcIiwgKCkgPT4ge1xuICAgIGV4cGVjdChmb3JtYXRDdXJyZW5jeSgxMDAwLCBcImVuLVVTXCIsIFwiVVNEXCIpKS50b0JlKFwiJDEsMDAwLjAwXCIpO1xuICB9KTtcblxuICBpdChcImRlYmUgbWFuZWphciB2YWxvcmVzIGNlcm9cIiwgKCkgPT4ge1xuICAgIGV4cGVjdChmb3JtYXRDdXJyZW5jeSgwKSkudG9Db250YWluKFwiMFwiKTtcbiAgfSk7XG59KTtcbiJdLCJuYW1lcyI6WyJkZXNjcmliZSIsIml0IiwiZXhwZWN0IiwiZm9ybWF0Q3VycmVuY3kiLCJ0b0NvbnRhaW4iLCJ0b0JlIl0sIm1hcHBpbmdzIjoiOzs7O2dDQUErQjtBQUUvQkEsU0FBUyxrQkFBa0I7SUFDekJDLEdBQUcsNkNBQTZDO1FBQzlDQyxPQUFPQyxJQUFBQSw4QkFBYyxFQUFDLFNBQVNDLFNBQVMsQ0FBQztJQUMzQztJQUVBSCxHQUFHLDhDQUE4QztRQUMvQ0MsT0FBT0MsSUFBQUEsOEJBQWMsRUFBQyxNQUFNLFNBQVMsUUFBUUUsSUFBSSxDQUFDO0lBQ3BEO0lBRUFKLEdBQUcsNkJBQTZCO1FBQzlCQyxPQUFPQyxJQUFBQSw4QkFBYyxFQUFDLElBQUlDLFNBQVMsQ0FBQztJQUN0QztBQUNGIn0=

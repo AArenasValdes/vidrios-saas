@@ -1,0 +1,22 @@
+2b14cdd8614f5f1c37a327abf651f2b2
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "calculateItemPrice", {
+    enumerable: true,
+    get: function() {
+        return calculateItemPrice;
+    }
+});
+const calculateItemPrice = (unitPrice, quantity)=>{
+    if (unitPrice < 0) {
+        throw new Error("El precio unitario no puede ser negativo");
+    }
+    if (quantity < 0) {
+        throw new Error("La cantidad no puede ser negativa");
+    }
+    return unitPrice * quantity;
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFxzZXJ2aWNlc1xcY290aXphZG9yLWVuZ2luZVxcY2FsY3VsYXRlSXRlbVByaWNlLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImV4cG9ydCBjb25zdCBjYWxjdWxhdGVJdGVtUHJpY2UgPSAodW5pdFByaWNlOiBudW1iZXIsIHF1YW50aXR5OiBudW1iZXIpID0+IHtcbiAgaWYgKHVuaXRQcmljZSA8IDApIHtcbiAgICB0aHJvdyBuZXcgRXJyb3IoXCJFbCBwcmVjaW8gdW5pdGFyaW8gbm8gcHVlZGUgc2VyIG5lZ2F0aXZvXCIpO1xuICB9XG5cbiAgaWYgKHF1YW50aXR5IDwgMCkge1xuICAgIHRocm93IG5ldyBFcnJvcihcIkxhIGNhbnRpZGFkIG5vIHB1ZWRlIHNlciBuZWdhdGl2YVwiKTtcbiAgfVxuXG4gIHJldHVybiB1bml0UHJpY2UgKiBxdWFudGl0eTtcbn07XG4iXSwibmFtZXMiOlsiY2FsY3VsYXRlSXRlbVByaWNlIiwidW5pdFByaWNlIiwicXVhbnRpdHkiLCJFcnJvciJdLCJtYXBwaW5ncyI6Ijs7OzsrQkFBYUE7OztlQUFBQTs7O0FBQU4sTUFBTUEscUJBQXFCLENBQUNDLFdBQW1CQztJQUNwRCxJQUFJRCxZQUFZLEdBQUc7UUFDakIsTUFBTSxJQUFJRSxNQUFNO0lBQ2xCO0lBRUEsSUFBSUQsV0FBVyxHQUFHO1FBQ2hCLE1BQU0sSUFBSUMsTUFBTTtJQUNsQjtJQUVBLE9BQU9GLFlBQVlDO0FBQ3JCIn0=

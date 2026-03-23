@@ -1,0 +1,1 @@
+{"version":3,"sources":["C:\\Users\\aless\\vidrios-saas\\src\\constants\\impuestos.ts"],"sourcesContent":["export const impuestos = {\n  iva: 0.19,\n} as const;\r\n"],"names":["impuestos","iva"],"mappings":";;;;+BAAaA;;;eAAAA;;;AAAN,MAAMA,YAAY;IACvBC,KAAK;AACP"}

@@ -1,0 +1,52 @@
+894b97782d6083a571101f189a390819
+/** @jest-environment jsdom */ "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _cotizacionpdf = require("../cotizacion-pdf");
+const record = {
+    id: "cot-1",
+    codigo: "COT-123456",
+    clientId: 1,
+    projectId: 1,
+    clienteNombre: "Roberto Fuentes",
+    clienteTelefono: "+56 9 8234 5678",
+    obra: "Casa Los Pescadores, La Serena",
+    direccion: "Los Pescadores 221",
+    validez: "15 dias",
+    descuentoPct: 0,
+    observaciones: "",
+    estado: "creada",
+    createdAt: "2026-03-14T10:00:00.000Z",
+    updatedAt: "2026-03-14T10:00:00.000Z",
+    items: [],
+    subtotal: 100000,
+    descuentoValor: 0,
+    neto: 100000,
+    iva: 19000,
+    flete: 0,
+    total: 119000
+};
+describe("cotizacion-pdf utils", ()=>{
+    it("debe construir un nombre de archivo limpio para la cotizacion", ()=>{
+        expect((0, _cotizacionpdf.buildCotizacionPdfFileName)(record)).toBe("cot-123456-casa-los-pescadores-la-serena.pdf");
+    });
+    it("debe detectar cuando el navegador no puede compartir archivos", ()=>{
+        Object.defineProperty(window.navigator, "share", {
+            value: undefined,
+            configurable: true
+        });
+        Object.defineProperty(window.navigator, "canShare", {
+            value: undefined,
+            configurable: true
+        });
+        const file = new File([
+            "test"
+        ], "cotizacion.pdf", {
+            type: "application/pdf"
+        });
+        expect((0, _cotizacionpdf.canSharePdfFile)(file)).toBe(false);
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFxjb3RpemFjaW9uLXBkZi50ZXN0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbIi8qKiBAamVzdC1lbnZpcm9ubWVudCBqc2RvbSAqL1xuXG5pbXBvcnQge1xuICBidWlsZENvdGl6YWNpb25QZGZGaWxlTmFtZSxcbiAgY2FuU2hhcmVQZGZGaWxlLFxufSBmcm9tIFwiLi4vY290aXphY2lvbi1wZGZcIjtcblxuY29uc3QgcmVjb3JkID0ge1xuICBpZDogXCJjb3QtMVwiLFxuICBjb2RpZ286IFwiQ09ULTEyMzQ1NlwiLFxuICBjbGllbnRJZDogMSxcbiAgcHJvamVjdElkOiAxLFxuICBjbGllbnRlTm9tYnJlOiBcIlJvYmVydG8gRnVlbnRlc1wiLFxuICBjbGllbnRlVGVsZWZvbm86IFwiKzU2IDkgODIzNCA1Njc4XCIsXG4gIG9icmE6IFwiQ2FzYSBMb3MgUGVzY2Fkb3JlcywgTGEgU2VyZW5hXCIsXG4gIGRpcmVjY2lvbjogXCJMb3MgUGVzY2Fkb3JlcyAyMjFcIixcbiAgdmFsaWRlejogXCIxNSBkaWFzXCIsXG4gIGRlc2N1ZW50b1BjdDogMCxcbiAgb2JzZXJ2YWNpb25lczogXCJcIixcbiAgZXN0YWRvOiBcImNyZWFkYVwiIGFzIGNvbnN0LFxuICBjcmVhdGVkQXQ6IFwiMjAyNi0wMy0xNFQxMDowMDowMC4wMDBaXCIsXG4gIHVwZGF0ZWRBdDogXCIyMDI2LTAzLTE0VDEwOjAwOjAwLjAwMFpcIixcbiAgaXRlbXM6IFtdLFxuICBzdWJ0b3RhbDogMTAwMDAwLFxuICBkZXNjdWVudG9WYWxvcjogMCxcbiAgbmV0bzogMTAwMDAwLFxuICBpdmE6IDE5MDAwLFxuICBmbGV0ZTogMCxcbiAgdG90YWw6IDExOTAwMCxcbn07XG5cbmRlc2NyaWJlKFwiY290aXphY2lvbi1wZGYgdXRpbHNcIiwgKCkgPT4ge1xuICBpdChcImRlYmUgY29uc3RydWlyIHVuIG5vbWJyZSBkZSBhcmNoaXZvIGxpbXBpbyBwYXJhIGxhIGNvdGl6YWNpb25cIiwgKCkgPT4ge1xuICAgIGV4cGVjdChidWlsZENvdGl6YWNpb25QZGZGaWxlTmFtZShyZWNvcmQpKS50b0JlKFxuICAgICAgXCJjb3QtMTIzNDU2LWNhc2EtbG9zLXBlc2NhZG9yZXMtbGEtc2VyZW5hLnBkZlwiXG4gICAgKTtcbiAgfSk7XG5cbiAgaXQoXCJkZWJlIGRldGVjdGFyIGN1YW5kbyBlbCBuYXZlZ2Fkb3Igbm8gcHVlZGUgY29tcGFydGlyIGFyY2hpdm9zXCIsICgpID0+IHtcbiAgICBPYmplY3QuZGVmaW5lUHJvcGVydHkod2luZG93Lm5hdmlnYXRvciwgXCJzaGFyZVwiLCB7XG4gICAgICB2YWx1ZTogdW5kZWZpbmVkLFxuICAgICAgY29uZmlndXJhYmxlOiB0cnVlLFxuICAgIH0pO1xuICAgIE9iamVjdC5kZWZpbmVQcm9wZXJ0eSh3aW5kb3cubmF2aWdhdG9yLCBcImNhblNoYXJlXCIsIHtcbiAgICAgIHZhbHVlOiB1bmRlZmluZWQsXG4gICAgICBjb25maWd1cmFibGU6IHRydWUsXG4gICAgfSk7XG5cbiAgICBjb25zdCBmaWxlID0gbmV3IEZpbGUoW1widGVzdFwiXSwgXCJjb3RpemFjaW9uLnBkZlwiLCB7IHR5cGU6IFwiYXBwbGljYXRpb24vcGRmXCIgfSk7XG5cbiAgICBleHBlY3QoY2FuU2hhcmVQZGZGaWxlKGZpbGUpKS50b0JlKGZhbHNlKTtcbiAgfSk7XG59KTtcbiJdLCJuYW1lcyI6WyJyZWNvcmQiLCJpZCIsImNvZGlnbyIsImNsaWVudElkIiwicHJvamVjdElkIiwiY2xpZW50ZU5vbWJyZSIsImNsaWVudGVUZWxlZm9ubyIsIm9icmEiLCJkaXJlY2Npb24iLCJ2YWxpZGV6IiwiZGVzY3VlbnRvUGN0Iiwib2JzZXJ2YWNpb25lcyIsImVzdGFkbyIsImNyZWF0ZWRBdCIsInVwZGF0ZWRBdCIsIml0ZW1zIiwic3VidG90YWwiLCJkZXNjdWVudG9WYWxvciIsIm5ldG8iLCJpdmEiLCJmbGV0ZSIsInRvdGFsIiwiZGVzY3JpYmUiLCJpdCIsImV4cGVjdCIsImJ1aWxkQ290aXphY2lvblBkZkZpbGVOYW1lIiwidG9CZSIsIk9iamVjdCIsImRlZmluZVByb3BlcnR5Iiwid2luZG93IiwibmF2aWdhdG9yIiwidmFsdWUiLCJ1bmRlZmluZWQiLCJjb25maWd1cmFibGUiLCJmaWxlIiwiRmlsZSIsInR5cGUiLCJjYW5TaGFyZVBkZkZpbGUiXSwibWFwcGluZ3MiOiJBQUFBLDRCQUE0Qjs7OzsrQkFLckI7QUFFUCxNQUFNQSxTQUFTO0lBQ2JDLElBQUk7SUFDSkMsUUFBUTtJQUNSQyxVQUFVO0lBQ1ZDLFdBQVc7SUFDWEMsZUFBZTtJQUNmQyxpQkFBaUI7SUFDakJDLE1BQU07SUFDTkMsV0FBVztJQUNYQyxTQUFTO0lBQ1RDLGNBQWM7SUFDZEMsZUFBZTtJQUNmQyxRQUFRO0lBQ1JDLFdBQVc7SUFDWEMsV0FBVztJQUNYQyxPQUFPLEVBQUU7SUFDVEMsVUFBVTtJQUNWQyxnQkFBZ0I7SUFDaEJDLE1BQU07SUFDTkMsS0FBSztJQUNMQyxPQUFPO0lBQ1BDLE9BQU87QUFDVDtBQUVBQyxTQUFTLHdCQUF3QjtJQUMvQkMsR0FBRyxpRUFBaUU7UUFDbEVDLE9BQU9DLElBQUFBLHlDQUEwQixFQUFDekIsU0FBUzBCLElBQUksQ0FDN0M7SUFFSjtJQUVBSCxHQUFHLGlFQUFpRTtRQUNsRUksT0FBT0MsY0FBYyxDQUFDQyxPQUFPQyxTQUFTLEVBQUUsU0FBUztZQUMvQ0MsT0FBT0M7WUFDUEMsY0FBYztRQUNoQjtRQUNBTixPQUFPQyxjQUFjLENBQUNDLE9BQU9DLFNBQVMsRUFBRSxZQUFZO1lBQ2xEQyxPQUFPQztZQUNQQyxjQUFjO1FBQ2hCO1FBRUEsTUFBTUMsT0FBTyxJQUFJQyxLQUFLO1lBQUM7U0FBTyxFQUFFLGtCQUFrQjtZQUFFQyxNQUFNO1FBQWtCO1FBRTVFWixPQUFPYSxJQUFBQSw4QkFBZSxFQUFDSCxPQUFPUixJQUFJLENBQUM7SUFDckM7QUFDRiJ9

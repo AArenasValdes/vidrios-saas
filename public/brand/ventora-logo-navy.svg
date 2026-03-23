@@ -1,0 +1,25 @@
+<svg width="430" height="96" viewBox="0 0 430 96" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .lt {
+        font-family: "Inter", Arial, sans-serif;
+        font-size: 72px;
+        font-style: normal;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        fill: #243b6b;
+      }
+    </style>
+  </defs>
+
+  <text class="lt" x="6" y="72" textLength="210" lengthAdjust="spacingAndGlyphs">VENT</text>
+
+  <g aria-label="Ventora cube" transform="translate(226, 18)">
+    <polygon points="27,0 0,16 27,32 54,16" fill="#bcc8da" />
+    <polygon points="0,16 27,32 27,58 0,42" fill="#60769b" />
+    <polygon points="27,32 54,16 54,42 27,58" fill="#31486f" />
+    <path d="M27 32L0 16M27 32L54 16M27 32V58" stroke="#eef3f8" stroke-width="2" stroke-linecap="round" />
+  </g>
+
+  <text class="lt" x="283" y="72" textLength="108" lengthAdjust="spacingAndGlyphs">RA</text>
+</svg>
