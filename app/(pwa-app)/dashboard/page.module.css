@@ -395,6 +395,10 @@
 }
 
 @media (max-width: 720px) {
+  .mobileHiddenSection {
+    display: none;
+  }
+
   .root {
     gap: 18px;
   }

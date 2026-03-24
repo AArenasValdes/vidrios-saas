@@ -1,0 +1,78 @@
+f099a96995b533ff06a4e1ec83cca379
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function _export(target, all) {
+    for(var name in all)Object.defineProperty(target, name, {
+        enumerable: true,
+        get: Object.getOwnPropertyDescriptor(all, name).get
+    });
+}
+_export(exports, {
+    get DEFAULT_COTIZACION_SHARE_EXPERIENCE () {
+        return DEFAULT_COTIZACION_SHARE_EXPERIENCE;
+    },
+    get detectLikelyMobileDevice () {
+        return detectLikelyMobileDevice;
+    },
+    get getCotizacionShareExperience () {
+        return getCotizacionShareExperience;
+    },
+    get resolveCotizacionShareExperience () {
+        return resolveCotizacionShareExperience;
+    }
+});
+const _cotizacionpdf = require("./cotizacion-pdf");
+const DEFAULT_COTIZACION_SHARE_EXPERIENCE = {
+    canSharePdf: false,
+    isLikelyMobile: false,
+    actionLabel: "Compartir por WhatsApp",
+    helperText: "Abrimos WhatsApp con el mensaje listo. En Android, si tu telefono lo permite, el visor tambien puede compartir el PDF adjunto."
+};
+function detectLikelyMobileDevice({ userAgent, maxTouchPoints, screenWidth }) {
+    const mobileUa = /android|iphone|ipad|ipod|mobile|windows phone/i.test(userAgent);
+    if (mobileUa) {
+        return true;
+    }
+    return maxTouchPoints > 1 && screenWidth <= 1024;
+}
+function resolveCotizacionShareExperience(input) {
+    if (input.canSharePdf) {
+        return {
+            canSharePdf: true,
+            isLikelyMobile: input.isLikelyMobile,
+            actionLabel: "Enviar PDF por WhatsApp",
+            helperText: "En Android intentamos adjuntar el PDF directo en WhatsApp. Si el sistema no lo permite, abrimos el mensaje de respaldo con el link para responder."
+        };
+    }
+    if (input.isLikelyMobile) {
+        return {
+            canSharePdf: false,
+            isLikelyMobile: true,
+            actionLabel: "Compartir por WhatsApp",
+            helperText: "Tu telefono no permite adjuntar el PDF directo desde esta vista. Dejamos el mensaje listo en WhatsApp como respaldo."
+        };
+    }
+    return DEFAULT_COTIZACION_SHARE_EXPERIENCE;
+}
+function getCotizacionShareExperience() {
+    if (typeof window === "undefined" || typeof navigator === "undefined" || typeof File === "undefined") {
+        return DEFAULT_COTIZACION_SHARE_EXPERIENCE;
+    }
+    const file = new File([
+        "share-check"
+    ], "cotizacion.pdf", {
+        type: "application/pdf"
+    });
+    return resolveCotizacionShareExperience({
+        canSharePdf: (0, _cotizacionpdf.canSharePdfFile)(file),
+        isLikelyMobile: detectLikelyMobileDevice({
+            userAgent: navigator.userAgent,
+            maxTouchPoints: navigator.maxTouchPoints || 0,
+            screenWidth: window.innerWidth
+        })
+    });
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcc2hhcmUtY2FwYWJpbGl0aWVzLnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IGNhblNoYXJlUGRmRmlsZSB9IGZyb20gXCJAL3V0aWxzL2NvdGl6YWNpb24tcGRmXCI7XG5cbnR5cGUgRGV2aWNlSGludHMgPSB7XG4gIHVzZXJBZ2VudDogc3RyaW5nO1xuICBtYXhUb3VjaFBvaW50czogbnVtYmVyO1xuICBzY3JlZW5XaWR0aDogbnVtYmVyO1xufTtcblxuZXhwb3J0IHR5cGUgQ290aXphY2lvblNoYXJlRXhwZXJpZW5jZSA9IHtcbiAgY2FuU2hhcmVQZGY6IGJvb2xlYW47XG4gIGlzTGlrZWx5TW9iaWxlOiBib29sZWFuO1xuICBhY3Rpb25MYWJlbDogc3RyaW5nO1xuICBoZWxwZXJUZXh0OiBzdHJpbmc7XG59O1xuXG5leHBvcnQgY29uc3QgREVGQVVMVF9DT1RJWkFDSU9OX1NIQVJFX0VYUEVSSUVOQ0U6IENvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2UgPSB7XG4gIGNhblNoYXJlUGRmOiBmYWxzZSxcbiAgaXNMaWtlbHlNb2JpbGU6IGZhbHNlLFxuICBhY3Rpb25MYWJlbDogXCJDb21wYXJ0aXIgcG9yIFdoYXRzQXBwXCIsXG4gIGhlbHBlclRleHQ6XG4gICAgXCJBYnJpbW9zIFdoYXRzQXBwIGNvbiBlbCBtZW5zYWplIGxpc3RvLiBFbiBBbmRyb2lkLCBzaSB0dSB0ZWxlZm9ubyBsbyBwZXJtaXRlLCBlbCB2aXNvciB0YW1iaWVuIHB1ZWRlIGNvbXBhcnRpciBlbCBQREYgYWRqdW50by5cIixcbn07XG5cbmV4cG9ydCBmdW5jdGlvbiBkZXRlY3RMaWtlbHlNb2JpbGVEZXZpY2Uoe1xuICB1c2VyQWdlbnQsXG4gIG1heFRvdWNoUG9pbnRzLFxuICBzY3JlZW5XaWR0aCxcbn06IERldmljZUhpbnRzKSB7XG4gIGNvbnN0IG1vYmlsZVVhID1cbiAgICAvYW5kcm9pZHxpcGhvbmV8aXBhZHxpcG9kfG1vYmlsZXx3aW5kb3dzIHBob25lL2kudGVzdCh1c2VyQWdlbnQpO1xuXG4gIGlmIChtb2JpbGVVYSkge1xuICAgIHJldHVybiB0cnVlO1xuICB9XG5cbiAgcmV0dXJuIG1heFRvdWNoUG9pbnRzID4gMSAmJiBzY3JlZW5XaWR0aCA8PSAxMDI0O1xufVxuXG5leHBvcnQgZnVuY3Rpb24gcmVzb2x2ZUNvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2UoaW5wdXQ6IHtcbiAgY2FuU2hhcmVQZGY6IGJvb2xlYW47XG4gIGlzTGlrZWx5TW9iaWxlOiBib29sZWFuO1xufSk6IENvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2Uge1xuICBpZiAoaW5wdXQuY2FuU2hhcmVQZGYpIHtcbiAgICByZXR1cm4ge1xuICAgICAgY2FuU2hhcmVQZGY6IHRydWUsXG4gICAgICBpc0xpa2VseU1vYmlsZTogaW5wdXQuaXNMaWtlbHlNb2JpbGUsXG4gICAgICBhY3Rpb25MYWJlbDogXCJFbnZpYXIgUERGIHBvciBXaGF0c0FwcFwiLFxuICAgICAgaGVscGVyVGV4dDpcbiAgICAgICAgXCJFbiBBbmRyb2lkIGludGVudGFtb3MgYWRqdW50YXIgZWwgUERGIGRpcmVjdG8gZW4gV2hhdHNBcHAuIFNpIGVsIHNpc3RlbWEgbm8gbG8gcGVybWl0ZSwgYWJyaW1vcyBlbCBtZW5zYWplIGRlIHJlc3BhbGRvIGNvbiBlbCBsaW5rIHBhcmEgcmVzcG9uZGVyLlwiLFxuICAgIH07XG4gIH1cblxuICBpZiAoaW5wdXQuaXNMaWtlbHlNb2JpbGUpIHtcbiAgICByZXR1cm4ge1xuICAgICAgY2FuU2hhcmVQZGY6IGZhbHNlLFxuICAgICAgaXNMaWtlbHlNb2JpbGU6IHRydWUsXG4gICAgICBhY3Rpb25MYWJlbDogXCJDb21wYXJ0aXIgcG9yIFdoYXRzQXBwXCIsXG4gICAgICBoZWxwZXJUZXh0OlxuICAgICAgICBcIlR1IHRlbGVmb25vIG5vIHBlcm1pdGUgYWRqdW50YXIgZWwgUERGIGRpcmVjdG8gZGVzZGUgZXN0YSB2aXN0YS4gRGVqYW1vcyBlbCBtZW5zYWplIGxpc3RvIGVuIFdoYXRzQXBwIGNvbW8gcmVzcGFsZG8uXCIsXG4gICAgfTtcbiAgfVxuXG4gIHJldHVybiBERUZBVUxUX0NPVElaQUNJT05fU0hBUkVfRVhQRVJJRU5DRTtcbn1cblxuZXhwb3J0IGZ1bmN0aW9uIGdldENvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2UoKTogQ290aXphY2lvblNoYXJlRXhwZXJpZW5jZSB7XG4gIGlmIChcbiAgICB0eXBlb2Ygd2luZG93ID09PSBcInVuZGVmaW5lZFwiIHx8XG4gICAgdHlwZW9mIG5hdmlnYXRvciA9PT0gXCJ1bmRlZmluZWRcIiB8fFxuICAgIHR5cGVvZiBGaWxlID09PSBcInVuZGVmaW5lZFwiXG4gICkge1xuICAgIHJldHVybiBERUZBVUxUX0NPVElaQUNJT05fU0hBUkVfRVhQRVJJRU5DRTtcbiAgfVxuXG4gIGNvbnN0IGZpbGUgPSBuZXcgRmlsZShbXCJzaGFyZS1jaGVja1wiXSwgXCJjb3RpemFjaW9uLnBkZlwiLCB7XG4gICAgdHlwZTogXCJhcHBsaWNhdGlvbi9wZGZcIixcbiAgfSk7XG5cbiAgcmV0dXJuIHJlc29sdmVDb3RpemFjaW9uU2hhcmVFeHBlcmllbmNlKHtcbiAgICBjYW5TaGFyZVBkZjogY2FuU2hhcmVQZGZGaWxlKGZpbGUpLFxuICAgIGlzTGlrZWx5TW9iaWxlOiBkZXRlY3RMaWtlbHlNb2JpbGVEZXZpY2Uoe1xuICAgICAgdXNlckFnZW50OiBuYXZpZ2F0b3IudXNlckFnZW50LFxuICAgICAgbWF4VG91Y2hQb2ludHM6IG5hdmlnYXRvci5tYXhUb3VjaFBvaW50cyB8fCAwLFxuICAgICAgc2NyZWVuV2lkdGg6IHdpbmRvdy5pbm5lcldpZHRoLFxuICAgIH0pLFxuICB9KTtcbn1cbiJdLCJuYW1lcyI6WyJERUZBVUxUX0NPVElaQUNJT05fU0hBUkVfRVhQRVJJRU5DRSIsImRldGVjdExpa2VseU1vYmlsZURldmljZSIsImdldENvdGl6YWNpb25TaGFyZUV4cGVyaWVuY2UiLCJyZXNvbHZlQ290aXphY2lvblNoYXJlRXhwZXJpZW5jZSIsImNhblNoYXJlUGRmIiwiaXNMaWtlbHlNb2JpbGUiLCJhY3Rpb25MYWJlbCIsImhlbHBlclRleHQiLCJ1c2VyQWdlbnQiLCJtYXhUb3VjaFBvaW50cyIsInNjcmVlbldpZHRoIiwibW9iaWxlVWEiLCJ0ZXN0IiwiaW5wdXQiLCJ3aW5kb3ciLCJuYXZpZ2F0b3IiLCJGaWxlIiwiZmlsZSIsInR5cGUiLCJjYW5TaGFyZVBkZkZpbGUiLCJpbm5lcldpZHRoIl0sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7OztRQWVhQTtlQUFBQTs7UUFRR0M7ZUFBQUE7O1FBMENBQztlQUFBQTs7UUEzQkFDO2VBQUFBOzs7K0JBdENnQjtBQWV6QixNQUFNSCxzQ0FBaUU7SUFDNUVJLGFBQWE7SUFDYkMsZ0JBQWdCO0lBQ2hCQyxhQUFhO0lBQ2JDLFlBQ0U7QUFDSjtBQUVPLFNBQVNOLHlCQUF5QixFQUN2Q08sU0FBUyxFQUNUQyxjQUFjLEVBQ2RDLFdBQVcsRUFDQztJQUNaLE1BQU1DLFdBQ0osaURBQWlEQyxJQUFJLENBQUNKO0lBRXhELElBQUlHLFVBQVU7UUFDWixPQUFPO0lBQ1Q7SUFFQSxPQUFPRixpQkFBaUIsS0FBS0MsZUFBZTtBQUM5QztBQUVPLFNBQVNQLGlDQUFpQ1UsS0FHaEQ7SUFDQyxJQUFJQSxNQUFNVCxXQUFXLEVBQUU7UUFDckIsT0FBTztZQUNMQSxhQUFhO1lBQ2JDLGdCQUFnQlEsTUFBTVIsY0FBYztZQUNwQ0MsYUFBYTtZQUNiQyxZQUNFO1FBQ0o7SUFDRjtJQUVBLElBQUlNLE1BQU1SLGNBQWMsRUFBRTtRQUN4QixPQUFPO1lBQ0xELGFBQWE7WUFDYkMsZ0JBQWdCO1lBQ2hCQyxhQUFhO1lBQ2JDLFlBQ0U7UUFDSjtJQUNGO0lBRUEsT0FBT1A7QUFDVDtBQUVPLFNBQVNFO0lBQ2QsSUFDRSxPQUFPWSxXQUFXLGVBQ2xCLE9BQU9DLGNBQWMsZUFDckIsT0FBT0MsU0FBUyxhQUNoQjtRQUNBLE9BQU9oQjtJQUNUO0lBRUEsTUFBTWlCLE9BQU8sSUFBSUQsS0FBSztRQUFDO0tBQWMsRUFBRSxrQkFBa0I7UUFDdkRFLE1BQU07SUFDUjtJQUVBLE9BQU9mLGlDQUFpQztRQUN0Q0MsYUFBYWUsSUFBQUEsOEJBQWUsRUFBQ0Y7UUFDN0JaLGdCQUFnQkoseUJBQXlCO1lBQ3ZDTyxXQUFXTyxVQUFVUCxTQUFTO1lBQzlCQyxnQkFBZ0JNLFVBQVVOLGNBQWMsSUFBSTtZQUM1Q0MsYUFBYUksT0FBT00sVUFBVTtRQUNoQztJQUNGO0FBQ0YifQ==

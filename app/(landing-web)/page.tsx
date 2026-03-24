@@ -2,29 +2,35 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import type { IconType } from "react-icons";
 import {
   FaArrowRight,
+  FaBars,
   FaCalculator,
   FaCheckCircle,
+  FaClock,
+  FaEnvelope,
   FaFilePdf,
-  FaHammer,
+  FaMapMarkerAlt,
+  FaPhoneAlt,
   FaPlus,
   FaRulerCombined,
+  FaTimes,
   FaWhatsapp,
 } from "react-icons/fa";
 
 import s from "./landing.module.css";
+import { FooterSection } from "@/components/footer-section";
 import { ProblemSection } from "@/components/landing/problem-section";
-
-const CURRENT_YEAR = new Date().getFullYear();
+import { TestimonialsSection } from "@/components/testimonials-with-marquee";
 
 const navLinks = [
   { href: "#problema", label: "Problema" },
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#producto", label: "Producto" },
+  { href: "/planes", label: "Planes" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -93,10 +99,28 @@ const processVisuals = [
   },
 ];
 
-const productSignals = [
-  "Componentes por obra con codigo, medidas y tipo.",
-  "Margen visible por item para no vender a ciegas.",
-  "Estados comerciales: borrador, enviada, aprobada.",
+const productBenefits: Array<{ icon: IconType; text: string }> = [
+  {
+    icon: FaClock,
+    text: "Ahorra hasta 1 hora diaria en cotizaciones",
+  },
+  {
+    icon: FaFilePdf,
+    text: "Envia presupuestos profesionales que generan confianza",
+  },
+];
+
+const productCallouts: Array<{ icon: IconType; label: string; detail: string }> = [
+  {
+    icon: FaCalculator,
+    label: "Cotizacion y cierre",
+    detail: "Valores, margen y total ordenados en una sola vista.",
+  },
+  {
+    icon: FaWhatsapp,
+    label: "Clientes y seguimiento",
+    detail: "Comparte y revisa el avance desde el mismo sistema.",
+  },
 ];
 
 const showcaseCards = [
@@ -116,16 +140,34 @@ const showcaseCards = [
   },
 ];
 
-const stats = [
-  { value: "+50", label: "cotizaciones creadas" },
-  { value: "3 pasos", label: "desde la obra al PDF" },
-  { value: "Chile", label: "hecho para instaladores del rubro" },
-];
-
-const advantagePoints = [
-  "No necesitas Excel para presentar algo serio.",
-  "No necesitas saber formulas para calcular bien.",
-  "No necesitas explicar tu trabajo con una interfaz generica.",
+const landingTestimonials = [
+  {
+    author: {
+      name: "Carlos Mella",
+      handle: "San Marco Aluminios y PVC · La Serena",
+      avatar: "/brand/logosanmarco.jpg",
+    },
+    text:
+      "Antes mandabamos valores por WhatsApp y despues cada cliente entendia algo distinto. Ahora la cotizacion sale clara, con PDF serio, y nos responden mucho mas rapido.",
+  },
+  {
+    author: {
+      name: "Fernanda Araya",
+      handle: "Andina Aluminios · Antofagasta",
+      avatar: "/brand/screen2.png",
+    },
+    text:
+      "Lo mejor es que en terreno ya podemos cerrar una propuesta bien presentada. No volvemos a la oficina a ordenar notas ni a rehacer precios en Excel.",
+  },
+  {
+    author: {
+      name: "Jorge Bustos",
+      handle: "Litoral Glass · Santiago",
+      avatar: "/brand/screen.png",
+    },
+    text:
+      "Se siente hecho para el rubro. Me ayuda a cotizar rapido, a no perder seguimiento y a enviar algo que se ve mucho mas profesional que antes.",
+  },
 ];
 
 const faqs = [
@@ -176,11 +218,73 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [contactFeedback, setContactFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, "change", (value) => {
     setIsScrolled(value > 18);
   });
+
+  async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (isSubmittingContact) {
+      return;
+    }
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    setIsSubmittingContact(true);
+    setContactFeedback(null);
+
+    try {
+      const response = await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: String(formData.get("nombre") ?? ""),
+          empresa: String(formData.get("empresa") ?? ""),
+          correo: String(formData.get("correo") ?? ""),
+          telefono: String(formData.get("telefono") ?? ""),
+          ayuda: String(formData.get("ayuda") ?? ""),
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ??
+            "No pudimos enviar tu solicitud. Intenta nuevamente."
+        );
+      }
+
+      form.reset();
+      setContactFeedback({
+        kind: "success",
+        message:
+          "Solicitud enviada con exito. Te contactaremos a la brevedad.",
+      });
+    } catch (error) {
+      setContactFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No pudimos enviar tu solicitud. Intenta nuevamente.",
+      });
+    } finally {
+      setIsSubmittingContact(false);
+    }
+  }
 
   return (
     <main className={s.page}>
@@ -208,7 +312,7 @@ export default function LandingPage() {
             <ul className={s.navLinks}>
               {navLinks.map((link) => (
                 <li key={link.href}>
-                  <a href={link.href}>{link.label}</a>
+                  <Link href={link.href}>{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -229,7 +333,7 @@ export default function LandingPage() {
               aria-expanded={menuOpen}
               aria-label="Abrir menu"
             >
-              {menuOpen ? "X" : "+"}
+              {menuOpen ? <FaTimes aria-hidden /> : <FaBars aria-hidden />}
             </button>
           </div>
         </div>
@@ -245,9 +349,9 @@ export default function LandingPage() {
             transition={{ duration: 0.22, ease: easeOut }}
           >
             {navLinks.map((link) => (
-              <a key={link.href} href={link.href} onClick={() => setMenuOpen(false)}>
+              <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}>
                 {link.label}
-              </a>
+              </Link>
             ))}
             <Link href="/planes" onClick={() => setMenuOpen(false)} className={s.mobilePrimary}>
               Probar demo
@@ -507,31 +611,38 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.productLayout}>
             <div className={s.productCopy}>
-              <div className={s.sectionTagLight}>Producto real</div>
-              <h2 className={s.sectionTitleDark}>No parece una demo. Parece un sistema que ya esta trabajando.</h2>
+              <div className={s.sectionTagLight}>Beneficios reales</div>
+              <h2 className={s.sectionTitleDark}>Ventora ordena tu trabajo comercial sin sumar pasos extra.</h2>
               <p className={s.sectionTextDark}>
-                Componentes reales, codigos, precios, margen, estados y salida comercial. Todo habla el lenguaje de la
-                obra y del taller.
+                Cotiza, envia y sigue cada presupuesto sin volver a planillas sueltas.
               </p>
 
-              <ul className={s.signalList}>
-                {productSignals.map((signal) => (
-                  <li key={signal}>
-                    <FaCheckCircle aria-hidden />
-                    <span>{signal}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className={s.benefitGrid}>
+                {productBenefits.map((benefit) => {
+                  const Icon = benefit.icon;
+
+                  return (
+                    <article key={benefit.text} className={s.benefitCard}>
+                      <div className={s.benefitIcon}>
+                        <Icon aria-hidden />
+                      </div>
+                      <p>{benefit.text}</p>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
 
             <div className={s.productVisual}>
               <div className={s.productBoard}>
                 <div className={s.productBoardHeader}>
                   <div>
-                    <span className={s.smallTagDark}>Capturas reales del producto</span>
-                    <h3>Se ve como una herramienta real porque ya muestra trabajo real.</h3>
+                    <span className={s.smallTagDark}>Vista real del sistema</span>
+                    <h3>Todo el trabajo comercial en una sola vista.</h3>
+                    <p className={s.productBoardText}>
+                      Cotizaciones, PDF, clientes y seguimiento dentro de un flujo simple y entendible.
+                    </p>
                   </div>
-                  <span className={s.captureCount}>4 vistas clave</span>
                 </div>
 
                 <div className={s.productMock}>
@@ -569,18 +680,17 @@ export default function LandingPage() {
                         <span />
                         <span />
                       </div>
-                        <p>01 · Carga de componentes</p>
+                        <p>Panel comercial Ventora</p>
                     </div>
 
                     <div className={s.captureImageWrap}>
                       <Image
-                        src="/brand/landing-paso2.png"
-                        alt="Paso 2 real del flujo de cotizacion con componentes y resumen"
-                        width={1284}
-                        height={918}
+                        src="/brand/landing-dashboard.png"
+                        alt="Vista real del panel comercial de Ventora"
+                        width={240675}
+                        height={135343}
                         className={s.captureImage}
                       />
-                      <div className={`${s.captureMask} ${s.captureMaskPaso2TopRight}`} aria-hidden />
                     </div>
                   </article>
 
@@ -667,6 +777,24 @@ export default function LandingPage() {
                   </div>
                 </div>
 
+                <div className={s.productCalloutGrid}>
+                  {productCallouts.map((callout) => {
+                    const Icon = callout.icon;
+
+                    return (
+                      <article key={callout.label} className={s.productCallout}>
+                        <div className={s.productCalloutIcon}>
+                          <Icon aria-hidden />
+                        </div>
+                        <div className={s.productCalloutBody}>
+                          <strong>{callout.label}</strong>
+                          <p>{callout.detail}</p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
               </div>
             </div>
           </div>
@@ -677,44 +805,25 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.advantageShell}>
             <div className={s.advantageCopy}>
-              <div className={s.sectionTag}>Hecho para el rubro</div>
-              <h2 className={s.sectionTitleLight}>No es software para programadores. Es una herramienta para vender mejor.</h2>
+              <h2 className={s.sectionTitleLight}>Con la confianza de talleres e instaladores en Chile.</h2>
               <p className={s.sectionTextLight}>
-                El tono, la interfaz y la salida comercial estan pensados para talleres, instaladores y vendedores
-                tecnicos que necesitan avanzar desde la obra.
+                Sumate a equipos que ya estan cotizando mas rapido, con mejor presentacion y mas control comercial
+                desde la obra hasta el cierre.
               </p>
 
-              <motion.div
-                className={s.advantageList}
-                variants={staggerList}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
-              >
-                {advantagePoints.map((point) => (
-                  <motion.div key={point} className={s.advantageItem} variants={revealUp}>
-                    <FaHammer aria-hidden />
-                    <span>{point}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
             </div>
 
             <div className={s.proofPanel}>
-              <motion.div
-                className={s.statsGrid}
-                variants={staggerList}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
-              >
-                {stats.map((stat) => (
-                  <motion.div key={stat.label} className={s.statCard} variants={revealUp}>
-                    <strong>{stat.value}</strong>
-                    <span>{stat.label}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
+              <TestimonialsSection
+                as="div"
+                dark
+                compact
+                showHeader={false}
+                className={s.advantageTestimonials}
+                title="Testimonios"
+                description=""
+                testimonials={landingTestimonials}
+              />
 
               <blockquote className={s.testimonial}>
                 <p>
@@ -761,50 +870,159 @@ export default function LandingPage() {
 
       <section id="contacto" className={s.ctaSection}>
         <div className={s.container}>
-          <div className={s.ctaShell}>
-            <div className={s.ctaCopy}>
-              <div className={s.sectionTag}>Cierre comercial</div>
-              <h2 className={s.sectionTitleLight}>Si tu competencia se ve improvisada, la presentacion tambien vende.</h2>
-              <p className={s.sectionTextLight}>
-                Ventora esta pensado para que la primera impresion ya se sienta mas profesional, mas clara y mas lista
-                para cerrar.
+          <div className={s.contactShell}>
+            <div className={s.contactCopy}>
+              <span className={s.contactEyebrow}>Contactanos</span>
+              <h2 className={s.contactTitle}>
+                Hablemos.
+                <br />
+                Te mostramos
+                <br />
+                como funciona.
+              </h2>
+              <p className={s.contactDescription}>
+                Dejanos tus datos y un ejecutivo te contacta en menos de 24 horas habiles. Sin spam, sin compromiso.
               </p>
+
+              <div className={s.contactList}>
+                <div className={s.contactItem}>
+                  <div className={s.contactIconWrap}>
+                    <FaEnvelope aria-hidden />
+                  </div>
+                  <div className={s.contactItemBody}>
+                    <span>Correo</span>
+                    <a href="mailto:hola@ventora.cl">hola@ventora.cl</a>
+                  </div>
+                </div>
+
+                <div className={s.contactItem}>
+                  <div className={s.contactIconWrap}>
+                    <FaPhoneAlt aria-hidden />
+                  </div>
+                  <div className={s.contactItemBody}>
+                    <span>Telefono</span>
+                    <a href="tel:+56987654321">+56 9 8765 4321</a>
+                  </div>
+                </div>
+
+                <div className={s.contactItem}>
+                  <div className={s.contactIconWrap}>
+                    <FaMapMarkerAlt aria-hidden />
+                  </div>
+                  <div className={s.contactItemBody}>
+                    <span>Ubicacion</span>
+                    <p>Santiago, Chile</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className={s.ctaActions}>
-              <Link href="/planes" className={s.primaryButton}>
-                Probar demo
-                <FaArrowRight aria-hidden />
-              </Link>
-              <a href="mailto:contacto@vidriossaas.cl" className={s.secondaryButtonDark}>
-                Hablar con ventas
-              </a>
+            <div className={s.contactFormShell}>
+              <div className={s.contactFormCard}>
+                <div className={s.contactFormHeading}>
+                  <h3>Solicita una demo o cotizacion</h3>
+                  <p>Completa el formulario y te contactamos a la brevedad</p>
+                </div>
+
+                <form className={s.contactForm} onSubmit={handleContactSubmit}>
+                  <div className={s.contactFormGrid}>
+                    <label className={s.contactField}>
+                      <span>Nombre</span>
+                      <input
+                        type="text"
+                        name="nombre"
+                        placeholder="Juan Perez"
+                        autoComplete="name"
+                        required
+                      />
+                    </label>
+                    <label className={s.contactField}>
+                      <span>Empresa</span>
+                      <input
+                        type="text"
+                        name="empresa"
+                        placeholder="Vidrios Sur"
+                        autoComplete="organization"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <label className={s.contactField}>
+                    <span>Correo electronico</span>
+                    <input
+                      type="email"
+                      name="correo"
+                      placeholder="juan@empresa.cl"
+                      autoComplete="email"
+                      inputMode="email"
+                      required
+                    />
+                  </label>
+
+                  <label className={s.contactField}>
+                    <span>Telefono</span>
+                    <input
+                      type="tel"
+                      name="telefono"
+                      placeholder="+56 9 0000 0000"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      required
+                    />
+                  </label>
+
+                  <label className={s.contactField}>
+                    <span>En que te ayudamos?</span>
+                    <select name="ayuda" defaultValue="" required>
+                      <option value="" disabled>
+                        Selecciona una opcion
+                      </option>
+                      <option value="demo">Quiero una demo</option>
+                      <option value="cotizacion">Necesito una cotizacion</option>
+                      <option value="ventas">Quiero hablar con ventas</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className={s.contactSubmit}
+                    disabled={isSubmittingContact}
+                    aria-busy={isSubmittingContact}
+                  >
+                    {isSubmittingContact ? "Enviando solicitud..." : "Enviar solicitud"}
+                    <FaArrowRight aria-hidden />
+                  </button>
+                </form>
+
+                {contactFeedback ? (
+                  <p
+                    className={`${s.contactFeedback} ${
+                      contactFeedback.kind === "error"
+                        ? s.contactFeedbackError
+                        : ""
+                    }`}
+                    role="status"
+                  >
+                    {contactFeedback.message}
+                  </p>
+                ) : null}
+
+                <p className={s.contactLegal}>Sin spam · Tus datos son privados y seguros</p>
+              </div>
             </div>
+          </div>
+
+          <div className={s.contactTrustRow}>
+            <span>Sin tarjeta de credito</span>
+            <span>Funciona desde el primer dia</span>
+            <span>Soporte en espanol</span>
+            <span>Hecho en Chile</span>
           </div>
         </div>
       </section>
 
-      <footer className={s.footer}>
-        <div className={s.container}>
-          <div className={s.footerInner}>
-            <div className={s.footerBrand}>
-              <Image src="/brand/ventora-logo-navy.svg" alt="Ventora" width={150} height={36} />
-              <p>Software comercial para vidrios y aluminio hecho para vender mejor en Chile.</p>
-            </div>
-
-            <div className={s.footerLinks}>
-              {navLinks.map((link) => (
-                <a key={link.href} href={link.href}>
-                  {link.label}
-                </a>
-              ))}
-              <Link href="/login">Ingresar</Link>
-            </div>
-
-            <div className={s.footerCopy}>© {CURRENT_YEAR} Ventora · Industrial, claro y listo para terreno</div>
-          </div>
-        </div>
-      </footer>
+      <FooterSection navLinks={navLinks} />
     </main>
   );
 }

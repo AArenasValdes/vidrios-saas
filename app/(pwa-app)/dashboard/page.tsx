@@ -170,12 +170,11 @@ export default function DashboardPage() {
         <div>
           <h1 className={s.title}>Buen dia, {greetingName}</h1>
           <p className={s.subtitle}>{hoy} - {companyName}</p>
-          {isRefreshing ? <p className={s.subtitle}>Sincronizando cotizaciones...</p> : null}
         </div>
       </div>
 
       {responseActivityCards.length > 0 ? (
-        <section className={s.section}>
+        <section className={`${s.section} ${s.mobileHiddenSection}`}>
           <div className={s.sectionHeader}>
             <span className={s.sectionTitle}>Ultimas respuestas de clientes</span>
             <Link className={s.verTodo} href="/cotizaciones">

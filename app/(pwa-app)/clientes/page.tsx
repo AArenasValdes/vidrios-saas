@@ -196,7 +196,6 @@ export default function ClientesPage() {
           <p className={s.subtitle}>
             Centraliza contactos, obras y seguimiento comercial para no perder oportunidades.
           </p>
-          {isRefreshing ? <p className={s.subtitle}>Sincronizando clientes...</p> : null}
         </div>
 
         <div className={s.headerActions}>

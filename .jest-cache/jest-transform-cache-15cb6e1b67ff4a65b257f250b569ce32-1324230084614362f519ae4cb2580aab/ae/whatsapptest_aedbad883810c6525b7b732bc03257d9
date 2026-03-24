@@ -1,0 +1,66 @@
+3dd1d88aa9acbe9a209b50740c985258
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+const _whatsapp = require("../whatsapp");
+const record = {
+    id: "cot-1",
+    codigo: "COT-123456",
+    clientId: 1,
+    projectId: 1,
+    clienteNombre: "Roberto Fuentes",
+    clienteTelefono: "+56 9 8234 5678",
+    obra: "Casa Coquimbo",
+    direccion: "Los Pescadores 221",
+    validez: "15 dias",
+    descuentoPct: 0,
+    observaciones: "",
+    estado: "creada",
+    approvalToken: "abc123abc123abc123abc123abc123ab",
+    approvalTokenExpiresAt: null,
+    clienteVioEn: null,
+    clienteRespondioEn: null,
+    clienteRespuestaCanal: null,
+    createdAt: "2026-03-14T10:00:00.000Z",
+    updatedAt: "2026-03-14T10:00:00.000Z",
+    items: [],
+    subtotal: 100000,
+    descuentoValor: 0,
+    neto: 100000,
+    iva: 19000,
+    flete: 0,
+    total: 119000
+};
+describe("whatsapp utils", ()=>{
+    it("debe normalizar telefonos chilenos moviles", ()=>{
+        expect((0, _whatsapp.normalizeWhatsappPhone)("+56 9 8234 5678")).toBe("56982345678");
+        expect((0, _whatsapp.normalizeWhatsappPhone)("982345678")).toBe("56982345678");
+        expect((0, _whatsapp.normalizeWhatsappPhone)("09 8234 5678")).toBe("56982345678");
+    });
+    it("debe generar el mensaje comercial de la cotizacion", ()=>{
+        const message = (0, _whatsapp.buildCotizacionWhatsappMessage)(record, {
+            pdfUrl: "https://cdn.example.com/cotizacion.pdf"
+        });
+        expect(message).toContain("COT-123456");
+        expect(message).toContain("Total");
+        expect(message).toContain("Vigencia");
+        expect(message).toContain("PDF:");
+        expect(message).toContain("https://cdn.example.com/cotizacion.pdf");
+        expect(message).toContain("Responder:");
+    });
+    it("debe indicar cuando el PDF va adjunto al compartir", ()=>{
+        const message = (0, _whatsapp.buildCotizacionWhatsappMessage)(record, {
+            deliveryMode: "attachment"
+        });
+        expect(message).toContain("PDF adjunto");
+        expect(message).toContain("/presupuesto/");
+    });
+    it("debe construir la url de WhatsApp lista para abrir", ()=>{
+        const url = (0, _whatsapp.buildCotizacionWhatsappUrl)(record);
+        expect(url).toContain("https://wa.me/56982345678");
+        expect(url).toContain("COT-123456");
+    });
+});
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcYWxlc3NcXHZpZHJpb3Mtc2Fhc1xcc3JjXFx1dGlsc1xcX190ZXN0c19fXFx3aGF0c2FwcC50ZXN0LnRzIl0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7XG4gIGJ1aWxkQ290aXphY2lvbldoYXRzYXBwTWVzc2FnZSxcbiAgYnVpbGRDb3RpemFjaW9uV2hhdHNhcHBVcmwsXG4gIG5vcm1hbGl6ZVdoYXRzYXBwUGhvbmUsXG59IGZyb20gXCIuLi93aGF0c2FwcFwiO1xuXG5jb25zdCByZWNvcmQgPSB7XG4gIGlkOiBcImNvdC0xXCIsXG4gIGNvZGlnbzogXCJDT1QtMTIzNDU2XCIsXG4gIGNsaWVudElkOiAxLFxuICBwcm9qZWN0SWQ6IDEsXG4gIGNsaWVudGVOb21icmU6IFwiUm9iZXJ0byBGdWVudGVzXCIsXG4gIGNsaWVudGVUZWxlZm9ubzogXCIrNTYgOSA4MjM0IDU2NzhcIixcbiAgb2JyYTogXCJDYXNhIENvcXVpbWJvXCIsXG4gIGRpcmVjY2lvbjogXCJMb3MgUGVzY2Fkb3JlcyAyMjFcIixcbiAgdmFsaWRlejogXCIxNSBkaWFzXCIsXG4gIGRlc2N1ZW50b1BjdDogMCxcbiAgb2JzZXJ2YWNpb25lczogXCJcIixcbiAgZXN0YWRvOiBcImNyZWFkYVwiIGFzIGNvbnN0LFxuICBhcHByb3ZhbFRva2VuOiBcImFiYzEyM2FiYzEyM2FiYzEyM2FiYzEyM2FiYzEyM2FiXCIsXG4gIGFwcHJvdmFsVG9rZW5FeHBpcmVzQXQ6IG51bGwsXG4gIGNsaWVudGVWaW9FbjogbnVsbCxcbiAgY2xpZW50ZVJlc3BvbmRpb0VuOiBudWxsLFxuICBjbGllbnRlUmVzcHVlc3RhQ2FuYWw6IG51bGwsXG4gIGNyZWF0ZWRBdDogXCIyMDI2LTAzLTE0VDEwOjAwOjAwLjAwMFpcIixcbiAgdXBkYXRlZEF0OiBcIjIwMjYtMDMtMTRUMTA6MDA6MDAuMDAwWlwiLFxuICBpdGVtczogW10sXG4gIHN1YnRvdGFsOiAxMDAwMDAsXG4gIGRlc2N1ZW50b1ZhbG9yOiAwLFxuICBuZXRvOiAxMDAwMDAsXG4gIGl2YTogMTkwMDAsXG4gIGZsZXRlOiAwLFxuICB0b3RhbDogMTE5MDAwLFxufTtcblxuZGVzY3JpYmUoXCJ3aGF0c2FwcCB1dGlsc1wiLCAoKSA9PiB7XG4gIGl0KFwiZGViZSBub3JtYWxpemFyIHRlbGVmb25vcyBjaGlsZW5vcyBtb3ZpbGVzXCIsICgpID0+IHtcbiAgICBleHBlY3Qobm9ybWFsaXplV2hhdHNhcHBQaG9uZShcIis1NiA5IDgyMzQgNTY3OFwiKSkudG9CZShcIjU2OTgyMzQ1Njc4XCIpO1xuICAgIGV4cGVjdChub3JtYWxpemVXaGF0c2FwcFBob25lKFwiOTgyMzQ1Njc4XCIpKS50b0JlKFwiNTY5ODIzNDU2NzhcIik7XG4gICAgZXhwZWN0KG5vcm1hbGl6ZVdoYXRzYXBwUGhvbmUoXCIwOSA4MjM0IDU2NzhcIikpLnRvQmUoXCI1Njk4MjM0NTY3OFwiKTtcbiAgfSk7XG5cbiAgaXQoXCJkZWJlIGdlbmVyYXIgZWwgbWVuc2FqZSBjb21lcmNpYWwgZGUgbGEgY290aXphY2lvblwiLCAoKSA9PiB7XG4gICAgY29uc3QgbWVzc2FnZSA9IGJ1aWxkQ290aXphY2lvbldoYXRzYXBwTWVzc2FnZShyZWNvcmQsIHtcbiAgICAgIHBkZlVybDogXCJodHRwczovL2Nkbi5leGFtcGxlLmNvbS9jb3RpemFjaW9uLnBkZlwiLFxuICAgIH0pO1xuXG4gICAgZXhwZWN0KG1lc3NhZ2UpLnRvQ29udGFpbihcIkNPVC0xMjM0NTZcIik7XG4gICAgZXhwZWN0KG1lc3NhZ2UpLnRvQ29udGFpbihcIlRvdGFsXCIpO1xuICAgIGV4cGVjdChtZXNzYWdlKS50b0NvbnRhaW4oXCJWaWdlbmNpYVwiKTtcbiAgICBleHBlY3QobWVzc2FnZSkudG9Db250YWluKFwiUERGOlwiKTtcbiAgICBleHBlY3QobWVzc2FnZSkudG9Db250YWluKFwiaHR0cHM6Ly9jZG4uZXhhbXBsZS5jb20vY290aXphY2lvbi5wZGZcIik7XG4gICAgZXhwZWN0KG1lc3NhZ2UpLnRvQ29udGFpbihcIlJlc3BvbmRlcjpcIik7XG4gIH0pO1xuXG4gIGl0KFwiZGViZSBpbmRpY2FyIGN1YW5kbyBlbCBQREYgdmEgYWRqdW50byBhbCBjb21wYXJ0aXJcIiwgKCkgPT4ge1xuICAgIGNvbnN0IG1lc3NhZ2UgPSBidWlsZENvdGl6YWNpb25XaGF0c2FwcE1lc3NhZ2UocmVjb3JkLCB7XG4gICAgICBkZWxpdmVyeU1vZGU6IFwiYXR0YWNobWVudFwiLFxuICAgIH0pO1xuXG4gICAgZXhwZWN0KG1lc3NhZ2UpLnRvQ29udGFpbihcIlBERiBhZGp1bnRvXCIpO1xuICAgIGV4cGVjdChtZXNzYWdlKS50b0NvbnRhaW4oXCIvcHJlc3VwdWVzdG8vXCIpO1xuICB9KTtcblxuICBpdChcImRlYmUgY29uc3RydWlyIGxhIHVybCBkZSBXaGF0c0FwcCBsaXN0YSBwYXJhIGFicmlyXCIsICgpID0+IHtcbiAgICBjb25zdCB1cmwgPSBidWlsZENvdGl6YWNpb25XaGF0c2FwcFVybChyZWNvcmQpO1xuXG4gICAgZXhwZWN0KHVybCkudG9Db250YWluKFwiaHR0cHM6Ly93YS5tZS81Njk4MjM0NTY3OFwiKTtcbiAgICBleHBlY3QodXJsKS50b0NvbnRhaW4oXCJDT1QtMTIzNDU2XCIpO1xuICB9KTtcbn0pO1xuIl0sIm5hbWVzIjpbInJlY29yZCIsImlkIiwiY29kaWdvIiwiY2xpZW50SWQiLCJwcm9qZWN0SWQiLCJjbGllbnRlTm9tYnJlIiwiY2xpZW50ZVRlbGVmb25vIiwib2JyYSIsImRpcmVjY2lvbiIsInZhbGlkZXoiLCJkZXNjdWVudG9QY3QiLCJvYnNlcnZhY2lvbmVzIiwiZXN0YWRvIiwiYXBwcm92YWxUb2tlbiIsImFwcHJvdmFsVG9rZW5FeHBpcmVzQXQiLCJjbGllbnRlVmlvRW4iLCJjbGllbnRlUmVzcG9uZGlvRW4iLCJjbGllbnRlUmVzcHVlc3RhQ2FuYWwiLCJjcmVhdGVkQXQiLCJ1cGRhdGVkQXQiLCJpdGVtcyIsInN1YnRvdGFsIiwiZGVzY3VlbnRvVmFsb3IiLCJuZXRvIiwiaXZhIiwiZmxldGUiLCJ0b3RhbCIsImRlc2NyaWJlIiwiaXQiLCJleHBlY3QiLCJub3JtYWxpemVXaGF0c2FwcFBob25lIiwidG9CZSIsIm1lc3NhZ2UiLCJidWlsZENvdGl6YWNpb25XaGF0c2FwcE1lc3NhZ2UiLCJwZGZVcmwiLCJ0b0NvbnRhaW4iLCJkZWxpdmVyeU1vZGUiLCJ1cmwiLCJidWlsZENvdGl6YWNpb25XaGF0c2FwcFVybCJdLCJtYXBwaW5ncyI6Ijs7OzswQkFJTztBQUVQLE1BQU1BLFNBQVM7SUFDYkMsSUFBSTtJQUNKQyxRQUFRO0lBQ1JDLFVBQVU7SUFDVkMsV0FBVztJQUNYQyxlQUFlO0lBQ2ZDLGlCQUFpQjtJQUNqQkMsTUFBTTtJQUNOQyxXQUFXO0lBQ1hDLFNBQVM7SUFDVEMsY0FBYztJQUNkQyxlQUFlO0lBQ2ZDLFFBQVE7SUFDUkMsZUFBZTtJQUNmQyx3QkFBd0I7SUFDeEJDLGNBQWM7SUFDZEMsb0JBQW9CO0lBQ3BCQyx1QkFBdUI7SUFDdkJDLFdBQVc7SUFDWEMsV0FBVztJQUNYQyxPQUFPLEVBQUU7SUFDVEMsVUFBVTtJQUNWQyxnQkFBZ0I7SUFDaEJDLE1BQU07SUFDTkMsS0FBSztJQUNMQyxPQUFPO0lBQ1BDLE9BQU87QUFDVDtBQUVBQyxTQUFTLGtCQUFrQjtJQUN6QkMsR0FBRyw4Q0FBOEM7UUFDL0NDLE9BQU9DLElBQUFBLGdDQUFzQixFQUFDLG9CQUFvQkMsSUFBSSxDQUFDO1FBQ3ZERixPQUFPQyxJQUFBQSxnQ0FBc0IsRUFBQyxjQUFjQyxJQUFJLENBQUM7UUFDakRGLE9BQU9DLElBQUFBLGdDQUFzQixFQUFDLGlCQUFpQkMsSUFBSSxDQUFDO0lBQ3REO0lBRUFILEdBQUcsc0RBQXNEO1FBQ3ZELE1BQU1JLFVBQVVDLElBQUFBLHdDQUE4QixFQUFDakMsUUFBUTtZQUNyRGtDLFFBQVE7UUFDVjtRQUVBTCxPQUFPRyxTQUFTRyxTQUFTLENBQUM7UUFDMUJOLE9BQU9HLFNBQVNHLFNBQVMsQ0FBQztRQUMxQk4sT0FBT0csU0FBU0csU0FBUyxDQUFDO1FBQzFCTixPQUFPRyxTQUFTRyxTQUFTLENBQUM7UUFDMUJOLE9BQU9HLFNBQVNHLFNBQVMsQ0FBQztRQUMxQk4sT0FBT0csU0FBU0csU0FBUyxDQUFDO0lBQzVCO0lBRUFQLEdBQUcsc0RBQXNEO1FBQ3ZELE1BQU1JLFVBQVVDLElBQUFBLHdDQUE4QixFQUFDakMsUUFBUTtZQUNyRG9DLGNBQWM7UUFDaEI7UUFFQVAsT0FBT0csU0FBU0csU0FBUyxDQUFDO1FBQzFCTixPQUFPRyxTQUFTRyxTQUFTLENBQUM7SUFDNUI7SUFFQVAsR0FBRyxzREFBc0Q7UUFDdkQsTUFBTVMsTUFBTUMsSUFBQUEsb0NBQTBCLEVBQUN0QztRQUV2QzZCLE9BQU9RLEtBQUtGLFNBQVMsQ0FBQztRQUN0Qk4sT0FBT1EsS0FBS0YsU0FBUyxDQUFDO0lBQ3hCO0FBQ0YifQ==

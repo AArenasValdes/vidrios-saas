@@ -1,4 +1,5 @@
 const APPROVAL_TOKEN_LENGTH = 32;
+const PUBLIC_URL_PLACEHOLDER = "https://tu-dominio.cl";
 
 function randomHex(length: number) {
   const targetBytes = Math.ceil(length / 2);
@@ -20,16 +21,35 @@ export function buildCotizacionApprovalPath(token: string) {
 }
 
 export function resolveAppOrigin() {
-  if (typeof window !== "undefined" && window.location.origin) {
-    return window.location.origin;
-  }
-
   const configured =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
     "";
 
-  return configured.replace(/\/+$/, "");
+  const normalizedConfigured = configured.replace(/\/+$/, "");
+
+  if (normalizedConfigured) {
+    return normalizedConfigured;
+  }
+
+  if (typeof window !== "undefined" && window.location.origin) {
+    const runtimeOrigin = window.location.origin.replace(/\/+$/, "");
+    const hostname = window.location.hostname;
+    const isLocalHost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]";
+    const isPrivateIpv4 =
+      /^10\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+
+    if (!isLocalHost && !isPrivateIpv4) {
+      return runtimeOrigin;
+    }
+  }
+
+  return PUBLIC_URL_PLACEHOLDER;
 }
 
 export function buildCotizacionApprovalUrl(token: string, origin = resolveAppOrigin()) {

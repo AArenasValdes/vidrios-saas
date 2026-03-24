@@ -59,13 +59,18 @@ function resolveEstadoClienteAutomatico(input: {
   totalCotizaciones: number;
   latestQuoteAt: string | null;
   hasApprovedQuote: boolean;
+  hasFollowUpQuote: boolean;
 }): EstadoClienteResumen {
   if (input.totalCotizaciones === 0) {
     return "prospecto";
   }
 
+  if (!input.hasApprovedQuote && !input.hasFollowUpQuote) {
+    return "prospecto";
+  }
+
   if (!input.latestQuoteAt) {
-    return "seguimiento";
+    return input.hasApprovedQuote ? "activo" : "seguimiento";
   }
 
   const diffDays =
@@ -96,6 +101,7 @@ function buildClienteResumen(input: {
   obras: number;
   totalCotizaciones: number;
   hasApprovedQuote: boolean;
+  hasFollowUpQuote: boolean;
 }): ClienteResumen {
   const ultimaGestionAt =
     input.latestQuoteDate ??
@@ -106,6 +112,7 @@ function buildClienteResumen(input: {
     totalCotizaciones: input.totalCotizaciones,
     latestQuoteAt: input.latestQuoteDate,
     hasApprovedQuote: input.hasApprovedQuote,
+    hasFollowUpQuote: input.hasFollowUpQuote,
   });
 
   return {
@@ -188,6 +195,7 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
       const latestQuoteDateByClientId = new Map<string, string>();
       const quoteCountByClientId = new Map<string, number>();
       const approvedQuoteByClientId = new Map<string, boolean>();
+      const followUpQuoteByClientId = new Map<string, boolean>();
 
       for (const cotizacion of cotizaciones) {
         if (!cotizacion.proyectoId) {
@@ -208,6 +216,15 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
           cotizacion.estado === "terminada"
         ) {
           approvedQuoteByClientId.set(clientKey, true);
+        }
+
+        if (
+          cotizacion.estado === "enviada" ||
+          cotizacion.estado === "rechazada" ||
+          Boolean(cotizacion.clienteVioEn) ||
+          Boolean(cotizacion.clienteRespondioEn)
+        ) {
+          followUpQuoteByClientId.set(clientKey, true);
         }
 
         const currentLatest = latestQuoteDateByClientId.get(clientKey);
@@ -238,6 +255,7 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
             obras,
             totalCotizaciones: quoteCountByClientId.get(clientKey) ?? 0,
             hasApprovedQuote: approvedQuoteByClientId.get(clientKey) ?? false,
+            hasFollowUpQuote: followUpQuoteByClientId.get(clientKey) ?? false,
           });
         })
         .sort((left, right) => {
@@ -269,6 +287,7 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
       const cotizacionesResumen: ClienteCotizacionResumen[] = [];
       let latestQuoteAt: string | null = null;
       let approvedQuotes = false;
+      let followUpQuotes = false;
 
       for (const cotizacion of cotizaciones) {
         if (!cotizacion.proyectoId) {
@@ -299,6 +318,15 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
 
         if (cotizacion.estado === "aprobada" || cotizacion.estado === "terminada") {
           approvedQuotes = true;
+        }
+
+        if (
+          cotizacion.estado === "enviada" ||
+          cotizacion.estado === "rechazada" ||
+          Boolean(cotizacion.clienteVioEn) ||
+          Boolean(cotizacion.clienteRespondioEn)
+        ) {
+          followUpQuotes = true;
         }
 
         if (getTimestamp(summary.updatedAt) > getTimestamp(latestQuoteAt)) {
@@ -350,6 +378,7 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
         obras: relatedProjects.length,
         totalCotizaciones: cotizacionesResumen.length,
         hasApprovedQuote: approvedQuotes,
+        hasFollowUpQuote: followUpQuotes,
       });
 
       return {

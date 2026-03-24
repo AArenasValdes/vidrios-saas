@@ -403,17 +403,58 @@ describe("cotizaciones.service", () => {
     expect(record.total).toBe(739000);
   });
 
-  it("debe fallar si se intenta guardar una cotizacion sin componentes", async () => {
+  it("debe permitir guardar un borrador sin componentes", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
     const service = createCotizacionesAppService({
-      clientesRepository: createClientesRepositoryMock(),
-      projectsRepository: createProjectsRepositoryMock(),
-      cotizacionesRepository: createCotizacionesRepositoryMock(),
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    const record = await service.saveWorkflow({
+      organizationId: 77,
+      estado: "borrador",
+      draft: {
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "Casa Coquimbo",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        items: [],
+      },
+    });
+
+    expect(clientesRepository.create).toHaveBeenCalledTimes(1);
+    expect(projectsRepository.create).toHaveBeenCalledTimes(1);
+    expect(cotizacionesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estado: "borrador",
+        items: [],
+        total: 0,
+      })
+    );
+    expect(record.id).toBe("100");
+  });
+
+  it("debe fallar sin componentes antes de crear cliente o proyecto al guardar como presupuesto", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
     });
 
     await expect(
       service.saveWorkflow({
         organizationId: 77,
-        estado: "borrador",
+        estado: "creada",
         draft: {
           clienteNombre: "Roberto Fuentes",
           clienteTelefono: "+56 9 8234 5678",
@@ -427,6 +468,10 @@ describe("cotizaciones.service", () => {
         },
       })
     ).rejects.toThrow("La cotizacion debe tener al menos un componente");
+
+    expect(clientesRepository.create).not.toHaveBeenCalled();
+    expect(projectsRepository.create).not.toHaveBeenCalled();
+    expect(cotizacionesRepository.create).not.toHaveBeenCalled();
   });
 
   it("debe eliminar una cotizacion con soft delete", async () => {

@@ -42,6 +42,7 @@ function readCachedCotizaciones(organizationKey: string) {
 type UseCotizacionAlertsOptions = {
   autoRefresh?: boolean;
   refreshOnVisibility?: boolean;
+  pollingIntervalMs?: number;
 };
 
 export function useCotizacionAlerts(
@@ -54,6 +55,7 @@ export function useCotizacionAlerts(
   const isMountedRef = useRef(true);
   const autoRefresh = options.autoRefresh ?? true;
   const refreshOnVisibility = options.refreshOnVisibility ?? autoRefresh;
+  const pollingIntervalMs = options.pollingIntervalMs ?? 45000;
 
   const refresh = useCallback(async () => {
     if (!organizationId) {
@@ -146,6 +148,24 @@ export function useCotizacionAlerts(
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [organizationId, refresh, refreshOnVisibility]);
+
+  useEffect(() => {
+    if (!organizationId || !autoRefresh || pollingIntervalMs <= 0) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void refresh();
+    }, pollingIntervalMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [autoRefresh, organizationId, pollingIntervalMs, refresh]);
 
   return {
     alerts,

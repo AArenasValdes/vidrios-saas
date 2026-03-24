@@ -1,10 +1,14 @@
-const CACHE_NAME = "vidrios-saas-v2";
+const CACHE_NAME = "vidrios-saas-v4";
 const APP_SHELL = [
   "/",
   "/login",
   "/planes",
   "/offline",
   "/manifest.webmanifest",
+  "/icons/apple-touch-icon.png",
+  "/icons/pwa-192.png",
+  "/icons/pwa-512.png",
+  "/icons/pwa-maskable-512.png",
   "/icons/pwa-icon.svg",
   "/icons/pwa-maskable.svg",
 ];
@@ -127,4 +131,70 @@ self.addEventListener("fetch", (event) => {
   if (isStaticAsset(event.request, requestUrl)) {
     event.respondWith(staleWhileRevalidate(event.request));
   }
+});
+
+self.addEventListener("push", (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  let payload = null;
+
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = {
+      title: "Ventora",
+      body: event.data.text(),
+      url: "/cotizaciones",
+      tag: "ventora-push",
+    };
+  }
+
+  const title = payload?.title || "Ventora";
+  const options = {
+    body: payload?.body || "Tienes una actualizacion nueva.",
+    icon: "/icons/pwa-192.png",
+    badge: "/icons/pwa-192.png",
+    data: {
+      url: payload?.url || "/cotizaciones",
+    },
+    tag: payload?.tag || "ventora-push",
+    renotify: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(
+    event.notification.data?.url || "/cotizaciones",
+    self.location.origin
+  ).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          if (client.url === targetUrl) {
+            return client.focus();
+          }
+        }
+      }
+
+      const existing = clients.find((client) => "focus" in client);
+
+      if (existing && "navigate" in existing) {
+        return existing.navigate(targetUrl).then(() => existing.focus());
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+
+      return undefined;
+    })
+  );
 });

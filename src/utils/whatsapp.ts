@@ -9,6 +9,11 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function extractValidezDays(validez: string) {
+  const match = validez.match(/\d+/);
+  return match?.[0] ?? validez.trim();
+}
+
 export function normalizeWhatsappPhone(phone: string) {
   const digits = phone.replace(/\D/g, "");
 
@@ -38,6 +43,7 @@ export function normalizeWhatsappPhone(phone: string) {
 type BuildCotizacionWhatsappOptions = {
   approvalUrl?: string | null;
   pdfUrl?: string | null;
+  deliveryMode?: "attachment" | "link" | "message";
 };
 
 export function buildCotizacionWhatsappMessage(
@@ -48,18 +54,37 @@ export function buildCotizacionWhatsappMessage(
     options.approvalUrl ??
     (record.approvalToken ? buildCotizacionApprovalUrl(record.approvalToken) : null);
   const pdfUrl = options.pdfUrl ?? null;
+  const deliveryMode = options.deliveryMode ?? (pdfUrl ? "link" : "message");
+  const quoteContext = record.obra?.trim() ? ` para ${record.obra.trim()}.` : ".";
+  const validezDays = extractValidezDays(record.validez);
+
+  const publicLinkBlock =
+    deliveryMode === "attachment"
+      ? approvalUrl
+        ? `📄 Ver cotización:\n${approvalUrl}`
+        : null
+      : pdfUrl
+        ? `📄 Ver cotización:\n${pdfUrl}`
+        : approvalUrl
+          ? `📄 Ver cotización:\n${approvalUrl}`
+          : null;
 
   return [
     `Hola ${record.clienteNombre},`,
-    `te envio la cotizacion ${record.codigo}.`,
-    `Total ${formatCurrency(record.total)}.`,
-    `Vigencia ${record.validez}.`,
-    pdfUrl ? `Descargar PDF: ${pdfUrl}` : null,
-    approvalUrl ? `Puedes revisar, aceptar o rechazar aqui: ${approvalUrl}` : null,
-    "Quedo atento a tu confirmacion.",
+    "",
+    `Te enviamos tu cotización${quoteContext}`,
+    "",
+    `Total: ${formatCurrency(record.total)}`,
+    `Vigencia: ${validezDays} días`,
+    "",
+    publicLinkBlock,
+    "",
+    "Puedes aprobar o rechazar directamente desde el enlace.",
+    "",
+    "Quedamos atentos.",
   ]
     .filter(Boolean)
-    .join(" ");
+    .join("\n");
 }
 
 export function buildCotizacionWhatsappUrl(

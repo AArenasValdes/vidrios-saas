@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuArrowLeft, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
+import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
@@ -27,9 +27,9 @@ import type { CotizacionWorkflowItem } from "@/types/cotizacion-workflow";
 
 import s from "./page.module.css";
 
-const FIRST_PAGE_COMPONENTS = 2;
+const FIRST_PAGE_COMPONENTS = 3;
 const NEXT_PAGE_COMPONENTS = 3;
-const APP_NAME = "Vidrios SaaS";
+const APP_NAME = "Ventora";
 const clpFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
   currency: "CLP",
@@ -169,6 +169,160 @@ function ClientField({
   );
 }
 
+function estimatePillWidth(text: string, base = 18, perChar = 4.3) {
+  return Math.max(base, Math.ceil(base + text.length * perChar));
+}
+
+function ExportBadge({ label }: { label: string }) {
+  const width = estimatePillWidth(label, 24, 4.9);
+
+  return (
+    <svg
+      aria-hidden
+      className={s.exportBadgeSvg}
+      viewBox={`0 0 ${width} 22`}
+      width={width}
+      height={22}
+    >
+      <rect width={width} height={22} rx={6} fill="var(--brand)" />
+      <text
+        x={width / 2}
+        y="11"
+        fill="#ffffff"
+        fontFamily="Montserrat, Arial, sans-serif"
+        fontSize="8.2"
+        fontWeight="700"
+        letterSpacing="0.4"
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        {label}
+      </text>
+    </svg>
+  );
+}
+
+function ExportChip({
+  label,
+  dotColor,
+}: {
+  label: string;
+  dotColor?: string;
+}) {
+  const dotSpace = dotColor ? 14 : 0;
+  const width = estimatePillWidth(label, 17 + dotSpace, 3.85);
+  const textX = dotColor ? width / 2 + 5 : width / 2;
+
+  return (
+    <svg
+      aria-hidden
+      className={s.exportChipSvg}
+      viewBox={`0 0 ${width} 18`}
+      width={width}
+      height={18}
+    >
+      <rect x="0.5" y="0.5" width={width - 1} height={17} rx={9} fill="#ffffff" stroke="#d1d5db" />
+      {dotColor ? <circle cx="16" cy="9" r="4" fill={dotColor} stroke="rgba(17,24,39,0.16)" /> : null}
+      <text
+        x={textX}
+        y="9.2"
+        fill="#4b5563"
+        fontFamily="Montserrat, Arial, sans-serif"
+        fontSize="7"
+        fontWeight="500"
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        {label}
+      </text>
+    </svg>
+  );
+}
+
+function ExportTitleRow({
+  code,
+  name,
+}: {
+  code: string;
+  name: string;
+}) {
+  const codeWidth = estimatePillWidth(code, 12, 4.2);
+  const nameWidth = estimatePillWidth(name, 76, 6.8);
+  const totalWidth = codeWidth + nameWidth + 10;
+
+  return (
+    <svg
+      aria-hidden
+      className={s.exportTitleSvg}
+      viewBox={`0 0 ${totalWidth} 22`}
+      width={totalWidth}
+      height={22}
+    >
+      <text
+        x="0"
+        y="11"
+        fill="#6b7280"
+        fontFamily="Montserrat, Arial, sans-serif"
+        fontSize="8.5"
+        fontWeight="500"
+        dominantBaseline="middle"
+      >
+        {code}
+      </text>
+      <text
+        x={codeWidth + 6}
+        y="11.4"
+        fill="#111111"
+        fontFamily="Georgia, Times New Roman, serif"
+        fontSize="12"
+        fontWeight="700"
+        dominantBaseline="middle"
+      >
+        {name}
+      </text>
+    </svg>
+  );
+}
+
+function ExportPager({
+  current,
+  total,
+}: {
+  current: string;
+  total: string;
+}) {
+  return (
+    <svg aria-hidden className={s.exportPagerSvg} viewBox="0 0 56 18" width={56} height={18}>
+      <rect x="0" y="0" width="24" height="18" rx="4" fill="var(--brand)" />
+      <rect x="24" y="0" width="32" height="18" rx="4" fill="#eef2f7" />
+      <text
+        x="12"
+        y="9.4"
+        fill="#ffffff"
+        fontFamily="Montserrat, Arial, sans-serif"
+        fontSize="9.2"
+        fontWeight="700"
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        {current}
+      </text>
+      <text
+        x="40"
+        y="9.4"
+        fill="#6b7280"
+        fontFamily="Montserrat, Arial, sans-serif"
+        fontSize="8"
+        fontWeight="700"
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >
+        /{total}
+      </text>
+    </svg>
+  );
+}
+
 export default function CotizacionPrintPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -181,10 +335,13 @@ export default function CotizacionPrintPage() {
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetScaleFrameRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
+  const exportSheetRef = useRef<HTMLElement | null>(null);
   const buildPdfPromiseRef = useRef<Promise<{ blob: Blob; file: File }> | null>(null);
   const prewarmedCacheKeyRef = useRef<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [showWhatsappFallbackActions, setShowWhatsappFallbackActions] = useState(false);
   const [isHydratingRecord, setIsHydratingRecord] = useState(!hasRenderableRecord);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [sheetPreviewScale, setSheetPreviewScale] = useState(1);
@@ -325,14 +482,24 @@ export default function CotizacionPrintPage() {
   const fromWizard = searchParams.get("from") === "wizard";
   const wasJustCreated = searchParams.get("created") === "1";
   const isEmbeddedPreview = previewMode === "embed";
-  const shouldWarmPdf = shareIntent === "warm";
+  const shouldWarmPdf = shareIntent === "warm" || shareIntent === "whatsapp" || !isEmbeddedPreview;
   const isAppleMobile =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroidMobile =
+    typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+  const shouldSharePdfToWhatsapp = shareExperience.canSharePdf && isAndroidMobile;
+  const whatsappActionLabel = shouldSharePdfToWhatsapp
+    ? "Enviar PDF por WhatsApp"
+    : "Enviar link por WhatsApp";
   const shareHintText =
     shareIntent === "whatsapp"
-      ? "En celular, toca el boton 'Compartir por WhatsApp' de arriba. Si WhatsApp no acepta el adjunto, enviaremos el mensaje con un enlace directo al PDF."
+      ? shouldSharePdfToWhatsapp
+        ? "En Android, toca 'Enviar PDF por WhatsApp' para adjuntar el archivo. Si el sistema no lo permite, abrimos WhatsApp con el link publico como respaldo."
+        : "Toca 'Enviar link por WhatsApp' para abrir el mensaje listo con el enlace publico de la cotizacion."
       : isAppleMobile
         ? "En iPhone, el boton abre el archivo PDF para que luego puedas guardarlo o compartirlo desde Safari."
+        : shouldSharePdfToWhatsapp
+          ? "En Android puedes enviar el PDF por WhatsApp desde aqui. Si el telefono no deja adjuntar el archivo, abrimos el mensaje de respaldo."
         : shareExperience.helperText;
   const companyAddressLine = [
     organizationProfile.empresaDireccion,
@@ -406,12 +573,12 @@ export default function CotizacionPrintPage() {
       return buildPdfPromiseRef.current;
     }
 
-    if (!sheetRef.current || !visibleCotizacion) {
+    if (!exportSheetRef.current || !visibleCotizacion) {
       throw new Error("La cotizacion aun no esta lista para exportar");
     }
 
     buildPdfPromiseRef.current = (async () => {
-      sheetRef.current?.classList.add(s.sheetExporting);
+      exportSheetRef.current?.classList.add(s.sheetExporting);
 
       try {
         await new Promise<void>((resolve) =>
@@ -428,7 +595,7 @@ export default function CotizacionPrintPage() {
           throw new Error("El presupuesto todavia se esta preparando. Intenta de nuevo en unos segundos.");
         }
 
-        const sourceSheet = sheetRef.current;
+        const sourceSheet = exportSheetRef.current;
 
         if (!sourceSheet) {
           throw new Error("La hoja de impresion ya no esta disponible para exportar");
@@ -442,7 +609,7 @@ export default function CotizacionPrintPage() {
           cacheKey: pdfCacheKey ?? undefined,
         });
       } finally {
-        sheetRef.current?.classList.remove(s.sheetExporting);
+        exportSheetRef.current?.classList.remove(s.sheetExporting);
         buildPdfPromiseRef.current = null;
       }
     })();
@@ -464,7 +631,7 @@ export default function CotizacionPrintPage() {
       prewarmedCacheKeyRef.current === pdfCacheKey ||
       isHydratingRecord ||
       !isProfileReady ||
-      !sheetRef.current ||
+      !exportSheetRef.current ||
       printPages.length === 0
     ) {
       return;
@@ -493,6 +660,7 @@ export default function CotizacionPrintPage() {
     try {
       setIsExporting(true);
       setExportError(null);
+      setShowWhatsappFallbackActions(false);
       const { blob } = await buildPdfFile();
       const downloadResult = downloadPdfBlob(blob, exportFileName);
 
@@ -520,11 +688,23 @@ export default function CotizacionPrintPage() {
     try {
       setIsExporting(true);
       setExportError(null);
+      setShowWhatsappFallbackActions(false);
+
+      if (!shouldSharePdfToWhatsapp) {
+        if (!whatsappUrl) {
+          setExportError("El cliente no tiene un telefono valido para WhatsApp.");
+          return;
+        }
+
+        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
 
       const { blob, file } = await buildPdfFile();
       const shareText = visibleCotizacion
         ? buildCotizacionWhatsappMessage(visibleCotizacion, {
             approvalUrl,
+            deliveryMode: "attachment",
           })
         : whatsappMessage;
       const shared = await shareCotizacionPdf({
@@ -534,11 +714,13 @@ export default function CotizacionPrintPage() {
       });
 
       if (!shared) {
+        setShowWhatsappFallbackActions(true);
         downloadPdfBlob(blob, exportFileName);
 
         const fallbackWhatsappUrl = visibleCotizacion
           ? buildCotizacionWhatsappUrl(visibleCotizacion, {
-            approvalUrl,
+              approvalUrl,
+              deliveryMode: "message",
             })
           : whatsappUrl;
 
@@ -547,10 +729,11 @@ export default function CotizacionPrintPage() {
         }
 
         setExportError(
-          "Tu navegador no pudo adjuntar el PDF directo a WhatsApp. Dejamos el archivo abierto o descargado y abrimos el mensaje como respaldo."
+          "Tu navegador actual no pudo adjuntar el PDF directo a WhatsApp desde la web. Dejamos el archivo descargado o abierto y abrimos el mensaje con el link publico como respaldo. En Chrome Android o con la PWA instalada suele funcionar mejor."
         );
       }
     } catch (error) {
+      setShowWhatsappFallbackActions(true);
       setExportError(formatCotizacionPdfError(error));
     } finally {
       setIsExporting(false);
@@ -561,9 +744,331 @@ export default function CotizacionPrintPage() {
     visibleCotizacion,
     visibleCotizacion?.codigo,
     exportFileName,
+    shouldSharePdfToWhatsapp,
     whatsappMessage,
     whatsappUrl,
   ]);
+
+  const handleCopyWhatsappMessage = useCallback(async () => {
+    if (!whatsappMessage) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(whatsappMessage);
+      setCopyFeedback("Mensaje copiado. Puedes pegarlo en WhatsApp.");
+      setExportError(null);
+      window.setTimeout(() => {
+        setCopyFeedback(null);
+      }, 2500);
+    } catch {
+      setExportError(
+        "No pudimos copiar el mensaje automaticamente en este navegador."
+      );
+    }
+  }, [whatsappMessage]);
+
+  const handleOpenWhatsappMessage = useCallback(() => {
+    if (!whatsappUrl) {
+      setExportError("El cliente no tiene un telefono valido para WhatsApp.");
+      return;
+    }
+
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  }, [whatsappUrl]);
+
+  const renderPrintPages = useCallback(
+    (mode: "preview" | "export"): ReactNode => {
+      if (!visibleCotizacion) {
+        return null;
+      }
+
+      return printPages.map((pagePlan, pageIndex) => {
+        const totalPages = printPages.length;
+        const pageNumber = pageIndex + 1;
+        const isLastPage = pageIndex === totalPages - 1;
+        const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
+
+        return (
+          <article
+            key={`${mode}-${pagePlan.kind}-${pageNumber}`}
+            className={`${s.pdfPage} ${mode === "export" ? s.exportPdfPage : ""}`}
+          >
+            <div className={s.softwareSignature}>
+              <span className={s.softwareSignaturePrefix}>Powered by</span>
+              <strong className={s.softwareSignatureName}>{APP_NAME}</strong>
+              <span className={s.softwareSignatureVersion}>v2.0</span>
+            </div>
+
+            <header className={s.pageHeader}>
+              <div className={s.companyBlock}>
+                <div className={s.companyLogoWrap}>
+                  {organizationProfile.empresaLogoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={organizationProfile.empresaNombre}
+                      className={s.companyLogo}
+                      loading="eager"
+                      src={organizationProfile.empresaLogoUrl}
+                    />
+                  ) : (
+                    <div className={s.companyLogoFallback}>
+                      {organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div className={s.companyMeta}>
+                  <strong className={s.companyName}>{organizationProfile.empresaNombre}</strong>
+                  <span className={s.companyAddress}>
+                    {companyAddressLine || "Perfil comercial aun no configurado"}
+                  </span>
+                </div>
+              </div>
+
+              <div className={s.quoteMeta}>
+                <span className={s.quoteMetaDate}>
+                  Creada {formatCotizacionDate(visibleCotizacion.updatedAt)}
+                </span>
+                <span className={s.quoteMetaDue}>Vence {dueDate}</span>
+                <strong>{visibleCotizacion.codigo}</strong>
+              </div>
+            </header>
+
+            {pagePlan.kind === "cover" ? (
+              <section className={s.clientPanel}>
+                <div className={s.clientPanelHeader}>
+                  <span className={s.sectionLabel}>DATOS DEL CLIENTE</span>
+                </div>
+
+                <div className={s.clientGrid}>
+                  <ClientField label="Cliente" value={visibleCotizacion.clienteNombre} />
+                  <ClientField label="Obra" value={visibleCotizacion.obra} />
+                  <ClientField label="Version" value={visibleCotizacion.codigo} />
+                  <ClientField label="Fecha" value={formatCotizacionDate(visibleCotizacion.updatedAt)} />
+                </div>
+              </section>
+            ) : null}
+
+            <section className={s.detailHeading}>
+              <span className={s.detailLabel}>COMPONENTES COTIZADOS · OFERTA CLIENTE</span>
+            </section>
+
+            <div className={s.componentList}>
+              {pagePlan.items.map((item, itemIndex) => {
+                const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
+                const presentation = itemPresentationMap.get(item.id);
+                const componentCode = item.codigo || `I${absoluteIndex}`;
+                const colorHex = presentation?.colorHex ?? "#a8a8a8";
+                const material = presentation?.material ?? "Material a definir";
+                const colorName = presentation?.colorName ?? "Color a definir";
+                const surface = presentation?.surface ?? "-";
+                const specs =
+                  presentation?.specs ?? [
+                    { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
+                    { key: "Material", value: material },
+                    { key: "Color", value: colorName },
+                    { key: "Referencia", value: "-" },
+                    { key: "Vidrio", value: item.vidrio || "-" },
+                    { key: "Superficie", value: surface },
+                  ];
+                const drawingSvg =
+                  presentation?.drawingSvg ??
+                  generateComponentSVG({
+                    tipo: item.tipo,
+                    ancho: item.ancho,
+                    alto: item.alto,
+                    colorHex,
+                    maxW: 108,
+                    maxH: 94,
+                    variant: "pdf",
+                  });
+                const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
+
+                return (
+                  <article key={item.id} className={s.componentCard}>
+                    <div className={s.itemBadge}>
+                      {mode === "export" ? <ExportBadge label={itemBadgeLabel} /> : itemBadgeLabel}
+                    </div>
+
+                    <div className={s.componentHeader}>
+                      <div className={s.componentTitleRow}>
+                        {mode === "export" ? (
+                          <ExportTitleRow code={componentCode} name={item.nombre} />
+                        ) : (
+                          <>
+                            <span className={s.itemCode}>{componentCode}</span>
+                            <h2 className={s.itemName}>{item.nombre}</h2>
+                          </>
+                        )}
+                      </div>
+
+                      <div className={s.itemChips}>
+                        {mode === "export" ? (
+                          <>
+                            <ExportChip label={item.tipo} />
+                            <ExportChip label={material} />
+                            <ExportChip label={colorName} dotColor={colorHex} />
+                            <ExportChip label={`${item.cantidad} ${item.cantidad === 1 ? "unidad" : "unidades"}`} />
+                            <ExportChip label={surface} />
+                          </>
+                        ) : (
+                          <>
+                            <span className={s.itemChip}>{item.tipo}</span>
+                            <span className={s.itemChip}>{material}</span>
+                            <span className={`${s.itemChip} ${s.itemChipColor}`}>
+                              <i
+                                className={s.itemChipDot}
+                                style={{ backgroundColor: colorHex }}
+                                aria-hidden
+                              />
+                              {colorName}
+                            </span>
+                            <span className={s.itemChip}>
+                              {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
+                            </span>
+                            <span className={s.itemChip}>{surface}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={s.componentBody}>
+                      <div className={s.drawingColumn}>
+                        <div className={s.drawingFrame}>
+                          <div
+                            className={s.drawingSvg}
+                            dangerouslySetInnerHTML={{ __html: drawingSvg }}
+                          />
+                        </div>
+                        <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
+                      </div>
+
+                      <div className={s.specsColumn}>
+                        {specs.map((spec) => (
+                          <div key={spec.key} className={s.specRow}>
+                            <span className={s.specBullet} aria-hidden />
+                            <span className={s.specKey}>{spec.key}</span>
+                            <span className={s.specValue}>{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <aside className={s.pricesColumn}>
+                        <div className={s.pricesHeading}>VALOR COMERCIAL</div>
+                        <div className={s.pricesSubheading}>MONTOS EN CLP</div>
+
+                        <div className={s.priceRow}>
+                          <span>Precio unitario</span>
+                          <strong>{CLP(item.precioUnitario)}</strong>
+                        </div>
+                        <div className={s.priceRow}>
+                          <span>Cantidad</span>
+                          <strong>{item.cantidad}</strong>
+                        </div>
+
+                        <div className={s.priceTotal}>
+                          <span>Valor</span>
+                          <strong>{CLP(item.precioTotal)}</strong>
+                        </div>
+                      </aside>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {isLastPage ? (
+              <>
+                {paymentTerms ? (
+                  <section className={s.paymentBand}>
+                    <span className={s.paymentLabel}>Forma de pago:</span>
+                    <span className={s.paymentValue}>{paymentTerms}</span>
+                  </section>
+                ) : null}
+
+                <section className={s.summarySection}>
+                  <section className={s.conditionsColumn}>
+                    <span className={s.summaryLabel}>CONDICIONES</span>
+                    <p className={s.conditionsText}>
+                      {visibleCotizacion.observaciones.trim() || "Sin observaciones adicionales."}
+                    </p>
+                  </section>
+
+                  <aside className={s.totalsColumn}>
+                    <span className={s.summaryLabel}>RESUMEN FINAL</span>
+                    <div className={s.totalRow}>
+                      <span>Subtotal</span>
+                      <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                    </div>
+                    <div className={s.totalRow}>
+                      <span>Descuento</span>
+                      <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                    </div>
+                    <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                      <span>Neto</span>
+                      <strong>{CLP(visibleCotizacion.neto)}</strong>
+                    </div>
+                    <div className={s.totalRow}>
+                      <span>IVA 19%</span>
+                      <strong>{CLP(visibleCotizacion.iva)}</strong>
+                    </div>
+                    {visibleCotizacion.flete > 0 ? (
+                      <div className={s.totalRow}>
+                        <span>Flete</span>
+                        <strong>{CLP(visibleCotizacion.flete)}</strong>
+                      </div>
+                    ) : null}
+                    <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                      <span>Carpintería total</span>
+                      <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                    </div>
+                  </aside>
+                </section>
+
+                <section className={s.grandTotal}>
+                  <span>Total presupuesto</span>
+                  <strong>{CLP(visibleCotizacion.total)}</strong>
+                </section>
+              </>
+            ) : null}
+
+            <footer className={s.pageFooter}>
+              <span className={s.footerBranding}>
+                Sistema generado por <strong>{APP_NAME}</strong>
+              </span>
+              <div className={s.footerMeta}>
+                <div className={s.footerPager} aria-label={`Pagina ${formatPageNumber(pageNumber, totalPages)}`}>
+                  {mode === "export" ? (
+                    <ExportPager
+                      current={String(pageNumber).padStart(2, "0")}
+                      total={String(totalPages).padStart(2, "0")}
+                    />
+                  ) : (
+                    <div className={s.footerPagerValue}>
+                      <span className={s.footerPagerCurrent}>{String(pageNumber).padStart(2, "0")}</span>
+                      <span className={s.footerPagerTotal}>/{String(totalPages).padStart(2, "0")}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </footer>
+          </article>
+        );
+      });
+    },
+    [
+      companyAddressLine,
+      itemPresentationMap,
+      organizationProfile.brandColor,
+      organizationProfile.empresaLogoUrl,
+      organizationProfile.empresaNombre,
+      paymentTerms,
+      printPages,
+      totalSurfaceM2,
+      visibleCotizacion,
+    ]
+  );
 
   if (isReady && !visibleCotizacion && !isHydratingRecord) {
     return (
@@ -669,8 +1174,30 @@ export default function CotizacionPrintPage() {
               disabled={isExporting}
             >
               <LuShare2 aria-hidden />
-              {shareExperience.actionLabel}
+              {whatsappActionLabel}
             </button>
+            {showWhatsappFallbackActions ? (
+              <>
+                <button
+                  className={s.actionSecondary}
+                  onClick={() => void handleCopyWhatsappMessage()}
+                  type="button"
+                  disabled={!whatsappMessage || isExporting}
+                >
+                  <LuCopy aria-hidden />
+                  Copiar mensaje
+                </button>
+                <button
+                  className={s.actionSecondary}
+                  onClick={handleOpenWhatsappMessage}
+                  type="button"
+                  disabled={!whatsappUrl || isExporting}
+                >
+                  <LuShare2 aria-hidden />
+                  Abrir WhatsApp
+                </button>
+              </>
+            ) : null}
             <button
               className={s.actionPrimary}
               onClick={() => void handleDownloadPdf()}
@@ -698,6 +1225,7 @@ export default function CotizacionPrintPage() {
         </div>
       )}
       {isEmbeddedPreview ? null : exportError ? <div className={s.notice}>{exportError}</div> : null}
+      {isEmbeddedPreview ? null : copyFeedback ? <div className={s.successTicket}>{copyFeedback}</div> : null}
       {isEmbeddedPreview ? null : <div className={s.shareHint}>{shareHintText}</div>}
 
       <div
@@ -721,258 +1249,15 @@ export default function CotizacionPrintPage() {
           }}
         >
           <section ref={sheetRef} className={s.sheet}>
-            {printPages.map((pagePlan, pageIndex) => {
-          const totalPages = printPages.length;
-          const pageNumber = pageIndex + 1;
-          const isLastPage = pageIndex === totalPages - 1;
-          const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
-
-          return (
-            <article key={`${pagePlan.kind}-${pageNumber}`} className={s.pdfPage}>
-              <div className={s.softwareSignature}>
-                <span className={s.softwareSignaturePrefix}>Powered by</span>
-                <strong className={s.softwareSignatureName}>{APP_NAME}</strong>
-                <span className={s.softwareSignatureVersion}>v2.0</span>
-              </div>
-
-              <header className={s.pageHeader}>
-                <div className={s.companyBlock}>
-                  <div className={s.companyLogoWrap}>
-                    {organizationProfile.empresaLogoUrl ? (
-                     /// El componente Image de Next.js no soporta bien la generación de PDF, ya que no se renderiza en el canvas. Por eso usamos la etiqueta img nativa del HTML para mostrar el logo en el PDF exportado, y dejamos el componente Image para la vista previa en pantalla, donde sí puede optimizar la carga.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt={organizationProfile.empresaNombre}
-                        className={s.companyLogo}
-                        loading="eager"
-                        src={organizationProfile.empresaLogoUrl}
-                      />
-                    ) : (
-                      <div className={s.companyLogoFallback}>
-                        {organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={s.companyMeta}>
-                    <strong className={s.companyName}>{organizationProfile.empresaNombre}</strong>
-                    <span className={s.companyAddress}>
-                      {companyAddressLine || "Perfil comercial aun no configurado"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={s.quoteMeta}>
-                  <span className={s.quoteMetaDate}>Creada {formatCotizacionDate(visibleCotizacion.updatedAt)}</span>
-                  <span className={s.quoteMetaDue}>Vence {dueDate}</span>
-                  <strong>{visibleCotizacion.codigo}</strong>
-                </div>
-              </header>
-
-              {pagePlan.kind === "cover" ? (
-                <section className={s.clientPanel}>
-                  <div className={s.clientPanelHeader}>
-                    <span className={s.sectionLabel}>DATOS DEL CLIENTE</span>
-                  </div>
-
-                  <div className={s.clientGrid}>
-                    <ClientField label="Cliente" value={visibleCotizacion.clienteNombre} />
-                    <ClientField label="Obra" value={visibleCotizacion.obra} />
-                    <ClientField label="Version" value={visibleCotizacion.codigo} />
-                    <ClientField label="Fecha" value={formatCotizacionDate(visibleCotizacion.updatedAt)} />
-                  </div>
-                </section>
-              ) : null}
-
-              <section className={s.detailHeading}>
-                <span className={s.detailLabel}>COMPONENTES COTIZADOS · OFERTA CLIENTE</span>
-              </section>
-
-              <div className={s.componentList}>
-                {pagePlan.items.map((item, itemIndex) => {
-                  const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
-                  const presentation = itemPresentationMap.get(item.id);
-                  const componentCode = item.codigo || `I${absoluteIndex}`;
-                  const colorHex = presentation?.colorHex ?? "#a8a8a8";
-                  const material = presentation?.material ?? "Material a definir";
-                  const colorName = presentation?.colorName ?? "Color a definir";
-                  const surface = presentation?.surface ?? "-";
-                  const specs =
-                    presentation?.specs ?? [
-                      { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-                      { key: "Material", value: material },
-                      { key: "Color", value: colorName },
-                      { key: "Referencia", value: "-" },
-                      { key: "Vidrio", value: item.vidrio || "-" },
-                      { key: "Superficie", value: surface },
-                    ];
-                  const drawingSvg =
-                    presentation?.drawingSvg ??
-                    generateComponentSVG({
-                      tipo: item.tipo,
-                      ancho: item.ancho,
-                      alto: item.alto,
-                      colorHex,
-                      maxW: 108,
-                      maxH: 94,
-                      variant: "pdf",
-                    });
-
-                  return (
-                    <article key={item.id} className={s.componentCard}>
-                      <div className={s.itemBadge}>
-                        ITEM {String(absoluteIndex).padStart(2, "0")}
-                      </div>
-
-                      <div className={s.componentHeader}>
-                        <div className={s.componentTitleRow}>
-                          <span className={s.itemCode}>{componentCode}</span>
-                          <h2 className={s.itemName}>{item.nombre}</h2>
-                        </div>
-
-                        <div className={s.itemChips}>
-                          <span className={s.itemChip}>{item.tipo}</span>
-                          <span className={s.itemChip}>{material}</span>
-                          <span className={`${s.itemChip} ${s.itemChipColor}`}>
-                            <i
-                              className={s.itemChipDot}
-                              style={{ backgroundColor: colorHex }}
-                              aria-hidden
-                            />
-                            {colorName}
-                          </span>
-                          <span className={s.itemChip}>
-                            {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-                          </span>
-                          <span className={s.itemChip}>{surface}</span>
-                        </div>
-                      </div>
-
-                      <div className={s.componentBody}>
-                        <div className={s.drawingColumn}>
-                          <div className={s.drawingFrame}>
-                            <div
-                              className={s.drawingSvg}
-                              dangerouslySetInnerHTML={{ __html: drawingSvg }}
-                            />
-                          </div>
-                          <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
-                        </div>
-
-                        <div className={s.specsColumn}>
-                          {specs.map((spec) => (
-                            <div key={spec.key} className={s.specRow}>
-                              <span className={s.specBullet} aria-hidden />
-                              <span className={s.specKey}>{spec.key}</span>
-                              <span className={s.specValue}>{spec.value}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <aside className={s.pricesColumn}>
-                          <div className={s.pricesHeading}>VALOR COMERCIAL</div>
-                          <div className={s.pricesSubheading}>MONTOS EN CLP</div>
-
-                          <div className={s.priceRow}>
-                            <span>Precio unitario</span>
-                            <strong>{CLP(item.precioUnitario)}</strong>
-                          </div>
-                          <div className={s.priceRow}>
-                            <span>Cantidad</span>
-                            <strong>{item.cantidad}</strong>
-                          </div>
-
-                          <div className={s.priceTotal}>
-                            <span>Valor</span>
-                            <strong>{CLP(item.precioTotal)}</strong>
-                          </div>
-                        </aside>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-
-              {isLastPage ? (
-                <>
-                  {paymentTerms ? (
-                    <section className={s.paymentBand}>
-                      <span className={s.paymentLabel}>Forma de pago:</span>
-                      <span className={s.paymentValue}>{paymentTerms}</span>
-                    </section>
-                  ) : null}
-
-                  {approvalUrl ? (
-                    <section className={s.approvalBand}>
-                      <span className={s.approvalLabel}>Revisar y responder presupuesto:</span>
-                      <span className={s.approvalValue}>{approvalUrl}</span>
-                    </section>
-                  ) : null}
-
-                  <section className={s.summarySection}>
-                    <section className={s.conditionsColumn}>
-                      <span className={s.summaryLabel}>CONDICIONES</span>
-                      <p className={s.conditionsText}>
-                        {visibleCotizacion.observaciones.trim() || "Sin observaciones adicionales."}
-                      </p>
-                    </section>
-
-                    <aside className={s.totalsColumn}>
-                      <span className={s.summaryLabel}>RESUMEN FINAL</span>
-                      <div className={s.totalRow}>
-                        <span>Subtotal</span>
-                        <strong>{CLP(visibleCotizacion.subtotal)}</strong>
-                      </div>
-                      <div className={s.totalRow}>
-                        <span>Descuento</span>
-                        <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
-                      </div>
-                      <div className={`${s.totalRow} ${s.totalRowStrong}`}>
-                        <span>Neto</span>
-                        <strong>{CLP(visibleCotizacion.neto)}</strong>
-                      </div>
-                      <div className={s.totalRow}>
-                        <span>IVA 19%</span>
-                        <strong>{CLP(visibleCotizacion.iva)}</strong>
-                      </div>
-                      {visibleCotizacion.flete > 0 ? (
-                        <div className={s.totalRow}>
-                          <span>Flete</span>
-                          <strong>{CLP(visibleCotizacion.flete)}</strong>
-                        </div>
-                      ) : null}
-                      <div className={`${s.totalRow} ${s.totalRowStrong}`}>
-                        <span>Carpinteria total</span>
-                        <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                      </div>
-                    </aside>
-                  </section>
-
-                  <section className={s.grandTotal}>
-                    <span>Total presupuesto</span>
-                    <strong>{CLP(visibleCotizacion.total)}</strong>
-                  </section>
-                </>
-              ) : null}
-
-              <footer className={s.pageFooter}>
-                <span className={s.footerBranding}>
-                  Sistema generado por <strong>{APP_NAME}</strong>
-                </span>
-                <div className={s.footerMeta}>
-                  <div className={s.footerPager} aria-label={`Pagina ${formatPageNumber(pageNumber, totalPages)}`}>
-                    <div className={s.footerPagerValue}>
-                      <span className={s.footerPagerCurrent}>{String(pageNumber).padStart(2, "0")}</span>
-                      <span className={s.footerPagerTotal}>/{String(totalPages).padStart(2, "0")}</span>
-                    </div>
-                  </div>
-                </div>
-              </footer>
-            </article>
-          );
-        })}
+            {renderPrintPages("preview")}
           </section>
         </div>
+      </div>
+
+      <div className={s.exportRenderHost} aria-hidden>
+        <section ref={exportSheetRef} className={`${s.sheet} ${s.exportSheet}`}>
+          {renderPrintPages("export")}
+        </section>
       </div>
     </main>
   );

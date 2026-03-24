@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { acceptPublicQuoteAction, rejectPublicQuoteAction } from "./actions";
+import { PublicQuotePreview } from "./public-quote-preview";
 import { publicCotizacionApprovalService } from "@/services/public-cotizacion-approval.service";
 
 import s from "./page.module.css";
@@ -11,56 +12,6 @@ const CLP = (value: number) =>
     currency: "CLP",
     maximumFractionDigits: 0,
   }).format(value);
-
-function normalizeComparableComponentText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function isLegacyAutoComponentLabel(tipo: string, descripcion: string) {
-  const normalizedDescription = normalizeComparableComponentText(descripcion);
-  const normalizedTipo = normalizeComparableComponentText(tipo);
-
-  if (!normalizedDescription || !normalizedTipo) {
-    return false;
-  }
-
-  const parts = normalizedDescription.split(" ");
-  const tipoParts = normalizedTipo.split(" ");
-
-  if (parts.length !== tipoParts.length + 1) {
-    return false;
-  }
-
-  const trailingCode = parts.at(-1) ?? "";
-
-  if (!/^[a-z]{1,3}\d{1,4}$/.test(trailingCode)) {
-    return false;
-  }
-
-  return parts.slice(0, -1).join(" ") === normalizedTipo;
-}
-
-function getVisibleComponentDescription(tipo: string, nombre: string, descripcion: string) {
-  const trimmedDescription = descripcion.trim();
-
-  if (!trimmedDescription) {
-    return "";
-  }
-
-  return (
-    normalizeComparableComponentText(trimmedDescription) ===
-      normalizeComparableComponentText(nombre) ||
-    isLegacyAutoComponentLabel(tipo, trimmedDescription)
-  )
-    ? ""
-    : trimmedDescription;
-}
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -139,6 +90,7 @@ export default async function PresupuestoPublicoPage({
       : query.decision === "rechazada"
         ? "Presupuesto rechazado correctamente."
         : null;
+  const hasDecisionState = Boolean(decisionMessage);
   const statusClass =
     quote.estado === "aprobada"
       ? s.statusAprobada
@@ -151,199 +103,80 @@ export default async function PresupuestoPublicoPage({
   return (
     <main className={s.page} style={brandStyle}>
       <section className={s.shell}>
-        <article className={s.hero}>
-          <div className={s.brandRow}>
-            <div className={s.logoWrap}>
-              {quote.organizationProfile.empresaLogoUrl ? (
-                <img
-                  alt={quote.organizationProfile.empresaNombre}
-                  className={s.logo}
-                  src={quote.organizationProfile.empresaLogoUrl}
-                />
-              ) : (
-                <div
-                  className={s.logoFallback}
-                  style={{ background: quote.organizationProfile.brandColor }}
-                >
-                  {quote.organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className={s.brandMeta}>
-              <span className={s.eyebrow}>Oferta cliente</span>
-              <strong className={s.companyName}>{quote.organizationProfile.empresaNombre}</strong>
-              <span className={s.companyMeta}>
-                {[quote.organizationProfile.empresaDireccion, quote.organizationProfile.empresaTelefono]
-                  .filter(Boolean)
-                  .join(" | ")}
-              </span>
-            </div>
-          </div>
-
-          <div className={s.heroTop}>
-            <div>
-              <h1 className={s.title}>{quote.codigo}</h1>
-              <p className={s.subtitle}>
-                Revisa el presupuesto, confirma si quieres seguir adelante y nosotros
-                registraremos tu respuesta de inmediato.
-              </p>
-            </div>
-            <span className={`${s.statusBadge} ${statusClass}`}>
+        {hasDecisionState ? (
+          <article className={s.finalStateCard}>
+            <p className={s.eyebrow}>Respuesta registrada</p>
+            <h1 className={s.finalStateTitle}>{decisionMessage}</h1>
+            <p className={s.finalStateText}>
               {quote.estado === "aprobada"
-                ? "Aprobada"
-                : quote.estado === "rechazada"
-                  ? "Rechazada"
-                  : "Pendiente"}
-            </span>
-          </div>
-
-          <div className={s.heroGrid}>
-            <div className={s.metaCard}>
-              <span>Cliente</span>
-              <strong>{quote.clienteNombre}</strong>
-            </div>
-            <div className={s.metaCard}>
-              <span>Obra</span>
-              <strong>{quote.obra}</strong>
-            </div>
-            <div className={s.metaCard}>
-              <span>Vigencia</span>
-              <strong>{quote.validez}</strong>
-            </div>
-            <div className={s.metaCard}>
-              <span>Total</span>
+                ? "La empresa ya recibio tu aprobacion y seguira el siguiente paso contigo."
+                : "La empresa ya recibio tu respuesta y puede revisar contigo una nueva propuesta si hace falta."}
+            </p>
+            <div className={s.finalStateMeta}>
+              <span>{quote.codigo}</span>
+              <span>{quote.obra}</span>
               <strong>{CLP(quote.total)}</strong>
             </div>
-          </div>
-        </article>
-
-        <section className={s.summary}>
-          <div>
-            <p className={s.eyebrow}>Resumen del presupuesto</p>
-            <h2 className={s.sectionTitle}>Revisar y responder presupuesto</h2>
-            <p className={s.helper}>
-              Este presupuesto incluye {quote.items.length} componente
-              {quote.items.length === 1 ? "" : "s"}. Si aceptas, la empresa vera la
-              aprobacion al instante dentro del sistema.
-            </p>
-          </div>
-
-          <div className={s.summaryGrid}>
-            <div className={s.summaryCard}>
-              <span>Creado</span>
-              <strong>{formatDate(quote.createdAt)}</strong>
-            </div>
-            <div className={s.summaryCard}>
-              <span>Ultima actualizacion</span>
-              <strong>{formatDate(quote.updatedAt)}</strong>
-            </div>
-            <div className={s.summaryCard}>
-              <span>Subtotal</span>
-              <strong>{CLP(quote.subtotal)}</strong>
-            </div>
-            <div className={s.summaryCard}>
-              <span>IVA + flete</span>
-              <strong>{CLP(quote.iva + quote.flete)}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className={s.itemsCard}>
-          <div>
-            <p className={s.eyebrow}>Componentes</p>
-            <h2 className={s.sectionTitle}>Lo que incluye este trabajo</h2>
-          </div>
-
-          <div className={s.itemList}>
-            {quote.items.map((item) => (
-              <article key={item.id} className={s.itemRow}>
-                <div className={s.itemHead}>
-                  <span
-                    className={s.itemCode}
-                    style={{ background: quote.organizationProfile.brandColor }}
-                  >
-                    {item.codigo}
-                  </span>
-                  <strong className={s.itemPrice}>{CLP(item.precioTotal)}</strong>
-                </div>
-                <h3 className={s.itemName}>{item.nombre}</h3>
-                {getVisibleComponentDescription(item.tipo, item.nombre, item.descripcion) ? (
-                  <p className={s.itemDesc}>
-                    {getVisibleComponentDescription(item.tipo, item.nombre, item.descripcion)}
-                  </p>
-                ) : null}
-                <div className={s.itemFoot}>
-                  <p className={s.itemSpecs}>
-                    {[item.tipo, item.vidrio, `${item.cantidad} ${item.unidad}`]
-                      .filter(Boolean)
-                      .join(" | ")}
-                  </p>
-                  <p className={s.itemSpecs}>
-                    {item.ancho && item.alto
-                      ? `${item.ancho} x ${item.alto} mm`
-                      : "Medidas por definir"}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {quote.observaciones ? (
-          <article className={s.stateCard}>
-            <p className={s.eyebrow}>Condiciones</p>
-            <h2 className={s.sectionTitle}>Notas del presupuesto</h2>
-            <p className={s.stateText}>{quote.observaciones}</p>
           </article>
         ) : null}
 
-        {decisionMessage ? (
-          <article className={s.stateCard}>
-            <p className={s.eyebrow}>Respuesta registrada</p>
-            <h2 className={s.stateTitle}>{decisionMessage}</h2>
-            <p className={s.stateText}>
-              Estado actual: {quote.estado === "aprobada" ? "Aprobada" : "Rechazada"}.
-            </p>
-          </article>
-        ) : null}
+        {!hasDecisionState ? (
+        <article className={s.responseCard}>
+          <div className={s.responseHeader}>
+            <div className={s.responseCopy}>
+              <p className={s.eyebrow}>Presupuesto cliente</p>
+              <h1 className={s.stateTitle}>{quote.codigo}</h1>
+              <p className={s.stateText}>
+                Revisa la misma hoja comercial del presupuesto y responde desde aqui.
+              </p>
+            </div>
 
-        {!quote.canRespond ? (
-          <article className={s.stateCard}>
-            <p className={s.eyebrow}>Estado final</p>
-            <h2 className={s.stateTitle}>
-              {quote.isExpired
-                ? "Este presupuesto ya expiro"
-                : quote.estado === "aprobada"
-                  ? "Presupuesto aprobado"
+            <div className={s.responseMeta}>
+              <span className={`${s.statusBadge} ${statusClass}`}>
+                {quote.estado === "aprobada"
+                  ? "Aprobada"
                   : quote.estado === "rechazada"
-                    ? "Presupuesto rechazado"
-                    : "Presupuesto sin cambios"}
-            </h2>
-            <p className={s.stateText}>
-              {quote.isExpired
-                ? "La vigencia de esta oferta termino y ya no se puede responder desde este link."
-                : `La respuesta fue registrada el ${formatDate(quote.clienteRespondioEn)}.`}
-            </p>
-          </article>
-        ) : (
-          <div className={s.actions}>
-            <form action={rejectAction}>
-              <button className={s.actionSecondary} type="submit">
-                Rechazar presupuesto
-              </button>
-            </form>
-            <form action={acceptAction}>
-              <button
-                className={s.actionPrimary}
-                style={{ background: quote.organizationProfile.brandColor }}
-                type="submit"
-              >
-                Aceptar presupuesto
-              </button>
-            </form>
+                    ? "Rechazada"
+                    : "Pendiente"}
+              </span>
+              <div className={s.responseFacts}>
+                <span>{quote.clienteNombre}</span>
+                <span>{quote.obra}</span>
+                <strong>{CLP(quote.total)}</strong>
+              </div>
+            </div>
           </div>
-        )}
+          {!quote.canRespond ? (
+            <div className={s.responseNotice}>
+              <p className={s.eyebrow}>Estado final</p>
+              <p className={s.responseNoticeText}>
+                {quote.isExpired
+                  ? "La vigencia de esta oferta termino y ya no se puede responder desde este link."
+                  : `La respuesta fue registrada el ${formatDate(quote.clienteRespondioEn)}.`}
+              </p>
+            </div>
+          ) : (
+            <div className={s.actions}>
+              <form action={rejectAction}>
+                <button className={s.actionSecondary} type="submit">
+                  Rechazar cotizacion
+                </button>
+              </form>
+              <form action={acceptAction}>
+                <button
+                  className={s.actionPrimary}
+                  style={{ background: quote.organizationProfile.brandColor }}
+                  type="submit"
+                >
+                  Aceptar cotizacion
+                </button>
+              </form>
+            </div>
+          )}
+        </article>
+        ) : null}
+
+        {!hasDecisionState ? <PublicQuotePreview quote={quote} /> : null}
       </section>
     </main>
   );

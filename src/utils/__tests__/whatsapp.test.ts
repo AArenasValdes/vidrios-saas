@@ -45,18 +45,30 @@ describe("whatsapp utils", () => {
       pdfUrl: "https://cdn.example.com/cotizacion.pdf",
     });
 
-    expect(message).toContain("COT-123456");
-    expect(message).toContain("Total");
-    expect(message).toContain("Vigencia");
-    expect(message).toContain("Descargar PDF");
+    expect(message).toContain("Hola Roberto Fuentes,");
+    expect(message).toContain("Te enviamos tu cotización para Casa Coquimbo.");
+    expect(message).toContain("Total: $119.000");
+    expect(message).toContain("Vigencia: 15 días");
+    expect(message).toContain("📄 Ver cotización:");
     expect(message).toContain("https://cdn.example.com/cotizacion.pdf");
+    expect(message).toContain("Puedes aprobar o rechazar directamente desde el enlace.");
+    expect(message).not.toContain("COT-123456");
+  });
+
+  it("debe usar el link publico al compartir con PDF adjunto", () => {
+    const message = buildCotizacionWhatsappMessage(record, {
+      deliveryMode: "attachment",
+    });
+
+    expect(message).toContain("📄 Ver cotización:");
     expect(message).toContain("/presupuesto/");
+    expect(message).toContain("https://tu-dominio.cl");
   });
 
   it("debe construir la url de WhatsApp lista para abrir", () => {
     const url = buildCotizacionWhatsappUrl(record);
 
     expect(url).toContain("https://wa.me/56982345678");
-    expect(url).toContain("COT-123456");
+    expect(url).toContain("Hola%20Roberto%20Fuentes%2C");
   });
 });

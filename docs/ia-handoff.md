@@ -1,126 +1,203 @@
 # Handoff IA - Vidrios SaaS
 
-Resumen corto para otra IA que tenga que continuar el trabajo.
+Actualizado: 2026-03-23.
+
+Resumen corto para otra IA o para retomar trabajo sin releer todo el repo.
 
 ---
 
-## Cambio principal
+## Estado actual
 
-El proyecto ya no se orienta a un motor tecnico de calculo de ventanas.
+El producto ya no esta en fase de definicion.
 
-El nuevo MVP es:
+La base funcional del MVP comercial ya existe y el foco correcto ahora es:
 
-**un generador profesional de presupuestos para maestros de vidrios y aluminio.**
+**cerrar robustez, validacion real y salida a produccion o beta cerrada.**
 
-La app debe permitir:
+El producto hoy debe entenderse como:
 
+**un presupuestario comercial vertical para vidrios y aluminio, con PDF, WhatsApp y seguimiento liviano del cliente.**
+
+No es un ERP.
+No es logistica.
+No es un cotizador tecnico de perfileria.
+
+---
+
+## Que ya esta realmente funcionando
+
+- login con Supabase email/password
+- dashboard interno
 - clientes
-- proyectos
 - cotizaciones
-- componentes del proyecto
-- costo proveedor
-- margen
-- PDF
-- WhatsApp
+- flujo guiado de nueva cotizacion
+- componentes con costo proveedor y margen
+- detalle de cotizacion
+- PDF imprimible
+- compartir por WhatsApp
+- branding basico de empresa
+- flujo publico `/presupuesto/[token]`
+- aprobacion o rechazo publico
+- build de produccion pasando
 
-Modelo base:
+---
+
+## Que sigue siendo fragil o incompleto
+
+- escrituras de cotizaciones no transaccionales
+- validacion real de Supabase pendiente en entorno final
+- validacion real del flujo publico pendiente
+- observabilidad de produccion inexistente
+- smoke test manual punta a punta pendiente
+- PWA y offline sin validacion real en dispositivo
+- algunos textos o datos heredados siguen con problemas de encoding
+- OAuth visible como idea, pero no operativo
+
+---
+
+## Decisiones de producto que no deben romperse
+
+- seguir con calculo simple por componente
+- no reabrir el cotizador tecnico
+- mantener PDF y WhatsApp como salida core
+- mantener posicionamiento de presupuestario comercial
+- no meter pagos ni analytics antes de estabilizar el core
+
+Modelo vigente:
 
 ```text
-precio_final = costo_proveedor * (1 + margen)
+precio_final = costo_proveedor * (1 + margen_pct / 100)
 ```
 
 ---
 
-## Problema real que se busca resolver
+## Arquitectura a respetar
 
-El maestro no calcula materiales desde cero.
+```text
+page / component -> hook -> service -> repository -> Supabase
+```
 
-Normalmente:
+Reglas:
 
-1. pide precio al proveedor
-2. recibe costo del componente
-3. aplica margen
-4. arma presupuesto en Excel o Word
-5. lo manda por WhatsApp
-
-El software debe profesionalizar ese flujo.
-
----
-
-## Que del repo sigue sirviendo
-
-- auth real
-- clientes reales
-- proyectos ligados a clientes
-- cotizaciones reales
-- PDF imprimible
-- WhatsApp
-- arquitectura por capas
-- multi-tenant
+- filtrar siempre por `organization_id`
+- usar soft delete
+- calculos solo en services
+- no meter logica de negocio en repositories
 
 ---
 
-## Que sigue pendiente
+## Archivos y zonas clave
 
-- ejecutar la migracion SQL real para `codigo`, `tipo_componente` y `orden`
-- seguir puliendo el flujo de nueva cotizacion
-- seguir mejorando PDF y detalle comercial
-- limpiar tablas legacy en base de datos solo cuando el MVP ya este estable
-
----
-
-## Norte del MVP actual
-
-La cotizacion debe estar compuesta por **componentes** del proyecto, por ejemplo:
-
-- V1 ventana living
-- V2 ventana cocina
-- P1 puerta terraza
-
-Cada componente deberia tener, como minimo:
-
-- codigo
-- tipo
-- ancho
-- alto
-- descripcion
-- costoProveedor
-- margenPct
-- precioFinal
-
----
-
-## Archivos clave para seguir
-
-- `Agents.md`: fuente de verdad del nuevo enfoque.
-- `docs/mvp-componentes-plan.md`: plan de reconversion del MVP.
-- `docs/mvp-componentes-schema.sql`: migracion minima sugerida.
-- `docs/salida-beta-checklist.md`: checklist operativo para salir a beta cerrada.
-- `src/services/cotizaciones.service.ts`: servicio de aplicacion ya conectado a clientes/proyectos/cotizaciones.
-- `src/hooks/useCotizacionesStore.ts`: estado principal del flujo de cotizaciones.
-- `app/(pwa-app)/cotizaciones/nueva/page.tsx`: principal pantalla a reconvertir.
-- `app/print/cotizaciones/[id]/page.tsx`: salida PDF a adaptar al nuevo presupuesto por componentes.
+- `AGENTS.md`
+- `docs/salida-beta-checklist.md`
+- `app/(landing-web)/page.tsx`
+- `app/(landing-web)/landing.module.css`
+- `app/(auth-public)/login/login-view.tsx`
+- `app/(auth-public)/login/login.module.css`
+- `app/(pwa-app)/cotizaciones/nueva/page.tsx`
+- `src/services/cotizaciones.service.ts`
+- `src/services/cotizaciones-workflow.service.ts`
+- `src/repositories/cotizaciones-repository.ts`
+- `app/print/cotizaciones/[id]/page.tsx`
 - `src/utils/pdf.ts`
 - `src/utils/whatsapp.ts`
 
 ---
 
-## Proceso recomendado
+## Prioridad real de las proximas 48 horas
 
-1. No seguir construyendo el cotizador tecnico.
-2. Definir el modelo de datos del componente MVP.
-3. Simplificar nueva cotizacion para capturar componentes y precios simples.
-4. Mantener el flujo cliente -> proyecto -> cotizacion.
-5. Adaptar PDF y WhatsApp para presentar presupuesto profesional.
-6. Actualizar tests conforme se migre la logica.
-7. Ejecutar en Supabase `docs/mvp-componentes-schema.sql`.
+### P0 - Bloqueantes de salida
+
+1. Validar Supabase real:
+   - migraciones
+   - bucket `organization-assets`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - RLS y multi-tenant
+
+2. Validar flujo comercial completo:
+   - cliente
+   - cotizacion
+   - componentes
+   - borrador
+   - presupuesto
+   - PDF
+   - WhatsApp
+   - `/presupuesto/[token]`
+
+3. Corregir errores visibles:
+   - encoding roto
+   - estados vacios
+   - links rotos
+   - errores de UX en movil
+
+4. Asegurar salida publica coherente:
+   - landing
+   - login
+   - `/planes`
+   - CTA alineados con beta cerrada o salida real
+
+### P1 - Robustez minima antes de abrir
+
+1. Error handling real en create/update de cotizaciones.
+2. Logging basico para rutas sensibles.
+3. Monitoreo minimo de errores frontend y backend.
+4. Smoke test manual documentado.
+5. Revalidar PDF con branding real y fallback sin logo.
 
 ---
 
-## Guardrails no negociables
+## Que no deberia entrar antes de salir
 
-- `page -> hook -> service -> repository -> Supabase`
-- filtrar siempre por `organization_id`
-- respetar soft delete
-- calculos solo en services
-- no meter nueva logica de catalogo tecnico al MVP
+- pagos
+- billing
+- PostHog
+- OAuth real
+- CRM mas profundo
+- UI separada de proyectos
+- nuevas capas tecnicas de materiales o compatibilidades
+
+---
+
+## Criterio de "go"
+
+Se puede desplegar si ya esta validado con una cuenta real:
+
+- login
+- clientes
+- cotizacion completa
+- PDF
+- WhatsApp o fallback
+- branding
+- link publico `/presupuesto/[token]`
+
+Y ademas:
+
+- no hay rutas criticas rotas
+- no hay errores visibles graves
+- `next build` pasa
+- Supabase final esta correctamente configurado
+
+---
+
+## Criterio de "no-go"
+
+No salir si ocurre cualquiera de estos:
+
+- no guarda cotizaciones reales de punta a punta
+- PDF falla o sale inconsistente
+- branding no persiste
+- el link publico no abre o no responde
+- faltan migraciones o columnas reales en Supabase
+- hay errores visibles graves en movil
+
+---
+
+## Norte de trabajo
+
+Si entras al repo ahora:
+
+- no inventes nuevas features
+- no expandas el alcance
+- cierra robustez, errores y despliegue
+- piensa en validacion real, no en mas mockups
+- cualquier cambio en cotizaciones debe cuidar PDF, WhatsApp y aprobacion publica juntos

@@ -18,7 +18,6 @@ import {
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
-import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 
 import s from "./page.module.css";
 
@@ -142,12 +141,11 @@ export default function CotizacionDetallePage() {
     router.prefetch(printUrl);
   }, [printUrl, router]);
 
-  const { status, approvalUrl, whatsappUrl, itemCards } = useMemo(() => {
+  const { status, approvalUrl, itemCards } = useMemo(() => {
     if (!cotizacion) {
       return {
         status: ESTADO_META.borrador,
         approvalUrl: null,
-        whatsappUrl: null,
         itemCards: [],
       };
     }
@@ -160,7 +158,6 @@ export default function CotizacionDetallePage() {
     return {
       status: nextStatus,
       approvalUrl: nextApprovalUrl,
-      whatsappUrl: buildCotizacionWhatsappUrl(cotizacion, { approvalUrl: nextApprovalUrl }),
       itemCards: cotizacion.items.map((item, index) => ({
         id: item.id,
         badge: item.codigo || `I${index + 1}`,
@@ -353,6 +350,10 @@ export default function CotizacionDetallePage() {
     }
   };
 
+  const handleOpenWhatsappShare = () => {
+    router.push(`${printUrl}?intent=whatsapp`);
+  };
+
   return (
     <div className={s.root}>
       <div className={s.header}>
@@ -381,15 +382,15 @@ export default function CotizacionDetallePage() {
                 ? "Preparando PDF..."
                 : "Abrir visor PDF"}
             </button>
-            {whatsappUrl ? (
-              <Link className={s.btnGhost} href={whatsappUrl} rel="noreferrer" target="_blank">
+            {cotizacion.clienteTelefono?.trim() ? (
+              <button className={s.btnGhost} onClick={handleOpenWhatsappShare} type="button">
                 <LuPhone aria-hidden />
-                WhatsApp
-              </Link>
+                Enviar PDF por WhatsApp
+              </button>
             ) : (
               <button className={`${s.btnGhost} ${s.btnDisabled}`} type="button" disabled>
                 <LuPhone aria-hidden />
-                WhatsApp
+                Sin telefono para WhatsApp
               </button>
             )}
             <Link className={s.btnPrimary} href={`/cotizaciones/nueva?edit=${cotizacion.id}`}>
@@ -483,6 +484,14 @@ export default function CotizacionDetallePage() {
                 : "Sin respuesta"}
             </strong>
           </div>
+          {approvalUrl ? (
+            <div className={s.sideRow}>
+              <span>Link respuesta</span>
+              <Link href={approvalUrl} rel="noreferrer" target="_blank">
+                Abrir pagina cliente
+              </Link>
+            </div>
+          ) : null}
           <div className={s.sideTotal}>
             <span>Total</span>
             <strong>{CLP(cotizacion.total)}</strong>

@@ -5,6 +5,7 @@
 }
 
 .page {
+  --nav-height: 92px;
   --section-space: clamp(108px, 11vw, 152px);
   --light-bg: #f9fafb;
   --light-panel: #ffffff;
@@ -28,6 +29,7 @@
   color: var(--text-dark);
   font-family: "Inter", sans-serif;
   overflow-x: hidden;
+  padding-top: var(--nav-height);
 }
 
 .page,
@@ -43,8 +45,10 @@
 }
 
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 60;
   border-bottom: 1px solid rgba(214, 222, 232, 0.9);
   background: rgba(255, 255, 255, 0.82);
@@ -62,7 +66,7 @@
 }
 
 .navbarInner {
-  min-height: 92px;
+  min-height: var(--nav-height);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -72,7 +76,8 @@
 .navLogo {
   display: inline-flex;
   align-items: center;
-  min-height: 60px;
+  justify-self: start;
+  min-height: 64px;
   padding: 0;
   transition:
     transform 0.2s ease,
@@ -87,7 +92,7 @@
 .wordmark {
   display: block;
   width: auto;
-  height: 44px;
+  height: 50px;
 }
 
 .iconmark {
@@ -201,6 +206,7 @@
 
 .hamburger {
   display: none;
+  justify-self: end;
   width: 48px;
   height: 48px;
   border-radius: 14px;
@@ -208,6 +214,7 @@
   background: #ffffff;
   color: var(--text-dark);
   font-size: 22px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .mobileMenu {
@@ -858,6 +865,10 @@
 
 .problemSection,
 .faqSection,
+.contactTrustRow span:not(:last-child)::after {
+  content: "·";
+}
+
 .footer {
   background: var(--light-bg);
 }
@@ -1200,7 +1211,7 @@
 }
 
 .productSection {
-  background: #f9fafb;
+  background: #f8fafc;
 }
 
 .productLayout {
@@ -1208,27 +1219,54 @@
   align-items: start;
 }
 
-.signalList {
-  list-style: none;
+.benefitGrid {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 6px;
+  align-items: stretch;
+}
+
+.benefitCard {
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(214, 222, 232, 0.9);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.24s ease,
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
+}
+
+.benefitCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.benefitIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  font-size: 24px;
+}
+
+.benefitCard p {
   margin: 0;
-  padding: 0;
-}
-
-.signalList li {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  font-size: 16px;
-  line-height: 1.7;
+  max-width: 18ch;
   color: var(--text-dark);
-}
-
-.signalList svg {
-  color: var(--success);
-  margin-top: 2px;
-  flex-shrink: 0;
+  font-family: "Inter", sans-serif;
+  font-size: 17px;
+  line-height: 1.42;
+  font-weight: 600;
 }
 
 .productVisual {
@@ -1257,19 +1295,16 @@
   font-size: 34px;
   line-height: 1.02;
   letter-spacing: -0.04em;
+  max-width: 12ch;
 }
 
-.captureCount {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: #eef4ff;
-  border: 1px solid #d7e5ff;
-  color: #2563eb;
-  font-size: 13px;
-  font-weight: 700;
+.productBoardText {
+  margin: 14px 0 0;
+  max-width: 34ch;
+  color: #667085;
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
 }
 
 .productMock {
@@ -1395,15 +1430,14 @@
 
 .captureShowcase {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
-  gap: 18px;
+  grid-template-columns: 1fr;
+  gap: 0;
   margin-top: 28px;
   align-items: start;
 }
 
 .captureColumn {
-  display: grid;
-  gap: 18px;
+  display: none;
 }
 
 .captureFrame {
@@ -1417,6 +1451,54 @@
 
 .captureFrameWide {
   align-self: start;
+}
+
+.productCalloutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.productCallout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(214, 222, 232, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.productCalloutIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.productCalloutBody strong {
+  display: block;
+  color: #0f172a;
+  font-family: "Inter", sans-serif;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.productCalloutBody p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .captureFrameDark {
@@ -1742,6 +1824,17 @@
   align-items: start;
 }
 
+.advantageCopy,
+.proofPanel {
+  min-width: 0;
+}
+
+.advantageCopy .sectionTitleLight {
+  max-width: 12ch;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
 .advantageList {
   display: grid;
   gap: 16px;
@@ -1778,10 +1871,13 @@
   gap: 20px;
 }
 
+.advantageTestimonials {
+  width: 100%;
+  padding-top: 8px;
+}
+
 .statsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  display: none;
 }
 
 .statCard {
@@ -1804,6 +1900,7 @@
 }
 
 .testimonial {
+  display: none;
   padding: 26px;
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(17, 28, 51, 0.96) 0%, rgba(10, 16, 30, 0.96) 100%);
@@ -1883,39 +1980,271 @@
   padding: 0 24px 24px;
 }
 
-.ctaShell {
-  position: relative;
-  padding: 40px;
-  border-radius: 34px;
-  background: linear-gradient(180deg, rgba(17, 28, 51, 0.96) 0%, rgba(11, 19, 35, 0.96) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: var(--shadow-heavy);
+.ctaSection {
+  background: linear-gradient(180deg, #020617 0%, #0b1120 100%);
+}
+
+.contactShell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  padding: 24px 0 0;
+  position: relative;
+}
+
+.contactShell::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.contactCopy,
+.contactFormShell {
+  min-width: 0;
+}
+
+.contactCopy {
+  display: grid;
+  gap: 26px;
+  padding-right: 28px;
+}
+
+.contactEyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 169, 110, 0.34);
+  background: rgba(201, 169, 110, 0.08);
+  color: #c9a96e;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.contactTitle {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(48px, 5.4vw, 64px);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+  font-weight: 800;
+}
+
+.contactDescription {
+  margin: 0;
+  max-width: 32ch;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.contactList {
+  display: grid;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.contactItem {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
 }
 
-.ctaShell::after {
-  content: "";
-  position: absolute;
-  inset: 18px;
-  border-radius: 24px;
-  border: 1px solid rgba(200, 169, 110, 0.12);
-  pointer-events: none;
+.contactIconWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #c9a96e;
+  font-size: 18px;
 }
 
-.ctaCopy,
-.ctaActions {
-  position: relative;
-  z-index: 1;
+.contactItemBody {
+  display: grid;
+  gap: 4px;
 }
 
-.ctaActions {
+.contactItemBody span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contactItemBody a,
+.contactItemBody p {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.contactFormShell {
+  padding-left: 28px;
+}
+
+.contactFormCard {
+  padding: 32px;
+  border-radius: 20px;
+  background: #0b1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.contactFormHeading {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.contactFormHeading h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.contactFormHeading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.contactForm {
+  display: grid;
+  gap: 18px;
+}
+
+.contactFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.contactField {
+  display: grid;
+  gap: 8px;
+}
+
+.contactField span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contactField input,
+.contactField select {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #020617;
+  color: #ffffff;
+  font-size: 16px;
+  font-family: "Inter", sans-serif;
+}
+
+.contactField input::placeholder {
+  color: #64748b;
+}
+
+.contactField select {
+  color: #94a3b8;
+  appearance: none;
+}
+
+.contactSubmit {
+  min-height: 56px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.contactSubmit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.contactSubmit:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.contactFeedback {
+  margin: 14px 0 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 163, 107, 0.2);
+  background: rgba(47, 163, 107, 0.12);
+  color: #d8f3e3;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.contactFeedbackError {
+  border-color: rgba(217, 92, 92, 0.24);
+  background: rgba(217, 92, 92, 0.12);
+  color: #ffd7d7;
+}
+
+.contactLegal {
+  margin: 14px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.contactTrustRow {
+  margin-top: 34px;
+  padding-top: 18px;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  justify-content: flex-end;
+  gap: 12px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.contactTrustRow span {
+  position: relative;
+}
+
+.contactTrustRow span:not(:last-child)::after {
+  content: "•";
+  position: absolute;
+  right: -14px;
+  color: #475569;
 }
 
 .footer {
@@ -1961,7 +2290,7 @@
   .problemLayout,
   .productLayout,
   .advantageShell,
-  .ctaShell,
+  .contactShell,
   .footerInner {
     grid-template-columns: 1fr;
   }
@@ -2022,9 +2351,22 @@
     order: initial;
   }
 
-  .ctaActions,
+  .contactFormGrid,
   .footerLinks {
     justify-content: flex-start;
+  }
+
+  .contactShell {
+    gap: 36px;
+  }
+
+  .contactShell::after {
+    display: none;
+  }
+
+  .contactCopy,
+  .contactFormShell {
+    padding: 0;
   }
 }
 
@@ -2042,7 +2384,7 @@
 
   .mobileMenu {
     position: fixed;
-    top: 96px;
+    top: calc(var(--nav-height) + 12px);
     left: 16px;
     right: 16px;
     z-index: 55;
@@ -2080,19 +2422,49 @@
     width: 100%;
     margin-top: 14px;
   }
+
+  .contactTitle {
+    font-size: clamp(40px, 9vw, 54px);
+  }
+
+  .contactFormGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
+  .page {
+    --nav-height: 78px;
+  }
+
   .container {
     width: min(100% - 24px, 1180px);
   }
 
+  .navbarInner {
+    gap: 14px;
+  }
+
+  .navLogo {
+    min-height: 54px;
+    max-width: 176px;
+  }
+
   .wordmark {
-    display: none;
+    display: block;
+    height: 38px;
   }
 
   .iconmark {
-    display: block;
+    display: none;
+  }
+
+  .hamburger {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 18px;
+    margin-left: auto;
   }
 
   .heroSection,
@@ -2102,19 +2474,46 @@
   .advantageSection,
   .faqSection,
   .ctaSection {
-    padding-top: 84px;
+    padding-top: 56px;
     padding-bottom: 84px;
   }
 
   .heroShell {
     min-height: auto;
-    gap: 28px;
+    gap: 22px;
+  }
+
+  .heroCopy {
+    gap: 22px;
   }
 
   .heroTitle,
   .sectionTitleDark,
   .sectionTitleLight {
     font-size: clamp(36px, 11vw, 52px);
+  }
+
+  .advantageCopy .sectionTitleLight {
+    max-width: 13ch;
+    font-size: clamp(28px, 8vw, 38px);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .advantageCopy {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .advantageCopy .sectionTextLight {
+    max-width: 28ch;
+    margin-inline: auto;
+  }
+
+  .proofPanel {
+    width: 100%;
   }
 
   .heroBrandPlate {
@@ -2188,8 +2587,20 @@
 
   .workspaceMain,
   .productBoard,
-  .ctaShell {
+  .contactFormCard {
     padding: 20px;
+  }
+
+  .benefitCard {
+    padding: 22px;
+  }
+
+  .productCallout {
+    padding: 16px;
+  }
+
+  .productCalloutGrid {
+    grid-template-columns: 1fr;
   }
 
   .workspaceHeader,
@@ -2197,8 +2608,7 @@
   .totalsBar,
   .showcaseCard,
   .productBoardHeader,
-  .heroActions,
-  .ctaActions {
+  .heroActions {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -2224,7 +2634,24 @@
   .secondaryButton,
   .secondaryButtonDark,
   .mobilePrimary,
-  .mobileSecondary {
+  .mobileSecondary,
+  .contactSubmit {
     width: 100%;
+  }
+
+  .contactTitle {
+    font-size: clamp(34px, 11vw, 46px);
+    line-height: 1.02;
+  }
+
+  .contactDescription,
+  .contactItemBody a,
+  .contactItemBody p {
+    font-size: 16px;
+  }
+
+  .contactTrustRow {
+    gap: 10px 18px;
+    font-size: 13px;
   }
 }

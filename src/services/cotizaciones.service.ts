@@ -422,6 +422,12 @@ export function createCotizacionesAppService(
     const existingCotizacion = input.existingId
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
+    const normalizedItems = input.draft.items.map(normalizeWorkflowItem);
+
+    if (input.estado !== "borrador" && normalizedItems.length === 0) {
+      throw new Error("La cotizacion debe tener al menos un componente");
+    }
+
     const client = await ensureClient({
       organizationId: input.organizationId,
       existingClientId: input.existingClientId,
@@ -435,12 +441,6 @@ export function createCotizacionesAppService(
       clientId: client.id,
       titulo: input.draft.obra,
     });
-
-    const normalizedItems = input.draft.items.map(normalizeWorkflowItem);
-
-    if (normalizedItems.length === 0) {
-      throw new Error("La cotizacion debe tener al menos un componente");
-    }
 
     const totals = calculateCotizacionWorkflowTotals(
       normalizedItems,

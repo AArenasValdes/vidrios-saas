@@ -250,7 +250,7 @@ export function createPublicCotizacionApprovalRepository() {
       const clientResult =
         project?.cliente_id !== null && project?.cliente_id !== undefined
           ? await supabase
-              .from("clientes")
+              .from("clients")
               .select("id, nombre, telefono, direccion")
               .eq("id", project.cliente_id)
               .eq("organization_id", cotizacion.organization_id)
@@ -258,7 +258,7 @@ export function createPublicCotizacionApprovalRepository() {
               .maybeSingle()
           : { data: null, error: null };
 
-      if (clientResult.error && !isMissingRelationError(clientResult.error, "clientes")) {
+      if (clientResult.error && !isMissingRelationError(clientResult.error, "clients")) {
         throw clientResult.error;
       }
 

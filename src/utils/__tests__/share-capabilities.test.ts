@@ -23,7 +23,7 @@ describe("share-capabilities utils", () => {
         isLikelyMobile: true,
       })
     ).toMatchObject({
-      actionLabel: "Compartir por WhatsApp",
+      actionLabel: "Enviar PDF por WhatsApp",
       canSharePdf: true,
     });
   });
@@ -35,5 +35,21 @@ describe("share-capabilities utils", () => {
         isLikelyMobile: false,
       })
     ).toEqual(DEFAULT_COTIZACION_SHARE_EXPERIENCE);
+    expect(DEFAULT_COTIZACION_SHARE_EXPERIENCE.actionLabel).toBe(
+      "Enviar link por WhatsApp"
+    );
+  });
+
+  it("debe usar link publico en moviles sin share de PDF", () => {
+    expect(
+      resolveCotizacionShareExperience({
+        canSharePdf: false,
+        isLikelyMobile: true,
+      })
+    ).toMatchObject({
+      actionLabel: "Enviar link por WhatsApp",
+      canSharePdf: false,
+      isLikelyMobile: true,
+    });
   });
 });

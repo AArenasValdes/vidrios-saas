@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { IconType } from "react-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   LuClock3,
   LuFilePlus2,
   LuFileText,
+  LuInbox,
   LuLayoutDashboard,
   LuLogOut,
   LuRefreshCw,
@@ -24,7 +25,9 @@ import {
 import { useCotizacionAlerts } from "@/hooks/useCotizacionAlerts";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
+import { PushNotificationsPrompt } from "@/components/pwa/push-notifications-prompt";
 import { buildOrganizationInitials } from "@/services/organization-profile.service";
+import { canAccessSolicitudes } from "@/services/solicitudes-contacto-access";
 import type { CotizacionAlert } from "@/services/cotizacion-alerts.service";
 
 import s from "./app-shell.module.css";
@@ -67,6 +70,13 @@ const NAV_ITEMS: NavItem[] = [
     description: "Contactos, obras e historial comercial",
   },
   {
+    href: "/solicitudes",
+    icon: LuInbox,
+    label: "Solicitudes",
+    mobileLabel: "Leads",
+    description: "Contactos y demos que llegan desde la landing",
+  },
+  {
     href: "/configuracion/empresa",
     icon: LuSettings,
     label: "Empresa",
@@ -88,8 +98,42 @@ const SPECIAL_SCREENS: ContextItem[] = [
   },
 ];
 
+const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
+const ALERTS_CLEARED_STORAGE_PREFIX = "vidrios-saas:alerts-cleared:";
+
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+}
+
+function getAlertTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getAlertsSeenStorageKey(
+  organizationId: string | number | null | undefined,
+  email: string | null | undefined
+) {
+  if (!organizationId || !email) {
+    return null;
+  }
+
+  return `${ALERTS_SEEN_STORAGE_PREFIX}${String(organizationId)}:${email.trim().toLowerCase()}`;
+}
+
+function getAlertsClearedStorageKey(
+  organizationId: string | number | null | undefined,
+  email: string | null | undefined
+) {
+  if (!organizationId || !email) {
+    return null;
+  }
+
+  return `${ALERTS_CLEARED_STORAGE_PREFIX}${String(organizationId)}:${email.trim().toLowerCase()}`;
 }
 
 function formatAlertDate(value: string) {
@@ -153,13 +197,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { profile } = useOrganizationProfile();
   const { alerts, isLoading: isAlertsLoading, error: alertsError, refresh } =
     useCotizacionAlerts(organizacionId, {
-      autoRefresh: false,
-      refreshOnVisibility: false,
+      autoRefresh: true,
+      refreshOnVisibility: true,
     });
   const showMobileFab = !pathname.startsWith("/cotizaciones");
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [alertsSeenAt, setAlertsSeenAt] = useState(0);
+  const [alertsClearedAt, setAlertsClearedAt] = useState(0);
+  const [isCompactMobile, setIsCompactMobile] = useState(false);
 
   const currentItem = useMemo(
     () =>
@@ -169,15 +216,41 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [pathname]
   );
   const initial = useMemo(() => user?.email?.[0]?.toUpperCase() ?? "U", [user?.email]);
+  const canReviewSolicitudes = useMemo(
+    () =>
+      canAccessSolicitudes({
+        email: user?.email,
+        rol,
+      }),
+    [rol, user?.email]
+  );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
   const companyInitials = useMemo(
     () => buildOrganizationInitials(companyName),
     [companyName]
   );
-  const alertCount = alerts.length;
+  const alertsSeenStorageKey = useMemo(
+    () => getAlertsSeenStorageKey(organizacionId, user?.email),
+    [organizacionId, user?.email]
+  );
+  const alertsClearedStorageKey = useMemo(
+    () => getAlertsClearedStorageKey(organizacionId, user?.email),
+    [organizacionId, user?.email]
+  );
+  const unreadAlerts = useMemo(
+    () => alerts.filter((alert) => getAlertTimestamp(alert.occurredAt) > alertsSeenAt),
+    [alerts, alertsSeenAt]
+  );
+  const alertCount = unreadAlerts.length;
   const isWorkspaceBooting = cargando || Boolean(user && !organizacionId);
-  const visibleAlerts = useMemo(() => alerts.slice(0, 8), [alerts]);
+  const visibleAlerts = useMemo(
+    () =>
+      alerts
+        .filter((alert) => getAlertTimestamp(alert.occurredAt) > alertsClearedAt)
+        .slice(0, isCompactMobile ? 6 : 8),
+    [alerts, alertsClearedAt, isCompactMobile]
+  );
 
   const handleLogout = async () => {
     if (isSigningOut) {
@@ -194,6 +267,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const markAlertsAsSeen = useCallback(() => {
+    const latestSeenAt = alerts.reduce(
+      (latest, alert) => Math.max(latest, getAlertTimestamp(alert.occurredAt)),
+      alertsSeenAt
+    );
+
+    setAlertsSeenAt(latestSeenAt);
+
+    if (typeof window !== "undefined" && alertsSeenStorageKey) {
+      window.localStorage.setItem(alertsSeenStorageKey, String(latestSeenAt));
+    }
+  }, [alerts, alertsSeenAt, alertsSeenStorageKey]);
+
   useEffect(() => {
     if (!cargando && !user) {
       if (isSigningOut) {
@@ -207,6 +293,53 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [cargando, isSigningOut, pathname, router, user]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncViewport = () => {
+      setIsCompactMobile(window.innerWidth <= 720);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!alertsSeenStorageKey) {
+      setAlertsSeenAt(0);
+      return;
+    }
+
+    const rawSeenAt = window.localStorage.getItem(alertsSeenStorageKey);
+    const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
+    setAlertsSeenAt(Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0);
+  }, [alertsSeenStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!alertsClearedStorageKey) {
+      setAlertsClearedAt(0);
+      return;
+    }
+
+    const rawClearedAt = window.localStorage.getItem(alertsClearedStorageKey);
+    const parsedClearedAt = rawClearedAt ? Number(rawClearedAt) : 0;
+    setAlertsClearedAt(Number.isFinite(parsedClearedAt) ? parsedClearedAt : 0);
+  }, [alertsClearedStorageKey]);
+
+  useEffect(() => {
     if (isWorkspaceBooting) {
       return;
     }
@@ -215,6 +348,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       "/dashboard",
       "/cotizaciones",
       "/clientes",
+      "/solicitudes",
       "/configuracion/empresa",
       "/cotizaciones/nueva",
     ].filter((href) => href !== pathname);
@@ -290,7 +424,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setIsAlertsOpen(nextIsOpen);
 
     if (nextIsOpen) {
+      markAlertsAsSeen();
       void refresh();
+    }
+  };
+
+  const handleClearAlerts = () => {
+    markAlertsAsSeen();
+    const latestClearedAt = alerts.reduce(
+      (latest, alert) => Math.max(latest, getAlertTimestamp(alert.occurredAt)),
+      alertsClearedAt
+    );
+
+    setAlertsClearedAt(latestClearedAt);
+
+    if (typeof window !== "undefined" && alertsClearedStorageKey) {
+      window.localStorage.setItem(alertsClearedStorageKey, String(latestClearedAt));
     }
   };
 
@@ -364,6 +513,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className={s.navLabel}>Operacion</div>
 
           {NAV_ITEMS.map((item) => {
+            if (item.href === "/solicitudes" && !canReviewSolicitudes) {
+              return null;
+            }
+
             const active = isActivePath(pathname, item.href);
             const Icon = item.icon;
 
@@ -437,7 +590,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
             onClick={handleToggleAlerts}
           >
             <LuBell aria-hidden />
-            {alertCount > 0 ? <span className={s.alertDot}>{Math.min(alertCount, 9)}</span> : null}
+            {alertCount > 0 ? (
+              <span className={s.alertDot}>{alertCount > 9 ? "9+" : alertCount}</span>
+            ) : null}
           </button>
           <div className={s.mobileAvatar}>{initial}</div>
         </div>
@@ -462,7 +617,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <LuBell aria-hidden />
               Alertas
               {alertCount > 0 ? (
-                <span className={s.alertPill}>{Math.min(alertCount, 9)}</span>
+                <span className={s.alertPill}>{alertCount > 9 ? "9+" : alertCount}</span>
               ) : null}
             </button>
             <div className={s.teamBadge}>
@@ -476,7 +631,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <div className={s.pageContent}>{children}</div>
+        <div className={s.pageContent}>
+          <PushNotificationsPrompt />
+          {children}
+        </div>
       </main>
 
       {isAlertsOpen ? (
@@ -490,14 +648,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   : "Sin alertas activas"}
               </p>
             </div>
-            <button
-              className={s.alertsRefreshBtn}
-              onClick={() => void refresh()}
-              type="button"
-              aria-label="Actualizar alertas"
-            >
-              <LuRefreshCw aria-hidden />
-            </button>
+            <div className={s.alertsHeaderActions}>
+              <button
+                className={s.alertsClearBtn}
+                onClick={handleClearAlerts}
+                type="button"
+                aria-label="Limpiar alertas"
+              >
+                Limpiar
+              </button>
+              <button
+                className={s.alertsRefreshBtn}
+                onClick={() => void refresh()}
+                type="button"
+                aria-label="Actualizar alertas"
+              >
+                <LuRefreshCw aria-hidden />
+              </button>
+            </div>
           </div>
 
           {isAlertsLoading && alerts.length === 0 ? (
@@ -567,6 +735,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <nav className={s.tabBar}>
         <div className={s.tabBarInner}>
           {NAV_ITEMS.map((item) => {
+            if (item.href === "/solicitudes" && !canReviewSolicitudes) {
+              return null;
+            }
+
             const active = isActivePath(pathname, item.href);
             const Icon = item.icon;
 

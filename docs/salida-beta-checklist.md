@@ -1,291 +1,237 @@
-# Checklist de Salida a Beta
+# Checklist de Salida - Beta o Produccion Inicial
 
-Documento operativo para sacar este repo a una beta cerrada en el estado actual del producto.
+Actualizado: 2026-03-23.
 
-Fecha de corte: 2026-03-20.
+Documento operativo para cerrar salida en las proximas 24 a 48 horas.
+
+Este documento ya no esta pensado como lista larga de deseos.
+Esta pensado como lista corta de cierre para decidir si hay `go` o `no-go`.
 
 ---
 
-## Objetivo de esta beta
+## Objetivo de esta salida
 
-La meta no es salir con todo el SaaS terminado.
-
-La meta es salir con un producto que permita a un pequeno grupo de empresas:
+Salir con una version que permita a un pequeno grupo de empresas:
 
 - iniciar sesion
 - registrar clientes
 - crear cotizaciones por componente
 - generar PDF profesional
 - compartir por WhatsApp
-- configurar su marca basica
+- revisar y responder presupuestos desde link publico
+- configurar branding basico de empresa
 
-Beta sugerida:
+No se busca salir con:
 
-- 5 a 15 empresas piloto
-- 1 a 3 usuarios por empresa
-- feedback semanal
-
----
-
-## Definicion de "go" para beta cerrada
-
-Se puede desplegar beta si se cumple esto:
-
-- login funcionando en produccion
-- clientes funcionando en produccion
-- nueva cotizacion funcionando en produccion
-- detalle de cotizacion funcionando
-- PDF funcionando con logo o fallback
-- WhatsApp funcionando al menos con link de respaldo
-- branding de empresa funcionando
-- no hay rutas rotas en el flujo principal
-- variables de entorno cargadas
-- migraciones minimas aplicadas en Supabase
-
-Si uno de esos puntos falla, no hay go.
+- pagos
+- analytics
+- OAuth
+- proyectos como modulo separado
+- automatizaciones comerciales
 
 ---
 
-## Estado actual resumido
+## Definicion de "go"
 
-Lo que ya esta bien encaminado:
+Hay `go` si estas condiciones son verdaderas al mismo tiempo:
 
-- auth real con Supabase
-- clientes
-- cotizaciones
-- calculo por componente
-- detalle
-- PDF
-- WhatsApp
-- branding de empresa
+- login funciona en produccion
+- clientes funciona en produccion
+- nueva cotizacion funciona con datos reales
+- PDF sale correcto
+- WhatsApp funciona o tiene fallback util
+- branding de empresa persiste
+- `/presupuesto/[token]` funciona de punta a punta
+- variables de entorno y Supabase estan validados
+- no hay errores visibles graves en desktop y movil
+
+Si una de esas falla, no hay `go`.
+
+---
+
+## Estado de corte
+
+### Ya esta razonablemente listo
+
+- landing y login mucho mas alineados visualmente
+- navbar, branding y secciones publicas en mejor estado
+- dashboard, clientes y cotizaciones operativos
+- PDF y WhatsApp implementados
 - build de produccion pasando
 
-Lo que aun bloquea salida limpia:
+### Sigue siendo riesgo real
 
-- alinear CTA y copy publico con el modelo real de beta cerrada
-- validar migraciones SQL reales en Supabase
-- validar `SUPABASE_SERVICE_ROLE_KEY` para rutas publicas de aprobacion
-- falta smoke test manual completo de punta a punta
-- falta validar el flujo publico `/presupuesto/[token]`
-- falta validar PWA/offline real en dispositivo
-- no hay monitoreo de errores de produccion
-- las escrituras de cotizaciones siguen sin transaccion
-
-Lo que no bloquea beta:
-
-- metodo de pago
-- PostHog
-- OAuth
-- pricing final publico
-- UI separada de proyectos
+- escrituras no transaccionales en cotizaciones
+- validacion real de Supabase en entorno final
+- falta smoke test manual completo
+- falta observabilidad minima
+- PWA/offline no validado en dispositivo
+- flujo publico de aprobacion necesita validacion real
+- quedan posibles textos heredados con encoding roto
 
 ---
 
-## Checklist P0
+## Plan realista - Proximas 48 horas
 
-Esto debe quedar cerrado antes de desplegar beta.
+## Bloque 1 - Infra y entorno final
 
-### 1. Base de datos y Supabase
+Esto debe cerrarse primero.
 
-- [ ] Ejecutar `docs/mvp-componentes-schema.sql` en el proyecto Supabase correcto.
-- [ ] Verificar que `cotizacion_items` tenga `codigo`, `tipo_componente` y `orden`.
-- [ ] Ejecutar `docs/organization-profile-schema.sql` o validar que su equivalente ya este aplicado.
-- [ ] Verificar existencia del bucket `organization-assets`.
-- [ ] Configurar `SUPABASE_SERVICE_ROLE_KEY`.
-- [ ] Verificar politicas RLS de `organization_profile`.
-- [ ] Confirmar que login, lectura y escritura funcionan con un usuario real de prueba.
+- [ ] Confirmar proyecto Supabase correcto.
+- [ ] Aplicar migraciones pendientes reales.
+- [ ] Verificar columnas de componentes en `cotizacion_items`.
+- [ ] Verificar `organization_profile`.
+- [ ] Verificar bucket `organization-assets`.
+- [ ] Confirmar `SUPABASE_SERVICE_ROLE_KEY`.
+- [ ] Confirmar variables de entorno en hosting final.
+- [ ] Validar RLS y aislamiento por `organization_id`.
 
-### 2. Variables y despliegue
+Entregable:
 
-- [ ] Configurar `NEXT_PUBLIC_SUPABASE_URL`.
-- [ ] Configurar `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- [ ] Definir hosting inicial.
-- [ ] Definir dominio beta o subdominio beta.
-- [ ] Confirmar que `next build` pasa en el entorno final.
+- evidencia de que login, lectura y escritura funcionan con usuario real
 
-### 3. Flujo principal de producto
+---
 
-- [ ] Crear cliente en produccion.
-- [ ] Crear cotizacion con al menos 2 componentes.
-- [ ] Guardar como borrador.
+## Bloque 2 - Flujo comercial punta a punta
+
+Esto define si el producto puede usarse o no.
+
+- [ ] Crear cliente real.
+- [ ] Crear cotizacion con 2 o 3 componentes.
+- [ ] Guardar borrador.
 - [ ] Reabrir y editar borrador.
 - [ ] Guardar como presupuesto.
-- [ ] Abrir detalle de cotizacion.
-- [ ] Abrir vista `/print/cotizaciones/[id]`.
-- [ ] Descargar PDF.
-- [ ] Compartir por WhatsApp o validar fallback.
-- [ ] Abrir `/presupuesto/[token]` desde el link publico.
-- [ ] Aceptar o rechazar presupuesto desde el link publico.
-- [ ] Eliminar cotizacion y confirmar soft delete.
+- [ ] Abrir detalle.
+- [ ] Abrir print.
+- [ ] Generar PDF.
+- [ ] Compartir por WhatsApp.
+- [ ] Abrir `/presupuesto/[token]`.
+- [ ] Aprobar o rechazar presupuesto desde el link.
+- [ ] Confirmar que estados y timestamps cambian correctamente.
+- [ ] Confirmar soft delete.
 
-### 4. Branding minimo
+Entregable:
 
-- [x] Reemplazar `[NOMBRE]` en landing.
-- [x] Reemplazar `[NOMBRE]` en login.
-- [ ] Definir nombre comercial visible del producto.
-- [ ] Alinear CTA de beta cerrada vs acceso abierto en landing y `/planes`.
-- [ ] Revisar footer y textos publicos finales.
-- [ ] Cargar logo real y validar PDF con logo.
-- [ ] Validar fallback sin logo.
-
-### 5. Rutas rotas y UX critica
-
-- [x] Corregir o remover links a `/planes`.
-- [ ] Confirmar que `/offline` funciona.
-- [ ] Confirmar que el service worker queda registrado en produccion.
-- [ ] Confirmar que el service worker no rompe navegacion normal ni cachea datos autenticados.
-- [ ] Revisar mobile en login, nueva cotizacion, detalle y print.
-- [ ] Revisar mobile en `/presupuesto/[token]`.
-- [ ] Revisar textos con encoding roto visibles al usuario.
+- checklist manual completado con una cuenta real
 
 ---
 
-## Checklist P1
+## Bloque 3 - UX critica y errores visibles
 
-Esto no deberia bloquear la beta cerrada, pero si deberia entrar en la primera semana post-despliegue.
+Esto no es maquillaje; es cierre de uso real.
 
-### 1. Calidad operativa
+- [ ] Revisar login en desktop y movil.
+- [ ] Revisar nueva cotizacion en desktop y movil.
+- [ ] Revisar detalle de cotizacion.
+- [ ] Revisar PDF con y sin logo.
+- [ ] Revisar `/presupuesto/[token]` en movil.
+- [ ] Corregir textos con encoding roto visibles al usuario.
+- [ ] Revisar estados vacios y errores recuperables.
+- [ ] Revisar links publicos y CTA.
 
-- [ ] Definir un canal de reporte de errores para pilotos.
-- [ ] Agregar monitoreo de errores de frontend y backend.
-- [ ] Agregar logging minimo para errores del flujo de cotizacion.
-- [ ] Agregar logging para link publico de aprobacion y print/PDF.
-- [ ] Registrar quien usa el sistema y con que frecuencia.
+Entregable:
 
-### 2. Validacion comercial
-
-- [ ] Definir lista de empresas piloto.
-- [ ] Crear script de onboarding manual.
-- [ ] Preparar mensaje de invitacion beta.
-- [ ] Preparar formulario corto de feedback.
-- [ ] Medir tiempo real para crear una cotizacion desde cero.
-
-### 3. Pulido de producto
-
-- [ ] Revisar copy del dashboard.
-- [ ] Revisar copy del detalle de cotizacion.
-- [ ] Revisar copy del PDF.
-- [ ] Confirmar que el mensaje de WhatsApp es suficientemente profesional.
-- [ ] Confirmar que subtotal, descuento y total visibles al cliente son correctos en `/presupuesto/[token]`.
-- [ ] Revisar si mostrar costo proveedor en PDF es deseado o debe ocultarse para cliente final.
+- lista corta de bugs corregidos y 0 bloqueantes visuales
 
 ---
 
-## Checklist P2
+## Bloque 4 - Robustez minima antes de abrir
 
-Esto puede esperar hasta despues de validar uso real.
+Esto es lo minimo para no salir ciegos.
 
-- [ ] Metodo de pago.
-- [ ] Suscripciones y billing.
-- [ ] Analiticas de producto tipo PostHog.
-- [ ] Pricing final publicado.
-- [ ] OAuth.
-- [ ] CRM mas profundo.
-- [ ] Gestion explicita de proyectos.
-- [ ] Automatizaciones comerciales.
+- [ ] Agregar monitoreo de errores de frontend.
+- [ ] Agregar monitoreo de errores de backend o rutas criticas.
+- [ ] Agregar logging basico para:
+  - crear cotizacion
+  - actualizar cotizacion
+  - print/PDF
+  - aprobacion publica
+- [ ] Documentar donde ver errores si algo falla.
+- [ ] Revisar manejo de error en escrituras parciales de cotizaciones.
 
----
+Entregable:
 
-## Go / No-Go rapido
-
-### Go
-
-Haz deploy beta si ya estan resueltos:
-
-- P0 completo
-- flujo punta a punta validado con una cuenta real
-- branding minimo cerrado
-- sin rutas publicas rotas en el camino de conversion
-
-### No-Go
-
-No hagas deploy beta si ocurre cualquiera de estos:
-
-- no se pueden guardar cotizaciones reales
-- el PDF falla o sale roto
-- WhatsApp no tiene ni share ni fallback por link
-- branding de empresa no guarda
-- faltan columnas o politicas en Supabase
-- la landing principal apunta a rutas inexistentes
-- el flujo publico de aprobacion no registra o muestra mal la respuesta del cliente
+- ruta clara para detectar fallas en produccion
 
 ---
 
-## Secuencia sugerida para esta semana
+## Bloque 5 - Decision de salida
 
-### Dia 1
+Cuando los 4 bloques anteriores esten cerrados:
 
-- aplicar migraciones
-- validar auth
-- validar bucket y branding
+- [ ] Definir si la salida es beta cerrada o produccion inicial controlada.
+- [ ] Definir dominio final o subdominio.
+- [ ] Definir empresas piloto iniciales.
+- [ ] Definir canal de soporte y feedback.
+- [ ] Definir responsable de monitorear primeras 24 horas.
 
-### Dia 2
+Entregable:
 
-- alinear CTA y copy publico
-- revisar landing, `/planes` y login
-
-### Dia 3
-
-- smoke test funcional completo en desktop y movil
-- validar `/presupuesto/[token]` y PWA real
-- ajustar errores rapidos
-
-### Dia 4
-
-- desplegar beta cerrada
-- cargar 1 o 2 empresas piloto
-
-### Dia 5
-
-- observar uso real
-- registrar bugs
-- priorizar correcciones
+- decision `go / no-go` con responsables claros
 
 ---
 
-## Capacidad inicial esperable
+## P0 - Bloqueantes absolutos
 
-Sin pruebas de carga reales, la estimacion debe ser conservadora.
+No salir si cualquiera de estos sigue pendiente:
 
-Escenario razonable para primera beta:
-
-- 50 a 150 empresas
-- 200 a 800 usuarios activos mensuales
-- 20 a 50 usuarios concurrentes
-
-Esta estimacion asume:
-
-- despliegue correcto en hosting moderno
-- Supabase bien configurado
-- uso moderado
-- sin picos de trafico de marketing
-
-Si la beta empieza a moverse fuerte, lo siguiente a revisar es:
-
-- indices SQL
-- latencia de queries
-- errores en exportacion PDF
-- limites de storage
-- observabilidad
+- [ ] no se pueden guardar cotizaciones reales
+- [ ] PDF falla o sale roto
+- [ ] branding no persiste
+- [ ] `/presupuesto/[token]` falla
+- [ ] faltan migraciones reales en Supabase
+- [ ] variables de entorno no estan confirmadas
+- [ ] error visible grave en movil en flujo principal
 
 ---
 
-## Nota importante
+## P1 - Puede entrar justo despues de salir
 
-No bloquees la salida a beta por pagos o analiticas.
+- [ ] mejorar consistencia de escritura con estrategia transaccional o compensacion
+- [ ] hardening de PWA y cache
+- [ ] revision de copy final del dashboard
+- [ ] revision del mensaje de WhatsApp final
+- [ ] onboarding de empresas piloto
 
-Primero valida:
+---
 
-- que la gente realmente use el flujo
-- que genere cotizaciones
-- que envie PDFs
-- que los clientes puedan responder presupuestos sin friccion
-- que el producto ahorre tiempo real
+## P2 - No meter ahora
 
-Despues de eso, recien tiene sentido meter:
+- [ ] pagos
+- [ ] billing
+- [ ] PostHog
+- [ ] OAuth real
+- [ ] CRM profundo
+- [ ] gestion explicita de proyectos
 
-- pago online
-- planes
-- PostHog
-- embudos
-- conversion y retention
+---
+
+## Secuencia recomendada de trabajo
+
+### Hoy
+
+1. cerrar Supabase final
+2. ejecutar smoke test completo
+3. corregir bugs bloqueantes
+
+### Manana
+
+1. agregar monitoreo y logging minimo
+2. repetir smoke test en entorno desplegado
+3. decidir `go / no-go`
+4. abrir a pilotos
+
+---
+
+## Nota de criterio
+
+Lo que queda ya no es "inventar mas producto".
+
+Lo que queda es:
+
+- validar
+- endurecer
+- corregir
+- desplegar
+
+Si hay duda entre una feature nueva y una validacion real, gana la validacion real.

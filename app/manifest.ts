@@ -2,10 +2,11 @@
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Vidrios SaaS",
-    short_name: "Vidrios",
+    id: "/",
+    name: "Ventora",
+    short_name: "Ventora",
     description:
-      "Cotizaciones rapidas para talleres de vidrio y aluminio, optimizado para celular.",
+      "Ventora crea cotizaciones profesionales para talleres de vidrio y aluminio, optimizado para celular.",
     start_url: "/login",
     scope: "/",
     display: "standalone",
@@ -15,15 +16,21 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es-CL",
     icons: [
       {
-        src: "/brand/ventora-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icons/pwa-192.png",
+        sizes: "192x192",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand/ventora-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icons/pwa-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/pwa-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

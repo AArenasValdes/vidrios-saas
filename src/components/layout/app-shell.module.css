@@ -629,6 +629,12 @@
   gap: 12px;
 }
 
+.alertsHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .alertsHeader strong {
   display: block;
   font-size: 18px;
@@ -654,7 +660,32 @@
   cursor: pointer;
 }
 
+.alertsClearBtn {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
+}
+
 .alertsRefreshBtn:hover {
+  border-color: rgba(79, 125, 212, 0.24);
+  color: var(--goldStrong);
+  background: #f4f8ff;
+}
+
+.alertsClearBtn:hover {
   border-color: rgba(79, 125, 212, 0.24);
   color: var(--goldStrong);
   background: #f4f8ff;

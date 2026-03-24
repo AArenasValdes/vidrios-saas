@@ -6,6 +6,7 @@ import {
   downloadPdfBlob,
   formatCotizacionPdfError,
   resolveCotizacionPdfCanvasScale,
+  resolveCotizacionPdfPageImageBox,
   resolveCotizacionPdfRenderSize,
   requiresPdfOpenFallback,
 } from "../cotizacion-pdf";
@@ -102,6 +103,17 @@ describe("cotizacion-pdf utils", () => {
         computedHeight: "1248px",
       })
     ).toEqual({ width: 816, height: 1248 });
+  });
+
+  it("debe respetar la proporcion real del canvas al insertarlo en el PDF", () => {
+    expect(
+      resolveCotizacionPdfPageImageBox({
+        canvasWidth: 816,
+        canvasHeight: 1248,
+        pageWidth: 215.9,
+        pageHeight: 355.6,
+      })
+    ).toEqual({ width: 215.9, height: 330.2 });
   });
 
   it("debe detectar que iPhone necesita abrir el PDF en vez de descargar blob directo", () => {

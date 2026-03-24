@@ -1059,6 +1059,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .kpiCardCentered {
+    grid-column: 1 / -1;
+    width: min(100%, 176px);
+    justify-self: center;
+  }
+
   .headerActions,
   .resultsBar,
   .activityItem,

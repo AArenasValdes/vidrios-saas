@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FaCheckCircle, FaFilePdf, FaRulerCombined, FaWhatsapp } from "react-icons/fa";
+import { ArrowRight, Lock, Mail } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 
 import { useAuth } from "@/hooks/useAuth";
 import s from "./login.module.css";
@@ -14,23 +15,28 @@ interface LoginViewProps {
   nextPath: string | null;
 }
 
-const proofItems = [
-  {
-    icon: FaRulerCombined,
-    title: "Cotiza desde la obra",
-    text: "Carga medidas, componentes y margen desde el celular sin volver a Excel.",
-  },
-  {
-    icon: FaFilePdf,
-    title: "Entrega profesional",
-    text: "Genera un PDF claro para el cliente con una presentacion seria y ordenada.",
-  },
-  {
-    icon: FaWhatsapp,
-    title: "Salida comercial rapida",
-    text: "Comparte por WhatsApp y sigue la cotizacion sin perderte entre chats.",
-  },
-];
+const copy = {
+  brand: "Ventora",
+  title: "Bienvenido",
+  subtitle: "Accede a tu cuenta y gestiona tus cotizaciones",
+  emailLabel: "Email",
+  emailPlaceholder: "tu@empresa.cl",
+  passwordLabel: "Password",
+  passwordPlaceholder: "Ingresa tu contrase\u00f1a",
+  rememberSession: "Mantener sesi\u00f3n",
+  forgotPassword: "Olvid\u00e9 mi contrase\u00f1a",
+  submit: "Iniciar sesi\u00f3n",
+  submitting: "Ingresando...",
+  divider: "O contin\u00faa con",
+  google: "Continuar con Google",
+  signupPrompt: "\u00bfNo tienes cuenta?",
+  signupAction: "Crear cuenta",
+  oauthError:
+    "No pudimos completar el acceso con Google. Intenta con tu correo y contrase\u00f1a.",
+  credentialError: "Correo o contrase\u00f1a incorrectos",
+  googleHelper: "Acceso con Google disponible cuando tu empresa habilite OAuth.",
+  visualTitle: "Cotiza rápido, sin errores y desde cualquier lugar.",
+};
 
 export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
   const router = useRouter();
@@ -38,6 +44,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
 
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
+  const [mantenerSesion, setMantenerSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,146 +59,159 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
         password,
       });
     } catch {
-      setError("Correo o contrasena incorrectos");
+      setError(copy.credentialError);
       setCargando(false);
       return;
     }
 
-    const redirectTarget = nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
+    const redirectTarget =
+      nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
 
     router.push(redirectTarget);
     router.refresh();
   };
 
   return (
-    <div className={s.root}>
-      <section className={s.left}>
-        <div className={s.leftTop}>
-          <Link href="/" className={s.brand} aria-label="Ventora">
-            <Image src="/brand/ventora-logo-navy.svg" alt="Ventora" width={160} height={40} priority />
+    <main className={s.root}>
+      <section className={s.formPanel}>
+        <div className={s.formShell}>
+          <Link href="/" className={s.brand} aria-label={copy.brand}>
+            <Image
+              src="/brand/ventora-logo-light.svg"
+              alt="Ventora"
+              width={170}
+              height={34}
+              priority
+              className={s.brandLogo}
+            />
           </Link>
 
-          <p className={s.kicker}>Acceso para equipos de vidrios y aluminio</p>
-          <h1 className={s.headline}>Cotiza en terreno. Cierra ventas mas rapido.</h1>
-          <p className={s.subline}>
-            Entra a tu cuenta para seguir cotizando con una interfaz clara, legible y pensada para trabajar en obra.
+          <div className={s.formCard}>
+            <header className={s.formHeader}>
+              <h1 className={s.formTitle}>{copy.title}</h1>
+              <p className={s.formSubtitle}>{copy.subtitle}</p>
+            </header>
+
+            <form className={s.form} onSubmit={onSubmit} noValidate>
+              <div className={s.field}>
+                <label className={s.fieldLabel} htmlFor="correo">
+                  {copy.emailLabel}
+                </label>
+                <div className={s.fieldControl}>
+                  <Mail size={18} aria-hidden />
+                  <input
+                    id="correo"
+                    type="email"
+                    className={s.fieldInput}
+                    placeholder={copy.emailPlaceholder}
+                    value={correo}
+                    onChange={(e) => {
+                      setCorreo(e.target.value);
+                      setError(null);
+                    }}
+                    autoComplete="email"
+                    inputMode="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className={s.field}>
+                <label className={s.fieldLabel} htmlFor="password">
+                  {copy.passwordLabel}
+                </label>
+                <div className={s.fieldControl}>
+                  <Lock size={18} aria-hidden />
+                  <input
+                    id="password"
+                    type="password"
+                    className={s.fieldInput}
+                    placeholder={copy.passwordPlaceholder}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError(null);
+                    }}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className={s.utilityRow}>
+                <label className={s.checkboxLabel} htmlFor="mantener-sesion">
+                  <input
+                    id="mantener-sesion"
+                    type="checkbox"
+                    checked={mantenerSesion}
+                    onChange={(e) => setMantenerSesion(e.target.checked)}
+                  />
+                  <span className={s.checkboxBox} aria-hidden />
+                  <span>{copy.rememberSession}</span>
+                </label>
+
+                <a
+                  className={s.textLink}
+                  href="mailto:soporte@cotizapro.cl?subject=Recuperar%20acceso"
+                >
+                  {copy.forgotPassword}
+                </a>
+              </div>
+
+              {(oauthError || error) && (
+                <div className={s.errorBox} role="alert" aria-live="polite">
+                  <span className={s.errorMark} aria-hidden>
+                    !
+                  </span>
+                  <span>{error ?? copy.oauthError}</span>
+                </div>
+              )}
+
+              <button type="submit" className={s.primaryButton} disabled={cargando}>
+                <span className={s.buttonContent}>
+                  {cargando ? <span className={s.spinner} aria-hidden /> : null}
+                  {cargando ? copy.submitting : copy.submit}
+                </span>
+                <ArrowRight size={18} aria-hidden />
+              </button>
+
+              <div className={s.divider} aria-hidden>
+                <span />
+                <p>{copy.divider}</p>
+                <span />
+              </div>
+
+              <button type="button" className={s.googleButton} disabled>
+                <FcGoogle size={20} aria-hidden />
+                <span>{copy.google}</span>
+              </button>
+
+              <p className={s.helperText}>{copy.googleHelper}</p>
+            </form>
+          </div>
+
+          <p className={s.signupText}>
+            <span>{copy.signupPrompt}</span>{" "}
+            <Link href="/planes">{copy.signupAction}</Link>
           </p>
         </div>
-
-        <div className={s.proofGrid}>
-          {proofItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <article key={item.title} className={s.proofCard}>
-                <div className={s.proofIcon}>
-                  <Icon aria-hidden />
-                </div>
-                <div>
-                  <h2>{item.title}</h2>
-                  <p>{item.text}</p>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        <div className={s.bottomNote}>
-          <FaCheckCircle aria-hidden />
-          <span>Disenado para uso real en Chile, desde el celular y con salida comercial inmediata.</span>
-        </div>
       </section>
 
-      <section className={s.right}>
-        <form className={s.formWrap} onSubmit={onSubmit} noValidate>
-          <p className={s.formEyebrow}>Ingreso</p>
-          <h2 className={s.formTitle}>Bienvenido de vuelta</h2>
-          <p className={s.formSub}>Accede a tu cuenta para continuar con clientes, cotizaciones y PDF.</p>
+      <section className={s.visualPanel} aria-hidden>
+        <Image
+          src="/brand/loginpng.jpg"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 920px) 100vw, 60vw"
+          className={s.visualImage}
+        />
+        <div className={s.visualOverlay} />
 
-          <div className={s.field}>
-            <label className={s.fieldLabel} htmlFor="correo">
-              Correo
-            </label>
-            <input
-              id="correo"
-              type="email"
-              className={s.fieldInput}
-              placeholder="tu@correo.com"
-              value={correo}
-              onChange={(e) => {
-                setCorreo(e.target.value);
-                setError(null);
-              }}
-              autoComplete="email"
-              required
-            />
-          </div>
-
-          <div className={s.field}>
-            <label className={s.fieldLabel} htmlFor="password">
-              Contrasena
-            </label>
-            <input
-              id="password"
-              type="password"
-              className={s.fieldInput}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(null);
-              }}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-
-          {(oauthError || error) && (
-            <div className={s.errorBox}>
-              <span>⚠</span>
-              <span>{error ?? "No pudimos completar el inicio con OAuth. Intenta nuevamente."}</span>
-            </div>
-          )}
-
-          <button type="submit" className={s.btnSubmit} disabled={cargando}>
-            <span className={s.btnText}>
-              {cargando ? <span className={s.spinner} /> : null}
-              {cargando ? "Ingresando..." : "Ingresar"}
-            </span>
-          </button>
-
-          <div className={s.formLinks}>
-            <Link href="/" className={s.inlineLink}>
-              Volver al inicio
-            </Link>
-            <Link href="/planes" className={s.inlineLink}>
-              Ver como funciona
-            </Link>
-          </div>
-
-          <div className={s.oauthBlock}>
-            <div className={s.oauthDivider}>
-              <span />
-              <p>OAuth proximo</p>
-              <span />
-            </div>
-
-            <div className={s.oauthBtns}>
-              <button type="button" className={s.oauthBtn}>
-                Google
-              </button>
-              <button type="button" className={s.oauthBtn}>
-                Apple
-              </button>
-            </div>
-          </div>
-        </form>
-
-        <div className={s.formFooter}>
-          <span>© 2026 Ventora</span>
-          <span>Chile</span>
+        <div className={s.visualCopy}>
+          <h2 className={s.visualTitle}>{copy.visualTitle}</h2>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

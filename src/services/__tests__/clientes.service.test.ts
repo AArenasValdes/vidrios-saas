@@ -316,6 +316,77 @@ describe("clientes.service", () => {
     });
   });
 
+  it("debe mantener prospecto si el cliente solo tiene borradores o cotizaciones creadas", async () => {
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+      {
+        id: 100,
+        proyectoId: 10,
+        organizationId: 77,
+        numero: "COT-100",
+        estado: "borrador",
+        descuentoPct: 0,
+        flete: 0,
+        iva: 19000,
+        notas: "",
+        validoHasta: null,
+        subtotalNeto: 100000,
+        costoTotal: 80000,
+        margenPct: 25,
+        utilidadTotal: 20000,
+        estadoComercial: null,
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
+        creadoEn: "2026-03-12T10:00:00.000Z",
+        actualizadoEn: "2026-03-13T10:00:00.000Z",
+        eliminadoEn: null,
+        items: [],
+        total: 119000,
+      },
+      {
+        id: 101,
+        proyectoId: 11,
+        organizationId: 77,
+        numero: "COT-101",
+        estado: "creada",
+        descuentoPct: 0,
+        flete: 0,
+        iva: 38000,
+        notas: "",
+        validoHasta: null,
+        subtotalNeto: 200000,
+        costoTotal: 160000,
+        margenPct: 25,
+        utilidadTotal: 40000,
+        estadoComercial: null,
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
+        creadoEn: "2026-03-10T10:00:00.000Z",
+        actualizadoEn: "2026-03-14T10:00:00.000Z",
+        eliminadoEn: null,
+        items: [],
+        total: 238000,
+      },
+    ]);
+    const service = createClientesService({
+      clientesRepository: createClientesRepositoryMock(),
+      projectsRepository: createProjectsRepositoryMock(),
+      cotizacionesRepository,
+    });
+
+    const resumenes = await service.listResumenByOrganizationId(77);
+
+    expect(resumenes[0]).toMatchObject({
+      estado: "prospecto",
+    });
+  });
+
   it("debe marcar prospecto si el cliente aun no tiene cotizaciones", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
     cotizacionesRepository.listByOrganizationId.mockResolvedValue([]);

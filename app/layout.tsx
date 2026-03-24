@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
+import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
 import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
 import "./globals.css";
 import { Geist } from "next/font/google";
@@ -9,20 +10,23 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: {
-    default: "Vidrios SaaS",
-    template: "%s | Vidrios SaaS",
+    default: "Ventora",
+    template: "%s | Ventora",
   },
   description:
-    "Plataforma para talleres de vidrio y aluminio. Cotiza rapido desde el celular y gestiona tu operacion.",
-  applicationName: "Vidrios SaaS",
+    "Ventora ayuda a talleres de vidrio y aluminio a cotizar rapido desde el celular y gestionar su operacion comercial.",
+  applicationName: "Ventora",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/brand/ventora-icon.svg",
-    apple: "/brand/ventora-icon.svg",
+    icon: [
+      { url: "/icons/pwa-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/pwa-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
-    title: "Vidrios SaaS",
+    title: "Ventora",
     statusBarStyle: "black-translucent",
   },
   keywords: ["cotizaciones", "vidrios", "aluminio", "taller", "pwa"],
@@ -44,6 +48,7 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
         <RegisterServiceWorker />
+        <InstallAppPrompt />
         {children}
       </body>
     </html>

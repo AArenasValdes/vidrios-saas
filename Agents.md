@@ -3,7 +3,7 @@
 Contexto de producto, arquitectura y reglas de trabajo para cualquier IA que toque este repo.
 Lee este archivo antes de editar codigo.
 
-Ultima consolidacion revisada contra el repo: 2026-03-20.
+Ultima consolidacion revisada contra el repo: 2026-03-23.
 
 ---
 
@@ -30,6 +30,16 @@ Usuario principal:
 - maestro independiente
 - pequeno taller
 - instalador o vendedor tecnico que hoy cotiza con proveedor y arma el presupuesto manualmente
+
+### Modelo de usuario vigente del MVP
+
+Para esta etapa del producto, el sistema debe leerse asi:
+
+- cada cuenta representa al dueno del negocio o responsable comercial que usa Ventora
+- hoy existe un unico rol operativo real: `admin`
+- roles como `tecnico` o `viewer` pueden existir en codigo legado o preparacion futura, pero no forman parte del alcance activo del MVP
+- cualquier prueba funcional, validacion de salida o alta manual de usuarios debe asumir `rol = 'admin'`
+- ademas de `auth.users`, el login depende de una fila en `public.users` con `correo`, `organization_id` y `rol`
 
 **Stack actual:** Next.js 16.1.6 (App Router) + React 19.2.3 + TypeScript + Supabase + CSS Modules + Jest
 
@@ -267,6 +277,8 @@ Conclusion corta:
 ### Lo que ya esta implementado
 
 - landing publica y login
+- branding publico bajo nombre `Ventora`
+- navbar fijo y navegacion publica mas coherente
 - auth real con Supabase por email/password
 - shell operativa para la app interna
 - dashboard con KPIs simples de cotizaciones
@@ -293,7 +305,7 @@ Conclusion corta:
 ### Lo que hoy existe pero aun esta incompleto o desalineado
 
 - no hay UI separada para proyectos
-- la landing publica aun mezcla mensaje de beta cerrada con CTA de acceso abierto
+- la landing publica esta mucho mas alineada visualmente, pero aun requiere validacion comercial final de CTA, copy y conversion
 - OAuth tiene callback y UI placeholder, pero los proveedores aun no estan habilitados
 - la base PWA existe, pero el modo offline debe validarse en dispositivo real; no asumirlo solo por tener `sw.js`
 - el guardado de cotizaciones sigue sin ser transaccional; si falla un insert intermedio puede dejar estado parcial
@@ -302,6 +314,16 @@ Conclusion corta:
 - no hay monitoreo operativo ni observabilidad de produccion
 - no hay onboarding comercial completo para salir a mercado
 - hay algunos textos con problemas de encoding heredados en ciertas vistas y tests
+
+### Lectura operativa de este momento
+
+Si tomas este repo hoy, asume esto:
+
+- ya no estamos en etapa de discovery
+- ya no falta "inventar producto"
+- estamos en etapa de endurecimiento final para beta o produccion inicial controlada
+- lo mas importante en las proximas 24 a 48 horas es validar flujo real, Supabase real y errores reales
+- cualquier mejora visual debe ser secundaria frente a validacion, robustez y despliegue
 
 ### Como leer el repo desde ahora
 
@@ -598,18 +620,15 @@ Si el objetivo es produccion o beta cerrada, trata estos puntos como prioridad r
 3. Falta smoke test manual real de punta a punta.
 4. Falta validar Supabase real con migraciones, bucket y `SUPABASE_SERVICE_ROLE_KEY`.
 5. La PWA sigue siendo shell publica con validacion pendiente en dispositivo real.
+6. La landing y los CTA publicos deben validarse ya con criterio de salida, no solo con criterio visual.
 
 ---
 
 ## Prioridades actuales recomendadas
 
-Orden sugerido a partir del estado real del repo:
+Orden sugerido a partir del estado real del repo en este cierre preproduccion:
 
-1. Cerrar branding comercial basico:
-   - alinear mensaje de beta cerrada vs acceso abierto en landing y login
-   - corregir copy final de landing, login y `/planes`
-   - limpiar textos publicos con encoding heredado
-2. Ejecutar y validar migraciones pendientes en Supabase:
+1. Validar entorno real:
    - `codigo`
    - `tipo_componente`
    - `orden`
@@ -621,25 +640,28 @@ Orden sugerido a partir del estado real del repo:
    - `cliente_respuesta_canal`
    - bucket `organization-assets`
    - `SUPABASE_SERVICE_ROLE_KEY`
-3. Estabilizar el flujo principal de salida a produccion:
+   - RLS y multi-tenant con usuario real
+2. Estabilizar el flujo principal de salida a produccion:
    - smoke tests reales
    - validacion en movil
    - manejo de errores
    - revisar estados vacios y edge cases
    - validar PWA y offline real en dispositivo
    - revisar consistencia de escritura en create/update de cotizaciones
-4. Revisar experiencia comercial:
+3. Revisar experiencia comercial final:
    - detalle de cotizacion
    - PDF
    - mensaje de WhatsApp
    - flujo publico `/presupuesto/[token]`
    - claridad de forma de pago
-5. Definir despliegue inicial:
+   - CTA y copy final de landing, login y `/planes`
+   - limpieza de encoding roto visible al usuario
+4. Definir despliegue inicial:
    - hosting
    - variables de entorno
    - dominio
    - politicas de acceso
-6. Despues de eso:
+5. Despues de eso:
    - metodo de pago
    - analiticas tipo PostHog
    - onboarding comercial

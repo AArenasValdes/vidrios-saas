@@ -16,9 +16,9 @@ export type CotizacionShareExperience = {
 export const DEFAULT_COTIZACION_SHARE_EXPERIENCE: CotizacionShareExperience = {
   canSharePdf: false,
   isLikelyMobile: false,
-  actionLabel: "Compartir por WhatsApp",
+  actionLabel: "Enviar link por WhatsApp",
   helperText:
-    "Abrimos el mensaje de WhatsApp con el texto listo. Si luego quieres adjuntar el PDF, puedes hacerlo manualmente.",
+    "En escritorio abrimos WhatsApp con el link publico de la cotizacion para que el cliente la revise, descargue el PDF y responda desde el enlace.",
 };
 
 export function detectLikelyMobileDevice({
@@ -44,9 +44,9 @@ export function resolveCotizacionShareExperience(input: {
     return {
       canSharePdf: true,
       isLikelyMobile: input.isLikelyMobile,
-      actionLabel: "Compartir por WhatsApp",
+      actionLabel: "Enviar PDF por WhatsApp",
       helperText:
-        "Intentamos compartir el presupuesto desde tu celular. Si el archivo no se adjunta, abrimos WhatsApp como respaldo.",
+        "En Android intentamos adjuntar el PDF directo en WhatsApp. Si el sistema no lo permite, abrimos el mensaje de respaldo con el link para responder.",
     };
   }
 
@@ -54,9 +54,9 @@ export function resolveCotizacionShareExperience(input: {
     return {
       canSharePdf: false,
       isLikelyMobile: true,
-      actionLabel: "Compartir por WhatsApp",
+      actionLabel: "Enviar link por WhatsApp",
       helperText:
-        "Abrimos las apps disponibles en tu telefono. Si WhatsApp no puede adjuntar el archivo, dejamos el mensaje listo como respaldo.",
+        "Tu telefono no permite adjuntar el PDF directo desde esta vista. Abrimos WhatsApp con el link publico y el mensaje listo como respaldo.",
     };
   }
 

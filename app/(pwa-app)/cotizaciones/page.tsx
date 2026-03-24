@@ -17,7 +17,6 @@ import {
 
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
-import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 
 import s from "./page.module.css";
 
@@ -465,25 +464,17 @@ export default function CotizacionesPage() {
         throw new Error("No se pudo recuperar la cotizacion para enviarla.");
       }
 
-      if (!record.approvalToken) {
-        throw new Error(
-          "Esta cotizacion no tiene link publico de aprobacion disponible. Refresca el schema cache de Supabase antes de enviarla por WhatsApp."
-        );
-      }
-
-      const whatsappUrl = buildCotizacionWhatsappUrl(record);
-
-      if (!whatsappUrl) {
+      if (!record.clienteTelefono?.trim()) {
         throw new Error("El cliente no tiene un telefono valido para WhatsApp.");
       }
 
-      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      router.push(`/print/cotizaciones/${record.id}?intent=whatsapp`);
     } catch (error) {
       window.alert(getErrorMessage(error));
     } finally {
       setSendingId(null);
     }
-  }, [cotizaciones, loadCotizacionById]);
+  }, [cotizaciones, loadCotizacionById, router]);
 
   if (!isReady) {
     return (
@@ -509,7 +500,6 @@ export default function CotizacionesPage() {
           <p className={s.subtitle}>
             Gestiona presupuestos, corrige borradores y vuelve a editar cualquier cotizacion terminada si el maestro se equivoco.
           </p>
-          {isRefreshing ? <p className={s.subtitle}>Sincronizando cotizaciones...</p> : null}
         </div>
 
         <div className={s.headerActions}>
@@ -530,8 +520,13 @@ export default function CotizacionesPage() {
       </div>
 
       <div className={s.kpiRow}>
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={s.kpiCard}>
+        {kpis.map((kpi, index) => (
+          <div
+            key={kpi.label}
+            className={`${s.kpiCard}${
+              kpis.length % 2 === 1 && index === kpis.length - 1 ? ` ${s.kpiCardCentered}` : ""
+            }`}
+          >
             <span className={s.kpiLabel}>{kpi.label}</span>
             <span
               className={`${s.kpiValue}${kpi.mono ? ` ${s.kpiMono}` : ""} ${s[`tone${kpi.tone[0].toUpperCase()}${kpi.tone.slice(1)}`]}`}

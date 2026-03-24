@@ -39,6 +39,7 @@ export type PublicApprovalQuoteView = {
     tipo: string;
     nombre: string;
     descripcion: string;
+    observaciones: string;
     cantidad: number;
     unidad: string;
     vidrio: string;
@@ -115,6 +116,7 @@ export function createPublicCotizacionApprovalService(
       tipo: item.tipo_componente?.trim() || "Componente",
       nombre: item.nombre?.trim() || `Componente ${index + 1}`,
       descripcion: item.descripcion?.trim() || item.nombre?.trim() || `Componente ${index + 1}`,
+      observaciones: item.observaciones?.trim() || "",
       cantidad: item.cantidad,
       unidad: item.unidad?.trim() || "unidad",
       vidrio: item.vidrio?.trim() || "-",
@@ -137,7 +139,7 @@ export function createPublicCotizacionApprovalService(
       organizationId: String(payload.cotizacion.organization_id),
       codigo: payload.cotizacion.numero ?? `COT-${payload.cotizacion.id}`,
       estado: payload.cotizacion.estado,
-      clienteNombre: payload.client?.nombre ?? "Cliente sin nombre",
+      clienteNombre: payload.client?.nombre?.trim() || "Por confirmar",
       clienteTelefono: payload.client?.telefono ?? "",
       obra: payload.project?.titulo ?? "Proyecto sin nombre",
       direccion: payload.client?.direccion ?? "",

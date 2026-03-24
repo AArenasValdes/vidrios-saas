@@ -65,6 +65,13 @@ type RenderSizeInput = {
   computedHeight?: string;
 };
 
+type PdfPageImageBoxInput = {
+  canvasWidth: number;
+  canvasHeight: number;
+  pageWidth: number;
+  pageHeight: number;
+};
+
 export function formatCotizacionPdfError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -121,6 +128,22 @@ export function resolveCotizacionPdfRenderSize(input: RenderSizeInput) {
   );
 
   return { width, height };
+}
+
+export function resolveCotizacionPdfPageImageBox({
+  canvasWidth,
+  canvasHeight,
+  pageWidth,
+  pageHeight,
+}: PdfPageImageBoxInput) {
+  const safeCanvasWidth = Math.max(1, canvasWidth);
+  const safeCanvasHeight = Math.max(1, canvasHeight);
+  const renderedHeight = (safeCanvasHeight / safeCanvasWidth) * pageWidth;
+
+  return {
+    width: pageWidth,
+    height: Math.min(pageHeight, Number(renderedHeight.toFixed(2))),
+  };
 }
 
 function isAppleMobileUserAgent(userAgent: string) {
@@ -325,6 +348,7 @@ export async function exportCotizacionElementToPdf({
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
       });
+      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
 
       target.setAttribute(EXPORT_ROOT_ATTR, "true");
 
@@ -384,12 +408,27 @@ export async function exportCotizacionElementToPdf({
 
       for (const [index, target] of targets.entries()) {
         const canvas = await renderElementToCanvas(target);
+        const imageBox = resolveCotizacionPdfPageImageBox({
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          pageWidth,
+          pageHeight,
+        });
 
         if (index > 0) {
           pdf.addPage();
         }
 
-        pdf.addImage(canvas, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+        pdf.addImage(
+          canvas,
+          "PNG",
+          0,
+          0,
+          imageBox.width,
+          imageBox.height,
+          undefined,
+          "SLOW"
+        );
       }
 
       return pdf.output("blob");
@@ -489,13 +528,13 @@ export async function exportCotizacionElementToPdf({
 
       pdf.addImage(
         pageCanvas,
-        "JPEG",
+        "PNG",
         margin,
         margin + headerHeight,
         printableWidth,
         sliceHeightMm,
         undefined,
-        "FAST"
+        "SLOW"
       );
 
       const currentPage = String(pageIndex + 1).padStart(2, "0");
@@ -538,7 +577,7 @@ export function canSharePdfFile(file: File) {
   }
 
   if (typeof navigator.canShare !== "function") {
-    return false;
+    return true;
   }
 
   return navigator.canShare({ files: [file] });
@@ -632,15 +671,28 @@ export async function shareCotizacionPdf({
   title,
   text,
 }: ShareCotizacionPdfInput) {
-  if (!canSharePdfFile(file)) {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return false;
   }
 
-  await navigator.share({
-    title,
-    text,
-    files: [file],
-  });
+  if (typeof navigator.canShare === "function" && !navigator.canShare({ files: [file] })) {
+    const isAndroid =
+      typeof navigator.userAgent === "string" && /Android/i.test(navigator.userAgent);
+
+    if (!isAndroid) {
+      return false;
+    }
+  }
+
+  try {
+    await navigator.share({
+      title,
+      text,
+      files: [file],
+    });
+  } catch {
+    return false;
+  }
 
   return true;
 }
