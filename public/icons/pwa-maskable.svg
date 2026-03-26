@@ -1,16 +1,11 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title>Vidrios SaaS Maskable</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>Ventora Maskable</title>
   <defs>
     <linearGradient id="bgm" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#08111f"/>
       <stop offset="100%" stop-color="#1e3152"/>
     </linearGradient>
-    <linearGradient id="accentm" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#e4c890"/>
-      <stop offset="100%" stop-color="#a88b5a"/>
-    </linearGradient>
   </defs>
   <rect width="512" height="512" fill="url(#bgm)"/>
-  <path d="M126 112h92l38 110 38-110h92L291 400h-70L126 112z" fill="url(#accentm)"/>
+  <path d="M126 112h92l38 110 38-110h92L291 400h-70L126 112z" fill="#ffffff"/>
 </svg>
-
