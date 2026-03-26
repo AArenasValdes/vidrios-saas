@@ -1,4 +1,6 @@
 import type { EntityId } from "@/types/common";
+import type { PreferredProvider } from "@/services/component-suggestions.service";
+import type { PricingMode } from "@/types/pricing-mode";
 
 export type OrganizationProfile = {
   organizationId: EntityId | null;
@@ -9,6 +11,8 @@ export type OrganizationProfile = {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  proveedorPreferido: PreferredProvider;
+  modoPrecioPreferido: PricingMode;
   creadoEn: string | null;
   actualizadoEn: string | null;
 };
@@ -21,4 +25,6 @@ export type UpdateOrganizationProfileInput = {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  proveedorPreferido: PreferredProvider;
+  modoPrecioPreferido: PricingMode;
 };

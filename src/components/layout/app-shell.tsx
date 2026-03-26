@@ -203,6 +203,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const showMobileFab = !pathname.startsWith("/cotizaciones");
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState<
+    "sidebar" | "mobile" | "topbar" | null
+  >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
@@ -244,6 +247,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
   const alertCount = unreadAlerts.length;
   const isWorkspaceBooting = cargando || Boolean(user && !organizacionId);
+  const isProfileMenuOpen = profileMenuAnchor !== null;
   const visibleAlerts = useMemo(
     () =>
       alerts
@@ -266,6 +270,51 @@ export default function AppShell({ children }: { children: ReactNode }) {
       setIsSigningOut(false);
     }
   };
+
+  const handleToggleProfileMenu = (anchor: "sidebar" | "mobile" | "topbar") => {
+    setIsAlertsOpen(false);
+    setProfileMenuAnchor((current) => (current === anchor ? null : anchor));
+  };
+
+  const renderAccountMenu = (variant: "sidebar" | "mobile" | "topbar") => (
+    <div
+      className={`${s.accountMenu} ${
+        variant === "sidebar"
+          ? s.accountMenuSidebar
+          : variant === "mobile"
+            ? s.accountMenuMobile
+            : s.accountMenuTopbar
+      }`}
+      data-profile-menu="true"
+    >
+      <div className={s.accountMenuHeader}>
+        <span className={s.accountMenuEyebrow}>Cuenta</span>
+        <strong>{companyName}</strong>
+        <span>{email}</span>
+      </div>
+      <div className={s.accountMenuList}>
+        <Link
+          href="/configuracion/empresa"
+          className={s.accountMenuLink}
+          prefetch={false}
+          onClick={() => setProfileMenuAnchor(null)}
+        >
+          <LuSettings aria-hidden />
+          Configuracion de empresa
+        </Link>
+        <button
+          className={s.accountMenuAction}
+          type="button"
+          onClick={handleLogout}
+          disabled={isSigningOut}
+          aria-busy={isSigningOut}
+        >
+          <LuLogOut aria-hidden />
+          {isSigningOut ? "Cerrando sesion..." : "Cerrar sesion"}
+        </button>
+      </div>
+    </div>
+  );
 
   const markAlertsAsSeen = useCallback(() => {
     const latestSeenAt = alerts.reduce(
@@ -382,7 +431,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [isWorkspaceBooting, pathname, router]);
 
   useEffect(() => {
-    if (!isAlertsOpen) {
+    if (!isAlertsOpen && !isProfileMenuOpen) {
       return;
     }
 
@@ -401,12 +450,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (target.closest("[data-profile-trigger='true']")) {
+        return;
+      }
+
+      if (target.closest("[data-profile-menu='true']")) {
+        return;
+      }
+
       setIsAlertsOpen(false);
+      setProfileMenuAnchor(null);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsAlertsOpen(false);
+        setProfileMenuAnchor(null);
       }
     };
 
@@ -417,10 +476,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
       document.removeEventListener("click", handleDocumentClick);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isAlertsOpen]);
+  }, [isAlertsOpen, isProfileMenuOpen]);
+
+  useEffect(() => {
+    setIsAlertsOpen(false);
+    setProfileMenuAnchor(null);
+  }, [pathname]);
 
   const handleToggleAlerts = () => {
     const nextIsOpen = !isAlertsOpen;
+    setProfileMenuAnchor(null);
     setIsAlertsOpen(nextIsOpen);
 
     if (nextIsOpen) {
@@ -556,22 +621,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
           })}
         </div>
 
-        <div className={s.sidebarUser}>
-          <div className={s.userAvatar}>{initial}</div>
-          <div className={s.userInfo}>
-            <div className={s.userName}>{email}</div>
-            <div className={s.userRole}>{rol ?? "usuario"}</div>
-          </div>
+        <div className={s.profileMenuWrap}>
           <button
-            className={s.logoutBtn}
-            onClick={handleLogout}
-            title="Cerrar sesion"
-            aria-label="Cerrar sesion"
-            disabled={isSigningOut}
-            aria-busy={isSigningOut}
+            className={`${s.sidebarUser} ${profileMenuAnchor === "sidebar" ? s.profileTriggerActive : ""}`}
+            type="button"
+            data-profile-trigger="true"
+            aria-expanded={profileMenuAnchor === "sidebar"}
+            onClick={() => handleToggleProfileMenu("sidebar")}
           >
-            <LuLogOut aria-hidden />
+            <div className={s.userAvatar}>{initial}</div>
+            <div className={s.userInfo}>
+              <div className={s.userName}>{email}</div>
+              <div className={s.userRole}>{rol ?? "usuario"}</div>
+            </div>
+            <LuChevronRight className={s.profileTriggerArrow} aria-hidden />
           </button>
+
+          {profileMenuAnchor === "sidebar" ? (
+            renderAccountMenu("sidebar")
+          ) : null}
         </div>
       </aside>
 
@@ -594,7 +662,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span className={s.alertDot}>{alertCount > 9 ? "9+" : alertCount}</span>
             ) : null}
           </button>
-          <div className={s.mobileAvatar}>{initial}</div>
+          <div className={s.profileMenuWrap}>
+            <button
+              className={`${s.mobileAvatarButton} ${profileMenuAnchor === "mobile" ? s.profileTriggerActive : ""}`}
+              type="button"
+              data-profile-trigger="true"
+              aria-label="Abrir menu de cuenta"
+              aria-expanded={profileMenuAnchor === "mobile"}
+              onClick={() => handleToggleProfileMenu("mobile")}
+            >
+              <div className={s.mobileAvatar}>{initial}</div>
+            </button>
+
+            {profileMenuAnchor === "mobile" ? (
+              renderAccountMenu("mobile")
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -620,13 +703,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <span className={s.alertPill}>{alertCount > 9 ? "9+" : alertCount}</span>
               ) : null}
             </button>
-            <div className={s.teamBadge}>
-              <div className={s.teamBadgeAvatar}>{initial}</div>
-              <div>
-                <div className={s.teamBadgeName}>Equipo activo</div>
-                <div className={s.teamBadgeMeta}>{rol ?? "usuario"}</div>
-              </div>
-              <LuChevronRight className={s.teamBadgeArrow} aria-hidden />
+            <div className={s.profileMenuWrap}>
+              <button
+                className={`${s.teamBadge} ${profileMenuAnchor === "topbar" ? s.profileTriggerActive : ""}`}
+                type="button"
+                data-profile-trigger="true"
+                aria-expanded={profileMenuAnchor === "topbar"}
+                onClick={() => handleToggleProfileMenu("topbar")}
+              >
+                <div className={s.teamBadgeAvatar}>{initial}</div>
+                <div>
+                  <div className={s.teamBadgeName}>Equipo activo</div>
+                  <div className={s.teamBadgeMeta}>{rol ?? "usuario"}</div>
+                </div>
+                <LuChevronRight className={s.teamBadgeArrow} aria-hidden />
+              </button>
+
+              {profileMenuAnchor === "topbar" ? (
+                renderAccountMenu("topbar")
+              ) : null}
             </div>
           </div>
         </div>

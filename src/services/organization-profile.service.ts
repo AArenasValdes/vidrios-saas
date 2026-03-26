@@ -2,11 +2,13 @@ import {
   organizationProfileRepository,
   type OrganizationProfileRepository,
 } from "@/repositories/organization-profile.repository";
+import { normalizePreferredProvider } from "@/services/component-suggestions.service";
 import type { EntityId } from "@/types/common";
 import type {
   OrganizationProfile,
   UpdateOrganizationProfileInput,
 } from "@/types/organization-profile";
+import { normalizePricingMode } from "@/types/pricing-mode";
 
 type OrganizationProfileServiceDeps = {
   organizationProfileRepository?: OrganizationProfileRepository;
@@ -66,6 +68,8 @@ export function resolveOrganizationProfile(
     empresaEmail: normalizeText(profile?.empresaEmail),
     brandColor: sanitizeBrandColor(profile?.brandColor),
     formaPago: normalizeText(profile?.formaPago),
+    proveedorPreferido: normalizePreferredProvider(profile?.proveedorPreferido),
+    modoPrecioPreferido: normalizePricingMode(profile?.modoPrecioPreferido),
     creadoEn: profile?.creadoEn ?? null,
     actualizadoEn: profile?.actualizadoEn ?? null,
   };
@@ -107,6 +111,8 @@ export function createOrganizationProfileService(
         empresaEmail,
         brandColor: sanitizeBrandColor(input.brandColor),
         formaPago: normalizeText(input.formaPago),
+        proveedorPreferido: normalizePreferredProvider(input.proveedorPreferido),
+        modoPrecioPreferido: normalizePricingMode(input.modoPrecioPreferido),
       });
 
       return resolveOrganizationProfile(organizationId, persisted);

@@ -2,7 +2,7 @@
 
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { LuImagePlus, LuSave } from "react-icons/lu";
+import { LuBellRing, LuImagePlus, LuSave } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
 import {
@@ -10,6 +10,7 @@ import {
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/services/organization-profile.service";
 import type { UpdateOrganizationProfileInput } from "@/types/organization-profile";
+import type { PricingMode } from "@/types/pricing-mode";
 
 import s from "./page.module.css";
 
@@ -32,7 +33,62 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   empresaEmail: "",
   brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   formaPago: "",
+  proveedorPreferido: "",
+  modoPrecioPreferido: "margen",
 };
+
+type DeviceAlertsState = {
+  kind: "checking" | "enabled" | "available" | "unsupported" | "error";
+  message: string;
+};
+
+function supportsPushAlerts() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false;
+  }
+
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window &&
+    window.isSecureContext
+  );
+}
+
+function base64UrlToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const binary = window.atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+async function persistSubscription(subscription: PushSubscription) {
+  const response = await fetch("/api/pwa/push-subscriptions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      subscription: subscription.toJSON(),
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+
+    throw new Error(
+      payload?.error ?? "No pudimos guardar las alertas para este dispositivo."
+    );
+  }
+}
 
 export default function ConfiguracionEmpresaPage() {
   const { profile, isReady, isSaving, isUploading, saveProfile, uploadLogo } =
@@ -41,6 +97,11 @@ export default function ConfiguracionEmpresaPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [deviceAlertsState, setDeviceAlertsState] = useState<DeviceAlertsState>({
+    kind: "checking",
+    message: "Revisando si este dispositivo puede recibir notificaciones.",
+  });
+  const [isActivatingAlerts, setIsActivatingAlerts] = useState(false);
   const deferredPreviewForm = useDeferredValue(form);
 
   useEffect(() => {
@@ -56,6 +117,8 @@ export default function ConfiguracionEmpresaPage() {
       empresaEmail: profile.empresaEmail,
       brandColor: profile.brandColor,
       formaPago: profile.formaPago,
+      proveedorPreferido: profile.proveedorPreferido,
+      modoPrecioPreferido: profile.modoPrecioPreferido,
     });
   }, [profile]);
 
@@ -81,6 +144,69 @@ export default function ConfiguracionEmpresaPage() {
       formaPago: deferredPreviewForm.formaPago || "A convenir",
     };
   }, [deferredPreviewForm, previewUrl]);
+
+  const syncDeviceAlertsState = useCallback(async () => {
+    if (!supportsPushAlerts()) {
+      setDeviceAlertsState({
+        kind: "unsupported",
+        message:
+          "Este navegador no expone alertas push web en este acceso. Si necesitas avisos reales, usa un navegador compatible o instala la app.",
+      });
+      return;
+    }
+
+    const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+
+    if (!vapidPublicKey) {
+      setDeviceAlertsState({
+        kind: "error",
+        message: "Falta la clave publica de notificaciones en la configuracion del proyecto.",
+      });
+      return;
+    }
+
+    try {
+      if (Notification.permission !== "granted") {
+        setDeviceAlertsState({
+          kind: "available",
+          message:
+            "Puedes activar alertas en este equipo para enterarte cuando un cliente apruebe o rechace una cotizacion.",
+        });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const existingSubscription = await registration.pushManager.getSubscription();
+
+      if (!existingSubscription) {
+        setDeviceAlertsState({
+          kind: "available",
+          message:
+            "Las alertas estan permitidas, pero todavia no hay una suscripcion activa en este dispositivo.",
+        });
+        return;
+      }
+
+      await persistSubscription(existingSubscription);
+      setDeviceAlertsState({
+        kind: "enabled",
+        message:
+          "Este dispositivo ya recibe alertas cuando una cotizacion es aprobada o rechazada.",
+      });
+    } catch (error) {
+      setDeviceAlertsState({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No pudimos revisar el estado de alertas de este dispositivo.",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    void syncDeviceAlertsState();
+  }, [syncDeviceAlertsState]);
 
   const handleFieldChange = useCallback(<K extends keyof UpdateOrganizationProfileInput>(
     key: K,
@@ -143,6 +269,78 @@ export default function ConfiguracionEmpresaPage() {
       );
     }
   }, [form, saveProfile]);
+
+  const handleEnableDeviceAlerts = useCallback(async () => {
+    const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+
+    if (!vapidPublicKey) {
+      setDeviceAlertsState({
+        kind: "error",
+        message: "Falta la clave publica de notificaciones en la configuracion del proyecto.",
+      });
+      return;
+    }
+
+    try {
+      setIsActivatingAlerts(true);
+      const permission = await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setDeviceAlertsState({
+          kind: "available",
+          message: "Debes permitir las notificaciones del navegador para activarlas.",
+        });
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(vapidPublicKey),
+        });
+      }
+
+      await persistSubscription(subscription);
+      setDeviceAlertsState({
+        kind: "enabled",
+        message:
+          "Alertas activas. Este dispositivo quedo listo para recibir aprobaciones y rechazos.",
+      });
+    } catch (error) {
+      setDeviceAlertsState({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "No pudimos activar las alertas en este dispositivo.",
+      });
+    } finally {
+      setIsActivatingAlerts(false);
+    }
+  }, []);
+
+  const deviceAlertsBadge = useMemo(() => {
+    if (deviceAlertsState.kind === "enabled") {
+      return { label: "Activas", className: s.deviceAlertsBadgeSuccess };
+    }
+
+    if (deviceAlertsState.kind === "available") {
+      return { label: "Pendientes", className: s.deviceAlertsBadgePending };
+    }
+
+    if (deviceAlertsState.kind === "unsupported") {
+      return { label: "No disponible", className: s.deviceAlertsBadgeNeutral };
+    }
+
+    if (deviceAlertsState.kind === "error") {
+      return { label: "Revisar", className: s.deviceAlertsBadgeError };
+    }
+
+    return { label: "Revisando", className: s.deviceAlertsBadgeNeutral };
+  }, [deviceAlertsState.kind]);
 
   if (!isReady && !profile) {
     return (
@@ -250,6 +448,68 @@ export default function ConfiguracionEmpresaPage() {
             />
           </label>
 
+          <label className={s.field}>
+            <span className={s.label}>Modo de precio por defecto</span>
+            <div className={s.selectWrap}>
+              <select
+                className={s.input}
+                value={form.modoPrecioPreferido}
+                onChange={(event) =>
+                  handleFieldChange(
+                    "modoPrecioPreferido",
+                    event.target.value as PricingMode
+                  )
+                }
+              >
+                <option value="margen">Usar margen de ganancia</option>
+                <option value="precio_directo">Ingresar valor unitario directo</option>
+              </select>
+            </div>
+            <span className={s.helpText}>
+              Si eliges valor directo, el Paso 2 oculta el margen y te deja ingresar el precio final por componente.
+            </span>
+          </label>
+
+          <section className={s.deviceAlertsCard} aria-live="polite">
+            <div className={s.deviceAlertsIcon}>
+              <LuBellRing aria-hidden />
+            </div>
+            <div className={s.deviceAlertsBody}>
+              <div className={s.deviceAlertsHeader}>
+                <div>
+                  <p className={s.sectionEyebrow}>Alertas del dispositivo</p>
+                  <h2>Notificaciones de aprobacion y rechazo</h2>
+                </div>
+                <span className={`${s.deviceAlertsBadge} ${deviceAlertsBadge.className}`}>
+                  {deviceAlertsBadge.label}
+                </span>
+              </div>
+              <p className={s.deviceAlertsText}>{deviceAlertsState.message}</p>
+              <div className={s.deviceAlertsActions}>
+                {deviceAlertsState.kind === "enabled" ? (
+                  <button
+                    className={s.secondaryButton}
+                    type="button"
+                    onClick={() => void syncDeviceAlertsState()}
+                  >
+                    Revisar este dispositivo
+                  </button>
+                ) : null}
+
+                {deviceAlertsState.kind === "available" || deviceAlertsState.kind === "error" ? (
+                  <button
+                    className={s.secondaryButton}
+                    type="button"
+                    onClick={handleEnableDeviceAlerts}
+                    disabled={isActivatingAlerts}
+                  >
+                    {isActivatingAlerts ? "Activando..." : "Activar alertas en este equipo"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
           <div className={s.sectionHeader}>
             <div>
               <p className={s.sectionEyebrow}>Marca</p>
@@ -355,3 +615,4 @@ export default function ConfiguracionEmpresaPage() {
     </div>
   );
 }
+

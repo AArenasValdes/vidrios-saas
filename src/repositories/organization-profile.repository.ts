@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
+import { normalizePreferredProvider } from "@/services/component-suggestions.service";
 import type { EntityId } from "@/types/common";
 import type {
   OrganizationProfile,
   UpdateOrganizationProfileInput,
 } from "@/types/organization-profile";
+import { normalizePricingMode } from "@/types/pricing-mode";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -18,6 +20,8 @@ type OrganizationProfileRow = {
   empresa_email: string | null;
   brand_color: string | null;
   forma_pago: string | null;
+  proveedor_preferido: string | null;
+  modo_precio_preferido: string | null;
   creado_en: string | null;
   actualizado_en: string | null;
 };
@@ -33,6 +37,8 @@ const PROFILE_SELECT = `
   empresa_email,
   brand_color,
   forma_pago,
+  proveedor_preferido,
+  modo_precio_preferido,
   creado_en,
   actualizado_en
 `;
@@ -93,6 +99,8 @@ function mapOrganizationProfile(
     empresaEmail: row.empresa_email ?? "",
     brandColor: row.brand_color ?? "",
     formaPago: row.forma_pago ?? "",
+    proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
+    modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
   };
@@ -148,6 +156,8 @@ export function createOrganizationProfileRepository(
             empresa_email: input.empresaEmail,
             brand_color: input.brandColor,
             forma_pago: input.formaPago,
+            proveedor_preferido: input.proveedorPreferido || null,
+            modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
             actualizado_en: new Date().toISOString(),
           },
           {

@@ -326,12 +326,14 @@ function ExportPager({
 export default function CotizacionPrintPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const { getCotizacionById, loadCotizacionById, isReady } = useCotizacionesStore();
+  const { getCotizacionById, loadCotizacionById, markQuoteAsSent, isReady } =
+    useCotizacionesStore();
   const { profile: rawOrganizationProfile, isReady: isProfileReady } = useOrganizationProfile();
   const cotizacion = getCotizacionById(params.id);
-  const hasRenderableRecord = Boolean(cotizacion && cotizacion.items.length > 0);
-  const hasRenderedViewerRef = useRef(hasRenderableRecord);
-  const lastRenderableCotizacionRef = useRef(cotizacion);
+  const renderableCotizacion = cotizacion && cotizacion.items.length > 0 ? cotizacion : null;
+  const hasRenderableRecord = Boolean(renderableCotizacion);
+  const lastRenderableCotizacionRef = useRef(renderableCotizacion);
+  const hasForcedFreshLoadRef = useRef(false);
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetScaleFrameRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
@@ -348,6 +350,11 @@ export default function CotizacionPrintPage() {
   const [sheetPreviewWidth, setSheetPreviewWidth] = useState(0);
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
   const [shareExperience] = useState(getCotizacionShareExperience);
+  const shareIntent = searchParams.get("intent");
+  const previewMode = searchParams.get("preview");
+  const fromWizard = searchParams.get("from") === "wizard";
+  const wasJustCreated = searchParams.get("created") === "1";
+  const isEmbeddedPreview = previewMode === "embed";
 
   useEffect(() => {
     let isCancelled = false;
@@ -357,12 +364,30 @@ export default function CotizacionPrintPage() {
         return;
       }
 
-      if (cotizacion && cotizacion.items.length > 0) {
+      const shouldForceFreshLoad = fromWizard && wasJustCreated;
+      const hasWarmRecord = Boolean(cotizacion && cotizacion.items.length > 0);
+
+      if (hasWarmRecord && !shouldForceFreshLoad) {
         setIsHydratingRecord(false);
         return;
       }
 
+      if (hasWarmRecord && shouldForceFreshLoad) {
+        if (hasForcedFreshLoadRef.current) {
+          setIsHydratingRecord(false);
+          return;
+        }
+
+        hasForcedFreshLoadRef.current = true;
+        setIsHydratingRecord(false);
+        void loadCotizacionById(params.id).catch(() => {
+          return;
+        });
+        return;
+      }
+
       setIsHydratingRecord(true);
+      hasForcedFreshLoadRef.current = true;
 
       try {
         await loadCotizacionById(params.id);
@@ -378,14 +403,13 @@ export default function CotizacionPrintPage() {
     return () => {
       isCancelled = true;
     };
-  }, [cotizacion, loadCotizacionById, params.id]);
+  }, [cotizacion, fromWizard, loadCotizacionById, params.id, wasJustCreated]);
 
   useEffect(() => {
-    if (cotizacion && cotizacion.items.length > 0) {
-      lastRenderableCotizacionRef.current = cotizacion;
-      hasRenderedViewerRef.current = true;
+    if (renderableCotizacion) {
+      lastRenderableCotizacionRef.current = renderableCotizacion;
     }
-  }, [cotizacion]);
+  }, [renderableCotizacion]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof ResizeObserver === "undefined") {
@@ -458,7 +482,7 @@ export default function CotizacionPrintPage() {
     rawOrganizationProfile?.organizationId ?? null,
     rawOrganizationProfile
   );
-  const visibleCotizacion = cotizacion ?? lastRenderableCotizacionRef.current;
+  const visibleCotizacion = renderableCotizacion ?? lastRenderableCotizacionRef.current;
 
   const pageStyle = {
     "--brand": organizationProfile.brandColor,
@@ -477,12 +501,7 @@ export default function CotizacionPrintPage() {
   const whatsappUrl = visibleCotizacion
     ? buildCotizacionWhatsappUrl(visibleCotizacion, { approvalUrl })
     : null;
-  const shareIntent = searchParams.get("intent");
-  const previewMode = searchParams.get("preview");
-  const fromWizard = searchParams.get("from") === "wizard";
-  const wasJustCreated = searchParams.get("created") === "1";
-  const isEmbeddedPreview = previewMode === "embed";
-  const shouldWarmPdf = shareIntent === "warm" || shareIntent === "whatsapp" || !isEmbeddedPreview;
+  const shouldWarmPdf = shareIntent === "warm" || shareIntent === "whatsapp";
   const isAppleMobile =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isAndroidMobile =
@@ -696,6 +715,9 @@ export default function CotizacionPrintPage() {
           return;
         }
 
+        if (visibleCotizacion) {
+          await markQuoteAsSent(String(visibleCotizacion.id));
+        }
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
         return;
       }
@@ -725,12 +747,18 @@ export default function CotizacionPrintPage() {
           : whatsappUrl;
 
         if (fallbackWhatsappUrl) {
+          if (visibleCotizacion) {
+            await markQuoteAsSent(String(visibleCotizacion.id));
+          }
           window.open(fallbackWhatsappUrl, "_blank", "noopener,noreferrer");
         }
 
         setExportError(
           "Tu navegador actual no pudo adjuntar el PDF directo a WhatsApp desde la web. Dejamos el archivo descargado o abierto y abrimos el mensaje con el link publico como respaldo. En Chrome Android o con la PWA instalada suele funcionar mejor."
         );
+      }
+      if (visibleCotizacion) {
+        await markQuoteAsSent(String(visibleCotizacion.id));
       }
     } catch (error) {
       setShowWhatsappFallbackActions(true);
@@ -741,6 +769,7 @@ export default function CotizacionPrintPage() {
   }, [
     approvalUrl,
     buildPdfFile,
+    markQuoteAsSent,
     visibleCotizacion,
     visibleCotizacion?.codigo,
     exportFileName,
@@ -774,8 +803,11 @@ export default function CotizacionPrintPage() {
       return;
     }
 
+    if (visibleCotizacion) {
+      void markQuoteAsSent(String(visibleCotizacion.id));
+    }
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  }, [whatsappUrl]);
+  }, [markQuoteAsSent, visibleCotizacion, whatsappUrl]);
 
   const renderPrintPages = useCallback(
     (mode: "preview" | "export"): ReactNode => {
@@ -1090,7 +1122,7 @@ export default function CotizacionPrintPage() {
     );
   }
 
-  if (!visibleCotizacion || (isHydratingRecord && !hasRenderedViewerRef.current) || (!isProfileReady && !hasRenderedViewerRef.current)) {
+  if (!visibleCotizacion) {
     return (
       <main className={s.page} style={pageStyle}>
         <div className={s.toolbar}>
@@ -1121,7 +1153,7 @@ export default function CotizacionPrintPage() {
             </div>
             <div className={s.loadingBrandText}>
               <strong>{organizationProfile.empresaNombre}</strong>
-              <span>{visibleCotizacion?.codigo ?? "Preparando cotizacion"}</span>
+              <span>Preparando cotizacion</span>
             </div>
           </div>
             <div className={s.loadingHeroBody}>

@@ -61,21 +61,21 @@ export function buildCotizacionWhatsappMessage(
   const publicLinkBlock =
     deliveryMode === "attachment"
       ? approvalUrl
-        ? `📄 Ver cotización:\n${approvalUrl}`
+        ? `Ver cotizacion:\n${approvalUrl}`
         : null
       : pdfUrl
-        ? `📄 Ver cotización:\n${pdfUrl}`
+        ? `Ver cotizacion:\n${pdfUrl}`
         : approvalUrl
-          ? `📄 Ver cotización:\n${approvalUrl}`
+          ? `Ver cotizacion:\n${approvalUrl}`
           : null;
 
   return [
     `Hola ${record.clienteNombre},`,
     "",
-    `Te enviamos tu cotización${quoteContext}`,
+    `Te enviamos tu cotizacion${quoteContext}`,
     "",
     `Total: ${formatCurrency(record.total)}`,
-    `Vigencia: ${validezDays} días`,
+    `Vigencia: ${validezDays} dias`,
     "",
     publicLinkBlock,
     "",

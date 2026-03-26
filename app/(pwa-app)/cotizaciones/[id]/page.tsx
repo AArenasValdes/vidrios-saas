@@ -18,6 +18,7 @@ import {
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "./page.module.css";
 
@@ -158,24 +159,34 @@ export default function CotizacionDetallePage() {
     return {
       status: nextStatus,
       approvalUrl: nextApprovalUrl,
-      itemCards: cotizacion.items.map((item, index) => ({
-        id: item.id,
-        badge: item.codigo || `I${index + 1}`,
-        total: CLP(item.precioTotal),
-        nombre: item.nombre,
-        descripcion: getVisibleComponentDescription(item.tipo, item.nombre, item.descripcion),
-        meta: [
-          item.tipo,
-          item.ancho && item.alto ? `${item.ancho} x ${item.alto} mm` : null,
-          `${item.cantidad} ud.`,
-        ]
-          .filter(Boolean)
-          .join(" - "),
-        costoProveedor: CLP(item.costoProveedorTotal),
-        utilidad: CLP(item.precioTotal - item.costoProveedorTotal),
-        margen: `${item.margenPct}%`,
-        venta: CLP(item.precioTotal),
-      })),
+      itemCards: cotizacion.items.map((item, index) => {
+        const { pricingMode } = decodeCotizacionItemPresentationMeta(item.observaciones);
+        const usesDirectPricing = pricingMode === "precio_directo";
+
+        return {
+          id: item.id,
+          badge: item.codigo || `I${index + 1}`,
+          total: CLP(item.precioTotal),
+          nombre: item.nombre,
+          descripcion: getVisibleComponentDescription(item.tipo, item.nombre, item.descripcion),
+          meta: [
+            item.tipo,
+            item.ancho && item.alto ? `${item.ancho} x ${item.alto} mm` : null,
+            `${item.cantidad} ud.`,
+          ]
+            .filter(Boolean)
+            .join(" - "),
+          valorBaseLabel: usesDirectPricing ? "Valor unitario" : "Costo proveedor",
+          valorBase: CLP(usesDirectPricing ? item.precioUnitario : item.costoProveedorTotal),
+          utilidadLabel: usesDirectPricing ? "Desglose" : "Utilidad",
+          utilidad: usesDirectPricing
+            ? "Sin calculo interno"
+            : CLP(item.precioTotal - item.costoProveedorTotal),
+          margenLabel: usesDirectPricing ? "Modo" : "Margen",
+          margen: usesDirectPricing ? "Precio directo" : `${item.margenPct}%`,
+          venta: CLP(item.precioTotal),
+        };
+      }),
     };
   }, [cotizacion]);
 
@@ -558,19 +569,19 @@ export default function CotizacionDetallePage() {
                         <h4>{item.nombre}</h4>
                         {item.descripcion ? <p>{item.descripcion}</p> : null}
                         <p>{item.meta}</p>
-                        <div className={s.itemFinance}>
+                          <div className={s.itemFinance}>
                           <div className={s.itemFinanceTitle}>Resumen interno</div>
                           <div className={s.itemFinanceGrid}>
                             <div className={s.itemFinanceCell}>
-                              <span>Costo proveedor</span>
-                              <strong>{item.costoProveedor}</strong>
+                              <span>{item.valorBaseLabel}</span>
+                              <strong>{item.valorBase}</strong>
                             </div>
                             <div className={s.itemFinanceCell}>
-                              <span>Utilidad</span>
+                              <span>{item.utilidadLabel}</span>
                               <strong>{item.utilidad}</strong>
                             </div>
                             <div className={s.itemFinanceCell}>
-                              <span>Margen</span>
+                              <span>{item.margenLabel}</span>
                               <strong>{item.margen}</strong>
                             </div>
                             <div className={s.itemFinanceCell}>

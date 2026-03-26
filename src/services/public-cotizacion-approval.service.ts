@@ -170,6 +170,8 @@ export function createPublicCotizacionApprovalService(
               empresaEmail: payload.organizationProfile.empresa_email ?? "",
               brandColor: payload.organizationProfile.brand_color ?? "",
               formaPago: payload.organizationProfile.forma_pago ?? "",
+              proveedorPreferido: "",
+              modoPrecioPreferido: "margen",
               creadoEn: null,
               actualizadoEn: null,
             }

@@ -46,23 +46,30 @@ describe("whatsapp utils", () => {
     });
 
     expect(message).toContain("Hola Roberto Fuentes,");
-    expect(message).toContain("Te enviamos tu cotización para Casa Coquimbo.");
+    expect(message).toContain("Te enviamos tu cotizacion para Casa Coquimbo.");
     expect(message).toContain("Total: $119.000");
-    expect(message).toContain("Vigencia: 15 días");
-    expect(message).toContain("📄 Ver cotización:");
+    expect(message).toContain("Vigencia: 15 dias");
+    expect(message).toContain("Ver cotizacion:");
     expect(message).toContain("https://cdn.example.com/cotizacion.pdf");
     expect(message).toContain("Puedes aprobar o rechazar directamente desde el enlace.");
     expect(message).not.toContain("COT-123456");
   });
 
   it("debe usar el link publico al compartir con PDF adjunto", () => {
-    const message = buildCotizacionWhatsappMessage(record, {
-      deliveryMode: "attachment",
-    });
+    const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = "https://vidrios-saas.vercel.app";
 
-    expect(message).toContain("📄 Ver cotización:");
-    expect(message).toContain("/presupuesto/");
-    expect(message).toContain("https://tu-dominio.cl");
+    try {
+      const message = buildCotizacionWhatsappMessage(record, {
+        deliveryMode: "attachment",
+      });
+
+      expect(message).toContain("Ver cotizacion:");
+      expect(message).toContain("/presupuesto/");
+      expect(message).toContain("https://vidrios-saas.vercel.app");
+    } finally {
+      process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
+    }
   });
 
   it("debe construir la url de WhatsApp lista para abrir", () => {

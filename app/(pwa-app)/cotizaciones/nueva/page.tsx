@@ -2,10 +2,21 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  memo,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   LuArrowLeft,
   LuCheck,
+  LuChevronDown,
   LuChevronRight,
   LuCopy,
   LuDownload,
@@ -13,11 +24,11 @@ import {
   LuFileCheck2,
   LuFilterX,
   LuFolderOpen,
+  LuLayers3,
   LuMapPin,
   LuPencil,
   LuPhone,
   LuPlus,
-  LuRuler,
   LuSave,
   LuSearch,
   LuTrash2,
@@ -25,6 +36,11 @@ import {
 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
+import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
+import {
+  getComponentSuggestion,
+  type PreferredProvider,
+} from "@/services/component-suggestions.service";
 import {
   calculateComponentItem,
   calculateCotizacionWorkflowTotals,
@@ -43,6 +59,10 @@ import { generateComponentSVG } from "@/utils/window-drawings";
 import {
   getCotizacionShareExperience,
 } from "@/utils/share-capabilities";
+import {
+  normalizePricingMode,
+  type PricingMode,
+} from "@/types/pricing-mode";
 
 import s from "./page.module.css";
 
@@ -53,6 +73,7 @@ type ComponentFormState = {
   tipo: string;
   material: "Aluminio" | "PVC";
   referencia: string;
+  pricingMode: PricingMode;
   vidrio: string;
   nombre: string;
   descripcion: string;
@@ -63,6 +84,7 @@ type ComponentFormState = {
   margenPct: string;
   observaciones: string;
   colorHex: string;
+  loteCantidad: string;
 };
 
 type FieldErrors = Partial<
@@ -73,7 +95,7 @@ type FieldErrors = Partial<
 >;
 
 type PersistedWorkflowState = {
-  version: 1;
+  version: 2;
   step: StepKey;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
@@ -81,6 +103,25 @@ type PersistedWorkflowState = {
   selectedClientId: string;
   clientQuery: string;
   showStep1MoreData: boolean;
+};
+
+type QuickEditDraftState = {
+  ancho: string;
+  alto: string;
+  costoProveedorUnitario: string;
+};
+
+type ComponentListCardViewModel = {
+  id: string;
+  source: CotizacionWorkflowItem;
+  colorHex: string;
+  title: string;
+  price: string;
+  metaPrimary: string;
+  metaSecondary: string;
+  metaTertiary: string;
+  quickEditPriceLabel: string;
+  svgMarkup: string;
 };
 
 const COMPONENT_TYPE_GROUPS = [
@@ -205,7 +246,11 @@ function buildWorkflowStorageKey(editId: string | null, duplicateId: string | nu
 }
 
 function loadPersistedWorkflowState(
-  storageKey: string
+  storageKey: string,
+  defaults: {
+    provider?: PreferredProvider;
+    pricingMode?: PricingMode;
+  } = {}
 ): PersistedWorkflowState | null {
   if (typeof window === "undefined") {
     return null;
@@ -217,9 +262,18 @@ function loadPersistedWorkflowState(
       return null;
     }
 
-    const parsed = JSON.parse(raw) as PersistedWorkflowState;
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      step?: StepKey;
+      draft?: CotizacionWorkflowDraft;
+      componentForm?: Partial<ComponentFormState>;
+      editingItemId?: string | null;
+      selectedClientId?: string;
+      clientQuery?: string;
+      showStep1MoreData?: boolean;
+    };
 
-    if (parsed.version !== 1) {
+    if (parsed.version !== 1 && parsed.version !== 2) {
       return null;
     }
 
@@ -228,6 +282,11 @@ function loadPersistedWorkflowState(
 
     return {
       ...parsed,
+      step: parsed.step ?? 1,
+      editingItemId: parsed.editingItemId ?? null,
+      selectedClientId: parsed.selectedClientId ?? "",
+      clientQuery: parsed.clientQuery ?? "",
+      showStep1MoreData: parsed.showStep1MoreData ?? false,
       draft: {
         ...emptyDraft,
         ...persistedDraft,
@@ -237,7 +296,16 @@ function loadPersistedWorkflowState(
         flete: Number.isFinite(persistedDraft.flete) ? persistedDraft.flete : emptyDraft.flete,
         items: persistedDraft.items ?? emptyDraft.items,
       },
-    };
+      componentForm: {
+        ...createEmptyComponentForm(
+          persistedDraft.items,
+          defaults.provider,
+          defaults.pricingMode
+        ),
+        ...parsed.componentForm,
+        loteCantidad: parsed.componentForm?.loteCantidad ?? "1",
+      },
+    } as PersistedWorkflowState;
   } catch {
     return null;
   }
@@ -353,6 +421,173 @@ function formatCurrencyInput(value: string) {
   }).format(Number(value));
 }
 
+function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraftState {
+  return {
+    ancho: item.ancho ? String(item.ancho) : "",
+    alto: item.alto ? String(item.alto) : "",
+    costoProveedorUnitario:
+      item.costoProveedorUnitario > 0 ? String(Math.round(item.costoProveedorUnitario)) : "",
+  };
+}
+
+const MobileQuickEditor = memo(function MobileQuickEditor({
+  item,
+  initialDraft,
+  itemIndex,
+  totalItems,
+  pricingLabel,
+  onDraftChange,
+  onCommit,
+  onNavigate,
+  onScrollToSummary,
+}: {
+  item: CotizacionWorkflowItem;
+  initialDraft: QuickEditDraftState;
+  itemIndex: number;
+  totalItems: number;
+  pricingLabel: string;
+  onDraftChange: (
+    itemId: string,
+    key: keyof QuickEditDraftState,
+    value: string
+  ) => void;
+  onCommit: (itemId: string, draft: QuickEditDraftState) => void;
+  onNavigate: (direction: -1 | 1) => void;
+  onScrollToSummary: () => void;
+}) {
+  const [localDraft, setLocalDraft] = useState<QuickEditDraftState>(initialDraft);
+
+  useEffect(() => {
+    setLocalDraft(initialDraft);
+  }, [item.id]);
+
+  const handleFieldChange = useCallback(
+    (key: keyof QuickEditDraftState, value: string) => {
+      const normalizedValue =
+        key === "costoProveedorUnitario"
+          ? normalizeCurrencyInput(value)
+          : value.replace(/[^\d]/g, "");
+
+      setLocalDraft((current) => {
+        const nextDraft = {
+          ...current,
+          [key]: normalizedValue,
+        };
+
+        onDraftChange(item.id, key, normalizedValue);
+
+        return nextDraft;
+      });
+    },
+    [item.id, onDraftChange]
+  );
+
+  const handleBlur = useCallback(() => {
+    onCommit(item.id, localDraft);
+  }, [item.id, localDraft, onCommit]);
+
+  const handleNavigate = useCallback(
+    (direction: -1 | 1) => {
+      handleBlur();
+      onNavigate(direction);
+    },
+    [handleBlur, onNavigate]
+  );
+
+  const handleSummary = useCallback(() => {
+    handleBlur();
+    onScrollToSummary();
+  }, [handleBlur, onScrollToSummary]);
+
+  return (
+    <section className={s.mobileQuickEditor}>
+      <div className={s.mobileQuickEditorHeader}>
+        <div>
+          <span className={s.mobileQuickEditorEyebrow}>Edicion rapida</span>
+          <strong>
+            {item.codigo} · {item.tipo}
+          </strong>
+        </div>
+        <span className={s.mobileQuickEditorPrice}>{CLP(item.precioTotal)}</span>
+      </div>
+
+      <div className={s.mobileQuickEditorNav}>
+        <span className={s.mobileQuickEditorNavPill}>
+          {itemIndex + 1} de {totalItems}
+        </span>
+        <div className={s.mobileQuickEditorNavButtons}>
+          <button
+            type="button"
+            className={s.mobileQuickEditorNavButton}
+            onClick={() => handleNavigate(-1)}
+            disabled={itemIndex <= 0}
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            className={s.mobileQuickEditorNavButton}
+            onClick={() => handleNavigate(1)}
+            disabled={itemIndex >= totalItems - 1}
+          >
+            Siguiente
+          </button>
+        </div>
+      </div>
+
+      <div className={s.mobileQuickEditorMeta}>
+        {item.vidrio || "Sin vidrio"} · {item.cantidad} {item.cantidad === 1 ? "ud." : "uds."}
+      </div>
+
+      <div className={s.quickEditRow}>
+        <label className={s.quickEditField}>
+          <span>Ancho</span>
+          <input
+            className={s.quickEditInput}
+            inputMode="numeric"
+            value={localDraft.ancho}
+            onChange={(event) => handleFieldChange("ancho", event.target.value)}
+            onBlur={handleBlur}
+            placeholder="-"
+          />
+        </label>
+        <label className={s.quickEditField}>
+          <span>Alto</span>
+          <input
+            className={s.quickEditInput}
+            inputMode="numeric"
+            value={localDraft.alto}
+            onChange={(event) => handleFieldChange("alto", event.target.value)}
+            onBlur={handleBlur}
+            placeholder="-"
+          />
+        </label>
+        <label className={`${s.quickEditField} ${s.quickEditFieldWide}`}>
+          <span>{pricingLabel}</span>
+          <input
+            className={s.quickEditInput}
+            inputMode="numeric"
+            value={formatCurrencyInput(localDraft.costoProveedorUnitario)}
+            onChange={(event) =>
+              handleFieldChange("costoProveedorUnitario", event.target.value)
+            }
+            onBlur={handleBlur}
+            placeholder="0"
+          />
+        </label>
+      </div>
+
+      <button
+        className={`${s.btnPrimary} ${s.mobileQuickEditorSummaryButton}`}
+        type="button"
+        onClick={handleSummary}
+      >
+        Ver cierre del paso <LuChevronDown aria-hidden />
+      </button>
+    </section>
+  );
+});
+
 function normalizeSearchValue(value: string) {
   return value
     .normalize("NFD")
@@ -428,6 +663,26 @@ function buildGlassValue(prefix: string, item: string) {
   return prefix ? `${prefix} ${item}` : item;
 }
 
+function pickSuggestedString(value: string | null | undefined, fallback: string) {
+  return typeof value === "string" && value.trim() !== "" ? value : fallback;
+}
+
+function resolveSuggestedMarginValue(
+  pricingMode: PricingMode,
+  suggestionMarginPct: number,
+  currentValue: string | null | undefined
+) {
+  if (pricingMode === "precio_directo") {
+    return "0";
+  }
+
+  return pickSuggestedString(currentValue, String(suggestionMarginPct));
+}
+
+function getPricingModeSummaryLabel(pricingMode: PricingMode) {
+  return pricingMode === "precio_directo" ? "Precio directo" : "Con margen";
+}
+
 function filterGlassOptions(query: string) {
   const normalizedQuery = normalizeSearchValue(query);
 
@@ -450,23 +705,67 @@ function filterGlassOptions(query: string) {
   }).filter((group) => group.items.length > 0);
 }
 
-function createEmptyComponentForm(items: CotizacionWorkflowItem[] = []): ComponentFormState {
+function buildSuggestedComponentForm(
+  input: {
+    items?: CotizacionWorkflowItem[];
+    tipo?: string;
+    provider?: PreferredProvider;
+    pricingMode?: PricingMode;
+    current?: Partial<ComponentFormState>;
+  } = {}
+): ComponentFormState {
+  const items = input.items ?? [];
+  const tipo = input.tipo ?? input.current?.tipo ?? "Ventana";
+  const pricingMode = normalizePricingMode(
+    input.current?.pricingMode ?? input.pricingMode
+  );
+  const suggestion = getComponentSuggestion({
+    tipo,
+    provider: input.provider,
+  });
+  const current = input.current ?? {};
+
   return {
-    codigo: buildNextComponentCode(items),
-    tipo: "Ventana",
-    material: "Aluminio",
-    referencia: "",
-    vidrio: "",
-    nombre: "",
-    descripcion: "",
-    ancho: "",
-    alto: "",
-    cantidad: "1",
-    costoProveedorUnitario: "",
-    margenPct: "100",
-    observaciones: "",
-    colorHex: "#a8a8a8",
+    codigo: pickSuggestedString(current.codigo, buildNextComponentCode(items, tipo)),
+    tipo,
+    material:
+      current.material === "PVC" || current.material === "Aluminio"
+        ? current.material
+        : suggestion.material,
+    referencia: pickSuggestedString(current.referencia, suggestion.referencia),
+    pricingMode,
+    vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
+    nombre: current.nombre ?? "",
+    descripcion: pickSuggestedString(current.descripcion, suggestion.descripcion),
+    ancho: current.ancho ?? "",
+    alto: current.alto ?? "",
+    cantidad: current.cantidad ?? "1",
+    costoProveedorUnitario: current.costoProveedorUnitario ?? "",
+    margenPct: resolveSuggestedMarginValue(
+      pricingMode,
+      suggestion.margenPct,
+      current.margenPct
+    ),
+    observaciones: current.observaciones ?? "",
+    colorHex:
+      typeof current.colorHex === "string" && /^#[0-9a-fA-F]{3,8}$/.test(current.colorHex)
+        ? current.colorHex
+        : suggestion.colorHex,
+    loteCantidad: current.loteCantidad ?? "1",
   };
+}
+
+function createEmptyComponentForm(
+  items: CotizacionWorkflowItem[] = [],
+  provider: PreferredProvider = "",
+  pricingMode: PricingMode = "margen"
+): ComponentFormState {
+  return buildSuggestedComponentForm({
+    items,
+    tipo: "Ventana",
+    provider,
+    pricingMode,
+  });
 }
 
 function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWorkflowDraft {
@@ -484,14 +783,16 @@ function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWorkflowD
 }
 
 function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
-  const { colorHex, referencia, material, raw } = decodeCotizacionItemPresentationMeta(
+  const { colorHex, referencia, material, pricingMode, raw } =
+    decodeCotizacionItemPresentationMeta(
     item.observaciones
-  );
+    );
   return {
     codigo: item.codigo,
     tipo: item.tipo,
     material,
     referencia,
+    pricingMode,
     vidrio: item.vidrio ?? "",
     nombre: item.nombre,
     descripcion: item.descripcion,
@@ -502,6 +803,7 @@ function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
     margenPct: String(item.margenPct),
     observaciones: raw,
     colorHex,
+    loteCantidad: "1",
   };
 }
 
@@ -539,6 +841,10 @@ function buildItemFromForm(
     !isLegacyAutoComponentLabel(form.tipo, rawDescription)
       ? rawDescription
       : "";
+  const pricingMode = normalizePricingMode(form.pricingMode);
+  const costoProveedorUnitario = Number(form.costoProveedorUnitario || 0);
+  const margenPct =
+    pricingMode === "precio_directo" ? 0 : Number(form.margenPct || 0);
 
   return calculateComponentItem({
     id: editingItemId ?? undefined,
@@ -551,12 +857,13 @@ function buildItemFromForm(
     alto: form.alto ? Number(form.alto) : null,
     cantidad: Number(form.cantidad || 1),
     unidad: "unidad",
-    costoProveedorUnitario: Number(form.costoProveedorUnitario || 0),
-    margenPct: Number(form.margenPct || 0),
+    costoProveedorUnitario,
+    margenPct,
     observaciones: encodeCotizacionItemPresentationMeta({
       colorHex: form.colorHex,
       referencia: form.referencia,
       material: form.material,
+      pricingMode,
       raw: form.observaciones,
     }),
   });
@@ -579,12 +886,22 @@ function validateComponentForm(
   if (!form.material.trim()) errors.material = "Selecciona material";
   const qty = Number(form.cantidad);
   if (!form.cantidad || isNaN(qty) || qty < 1) errors.cantidad = "Minimo 1";
+  const hasCostValue = form.costoProveedorUnitario.trim() !== "";
   const costo = Number(form.costoProveedorUnitario);
-  if (form.costoProveedorUnitario === "" || isNaN(costo) || costo < 0)
-    errors.costoProveedorUnitario = "Ingresa el costo del proveedor";
-  const margen = Number(form.margenPct);
-  if (form.margenPct === "" || isNaN(margen) || margen < 0)
-    errors.margenPct = "El margen de ganancia no puede ser negativo";
+  if (hasCostValue && (isNaN(costo) || costo < 0))
+    errors.costoProveedorUnitario =
+      form.pricingMode === "precio_directo"
+        ? "Ingresa el valor unitario"
+        : "Ingresa el costo del proveedor";
+  if (form.pricingMode === "margen") {
+    const margen = Number(form.margenPct);
+    if (form.margenPct === "" || isNaN(margen) || margen < 0)
+      errors.margenPct = "El margen de ganancia no puede ser negativo";
+  }
+  const lote = Number(form.loteCantidad);
+  if (!editingItemId && (!form.loteCantidad || isNaN(lote) || lote < 1)) {
+    errors.step2 = "Indica cuántos componentes quieres agregar";
+  }
   return errors;
 }
 
@@ -627,9 +944,12 @@ function NuevaCotizacionPageContent() {
   const initializedRef = useRef(false);
   const hydrationCompleteRef = useRef(false);
   const persistTimeoutRef = useRef<number | null>(null);
+  const quickEditDraftsRef = useRef<Record<string, QuickEditDraftState>>({});
   const lastCommittedSignatureRef = useRef("");
   const glassCloseTimeoutRef = useRef<number | null>(null);
+  const stepTwoListScrollFrameRef = useRef<number | null>(null);
   const stepTwoListRef = useRef<HTMLDivElement | null>(null);
+  const stepTwoSummaryRef = useRef<HTMLDivElement | null>(null);
   const storageKey = useMemo(() => buildWorkflowStorageKey(editId, duplicateId), [duplicateId, editId]);
 
   const [draft, setDraft] = useState<CotizacionWorkflowDraft>(createCotizacionWorkflowDraft);
@@ -652,6 +972,7 @@ function NuevaCotizacionPageContent() {
   const [stepTwoListHeight, setStepTwoListHeight] = useState(0);
   const [stepTwoListRowHeight, setStepTwoListRowHeight] = useState(STEP_TWO_DEFAULT_ROW_HEIGHT);
   const [stepTwoListGap, setStepTwoListGap] = useState(STEP_TWO_DEFAULT_GAP);
+  const [expandedQuickEditItemId, setExpandedQuickEditItemId] = useState<string | null>(null);
   const [recordMeta, setRecordMeta] = useState<{
     id?: string;
     codigo?: string;
@@ -668,6 +989,15 @@ function NuevaCotizacionPageContent() {
     isReady,
     isSaving,
   } = useCotizacionesStore();
+  const {
+    profile: organizationProfile,
+    saveProfile: saveOrganizationProfile,
+  } = useOrganizationProfile();
+  const suggestionProvider: PreferredProvider = "";
+  const preferredPricingMode = normalizePricingMode(
+    organizationProfile?.modoPrecioPreferido
+  );
+  const deferredWorkflowItems = useDeferredValue(draft.items);
 
   const sourceRecord = editId || duplicateId ? getCotizacionById(editId ?? duplicateId ?? "") : null;
 
@@ -679,8 +1009,37 @@ function NuevaCotizacionPageContent() {
       if (glassCloseTimeoutRef.current !== null) {
         window.clearTimeout(glassCloseTimeoutRef.current);
       }
+      if (stepTwoListScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(stepTwoListScrollFrameRef.current);
+        stepTwoListScrollFrameRef.current = null;
+      }
     };
   }, []);
+
+  useEffect(() => {
+    const nextDrafts: Record<string, QuickEditDraftState> = {};
+
+    draft.items.forEach((item) => {
+      nextDrafts[item.id] = quickEditDraftsRef.current[item.id] ?? buildQuickEditDraft(item);
+    });
+
+    quickEditDraftsRef.current = nextDrafts;
+  }, [draft.items]);
+
+  useEffect(() => {
+    if (draft.items.length === 0) {
+      setExpandedQuickEditItemId(null);
+      return;
+    }
+
+    setExpandedQuickEditItemId((current) => {
+      if (current && draft.items.some((item) => item.id === current)) {
+        return current;
+      }
+
+      return draft.items[0]?.id ?? null;
+    });
+  }, [draft.items]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 800px)");
@@ -714,10 +1073,17 @@ function NuevaCotizacionPageContent() {
       if (!sourceRecord) return;
     }
     if (!editId && !duplicateId && !sourceRecord) {
-      const persisted = loadPersistedWorkflowState(storageKey);
+      const persisted = loadPersistedWorkflowState(storageKey, {
+        provider: suggestionProvider,
+        pricingMode: preferredPricingMode,
+      });
       const blankSignature = buildWorkflowDirtySignature({
         draft: createCotizacionWorkflowDraft(),
-        componentForm: createEmptyComponentForm(),
+        componentForm: createEmptyComponentForm(
+          [],
+          suggestionProvider,
+          preferredPricingMode
+        ),
         editingItemId: null,
         selectedClientId: "",
         clientQuery: "",
@@ -736,7 +1102,9 @@ function NuevaCotizacionPageContent() {
         setStep(persisted.step);
       } else {
         setSelectedClientId("");
-        setComponentForm(createEmptyComponentForm());
+        setComponentForm(
+          createEmptyComponentForm([], suggestionProvider, preferredPricingMode)
+        );
         setStep(1);
       }
       hydrationCompleteRef.current = true;
@@ -749,13 +1117,20 @@ function NuevaCotizacionPageContent() {
     const baseSelectedClientId = sourceRecord.clientId ? String(sourceRecord.clientId) : "";
     const baseSignature = buildWorkflowDirtySignature({
       draft: baseDraft,
-      componentForm: createEmptyComponentForm(baseDraft.items),
+      componentForm: createEmptyComponentForm(
+        baseDraft.items,
+        suggestionProvider,
+        preferredPricingMode
+      ),
       editingItemId: null,
       selectedClientId: baseSelectedClientId,
       clientQuery: "",
       showStep1MoreData: false,
     });
-    const persisted = loadPersistedWorkflowState(storageKey);
+    const persisted = loadPersistedWorkflowState(storageKey, {
+      provider: suggestionProvider,
+      pricingMode: preferredPricingMode,
+    });
 
     lastCommittedSignatureRef.current = baseSignature;
     if (persisted) {
@@ -770,7 +1145,13 @@ function NuevaCotizacionPageContent() {
       setDraft(baseDraft);
       setSelectedClientId(baseSelectedClientId);
       setClientQuery(sourceRecord.clienteNombre ?? "");
-      setComponentForm(createEmptyComponentForm(baseDraft.items));
+      setComponentForm(
+        createEmptyComponentForm(
+          baseDraft.items,
+          suggestionProvider,
+          preferredPricingMode
+        )
+      );
       if (requestedStep === 3) {
         setStep(baseDraft.items.length > 0 ? 3 : 2);
       } else if (requestedStep === 2) {
@@ -789,7 +1170,15 @@ function NuevaCotizacionPageContent() {
     setLastSaveMode(null);
     initializedRef.current = true;
     hydrationCompleteRef.current = true;
-  }, [duplicateId, editId, requestedStep, sourceRecord, storageKey]);
+  }, [
+    duplicateId,
+    editId,
+    preferredPricingMode,
+    suggestionProvider,
+    requestedStep,
+    sourceRecord,
+    storageKey,
+  ]);
 
   useEffect(() => {
     if (!hydrationCompleteRef.current) {
@@ -801,7 +1190,7 @@ function NuevaCotizacionPageContent() {
     }
 
     const snapshot: PersistedWorkflowState = {
-      version: 1,
+      version: 2,
       step,
       draft,
       componentForm,
@@ -858,7 +1247,10 @@ function NuevaCotizacionPageContent() {
   }, [hasUnsavedProgress]);
 
   useEffect(() => {
-    if (step !== 2) {
+    const shouldObserveScrollableList =
+      !isMobileViewport && draft.items.length >= STEP_TWO_VIRTUALIZATION_THRESHOLD;
+
+    if (step !== 2 || !shouldObserveScrollableList) {
       return;
     }
 
@@ -873,7 +1265,14 @@ function NuevaCotizacionPageContent() {
       setStepTwoListScrollTop(listNode.scrollTop);
     };
     const handleScroll = () => {
-      setStepTwoListScrollTop(listNode.scrollTop);
+      if (stepTwoListScrollFrameRef.current !== null) {
+        return;
+      }
+
+      stepTwoListScrollFrameRef.current = window.requestAnimationFrame(() => {
+        setStepTwoListScrollTop(listNode.scrollTop);
+        stepTwoListScrollFrameRef.current = null;
+      });
     };
 
     syncMetrics();
@@ -888,6 +1287,10 @@ function NuevaCotizacionPageContent() {
 
       return () => {
         listNode.removeEventListener("scroll", handleScroll);
+        if (stepTwoListScrollFrameRef.current !== null) {
+          window.cancelAnimationFrame(stepTwoListScrollFrameRef.current);
+          stepTwoListScrollFrameRef.current = null;
+        }
         observer.disconnect();
       };
     }
@@ -897,8 +1300,12 @@ function NuevaCotizacionPageContent() {
     return () => {
       listNode.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", syncMetrics);
+      if (stepTwoListScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(stepTwoListScrollFrameRef.current);
+        stepTwoListScrollFrameRef.current = null;
+      }
     };
-  }, [draft.items.length, step]);
+  }, [draft.items.length, isMobileViewport, step]);
 
   const filteredClientes = useMemo(() => {
     const q = clientQuery.trim().toLowerCase();
@@ -966,39 +1373,44 @@ function NuevaCotizacionPageContent() {
     [draft.clienteNombre, draft.obra, draft.items.length, totals.iva, totals.subtotal, totals.total]
   );
 
-  const previewItem = useMemo(() => {
-    try {
-      if (!componentForm.nombre.trim() || !componentForm.codigo.trim()) return null;
-      return buildItemFromForm(componentForm, draft.items, editingItemId);
-    } catch {
-      return null;
-    }
-  }, [componentForm, draft.items, editingItemId]);
-  const livePreviewSvg = useMemo(
+  const currentComponentPreviewSvg = useMemo(
     () =>
       generateComponentSVG({
         tipo: componentForm.tipo,
-        ancho: componentForm.ancho ? Number(componentForm.ancho) : null,
-        alto: componentForm.alto ? Number(componentForm.alto) : null,
+        ancho: null,
+        alto: null,
         colorHex: componentForm.colorHex,
-        maxW: 160,
-        maxH: 140,
+        maxW: 92,
+        maxH: 72,
       }),
-    [componentForm.tipo, componentForm.ancho, componentForm.alto, componentForm.colorHex]
+    [componentForm.colorHex, componentForm.tipo]
   );
-  const componentListCards = useMemo(
+
+  const componentListCards = useMemo<ComponentListCardViewModel[]>(
     () =>
-      draft.items.map((item) => {
-        const { colorHex, referencia, material } = decodeCotizacionItemPresentationMeta(
-          item.observaciones
-        );
+      deferredWorkflowItems.map((item) => {
+        const { colorHex, referencia, material, pricingMode } =
+          decodeCotizacionItemPresentationMeta(item.observaciones);
 
         return {
           id: item.id,
           source: item,
+          colorHex,
           title: `${item.codigo} · ${item.tipo}`,
           price: CLP(item.precioTotal),
-          previewSvg: generateComponentSVG({
+          metaPrimary: `${material} · ${item.cantidad} ${
+            item.cantidad === 1 ? "ud." : "uds."
+          }`,
+          metaSecondary: `${
+            item.ancho && item.alto ? `${item.ancho}x${item.alto} mm` : "Sin medidas"
+          } · ${item.vidrio || "Sin vidrio"} · ${
+            pricingMode === "precio_directo"
+              ? "precio directo"
+              : `margen ${item.margenPct}%`
+          }`,
+          metaTertiary: referencia ? `Ref. ${referencia}` : "",
+          quickEditPriceLabel: pricingMode === "precio_directo" ? "Valor" : "Costo",
+          svgMarkup: generateComponentSVG({
             tipo: item.tipo,
             ancho: item.ancho,
             alto: item.alto,
@@ -1006,19 +1418,24 @@ function NuevaCotizacionPageContent() {
             maxW: 46,
             maxH: 46,
           }),
-          metaPrimary: `${material} · ${item.cantidad} ${
-            item.cantidad === 1 ? "ud." : "uds."
-          }`,
-          metaSecondary: `${
-            item.ancho && item.alto ? `${item.ancho}x${item.alto} mm` : "Sin medidas"
-          } · ${item.vidrio || "Sin vidrio"} · margen ${item.margenPct}%`,
-          metaTertiary: referencia ? `Ref. ${referencia}` : "",
         };
       }),
+    [deferredWorkflowItems]
+  );
+  const stepTwoItemIndexById = useMemo(
+    () => new Map(draft.items.map((item, index) => [item.id, index])),
     [draft.items]
   );
-  const shouldVirtualizeStepTwoList =
-    componentListCards.length >= STEP_TWO_VIRTUALIZATION_THRESHOLD;
+  const selectedQuickEditIndex = expandedQuickEditItemId
+    ? stepTwoItemIndexById.get(expandedQuickEditItemId) ?? -1
+    : -1;
+  const selectedQuickEditItem =
+    selectedQuickEditIndex >= 0 ? draft.items[selectedQuickEditIndex] ?? null : null;
+  const selectedQuickEditDraft = selectedQuickEditItem
+    ? quickEditDraftsRef.current[selectedQuickEditItem.id] ??
+      buildQuickEditDraft(selectedQuickEditItem)
+    : null;
+  const shouldVirtualizeStepTwoList = false;
   const visibleComponentListState = useMemo(() => {
     if (!shouldVirtualizeStepTwoList || stepTwoListHeight <= 0) {
       return {
@@ -1078,9 +1495,6 @@ function NuevaCotizacionPageContent() {
     }
   }, [stepTwoListGap, stepTwoListRowHeight]);
 
-  const ancho = componentForm.ancho ? Number(componentForm.ancho) : null;
-  const alto = componentForm.alto ? Number(componentForm.alto) : null;
-
   const handleDraftChange = <K extends keyof CotizacionWorkflowDraft>(
     key: K,
     value: CotizacionWorkflowDraft[K]
@@ -1114,7 +1528,11 @@ function NuevaCotizacionPageContent() {
 
   const resetWorkflowToBlank = useCallback(() => {
     const nextDraft = createCotizacionWorkflowDraft();
-    const nextComponentForm = createEmptyComponentForm();
+    const nextComponentForm = createEmptyComponentForm(
+      [],
+      suggestionProvider,
+      preferredPricingMode
+    );
     const blankSignature = buildWorkflowDirtySignature({
       draft: nextDraft,
       componentForm: nextComponentForm,
@@ -1138,7 +1556,7 @@ function NuevaCotizacionPageContent() {
     setStep(1);
     lastCommittedSignatureRef.current = blankSignature;
     setHasUnsavedProgress(false);
-  }, []);
+  }, [preferredPricingMode, suggestionProvider]);
 
   const handleResetStep1 = () => {
     const nextDraft = createCotizacionWorkflowDraft();
@@ -1171,6 +1589,31 @@ function NuevaCotizacionPageContent() {
     value: ComponentFormState[K]
   ) => {
     setComponentForm((cur) => {
+      if (key === "tipo" && !editingItemId) {
+        const next = buildSuggestedComponentForm({
+          items: draft.items,
+          tipo: value as string,
+          provider: suggestionProvider,
+          pricingMode: cur.pricingMode,
+          current: {
+            tipo: value as string,
+            codigo: "",
+            referencia: "",
+            nombre: "",
+            descripcion: "",
+            vidrio: "",
+            material: cur.material,
+            loteCantidad: cur.loteCantidad,
+            cantidad: cur.cantidad,
+            observaciones: cur.observaciones,
+            colorHex: cur.colorHex,
+            pricingMode: cur.pricingMode,
+          },
+        });
+
+        return next;
+      }
+
       const next = { ...cur, [key]: value };
       if (key === "tipo" && !editingItemId) {
         const prefix = getComponentPrefix(value as string);
@@ -1179,12 +1622,24 @@ function NuevaCotizacionPageContent() {
       }
       if (key === "material") {
         const material = value as ComponentFormState["material"];
-        if (material === "PVC" && cur.colorHex === "#a8a8a8") next.colorHex = "#f0eeeb";
+        if (material === "PVC") {
+          next.colorHex = "#f0eeeb";
+        }
+
+        if (
+          material === "Aluminio" &&
+          (cur.colorHex === "#f0eeeb" || cur.colorHex === "#dfd5c4")
+        ) {
+          next.colorHex = "#a8a8a8";
+        }
       }
       return next;
     });
     if (fieldErrors[key as keyof FieldErrors]) {
       setFieldErrors((e) => ({ ...e, [key]: undefined }));
+    }
+    if (key === "loteCantidad" && fieldErrors.step2) {
+      setFieldErrors((current) => ({ ...current, step2: undefined }));
     }
   };
 
@@ -1195,14 +1650,37 @@ function NuevaCotizacionPageContent() {
       return;
     }
     try {
-      const item = buildItemFromForm(componentForm, draft.items, editingItemId);
-      const nextItems = editingItemId
-        ? draft.items.map((e) => (e.id === editingItemId ? item : e))
-        : [...draft.items, item];
+      let nextItems: CotizacionWorkflowItem[];
+
+      if (editingItemId) {
+        const item = buildItemFromForm(componentForm, draft.items, editingItemId);
+        nextItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
+      } else {
+        const quantity = Math.max(1, Number.parseInt(componentForm.loteCantidad || "1", 10) || 1);
+        nextItems = [...draft.items];
+
+        for (let index = 0; index < quantity; index += 1) {
+          const nextForm =
+            index === 0 && quantity === 1
+              ? componentForm
+              : {
+                  ...componentForm,
+                  codigo: buildNextComponentCode(nextItems, componentForm.tipo),
+                  nombre: "",
+                };
+
+          nextItems.push(buildItemFromForm(nextForm, nextItems, null));
+        }
+      }
 
       setDraft((cur) => ({ ...cur, items: nextItems }));
+      if (!editingItemId && isMobileViewport) {
+        setExpandedQuickEditItemId(nextItems.at(-1)?.id ?? null);
+      }
       setEditingItemId(null);
-      setComponentForm(createEmptyComponentForm(nextItems));
+      setComponentForm(
+        createEmptyComponentForm(nextItems, suggestionProvider, preferredPricingMode)
+      );
       setIsGlassPanelOpen(false);
       setGlassQuery("");
       setFieldErrors({});
@@ -1221,32 +1699,44 @@ function NuevaCotizacionPageContent() {
     setStep(2);
     setFieldErrors({});
     setGlobalError(null);
+    setExpandedQuickEditItemId(item.id);
     scrollToSection("component-form");
   };
 
   const handleDuplicateItem = (item: CotizacionWorkflowItem) => {
     setEditingItemId(null);
-    setComponentForm(mapItemToDuplicateForm(item, draft.items));
+    const duplicated = mapItemToDuplicateForm(item, draft.items);
+    setComponentForm({
+      ...duplicated,
+      loteCantidad: "1",
+    });
     setIsGlassPanelOpen(false);
     setGlassQuery("");
     setStep(2);
     setFieldErrors({});
     setGlobalError(null);
-    scrollToSection("component-measures");
+    scrollToSection("component-form");
   };
 
   const handleRemoveItem = (itemId: string) => {
     const nextItems = draft.items.filter((i) => i.id !== itemId);
     setDraft((cur) => ({ ...cur, items: nextItems }));
+    setExpandedQuickEditItemId((current) =>
+      current === itemId ? nextItems[0]?.id ?? null : current
+    );
     if (editingItemId === itemId) {
       setEditingItemId(null);
-      setComponentForm(createEmptyComponentForm(nextItems));
+      setComponentForm(
+        createEmptyComponentForm(nextItems, suggestionProvider, preferredPricingMode)
+      );
     }
   };
 
   const handleCancelItemEdit = () => {
     setEditingItemId(null);
-    setComponentForm(createEmptyComponentForm(draft.items));
+    setComponentForm(
+      createEmptyComponentForm(draft.items, suggestionProvider, preferredPricingMode)
+    );
     setIsGlassPanelOpen(false);
     setGlassQuery("");
     setFieldErrors({});
@@ -1254,8 +1744,195 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleResetStep2Form = () => {
-    handleCancelItemEdit();
+    setEditingItemId(null);
+    setComponentForm(
+      createEmptyComponentForm(draft.items, suggestionProvider, preferredPricingMode)
+    );
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setFieldErrors({});
+    setGlobalError(null);
+    scrollToSection("component-form");
   };
+
+  const commitQuickEditDraft = useCallback(
+    (itemId: string, draftOverride?: QuickEditDraftState) => {
+      if (draftOverride) {
+        quickEditDraftsRef.current[itemId] = draftOverride;
+      }
+
+      startTransition(() => {
+        setDraft((current) => {
+          const target = current.items.find((item) => item.id === itemId);
+          const draftState = quickEditDraftsRef.current[itemId];
+
+          if (!target || !draftState) {
+            return current;
+          }
+
+          try {
+            const currentDraft = buildQuickEditDraft(target);
+
+            if (
+              currentDraft.ancho === draftState.ancho &&
+              currentDraft.alto === draftState.alto &&
+              currentDraft.costoProveedorUnitario === draftState.costoProveedorUnitario
+            ) {
+              return current;
+            }
+
+            const nextForm = {
+              ...mapItemToForm(target),
+              ancho: draftState.ancho,
+              alto: draftState.alto,
+              costoProveedorUnitario: draftState.costoProveedorUnitario,
+            } as ComponentFormState;
+            const nextItem = buildItemFromForm(nextForm, current.items, target.id);
+
+            return {
+              ...current,
+              items: current.items.map((item) => (item.id === itemId ? nextItem : item)),
+            };
+          } catch {
+            return current;
+          }
+        });
+      });
+    },
+    []
+  );
+
+  const handleQuickItemFieldChange = useCallback(
+    (itemId: string, key: keyof QuickEditDraftState, value: string) => {
+      const base = quickEditDraftsRef.current[itemId] ?? {
+        ancho: "",
+        alto: "",
+        costoProveedorUnitario: "",
+      };
+
+      quickEditDraftsRef.current[itemId] = {
+        ...base,
+        [key]: value,
+      };
+    },
+    []
+  );
+
+  const applyQuickEditDraftsToItems = useCallback(
+    (items: CotizacionWorkflowItem[]) =>
+      items.map((item) => {
+        const draftState = quickEditDraftsRef.current[item.id];
+
+        if (!draftState) {
+          return item;
+        }
+
+        try {
+          const nextForm = {
+            ...mapItemToForm(item),
+            ancho: draftState.ancho,
+            alto: draftState.alto,
+            costoProveedorUnitario: draftState.costoProveedorUnitario,
+          } as ComponentFormState;
+
+          return buildItemFromForm(nextForm, items, item.id);
+        } catch {
+          return item;
+        }
+      }),
+    []
+  );
+
+  const flushQuickEditDrafts = useCallback(() => {
+    const nextItems = applyQuickEditDraftsToItems(draft.items);
+    startTransition(() => {
+      setDraft((current) => ({ ...current, items: nextItems }));
+    });
+
+    return nextItems;
+  }, [applyQuickEditDraftsToItems, draft.items]);
+
+  const handleSelectQuickEditItem = useCallback((itemId: string) => {
+    setExpandedQuickEditItemId(itemId);
+  }, []);
+
+  const handleQuickEditNavigate = useCallback((direction: -1 | 1) => {
+    if (selectedQuickEditIndex < 0) {
+      return;
+    }
+
+    const nextItem = draft.items[selectedQuickEditIndex + direction];
+
+    if (!nextItem) {
+      return;
+    }
+
+    handleSelectQuickEditItem(nextItem.id);
+  }, [draft.items, handleSelectQuickEditItem, selectedQuickEditIndex]);
+
+  const handleScrollToStepTwoSummary = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      stepTwoSummaryRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    });
+  }, []);
+
+  const handlePricingModeSelection = useCallback(
+    (pricingMode: PricingMode) => {
+      setComponentForm((current) => {
+        const nextMarginValue =
+          pricingMode === "precio_directo"
+            ? "0"
+            : current.pricingMode === "precio_directo"
+              ? ""
+              : current.margenPct;
+
+        const next = buildSuggestedComponentForm({
+          items: draft.items,
+          tipo: current.tipo,
+          provider: suggestionProvider,
+          pricingMode,
+          current: {
+            ...current,
+            pricingMode,
+            margenPct: nextMarginValue,
+          },
+        });
+
+        return {
+          ...next,
+          pricingMode,
+        };
+      });
+      setFieldErrors((current) => ({
+        ...current,
+        costoProveedorUnitario: undefined,
+        margenPct: undefined,
+      }));
+      setGlobalError(null);
+
+      if (!organizationProfile) {
+        return;
+      }
+
+      void saveOrganizationProfile({
+        empresaNombre: organizationProfile.empresaNombre,
+        empresaLogoUrl: organizationProfile.empresaLogoUrl,
+        empresaDireccion: organizationProfile.empresaDireccion,
+        empresaTelefono: organizationProfile.empresaTelefono,
+        empresaEmail: organizationProfile.empresaEmail,
+        brandColor: organizationProfile.brandColor,
+        formaPago: organizationProfile.formaPago,
+        proveedorPreferido: organizationProfile.proveedorPreferido,
+        modoPrecioPreferido: pricingMode,
+      }).catch(() => {
+        return;
+      });
+    },
+    [draft.items, organizationProfile, saveOrganizationProfile, suggestionProvider]
+  );
 
   const handleGlassSelect = (nextGlass: string) => {
     handleComponentChange("vidrio", nextGlass);
@@ -1283,6 +1960,10 @@ function NuevaCotizacionPageContent() {
   };
 
   const goToStep = (target: StepKey) => {
+    if (target >= 3 && step === 2) {
+      flushQuickEditDrafts();
+    }
+
     if (target === 2) {
       const errors = validateStep1(draft);
       if (errors.step1) {
@@ -1314,9 +1995,16 @@ function NuevaCotizacionPageContent() {
     estado: "borrador" | "creada",
     options?: { exitAfterSave?: boolean }
   ) => {
-    const step1Errors = validateStep1(draft);
+    const nextItems = applyQuickEditDraftsToItems(draft.items);
+    const draftToSave = {
+      ...draft,
+      items: nextItems,
+    };
+    setDraft(draftToSave);
+
+    const step1Errors = validateStep1(draftToSave);
     const finalErrors: FieldErrors = { ...step1Errors };
-    if (estado === "creada" && draft.items.length === 0) {
+    if (estado === "creada" && draftToSave.items.length === 0) {
       finalErrors.items = "Agrega al menos un componente";
     }
 
@@ -1331,7 +2019,7 @@ function NuevaCotizacionPageContent() {
     try {
       setGlobalError(null);
       const record = await saveWorkflow({
-        draft,
+        draft: draftToSave,
         estado,
         existingId: recordMeta?.id,
         existingCode: recordMeta?.codigo,
@@ -1345,7 +2033,7 @@ function NuevaCotizacionPageContent() {
         projectId: record.projectId ?? null,
       });
       lastCommittedSignatureRef.current = buildWorkflowDirtySignature({
-        draft,
+        draft: draftToSave,
         componentForm,
         editingItemId,
         selectedClientId,
@@ -1383,6 +2071,7 @@ function NuevaCotizacionPageContent() {
       );
     }
   }, [
+    applyQuickEditDraftsToItems,
     clientQuery,
     componentForm,
     draft,
@@ -1429,11 +2118,7 @@ function NuevaCotizacionPageContent() {
             <p className={s.pageSub}>Flujo simple para obra: cliente, componentes y envio.</p>
           </div>
           <div className={`${s.headerActions} ${step === 1 ? s.headerActionsStep1 : ""}`}>
-            {step === 2 ? (
-              <button className={s.btnPrimary} type="button" onClick={() => goToStep(3)}>
-                Ir a resumen <LuChevronRight aria-hidden />
-              </button>
-            ) : (
+            {step !== 2 ? (
               <>
                 <button className={s.btnGhost} onClick={() => void handleSave("borrador")} type="button" disabled={isSaving}>
                   <LuSave aria-hidden /> {isSaving ? "Guardando..." : "Borrador"}
@@ -1442,7 +2127,7 @@ function NuevaCotizacionPageContent() {
                   <LuFileCheck2 aria-hidden /> {isSaving ? "Guardando..." : step === 3 ? "Guardar y abrir visor" : "Guardar presupuesto"}
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -1764,15 +2449,180 @@ function NuevaCotizacionPageContent() {
                 </div>
 
                 <div className={s.formFields}>
+                  <section className={`${s.formSection} ${s.providerOnboardingCard}`}>
+                    <div className={s.formSectionHead}>
+                      <span className={s.formSectionEyebrow}>Precio</span>
+                      <strong>Modo de precio del maestro</strong>
+                      <p>
+                        Define si este presupuesto trabaja con margen o con valor directo. El cambio se aplica al instante.
+                      </p>
+                    </div>
+
+                    <div className={s.field}>
+                      <span className={s.label}>Modo de precio</span>
+                      <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de precio">
+                        <label
+                          className={`${s.segmentedChoice} ${
+                            componentForm.pricingMode === "margen"
+                              ? s.segmentedChoiceActive
+                              : ""
+                          }`}
+                        >
+                          <input
+                            className={s.segmentedChoiceInput}
+                            type="radio"
+                            name="pricing-mode"
+                            value="margen"
+                            checked={componentForm.pricingMode === "margen"}
+                            onChange={() => handlePricingModeSelection("margen")}
+                          />
+                          <span className={s.segmentedChoiceTitle}>Con margen</span>
+                          <span className={s.segmentedChoiceHint}>
+                            Calcula precio final desde costo + utilidad.
+                          </span>
+                        </label>
+                        <label
+                          className={`${s.segmentedChoice} ${
+                            componentForm.pricingMode === "precio_directo"
+                              ? s.segmentedChoiceActive
+                              : ""
+                          }`}
+                        >
+                          <input
+                            className={s.segmentedChoiceInput}
+                            type="radio"
+                            name="pricing-mode"
+                            value="precio_directo"
+                            checked={componentForm.pricingMode === "precio_directo"}
+                            onChange={() => handlePricingModeSelection("precio_directo")}
+                          />
+                          <span className={s.segmentedChoiceTitle}>Valor directo</span>
+                          <span className={s.segmentedChoiceHint}>
+                            Oculta el margen y cargas el valor final por unidad.
+                          </span>
+                        </label>
+                      </div>
+                      <span className={s.helpText}>
+                        {componentForm.pricingMode === "precio_directo"
+                          ? "Ocultamos el margen y trabajas con el precio final por componente."
+                          : "Calculamos la venta a partir del costo proveedor y el margen sugerido."}
+                      </span>
+                    </div>
+
+                    {componentForm.pricingMode === "margen" ? (
+                      <div className={s.field}>
+                        <span className={s.label}>
+                          Margen ganancia (%) <span className={s.required}>*</span>
+                        </span>
+                        <input
+                          className={`${s.input} ${fieldErrors.margenPct ? s.inputError : ""}`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={componentForm.margenPct}
+                          onChange={(event) =>
+                            handleComponentChange("margenPct", event.target.value)
+                          }
+                          placeholder="100"
+                        />
+                        {fieldErrors.margenPct ? (
+                          <span className={s.fieldError}>{fieldErrors.margenPct}</span>
+                        ) : null}
+                        <div className={s.presetRow}>
+                          {MARGIN_PRESET_OPTIONS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className={`${s.presetButton} ${
+                                componentForm.margenPct === String(preset)
+                                  ? s.presetButtonActive
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                handleComponentChange("margenPct", String(preset))
+                              }
+                            >
+                              {preset}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </section>
+
                   <section className={s.formSection}>
                     <div className={s.formSectionHead}>
-                      <span className={s.formSectionEyebrow}>Identidad</span>
-                      <strong>Que componente estas cotizando</strong>
-                      <p>Define el codigo comercial, el tipo y cuantas piezas van en esta parte de la obra.</p>
+                      <span className={s.formSectionEyebrow}>Material</span>
+                      <strong>Elige la base del sistema</strong>
+                      <p>Selecciona rápido si este componente se trabaja en aluminio o PVC.</p>
+                    </div>
+
+                    <div
+                      className={s.segmentedChoiceGrid}
+                      role="radiogroup"
+                      aria-label="Material del componente"
+                    >
+                      {MATERIAL_OPTIONS.map((materialOption) => (
+                        <label
+                          key={materialOption}
+                          className={`${s.segmentedChoice} ${
+                            componentForm.material === materialOption
+                              ? s.segmentedChoiceActive
+                              : ""
+                          }`}
+                        >
+                          <input
+                            className={s.segmentedChoiceInput}
+                            type="radio"
+                            name="component-material"
+                            value={materialOption}
+                            checked={componentForm.material === materialOption}
+                            onChange={() =>
+                              handleComponentChange(
+                                "material",
+                                materialOption as ComponentFormState["material"]
+                              )
+                            }
+                          />
+                          <span className={s.segmentedChoiceTitle}>{materialOption}</span>
+                          <span className={s.segmentedChoiceHint}>
+                            {materialOption === "Aluminio"
+                              ? "Perfil estándar para cierres, ventanas y puertas."
+                              : "Alternativa liviana para espejos, tapas y trabajos puntuales."}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {fieldErrors.material ? (
+                      <span className={s.fieldError}>{fieldErrors.material}</span>
+                    ) : null}
+                  </section>
+
+                  <section className={s.formSection}>
+                    <div className={s.formSectionHead}>
+                      <span className={s.formSectionEyebrow}>Modo rapido</span>
+                      <strong>Elige el componente y confirma la base</strong>
+                      <p>Te sugerimos configuración inicial para que solo ajustes lo necesario.</p>
+                    </div>
+
+                    <div className={s.quickPreviewCard}>
+                      <div className={s.quickPreviewThumb}>
+                        <div
+                          className={s.quickPreviewThumbSvg}
+                          dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }}
+                        />
+                      </div>
+                      <div className={s.quickPreviewBody}>
+                        <strong>{componentForm.tipo}</strong>
+                        <span>
+                          Vista rápida del sistema base. Las medidas finales se ajustan abajo en
+                          componentes cargados.
+                        </span>
+                      </div>
                     </div>
 
                     <div className={`${s.field} ${s.fieldFull}`}>
-                        <span className={s.label}>Tipo <span className={s.required}>*</span></span>
+                        <span className={s.label}>Tipo de componente <span className={s.required}>*</span></span>
                         <div className={`${s.typeSelector} ${fieldErrors.tipo ? s.typeSelectorError : ""}`}>
                           {COMPONENT_TYPE_GROUPS.map((group) => (
                             <section key={group.title} className={s.typeGroup}>
@@ -1797,46 +2647,57 @@ function NuevaCotizacionPageContent() {
                         {fieldErrors.tipo ? <span className={s.fieldError}>{fieldErrors.tipo}</span> : null}
                     </div>
 
-                    <div className={s.formGrid2}>
-                      <label className={s.field}>
-                        <span className={s.label}>Codigo <span className={s.required}>*</span></span>
-                        <input
-                          className={`${s.input} ${s.inputMono} ${fieldErrors.codigo ? s.inputError : ""}`}
-                          value={componentForm.codigo}
-                          onChange={(e) => handleComponentChange("codigo", e.target.value.toUpperCase())}
-                          placeholder="V1"
-                        />
-                        {fieldErrors.codigo && <span className={s.fieldError}>{fieldErrors.codigo}</span>}
-                      </label>
-
-                      <label className={s.field}>
-                        <span className={s.label}>Cantidad <span className={s.required}>*</span></span>
-                        <input className={`${s.input} ${fieldErrors.cantidad ? s.inputError : ""}`} type="number" min="1" step="1" value={componentForm.cantidad} onChange={(e) => handleComponentChange("cantidad", e.target.value)} />
-                        {fieldErrors.cantidad && <span className={s.fieldError}>{fieldErrors.cantidad}</span>}
-                      </label>
-                    </div>
+                    {!editingItemId ? (
+                      <div className={`${s.field} ${s.fieldFull}`}>
+                        <span className={s.label}>¿Cuántos deseas agregar?</span>
+                        <div className={s.batchCountRow}>
+                          {[1, 2, 3, 4].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className={`${s.batchCountButton} ${
+                                componentForm.loteCantidad === String(preset)
+                                  ? s.batchCountButtonActive
+                                  : ""
+                              }`}
+                              onClick={() => handleComponentChange("loteCantidad", String(preset))}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                          <input
+                            className={`${s.input} ${s.batchCountInput}`}
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={componentForm.loteCantidad}
+                            onChange={(event) =>
+                              handleComponentChange("loteCantidad", event.target.value)
+                            }
+                            aria-label="Cantidad de componentes"
+                          />
+                        </div>
+                        <span className={s.helpText}>
+                          Se generan varios componentes base de una vez para editarlos rápido en la lista.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className={s.quickEditBadge}>Editando {componentForm.codigo}</div>
+                    )}
                   </section>
 
-                  <section className={s.formSection}>
+                  <details className={`${s.formSection} ${s.advancedSection}`}>
+                    <summary className={`${s.mobileMoreButton} ${s.advancedSummaryButton}`}>
+                      Opciones avanzadas ↓
+                    </summary>
+
                     <div className={s.formSectionHead}>
-                      <span className={s.formSectionEyebrow}>Fisico</span>
-                      <strong>Como es fisicamente</strong>
-                      <p>Define material, color y referencia para que el componente salga claro en el PDF final.</p>
+                      <span className={s.formSectionEyebrow}>Configuracion</span>
+                      <strong>Línea, color y ajustes finos</strong>
+                      <p>Aquí puedes corregir la sugerencia inicial si este componente necesita algo distinto.</p>
                     </div>
 
                     <div className={s.formGrid2}>
-                      <label className={s.field}>
-                        <span className={s.label}>Material <span className={s.required}>*</span></span>
-                        <div className={s.selectWrap}>
-                          <select className={`${s.input} ${fieldErrors.material ? s.inputError : ""}`} value={componentForm.material} onChange={(e) => handleComponentChange("material", e.target.value as ComponentFormState["material"])}>
-                            {MATERIAL_OPTIONS.map((m) => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                        </div>
-                        {fieldErrors.material && <span className={s.fieldError}>{fieldErrors.material}</span>}
-                      </label>
-
                       <label className={s.field}>
                         <span className={s.label}>Referencia o linea habitual</span>
                         <input
@@ -1867,46 +2728,13 @@ function NuevaCotizacionPageContent() {
                         {COLOR_OPTIONS.find((c) => c.hex === componentForm.colorHex)?.label ?? "Color"}
                       </div>
                     </div>
-                  </section>
-
-                  <section className={s.formSection} id="component-measures">
-                    <div className={s.formSectionHead}>
-                      <span className={s.formSectionEyebrow}>Medidas</span>
-                      <strong>Dimensiones base del trabajo</strong>
-                      <p>Estas medidas ayudan al dibujo, al PDF y a la lectura comercial del item.</p>
-                    </div>
-
-                    <div className={s.formGrid2}>
-                      <label className={s.field}>
-                        <span className={s.label}>Ancho (mm)</span>
-                        <input className={s.input} type="number" min="0" step="1" value={componentForm.ancho} onChange={(e) => handleComponentChange("ancho", e.target.value)} placeholder="1200" />
-                      </label>
-                      <label className={s.field}>
-                        <span className={s.label}>Alto (mm)</span>
-                        <input className={s.input} type="number" min="0" step="1" value={componentForm.alto} onChange={(e) => handleComponentChange("alto", e.target.value)} placeholder="1000" />
-                      </label>
-                    </div>
-
-                    {ancho && alto ? (
-                      <div className={s.svgPanel}>
-                        <div className={s.svgPreviewWrap}>
-                          <div
-                            className={s.svgMarkup}
-                            dangerouslySetInnerHTML={{ __html: livePreviewSvg }}
-                          />
-                        </div>
-                        <div className={s.svgDims}>
-                          <LuRuler size={11} aria-hidden /> {ancho} x {alto} mm
-                        </div>
-                      </div>
-                    ) : null}
-                  </section>
+                  </details>
 
                   <section className={s.formSection}>
                     <div className={s.formSectionHead}>
                       <span className={s.formSectionEyebrow}>Vidrio</span>
-                      <strong>Que vidrio lleva</strong>
-                      <p>Selecciona el vidrio por categoria. Optimizado para tocar rapido desde el celular.</p>
+                      <strong>Vidrio visible desde el inicio</strong>
+                      <p>El tipo de vidrio queda abierto porque es una decisión frecuente en terreno.</p>
                     </div>
 
                     <div className={`${s.field} ${s.fieldFull}`}>
@@ -2018,99 +2846,59 @@ function NuevaCotizacionPageContent() {
                       </div>
                     </section>
 
-                    <section className={`${s.formSection} ${s.formSectionAccent}`}>
-                      <div className={s.formSectionHead}>
-                        <span className={s.formSectionEyebrow}>Precio</span>
-                        <strong>Valor del proveedor y margen comercial</strong>
-                        <p>Deja el calculo listo al tiro para que el maestro vea costo, utilidad y venta final.</p>
-                      </div>
+                    <details className={`${s.formSection} ${s.advancedSection}`}>
+                      <summary className={`${s.mobileMoreButton} ${s.advancedSummaryButton}`}>
+                        Codigo, cantidad y detalles ↓
+                      </summary>
 
                       <div className={s.formGrid2}>
                         <label className={s.field}>
-                          <span className={s.label}>Costo proveedor (unitario) <span className={s.required}>*</span></span>
-                          <div className={s.moneyInputWrap}>
-                            <span className={s.moneyPrefix}>CLP</span>
-                            <input
-                              className={`${s.input} ${s.inputMono} ${s.moneyInput} ${fieldErrors.costoProveedorUnitario ? s.inputError : ""}`}
-                              inputMode="numeric"
-                              value={formatCurrencyInput(componentForm.costoProveedorUnitario)}
-                              onChange={(e) =>
-                                handleComponentChange(
-                                  "costoProveedorUnitario",
-                                  normalizeCurrencyInput(e.target.value)
-                                )
-                              }
-                              placeholder="300.000"
-                            />
-                          </div>
-                          {fieldErrors.costoProveedorUnitario && <span className={s.fieldError}>{fieldErrors.costoProveedorUnitario}</span>}
-                          <span className={s.helpText}>Escribe 300000 y el campo lo muestra como 300.000 automaticamente.</span>
+                          <span className={s.label}>Codigo <span className={s.required}>*</span></span>
+                          <input
+                            className={`${s.input} ${s.inputMono} ${
+                              fieldErrors.codigo ? s.inputError : ""
+                            }`}
+                            value={componentForm.codigo}
+                            onChange={(event) =>
+                              handleComponentChange("codigo", event.target.value.toUpperCase())
+                            }
+                            placeholder="V1"
+                          />
+                          {fieldErrors.codigo ? <span className={s.fieldError}>{fieldErrors.codigo}</span> : null}
                         </label>
+
                         <label className={s.field}>
-                          <span className={s.label}>Margen ganancia (%) <span className={s.required}>*</span></span>
-                          <input className={`${s.input} ${fieldErrors.margenPct ? s.inputError : ""}`} type="number" min="0" step="1" value={componentForm.margenPct} onChange={(e) => handleComponentChange("margenPct", e.target.value)} placeholder="100" />
-                          {fieldErrors.margenPct && <span className={s.fieldError}>{fieldErrors.margenPct}</span>}
-                          <div className={s.presetRow}>
-                            {MARGIN_PRESET_OPTIONS.map((preset) => (
-                              <button
-                                key={preset}
-                                type="button"
-                                className={`${s.presetButton} ${componentForm.margenPct === String(preset) ? s.presetButtonActive : ""}`}
-                                onClick={() => handleComponentChange("margenPct", String(preset))}
-                              >
-                                {preset}%
-                              </button>
-                            ))}
-                          </div>
+                          <span className={s.label}>Cantidad por componente</span>
+                          <input
+                            className={`${s.input} ${fieldErrors.cantidad ? s.inputError : ""}`}
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={componentForm.cantidad}
+                            onChange={(event) => handleComponentChange("cantidad", event.target.value)}
+                          />
+                          {fieldErrors.cantidad ? <span className={s.fieldError}>{fieldErrors.cantidad}</span> : null}
                         </label>
                       </div>
 
-                      {previewItem && (
-                        <div className={s.pricePreview}>
-                          <div className={s.pricePreviewHeader}>
-                            <span className={s.pricePreviewEyebrow}>Resumen interno</span>
-                            <strong className={s.pricePreviewTitle}>
-                              No se muestra en el PDF del cliente
-                            </strong>
-                          </div>
-                          <div className={s.pricePreviewRow}>
-                            <span>Costo proveedor total</span>
-                            <strong>{CLP(previewItem.costoProveedorTotal)}</strong>
-                          </div>
-                          <div className={s.pricePreviewRow}>
-                            <span>Venta unitaria (margen ganancia {previewItem.margenPct}%)</span>
-                            <strong>{CLP(previewItem.precioUnitario)}</strong>
-                          </div>
-                          <div className={s.pricePreviewRow}>
-                            <span>Utilidad estimada</span>
-                            <strong>{CLP(previewItem.precioTotal - previewItem.costoProveedorTotal)}</strong>
-                          </div>
-                          <div className={`${s.pricePreviewRow} ${s.pricePreviewTotal}`}>
-                            <span>Valor comercial total ({previewItem.cantidad} ud.)</span>
-                            <strong>{CLP(previewItem.precioTotal)}</strong>
-                          </div>
-                        </div>
-                      )}
-                    </section>
-
-                    <details className={s.formSection}>
-                      <summary className={s.mobileMoreButton}>Agregar nota para el cliente ↓</summary>
-
                       <div className={s.formGrid2}>
-                        <label className={s.field}>
-                          <span className={s.label}>Descripcion comercial</span>
-                          <textarea className={s.textarea} rows={2} value={componentForm.descripcion} onChange={(e) => handleComponentChange("descripcion", e.target.value)} placeholder="Ej: Ventana corredera 2 hojas color negro linea S60, vidrio 5mm." />
-                        </label>
-
                         <label className={s.field}>
                           <span className={s.label}>Nombre visible</span>
                           <input className={`${s.input} ${fieldErrors.nombre ? s.inputError : ""}`} value={componentForm.nombre} onChange={(e) => handleComponentChange("nombre", e.target.value)} placeholder="Ej: Ventana living" />
                           <span className={s.helpText}>Opcional. Si lo dejas vacio, usamos {buildAutoComponentName(componentForm)}.</span>
                         </label>
                       </div>
-                    </details>
-                  </div>
 
+                      <div className={s.formGrid2}>
+                        <label className={s.field}>
+                          <span className={s.label}>Descripcion comercial</span>
+                          <textarea className={s.textarea} rows={2} value={componentForm.descripcion} onChange={(e) => handleComponentChange("descripcion", e.target.value)} placeholder="Ej: Ventana corredera 2 hojas color negro linea S60, vidrio 5mm." />
+                        </label>
+                      </div>
+                  </details>
+                </div>
+
+                {fieldErrors.step2 && <div className={s.inlineError}>{fieldErrors.step2}</div>}
                 {globalError && <div className={s.inlineError}>{globalError}</div>}
 
                 <div className={s.cardFooter}>
@@ -2145,20 +2933,25 @@ function NuevaCotizacionPageContent() {
                   <span className={s.stepTwoCounter}>{draft.items.length}</span>
                 </div>
 
-                <div className={s.stepTwoTotalsGrid}>
-                  <div className={s.stepTwoTotalCell}>
-                    <span>Subtotal</span>
-                    <strong>{CLP(totals.subtotal)}</strong>
-                  </div>
-                  <div className={s.stepTwoTotalCell}>
-                    <span>IVA</span>
-                    <strong>{CLP(totals.iva)}</strong>
-                  </div>
-                  <div className={`${s.stepTwoTotalCell} ${s.stepTwoTotalCellWide}`}>
-                    <span>Total</span>
-                    <strong>{CLP(totals.total)}</strong>
-                  </div>
-                </div>
+                {selectedQuickEditItem && selectedQuickEditDraft ? (
+                  <MobileQuickEditor
+                    key={selectedQuickEditItem.id}
+                    item={selectedQuickEditItem}
+                    initialDraft={selectedQuickEditDraft}
+                    itemIndex={selectedQuickEditIndex}
+                    totalItems={draft.items.length}
+                    pricingLabel={
+                      decodeCotizacionItemPresentationMeta(selectedQuickEditItem.observaciones)
+                        .pricingMode === "precio_directo"
+                        ? "Valor"
+                        : "Costo"
+                    }
+                    onDraftChange={handleQuickItemFieldChange}
+                    onCommit={commitQuickEditDraft}
+                    onNavigate={handleQuickEditNavigate}
+                    onScrollToSummary={handleScrollToStepTwoSummary}
+                  />
+                ) : null}
 
                 {fieldErrors.items && <div className={s.inlineError}>{fieldErrors.items}</div>}
 
@@ -2178,16 +2971,27 @@ function NuevaCotizacionPageContent() {
                       />
                     ) : null}
                     {visibleComponentListState.cards.map((item, index) => {
+                      const isQuickEditSelected = expandedQuickEditItemId === item.id;
+
                       return (
                         <article
                           key={item.id}
-                          ref={index === 0 ? handleStepTwoListMeasure : undefined}
-                          className={`${s.stepTwoListCard} ${editingItemId === item.id ? s.stepTwoListCardEditing : ""}`}
+                          ref={(node) => {
+                            if (index === 0) {
+                              handleStepTwoListMeasure(node);
+                            }
+                          }}
+                          onClick={() => handleSelectQuickEditItem(item.id)}
+                          className={`${s.stepTwoListCard} ${
+                            editingItemId === item.id ? s.stepTwoListCardEditing : ""
+                          } ${isQuickEditSelected ? s.stepTwoListCardSelected : ""}`}
                         >
                           <div className={s.stepTwoListThumb}>
                             <div
                               className={s.stepTwoListThumbSvg}
-                              dangerouslySetInnerHTML={{ __html: item.previewSvg }}
+                              dangerouslySetInnerHTML={{
+                                __html: item.svgMarkup,
+                              }}
                             />
                           </div>
 
@@ -2233,13 +3037,27 @@ function NuevaCotizacionPageContent() {
                   </div>
                 )}
 
-                <div className={s.stepTwoPanelFooter}>
-                  <div className={s.stepTwoFooterTotal}>
-                    <span>Total con IVA</span>
-                    <strong>{CLP(totals.total)}</strong>
+                <div className={s.stepTwoPanelFooter} ref={stepTwoSummaryRef}>
+                  <div className={s.stepTwoTotalsGrid}>
+                    <div className={s.stepTwoTotalCell}>
+                      <span>Subtotal</span>
+                      <strong>{CLP(totals.subtotal)}</strong>
+                    </div>
+                    <div className={s.stepTwoTotalCell}>
+                      <span>IVA</span>
+                      <strong>{CLP(totals.iva)}</strong>
+                    </div>
+                    <div className={`${s.stepTwoTotalCell} ${s.stepTwoTotalCellWide}`}>
+                      <span>Total</span>
+                      <strong>{CLP(totals.total)}</strong>
+                    </div>
                   </div>
-                  <button className={`${s.btnPrimary} ${s.stepTwoSummaryButton}`} type="button" onClick={() => goToStep(3)}>
-                    Ir a resumen <LuChevronRight aria-hidden />
+                  <button
+                    className={`${s.btnPrimary} ${s.stepTwoSummaryButton}`}
+                    type="button"
+                    onClick={() => goToStep(3)}
+                  >
+                    Continuar al resumen <LuChevronRight aria-hidden />
                   </button>
                 </div>
               </aside>

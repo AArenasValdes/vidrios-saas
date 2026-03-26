@@ -927,6 +927,37 @@ export function createCotizacionesRepository(
 
       return hydrateCotizacion(mapCotizacion(updated));
     },
+
+    async updateShareStatus(
+      id: EntityId,
+      organizationId: EntityId,
+      input: {
+        estado: "enviada";
+      }
+    ) {
+      const { error } = await supabase
+        .from("cotizaciones")
+        .update({
+          estado: input.estado,
+        })
+        .eq("id", id)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null);
+
+      if (error) {
+        throw error;
+      }
+
+      const updated = await getCotizacionBase(id, organizationId);
+
+      if (!updated) {
+        throw new Error(
+          "La cotizacion se marco como enviada, pero no se pudo recuperar el registro actualizado."
+        );
+      }
+
+      return hydrateCotizacion(mapCotizacion(updated));
+    },
   };
 }
 
@@ -968,5 +999,8 @@ export const cotizacionesRepository: CotizacionesRepository = {
   },
   updateManualResponse(...args) {
     return getDefaultCotizacionesRepository().updateManualResponse(...args);
+  },
+  updateShareStatus(...args) {
+    return getDefaultCotizacionesRepository().updateShareStatus(...args);
   },
 };

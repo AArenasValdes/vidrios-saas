@@ -27,6 +27,8 @@ describe("organization-profile.service", () => {
       organizationId: "org-1",
       empresaNombre: "Mi empresa",
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
+      proveedorPreferido: "",
+      modoPrecioPreferido: "margen",
     });
   });
 
@@ -44,6 +46,8 @@ describe("organization-profile.service", () => {
         empresaEmail: "",
         brandColor: "#123456",
         formaPago: "",
+        proveedorPreferido: "",
+        modoPrecioPreferido: "margen",
       })
     ).rejects.toThrow("El nombre de la empresa es obligatorio");
   });
@@ -62,6 +66,8 @@ describe("organization-profile.service", () => {
       empresaEmail: " INFO@MARCA.CL ",
       brandColor: "azul",
       formaPago: " 50% anticipo ",
+      proveedorPreferido: " Indalum ",
+      modoPrecioPreferido: " precio_directo ",
     });
 
     expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", {
@@ -72,6 +78,8 @@ describe("organization-profile.service", () => {
       empresaEmail: "info@marca.cl",
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
       formaPago: "50% anticipo",
+      proveedorPreferido: "Indalum",
+      modoPrecioPreferido: "precio_directo",
     });
   });
 

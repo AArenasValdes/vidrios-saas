@@ -7,7 +7,25 @@ import s from "./push-notifications-prompt.module.css";
 
 const DISMISS_KEY = "ventora:push-notifications-dismissed";
 
-function isAndroidPushCandidate() {
+type PushPromptPlatform = "android" | "ios" | "desktop";
+
+function detectPushPromptPlatform(): PushPromptPlatform {
+  if (typeof navigator === "undefined") {
+    return "desktop";
+  }
+
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    return "ios";
+  }
+
+  if (/Android/i.test(navigator.userAgent)) {
+    return "android";
+  }
+
+  return "desktop";
+}
+
+function isPushSupportedDevice() {
   if (typeof window === "undefined" || typeof navigator === "undefined") {
     return false;
   }
@@ -15,12 +33,40 @@ function isAndroidPushCandidate() {
   if (
     !("serviceWorker" in navigator) ||
     !("PushManager" in window) ||
-    !("Notification" in window)
+    !("Notification" in window) ||
+    !window.isSecureContext
   ) {
     return false;
   }
 
-  return /Android/i.test(navigator.userAgent);
+  return true;
+}
+
+function getPromptCopy(platform: PushPromptPlatform) {
+  if (platform === "ios") {
+    return {
+      eyebrow: "Alertas del iPhone",
+      title: "Activa alertas para respuestas de clientes",
+      text:
+        "Si tu iPhone permite notificaciones web en este acceso, te avisaremos cuando una cotizacion sea aprobada o rechazada.",
+    };
+  }
+
+  if (platform === "android") {
+    return {
+      eyebrow: "Alertas del celular",
+      title: "Activa alertas reales para respuestas de clientes",
+      text:
+        "Recibiras una notificacion normal del celular cuando un cliente apruebe o rechace una cotizacion.",
+    };
+  }
+
+  return {
+    eyebrow: "Alertas del dispositivo",
+    title: "Activa alertas para respuestas de clientes",
+    text:
+      "Recibiras una notificacion del navegador cuando un cliente apruebe o rechace una cotizacion.",
+  };
 }
 
 function base64UrlToUint8Array(value: string) {
@@ -64,11 +110,14 @@ export function PushNotificationsPrompt() {
   const [isBusy, setIsBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [statusIsError, setStatusIsError] = useState(false);
+  const [platform, setPlatform] = useState<PushPromptPlatform>("desktop");
 
   useEffect(() => {
-    if (!isAndroidPushCandidate()) {
+    if (!isPushSupportedDevice()) {
       return;
     }
+
+    setPlatform(detectPushPromptPlatform());
 
     const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
 
@@ -112,7 +161,7 @@ export function PushNotificationsPrompt() {
 
         if (!cancelled) {
           setIsEnabled(true);
-          setStatus("Alertas activas para aprobaciones y rechazos.");
+          setStatus("Alertas activas para aprobaciones y rechazos en este dispositivo.");
           setStatusIsError(false);
         }
       } catch {
@@ -188,6 +237,8 @@ export function PushNotificationsPrompt() {
     return null;
   }
 
+  const promptCopy = getPromptCopy(platform);
+
   return (
     <section className={s.card} aria-live="polite">
       <div className={s.icon} aria-hidden>
@@ -195,12 +246,9 @@ export function PushNotificationsPrompt() {
       </div>
 
       <div className={s.body}>
-        <span className={s.eyebrow}>Android PWA</span>
-        <h2 className={s.title}>Activa alertas reales para respuestas de clientes</h2>
-        <p className={s.text}>
-          Solo te avisaremos cuando una cotizacion sea aprobada o rechazada. Sin ruido
-          extra ni recordatorios innecesarios.
-        </p>
+        <span className={s.eyebrow}>{promptCopy.eyebrow}</span>
+        <h2 className={s.title}>{promptCopy.title}</h2>
+        <p className={s.text}>{promptCopy.text}</p>
         {status ? (
           <p className={`${s.status}${statusIsError ? ` ${s.statusError}` : ""}`}>
             {status}

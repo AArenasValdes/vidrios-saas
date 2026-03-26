@@ -493,6 +493,42 @@ export function useCotizacionesStore() {
     }
   };
 
+  const markQuoteAsSent = async (id: string) => {
+    if (!organizacionId) {
+      throw new Error("No hay organizacion activa");
+    }
+
+    setIsSaving(true);
+
+    try {
+      const record = await cotizacionesAppService.markWorkflowAsSent({
+        id,
+        organizationId: organizacionId,
+      });
+
+      const currentCotizaciones = cotizacionesRef.current;
+      const nextCotizaciones = sortCotizaciones(
+        currentCotizaciones.some((item) => item.id === record.id)
+          ? currentCotizaciones.map((item) => (item.id === record.id ? record : item))
+          : [record, ...currentCotizaciones]
+      );
+
+      cotizacionesRef.current = nextCotizaciones;
+      setCotizaciones(nextCotizaciones);
+      const nextCacheEntry = {
+        organizationId: String(organizacionId),
+        cotizaciones: nextCotizaciones,
+        clientes: clientesRef.current,
+      };
+      cotizacionesCache.set(String(organizacionId), nextCacheEntry);
+      persistCotizacionesCache(nextCacheEntry);
+
+      return record;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const getCotizacionById = (id: string) => {
     return cotizaciones.find((record) => record.id === id) ?? null;
   };
@@ -536,6 +572,7 @@ export function useCotizacionesStore() {
     saveWorkflow,
     deleteWorkflow,
     updateManualResponseStatus,
+    markQuoteAsSent,
     getCotizacionById,
     loadCotizacionById,
     refreshCotizaciones,

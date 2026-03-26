@@ -1,6 +1,17 @@
 const APPROVAL_TOKEN_LENGTH = 32;
 const PUBLIC_URL_PLACEHOLDER = "https://tu-dominio.cl";
 
+function normalizeOrigin(origin: string | null | undefined) {
+  const trimmed = origin?.trim() ?? "";
+
+  if (!trimmed || trimmed === "undefined" || trimmed === "null") {
+    return "";
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withProtocol.replace(/\/+$/, "");
+}
+
 function randomHex(length: number) {
   const targetBytes = Math.ceil(length / 2);
   const buffer = new Uint8Array(targetBytes);
@@ -21,12 +32,16 @@ export function buildCotizacionApprovalPath(token: string) {
 }
 
 export function resolveAppOrigin() {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "";
-
-  const normalizedConfigured = configured.replace(/\/+$/, "");
+  const normalizedConfigured = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.NEXT_PUBLIC_VERCEL_URL,
+    process.env.VERCEL_URL,
+  ]
+    .map((value) => normalizeOrigin(value))
+    .find(Boolean);
 
   if (normalizedConfigured) {
     return normalizedConfigured;

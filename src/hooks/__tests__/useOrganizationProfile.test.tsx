@@ -42,6 +42,8 @@ function createProfile(
     empresaEmail: "",
     brandColor: "#335ea9",
     formaPago: "",
+    proveedorPreferido: "",
+    modoPrecioPreferido: "margen",
     creadoEn: "2026-03-20T00:00:00.000Z",
     actualizadoEn: "2026-03-20T00:00:00.000Z",
   };

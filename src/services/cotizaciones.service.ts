@@ -552,6 +552,44 @@ export function createCotizacionesAppService(
     });
   }
 
+  async function markWorkflowAsSent(input: {
+    id: EntityId;
+    organizationId: EntityId;
+  }) {
+    const existing = await cotizacionesRepo.getById(input.id, input.organizationId);
+
+    if (!existing) {
+      throw new Error("No se encontro la cotizacion para marcarla como enviada.");
+    }
+
+    const nextEstado =
+      existing.estado === "creada" || existing.estado === "borrador"
+        ? "enviada"
+        : existing.estado;
+    const updated =
+      nextEstado === existing.estado
+        ? existing
+        : await cotizacionesRepo.updateShareStatus(input.id, input.organizationId, {
+            estado: "enviada",
+          });
+    const project = updated.proyectoId
+      ? await projectsRepo.getById(updated.proyectoId, input.organizationId)
+      : null;
+    const client =
+      project?.clienteId !== null && project?.clienteId !== undefined
+        ? await clientesRepo.getById(project.clienteId, input.organizationId)
+        : null;
+
+    return mapCotizacionToWorkflowRecord({
+      cotizacion: updated,
+      clientId: project?.clienteId ?? null,
+      clientName: client?.nombre ?? "Cliente sin nombre",
+      clientPhone: client?.telefono ?? "",
+      clientAddress: client?.direccion ?? "",
+      projectTitle: project?.titulo ?? "Proyecto sin nombre",
+    });
+  }
+
   return {
     listClientsByOrganizationId,
     listWorkflowByOrganizationId,
@@ -559,6 +597,7 @@ export function createCotizacionesAppService(
     saveWorkflow,
     deleteWorkflow,
     updateManualResponseStatus,
+    markWorkflowAsSent,
   };
 }
 

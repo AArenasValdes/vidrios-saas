@@ -25,6 +25,7 @@ const saveWorkflow = jest.fn();
 const deleteWorkflow = jest.fn();
 const getWorkflowById = jest.fn();
 const updateManualResponseStatus = jest.fn();
+const markWorkflowAsSent = jest.fn();
 
 jest.mock("@/hooks/useAuth", () => ({
   useAuth: () => authState,
@@ -40,6 +41,7 @@ jest.mock("@/services/cotizaciones.service", () => ({
     deleteWorkflow: (...args: unknown[]) => deleteWorkflow(...args),
     getWorkflowById: (...args: unknown[]) => getWorkflowById(...args),
     updateManualResponseStatus: (...args: unknown[]) => updateManualResponseStatus(...args),
+    markWorkflowAsSent: (...args: unknown[]) => markWorkflowAsSent(...args),
   },
 }));
 
@@ -107,6 +109,7 @@ function ProbeCotizacionesStore() {
     error,
     isReady,
     isRefreshing,
+    markQuoteAsSent,
     saveWorkflow,
     refreshCotizaciones,
   } = useCotizacionesStore();
@@ -150,6 +153,9 @@ function ProbeCotizacionesStore() {
       >
         guardar
       </button>
+      <button type="button" onClick={() => void markQuoteAsSent("cot-1")}>
+        marcar-enviada
+      </button>
     </div>
   );
 }
@@ -170,6 +176,7 @@ describe("useCotizacionesStore", () => {
     deleteWorkflow.mockReset();
     getWorkflowById.mockReset();
     updateManualResponseStatus.mockReset();
+    markWorkflowAsSent.mockReset();
   });
 
   it("debe refrescar cotizaciones y limpiar datos al cambiar de organizacion", async () => {
@@ -320,6 +327,35 @@ describe("useCotizacionesStore", () => {
       expect(screen.getByTestId("cotizaciones")).toHaveTextContent(
         "COT-003,COT-001,COT-002"
       );
+    });
+  });
+
+  it("debe actualizar una cotizacion a enviada al marcarla como compartida", async () => {
+    listWorkflowByOrganizationId.mockResolvedValueOnce([
+      createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
+    ]);
+    listClientsByOrganizationId.mockResolvedValue([]);
+    markWorkflowAsSent.mockResolvedValue(
+      createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z")
+    );
+    markWorkflowAsSent.mockResolvedValueOnce({
+      ...createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z"),
+      estado: "enviada",
+    });
+
+    render(<ProbeCotizacionesStore />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cotizaciones")).toHaveTextContent("COT-001");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "marcar-enviada" }));
+
+    await waitFor(() => {
+      expect(markWorkflowAsSent).toHaveBeenCalledWith({
+        id: "cot-1",
+        organizationId: 1,
+      });
     });
   });
 });

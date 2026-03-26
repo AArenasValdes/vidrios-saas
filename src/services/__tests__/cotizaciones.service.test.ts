@@ -196,6 +196,33 @@ function createCotizacionesRepositoryMock(): jest.Mocked<CotizacionesRepository>
       items: [],
       total: 714000,
     }),
+    updateShareStatus: jest.fn().mockResolvedValue({
+      id: 100,
+      proyectoId: 10,
+      organizationId: 77,
+      numero: "COT-123456",
+      estado: "enviada",
+      descuentoPct: 0,
+      flete: 0,
+      iva: 114000,
+      notas: "",
+      validoHasta: "2026-03-29",
+      subtotalNeto: 600000,
+      costoTotal: 300000,
+      margenPct: 100,
+      utilidadTotal: 300000,
+      estadoComercial: null,
+      approvalToken: "approval-token-1",
+      approvalTokenExpiresAt: null,
+      clienteVioEn: null,
+      clienteRespondioEn: null,
+      clienteRespuestaCanal: null,
+      creadoEn: "2026-03-14T10:00:00.000Z",
+      actualizadoEn: "2026-03-21T10:00:00.000Z",
+      eliminadoEn: null,
+      items: [],
+      total: 714000,
+    }),
   } as unknown as jest.Mocked<CotizacionesRepository>;
 }
 
@@ -585,5 +612,24 @@ describe("cotizaciones.service", () => {
     });
     expect(record.estado).toBe("terminada");
     expect(record.clienteRespuestaCanal).toBe("manual_app");
+  });
+
+  it("debe marcar una cotizacion creada como enviada al compartirla", async () => {
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository: createClientesRepositoryMock(),
+      projectsRepository: createProjectsRepositoryMock(),
+      cotizacionesRepository,
+    });
+
+    const record = await service.markWorkflowAsSent({
+      id: 100,
+      organizationId: 77,
+    });
+
+    expect(cotizacionesRepository.updateShareStatus).toHaveBeenCalledWith(100, 77, {
+      estado: "enviada",
+    });
+    expect(record.estado).toBe("enviada");
   });
 });

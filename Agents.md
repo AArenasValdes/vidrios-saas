@@ -9,18 +9,20 @@ Ultima consolidacion revisada contra el repo: 2026-03-23.
 
 ## Que es este proyecto ahora
 
-Este proyecto ya no debe pensarse como un motor tecnico de calculo de ventanas.
+Este proyecto ya no debe pensarse como un formulario tecnico ni como un motor de calculo de ventanas.
 
 El enfoque vigente es:
 
-**un SaaS para crear presupuestos profesionales de vidrios y aluminio por componente, pensado para uso rapido en terreno y envio inmediato al cliente.**
+**un cotizador basado en sistemas preconfigurados, con autocompletado inteligente y edicion rapida, pensado para cotizar en terreno sin obligar al usuario a construir cada componente desde cero.**
 
 El software hoy apunta a ayudar a:
 
 - registrar clientes
 - crear cotizaciones
 - crear o reutilizar proyectos de forma implicita dentro del flujo de cotizacion
-- agregar componentes del proyecto
+- sugerir sistemas completos por tipo de componente y proveedor
+- autocompletar material, vidrio, margen, linea y descripcion base
+- editar solo lo necesario desde el movil
 - calcular margen sobre costo proveedor
 - generar PDF profesional con branding de la empresa
 - compartir presupuesto por WhatsApp
@@ -28,7 +30,7 @@ El software hoy apunta a ayudar a:
 Usuario principal:
 
 - maestro independiente
-- pequeno taller
+- pequeño taller
 - instalador o vendedor tecnico que hoy cotiza con proveedor y arma el presupuesto manualmente
 
 ### Modelo de usuario vigente del MVP
@@ -58,10 +60,14 @@ El proyecto partio con la idea de construir un cotizador tecnico completo:
 
 Ese enfoque queda fuera del MVP comercial porque agrega demasiada complejidad para validar negocio.
 
+El nuevo enfoque es otro:
+
+**el usuario no construye el componente, el sistema le propone un sistema sugerido y el usuario solo confirma o ajusta.**
+
 Problema real del usuario:
 
 1. Cotiza con el proveedor.
-2. Recibe un costo por pieza, componente o solucion ya definida.
+2. Recibe una configuracion o costo ya bastante definido.
 3. Aplica margen.
 4. Arma el presupuesto en Excel, Word o WhatsApp.
 5. Lo envia al cliente.
@@ -69,8 +75,9 @@ Problema real del usuario:
 Conclusiones operativas:
 
 - el problema principal no es ingenieria de ventanas
-- el problema principal es capturar, presentar y enviar el presupuesto rapido
-- el MVP debe optimizar ese flujo, no reemplazar al proveedor
+- el problema principal es proponer rapido una configuracion util
+- el MVP debe optimizar el flujo de sugerencia y confirmacion, no obligar a construir desde cero
+- la precision perfecta vale menos que la velocidad util en terreno
 
 ---
 
@@ -78,7 +85,7 @@ Conclusiones operativas:
 
 El producto debe resolver esto:
 
-**crear presupuestos comerciales por componente, con calculo simple, PDF claro, branding de empresa y salida por WhatsApp.**
+**crear presupuestos comerciales a partir de sistemas preconfigurados, con calculo simple, PDF claro, branding de empresa y salida por WhatsApp.**
 
 ### Posicionamiento comercial recomendado
 
@@ -86,13 +93,14 @@ La categoria correcta hoy no es "ERP", ni "software logistico", ni "motor tecnic
 
 La forma mas precisa de posicionarlo es:
 
-**un presupuestario comercial vertical para vidrios y aluminio, con seguimiento liviano del cliente y del avance comercial de la obra.**
+**un presupuestario comercial vertical para vidrios y aluminio, basado en sistemas sugeridos, con seguimiento liviano del cliente y del avance comercial de la obra.**
 
 Formas correctas de describirlo:
 
 - software para crear y enviar cotizaciones de vidrios y aluminio
 - presupuestario comercial con PDF, WhatsApp y aprobacion del cliente
 - CRM operativo liviano para talleres y maestros que necesitan cotizar rapido
+- cotizador basado en sistemas preconfigurados con autocompletado inteligente
 
 Formas incorrectas de describirlo:
 
@@ -100,6 +108,7 @@ Formas incorrectas de describirlo:
 - sistema logistico completo
 - software de planificacion de produccion
 - cotizador tecnico de perfiles y despiece
+- formulario tecnico que obliga a construir cada componente desde cero
 
 Importante:
 
@@ -134,35 +143,41 @@ Eso queda como fase 2 eventual si el producto valida mercado.
 
 ---
 
-## Concepto clave del MVP: Componentes
+## Concepto clave del MVP: Sistemas
 
-Las cotizaciones no se modelan como productos genericos.
+Las cotizaciones no se modelan como formularios vacios ni como productos genericos.
 
-Se modelan como **componentes del proyecto**.
+Se modelan como **sistemas sugeridos y editables**.
 
-Ejemplos:
+Un sistema representa una configuracion real de trabajo en terreno. Ejemplos:
 
-- `V1` -> ventana living
-- `V2` -> ventana cocina
-- `P1` -> puerta terraza
-- `C1` -> cierre logia
+- ventana corredera aluminio basica
+- ventana corredera aluminio premium
+- puerta abatible aluminio
+- shower door estandar
+- cierre de terraza piso-cielo
 
-Cada componente puede tener:
+Cada sistema puede incluir:
 
-- codigo
-- tipo
-- material
-- vidrio
-- ancho
-- alto
-- descripcion
-- costo proveedor unitario
-- costo proveedor total
-- margen
-- precio final unitario
-- precio final total
+- tipo de componente
+- proveedor
+- linea
+- nivel
+- tipo de apertura
+- vidrio compatible
+- restricciones de dimension
+- configuracion base sugerida
+- margen sugerido
+- descripcion base
 
-El componente es la unidad principal del presupuesto.
+Cada componente sigue siendo la unidad de calculo y presupuesto, pero nace desde un sistema sugerido.
+
+### Lectura operativa
+
+- `sistema` = configuracion sugerida
+- `componente` = item editable y calculable dentro de la cotizacion
+
+El usuario no debe partir de cero. El sistema debe sugerir una base completa y dejar al usuario solo la correccion final.
 
 ---
 
@@ -174,19 +189,24 @@ Flujo que hoy ya existe en el repo:
 2. Dashboard
 3. Clientes
 4. Nueva cotizacion en flujo guiado
-5. Agregar componentes
-6. Calcular subtotal, neto, IVA y total
-7. Guardar borrador o presupuesto
-8. Ver detalle
-9. Generar PDF
-10. Compartir por WhatsApp
-11. Cliente revisa y responde desde link publico
-12. Configurar perfil comercial de la empresa
+5. Elegir tipo de componente
+6. Recibir sistema sugerido y autocompletado inteligente
+7. Ajustar solo lo necesario
+8. Crear uno o varios componentes en lote
+9. Editar rapido en lista
+10. Calcular subtotal, neto, IVA y total
+11. Guardar borrador o presupuesto
+12. Ver detalle
+13. Generar PDF
+14. Compartir por WhatsApp
+15. Cliente revisa y responde desde link publico
+16. Configurar perfil comercial de la empresa
 
 Importante:
 
 - el proyecto se crea o reutiliza desde el service de cotizaciones
 - hoy no existe una UI separada de gestion de proyectos
+- el Paso 2 debe leerse como un asistente de configuracion, no como un formulario manual
 
 ---
 
@@ -330,7 +350,7 @@ Si tomas este repo hoy, asume esto:
 - el corazon del producto ya es el flujo comercial de cotizaciones
 - no hay que volver a expandir el cotizador tecnico por inercia
 - el valor actual ya esta en clientes, cotizaciones, PDF, branding y WhatsApp
-- el siguiente salto no es "mas motor tecnico"; es estabilizar, desplegar y vender
+- el siguiente salto no es "mas logica tecnica"; es consolidar sistemas sugeridos, estabilizar, desplegar y vender
 
 ---
 
@@ -350,6 +370,7 @@ Si tomas este repo hoy, asume esto:
 - dashboard presente
 - clientes presente
 - cotizaciones presente
+- flujo rapido de sistemas sugeridos en nueva cotizacion
 - configuracion de empresa presente
 
 ### Comercial
@@ -359,6 +380,7 @@ Si tomas este repo hoy, asume esto:
 - WhatsApp presente
 - aprobacion publica de presupuesto presente
 - seguimiento comercial liviano presente
+- cotizacion basada en sistemas sugeridos y editables
 
 ### Operacion liviana
 
@@ -376,6 +398,7 @@ Si tomas este repo hoy, asume esto:
 - CRM comercial profundo
 - gestion explicita de proyectos
 - logistica, despacho o planificacion de taller
+- catalogo completo de sistemas versionados por proveedor, familia y nivel
 
 ---
 
@@ -422,7 +445,7 @@ La logica principal del MVP trabaja con:
 
 **7. No reintroducir el cotizador tecnico**
 
-No agregar nuevas capas de materiales, perfiles, compatibilidades o formulas salvo instruccion explicita.
+No volver al modelo de formulario tecnico ni agregar nuevas capas de materiales, perfiles, compatibilidades o formulas salvo instruccion explicita. El flujo debe seguir basado en sistemas sugeridos y editables.
 
 **8. Infraestructura encapsulada**
 
@@ -641,14 +664,20 @@ Orden sugerido a partir del estado real del repo en este cierre preproduccion:
    - bucket `organization-assets`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - RLS y multi-tenant con usuario real
-2. Estabilizar el flujo principal de salida a produccion:
+2. Consolidar el motor de sugerencias y sistemas:
+   - reglas base por proveedor
+   - reglas por tipo de componente
+   - sugerencias por dimension
+   - defaults editables sin romper el flujo rapido
+   - fallback claro cuando el sistema no conozca una combinacion
+3. Estabilizar el flujo principal de salida a produccion:
    - smoke tests reales
    - validacion en movil
    - manejo de errores
    - revisar estados vacios y edge cases
    - validar PWA y offline real en dispositivo
    - revisar consistencia de escritura en create/update de cotizaciones
-3. Revisar experiencia comercial final:
+4. Revisar experiencia comercial final:
    - detalle de cotizacion
    - PDF
    - mensaje de WhatsApp
@@ -656,12 +685,12 @@ Orden sugerido a partir del estado real del repo en este cierre preproduccion:
    - claridad de forma de pago
    - CTA y copy final de landing, login y `/planes`
    - limpieza de encoding roto visible al usuario
-4. Definir despliegue inicial:
+5. Definir despliegue inicial:
    - hosting
    - variables de entorno
    - dominio
    - politicas de acceso
-5. Despues de eso:
+6. Despues de eso:
    - metodo de pago
    - analiticas tipo PostHog
    - onboarding comercial
@@ -674,7 +703,8 @@ Si entras a este repo hoy, asume esto:
 
 - el MVP comercial ya tiene base funcional real
 - la prioridad ya no es inventar mas producto, sino cerrar salida a mercado
+- el flujo principal debe comportarse como un asistente de configuracion, no como un formulario
 - no metas pagos ni analiticas antes de estabilizar despliegue y experiencia principal
 - no reabras el cotizador tecnico salvo instruccion explicita
-- si tocas cotizaciones, debes cuidar servicio, PDF, WhatsApp y aprobacion publica juntos
-- no posiciones este producto como ERP o logistica; hoy es presupuestario comercial vertical con seguimiento liviano
+- si tocas cotizaciones, debes cuidar servicio, sugerencias, PDF, WhatsApp y aprobacion publica juntos
+- no posiciones este producto como ERP o logistica; hoy es un presupuestario comercial vertical basado en sistemas sugeridos

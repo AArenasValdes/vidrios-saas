@@ -9,17 +9,20 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
+      pricingMode: "precio_directo",
       raw: "Ventana living con vidrio claro",
     });
 
     expect(encoded).toContain("[c:#2a2a2a]");
     expect(encoded).toContain("[r:Serie 25]");
     expect(encoded).toContain("[m:Aluminio]");
+    expect(encoded).toContain("[pm:precio_directo]");
 
     expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual({
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
+      pricingMode: "precio_directo",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -31,6 +34,7 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#ffffff",
       material: "PVC",
       referencia: "S60",
+      pricingMode: "margen",
       raw: "Cierre de terraza",
     });
   });
@@ -40,6 +44,7 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#f0eeeb",
       material: "PVC",
       referencia: "",
+      pricingMode: "margen",
       raw: "",
     });
   });

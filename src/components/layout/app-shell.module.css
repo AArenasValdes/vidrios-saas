@@ -361,9 +361,16 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: 16px 18px 18px;
   border-top: 1px solid var(--border);
   background: rgba(250, 252, 255, 0.92);
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .userAvatar,
@@ -417,22 +424,169 @@
     background 0.18s ease;
 }
 
-.logoutBtn {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.logoutBtn:hover,
 .mobileGhostBtn:hover,
 .ghostAction:hover {
   border-color: rgba(79, 125, 212, 0.24);
   color: var(--goldStrong);
   background: #f4f8ff;
+}
+
+.profileMenuWrap {
+  position: relative;
+}
+
+.profileTriggerActive {
+  border-color: rgba(79, 125, 212, 0.28);
+  background: linear-gradient(180deg, rgba(244, 248, 255, 0.98), rgba(235, 242, 255, 0.96));
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.08);
+}
+
+.profileTriggerArrow {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  color: #7b8697;
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease;
+}
+
+.profileTriggerActive .profileTriggerArrow,
+.profileTriggerActive .teamBadgeArrow {
+  transform: rotate(90deg);
+  color: var(--goldStrong);
+}
+
+.mobileAvatarButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: inline-flex;
+  border-radius: 18px;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileAvatarButton:active,
+.sidebarUser:active,
+.teamBadge:active,
+.accountMenuLink:active,
+.accountMenuAction:active {
+  transform: scale(0.98);
+}
+
+.accountMenu {
+  position: absolute;
+  right: 0;
+  min-width: 248px;
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 254, 0.96)),
+    var(--surface);
+  box-shadow: 0 24px 46px rgba(23, 35, 62, 0.16);
+  backdrop-filter: blur(18px);
+  z-index: 80;
+  animation: accountMenuIn 160ms ease;
+}
+
+.accountMenuSidebar {
+  bottom: calc(100% + 12px);
+}
+
+.accountMenuTopbar,
+.accountMenuMobile {
+  top: calc(100% + 12px);
+}
+
+.accountMenuHeader {
+  display: grid;
+  gap: 4px;
+  padding: 4px 4px 12px;
+}
+
+.accountMenuList {
+  display: grid;
+  gap: 8px;
+}
+
+.accountMenuEyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7b8697;
+}
+
+.accountMenuHeader strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.accountMenuHeader span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.accountMenuLink,
+.accountMenuAction {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background: #fff;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: "Lato", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.accountMenuLink {
+  background: rgba(247, 250, 255, 0.98);
+}
+
+.accountMenuLink:hover,
+.accountMenuAction:hover {
+  border-color: rgba(79, 125, 212, 0.28);
+  background: #f5f9ff;
+  box-shadow: 0 10px 20px rgba(79, 125, 212, 0.08);
+}
+
+.accountMenuAction:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+@keyframes accountMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .main {
@@ -540,6 +694,14 @@
   gap: 10px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .teamBadgeName {
@@ -560,6 +722,9 @@
   width: 16px;
   height: 16px;
   color: #7b8697;
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease;
 }
 
 .pageContent {
@@ -1013,5 +1178,13 @@
   .alertItemMeta {
     font-size: 11px;
     letter-spacing: 0.04em;
+  }
+
+  .accountMenuMobile {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    min-width: 0;
   }
 }
