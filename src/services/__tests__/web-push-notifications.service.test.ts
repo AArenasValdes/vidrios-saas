@@ -108,4 +108,36 @@ describe("web-push-notifications.service", () => {
       skipped: false,
     });
   });
+
+  it("debe enviar push cuando una cotizacion se marca como enviada", async () => {
+    repository.listActiveByOrganizationId.mockResolvedValue([
+      {
+        endpoint: subscription.endpoint,
+        subscription,
+      },
+    ]);
+    (webpush.sendNotification as jest.Mock).mockResolvedValue(undefined);
+
+    const service = createWebPushNotificationsService({
+      repository,
+    });
+
+    const result = await service.sendQuoteSentPush({
+      organizationId: 77,
+      cotizacionId: "cot-2",
+      codigo: "COT-2001",
+      clienteNombre: "Maria Soto",
+    });
+
+    expect(webpush.sendNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: subscription.endpoint,
+      }),
+      expect.stringContaining("Cotizacion enviada")
+    );
+    expect(result).toEqual({
+      sent: 1,
+      skipped: false,
+    });
+  });
 });

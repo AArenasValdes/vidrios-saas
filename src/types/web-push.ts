@@ -1,4 +1,5 @@
 export type PushDecisionKind = "aprobada" | "rechazada";
+export type PushNotificationKind = "cotizacion-enviada" | "cotizacion-respuesta";
 
 export type WebPushSubscriptionRecord = {
   id: number;
@@ -35,4 +36,14 @@ export type QuoteDecisionPushPayload = {
   cotizacionId: string;
   organizationId: string;
   decision: PushDecisionKind;
+};
+
+export type QuoteSentPushPayload = {
+  title: string;
+  body: string;
+  url: string;
+  tag: string;
+  cotizacionId: string;
+  organizationId: string;
+  kind: PushNotificationKind;
 };

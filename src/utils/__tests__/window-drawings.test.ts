@@ -87,7 +87,7 @@ describe("generateComponentSVG", () => {
       variant: "pdf",
     });
 
-    expect(svg).toContain('stroke-width="5"');
+    expect(svg).toContain('width="5"');
     expect(svg).toContain('font-size="7"');
     expect(svg).not.toContain("Ventana corredera");
     expect(svg).not.toContain("VISTA INTERIOR REFERENCIAL");

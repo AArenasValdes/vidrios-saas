@@ -340,12 +340,12 @@ export default function CotizacionPrintPage() {
   const exportSheetRef = useRef<HTMLElement | null>(null);
   const buildPdfPromiseRef = useRef<Promise<{ blob: Blob; file: File }> | null>(null);
   const prewarmedCacheKeyRef = useRef<string | null>(null);
+  const sentPushNotifiedQuoteRef = useRef<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [showWhatsappFallbackActions, setShowWhatsappFallbackActions] = useState(false);
   const [isHydratingRecord, setIsHydratingRecord] = useState(!hasRenderableRecord);
-  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [sheetPreviewScale, setSheetPreviewScale] = useState(1);
   const [sheetPreviewWidth, setSheetPreviewWidth] = useState(0);
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
@@ -452,31 +452,6 @@ export default function CotizacionPrintPage() {
       window.removeEventListener("resize", updatePreviewMetrics);
     };
   }, [cotizacion, isHydratingRecord, isProfileReady]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(max-width: 720px)");
-    const syncViewport = () => {
-      setIsCompactViewport(mediaQuery.matches);
-    };
-
-    syncViewport();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", syncViewport);
-      return () => {
-        mediaQuery.removeEventListener("change", syncViewport);
-      };
-    }
-
-    mediaQuery.addListener(syncViewport);
-
-    return () => {
-      mediaQuery.removeListener(syncViewport);
-    };
-  }, []);
 
   const organizationProfile = resolveOrganizationProfile(
     rawOrganizationProfile?.organizationId ?? null,
@@ -586,6 +561,75 @@ export default function CotizacionPrintPage() {
 
     return map;
   }, [visibleCotizacion?.items]);
+
+  useEffect(() => {
+    if (!visibleCotizacion?.id) {
+      sentPushNotifiedQuoteRef.current = null;
+      return;
+    }
+
+    if (visibleCotizacion.estado !== "enviada") {
+      sentPushNotifiedQuoteRef.current = null;
+    }
+  }, [visibleCotizacion?.estado, visibleCotizacion?.id]);
+
+  const notifyQuoteSent = useCallback(
+    async (input: {
+      cotizacionId: string;
+      codigo: string;
+      clienteNombre: string;
+    }) => {
+      if (sentPushNotifiedQuoteRef.current === input.cotizacionId) {
+        return;
+      }
+
+      const response = await fetch("/api/pwa/quote-alerts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+
+        throw new Error(
+          payload?.error ?? "No pudimos enviar la alerta al celular del maestro."
+        );
+      }
+
+      sentPushNotifiedQuoteRef.current = input.cotizacionId;
+    },
+    []
+  );
+
+  const markQuoteAsSentWithAlert = useCallback(async () => {
+    if (!visibleCotizacion) {
+      return;
+    }
+
+    const wasAlreadySent = visibleCotizacion.estado === "enviada";
+
+    await markQuoteAsSent(String(visibleCotizacion.id));
+
+    if (wasAlreadySent) {
+      sentPushNotifiedQuoteRef.current = String(visibleCotizacion.id);
+      return;
+    }
+
+    try {
+      await notifyQuoteSent({
+        cotizacionId: String(visibleCotizacion.id),
+        codigo: visibleCotizacion.codigo,
+        clienteNombre: visibleCotizacion.clienteNombre,
+      });
+    } catch (error) {
+      console.error("No pudimos enviar el push de cotizacion enviada.", error);
+    }
+  }, [markQuoteAsSent, notifyQuoteSent, visibleCotizacion]);
 
   const buildPdfFile = useCallback(async () => {
     if (buildPdfPromiseRef.current) {
@@ -716,7 +760,7 @@ export default function CotizacionPrintPage() {
         }
 
         if (visibleCotizacion) {
-          await markQuoteAsSent(String(visibleCotizacion.id));
+          await markQuoteAsSentWithAlert();
         }
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
         return;
@@ -748,7 +792,7 @@ export default function CotizacionPrintPage() {
 
         if (fallbackWhatsappUrl) {
           if (visibleCotizacion) {
-            await markQuoteAsSent(String(visibleCotizacion.id));
+            await markQuoteAsSentWithAlert();
           }
           window.open(fallbackWhatsappUrl, "_blank", "noopener,noreferrer");
         }
@@ -758,7 +802,7 @@ export default function CotizacionPrintPage() {
         );
       }
       if (visibleCotizacion) {
-        await markQuoteAsSent(String(visibleCotizacion.id));
+        await markQuoteAsSentWithAlert();
       }
     } catch (error) {
       setShowWhatsappFallbackActions(true);
@@ -769,9 +813,8 @@ export default function CotizacionPrintPage() {
   }, [
     approvalUrl,
     buildPdfFile,
-    markQuoteAsSent,
+    markQuoteAsSentWithAlert,
     visibleCotizacion,
-    visibleCotizacion?.codigo,
     exportFileName,
     shouldSharePdfToWhatsapp,
     whatsappMessage,
@@ -804,10 +847,10 @@ export default function CotizacionPrintPage() {
     }
 
     if (visibleCotizacion) {
-      void markQuoteAsSent(String(visibleCotizacion.id));
+      void markQuoteAsSentWithAlert();
     }
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  }, [markQuoteAsSent, visibleCotizacion, whatsappUrl]);
+  }, [markQuoteAsSentWithAlert, visibleCotizacion, whatsappUrl]);
 
   const renderPrintPages = useCallback(
     (mode: "preview" | "export"): ReactNode => {
@@ -1092,7 +1135,6 @@ export default function CotizacionPrintPage() {
     [
       companyAddressLine,
       itemPresentationMap,
-      organizationProfile.brandColor,
       organizationProfile.empresaLogoUrl,
       organizationProfile.empresaNombre,
       paymentTerms,

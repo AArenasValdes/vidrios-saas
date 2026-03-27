@@ -68,6 +68,9 @@ export function buildCotizacionWhatsappMessage(
         : approvalUrl
           ? `Ver cotizacion:\n${approvalUrl}`
           : null;
+  const responseInstruction = publicLinkBlock
+    ? "Puedes aprobar o rechazar directamente desde el enlace."
+    : "Si quieres avanzar o revisar ajustes, responde a este mensaje y la empresa seguira contigo.";
 
   return [
     `Hola ${record.clienteNombre},`,
@@ -79,7 +82,7 @@ export function buildCotizacionWhatsappMessage(
     "",
     publicLinkBlock,
     "",
-    "Puedes aprobar o rechazar directamente desde el enlace.",
+    responseInstruction,
     "",
     "Quedamos atentos.",
   ]

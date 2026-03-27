@@ -78,4 +78,17 @@ describe("whatsapp utils", () => {
     expect(url).toContain("https://wa.me/56982345678");
     expect(url).toContain("Hola%20Roberto%20Fuentes%2C");
   });
+
+  it("debe evitar prometer un enlace cuando no existe link publico ni PDF", () => {
+    const message = buildCotizacionWhatsappMessage({
+      ...record,
+      approvalToken: null,
+    });
+
+    expect(message).not.toContain("Ver cotizacion:");
+    expect(message).not.toContain("Puedes aprobar o rechazar directamente desde el enlace.");
+    expect(message).toContain(
+      "Si quieres avanzar o revisar ajustes, responde a este mensaje y la empresa seguira contigo."
+    );
+  });
 });

@@ -348,7 +348,6 @@ export async function exportCotizacionElementToPdf({
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
       });
-      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
 
       target.setAttribute(EXPORT_ROOT_ATTR, "true");
 

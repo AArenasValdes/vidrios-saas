@@ -139,6 +139,7 @@ const showcaseCards = [
     status: "aprobada",
   },
 ];
+void showcaseCards;
 
 const landingTestimonials = [
   {
@@ -827,8 +828,8 @@ export default function LandingPage() {
 
               <blockquote className={s.testimonial}>
                 <p>
-                  "Se ve mas serio que cualquier PDF que sacabamos antes. Ahora el cliente entiende y responde mas
-                  rapido."
+                  &ldquo;Se ve mas serio que cualquier PDF que sacabamos antes. Ahora el cliente entiende y responde
+                  mas rapido.&rdquo;
                 </p>
                 <footer>Instalador de aluminio · Santiago</footer>
               </blockquote>

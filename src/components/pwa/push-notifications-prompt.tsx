@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { LuBellRing } from "react-icons/lu";
 
+import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
+
 import s from "./push-notifications-prompt.module.css";
 
 const DISMISS_KEY = "ventora:push-notifications-dismissed";
@@ -46,26 +48,26 @@ function getPromptCopy(platform: PushPromptPlatform) {
   if (platform === "ios") {
     return {
       eyebrow: "Alertas del iPhone",
-      title: "Activa alertas para respuestas de clientes",
+      title: "Activa alertas de envio y respuesta",
       text:
-        "Si tu iPhone permite notificaciones web en este acceso, te avisaremos cuando una cotizacion sea aprobada o rechazada.",
+        "Si tu iPhone permite notificaciones web en este acceso, te avisaremos cuando envies una cotizacion y cuando el cliente la apruebe o rechace.",
     };
   }
 
   if (platform === "android") {
     return {
       eyebrow: "Alertas del celular",
-      title: "Activa alertas reales para respuestas de clientes",
+      title: "Activa alertas reales de envio y respuesta",
       text:
-        "Recibiras una notificacion normal del celular cuando un cliente apruebe o rechace una cotizacion.",
+        "Recibiras una notificacion normal del celular cuando envies una cotizacion y cuando un cliente la apruebe o rechace.",
     };
   }
 
   return {
     eyebrow: "Alertas del dispositivo",
-    title: "Activa alertas para respuestas de clientes",
+    title: "Activa alertas de envio y respuesta",
     text:
-      "Recibiras una notificacion del navegador cuando un cliente apruebe o rechace una cotizacion.",
+      "Recibiras una notificacion del navegador cuando envies una cotizacion y cuando un cliente la apruebe o rechace.",
   };
 }
 
@@ -150,7 +152,7 @@ export function PushNotificationsPrompt() {
 
     const syncExistingSubscription = async () => {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await resolvePushServiceWorkerRegistration();
         const existing = await registration.pushManager.getSubscription();
 
         if (!existing || cancelled) {
@@ -161,7 +163,7 @@ export function PushNotificationsPrompt() {
 
         if (!cancelled) {
           setIsEnabled(true);
-          setStatus("Alertas activas para aprobaciones y rechazos en este dispositivo.");
+          setStatus("Alertas activas para envios, aprobaciones y rechazos en este dispositivo.");
           setStatusIsError(false);
         }
       } catch {
@@ -201,12 +203,12 @@ export function PushNotificationsPrompt() {
       const permission = await Notification.requestPermission();
 
       if (permission !== "granted") {
-        setStatus("Debes permitir notificaciones para recibir aprobaciones y rechazos.");
+        setStatus("Debes permitir notificaciones para recibir alertas de envio, aprobacion y rechazo.");
         setStatusIsError(true);
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await resolvePushServiceWorkerRegistration();
       let subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
@@ -219,7 +221,7 @@ export function PushNotificationsPrompt() {
       await persistSubscription(subscription);
       window.localStorage.removeItem(DISMISS_KEY);
       setIsEnabled(true);
-      setStatus("Alertas activas. Te avisaremos cuando un cliente apruebe o rechace.");
+      setStatus("Alertas activas. Te avisaremos cuando envies una cotizacion y cuando el cliente responda.");
       setStatusIsError(false);
     } catch (error) {
       setStatus(

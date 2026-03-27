@@ -1,5 +1,7 @@
 const APPROVAL_TOKEN_LENGTH = 32;
 const PUBLIC_URL_PLACEHOLDER = "https://tu-dominio.cl";
+const CANONICAL_PUBLIC_ORIGIN = "https://ventorap.cl";
+const CANONICAL_PUBLIC_HOSTS = new Set(["ventorap.cl", "www.ventorap.cl"]);
 
 function normalizeOrigin(origin: string | null | undefined) {
   const trimmed = origin?.trim() ?? "";
@@ -10,6 +12,30 @@ function normalizeOrigin(origin: string | null | undefined) {
 
   const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   return withProtocol.replace(/\/+$/, "");
+}
+
+function canonicalizeOrigin(origin: string) {
+  try {
+    const parsed = new URL(origin);
+
+    if (CANONICAL_PUBLIC_HOSTS.has(parsed.hostname.toLowerCase())) {
+      return CANONICAL_PUBLIC_ORIGIN;
+    }
+
+    return parsed.origin.replace(/\/+$/, "");
+  } catch {
+    return origin;
+  }
+}
+
+function normalizeConfiguredOrigin(origin: string | null | undefined) {
+  const normalized = normalizeOrigin(origin);
+
+  if (!normalized || normalized === PUBLIC_URL_PLACEHOLDER) {
+    return "";
+  }
+
+  return canonicalizeOrigin(normalized);
 }
 
 function randomHex(length: number) {
@@ -35,12 +61,13 @@ export function resolveAppOrigin() {
   const normalizedConfigured = [
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXT_PUBLIC_SITE_URL,
+    CANONICAL_PUBLIC_ORIGIN,
     process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL,
     process.env.VERCEL_PROJECT_PRODUCTION_URL,
     process.env.NEXT_PUBLIC_VERCEL_URL,
     process.env.VERCEL_URL,
   ]
-    .map((value) => normalizeOrigin(value))
+    .map((value) => normalizeConfiguredOrigin(value))
     .find(Boolean);
 
   if (normalizedConfigured) {
@@ -48,7 +75,7 @@ export function resolveAppOrigin() {
   }
 
   if (typeof window !== "undefined" && window.location.origin) {
-    const runtimeOrigin = window.location.origin.replace(/\/+$/, "");
+    const runtimeOrigin = canonicalizeOrigin(window.location.origin.replace(/\/+$/, ""));
     const hostname = window.location.hostname;
     const isLocalHost =
       hostname === "localhost" ||

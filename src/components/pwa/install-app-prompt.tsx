@@ -45,24 +45,37 @@ function isIosSafari() {
 export function InstallAppPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosHint, setShowIosHint] = useState(false);
-  const [dismissed, setDismissed] = useState(true);
+  const [showIosHint, setShowIosHint] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
+    const standalone = isStandaloneMode();
+
+    return !wasDismissed && !standalone && isIosSafari();
+  });
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
+    const standalone = isStandaloneMode();
+
+    return wasDismissed || standalone;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
-    const standalone = isStandaloneMode();
-
-    setDismissed(wasDismissed || standalone);
-    setShowIosHint(!wasDismissed && !standalone && isIosSafari());
-
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setDeferredPrompt(event as BeforeInstallPromptEvent);
-      setDismissed(wasDismissed || standalone);
+      setDismissed(false);
+      setShowIosHint(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);

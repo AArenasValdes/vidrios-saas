@@ -32,7 +32,7 @@ export async function GET() {
   const { data: perfil, error: perfilError } = await supabase
     .from("users")
     .select("rol")
-    .eq("correo", user.email ?? "")
+    .ilike("correo", user.email ?? "")
     .is("eliminado_en", null)
     .maybeSingle();
 

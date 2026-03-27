@@ -41,10 +41,11 @@ function mapRow(row: WebPushSubscriptionRow): WebPushSubscriptionRecord {
 }
 
 export function createWebPushSubscriptionsRepository() {
-  const supabase = createAdminClient();
+  const getSupabase = () => createAdminClient();
 
   return {
     async upsert(input: UpsertWebPushSubscriptionInput) {
+      const supabase = getSupabase();
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("web_push_subscriptions")
@@ -79,6 +80,7 @@ export function createWebPushSubscriptionsRepository() {
     },
 
     async listActiveByOrganizationId(organizationId: string | number) {
+      const supabase = getSupabase();
       const { data, error } = await supabase
         .from("web_push_subscriptions")
         .select(
@@ -96,6 +98,7 @@ export function createWebPushSubscriptionsRepository() {
     },
 
     async deactivateByEndpoint(endpoint: string) {
+      const supabase = getSupabase();
       const { error } = await supabase
         .from("web_push_subscriptions")
         .update({
@@ -113,6 +116,7 @@ export function createWebPushSubscriptionsRepository() {
       endpoint: string,
       organizationId: string | number
     ) {
+      const supabase = getSupabase();
       const { error } = await supabase
         .from("web_push_subscriptions")
         .update({
@@ -133,5 +137,31 @@ export type WebPushSubscriptionsRepository = ReturnType<
   typeof createWebPushSubscriptionsRepository
 >;
 
-export const webPushSubscriptionsRepository =
-  createWebPushSubscriptionsRepository();
+let defaultWebPushSubscriptionsRepository: WebPushSubscriptionsRepository | null =
+  null;
+
+function getDefaultWebPushSubscriptionsRepository() {
+  if (!defaultWebPushSubscriptionsRepository) {
+    defaultWebPushSubscriptionsRepository =
+      createWebPushSubscriptionsRepository();
+  }
+
+  return defaultWebPushSubscriptionsRepository;
+}
+
+export const webPushSubscriptionsRepository: WebPushSubscriptionsRepository = {
+  upsert(...args) {
+    return getDefaultWebPushSubscriptionsRepository().upsert(...args);
+  },
+  listActiveByOrganizationId(...args) {
+    return getDefaultWebPushSubscriptionsRepository().listActiveByOrganizationId(...args);
+  },
+  deactivateByEndpoint(...args) {
+    return getDefaultWebPushSubscriptionsRepository().deactivateByEndpoint(...args);
+  },
+  deactivateByEndpointAndOrganizationId(...args) {
+    return getDefaultWebPushSubscriptionsRepository().deactivateByEndpointAndOrganizationId(
+      ...args
+    );
+  },
+};

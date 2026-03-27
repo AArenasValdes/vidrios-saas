@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LuFileText, LuLayers3, LuShieldCheck } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import printStyles from "../../print/cotizaciones/[id]/page.module.css";
+import s from "./public-quote-preview.module.css";
 
 const FIRST_PAGE_COMPONENTS = 3;
 const NEXT_PAGE_COMPONENTS = 3;
@@ -238,6 +240,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
       totalSurfaceM2: nextTotalSurfaceM2,
     };
   }, [quote.items]);
+  const formattedTotalSurface = totalSurfaceM2.toFixed(2);
 
   const itemPresentationMap = useMemo(() => {
     const map = new Map<string, ItemPresentation>();
@@ -321,284 +324,353 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
   }, [quote.codigo, printPages.length]);
 
   return (
-    <div
-      ref={sheetViewportRef}
-      className={printStyles.sheetViewport}
-      style={{
-        height:
-          sheetPreviewWidth > 0 && sheetPreviewHeight > 0
-            ? `${Math.round(sheetPreviewHeight * sheetPreviewScale)}px`
-            : undefined,
-      }}
-    >
-      <div
-        className={printStyles.sheetScaleFrame}
-        style={{
-          width: sheetPreviewWidth > 0 ? `${sheetPreviewWidth}px` : undefined,
-          height: sheetPreviewHeight > 0 ? `${sheetPreviewHeight}px` : undefined,
-          transform: `scale(${sheetPreviewScale})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <section ref={sheetRef} className={printStyles.sheet}>
-          {printPages.map((pagePlan, pageIndex) => {
-            const pageNumber = pageIndex + 1;
-            const totalPages = printPages.length;
-            const isLastPage = pageNumber === totalPages;
+    <section className={s.previewShell}>
+      <div className={s.previewHeader}>
+        <div className={s.previewHeaderCopy}>
+          <span className={s.eyebrow}>Documento comercial</span>
+          <h2 className={s.title}>Vista previa del presupuesto</h2>
+          <p className={s.description}>
+            Aqui ves la propuesta completa tal como fue preparada para tu proyecto.
+            Revisa componentes, montos y condiciones en un solo recorrido y responde con
+            claridad desde esta misma experiencia.
+          </p>
+        </div>
 
-            return (
-              <article key={`${pagePlan.kind}-${pageNumber}`} className={printStyles.pdfPage}>
-                <div className={printStyles.softwareSignature}>
-                  <span className={printStyles.softwareSignaturePrefix}>Powered by</span>
-                  <strong className={printStyles.softwareSignatureName}>{APP_NAME}</strong>
-                  <span className={printStyles.softwareSignatureVersion}>v2.0</span>
-                </div>
+        <div className={s.previewTrust}>
+          <span className={s.previewTrustPill}>
+            <LuShieldCheck aria-hidden />
+            Vista verificada
+          </span>
+        </div>
+      </div>
 
-                <header className={printStyles.pageHeader}>
-                  <div className={printStyles.companyBlock}>
-                    <div className={printStyles.companyLogoWrap}>
-                      {quote.organizationProfile.empresaLogoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          alt={quote.organizationProfile.empresaNombre}
-                          className={printStyles.companyLogo}
-                          loading="eager"
-                          src={quote.organizationProfile.empresaLogoUrl}
-                        />
-                      ) : (
-                        <div className={printStyles.companyLogoFallback}>
-                          {quote.organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
+      <div className={s.previewStats}>
+        <div className={s.previewStatCard}>
+          <LuFileText aria-hidden />
+          <div>
+            <span>Documento</span>
+            <strong>{quote.codigo}</strong>
+          </div>
+        </div>
+        <div className={s.previewStatCard}>
+          <LuLayers3 aria-hidden />
+          <div>
+            <span>Componentes</span>
+            <strong>{quote.items.length}</strong>
+          </div>
+        </div>
+        <div className={s.previewStatCard}>
+          <LuShieldCheck aria-hidden />
+          <div>
+            <span>Superficie total</span>
+            <strong>{formattedTotalSurface} m2</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className={s.previewGuide}>
+        <span className={s.previewGuideStep}>Revisa la propuesta completa</span>
+        <span className={s.previewGuideStep}>Confirma montos y condiciones</span>
+        <span className={s.previewGuideStep}>Responde en menos de un minuto</span>
+      </div>
+
+      <div className={s.previewFrame}>
+        <div className={s.previewFrameTop}>
+          <div className={s.previewWindowDots} aria-hidden>
+            <span />
+            <span />
+            <span />
+          </div>
+          <span className={s.previewFrameLabel}>Ventora Document Viewer</span>
+          <span className={s.previewFrameMeta}>
+            {printPages.length} pagina{printPages.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        <div
+          ref={sheetViewportRef}
+          className={`${printStyles.sheetViewport} ${s.previewViewport}`}
+          style={{
+            height:
+              sheetPreviewWidth > 0 && sheetPreviewHeight > 0
+                ? `${Math.round(sheetPreviewHeight * sheetPreviewScale)}px`
+                : undefined,
+          }}
+        >
+          <div
+            className={printStyles.sheetScaleFrame}
+            style={{
+              width: sheetPreviewWidth > 0 ? `${sheetPreviewWidth}px` : undefined,
+              height: sheetPreviewHeight > 0 ? `${sheetPreviewHeight}px` : undefined,
+              transform: `scale(${sheetPreviewScale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <section ref={sheetRef} className={printStyles.sheet}>
+              {printPages.map((pagePlan, pageIndex) => {
+                const pageNumber = pageIndex + 1;
+                const totalPages = printPages.length;
+                const isLastPage = pageNumber === totalPages;
+
+                return (
+                  <article key={`${pagePlan.kind}-${pageNumber}`} className={printStyles.pdfPage}>
+                    <div className={printStyles.softwareSignature}>
+                      <span className={printStyles.softwareSignaturePrefix}>Powered by</span>
+                      <strong className={printStyles.softwareSignatureName}>{APP_NAME}</strong>
+                      <span className={printStyles.softwareSignatureVersion}>v2.0</span>
                     </div>
 
-                    <div className={printStyles.companyMeta}>
-                      <strong className={printStyles.companyName}>
-                        {quote.organizationProfile.empresaNombre}
-                      </strong>
-                      <span className={printStyles.companyAddress}>
-                        {companyAddressLine || "Perfil comercial aun no configurado"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={printStyles.quoteMeta}>
-                    <span className={printStyles.quoteMetaDate}>
-                      Creada {formatCotizacionDate(baseDate)}
-                    </span>
-                    <span className={printStyles.quoteMetaDue}>Vence {dueDate}</span>
-                    <strong>{quote.codigo}</strong>
-                  </div>
-                </header>
-
-                {pagePlan.kind === "cover" ? (
-                  <section className={printStyles.clientPanel}>
-                    <div className={printStyles.clientPanelHeader}>
-                      <span className={printStyles.sectionLabel}>DATOS DEL CLIENTE</span>
-                    </div>
-
-                    <div className={printStyles.clientGrid}>
-                      <ClientField label="Cliente" value={quote.clienteNombre} />
-                      <ClientField label="Obra" value={quote.obra} />
-                      <ClientField label="Version" value={quote.codigo} />
-                      <ClientField label="Fecha" value={formatCotizacionDate(baseDate)} />
-                    </div>
-                  </section>
-                ) : null}
-
-                <section className={printStyles.detailHeading}>
-                  <span className={printStyles.detailLabel}>
-                    COMPONENTES COTIZADOS · OFERTA CLIENTE
-                  </span>
-                </section>
-
-                <div className={printStyles.componentList}>
-                  {pagePlan.items.map((item, itemIndex) => {
-                    const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
-                    const presentation = itemPresentationMap.get(item.id);
-                    const componentCode = item.codigo || `I${absoluteIndex}`;
-                    const colorHex = presentation?.colorHex ?? "#a8a8a8";
-                    const material = presentation?.material ?? "Material a definir";
-                    const colorName = presentation?.colorName ?? "Color a definir";
-                    const surface = presentation?.surface ?? "-";
-                    const specs =
-                      presentation?.specs ?? [
-                        { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-                        { key: "Material", value: material },
-                        { key: "Color", value: colorName },
-                        { key: "Referencia", value: "-" },
-                        { key: "Vidrio", value: item.vidrio || "-" },
-                        { key: "Superficie", value: surface },
-                      ];
-                    const drawingSvg =
-                      presentation?.drawingSvg ??
-                      generateComponentSVG({
-                        tipo: item.tipo,
-                        ancho: item.ancho,
-                        alto: item.alto,
-                        colorHex,
-                        maxW: 108,
-                        maxH: 94,
-                        variant: "pdf",
-                      });
-
-                    return (
-                      <article key={item.id} className={printStyles.componentCard}>
-                        <div className={printStyles.itemBadge}>
-                          {`ITEM ${String(absoluteIndex).padStart(2, "0")}`}
+                    <header className={printStyles.pageHeader}>
+                      <div className={printStyles.companyBlock}>
+                        <div className={printStyles.companyLogoWrap}>
+                          {quote.organizationProfile.empresaLogoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              alt={quote.organizationProfile.empresaNombre}
+                              className={printStyles.companyLogo}
+                              loading="eager"
+                              src={quote.organizationProfile.empresaLogoUrl}
+                            />
+                          ) : (
+                            <div className={printStyles.companyLogoFallback}>
+                              {quote.organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </div>
 
-                        <div className={printStyles.componentHeader}>
-                          <div className={printStyles.componentTitleRow}>
-                            <span className={printStyles.itemCode}>{componentCode}</span>
-                            <h2 className={printStyles.itemName}>{item.nombre}</h2>
-                          </div>
+                        <div className={printStyles.companyMeta}>
+                          <strong className={printStyles.companyName}>
+                            {quote.organizationProfile.empresaNombre}
+                          </strong>
+                          <span className={printStyles.companyAddress}>
+                            {companyAddressLine || "Perfil comercial aun no configurado"}
+                          </span>
+                        </div>
+                      </div>
 
-                          <div className={printStyles.itemChips}>
-                            <span className={printStyles.itemChip}>{item.tipo}</span>
-                            <span className={printStyles.itemChip}>{material}</span>
-                            <span className={printStyles.itemChip}>
-                              <i
-                                className={printStyles.itemChipDot}
-                                style={{ backgroundColor: colorHex }}
-                                aria-hidden
-                              />
-                              {colorName}
-                            </span>
-                            <span className={printStyles.itemChip}>
-                              {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-                            </span>
-                            <span className={printStyles.itemChip}>{surface}</span>
-                          </div>
+                      <div className={printStyles.quoteMeta}>
+                        <span className={printStyles.quoteMetaDate}>
+                          Creada {formatCotizacionDate(baseDate)}
+                        </span>
+                        <span className={printStyles.quoteMetaDue}>Vence {dueDate}</span>
+                        <strong>{quote.codigo}</strong>
+                      </div>
+                    </header>
+
+                    {pagePlan.kind === "cover" ? (
+                      <section className={printStyles.clientPanel}>
+                        <div className={printStyles.clientPanelHeader}>
+                          <span className={printStyles.sectionLabel}>DATOS DEL CLIENTE</span>
                         </div>
 
-                        <div className={printStyles.componentBody}>
-                          <div className={printStyles.drawingColumn}>
-                            <div className={printStyles.drawingFrame}>
-                              <div
-                                className={printStyles.drawingSvg}
-                                dangerouslySetInnerHTML={{ __html: drawingSvg }}
-                              />
-                            </div>
-                            <span className={printStyles.drawingCaption}>
-                              VISTA INTERIOR REFERENCIAL
-                            </span>
-                          </div>
-
-                          <div className={printStyles.specsColumn}>
-                            {specs.map((spec) => (
-                              <div key={spec.key} className={printStyles.specRow}>
-                                <span className={printStyles.specBullet} aria-hidden />
-                                <span className={printStyles.specKey}>{spec.key}</span>
-                                <span className={printStyles.specValue}>{spec.value}</span>
-                              </div>
-                            ))}
-                          </div>
-
-                          <aside className={printStyles.pricesColumn}>
-                            <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
-                            <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
-
-                            <div className={printStyles.priceRow}>
-                              <span>Precio unitario</span>
-                              <strong>{CLP(item.precioUnitario)}</strong>
-                            </div>
-                            <div className={printStyles.priceRow}>
-                              <span>Cantidad</span>
-                              <strong>{item.cantidad}</strong>
-                            </div>
-
-                            <div className={printStyles.priceTotal}>
-                              <span>Valor</span>
-                              <strong>{CLP(item.precioTotal)}</strong>
-                            </div>
-                          </aside>
+                        <div className={printStyles.clientGrid}>
+                          <ClientField label="Cliente" value={quote.clienteNombre} />
+                          <ClientField label="Obra" value={quote.obra} />
+                          <ClientField label="Version" value={quote.codigo} />
+                          <ClientField label="Fecha" value={formatCotizacionDate(baseDate)} />
                         </div>
-                      </article>
-                    );
-                  })}
-                </div>
-
-                {isLastPage ? (
-                  <>
-                    {paymentTerms ? (
-                      <section className={printStyles.paymentBand}>
-                        <span className={printStyles.paymentLabel}>Forma de pago:</span>
-                        <span className={printStyles.paymentValue}>{paymentTerms}</span>
                       </section>
                     ) : null}
 
-                    <section className={printStyles.summarySection}>
-                      <section className={printStyles.conditionsColumn}>
-                        <span className={printStyles.summaryLabel}>CONDICIONES</span>
-                        <p className={printStyles.conditionsText}>
-                          {quote.observaciones.trim() || "Sin observaciones adicionales."}
-                        </p>
-                      </section>
-
-                      <aside className={printStyles.totalsColumn}>
-                        <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
-                        <div className={printStyles.totalRow}>
-                          <span>Subtotal</span>
-                          <strong>{CLP(quote.subtotal)}</strong>
-                        </div>
-                        <div className={printStyles.totalRow}>
-                          <span>Descuento</span>
-                          <strong>- {CLP(discountValue)}</strong>
-                        </div>
-                        <div className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}>
-                          <span>Neto</span>
-                          <strong>{CLP(neto)}</strong>
-                        </div>
-                        <div className={printStyles.totalRow}>
-                          <span>IVA 19%</span>
-                          <strong>{CLP(quote.iva)}</strong>
-                        </div>
-                        {quote.flete > 0 ? (
-                          <div className={printStyles.totalRow}>
-                            <span>Flete</span>
-                            <strong>{CLP(quote.flete)}</strong>
-                          </div>
-                        ) : null}
-                        <div className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}>
-                          <span>Carpintería total</span>
-                          <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                        </div>
-                      </aside>
+                    <section className={printStyles.detailHeading}>
+                      <span className={printStyles.detailLabel}>
+                        COMPONENTES COTIZADOS - OFERTA CLIENTE
+                      </span>
                     </section>
 
-                    <section className={printStyles.grandTotal}>
-                      <span>Total presupuesto</span>
-                      <strong>{CLP(quote.total)}</strong>
-                    </section>
-                  </>
-                ) : null}
+                    <div className={printStyles.componentList}>
+                      {pagePlan.items.map((item, itemIndex) => {
+                        const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
+                        const presentation = itemPresentationMap.get(item.id);
+                        const componentCode = item.codigo || `I${absoluteIndex}`;
+                        const colorHex = presentation?.colorHex ?? "#a8a8a8";
+                        const material = presentation?.material ?? "Material a definir";
+                        const colorName = presentation?.colorName ?? "Color a definir";
+                        const surface = presentation?.surface ?? "-";
+                        const specs =
+                          presentation?.specs ?? [
+                            { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
+                            { key: "Material", value: material },
+                            { key: "Color", value: colorName },
+                            { key: "Referencia", value: "-" },
+                            { key: "Vidrio", value: item.vidrio || "-" },
+                            { key: "Superficie", value: surface },
+                          ];
+                        const drawingSvg =
+                          presentation?.drawingSvg ??
+                          generateComponentSVG({
+                            tipo: item.tipo,
+                            ancho: item.ancho,
+                            alto: item.alto,
+                            colorHex,
+                            maxW: 108,
+                            maxH: 94,
+                            variant: "pdf",
+                          });
 
-                <footer className={printStyles.pageFooter}>
-                  <span className={printStyles.footerBranding}>
-                    Sistema generado por <strong>{APP_NAME}</strong>
-                  </span>
-                  <div className={printStyles.footerMeta}>
-                    <div
-                      className={printStyles.footerPager}
-                      aria-label={`Pagina ${formatPageNumber(pageNumber, totalPages)}`}
-                    >
-                      <div className={printStyles.footerPagerValue}>
-                        <span className={printStyles.footerPagerCurrent}>
-                          {String(pageNumber).padStart(2, "0")}
-                        </span>
-                        <span className={printStyles.footerPagerTotal}>
-                          /{String(totalPages).padStart(2, "0")}
-                        </span>
-                      </div>
+                        return (
+                          <article key={item.id} className={printStyles.componentCard}>
+                            <div className={printStyles.itemBadge}>
+                              {`ITEM ${String(absoluteIndex).padStart(2, "0")}`}
+                            </div>
+
+                            <div className={printStyles.componentHeader}>
+                              <div className={printStyles.componentTitleRow}>
+                                <span className={printStyles.itemCode}>{componentCode}</span>
+                                <h2 className={printStyles.itemName}>{item.nombre}</h2>
+                              </div>
+
+                              <div className={printStyles.itemChips}>
+                                <span className={printStyles.itemChip}>{item.tipo}</span>
+                                <span className={printStyles.itemChip}>{material}</span>
+                                <span className={printStyles.itemChip}>
+                                  <i
+                                    className={printStyles.itemChipDot}
+                                    style={{ backgroundColor: colorHex }}
+                                    aria-hidden
+                                  />
+                                  {colorName}
+                                </span>
+                                <span className={printStyles.itemChip}>
+                                  {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
+                                </span>
+                                <span className={printStyles.itemChip}>{surface}</span>
+                              </div>
+                            </div>
+
+                            <div className={printStyles.componentBody}>
+                              <div className={printStyles.drawingColumn}>
+                                <div className={printStyles.drawingFrame}>
+                                  <div
+                                    className={printStyles.drawingSvg}
+                                    dangerouslySetInnerHTML={{ __html: drawingSvg }}
+                                  />
+                                </div>
+                                <span className={printStyles.drawingCaption}>
+                                  VISTA INTERIOR REFERENCIAL
+                                </span>
+                              </div>
+
+                              <div className={printStyles.specsColumn}>
+                                {specs.map((spec) => (
+                                  <div key={spec.key} className={printStyles.specRow}>
+                                    <span className={printStyles.specBullet} aria-hidden />
+                                    <span className={printStyles.specKey}>{spec.key}</span>
+                                    <span className={printStyles.specValue}>{spec.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <aside className={printStyles.pricesColumn}>
+                                <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
+                                <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
+
+                                <div className={printStyles.priceRow}>
+                                  <span>Precio unitario</span>
+                                  <strong>{CLP(item.precioUnitario)}</strong>
+                                </div>
+                                <div className={printStyles.priceRow}>
+                                  <span>Cantidad</span>
+                                  <strong>{item.cantidad}</strong>
+                                </div>
+
+                                <div className={printStyles.priceTotal}>
+                                  <span>Valor</span>
+                                  <strong>{CLP(item.precioTotal)}</strong>
+                                </div>
+                              </aside>
+                            </div>
+                          </article>
+                        );
+                      })}
                     </div>
-                  </div>
-                </footer>
-              </article>
-            );
-          })}
-        </section>
+
+                    {isLastPage ? (
+                      <>
+                        {paymentTerms ? (
+                          <section className={printStyles.paymentBand}>
+                            <span className={printStyles.paymentLabel}>Forma de pago:</span>
+                            <span className={printStyles.paymentValue}>{paymentTerms}</span>
+                          </section>
+                        ) : null}
+
+                        <section className={printStyles.summarySection}>
+                          <section className={printStyles.conditionsColumn}>
+                            <span className={printStyles.summaryLabel}>CONDICIONES</span>
+                            <p className={printStyles.conditionsText}>
+                              {quote.observaciones.trim() || "Sin observaciones adicionales."}
+                            </p>
+                          </section>
+
+                          <aside className={printStyles.totalsColumn}>
+                            <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
+                            <div className={printStyles.totalRow}>
+                              <span>Subtotal</span>
+                              <strong>{CLP(quote.subtotal)}</strong>
+                            </div>
+                            <div className={printStyles.totalRow}>
+                              <span>Descuento</span>
+                              <strong>- {CLP(discountValue)}</strong>
+                            </div>
+                            <div
+                              className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}
+                            >
+                              <span>Neto</span>
+                              <strong>{CLP(neto)}</strong>
+                            </div>
+                            <div className={printStyles.totalRow}>
+                              <span>IVA 19%</span>
+                              <strong>{CLP(quote.iva)}</strong>
+                            </div>
+                            {quote.flete > 0 ? (
+                              <div className={printStyles.totalRow}>
+                                <span>Flete</span>
+                                <strong>{CLP(quote.flete)}</strong>
+                              </div>
+                            ) : null}
+                            <div
+                              className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}
+                            >
+                              <span>Carpinteria total</span>
+                              <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                            </div>
+                          </aside>
+                        </section>
+
+                        <section className={printStyles.grandTotal}>
+                          <span>Total presupuesto</span>
+                          <strong>{CLP(quote.total)}</strong>
+                        </section>
+                      </>
+                    ) : null}
+
+                    <footer className={printStyles.pageFooter}>
+                      <span className={printStyles.footerBranding}>
+                        Sistema generado por <strong>{APP_NAME}</strong>
+                      </span>
+                      <div className={printStyles.footerMeta}>
+                        <div
+                          className={printStyles.footerPager}
+                          aria-label={`Pagina ${formatPageNumber(pageNumber, totalPages)}`}
+                        >
+                          <div className={printStyles.footerPagerValue}>
+                            <span className={printStyles.footerPagerCurrent}>
+                              {String(pageNumber).padStart(2, "0")}
+                            </span>
+                            <span className={printStyles.footerPagerTotal}>
+                              /{String(totalPages).padStart(2, "0")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </footer>
+                  </article>
+                );
+              })}
+            </section>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

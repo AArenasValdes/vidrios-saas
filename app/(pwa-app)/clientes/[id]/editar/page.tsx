@@ -41,18 +41,14 @@ export default function EditarClientePage() {
     isSaving,
   } = useClientes();
   const detalle = getClienteDetalleById(params.id);
-  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [loadAttempted, setLoadAttempted] = useState(false);
+  const loadingDetail = Boolean(params.id) && !detalle && !loadAttempted;
   const [form, setForm] = useState<FormState>(initialState);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!params.id) {
-      setLoadingDetail(false);
-      return;
-    }
-
-    if (detalle) {
-      setLoadingDetail(false);
+    if (!params.id || detalle) {
       return;
     }
 
@@ -60,7 +56,7 @@ export default function EditarClientePage() {
 
     void loadClienteDetalleById(params.id).finally(() => {
       if (active) {
-        setLoadingDetail(false);
+        setLoadAttempted(true);
       }
     });
 
@@ -70,19 +66,6 @@ export default function EditarClientePage() {
   }, [detalle, loadClienteDetalleById, params.id]);
 
   useEffect(() => {
-    if (!detalle) {
-      return;
-    }
-
-    setForm({
-      nombre: detalle.cliente.nombre,
-      telefono: detalle.cliente.telefono ?? "",
-      correo: detalle.cliente.correo ?? "",
-      direccion: detalle.cliente.direccion ?? "",
-    });
-  }, [detalle]);
-
-  useEffect(() => {
     if (!params.id) {
       return;
     }
@@ -90,7 +73,21 @@ export default function EditarClientePage() {
     router.prefetch(`/clientes/${params.id}`);
   }, [params.id, router]);
 
-  const canSave = Boolean(form.nombre.trim());
+  const baseForm = useMemo<FormState>(
+    () =>
+      detalle
+        ? {
+            nombre: detalle.cliente.nombre,
+            telefono: detalle.cliente.telefono ?? "",
+            correo: detalle.cliente.correo ?? "",
+            direccion: detalle.cliente.direccion ?? "",
+          }
+        : initialState,
+    [detalle]
+  );
+  const activeForm = hasUserEdited ? form : baseForm;
+
+  const canSave = Boolean(activeForm.nombre.trim());
   const detailHref = `/clientes/${params.id}`;
   const contextFacts = useMemo(
     () =>
@@ -107,6 +104,7 @@ export default function EditarClientePage() {
   const handleChange = useCallback(
     (field: keyof FormState) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
+      setHasUserEdited(true);
       setForm((current) => ({
         ...current,
         [field]: event.target.value,
@@ -124,10 +122,10 @@ export default function EditarClientePage() {
 
     try {
       await updateCliente(params.id, {
-        nombre: form.nombre,
-        telefono: form.telefono,
-        correo: form.correo,
-        direccion: form.direccion,
+        nombre: activeForm.nombre,
+        telefono: activeForm.telefono,
+        correo: activeForm.correo,
+        direccion: activeForm.direccion,
       });
       router.push(detailHref);
     } catch (submissionError) {
@@ -140,10 +138,10 @@ export default function EditarClientePage() {
   }, [
     canSave,
     detailHref,
-    form.correo,
-    form.direccion,
-    form.nombre,
-    form.telefono,
+    activeForm.correo,
+    activeForm.direccion,
+    activeForm.nombre,
+    activeForm.telefono,
     params.id,
     router,
     updateCliente,
@@ -217,7 +215,7 @@ export default function EditarClientePage() {
                 <input
                   onChange={handleChange("nombre")}
                   type="text"
-                  value={form.nombre}
+                  value={activeForm.nombre}
                 />
               </div>
             </label>
@@ -229,7 +227,7 @@ export default function EditarClientePage() {
                 <input
                   onChange={handleChange("telefono")}
                   type="tel"
-                  value={form.telefono}
+                  value={activeForm.telefono}
                 />
               </div>
             </label>
@@ -241,7 +239,7 @@ export default function EditarClientePage() {
                 <input
                   onChange={handleChange("correo")}
                   type="email"
-                  value={form.correo}
+                  value={activeForm.correo}
                 />
               </div>
             </label>
@@ -282,7 +280,7 @@ export default function EditarClientePage() {
                 <input
                   onChange={handleChange("direccion")}
                   type="text"
-                  value={form.direccion}
+                  value={activeForm.direccion}
                 />
               </div>
             </label>

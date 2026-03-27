@@ -25,7 +25,6 @@ import {
 import { useCotizacionAlerts } from "@/hooks/useCotizacionAlerts";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
-import { PushNotificationsPrompt } from "@/components/pwa/push-notifications-prompt";
 import { buildOrganizationInitials } from "@/services/organization-profile.service";
 import { canAccessSolicitudes } from "@/services/solicitudes-contacto-access";
 import type { CotizacionAlert } from "@/services/cotizacion-alerts.service";
@@ -727,7 +726,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className={s.pageContent}>
-          <PushNotificationsPrompt />
           {children}
         </div>
       </main>

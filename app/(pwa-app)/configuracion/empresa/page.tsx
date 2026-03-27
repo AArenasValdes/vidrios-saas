@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { LuBellRing, LuImagePlus, LuSave } from "react-icons/lu";
@@ -9,6 +10,7 @@ import {
   buildOrganizationInitials,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/services/organization-profile.service";
+import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import type { UpdateOrganizationProfileInput } from "@/types/organization-profile";
 import type { PricingMode } from "@/types/pricing-mode";
 
@@ -170,12 +172,12 @@ export default function ConfiguracionEmpresaPage() {
         setDeviceAlertsState({
           kind: "available",
           message:
-            "Puedes activar alertas en este equipo para enterarte cuando un cliente apruebe o rechace una cotizacion.",
+            "Puedes activar alertas en este equipo para enterarte cuando envies una cotizacion y cuando el cliente la apruebe o rechace.",
         });
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await resolvePushServiceWorkerRegistration();
       const existingSubscription = await registration.pushManager.getSubscription();
 
       if (!existingSubscription) {
@@ -191,7 +193,7 @@ export default function ConfiguracionEmpresaPage() {
       setDeviceAlertsState({
         kind: "enabled",
         message:
-          "Este dispositivo ya recibe alertas cuando una cotizacion es aprobada o rechazada.",
+          "Este dispositivo ya recibe alertas cuando envias una cotizacion y cuando el cliente responde.",
       });
     } catch (error) {
       setDeviceAlertsState({
@@ -293,7 +295,7 @@ export default function ConfiguracionEmpresaPage() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await resolvePushServiceWorkerRegistration();
       let subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
@@ -307,7 +309,7 @@ export default function ConfiguracionEmpresaPage() {
       setDeviceAlertsState({
         kind: "enabled",
         message:
-          "Alertas activas. Este dispositivo quedo listo para recibir aprobaciones y rechazos.",
+          "Alertas activas. Este dispositivo quedo listo para recibir envios, aprobaciones y rechazos.",
       });
     } catch (error) {
       setDeviceAlertsState({
@@ -340,6 +342,50 @@ export default function ConfiguracionEmpresaPage() {
     }
 
     return { label: "Revisando", className: s.deviceAlertsBadgeNeutral };
+  }, [deviceAlertsState.kind]);
+
+  const deviceAlertsSummary = useMemo(() => {
+    if (deviceAlertsState.kind === "enabled") {
+      return {
+        title: "Este equipo ya esta cubierto",
+        helper:
+          "Cuando envies una cotizacion o el cliente responda, este dispositivo podra recibir el aviso.",
+        actionLabel: "Revisar este dispositivo",
+      };
+    }
+
+    if (deviceAlertsState.kind === "available") {
+      return {
+        title: "Puedes activarlas ahora",
+        helper:
+          "Hazlo una sola vez en este equipo para recibir avisos de envio, aprobacion y rechazo.",
+        actionLabel: "Activar alertas en este equipo",
+      };
+    }
+
+    if (deviceAlertsState.kind === "error") {
+      return {
+        title: "Hace falta revisar este equipo",
+        helper:
+          "La activacion no termino bien. Vuelve a intentarlo y, si falla, revisa permisos del navegador.",
+        actionLabel: "Reintentar activacion",
+      };
+    }
+
+    if (deviceAlertsState.kind === "unsupported") {
+      return {
+        title: "Este acceso no admite push web",
+        helper:
+          "Para tener avisos reales, usa un navegador compatible o instala la app en el celular.",
+        actionLabel: null,
+      };
+    }
+
+    return {
+      title: "Revisando compatibilidad del equipo",
+      helper: "Estamos validando si este dispositivo puede recibir alertas push.",
+      actionLabel: null,
+    };
   }, [deviceAlertsState.kind]);
 
   if (!isReady && !profile) {
@@ -478,13 +524,26 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.deviceAlertsHeader}>
                 <div>
                   <p className={s.sectionEyebrow}>Alertas del dispositivo</p>
-                  <h2>Notificaciones de aprobacion y rechazo</h2>
+                  <h2>Notificaciones del maestro</h2>
                 </div>
                 <span className={`${s.deviceAlertsBadge} ${deviceAlertsBadge.className}`}>
                   {deviceAlertsBadge.label}
                 </span>
               </div>
+
+              <div className={s.deviceAlertsSummary}>
+                <strong>{deviceAlertsSummary.title}</strong>
+                <p>{deviceAlertsSummary.helper}</p>
+              </div>
+
+              <div className={s.deviceAlertsCapabilities}>
+                <span className={s.deviceAlertsCapability}>Envio</span>
+                <span className={s.deviceAlertsCapability}>Aprobacion</span>
+                <span className={s.deviceAlertsCapability}>Rechazo</span>
+              </div>
+
               <p className={s.deviceAlertsText}>{deviceAlertsState.message}</p>
+
               <div className={s.deviceAlertsActions}>
                 {deviceAlertsState.kind === "enabled" ? (
                   <button
@@ -492,18 +551,20 @@ export default function ConfiguracionEmpresaPage() {
                     type="button"
                     onClick={() => void syncDeviceAlertsState()}
                   >
-                    Revisar este dispositivo
+                    {deviceAlertsSummary.actionLabel}
                   </button>
                 ) : null}
 
                 {deviceAlertsState.kind === "available" || deviceAlertsState.kind === "error" ? (
                   <button
-                    className={s.secondaryButton}
+                    className={s.primaryButton}
                     type="button"
                     onClick={handleEnableDeviceAlerts}
                     disabled={isActivatingAlerts}
                   >
-                    {isActivatingAlerts ? "Activando..." : "Activar alertas en este equipo"}
+                    {isActivatingAlerts
+                      ? "Activando..."
+                      : deviceAlertsSummary.actionLabel}
                   </button>
                 ) : null}
               </div>
@@ -575,11 +636,13 @@ export default function ConfiguracionEmpresaPage() {
           >
             <div className={s.previewHeader}>
               {previewModel.logoPreview ? (
-                <img
+                <Image
                   className={s.previewLogoImage}
                   src={previewModel.logoPreview}
                   alt={previewModel.empresaNombre || "Logo de la empresa"}
-                  crossOrigin="anonymous"
+                  width={82}
+                  height={82}
+                  unoptimized
                 />
               ) : (
                 <div className={s.previewLogoFallback}>{previewModel.initials}</div>

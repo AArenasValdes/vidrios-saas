@@ -158,7 +158,7 @@ export function createAuthRepository(
         const { data, error } = await supabase
           .from("users")
           .select("organization_id, rol")
-          .eq("correo", email)
+          .ilike("correo", email.trim().toLowerCase())
           .is("eliminado_en", null)
           .maybeSingle();
 

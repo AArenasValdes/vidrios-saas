@@ -630,13 +630,18 @@ export function createCotizacionesRepository(
           data = createdData as CotizacionRow;
         } else if (isMissingApprovalFieldsError(error)) {
           const {
-            approval_token: _approvalToken,
-            approval_token_expires_at: _approvalTokenExpiresAt,
-            cliente_vio_en: _clienteVioEn,
-            cliente_respondio_en: _clienteRespondioEn,
-            cliente_respuesta_canal: _clienteRespuestaCanal,
+            approval_token: approvalToken,
+            approval_token_expires_at: approvalTokenExpiresAt,
+            cliente_vio_en: clienteVioEn,
+            cliente_respondio_en: clienteRespondioEn,
+            cliente_respuesta_canal: clienteRespuestaCanal,
             ...legacyInsertPayload
           } = insertPayload;
+          void approvalToken;
+          void approvalTokenExpiresAt;
+          void clienteVioEn;
+          void clienteRespondioEn;
+          void clienteRespuestaCanal;
 
           const { data: legacyData, error: legacyError } = await supabase
             .from("cotizaciones")
@@ -733,13 +738,18 @@ export function createCotizacionesRepository(
           data = updatedData as CotizacionRow;
         } else if (isMissingApprovalFieldsError(error)) {
           const {
-            approval_token: _approvalToken,
-            approval_token_expires_at: _approvalTokenExpiresAt,
-            cliente_vio_en: _clienteVioEn,
-            cliente_respondio_en: _clienteRespondioEn,
-            cliente_respuesta_canal: _clienteRespuestaCanal,
+            approval_token: approvalToken,
+            approval_token_expires_at: approvalTokenExpiresAt,
+            cliente_vio_en: clienteVioEn,
+            cliente_respondio_en: clienteRespondioEn,
+            cliente_respuesta_canal: clienteRespuestaCanal,
             ...legacyUpdatePayload
           } = updatePayload;
+          void approvalToken;
+          void approvalTokenExpiresAt;
+          void clienteVioEn;
+          void clienteRespondioEn;
+          void clienteRespuestaCanal;
 
           const { data: legacyData, error: legacyError } = await supabase
             .from("cotizaciones")

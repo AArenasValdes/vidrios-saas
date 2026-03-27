@@ -20,7 +20,7 @@ async function resolveAuthContext() {
 
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("organization_id, rol")
+    .select("organization_id")
     .ilike("correo", user.email ?? "")
     .is("eliminado_en", null)
     .maybeSingle();
@@ -49,9 +49,6 @@ async function resolveAuthContext() {
     error: null,
     context: {
       organizationId: profile.organization_id,
-      authUserId: user.id,
-      userEmail: user.email ?? null,
-      userAgent: null as string | null,
     },
   };
 }
@@ -65,75 +62,37 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as {
-      subscription?: PushSubscriptionJSON;
+      cotizacionId?: string;
+      codigo?: string;
+      clienteNombre?: string;
     };
 
-    if (!body.subscription) {
+    const cotizacionId = body.cotizacionId?.trim();
+    const codigo = body.codigo?.trim();
+    const clienteNombre = body.clienteNombre?.trim();
+
+    if (!cotizacionId || !codigo || !clienteNombre) {
       return NextResponse.json(
-        { error: "Falta la suscripcion push del dispositivo." },
+        { error: "Faltan datos para enviar la alerta de cotizacion." },
         { status: 400 }
       );
     }
 
-    const saved = await webPushNotificationsService.registerSubscription(
-      body.subscription,
-      {
-        ...authState.context,
-        userAgent: request.headers.get("user-agent"),
-      }
-    );
-
-    return NextResponse.json({
-      subscription: {
-        endpoint: saved.endpoint,
-        isActive: saved.isActive,
-      },
+    const result = await webPushNotificationsService.sendQuoteSentPush({
+      organizationId: authState.context.organizationId,
+      cotizacionId,
+      codigo,
+      clienteNombre,
     });
+
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : "No pudimos activar las notificaciones push.",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: Request) {
-  const authState = await resolveAuthContext();
-
-  if (authState.error || !authState.context) {
-    return authState.error;
-  }
-
-  try {
-    const body = (await request.json()) as {
-      endpoint?: string;
-    };
-
-    if (!body.endpoint?.trim()) {
-      return NextResponse.json(
-        { error: "Falta el endpoint de la suscripcion." },
-        { status: 400 }
-      );
-    }
-
-    await webPushNotificationsService.unregisterSubscription(
-      body.endpoint,
-      authState.context.organizationId
-    );
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos desactivar las notificaciones push.",
+            : "No pudimos enviar la alerta push de cotizacion enviada.",
       },
       { status: 500 }
     );

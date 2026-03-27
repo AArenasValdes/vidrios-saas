@@ -74,16 +74,11 @@ export default function ClienteDetallePage() {
   const router = useRouter();
   const { getClienteDetalleById, loadClienteDetalleById, isReady } = useClientes();
   const detalle = getClienteDetalleById(params.id);
-  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [loadAttempted, setLoadAttempted] = useState(false);
+  const loadingDetail = Boolean(params.id) && !detalle && !loadAttempted;
 
   useEffect(() => {
-    if (!params.id) {
-      setLoadingDetail(false);
-      return;
-    }
-
-    if (detalle) {
-      setLoadingDetail(false);
+    if (!params.id || detalle) {
       return;
     }
 
@@ -91,7 +86,7 @@ export default function ClienteDetallePage() {
 
     void loadClienteDetalleById(params.id).finally(() => {
       if (active) {
-        setLoadingDetail(false);
+        setLoadAttempted(true);
       }
     });
 

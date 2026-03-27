@@ -6,6 +6,7 @@ import {
   Suspense,
   memo,
   startTransition,
+  type KeyboardEvent,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -16,15 +17,11 @@ import {
 import {
   LuArrowLeft,
   LuCheck,
-  LuChevronDown,
   LuChevronRight,
-  LuCopy,
   LuDownload,
-  LuEye,
   LuFileCheck2,
   LuFilterX,
   LuFolderOpen,
-  LuLayers3,
   LuMapPin,
   LuPencil,
   LuPhone,
@@ -56,9 +53,6 @@ import {
   encodeCotizacionItemPresentationMeta,
 } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
-import {
-  getCotizacionShareExperience,
-} from "@/utils/share-capabilities";
 import {
   normalizePricingMode,
   type PricingMode,
@@ -111,6 +105,17 @@ type QuickEditDraftState = {
   costoProveedorUnitario: string;
 };
 
+type QuickEditFieldKey = keyof QuickEditDraftState;
+
+type Step1FieldKey =
+  | "clientSearch"
+  | "clienteNombre"
+  | "clienteTelefono"
+  | "obra"
+  | "direccion"
+  | "validez"
+  | "observaciones";
+
 type ComponentListCardViewModel = {
   id: string;
   source: CotizacionWorkflowItem;
@@ -122,6 +127,7 @@ type ComponentListCardViewModel = {
   metaTertiary: string;
   quickEditPriceLabel: string;
   svgMarkup: string;
+  isComplete: boolean;
 };
 
 const COMPONENT_TYPE_GROUPS = [
@@ -228,6 +234,7 @@ const FIELD_LIMITS = {
   direccion: 120,
   observaciones: 280,
 } as const;
+const STEP_TWO_SCROLL_THRESHOLD = 4;
 const STEP_TWO_VIRTUALIZATION_THRESHOLD = 14;
 const STEP_TWO_VIRTUALIZATION_OVERSCAN = 4;
 const STEP_TWO_DEFAULT_ROW_HEIGHT = 110;
@@ -337,10 +344,6 @@ const CLP = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-function getColorLabel(colorHex: string) {
-  return COLOR_OPTIONS.find((color) => color.hex === colorHex)?.label ?? "Color a definir";
-}
-
 function getComponentPrefix(tipo: string) {
   const n = tipo.trim().toLowerCase();
   if (n.startsWith("vent")) return "V";
@@ -430,9 +433,27 @@ function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraftState 
   };
 }
 
+function isQuickEditDraftComplete(draft: QuickEditDraftState) {
+  const ancho = Number(draft.ancho);
+  const alto = Number(draft.alto);
+  const costo = Number(draft.costoProveedorUnitario);
+
+  return ancho > 0 && alto > 0 && costo > 0;
+}
+
+function isWorkflowItemComplete(item: CotizacionWorkflowItem) {
+  return (
+    (item.ancho ?? 0) > 0 &&
+    (item.alto ?? 0) > 0 &&
+    Number(item.costoProveedorUnitario ?? 0) > 0
+  );
+}
+
 const MobileQuickEditor = memo(function MobileQuickEditor({
   item,
-  initialDraft,
+  draft,
+  initialFocusField,
+  isMobileViewport,
   itemIndex,
   totalItems,
   pricingLabel,
@@ -442,24 +463,48 @@ const MobileQuickEditor = memo(function MobileQuickEditor({
   onScrollToSummary,
 }: {
   item: CotizacionWorkflowItem;
-  initialDraft: QuickEditDraftState;
+  draft: QuickEditDraftState;
+  initialFocusField: QuickEditFieldKey | null;
+  isMobileViewport: boolean;
   itemIndex: number;
   totalItems: number;
   pricingLabel: string;
   onDraftChange: (
     itemId: string,
-    key: keyof QuickEditDraftState,
+    key: QuickEditFieldKey,
     value: string
   ) => void;
   onCommit: (itemId: string, draft: QuickEditDraftState) => void;
-  onNavigate: (direction: -1 | 1) => void;
+  onNavigate: (
+    direction: -1 | 1,
+    focusField?: QuickEditFieldKey,
+    options?: { preferIncomplete?: boolean }
+  ) => void;
   onScrollToSummary: () => void;
 }) {
-  const [localDraft, setLocalDraft] = useState<QuickEditDraftState>(initialDraft);
+  const inputRefs = useRef<Record<QuickEditFieldKey, HTMLInputElement | null>>({
+    ancho: null,
+    alto: null,
+    costoProveedorUnitario: null,
+  });
 
   useEffect(() => {
-    setLocalDraft(initialDraft);
-  }, [item.id]);
+    if (!initialFocusField) {
+      return;
+    }
+
+    const node = inputRefs.current[initialFocusField];
+    if (!node) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      node.focus();
+      node.select();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialFocusField, item.id]);
 
   const handleFieldChange = useCallback(
     (key: keyof QuickEditDraftState, value: string) => {
@@ -467,40 +512,77 @@ const MobileQuickEditor = memo(function MobileQuickEditor({
         key === "costoProveedorUnitario"
           ? normalizeCurrencyInput(value)
           : value.replace(/[^\d]/g, "");
-
-      setLocalDraft((current) => {
-        const nextDraft = {
-          ...current,
-          [key]: normalizedValue,
-        };
-
-        onDraftChange(item.id, key, normalizedValue);
-
-        return nextDraft;
-      });
+      onDraftChange(item.id, key, normalizedValue);
     },
     [item.id, onDraftChange]
   );
 
   const handleBlur = useCallback(() => {
-    onCommit(item.id, localDraft);
-  }, [item.id, localDraft, onCommit]);
+    onCommit(item.id, draft);
+  }, [draft, item.id, onCommit]);
 
   const handleNavigate = useCallback(
-    (direction: -1 | 1) => {
+    (
+      direction: -1 | 1,
+      focusField: QuickEditFieldKey = "ancho",
+      options?: { preferIncomplete?: boolean }
+    ) => {
       handleBlur();
-      onNavigate(direction);
+      onNavigate(direction, focusField, options);
     },
     [handleBlur, onNavigate]
   );
 
-  const handleSummary = useCallback(() => {
-    handleBlur();
-    onScrollToSummary();
-  }, [handleBlur, onScrollToSummary]);
+  const focusNextField = useCallback((field: QuickEditFieldKey) => {
+    if (field === "ancho") {
+      inputRefs.current.alto?.focus();
+      inputRefs.current.alto?.select();
+      return;
+    }
+
+    if (field === "alto") {
+      inputRefs.current.costoProveedorUnitario?.focus();
+      inputRefs.current.costoProveedorUnitario?.select();
+    }
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (field: QuickEditFieldKey, event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key !== "Enter") {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (field === "ancho") {
+        focusNextField("ancho");
+        return;
+      }
+
+      if (field === "alto") {
+        focusNextField("alto");
+        return;
+      }
+
+      if (itemIndex < totalItems - 1) {
+        handleNavigate(1, "ancho", { preferIncomplete: true });
+        return;
+      }
+
+      handleBlur();
+      onScrollToSummary();
+    },
+    [focusNextField, handleBlur, handleNavigate, itemIndex, onScrollToSummary, totalItems]
+  );
+
+  const currentItemReady = isQuickEditDraftComplete(draft);
 
   return (
-    <section className={s.mobileQuickEditor}>
+    <section
+      className={`${s.mobileQuickEditor} ${
+        isMobileViewport ? "" : s.quickEditorDesktop
+      }`}
+    >
       <div className={s.mobileQuickEditorHeader}>
         <div>
           <span className={s.mobileQuickEditorEyebrow}>Edicion rapida</span>
@@ -512,9 +594,12 @@ const MobileQuickEditor = memo(function MobileQuickEditor({
       </div>
 
       <div className={s.mobileQuickEditorNav}>
-        <span className={s.mobileQuickEditorNavPill}>
-          {itemIndex + 1} de {totalItems}
-        </span>
+        <div className={s.mobileQuickEditorNavStatus}>
+          <span className={s.mobileQuickEditorNavPill}>
+            {itemIndex + 1} de {totalItems}
+          </span>
+          <span className={s.mobileQuickEditorNavLabel}>Mover entre componentes</span>
+        </div>
         <div className={s.mobileQuickEditorNavButtons}>
           <button
             type="button"
@@ -522,15 +607,17 @@ const MobileQuickEditor = memo(function MobileQuickEditor({
             onClick={() => handleNavigate(-1)}
             disabled={itemIndex <= 0}
           >
-            Anterior
+            <LuArrowLeft aria-hidden />
+            <span>Anterior</span>
           </button>
           <button
             type="button"
-            className={s.mobileQuickEditorNavButton}
+            className={`${s.mobileQuickEditorNavButton} ${s.mobileQuickEditorNavButtonPrimary}`}
             onClick={() => handleNavigate(1)}
             disabled={itemIndex >= totalItems - 1}
           >
-            Siguiente
+            <span>Siguiente</span>
+            <LuChevronRight aria-hidden />
           </button>
         </div>
       </div>
@@ -539,51 +626,79 @@ const MobileQuickEditor = memo(function MobileQuickEditor({
         {item.vidrio || "Sin vidrio"} · {item.cantidad} {item.cantidad === 1 ? "ud." : "uds."}
       </div>
 
+      <div className={s.mobileQuickEditorProgress}>
+        <span
+          className={`${s.mobileQuickEditorProgressPill} ${
+            currentItemReady
+              ? s.mobileQuickEditorProgressPillComplete
+              : s.mobileQuickEditorProgressPillPending
+          }`}
+        >
+          {currentItemReady ? (
+            <>
+              <LuCheck aria-hidden />
+              Completo
+            </>
+          ) : (
+            "Pendiente"
+          )}
+        </span>
+        <span className={s.mobileQuickEditorProgressHint}>
+          {currentItemReady
+            ? "Presiona Siguiente para continuar con el proximo pendiente."
+            : "Completa ancho, alto y valor para dejarlo listo."}
+        </span>
+      </div>
+
       <div className={s.quickEditRow}>
         <label className={s.quickEditField}>
           <span>Ancho</span>
           <input
+            ref={(node) => {
+              inputRefs.current.ancho = node;
+            }}
             className={s.quickEditInput}
             inputMode="numeric"
-            value={localDraft.ancho}
+            value={draft.ancho}
             onChange={(event) => handleFieldChange("ancho", event.target.value)}
             onBlur={handleBlur}
+            onKeyDown={(event) => handleKeyDown("ancho", event)}
             placeholder="-"
           />
         </label>
         <label className={s.quickEditField}>
           <span>Alto</span>
           <input
+            ref={(node) => {
+              inputRefs.current.alto = node;
+            }}
             className={s.quickEditInput}
             inputMode="numeric"
-            value={localDraft.alto}
+            value={draft.alto}
             onChange={(event) => handleFieldChange("alto", event.target.value)}
             onBlur={handleBlur}
+            onKeyDown={(event) => handleKeyDown("alto", event)}
             placeholder="-"
           />
         </label>
         <label className={`${s.quickEditField} ${s.quickEditFieldWide}`}>
           <span>{pricingLabel}</span>
           <input
+            ref={(node) => {
+              inputRefs.current.costoProveedorUnitario = node;
+            }}
             className={s.quickEditInput}
             inputMode="numeric"
-            value={formatCurrencyInput(localDraft.costoProveedorUnitario)}
+            value={formatCurrencyInput(draft.costoProveedorUnitario)}
             onChange={(event) =>
               handleFieldChange("costoProveedorUnitario", event.target.value)
             }
             onBlur={handleBlur}
+            onKeyDown={(event) => handleKeyDown("costoProveedorUnitario", event)}
             placeholder="0"
           />
         </label>
       </div>
-
-      <button
-        className={`${s.btnPrimary} ${s.mobileQuickEditorSummaryButton}`}
-        type="button"
-        onClick={handleSummary}
-      >
-        Ver cierre del paso <LuChevronDown aria-hidden />
-      </button>
     </section>
   );
 });
@@ -677,10 +792,6 @@ function resolveSuggestedMarginValue(
   }
 
   return pickSuggestedString(currentValue, String(suggestionMarginPct));
-}
-
-function getPricingModeSummaryLabel(pricingMode: PricingMode) {
-  return pricingMode === "precio_directo" ? "Precio directo" : "Con margen";
 }
 
 function filterGlassOptions(query: string) {
@@ -807,26 +918,6 @@ function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
   };
 }
 
-function mapItemToDuplicateForm(
-  item: CotizacionWorkflowItem,
-  items: CotizacionWorkflowItem[]
-): ComponentFormState {
-  const duplicated = mapItemToForm(item);
-  const nextCode = buildNextComponentCode(items, item.tipo);
-  const previousAutoName = buildAutoComponentName(duplicated);
-  const descriptionLooksAutoGenerated =
-    normalizeComparableComponentText(duplicated.descripcion) ===
-      normalizeComparableComponentText(previousAutoName) ||
-    isLegacyAutoComponentLabel(item.tipo, duplicated.descripcion);
-
-  return {
-    ...duplicated,
-    codigo: nextCode,
-    nombre: item.nombre.trim() === previousAutoName ? "" : duplicated.nombre,
-    descripcion: descriptionLooksAutoGenerated ? "" : duplicated.descripcion,
-  };
-}
-
 function buildItemFromForm(
   form: ComponentFormState,
   items: CotizacionWorkflowItem[],
@@ -944,9 +1035,17 @@ function NuevaCotizacionPageContent() {
   const initializedRef = useRef(false);
   const hydrationCompleteRef = useRef(false);
   const persistTimeoutRef = useRef<number | null>(null);
-  const quickEditDraftsRef = useRef<Record<string, QuickEditDraftState>>({});
   const lastCommittedSignatureRef = useRef("");
   const glassCloseTimeoutRef = useRef<number | null>(null);
+  const step1InputRefs = useRef<Record<Step1FieldKey, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({
+    clientSearch: null,
+    clienteNombre: null,
+    clienteTelefono: null,
+    obra: null,
+    direccion: null,
+    validez: null,
+    observaciones: null,
+  });
   const stepTwoListScrollFrameRef = useRef<number | null>(null);
   const stepTwoListRef = useRef<HTMLDivElement | null>(null);
   const stepTwoSummaryRef = useRef<HTMLDivElement | null>(null);
@@ -962,7 +1061,6 @@ function NuevaCotizacionPageContent() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [savedRecord, setSavedRecord] = useState<CotizacionWorkflowRecord | null>(null);
   const [lastSaveMode, setLastSaveMode] = useState<keyof typeof STATUS_COPY | null>(null);
-  const [shareExperience] = useState(getCotizacionShareExperience);
   const [isGlassPanelOpen, setIsGlassPanelOpen] = useState(false);
   const [glassQuery, setGlassQuery] = useState("");
   const [showStep1MoreData, setShowStep1MoreData] = useState(false);
@@ -973,6 +1071,9 @@ function NuevaCotizacionPageContent() {
   const [stepTwoListRowHeight, setStepTwoListRowHeight] = useState(STEP_TWO_DEFAULT_ROW_HEIGHT);
   const [stepTwoListGap, setStepTwoListGap] = useState(STEP_TWO_DEFAULT_GAP);
   const [expandedQuickEditItemId, setExpandedQuickEditItemId] = useState<string | null>(null);
+  const [expandedQuickEditFocusField, setExpandedQuickEditFocusField] = useState<QuickEditFieldKey | null>("ancho");
+  const [showOnlyPendingItems, setShowOnlyPendingItems] = useState(false);
+  const [quickEditDrafts, setQuickEditDrafts] = useState<Record<string, QuickEditDraftState>>({});
   const [recordMeta, setRecordMeta] = useState<{
     id?: string;
     codigo?: string;
@@ -1017,31 +1118,6 @@ function NuevaCotizacionPageContent() {
   }, []);
 
   useEffect(() => {
-    const nextDrafts: Record<string, QuickEditDraftState> = {};
-
-    draft.items.forEach((item) => {
-      nextDrafts[item.id] = quickEditDraftsRef.current[item.id] ?? buildQuickEditDraft(item);
-    });
-
-    quickEditDraftsRef.current = nextDrafts;
-  }, [draft.items]);
-
-  useEffect(() => {
-    if (draft.items.length === 0) {
-      setExpandedQuickEditItemId(null);
-      return;
-    }
-
-    setExpandedQuickEditItemId((current) => {
-      if (current && draft.items.some((item) => item.id === current)) {
-        return current;
-      }
-
-      return draft.items[0]?.id ?? null;
-    });
-  }, [draft.items]);
-
-  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 800px)");
     const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
 
@@ -1066,6 +1142,39 @@ function NuevaCotizacionPageContent() {
   useEffect(() => {
     void ensureClientesLoaded();
   }, [ensureClientesLoaded]);
+
+  const applyWorkflowBootstrap = useCallback(
+    (input: {
+      draft: CotizacionWorkflowDraft;
+      componentForm: ComponentFormState;
+      editingItemId: string | null;
+      selectedClientId: string;
+      clientQuery: string;
+      showStep1MoreData: boolean;
+      step: StepKey;
+      expandedQuickEditItemId: string | null;
+      expandedQuickEditFocusField?: QuickEditFieldKey | null;
+    }) => {
+      setDraft(input.draft);
+      setComponentForm(input.componentForm);
+      setEditingItemId(input.editingItemId);
+      setSelectedClientId(input.selectedClientId);
+      setClientQuery(input.clientQuery);
+      setShowStep1MoreData(input.showStep1MoreData);
+      setStep(input.step);
+      setExpandedQuickEditItemId(input.expandedQuickEditItemId);
+      setExpandedQuickEditFocusField(input.expandedQuickEditFocusField ?? "ancho");
+    },
+    []
+  );
+  const scheduleWorkflowBootstrap = useCallback(
+    (input: Parameters<typeof applyWorkflowBootstrap>[0]) => {
+      queueMicrotask(() => {
+        applyWorkflowBootstrap(input);
+      });
+    },
+    [applyWorkflowBootstrap]
+  );
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -1093,19 +1202,27 @@ function NuevaCotizacionPageContent() {
       initializedRef.current = true;
       lastCommittedSignatureRef.current = blankSignature;
       if (persisted) {
-        setDraft(persisted.draft);
-        setComponentForm(persisted.componentForm);
-        setEditingItemId(persisted.editingItemId);
-        setSelectedClientId(persisted.selectedClientId);
-        setClientQuery(persisted.clientQuery);
-        setShowStep1MoreData(persisted.showStep1MoreData);
-        setStep(persisted.step);
+        scheduleWorkflowBootstrap({
+          draft: persisted.draft,
+          componentForm: persisted.componentForm,
+          editingItemId: persisted.editingItemId,
+          selectedClientId: persisted.selectedClientId,
+          clientQuery: persisted.clientQuery,
+          showStep1MoreData: persisted.showStep1MoreData,
+          step: persisted.step,
+          expandedQuickEditItemId: persisted.draft.items[0]?.id ?? null,
+        });
       } else {
-        setSelectedClientId("");
-        setComponentForm(
-          createEmptyComponentForm([], suggestionProvider, preferredPricingMode)
-        );
-        setStep(1);
+        scheduleWorkflowBootstrap({
+          draft: createCotizacionWorkflowDraft(),
+          componentForm: createEmptyComponentForm([], suggestionProvider, preferredPricingMode),
+          editingItemId: null,
+          selectedClientId: "",
+          clientQuery: "",
+          showStep1MoreData: false,
+          step: 1,
+          expandedQuickEditItemId: null,
+        });
       }
       hydrationCompleteRef.current = true;
       return;
@@ -1131,51 +1248,67 @@ function NuevaCotizacionPageContent() {
       provider: suggestionProvider,
       pricingMode: preferredPricingMode,
     });
+    const persistedHasItems = (persisted?.draft.items?.length ?? 0) > 0;
 
     lastCommittedSignatureRef.current = baseSignature;
     if (persisted) {
-      setDraft(persisted.draft);
-      setSelectedClientId(persisted.selectedClientId);
-      setComponentForm(persisted.componentForm);
-      setEditingItemId(persisted.editingItemId);
-      setClientQuery(persisted.clientQuery);
-      setShowStep1MoreData(persisted.showStep1MoreData);
-      setStep(persisted.step);
+      scheduleWorkflowBootstrap({
+        draft: persistedHasItems ? persisted.draft : baseDraft,
+        selectedClientId: persisted.selectedClientId || baseSelectedClientId,
+        componentForm: persistedHasItems
+          ? persisted.componentForm
+          : createEmptyComponentForm(baseDraft.items, suggestionProvider, preferredPricingMode),
+        editingItemId: persistedHasItems ? persisted.editingItemId : null,
+        clientQuery: persisted.clientQuery || (sourceRecord.clienteNombre ?? ""),
+        showStep1MoreData: persisted.showStep1MoreData,
+        step: persistedHasItems
+          ? persisted.step
+          : requestedStep === 3
+            ? 3
+            : requestedStep === 2
+              ? 2
+              : 1,
+        expandedQuickEditItemId: persistedHasItems
+          ? persisted.editingItemId ?? baseDraft.items[0]?.id ?? null
+          : baseDraft.items[0]?.id ?? null,
+      });
     } else {
-      setDraft(baseDraft);
-      setSelectedClientId(baseSelectedClientId);
-      setClientQuery(sourceRecord.clienteNombre ?? "");
-      setComponentForm(
-        createEmptyComponentForm(
+      scheduleWorkflowBootstrap({
+        draft: baseDraft,
+        selectedClientId: baseSelectedClientId,
+        clientQuery: sourceRecord.clienteNombre ?? "",
+        componentForm: createEmptyComponentForm(
           baseDraft.items,
           suggestionProvider,
           preferredPricingMode
-        )
-      );
-      if (requestedStep === 3) {
-        setStep(baseDraft.items.length > 0 ? 3 : 2);
-      } else if (requestedStep === 2) {
-        setStep(2);
-      } else {
-        setStep(1);
-      }
+        ),
+        editingItemId: null,
+        showStep1MoreData: false,
+        step:
+          requestedStep === 3 ? (baseDraft.items.length > 0 ? 3 : 2) : requestedStep === 2 ? 2 : 1,
+        expandedQuickEditItemId: baseDraft.items[0]?.id ?? null,
+      });
     }
-    setRecordMeta({
-      id: duplicateId ? undefined : sourceRecord.id,
-      codigo: duplicateId ? undefined : sourceRecord.codigo,
-      clientId: sourceRecord.clientId ?? null,
-      projectId: duplicateId ? null : sourceRecord.projectId ?? null,
+    queueMicrotask(() => {
+      setRecordMeta({
+        id: duplicateId ? undefined : sourceRecord.id,
+        codigo: duplicateId ? undefined : sourceRecord.codigo,
+        clientId: sourceRecord.clientId ?? null,
+        projectId: duplicateId ? null : sourceRecord.projectId ?? null,
+      });
+      setSavedRecord(null);
+      setLastSaveMode(null);
     });
-    setSavedRecord(null);
-    setLastSaveMode(null);
     initializedRef.current = true;
     hydrationCompleteRef.current = true;
   }, [
+    applyWorkflowBootstrap,
     duplicateId,
     editId,
     preferredPricingMode,
     suggestionProvider,
     requestedStep,
+    scheduleWorkflowBootstrap,
     sourceRecord,
     storageKey,
   ]);
@@ -1410,6 +1543,7 @@ function NuevaCotizacionPageContent() {
           }`,
           metaTertiary: referencia ? `Ref. ${referencia}` : "",
           quickEditPriceLabel: pricingMode === "precio_directo" ? "Valor" : "Costo",
+          isComplete: isWorkflowItemComplete(item),
           svgMarkup: generateComponentSVG({
             tipo: item.tipo,
             ancho: item.ancho,
@@ -1422,24 +1556,86 @@ function NuevaCotizacionPageContent() {
       }),
     [deferredWorkflowItems]
   );
+  const completedItemsCount = useMemo(
+    () => componentListCards.filter((item) => item.isComplete).length,
+    [componentListCards]
+  );
+  const pendingItemsCount = componentListCards.length - completedItemsCount;
+  const syncedQuickEditDrafts = useMemo(() => {
+    const nextDrafts: Record<string, QuickEditDraftState> = {};
+
+    draft.items.forEach((item) => {
+      nextDrafts[item.id] = quickEditDrafts[item.id] ?? buildQuickEditDraft(item);
+    });
+
+    return nextDrafts;
+  }, [draft.items, quickEditDrafts]);
+  const effectiveShowOnlyPendingItems = showOnlyPendingItems && pendingItemsCount > 0;
+  const filteredComponentListCards = useMemo(
+    () =>
+      effectiveShowOnlyPendingItems
+        ? componentListCards.filter((item) => !item.isComplete)
+        : componentListCards,
+    [componentListCards, effectiveShowOnlyPendingItems]
+  );
   const stepTwoItemIndexById = useMemo(
     () => new Map(draft.items.map((item, index) => [item.id, index])),
     [draft.items]
   );
-  const selectedQuickEditIndex = expandedQuickEditItemId
-    ? stepTwoItemIndexById.get(expandedQuickEditItemId) ?? -1
+  const resolvedExpandedQuickEditItemId = useMemo(() => {
+    if (draft.items.length === 0) {
+      return null;
+    }
+
+    const baseSelectedId =
+      expandedQuickEditItemId && draft.items.some((item) => item.id === expandedQuickEditItemId)
+        ? expandedQuickEditItemId
+        : draft.items[0]?.id ?? null;
+
+    if (!effectiveShowOnlyPendingItems || !baseSelectedId) {
+      return baseSelectedId;
+    }
+
+    const selectedItem = draft.items.find((item) => item.id === baseSelectedId) ?? null;
+    if (selectedItem && !isWorkflowItemComplete(selectedItem)) {
+      return baseSelectedId;
+    }
+
+    return draft.items.find((item) => !isWorkflowItemComplete(item))?.id ?? baseSelectedId;
+  }, [draft.items, effectiveShowOnlyPendingItems, expandedQuickEditItemId]);
+  const selectedQuickEditIndex = resolvedExpandedQuickEditItemId
+    ? stepTwoItemIndexById.get(resolvedExpandedQuickEditItemId) ?? -1
     : -1;
   const selectedQuickEditItem =
     selectedQuickEditIndex >= 0 ? draft.items[selectedQuickEditIndex] ?? null : null;
   const selectedQuickEditDraft = selectedQuickEditItem
-    ? quickEditDraftsRef.current[selectedQuickEditItem.id] ??
-      buildQuickEditDraft(selectedQuickEditItem)
+    ? syncedQuickEditDrafts[selectedQuickEditItem.id] ?? buildQuickEditDraft(selectedQuickEditItem)
     : null;
+
+  useEffect(() => {
+    if (!isMobileViewport || !selectedQuickEditItem) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-step-two-item-id="${selectedQuickEditItem.id}"]`)
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMobileViewport, selectedQuickEditItem]);
+
   const shouldVirtualizeStepTwoList = false;
+  const shouldUseStepTwoListScroll =
+    filteredComponentListCards.length > STEP_TWO_SCROLL_THRESHOLD;
   const visibleComponentListState = useMemo(() => {
     if (!shouldVirtualizeStepTwoList || stepTwoListHeight <= 0) {
       return {
-        cards: componentListCards,
+        cards: filteredComponentListCards,
         paddingTop: 0,
         paddingBottom: 0,
       };
@@ -1454,12 +1650,12 @@ function NuevaCotizacionPageContent() {
     );
     const visibleCount =
       Math.ceil(stepTwoListHeight / stride) + STEP_TWO_VIRTUALIZATION_OVERSCAN * 2;
-    const endIndex = Math.min(componentListCards.length, startIndex + visibleCount);
+    const endIndex = Math.min(filteredComponentListCards.length, startIndex + visibleCount);
     const hiddenBefore = startIndex;
-    const hiddenAfter = Math.max(0, componentListCards.length - endIndex);
+    const hiddenAfter = Math.max(0, filteredComponentListCards.length - endIndex);
 
     return {
-      cards: componentListCards.slice(startIndex, endIndex),
+      cards: filteredComponentListCards.slice(startIndex, endIndex),
       paddingTop:
         hiddenBefore > 0
           ? hiddenBefore * rowHeight + Math.max(0, hiddenBefore - 1) * gap
@@ -1470,7 +1666,7 @@ function NuevaCotizacionPageContent() {
           : 0,
     };
   }, [
-    componentListCards,
+    filteredComponentListCards,
     shouldVirtualizeStepTwoList,
     stepTwoListGap,
     stepTwoListHeight,
@@ -1675,7 +1871,8 @@ function NuevaCotizacionPageContent() {
 
       setDraft((cur) => ({ ...cur, items: nextItems }));
       if (!editingItemId && isMobileViewport) {
-        setExpandedQuickEditItemId(nextItems.at(-1)?.id ?? null);
+        setExpandedQuickEditItemId(nextItems.at(0)?.id ?? null);
+        setExpandedQuickEditFocusField("ancho");
       }
       setEditingItemId(null);
       setComponentForm(
@@ -1700,21 +1897,7 @@ function NuevaCotizacionPageContent() {
     setFieldErrors({});
     setGlobalError(null);
     setExpandedQuickEditItemId(item.id);
-    scrollToSection("component-form");
-  };
-
-  const handleDuplicateItem = (item: CotizacionWorkflowItem) => {
-    setEditingItemId(null);
-    const duplicated = mapItemToDuplicateForm(item, draft.items);
-    setComponentForm({
-      ...duplicated,
-      loteCantidad: "1",
-    });
-    setIsGlassPanelOpen(false);
-    setGlassQuery("");
-    setStep(2);
-    setFieldErrors({});
-    setGlobalError(null);
+    setExpandedQuickEditFocusField("ancho");
     scrollToSection("component-form");
   };
 
@@ -1724,23 +1907,13 @@ function NuevaCotizacionPageContent() {
     setExpandedQuickEditItemId((current) =>
       current === itemId ? nextItems[0]?.id ?? null : current
     );
+    setExpandedQuickEditFocusField("ancho");
     if (editingItemId === itemId) {
       setEditingItemId(null);
       setComponentForm(
         createEmptyComponentForm(nextItems, suggestionProvider, preferredPricingMode)
       );
     }
-  };
-
-  const handleCancelItemEdit = () => {
-    setEditingItemId(null);
-    setComponentForm(
-      createEmptyComponentForm(draft.items, suggestionProvider, preferredPricingMode)
-    );
-    setIsGlassPanelOpen(false);
-    setGlassQuery("");
-    setFieldErrors({});
-    setGlobalError(null);
   };
 
   const handleResetStep2Form = () => {
@@ -1752,19 +1925,30 @@ function NuevaCotizacionPageContent() {
     setGlassQuery("");
     setFieldErrors({});
     setGlobalError(null);
+    setExpandedQuickEditItemId(draft.items[0]?.id ?? null);
+    setExpandedQuickEditFocusField("ancho");
     scrollToSection("component-form");
   };
 
   const commitQuickEditDraft = useCallback(
     (itemId: string, draftOverride?: QuickEditDraftState) => {
+      const resolvedDraftState = draftOverride ?? syncedQuickEditDrafts[itemId];
+
+      if (!resolvedDraftState) {
+        return;
+      }
+
       if (draftOverride) {
-        quickEditDraftsRef.current[itemId] = draftOverride;
+        setQuickEditDrafts((current) => ({
+          ...current,
+          [itemId]: draftOverride,
+        }));
       }
 
       startTransition(() => {
         setDraft((current) => {
           const target = current.items.find((item) => item.id === itemId);
-          const draftState = quickEditDraftsRef.current[itemId];
+          const draftState = resolvedDraftState;
 
           if (!target || !draftState) {
             return current;
@@ -1799,21 +1983,26 @@ function NuevaCotizacionPageContent() {
         });
       });
     },
-    []
+    [syncedQuickEditDrafts]
   );
 
   const handleQuickItemFieldChange = useCallback(
     (itemId: string, key: keyof QuickEditDraftState, value: string) => {
-      const base = quickEditDraftsRef.current[itemId] ?? {
-        ancho: "",
-        alto: "",
-        costoProveedorUnitario: "",
-      };
+      setQuickEditDrafts((current) => {
+        const base = current[itemId] ?? {
+          ancho: "",
+          alto: "",
+          costoProveedorUnitario: "",
+        };
 
-      quickEditDraftsRef.current[itemId] = {
-        ...base,
-        [key]: value,
-      };
+        return {
+          ...current,
+          [itemId]: {
+            ...base,
+            [key]: value,
+          },
+        };
+      });
     },
     []
   );
@@ -1821,7 +2010,7 @@ function NuevaCotizacionPageContent() {
   const applyQuickEditDraftsToItems = useCallback(
     (items: CotizacionWorkflowItem[]) =>
       items.map((item) => {
-        const draftState = quickEditDraftsRef.current[item.id];
+        const draftState = syncedQuickEditDrafts[item.id];
 
         if (!draftState) {
           return item;
@@ -1840,7 +2029,7 @@ function NuevaCotizacionPageContent() {
           return item;
         }
       }),
-    []
+    [syncedQuickEditDrafts]
   );
 
   const flushQuickEditDrafts = useCallback(() => {
@@ -1852,23 +2041,43 @@ function NuevaCotizacionPageContent() {
     return nextItems;
   }, [applyQuickEditDraftsToItems, draft.items]);
 
-  const handleSelectQuickEditItem = useCallback((itemId: string) => {
+  const handleSelectQuickEditItem = useCallback((itemId: string, focusField: QuickEditFieldKey = "ancho") => {
     setExpandedQuickEditItemId(itemId);
+    setExpandedQuickEditFocusField(focusField);
   }, []);
 
-  const handleQuickEditNavigate = useCallback((direction: -1 | 1) => {
-    if (selectedQuickEditIndex < 0) {
-      return;
-    }
+  const handleQuickEditNavigate = useCallback(
+    (
+      direction: -1 | 1,
+      focusField: QuickEditFieldKey = "ancho",
+      options?: { preferIncomplete?: boolean }
+    ) => {
+      if (selectedQuickEditIndex < 0) {
+        return;
+      }
 
-    const nextItem = draft.items[selectedQuickEditIndex + direction];
+      const candidateIndexes =
+        direction === 1
+          ? draft.items.map((_, index) => index).slice(selectedQuickEditIndex + 1)
+          : draft.items
+              .map((_, index) => index)
+              .slice(0, selectedQuickEditIndex)
+              .reverse();
 
-    if (!nextItem) {
-      return;
-    }
+      const shouldPreferIncomplete = options?.preferIncomplete ?? effectiveShowOnlyPendingItems;
+      const nextPreferredIndex = shouldPreferIncomplete
+        ? candidateIndexes.find((index) => !isWorkflowItemComplete(draft.items[index]))
+        : undefined;
+      const nextIndex = nextPreferredIndex ?? candidateIndexes[0];
 
-    handleSelectQuickEditItem(nextItem.id);
-  }, [draft.items, handleSelectQuickEditItem, selectedQuickEditIndex]);
+      if (nextIndex === undefined) {
+        return;
+      }
+
+      handleSelectQuickEditItem(draft.items[nextIndex].id, focusField);
+    },
+    [draft.items, effectiveShowOnlyPendingItems, handleSelectQuickEditItem, selectedQuickEditIndex]
+  );
 
   const handleScrollToStepTwoSummary = useCallback(() => {
     window.requestAnimationFrame(() => {
@@ -1877,6 +2086,18 @@ function NuevaCotizacionPageContent() {
         block: "nearest",
       });
     });
+  }, []);
+
+  const focusStep1Field = useCallback((field: Step1FieldKey) => {
+    const node = step1InputRefs.current[field];
+    if (!node) {
+      return;
+    }
+
+    node.focus();
+    if ("select" in node && typeof node.select === "function") {
+      node.select();
+    }
   }, []);
 
   const handlePricingModeSelection = useCallback(
@@ -1948,7 +2169,7 @@ function NuevaCotizacionPageContent() {
     }, 200);
   };
 
-  const goNextFromStep1 = () => {
+  const goNextFromStep1 = useCallback(() => {
     const errors = validateStep1(draft);
     if (errors.step1) {
       setFieldErrors((cur) => ({ ...cur, ...errors }));
@@ -1957,7 +2178,69 @@ function NuevaCotizacionPageContent() {
     setFieldErrors((cur) => ({ ...cur, step1: undefined }));
     setStep(2);
     scrollPageToTop();
-  };
+  }, [draft]);
+
+  const handleStep1KeyDown = useCallback(
+    (
+      field: Step1FieldKey,
+      event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+      if (event.key !== "Enter") {
+        return;
+      }
+
+      if (field === "clientSearch") {
+        if (clientQuery.trim() !== "" && filteredClientes.length > 0 && !selectedClient) {
+          event.preventDefault();
+          setSelectedClientId(String(filteredClientes[0].id));
+          return;
+        }
+
+        if (selectedClient) {
+          event.preventDefault();
+          focusStep1Field("obra");
+        }
+        return;
+      }
+
+      event.preventDefault();
+
+      if (field === "clienteNombre") {
+        focusStep1Field("clienteTelefono");
+        return;
+      }
+
+      if (field === "clienteTelefono") {
+        focusStep1Field("obra");
+        return;
+      }
+
+      if (field === "obra") {
+        if (showStep1MoreData) {
+          focusStep1Field("direccion");
+        } else {
+          setShowStep1MoreData(true);
+          window.requestAnimationFrame(() => focusStep1Field("direccion"));
+        }
+        return;
+      }
+
+      if (field === "direccion") {
+        focusStep1Field("validez");
+        return;
+      }
+
+      if (field === "validez") {
+        focusStep1Field("observaciones");
+        return;
+      }
+
+      if (field === "observaciones") {
+        goNextFromStep1();
+      }
+    },
+    [clientQuery, filteredClientes, focusStep1Field, goNextFromStep1, selectedClient, showStep1MoreData]
+  );
 
   const goToStep = (target: StepKey) => {
     if (target >= 3 && step === 2) {
@@ -2189,9 +2472,13 @@ function NuevaCotizacionPageContent() {
                   <div className={s.searchField}>
                     <LuSearch className={s.searchIcon} aria-hidden />
                     <input
+                      ref={(node) => {
+                        step1InputRefs.current.clientSearch = node;
+                      }}
                       className={s.searchInput}
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
+                      onKeyDown={(event) => handleStep1KeyDown("clientSearch", event)}
                       placeholder="Buscar cliente existente..."
                     />
                   </div>
@@ -2294,6 +2581,9 @@ function NuevaCotizacionPageContent() {
                     <label className={s.field}>
                       <span className={s.label}>Nombre cliente <span className={s.required}>*</span></span>
                       <input
+                        ref={(node) => {
+                          step1InputRefs.current.clienteNombre = node;
+                        }}
                         className={`${s.input} ${fieldErrors.clienteNombre ? s.inputError : ""}`}
                         maxLength={FIELD_LIMITS.clienteNombre}
                         value={draft.clienteNombre}
@@ -2301,6 +2591,7 @@ function NuevaCotizacionPageContent() {
                           handleDraftChange("clienteNombre", e.target.value);
                           if (fieldErrors.clienteNombre) setFieldErrors((f) => ({ ...f, clienteNombre: undefined }));
                         }}
+                        onKeyDown={(event) => handleStep1KeyDown("clienteNombre", event)}
                         placeholder="Ej: Roberto Fuentes"
                       />
                       {fieldErrors.clienteNombre && <span className={s.fieldError}>{fieldErrors.clienteNombre}</span>}
@@ -2308,12 +2599,16 @@ function NuevaCotizacionPageContent() {
                     <label className={s.field}>
                       <span className={s.label}>Telefono</span>
                       <input
+                        ref={(node) => {
+                          step1InputRefs.current.clienteTelefono = node;
+                        }}
                         className={s.input}
                         inputMode="numeric"
                         autoComplete="tel-national"
                         pattern="[0-9 ]*"
                         value={draft.clienteTelefono}
                         onChange={(e) => handleDraftPhoneChange(e.target.value)}
+                        onKeyDown={(event) => handleStep1KeyDown("clienteTelefono", event)}
                         placeholder="8234 5678"
                       />
                     </label>
@@ -2325,6 +2620,9 @@ function NuevaCotizacionPageContent() {
                 <label className={`${s.field} ${s.fieldFull}`}>
                   <span className={s.label}>Obra o proyecto <span className={s.required}>*</span></span>
                   <input
+                    ref={(node) => {
+                      step1InputRefs.current.obra = node;
+                    }}
                         className={`${s.input} ${fieldErrors.obra ? s.inputError : ""}`}
                     maxLength={FIELD_LIMITS.obra}
                     value={draft.obra}
@@ -2332,6 +2630,7 @@ function NuevaCotizacionPageContent() {
                       handleDraftChange("obra", e.target.value);
                       if (fieldErrors.obra) setFieldErrors((f) => ({ ...f, obra: undefined }));
                     }}
+                    onKeyDown={(event) => handleStep1KeyDown("obra", event)}
                     placeholder="Ej: Casa Los Pescadores"
                   />
                   {fieldErrors.obra && <span className={s.fieldError}>{fieldErrors.obra}</span>}
@@ -2355,10 +2654,14 @@ function NuevaCotizacionPageContent() {
                 <label className={s.field}>
                   <span className={s.label}>Direccion</span>
                   <input
+                    ref={(node) => {
+                      step1InputRefs.current.direccion = node;
+                    }}
                     className={s.input}
                     maxLength={FIELD_LIMITS.direccion}
                     value={draft.direccion}
                     onChange={(e) => handleDraftChange("direccion", e.target.value)}
+                    onKeyDown={(event) => handleStep1KeyDown("direccion", event)}
                     placeholder="Ej: Los Pescadores 221, Coquimbo"
                   />
                 </label>
@@ -2366,9 +2669,13 @@ function NuevaCotizacionPageContent() {
                   <span className={s.label}>Validez</span>
                   <div className={s.selectWrap}>
                     <select
+                      ref={(node) => {
+                        step1InputRefs.current.validez = node;
+                      }}
                       className={s.input}
                       value={draft.validez}
                       onChange={(e) => handleDraftChange("validez", e.target.value)}
+                      onKeyDown={(event) => handleStep1KeyDown("validez", event)}
                     >
                       {VALIDEZ_OPTIONS.map((v) => (
                         <option key={v} value={v}>
@@ -2381,11 +2688,15 @@ function NuevaCotizacionPageContent() {
                 <label className={s.field}>
                   <span className={s.label}>Condiciones comerciales</span>
                   <textarea
+                    ref={(node) => {
+                      step1InputRefs.current.observaciones = node;
+                    }}
                     className={s.textarea}
                     rows={2}
                     maxLength={FIELD_LIMITS.observaciones}
                     value={draft.observaciones}
                     onChange={(e) => handleDraftChange("observaciones", e.target.value)}
+                    onKeyDown={(event) => handleStep1KeyDown("observaciones", event)}
                     placeholder="Ej: Anticipo 50% al confirmar, saldo contra entrega."
                   />
                 </label>
@@ -2436,6 +2747,7 @@ function NuevaCotizacionPageContent() {
           )}
 
           {step === 2 && (
+            <>
             <div className={s.stepTwoLayout}>
               <section className={`${s.card} ${s.stepTwoFormCard}`} id="component-form">
                 <div className={s.cardHeaderRow}>
@@ -2929,15 +3241,42 @@ function NuevaCotizacionPageContent() {
 
               <aside className={`${s.card} ${s.stepTwoPanel}`}>
                 <div className={s.stepTwoPanelHeader}>
-                  <div className={s.stepTwoPanelTitle}>Componentes cargados</div>
-                  <span className={s.stepTwoCounter}>{draft.items.length}</span>
+                  <div className={s.stepTwoPanelHeaderMain}>
+                    <div className={s.stepTwoPanelTitle}>Componentes cargados</div>
+                    <div className={s.stepTwoPanelStats}>
+                      <span className={s.stepTwoPanelStatPending}>
+                        {pendingItemsCount} pendientes
+                      </span>
+                      <span className={s.stepTwoPanelStatDivider} aria-hidden />
+                      <span className={s.stepTwoPanelStatComplete}>
+                        {completedItemsCount} listos
+                      </span>
+                    </div>
+                  </div>
+                  <div className={s.stepTwoPanelHeaderActions}>
+                    {draft.items.length > STEP_TWO_SCROLL_THRESHOLD && pendingItemsCount > 0 ? (
+                      <button
+                        className={`${s.stepTwoFilterButton} ${
+                          effectiveShowOnlyPendingItems ? s.stepTwoFilterButtonActive : ""
+                        }`}
+                        type="button"
+                        onClick={() => setShowOnlyPendingItems((current) => !current)}
+                      >
+                        <LuFilterX aria-hidden />
+                        {effectiveShowOnlyPendingItems ? "Ver todos" : "Solo pendientes"}
+                      </button>
+                    ) : null}
+                    <span className={s.stepTwoCounter}>{draft.items.length}</span>
+                  </div>
                 </div>
 
                 {selectedQuickEditItem && selectedQuickEditDraft ? (
                   <MobileQuickEditor
                     key={selectedQuickEditItem.id}
                     item={selectedQuickEditItem}
-                    initialDraft={selectedQuickEditDraft}
+                    draft={selectedQuickEditDraft}
+                    initialFocusField={expandedQuickEditFocusField}
+                    isMobileViewport={isMobileViewport}
                     itemIndex={selectedQuickEditIndex}
                     totalItems={draft.items.length}
                     pricingLabel={
@@ -2962,78 +3301,109 @@ function NuevaCotizacionPageContent() {
                     <span>Agrega una ventana, puerta o cierre usando el formulario de la izquierda.</span>
                   </div>
                 ) : (
-                  <div className={s.stepTwoList} ref={stepTwoListRef}>
-                    {visibleComponentListState.paddingTop > 0 ? (
-                      <div
-                        aria-hidden
-                        className={s.stepTwoVirtualSpacer}
-                        style={{ height: `${visibleComponentListState.paddingTop}px` }}
-                      />
-                    ) : null}
-                    {visibleComponentListState.cards.map((item, index) => {
-                      const isQuickEditSelected = expandedQuickEditItemId === item.id;
+                  <div
+                    className={`${s.stepTwoListViewport} ${
+                      shouldUseStepTwoListScroll ? s.stepTwoListViewportScrollable : ""
+                    }`}
+                    ref={stepTwoListRef}
+                  >
+                    <div className={s.stepTwoList}>
+                      {visibleComponentListState.paddingTop > 0 ? (
+                        <div
+                          aria-hidden
+                          className={s.stepTwoVirtualSpacer}
+                          style={{ height: `${visibleComponentListState.paddingTop}px` }}
+                        />
+                      ) : null}
+                      {visibleComponentListState.cards.map((item, index) => {
+                        const isQuickEditSelected = expandedQuickEditItemId === item.id;
+                        const isEditing = editingItemId === item.id;
+                        const cardSelectionStatusLabel = isEditing
+                          ? "Editando"
+                          : isQuickEditSelected
+                            ? "Activo"
+                            : null;
 
-                      return (
-                        <article
-                          key={item.id}
-                          ref={(node) => {
-                            if (index === 0) {
-                              handleStepTwoListMeasure(node);
-                            }
-                          }}
-                          onClick={() => handleSelectQuickEditItem(item.id)}
-                          className={`${s.stepTwoListCard} ${
-                            editingItemId === item.id ? s.stepTwoListCardEditing : ""
-                          } ${isQuickEditSelected ? s.stepTwoListCardSelected : ""}`}
-                        >
-                          <div className={s.stepTwoListThumb}>
-                            <div
-                              className={s.stepTwoListThumbSvg}
-                              dangerouslySetInnerHTML={{
-                                __html: item.svgMarkup,
-                              }}
-                            />
-                          </div>
-
-                          <div className={s.stepTwoListBody}>
-                            <div className={s.stepTwoListTop}>
-                              <div className={s.stepTwoListName}>{item.title}</div>
-                              <span className={s.stepTwoListPrice}>{item.price}</span>
+                        return (
+                          <article
+                            key={item.id}
+                            data-step-two-item-id={item.id}
+                            ref={(node) => {
+                              if (index === 0) {
+                                handleStepTwoListMeasure(node);
+                              }
+                            }}
+                            onClick={() => handleSelectQuickEditItem(item.id)}
+                            className={`${s.stepTwoListCard} ${
+                              isEditing ? s.stepTwoListCardEditing : ""
+                            } ${isQuickEditSelected ? s.stepTwoListCardSelected : ""}`}
+                          >
+                            <div className={s.stepTwoListThumb}>
+                              <div
+                                className={s.stepTwoListThumbSvg}
+                                dangerouslySetInnerHTML={{
+                                  __html: item.svgMarkup,
+                                }}
+                              />
                             </div>
 
-                            <div className={s.stepTwoMetaLine}>{item.metaPrimary}</div>
-                            <div className={s.stepTwoMetaLine}>{item.metaSecondary}</div>
-                            {item.metaTertiary ? (
-                              <div className={s.stepTwoMetaLine}>{item.metaTertiary}</div>
-                            ) : null}
-                          </div>
+                            <div className={s.stepTwoListBody}>
+                              <div className={s.stepTwoListTop}>
+                                <div className={s.stepTwoListHeading}>
+                                  <div className={s.stepTwoListName}>{item.title}</div>
+                                  <div className={s.stepTwoStatusGroup}>
+                                    <span
+                                      className={`${s.stepTwoStatusPill} ${
+                                        item.isComplete
+                                          ? s.stepTwoStatusPillComplete
+                                          : s.stepTwoStatusPillPending
+                                      }`}
+                                    >
+                                      {item.isComplete ? <LuCheck size={12} aria-hidden /> : null}
+                                      {item.isComplete ? "Completo" : "Pendiente"}
+                                    </span>
+                                    {cardSelectionStatusLabel ? (
+                                      <span
+                                        className={`${s.stepTwoStatusPill} ${
+                                          isEditing
+                                            ? s.stepTwoStatusPillEditing
+                                            : s.stepTwoStatusPillSelected
+                                        }`}
+                                      >
+                                        {cardSelectionStatusLabel}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <span className={s.stepTwoListPrice}>{item.price}</span>
+                              </div>
 
-                          <div className={s.stepTwoCardActions}>
-                            <button
-                              className={s.iconButton}
-                              onClick={() => handleDuplicateItem(item.source)}
-                              type="button"
-                              title="Duplicar como base"
-                            >
-                              <LuCopy size={14} aria-hidden />
-                            </button>
-                            <button className={s.iconButton} onClick={() => handleEditItem(item.source)} type="button" title="Editar">
-                              <LuPencil size={14} aria-hidden />
-                            </button>
-                            <button className={s.iconButtonDanger} onClick={() => handleRemoveItem(item.id)} type="button" title="Eliminar">
-                              <LuTrash2 size={14} aria-hidden />
-                            </button>
-                          </div>
-                        </article>
-                      );
-                    })}
-                    {visibleComponentListState.paddingBottom > 0 ? (
-                      <div
-                        aria-hidden
-                        className={s.stepTwoVirtualSpacer}
-                        style={{ height: `${visibleComponentListState.paddingBottom}px` }}
-                      />
-                    ) : null}
+                              <div className={s.stepTwoMetaLine}>{item.metaPrimary}</div>
+                              <div className={s.stepTwoMetaLine}>{item.metaSecondary}</div>
+                              {item.metaTertiary ? (
+                                <div className={s.stepTwoMetaLine}>{item.metaTertiary}</div>
+                              ) : null}
+                            </div>
+
+                            <div className={s.stepTwoCardActions}>
+                              <button className={s.iconButton} onClick={() => handleEditItem(item.source)} type="button" title="Editar">
+                                <LuPencil size={14} aria-hidden />
+                              </button>
+                              <button className={s.iconButtonDanger} onClick={() => handleRemoveItem(item.id)} type="button" title="Eliminar">
+                                <LuTrash2 size={14} aria-hidden />
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                      {visibleComponentListState.paddingBottom > 0 ? (
+                        <div
+                          aria-hidden
+                          className={s.stepTwoVirtualSpacer}
+                          style={{ height: `${visibleComponentListState.paddingBottom}px` }}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 )}
 
@@ -3062,6 +3432,25 @@ function NuevaCotizacionPageContent() {
                 </div>
               </aside>
             </div>
+
+              {isMobileViewport && draft.items.length > 0 ? (
+                <div className={s.stepTwoMobileDock}>
+                  <div className={s.stepTwoMobileDockInfo}>
+                    <span>
+                      {draft.items.length} {draft.items.length === 1 ? "componente listo" : "componentes listos"}
+                    </span>
+                    <strong>{CLP(totals.total)}</strong>
+                  </div>
+                  <button
+                    className={`${s.btnPrimary} ${s.stepTwoMobileDockButton}`}
+                    type="button"
+                    onClick={() => goToStep(3)}
+                  >
+                    Ir al resumen <LuChevronRight aria-hidden />
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
 
           {step === 3 && (

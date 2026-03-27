@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   LuBuilding2,
   LuEye,
@@ -138,19 +138,25 @@ export default function ClientesPage() {
   };
 
   const totalPages = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
-  const pageNumbers = buildPageNumbers(currentPage, totalPages);
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const visiblePage = Math.min(currentPage, totalPages);
+  const pageNumbers = buildPageNumbers(visiblePage, totalPages);
+  const pageStart = (visiblePage - 1) * PAGE_SIZE;
   const paginatedClientes = filtrados.slice(pageStart, pageStart + PAGE_SIZE);
 
-  useEffect(() => {
+  const handleBusquedaChange = (value: string) => {
+    setBusqueda(value);
     setCurrentPage(1);
-  }, [estadoFiltro, direccionFiltro, busqueda]);
+  };
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const handleEstadoFiltroChange = (value: string) => {
+    setEstadoFiltro(value);
+    setCurrentPage(1);
+  };
+
+  const handleDireccionFiltroChange = (value: string) => {
+    setDireccionFiltro(value);
+    setCurrentPage(1);
+  };
 
   const handleDelete = (id: string, nombre: string) => {
     setDeleteCandidate({ id, nombre });
@@ -227,7 +233,7 @@ export default function ClientesPage() {
             className={s.searchInput}
             placeholder="Buscar por nombre, referencia, telefono o direccion..."
             value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
+            onChange={(event) => handleBusquedaChange(event.target.value)}
           />
         </div>
 
@@ -236,7 +242,7 @@ export default function ClientesPage() {
           <select
             className={s.filterSelect}
             value={estadoFiltro}
-            onChange={(event) => setEstadoFiltro(event.target.value)}
+            onChange={(event) => handleEstadoFiltroChange(event.target.value)}
           >
             {ESTADOS.map((estado) => (
               <option key={estado}>{estado}</option>
@@ -249,7 +255,7 @@ export default function ClientesPage() {
           <select
             className={s.filterSelect}
             value={direccionFiltro}
-            onChange={(event) => setDireccionFiltro(event.target.value)}
+            onChange={(event) => handleDireccionFiltroChange(event.target.value)}
           >
             {direcciones.map((direccion) => (
               <option key={direccion}>{direccion}</option>
@@ -502,14 +508,14 @@ export default function ClientesPage() {
                   className={s.pagBtn}
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  disabled={currentPage === 1}
+                  disabled={visiblePage === 1}
                 >
                   {"<"}
                 </button>
                 {pageNumbers.map((page) => (
                   <button
                     key={page}
-                    className={`${s.pagBtn}${page === currentPage ? ` ${s.pagActive}` : ""}`}
+                    className={`${s.pagBtn}${page === visiblePage ? ` ${s.pagActive}` : ""}`}
                     type="button"
                     onClick={() => setCurrentPage(page)}
                   >
@@ -520,7 +526,7 @@ export default function ClientesPage() {
                   className={s.pagBtn}
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={visiblePage === totalPages}
                 >
                   {">"}
                 </button>

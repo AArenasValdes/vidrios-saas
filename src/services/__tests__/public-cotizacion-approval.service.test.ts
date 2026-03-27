@@ -147,4 +147,26 @@ describe("public-cotizacion-approval.service", () => {
     );
     expect(quote?.estado).toBe("aprobada");
   });
+
+  it("no debe consultar el repositorio con un token invalido", async () => {
+    const repository = createRepositoryMock();
+    const service = createPublicCotizacionApprovalService({ repository });
+
+    const quote = await service.resolveByToken("token-invalido");
+
+    expect(quote).toBeNull();
+    expect(repository.getByApprovalToken).not.toHaveBeenCalled();
+  });
+
+  it("no debe registrar una segunda respuesta si el cliente ya respondio", async () => {
+    const repository = createRepositoryMock();
+    const service = createPublicCotizacionApprovalService({ repository });
+
+    await service.accept("abc123abc123abc123abc123abc123ab");
+    const quote = await service.reject("abc123abc123abc123abc123abc123ab");
+
+    expect(repository.respond).toHaveBeenCalledTimes(1);
+    expect(quote?.estado).toBe("aprobada");
+    expect(quote?.canRespond).toBe(false);
+  });
 });
