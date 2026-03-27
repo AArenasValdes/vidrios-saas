@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LuBellRing } from "react-icons/lu";
 
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
+import { base64UrlToUint8Array } from "@/utils/web-push";
 
 import s from "./push-notifications-prompt.module.css";
 
@@ -69,19 +70,6 @@ function getPromptCopy(platform: PushPromptPlatform) {
     text:
       "Recibiras una notificacion del navegador cuando envies una cotizacion y cuando un cliente la apruebe o rechace.",
   };
-}
-
-function base64UrlToUint8Array(value: string) {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const binary = window.atob(normalized);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
 }
 
 async function persistSubscription(subscription: PushSubscription) {

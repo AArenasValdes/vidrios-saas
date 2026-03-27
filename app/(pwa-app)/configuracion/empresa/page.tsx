@@ -11,6 +11,7 @@ import {
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
+import { base64UrlToUint8Array } from "@/utils/web-push";
 import type { UpdateOrganizationProfileInput } from "@/types/organization-profile";
 import type { PricingMode } from "@/types/pricing-mode";
 
@@ -55,19 +56,6 @@ function supportsPushAlerts() {
     "Notification" in window &&
     window.isSecureContext
   );
-}
-
-function base64UrlToUint8Array(value: string) {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const binary = window.atob(normalized);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
 }
 
 async function persistSubscription(subscription: PushSubscription) {
