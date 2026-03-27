@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { LuBellRing } from "react-icons/lu";
 
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
-import { base64UrlToUint8Array } from "@/utils/web-push";
+import { subscribeToPushNotifications } from "@/utils/web-push";
 
 import s from "./push-notifications-prompt.module.css";
 
@@ -196,15 +196,7 @@ export function PushNotificationsPrompt() {
         return;
       }
 
-      const registration = await resolvePushServiceWorkerRegistration();
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: base64UrlToUint8Array(vapidPublicKey),
-        });
-      }
+      const subscription = await subscribeToPushNotifications(vapidPublicKey);
 
       await persistSubscription(subscription);
       window.localStorage.removeItem(DISMISS_KEY);

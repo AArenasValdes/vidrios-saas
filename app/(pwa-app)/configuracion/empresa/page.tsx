@@ -11,7 +11,7 @@ import {
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
-import { base64UrlToUint8Array } from "@/utils/web-push";
+import { subscribeToPushNotifications } from "@/utils/web-push";
 import type { UpdateOrganizationProfileInput } from "@/types/organization-profile";
 import type { PricingMode } from "@/types/pricing-mode";
 
@@ -283,15 +283,7 @@ export default function ConfiguracionEmpresaPage() {
         return;
       }
 
-      const registration = await resolvePushServiceWorkerRegistration();
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: base64UrlToUint8Array(vapidPublicKey),
-        });
-      }
+      const subscription = await subscribeToPushNotifications(vapidPublicKey);
 
       await persistSubscription(subscription);
       setDeviceAlertsState({
