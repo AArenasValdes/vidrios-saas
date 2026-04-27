@@ -8,12 +8,18 @@ describe("RegisterServiceWorker", () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value: originalNodeEnv,
+      configurable: true,
+    });
     jest.restoreAllMocks();
   });
 
   it("debe registrar el service worker en produccion", async () => {
-    process.env.NODE_ENV = "production";
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value: "production",
+      configurable: true,
+    });
 
     const update = jest.fn();
     const register = jest.fn().mockResolvedValue({ update });
@@ -52,7 +58,10 @@ describe("RegisterServiceWorker", () => {
   });
 
   it("debe limpiar service workers y caches fuera de produccion", async () => {
-    process.env.NODE_ENV = "test";
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value: "test",
+      configurable: true,
+    });
 
     const unregister = jest.fn().mockResolvedValue(true);
     const getRegistrations = jest.fn().mockResolvedValue([{ unregister }]);
