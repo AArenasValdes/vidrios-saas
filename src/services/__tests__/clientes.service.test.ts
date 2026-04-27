@@ -159,8 +159,13 @@ describe("clientes.service", () => {
         margenPct: 25,
         utilidadTotal: 20000,
         estadoComercial: null,
-        creadoEn: "2026-03-12T10:00:00.000Z",
-        actualizadoEn: "2026-03-13T10:00:00.000Z",
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
+        creadoEn: "2026-04-10T10:00:00.000Z",
+        actualizadoEn: "2026-04-11T10:00:00.000Z",
         eliminadoEn: null,
         items: [],
         total: 119000,
@@ -237,6 +242,11 @@ describe("clientes.service", () => {
         margenPct: 0,
         utilidadTotal: 0,
         estadoComercial: null,
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
         creadoEn: "2026-03-20T10:00:00.000Z",
         actualizadoEn: "2026-03-20T10:00:00.000Z",
         eliminadoEn: null,
@@ -303,10 +313,43 @@ describe("clientes.service", () => {
 
   it("debe marcar seguimiento si el cliente tiene cotizaciones pero ninguna aprobada", async () => {
     const clientesRepository = createClientesRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const recentlyUpdatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+      {
+        id: 101,
+        proyectoId: 10,
+        organizationId: 77,
+        numero: "COT-101",
+        estado: "enviada",
+        descuentoPct: 0,
+        flete: 0,
+        iva: 19000,
+        notas: "",
+        validoHasta: null,
+        subtotalNeto: 100000,
+        costoTotal: 80000,
+        margenPct: 25,
+        utilidadTotal: 20000,
+        estadoComercial: null,
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
+        creadoEn: recentlyUpdatedAt,
+        actualizadoEn: recentlyUpdatedAt,
+        eliminadoEn: null,
+        items: [],
+        total: 119000,
+      },
+    ]);
+
     const service = createClientesService({
       clientesRepository,
       projectsRepository: createProjectsRepositoryMock(),
-      cotizacionesRepository: createCotizacionesRepositoryMock(),
+      cotizacionesRepository,
     });
 
     const resumenes = await service.listResumenByOrganizationId(77);
@@ -422,6 +465,11 @@ describe("clientes.service", () => {
         margenPct: 25,
         utilidadTotal: 20000,
         estadoComercial: null,
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
         creadoEn: "2025-12-01T10:00:00.000Z",
         actualizadoEn: "2026-01-01T10:00:00.000Z",
         eliminadoEn: null,

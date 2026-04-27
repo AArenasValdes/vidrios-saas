@@ -3,21 +3,28 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   LuCopy,
   LuDownload,
   LuEye,
   LuFilePlus2,
   LuFilterX,
+  LuPlus,
   LuPencil,
   LuSearch,
   LuSend,
+  LuSlidersHorizontal,
   LuTrash2,
 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 
+import { CotizacionMobileCard } from "./_components/cotizacion-mobile-card";
+import { CotizacionesFilterFields } from "./_components/cotizaciones-filter-fields";
+import { CotizacionesMobileSummary } from "./_components/cotizaciones-mobile-summary";
+import type { CotizacionesMobileSummaryKey } from "./_components/cotizaciones-page.types";
 import s from "./page.module.css";
 
 const ESTADOS = [
@@ -68,6 +75,18 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 });
 
 const CLP = (value: number) => clpFormatter.format(value);
+
+function formatCompactAmount(value: number) {
+  if (value >= 1_000_000) {
+    return `$${Math.floor(value / 1_000_000)}M`;
+  }
+
+  if (value >= 1_000) {
+    return `$${Math.floor(value / 1_000)} mil`;
+  }
+
+  return CLP(value);
+}
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -154,6 +173,7 @@ function buildPageNumbers(currentPage: number, totalPages: number) {
 }
 
 export default function CotizacionesPage() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const {
     cotizaciones,
@@ -167,7 +187,7 @@ export default function CotizacionesPage() {
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
   const [clienteFiltro, setClienteFiltro] = useState("Todos");
   const [periodoFiltro, setPeriodoFiltro] = useState<(typeof PERIODOS)[number]["value"]>(
-    "this_month"
+    "all"
   );
   const [ordenFiltro, setOrdenFiltro] = useState<(typeof ORDENES)[number]["value"]>(() => {
     if (typeof window === "undefined") {
@@ -187,6 +207,8 @@ export default function CotizacionesPage() {
   });
   const [busqueda, setBusqueda] = useState("");
   const busquedaDiferida = useDeferredValue(busqueda);
+  const [atajoEstado, setAtajoEstado] = useState<CotizacionesMobileSummaryKey>("todos");
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [responseUpdatingId, setResponseUpdatingId] = useState<string | null>(null);
@@ -197,38 +219,32 @@ export default function CotizacionesPage() {
   } | null>(null);
   const isInitialSync = isRefreshing && cotizaciones.length === 0;
   const now = useMemo(() => new Date(), []);
-  const { clientes, filtradas, filtrosActivos, kpis, ordenadas, montoFiltrado } = useMemo(() => {
-    let aprobadasCount = 0;
-    let aprobadasMonto = 0;
-    let pendientesCount = 0;
-    let terminadasCount = 0;
+  const {
+    clientes,
+    filtradas,
+    filtrosActivos,
+    kpis,
+    mobileStats,
+    ordenadas,
+    montoFiltrado,
+  } = useMemo(() => {
     const clientesSet = new Set<string>();
 
     for (const item of cotizaciones) {
       clientesSet.add(item.clienteNombre);
-
-      if (item.estado === "aprobada") {
-        aprobadasCount += 1;
-        aprobadasMonto += item.total;
-      }
-
-      if (item.estado === "terminada") {
-        terminadasCount += 1;
-      }
-
-      if (
-        item.estado === "enviada" ||
-        item.estado === "borrador" ||
-        item.estado === "creada"
-      ) {
-        pendientesCount += 1;
-      }
     }
 
     const query = busquedaDiferida.trim().toLowerCase();
     const nextFiltradas = cotizaciones.filter((cotizacion) => {
+      const matchAtajoEstado =
+        atajoEstado === "todos" ||
+        (atajoEstado === "aprobadas" && cotizacion.estado === "aprobada") ||
+        (atajoEstado === "rechazadas" && cotizacion.estado === "rechazada") ||
+        (atajoEstado === "pendientes" &&
+          ["enviada", "borrador", "creada"].includes(cotizacion.estado));
       const matchEstado =
-        estadoFiltro === "Todos" || cotizacion.estado === estadoFiltro.toLowerCase();
+        matchAtajoEstado &&
+        (estadoFiltro === "Todos" || cotizacion.estado === estadoFiltro.toLowerCase());
       const matchCliente =
         clienteFiltro === "Todos" || cotizacion.clienteNombre === clienteFiltro;
       const matchPeriodo = isWithinPeriod(cotizacion.updatedAt, periodoFiltro, now);
@@ -267,6 +283,37 @@ export default function CotizacionesPage() {
       (accumulator, cotizacion) => accumulator + cotizacion.total,
       0
     );
+    const aprobadas = nextFiltradas.filter((item) => item.estado === "aprobada");
+    const rechazadas = nextFiltradas.filter((item) => item.estado === "rechazada");
+    const pendientes = nextFiltradas.filter((item) =>
+      ["enviada", "borrador", "creada"].includes(item.estado)
+    );
+    const mobileStatsBase = [
+      {
+        key: "todos",
+        label: "Total",
+        value: formatCompactAmount(nextMontoFiltrado),
+        tone: "blue",
+      },
+      {
+        key: "aprobadas",
+        label: "Aprob.",
+        value: String(aprobadas.length),
+        tone: "green",
+      },
+      {
+        key: "pendientes",
+        label: "Pend.",
+        value: String(pendientes.length),
+        tone: "amber",
+      },
+      {
+        key: "rechazadas",
+        label: "Rech.",
+        value: String(rechazadas.length),
+        tone: "red",
+      },
+    ] as const;
 
     return {
       clientes: ["Todos", ...clientesSet],
@@ -274,6 +321,13 @@ export default function CotizacionesPage() {
       ordenadas: nextOrdenadas,
       montoFiltrado: nextMontoFiltrado,
       filtrosActivos: [
+        atajoEstado === "aprobadas"
+          ? "Atajo: aprobadas"
+          : atajoEstado === "pendientes"
+          ? "Atajo: pendientes"
+          : atajoEstado === "rechazadas"
+          ? "Atajo: rechazadas"
+          : null,
         estadoFiltro !== "Todos" ? `Estado: ${estadoFiltro}` : null,
         clienteFiltro !== "Todos" ? `Cliente: ${clienteFiltro}` : null,
         periodoFiltro !== "this_month"
@@ -297,32 +351,37 @@ export default function CotizacionesPage() {
         },
         {
           label: "Aprobadas",
-          value: String(aprobadasCount),
+          value: String(aprobadas.length),
           sub: "este mes",
           tone: "green",
         },
         {
           label: "Pendientes",
-          value: String(pendientesCount),
+          value: String(pendientes.length),
           sub: "por revisar",
           tone: "amber",
         },
         {
           label: "Terminadas",
-          value: String(terminadasCount),
+          value: String(nextFiltradas.filter((item) => item.estado === "terminada").length),
           sub: "obras cerradas",
           tone: "strong",
         },
         {
           label: "Aprobado",
-          value: CLP(aprobadasMonto),
+          value: CLP(aprobadas.reduce((accumulator, item) => accumulator + item.total, 0)),
           sub: "monto total",
           tone: "blue",
           mono: true,
         },
       ],
+      mobileStats: mobileStatsBase.map((item) => ({
+        ...item,
+        active: atajoEstado === item.key,
+      })),
     };
   }, [
+    atajoEstado,
     busquedaDiferida,
     clienteFiltro,
     cotizaciones,
@@ -333,11 +392,13 @@ export default function CotizacionesPage() {
   ]);
 
   const limpiar = () => {
+    setAtajoEstado("todos");
     setEstadoFiltro("Todos");
     setClienteFiltro("Todos");
-    setPeriodoFiltro("this_month");
+    setPeriodoFiltro("all");
     setOrdenFiltro("updated_desc");
     setBusqueda("");
+    setIsFilterPanelOpen(false);
     setCurrentPage(1);
   };
 
@@ -354,7 +415,7 @@ export default function CotizacionesPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [estadoFiltro, clienteFiltro, periodoFiltro, ordenFiltro, busqueda]);
+  }, [atajoEstado, estadoFiltro, clienteFiltro, periodoFiltro, ordenFiltro, busqueda]);
 
   useEffect(() => {
     try {
@@ -370,6 +431,27 @@ export default function CotizacionesPage() {
     }
   }, [currentPage, totalPages]);
 
+  const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
+    setAtajoEstado(key);
+
+    if (key === "todos") {
+      setEstadoFiltro("Todos");
+      return;
+    }
+
+    if (key === "aprobadas") {
+      setEstadoFiltro("Aprobada");
+      return;
+    }
+
+    if (key === "rechazadas") {
+      setEstadoFiltro("Rechazada");
+      return;
+    }
+
+    setEstadoFiltro("Todos");
+  }, []);
+
   const visibleRows = useMemo(
     () =>
       paginatedCotizaciones.map((cotizacion) => {
@@ -378,6 +460,14 @@ export default function CotizacionesPage() {
           label: cotizacion.estado,
         };
         const manualResponse = getManualResponseValue(cotizacion.estado);
+        const responseMeta =
+          manualResponse === "aprobada"
+            ? { cls: "stAprobada", label: "Aprobada" }
+            : manualResponse === "rechazada"
+              ? { cls: "stRechazada", label: "Rechazada" }
+              : manualResponse === "terminada"
+                ? { cls: "stTerminada", label: "Terminada" }
+                : { cls: "stEnviada", label: "Pendiente" };
         const isUpdatingResponse = responseUpdatingId === cotizacion.id;
         const hasWhatsappPhone = Boolean(cotizacion.clienteTelefono?.trim());
         const isSending = sendingId === cotizacion.id;
@@ -391,6 +481,7 @@ export default function CotizacionesPage() {
           total: CLP(cotizacion.total),
           manualResponse,
           meta,
+          responseMeta,
           isUpdatingResponse,
           hasWhatsappPhone,
           isSending,
@@ -512,12 +603,23 @@ export default function CotizacionesPage() {
             <LuDownload aria-hidden />
             {isExporting ? "Preparando..." : "Exportar CSV"}
           </button>
-          <Link className={s.btnPrimary} href="/cotizaciones/nueva">
-            <LuFilePlus2 aria-hidden />
-            Nueva cotizacion
-          </Link>
+          <motion.div
+            whileHover={reduceMotion ? undefined : { y: -1 }}
+            whileTap={reduceMotion ? undefined : { scale: 0.99 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            <Link className={s.btnPrimary} href="/cotizaciones/nueva">
+              <LuPlus aria-hidden />
+              Nueva cotizacion
+            </Link>
+          </motion.div>
         </div>
       </div>
+
+      <CotizacionesMobileSummary
+        items={mobileStats}
+        onSelect={handleAtajoEstadoSelect}
+      />
 
       <div className={s.kpiRow}>
         {kpis.map((kpi, index) => (
@@ -538,6 +640,36 @@ export default function CotizacionesPage() {
         ))}
       </div>
 
+      <motion.div
+        className={s.mobileToolbar}
+        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <div className={s.searchWrap}>
+          <span className={s.searchIcon}>
+            <LuSearch aria-hidden />
+          </span>
+          <input
+            className={s.searchInput}
+            placeholder="Buscar cliente o codigo"
+            value={busqueda}
+            onChange={(event) => setBusqueda(event.target.value)}
+          />
+        </div>
+        <button
+          className={`${s.filterToggleBtn}${isFilterPanelOpen ? ` ${s.filterToggleBtnActive}` : ""}`}
+          type="button"
+          onClick={() => setIsFilterPanelOpen((current) => !current)}
+          aria-expanded={isFilterPanelOpen}
+          aria-pressed={isFilterPanelOpen}
+          aria-controls="cotizaciones-mobile-filter-panel"
+          aria-label="Mostrar filtros"
+        >
+          <LuSlidersHorizontal aria-hidden />
+        </button>
+      </motion.div>
+
       <div className={s.filterBar}>
         <div className={s.searchWrap}>
           <span className={s.searchIcon}>
@@ -551,74 +683,69 @@ export default function CotizacionesPage() {
           />
         </div>
 
-        <div className={s.filterGroup}>
-          <label className={s.filterLabel}>Estado</label>
-          <select
-            className={s.filterSelect}
-            value={estadoFiltro}
-            onChange={(event) => setEstadoFiltro(event.target.value)}
-          >
-            {ESTADOS.map((estado) => (
-              <option key={estado}>{estado}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className={s.filterGroup}>
-          <label className={s.filterLabel}>Periodo</label>
-          <select
-            className={s.filterSelect}
-            value={periodoFiltro}
-            onChange={(event) =>
-              setPeriodoFiltro(event.target.value as (typeof PERIODOS)[number]["value"])
-            }
-          >
-            {PERIODOS.map((periodo) => (
-              <option key={periodo.value} value={periodo.value}>
-                {periodo.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={s.filterGroup}>
-          <label className={s.filterLabel}>Cliente</label>
-          <select
-            className={s.filterSelect}
-            value={clienteFiltro}
-            onChange={(event) => setClienteFiltro(event.target.value)}
-          >
-            {clientes.map((cliente) => (
-              <option key={cliente}>{cliente}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className={s.filterGroup}>
-          <label className={s.filterLabel}>Ordenar por</label>
-          <select
-            className={s.filterSelect}
-            value={ordenFiltro}
-            onChange={(event) =>
-              setOrdenFiltro(event.target.value as (typeof ORDENES)[number]["value"])
-            }
-          >
-            {ORDENES.map((orden) => (
-              <option key={orden.value} value={orden.value}>
-                {orden.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button className={s.btnGhost} onClick={limpiar} type="button">
-          <LuFilterX aria-hidden />
-          Limpiar
-        </button>
+        <CotizacionesFilterFields
+          estados={ESTADOS}
+          clientes={clientes}
+          periodos={PERIODOS}
+          ordenes={ORDENES}
+          estadoFiltro={estadoFiltro}
+          clienteFiltro={clienteFiltro}
+          periodoFiltro={periodoFiltro}
+          ordenFiltro={ordenFiltro}
+          onEstadoChange={(value) => {
+            setAtajoEstado("todos");
+            setEstadoFiltro(value);
+          }}
+          onClienteChange={setClienteFiltro}
+          onPeriodoChange={(value) =>
+            setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"])
+          }
+          onOrdenChange={(value) =>
+            setOrdenFiltro(value as (typeof ORDENES)[number]["value"])
+          }
+          onLimpiar={limpiar}
+        />
       </div>
 
+      <AnimatePresence initial={false}>
+        {isFilterPanelOpen ? (
+          <motion.div
+            id="cotizaciones-mobile-filter-panel"
+            data-testid="cotizaciones-mobile-filter-panel"
+            className={s.mobileFilterPanel}
+            initial={reduceMotion ? false : { opacity: 0, height: 0, y: -6 }}
+            animate={reduceMotion ? undefined : { opacity: 1, height: "auto", y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, height: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            <CotizacionesFilterFields
+              estados={ESTADOS}
+              clientes={clientes}
+              periodos={PERIODOS}
+              ordenes={ORDENES}
+              estadoFiltro={estadoFiltro}
+              clienteFiltro={clienteFiltro}
+              periodoFiltro={periodoFiltro}
+              ordenFiltro={ordenFiltro}
+              onEstadoChange={(value) => {
+                setAtajoEstado("todos");
+                setEstadoFiltro(value);
+              }}
+              onClienteChange={setClienteFiltro}
+              onPeriodoChange={(value) =>
+                setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"])
+              }
+              onOrdenChange={(value) =>
+                setOrdenFiltro(value as (typeof ORDENES)[number]["value"])
+              }
+              onLimpiar={limpiar}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
       <div className={s.resultsBar}>
-        <div>
+        <div className={s.resultsSummary}>
           <p className={s.resultsLabel}>Resultados</p>
           <div className={s.resultsMain}>
             <strong>{filtradas.length}</strong>
@@ -637,8 +764,13 @@ export default function CotizacionesPage() {
               ))}
             </div>
           ) : (
-            <span className={s.resultsHint}>Sin filtros activos</span>
+              <span className={s.resultsHint}>Sin filtros activos</span>
           )}
+        </div>
+        <div className={s.resultsCompactMobile}>
+          <strong>{filtradas.length} cotizaciones</strong>
+          <span>&middot;</span>
+          <span>Total {CLP(montoFiltrado)}</span>
         </div>
       </div>
 
@@ -808,87 +940,9 @@ export default function CotizacionesPage() {
           </div>
 
           <div className={s.cardList}>
-            {visibleRows.map((row) => {
-              return (
-                <div key={row.id} className={row.cardClassName}>
-                  <div className={s.cotCardTop}>
-                    <span className={s.cotCardNum}>{row.codigo}</span>
-                    <span className={`${s.badge} ${s[row.meta.cls]}`}>{row.meta.label}</span>
-                  </div>
-                  <div className={s.cotCardNombre}>{row.clienteNombre}</div>
-                  <div className={s.cotCardObra}>{row.obra}</div>
-                  <div className={s.responseCardWrap}>
-                    <span className={s.responseCardLabel}>Respuesta</span>
-                    <select
-                      className={`${s.responseSelect}${row.isUpdatingResponse ? ` ${s.responseSelectUpdating}` : ""}`}
-                      value={row.manualResponse}
-                      onChange={(event) =>
-                        void handleManualResponseChange(
-                          row.id,
-                          event.target.value as ManualResponseStatus
-                        )
-                      }
-                      disabled={row.isUpdatingResponse || isSaving}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="aprobada">Aprobada</option>
-                      <option value="rechazada">Rechazada</option>
-                      <option value="terminada">Proyecto terminado</option>
-                    </select>
-                  </div>
-                  <div className={s.cotCardBottom}>
-                    <span className={s.cotCardFecha}>{row.fecha}</span>
-                    <span className={s.cotCardTotal}>{row.total}</span>
-                  </div>
-                  <div className={s.cotCardAcciones}>
-                    <Link className={s.accionBtnMobile} href={row.detailHref}>
-                      <LuEye aria-hidden />
-                      Ver detalle
-                    </Link>
-                    <Link
-                      className={s.accionBtnMobile}
-                      href={row.editHref}
-                    >
-                      <LuPencil aria-hidden />
-                      Editar
-                    </Link>
-                    {row.hasWhatsappPhone ? (
-                      <button
-                        className={s.accionBtnMobile}
-                        onClick={() => void handleSendQuote(row.id)}
-                        type="button"
-                        disabled={row.isSending}
-                      >
-                        <LuSend aria-hidden />
-                        {row.isSending ? "Preparando envio..." : "Enviar por WhatsApp"}
-                      </button>
-                    ) : (
-                      <button className={`${s.accionBtnMobile} ${s.accionBtnMobileDisabled}`} type="button" disabled>
-                        <LuSend aria-hidden />
-                        Sin telefono para enviar
-                      </button>
-                    )}
-                    <button
-                      className={s.accionBtnMobile}
-                      onClick={() => handleDuplicate(row.id)}
-                      type="button"
-                    >
-                      <LuCopy aria-hidden />
-                      Duplicar
-                    </button>
-                    <button
-                      className={`${s.accionBtnMobile} ${s.accionBtnMobileDanger}`}
-                      onClick={() => void handleDelete(row.id, row.codigo)}
-                      type="button"
-                      disabled={row.deleteDisabled}
-                    >
-                      <LuTrash2 aria-hidden />
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {visibleRows.map((row, index) => (
+              <CotizacionMobileCard key={row.id} row={row} index={index} />
+            ))}
           </div>
 
           {totalPages > 1 ? (

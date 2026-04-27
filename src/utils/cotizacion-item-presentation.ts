@@ -15,13 +15,22 @@ const DEFAULT_COLOR_BY_MATERIAL: Record<ComponentMaterial, string> = {
   PVC: "#f0eeeb",
 };
 
+const LEGACY_COLOR_HEX = "#b87333";
+const WOOD_COLOR = "#8b5e3c";
+
 function normalizeMaterial(value: string | null | undefined): ComponentMaterial {
   return value === "PVC" ? "PVC" : "Aluminio";
 }
 
 function normalizeColor(colorHex: string | null | undefined, material: ComponentMaterial) {
   if (typeof colorHex === "string" && /^#[0-9a-fA-F]{3,8}$/.test(colorHex.trim())) {
-    return colorHex.trim();
+    const normalized = colorHex.trim().toLowerCase();
+
+    if (normalized === LEGACY_COLOR_HEX) {
+      return WOOD_COLOR;
+    }
+
+    return normalized;
   }
 
   return DEFAULT_COLOR_BY_MATERIAL[material];

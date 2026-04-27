@@ -39,6 +39,20 @@ describe("cotizacion-item-presentation", () => {
     });
   });
 
+  it("debe conservar referencias compuestas de sistema y configuracion", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      referencia: "Fijo - Premium",
+      pricingMode: "margen",
+      raw: "",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded).referencia).toBe(
+      "Fijo - Premium"
+    );
+  });
+
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {
     expect(decodeCotizacionItemPresentationMeta("[m:PVC]")).toEqual({
       colorHex: "#f0eeeb",
@@ -46,6 +60,18 @@ describe("cotizacion-item-presentation", () => {
       referencia: "",
       pricingMode: "margen",
       raw: "",
+    });
+  });
+
+  it("debe normalizar un color legado a madera", () => {
+    expect(
+      decodeCotizacionItemPresentationMeta("[c:#b87333][m:Aluminio] Ventana corredera")
+    ).toEqual({
+      colorHex: "#8b5e3c",
+      material: "Aluminio",
+      referencia: "",
+      pricingMode: "margen",
+      raw: "Ventana corredera",
     });
   });
 });

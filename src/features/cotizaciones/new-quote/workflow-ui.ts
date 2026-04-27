@@ -1,0 +1,863 @@
+import {
+  getComponentSuggestion,
+  type PreferredProvider,
+} from "@/features/cotizaciones/services/component-suggestions.service";
+import {
+  calculateComponentItem,
+  createCotizacionWorkflowDraft,
+} from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import type {
+  CotizacionWorkflowDraft,
+  CotizacionWorkflowItem,
+  CotizacionWorkflowRecord,
+} from "@/features/cotizaciones/types/cotizacion-workflow";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
+import {
+  normalizePricingMode,
+  type PricingMode,
+} from "@/features/cotizaciones/types/pricing-mode";
+import { COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS } from "@/features/cotizaciones/services/component-catalog.service";
+
+export type StepKey = 1 | 2 | 3;
+export type { PreferredProvider };
+
+export type ComponentFormState = {
+  codigo: string;
+  tipo: string;
+  material: "Aluminio" | "PVC";
+  referencia: string;
+  pricingMode: PricingMode;
+  vidrio: string;
+  nombre: string;
+  descripcion: string;
+  ancho: string;
+  alto: string;
+  cantidad: string;
+  costoProveedorUnitario: string;
+  margenPct: string;
+  observaciones: string;
+  colorHex: string;
+  loteCantidad: string;
+};
+
+export type FieldErrors = Partial<
+  Record<
+    keyof ComponentFormState | "clienteNombre" | "obra" | "items" | "step1" | "step2",
+    string
+  >
+>;
+
+export type PersistedWorkflowState = {
+  version: 2;
+  step: StepKey;
+  draft: CotizacionWorkflowDraft;
+  componentForm: ComponentFormState;
+  editingItemId: string | null;
+  selectedClientId: string;
+  clientQuery: string;
+  showStep1MoreData: boolean;
+};
+
+export type QuickEditDraftState = {
+  ancho: string;
+  alto: string;
+  costoProveedorUnitario: string;
+};
+
+export type QuickEditFieldKey = keyof QuickEditDraftState;
+
+export type QuickEditBatchTarget = {
+  id: string;
+  code: string;
+  title: string;
+};
+
+export type Step1FieldKey =
+  | "clientSearch"
+  | "clienteNombre"
+  | "clienteTelefono"
+  | "obra"
+  | "direccion"
+  | "validez"
+  | "observaciones";
+
+export type ComponentListCardViewModel = {
+  id: string;
+  source: CotizacionWorkflowItem;
+  colorHex: string;
+  title: string;
+  price: string;
+  priceLabel: string;
+  compactMeta: string;
+  metaPrimary: string;
+  metaSecondary: string;
+  metaTertiary: string;
+  quickEditPriceLabel: string;
+  svgMarkup: string;
+  isComplete: boolean;
+};
+
+export const COMPONENT_TYPE_GROUPS = CATALOG_COMPONENT_TYPE_GROUPS;
+
+export const VALIDEZ_OPTIONS = ["7 dias", "15 dias", "30 dias"];
+export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
+export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
+
+export const COLOR_OPTIONS = [
+  { label: "Aluminio natural", hex: "#a8a8a8" },
+  { label: "Blanco", hex: "#f0eeeb" },
+  { label: "Blanco hueso", hex: "#dfd5c4" },
+  { label: "Negro", hex: "#2a2a2a" },
+  { label: "Negro mate", hex: "#444444" },
+  { label: "Madera", hex: "#8b5e3c" },
+  { label: "Titanio", hex: "#7d8791" },
+];
+
+const LEGACY_COLOR_HEX = "#b87333";
+const WOOD_COLOR = "#8b5e3c";
+
+export const GLASS_OPTIONS = [
+  {
+    grupo: "Incoloro monolítico",
+    items: ["3mm", "4mm", "5mm", "6mm", "8mm", "10mm", "12mm"],
+    prefix: "Incoloro monolítico",
+  },
+  {
+    grupo: "DVH (doble vidriado)",
+    items: ["4+9+4", "4+12+4", "6+12+4", "3+3+9+4", "3+3 / 12 / 3+3."],
+    prefix: "DVH",
+  },
+  {
+    grupo: "Laminado",
+    items: ["3+3", "4+4", "5+5", "6+6"],
+    prefix: "Laminado",
+  },
+  {
+    grupo: "Templado",
+    items: ["6mm", "8mm", "10mm", "12mm"],
+    prefix: "Templado",
+  },
+  {
+    grupo: "Reflectivo",
+    items: ["Cafe 6mm", "Gris 6mm", "Azul 6mm"],
+    prefix: "Reflectivo",
+  },
+  {
+    grupo: "Especial",
+    items: [
+      "Catedral Semilla",
+      "Catedral Stipolite",
+      "Esmerilado / Satinado",
+      "Acanalado (Fluted)",
+      "Pacífico",
+    ],
+    prefix: "",
+  },
+] as const;
+
+export const STATUS_COPY = {
+  borrador: {
+    title: "Borrador guardado",
+    description: "Puedes seguir editando sin perder el avance.",
+  },
+  creada: {
+    title: "Presupuesto listo",
+    description: "Listo para PDF y envio por WhatsApp.",
+  },
+  actualizada: {
+    title: "Cambios guardados",
+    description: "El presupuesto fue actualizado correctamente.",
+  },
+} as const;
+
+export const FIELD_LIMITS = {
+  clienteNombre: 80,
+  obra: 80,
+  direccion: 120,
+  observaciones: 280,
+} as const;
+
+export const STEP_TWO_SCROLL_THRESHOLD = 4;
+export const STEP_TWO_VIRTUALIZATION_THRESHOLD = 14;
+export const STEP_TWO_VIRTUALIZATION_OVERSCAN = 4;
+export const STEP_TWO_DEFAULT_ROW_HEIGHT = 110;
+export const STEP_TWO_DEFAULT_GAP = 13;
+export const MAX_COMPONENTS_PER_QUOTE = 200;
+
+export const STEP_LABELS = [
+  { id: 1 as StepKey, title: "Cliente", sub: "Obra y contacto" },
+  { id: 2 as StepKey, title: "Componentes", sub: "Carga y precios" },
+  { id: 3 as StepKey, title: "Resumen", sub: "Guardar y enviar" },
+];
+
+export function isConnectivityError(error: unknown) {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return true;
+  }
+
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("failed to fetch") ||
+    message.includes("network") ||
+    message.includes("internet_disconnected") ||
+    message.includes("fetch")
+  );
+}
+
+export function buildWorkflowStorageKey(editId: string | null, duplicateId: string | null) {
+  if (editId) return `cotizacion-workflow:edit:${editId}`;
+  if (duplicateId) return `cotizacion-workflow:duplicate:${duplicateId}`;
+  return "cotizacion-workflow:new";
+}
+
+export function loadPersistedWorkflowState(
+  storageKey: string,
+  defaults: {
+    provider?: PreferredProvider;
+    pricingMode?: PricingMode;
+  } = {}
+): PersistedWorkflowState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as {
+      version?: number;
+      step?: StepKey;
+      draft?: CotizacionWorkflowDraft;
+      componentForm?: Partial<ComponentFormState>;
+      editingItemId?: string | null;
+      selectedClientId?: string;
+      clientQuery?: string;
+      showStep1MoreData?: boolean;
+    };
+
+    if (parsed.version !== 1 && parsed.version !== 2) {
+      return null;
+    }
+
+    const emptyDraft = createCotizacionWorkflowDraft();
+    const persistedDraft = parsed.draft ?? emptyDraft;
+
+    return {
+      ...parsed,
+      step: parsed.step ?? 1,
+      editingItemId: parsed.editingItemId ?? null,
+      selectedClientId: parsed.selectedClientId ?? "",
+      clientQuery: parsed.clientQuery ?? "",
+      showStep1MoreData: parsed.showStep1MoreData ?? false,
+      draft: {
+        ...emptyDraft,
+        ...persistedDraft,
+        descuentoPct: Number.isFinite(persistedDraft.descuentoPct)
+          ? persistedDraft.descuentoPct
+          : emptyDraft.descuentoPct,
+        flete: Number.isFinite(persistedDraft.flete) ? persistedDraft.flete : emptyDraft.flete,
+        items: persistedDraft.items ?? emptyDraft.items,
+      },
+      componentForm: {
+        ...createEmptyComponentForm(
+          persistedDraft.items,
+          defaults.provider,
+          defaults.pricingMode
+        ),
+        ...parsed.componentForm,
+        loteCantidad: parsed.componentForm?.loteCantidad ?? "1",
+      },
+    } as PersistedWorkflowState;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPersistedWorkflowState(storageKey: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(storageKey);
+}
+
+export function buildWorkflowDirtySignature(input: {
+  draft: CotizacionWorkflowDraft;
+  componentForm: ComponentFormState;
+  editingItemId: string | null;
+  selectedClientId: string;
+  clientQuery: string;
+  showStep1MoreData: boolean;
+}) {
+  return JSON.stringify(input);
+}
+
+export const CLP = (value: number) =>
+  new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+function getComponentPrefix(tipo: string) {
+  const n = tipo.trim().toLowerCase();
+  if (n.startsWith("vent")) return "V";
+  if (n.startsWith("puert")) return "P";
+  if (n.includes("fijo")) return "F";
+  if (n.startsWith("cier")) return "C";
+  if (n.startsWith("show")) return "S";
+  if (n.startsWith("bar")) return "B";
+  if (n.startsWith("esp")) return "E";
+  if (n.startsWith("tap")) return "M";
+  return "I";
+}
+
+export function buildNextComponentCode(
+  items: CotizacionWorkflowItem[],
+  tipo = "Ventana",
+  excludeItemId?: string | null
+) {
+  const prefix = getComponentPrefix(tipo);
+  const count =
+    items.filter((i) => i.id !== excludeItemId && i.codigo.startsWith(prefix)).length + 1;
+  return `${prefix}${count}`;
+}
+
+function normalizeLegacyAluminumColorHex(value: string) {
+  return value.toLowerCase() === LEGACY_COLOR_HEX ? WOOD_COLOR : value;
+}
+
+export function buildUpcomingComponentCodes(
+  items: CotizacionWorkflowItem[],
+  tipo: string,
+  quantity: number
+) {
+  const safeQuantity = Math.min(MAX_COMPONENTS_PER_QUOTE, Math.max(0, quantity));
+  if (safeQuantity === 0) {
+    return [];
+  }
+  const prefix = getComponentPrefix(tipo);
+  const existingCount = items.filter((item) => item.codigo.startsWith(prefix)).length;
+
+  return Array.from({ length: safeQuantity }, (_, index) => `${prefix}${existingCount + index + 1}`);
+}
+
+export function getComponentTypeLabelForBatch(tipo: string, quantity: number) {
+  const normalized = tipo.trim().toLowerCase() || "componentes";
+  if (quantity === 1) {
+    return normalized;
+  }
+
+  if (normalized.endsWith("z")) {
+    return `${normalized.slice(0, -1)}ces`;
+  }
+
+  if (normalized.endsWith("s")) {
+    return normalized;
+  }
+
+  return `${normalized}s`;
+}
+
+export function getRemainingComponentSlots(itemsCount: number) {
+  return Math.max(0, MAX_COMPONENTS_PER_QUOTE - itemsCount);
+}
+
+export function buildAutoComponentName(form: Pick<ComponentFormState, "codigo" | "tipo">) {
+  const codigo = form.codigo.trim();
+  const tipo = form.tipo.trim() || "Componente";
+
+  return codigo ? `${tipo} ${codigo}` : tipo;
+}
+
+function normalizeComparableComponentText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isLegacyAutoComponentLabel(tipo: string, descripcion: string) {
+  const normalizedDescription = normalizeComparableComponentText(descripcion);
+  const normalizedTipo = normalizeComparableComponentText(tipo);
+
+  if (!normalizedDescription || !normalizedTipo) {
+    return false;
+  }
+
+  const descriptionParts = normalizedDescription.split(" ");
+  const tipoParts = normalizedTipo.split(" ");
+
+  if (descriptionParts.length !== tipoParts.length + 1) {
+    return false;
+  }
+
+  const trailingCode = descriptionParts.at(-1) ?? "";
+
+  if (!/^[a-z]{1,3}\d{1,4}$/.test(trailingCode)) {
+    return false;
+  }
+
+  return descriptionParts.slice(0, -1).join(" ") === normalizedTipo;
+}
+
+export function normalizeCurrencyInput(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  return digits.replace(/^0+(?=\d)/, "");
+}
+
+export function formatCurrencyInput(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.NumberFormat("es-CL", {
+    maximumFractionDigits: 0,
+  }).format(Number(value));
+}
+
+export function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraftState {
+  return {
+    ancho: item.ancho ? String(item.ancho) : "",
+    alto: item.alto ? String(item.alto) : "",
+    costoProveedorUnitario:
+      item.costoProveedorUnitario > 0 ? String(Math.round(item.costoProveedorUnitario)) : "",
+  };
+}
+
+export function isQuickEditDraftComplete(draft: QuickEditDraftState) {
+  const ancho = Number(draft.ancho);
+  const alto = Number(draft.alto);
+  const costo = Number(draft.costoProveedorUnitario);
+
+  return ancho > 0 && alto > 0 && costo > 0;
+}
+
+export function isWorkflowItemComplete(item: CotizacionWorkflowItem) {
+  return (
+    (item.ancho ?? 0) > 0 &&
+    (item.alto ?? 0) > 0 &&
+    Number(item.costoProveedorUnitario ?? 0) > 0
+  );
+}
+
+export function isWorkflowItemEffectivelyComplete(
+  item: CotizacionWorkflowItem,
+  draftState?: QuickEditDraftState
+) {
+  return draftState ? isQuickEditDraftComplete(draftState) : isWorkflowItemComplete(item);
+}
+
+export function applyQuickEditDraftStatesToItems(
+  items: CotizacionWorkflowItem[],
+  quickEditDrafts: Record<string, QuickEditDraftState>
+) {
+  return items.map((item) => {
+    const draftState = quickEditDrafts[item.id];
+
+    if (!draftState) {
+      return item;
+    }
+
+    try {
+      const nextForm = {
+        ...mapItemToForm(item),
+        ancho: draftState.ancho,
+        alto: draftState.alto,
+        costoProveedorUnitario: draftState.costoProveedorUnitario,
+      } as ComponentFormState;
+
+      return buildItemFromForm(nextForm, items, item.id);
+    } catch {
+      return item;
+    }
+  });
+}
+
+export function normalizeSearchValue(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function formatChilePhoneInput(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return "+56 9 ";
+  }
+
+  let localDigits = digits;
+
+  if (localDigits.startsWith("56")) {
+    localDigits = localDigits.slice(2);
+  }
+
+  if (localDigits.startsWith("9")) {
+    localDigits = localDigits.slice(1);
+  }
+
+  localDigits = localDigits.slice(0, 8);
+
+  const firstBlock = localDigits.slice(0, 4);
+  const secondBlock = localDigits.slice(4, 8);
+
+  if (!firstBlock) {
+    return "+56 9 ";
+  }
+
+  if (!secondBlock) {
+    return `+56 9 ${firstBlock}`;
+  }
+
+  return `+56 9 ${firstBlock} ${secondBlock}`;
+}
+
+export function formatDraftPhoneValue(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "+56 9 ";
+  }
+
+  if (trimmed.startsWith("+") && !trimmed.startsWith("+56")) {
+    return value;
+  }
+
+  return formatChilePhoneInput(value);
+}
+
+export function buildClientInitials(nombre: string) {
+  const words = nombre
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return "CL";
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function buildGlassValue(prefix: string, item: string) {
+  return prefix ? `${prefix} ${item}` : item;
+}
+
+function pickSuggestedString(value: string | null | undefined, fallback: string) {
+  return typeof value === "string" && value.trim() !== "" ? value : fallback;
+}
+
+function resolveSuggestedMarginValue(
+  pricingMode: PricingMode,
+  suggestionMarginPct: number,
+  currentValue: string | null | undefined,
+  defaultMargin?: number
+) {
+  if (pricingMode === "precio_directo") {
+    return "0";
+  }
+
+  const baseValue = defaultMargin ?? suggestionMarginPct;
+
+  return pickSuggestedString(currentValue, String(baseValue));
+}
+
+export function filterGlassOptions(query: string) {
+  const normalizedQuery = normalizeSearchValue(query);
+
+  return GLASS_OPTIONS.map((group) => {
+    const items = group.items.filter((item) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const fullValue = buildGlassValue(group.prefix, item);
+      const haystack = [group.grupo, item, fullValue].map(normalizeSearchValue).join(" ");
+
+      return haystack.includes(normalizedQuery);
+    });
+
+    return {
+      ...group,
+      items,
+    };
+  }).filter((group) => group.items.length > 0);
+}
+
+export function buildSuggestedComponentForm(
+  input: {
+    items?: CotizacionWorkflowItem[];
+    tipo?: string;
+    provider?: PreferredProvider;
+    pricingMode?: PricingMode;
+    defaultMargin?: number;
+    current?: Partial<ComponentFormState>;
+  } = {}
+): ComponentFormState {
+  const items = input.items ?? [];
+  const tipo = input.tipo ?? input.current?.tipo ?? "Ventana";
+  const pricingMode = normalizePricingMode(
+    input.current?.pricingMode ?? input.pricingMode
+  );
+  const suggestion = getComponentSuggestion({
+    tipo,
+    provider: input.provider,
+  });
+  const current = input.current ?? {};
+
+  return {
+    codigo: pickSuggestedString(current.codigo, buildNextComponentCode(items, tipo)),
+    tipo,
+    material:
+      current.material === "PVC" || current.material === "Aluminio"
+        ? current.material
+        : suggestion.material,
+    referencia: pickSuggestedString(current.referencia, suggestion.referencia),
+    pricingMode,
+    vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
+    nombre: current.nombre ?? "",
+    descripcion: pickSuggestedString(current.descripcion, suggestion.descripcion),
+    ancho: current.ancho ?? "",
+    alto: current.alto ?? "",
+    cantidad: current.cantidad ?? "1",
+    costoProveedorUnitario: current.costoProveedorUnitario ?? "",
+    margenPct: resolveSuggestedMarginValue(
+      pricingMode,
+      suggestion.margenPct,
+      current.margenPct,
+      input.defaultMargin
+    ),
+    observaciones: current.observaciones ?? "",
+    colorHex:
+      typeof current.colorHex === "string" && /^#[0-9a-fA-F]{3,8}$/.test(current.colorHex)
+        ? normalizeLegacyAluminumColorHex(current.colorHex)
+        : suggestion.colorHex,
+    loteCantidad: current.loteCantidad ?? "1",
+  };
+}
+
+export function createEmptyComponentForm(
+  items: CotizacionWorkflowItem[] = [],
+  provider: PreferredProvider = "",
+  pricingMode: PricingMode = "margen",
+  defaultMargin?: number
+): ComponentFormState {
+  return buildSuggestedComponentForm({
+    items,
+    tipo: "Ventana",
+    provider,
+    pricingMode,
+    defaultMargin,
+  });
+}
+
+export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWorkflowDraft {
+  return {
+    clienteNombre: record.clienteNombre,
+    clienteTelefono: record.clienteTelefono,
+    obra: record.obra,
+    direccion: record.direccion,
+    validez: record.validez,
+    descuentoPct: record.descuentoPct,
+    flete: record.flete,
+    observaciones: record.observaciones,
+    items: record.items,
+  };
+}
+
+export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
+  const { colorHex, referencia, material, pricingMode, raw } =
+    decodeCotizacionItemPresentationMeta(item.observaciones);
+
+  return {
+    codigo: item.codigo,
+    tipo: item.tipo,
+    material,
+    referencia,
+    pricingMode,
+    vidrio: item.vidrio ?? "",
+    nombre: item.nombre,
+    descripcion: item.descripcion,
+    ancho: item.ancho ? String(item.ancho) : "",
+    alto: item.alto ? String(item.alto) : "",
+    cantidad: String(item.cantidad),
+    costoProveedorUnitario: String(item.costoProveedorUnitario),
+    margenPct: String(item.margenPct),
+    observaciones: raw,
+    colorHex: normalizeLegacyAluminumColorHex(colorHex),
+    loteCantidad: "1",
+  };
+}
+
+export function buildItemFromForm(
+  form: ComponentFormState,
+  items: CotizacionWorkflowItem[],
+  editingItemId: string | null
+) {
+  const autoName = form.nombre.trim() || buildAutoComponentName(form);
+  const rawDescription = form.descripcion.trim();
+  const normalizedAutoName = normalizeComparableComponentText(autoName);
+  const descripcion =
+    rawDescription &&
+    normalizeComparableComponentText(rawDescription) !== normalizedAutoName &&
+    !isLegacyAutoComponentLabel(form.tipo, rawDescription)
+      ? rawDescription
+      : "";
+  const pricingMode = normalizePricingMode(form.pricingMode);
+  const costoProveedorUnitario = Number(form.costoProveedorUnitario || 0);
+  const margenPct =
+    pricingMode === "precio_directo" ? 0 : Number(form.margenPct || 0);
+
+  return calculateComponentItem({
+    id: editingItemId ?? undefined,
+    codigo: form.codigo.trim() || buildNextComponentCode(items, form.tipo),
+    tipo: form.tipo,
+    vidrio: form.vidrio,
+    nombre: autoName,
+    descripcion,
+    ancho: form.ancho ? Number(form.ancho) : null,
+    alto: form.alto ? Number(form.alto) : null,
+    cantidad: Number(form.cantidad || 1),
+    unidad: "unidad",
+    costoProveedorUnitario,
+    margenPct,
+    observaciones: encodeCotizacionItemPresentationMeta({
+      colorHex: form.colorHex,
+      referencia: form.referencia,
+      material: form.material,
+      pricingMode,
+      raw: form.observaciones,
+    }),
+  });
+}
+
+export function applyQuotePricingToItems(
+  items: CotizacionWorkflowItem[],
+  pricingMode: PricingMode,
+  marginValue: string
+) {
+  const normalizedMargin = pricingMode === "precio_directo" ? 0 : Number(marginValue || 0);
+
+  return items.map((item) => {
+    const { colorHex, referencia, material, raw } = decodeCotizacionItemPresentationMeta(
+      item.observaciones
+    );
+
+    return calculateComponentItem({
+      id: item.id,
+      codigo: item.codigo,
+      tipo: item.tipo,
+      vidrio: item.vidrio,
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      ancho: item.ancho,
+      alto: item.alto,
+      cantidad: item.cantidad,
+      unidad: item.unidad,
+      costoProveedorUnitario: item.costoProveedorUnitario,
+      margenPct: normalizedMargin,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex,
+        referencia,
+        material,
+        pricingMode,
+        raw,
+      }),
+    });
+  });
+}
+
+export function validateComponentForm(
+  form: ComponentFormState,
+  items: CotizacionWorkflowItem[],
+  editingItemId: string | null
+): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!form.codigo.trim()) errors.codigo = "El codigo es obligatorio";
+  else if (
+    items.some(
+      (i) => i.codigo.toLowerCase() === form.codigo.trim().toLowerCase() && i.id !== editingItemId
+    )
+  ) {
+    errors.codigo = "Ese codigo ya existe en esta cotizacion";
+  }
+  if (!form.tipo.trim()) errors.tipo = "Selecciona un tipo";
+  if (!form.material.trim()) errors.material = "Selecciona material";
+  const qty = Number(form.cantidad);
+  if (!form.cantidad || Number.isNaN(qty) || qty < 1) errors.cantidad = "Minimo 1";
+  const hasCostValue = form.costoProveedorUnitario.trim() !== "";
+  const costo = Number(form.costoProveedorUnitario);
+  if (hasCostValue && (Number.isNaN(costo) || costo < 0)) {
+    errors.costoProveedorUnitario =
+      form.pricingMode === "precio_directo"
+        ? "Ingresa el valor unitario"
+        : "Ingresa el costo del proveedor";
+  }
+  if (form.pricingMode === "margen") {
+    const margen = Number(form.margenPct);
+    if (form.margenPct === "" || Number.isNaN(margen) || margen < 0) {
+      errors.margenPct = "El margen de ganancia no puede ser negativo";
+    }
+  }
+  const lote = Number(form.loteCantidad);
+  if (!editingItemId && (!form.loteCantidad || Number.isNaN(lote) || lote < 1)) {
+    errors.step2 = "Indica cuántas piezas quieres agregar ahora.";
+  }
+  if (!editingItemId && items.length + Math.max(1, lote || 1) > MAX_COMPONENTS_PER_QUOTE) {
+    errors.step2 = `Puedes cargar hasta ${MAX_COMPONENTS_PER_QUOTE} piezas por cotización.`;
+  }
+  return errors;
+}
+
+export function validateStep1(draft: CotizacionWorkflowDraft): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!draft.clienteNombre.trim()) errors.clienteNombre = "El nombre del cliente es obligatorio";
+  if (!draft.obra.trim()) errors.obra = "La obra o proyecto es obligatoria";
+  if (Object.keys(errors).length > 0) errors.step1 = "Completa cliente y obra para continuar.";
+  return errors;
+}
+
+export function scrollPageToTop() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+export function scrollToSection(sectionId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}

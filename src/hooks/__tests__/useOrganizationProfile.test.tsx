@@ -16,11 +16,11 @@ const getByOrganizationId = jest.fn<Promise<OrganizationProfile>, [string | numb
 const updateByOrganizationId = jest.fn();
 const uploadLogo = jest.fn();
 
-jest.mock("@/hooks/useAuth", () => ({
+jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
-jest.mock("@/services/organization-profile.service", () => ({
+jest.mock("@/features/organization-profile/services/organization-profile.service", () => ({
   organizationProfileService: {
     getByOrganizationId: (organizationId: string | number) =>
       getByOrganizationId(organizationId),
@@ -44,9 +44,10 @@ function createProfile(
     formaPago: "",
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
-    creadoEn: "2026-03-20T00:00:00.000Z",
-    actualizadoEn: "2026-03-20T00:00:00.000Z",
-  };
+    margenDefecto: 100,
+    creadoEn: "2026-03-27T10:00:00Z",
+    actualizadoEn: "2026-03-27T10:00:00Z",
+    };
 }
 
 function ProbeOrganizationProfile() {

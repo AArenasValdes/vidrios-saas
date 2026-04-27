@@ -1,0 +1,257 @@
+"use client";
+
+import { useState } from "react";
+import { LuChevronDown, LuTruck } from "react-icons/lu";
+
+import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+
+import s from "../page.module.css";
+
+type PasoTresDetalleFinalProps = {
+  draft: CotizacionWorkflowDraft;
+  subtotal: string;
+  iva: string;
+  flete: string;
+  total: string;
+  savedRecord: CotizacionWorkflowRecord | null;
+  isMobileViewport: boolean;
+  onDraftFleteChange: (value: string) => void;
+  formatCurrencyInput: (value: string) => string;
+};
+
+export function PasoTresDetalleFinal({
+  draft,
+  subtotal,
+  iva,
+  flete,
+  total,
+  savedRecord,
+  isMobileViewport,
+  onDraftFleteChange,
+  formatCurrencyInput,
+}: PasoTresDetalleFinalProps) {
+  const [showFreightEditor, setShowFreightEditor] = useState(false);
+  const [showAllItems, setShowAllItems] = useState(false);
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const buildItemBadge = (code: string, index: number) => {
+    const normalized = code.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    if (normalized.length >= 2) return normalized.slice(0, 2);
+    return `I${index + 1}`;
+  };
+
+  const buildItemMeta = (item: CotizacionWorkflowDraft["items"][number]) => {
+    const width = item.ancho ? String(item.ancho).replace(/\.0+$/, "") : "-";
+    const height = item.alto ? String(item.alto).replace(/\.0+$/, "") : "-";
+    const unit = item.unidad?.trim() || "u";
+    return `${width}×${height} · ${item.cantidad} ${unit}`;
+  };
+
+  const validezMatch = draft.validez.match(/^(\d+)\s*(.*)$/i);
+  const validezValue = validezMatch?.[1] ?? draft.validez;
+  const validezSuffix = validezMatch?.[2] ? validezMatch[2].trim() : "";
+  const visibleItems = showAllItems ? draft.items : draft.items.slice(0, 3);
+  const hasHiddenItems = draft.items.length > 3;
+
+  if (isMobileViewport) {
+    return (
+      <div className={s.finalStageMain}>
+        <section className={s.stepThreeSummaryCard}>
+          <div className={s.stepThreeSummaryRow}>
+            <span>CLIENTE</span>
+            <strong>{draft.clienteNombre || "-"}</strong>
+          </div>
+          <div className={s.stepThreeSummaryRow}>
+            <span>PROYECTO</span>
+            <strong>{draft.obra || "-"}</strong>
+          </div>
+          <div className={s.stepThreeSummaryRow}>
+            <span>VALIDEZ</span>
+            <div className={s.stepThreeValidityValue}>
+              <strong className={s.stepThreeValidityPill}>{validezValue}</strong>
+              {validezSuffix ? <span>{validezSuffix}</span> : null}
+            </div>
+          </div>
+        </section>
+
+        <section className={s.stepThreeItemsCard}>
+          <div className={s.stepThreeCardHeader}>
+            <span className={s.stepThreeCardEyebrow}>COMPONENTES ({draft.items.length})</span>
+            <strong>{subtotal}</strong>
+          </div>
+          <div className={s.stepThreeItemList}>
+            {visibleItems.map((item, index) => (
+              <article key={item.id} className={s.stepThreeItemRow}>
+                <span className={s.stepThreeItemBadge}>{buildItemBadge(item.codigo, index)}</span>
+                <div className={s.stepThreeItemBody}>
+                  <strong>{item.nombre || item.tipo || item.codigo}</strong>
+                  <span>{buildItemMeta(item)}</span>
+                </div>
+                <strong className={s.stepThreeItemPrice}>{formatMoney(item.precioTotal)}</strong>
+              </article>
+            ))}
+          </div>
+          {hasHiddenItems ? (
+            <button
+              type="button"
+              className={s.stepThreeItemsLink}
+              onClick={() => setShowAllItems((current) => !current)}
+            >
+              {showAllItems ? "Ocultar componentes" : "Ver todos los componentes"}
+            </button>
+          ) : null}
+        </section>
+
+        <section className={s.stepThreeFreightCard}>
+          <div className={s.stepThreeFreightRow}>
+            <div className={s.stepThreeFreightMain}>
+              <span className={s.stepThreeFreightIcon}>
+                <LuTruck aria-hidden />
+              </span>
+              <div className={s.stepThreeFreightText}>
+                <strong>Flete</strong>
+                <span>{draft.flete > 0 ? flete : "No incluido"}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={s.stepThreeFreightToggle}
+              onClick={() => setShowFreightEditor((current) => !current)}
+            >
+              Editar <LuChevronDown className={showFreightEditor ? s.stepThreeFreightToggleOpen : ""} aria-hidden />
+            </button>
+          </div>
+
+          {showFreightEditor ? (
+            <label className={s.field}>
+              <span className={s.label}>Valor del flete</span>
+              <div className={s.moneyInputWrap}>
+                <span className={s.moneyPrefix}>CLP</span>
+                <input
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                  inputMode="numeric"
+                  value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
+                  onChange={(event) => onDraftFleteChange(event.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </label>
+          ) : null}
+        </section>
+
+        <div className={s.totalPanel}>
+          <div className={s.totalRow}>
+            <span>Subtotal</span>
+            <strong>{subtotal}</strong>
+          </div>
+          <div className={s.totalRow}>
+            <span>IVA 19%</span>
+            <strong>{iva}</strong>
+          </div>
+          <div className={s.totalRow}>
+            <span>Flete</span>
+            <strong>{draft.flete > 0 ? flete : "$0"}</strong>
+          </div>
+          <div className={s.totalGrand}>
+            <span>TOTAL</span>
+            <strong>{total}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.finalStageMain}>
+      <div className={s.summaryGrid}>
+        <div className={s.summaryBlock}>
+          <span>Cliente</span>
+          <strong>{draft.clienteNombre || "-"}</strong>
+        </div>
+        <div className={s.summaryBlock}>
+          <span>Proyecto</span>
+          <strong>{draft.obra || "-"}</strong>
+        </div>
+        <div className={s.summaryBlock}>
+          <span>Componentes</span>
+          <strong>{draft.items.length}</strong>
+        </div>
+        <div className={s.summaryBlock}>
+          <span>Validez</span>
+          <strong>{draft.validez}</strong>
+        </div>
+      </div>
+
+      <div className={s.summaryAdjustments}>
+        <div className={s.summaryAdjustmentCard}>
+          <div className={s.summaryAdjustmentHeader}>
+            <div>
+              <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
+              <strong>Flete</strong>
+            </div>
+            <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
+          </div>
+          <label className={s.field}>
+            <span className={s.label}>Valor del flete</span>
+            <div className={s.moneyInputWrap}>
+              <span className={s.moneyPrefix}>CLP</span>
+              <input
+                className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                inputMode="numeric"
+                value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
+                onChange={(event) => onDraftFleteChange(event.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
+          </label>
+        </div>
+      </div>
+
+      <div className={s.totalPanel}>
+        <div className={s.totalRow}>
+          <span>Subtotal</span>
+          <strong>{subtotal}</strong>
+        </div>
+        <div className={s.totalRow}>
+          <span>IVA 19%</span>
+          <strong>{iva}</strong>
+        </div>
+        {draft.flete > 0 ? (
+          <div className={s.totalRow}>
+            <span>Flete</span>
+            <strong>{flete}</strong>
+          </div>
+        ) : null}
+        <div className={s.totalGrand}>
+          <span>Total</span>
+          <strong>{total}</strong>
+        </div>
+      </div>
+
+      {savedRecord ? (
+        <section className={s.mobileFinalReadyCard}>
+          <div className={s.mobileFinalReadyEyebrow}>Presupuesto guardado</div>
+          <strong>Tu presupuesto ya esta listo para revisarlo.</strong>
+          <p>
+            No abrimos el PDF automatico para que esta pantalla siga simple y estable. Usa los
+            botones de abajo para revisar, compartir o descargar.
+          </p>
+        </section>
+      ) : (
+        <section className={s.previewPlaceholder}>
+          <div className={s.previewPlaceholderTitle}>Guarda primero para ver el resultado final</div>
+          <p className={s.previewPlaceholderText}>
+            Apenas guardes, se habilitan el PDF y la vista final.
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}

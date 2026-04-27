@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { canAccessSolicitudes } from "@/services/solicitudes-contacto-access";
+import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 import {
   SolicitudContactoValidationError,
   solicitudesContactoService,
-} from "@/services/solicitudes-contacto.service";
+} from "@/features/solicitudes/services/solicitudes-contacto.service";
 
 export const dynamic = "force-dynamic";
+
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const recentRequestsByIp = new Map<string, number[]>();
 
 function resolveIp(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -17,6 +21,24 @@ function resolveIp(request: Request) {
   }
 
   return request.headers.get("x-real-ip");
+}
+
+function isRateLimited(ip: string | null) {
+  const key = ip || "unknown";
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const recentRequests = (recentRequestsByIp.get(key) ?? []).filter(
+    (timestamp) => timestamp > windowStart
+  );
+
+  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+    recentRequestsByIp.set(key, recentRequests);
+    return true;
+  }
+
+  recentRequests.push(now);
+  recentRequestsByIp.set(key, recentRequests);
+  return false;
 }
 
 export async function GET() {
@@ -69,6 +91,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const ip = resolveIp(request);
+
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Recibimos demasiadas solicitudes. Intenta nuevamente en unos minutos." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = (await request.json()) as {
       nombre?: string;
@@ -85,7 +116,7 @@ export async function POST(request: Request) {
       telefono: body.telefono ?? "",
       ayuda: body.ayuda ?? "demo",
       origen: "landing",
-      ip: resolveIp(request),
+      ip,
       userAgent: request.headers.get("user-agent"),
     });
 

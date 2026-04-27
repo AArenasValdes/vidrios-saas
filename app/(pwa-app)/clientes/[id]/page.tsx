@@ -16,7 +16,7 @@ import {
   LuUsers,
 } from "react-icons/lu";
 
-import { useClientes } from "@/hooks/useClientes";
+import { useClientes } from "@/features/clientes/hooks/useClientes";
 
 import s from "./page.module.css";
 

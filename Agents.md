@@ -3,7 +3,9 @@
 Contexto de producto, arquitectura y reglas de trabajo para cualquier IA que toque este repo.
 Lee este archivo antes de editar codigo.
 
-Ultima consolidacion revisada contra el repo: 2026-03-23.
+Ultima consolidacion revisada contra el repo: 2026-04-27.
+
+Si vas a usar ChatGPT web sin contexto del repo, revisa tambien `docs/contexto-rapido-web.md`.
 
 ---
 
@@ -13,7 +15,7 @@ Este proyecto ya no debe pensarse como un formulario tecnico ni como un motor de
 
 El enfoque vigente es:
 
-**un cotizador basado en sistemas preconfigurados, con autocompletado inteligente y edicion rapida, pensado para cotizar en terreno sin obligar al usuario a construir cada componente desde cero.**
+**un cotizador comercial basado en sistemas preconfigurados, con autocompletado inteligente y edicion rapida, pensado para cotizar en terreno sin obligar al usuario a construir cada componente desde cero.**
 
 El software hoy apunta a ayudar a:
 
@@ -30,7 +32,7 @@ El software hoy apunta a ayudar a:
 Usuario principal:
 
 - maestro independiente
-- pequeño taller
+- pequeno taller
 - instalador o vendedor tecnico que hoy cotiza con proveedor y arma el presupuesto manualmente
 
 ### Modelo de usuario vigente del MVP
@@ -42,6 +44,9 @@ Para esta etapa del producto, el sistema debe leerse asi:
 - roles como `tecnico` o `viewer` pueden existir en codigo legado o preparacion futura, pero no forman parte del alcance activo del MVP
 - cualquier prueba funcional, validacion de salida o alta manual de usuarios debe asumir `rol = 'admin'`
 - ademas de `auth.users`, el login depende de una fila en `public.users` con `correo`, `organization_id` y `rol`
+- para salida a produccion, el navegador recomendado para el maestro es `Chrome` o `Edge` en desktop
+- en iPhone, la experiencia correcta es abrir desde `Safari` y agregar a pantalla de inicio como PWA
+- `Brave` no debe considerarse navegador principal para alertas push, porque puede bloquear la suscripcion
 
 **Stack actual:** Next.js 16.1.6 (App Router) + React 19.2.3 + TypeScript + Supabase + CSS Modules + Jest
 
@@ -206,85 +211,7 @@ Importante:
 
 - el proyecto se crea o reutiliza desde el service de cotizaciones
 - hoy no existe una UI separada de gestion de proyectos
-- el Paso 2 debe leerse como un asistente de configuracion, no como un formulario manual
-
----
-
-## Arquitectura vigente: Monolito Modular en Capas
-
-La separacion vigente para codigo nuevo sigue siendo esta:
-
-```text
-app/                -> Presentacion   (routing, pages, route handlers)
-src/components/     -> UI             (componentes reutilizables)
-src/hooks/          -> Aplicacion     (estado React, coordinacion)
-src/services/       -> Negocio        (reglas, validaciones, calculos)
-src/repositories/   -> Datos          (Supabase, queries)
-src/lib/supabase/   -> Infra          (clientes server/client)
-```
-
-Flujo obligatorio:
-
-```text
-page / component -> hook -> service -> repository -> Supabase
-```
-
-Regla practica:
-
-- si hoy existe una excepcion, tratalo como deuda tecnica
-- no la copies como patron nuevo
-
----
-
-## Estructura real del repo
-
-```text
-vidrios-saas/
-|-- app/
-|   |-- (landing-web)/
-|   |-- (auth-public)/
-|   |-- (pwa-app)/
-|   |-- print/
-|   |-- globals.css
-|   |-- layout.tsx
-|   `-- manifest.ts
-|-- docs/
-|   |-- ia-handoff.md
-|   |-- mvp-componentes-plan.md
-|   |-- mvp-componentes-schema.sql
-|   `-- organization-profile-schema.sql
-|-- public/
-|   |-- icons/
-|   `-- sw.js
-|-- src/
-|   |-- components/
-|   |   |-- layout/
-|   |   `-- pwa/
-|   |-- constants/
-|   |-- hooks/
-|   |-- lib/
-|   |   |-- supabase/
-|   |   `-- supabaseClient.ts
-|   |-- repositories/
-|   |-- services/
-|   |   `-- __tests__/
-|   |-- types/
-|   `-- utils/
-|-- supabase/
-|   `-- migrations/
-|-- Agents.md
-|-- proxy.ts
-|-- jest.config.js
-|-- jest.setup.ts
-`-- package.json
-```
-
-Notas rapidas:
-
-- `README.md` sigue sin ser fuente de verdad
-- `proxy.ts` es parte del proyecto actual; no asumas `middleware.ts`
-- existe base PWA con `manifest.ts`, `public/sw.js` y registro del service worker
-- el cache offline debe mantenerse conservador; no asumas soporte offline robusto para la app autenticada
+- el paso 2 debe leerse como un asistente de configuracion, no como un formulario manual
 
 ---
 
@@ -292,7 +219,7 @@ Notas rapidas:
 
 Conclusion corta:
 
-**el MVP comercial ya no esta solo "planeado"; ya existe una base funcional importante en runtime.**
+**el MVP comercial ya no esta solo planeado; ya existe una base funcional importante en runtime.**
 
 ### Lo que ya esta implementado
 
@@ -313,14 +240,34 @@ Conclusion corta:
 - compartir por WhatsApp
 - pagina publica de planes
 - aprobacion o rechazo publico de presupuesto por token
+- link publico canonico en `ventorap.cl` y `www.ventorap.cl`
+- notificaciones push para el maestro al enviar, aprobar o rechazar cotizaciones, sujeto a soporte del navegador
+- landing publica con bloque de instalacion y acceso orientado a maestros, con copy simple y navegacion recomendada
 - estados comerciales automaticos de clientes segun cotizaciones
 - estados operativos de cotizacion hasta proyecto terminado
 - perfil comercial de empresa
 - subida de logo a Supabase Storage
 - forma de pago visible en PDF
 - base multi-tenant por `organization_id`
+- paso 2 movil mucho mas afinado para trabajo en terreno:
+  - viewport de lista estable
+  - scroll interno controlado
+  - editor rapido movil
+  - copia parcial de medidas/costo a componentes del mismo tipo
+  - limite de 200 componentes por cotizacion
+  - copy mas simple para maestros
+  - codigos autogenerados visibles al crear lotes
+  - selector de margen local a la cotizacion con recalculo de componentes cargados
+  - tarjetas moviles mas compactas, con menos texto y lectura priorizada
+- modo `con margen` ya puede convivir con una empresa configurada en `valor directo` sin pisar la preferencia global
+- en paso 2, cuando una cotizacion trabaja con margen, la lista muestra primero el costo del componente y deja la venta como dato secundario
+- colores actualizados para aluminio:
+  - `Titanio`
+  - `Madera`
+  - `Bronce` eliminado del flujo activo
 - tests de services, utils y hooks
 - build de produccion pasando
+- despliegue productivo activo en Vercel para `ventorap.cl`
 
 ### Lo que hoy existe pero aun esta incompleto o desalineado
 
@@ -329,20 +276,28 @@ Conclusion corta:
 - OAuth tiene callback y UI placeholder, pero los proveedores aun no estan habilitados
 - la base PWA existe, pero el modo offline debe validarse en dispositivo real; no asumirlo solo por tener `sw.js`
 - el guardado de cotizaciones sigue sin ser transaccional; si falla un insert intermedio puede dejar estado parcial
+- el soporte de Web Push depende del navegador y del sistema operativo; Brave no se considera navegacion base de produccion para el maestro
+- la guia comercial de instalacion y navegador debe seguir refinandose para que la gente no tecnica entienda rapido que usar
 - pagos y billing no existen
-- analiticas de producto no existen
-- no hay monitoreo operativo ni observabilidad de produccion
+- observabilidad de produccion y monitoreo operacional siguen incompletos; hoy hay base tecnica en `app/layout.tsx` con `@vercel/analytics` y `@vercel/speed-insights`, pero eso no reemplaza telemetria operativa, alertas ni seguimiento de errores
 - no hay onboarding comercial completo para salir a mercado
 - hay algunos textos con problemas de encoding heredados en ciertas vistas y tests
+- el paso 2 sigue siendo el area mas sensible del producto en movil:
+  - todavia requiere refinamiento de claridad, jerarquia y velocidad real de uso
+  - el objetivo no es agregar mas funciones, sino quitar friccion
+  - cada cambio debe validarse con un maestro real en movil antes de consolidarlo
+- el flujo de precio en paso 2 ya mejora bastante, pero aun debe validarse con mas casos reales de margen vs valor directo
+- la creacion masiva y la edicion rapida ya existen, pero todavia pueden simplificarse mas para usuarios no tecnicos
+- el paso 2 no debe volver a llenarse de texto explicativo; la prioridad es mostrar solo lo minimo necesario
 
 ### Lectura operativa de este momento
 
 Si tomas este repo hoy, asume esto:
 
 - ya no estamos en etapa de discovery
-- ya no falta "inventar producto"
+- ya no falta inventar producto
 - estamos en etapa de endurecimiento final para beta o produccion inicial controlada
-- lo mas importante en las proximas 24 a 48 horas es validar flujo real, Supabase real y errores reales
+- lo mas importante en las proximas 24 a 48 horas es validar flujo real, Supabase real, errores reales y el comportamiento del paso 2 en movil
 - cualquier mejora visual debe ser secundaria frente a validacion, robustez y despliegue
 
 ### Como leer el repo desde ahora
@@ -350,7 +305,7 @@ Si tomas este repo hoy, asume esto:
 - el corazon del producto ya es el flujo comercial de cotizaciones
 - no hay que volver a expandir el cotizador tecnico por inercia
 - el valor actual ya esta en clientes, cotizaciones, PDF, branding y WhatsApp
-- el siguiente salto no es "mas logica tecnica"; es consolidar sistemas sugeridos, estabilizar, desplegar y vender
+- el siguiente salto no es mas logica tecnica; es consolidar sistemas sugeridos, estabilizar, desplegar y vender
 
 ---
 
@@ -372,6 +327,7 @@ Si tomas este repo hoy, asume esto:
 - cotizaciones presente
 - flujo rapido de sistemas sugeridos en nueva cotizacion
 - configuracion de empresa presente
+- paso 2 con edicion rapida movil, copia de medidas/costo y recalculo comercial en runtime
 
 ### Comercial
 
@@ -393,12 +349,109 @@ Si tomas este repo hoy, asume esto:
 - OAuth habilitado con proveedores reales
 - checkout
 - suscripciones
-- analytics de producto
-- observabilidad de produccion
+- analitica de producto propia
+- observabilidad de produccion completa
 - CRM comercial profundo
 - gestion explicita de proyectos
 - logistica, despacho o planificacion de taller
 - catalogo completo de sistemas versionados por proveedor, familia y nivel
+
+---
+
+## Arquitectura vigente
+
+La separacion vigente para codigo nuevo sigue siendo esta:
+
+```text
+app/                                 -> Presentacion   (routing, pages, route handlers)
+src/components/                      -> UI compartida  (componentes reutilizables)
+src/features/<feature>/hooks/        -> Aplicacion     (estado React, coordinacion)
+src/features/<feature>/services/     -> Negocio        (reglas, validaciones, calculos)
+src/features/<feature>/repositories/ -> Datos          (Supabase, queries)
+src/features/<feature>/types/        -> Tipos de dominio del feature
+src/lib/supabase/                    -> Infra          (clientes server/client)
+src/utils/                           -> helpers puros compartidos
+src/constants/                       -> constantes compartidas
+```
+
+Flujo obligatorio:
+
+```text
+page / component -> hook -> service -> repository -> Supabase
+```
+
+Regla practica:
+
+- si hoy existe una excepcion, tratalo como deuda tecnica
+- no la copies como patron nuevo
+- `src/hooks`, `src/services`, `src/repositories` y `src/types` quedan como capa de compatibilidad o shared legacy mientras termina la migracion
+- codigo nuevo de dominio debe vivir primero dentro de `src/features/<feature>/...`
+
+### Mapa real de features activas
+
+- `src/features/auth`
+- `src/features/clientes`
+- `src/features/cotizaciones`
+- `src/features/notificaciones`
+- `src/features/organization-profile`
+- `src/features/solicitudes`
+
+### Subdominios ya activos dentro de cotizaciones
+
+- `new-quote`
+- `public-approval`
+- `pdf-cache`
+- workflow de sugerencias y calculo comercial
+
+---
+
+## Estructura real del repo
+
+```text
+vidrios-saas/
+|-- app/
+|   |-- (landing-web)/
+|   |-- (auth-public)/
+|   |-- (pwa-app)/
+|   |-- print/
+|   |-- globals.css
+|   |-- layout.tsx
+|   `-- manifest.ts
+|-- docs/
+|   |-- contexto-rapido-web.md
+|   |-- ia-handoff.md
+|   |-- mvp-componentes-plan.md
+|   |-- mvp-componentes-schema.sql
+|   `-- organization-profile-schema.sql
+|-- public/
+|   |-- icons/
+|   `-- sw.js
+|-- src/
+|   |-- components/
+|   |-- constants/
+|   |-- features/
+|   |-- hooks/
+|   |-- lib/
+|   |-- repositories/
+|   |-- services/
+|   |-- types/
+|   `-- utils/
+|-- supabase/
+|   `-- migrations/
+|-- Agents.md
+|-- proxy.ts
+|-- jest.config.js
+|-- jest.setup.ts
+`-- package.json
+```
+
+Notas rapidas:
+
+- `README.md` sigue sin ser fuente de verdad
+- `proxy.ts` es parte del proyecto actual; no asumas `middleware.ts`
+- existe base PWA con `manifest.ts`, `public/sw.js` y registro del service worker
+- el cache offline debe mantenerse conservador; no asumas soporte offline robusto para la app autenticada
+- `app/layout.tsx` ya inyecta `@vercel/analytics/next` y `@vercel/speed-insights/next`, pero eso solo cubre una capa minima de observabilidad
 
 ---
 
@@ -416,7 +469,7 @@ Un repository nunca contiene logica de negocio.
 
 **2. TypeScript estricto**
 
-Todos los datos deben vivir tipados en `src/types/`.
+Todos los datos deben vivir tipados en `src/features/<feature>/types/` o en `src/types/` solo si son realmente compartidos entre multiples features.
 No usar `any` salvo caso inevitable y comentado.
 
 **3. Multi-tenant obligatorio**
@@ -431,7 +484,7 @@ Las queries activas deben filtrar `.is("eliminado_en", null)`.
 
 **5. Calculos financieros solo en services**
 
-Subtotal, descuento, IVA, utilidad y total se calculan en `src/services/`.
+Subtotal, descuento, IVA, utilidad y total se calculan en `src/features/<feature>/services/` o en `src/services/` solo si el calculo es realmente transversal.
 
 **6. El MVP usa calculo simple por componente**
 
@@ -461,9 +514,9 @@ Todo cambio en cotizaciones debe cuidar:
 - marca de empresa correcta
 - salida por WhatsApp util
 
-**10. No abrir pagos ni analiticas antes de estabilizar el core**
+**10. No abrir pagos ni analitica de producto antes de estabilizar el core**
 
-Antes de meter billing, PostHog o integraciones similares, primero cerrar bien:
+Antes de meter billing, instrumentos adicionales de analitica o integraciones similares, primero cerrar bien:
 
 - flujo de cotizacion
 - branding
@@ -580,6 +633,24 @@ Regla:
 - no depender de ellas para el flujo principal
 - no seguir metiendo logica nueva ahi
 
+### Campos que hoy son criticos y deben seguirse verificando
+
+- `codigo`
+- `tipo_componente`
+- `orden`
+- `approval_token`
+- `approval_token_expires_at`
+- `cliente_vio_en`
+- `cliente_respondio_en`
+- `cliente_respuesta_canal`
+
+### Infraestructura de datos y storage que no se puede asumir lista
+
+- bucket `organization-assets`
+- RLS para `organization_id`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- migraciones aplicadas en el entorno real
+
 ---
 
 ## Variables de entorno requeridas
@@ -598,6 +669,7 @@ Notas:
 - revisar `supabase/migrations/20260317154500_organization_profile.sql`
 - revisar `supabase/migrations/20260318093000_cotizacion_items_component_fields.sql`
 - revisar `supabase/migrations/20260319183000_cotizaciones_approval_public_link.sql`
+- revisar `supabase/migrations/20260327174500_normalize_legacy_color.sql`
 
 ---
 
@@ -644,6 +716,57 @@ Si el objetivo es produccion o beta cerrada, trata estos puntos como prioridad r
 4. Falta validar Supabase real con migraciones, bucket y `SUPABASE_SERVICE_ROLE_KEY`.
 5. La PWA sigue siendo shell publica con validacion pendiente en dispositivo real.
 6. La landing y los CTA publicos deben validarse ya con criterio de salida, no solo con criterio visual.
+7. El paso 2 movil sigue siendo el punto con mayor riesgo de friccion comercial y operativa.
+8. Los textos con encoding roto todavia pueden confundir al usuario si reaparecen en vistas clave o tests que documentan comportamiento.
+9. Push notifications, aprobacion publica y PDF deben seguir verificandose juntos, porque dependen de distintos caminos de escritura y lectura.
+
+---
+
+## Que falta verificar antes de cerrar la beta
+
+### Infraestructura real
+
+- migraciones efectivamente aplicadas
+- bucket `organization-assets`
+- RLS con `organization_id`
+- `SUPABASE_SERVICE_ROLE_KEY` en el entorno correcto
+- `public.users` con `correo`, `organization_id` y `rol`
+- usuarios reales operando como `admin`
+
+### Flujo comercial principal
+
+- creacion de cotizacion de punta a punta
+- edicion del paso 2 en movil real
+- calculo `con margen` y `valor directo`
+- guardado de borrador y presupuesto
+- PDF imprimible
+- WhatsApp
+- aprobacion y rechazo publico por token
+- notificaciones push en navegadores soportados
+
+### PWA y acceso
+
+- instalacion como app en iPhone desde Safari
+- acceso desde Chrome y Edge en desktop
+- validacion de offline real en dispositivo
+- comportamiento del service worker sin asumir cobertura completa
+
+### Comercial y salida
+
+- landing
+- CTA
+- copy para gente no tecnica
+- claridad de planes
+- forma de pago en PDF y en detalle
+- onboarding comercial basico
+
+### Tecnico y operacional
+
+- consistencia de escrituras
+- manejo de errores intermedios
+- logs y trazas minimas
+- performance del paso 2
+- cobertura de tests en casos de borde
 
 ---
 
@@ -664,20 +787,29 @@ Orden sugerido a partir del estado real del repo en este cierre preproduccion:
    - bucket `organization-assets`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - RLS y multi-tenant con usuario real
-2. Consolidar el motor de sugerencias y sistemas:
+2. Endurecer el paso 2 movil:
+   - reducir confusion de labels
+   - mantener tarjetas con informacion minima y clara
+   - validar replicacion parcial por tipo
+   - validar `con margen` vs `valor directo` en casos reales
+   - confirmar que costo, venta y total se lean sin ambiguedad
+   - pulir flujo de lotes, espacios y nombres visibles
+   - seguir testando con maestros reales antes de congelar cambios
+3. Consolidar el motor de sugerencias y sistemas:
    - reglas base por proveedor
    - reglas por tipo de componente
    - sugerencias por dimension
    - defaults editables sin romper el flujo rapido
    - fallback claro cuando el sistema no conozca una combinacion
-3. Estabilizar el flujo principal de salida a produccion:
+4. Estabilizar el flujo principal de salida a produccion:
    - smoke tests reales
    - validacion en movil
    - manejo de errores
    - revisar estados vacios y edge cases
    - validar PWA y offline real en dispositivo
    - revisar consistencia de escritura en create/update de cotizaciones
-4. Revisar experiencia comercial final:
+   - verificar push en Chrome y Edge, no solo en Brave
+5. Revisar experiencia comercial final:
    - detalle de cotizacion
    - PDF
    - mensaje de WhatsApp
@@ -685,14 +817,15 @@ Orden sugerido a partir del estado real del repo en este cierre preproduccion:
    - claridad de forma de pago
    - CTA y copy final de landing, login y `/planes`
    - limpieza de encoding roto visible al usuario
-5. Definir despliegue inicial:
+   - mejorar la guia de instalacion y acceso para usuarios no tecnicos
+6. Definir despliegue inicial:
    - hosting
    - variables de entorno
    - dominio
    - politicas de acceso
-6. Despues de eso:
+7. Despues de eso:
    - metodo de pago
-   - analiticas tipo PostHog
+   - analitica de producto
    - onboarding comercial
 
 ---
@@ -704,7 +837,9 @@ Si entras a este repo hoy, asume esto:
 - el MVP comercial ya tiene base funcional real
 - la prioridad ya no es inventar mas producto, sino cerrar salida a mercado
 - el flujo principal debe comportarse como un asistente de configuracion, no como un formulario
-- no metas pagos ni analiticas antes de estabilizar despliegue y experiencia principal
+- no metas pagos ni analitica de producto antes de estabilizar despliegue y experiencia principal
 - no reabras el cotizador tecnico salvo instruccion explicita
 - si tocas cotizaciones, debes cuidar servicio, sugerencias, PDF, WhatsApp y aprobacion publica juntos
 - no posiciones este producto como ERP o logistica; hoy es un presupuestario comercial vertical basado en sistemas sugeridos
+- si modificas la landing o las alertas, piensa primero en usuarios no tecnicos y en navegadores realmente compatibles
+- el paso 2 movil hoy es el cuello de botella principal de UX; si lo tocas, piensa primero en claridad, velocidad y lectura en terreno

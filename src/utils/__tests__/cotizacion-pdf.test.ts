@@ -90,6 +90,18 @@ describe("cotizacion-pdf utils", () => {
     ).toBe(3.71);
   });
 
+  it("debe usar una escala mas liviana en Android para acelerar la exportacion", () => {
+    expect(
+      resolveCotizacionPdfCanvasScale({
+        width: 816,
+        height: 1248,
+        devicePixelRatio: 3,
+        userAgent:
+          "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36",
+      })
+    ).toBe(2.2);
+  });
+
   it("debe exportar usando el tamano real de la hoja y no el rect escalado del preview", () => {
     expect(
       resolveCotizacionPdfRenderSize({

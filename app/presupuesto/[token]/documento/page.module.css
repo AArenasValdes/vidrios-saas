@@ -1,0 +1,128 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef3f8 0%, #f7f9fc 100%);
+  padding: 20px 12px 28px;
+}
+
+.pageEmbedded {
+  min-height: auto;
+  background: transparent;
+  padding: 0;
+}
+
+.shell {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(217, 224, 234, 0.94);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 34px rgba(36, 59, 107, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.toolbarLink,
+.toolbarAction {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(79, 125, 212, 0.22);
+  background: linear-gradient(180deg, #ffffff, #f7fbff);
+  color: #243b6b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-family: "Lato", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.toolbarAction {
+  cursor: pointer;
+}
+
+.toolbarInfo {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #667085;
+}
+
+.title {
+  margin: 0;
+  font-family: "Syne", sans-serif;
+  font-size: 19px;
+  line-height: 1.05;
+  color: #243b6b;
+}
+
+.note {
+  padding: 0 4px;
+  margin: 0;
+  font-family: "Lato", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #667085;
+}
+
+.sheetWrap {
+  overflow-x: auto;
+}
+
+.pageEmbedded .shell {
+  width: 100%;
+  gap: 0;
+}
+
+.pageEmbedded .sheetWrap {
+  overflow: auto;
+  padding: 8px;
+  background: linear-gradient(180deg, #e9eef6 0%, #f4f7fb 100%);
+}
+
+.embeddedViewport {
+  min-height: 100%;
+}
+
+.embeddedScaleFrame {
+  position: relative;
+}
+
+@media print {
+  .page {
+    background: #ffffff;
+    padding: 0;
+  }
+
+  .toolbar,
+  .note {
+    display: none;
+  }
+
+  .shell {
+    width: 100%;
+    gap: 0;
+  }
+
+  .sheetWrap {
+    overflow: visible;
+  }
+}

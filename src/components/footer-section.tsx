@@ -158,7 +158,7 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
 
           <div className={s.legalBadges}>
             <span>Sin tarjeta de credito</span>
-            <span>Soporte en espanol</span>
+            <span>Soporte en español</span>
             <span>Disenado para obra</span>
           </div>
         </div>

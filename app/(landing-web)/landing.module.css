@@ -1501,6 +1501,160 @@
   line-height: 1.5;
 }
 
+.installationSection {
+  padding: var(--section-space) 0;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(79, 125, 212, 0.16), transparent 28%),
+    radial-gradient(circle at 88% 14%, rgba(79, 125, 212, 0.09), transparent 24%),
+    linear-gradient(180deg, #f9fbff 0%, #edf3fb 100%);
+}
+
+.installationShell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.8fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.installationNote {
+  padding: 28px 24px;
+  border-radius: 26px;
+  border: 1px solid rgba(214, 222, 232, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 247, 255, 0.92) 100%);
+  box-shadow: 0 20px 52px rgba(36, 59, 107, 0.1);
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.installationNoteLabel {
+  font-family: "JetBrains Mono", monospace;
+  width: fit-content;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 125, 212, 0.18);
+  background: rgba(79, 125, 212, 0.08);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+}
+
+.installationNote strong {
+  font-family: "Inter", sans-serif;
+  font-size: 36px;
+  line-height: 1.04;
+  color: #243b6b;
+  letter-spacing: -0.05em;
+}
+
+.installationNote p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.75;
+  color: #667085;
+}
+
+.installationPills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.installationPills span {
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(51, 94, 169, 0.14);
+  background: linear-gradient(135deg, #335ea9 0%, #4f7dd4 58%, #c8a96e 100%);
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  box-shadow: 0 16px 32px rgba(51, 94, 169, 0.2);
+}
+
+.installationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.installationCard {
+  padding: 28px 22px 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(214, 222, 232, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  box-shadow: 0 18px 42px rgba(36, 59, 107, 0.08);
+  display: grid;
+  justify-items: start;
+  text-align: left;
+  gap: 18px;
+}
+
+.installationIcon {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(79, 125, 212, 0.1) 0%, rgba(79, 125, 212, 0.16) 100%);
+  color: #335ea9;
+  box-shadow: inset 0 0 0 1px rgba(79, 125, 212, 0.12);
+  font-size: 42px;
+}
+
+.installationCardBody {
+  display: grid;
+  gap: 10px;
+}
+
+.installationCardStep {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(79, 125, 212, 0.08);
+  color: #335ea9;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.installationCardBody h3 {
+  margin: 0;
+  max-width: 12ch;
+  font-family: "Inter", sans-serif;
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.02;
+  color: #172846;
+  letter-spacing: -0.05em;
+}
+
+.installationCardBody p {
+  margin: 0;
+  max-width: 24ch;
+  font-size: 18px;
+  line-height: 1.58;
+  color: #667085;
+}
+
 .captureFrameDark {
   background: linear-gradient(180deg, #1f3b74 0%, #1b315e 100%);
   border-color: rgba(37, 99, 235, 0.18);
@@ -2430,6 +2584,14 @@
   .contactFormGrid {
     grid-template-columns: 1fr;
   }
+
+  .installationShell {
+    grid-template-columns: 1fr;
+  }
+
+  .installationGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -2601,6 +2763,51 @@
 
   .productCalloutGrid {
     grid-template-columns: 1fr;
+  }
+
+  .installationSection {
+    padding-top: 56px;
+    padding-bottom: 84px;
+  }
+
+  .installationNote,
+  .installationCard {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .installationNote strong {
+    font-size: 28px;
+  }
+
+  .installationShell {
+    gap: 14px;
+  }
+
+  .installationPills {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .installationIcon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    font-size: 34px;
+  }
+
+  .installationCardStep {
+    font-size: 10px;
+  }
+
+  .installationNote p,
+  .installationCardBody p {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .installationCardBody h3 {
+    max-width: none;
+    font-size: 22px;
   }
 
   .workspaceHeader,

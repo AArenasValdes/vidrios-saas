@@ -49,26 +49,26 @@ function getPromptCopy(platform: PushPromptPlatform) {
   if (platform === "ios") {
     return {
       eyebrow: "Alertas del iPhone",
-      title: "Activa alertas de envio y respuesta",
+      title: "Activa alertas de respuesta",
       text:
-        "Si tu iPhone permite notificaciones web en este acceso, te avisaremos cuando envies una cotizacion y cuando el cliente la apruebe o rechace.",
+        "Si tu iPhone permite notificaciones web en este acceso, te avisaremos cuando el cliente apruebe o rechace una cotizacion.",
     };
   }
 
   if (platform === "android") {
     return {
       eyebrow: "Alertas del celular",
-      title: "Activa alertas reales de envio y respuesta",
+      title: "Activa alertas reales de respuesta",
       text:
-        "Recibiras una notificacion normal del celular cuando envies una cotizacion y cuando un cliente la apruebe o rechace.",
+        "Recibiras una notificacion del celular cuando el cliente apruebe o rechace una cotizacion.",
     };
   }
 
   return {
     eyebrow: "Alertas del dispositivo",
-    title: "Activa alertas de envio y respuesta",
+    title: "Activa alertas de respuesta",
     text:
-      "Recibiras una notificacion del navegador cuando envies una cotizacion y cuando un cliente la apruebe o rechace.",
+      "Recibiras una notificacion del navegador cuando el cliente apruebe o rechace una cotizacion.",
   };
 }
 
@@ -151,7 +151,7 @@ export function PushNotificationsPrompt() {
 
         if (!cancelled) {
           setIsEnabled(true);
-          setStatus("Alertas activas para envios, aprobaciones y rechazos en este dispositivo.");
+          setStatus("Alertas activas para respuestas de clientes en este dispositivo.");
           setStatusIsError(false);
         }
       } catch {
@@ -191,7 +191,7 @@ export function PushNotificationsPrompt() {
       const permission = await Notification.requestPermission();
 
       if (permission !== "granted") {
-        setStatus("Debes permitir notificaciones para recibir alertas de envio, aprobacion y rechazo.");
+        setStatus("Debes permitir notificaciones para recibir alertas de respuesta.");
         setStatusIsError(true);
         return;
       }
@@ -201,7 +201,7 @@ export function PushNotificationsPrompt() {
       await persistSubscription(subscription);
       window.localStorage.removeItem(DISMISS_KEY);
       setIsEnabled(true);
-      setStatus("Alertas activas. Te avisaremos cuando envies una cotizacion y cuando el cliente responda.");
+      setStatus("Alertas activas. Te avisaremos cuando el cliente apruebe o rechace.");
       setStatusIsError(false);
     } catch (error) {
       setStatus(

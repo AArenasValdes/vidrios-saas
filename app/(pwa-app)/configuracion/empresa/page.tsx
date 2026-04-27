@@ -5,15 +5,15 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { LuBellRing, LuImagePlus, LuSave } from "react-icons/lu";
 
-import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildOrganizationInitials,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
-} from "@/services/organization-profile.service";
+} from "@/features/organization-profile/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { subscribeToPushNotifications } from "@/utils/web-push";
-import type { UpdateOrganizationProfileInput } from "@/types/organization-profile";
-import type { PricingMode } from "@/types/pricing-mode";
+import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
+import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 
 import s from "./page.module.css";
 
@@ -38,6 +38,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   formaPago: "",
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
+  margenDefecto: 100,
 };
 
 type DeviceAlertsState = {
@@ -109,6 +110,7 @@ export default function ConfiguracionEmpresaPage() {
       formaPago: profile.formaPago,
       proveedorPreferido: profile.proveedorPreferido,
       modoPrecioPreferido: profile.modoPrecioPreferido,
+      margenDefecto: profile.margenDefecto,
     });
   }, [profile]);
 
@@ -495,6 +497,26 @@ export default function ConfiguracionEmpresaPage() {
               Si eliges valor directo, el Paso 2 oculta el margen y te deja ingresar el precio final por componente.
             </span>
           </label>
+
+          {form.modoPrecioPreferido === "margen" && (
+            <label className={s.field}>
+              <span className={s.label}>Margen por defecto (%)</span>
+              <input
+                className={s.input}
+                type="number"
+                min="0"
+                step="1"
+                value={form.margenDefecto}
+                onChange={(event) =>
+                  handleFieldChange("margenDefecto", Number(event.target.value))
+                }
+                placeholder="Ej: 100"
+              />
+              <span className={s.helpText}>
+                Este margen se aplicará automáticamente a los nuevos componentes que crees.
+              </span>
+            </label>
+          )}
 
           <section className={s.deviceAlertsCard} aria-live="polite">
             <div className={s.deviceAlertsIcon}>

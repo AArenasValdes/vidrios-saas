@@ -577,6 +577,19 @@
 }
 
 @media (max-width: 720px) {
+  .root {
+    gap: 14px;
+    padding-bottom: calc(var(--tabbar-h, 84px) + 56px);
+    overflow-x: hidden;
+  }
+
+  .topGrid,
+  .layout,
+  .metaGrid {
+    width: 100%;
+    min-width: 0;
+  }
+
   .header,
   .heroHeader,
   .sectionHeader,
@@ -590,8 +603,32 @@
     gap: 10px;
   }
 
+  .header {
+    gap: 14px;
+  }
+
+  .backLink {
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+
+  .title {
+    max-width: 100%;
+    font-size: clamp(25px, 9vw, 34px);
+    line-height: 0.95;
+    overflow-wrap: anywhere;
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    max-width: 100%;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
   .headerActions {
     width: 100%;
+    gap: 9px;
   }
 
   .headerActionsWrap {
@@ -603,8 +640,102 @@
     flex: 1 1 100%;
   }
 
+  .btnPrimary,
+  .btnGhost,
+  .btnDanger,
+  .inlineAction {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 13px;
+    padding: 0 14px;
+    justify-content: flex-start;
+    font-size: 14px;
+  }
+
+  .heroCard,
+  .mainCard,
+  .sideCard {
+    width: 100%;
+    min-width: 0;
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .heroHeader h2,
+  .sectionHeader h3 {
+    margin-top: 6px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .heroHeader h2 {
+    font-size: clamp(24px, 8vw, 32px);
+    line-height: 1.05;
+  }
+
+  .sectionHeader {
+    margin-bottom: 12px;
+  }
+
+  .sectionHeader h3 {
+    font-size: 20px;
+  }
+
+  .badge {
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 9px;
+  }
+
+  .metaGrid {
+    margin-top: 14px;
+    gap: 9px;
+  }
+
+  .metaCard {
+    min-width: 0;
+    padding: 12px;
+    border-radius: 14px;
+    gap: 9px;
+  }
+
+  .metaCard svg {
+    flex: 0 0 auto;
+  }
+
+  .metaCard strong {
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .sideCard {
+    gap: 8px;
+  }
+
+  .sideRow,
+  .sideTotal,
+  .totalRow,
+  .totalStrong {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sideRow strong,
+  .sideTotal strong,
+  .totalRow strong,
+  .totalStrong strong {
+    margin-left: auto;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
   .itemFinanceGrid {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .summaryAdjustmentHeader {
@@ -616,11 +747,96 @@
   }
 
   .itemListScroll {
-    max-height: 62vh;
-    padding-right: 4px;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .itemsLoadingState {
     align-items: flex-start;
+  }
+
+  .itemListCards {
+    gap: 10px;
+  }
+
+  .itemCard {
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .itemTop {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .itemTop strong {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .itemCard h4 {
+    margin-top: 10px;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+
+  .itemCard p {
+    overflow-wrap: anywhere;
+  }
+
+  .itemFinance {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .itemFinanceCell {
+    padding: 10px 12px;
+    border-radius: 13px;
+  }
+
+  .noteCard,
+  .summaryAdjustmentCard {
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .totalRow,
+  .totalStrong {
+    padding: 13px 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .title {
+    font-size: clamp(23px, 8.5vw, 30px);
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .heroCard,
+  .mainCard,
+  .sideCard {
+    padding: 14px;
+  }
+
+  .btnPrimary,
+  .btnGhost,
+  .btnDanger,
+  .inlineAction {
+    min-height: 42px;
+    font-size: 13px;
+  }
+
+  .metaCard {
+    padding: 11px;
+  }
+
+  .metaCard strong,
+  .sideRow strong,
+  .sideTotal strong {
+    font-size: 13px;
   }
 }

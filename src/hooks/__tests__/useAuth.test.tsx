@@ -11,7 +11,7 @@ const subscribeToAuthChanges: jest.MockedFunction<(listener: () => void) => () =
 const signIn: jest.MockedFunction<(credentials: AuthSignInInput) => Promise<void>> = jest.fn();
 const signOut: jest.MockedFunction<() => Promise<void>> = jest.fn();
 
-jest.mock("@/services/auth.service", () => ({
+jest.mock("@/features/auth/services/auth.service", () => ({
   authService: {
     getCurrentAuthState: () => getCurrentAuthState(),
     subscribeToAuthChanges: (listener: () => void) => subscribeToAuthChanges(listener),

@@ -1,0 +1,10 @@
+.codex-*
+.jest-cache/
+.next/
+.swc/
+coverage/
+node_modules/
+*.log
+*.tsbuildinfo
+pdf-ref-shot.png
+tmp-*

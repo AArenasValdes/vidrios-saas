@@ -2,6 +2,7 @@ import {
   getComponentSuggestion,
   getSuggestedReferenceByProvider,
   normalizePreferredProvider,
+  type PreferredProvider,
 } from "../component-suggestions.service";
 
 describe("component-suggestions.service", () => {
@@ -30,7 +31,7 @@ describe("component-suggestions.service", () => {
 
     const suggestion = getComponentSuggestion({
       tipo: "Mampara especial",
-      provider: "Proveedor X",
+      provider: "Proveedor X" as PreferredProvider,
     });
 
     expect(suggestion).toMatchObject({

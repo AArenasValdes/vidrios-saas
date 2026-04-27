@@ -1,0 +1,286 @@
+.page {
+  composes: tokens from "../shared/dashboard.tokens.module.css";
+  display: grid;
+  gap: var(--dashboard-space-4);
+  color: var(--dashboard-text);
+}
+
+.header {
+  display: grid;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-family: "Syne", sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.date {
+  margin: 0;
+  color: var(--dashboard-text-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.cta {
+  min-height: 56px;
+  width: 100%;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 18px;
+  background: linear-gradient(180deg, var(--dashboard-accent), var(--dashboard-accent-strong));
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 16px 28px rgba(51, 94, 169, 0.24);
+}
+
+.alertCard,
+.metricCard,
+.quotesPanel {
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 254, 0.98));
+  box-shadow: 0 14px 28px rgba(28, 44, 79, 0.07);
+}
+
+.alertCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fff8eb, #fff2d8);
+  border-color: rgba(216, 155, 60, 0.22);
+  text-decoration: none;
+}
+
+.alertIcon,
+.alertArrow,
+.metricIcon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alertIcon {
+  color: #f59e0b;
+}
+
+.alertBody {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.alertEyebrow,
+.metricLabel,
+.quoteCode,
+.quotesEyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.alertEyebrow {
+  color: #9d6a0c;
+}
+
+.alertTitle {
+  color: var(--dashboard-text);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.alertSuccess {
+  color: var(--dashboard-success);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.alertArrow {
+  color: #9d6a0c;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.metricLabel {
+  color: #7b8697;
+}
+
+.metricValue {
+  font-family: "Syne", sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.metricMono {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 16px;
+  letter-spacing: -0.03em;
+  color: var(--dashboard-success);
+}
+
+.metricIconPrimary {
+  color: var(--dashboard-accent);
+}
+
+.metricIconSuccess {
+  color: var(--dashboard-success);
+}
+
+.section {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #667085;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sectionLink {
+  color: var(--dashboard-accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.quotesPanel {
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.quoteList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.quoteRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px 18px;
+  text-decoration: none;
+}
+
+.quoteItem + .quoteItem {
+  border-top: 1px solid rgba(217, 224, 234, 0.9);
+}
+
+.quoteMain,
+.quoteSide {
+  display: grid;
+  gap: 6px;
+}
+
+.quoteName {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--dashboard-text);
+}
+
+.quoteCode {
+  color: #7b8697;
+  font-size: 12px;
+}
+
+.quoteSide {
+  justify-items: end;
+  align-content: start;
+}
+
+.quoteAmount {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dashboard-accent-strong);
+}
+
+.pill {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--dashboard-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+
+.pillSuccess {
+  background: #eaf7f0;
+  color: var(--dashboard-success);
+  border-color: rgba(47, 163, 107, 0.16);
+}
+
+.pillWarning {
+  background: #fff6e8;
+  color: var(--dashboard-warning);
+  border-color: rgba(216, 155, 60, 0.18);
+}
+
+.pillDanger {
+  background: #fff1f1;
+  color: var(--dashboard-danger);
+  border-color: rgba(217, 92, 92, 0.16);
+}
+
+.emptyCard {
+  padding: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dashboard-text);
+}
+
+.emptySub {
+  margin: 0;
+  color: var(--dashboard-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}

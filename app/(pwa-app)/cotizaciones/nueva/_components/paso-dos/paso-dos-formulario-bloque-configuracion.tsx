@@ -1,0 +1,270 @@
+"use client";
+
+import { LuPencil, LuPlus } from "react-icons/lu";
+
+import {
+  COMPONENT_TYPE_GROUPS,
+  MARGIN_SELECT_OPTIONS,
+  MATERIAL_OPTIONS,
+  MAX_COMPONENTS_PER_QUOTE,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
+
+import s from "../../page.module.css";
+
+type Props = Pick<
+  PasoDosFormularioComponenteProps,
+  | "itemsCount"
+  | "editingItemId"
+  | "componentForm"
+  | "fieldErrors"
+  | "isMobileViewport"
+  | "currentComponentPreviewSvg"
+  | "batchPreviewCodes"
+  | "visibleBatchPreviewCodes"
+  | "hiddenBatchPreviewCount"
+  | "batchPreviewTypeLabel"
+  | "onPricingModeSelection"
+  | "onComponentChange"
+>;
+
+export function PasoDosFormularioBloqueConfiguracion({
+  itemsCount,
+  editingItemId,
+  componentForm,
+  fieldErrors,
+  isMobileViewport,
+  currentComponentPreviewSvg,
+  batchPreviewCodes,
+  visibleBatchPreviewCodes,
+  hiddenBatchPreviewCount,
+  batchPreviewTypeLabel,
+  onPricingModeSelection,
+  onComponentChange,
+}: Props) {
+  const availableSlots = Math.max(1, MAX_COMPONENTS_PER_QUOTE - itemsCount);
+  const batchPresetOptions = Array.from(
+    new Set(
+      (isMobileViewport ? [1, 2, 4, 8] : [1, 2, 3, 4]).filter((preset) => preset <= availableSlots)
+    )
+  );
+
+  return (
+    <>
+      <section className={`${s.formSection} ${s.providerOnboardingCard} ${s.stepTwoSectionStrong}`}>
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>Precio</span>
+          <strong>Como quieres cobrar este trabajo</strong>
+          {!isMobileViewport ? <p>Elige una sola forma de precio.</p> : null}
+        </div>
+
+        <div className={s.field}>
+          <span className={s.label}>Forma de cobro</span>
+          <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de precio">
+            <label className={`${s.segmentedChoice} ${componentForm.pricingMode === "margen" ? s.segmentedChoiceActive : ""}`}>
+              <input
+                className={s.segmentedChoiceInput}
+                type="radio"
+                name="pricing-mode"
+                value="margen"
+                checked={componentForm.pricingMode === "margen"}
+                onChange={() => onPricingModeSelection("margen")}
+              />
+              <span className={s.segmentedChoiceTitle}>Con margen</span>
+              {!isMobileViewport ? (
+                <span className={s.segmentedChoiceHint}>Calcula la venta desde costo y margen.</span>
+              ) : null}
+            </label>
+            <label
+              className={`${s.segmentedChoice} ${
+                componentForm.pricingMode === "precio_directo" ? s.segmentedChoiceActive : ""
+              }`}
+            >
+              <input
+                className={s.segmentedChoiceInput}
+                type="radio"
+                name="pricing-mode"
+                value="precio_directo"
+                checked={componentForm.pricingMode === "precio_directo"}
+                onChange={() => onPricingModeSelection("precio_directo")}
+              />
+              <span className={s.segmentedChoiceTitle}>Valor directo</span>
+              {!isMobileViewport ? (
+                <span className={s.segmentedChoiceHint}>Ingresas directo el valor de venta.</span>
+              ) : null}
+            </label>
+          </div>
+          {!isMobileViewport ? (
+            <span className={s.helpText}>
+              {componentForm.pricingMode === "precio_directo"
+                ? "Tu escribes el valor final por componente."
+                : "El sistema calcula la venta con el margen."}
+            </span>
+          ) : null}
+        </div>
+
+        {componentForm.pricingMode === "margen" ? (
+          <div className={s.field}>
+            <span className={s.label}>
+              Margen <span className={s.required}>*</span>
+            </span>
+            <div className={s.selectWrap}>
+              <select
+                className={`${s.input} ${fieldErrors.margenPct ? s.inputError : ""}`}
+                value={componentForm.margenPct}
+                onChange={(event) => onComponentChange("margenPct", event.target.value)}
+                aria-label="Margen a aplicar"
+              >
+                {MARGIN_SELECT_OPTIONS.map((preset) => (
+                  <option key={preset} value={String(preset)}>
+                    {preset === 0 ? "0% (sin margen)" : `${preset}%`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {fieldErrors.margenPct ? <span className={s.fieldError}>{fieldErrors.margenPct}</span> : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>Material</span>
+          <strong>{isMobileViewport ? "Elige el material" : "Elige el material base"}</strong>
+          {!isMobileViewport ? <p>Selecciona rapido si este componente es de aluminio o PVC.</p> : null}
+        </div>
+
+        <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Material del componente">
+          {MATERIAL_OPTIONS.map((materialOption) => (
+            <label
+              key={materialOption}
+              className={`${s.segmentedChoice} ${componentForm.material === materialOption ? s.segmentedChoiceActive : ""}`}
+            >
+              <input
+                className={s.segmentedChoiceInput}
+                type="radio"
+                name="component-material"
+                value={materialOption}
+                checked={componentForm.material === materialOption}
+                onChange={() => onComponentChange("material", materialOption)}
+              />
+              <span className={s.segmentedChoiceTitle}>{materialOption}</span>
+              {!isMobileViewport ? (
+                <span className={s.segmentedChoiceHint}>
+                  {materialOption === "Aluminio"
+                    ? "Perfil comun para ventanas, puertas y cierres."
+                    : "Alternativa liviana para espejos, tapas y trabajos puntuales."}
+                </span>
+              ) : null}
+            </label>
+          ))}
+        </div>
+        {fieldErrors.material ? <span className={s.fieldError}>{fieldErrors.material}</span> : null}
+      </section>
+
+      <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>Carga rapida</span>
+          <strong>{isMobileViewport ? "Elige el componente" : "Elige el componente base"}</strong>
+          {!isMobileViewport ? <p>Te sugerimos una base para que ajustes solo lo necesario.</p> : null}
+        </div>
+
+        <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
+          <div className={s.quickPreviewThumb}>
+            <div className={s.quickPreviewThumbSvg} dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }} />
+          </div>
+          <div className={s.quickPreviewBody}>
+            <strong>{componentForm.tipo}</strong>
+            {!isMobileViewport ? <span>Vista rapida. Las medidas y valores finales se ajustan abajo.</span> : null}
+          </div>
+        </div>
+
+        <div className={`${s.field} ${s.fieldFull}`}>
+          <span className={s.label}>
+            Tipo de componente <span className={s.required}>*</span>
+          </span>
+          <div className={`${s.typeSelector} ${fieldErrors.tipo ? s.typeSelectorError : ""}`}>
+            {COMPONENT_TYPE_GROUPS.map((group) => (
+              <section key={group.title} className={s.typeGroup}>
+                <div className={s.typeGroupTitle}>{group.title}</div>
+                <div className={s.typeGroupGrid}>
+                  {group.items.map((typeOption) => (
+                    <button
+                      key={typeOption}
+                      type="button"
+                      className={`${s.typeChip} ${componentForm.tipo === typeOption ? s.typeChipActive : ""}`}
+                      onClick={() => onComponentChange("tipo", typeOption)}
+                    >
+                      {typeOption}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+          {fieldErrors.tipo ? <span className={s.fieldError}>{fieldErrors.tipo}</span> : null}
+        </div>
+
+        {!editingItemId ? (
+          <div className={`${s.field} ${s.fieldFull}`}>
+            <span className={s.label}>
+              {isMobileViewport ? "Cuantas piezas quieres cargar" : "Cuantos quieres agregar ahora"}
+            </span>
+            <div className={s.batchCountRow}>
+              {batchPresetOptions.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className={`${s.batchCountButton} ${
+                    componentForm.loteCantidad === String(preset) ? s.batchCountButtonActive : ""
+                  }`}
+                  onClick={() => onComponentChange("loteCantidad", String(preset))}
+                >
+                  {preset}
+                </button>
+              ))}
+              <input
+                className={`${s.input} ${s.batchCountInput}`}
+                type="number"
+                min="1"
+                max={availableSlots}
+                step="1"
+                value={componentForm.loteCantidad}
+                onChange={(event) => onComponentChange("loteCantidad", event.target.value)}
+                aria-label="Cantidad de componentes"
+              />
+            </div>
+            {isMobileViewport ? (
+              <div className={s.batchPreviewWrap}>
+                <span className={s.batchPreviewLabel}>
+                  {batchPreviewCodes.length > 0
+                    ? `Se crean ${batchPreviewCodes.length} ${batchPreviewTypeLabel}`
+                    : `Llegaste al limite de ${MAX_COMPONENTS_PER_QUOTE}`}
+                </span>
+                <div className={s.batchPreviewCodes}>
+                  {visibleBatchPreviewCodes.map((code) => (
+                    <span key={code} className={s.batchPreviewCode}>
+                      {code}
+                    </span>
+                  ))}
+                  {hiddenBatchPreviewCount > 0 ? (
+                    <span className={`${s.batchPreviewCode} ${s.batchPreviewCodeMuted}`}>+{hiddenBatchPreviewCount} mas</span>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <span className={s.helpText}>
+                Si son parecidas, primero cargas una y despues copias medidas y costo.
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className={s.quickEditBadge}>
+            {editingItemId ? <LuPencil aria-hidden /> : <LuPlus aria-hidden />}
+            Editando {componentForm.codigo}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}

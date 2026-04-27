@@ -6,10 +6,10 @@ import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
 
-import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
-import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
-import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
-import { resolveOrganizationProfile } from "@/services/organization-profile.service";
+import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
 import {
   buildCotizacionPdfFileName,
   downloadPdfBlob,
@@ -23,12 +23,11 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import { getCotizacionShareExperience } from "@/utils/share-capabilities";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
-import type { CotizacionWorkflowItem } from "@/types/cotizacion-workflow";
 
+import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
+import { buildPrintPlan } from "./_utils/print-plan";
 import s from "./page.module.css";
 
-const FIRST_PAGE_COMPONENTS = 3;
-const NEXT_PAGE_COMPONENTS = 3;
 const APP_NAME = "Ventora";
 const clpFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -38,26 +37,34 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 
 const CLP = (value: number) => clpFormatter.format(value);
 
+function resolvePrintRuntimeMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const candidate = ["message", "error", "details", "hint", "code"].find((key) => {
+      const value = Reflect.get(error, key);
+      return typeof value === "string" && value.trim().length > 0;
+    });
+
+    if (candidate) {
+      return String(Reflect.get(error, candidate));
+    }
+  }
+
+  return fallback;
+}
+
 const COLOR_NAMES: Record<string, string> = {
   "#a8a8a8": "Aluminio natural",
   "#f0eeeb": "Blanco",
   "#dfd5c4": "Blanco hueso",
   "#2a2a2a": "Negro",
   "#444444": "Negro mate",
-  "#b87333": "Bronce",
+  "#8b5e3c": "Madera",
+  "#7d8791": "Titanio",
 };
-
-type PrintPagePlan =
-  | {
-      kind: "cover";
-      startIndex: number;
-      items: CotizacionWorkflowItem[];
-    }
-  | {
-      kind: "components";
-      startIndex: number;
-      items: CotizacionWorkflowItem[];
-    };
 
 type ItemPresentation = {
   colorHex: string;
@@ -90,20 +97,6 @@ function formatSurface(ancho: number | null, alto: number | null, cantidad: numb
   return `${totalM2.toFixed(2)} m2 aprox.`;
 }
 
-function chunkItems<T>(items: T[], chunkSize: number) {
-  if (items.length === 0) {
-    return [] as T[][];
-  }
-
-  const groups: T[][] = [];
-
-  for (let index = 0; index < items.length; index += chunkSize) {
-    groups.push(items.slice(index, index + chunkSize));
-  }
-
-  return groups;
-}
-
 function formatPageNumber(current: number, total: number) {
   return `${String(current).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
 }
@@ -123,32 +116,6 @@ function formatDueDate(baseDateValue: string, validez: string) {
   baseDate.setDate(baseDate.getDate() + days);
 
   return formatCotizacionDate(baseDate.toISOString());
-}
-
-function buildPrintPlan(items: CotizacionWorkflowItem[]): PrintPagePlan[] {
-  const firstItems = items.slice(0, Math.min(items.length, FIRST_PAGE_COMPONENTS));
-  const remainingItems = items.slice(firstItems.length);
-  const remainingPages = chunkItems(remainingItems, NEXT_PAGE_COMPONENTS);
-  const pages: PrintPagePlan[] = [
-    {
-      kind: "cover",
-      startIndex: 0,
-      items: Array.from(firstItems),
-    },
-  ];
-
-  let startIndex = firstItems.length;
-
-  remainingPages.forEach((group) => {
-    pages.push({
-      kind: "components",
-      startIndex,
-      items: group,
-    });
-    startIndex += group.length;
-  });
-
-  return pages;
 }
 
 function ClientField({
@@ -333,16 +300,15 @@ export default function CotizacionPrintPage() {
   const renderableCotizacion = cotizacion && cotizacion.items.length > 0 ? cotizacion : null;
   const hasRenderableRecord = Boolean(renderableCotizacion);
   const lastRenderableCotizacionRef = useRef(renderableCotizacion);
-  const hasForcedFreshLoadRef = useRef(false);
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetScaleFrameRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
   const exportSheetRef = useRef<HTMLElement | null>(null);
   const buildPdfPromiseRef = useRef<Promise<{ blob: Blob; file: File }> | null>(null);
   const prewarmedCacheKeyRef = useRef<string | null>(null);
-  const sentPushNotifiedQuoteRef = useRef<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [recordLoadError, setRecordLoadError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [showWhatsappFallbackActions, setShowWhatsappFallbackActions] = useState(false);
   const [isHydratingRecord, setIsHydratingRecord] = useState(!hasRenderableRecord);
@@ -364,33 +330,30 @@ export default function CotizacionPrintPage() {
         return;
       }
 
-      const shouldForceFreshLoad = fromWizard && wasJustCreated;
       const hasWarmRecord = Boolean(cotizacion && cotizacion.items.length > 0);
 
-      if (hasWarmRecord && !shouldForceFreshLoad) {
+      if (hasWarmRecord) {
+        setRecordLoadError(null);
         setIsHydratingRecord(false);
-        return;
-      }
-
-      if (hasWarmRecord && shouldForceFreshLoad) {
-        if (hasForcedFreshLoadRef.current) {
-          setIsHydratingRecord(false);
-          return;
-        }
-
-        hasForcedFreshLoadRef.current = true;
-        setIsHydratingRecord(false);
-        void loadCotizacionById(params.id).catch(() => {
-          return;
-        });
         return;
       }
 
       setIsHydratingRecord(true);
-      hasForcedFreshLoadRef.current = true;
 
       try {
         await loadCotizacionById(params.id);
+        if (!isCancelled) {
+          setRecordLoadError(null);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setRecordLoadError(
+            resolvePrintRuntimeMessage(
+              error,
+              "No pudimos abrir el presupuesto en este momento. Revisa tu conexion y vuelve a intentar."
+            )
+          );
+        }
       } finally {
         if (!isCancelled) {
           setIsHydratingRecord(false);
@@ -403,7 +366,29 @@ export default function CotizacionPrintPage() {
     return () => {
       isCancelled = true;
     };
-  }, [cotizacion, fromWizard, loadCotizacionById, params.id, wasJustCreated]);
+  }, [cotizacion, loadCotizacionById, params.id]);
+
+  const retryLoadRecord = useCallback(async () => {
+    if (!params.id) {
+      return;
+    }
+
+    setRecordLoadError(null);
+    setIsHydratingRecord(true);
+
+    try {
+      await loadCotizacionById(params.id);
+    } catch (error) {
+      setRecordLoadError(
+        resolvePrintRuntimeMessage(
+          error,
+          "No pudimos volver a cargar el presupuesto. Intenta nuevamente en unos segundos."
+        )
+      );
+    } finally {
+      setIsHydratingRecord(false);
+    }
+  }, [loadCotizacionById, params.id]);
 
   useEffect(() => {
     if (renderableCotizacion) {
@@ -476,12 +461,15 @@ export default function CotizacionPrintPage() {
   const whatsappUrl = visibleCotizacion
     ? buildCotizacionWhatsappUrl(visibleCotizacion, { approvalUrl })
     : null;
-  const shouldWarmPdf = shareIntent === "warm" || shareIntent === "whatsapp";
   const isAppleMobile =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isAndroidMobile =
     typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
   const shouldSharePdfToWhatsapp = shareExperience.canSharePdf && isAndroidMobile;
+  const shouldWarmPdf =
+    wasJustCreated ||
+    shareIntent === "warm" ||
+    (shareIntent === "whatsapp" && shouldSharePdfToWhatsapp);
   const whatsappActionLabel = shouldSharePdfToWhatsapp
     ? "Enviar PDF por WhatsApp"
     : "Enviar link por WhatsApp";
@@ -493,7 +481,7 @@ export default function CotizacionPrintPage() {
       : isAppleMobile
         ? "En iPhone, el boton abre el archivo PDF para que luego puedas guardarlo o compartirlo desde Safari."
         : shouldSharePdfToWhatsapp
-          ? "En Android puedes enviar el PDF por WhatsApp desde aqui. Si el telefono no deja adjuntar el archivo, abrimos el mensaje de respaldo."
+        ? "En Android puedes enviar el PDF por WhatsApp desde aqui. Si el telefono no deja adjuntar el archivo, abrimos el mensaje de respaldo."
         : shareExperience.helperText;
   const companyAddressLine = [
     organizationProfile.empresaDireccion,
@@ -549,11 +537,12 @@ export default function CotizacionPrintPage() {
         ],
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
+          referencia,
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 108,
-          maxH: 94,
+          maxW: 156,
+          maxH: 138,
           variant: "pdf",
         }),
       });
@@ -562,74 +551,15 @@ export default function CotizacionPrintPage() {
     return map;
   }, [visibleCotizacion?.items]);
 
-  useEffect(() => {
-    if (!visibleCotizacion?.id) {
-      sentPushNotifiedQuoteRef.current = null;
-      return;
-    }
-
-    if (visibleCotizacion.estado !== "enviada") {
-      sentPushNotifiedQuoteRef.current = null;
-    }
-  }, [visibleCotizacion?.estado, visibleCotizacion?.id]);
-
-  const notifyQuoteSent = useCallback(
-    async (input: {
-      cotizacionId: string;
-      codigo: string;
-      clienteNombre: string;
-    }) => {
-      if (sentPushNotifiedQuoteRef.current === input.cotizacionId) {
-        return;
-      }
-
-      const response = await fetch("/api/pwa/quote-alerts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(input),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null;
-
-        throw new Error(
-          payload?.error ?? "No pudimos enviar la alerta al celular del maestro."
-        );
-      }
-
-      sentPushNotifiedQuoteRef.current = input.cotizacionId;
-    },
-    []
-  );
-
-  const markQuoteAsSentWithAlert = useCallback(async () => {
+  const markQuoteAsSentInBackground = useCallback(() => {
     if (!visibleCotizacion) {
       return;
     }
 
-    const wasAlreadySent = visibleCotizacion.estado === "enviada";
-
-    await markQuoteAsSent(String(visibleCotizacion.id));
-
-    if (wasAlreadySent) {
-      sentPushNotifiedQuoteRef.current = String(visibleCotizacion.id);
+    void markQuoteAsSent(String(visibleCotizacion.id)).catch(() => {
       return;
-    }
-
-    try {
-      await notifyQuoteSent({
-        cotizacionId: String(visibleCotizacion.id),
-        codigo: visibleCotizacion.codigo,
-        clienteNombre: visibleCotizacion.clienteNombre,
-      });
-    } catch (error) {
-      console.error("No pudimos enviar el push de cotizacion enviada.", error);
-    }
-  }, [markQuoteAsSent, notifyQuoteSent, visibleCotizacion]);
+    });
+  }, [markQuoteAsSent, visibleCotizacion]);
 
   const buildPdfFile = useCallback(async () => {
     if (buildPdfPromiseRef.current) {
@@ -664,13 +594,15 @@ export default function CotizacionPrintPage() {
           throw new Error("La hoja de impresion ya no esta disponible para exportar");
         }
 
-        return exportCotizacionElementToPdf({
+        const result = await exportCotizacionElementToPdf({
           element: sourceSheet,
           fileName: exportFileName,
           pageSelector: `.${s.pdfPage}`,
           format: "legal",
           cacheKey: pdfCacheKey ?? undefined,
         });
+
+                return result;
       } finally {
         exportSheetRef.current?.classList.remove(s.sheetExporting);
         buildPdfPromiseRef.current = null;
@@ -700,15 +632,35 @@ export default function CotizacionPrintPage() {
       return;
     }
 
-    const timer = window.setTimeout(() => {
+    const scheduleWarmPdf = () => {
       prewarmedCacheKeyRef.current = pdfCacheKey;
       void buildPdfFile().catch(() => {
         prewarmedCacheKeyRef.current = null;
+                setExportError(
+          "No pudimos dejar el PDF listo en segundo plano. Puedes abrirlo o descargarlo manualmente desde aqui."
+        );
       });
-    }, 450);
+    };
+
+    const idleTimeout = wasJustCreated ? 500 : 1200;
+    const fallbackDelay = wasJustCreated ? 180 : 900;
+    const idleCallback =
+      "requestIdleCallback" in window
+        ? window.requestIdleCallback(scheduleWarmPdf, { timeout: idleTimeout })
+        : null;
+    const timer =
+      idleCallback === null
+        ? window.setTimeout(scheduleWarmPdf, fallbackDelay)
+        : null;
 
     return () => {
-      window.clearTimeout(timer);
+      if (idleCallback !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleCallback);
+      }
+
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
     };
   }, [
     buildPdfFile,
@@ -717,6 +669,7 @@ export default function CotizacionPrintPage() {
     pdfCacheKey,
     printPages.length,
     shouldWarmPdf,
+    wasJustCreated,
   ]);
 
   const handleDownloadPdf = useCallback(async () => {
@@ -759,10 +712,8 @@ export default function CotizacionPrintPage() {
           return;
         }
 
-        if (visibleCotizacion) {
-          await markQuoteAsSentWithAlert();
-        }
         window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        markQuoteAsSentInBackground();
         return;
       }
 
@@ -791,18 +742,13 @@ export default function CotizacionPrintPage() {
           : whatsappUrl;
 
         if (fallbackWhatsappUrl) {
-          if (visibleCotizacion) {
-            await markQuoteAsSentWithAlert();
-          }
           window.open(fallbackWhatsappUrl, "_blank", "noopener,noreferrer");
+          markQuoteAsSentInBackground();
         }
 
         setExportError(
           "Tu navegador actual no pudo adjuntar el PDF directo a WhatsApp desde la web. Dejamos el archivo descargado o abierto y abrimos el mensaje con el link publico como respaldo. En Chrome Android o con la PWA instalada suele funcionar mejor."
         );
-      }
-      if (visibleCotizacion) {
-        await markQuoteAsSentWithAlert();
       }
     } catch (error) {
       setShowWhatsappFallbackActions(true);
@@ -813,7 +759,7 @@ export default function CotizacionPrintPage() {
   }, [
     approvalUrl,
     buildPdfFile,
-    markQuoteAsSentWithAlert,
+    markQuoteAsSentInBackground,
     visibleCotizacion,
     exportFileName,
     shouldSharePdfToWhatsapp,
@@ -846,11 +792,9 @@ export default function CotizacionPrintPage() {
       return;
     }
 
-    if (visibleCotizacion) {
-      void markQuoteAsSentWithAlert();
-    }
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  }, [markQuoteAsSentWithAlert, visibleCotizacion, whatsappUrl]);
+    markQuoteAsSentInBackground();
+  }, [markQuoteAsSentInBackground, whatsappUrl]);
 
   const renderPrintPages = useCallback(
     (mode: "preview" | "export"): ReactNode => {
@@ -862,12 +806,20 @@ export default function CotizacionPrintPage() {
         const totalPages = printPages.length;
         const pageNumber = pageIndex + 1;
         const isLastPage = pageIndex === totalPages - 1;
+        const isSpaciousCoverPage =
+          pagePlan.kind === "cover" && pagePlan.items.length === 2 && !isLastPage;
         const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
 
         return (
           <article
             key={`${mode}-${pagePlan.kind}-${pageNumber}`}
-            className={`${s.pdfPage} ${mode === "export" ? s.exportPdfPage : ""}`}
+            className={[
+              s.pdfPage,
+              mode === "export" ? s.exportPdfPage : "",
+              isSpaciousCoverPage ? s.spaciousCoverPage : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             <div className={s.softwareSignature}>
               <span className={s.softwareSignaturePrefix}>Powered by</span>
@@ -951,11 +903,12 @@ export default function CotizacionPrintPage() {
                   presentation?.drawingSvg ??
                   generateComponentSVG({
                     tipo: item.tipo,
+                    referencia: presentation?.referencia,
                     ancho: item.ancho,
                     alto: item.alto,
                     colorHex,
-                    maxW: 108,
-                    maxH: 94,
+                            maxW: 156,
+                            maxH: 138,
                     variant: "pdf",
                   });
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
@@ -1144,6 +1097,57 @@ export default function CotizacionPrintPage() {
     ]
   );
 
+  if (!visibleCotizacion && recordLoadError && !isHydratingRecord) {
+    return (
+      <main className={s.page} style={pageStyle}>
+        <div className={s.toolbar}>
+          <Link className={s.actionSecondary} href={fromWizard ? "/cotizaciones" : `/cotizaciones/${params.id}`}>
+            <LuArrowLeft aria-hidden />
+            {fromWizard ? "Volver a cotizaciones" : "Volver"}
+          </Link>
+        </div>
+
+        <section className={s.viewerLoadingShell}>
+          <div className={s.loadingHero}>
+            <div className={s.loadingBrand}>
+              <div className={s.loadingLogoWrap}>
+                <div className={s.companyLogoFallback}>V</div>
+              </div>
+              <div className={s.loadingBrandText}>
+                <strong>Ventora</strong>
+                <span>No pudimos abrir el presupuesto</span>
+              </div>
+            </div>
+            <div className={s.loadingHeroBody}>
+              <div className={s.loadingErrorIcon} aria-hidden>
+                !
+              </div>
+              <div className={s.loadingCopy}>
+                <h1 className={s.emptyTitle}>Error al preparar el visor</h1>
+                <p className={s.emptyText}>{recordLoadError}</p>
+                <div className={s.loadingActions}>
+                  <button
+                    className={s.actionPrimary}
+                    onClick={() => void retryLoadRecord()}
+                    type="button"
+                  >
+                    Reintentar
+                  </button>
+                  <Link
+                    className={s.actionSecondary}
+                    href={fromWizard ? "/cotizaciones" : `/cotizaciones/${params.id}`}
+                  >
+                    Volver
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   if (isReady && !visibleCotizacion && !isHydratingRecord) {
     return (
       <main className={s.page}>
@@ -1167,57 +1171,7 @@ export default function CotizacionPrintPage() {
   if (!visibleCotizacion) {
     return (
       <main className={s.page} style={pageStyle}>
-        <div className={s.toolbar}>
-          <Link className={s.actionSecondary} href={fromWizard ? "/cotizaciones" : `/cotizaciones/${params.id}`}>
-            <LuArrowLeft aria-hidden />
-            {fromWizard ? "Volver a cotizaciones" : "Volver al detalle"}
-          </Link>
-        </div>
-
-        <section className={s.viewerLoadingShell}>
-          <div className={s.loadingHero}>
-            <div className={s.loadingBrand}>
-            <div className={s.loadingLogoWrap}>
-              {organizationProfile.empresaLogoUrl ? (
-               // El componente Image de Next.js no soporta bien la generación de PDF, ya que no se renderiza en el canvas. Por eso usamos la etiqueta img nativa del HTML para mostrar el logo en el PDF exportado, y dejamos el componente Image para la vista previa en pantalla, donde sí puede optimizar la carga.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt={organizationProfile.empresaNombre}
-                  className={s.loadingLogo}
-                  loading="eager"
-                  src={organizationProfile.empresaLogoUrl}
-                />
-              ) : (
-                <div className={s.companyLogoFallback}>
-                  {organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div className={s.loadingBrandText}>
-              <strong>{organizationProfile.empresaNombre}</strong>
-              <span>Preparando cotizacion</span>
-            </div>
-          </div>
-            <div className={s.loadingHeroBody}>
-              <div className={s.loadingPulse} aria-hidden />
-              <div className={s.loadingCopy}>
-                <h1 className={s.emptyTitle}>Preparando visor PDF</h1>
-                <p className={s.emptyText}>
-                  Estamos ordenando la hoja final para que aparezca completa y lista para compartir.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className={s.loadingPreviewCard} aria-hidden>
-            <div className={s.loadingPreviewBar} />
-            <div className={s.loadingPreviewGrid}>
-              <div className={s.loadingPreviewBlock} />
-              <div className={s.loadingPreviewBlock} />
-              <div className={s.loadingPreviewWide} />
-            </div>
-          </div>
-        </section>
+        <VisorPdfLoadingShell />
       </main>
     );
   }

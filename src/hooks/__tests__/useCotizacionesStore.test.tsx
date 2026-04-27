@@ -27,11 +27,11 @@ const getWorkflowById = jest.fn();
 const updateManualResponseStatus = jest.fn();
 const markWorkflowAsSent = jest.fn();
 
-jest.mock("@/hooks/useAuth", () => ({
+jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
-jest.mock("@/services/cotizaciones.service", () => ({
+jest.mock("@/features/cotizaciones/services/cotizaciones.service", () => ({
   cotizacionesAppService: {
     listWorkflowByOrganizationId: (organizationId: string | number) =>
       listWorkflowByOrganizationId(organizationId),
@@ -134,17 +134,14 @@ function ProbeCotizacionesStore() {
         onClick={() =>
           void saveWorkflow({
             draft: {
-              client: {
-                id: "cliente-1",
-                nombre: "Cliente Uno",
-                telefono: "",
-              },
+              clienteNombre: "Cliente Uno",
+              clienteTelefono: "",
               obra: "Obra principal",
               direccion: "",
               validez: "15 dias",
               descuentoPct: 0,
               observaciones: "",
-              componentes: [],
+              items: [],
               flete: 0,
             },
             estado: "creada",

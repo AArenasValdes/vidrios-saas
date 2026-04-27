@@ -1,0 +1,29 @@
+.tokens {
+  --dashboard-bg: #f3f5f9;
+  --dashboard-surface: #ffffff;
+  --dashboard-surface-soft: #f7f9fc;
+  --dashboard-surface-strong: #eef3f8;
+  --dashboard-border: #d9e0ea;
+  --dashboard-border-strong: rgba(217, 224, 234, 0.92);
+  --dashboard-text: #243b6b;
+  --dashboard-text-muted: #667085;
+  --dashboard-text-soft: #98a2b3;
+  --dashboard-accent: #4f7dd4;
+  --dashboard-accent-strong: #335ea9;
+  --dashboard-success: #2fa36b;
+  --dashboard-warning: #d89b3c;
+  --dashboard-danger: #d95c5c;
+  --dashboard-radius-card: 22px;
+  --dashboard-radius-soft: 18px;
+  --dashboard-radius-pill: 999px;
+  --dashboard-shadow-card:
+    0 18px 38px rgba(28, 44, 79, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  --dashboard-shadow-soft: 0 12px 24px rgba(28, 44, 79, 0.05);
+  --dashboard-space-2: 8px;
+  --dashboard-space-3: 12px;
+  --dashboard-space-4: 16px;
+  --dashboard-space-5: 20px;
+  --dashboard-space-6: 24px;
+  --dashboard-space-7: 28px;
+}

@@ -1,0 +1,122 @@
+"use client";
+
+import { LuSearch } from "react-icons/lu";
+
+import { buildGlassValue } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
+
+import s from "../../page.module.css";
+
+type Props = Pick<
+  PasoDosFormularioComponenteProps,
+  | "componentForm"
+  | "isMobileViewport"
+  | "isGlassPanelOpen"
+  | "glassQuery"
+  | "filteredGlassGroups"
+  | "onToggleGlassPanel"
+  | "onGlassQueryChange"
+  | "onGlassSelect"
+>;
+
+export function PasoDosFormularioBloqueVidrio({
+  componentForm,
+  isMobileViewport,
+  isGlassPanelOpen,
+  glassQuery,
+  filteredGlassGroups,
+  onToggleGlassPanel,
+  onGlassQueryChange,
+  onGlassSelect,
+}: Props) {
+  return (
+    <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
+      <div className={s.formSectionHead}>
+        <span className={s.formSectionEyebrow}>Vidrio</span>
+        <strong>Vidrio</strong>
+        {!isMobileViewport ? <p>Dejalo visible desde el inicio porque suele cambiar en terreno.</p> : null}
+      </div>
+
+      <div className={`${s.field} ${s.fieldFull}`}>
+        <span className={s.label}>Tipo de vidrio</span>
+        <div className={s.inlineSelector}>
+          <button
+            className={`${s.inlineSelectorTrigger} ${isGlassPanelOpen ? s.inlineSelectorTriggerActive : ""}`}
+            type="button"
+            onClick={onToggleGlassPanel}
+          >
+            <span className={componentForm.vidrio ? s.inlineSelectorValue : s.inlineSelectorPlaceholder}>
+              {componentForm.vidrio || "Sin vidrio seleccionado"}
+            </span>
+            <span className={s.inlineSelectorMeta}>{isGlassPanelOpen ? "Cerrar" : "Elegir"}</span>
+          </button>
+          {isMobileViewport ? null : (
+            <span className={s.helpText}>
+              {componentForm.vidrio
+                ? "Puedes cambiarlo o limpiarlo desde este selector."
+                : 'Ejemplo: "Incoloro monolitico 5mm". Toca "Elegir vidrio" para cargar uno.'}
+            </span>
+          )}
+
+          {isGlassPanelOpen ? (
+            <div className={s.inlineSelectorPanel}>
+              <div className={s.glassSearchWrap}>
+                <LuSearch className={s.glassSearchIcon} aria-hidden />
+                <input
+                  className={s.glassSearchInput}
+                  value={glassQuery}
+                  onChange={(event) => onGlassQueryChange(event.target.value)}
+                  placeholder="Buscar por vidrio o categoria"
+                />
+              </div>
+
+              <div className={s.glassGroups}>
+                {filteredGlassGroups.length === 0 ? (
+                  <div className={s.glassEmptyState}>No encontramos opciones con ese texto.</div>
+                ) : (
+                  filteredGlassGroups.map((group, groupIndex) => (
+                    <section key={group.grupo} className={s.glassGroup}>
+                      {groupIndex > 0 ? <div className={s.glassDivider} /> : null}
+                      <div className={s.glassGroupTitle}>{group.grupo}</div>
+                      <div className={s.glassChipGrid}>
+                        {group.items.map((glassItem) => {
+                          const fullValue = buildGlassValue(group.prefix, glassItem);
+                          const isActive = componentForm.vidrio === fullValue;
+
+                          return (
+                            <button
+                              key={`${group.grupo}-${glassItem}`}
+                              type="button"
+                              className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
+                              onClick={() => onGlassSelect(fullValue)}
+                            >
+                              {glassItem}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))
+                )}
+              </div>
+
+              <div className={s.inlineSelectorActions}>
+                {!isMobileViewport ? (
+                  <span className={s.helpText}>Se guarda igual a como saldra en el PDF.</span>
+                ) : null}
+                {componentForm.vidrio ? (
+                  <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("")}>
+                    Limpiar
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <span className={s.helpText}>
+          Elige el vidrio por categoria. Pensado para tocar rapido desde el celular.
+        </span>
+      </div>
+    </section>
+  );
+}

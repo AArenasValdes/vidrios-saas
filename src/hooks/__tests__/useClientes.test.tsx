@@ -19,11 +19,11 @@ const updateClient = jest.fn();
 const updateProjectStatus = jest.fn();
 const deleteClient = jest.fn();
 
-jest.mock("@/hooks/useAuth", () => ({
+jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
-jest.mock("@/services/clientes.service", () => ({
+jest.mock("@/features/clientes/services/clientes.service", () => ({
   clientesService: {
     listResumenByOrganizationId: (organizationId: string | number) =>
       listResumenByOrganizationId(organizationId),

@@ -610,7 +610,7 @@
 .topbarEyebrow,
 .mobileHeaderEyebrow {
   font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--goldStrong);
@@ -619,7 +619,7 @@
 .topbarTitle {
   margin-top: 8px;
   font-family: "Syne", sans-serif;
-  font-size: clamp(28px, 4vw, 36px);
+  font-size: clamp(30px, 4vw, 38px);
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -745,10 +745,32 @@
   border-bottom: 1px solid rgba(217, 224, 234, 0.88);
 }
 
+.mobileHeaderCreateFlow {
+  padding: 9px 12px 8px;
+}
+
+.mobileHeaderCreateFlow .mobileHeaderEyebrow {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #7c8ca6;
+}
+
+.mobileHeaderCreateFlow .mobileHeaderBrand {
+  margin-top: 1px;
+  font-size: 18px;
+  color: #243b6b;
+}
+
+.mobileHeaderCreateFlow .mobileGhostBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+}
+
 .mobileHeaderBrand {
-  margin-top: 4px;
+  margin-top: 5px;
   font-family: "Syne", sans-serif;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -1065,12 +1087,11 @@
   gap: 5px;
   color: var(--muted);
   text-decoration: none;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 8px;
+  font-family: "Lato", sans-serif;
+  font-size: 10px;
   line-height: 1.1;
   text-align: center;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.015em;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -1088,6 +1109,33 @@
 .tabIcon {
   width: 18px;
   height: 18px;
+}
+
+.tabItemCreate {
+  transform: translateY(-10px);
+  color: #335ea9;
+  font-size: 10px;
+}
+
+.tabCreateCircle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #4f7dd4, #335ea9);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(51, 94, 169, 0.28);
+  border: 4px solid #ffffff;
+}
+
+.tabCreateCircle svg {
+  width: 24px;
+  height: 24px;
+}
+
+.tabItemCreateActive .tabCreateCircle {
+  background: linear-gradient(180deg, #335ea9, #243b6b);
 }
 
 .mobileFab {
@@ -1186,5 +1234,23 @@
     right: 16px;
     left: 16px;
     min-width: 0;
+  }
+}
+
+.mainCreateFlow {}
+
+.pageContentCreateFlow {}
+
+.tabBarHidden {
+  display: none !important;
+}
+
+@media (max-width: 860px) {
+  .mainCreateFlow {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .pageContentCreateFlow {
+    padding: 4px 0 10px;
   }
 }

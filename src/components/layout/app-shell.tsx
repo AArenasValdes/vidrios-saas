@@ -22,12 +22,12 @@ import {
   LuUsers,
 } from "react-icons/lu";
 
-import { useCotizacionAlerts } from "@/hooks/useCotizacionAlerts";
-import { useAuth } from "@/hooks/useAuth";
-import { useOrganizationProfile } from "@/hooks/useOrganizationProfile";
-import { buildOrganizationInitials } from "@/services/organization-profile.service";
-import { canAccessSolicitudes } from "@/services/solicitudes-contacto-access";
-import type { CotizacionAlert } from "@/services/cotizacion-alerts.service";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useCotizacionAlerts } from "@/features/cotizaciones/hooks/useCotizacionAlerts";
+import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { buildOrganizationInitials } from "@/features/organization-profile/services/organization-profile.service";
+import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 
 import s from "./app-shell.module.css";
 
@@ -199,7 +199,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
       autoRefresh: true,
       refreshOnVisibility: true,
     });
-  const showMobileFab = !pathname.startsWith("/cotizaciones");
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<
@@ -642,7 +641,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <header className={s.mobileHeader}>
+      <header
+        className={`${s.mobileHeader}${isNuevaCotizacionRoute ? ` ${s.mobileHeaderCreateFlow}` : ""}`}
+      >
         <div>
           <span className={s.mobileHeaderEyebrow}>Area operativa</span>
           <div className={s.mobileHeaderBrand}>{currentItem.mobileLabel}</div>
@@ -680,7 +681,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className={s.main}>
+      <main className={`${s.main}${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}>
         <div className={s.topbar}>
           <div>
             <p className={s.topbarEyebrow}>Panel operativo</p>
@@ -725,7 +726,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <div className={s.pageContent}>
+        <div className={`${s.pageContent}${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}`}>
           {children}
         </div>
       </main>
@@ -825,41 +826,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </aside>
       ) : null}
 
-      <nav className={s.tabBar}>
+      <nav className={`${s.tabBar}${isNuevaCotizacionRoute ? ` ${s.tabBarHidden}` : ""}`}>
         <div className={s.tabBarInner}>
-          {NAV_ITEMS.map((item) => {
-            if (item.href === "/solicitudes" && !canReviewSolicitudes) {
-              return null;
-            }
-
-            const active = isActivePath(pathname, item.href);
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={false}
-                className={`${s.tabItem}${active ? ` ${s.tabItemActive}` : ""}`}
-              >
-                <Icon className={s.tabIcon} aria-hidden />
-                {item.mobileLabel}
-              </Link>
-            );
-          })}
+          <Link
+            href="/dashboard"
+            prefetch={false}
+            className={`${s.tabItem}${isActivePath(pathname, "/dashboard") ? ` ${s.tabItemActive}` : ""}`}
+          >
+            <LuLayoutDashboard className={s.tabIcon} aria-hidden />
+            Inicio
+          </Link>
+          <Link
+            href="/cotizaciones"
+            prefetch={false}
+            className={`${s.tabItem}${isActivePath(pathname, "/cotizaciones") && !isNuevaCotizacionRoute ? ` ${s.tabItemActive}` : ""}`}
+          >
+            <LuFileText className={s.tabIcon} aria-hidden />
+            Cotizaciones
+          </Link>
+          <Link
+            href="/cotizaciones/nueva"
+            prefetch={false}
+            className={`${s.tabItem} ${s.tabItemCreate}${isNuevaCotizacionRoute ? ` ${s.tabItemCreateActive}` : ""}`}
+            aria-label="Crear nueva cotizacion"
+          >
+            <span className={s.tabCreateCircle}>
+              <LuFilePlus2 aria-hidden />
+            </span>
+            <span>Nueva cotizacion</span>
+          </Link>
+          <Link
+            href="/clientes"
+            prefetch={false}
+            className={`${s.tabItem}${isActivePath(pathname, "/clientes") ? ` ${s.tabItemActive}` : ""}`}
+          >
+            <LuUsers className={s.tabIcon} aria-hidden />
+            Clientes
+          </Link>
         </div>
       </nav>
-
-      {showMobileFab ? (
-        <Link
-          href="/cotizaciones/nueva"
-          prefetch={false}
-          className={s.mobileFab}
-          aria-label="Crear cotizacion"
-        >
-          <LuFilePlus2 aria-hidden />
-        </Link>
-      ) : null}
     </div>
   );
 }

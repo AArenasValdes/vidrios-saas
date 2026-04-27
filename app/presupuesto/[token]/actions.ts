@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { publicCotizacionApprovalService } from "@/services/public-cotizacion-approval.service";
-import { webPushNotificationsService } from "@/services/web-push-notifications.service";
+import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
+import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 
 export async function acceptPublicQuoteAction(token: string) {
   const current = await publicCotizacionApprovalService.resolveByToken(token);

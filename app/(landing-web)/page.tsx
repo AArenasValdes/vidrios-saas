@@ -8,9 +8,12 @@ import type { IconType } from "react-icons";
 import {
   FaArrowRight,
   FaBars,
+  FaBell,
   FaCalculator,
   FaCheckCircle,
+  FaChrome,
   FaClock,
+  FaDownload,
   FaEnvelope,
   FaFilePdf,
   FaMapMarkerAlt,
@@ -29,6 +32,7 @@ import { TestimonialsSection } from "@/components/testimonials-with-marquee";
 const navLinks = [
   { href: "#problema", label: "Problema" },
   { href: "#como-funciona", label: "Como funciona" },
+  { href: "#instalacion", label: "Instalacion" },
   { href: "#producto", label: "Producto" },
   { href: "/planes", label: "Planes" },
   { href: "#faq", label: "FAQ" },
@@ -123,6 +127,30 @@ const productCallouts: Array<{ icon: IconType; label: string; detail: string }> 
   },
 ];
 
+const installationSteps: Array<{ step: string; title: string; description: string; icon: IconType }> = [
+  {
+    step: "01",
+    icon: FaChrome,
+    title: "Abre Ventora en Chrome o Edge",
+    description:
+      "Asi te anda mas estable y las alertas del maestro funcionan mejor en el computador.",
+  },
+  {
+    step: "02",
+    icon: FaDownload,
+    title: "Instalala como app",
+    description:
+      "Aprieta instalar en el navegador y te queda un acceso directo para abrirla mas rapido.",
+  },
+  {
+    step: "03",
+    icon: FaBell,
+    title: "Activa las notificaciones",
+    description:
+      "Asi te avisa cuando una cotizacion se envia, se aprueba o se rechaza.",
+  },
+];
+
 const showcaseCards = [
   {
     title: "Ventana aluminio",
@@ -134,7 +162,7 @@ const showcaseCards = [
   {
     title: "Shower door",
     code: "S1",
-    detail: "Templado 8 mm · bano principal",
+    detail: "Templado 8 mm · baño principal",
     price: "$421.800",
     status: "aprobada",
   },
@@ -181,6 +209,11 @@ const faqs = [
     question: "Lo puedo usar desde el celular en la obra?",
     answer:
       "Si. La experiencia prioriza contraste, botones grandes y lectura rapida para terreno y uso movil.",
+  },
+  {
+    question: "En que navegador funciona mejor?",
+    answer:
+      "Chrome o Edge en desktop son la mejor opcion. En iPhone, agrega el acceso desde Safari. Brave no es el navegador recomendado para push.",
   },
   {
     question: "El cliente recibe algo presentable?",
@@ -668,7 +701,7 @@ export default function LandingPage() {
                     <div className={s.panelMetaDark}>
                       <span className={s.itemCodeLight}>S1</span>
                       <strong>Shower door</strong>
-                      <p>Templado 8 mm · bano principal</p>
+                      <p>Templado 8 mm · baño principal</p>
                     </div>
                   </div>
                 </div>
@@ -834,6 +867,58 @@ export default function LandingPage() {
                 <footer>Instalador de aluminio · Santiago</footer>
               </blockquote>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="instalacion" className={s.installationSection}>
+        <div className={s.container}>
+          <div className={s.sectionHeadingLight}>
+            <div className={s.sectionTag}>Instalacion y acceso</div>
+            <h2 className={s.sectionTitleDark}>
+              Entra, instalala y dejala lista para trabajar.
+            </h2>
+            <p className={s.sectionTextDark}>
+              Si la abres en Chrome o Edge en computador, y en Safari cuando usas iPhone,
+              Ventora se ve mejor, responde mejor y las alertas funcionan con menos problemas.
+            </p>
+          </div>
+
+          <div className={s.installationShell}>
+            <div className={s.installationGrid}>
+              {installationSteps.map((step) => {
+                const Icon = step.icon;
+
+                return (
+                  <article key={step.step} className={s.installationCard}>
+                    <div className={s.installationIcon}>
+                      <Icon aria-hidden />
+                    </div>
+                    <div className={s.installationCardBody}>
+                      <span className={s.installationCardStep}>{step.step}</span>
+                      <h3>{step.title}</h3>
+                      <p>{step.description}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <aside className={s.installationNote}>
+              <span className={s.installationNoteLabel}>Recomendado</span>
+              <strong>Chrome o Edge en computador</strong>
+              <p>
+                Si quieres usar Ventora tranquilo y recibir alertas sin enredos, usa Chrome o Edge.
+                Brave puede bloquear notificaciones y hacerte perder avisos importantes.
+              </p>
+
+              <div className={s.installationPills} aria-label="Navegadores recomendados">
+                <span>Chrome</span>
+                <span>Edge</span>
+                <span>Instalar app</span>
+                <span>Alertas push</span>
+              </div>
+            </aside>
           </div>
         </div>
       </section>
@@ -1017,7 +1102,7 @@ export default function LandingPage() {
           <div className={s.contactTrustRow}>
             <span>Sin tarjeta de credito</span>
             <span>Funciona desde el primer dia</span>
-            <span>Soporte en espanol</span>
+            <span>Soporte en español</span>
             <span>Hecho en Chile</span>
           </div>
         </div>

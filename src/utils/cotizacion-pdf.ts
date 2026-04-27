@@ -150,6 +150,10 @@ function isAppleMobileUserAgent(userAgent: string) {
   return /iPhone|iPad|iPod/i.test(userAgent);
 }
 
+function isAndroidUserAgent(userAgent: string) {
+  return /Android/i.test(userAgent);
+}
+
 export function resolveCotizacionPdfCanvasScale({
   width,
   height,
@@ -160,11 +164,14 @@ export function resolveCotizacionPdfCanvasScale({
   const safeHeight = Math.max(1, height);
   const safeDevicePixelRatio = Math.max(1, devicePixelRatio);
   const isAppleMobile = isAppleMobileUserAgent(userAgent);
+  const isAndroid = isAndroidUserAgent(userAgent);
   const desiredScale = isAppleMobile
     ? Math.min(2.4, Math.max(1.8, safeDevicePixelRatio))
-    : Math.min(4, Math.max(3, safeDevicePixelRatio * 2));
-  const maxCanvasArea = isAppleMobile ? 7_500_000 : 14_000_000;
-  const maxCanvasEdge = isAppleMobile ? 3072 : 8192;
+    : isAndroid
+      ? Math.min(2.2, Math.max(1.6, safeDevicePixelRatio * 0.75))
+      : Math.min(4, Math.max(3, safeDevicePixelRatio * 2));
+  const maxCanvasArea = isAppleMobile ? 7_500_000 : isAndroid ? 9_500_000 : 14_000_000;
+  const maxCanvasEdge = isAppleMobile ? 3072 : isAndroid ? 4096 : 8192;
   const areaLimitedScale = Math.sqrt(maxCanvasArea / (safeWidth * safeHeight));
   const edgeLimitedScale = maxCanvasEdge / Math.max(safeWidth, safeHeight);
 
@@ -426,7 +433,7 @@ export async function exportCotizacionElementToPdf({
           imageBox.width,
           imageBox.height,
           undefined,
-          "SLOW"
+          "FAST"
         );
       }
 
@@ -533,7 +540,7 @@ export async function exportCotizacionElementToPdf({
         printableWidth,
         sliceHeightMm,
         undefined,
-        "SLOW"
+        "FAST"
       );
 
       const currentPage = String(pageIndex + 1).padStart(2, "0");

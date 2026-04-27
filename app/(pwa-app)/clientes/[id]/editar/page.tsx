@@ -12,7 +12,7 @@ import {
   LuUserRound,
 } from "react-icons/lu";
 
-import { useClientes } from "@/hooks/useClientes";
+import { useClientes } from "@/features/clientes/hooks/useClientes";
 
 import s from "../../nuevo/page.module.css";
 

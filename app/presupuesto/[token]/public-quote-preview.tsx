@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuFileText, LuLayers3, LuShieldCheck } from "react-icons/lu";
 
-import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
+import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -93,7 +93,8 @@ const COLOR_NAMES: Record<string, string> = {
   "#dfd5c4": "Blanco hueso",
   "#2a2a2a": "Negro",
   "#444444": "Negro mate",
-  "#b87333": "Bronce",
+  "#8b5e3c": "Madera",
+  "#7d8791": "Titanio",
 };
 
 function CLP(value: number) {
@@ -268,11 +269,12 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         ],
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
+          referencia,
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 108,
-          maxH: 94,
+          maxW: 156,
+          maxH: 138,
           variant: "pdf",
         }),
       });
@@ -500,11 +502,12 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           presentation?.drawingSvg ??
                           generateComponentSVG({
                             tipo: item.tipo,
+                            referencia: presentation?.referencia,
                             ancho: item.ancho,
                             alto: item.alto,
                             colorHex,
-                            maxW: 108,
-                            maxH: 94,
+                            maxW: 156,
+                            maxH: 138,
                             variant: "pdf",
                           });
 

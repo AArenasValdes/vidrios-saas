@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import {
-  LuBuilding2,
+  LuEllipsis,
   LuEye,
   LuFilterX,
   LuMapPin,
@@ -20,6 +20,13 @@ import { useClientes } from "@/hooks/useClientes";
 import s from "./page.module.css";
 
 const ESTADOS = ["Todos", "Activo", "Seguimiento", "Prospecto", "Inactivo"];
+const MOBILE_ESTADO_CHIPS = [
+  { label: "Todos", value: "Todos" },
+  { label: "Activos", value: "Activo" },
+  { label: "Seguim.", value: "Seguimiento" },
+  { label: "Prospectos", value: "Prospecto" },
+  { label: "Inactivos", value: "Inactivo" },
+] as const;
 
 const ESTADO_META: Record<string, { cls: string; label: string }> = {
   activo: { cls: "stActivo", label: "Activo" },
@@ -43,6 +50,13 @@ function buildPageNumbers(currentPage: number, totalPages: number) {
   return pages;
 }
 
+function getClienteMeta(estado: string) {
+  return ESTADO_META[estado] ?? {
+    cls: "stSeguimiento",
+    label: estado,
+  };
+}
+
 export default function ClientesPage() {
   const { clientes, isReady, isRefreshing, isSaving, deleteCliente } = useClientes();
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
@@ -57,7 +71,7 @@ export default function ClientesPage() {
   const busquedaDiferida = useDeferredValue(busqueda);
   const isInitialSync = isRefreshing && clientes.length === 0;
 
-  const { direcciones, filtrados, filtrosActivos, kpis, obrasFiltradas } = useMemo(() => {
+  const { direcciones, filtrados, filtrosActivos, kpis, mobileKpis, obrasFiltradas } = useMemo(() => {
     const query = busquedaDiferida.trim().toLowerCase();
     let seguimientoCount = 0;
     let prospectosCount = 0;
@@ -127,6 +141,28 @@ export default function ClientesPage() {
           tone: "strong",
         },
       ],
+      mobileKpis: [
+        {
+          label: "Clientes",
+          value: String(clientes.length),
+          tone: "blue",
+        },
+        {
+          label: "Seguimiento",
+          value: String(seguimientoCount),
+          tone: "amber",
+        },
+        {
+          label: "Obras activas",
+          value: String(obrasActivas),
+          tone: "green",
+        },
+        {
+          label: "Prospectos",
+          value: String(prospectosCount),
+          tone: "danger",
+        },
+      ],
     };
   }, [busquedaDiferida, clientes, direccionFiltro, estadoFiltro]);
 
@@ -142,6 +178,29 @@ export default function ClientesPage() {
   const pageNumbers = buildPageNumbers(visiblePage, totalPages);
   const pageStart = (visiblePage - 1) * PAGE_SIZE;
   const paginatedClientes = filtrados.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRows = useMemo(
+    () =>
+      paginatedClientes.map((cliente) => {
+        const meta = getClienteMeta(cliente.estado);
+
+        return {
+          id: String(cliente.id),
+          nombre: cliente.nombre,
+          referencia: cliente.referencia,
+          telefono: cliente.telefono || "Sin telefono",
+          telefonoHref: cliente.telefono ? `tel:${cliente.telefono}` : undefined,
+          direccion: cliente.direccion,
+          obrasCount: String(cliente.obras),
+          obrasLabel: `${cliente.obras} obras`,
+          ultimaGestion: cliente.ultimaGestion,
+          detailHref: `/clientes/${cliente.id}`,
+          editHref: `/clientes/${cliente.id}/editar`,
+          metaClassName: s[meta.cls],
+          metaLabel: meta.label,
+        };
+      }),
+    [paginatedClientes]
+  );
 
   const handleBusquedaChange = (value: string) => {
     setBusqueda(value);
@@ -197,18 +256,53 @@ export default function ClientesPage() {
   return (
     <div className={s.root}>
       <div className={s.header}>
-        <div>
-          <h1 className={s.title}>Clientes</h1>
-          <p className={s.subtitle}>
-            Centraliza contactos, obras y seguimiento comercial para no perder oportunidades.
-          </p>
-        </div>
-
         <div className={s.headerActions}>
           <Link className={s.btnPrimary} href="/clientes/nuevo">
             <LuUserPlus aria-hidden />
             Nuevo cliente
           </Link>
+        </div>
+      </div>
+
+      <div className={s.mobileKpiGrid}>
+        {mobileKpis.map((kpi) => (
+          <div key={kpi.label} className={`${s.mobileKpiCard} ${s[`mobileKpi${kpi.tone[0].toUpperCase()}${kpi.tone.slice(1)}`]}`}>
+            <strong>{kpi.value}</strong>
+            <span>{kpi.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={s.mobileSearchSection}>
+        <div className={s.mobileSearchWrap}>
+          <span className={s.searchIcon}>
+            <LuSearch aria-hidden />
+          </span>
+          <input
+            className={s.searchInput}
+            placeholder="Buscar cliente"
+            value={busqueda}
+            onChange={(event) => handleBusquedaChange(event.target.value)}
+          />
+        </div>
+
+        <div className={s.mobileFilterChips}>
+          {MOBILE_ESTADO_CHIPS.map((chip) => (
+            <button
+              key={chip.value}
+              className={`${s.mobileFilterChip}${estadoFiltro === chip.value ? ` ${s.mobileFilterChipActive}` : ""}`}
+              onClick={() => handleEstadoFiltroChange(chip.value)}
+              type="button"
+              aria-pressed={estadoFiltro === chip.value}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        <div className={s.mobileResultsLine}>
+          <strong>{filtrados.length} clientes</strong>
+          <span>{obrasFiltradas} obras activas</span>
         </div>
       </div>
 
@@ -355,69 +449,64 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedClientes.map((cliente) => {
-                  const meta = ESTADO_META[cliente.estado] ?? {
-                    cls: "stSeguimiento",
-                    label: cliente.estado,
-                  };
-
+                {visibleRows.map((row) => {
                   return (
-                    <tr key={cliente.id} className={s.tr}>
+                    <tr key={row.id} className={s.tr}>
                       <td className={s.tdPrimary}>
                         <div className={s.clientIdentity}>
-                          <span className={s.clientNameValue}>{cliente.nombre}</span>
+                          <span className={s.clientNameValue}>{row.nombre}</span>
                         </div>
                       </td>
                       <td className={s.tdContacto}>
                         <div className={s.contactBlock}>
-                          <span className={s.contactPhone}>{cliente.telefono || "Sin telefono"}</span>
-                          <span className={s.contactAddress}>{cliente.direccion}</span>
+                          <span className={s.contactPhone}>{row.telefono}</span>
+                          <span className={s.contactAddress}>{row.direccion}</span>
                         </div>
                       </td>
                       <td className={s.tdResumen}>
                         <div className={s.resumenBlock}>
-                          <span className={s.resumenReferencia}>{cliente.referencia}</span>
-                          <span className={s.resumenMeta}>{cliente.obras} obras</span>
-                          <span className={s.resumenGestion}>{cliente.ultimaGestion}</span>
+                          <span className={s.resumenReferencia}>{row.referencia}</span>
+                          <span className={s.resumenMeta}>{row.obrasLabel}</span>
+                          <span className={s.resumenGestion}>{row.ultimaGestion}</span>
                         </div>
                       </td>
                       <td className={s.tdCenter}>
-                        <span className={`${s.badge} ${s[meta.cls]}`}>{meta.label}</span>
+                        <span className={`${s.badge} ${row.metaClassName}`}>{row.metaLabel}</span>
                       </td>
                       <td className={s.tdCenter}>
                         <div className={s.accionesStack}>
                           <div className={`${s.acciones} ${s.accionesDock}`}>
-                          <Link
-                            className={s.accionBtn}
-                            href={`/clientes/${cliente.id}`}
-                            title="Ver detalle"
-                            aria-label="Ver detalle"
-                            data-tooltip="Ver detalle"
-                          >
-                            <LuEye aria-hidden />
-                          </Link>
-                          <Link
-                            className={s.accionBtn}
-                            href={`/clientes/${cliente.id}/editar`}
-                            title="Editar"
-                            aria-label="Editar"
-                            data-tooltip="Editar"
-                          >
-                            <LuPencil aria-hidden />
-                          </Link>
-                          <a
-                            className={s.accionBtn}
-                            href={cliente.telefono ? `tel:${cliente.telefono}` : undefined}
-                            title="Llamar"
-                            aria-label="Llamar"
-                            data-tooltip={cliente.telefono ? "Llamar" : "Sin telefono"}
-                          >
-                            <LuPhone aria-hidden />
-                          </a>
+                            <Link
+                              className={s.accionBtn}
+                              href={row.detailHref}
+                              title="Ver detalle"
+                              aria-label="Ver detalle"
+                              data-tooltip="Ver detalle"
+                            >
+                              <LuEye aria-hidden />
+                            </Link>
+                            <Link
+                              className={s.accionBtn}
+                              href={row.editHref}
+                              title="Editar"
+                              aria-label="Editar"
+                              data-tooltip="Editar"
+                            >
+                              <LuPencil aria-hidden />
+                            </Link>
+                            <a
+                              className={s.accionBtn}
+                              href={row.telefonoHref}
+                              title="Llamar"
+                              aria-label="Llamar"
+                              data-tooltip={row.telefonoHref ? "Llamar" : "Sin telefono"}
+                            >
+                              <LuPhone aria-hidden />
+                            </a>
                           </div>
                           <button
                             className={`${s.accionBtn} ${s.accionBtnDanger} ${s.accionBtnDelete}`}
-                            onClick={() => handleDelete(String(cliente.id), cliente.nombre)}
+                            onClick={() => handleDelete(row.id, row.nombre)}
                             title="Eliminar cliente"
                             aria-label="Eliminar cliente"
                             data-tooltip="Eliminar cliente"
@@ -436,60 +525,66 @@ export default function ClientesPage() {
           </div>
 
           <div className={s.cardList}>
-            {paginatedClientes.map((cliente) => {
-              const meta = ESTADO_META[cliente.estado] ?? {
-                cls: "stSeguimiento",
-                label: cliente.estado,
-              };
-
+            {visibleRows.map((row) => {
               return (
-                <div key={cliente.id} className={s.clientCard}>
+                <div key={row.id} className={s.clientCard}>
                   <div className={s.clientCardTop}>
-                    <div>
-                      <div className={s.clientCardName}>{cliente.nombre}</div>
-                      <div className={s.clientCardRef}>{cliente.referencia}</div>
+                    <div className={s.clientCardIdentity}>
+                      <div className={s.clientCardName}>{row.nombre}</div>
+                      <span className={`${s.badge} ${row.metaClassName}`}>{row.metaLabel}</span>
                     </div>
-                    <span className={`${s.badge} ${s[meta.cls]}`}>{meta.label}</span>
+                    <div className={s.clientCardObras}>
+                      <strong>{row.obrasCount}</strong>
+                      <span>obras</span>
+                    </div>
                   </div>
 
                   <div className={s.clientCardMeta}>
                     <span>
                       <LuPhone aria-hidden />
-                      {cliente.telefono || "Sin telefono"}
+                      {row.telefono}
                     </span>
                     <span>
                       <LuMapPin aria-hidden />
-                      {cliente.direccion}
-                    </span>
-                    <span>
-                      <LuBuilding2 aria-hidden />
-                      {cliente.obras} obras
+                      {row.direccion}
                     </span>
                   </div>
 
+                  <div className={s.clientCardSince}>Ultima gestion: {row.ultimaGestion}</div>
+
                   <div className={s.clientCardBottom}>
-                    <span className={s.clientCardLast}>{cliente.ultimaGestion}</span>
-                    <div className={s.acciones}>
-                      <Link className={s.accionBtnMobile} href={`/clientes/${cliente.id}`}>
-                        <LuEye aria-hidden />
-                        Ver ficha
-                      </Link>
+                    <Link className={s.clientCardPrimaryAction} href={row.detailHref}>
+                      <LuEye aria-hidden />
+                      Ver ficha
+                    </Link>
+                    <div className={s.clientCardSecondaryActions}>
                       <a
-                        className={s.accionBtnMobile}
-                        href={cliente.telefono ? `tel:${cliente.telefono}` : undefined}
+                        className={s.clientCardIconAction}
+                        href={row.telefonoHref}
+                        aria-label={row.telefonoHref ? "Llamar cliente" : "Cliente sin telefono"}
                       >
                         <LuPhone aria-hidden />
-                        Llamar cliente
                       </a>
-                      <button
-                        className={`${s.accionBtnMobile} ${s.accionBtnMobileDanger}`}
-                        onClick={() => handleDelete(String(cliente.id), cliente.nombre)}
-                        type="button"
-                        disabled={isSaving}
-                      >
-                        <LuTrash2 aria-hidden />
-                        Eliminar cliente
-                      </button>
+                      <details className={s.clientMenu}>
+                        <summary className={s.clientCardIconAction}>
+                          <LuEllipsis aria-hidden />
+                        </summary>
+                        <div className={s.clientMenuContent}>
+                          <Link className={s.accionBtnMobile} href={row.editHref}>
+                            <LuPencil aria-hidden />
+                            Editar
+                          </Link>
+                          <button
+                            className={`${s.accionBtnMobile} ${s.accionBtnMobileDanger}`}
+                            onClick={() => handleDelete(row.id, row.nombre)}
+                            type="button"
+                            disabled={isSaving}
+                          >
+                            <LuTrash2 aria-hidden />
+                            Eliminar
+                          </button>
+                        </div>
+                      </details>
                     </div>
                   </div>
                 </div>

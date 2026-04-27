@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import s from "./install-app-prompt.module.css";
@@ -43,6 +44,7 @@ function isIosSafari() {
 }
 
 export function InstallAppPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(() => {
@@ -110,7 +112,7 @@ export function InstallAppPrompt() {
     setDeferredPrompt(null);
   };
 
-  if (dismissed || isStandaloneMode()) {
+  if (pathname?.startsWith("/print") || dismissed || isStandaloneMode()) {
     return null;
   }
 

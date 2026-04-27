@@ -15,8 +15,8 @@ import {
   LuTrash2,
 } from "react-icons/lu";
 
-import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
-import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
+import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 

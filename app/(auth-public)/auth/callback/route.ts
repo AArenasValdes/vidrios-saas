@@ -1,4 +1,4 @@
-import { authServerService } from "@/services/auth-server.service";
+import { authServerService } from "@/features/auth/services/auth-server.service";
 import { NextResponse } from "next/server";
 
 // Este archivo maneja el redirect de OAuth (Google, Apple)

@@ -11,9 +11,9 @@ import {
   LuRefreshCw,
 } from "react-icons/lu";
 
-import { useAuth } from "@/hooks/useAuth";
-import { canAccessSolicitudes } from "@/services/solicitudes-contacto-access";
-import { useSolicitudesContacto } from "@/hooks/useSolicitudesContacto";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
+import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 
 import s from "./page.module.css";
 

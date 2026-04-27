@@ -9,8 +9,9 @@ import {
 } from "react-icons/lu";
 
 import { acceptPublicQuoteAction, rejectPublicQuoteAction } from "./actions";
+import { PublicQuoteMobile } from "./public-quote-mobile";
 import { PublicQuotePreview } from "./public-quote-preview";
-import { publicCotizacionApprovalService } from "@/services/public-cotizacion-approval.service";
+import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
 
 import s from "./page.module.css";
 
@@ -110,7 +111,17 @@ export default async function PresupuestoPublicoPage({
 
   return (
     <main className={s.page} style={brandStyle}>
-      <section className={s.shell}>
+      <div className={s.mobileOnly}>
+        <PublicQuoteMobile
+          quote={quote}
+          decisionMessage={decisionMessage}
+          acceptAction={hasDecisionState ? null : acceptAction}
+          rejectAction={hasDecisionState ? null : rejectAction}
+        />
+      </div>
+
+      <div className={s.desktopOnly}>
+        <section className={s.shell}>
         <article className={s.hero}>
           <div className={s.heroTop}>
             <div className={s.heroTrustBar}>
@@ -335,7 +346,8 @@ export default async function PresupuestoPublicoPage({
         ) : null}
 
         {!hasDecisionState ? <PublicQuotePreview quote={quote} /> : null}
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

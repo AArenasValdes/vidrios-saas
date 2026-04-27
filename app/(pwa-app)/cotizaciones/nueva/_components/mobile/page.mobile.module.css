@@ -1,0 +1,10 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.layout {
+  display: block;
+  min-width: 0;
+}

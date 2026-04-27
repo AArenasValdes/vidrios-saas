@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { webPushNotificationsService } from "@/services/web-push-notifications.service";
+import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 
 export const dynamic = "force-dynamic";
 

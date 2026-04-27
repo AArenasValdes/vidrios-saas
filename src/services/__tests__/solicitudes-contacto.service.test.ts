@@ -65,6 +65,32 @@ describe("solicitudes-contacto.service", () => {
     ).rejects.toBeInstanceOf(SolicitudContactoValidationError);
   });
 
+  it("debe limitar campos largos antes de guardar", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const service = createSolicitudesContactoService({ repository });
+
+    await service.createSolicitud({
+      nombre: "Juan ".repeat(30),
+      empresa: "Vidrios ".repeat(30),
+      correo: `${"correo".repeat(20)}@empresa.cl`,
+      telefono: "+56 9 8765 4321 ".repeat(4),
+      ayuda: "demo",
+      origen: "landing-publica-con-un-origen-demasiado-largo",
+      ip: "192.168.0.1 ".repeat(12),
+      userAgent: "Chrome ".repeat(80),
+    });
+
+    const saved = repository.create.mock.calls[0]?.[0];
+
+    expect(saved?.nombre).toHaveLength(80);
+    expect(saved?.empresa).toHaveLength(100);
+    expect(saved?.correo.length).toBeLessThanOrEqual(160);
+    expect(saved?.telefono).toHaveLength(32);
+    expect(saved?.origen).toHaveLength(40);
+    expect(saved?.ip).toHaveLength(80);
+    expect(saved?.userAgent).toHaveLength(240);
+  });
+
   it("debe rechazar ayudas fuera del catalogo", async () => {
     const service = createSolicitudesContactoService({
       repository: createSolicitudesContactoRepositoryMock(),

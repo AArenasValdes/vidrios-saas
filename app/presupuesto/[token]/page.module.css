@@ -7,6 +7,14 @@
   padding: 24px 16px 40px;
 }
 
+.mobileOnly {
+  display: none;
+}
+
+.desktopOnly {
+  display: block;
+}
+
 .shell {
   width: min(100%, 1080px);
   margin: 0 auto;
@@ -747,7 +755,15 @@
 
 @media (max-width: 720px) {
   .page {
-    padding: 16px 12px 28px;
+    padding: 0;
+  }
+
+  .mobileOnly {
+    display: block;
+  }
+
+  .desktopOnly {
+    display: none;
   }
 
   .responseCard {

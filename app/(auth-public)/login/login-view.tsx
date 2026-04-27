@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, Mail } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import s from "./login.module.css";
 
 interface LoginViewProps {
