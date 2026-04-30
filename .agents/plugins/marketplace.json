@@ -1,0 +1,20 @@
+{
+  "name": "vidrios-saas-local-marketplace",
+  "interface": {
+    "displayName": "Vidrios SaaS Local Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "caveman",
+      "source": {
+        "source": "local",
+        "path": "./plugins/caveman"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

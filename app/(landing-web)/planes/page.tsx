@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FaArrowRight, FaCheckCircle, FaClock, FaComments, FaPhoneAlt } from "react-icons/fa";
 
 import s from "./page.module.css";
+import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 
 const OPTIONS = [
   {
@@ -15,7 +16,7 @@ const OPTIONS = [
       "Revision de tu flujo actual de ventas",
     ],
     cta: {
-      href: "mailto:contacto@vidriossaas.cl?subject=Quiero%20agendar%20una%20demo%20de%20Ventora",
+      href: VENTORA_CONTACT.demoMailto,
       label: "Agendar demo",
       external: true,
     },
@@ -89,7 +90,7 @@ export default function PlanesPage() {
               <div className={s.heroActions}>
                 <a
                   className={s.primaryButton}
-                  href="mailto:contacto@vidriossaas.cl?subject=Quiero%20agendar%20una%20demo%20de%20Ventora"
+                  href={VENTORA_CONTACT.demoMailto}
                 >
                   Probar demo
                   <FaArrowRight aria-hidden />

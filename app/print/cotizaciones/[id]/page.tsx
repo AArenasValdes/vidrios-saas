@@ -8,6 +8,7 @@ import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icon
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
 import {
@@ -56,14 +57,23 @@ function resolvePrintRuntimeMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+// Compat temporal: mantener mapa local hasta limpiar encoding histórico de este bloque.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const COLOR_NAMES: Record<string, string> = {
   "#a8a8a8": "Aluminio natural",
   "#f0eeeb": "Blanco",
+  "#b7bcc4": "Gris",
+  "#b7834a": "Roble Dorado",
+  "#6f4a34": "Nogal",
   "#dfd5c4": "Blanco hueso",
+  "#4f555d": "Gris Antracita",
   "#2a2a2a": "Negro",
   "#444444": "Negro mate",
   "#8b5e3c": "Madera",
   "#7d8791": "Titanio",
+  "#1f8c5a": "Verde (Eléctrico)",
+  "#2968c8": "Azul (Alta presión)",
+  "#e7842a": "Naranja (Ventilación)",
 };
 
 type ItemPresentation = {
@@ -77,7 +87,7 @@ type ItemPresentation = {
 };
 
 function getColorName(colorHex: string) {
-  return COLOR_NAMES[colorHex.toLowerCase()] ?? "Color a definir";
+  return resolveComponentColorName(colorHex);
 }
 
 function formatDimensions(ancho: number | null, alto: number | null) {

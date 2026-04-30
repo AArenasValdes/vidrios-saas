@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  ALUMINUM_COLOR_OPTIONS,
   buildGlassValue,
   buildSuggestedComponentForm,
   GLASS_OPTIONS,
   getComponentTypeLabelForBatch,
   normalizeCurrencyInput,
   MATERIAL_OPTIONS,
-  COLOR_OPTIONS,
+  PVC_COLOR_OPTIONS,
   normalizeSearchValue,
   type ComponentFormState,
   type PreferredProvider,
@@ -79,12 +80,21 @@ export function resolveMaterialColorHex(
   material: PasoDosGrupoDraft["material"],
   currentColorHex?: string
 ) {
+  const normalizedColor = currentColorHex?.trim().toLowerCase();
+
   if (material === "PVC") {
+    const isKnownPvcColor = PVC_COLOR_OPTIONS.some(
+      (option) => option.hex.toLowerCase() === normalizedColor
+    );
+
+    if (normalizedColor && isKnownPvcColor) {
+      return currentColorHex ?? "#f0eeeb";
+    }
+
     return "#f0eeeb";
   }
 
-  const normalizedColor = currentColorHex?.trim().toLowerCase();
-  const isKnownColor = COLOR_OPTIONS.some(
+  const isKnownColor = ALUMINUM_COLOR_OPTIONS.some(
     (option) => option.hex.toLowerCase() === normalizedColor
   );
 

@@ -70,6 +70,29 @@ type PublicItemRow = {
   eliminado_en: string | null;
 };
 
+const ORGANIZATION_PROFILE_SELECT = `
+  organization_id,
+  empresa_nombre,
+  empresa_logo_url,
+  empresa_direccion,
+  empresa_telefono,
+  empresa_email,
+  brand_color,
+  forma_pago,
+  margen_defecto
+`;
+
+const ORGANIZATION_PROFILE_SELECT_LEGACY = `
+  organization_id,
+  empresa_nombre,
+  empresa_logo_url,
+  empresa_direccion,
+  empresa_telefono,
+  empresa_email,
+  brand_color,
+  forma_pago
+`;
+
 const COTIZACION_APPROVAL_SELECT = `
   id,
   organization_id,
@@ -156,6 +179,18 @@ function isMissingRelationError(error: unknown, relationName: string) {
   );
 }
 
+function isMissingOrganizationProfileMarginColumnError(error: unknown) {
+  const haystack = getErrorText(error);
+
+  return (
+    haystack.includes("organization_profile") &&
+    haystack.includes("margen_defecto") &&
+    (haystack.includes("column") ||
+      haystack.includes("schema cache") ||
+      haystack.includes("does not exist"))
+  );
+}
+
 export function createPublicCotizacionApprovalRepository() {
   const supabase = createAdminClient();
 
@@ -222,13 +257,11 @@ export function createPublicCotizacionApprovalRepository() {
 
       const profilePromise = supabase
         .from("organization_profile")
-        .select(
-          "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, forma_pago, margen_defecto"
-        )
+        .select(ORGANIZATION_PROFILE_SELECT)
         .eq("organization_id", cotizacion.organization_id)
         .maybeSingle();
 
-      const [projectResult, itemsResult, profileResult] = await Promise.all([
+      const [projectResult, itemsResult, initialProfileResult] = await Promise.all([
         projectPromise,
         itemsPromise,
         profilePromise,
@@ -242,8 +275,29 @@ export function createPublicCotizacionApprovalRepository() {
         throw itemsResult.error;
       }
 
-      if (profileResult.error) {
-        throw profileResult.error;
+      let organizationProfile = initialProfileResult.data as OrganizationProfileRow | null;
+
+      if (initialProfileResult.error && !isMissingOrganizationProfileMarginColumnError(initialProfileResult.error)) {
+        throw initialProfileResult.error;
+      }
+
+      if (initialProfileResult.error && isMissingOrganizationProfileMarginColumnError(initialProfileResult.error)) {
+        const { data: fallbackProfile, error: fallbackProfileError } = await supabase
+          .from("organization_profile")
+          .select(ORGANIZATION_PROFILE_SELECT_LEGACY)
+          .eq("organization_id", cotizacion.organization_id)
+          .maybeSingle();
+
+        if (fallbackProfileError) {
+          throw fallbackProfileError;
+        }
+
+        organizationProfile = fallbackProfile
+          ? ({
+              ...(fallbackProfile as Omit<OrganizationProfileRow, "margen_defecto">),
+              margen_defecto: null,
+            } as OrganizationProfileRow)
+          : null;
       }
 
       const project = projectResult.data as ProjectRow | null;
@@ -269,7 +323,7 @@ export function createPublicCotizacionApprovalRepository() {
         client: clientResult.error
           ? null
           : (clientResult.data as ClientRow | null),
-        organizationProfile: profileResult.data as OrganizationProfileRow | null,
+        organizationProfile,
         items: ((itemsResult.data as PublicItemRow[] | null) ?? []).filter(
           (item) => item.eliminado_en === null
         ),

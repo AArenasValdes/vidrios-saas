@@ -44,7 +44,7 @@ export function PasoDosWizardTipoMovil({
           >
             <div className={s.stepTwoMobileCategoryTabMain}>
               <strong>{option.title}</strong>
-              <span>{option.subtitle}</span>
+              <span>{repairBrokenText(option.subtitle)}</span>
             </div>
             <small className={s.stepTwoMobileCategoryTabCount}>{option.countLabel}</small>
           </button>

@@ -9,7 +9,7 @@ import {
 import {
   projectsRepository,
   type ProjectsRepository,
-} from "@/repositories/projects.repository";
+} from "@/features/projects/repositories/projects.repository";
 import {
   buildCotizacionCode,
   buildLegacyCotizacionCode,
@@ -33,6 +33,11 @@ type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
   projectsRepository?: ProjectsRepository;
   cotizacionesRepository?: CotizacionesRepository;
+};
+
+type EnsuredEntity<T> = {
+  record: T;
+  rollback?: () => Promise<void>;
 };
 
 export type GuardarCotizacionWorkflowInput = {
@@ -255,7 +260,7 @@ export function createCotizacionesAppService(
     nombre: string;
     telefono: string;
     direccion: string;
-  }) {
+  }): Promise<EnsuredEntity<Cliente>> {
     const nombre = normalizeString(input.nombre);
 
     if (!nombre) {
@@ -267,29 +272,40 @@ export function createCotizacionesAppService(
       : null;
 
     if (existingById) {
-      return clientesRepo.update(existingById.id, input.organizationId, {
-        nombre,
-        telefono: normalizeString(input.telefono) || null,
-        direccion: normalizeString(input.direccion) || null,
-      });
+      return {
+        record: await clientesRepo.update(existingById.id, input.organizationId, {
+          nombre,
+          telefono: normalizeString(input.telefono) || null,
+          direccion: normalizeString(input.direccion) || null,
+        }),
+      };
     }
 
     const existingByName = await clientesRepo.findByNombre(nombre, input.organizationId);
 
     if (existingByName) {
-      return clientesRepo.update(existingByName.id, input.organizationId, {
-        nombre,
-        telefono: normalizeString(input.telefono) || null,
-        direccion: normalizeString(input.direccion) || null,
-      });
+      return {
+        record: await clientesRepo.update(existingByName.id, input.organizationId, {
+          nombre,
+          telefono: normalizeString(input.telefono) || null,
+          direccion: normalizeString(input.direccion) || null,
+        }),
+      };
     }
 
-    return clientesRepo.create({
+    const createdClient = await clientesRepo.create({
       organizationId: input.organizationId,
       nombre,
       telefono: normalizeString(input.telefono) || null,
       direccion: normalizeString(input.direccion) || null,
     });
+
+    return {
+      record: createdClient,
+      rollback: async () => {
+        await clientesRepo.softDelete(createdClient.id, input.organizationId);
+      },
+    };
   }
 
   async function ensureProject(input: {
@@ -297,7 +313,9 @@ export function createCotizacionesAppService(
     existingProjectId?: EntityId | null;
     clientId: EntityId;
     titulo: string;
-  }) {
+  }): Promise<
+    EnsuredEntity<Awaited<ReturnType<ProjectsRepository["create"]>>>
+  > {
     const titulo = normalizeString(input.titulo);
 
     if (!titulo) {
@@ -309,10 +327,12 @@ export function createCotizacionesAppService(
       : null;
 
     if (existingById) {
-      return projectsRepo.update(existingById.id, input.organizationId, {
-        titulo,
-        clienteId: input.clientId,
-      });
+      return {
+        record: await projectsRepo.update(existingById.id, input.organizationId, {
+          titulo,
+          clienteId: input.clientId,
+        }),
+      };
     }
 
     const existingByTitle = await projectsRepo.findByTitleAndClientId(
@@ -322,17 +342,40 @@ export function createCotizacionesAppService(
     );
 
     if (existingByTitle) {
-      return projectsRepo.update(existingByTitle.id, input.organizationId, {
-        titulo,
-        clienteId: input.clientId,
-      });
+      return {
+        record: await projectsRepo.update(existingByTitle.id, input.organizationId, {
+          titulo,
+          clienteId: input.clientId,
+        }),
+      };
     }
 
-    return projectsRepo.create({
+    const createdProject = await projectsRepo.create({
       titulo,
       clienteId: input.clientId,
       organizationId: input.organizationId,
     });
+
+    return {
+      record: createdProject,
+      rollback: async () => {
+        await projectsRepo.softDelete(createdProject.id, input.organizationId);
+      },
+    };
+  }
+
+  async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefined>) {
+    for (const rollback of [...rollbacks].reverse()) {
+      if (!rollback) {
+        continue;
+      }
+
+      try {
+        await rollback();
+      } catch (error) {
+        console.error("No se pudo revertir una entidad auxiliar de la cotización.", error);
+      }
+    }
   }
 
   async function listWorkflowByOrganizationId(organizationId: EntityId) {
@@ -428,76 +471,94 @@ export function createCotizacionesAppService(
       throw new Error("La cotizacion debe tener al menos un componente");
     }
 
-    const client = await ensureClient({
+    const clientResult = await ensureClient({
       organizationId: input.organizationId,
       existingClientId: input.existingClientId,
       nombre: input.draft.clienteNombre,
       telefono: input.draft.clienteTelefono,
       direccion: input.draft.direccion,
     });
-    const project = await ensureProject({
-      organizationId: input.organizationId,
-      existingProjectId: input.existingProjectId,
-      clientId: client.id,
-      titulo: input.draft.obra,
-    });
+    const rollbackStack: Array<(() => Promise<void>) | undefined> = [clientResult.rollback];
+    const client = clientResult.record;
 
-    const totals = calculateCotizacionWorkflowTotals(
-      normalizedItems,
-      input.draft.descuentoPct,
-      input.draft.flete
-    );
-    const costoTotal = round(
-      normalizedItems.reduce(
-        (accumulator, item) => accumulator + item.costoProveedorTotal,
-        0
-      ),
-      2
-    );
-    const utilidadTotal = round(totals.neto - costoTotal, 2);
-    const margenPct =
-      costoTotal === 0 ? 0 : round((utilidadTotal / costoTotal) * 100, 2);
-    const codigo =
-      input.existingCode ??
-      (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
-      buildCotizacionCode();
+    try {
+      const projectResult = await ensureProject({
+        organizationId: input.organizationId,
+        existingProjectId: input.existingProjectId,
+        clientId: client.id,
+        titulo: input.draft.obra,
+      });
+      rollbackStack.push(projectResult.rollback);
+      const project = projectResult.record;
 
-    const cotizacionInput: CrearCotizacionInput = {
-      organizationId: input.organizationId,
-      proyectoId: project.id,
-      numero: codigo,
-      estado: input.estado,
-      descuentoPct: input.draft.descuentoPct,
-      notas: input.draft.observaciones,
-      validoHasta: resolveValidoHasta(input.draft.validez),
-      subtotalNeto: totals.neto,
-      costoTotal,
-      margenPct,
-      utilidadTotal,
-      approvalToken: existingCotizacion?.approvalToken ?? createApprovalToken(),
-      approvalTokenExpiresAt: existingCotizacion?.approvalTokenExpiresAt ?? null,
-      clienteVioEn: existingCotizacion?.clienteVioEn ?? null,
-      clienteRespondioEn: existingCotizacion?.clienteRespondioEn ?? null,
-      clienteRespuestaCanal: existingCotizacion?.clienteRespuestaCanal ?? null,
-      iva: totals.iva,
-      flete: totals.flete,
-      total: totals.total,
-      items: normalizedItems.map((item, index) =>
-        mapWorkflowItemToRepositoryItem(item, input.organizationId, index)
-      ),
-    };
+      const totals = calculateCotizacionWorkflowTotals(
+        normalizedItems,
+        input.draft.descuentoPct,
+        input.draft.flete
+      );
+      const costoTotal = round(
+        normalizedItems.reduce(
+          (accumulator, item) => accumulator + item.costoProveedorTotal,
+          0
+        ),
+        2
+      );
+      const utilidadTotal = round(totals.neto - costoTotal, 2);
+      const margenPct =
+        costoTotal === 0 ? 0 : round((utilidadTotal / costoTotal) * 100, 2);
+      const codigo =
+        input.existingCode ??
+        (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
+        buildCotizacionCode();
 
-    const persisted = input.existingId
-      ? await cotizacionesRepo.update(input.existingId, cotizacionInput)
-      : await cotizacionesRepo.create(cotizacionInput);
+      const cotizacionInput: CrearCotizacionInput = {
+        organizationId: input.organizationId,
+        proyectoId: project.id,
+        numero: codigo,
+        estado: input.estado,
+        descuentoPct: input.draft.descuentoPct,
+        notas: input.draft.observaciones,
+        validoHasta: resolveValidoHasta(input.draft.validez),
+        subtotalNeto: totals.neto,
+        costoTotal,
+        margenPct,
+        utilidadTotal,
+        approvalToken: existingCotizacion?.approvalToken ?? createApprovalToken(),
+        approvalTokenExpiresAt: existingCotizacion?.approvalTokenExpiresAt ?? null,
+        clienteVioEn: existingCotizacion?.clienteVioEn ?? null,
+        clienteRespondioEn: existingCotizacion?.clienteRespondioEn ?? null,
+        clienteRespuestaCanal: existingCotizacion?.clienteRespuestaCanal ?? null,
+        iva: totals.iva,
+        flete: totals.flete,
+        total: totals.total,
+        items: normalizedItems.map((item, index) =>
+          mapWorkflowItemToRepositoryItem(item, input.organizationId, index)
+        ),
+      };
 
-    const workflowRecord = await getWorkflowById(persisted.id, input.organizationId);
+      const persisted = input.existingId
+        ? await cotizacionesRepo.update(
+            input.existingId,
+            cotizacionInput,
+            existingCotizacion
+          )
+        : await cotizacionesRepo.create(cotizacionInput);
 
-    if (!workflowRecord) {
-      throw new Error("No se pudo recuperar la cotizacion guardada");
+      const workflowRecord = await getWorkflowById(persisted.id, input.organizationId);
+
+      if (!workflowRecord) {
+        throw new Error("No se pudo recuperar la cotizacion guardada");
+      }
+
+      return workflowRecord;
+    } catch (error) {
+      if (!input.existingId) {
+        await rollbackEntities(rollbackStack);
+      }
+
+      console.error("Fallo el guardado principal de la cotización.", error);
+      throw error;
     }
-
-    return workflowRecord;
   }
 
   async function deleteWorkflow(id: EntityId, organizationId: EntityId) {

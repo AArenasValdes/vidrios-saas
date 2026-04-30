@@ -1,6 +1,6 @@
 "use client";
 
-import { LuSearch, LuX } from "react-icons/lu";
+import { useMemo, useState } from "react";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 
@@ -9,6 +9,8 @@ import {
   getGroupStatusTitle,
   repairBrokenText,
 } from "./paso-dos-wizard-movil.utils";
+import { PasoDosWizardPrecioMovil } from "./paso-dos-wizard-precio-movil";
+import { PasoDosWizardVidrioMovil } from "./paso-dos-wizard-vidrio-movil";
 import s from "../../page.module.css";
 
 type GlassCatalogGroup = {
@@ -83,20 +85,20 @@ export function PasoDosWizardConfiguracionMovil({
   onSetShowAllSystems,
   onSetVidSearch,
 }: Props) {
+  const [showAllColors, setShowAllColors] = useState(false);
+  const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
+  const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
+
   return (
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileConfigStatus}>
         <strong>
-          {getGroupStatusTitle(
-            draft.cantidad,
-            draft.subtipo,
-            draft.sistema
-          )}
+          {getGroupStatusTitle(draft.cantidad, draft.subtipo, draft.sistema)}
         </strong>
-        <span>Mismas medidas y mismo precio</span>
+        <span>Mismas medidas, mismo sistema y mismo valor inicial.</span>
       </div>
 
-      <div className={s.stepTwoMobileBlockSecundario}>
+      <div className={s.stepTwoMobileBlockHero}>
         <div className={s.stepTwoMobileBlockLabel}>Sistema</div>
         <div className={s.stepTwoMobileChoiceChips}>
           {displaySystemOptions.map((option) => (
@@ -163,7 +165,10 @@ export function PasoDosWizardConfiguracionMovil({
               className={`${s.segmentedChoice} ${
                 draft.material === material ? s.segmentedChoiceActive : ""
               }`}
-              onClick={() => onMaterialChange(material)}
+              onClick={() => {
+                setShowAllColors(false);
+                onMaterialChange(material);
+              }}
               type="button"
             >
               <span className={s.segmentedChoiceTitle}>{material}</span>
@@ -172,16 +177,28 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       </div>
 
-      {draft.material === "Aluminio" ? (
+      {draft.material === "Aluminio" || draft.material === "PVC" ? (
         <div className={s.stepTwoMobileBlockSecundario}>
-          <div className={s.stepTwoMobileBlockLabel}>Color aluminio</div>
-          <div className={s.stepTwoMobileColorGrid}>
-            {colorOptions.map((option) => (
+          <div className={s.stepTwoMobileBlockHeaderInline}>
+            <div className={s.stepTwoMobileBlockLabel}>Color perfil</div>
+            {colorOptions.length > primaryColorOptions.length ? (
+              <button
+                className={s.stepTwoMobileSecondaryLink}
+                onClick={() => setShowAllColors((current) => !current)}
+                type="button"
+              >
+                {showAllColors ? "Menos opciones" : "Mas opciones"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className={s.stepTwoMobileColorGridCompact}>
+            {visibleColorOptions.map((option) => (
               <button
                 key={option.hex}
-                className={`${s.stepTwoMobileColorOption} ${
+                className={`${s.stepTwoMobileColorPill} ${
                   draft.colorHex.toLowerCase() === option.hex.toLowerCase()
-                    ? s.stepTwoMobileColorOptionActive
+                    ? s.stepTwoMobileColorPillActive
                     : ""
                 }`}
                 onClick={() => onColorChange(option.hex)}
@@ -236,190 +253,28 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       </div>
 
-      <div className={s.stepTwoMobileBlockPrecio}>
-        <div className={s.stepTwoMobileBlockLabel}>Modo de precio</div>
-        <div className={s.segmentedChoiceGrid}>
-          {(
-            [
-              { value: "precio_directo", label: "Valor directo" },
-              { value: "margen", label: "Con margen" },
-            ] as const
-          ).map((option) => (
-            <button
-              key={option.value}
-              className={`${s.segmentedChoice} ${
-                activePricingMode === option.value ? s.segmentedChoiceActive : ""
-              }`}
-              onClick={() => onPricingModeChange(option.value)}
-              type="button"
-            >
-              <span className={s.segmentedChoiceTitle}>{option.label}</span>
-            </button>
-          ))}
-        </div>
+      <PasoDosWizardPrecioMovil
+        activePricingMode={activePricingMode}
+        formattedPriceValue={formattedPriceValue}
+        marginValue={draft.margenPct}
+        onMargenChange={onMargenChange}
+        onPrecioChange={onPrecioChange}
+        onPricingModeChange={onPricingModeChange}
+        priceHelp={priceHelp}
+        priceLabel={priceLabel}
+      />
 
-        {activePricingMode === "margen" ? (
-          <div className={s.stepTwoMobileMarginField}>
-            <label className={s.stepTwoMobileMedidaLabel} htmlFor="grupo-margen">
-              Margen (%)
-            </label>
-            <input
-              className={s.stepTwoMobileMarginInput}
-              id="grupo-margen"
-              inputMode="numeric"
-              placeholder="60"
-              type="text"
-              value={draft.margenPct}
-              onChange={(event) => onMargenChange(event.target.value)}
-            />
-          </div>
-        ) : null}
-
-        <div className={s.stepTwoMobileBlockLabel}>{priceLabel}</div>
-        <input
-          className={s.stepTwoMobilePrecioInput}
-          id="grupo-precio"
-          inputMode="numeric"
-          placeholder="$ 120.000"
-          type="text"
-          value={formattedPriceValue}
-          onChange={(event) => onPrecioChange(event.target.value)}
-        />
-        <span className={s.stepTwoMobileBlockHelp}>{priceHelp}</span>
-      </div>
-
-      <div className={s.stepTwoMobileBlockSecundario}>
-        <div className={s.stepTwoMobileBlockLabel}>Cristal / Vidrio</div>
-        <p className={s.stepTwoMobileGlassIntro}>
-          Te sugerimos segun el tipo y sistema, pero puedes elegir cualquier vidrio.
-        </p>
-
-        <div className={s.stepTwoMobileVidrioSearchWrap}>
-          <LuSearch
-            aria-hidden
-            className={s.stepTwoMobileVidrioSearchIcon}
-            size={14}
-          />
-          <input
-            className={s.stepTwoMobileVidrioSearchInput}
-            placeholder='Buscar... ej: "inc", "dvh", "temp"'
-            type="text"
-            value={vidSearch}
-            onChange={(event) => onSetVidSearch(event.target.value)}
-          />
-          {vidSearch ? (
-            <button
-              className={s.stepTwoMobileVidrioSearchClear}
-              onClick={() => onSetVidSearch("")}
-              type="button"
-              aria-label="Limpiar busqueda"
-            >
-              <LuX aria-hidden size={11} />
-            </button>
-          ) : null}
-        </div>
-
-        {vidSearch.trim() ? (
-          <div className={s.stepTwoMobileChoiceChips}>
-            {searchResults.length > 0 ? (
-              searchResults.map((option) => (
-                <button
-                  key={option}
-                  className={`${s.stepTwoMobileChoiceChip} ${
-                    draft.vidrio === option
-                      ? s.stepTwoMobileChoiceChipActive
-                      : ""
-                  }`}
-                  onClick={() => {
-                    onVidrioChange(option);
-                    onSetVidSearch("");
-                  }}
-                  type="button"
-                >
-                  {repairBrokenText(option)}
-                </button>
-              ))
-            ) : (
-              <span className={s.stepTwoMobileVidrioNoResults}>
-                Sin resultados para {vidSearch}. Prueba con dvh o temp.
-              </span>
-            )}
-          </div>
-        ) : (
-          <>
-            {recommendedVidrios.length > 0 ? (
-              <div className={s.stepTwoMobileGlassRecommendedBox}>
-                <div className={s.stepTwoMobileGlassRecommendedHeader}>
-                  <div>
-                    <div className={s.stepTwoMobileVidrioRecLabel}>
-                      Recomendados para este sistema
-                    </div>
-                    <span>{recommendedReason}</span>
-                  </div>
-                </div>
-                <div className={s.stepTwoMobileChoiceChips}>
-                  {recommendedVidrios.map((option) => (
-                    <button
-                      key={option}
-                      className={`${s.stepTwoMobileChoiceChip} ${s.stepTwoMobileChoiceChipRec} ${
-                        draft.vidrio === option
-                          ? s.stepTwoMobileChoiceChipActive
-                          : ""
-                      }`}
-                      onClick={() => onVidrioChange(option)}
-                      type="button"
-                    >
-                      <span>{repairBrokenText(option)}</span>
-                      <small className={s.stepTwoMobileChoiceChipBadge}>
-                        Recomendado
-                      </small>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className={s.stepTwoMobileGlassCatalog}>
-              <div className={s.stepTwoMobileGlassCatalogTitle}>
-                Catalogo completo
-              </div>
-              {glassCatalogGroups.map((group) => (
-                <div className={s.stepTwoMobileGlassGroup} key={group.grupo}>
-                  <div className={s.stepTwoMobileGlassGroupTitle}>
-                    {repairBrokenText(group.grupo)}
-                  </div>
-                  <div className={s.stepTwoMobileChoiceChips}>
-                    {group.options.map((option) => (
-                      <button
-                        key={option}
-                        className={`${s.stepTwoMobileChoiceChip} ${
-                          isRecommendedGlass(option)
-                            ? s.stepTwoMobileChoiceChipRecSoft
-                            : ""
-                        } ${
-                          draft.vidrio === option
-                            ? s.stepTwoMobileChoiceChipActive
-                            : ""
-                        }`}
-                        onClick={() => onVidrioChange(option)}
-                        type="button"
-                      >
-                        {repairBrokenText(option)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {draft.vidrio ? (
-              <span className={s.stepTwoMobileBlockHelp}>
-                Vidrio elegido: {repairBrokenText(draft.vidrio)}
-              </span>
-            ) : null}
-          </>
-        )}
-      </div>
+      <PasoDosWizardVidrioMovil
+        currentGlass={draft.vidrio}
+        glassCatalogGroups={glassCatalogGroups}
+        isRecommendedGlass={isRecommendedGlass}
+        onSetVidSearch={onSetVidSearch}
+        onVidrioChange={onVidrioChange}
+        recommendedReason={recommendedReason}
+        recommendedVidrios={recommendedVidrios}
+        searchResults={searchResults}
+        vidSearch={vidSearch}
+      />
     </div>
   );
 }

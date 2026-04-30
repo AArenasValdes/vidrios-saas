@@ -60,6 +60,7 @@ import { NuevaCotizacionMobile } from "./_components/mobile/nueva-cotizacion-mob
 import { useFlujoNuevaCotizacion } from "./_hooks/use-flujo-nueva-cotizacion";
 import {
   buildPasoDosGrupoComponentForm,
+  resolveMaterialColorHex,
   usePasoDosAgregarGrupo,
 } from "./_hooks/use-paso-dos-agregar-grupo";
 import { usePasoDosAgregarGrupoMovil } from "./_hooks/use-paso-dos-agregar-grupo-movil";
@@ -67,6 +68,7 @@ import { usePasoUnoCliente } from "./_hooks/use-paso-uno-cliente";
 import { usePasoDosEdicionRapida } from "./_hooks/use-paso-dos-edicion-rapida";
 import { usePasoDosListaComponentes } from "./_hooks/use-paso-dos-lista-componentes";
 import { usePasoDosTarjetasComponentes } from "./_hooks/use-paso-dos-tarjetas-componentes";
+import { usePasoDosVariaciones } from "./_hooks/use-paso-dos-variaciones";
 import { usePasoTresGuardado } from "./_hooks/use-paso-tres-guardado";
 import { usePersistenciaNuevaCotizacion } from "./_hooks/use-persistencia-nueva-cotizacion";
 import s from "./page.module.css";
@@ -114,7 +116,6 @@ function NuevaCotizacionPageContent() {
     clientId?: string | number | null;
     projectId?: string | number | null;
   } | null>(null);
-
   const {
     clientes,
     ensureClientesLoaded,
@@ -317,6 +318,7 @@ function NuevaCotizacionPageContent() {
     setSavedRecord(null);
     setLastSaveMode(null);
     setRecordMeta(null);
+    pasoDosVariaciones.resetVariationState();
     setStep(1);
     persistenciaWizard.marcarComoGuardado({
       draft: nextDraft,
@@ -353,6 +355,58 @@ function NuevaCotizacionPageContent() {
       observaciones: nextDraft.observaciones,
     }));
   };
+
+  const openItemForEditing = (
+    item: CotizacionWorkflowItem,
+    nextItemsOverride?: CotizacionWorkflowItem[]
+  ) => {
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    const parsed = mapItemToForm(item);
+    const nextEditingItemId = item.id;
+    setEditingItemId(item.id);
+    setComponentForm(parsed);
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setStep(2);
+    setFieldErrors({});
+    setGlobalError(null);
+    pasoDosEdicionRapida.seleccionarItemEdicionRapida(item.id, "ancho");
+    persistenciaWizard.persistWorkflowSnapshot({
+      draft: nextItemsOverride ? { ...draft, items: nextItemsOverride } : draft,
+      componentForm: parsed,
+      editingItemId: nextEditingItemId,
+      selectedClientId,
+      clientQuery,
+      showStep1MoreData,
+      step: 2,
+    });
+    window.requestAnimationFrame(() => {
+      scrollToSection("component-form");
+    });
+  };
+  const pasoDosVariaciones = usePasoDosVariaciones({
+    items: draft.items,
+    setItems: (nextItems) => setDraft((current) => ({ ...current, items: nextItems })),
+    openItemForEditing,
+    clearEditingState: () => {
+      setEditingItemId(null);
+    },
+    clearUiState: () => {
+      setFieldErrors({});
+      setGlobalError(null);
+    },
+    openStepTwoTop: () => {
+      setStep(2);
+      window.requestAnimationFrame(() => {
+        scrollPageToTop();
+      });
+    },
+    scrollToList: () => {
+      window.requestAnimationFrame(() => {
+        scrollToSection("component-list");
+      });
+    },
+  });
 
   const handleComponentChange = <K extends keyof ComponentFormState>(
     key: K,
@@ -405,16 +459,7 @@ function NuevaCotizacionPageContent() {
       }
       if (key === "material") {
         const material = value as ComponentFormState["material"];
-        if (material === "PVC") {
-          next.colorHex = "#f0eeeb";
-        }
-
-        if (
-          material === "Aluminio" &&
-          (cur.colorHex === "#f0eeeb" || cur.colorHex === "#dfd5c4")
-        ) {
-          next.colorHex = "#a8a8a8";
-        }
+        next.colorHex = resolveMaterialColorHex(material, cur.colorHex);
       }
       if (key === "margenPct" && cur.pricingMode === "margen") {
         const nextMarginValue = String(value || "0");
@@ -489,6 +534,7 @@ function NuevaCotizacionPageContent() {
           organizationProfile?.margenDefecto
         )
       );
+      pasoDosVariaciones.setVariationQuickEditDraft(null);
       setIsGlassPanelOpen(false);
       setGlassQuery("");
       setFieldErrors({});
@@ -518,14 +564,19 @@ function NuevaCotizacionPageContent() {
         provider: suggestionProvider,
         draft: groupDraft,
       });
-      const nextItem = buildItemFromForm(nextForm, draft.items, null);
-      const nextItems = [...draft.items, nextItem];
+      const nextItems = [...draft.items];
+      const nextItem = buildItemFromForm(nextForm, nextItems, null);
+      nextItems.push(nextItem);
 
       setDraft((current) => ({ ...current, items: nextItems }));
       if (isMobileViewport) {
-        pasoDosEdicionRapida.seleccionarItemEdicionRapida(nextItem.id, "ancho");
+        pasoDosEdicionRapida.seleccionarItemEdicionRapida(
+          nextItems.at(-1)?.id ?? null,
+          "ancho"
+        );
         scrollToSection("component-list");
       }
+      pasoDosVariaciones.setVariationQuickEditDraft(null);
       setEditingItemId(null);
       setComponentForm(
         createEmptyComponentForm(
@@ -554,28 +605,22 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleEditItem = (item: CotizacionWorkflowItem) => {
-    const parsed = mapItemToForm(item);
-    const nextEditingItemId = item.id;
-    setEditingItemId(item.id);
-    setComponentForm(parsed);
-    setIsGlassPanelOpen(false);
-    setGlassQuery("");
-    setStep(2);
-    setFieldErrors({});
-    setGlobalError(null);
-    pasoDosEdicionRapida.seleccionarItemEdicionRapida(item.id, "ancho");
-    persistenciaWizard.persistWorkflowSnapshot({
-      draft,
-      componentForm: parsed,
-      editingItemId: nextEditingItemId,
-      selectedClientId,
-      clientQuery,
-      showStep1MoreData,
-      step: 2,
-    });
-    window.requestAnimationFrame(() => {
-      scrollToSection("component-form");
-    });
+    const family =
+      pasoDosVariaciones.variationFamilies.find((current) => current.itemIds.includes(item.id)) ??
+      null;
+
+    if (isMobileViewport && family) {
+      pasoDosVariaciones.openVariationQuickEditForFamily(family, item.id);
+      return;
+    }
+
+    if (isMobileViewport && item.cantidad > 1) {
+      pasoDosVariaciones.openVariationQuickEdit(item);
+      return;
+    }
+
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    openItemForEditing(item);
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -599,6 +644,7 @@ function NuevaCotizacionPageContent() {
       setEditingItemId(null);
       setComponentForm(nextComponentForm);
     }
+    pasoDosVariaciones.handleItemRemoved(itemId);
     persistenciaWizard.persistWorkflowSnapshot({
       draft: { ...draft, items: nextItems },
       componentForm: nextComponentForm,
@@ -618,6 +664,7 @@ function NuevaCotizacionPageContent() {
 
   const handleResetStep2Form = () => {
     setEditingItemId(null);
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
     setComponentForm(
       createEmptyComponentForm(
         draft.items,
@@ -1003,7 +1050,7 @@ function NuevaCotizacionPageContent() {
       {flujo.esVistaMovil ? (
         <NuevaCotizacionMobile
           rootClassName={`${s.root} ${flujo.paso === 2 ? s.rootStepTwoMobile : ""}`}
-          layoutClassName={`${s.layout} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
+          layoutClassName={`${s.layout} ${flujo.paso === 1 ? s.layoutStepOne : ""} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
           step={flujo.paso}
           headerProps={{
             step: flujo.paso,
@@ -1020,7 +1067,12 @@ function NuevaCotizacionPageContent() {
             subtotal: CLP(totals.subtotal),
             total: CLP(totals.total),
             pricingMode: componentForm.pricingMode,
+            adjustedItems: pasoDosVariaciones.adjustedItems,
+            variationQuickEdit: pasoDosVariaciones.variationQuickEdit,
             onGoToSummary: () => goToStep(3),
+            onVariationQuickEditChange: pasoDosVariaciones.handleVariationQuickEditChange,
+            onEditVariationFull: pasoDosVariaciones.handleEditVariationFull,
+            onCloseVariationQuickEdit: pasoDosVariaciones.handleCloseVariationQuickEdit,
             onEditItem: handleEditItem,
             onRemoveItem: handleRemoveItem,
             wizard: {
@@ -1058,7 +1110,7 @@ function NuevaCotizacionPageContent() {
       ) : (
         <NuevaCotizacionDesktop
           rootClassName={s.root}
-          layoutClassName={`${s.layout} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
+          layoutClassName={`${s.layout} ${flujo.paso === 1 ? s.layoutStepOne : ""} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
           step={flujo.paso}
           headerProps={{
             step: flujo.paso,

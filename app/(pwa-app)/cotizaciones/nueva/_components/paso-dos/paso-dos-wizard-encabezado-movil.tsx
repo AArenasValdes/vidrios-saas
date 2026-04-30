@@ -31,7 +31,7 @@ export function PasoDosWizardEncabezadoMovil({
     <>
       <header className={s.stepTwoMobileCreatorHeader}>
         <div className={s.stepTwoMobileCreatorCopy}>
-          <span className={s.cardLabel}>Nuevo componente</span>
+          <span className={s.cardLabel}>Paso 2 / Agregar</span>
           <h2 className={s.stepTwoMobileTitle}>{title}</h2>
           <p className={s.stepTwoMobileSubtle}>{subtitle}</p>
         </div>

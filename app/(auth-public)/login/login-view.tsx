@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, Mail } from "lucide-react";
-import { FcGoogle } from "react-icons/fc";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import s from "./login.module.css";
 
 interface LoginViewProps {
@@ -22,19 +22,16 @@ const copy = {
   emailLabel: "Email",
   emailPlaceholder: "tu@empresa.cl",
   passwordLabel: "Password",
-  passwordPlaceholder: "Ingresa tu contrase\u00f1a",
-  rememberSession: "Mantener sesi\u00f3n",
-  forgotPassword: "Olvid\u00e9 mi contrase\u00f1a",
-  submit: "Iniciar sesi\u00f3n",
+  passwordPlaceholder: "Ingresa tu contraseña",
+  rememberSession: "Mantener sesión",
+  forgotPassword: "Olvidé mi contraseña",
+  submit: "Iniciar sesión",
   submitting: "Ingresando...",
-  divider: "O contin\u00faa con",
-  google: "Continuar con Google",
-  signupPrompt: "\u00bfNo tienes cuenta?",
+  signupPrompt: "¿No tienes cuenta?",
   signupAction: "Crear cuenta",
   oauthError:
-    "No pudimos completar el acceso con Google. Intenta con tu correo y contrase\u00f1a.",
-  credentialError: "Correo o contrase\u00f1a incorrectos",
-  googleHelper: "Acceso con Google disponible cuando tu empresa habilite OAuth.",
+    "No pudimos completar el acceso con Google. Intenta con tu correo y contraseña.",
+  credentialError: "Correo o contraseña incorrectos",
   visualTitle: "Cotiza rápido, sin errores y desde cualquier lugar.",
 };
 
@@ -152,7 +149,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
 
                 <a
                   className={s.textLink}
-                  href="mailto:soporte@cotizapro.cl?subject=Recuperar%20acceso"
+                  href={`${VENTORA_CONTACT.supportMailto}?subject=Recuperar%20acceso`}
                 >
                   {copy.forgotPassword}
                 </a>
@@ -174,19 +171,6 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                 </span>
                 <ArrowRight size={18} aria-hidden />
               </button>
-
-              <div className={s.divider} aria-hidden>
-                <span />
-                <p>{copy.divider}</p>
-                <span />
-              </div>
-
-              <button type="button" className={s.googleButton} disabled>
-                <FcGoogle size={20} aria-hidden />
-                <span>{copy.google}</span>
-              </button>
-
-              <p className={s.helperText}>{copy.googleHelper}</p>
             </form>
           </div>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
 
+import { VENTORA_CONTACT, VENTORA_COPY } from "@/constants/ventora-brand";
 import s from "./footer-section.module.css";
 
 type FooterNavLink = {
@@ -128,17 +129,17 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
               <div className={s.column}>
                 <h3 className={s.columnTitle}>Contacto</h3>
                 <div className={s.contactCard}>
-                  <a href="mailto:hola@ventora.cl" className={s.contactItem}>
+                  <a href={VENTORA_CONTACT.supportMailto} className={s.contactItem}>
                     <Mail size={16} aria-hidden />
-                    hola@ventora.cl
+                    {VENTORA_CONTACT.supportEmail}
                   </a>
-                  <a href="tel:+56987654321" className={s.contactItem}>
+                  <a href={VENTORA_CONTACT.phoneHref} className={s.contactItem}>
                     <Phone size={16} aria-hidden />
-                    +56 9 8765 4321
+                    {VENTORA_CONTACT.phoneDisplay}
                   </a>
                   <span className={s.contactItem}>
                     <MapPin size={16} aria-hidden />
-                    Santiago, Chile
+                    {VENTORA_CONTACT.city}
                   </span>
                   <a href="#contacto" className={s.contactItem}>
                     <ArrowUpRight size={16} aria-hidden />
@@ -158,8 +159,8 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
 
           <div className={s.legalBadges}>
             <span>Sin tarjeta de credito</span>
-            <span>Soporte en español</span>
-            <span>Disenado para obra</span>
+            <span>{VENTORA_COPY.supportLanguage}</span>
+            <span>{VENTORA_COPY.fieldDesign}</span>
           </div>
         </div>
       </div>

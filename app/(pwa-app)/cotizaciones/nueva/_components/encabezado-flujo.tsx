@@ -19,31 +19,20 @@ type EncabezadoFlujoProps = {
 export function EncabezadoFlujo({
   step,
   isSaving,
-  isEditing,
   onGoToStep,
   onSaveDraft,
   onSaveQuote,
 }: EncabezadoFlujoProps) {
-  const activeStep = STEP_LABELS.find((item) => item.id === step) ?? STEP_LABELS[0];
-
   return (
     <div className={s.mobileTopBand}>
       <div className={s.pageHeader}>
         <div className={s.pageHeading}>
-          <div className={s.pageHeaderTopRow}>
+          <div className={s.pageBackRow}>
             <Link href="/cotizaciones" className={s.backLink}>
-              <LuArrowLeft aria-hidden /> Volver a cotizaciones
+              <LuArrowLeft aria-hidden /> Volver
             </Link>
             <div className={s.pageStepKicker}>Paso {step} de 3</div>
           </div>
-          <div className={s.pageTitleRow}>
-            <h1 className={s.pageTitle}>
-              {isEditing ? "Editar cotizacion" : "Nueva cotizacion"}
-            </h1>
-          </div>
-          <p className={s.pageSub}>
-            {activeStep.title}. {activeStep.sub}
-          </p>
         </div>
         <div className={`${s.headerActions} ${step === 1 ? s.headerActionsStep1 : ""}`}>
           {step !== 2 ? (

@@ -2,6 +2,7 @@
 
 import { LuFileText, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
 
+import { COLOR_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -18,6 +19,7 @@ type Props = {
   subtotal: string;
   total: string;
   isWizardOpen: boolean;
+  adjustedItems: Record<string, string>;
   onOpenWizard: () => void;
   onGoToSummary: () => void;
   onSaveAndExit: () => void;
@@ -30,6 +32,7 @@ export function PasoDosListaMovil({
   subtotal,
   total,
   isWizardOpen,
+  adjustedItems,
   onOpenWizard,
   onGoToSummary,
   onSaveAndExit,
@@ -42,16 +45,30 @@ export function PasoDosListaMovil({
     <>
       <section className={s.stepTwoMobileLoadedSection} id="component-list">
         <div className={s.stepTwoMobileLoadedHeader}>
-          <div>
-            <span className={s.cardLabel}>Lista actual</span>
-            <strong>
-              {items.length} componente{items.length !== 1 ? "s" : ""}
-            </strong>
+          <div className={s.stepTwoMobileLoadedHeaderCopy}>
+            <span className={s.cardLabel}>Paso 2 / Componentes</span>
+            <strong>Componentes cargados</strong>
+            <div className={s.stepTwoMobileLoadedStats}>
+              <span className={s.stepTwoMobileLoadedStat}>
+                {items.length} componente{items.length !== 1 ? "s" : ""}
+              </span>
+              <span
+                className={`${s.stepTwoMobileLoadedStat} ${
+                  items.length > 0 && pendingCount === 0
+                    ? s.stepTwoMobileLoadedStatReady
+                    : s.stepTwoMobileLoadedStatPending
+                }`}
+              >
+                {items.length > 0 && pendingCount === 0
+                  ? "Listo"
+                  : `${pendingCount} pendiente${pendingCount !== 1 ? "s" : ""}`}
+              </span>
+            </div>
             {items.length > 0 ? (
               <p className={s.stepTwoMobileLoadedSubtle}>
                 {pendingCount > 0
-                  ? `${pendingCount} pendiente${pendingCount !== 1 ? "s" : ""} de completar`
-                  : "Todo listo para pasar al resumen"}
+                  ? "Completa los pendientes o sigue agregando piezas."
+                  : "Todo listo para pasar al resumen."}
               </p>
             ) : null}
           </div>
@@ -62,15 +79,15 @@ export function PasoDosListaMovil({
               type="button"
             >
               <LuFileText aria-hidden />
-              Ir al resumen
+              Resumen
             </button>
           ) : null}
         </div>
 
         {items.length === 0 ? (
           <div className={s.stepTwoMobileEmptyState}>
-            <strong>Aun no agregas componentes</strong>
-            <span>Presiona el boton de abajo para empezar.</span>
+            <strong>Agrega tu primer componente</strong>
+            <span>Empieza por el tipo y luego completa medidas, vidrio y valor.</span>
           </div>
         ) : (
           <div className={s.stepTwoMobileItemStack}>
@@ -79,6 +96,15 @@ export function PasoDosListaMovil({
               const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
               const itemType = getItemType(item);
               const displayCode = item.codigo || "--";
+              const adjustedFromBaseCode = adjustedItems[item.id] ?? null;
+              const isAdjusted = Boolean(adjustedFromBaseCode);
+              const colorLabel =
+                itemMeta.material === "PVC"
+                  ? "PVC blanco"
+                  : COLOR_OPTIONS.find(
+                      (option) =>
+                        option.hex.toLowerCase() === itemMeta.colorHex.toLowerCase()
+                    )?.label ?? "Color personalizado";
 
               return (
                 <article
@@ -91,8 +117,27 @@ export function PasoDosListaMovil({
                 >
                   <div className={s.stepTwoMobileItemHead}>
                     <div className={s.stepTwoMobileItemHeadLeft}>
-                      <span className={s.stepTwoMobileItemCode}>{displayCode}</span>
+                      <div className={s.stepTwoMobileItemHeadMeta}>
+                        <span className={s.stepTwoMobileItemCode}>{displayCode}</span>
+                        {isAdjusted ? (
+                          <span className={s.stepTwoMobileItemAdjustedBadge}>Ajustada</span>
+                        ) : null}
+                        <span
+                          className={`${s.stepTwoMobileItemState} ${
+                            incomplete
+                              ? s.stepTwoMobileItemStatePending
+                              : s.stepTwoMobileItemStateReady
+                          }`}
+                        >
+                          {incomplete ? "Pendiente" : "Completo"}
+                        </span>
+                      </div>
                       <span className={s.stepTwoMobileItemName}>{itemType}</span>
+                      {adjustedFromBaseCode ? (
+                        <span className={s.stepTwoMobileItemAdjustedHint}>
+                          Sale de {adjustedFromBaseCode}
+                        </span>
+                      ) : null}
                     </div>
                     <div className={s.stepTwoMobileItemActions}>
                       <button
@@ -146,6 +191,16 @@ export function PasoDosListaMovil({
                         {itemMeta.material ? (
                           <span>{repairBrokenText(itemMeta.material)}</span>
                         ) : null}
+                        {itemMeta.colorHex ? (
+                          <span className={s.stepTwoMobileItemColorChip}>
+                            <i
+                              className={s.stepTwoMobileItemColorSwatch}
+                              style={{ backgroundColor: itemMeta.colorHex }}
+                              aria-hidden
+                            />
+                            {repairBrokenText(colorLabel)}
+                          </span>
+                        ) : null}
                         {item.vidrio ? (
                           <span>{repairBrokenText(item.vidrio)}</span>
                         ) : null}
@@ -153,8 +208,11 @@ export function PasoDosListaMovil({
                           <span>{repairBrokenText(itemMeta.referencia)}</span>
                         ) : null}
                       </div>
-                      <div className={s.stepTwoMobileItemPrice}>
-                        {formatMoney(item.precioTotal)}
+                      <div className={s.stepTwoMobileItemFooter}>
+                        <span className={s.stepTwoMobileItemFooterLabel}>Venta</span>
+                        <div className={s.stepTwoMobileItemPrice}>
+                          {formatMoney(item.precioTotal)}
+                        </div>
                       </div>
                     </>
                   )}
@@ -168,7 +226,9 @@ export function PasoDosListaMovil({
       {!isWizardOpen ? (
         <footer className={s.stepTwoMobileFooterBar}>
           <div className={s.stepTwoMobileFooterTotals}>
-            <span>Subtotal {subtotal}</span>
+            <span>
+              {items.length} componente{items.length !== 1 ? "s" : ""} · Subtotal {subtotal}
+            </span>
             <strong>Total {total}</strong>
           </div>
           <div className={s.stepTwoMobileFooterActions}>
@@ -181,7 +241,7 @@ export function PasoDosListaMovil({
             </button>
             <button className={s.btnPrimary} onClick={onOpenWizard} type="button">
               <LuPlus aria-hidden />
-              Componente
+              Agregar
             </button>
           </div>
         </footer>

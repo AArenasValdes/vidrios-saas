@@ -1,4 +1,8 @@
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import {
+  normalizeBrokenText,
+  repairBrokenText as repairBrokenTextShared,
+} from "@/utils/repair-broken-text";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 
@@ -39,10 +43,7 @@ const BROKEN_TEXT_REPLACEMENTS: Array<[string, string]> = [
 ];
 
 function normalizeGlassLabel(value: string) {
-  return repairBrokenText(value)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return normalizeBrokenText(value);
 }
 
 function getGlassCategoryRank(option: string) {
@@ -75,9 +76,11 @@ function getGlassNumericRank(option: string) {
 }
 
 export function repairBrokenText(value: string) {
-  return BROKEN_TEXT_REPLACEMENTS.reduce(
-    (current, [broken, fixed]) => current.replaceAll(broken, fixed),
-    value
+  return repairBrokenTextShared(
+    BROKEN_TEXT_REPLACEMENTS.reduce(
+      (current, [broken, fixed]) => current.replaceAll(broken, fixed),
+      value
+    )
   );
 }
 
@@ -105,7 +108,7 @@ export function getSubtypeBadge(subtipo: string) {
 }
 
 export function getColorByMaterial(material: PasoDosGrupoDraft["material"]) {
-  return material === "PVC" ? "#ece8e1" : "#8f99a8";
+  return material === "PVC" ? "#f0eeeb" : "#8f99a8";
 }
 
 export function isPositiveNumber(value: string) {

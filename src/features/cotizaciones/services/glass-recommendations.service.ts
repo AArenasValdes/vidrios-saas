@@ -1,3 +1,5 @@
+import { normalizeBrokenText } from "@/utils/repair-broken-text";
+
 export type GlassRecommendationContext = {
   subtipo: string;
   sistema: string;
@@ -21,16 +23,7 @@ type NormalizedGlassRecommendationContext = {
 };
 
 function normalizeText(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ã±/g, "n")
-    .replace(/ã³/g, "o")
-    .replace(/ã­/g, "i")
-    .replace(/ã¡/g, "a")
-    .replace(/ã©/g, "e")
-    .replace(/ãº/g, "u")
+  return normalizeBrokenText(value)
     .replace(/[^\w+]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -57,10 +50,7 @@ function resolveRecommendedOptions(
     .filter((option): option is string => Boolean(option));
 }
 
-const WINDOW_DVH_OPTIONS = [
-  "DVH 4+12+4",
-  "DVH 3+3 / 12 / 3+3.",
-] as const;
+const WINDOW_DVH_OPTIONS = ["DVH 4+12+4", "DVH 3+3 / 12 / 3+3."] as const;
 
 const GLASS_RECOMMENDATION_RULES: readonly GlassRecommendationRule[] = [
   {

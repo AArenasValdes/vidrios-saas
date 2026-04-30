@@ -641,90 +641,92 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <header
-        className={`${s.mobileHeader}${isNuevaCotizacionRoute ? ` ${s.mobileHeaderCreateFlow}` : ""}`}
-      >
-        <div>
-          <span className={s.mobileHeaderEyebrow}>Area operativa</span>
-          <div className={s.mobileHeaderBrand}>{currentItem.mobileLabel}</div>
-        </div>
-        <div className={s.mobileHeaderRight}>
-          <button
-            className={`${s.mobileGhostBtn}${isAlertsOpen ? ` ${s.mobileGhostBtnActive}` : ""}`}
-            type="button"
-            aria-label="Notificaciones"
-            aria-expanded={isAlertsOpen}
-            data-alerts-trigger="true"
-            onClick={handleToggleAlerts}
-          >
-            <LuBell aria-hidden />
-            {alertCount > 0 ? (
-              <span className={s.alertDot}>{alertCount > 9 ? "9+" : alertCount}</span>
-            ) : null}
-          </button>
-          <div className={s.profileMenuWrap}>
-            <button
-              className={`${s.mobileAvatarButton} ${profileMenuAnchor === "mobile" ? s.profileTriggerActive : ""}`}
-              type="button"
-              data-profile-trigger="true"
-              aria-label="Abrir menu de cuenta"
-              aria-expanded={profileMenuAnchor === "mobile"}
-              onClick={() => handleToggleProfileMenu("mobile")}
-            >
-              <div className={s.mobileAvatar}>{initial}</div>
-            </button>
-
-            {profileMenuAnchor === "mobile" ? (
-              renderAccountMenu("mobile")
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <main className={`${s.main}${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}>
-        <div className={s.topbar}>
+      {!isNuevaCotizacionRoute ? (
+        <header className={s.mobileHeader}>
           <div>
-            <p className={s.topbarEyebrow}>Panel operativo</p>
-            <h1 className={s.topbarTitle}>{currentItem.label}</h1>
-            <p className={s.topbarText}>{currentItem.description}</p>
+            <span className={s.mobileHeaderEyebrow}>Area operativa</span>
+            <div className={s.mobileHeaderBrand}>{currentItem.mobileLabel}</div>
           </div>
-
-          <div className={s.topbarActions}>
+          <div className={s.mobileHeaderRight}>
             <button
-              className={`${s.ghostAction}${isAlertsOpen ? ` ${s.ghostActionActive}` : ""}`}
+              className={`${s.mobileGhostBtn}${isAlertsOpen ? ` ${s.mobileGhostBtnActive}` : ""}`}
               type="button"
+              aria-label="Notificaciones"
               aria-expanded={isAlertsOpen}
               data-alerts-trigger="true"
               onClick={handleToggleAlerts}
             >
               <LuBell aria-hidden />
-              Alertas
               {alertCount > 0 ? (
-                <span className={s.alertPill}>{alertCount > 9 ? "9+" : alertCount}</span>
+                <span className={s.alertDot}>{alertCount > 9 ? "9+" : alertCount}</span>
               ) : null}
             </button>
             <div className={s.profileMenuWrap}>
               <button
-                className={`${s.teamBadge} ${profileMenuAnchor === "topbar" ? s.profileTriggerActive : ""}`}
+                className={`${s.mobileAvatarButton} ${profileMenuAnchor === "mobile" ? s.profileTriggerActive : ""}`}
                 type="button"
                 data-profile-trigger="true"
-                aria-expanded={profileMenuAnchor === "topbar"}
-                onClick={() => handleToggleProfileMenu("topbar")}
+                aria-label="Abrir menu de cuenta"
+                aria-expanded={profileMenuAnchor === "mobile"}
+                onClick={() => handleToggleProfileMenu("mobile")}
               >
-                <div className={s.teamBadgeAvatar}>{initial}</div>
-                <div>
-                  <div className={s.teamBadgeName}>Equipo activo</div>
-                  <div className={s.teamBadgeMeta}>{rol ?? "usuario"}</div>
-                </div>
-                <LuChevronRight className={s.teamBadgeArrow} aria-hidden />
+                <div className={s.mobileAvatar}>{initial}</div>
               </button>
 
-              {profileMenuAnchor === "topbar" ? (
-                renderAccountMenu("topbar")
+              {profileMenuAnchor === "mobile" ? (
+                renderAccountMenu("mobile")
               ) : null}
             </div>
           </div>
-        </div>
+        </header>
+      ) : null}
+
+      <main className={`${s.main}${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}>
+        {!isNuevaCotizacionRoute ? (
+          <div className={s.topbar}>
+            <div>
+              <p className={s.topbarEyebrow}>Panel operativo</p>
+              <h1 className={s.topbarTitle}>{currentItem.label}</h1>
+              <p className={s.topbarText}>{currentItem.description}</p>
+            </div>
+
+            <div className={s.topbarActions}>
+              <button
+                className={`${s.ghostAction}${isAlertsOpen ? ` ${s.ghostActionActive}` : ""}`}
+                type="button"
+                aria-expanded={isAlertsOpen}
+                data-alerts-trigger="true"
+                onClick={handleToggleAlerts}
+              >
+                <LuBell aria-hidden />
+                Alertas
+                {alertCount > 0 ? (
+                  <span className={s.alertPill}>{alertCount > 9 ? "9+" : alertCount}</span>
+                ) : null}
+              </button>
+              <div className={s.profileMenuWrap}>
+                <button
+                  className={`${s.teamBadge} ${profileMenuAnchor === "topbar" ? s.profileTriggerActive : ""}`}
+                  type="button"
+                  data-profile-trigger="true"
+                  aria-expanded={profileMenuAnchor === "topbar"}
+                  onClick={() => handleToggleProfileMenu("topbar")}
+                >
+                  <div className={s.teamBadgeAvatar}>{initial}</div>
+                  <div>
+                    <div className={s.teamBadgeName}>Equipo activo</div>
+                    <div className={s.teamBadgeMeta}>{rol ?? "usuario"}</div>
+                  </div>
+                  <LuChevronRight className={s.teamBadgeArrow} aria-hidden />
+                </button>
+
+                {profileMenuAnchor === "topbar" ? (
+                  renderAccountMenu("topbar")
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className={`${s.pageContent}${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}`}>
           {children}

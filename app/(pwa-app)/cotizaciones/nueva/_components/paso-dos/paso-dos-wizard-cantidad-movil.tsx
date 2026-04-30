@@ -48,7 +48,7 @@ export function PasoDosWizardCantidadMovil({
         <strong>
           {cantidadDisplayValue.trim() || draft.cantidad} x {groupLabel}
         </strong>
-        <span>Todo este grupo comparte medidas, vidrio y precio.</span>
+        <span>Empieza con una base comun y luego ajustas desde el lapiz si alguna pieza cambia.</span>
       </div>
 
       <div className={s.stepTwoMobileQuantityPanel}>

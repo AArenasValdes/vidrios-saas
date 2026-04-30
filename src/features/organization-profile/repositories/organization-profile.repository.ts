@@ -45,6 +45,21 @@ const PROFILE_SELECT = `
   actualizado_en
 `;
 
+const PROFILE_SELECT_LEGACY = `
+  organization_id,
+  empresa_nombre,
+  empresa_logo_url,
+  empresa_direccion,
+  empresa_telefono,
+  empresa_email,
+  brand_color,
+  forma_pago,
+  proveedor_preferido,
+  modo_precio_preferido,
+  creado_en,
+  actualizado_en
+`;
+
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
     return "";
@@ -69,6 +84,18 @@ function isMissingOrganizationProfileTableError(error: unknown) {
   return (
     haystack.includes("organization_profile") &&
     (haystack.includes("relation") ||
+      haystack.includes("schema cache") ||
+      haystack.includes("does not exist"))
+  );
+}
+
+function isMissingOrganizationProfileMarginColumnError(error: unknown) {
+  const haystack = getErrorText(error);
+
+  return (
+    haystack.includes("organization_profile") &&
+    haystack.includes("margen_defecto") &&
+    (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
   );
@@ -109,6 +136,19 @@ function mapOrganizationProfile(
   };
 }
 
+function withLegacyMarginFallback(
+  row: Omit<OrganizationProfileRow, "margen_defecto"> | OrganizationProfileRow | null
+): OrganizationProfileRow | null {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    margen_defecto: "margen_defecto" in row ? row.margen_defecto : null,
+  };
+}
+
 function sanitizeFileName(fileName: string) {
   return fileName
     .trim()
@@ -132,12 +172,34 @@ export function createOrganizationProfileRepository(
         .eq("organization_id", organizationId)
         .maybeSingle();
 
-      if (error) {
+      if (error && !isMissingOrganizationProfileMarginColumnError(error)) {
         if (isMissingOrganizationProfileTableError(error)) {
           return null;
         }
 
         throw error;
+      }
+
+      if (error && isMissingOrganizationProfileMarginColumnError(error)) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from(TABLE_NAME)
+          .select(PROFILE_SELECT_LEGACY)
+          .eq("organization_id", organizationId)
+          .maybeSingle();
+
+        if (fallbackError) {
+          if (isMissingOrganizationProfileTableError(fallbackError)) {
+            return null;
+          }
+
+          throw fallbackError;
+        }
+
+        return mapOrganizationProfile(
+          withLegacyMarginFallback(
+            fallbackData as Omit<OrganizationProfileRow, "margen_defecto"> | null
+          )
+        );
       }
 
       return mapOrganizationProfile(data as OrganizationProfileRow | null);

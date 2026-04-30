@@ -82,6 +82,7 @@ describe("organization-profile.service", () => {
       formaPago: "50% anticipo",
       proveedorPreferido: "Indalum",
       modoPrecioPreferido: "precio_directo",
+      margenDefecto: 100,
     });
   });
 

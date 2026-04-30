@@ -362,10 +362,199 @@ function buildBreakdownInsert(
   };
 }
 
+function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
+  return {
+    proyecto_id: input.proyectoId ?? null,
+    organization_id: input.organizationId,
+    numero: input.numero ?? null,
+    estado: input.estado,
+    descuento_pct: input.descuentoPct ?? null,
+    flete: input.flete ?? null,
+    iva: input.iva ?? null,
+    notas: input.notas ?? null,
+    valido_hasta: input.validoHasta ?? null,
+    subtotal_neto: input.subtotalNeto ?? null,
+    costo_total: input.costoTotal ?? null,
+    margen_pct: input.margenPct ?? null,
+    utilidad_total: input.utilidadTotal ?? null,
+    estado_comercial: input.estadoComercial ?? null,
+    approval_token: input.approvalToken ?? null,
+    approval_token_expires_at: input.approvalTokenExpiresAt ?? null,
+    cliente_vio_en: input.clienteVioEn ?? null,
+    cliente_respondio_en: input.clienteRespondioEn ?? null,
+    cliente_respuesta_canal: input.clienteRespuestaCanal ?? null,
+    total: input.total,
+    actualizado_en: new Date().toISOString(),
+  };
+}
+
+function buildCotizacionInsertPayload(input: CrearCotizacionInput) {
+  const { actualizado_en: updatedAt, ...payload } = buildCotizacionUpdatePayload(input);
+  void updatedAt;
+  return payload;
+}
+
+function mapSnapshotItemToCreateInput(item: CotizacionItem): CrearCotizacionItemInput {
+  return {
+    codigo: item.codigo,
+    tipoComponente: item.tipoComponente,
+    orden: item.orden,
+    cantidad: item.cantidad,
+    precioUnitario: item.precioUnitario,
+    subtotal: item.subtotal,
+    organizationId: item.organizationId,
+    ancho: item.ancho,
+    alto: item.alto,
+    areaM2: item.areaM2,
+    linea: item.linea,
+    color: item.color,
+    vidrio: item.vidrio,
+    nombre: item.nombre,
+    descripcion: item.descripcion,
+    unidad: item.unidad,
+    observaciones: item.observaciones,
+    tipoItem: item.tipoItem,
+    productTypeId: item.productTypeId,
+    systemLineId: item.systemLineId,
+    configurationId: item.configurationId,
+    costoUnitario: item.costoUnitario,
+    costoTotal: item.costoTotal,
+    margenPct: item.margenPct,
+    utilidad: item.utilidad,
+    breakdown: item.breakdown.map((entry) => ({
+      materialId: entry.materialId,
+      descripcion: entry.descripcion,
+      unidad: entry.unidad,
+      cantidad: entry.cantidad,
+      costoUnitario: entry.costoUnitario,
+      costoTotal: entry.costoTotal,
+      precioUnitario: entry.precioUnitario,
+      precioTotal: entry.precioTotal,
+      origen: entry.origen,
+    })),
+  };
+}
+
 export function createCotizacionesRepository(
   deps: CotizacionesRepositoryDeps = {}
 ) {
   const supabase = deps.clientFactory ?? createClient();
+
+  async function softDeleteActiveItems(
+    cotizacionId: EntityId,
+    organizationId: EntityId,
+    deletedAt = new Date().toISOString()
+  ) {
+    const { error } = await supabase
+      .from("cotizacion_items")
+      .update({
+        eliminado_en: deletedAt,
+      })
+      .eq("cotizacion_id", cotizacionId)
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  async function insertBreakdownEntries(
+    breakdown: CrearCotizacionItemBreakdownInput[],
+    cotizacionItemId: EntityId,
+    organizationId: EntityId
+  ) {
+    if (breakdown.length === 0) {
+      return;
+    }
+
+    const { error: breakdownError } = await supabase
+      .from("quote_item_breakdown")
+      .insert(
+        breakdown.map((entry) =>
+          buildBreakdownInsert(entry, cotizacionItemId, organizationId)
+        )
+      );
+
+    if (breakdownError && !isMissingBreakdownTableError(breakdownError)) {
+      throw breakdownError;
+    }
+  }
+
+  async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
+    const snapshotInput: CrearCotizacionInput = {
+      organizationId: snapshot.organizationId,
+      proyectoId: snapshot.proyectoId,
+      numero: snapshot.numero,
+      estado: snapshot.estado,
+      descuentoPct: snapshot.descuentoPct,
+      flete: snapshot.flete,
+      iva: snapshot.iva,
+      notas: snapshot.notas,
+      validoHasta: snapshot.validoHasta,
+      subtotalNeto: snapshot.subtotalNeto,
+      costoTotal: snapshot.costoTotal,
+      margenPct: snapshot.margenPct,
+      utilidadTotal: snapshot.utilidadTotal,
+      estadoComercial: snapshot.estadoComercial,
+      approvalToken: snapshot.approvalToken,
+      approvalTokenExpiresAt: snapshot.approvalTokenExpiresAt,
+      clienteVioEn: snapshot.clienteVioEn,
+      clienteRespondioEn: snapshot.clienteRespondioEn,
+      clienteRespuestaCanal: snapshot.clienteRespuestaCanal,
+      total: snapshot.total,
+      items: snapshot.items.map(mapSnapshotItemToCreateInput),
+    };
+    const updatePayload = buildCotizacionUpdatePayload(snapshotInput);
+    let restoreError: unknown = null;
+
+    const { error } = await supabase
+      .from("cotizaciones")
+      .update(updatePayload)
+      .eq("id", snapshot.id)
+      .eq("organization_id", snapshot.organizationId);
+
+    if (error && isMissingApprovalFieldsError(error)) {
+      const {
+        approval_token: approvalToken,
+        approval_token_expires_at: approvalTokenExpiresAt,
+        cliente_vio_en: clienteVioEn,
+        cliente_respondio_en: clienteRespondioEn,
+        cliente_respuesta_canal: clienteRespuestaCanal,
+        ...legacyUpdatePayload
+      } = updatePayload;
+      void approvalToken;
+      void approvalTokenExpiresAt;
+      void clienteVioEn;
+      void clienteRespondioEn;
+      void clienteRespuestaCanal;
+
+      const { error: legacyError } = await supabase
+        .from("cotizaciones")
+        .update(legacyUpdatePayload)
+        .eq("id", snapshot.id)
+        .eq("organization_id", snapshot.organizationId);
+
+      restoreError = legacyError;
+    } else {
+      restoreError = error;
+    }
+
+    if (restoreError) {
+      throw restoreError;
+    }
+
+    await softDeleteActiveItems(snapshot.id, snapshot.organizationId);
+
+    for (const item of snapshot.items.map(mapSnapshotItemToCreateInput)) {
+      const createdItem = await createCotizacionItem(item, snapshot.id);
+      await insertBreakdownEntries(
+        item.breakdown ?? [],
+        createdItem.id,
+        snapshot.organizationId
+      );
+    }
+  }
 
   async function listCotizacionItems(
     cotizacionId: EntityId,
@@ -595,224 +784,177 @@ export function createCotizacionesRepository(
     },
 
     async create(input: CrearCotizacionInput) {
-      const insertPayload = {
-        proyecto_id: input.proyectoId ?? null,
-        organization_id: input.organizationId,
-        numero: input.numero ?? null,
-        estado: input.estado,
-        descuento_pct: input.descuentoPct ?? null,
-        flete: input.flete ?? null,
-        iva: input.iva ?? null,
-        notas: input.notas ?? null,
-        valido_hasta: input.validoHasta ?? null,
-        subtotal_neto: input.subtotalNeto ?? null,
-        costo_total: input.costoTotal ?? null,
-        margen_pct: input.margenPct ?? null,
-        utilidad_total: input.utilidadTotal ?? null,
-        estado_comercial: input.estadoComercial ?? null,
-        approval_token: input.approvalToken ?? null,
-        approval_token_expires_at: input.approvalTokenExpiresAt ?? null,
-        cliente_vio_en: input.clienteVioEn ?? null,
-        cliente_respondio_en: input.clienteRespondioEn ?? null,
-        cliente_respuesta_canal: input.clienteRespuestaCanal ?? null,
-        total: input.total,
-      };
+      const insertPayload = buildCotizacionInsertPayload(input);
       let data: CotizacionRow | null = null;
+      let createdQuoteId: EntityId | null = null;
 
-      {
-        const { data: createdData, error } = await supabase
-          .from("cotizaciones")
-          .insert(insertPayload)
-          .select(COTIZACION_DETAIL_SELECT)
-          .single();
-
-        if (!error) {
-          data = createdData as CotizacionRow;
-        } else if (isMissingApprovalFieldsError(error)) {
-          const {
-            approval_token: approvalToken,
-            approval_token_expires_at: approvalTokenExpiresAt,
-            cliente_vio_en: clienteVioEn,
-            cliente_respondio_en: clienteRespondioEn,
-            cliente_respuesta_canal: clienteRespuestaCanal,
-            ...legacyInsertPayload
-          } = insertPayload;
-          void approvalToken;
-          void approvalTokenExpiresAt;
-          void clienteVioEn;
-          void clienteRespondioEn;
-          void clienteRespuestaCanal;
-
-          const { data: legacyData, error: legacyError } = await supabase
+      try {
+        {
+          const { data: createdData, error } = await supabase
             .from("cotizaciones")
-            .insert(legacyInsertPayload)
-            .select(COTIZACION_DETAIL_SELECT_LEGACY)
+            .insert(insertPayload)
+            .select(COTIZACION_DETAIL_SELECT)
             .single();
 
-          if (legacyError) {
-            throw legacyError;
-          }
+          if (!error) {
+            data = createdData as CotizacionRow;
+          } else if (isMissingApprovalFieldsError(error)) {
+            const {
+              approval_token: approvalToken,
+              approval_token_expires_at: approvalTokenExpiresAt,
+              cliente_vio_en: clienteVioEn,
+              cliente_respondio_en: clienteRespondioEn,
+              cliente_respuesta_canal: clienteRespuestaCanal,
+              ...legacyInsertPayload
+            } = insertPayload;
+            void approvalToken;
+            void approvalTokenExpiresAt;
+            void clienteVioEn;
+            void clienteRespondioEn;
+            void clienteRespuestaCanal;
 
-          data = {
-            ...(legacyData as CotizacionRow),
-            approval_token: null,
-            approval_token_expires_at: null,
-            cliente_vio_en: null,
-            cliente_respondio_en: null,
-            cliente_respuesta_canal: null,
-          };
-        } else {
-          throw error;
-        }
-      }
+            const { data: legacyData, error: legacyError } = await supabase
+              .from("cotizaciones")
+              .insert(legacyInsertPayload)
+              .select(COTIZACION_DETAIL_SELECT_LEGACY)
+              .single();
 
-      const cotizacion = mapCotizacion(data as CotizacionRow);
-
-      for (const item of input.items) {
-        const createdItem = await createCotizacionItem(item, cotizacion.id);
-        const breakdown = item.breakdown ?? [];
-
-        if (breakdown.length > 0) {
-          const { error: breakdownError } = await supabase
-            .from("quote_item_breakdown")
-            .insert(
-              breakdown.map((entry) =>
-                buildBreakdownInsert(
-                  entry,
-                  createdItem.id,
-                  item.organizationId
-                )
-              )
-            );
-
-          if (breakdownError) {
-            if (!isMissingBreakdownTableError(breakdownError)) {
-              throw breakdownError;
+            if (legacyError) {
+              throw legacyError;
             }
+
+            data = {
+              ...(legacyData as CotizacionRow),
+              approval_token: null,
+              approval_token_expires_at: null,
+              cliente_vio_en: null,
+              cliente_respondio_en: null,
+              cliente_respuesta_canal: null,
+            };
+          } else {
+            throw error;
           }
         }
+
+        const cotizacion = mapCotizacion(data as CotizacionRow);
+        createdQuoteId = cotizacion.id;
+
+        for (const item of input.items) {
+          const createdItem = await createCotizacionItem(item, cotizacion.id);
+          await insertBreakdownEntries(
+            item.breakdown ?? [],
+            createdItem.id,
+            item.organizationId
+          );
+        }
+
+        return hydrateCotizacion(cotizacion);
+      } catch (error) {
+        if (createdQuoteId !== null) {
+          try {
+            await supabase
+              .from("cotizaciones")
+              .update({
+                eliminado_en: new Date().toISOString(),
+              })
+              .eq("id", createdQuoteId)
+              .eq("organization_id", input.organizationId)
+              .is("eliminado_en", null);
+            await softDeleteActiveItems(createdQuoteId, input.organizationId);
+          } catch (rollbackError) {
+            console.error("No se pudo revertir una creación parcial de cotización.", rollbackError);
+          }
+        }
+
+        throw error;
       }
-
-      const hydrated = await hydrateCotizacion(cotizacion);
-
-      return hydrated;
     },
 
-    async update(id: EntityId, input: CrearCotizacionInput) {
-      const updatePayload = {
-        proyecto_id: input.proyectoId ?? null,
-        organization_id: input.organizationId,
-        numero: input.numero ?? null,
-        estado: input.estado,
-        descuento_pct: input.descuentoPct ?? null,
-        flete: input.flete ?? null,
-        iva: input.iva ?? null,
-        notas: input.notas ?? null,
-        valido_hasta: input.validoHasta ?? null,
-        subtotal_neto: input.subtotalNeto ?? null,
-        costo_total: input.costoTotal ?? null,
-        margen_pct: input.margenPct ?? null,
-        utilidad_total: input.utilidadTotal ?? null,
-        estado_comercial: input.estadoComercial ?? null,
-        approval_token: input.approvalToken ?? null,
-        approval_token_expires_at: input.approvalTokenExpiresAt ?? null,
-        cliente_vio_en: input.clienteVioEn ?? null,
-        cliente_respondio_en: input.clienteRespondioEn ?? null,
-        cliente_respuesta_canal: input.clienteRespuestaCanal ?? null,
-        total: input.total,
-        actualizado_en: new Date().toISOString(),
-      };
+    async update(
+      id: EntityId,
+      input: CrearCotizacionInput,
+      previousSnapshot: Cotizacion | null = null
+    ) {
+      const updatePayload = buildCotizacionUpdatePayload(input);
       let data: CotizacionRow | null = null;
 
-      {
-        const { data: updatedData, error } = await supabase
-          .from("cotizaciones")
-          .update(updatePayload)
-          .eq("id", id)
-          .eq("organization_id", input.organizationId)
-          .is("eliminado_en", null)
-          .select(COTIZACION_DETAIL_SELECT)
-          .single();
-
-        if (!error) {
-          data = updatedData as CotizacionRow;
-        } else if (isMissingApprovalFieldsError(error)) {
-          const {
-            approval_token: approvalToken,
-            approval_token_expires_at: approvalTokenExpiresAt,
-            cliente_vio_en: clienteVioEn,
-            cliente_respondio_en: clienteRespondioEn,
-            cliente_respuesta_canal: clienteRespuestaCanal,
-            ...legacyUpdatePayload
-          } = updatePayload;
-          void approvalToken;
-          void approvalTokenExpiresAt;
-          void clienteVioEn;
-          void clienteRespondioEn;
-          void clienteRespuestaCanal;
-
-          const { data: legacyData, error: legacyError } = await supabase
+      try {
+        {
+          const { data: updatedData, error } = await supabase
             .from("cotizaciones")
-            .update(legacyUpdatePayload)
+            .update(updatePayload)
             .eq("id", id)
             .eq("organization_id", input.organizationId)
             .is("eliminado_en", null)
-            .select(COTIZACION_DETAIL_SELECT_LEGACY)
+            .select(COTIZACION_DETAIL_SELECT)
             .single();
 
-          if (legacyError) {
-            throw legacyError;
-          }
+          if (!error) {
+            data = updatedData as CotizacionRow;
+          } else if (isMissingApprovalFieldsError(error)) {
+            const {
+              approval_token: approvalToken,
+              approval_token_expires_at: approvalTokenExpiresAt,
+              cliente_vio_en: clienteVioEn,
+              cliente_respondio_en: clienteRespondioEn,
+              cliente_respuesta_canal: clienteRespuestaCanal,
+              ...legacyUpdatePayload
+            } = updatePayload;
+            void approvalToken;
+            void approvalTokenExpiresAt;
+            void clienteVioEn;
+            void clienteRespondioEn;
+            void clienteRespuestaCanal;
 
-          data = {
-            ...(legacyData as CotizacionRow),
-            approval_token: null,
-            approval_token_expires_at: null,
-            cliente_vio_en: null,
-            cliente_respondio_en: null,
-            cliente_respuesta_canal: null,
-          };
-        } else {
-          throw error;
-        }
-      }
+            const { data: legacyData, error: legacyError } = await supabase
+              .from("cotizaciones")
+              .update(legacyUpdatePayload)
+              .eq("id", id)
+              .eq("organization_id", input.organizationId)
+              .is("eliminado_en", null)
+              .select(COTIZACION_DETAIL_SELECT_LEGACY)
+              .single();
 
-      const deletedAt = new Date().toISOString();
-      const { error: softDeleteItemsError } = await supabase
-        .from("cotizacion_items")
-        .update({
-          eliminado_en: deletedAt,
-        })
-        .eq("cotizacion_id", id)
-        .eq("organization_id", input.organizationId)
-        .is("eliminado_en", null);
-
-      if (softDeleteItemsError) {
-        throw softDeleteItemsError;
-      }
-
-      for (const item of input.items) {
-        const createdItem = await createCotizacionItem(item, id);
-        const breakdown = item.breakdown ?? [];
-
-        if (breakdown.length > 0) {
-          const { error: breakdownError } = await supabase
-            .from("quote_item_breakdown")
-            .insert(
-              breakdown.map((entry) =>
-                buildBreakdownInsert(entry, createdItem.id, item.organizationId)
-              )
-            );
-
-          if (breakdownError) {
-            if (!isMissingBreakdownTableError(breakdownError)) {
-              throw breakdownError;
+            if (legacyError) {
+              throw legacyError;
             }
+
+            data = {
+              ...(legacyData as CotizacionRow),
+              approval_token: null,
+              approval_token_expires_at: null,
+              cliente_vio_en: null,
+              cliente_respondio_en: null,
+              cliente_respuesta_canal: null,
+            };
+          } else {
+            throw error;
           }
         }
-      }
 
-      return hydrateCotizacion(mapCotizacion(data as CotizacionRow));
+        await softDeleteActiveItems(id, input.organizationId);
+
+        for (const item of input.items) {
+          const createdItem = await createCotizacionItem(item, id);
+          await insertBreakdownEntries(
+            item.breakdown ?? [],
+            createdItem.id,
+            item.organizationId
+          );
+        }
+
+        return hydrateCotizacion(mapCotizacion(data as CotizacionRow));
+      } catch (error) {
+        if (previousSnapshot) {
+          try {
+            await restoreCotizacionSnapshot(previousSnapshot);
+          } catch (restoreError) {
+            console.error("No se pudo restaurar la cotización tras una actualización parcial.", restoreError);
+          }
+        }
+
+        throw error;
+      }
     },
 
     async softDelete(id: EntityId, organizationId: EntityId) {
@@ -830,18 +972,7 @@ export function createCotizacionesRepository(
         throw error;
       }
 
-      const { error: itemError } = await supabase
-        .from("cotizacion_items")
-        .update({
-          eliminado_en: deletedAt,
-        })
-        .eq("cotizacion_id", id)
-        .eq("organization_id", organizationId)
-        .is("eliminado_en", null);
-
-      if (itemError) {
-        throw itemError;
-      }
+      await softDeleteActiveItems(id, organizationId, deletedAt);
     },
 
     async updateApprovalAccess(

@@ -374,8 +374,12 @@ export function PasoUnoDatosCliente({
                   <LuPlus aria-hidden />
                   <span>
                     {shouldShowOptionalClientFields
-                      ? "Ocultar telefono y correo"
-                      : "Anadir telefono y correo"}
+                      ? isMobileViewport
+                        ? "Ocultar extras"
+                        : "Ocultar telefono y correo"
+                      : isMobileViewport
+                        ? "Telefono y correo"
+                        : "Anadir telefono y correo"}
                   </span>
                 </button>
 
@@ -448,7 +452,15 @@ export function PasoUnoDatosCliente({
           aria-expanded={showStep1MoreData}
         >
           <LuPlus aria-hidden />
-          <span>{showStep1MoreData ? "Ocultar mas datos" : "Agregar mas datos"}</span>
+          <span>
+            {showStep1MoreData
+              ? isMobileViewport
+                ? "Ocultar extras"
+                : "Ocultar mas datos"
+              : isMobileViewport
+                ? "Mas datos"
+                : "Agregar mas datos"}
+          </span>
         </button>
 
         {showStep1MoreData ? (

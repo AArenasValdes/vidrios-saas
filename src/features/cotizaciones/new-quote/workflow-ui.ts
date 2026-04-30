@@ -106,7 +106,7 @@ export const VALIDEZ_OPTIONS = ["7 dias", "15 dias", "30 dias"];
 export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
 export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
 
-export const COLOR_OPTIONS = [
+export const ALUMINUM_COLOR_OPTIONS = [
   { label: "Aluminio natural", hex: "#a8a8a8" },
   { label: "Blanco", hex: "#f0eeeb" },
   { label: "Blanco hueso", hex: "#dfd5c4" },
@@ -115,6 +115,26 @@ export const COLOR_OPTIONS = [
   { label: "Madera", hex: "#8b5e3c" },
   { label: "Titanio", hex: "#7d8791" },
 ];
+
+export const PVC_COLOR_OPTIONS = [
+  { label: "Blanco", hex: "#f0eeeb" },
+  { label: "Gris", hex: "#b7bcc4" },
+  { label: "Roble Dorado", hex: "#b7834a" },
+  { label: "Nogal", hex: "#6f4a34" },
+  { label: "Gris Antracita", hex: "#4f555d" },
+  { label: "Negro", hex: "#2a2a2a" },
+  { label: "Verde (Eléctrico)", hex: "#1f8c5a" },
+  { label: "Azul (Alta presión)", hex: "#2968c8" },
+  { label: "Naranja (Ventilación)", hex: "#e7842a" },
+];
+
+export const COLOR_OPTIONS = [...ALUMINUM_COLOR_OPTIONS];
+
+for (const option of PVC_COLOR_OPTIONS) {
+  if (!COLOR_OPTIONS.some((current) => current.hex.toLowerCase() === option.hex.toLowerCase())) {
+    COLOR_OPTIONS.push(option);
+  }
+}
 
 const LEGACY_COLOR_HEX = "#b87333";
 const WOOD_COLOR = "#8b5e3c";
