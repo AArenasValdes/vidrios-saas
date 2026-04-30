@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
@@ -11,7 +12,7 @@ function pillClassName(stateColor: DashboardDesktopProps["quoteCards"][number]["
   return `${styles.pill} ${styles.pillWarning}`;
 }
 
-export function DashboardDesktop({
+export const DashboardDesktop = memo(function DashboardDesktop({
   greetingName,
   subtitle,
   newQuoteHref,
@@ -100,4 +101,4 @@ export function DashboardDesktop({
       </section>
     </div>
   );
-}
+});

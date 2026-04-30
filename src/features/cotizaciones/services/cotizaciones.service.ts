@@ -380,9 +380,11 @@ export function createCotizacionesAppService(
 
   async function listWorkflowByOrganizationId(organizationId: EntityId) {
     const cotizaciones = await cotizacionesRepo.listByOrganizationId(organizationId);
+    // Optimización: limitar a últimas 50 cotizaciones para mejorar performance en dashboard
+    const limitedCotizaciones = cotizaciones.slice(0, 50);
     const projectIds = Array.from(
       new Set(
-        cotizaciones
+        limitedCotizaciones
           .map((cotizacion) => cotizacion.proyectoId)
           .filter((value): value is EntityId => value !== null)
       )
@@ -399,7 +401,7 @@ export function createCotizacionesAppService(
     const clients = await clientesRepo.listByIds(clientIds, organizationId);
     const clientsById = new Map(clients.map((client) => [String(client.id), client]));
 
-    return cotizaciones.map((cotizacion) => {
+    return limitedCotizaciones.map((cotizacion) => {
       const project = cotizacion.proyectoId
         ? projectsById.get(String(cotizacion.proyectoId))
         : null;

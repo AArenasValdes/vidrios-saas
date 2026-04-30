@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Plus } from "lucide-react";
 
@@ -12,7 +13,7 @@ function pillClassName(stateColor: DashboardMobileProps["quoteCards"][number]["s
   return `${styles.pill} ${styles.pillWarning}`;
 }
 
-export function DashboardMobile({
+export const DashboardMobile = memo(function DashboardMobile({
   greetingName,
   mobileDateLabel,
   newQuoteHref,
@@ -109,4 +110,4 @@ export function DashboardMobile({
       </section>
     </div>
   );
-}
+});

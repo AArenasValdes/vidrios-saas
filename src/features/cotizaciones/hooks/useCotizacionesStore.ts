@@ -21,6 +21,7 @@ type CotizacionesCacheEntry = {
   organizationId: string;
   cotizaciones: CotizacionWorkflowRecord[];
   clientes: Cliente[];
+  timestamp?: number;
 };
 
 const cotizacionesCache = new Map<string, CotizacionesCacheEntry>();
@@ -30,6 +31,7 @@ const cotizacionesPromiseByOrganization = new Map<
 >();
 const clientesPromiseByOrganization = new Map<string, Promise<Cliente[]>>();
 const COTIZACIONES_STORAGE_PREFIX = "vidrios-saas:cotizaciones:";
+const CACHE_TTL_MS = 5 * 60 * 1000; // Cache válido por 5 minutos
 
 export function __resetCotizacionesStoreTestState() {
   cotizacionesCache.clear();
@@ -55,7 +57,16 @@ function readCotizacionesCacheFromStorage(organizationKey: string) {
       return null;
     }
 
-    return JSON.parse(raw) as CotizacionesCacheEntry;
+    const entry = JSON.parse(raw) as CotizacionesCacheEntry;
+    // Verificar si el cache aún es fresco (menos de 5 minutos)
+    const age = Date.now() - (entry.timestamp || 0);
+    if (age > CACHE_TTL_MS) {
+      // Cache expirado, eliminarlo
+      window.sessionStorage.removeItem(getCotizacionesStorageKey(organizationKey));
+      return null;
+    }
+
+    return entry;
   } catch {
     return null;
   }
@@ -67,9 +78,13 @@ function persistCotizacionesCache(entry: CotizacionesCacheEntry) {
   }
 
   try {
+    const entryWithTimestamp = {
+      ...entry,
+      timestamp: Date.now(),
+    };
     window.sessionStorage.setItem(
       getCotizacionesStorageKey(entry.organizationId),
-      JSON.stringify(entry)
+      JSON.stringify(entryWithTimestamp)
     );
   } catch {
     return;
