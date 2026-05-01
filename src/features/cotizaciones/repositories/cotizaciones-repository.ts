@@ -102,6 +102,22 @@ const COTIZACION_ITEM_SELECT_LEGACY =
   "id, cotizacion_id, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
 const COTIZACION_BREAKDOWN_SELECT =
   "id, cotizacion_item_id, material_id, descripcion, unidad, cantidad, costo_unitario, costo_total, precio_unitario, precio_total, origen, creado_en, organization_id";
+const COTIZACION_DASHBOARD_SELECT =
+  "id, proyecto_id, organization_id, numero, estado, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
+
+type CotizacionesDashboardFilter = {
+  estados?: string[];
+  updatedFrom?: string;
+  updatedTo?: string;
+  respondedFrom?: string;
+  respondedTo?: string;
+  viewedOnly?: boolean;
+  respondedOnly?: boolean;
+};
+
+type HydrateCotizacionOptions = {
+  includeBreakdown?: boolean;
+};
 
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -623,11 +639,21 @@ export function createCotizacionesRepository(
     return legacyData as CotizacionItemRow;
   }
 
-  async function hydrateCotizacion(base: Cotizacion) {
+  async function hydrateCotizacion(
+    base: Cotizacion,
+    options: HydrateCotizacionOptions = {}
+  ) {
     const items = await listCotizacionItems(base.id, base.organizationId);
 
     if (items.length === 0) {
       return base;
+    }
+
+    if (options.includeBreakdown === false) {
+      return {
+        ...base,
+        items: items.map((item) => mapCotizacionItem(item, [])),
+      };
     }
 
     const itemIds = items.map((item) => item.id);
@@ -706,6 +732,191 @@ export function createCotizacionesRepository(
     }));
   }
 
+  async function listDashboardCotizacionesBase(
+    organizationId: EntityId,
+    limit?: number
+  ): Promise<CotizacionRow[]> {
+    if (typeof limit === "number" && limit <= 0) {
+      return [];
+    }
+
+    const query = supabase
+      .from("cotizaciones")
+      .select(COTIZACION_DASHBOARD_SELECT)
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null)
+      .order("creado_en", { ascending: false });
+
+    const { data, error } =
+      typeof limit === "number"
+        ? await query.range(0, Math.max(limit, 0) - 1)
+        : await query;
+
+    if (!error) {
+      return (data as CotizacionRow[]) ?? [];
+    }
+
+    if (!isMissingApprovalFieldsError(error)) {
+      throw error;
+    }
+
+    const legacyQuery = supabase
+      .from("cotizaciones")
+      .select(COTIZACION_LIST_SELECT_LEGACY)
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null)
+      .order("creado_en", { ascending: false });
+
+    const { data: legacyData, error: legacyError } =
+      typeof limit === "number"
+        ? await legacyQuery.range(0, Math.max(limit, 0) - 1)
+        : await legacyQuery;
+
+    if (legacyError) {
+      throw legacyError;
+    }
+
+    return ((legacyData as CotizacionRow[]) ?? []).map((row) => ({
+      ...row,
+      approval_token: null,
+      approval_token_expires_at: null,
+      cliente_vio_en: null,
+      cliente_respondio_en: null,
+      cliente_respuesta_canal: null,
+    }));
+  }
+
+  async function countCotizacionesBase(
+    organizationId: EntityId,
+    filters: CotizacionesDashboardFilter = {}
+  ) {
+    let query = supabase
+      .from("cotizaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null);
+
+    if (filters.estados && filters.estados.length > 0) {
+      query = query.in("estado", filters.estados);
+    }
+
+    if (filters.viewedOnly) {
+      query = query.not("cliente_vio_en", "is", null);
+    }
+
+    if (filters.respondedOnly) {
+      query = query.not("cliente_respondio_en", "is", null);
+    }
+
+    if (filters.updatedFrom) {
+      query = query.gte("actualizado_en", filters.updatedFrom);
+    }
+
+    if (filters.updatedTo) {
+      query = query.lt("actualizado_en", filters.updatedTo);
+    }
+
+    if (filters.respondedFrom) {
+      query = query.gte("cliente_respondio_en", filters.respondedFrom);
+    }
+
+    if (filters.respondedTo) {
+      query = query.lt("cliente_respondio_en", filters.respondedTo);
+    }
+
+    const { count, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return count ?? 0;
+  }
+
+  async function sumCotizacionesTotalBase(
+    organizationId: EntityId,
+    filters: CotizacionesDashboardFilter = {}
+  ) {
+    let query = supabase
+      .from("cotizaciones")
+      .select("total")
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null);
+
+    if (filters.estados && filters.estados.length > 0) {
+      query = query.in("estado", filters.estados);
+    }
+
+    if (filters.updatedFrom) {
+      query = query.gte("actualizado_en", filters.updatedFrom);
+    }
+
+    if (filters.updatedTo) {
+      query = query.lt("actualizado_en", filters.updatedTo);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return ((data as Array<{ total: number | string | null }>) ?? []).reduce(
+      (sum, row) => sum + Number(row.total ?? 0),
+      0
+    );
+  }
+
+  async function listDashboardAlertCandidatesBase(
+    organizationId: EntityId,
+    recentResponseDays = 21
+  ): Promise<CotizacionRow[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - recentResponseDays);
+    const cutoffIso = cutoff.toISOString();
+
+    const [viewedData, responseData] = await Promise.all([
+      supabase
+        .from("cotizaciones")
+        .select(COTIZACION_DASHBOARD_SELECT)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .not("cliente_vio_en", "is", null)
+        .is("cliente_respondio_en", null)
+        .order("cliente_vio_en", { ascending: false }),
+      supabase
+        .from("cotizaciones")
+        .select(COTIZACION_DASHBOARD_SELECT)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .in("estado", ["aprobada", "rechazada"])
+        .not("cliente_respondio_en", "is", null)
+        .gte("cliente_respondio_en", cutoffIso)
+        .order("cliente_respondio_en", { ascending: false }),
+    ]);
+
+    const { data: viewedRows, error: viewedError } = viewedData;
+    const { data: responseRows, error: responseError } = responseData;
+
+    if (viewedError) {
+      throw viewedError;
+    }
+
+    if (responseError) {
+      throw responseError;
+    }
+
+    const byId = new Map<EntityId, CotizacionRow>();
+
+    for (const row of ((viewedRows as CotizacionRow[]) ?? []).concat(
+      (responseRows as CotizacionRow[]) ?? []
+    )) {
+      byId.set(row.id, row);
+    }
+
+    return Array.from(byId.values());
+  }
+
   async function getCotizacionBase(id: EntityId, organizationId: EntityId) {
     const { data, error } = await supabase
       .from("cotizaciones")
@@ -756,14 +967,47 @@ export function createCotizacionesRepository(
       return rows.map(mapCotizacion);
     },
 
-    async getById(id: EntityId, organizationId: EntityId) {
+    async listRecentByOrganizationId(organizationId: EntityId, limit = 50) {
+      const rows = await listDashboardCotizacionesBase(organizationId, limit);
+
+      return rows.map(mapCotizacion);
+    },
+
+    async listDashboardAlertCandidatesByOrganizationId(
+      organizationId: EntityId,
+      recentResponseDays = 21
+    ) {
+      const rows = await listDashboardAlertCandidatesBase(organizationId, recentResponseDays);
+
+      return rows.map(mapCotizacion);
+    },
+
+    async countByOrganizationId(
+      organizationId: EntityId,
+      filters: CotizacionesDashboardFilter = {}
+    ) {
+      return countCotizacionesBase(organizationId, filters);
+    },
+
+    async sumTotalByOrganizationId(
+      organizationId: EntityId,
+      filters: CotizacionesDashboardFilter = {}
+    ) {
+      return sumCotizacionesTotalBase(organizationId, filters);
+    },
+
+    async getById(
+      id: EntityId,
+      organizationId: EntityId,
+      options: HydrateCotizacionOptions = {}
+    ) {
       const data = await getCotizacionBase(id, organizationId);
 
       if (!data) {
         return null;
       }
 
-      return hydrateCotizacion(mapCotizacion(data as CotizacionRow));
+      return hydrateCotizacion(mapCotizacion(data as CotizacionRow), options);
     },
 
     async reserveNextCode(organizationId: EntityId, quoteDate = new Date()) {
@@ -1119,6 +1363,20 @@ function getDefaultCotizacionesRepository() {
 export const cotizacionesRepository: CotizacionesRepository = {
   listByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listByOrganizationId(...args);
+  },
+  listRecentByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().listRecentByOrganizationId(...args);
+  },
+  listDashboardAlertCandidatesByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().listDashboardAlertCandidatesByOrganizationId(
+      ...args
+    );
+  },
+  countByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().countByOrganizationId(...args);
+  },
+  sumTotalByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().sumTotalByOrganizationId(...args);
   },
   getById(...args) {
     return getDefaultCotizacionesRepository().getById(...args);

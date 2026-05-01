@@ -126,7 +126,16 @@ describe("public-cotizacion-approval.service", () => {
     expect(quote?.canRespond).toBe(true);
   });
 
-  it("debe registrar la vista publica antes de responder", async () => {
+  it("debe registrar la vista publica", async () => {
+    const repository = createRepositoryMock();
+    const service = createPublicCotizacionApprovalService({ repository });
+
+    await service.markViewed("abc123abc123abc123abc123abc123ab");
+
+    expect(repository.markViewed).toHaveBeenCalledWith("abc123abc123abc123abc123abc123ab");
+  });
+
+  it("debe registrar la vista publica al abrir el link", async () => {
     const repository = createRepositoryMock();
     const service = createPublicCotizacionApprovalService({ repository });
 

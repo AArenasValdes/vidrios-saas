@@ -19,8 +19,8 @@ export const DashboardMobile = memo(function DashboardMobile({
   newQuoteHref,
   attentionHref,
   attentionTitle,
+  totalCount,
   approvedTodayCount,
-  monthCount,
   approvedMonthLabel,
   quotesHref,
   quoteCards,
@@ -57,7 +57,7 @@ export const DashboardMobile = memo(function DashboardMobile({
         <div className={styles.metricCard}>
           <Clock size={16} className={`${styles.metricIcon} ${styles.metricIconPrimary}`} />
           <span className={styles.metricLabel}>COTIZACIONES</span>
-          <strong className={styles.metricValue}>{monthCount}</strong>
+          <strong className={styles.metricValue}>{totalCount}</strong>
         </div>
 
         <div className={styles.metricCard}>
@@ -92,7 +92,13 @@ export const DashboardMobile = memo(function DashboardMobile({
             <ul className={styles.quoteList}>
               {quoteCards.map((quote) => (
                 <li key={quote.id} className={styles.quoteItem}>
-                  <Link href={quote.href} className={styles.quoteRow}>
+                  <Link
+                    href={quote.href}
+                    className={styles.quoteRow}
+                    onPointerEnter={quote.onPrefetchDetail}
+                    onFocus={quote.onPrefetchDetail}
+                    onTouchStart={quote.onPrefetchDetail}
+                  >
                     <div className={styles.quoteMain}>
                       <p className={styles.quoteName}>{quote.name}</p>
                       <p className={styles.quoteCode}>{quote.code}</p>

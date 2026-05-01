@@ -50,6 +50,11 @@ export type GuardarCotizacionWorkflowInput = {
   existingProjectId?: EntityId | null;
 };
 
+type GetWorkflowByIdOptions = {
+  seed?: CotizacionWorkflowRecord | null;
+  ensureApprovalToken?: boolean;
+};
+
 function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;
 
@@ -187,6 +192,20 @@ function mapCotizacionToWorkflowRecord(input: {
     flete: input.cotizacion.flete ?? 0,
     total: input.cotizacion.total,
   };
+}
+
+function mapCotizacionToWorkflowRecordFromSeed(
+  cotizacion: Cotizacion,
+  seed: CotizacionWorkflowRecord
+) {
+  return mapCotizacionToWorkflowRecord({
+    cotizacion,
+    clientId: seed.clientId ?? cotizacion.proyectoId ?? null,
+    clientName: seed.clienteNombre,
+    clientPhone: seed.clienteTelefono,
+    clientAddress: seed.direccion,
+    projectTitle: seed.obra,
+  });
 }
 
 function normalizeWorkflowItem(
@@ -380,11 +399,9 @@ export function createCotizacionesAppService(
 
   async function listWorkflowByOrganizationId(organizationId: EntityId) {
     const cotizaciones = await cotizacionesRepo.listByOrganizationId(organizationId);
-    // Optimización: limitar a últimas 50 cotizaciones para mejorar performance en dashboard
-    const limitedCotizaciones = cotizaciones.slice(0, 50);
     const projectIds = Array.from(
       new Set(
-        limitedCotizaciones
+        cotizaciones
           .map((cotizacion) => cotizacion.proyectoId)
           .filter((value): value is EntityId => value !== null)
       )
@@ -401,7 +418,7 @@ export function createCotizacionesAppService(
     const clients = await clientesRepo.listByIds(clientIds, organizationId);
     const clientsById = new Map(clients.map((client) => [String(client.id), client]));
 
-    return limitedCotizaciones.map((cotizacion) => {
+    return cotizaciones.map((cotizacion) => {
       const project = cotizacion.proyectoId
         ? projectsById.get(String(cotizacion.proyectoId))
         : null;
@@ -428,14 +445,20 @@ export function createCotizacionesAppService(
     return clientesRepo.listByOrganizationId(organizationId);
   }
 
-  async function getWorkflowById(id: EntityId, organizationId: EntityId) {
-    let cotizacion = await cotizacionesRepo.getById(id, organizationId);
+  async function getWorkflowById(
+    id: EntityId,
+    organizationId: EntityId,
+    options: GetWorkflowByIdOptions = {}
+  ) {
+    let cotizacion = await cotizacionesRepo.getById(id, organizationId, {
+      includeBreakdown: false,
+    });
 
     if (!cotizacion) {
       return null;
     }
 
-    if (!cotizacion.approvalToken) {
+    if (options.ensureApprovalToken !== false && !cotizacion.approvalToken) {
       cotizacion = await cotizacionesRepo.updateApprovalAccess(id, organizationId, {
         approvalToken: createApprovalToken(),
         approvalTokenExpiresAt: cotizacion.approvalTokenExpiresAt,
@@ -443,6 +466,10 @@ export function createCotizacionesAppService(
         clienteRespondioEn: cotizacion.clienteRespondioEn,
         clienteRespuestaCanal: cotizacion.clienteRespuestaCanal,
       });
+    }
+
+    if (options.seed) {
+      return mapCotizacionToWorkflowRecordFromSeed(cotizacion, options.seed);
     }
 
     const project = cotizacion.proyectoId
@@ -665,3 +692,4 @@ export function createCotizacionesAppService(
 }
 
 export const cotizacionesAppService = createCotizacionesAppService();
+

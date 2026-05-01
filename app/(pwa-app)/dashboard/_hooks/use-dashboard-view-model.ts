@@ -19,6 +19,7 @@ export type DashboardQuoteCard = {
   date: string;
   stateLabel: string;
   stateColor: DashboardQuoteStateColor;
+  onPrefetchDetail?: () => void;
 };
 
 export type DashboardMobileProps = {
@@ -27,6 +28,7 @@ export type DashboardMobileProps = {
   newQuoteHref: string;
   attentionHref: string;
   attentionTitle: string;
+  totalCount: number;
   approvedTodayCount: number;
   monthCount: number;
   approvedMonthLabel: string;
@@ -80,7 +82,7 @@ function formatMobileDateLabel(value: string) {
 export function useDashboardViewModel(): DashboardViewModel {
   const { user } = useAuth();
   const { profile } = useOrganizationProfile();
-  const { cotizaciones, isReady, isRefreshing } = useCotizacionesStore();
+  const { cotizaciones, isReady, isRefreshing, prefetchCotizacionById } = useCotizacionesStore();
 
   const companyName = profile?.empresaNombre?.trim() || "Mi empresa";
   const greetingName = buildUserName(user?.email) || companyName;
@@ -167,9 +169,12 @@ export function useDashboardViewModel(): DashboardViewModel {
           date: formatCotizacionDate(record.updatedAt),
           stateLabel,
           stateColor,
+          onPrefetchDetail: () => {
+            void prefetchCotizacionById(record.id);
+          },
         };
       });
-  }, [cotizaciones]);
+  }, [cotizaciones, prefetchCotizacionById]);
 
   const approvedMonthLabel = formatClp(stats.totalApproved);
   const isLoading = isRefreshing && cotizaciones.length === 0;
@@ -182,6 +187,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       newQuoteHref: "/cotizaciones/nueva",
       attentionHref,
       attentionTitle,
+      totalCount: cotizaciones.length,
       approvedTodayCount: stats.approvedTodayCount,
       monthCount: stats.monthCount,
       approvedMonthLabel,

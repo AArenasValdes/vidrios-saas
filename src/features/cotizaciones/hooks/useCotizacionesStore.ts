@@ -17,6 +17,41 @@ function sortCotizaciones(records: CotizacionWorkflowRecord[]) {
   });
 }
 
+function mergeWorkflowRecord(
+  current: CotizacionWorkflowRecord | undefined,
+  incoming: CotizacionWorkflowRecord
+) {
+  if (!current) {
+    return incoming;
+  }
+
+  if (current.items.length === 0 || incoming.items.length > 0) {
+    return incoming;
+  }
+
+  return {
+    ...incoming,
+    items: current.items,
+    subtotal: current.subtotal,
+    descuentoValor: current.descuentoValor,
+    neto: current.neto,
+    iva: current.iva,
+    flete: current.flete,
+    total: current.total,
+  };
+}
+
+function mergeWorkflowRecords(
+  currentRecords: CotizacionWorkflowRecord[],
+  incomingRecords: CotizacionWorkflowRecord[]
+) {
+  const currentById = new Map(currentRecords.map((record) => [record.id, record]));
+
+  return incomingRecords.map((incoming) =>
+    mergeWorkflowRecord(currentById.get(incoming.id), incoming)
+  );
+}
+
 type CotizacionesCacheEntry = {
   organizationId: string;
   cotizaciones: CotizacionWorkflowRecord[];
@@ -29,6 +64,10 @@ const cotizacionesPromiseByOrganization = new Map<
   string,
   Promise<CotizacionWorkflowRecord[]>
 >();
+const cotizacionDetailPromiseByKey = new Map<
+  string,
+  Promise<CotizacionWorkflowRecord | null>
+>();
 const clientesPromiseByOrganization = new Map<string, Promise<Cliente[]>>();
 const COTIZACIONES_STORAGE_PREFIX = "vidrios-saas:cotizaciones:";
 const CACHE_TTL_MS = 5 * 60 * 1000; // Cache válido por 5 minutos
@@ -36,11 +75,55 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // Cache válido por 5 minutos
 export function __resetCotizacionesStoreTestState() {
   cotizacionesCache.clear();
   cotizacionesPromiseByOrganization.clear();
+  cotizacionDetailPromiseByKey.clear();
   clientesPromiseByOrganization.clear();
 }
 
 function getCotizacionesStorageKey(organizationKey: string) {
   return `${COTIZACIONES_STORAGE_PREFIX}${organizationKey}`;
+}
+
+function getCotizacionDetailCacheKey(organizationKey: string, id: string) {
+  return `${organizationKey}:${id}`;
+}
+
+function readInitialCotizacionesState(organizationId: string | number | null) {
+  if (organizationId === null || organizationId === undefined) {
+    return {
+      cotizaciones: [] as CotizacionWorkflowRecord[],
+      clientes: [] as Cliente[],
+      isReady: false,
+    };
+  }
+
+  const organizationKey = String(organizationId);
+  const warmCache = cotizacionesCache.get(organizationKey);
+
+  if (warmCache) {
+    return {
+      cotizaciones: warmCache.cotizaciones,
+      clientes: warmCache.clientes,
+      isReady: true,
+    };
+  }
+
+  const persisted = readCotizacionesCacheFromStorage(organizationKey);
+
+  if (persisted) {
+    cotizacionesCache.set(organizationKey, persisted);
+
+    return {
+      cotizaciones: persisted.cotizaciones,
+      clientes: persisted.clientes,
+      isReady: true,
+    };
+  }
+
+  return {
+    cotizaciones: [] as CotizacionWorkflowRecord[],
+    clientes: [] as Cliente[],
+    isReady: false,
+  };
 }
 
 function readCotizacionesCacheFromStorage(organizationKey: string) {
@@ -127,17 +210,22 @@ type RefreshCotizacionesOptions = {
 
 export function useCotizacionesStore() {
   const { organizacionId, cargando } = useAuth();
-  const [cotizaciones, setCotizaciones] = useState<CotizacionWorkflowRecord[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const initialStateRef = useRef(readInitialCotizacionesState(organizacionId));
+  const [cotizaciones, setCotizaciones] = useState<CotizacionWorkflowRecord[]>(
+    initialStateRef.current.cotizaciones
+  );
+  const [clientes, setClientes] = useState<Cliente[]>(initialStateRef.current.clientes);
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(initialStateRef.current.isReady);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
   const lastOrganizationIdRef = useRef<string | null>(null);
-  const cotizacionesRef = useRef<CotizacionWorkflowRecord[]>([]);
-  const clientesRef = useRef<Cliente[]>([]);
+  const cotizacionesRef = useRef<CotizacionWorkflowRecord[]>(
+    initialStateRef.current.cotizaciones
+  );
+  const clientesRef = useRef<Cliente[]>(initialStateRef.current.clientes);
   const bootRetryCountRef = useRef(0);
   const bootRetryTimeoutRef = useRef<number | null>(null);
 
@@ -242,7 +330,9 @@ export function useCotizacionesStore() {
       }
 
       const records = await recordsPromise;
-      const nextCotizaciones = sortCotizaciones(records);
+      const nextCotizaciones = sortCotizaciones(
+        mergeWorkflowRecords(cotizacionesRef.current, records)
+      );
       const hasWarmCache =
         nextCotizaciones.length > 0 ||
         (cotizacionesCache.get(organizationKey)?.cotizaciones.length ?? 0) > 0;
@@ -356,6 +446,8 @@ export function useCotizacionesStore() {
     const cached = cotizacionesCache.get(String(organizacionId));
 
     if (cached) {
+      cotizacionesRef.current = cached.cotizaciones;
+      clientesRef.current = cached.clientes;
       setCotizaciones(cached.cotizaciones);
       setClientes(cached.clientes);
       setIsReady(true);
@@ -363,6 +455,8 @@ export function useCotizacionesStore() {
       const persisted = readCotizacionesCacheFromStorage(String(organizacionId));
 
       if (persisted) {
+        cotizacionesRef.current = persisted.cotizaciones;
+        clientesRef.current = persisted.clientes;
         setCotizaciones(persisted.cotizaciones);
         setClientes(persisted.clientes);
         cotizacionesCache.set(String(organizacionId), persisted);
@@ -544,16 +638,44 @@ export function useCotizacionesStore() {
     }
   };
 
-  const getCotizacionById = (id: string) => {
-    return cotizaciones.find((record) => record.id === id) ?? null;
-  };
+  const getCotizacionById = useCallback((id: string) => {
+    return (
+      cotizacionesRef.current.find((record) => record.id === id) ??
+      cotizaciones.find((record) => record.id === id) ??
+      null
+    );
+  }, [cotizaciones]);
 
-  const loadCotizacionById = async (id: string) => {
+  const loadCotizacionById = useCallback(async (id: string) => {
     if (!organizacionId) {
       return null;
     }
+    const organizationKey = String(organizacionId);
+    const existingRecord =
+      cotizacionesRef.current.find((record) => record.id === id) ??
+      cotizaciones.find((record) => record.id === id) ??
+      null;
 
-    const record = await cotizacionesAppService.getWorkflowById(id, organizacionId);
+    if (existingRecord?.items.length) {
+      return existingRecord;
+    }
+
+    const detailCacheKey = getCotizacionDetailCacheKey(organizationKey, id);
+    const inFlightPromise = cotizacionDetailPromiseByKey.get(detailCacheKey);
+    const recordPromise =
+      inFlightPromise ??
+      cotizacionesAppService
+        .getWorkflowById(id, organizacionId, {
+          seed: existingRecord,
+          ensureApprovalToken: false,
+        })
+        .finally(() => cotizacionDetailPromiseByKey.delete(detailCacheKey));
+
+    if (!inFlightPromise) {
+      cotizacionDetailPromiseByKey.set(detailCacheKey, recordPromise);
+    }
+
+    const record = await recordPromise;
 
     if (record) {
       const currentCotizaciones = cotizacionesRef.current;
@@ -575,7 +697,17 @@ export function useCotizacionesStore() {
     }
 
     return record;
-  };
+  }, [cotizaciones, organizacionId]);
+
+  const prefetchCotizacionById = useCallback(async (id: string) => {
+    try {
+      await loadCotizacionById(id);
+    } catch {
+      return null;
+    }
+
+    return null;
+  }, [loadCotizacionById]);
 
   return {
     cotizaciones,
@@ -590,6 +722,7 @@ export function useCotizacionesStore() {
     markQuoteAsSent,
     getCotizacionById,
     loadCotizacionById,
+    prefetchCotizacionById,
     refreshCotizaciones,
     ensureClientesLoaded,
   };

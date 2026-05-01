@@ -82,7 +82,12 @@ export const DashboardDesktop = memo(function DashboardDesktop({
           <ul className={styles.list}>
             {quoteCards.map((quote) => (
               <li key={quote.id} className={styles.listItem}>
-                <Link href={quote.href} className={styles.listLink}>
+                <Link
+                  href={quote.href}
+                  className={styles.listLink}
+                  onPointerEnter={quote.onPrefetchDetail}
+                  onFocus={quote.onPrefetchDetail}
+                >
                   <div className={styles.listMain}>
                     <p className={styles.listName}>{quote.name}</p>
                     <p className={styles.listCode}>

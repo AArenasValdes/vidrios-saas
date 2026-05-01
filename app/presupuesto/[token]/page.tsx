@@ -47,8 +47,11 @@ export default async function PresupuestoPublicoPage({
   let loadError: string | null = null;
 
   try {
-    await publicCotizacionApprovalService.registerView(token);
-    quote = await publicCotizacionApprovalService.resolveByToken(token);
+    const [, resolvedQuote] = await Promise.all([
+      publicCotizacionApprovalService.markViewed(token),
+      publicCotizacionApprovalService.resolveByToken(token),
+    ]);
+    quote = resolvedQuote;
   } catch (error) {
     if (error instanceof Error) {
       loadError = error.message;

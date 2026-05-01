@@ -62,12 +62,51 @@ function persistClientes(organizationKey: string, clientes: ClienteResumen[]) {
   }
 }
 
+function readInitialClientesState(organizationId: string | number | null) {
+  if (organizationId === null || organizationId === undefined) {
+    return {
+      clientes: [] as ClienteResumen[],
+      isReady: false,
+    };
+  }
+
+  const organizationKey = String(organizationId);
+  const warmCache = clientesCache.get(organizationKey);
+
+  if (warmCache) {
+    return {
+      clientes: warmCache.clientes,
+      isReady: true,
+    };
+  }
+
+  const persisted = readClientesFromStorage(organizationKey);
+
+  if (persisted) {
+    clientesCache.set(organizationKey, {
+      organizationId: organizationKey,
+      clientes: persisted,
+    });
+
+    return {
+      clientes: persisted,
+      isReady: true,
+    };
+  }
+
+  return {
+    clientes: [] as ClienteResumen[],
+    isReady: false,
+  };
+}
+
 export function useClientes() {
   const { organizacionId, cargando } = useAuth();
-  const [clientes, setClientes] = useState<ClienteResumen[]>([]);
+  const initialStateRef = useRef(readInitialClientesState(organizacionId));
+  const [clientes, setClientes] = useState<ClienteResumen[]>(initialStateRef.current.clientes);
   const [detalleById, setDetalleById] = useState<Record<string, ClienteDetalle>>({});
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(initialStateRef.current.isReady);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const activeRefreshIdRef = useRef(0);

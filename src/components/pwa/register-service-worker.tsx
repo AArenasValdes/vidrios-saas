@@ -2,6 +2,12 @@
 
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    __VIDRIOS_SAAS_SW_ENV__?: string;
+  }
+}
+
 async function unregisterAllServiceWorkers() {
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -30,11 +36,14 @@ async function clearAppCaches() {
 
 export function RegisterServiceWorker() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) {
+    const serviceWorker = navigator.serviceWorker;
+    if (!serviceWorker) {
       return;
     }
 
-    if (process.env.NODE_ENV !== "production") {
+    const runtimeEnv = window.__VIDRIOS_SAAS_SW_ENV__ ?? process.env.NODE_ENV;
+
+    if (runtimeEnv !== "production") {
       void unregisterAllServiceWorkers();
       void clearAppCaches();
       return;
@@ -42,7 +51,7 @@ export function RegisterServiceWorker() {
 
     const registerServiceWorker = async () => {
       try {
-        const registration = await navigator.serviceWorker.register("/sw.js", {
+        const registration = await serviceWorker.register("/sw.js", {
           scope: "/",
         });
         void registration.update();

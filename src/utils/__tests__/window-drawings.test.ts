@@ -2,7 +2,7 @@ import { generateComponentSVG } from "@/utils/window-drawings";
 
 function getPrimaryFrameSize(svg: string) {
   const match = svg.match(
-    /<rect x="[^"]+" y="[^"]+" width="([^"]+)" height="([^"]+)" fill="none" stroke="[^"]+" stroke-width="[^"]+" rx="1"/
+    /<rect x="[^"]+" y="[^"]+" width="([^"]+)" height="([^"]+)" fill="none" stroke="[^"]+" stroke-width="[^"]+" rx="0.5"/
   );
 
   return {
@@ -12,7 +12,7 @@ function getPrimaryFrameSize(svg: string) {
 }
 
 describe("generateComponentSVG", () => {
-  it("retorna un string SVG valido", () => {
+  it("retorna un string SVG válido", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       ancho: 1200,
@@ -63,17 +63,17 @@ describe("generateComponentSVG", () => {
     expect(svg).toContain("1000 mm");
   });
 
-  it("usa medidas base del tipo cuando no llegan dimensiones", () => {
+  it("muestra cotas vacías cuando no llegan dimensiones", () => {
     const svg = generateComponentSVG({
       tipo: "Otro",
       ancho: null,
       alto: null,
     });
 
-    expect(svg).toContain("135 mm");
+    expect(svg).toContain("— mm");
   });
 
-  it("usa mas area util para que el componente sea legible en pantalla", () => {
+  it("usa más área útil para que el componente sea legible en pantalla", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       ancho: null,
@@ -85,7 +85,7 @@ describe("generateComponentSVG", () => {
     expect(frame.height).toBeGreaterThanOrEqual(180);
   });
 
-  it("no contiene variables de color de marca ni CSS dinamico", () => {
+  it("no contiene variables de color de marca ni CSS dinámico", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       ancho: 1200,
@@ -96,7 +96,7 @@ describe("generateComponentSVG", () => {
     expect(svg).not.toContain("--brand");
   });
 
-  it("aplica el color del producto cuando se entrega colorHex", () => {
+  it("aplica la paleta derivada cuando se entrega colorHex", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       ancho: 1200,
@@ -104,9 +104,9 @@ describe("generateComponentSVG", () => {
       colorHex: "#b87333",
     });
 
-    expect(svg).toContain("#b87333");
-    expect(svg).toContain("#784b21");
-    expect(svg).toContain('fill="url(#architecturalGlass)"');
+    expect(svg).toContain("#a6682e");
+    expect(svg).toContain("#6e451f");
+    expect(svg).toContain('fill="rgba(220,234,247,0.86)"');
   });
 
   it("usa una variante pdf sin encabezado decorativo y con cotas compactas", () => {
@@ -119,10 +119,10 @@ describe("generateComponentSVG", () => {
 
     expect(svg).not.toContain("SISTEMA ESTÁNDAR");
     expect(svg).not.toContain("VISTA INTERIOR REFERENCIAL");
-    expect(svg).toContain('font-size="8"');
+    expect(svg).toContain('font-size="7"');
   });
 
-  it("resuelve el sistema desde referencia cuando no viene sistema explicito", () => {
+  it("resuelve el sistema desde referencia cuando no viene sistema explícito", () => {
     const corredera = generateComponentSVG({
       tipo: "Ventana",
       referencia: "Corredera",
@@ -138,7 +138,7 @@ describe("generateComponentSVG", () => {
     });
 
     expect(corredera).toContain('stroke-linecap="round"');
-    expect(corredera).not.toContain('stroke-dasharray="6,4"');
-    expect(abatible).toContain('stroke-dasharray="6,4"');
+    expect(corredera).not.toContain('stroke-dasharray="5,3"');
+    expect(abatible).toContain('stroke-dasharray="5,3"');
   });
 });

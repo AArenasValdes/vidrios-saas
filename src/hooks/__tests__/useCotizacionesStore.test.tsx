@@ -107,6 +107,7 @@ function ProbeCotizacionesStore() {
     clientes,
     ensureClientesLoaded,
     error,
+    prefetchCotizacionById,
     isReady,
     isRefreshing,
     markQuoteAsSent,
@@ -128,6 +129,9 @@ function ProbeCotizacionesStore() {
       </button>
       <button type="button" onClick={() => void ensureClientesLoaded()}>
         cargar-clientes
+      </button>
+      <button type="button" onClick={() => void prefetchCotizacionById("cot-1")}>
+        precargar-detalle
       </button>
       <button
         type="button"
@@ -152,6 +156,32 @@ function ProbeCotizacionesStore() {
       </button>
       <button type="button" onClick={() => void markQuoteAsSent("cot-1")}>
         marcar-enviada
+      </button>
+    </div>
+  );
+}
+
+function ProbeDetalleCaliente() {
+  const { getCotizacionById } = useCotizacionesStore();
+  const cotizacion = getCotizacionById("cot-1");
+
+  return <span data-testid="detalle-caliente">{cotizacion?.codigo ?? "vacio"}</span>;
+}
+
+function ProbeDetalleItems() {
+  const { getCotizacionById, prefetchCotizacionById, refreshCotizaciones, isReady } =
+    useCotizacionesStore();
+  const cotizacion = getCotizacionById("cot-1");
+
+  return (
+    <div>
+      <span data-testid="detalle-ready">{isReady ? "si" : "no"}</span>
+      <span data-testid="detalle-items">{cotizacion?.items.length ?? 0}</span>
+      <button type="button" onClick={() => void prefetchCotizacionById("cot-1")}>
+        calentar-detalle
+      </button>
+      <button type="button" onClick={() => void refreshCotizaciones()}>
+        refrescar-listado
       </button>
     </div>
   );
@@ -297,6 +327,121 @@ describe("useCotizacionesStore", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("clientes")).toHaveTextContent("Cliente Uno");
+    });
+  });
+
+  it("debe deduplicar la carga de detalle por id mientras esta en vuelo", async () => {
+    const deferredDetail = createDeferred<CotizacionWorkflowRecord | null>();
+    listWorkflowByOrganizationId.mockResolvedValueOnce([
+      createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
+    ]);
+    listClientsByOrganizationId.mockResolvedValue([]);
+    getWorkflowById.mockImplementation(() => deferredDetail.promise);
+
+    render(<ProbeCotizacionesStore />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ready")).toHaveTextContent("si");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "precargar-detalle" }));
+    fireEvent.click(screen.getByRole("button", { name: "precargar-detalle" }));
+
+    expect(getWorkflowById).toHaveBeenCalledTimes(1);
+
+    deferredDetail.resolve({
+      ...createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z"),
+      items: [
+        {
+          id: "item-1",
+          codigo: "V1",
+          tipo: "Ventana",
+          vidrio: "Incoloro",
+          nombre: "Ventana living",
+          descripcion: "Ventana living",
+          ancho: 1200,
+          alto: 1500,
+          cantidad: 1,
+          unidad: "unidad",
+          areaM2: 1.8,
+          costoProveedorUnitario: 1000,
+          costoProveedorTotal: 1000,
+          margenPct: 100,
+          precioUnitario: 2000,
+          precioTotal: 2000,
+          observaciones: "",
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cotizaciones")).toHaveTextContent("COT-001");
+    });
+  });
+
+  it("debe exponer el detalle desde cache caliente en el primer render", () => {
+    window.sessionStorage.setItem(
+      "vidrios-saas:cotizaciones:1",
+      JSON.stringify({
+        organizationId: "1",
+        cotizaciones: [createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z")],
+        clientes: [],
+        timestamp: Date.now(),
+      })
+    );
+
+    render(<ProbeDetalleCaliente />);
+
+    expect(screen.getByTestId("detalle-caliente")).toHaveTextContent("COT-001");
+  });
+
+  it("debe conservar items cargados cuando un refresh trae solo resumenes", async () => {
+    listWorkflowByOrganizationId
+      .mockResolvedValueOnce([createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z")])
+      .mockResolvedValueOnce([createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z")]);
+    listClientsByOrganizationId.mockResolvedValue([]);
+    getWorkflowById.mockResolvedValue({
+      ...createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z"),
+      items: [
+        {
+          id: "item-1",
+          codigo: "V1",
+          tipo: "Ventana",
+          vidrio: "Incoloro",
+          nombre: "Ventana living",
+          descripcion: "Ventana living",
+          ancho: 1200,
+          alto: 1500,
+          cantidad: 1,
+          unidad: "unidad",
+          areaM2: 1.8,
+          costoProveedorUnitario: 1000,
+          costoProveedorTotal: 1000,
+          margenPct: 100,
+          precioUnitario: 2000,
+          precioTotal: 2000,
+          observaciones: "",
+        },
+      ],
+    });
+
+    render(<ProbeDetalleItems />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("detalle-ready")).toHaveTextContent("si");
+      expect(screen.getByTestId("detalle-items")).toHaveTextContent("0");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "calentar-detalle" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("detalle-items")).toHaveTextContent("1");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "refrescar-listado" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("detalle-items")).toHaveTextContent("1");
     });
   });
 

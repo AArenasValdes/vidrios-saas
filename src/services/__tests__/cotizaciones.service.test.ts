@@ -248,6 +248,56 @@ describe("cotizaciones.service", () => {
     expect(clientes).toHaveLength(1);
   });
 
+  it("debe reutilizar el resumen existente al hidratar detalle desde el listado", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    const record = await service.getWorkflowById(100, 77, {
+      ensureApprovalToken: false,
+      seed: {
+        id: "100",
+        codigo: "COT-123456",
+        clientId: 1,
+        projectId: 10,
+        clienteNombre: "Cliente cacheado",
+        clienteTelefono: "+56 9 1111 2222",
+        obra: "Obra cacheada",
+        direccion: "Direccion cacheada",
+        validez: "15 dias",
+        descuentoPct: 0,
+        observaciones: "",
+        estado: "creada",
+        approvalToken: null,
+        approvalTokenExpiresAt: null,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+        clienteRespuestaCanal: null,
+        createdAt: "2026-03-14T10:00:00.000Z",
+        updatedAt: "2026-03-14T10:00:00.000Z",
+        items: [],
+        subtotal: 600000,
+        descuentoValor: 0,
+        neto: 600000,
+        iva: 114000,
+        flete: 0,
+        total: 714000,
+      },
+    });
+
+    expect(projectsRepository.getById).not.toHaveBeenCalled();
+    expect(clientesRepository.getById).not.toHaveBeenCalled();
+    expect(cotizacionesRepository.updateApprovalAccess).not.toHaveBeenCalled();
+    expect(record?.clienteNombre).toBe("Cliente cacheado");
+    expect(record?.obra).toBe("Obra cacheada");
+    expect(record?.items).toHaveLength(1);
+  });
+
   it("debe guardar una cotizacion de componentes resolviendo cliente y proyecto", async () => {
     const clientesRepository = createClientesRepositoryMock();
     const projectsRepository = createProjectsRepositoryMock();

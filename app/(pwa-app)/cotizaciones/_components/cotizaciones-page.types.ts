@@ -27,4 +27,5 @@ export type CotizacionesMobileRow = {
     cls: string;
     label: string;
   };
+  onPrefetchDetail?: () => void;
 };

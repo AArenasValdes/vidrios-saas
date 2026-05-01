@@ -186,6 +186,16 @@ export function createPublicCotizacionApprovalService(
   return {
     resolveByToken,
 
+    async markViewed(token: string) {
+      const normalized = normalizeToken(token);
+
+      if (!isValidToken(normalized)) {
+        return null;
+      }
+
+      return repository.markViewed(normalized);
+    },
+
     async registerView(token: string) {
       const normalized = normalizeToken(token);
 

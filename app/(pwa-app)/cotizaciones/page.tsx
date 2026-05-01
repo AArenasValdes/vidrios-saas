@@ -181,6 +181,7 @@ export default function CotizacionesPage() {
     isRefreshing,
     isSaving,
     deleteWorkflow,
+    prefetchCotizacionById,
     updateManualResponseStatus,
     loadCotizacionById,
   } = useCotizacionesStore();
@@ -452,6 +453,10 @@ export default function CotizacionesPage() {
     setEstadoFiltro("Todos");
   }, []);
 
+  const handlePrefetchDetail = useCallback((id: string) => {
+    void prefetchCotizacionById(id);
+  }, [prefetchCotizacionById]);
+
   const visibleRows = useMemo(
     () =>
       paginatedCotizaciones.map((cotizacion) => {
@@ -489,10 +494,11 @@ export default function CotizacionesPage() {
           cardClassName: `${s.cotCard}${manualResponse !== "pendiente" ? ` ${s.cotCardWithResponse}` : ""}`,
           detailHref: `/cotizaciones/${cotizacion.id}`,
           editHref: `/cotizaciones/nueva?edit=${cotizacion.id}`,
+          onPrefetchDetail: () => handlePrefetchDetail(cotizacion.id),
           deleteDisabled: isSaving,
         };
       }),
-    [isSaving, paginatedCotizaciones, responseUpdatingId, sendingId]
+    [handlePrefetchDetail, isSaving, paginatedCotizaciones, responseUpdatingId, sendingId]
   );
 
   const handleDuplicate = useCallback((id: string) => {
@@ -869,6 +875,9 @@ export default function CotizacionesPage() {
                             <Link
                               className={s.accionBtn}
                               href={row.detailHref}
+                              onPointerEnter={row.onPrefetchDetail}
+                              onFocus={row.onPrefetchDetail}
+                              onTouchStart={row.onPrefetchDetail}
                               title="Ver detalle"
                               aria-label="Ver detalle"
                               data-tooltip="Ver detalle"

@@ -5,21 +5,13 @@ import { render, waitFor } from "@testing-library/react";
 import { RegisterServiceWorker } from "../register-service-worker";
 
 describe("RegisterServiceWorker", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
-
   afterEach(() => {
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: originalNodeEnv,
-      configurable: true,
-    });
+    delete window.__VIDRIOS_SAAS_SW_ENV__;
     jest.restoreAllMocks();
   });
 
   it("debe registrar el service worker en produccion", async () => {
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: "production",
-      configurable: true,
-    });
+    window.__VIDRIOS_SAAS_SW_ENV__ = "production";
 
     const update = jest.fn();
     const register = jest.fn().mockResolvedValue({ update });
@@ -58,10 +50,7 @@ describe("RegisterServiceWorker", () => {
   });
 
   it("debe limpiar service workers y caches fuera de produccion", async () => {
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: "test",
-      configurable: true,
-    });
+    window.__VIDRIOS_SAAS_SW_ENV__ = "test";
 
     const unregister = jest.fn().mockResolvedValue(true);
     const getRegistrations = jest.fn().mockResolvedValue([{ unregister }]);

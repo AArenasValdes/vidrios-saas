@@ -741,8 +741,11 @@
   justify-content: space-between;
   padding: 14px 16px;
   backdrop-filter: blur(14px);
-  background: rgba(243, 245, 249, 0.94);
-  border-bottom: 1px solid rgba(217, 224, 234, 0.88);
+  background:
+    radial-gradient(circle at top center, rgba(79, 125, 212, 0.09), transparent 42%),
+    linear-gradient(180deg, rgba(243, 245, 249, 0.98), rgba(243, 245, 249, 0.92));
+  border-bottom: 1px solid rgba(217, 224, 234, 0.72);
+  box-shadow: 0 6px 18px rgba(36, 59, 107, 0.03);
 }
 
 .mobileHeaderCreateFlow {

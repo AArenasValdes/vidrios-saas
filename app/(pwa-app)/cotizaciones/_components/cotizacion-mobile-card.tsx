@@ -36,7 +36,13 @@ export function CotizacionMobileCard({
       }
       whileTap={reduceMotion ? undefined : { scale: 0.992 }}
     >
-      <Link className={s.cotCardMainLink} href={row.detailHref}>
+      <Link
+        className={s.cotCardMainLink}
+        href={row.detailHref}
+        onPointerEnter={row.onPrefetchDetail}
+        onFocus={row.onPrefetchDetail}
+        onTouchStart={row.onPrefetchDetail}
+      >
         <div className={s.cotCardHead}>
           <div className={s.cotCardHeadCopy}>
             <div className={s.cotCardNombre}>{row.clienteNombre}</div>
