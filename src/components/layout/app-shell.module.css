@@ -263,6 +263,23 @@
   border: 1px solid transparent;
 }
 
+.navCountPill {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d95c5c;
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .navItem:hover {
   background: rgba(255, 255, 255, 0.82);
   border-color: rgba(79, 125, 212, 0.12);
@@ -1080,6 +1097,10 @@
   backdrop-filter: blur(18px);
 }
 
+.tabBarInnerWithSolicitudes {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .tabItem {
   min-height: 56px;
   border-radius: 16px;
@@ -1102,6 +1123,7 @@
   transition:
     background 0.18s ease,
     color 0.18s ease;
+  position: relative;
 }
 
 .tabItemActive {
@@ -1112,6 +1134,24 @@
 .tabIcon {
   width: 18px;
   height: 18px;
+}
+
+.tabItemCount {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #d95c5c;
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  line-height: 1;
 }
 
 .tabItemCreate {

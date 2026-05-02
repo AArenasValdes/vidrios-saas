@@ -16,6 +16,8 @@ type PasoTresDetalleFinalProps = {
   savedRecord: CotizacionWorkflowRecord | null;
   isMobileViewport: boolean;
   onDraftFleteChange: (value: string) => void;
+  onValidezChange: (value: string) => void;
+  validezOptions: string[];
   formatCurrencyInput: (value: string) => string;
 };
 
@@ -28,6 +30,8 @@ export function PasoTresDetalleFinal({
   savedRecord,
   isMobileViewport,
   onDraftFleteChange,
+  onValidezChange,
+  validezOptions,
   formatCurrencyInput,
 }: PasoTresDetalleFinalProps) {
   const [showFreightEditor, setShowFreightEditor] = useState(false);
@@ -53,9 +57,6 @@ export function PasoTresDetalleFinal({
     return `${width}×${height} · ${item.cantidad} ${unit}`;
   };
 
-  const validezMatch = draft.validez.match(/^(\d+)\s*(.*)$/i);
-  const validezValue = validezMatch?.[1] ?? draft.validez;
-  const validezSuffix = validezMatch?.[2] ? validezMatch[2].trim() : "";
   const visibleItems = showAllItems ? draft.items : draft.items.slice(0, 3);
   const hasHiddenItems = draft.items.length > 3;
 
@@ -73,9 +74,20 @@ export function PasoTresDetalleFinal({
           </div>
           <div className={s.stepThreeSummaryRow}>
             <span>VALIDEZ</span>
-            <div className={s.stepThreeValidityValue}>
-              <strong className={s.stepThreeValidityPill}>{validezValue}</strong>
-              {validezSuffix ? <span>{validezSuffix}</span> : null}
+            <div className={s.stepThreeValidityEditor}>
+              <div className={s.selectWrap}>
+                <select
+                  className={`${s.input} ${s.stepThreeValiditySelect}`}
+                  value={draft.validez}
+                  onChange={(event) => onValidezChange(event.target.value)}
+                >
+                  {validezOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </section>
@@ -184,7 +196,19 @@ export function PasoTresDetalleFinal({
         </div>
         <div className={s.summaryBlock}>
           <span>Validez</span>
-          <strong>{draft.validez}</strong>
+          <div className={s.selectWrap}>
+            <select
+              className={`${s.input} ${s.stepThreeValiditySelectDesktop}`}
+              value={draft.validez}
+              onChange={(event) => onValidezChange(event.target.value)}
+            >
+              {validezOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

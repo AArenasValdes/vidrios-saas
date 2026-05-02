@@ -1,4 +1,5 @@
 export type AyudaSolicitudContacto = "demo" | "cotizacion" | "ventas";
+export type ContextoSolicitudContacto = "landing" | "empresa-publica";
 
 export type EstadoSolicitudContacto =
   | "nueva"
@@ -8,11 +9,16 @@ export type EstadoSolicitudContacto =
 
 export type SolicitudContacto = {
   id: string;
+  organizationId: string | number | null;
   nombre: string;
   empresa: string;
-  correo: string;
-  telefono: string;
+  correo: string | null;
+  telefono: string | null;
+  contacto: string | null;
+  tipoTrabajo: string | null;
+  mensaje: string | null;
   ayuda: AyudaSolicitudContacto;
+  contexto: ContextoSolicitudContacto;
   estado: EstadoSolicitudContacto;
   origen: string;
   ip: string | null;
@@ -27,6 +33,30 @@ export type CrearSolicitudContactoInput = {
   correo: string;
   telefono: string;
   ayuda: AyudaSolicitudContacto;
+  origen?: string;
+  ip?: string | null;
+  userAgent?: string | null;
+};
+
+export type SolicitudEmpresaPublicaConfig = {
+  organizationId: string | number;
+  empresaNombre: string;
+  empresaLogoUrl: string | null;
+  empresaTelefono: string;
+  empresaEmail: string;
+  brandColor: string;
+  solicitudPublicaSlug: string;
+  solicitudPublicaValor: string;
+  solicitudPublicaPrivacidad: string;
+};
+
+export type CrearSolicitudEmpresaInput = {
+  organizationId: string | number;
+  empresa: string;
+  nombre: string;
+  contacto: string;
+  tipoTrabajo: string;
+  mensaje?: string;
   origen?: string;
   ip?: string | null;
   userAgent?: string | null;

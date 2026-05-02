@@ -1,6 +1,8 @@
 import {
   buildCotizacionWhatsappMessage,
   buildCotizacionWhatsappUrl,
+  buildPublicLeadWhatsappMessage,
+  buildPublicLeadWhatsappUrl,
   normalizeWhatsappPhone,
 } from "../whatsapp";
 
@@ -90,5 +92,29 @@ describe("whatsapp utils", () => {
     expect(message).toContain(
       "Si quieres avanzar o revisar ajustes, responde a este mensaje y la empresa seguira contigo."
     );
+  });
+
+  it("debe construir mensaje publico corto para solicitud rapida", () => {
+    const message = buildPublicLeadWhatsappMessage({
+      nombre: "Ana Soto",
+      tipoTrabajo: "shower door",
+      mensaje: "Tengo medidas aproximadas.",
+    });
+
+    expect(message).toContain(
+      "Hola, vengo desde su enlace de cotización. Quiero consultar por: shower door."
+    );
+    expect(message).toContain("Mi nombre es Ana Soto.");
+    expect(message).toContain("Tengo medidas aproximadas.");
+  });
+
+  it("debe construir la url publica de WhatsApp para empresa", () => {
+    const url = buildPublicLeadWhatsappUrl("+56 9 8234 5678", {
+      nombre: "Ana Soto",
+      tipoTrabajo: "cierre terraza",
+    });
+
+    expect(url).toContain("https://wa.me/56982345678");
+    expect(url).toContain("vengo%20desde%20su%20enlace%20de%20cotizaci%C3%B3n");
   });
 });

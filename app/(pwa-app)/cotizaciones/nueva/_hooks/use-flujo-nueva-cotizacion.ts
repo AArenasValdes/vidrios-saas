@@ -230,6 +230,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     isMobileViewport: params.isMobileViewport,
     isSaving: params.isSaving,
     onDraftFleteChange: params.onDraftFleteChange,
+    onValidezChange: params.onValidezChange,
     onGoToStepTwo: () => params.onGoToStep(2),
     onSaveQuote: params.onSaveQuote,
     onSaveDraft: params.onSaveDraft,

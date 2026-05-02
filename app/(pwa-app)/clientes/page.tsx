@@ -58,7 +58,14 @@ function getClienteMeta(estado: string) {
 }
 
 export default function ClientesPage() {
-  const { clientes, isReady, isRefreshing, isSaving, deleteCliente } = useClientes();
+  const {
+    clientes,
+    isReady,
+    isRefreshing,
+    isSaving,
+    deleteCliente,
+    loadClienteDetalleById,
+  } = useClientes();
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
   const [direccionFiltro, setDireccionFiltro] = useState("Todas");
   const [busqueda, setBusqueda] = useState("");
@@ -219,6 +226,10 @@ export default function ClientesPage() {
 
   const handleDelete = (id: string, nombre: string) => {
     setDeleteCandidate({ id, nombre });
+  };
+
+  const handlePrefetchDetail = (id: string) => {
+    void loadClienteDetalleById(id);
   };
 
   const handleConfirmDelete = async () => {
@@ -482,6 +493,9 @@ export default function ClientesPage() {
                               title="Ver detalle"
                               aria-label="Ver detalle"
                               data-tooltip="Ver detalle"
+                              onPointerEnter={() => handlePrefetchDetail(row.id)}
+                              onFocus={() => handlePrefetchDetail(row.id)}
+                              onTouchStart={() => handlePrefetchDetail(row.id)}
                             >
                               <LuEye aria-hidden />
                             </Link>
@@ -553,7 +567,13 @@ export default function ClientesPage() {
                   <div className={s.clientCardSince}>Ultima gestion: {row.ultimaGestion}</div>
 
                   <div className={s.clientCardBottom}>
-                    <Link className={s.clientCardPrimaryAction} href={row.detailHref}>
+                    <Link
+                      className={s.clientCardPrimaryAction}
+                      href={row.detailHref}
+                      onPointerEnter={() => handlePrefetchDetail(row.id)}
+                      onFocus={() => handlePrefetchDetail(row.id)}
+                      onTouchStart={() => handlePrefetchDetail(row.id)}
+                    >
                       <LuEye aria-hidden />
                       Ver ficha
                     </Link>

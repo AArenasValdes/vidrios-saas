@@ -27,6 +27,7 @@ import { useCotizacionAlerts } from "@/features/cotizaciones/hooks/useCotizacion
 import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { buildOrganizationInitials } from "@/features/organization-profile/services/organization-profile.service";
+import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
 import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 
 import s from "./app-shell.module.css";
@@ -72,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/solicitudes",
     icon: LuInbox,
     label: "Solicitudes",
-    mobileLabel: "Leads",
+    mobileLabel: "Solicitudes",
     description: "Contactos y demos que llegan desde la landing",
   },
   {
@@ -99,6 +100,7 @@ const SPECIAL_SCREENS: ContextItem[] = [
 
 const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
 const ALERTS_CLEARED_STORAGE_PREFIX = "vidrios-saas:alerts-cleared:";
+const SOLICITUDES_SEEN_STORAGE_PREFIX = "vidrios-saas:solicitudes-seen:";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
@@ -133,6 +135,19 @@ function getAlertsClearedStorageKey(
   }
 
   return `${ALERTS_CLEARED_STORAGE_PREFIX}${String(organizationId)}:${email.trim().toLowerCase()}`;
+}
+
+function getSolicitudesSeenStorageKey(
+  organizationId: string | number | null | undefined,
+  email: string | null | undefined
+) {
+  if (!organizationId || !email) {
+    return null;
+  }
+
+  return `${SOLICITUDES_SEEN_STORAGE_PREFIX}${String(organizationId)}:${email
+    .trim()
+    .toLowerCase()}`;
 }
 
 function formatAlertDate(value: string) {
@@ -207,6 +222,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
+  const [solicitudesSeenAt, setSolicitudesSeenAt] = useState(0);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
 
   const currentItem = useMemo(
@@ -225,6 +241,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }),
     [rol, user?.email]
   );
+  const { solicitudes: solicitudesShell } = useSolicitudesContacto(
+    canReviewSolicitudes && !cargando
+  );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
   const companyInitials = useMemo(
@@ -237,6 +256,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
   const alertsClearedStorageKey = useMemo(
     () => getAlertsClearedStorageKey(organizacionId, user?.email),
+    [organizacionId, user?.email]
+  );
+  const solicitudesSeenStorageKey = useMemo(
+    () => getSolicitudesSeenStorageKey(organizacionId, user?.email),
     [organizacionId, user?.email]
   );
   const unreadAlerts = useMemo(
@@ -252,6 +275,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
         .filter((alert) => getAlertTimestamp(alert.occurredAt) > alertsClearedAt)
         .slice(0, isCompactMobile ? 6 : 8),
     [alerts, alertsClearedAt, isCompactMobile]
+  );
+  const nuevasSolicitudesCount = useMemo(
+    () =>
+      solicitudesShell.filter((solicitud) => {
+        if (solicitud.estado !== "nueva") {
+          return false;
+        }
+
+        return getAlertTimestamp(solicitud.creadoEn) > solicitudesSeenAt;
+      }).length,
+    [solicitudesSeenAt, solicitudesShell]
   );
 
   const handleLogout = async () => {
@@ -385,6 +419,48 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const parsedClearedAt = rawClearedAt ? Number(rawClearedAt) : 0;
     setAlertsClearedAt(Number.isFinite(parsedClearedAt) ? parsedClearedAt : 0);
   }, [alertsClearedStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!solicitudesSeenStorageKey) {
+      setSolicitudesSeenAt(0);
+      return;
+    }
+
+    const rawSeenAt = window.localStorage.getItem(solicitudesSeenStorageKey);
+    const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
+    setSolicitudesSeenAt(Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0);
+  }, [solicitudesSeenStorageKey]);
+
+  useEffect(() => {
+    if (!pathname.startsWith("/solicitudes")) {
+      return;
+    }
+
+    const latestSolicitudSeenAt = solicitudesShell.reduce((latest, solicitud) => {
+      if (solicitud.estado !== "nueva") {
+        return latest;
+      }
+
+      return Math.max(latest, getAlertTimestamp(solicitud.creadoEn));
+    }, solicitudesSeenAt);
+
+    if (latestSolicitudSeenAt === solicitudesSeenAt) {
+      return;
+    }
+
+    setSolicitudesSeenAt(latestSolicitudSeenAt);
+
+    if (typeof window !== "undefined" && solicitudesSeenStorageKey) {
+      window.localStorage.setItem(
+        solicitudesSeenStorageKey,
+        String(latestSolicitudSeenAt)
+      );
+    }
+  }, [pathname, solicitudesSeenAt, solicitudesSeenStorageKey, solicitudesShell]);
 
   useEffect(() => {
     if (isWorkspaceBooting) {
@@ -597,6 +673,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   <span className={s.navTitle}>{item.label}</span>
                   <span className={s.navHint}>{item.description}</span>
                 </span>
+                {item.href === "/solicitudes" && nuevasSolicitudesCount > 0 ? (
+                  <span className={s.navCountPill}>
+                    {nuevasSolicitudesCount > 9 ? "9+" : nuevasSolicitudesCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -829,7 +910,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <nav className={`${s.tabBar}${isNuevaCotizacionRoute ? ` ${s.tabBarHidden}` : ""}`}>
-        <div className={s.tabBarInner}>
+        <div
+          className={`${s.tabBarInner}${
+            canReviewSolicitudes ? ` ${s.tabBarInnerWithSolicitudes}` : ""
+          }`}
+        >
           <Link
             href="/dashboard"
             prefetch={false}
@@ -857,6 +942,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </span>
             <span>Nueva cotizacion</span>
           </Link>
+          {canReviewSolicitudes ? (
+            <Link
+              href="/solicitudes"
+              prefetch={false}
+              className={`${s.tabItem}${isActivePath(pathname, "/solicitudes") ? ` ${s.tabItemActive}` : ""}`}
+            >
+              <LuInbox className={s.tabIcon} aria-hidden />
+              Solicitudes
+              {nuevasSolicitudesCount > 0 ? (
+                <span className={s.tabItemCount}>
+                  {nuevasSolicitudesCount > 9 ? "9+" : nuevasSolicitudesCount}
+                </span>
+              ) : null}
+            </Link>
+          ) : null}
           <Link
             href="/clientes"
             prefetch={false}

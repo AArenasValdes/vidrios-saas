@@ -11,6 +11,9 @@ export type OrganizationProfile = {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  solicitudPublicaSlug: string;
+  solicitudPublicaValor: string;
+  solicitudPublicaPrivacidad: string;
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
@@ -26,6 +29,9 @@ export type UpdateOrganizationProfileInput = {
   empresaEmail: string;
   brandColor: string;
   formaPago: string;
+  solicitudPublicaSlug: string;
+  solicitudPublicaValor: string;
+  solicitudPublicaPrivacidad: string;
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;

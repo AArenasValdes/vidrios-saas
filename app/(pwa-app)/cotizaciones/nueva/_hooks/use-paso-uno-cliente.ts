@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from "react";
 
 import type { Cliente } from "@/features/clientes/types/cliente";
+import { SOLICITUD_PREFILL_CLIENT_ID_PREFIX } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 
 type UsePasoUnoClienteParams = {
   clientes: Cliente[];
   clientQuery: string;
   selectedClientId: string;
+  draftClienteNombre: string;
+  draftClienteTelefono: string;
+  draftDireccion: string;
   onClientQueryChange: (value: string) => void;
   onSelectClient: (clientId: string) => void;
   onAplicarClienteSeleccionado: (cliente: Cliente) => void;
@@ -18,11 +22,41 @@ export function usePasoUnoCliente(params: UsePasoUnoClienteParams) {
     clientes,
     clientQuery,
     selectedClientId,
+    draftClienteNombre,
+    draftClienteTelefono,
+    draftDireccion,
     onClientQueryChange,
     onSelectClient,
     onAplicarClienteSeleccionado,
   } = params;
   const ultimoClienteAplicadoRef = useRef<string | number | null>(null);
+  const isSolicitudPrefillSelected = selectedClientId.startsWith(
+    SOLICITUD_PREFILL_CLIENT_ID_PREFIX
+  );
+
+  const clienteSolicitudPrefill = useMemo<Cliente | null>(() => {
+    if (!isSolicitudPrefillSelected || !draftClienteNombre.trim()) {
+      return null;
+    }
+
+    return {
+      id: selectedClientId,
+      organizationId: "prefill",
+      nombre: draftClienteNombre.trim(),
+      telefono: draftClienteTelefono.trim() || null,
+      direccion: draftDireccion.trim() || null,
+      correo: null,
+      creadoEn: null,
+      actualizadoEn: null,
+      eliminadoEn: null,
+    };
+  }, [
+    draftDireccion,
+    draftClienteNombre,
+    draftClienteTelefono,
+    isSolicitudPrefillSelected,
+    selectedClientId,
+  ]);
 
   const clientesFiltrados = useMemo(() => {
     const q = clientQuery.trim().toLowerCase();
@@ -36,12 +70,23 @@ export function usePasoUnoCliente(params: UsePasoUnoClienteParams) {
       .slice(0, 6);
   }, [clientQuery, clientes]);
 
-  const clientesRecientes = useMemo(() => clientes.slice(0, 8), [clientes]);
+  const clientesRecientes = useMemo(() => {
+    if (!clienteSolicitudPrefill) {
+      return clientes.slice(0, 8);
+    }
+
+    return [
+      clienteSolicitudPrefill,
+      ...clientes.filter((cliente) => String(cliente.id) !== selectedClientId),
+    ].slice(0, 8);
+  }, [clienteSolicitudPrefill, clientes, selectedClientId]);
   const clientesRecientesMovil = useMemo(() => clientesRecientes.slice(0, 4), [clientesRecientes]);
 
   const clienteSeleccionado = useMemo(
-    () => clientes.find((cliente) => String(cliente.id) === selectedClientId) ?? null,
-    [clientes, selectedClientId]
+    () =>
+      clientes.find((cliente) => String(cliente.id) === selectedClientId) ??
+      clienteSolicitudPrefill,
+    [clienteSolicitudPrefill, clientes, selectedClientId]
   );
 
   const estadoBusquedaCliente = useMemo(() => {

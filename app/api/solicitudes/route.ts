@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
+import {
+  canAccessAllSolicitudes,
+  canAccessSolicitudes,
+} from "@/features/solicitudes/services/solicitudes-contacto-access";
 import {
   SolicitudContactoValidationError,
   solicitudesContactoService,
@@ -53,7 +56,7 @@ export async function GET() {
 
   const { data: perfil, error: perfilError } = await supabase
     .from("users")
-    .select("rol")
+    .select("rol, organization_id")
     .ilike("correo", user.email ?? "")
     .is("eliminado_en", null)
     .maybeSingle();
@@ -65,13 +68,7 @@ export async function GET() {
     );
   }
 
-  if (
-    !perfil ||
-    !canAccessSolicitudes({
-      email: user.email,
-      rol: perfil.rol,
-    })
-  ) {
+  if (!perfil || !canAccessSolicitudes({ email: user.email, rol: perfil.rol })) {
     return NextResponse.json(
       { error: "No tienes permisos para revisar las solicitudes." },
       { status: 403 }
@@ -79,12 +76,88 @@ export async function GET() {
   }
 
   try {
-    const solicitudes = await solicitudesContactoService.listSolicitudes();
+    const canReviewAll = canAccessAllSolicitudes(user.email);
+    if (!canReviewAll && !perfil.organization_id) {
+      return NextResponse.json(
+        { error: "No pudimos identificar la organización activa." },
+        { status: 403 }
+      );
+    }
+    const solicitudes = canReviewAll
+      ? await solicitudesContactoService.listSolicitudes()
+      : await solicitudesContactoService.listSolicitudesByOrganizationId(
+          perfil.organization_id
+        );
 
     return NextResponse.json({ solicitudes });
   } catch {
     return NextResponse.json(
       { error: "No pudimos cargar las solicitudes." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+  }
+
+  const { data: perfil, error: perfilError } = await supabase
+    .from("users")
+    .select("rol, organization_id")
+    .ilike("correo", user.email ?? "")
+    .is("eliminado_en", null)
+    .maybeSingle();
+
+  if (perfilError) {
+    return NextResponse.json(
+      { error: "No pudimos validar tus permisos." },
+      { status: 500 }
+    );
+  }
+
+  if (!perfil || !canAccessSolicitudes({ email: user.email, rol: perfil.rol })) {
+    return NextResponse.json(
+      { error: "No tienes permisos para actualizar solicitudes." },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const body = (await request.json()) as {
+      id?: string;
+      estado?: "nueva" | "contactada" | "cerrada" | "descartada";
+    };
+
+    const canReviewAll = canAccessAllSolicitudes(user.email);
+
+    if (!canReviewAll && !perfil.organization_id) {
+      return NextResponse.json(
+        { error: "No pudimos identificar la organización activa." },
+        { status: 403 }
+      );
+    }
+
+    const solicitud = await solicitudesContactoService.updateSolicitudStatus({
+      id: body.id ?? "",
+      estado: body.estado ?? "nueva",
+      organizationId: canReviewAll ? undefined : perfil.organization_id,
+    });
+
+    return NextResponse.json({ solicitud });
+  } catch (error) {
+    if (error instanceof SolicitudContactoValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { error: "No pudimos actualizar la solicitud." },
       { status: 500 }
     );
   }

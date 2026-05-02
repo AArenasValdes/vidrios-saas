@@ -15,9 +15,26 @@ type OrganizationProfileServiceDeps = {
 };
 
 export const DEFAULT_ORGANIZATION_BRAND_COLOR = "#1a3a5c";
+export const DEFAULT_SOLICITUD_PUBLICA_VALOR =
+  "Recibe una respuesta comercial inicial, orientación del trabajo y una base para tu cotización.";
+export const DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD =
+  "Tus datos se usan solo para esta solicitud y no se comparten fuera de la empresa.";
 
 function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? "";
+}
+
+export function normalizePublicRequestSlug(value: string | null | undefined) {
+  const normalized = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+
+  return normalized.slice(0, 48);
 }
 
 export function sanitizeBrandColor(value: string | null | undefined) {
@@ -40,7 +57,9 @@ export function buildOrganizationInitials(value: string) {
     return "ME";
   }
 
-  const initials = words.slice(0, 2).map((word) => word[0]?.toUpperCase() ?? "");
+  const initials = words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "");
 
   return initials.join("");
 }
@@ -55,19 +74,49 @@ export function hexToRgbChannels(hex: string) {
   return `${red} ${green} ${blue}`;
 }
 
+function isDuplicatePublicRequestSlugError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as { code?: string; message?: string; details?: string };
+  const haystack = [candidate.code, candidate.message, candidate.details]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    haystack.includes("organization_profile_solicitud_publica_slug_uidx") ||
+    (haystack.includes("solicitud_publica_slug") && haystack.includes("duplicate"))
+  );
+}
+
 export function resolveOrganizationProfile(
   organizationId: EntityId | null,
   profile: OrganizationProfile | null
 ): OrganizationProfile {
+  const empresaNombre = normalizeText(profile?.empresaNombre) || "Mi empresa";
+  const solicitudPublicaSlug =
+    normalizePublicRequestSlug(profile?.solicitudPublicaSlug) ||
+    normalizePublicRequestSlug(empresaNombre) ||
+    "mi-empresa";
+
   return {
     organizationId,
-    empresaNombre: normalizeText(profile?.empresaNombre) || "Mi empresa",
+    empresaNombre,
     empresaLogoUrl: profile?.empresaLogoUrl ?? null,
     empresaDireccion: normalizeText(profile?.empresaDireccion),
     empresaTelefono: normalizeText(profile?.empresaTelefono),
     empresaEmail: normalizeText(profile?.empresaEmail),
     brandColor: sanitizeBrandColor(profile?.brandColor),
     formaPago: normalizeText(profile?.formaPago),
+    solicitudPublicaSlug,
+    solicitudPublicaValor:
+      normalizeText(profile?.solicitudPublicaValor) ||
+      DEFAULT_SOLICITUD_PUBLICA_VALOR,
+    solicitudPublicaPrivacidad:
+      normalizeText(profile?.solicitudPublicaPrivacidad) ||
+      DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
     proveedorPreferido: normalizePreferredProvider(profile?.proveedorPreferido),
     modoPrecioPreferido: normalizePricingMode(profile?.modoPrecioPreferido),
     margenDefecto: profile?.margenDefecto ?? 100,
@@ -104,20 +153,36 @@ export function createOrganizationProfileService(
         throw new Error("El correo de la empresa no es valido");
       }
 
-      const persisted = await repository.upsertByOrganizationId(organizationId, {
-        empresaNombre,
-        empresaLogoUrl: input.empresaLogoUrl,
-        empresaDireccion: normalizeText(input.empresaDireccion),
-        empresaTelefono: normalizeText(input.empresaTelefono),
-        empresaEmail,
-        brandColor: sanitizeBrandColor(input.brandColor),
-        formaPago: normalizeText(input.formaPago),
-        proveedorPreferido: normalizePreferredProvider(input.proveedorPreferido),
-        modoPrecioPreferido: normalizePricingMode(input.modoPrecioPreferido),
-        margenDefecto: input.margenDefecto,
-      });
+      const solicitudPublicaSlug =
+        normalizePublicRequestSlug(input.solicitudPublicaSlug) ||
+        normalizePublicRequestSlug(empresaNombre) ||
+        "mi-empresa";
 
-      return resolveOrganizationProfile(organizationId, persisted);
+      try {
+        const persisted = await repository.upsertByOrganizationId(organizationId, {
+          empresaNombre,
+          empresaLogoUrl: input.empresaLogoUrl,
+          empresaDireccion: normalizeText(input.empresaDireccion),
+          empresaTelefono: normalizeText(input.empresaTelefono),
+          empresaEmail,
+          brandColor: sanitizeBrandColor(input.brandColor),
+          formaPago: normalizeText(input.formaPago),
+          solicitudPublicaSlug,
+          solicitudPublicaValor: normalizeText(input.solicitudPublicaValor),
+          solicitudPublicaPrivacidad: normalizeText(input.solicitudPublicaPrivacidad),
+          proveedorPreferido: normalizePreferredProvider(input.proveedorPreferido),
+          modoPrecioPreferido: normalizePricingMode(input.modoPrecioPreferido),
+          margenDefecto: input.margenDefecto,
+        });
+
+        return resolveOrganizationProfile(organizationId, persisted);
+      } catch (error) {
+        if (isDuplicatePublicRequestSlugError(error)) {
+          throw new Error("Ese slug público ya está ocupado por otra empresa.");
+        }
+
+        throw error;
+      }
     },
 
     async uploadLogo(organizationId: EntityId, file: File) {

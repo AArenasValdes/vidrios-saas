@@ -25,11 +25,9 @@ export function canAccessSolicitudes(input: {
   email: string | null | undefined;
   rol: UserRole | null | undefined;
 }) {
-  const email = normalizeEmail(input.email);
+  return input.rol === "admin" && Boolean(normalizeEmail(input.email));
+}
 
-  if (input.rol !== "admin" || !email) {
-    return false;
-  }
-
-  return getSolicitudesAllowedEmails().includes(email);
+export function canAccessAllSolicitudes(email: string | null | undefined) {
+  return getSolicitudesAllowedEmails().includes(normalizeEmail(email));
 }

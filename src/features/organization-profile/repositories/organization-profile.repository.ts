@@ -20,6 +20,9 @@ type OrganizationProfileRow = {
   empresa_email: string | null;
   brand_color: string | null;
   forma_pago: string | null;
+  solicitud_publica_slug?: string | null;
+  solicitud_publica_valor?: string | null;
+  solicitud_publica_privacidad?: string | null;
   proveedor_preferido: string | null;
   modo_precio_preferido: string | null;
   margen_defecto: number | null;
@@ -29,36 +32,6 @@ type OrganizationProfileRow = {
 
 const TABLE_NAME = "organization_profile";
 const LOGO_BUCKET = "organization-assets";
-const PROFILE_SELECT = `
-  organization_id,
-  empresa_nombre,
-  empresa_logo_url,
-  empresa_direccion,
-  empresa_telefono,
-  empresa_email,
-  brand_color,
-  forma_pago,
-  proveedor_preferido,
-  modo_precio_preferido,
-  margen_defecto,
-  creado_en,
-  actualizado_en
-`;
-
-const PROFILE_SELECT_LEGACY = `
-  organization_id,
-  empresa_nombre,
-  empresa_logo_url,
-  empresa_direccion,
-  empresa_telefono,
-  empresa_email,
-  brand_color,
-  forma_pago,
-  proveedor_preferido,
-  modo_precio_preferido,
-  creado_en,
-  actualizado_en
-`;
 
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -84,18 +57,6 @@ function isMissingOrganizationProfileTableError(error: unknown) {
   return (
     haystack.includes("organization_profile") &&
     (haystack.includes("relation") ||
-      haystack.includes("schema cache") ||
-      haystack.includes("does not exist"))
-  );
-}
-
-function isMissingOrganizationProfileMarginColumnError(error: unknown) {
-  const haystack = getErrorText(error);
-
-  return (
-    haystack.includes("organization_profile") &&
-    haystack.includes("margen_defecto") &&
-    (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
   );
@@ -128,24 +89,14 @@ function mapOrganizationProfile(
     empresaEmail: row.empresa_email ?? "",
     brandColor: row.brand_color ?? "",
     formaPago: row.forma_pago ?? "",
+    solicitudPublicaSlug: row.solicitud_publica_slug ?? "",
+    solicitudPublicaValor: row.solicitud_publica_valor ?? "",
+    solicitudPublicaPrivacidad: row.solicitud_publica_privacidad ?? "",
     proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
     modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     margenDefecto: row.margen_defecto ?? 100,
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
-  };
-}
-
-function withLegacyMarginFallback(
-  row: Omit<OrganizationProfileRow, "margen_defecto"> | OrganizationProfileRow | null
-): OrganizationProfileRow | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...row,
-    margen_defecto: "margen_defecto" in row ? row.margen_defecto : null,
   };
 }
 
@@ -168,38 +119,16 @@ export function createOrganizationProfileRepository(
     async getByOrganizationId(organizationId: EntityId) {
       const { data, error } = await supabase
         .from(TABLE_NAME)
-        .select(PROFILE_SELECT)
+        .select("*")
         .eq("organization_id", organizationId)
         .maybeSingle();
 
-      if (error && !isMissingOrganizationProfileMarginColumnError(error)) {
+      if (error) {
         if (isMissingOrganizationProfileTableError(error)) {
           return null;
         }
 
         throw error;
-      }
-
-      if (error && isMissingOrganizationProfileMarginColumnError(error)) {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from(TABLE_NAME)
-          .select(PROFILE_SELECT_LEGACY)
-          .eq("organization_id", organizationId)
-          .maybeSingle();
-
-        if (fallbackError) {
-          if (isMissingOrganizationProfileTableError(fallbackError)) {
-            return null;
-          }
-
-          throw fallbackError;
-        }
-
-        return mapOrganizationProfile(
-          withLegacyMarginFallback(
-            fallbackData as Omit<OrganizationProfileRow, "margen_defecto"> | null
-          )
-        );
       }
 
       return mapOrganizationProfile(data as OrganizationProfileRow | null);
@@ -221,6 +150,9 @@ export function createOrganizationProfileRepository(
             empresa_email: input.empresaEmail,
             brand_color: input.brandColor,
             forma_pago: input.formaPago,
+            solicitud_publica_slug: input.solicitudPublicaSlug,
+            solicitud_publica_valor: input.solicitudPublicaValor,
+            solicitud_publica_privacidad: input.solicitudPublicaPrivacidad,
             proveedor_preferido: input.proveedorPreferido || null,
             modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
             margen_defecto: input.margenDefecto,
@@ -230,7 +162,7 @@ export function createOrganizationProfileRepository(
             onConflict: "organization_id",
           }
         )
-        .select(PROFILE_SELECT)
+        .select("*")
         .single();
 
       if (error) {

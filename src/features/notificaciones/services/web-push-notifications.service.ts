@@ -7,6 +7,7 @@ import {
   type WebPushSubscriptionsRepository,
 } from "@/features/notificaciones/repositories/web-push-subscriptions.repository";
 import type {
+  LeadCreatedPushPayload,
   PushDecisionKind,
   QuoteDecisionPushPayload,
   UpsertWebPushSubscriptionInput,
@@ -22,6 +23,13 @@ type SendQuoteDecisionPushInput = {
   codigo: string;
   clienteNombre: string;
   decision: PushDecisionKind;
+};
+
+type SendLeadCreatedPushInput = {
+  organizationId: string | number;
+  prospectoNombre: string;
+  empresaNombre: string;
+  tipoTrabajo: string;
 };
 
 type AuthPushContext = {
@@ -80,6 +88,19 @@ function buildQuoteDecisionPushPayload(
     organizationId: String(input.organizationId),
     decision: input.decision,
     kind: "cotizacion-respuesta",
+  };
+}
+
+function buildLeadCreatedPushPayload(
+  input: SendLeadCreatedPushInput
+): LeadCreatedPushPayload {
+  return {
+    title: "Nueva solicitud comercial",
+    body: `${input.prospectoNombre} pidió ${input.tipoTrabajo} para ${input.empresaNombre}.`,
+    url: "/solicitudes",
+    tag: `solicitud-publica-${String(input.organizationId)}`,
+    organizationId: String(input.organizationId),
+    kind: "solicitud-publica",
   };
 }
 
@@ -195,8 +216,24 @@ export function createWebPushNotificationsService(
         }
       );
     },
+
+    async sendLeadCreatedPush(input: SendLeadCreatedPushInput) {
+      return sendOrganizationPush(
+        repository,
+        input.organizationId,
+        JSON.stringify(buildLeadCreatedPushPayload(input)),
+        {
+          urgency: "high",
+          TTL: 30 * 60,
+        }
+      );
+    },
   };
 }
+
+export type WebPushNotificationsService = ReturnType<
+  typeof createWebPushNotificationsService
+>;
 
 export const webPushNotificationsService =
   createWebPushNotificationsService();

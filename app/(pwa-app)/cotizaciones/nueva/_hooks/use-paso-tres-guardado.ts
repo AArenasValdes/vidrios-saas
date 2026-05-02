@@ -70,6 +70,7 @@ type UsePasoTresGuardadoParams = {
     existingClientId?: string | number;
     existingProjectId?: string | number | null;
   }) => Promise<CotizacionWorkflowRecord>;
+  onQuoteCreated?: (record: CotizacionWorkflowRecord) => Promise<void> | void;
   applyQuickEditDraftsToItems: (items: CotizacionWorkflowItem[]) => CotizacionWorkflowItem[];
   resetWorkflowToBlank: () => void;
   openPrintViewer: (recordId: string) => void;
@@ -120,6 +121,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
     isNewWorkflow,
     persistenciaWizard,
     saveWorkflow,
+    onQuoteCreated,
     applyQuickEditDraftsToItems,
     resetWorkflowToBlank,
     openPrintViewer,
@@ -198,6 +200,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         }
 
         if (estado === "creada") {
+          await onQuoteCreated?.(record);
           openPrintViewer(record.id);
           return;
         }
@@ -235,6 +238,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
       editingItemId,
       isNewWorkflow,
       openPrintViewer,
+      onQuoteCreated,
       openQuotesList,
       persistenciaWizard,
       recordMeta,

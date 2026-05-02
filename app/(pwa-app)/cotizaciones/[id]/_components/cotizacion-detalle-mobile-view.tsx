@@ -1,12 +1,10 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
-  LuArrowLeft,
   LuCalendarDays,
   LuChevronDown,
-  LuEllipsis,
   LuEye,
   LuMapPin,
   LuMessageCircle,
@@ -15,6 +13,7 @@ import {
   LuTrash2,
 } from "react-icons/lu";
 
+import { MobilePageHeader } from "../../../_components/mobile-page-header";
 import type { CotizacionDetalleMobileViewModel } from "./cotizacion-detalle-mobile-view-model";
 
 import s from "./cotizacion-detalle-mobile.module.css";
@@ -72,37 +71,25 @@ export function CotizacionDetalleMobileView({
     <div className={s.root}>
       <div className={s.shell}>
         <header className={s.header}>
-          <div className={s.headerBar}>
-            <Link href="/cotizaciones" className={s.backLink}>
-              <LuArrowLeft aria-hidden />
-              Cotizaciones
-            </Link>
-
-            <div className={s.menuWrap} ref={menuRef}>
-              <button
-                type="button"
-                className={s.menuButton}
-                aria-label="Más acciones"
-                aria-expanded={isMenuOpen}
-                onClick={() => setIsMenuOpen((current) => !current)}
-              >
-                <LuEllipsis aria-hidden />
-              </button>
-
-              {isMenuOpen ? (
-                <div className={s.menuCard}>
-                  <button
-                    type="button"
-                    className={s.menuDelete}
-                    onClick={() => void onDelete()}
-                    disabled={isSaving}
-                  >
-                    <LuTrash2 aria-hidden />
-                    Eliminar cotización
-                  </button>
-                </div>
-              ) : null}
-            </div>
+          <div ref={menuRef}>
+            <MobilePageHeader
+              backHref="/cotizaciones"
+              backLabel="Cotizaciones"
+              menuLabel="Más acciones"
+              menuOpen={isMenuOpen}
+              onToggleMenu={() => setIsMenuOpen((current) => !current)}
+              menuPanel={
+                <button
+                  type="button"
+                  className={s.menuDelete}
+                  onClick={() => void onDelete()}
+                  disabled={isSaving}
+                >
+                  <LuTrash2 aria-hidden />
+                  Eliminar cotización
+                </button>
+              }
+            />
           </div>
 
           <div className={s.codeRow}>
@@ -113,7 +100,7 @@ export function CotizacionDetalleMobileView({
 
         <section className={s.hero}>
           <h1 className={s.heroAmount}>{model.total}</h1>
-          <p className={s.heroLabel}>TOTAL · IVA INCLUIDO</p>
+          <p className={s.heroLabel}>TOTAL Â· IVA INCLUIDO</p>
           <p className={s.heroSubtext}>{model.heroSubtext}</p>
         </section>
 
@@ -164,7 +151,7 @@ export function CotizacionDetalleMobileView({
           <div className={s.clientMeta}>
             <LuCalendarDays aria-hidden />
             <span>
-              Actualizada {updatedLabel} · Vigencia {model.validity}
+              Actualizada {updatedLabel} Â· Vigencia {model.validity}
             </span>
           </div>
         </section>
@@ -172,7 +159,7 @@ export function CotizacionDetalleMobileView({
         <section className={s.sectionPlain}>
           <div className={s.sectionHeader}>
             <div className={s.sectionLabel}>
-              {isHydratingItems ? "COMPONENTES" : `COMPONENTES · ${model.itemsCount}`}
+              {isHydratingItems ? "COMPONENTES" : `COMPONENTES Â· ${model.itemsCount}`}
             </div>
             <Link href={editComponentsHref} className={s.sectionAction}>
               <LuPencil aria-hidden />
@@ -237,3 +224,4 @@ export function CotizacionDetalleMobileView({
     </div>
   );
 }
+

@@ -1,0 +1,347 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 0 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #335ea9;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.backIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(217, 224, 234, 0.9);
+}
+
+.backIcon svg {
+  font-size: 16px;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menuButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9e0ea;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #667085;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(36, 59, 107, 0.05);
+}
+
+.menuButton svg {
+  font-size: 16px;
+}
+
+.menuPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 156px;
+  padding: 8px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(36, 59, 107, 0.08);
+  z-index: 4;
+}
+
+.menuItem {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #243b6b;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.heroCard,
+.tabsCard,
+.listCard {
+  border: 1px solid #d9e0ea;
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.heroCard {
+  padding: 14px;
+}
+
+.heroTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  color: #4f7dd4;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  margin: 0;
+  color: #243b6b;
+  font-family: "Lato", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toneGreen {
+  background: #e7f7ec;
+  color: #21a460;
+}
+
+.toneOrange {
+  background: #fff2dc;
+  color: #f59e0b;
+}
+
+.toneGray {
+  background: #edf2f8;
+  color: #7d94b8;
+}
+
+.toneBlue {
+  background: #ebf2ff;
+  color: #4f7dd4;
+}
+
+.callButton {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.callButtonDisabled {
+  pointer-events: none;
+  color: #98a2b3;
+}
+
+.contactList {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.contactRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #4f6c98;
+  font-size: 14px;
+}
+
+.contactRow svg,
+.updatedLine svg {
+  color: #7d94b8;
+  flex-shrink: 0;
+}
+
+.updatedLine {
+  margin: 10px 0 0;
+  color: #8ca0c0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.metrics {
+  margin-top: 12px;
+  padding: 8px 0;
+  border-radius: 16px;
+  background: #f4f8fd;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+}
+
+.metricCell {
+  padding: 6px 8px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.metricCell strong {
+  color: #243b6b;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.metricCell span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.metricDivider {
+  width: 1px;
+  height: 34px;
+  background: #d9e3f0;
+}
+
+.tabsCard {
+  padding: 4px;
+}
+
+.tabsRail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tabButton {
+  min-height: 40px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #667085;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabButton small {
+  font-size: 13px;
+  color: inherit;
+}
+
+.tabButtonActive {
+  background: #244d88;
+  color: #ffffff;
+}
+
+.listCard {
+  overflow: hidden;
+}
+
+.rowItem,
+.quoteRow {
+  position: relative;
+  padding: 14px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quoteRow {
+  text-decoration: none;
+}
+
+.rowMain,
+.quoteCopy,
+.quoteAside {
+  display: grid;
+  gap: 6px;
+}
+
+.quoteAside {
+  justify-items: end;
+  flex-shrink: 0;
+}
+
+.rowTitle {
+  color: #243b6b;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.rowMeta {
+  color: #6b83a8;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.quotePrice {
+  color: #143f82;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.rowDivider {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 1px;
+  background: #e3eaf4;
+}
+
+@media (min-width: 768px) {
+  .root {
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import type { ChangeEvent, FormEvent } from "react";
@@ -7,6 +7,8 @@ import {
   LuBellRing,
   LuBuilding2,
   LuCheck,
+  LuCopy,
+  LuExternalLink,
   LuImagePlus,
   LuMail,
   LuMapPin,
@@ -20,6 +22,8 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import {
   buildOrganizationInitials,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
+  DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
+  DEFAULT_SOLICITUD_PUBLICA_VALOR,
 } from "@/features/organization-profile/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { subscribeToPushNotifications } from "@/utils/web-push";
@@ -45,6 +49,9 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   empresaEmail: "",
   brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   formaPago: "",
+  solicitudPublicaSlug: "",
+  solicitudPublicaValor: DEFAULT_SOLICITUD_PUBLICA_VALOR,
+  solicitudPublicaPrivacidad: DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
@@ -96,6 +103,7 @@ export default function ConfiguracionEmpresaPage() {
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [publicLinkMessage, setPublicLinkMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [deviceAlertsState, setDeviceAlertsState] = useState<DeviceAlertsState>({
     kind: "checking",
@@ -117,6 +125,9 @@ export default function ConfiguracionEmpresaPage() {
       empresaEmail: profile.empresaEmail,
       brandColor: profile.brandColor,
       formaPago: profile.formaPago,
+      solicitudPublicaSlug: profile.solicitudPublicaSlug,
+      solicitudPublicaValor: profile.solicitudPublicaValor,
+      solicitudPublicaPrivacidad: profile.solicitudPublicaPrivacidad,
       proveedorPreferido: profile.proveedorPreferido,
       modoPrecioPreferido: profile.modoPrecioPreferido,
       margenDefecto: profile.margenDefecto,
@@ -152,6 +163,23 @@ export default function ConfiguracionEmpresaPage() {
       ),
     [form.brandColor]
   );
+
+  const publicRequestUrl = useMemo(() => {
+    const baseUrl =
+      typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
+    const slug = form.solicitudPublicaSlug?.trim() || "mi-empresa";
+    return `${baseUrl}/solicitud/${slug}`;
+  }, [form.solicitudPublicaSlug]);
+
+  const persistedPublicRequestUrl = useMemo(() => {
+    const baseUrl =
+      typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
+    const slug =
+      profile?.solicitudPublicaSlug?.trim() ||
+      form.solicitudPublicaSlug?.trim() ||
+      "mi-empresa";
+    return `${baseUrl}/solicitud/${slug}`;
+  }, [form.solicitudPublicaSlug, profile?.solicitudPublicaSlug]);
 
   const syncDeviceAlertsState = useCallback(async () => {
     if (!supportsPushAlerts()) {
@@ -223,9 +251,19 @@ export default function ConfiguracionEmpresaPage() {
       setForm((current) => ({ ...current, [key]: value }));
       setStatusMessage(null);
       setErrorMessage(null);
+      setPublicLinkMessage(null);
     },
     []
   );
+
+  const handleCopyPublicLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(publicRequestUrl);
+      setPublicLinkMessage("Enlace copiado.");
+    } catch {
+      setPublicLinkMessage("No pudimos copiar el enlace en este dispositivo.");
+    }
+  }, [publicRequestUrl]);
 
   const handleLogoChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -554,6 +592,96 @@ export default function ConfiguracionEmpresaPage() {
 
         <section className={s.section}>
           <div className={s.sectionTitle}>
+            <LuBuilding2 aria-hidden />
+            <span>Solicitud pública</span>
+          </div>
+
+          <div className={s.card}>
+            <label className={s.field}>
+              <span className={s.label}>Slug público</span>
+              <input
+                className={s.input}
+                value={form.solicitudPublicaSlug}
+                onChange={(event) =>
+                  handleFieldChange("solicitudPublicaSlug", event.target.value)
+                }
+                placeholder="ej: vidrios-ventora"
+              />
+            </label>
+
+              <p className={s.helpText}>
+                Tu enlace quedará como <strong>/solicitud/{form.solicitudPublicaSlug || "mi-empresa"}</strong>.
+              </p>
+
+              <div className={s.publicLinkPanel}>
+                <div className={s.publicLinkBox}>
+                  <span className={s.label}>Enlace público</span>
+                  <strong>{publicRequestUrl}</strong>
+                </div>
+
+                <div className={s.publicLinkActions}>
+                  <button
+                    type="button"
+                    className={s.secondaryAction}
+                    onClick={() => void handleCopyPublicLink()}
+                  >
+                    <LuCopy aria-hidden />
+                    Copiar enlace
+                  </button>
+                  <a
+                    className={s.secondaryAction}
+                    href={persistedPublicRequestUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LuExternalLink aria-hidden />
+                    Ver página pública
+                  </a>
+                </div>
+              </div>
+
+              <p className={s.helpText}>
+                Usa este enlace en Instagram, Facebook, tarjetas, QR o WhatsApp Business.
+              </p>
+              {publicLinkMessage ? (
+                <p className={s.helpText}>{publicLinkMessage}</p>
+              ) : null}
+
+              <div className={s.divider} />
+
+            <label className={s.field}>
+              <span className={s.label}>Mensaje de valor</span>
+              <textarea
+                className={s.textarea}
+                rows={3}
+                value={form.solicitudPublicaValor}
+                onChange={(event) =>
+                  handleFieldChange("solicitudPublicaValor", event.target.value)
+                }
+                placeholder={DEFAULT_SOLICITUD_PUBLICA_VALOR}
+              />
+            </label>
+
+            <label className={s.field}>
+              <span className={s.label}>Mensaje de privacidad</span>
+              <textarea
+                className={s.textarea}
+                rows={3}
+                value={form.solicitudPublicaPrivacidad}
+                onChange={(event) =>
+                  handleFieldChange(
+                    "solicitudPublicaPrivacidad",
+                    event.target.value
+                  )
+                }
+                placeholder={DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className={s.section}>
+          <div className={s.sectionTitle}>
             <LuBellRing aria-hidden />
             <span>Notificaciones</span>
           </div>
@@ -601,3 +729,5 @@ export default function ConfiguracionEmpresaPage() {
     </div>
   );
 }
+
+

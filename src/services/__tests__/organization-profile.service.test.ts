@@ -1,4 +1,9 @@
-import { createOrganizationProfileService, DEFAULT_ORGANIZATION_BRAND_COLOR } from "../organization-profile.service";
+import {
+  createOrganizationProfileService,
+  DEFAULT_ORGANIZATION_BRAND_COLOR,
+  DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
+  DEFAULT_SOLICITUD_PUBLICA_VALOR,
+} from "../organization-profile.service";
 import type { OrganizationProfileRepository } from "@/repositories/organization-profile.repository";
 
 function createOrganizationProfileRepositoryMock(): jest.Mocked<OrganizationProfileRepository> {
@@ -27,6 +32,9 @@ describe("organization-profile.service", () => {
       organizationId: "org-1",
       empresaNombre: "Mi empresa",
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
+      solicitudPublicaSlug: "mi-empresa",
+      solicitudPublicaValor: DEFAULT_SOLICITUD_PUBLICA_VALOR,
+      solicitudPublicaPrivacidad: DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
       proveedorPreferido: "",
       modoPrecioPreferido: "margen",
     });
@@ -46,6 +54,9 @@ describe("organization-profile.service", () => {
         empresaEmail: "",
         brandColor: "",
         formaPago: "",
+        solicitudPublicaSlug: "",
+        solicitudPublicaValor: "",
+        solicitudPublicaPrivacidad: "",
         proveedorPreferido: "",
         modoPrecioPreferido: "margen",
         margenDefecto: 100,
@@ -67,6 +78,9 @@ describe("organization-profile.service", () => {
       empresaEmail: " INFO@MARCA.CL ",
       brandColor: "azul",
       formaPago: " 50% anticipo ",
+      solicitudPublicaSlug: " San Marco Norte ",
+      solicitudPublicaValor: " Respuesta comercial rápida ",
+      solicitudPublicaPrivacidad: " Tus datos quedan protegidos ",
       proveedorPreferido: "Indalum",
       modoPrecioPreferido: "precio_directo",
       margenDefecto: 100,
@@ -80,6 +94,9 @@ describe("organization-profile.service", () => {
       empresaEmail: "info@marca.cl",
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
       formaPago: "50% anticipo",
+      solicitudPublicaSlug: "san-marco-norte",
+      solicitudPublicaValor: "Respuesta comercial rápida",
+      solicitudPublicaPrivacidad: "Tus datos quedan protegidos",
       proveedorPreferido: "Indalum",
       modoPrecioPreferido: "precio_directo",
       margenDefecto: 100,

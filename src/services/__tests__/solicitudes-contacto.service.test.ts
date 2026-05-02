@@ -3,17 +3,25 @@ import {
   SolicitudContactoValidationError,
 } from "../solicitudes-contacto.service";
 import type { SolicitudesContactoRepository } from "@/repositories/solicitudes-contacto.repository";
+import type { WebPushNotificationsService } from "@/services/web-push-notifications.service";
 
 function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesContactoRepository> {
   return {
     listRecent: jest.fn().mockResolvedValue([]),
+    listByOrganizationId: jest.fn().mockResolvedValue([]),
+    getPublicConfigBySlug: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation(async (input) => ({
       id: "lead-1",
+      organizationId: null,
       nombre: input.nombre,
       empresa: input.empresa,
       correo: input.correo,
       telefono: input.telefono,
+      contacto: input.correo || input.telefono,
+      tipoTrabajo: null,
+      mensaje: null,
       ayuda: input.ayuda,
+      contexto: "landing",
       estado: "nueva",
       origen: input.origen ?? "landing",
       ip: input.ip ?? null,
@@ -21,7 +29,55 @@ function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesConta
       creadoEn: "2026-03-23T15:00:00.000Z",
       actualizadoEn: "2026-03-23T15:00:00.000Z",
     })),
+    createPublicRequest: jest.fn().mockImplementation(async (input) => ({
+      id: "lead-public-1",
+      organizationId: input.organizationId,
+      nombre: input.nombre,
+      empresa: input.empresa,
+      correo: null,
+      telefono: input.contacto,
+      contacto: input.contacto,
+      tipoTrabajo: input.tipoTrabajo,
+      mensaje: input.mensaje ?? null,
+      ayuda: "cotizacion",
+      contexto: "empresa-publica",
+      estado: "nueva",
+      origen: input.origen ?? "solicitud-publica",
+      ip: input.ip ?? null,
+      userAgent: input.userAgent ?? null,
+      creadoEn: "2026-03-23T15:00:00.000Z",
+      actualizadoEn: "2026-03-23T15:00:00.000Z",
+    })),
+    updateStatusById: jest.fn().mockImplementation(async (input) => ({
+      id: input.id,
+      organizationId: input.organizationId ?? "org-7",
+      nombre: "Ana Soto",
+      empresa: "Ventora Norte",
+      correo: null,
+      telefono: "+56998765432",
+      contacto: "+56998765432",
+      tipoTrabajo: "Cierre de terraza",
+      mensaje: null,
+      ayuda: "cotizacion",
+      contexto: "empresa-publica",
+      estado: input.estado,
+      origen: "solicitud-publica",
+      ip: null,
+      userAgent: null,
+      creadoEn: "2026-03-23T15:00:00.000Z",
+      actualizadoEn: "2026-03-23T15:10:00.000Z",
+    })),
   } as jest.Mocked<SolicitudesContactoRepository>;
+}
+
+function createNotificationsServiceMock(): jest.Mocked<WebPushNotificationsService> {
+  return {
+    isConfigured: jest.fn().mockReturnValue(true),
+    registerSubscription: jest.fn(),
+    unregisterSubscription: jest.fn(),
+    sendQuoteDecisionPush: jest.fn(),
+    sendLeadCreatedPush: jest.fn().mockResolvedValue({ sent: 1, skipped: false }),
+  } as unknown as jest.Mocked<WebPushNotificationsService>;
 }
 
 describe("solicitudes-contacto.service", () => {
@@ -33,7 +89,7 @@ describe("solicitudes-contacto.service", () => {
       nombre: " Juan Perez ",
       empresa: " Vidrios Sur ",
       correo: " JUAN@EMPRESA.CL ",
-      telefono: " +56 9 8765 4321 ",
+      telefono: " 9 8765 4321 ",
       ayuda: "demo",
     });
 
@@ -41,7 +97,7 @@ describe("solicitudes-contacto.service", () => {
       nombre: "Juan Perez",
       empresa: "Vidrios Sur",
       correo: "juan@empresa.cl",
-      telefono: "+56 9 8765 4321",
+      telefono: "+56987654321",
       ayuda: "demo",
       origen: "landing",
       ip: null,
@@ -59,7 +115,7 @@ describe("solicitudes-contacto.service", () => {
         nombre: "Juan Perez",
         empresa: "Vidrios Sur",
         correo: "correo-invalido",
-        telefono: "+56 9 8765 4321",
+        telefono: "987654321",
         ayuda: "demo",
       })
     ).rejects.toBeInstanceOf(SolicitudContactoValidationError);
@@ -73,7 +129,7 @@ describe("solicitudes-contacto.service", () => {
       nombre: "Juan ".repeat(30),
       empresa: "Vidrios ".repeat(30),
       correo: `${"correo".repeat(20)}@empresa.cl`,
-      telefono: "+56 9 8765 4321 ".repeat(4),
+      telefono: "987654321",
       ayuda: "demo",
       origen: "landing-publica-con-un-origen-demasiado-largo",
       ip: "192.168.0.1 ".repeat(12),
@@ -85,7 +141,7 @@ describe("solicitudes-contacto.service", () => {
     expect(saved?.nombre).toHaveLength(80);
     expect(saved?.empresa).toHaveLength(100);
     expect(saved?.correo.length).toBeLessThanOrEqual(160);
-    expect(saved?.telefono).toHaveLength(32);
+    expect(saved?.telefono).toBe("+56987654321");
     expect(saved?.origen).toHaveLength(40);
     expect(saved?.ip).toHaveLength(80);
     expect(saved?.userAgent).toHaveLength(240);
@@ -101,9 +157,93 @@ describe("solicitudes-contacto.service", () => {
         nombre: "Juan Perez",
         empresa: "Vidrios Sur",
         correo: "juan@empresa.cl",
-        telefono: "+56 9 8765 4321",
+        telefono: "987654321",
         ayuda: "soporte" as never,
       })
     ).rejects.toThrow("Selecciona el tipo de ayuda que necesitas.");
+  });
+
+  it("debe crear una solicitud publica por empresa y notificar a la organizacion", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const notificationsService = createNotificationsServiceMock();
+    const service = createSolicitudesContactoService({
+      repository,
+      notificationsService,
+    });
+
+    await service.createPublicRequest({
+      organizationId: "org-7",
+      empresa: "Ventora Norte",
+      nombre: " Ana Soto ",
+      contacto: " +56 9 9876 5432 ",
+      tipoTrabajo: " Cierre de terraza ",
+      mensaje: " Tengo medidas aproximadas ",
+      origen: "solicitud-publica",
+    });
+
+    expect(repository.createPublicRequest).toHaveBeenCalledWith({
+      organizationId: "org-7",
+      empresa: "Ventora Norte",
+      nombre: "Ana Soto",
+      contacto: "+56998765432",
+      tipoTrabajo: "Cierre de terraza",
+      mensaje: "Tengo medidas aproximadas",
+      origen: "solicitud-publica",
+      ip: null,
+      userAgent: null,
+    });
+    expect(notificationsService.sendLeadCreatedPush).toHaveBeenCalledWith({
+      organizationId: "org-7",
+      prospectoNombre: "Ana Soto",
+      tipoTrabajo: "Cierre de terraza",
+      empresaNombre: "Ventora Norte",
+    });
+  });
+
+  it("debe rechazar una solicitud publica sin contacto valido", async () => {
+    const service = createSolicitudesContactoService({
+      repository: createSolicitudesContactoRepositoryMock(),
+      notificationsService: createNotificationsServiceMock(),
+    });
+
+    await expect(
+      service.createPublicRequest({
+        organizationId: "org-7",
+        empresa: "Ventora Norte",
+        nombre: "Ana Soto",
+        contacto: "abc",
+        tipoTrabajo: "Cierre terraza",
+      })
+    ).rejects.toBeInstanceOf(SolicitudContactoValidationError);
+  });
+
+  it("debe actualizar el estado de una solicitud existente", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const service = createSolicitudesContactoService({ repository });
+
+    await service.updateSolicitudStatus({
+      id: "lead-public-1",
+      estado: "contactada",
+      organizationId: "org-7",
+    });
+
+    expect(repository.updateStatusById).toHaveBeenCalledWith({
+      id: "lead-public-1",
+      estado: "contactada",
+      organizationId: "org-7",
+    });
+  });
+
+  it("debe rechazar un estado invalido al actualizar una solicitud", async () => {
+    const service = createSolicitudesContactoService({
+      repository: createSolicitudesContactoRepositoryMock(),
+    });
+
+    await expect(
+      service.updateSolicitudStatus({
+        id: "lead-public-1",
+        estado: "cerrando" as never,
+      })
+    ).rejects.toBeInstanceOf(SolicitudContactoValidationError);
   });
 });

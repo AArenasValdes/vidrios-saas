@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import type { SolicitudContacto } from "@/features/solicitudes/types/solicitud-contacto";
+import type {
+  EstadoSolicitudContacto,
+  SolicitudContacto,
+} from "@/features/solicitudes/types/solicitud-contacto";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -18,7 +21,7 @@ export function useSolicitudesContacto(enabled = true) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadSolicitudes() {
+  const loadSolicitudes = useCallback(async () => {
     try {
       setIsRefreshing(true);
       setError(null);
@@ -44,7 +47,57 @@ export function useSolicitudesContacto(enabled = true) {
       setIsRefreshing(false);
       setIsReady(true);
     }
-  }
+  }, []);
+
+  const updateSolicitudEstado = useCallback(
+    async (id: string, estado: EstadoSolicitudContacto) => {
+      const previous = solicitudes;
+
+      try {
+        setError(null);
+        setSolicitudes((current) =>
+          current.map((solicitud) =>
+            solicitud.id === id
+              ? {
+                  ...solicitud,
+                  estado,
+                  actualizadoEn: new Date().toISOString(),
+                }
+              : solicitud
+          )
+        );
+
+        const response = await fetch("/api/solicitudes", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id, estado }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | { solicitud?: SolicitudContacto; error?: string }
+          | null;
+
+        if (!response.ok || !payload?.solicitud) {
+          throw new Error(
+            payload?.error ?? "No pudimos actualizar la solicitud."
+          );
+        }
+
+        setSolicitudes((current) =>
+          current.map((solicitud) =>
+            solicitud.id === id ? payload.solicitud! : solicitud
+          )
+        );
+      } catch (nextError) {
+        setSolicitudes(previous);
+        setError(getErrorMessage(nextError));
+        throw nextError;
+      }
+    },
+    [solicitudes]
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -56,7 +109,7 @@ export function useSolicitudesContacto(enabled = true) {
     }
 
     void loadSolicitudes();
-  }, [enabled]);
+  }, [enabled, loadSolicitudes]);
 
   return {
     solicitudes,
@@ -64,5 +117,6 @@ export function useSolicitudesContacto(enabled = true) {
     isRefreshing,
     error,
     refreshSolicitudes: loadSolicitudes,
+    updateSolicitudEstado,
   };
 }

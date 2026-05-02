@@ -54,6 +54,10 @@ import {
   applyQuotePricingToItems,
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  clearNuevaCotizacionSolicitudSourceId,
+  getNuevaCotizacionSolicitudSourceId,
+} from "@/features/cotizaciones/new-quote/solicitud-prefill";
 
 import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-desktop";
 import { NuevaCotizacionMobile } from "./_components/mobile/nueva-cotizacion-mobile";
@@ -116,6 +120,7 @@ function NuevaCotizacionPageContent() {
     clientId?: string | number | null;
     projectId?: string | number | null;
   } | null>(null);
+  const [sourceSolicitudId, setSourceSolicitudId] = useState<string | null>(null);
   const {
     clientes,
     ensureClientesLoaded,
@@ -192,10 +197,17 @@ function NuevaCotizacionPageContent() {
     void ensureClientesLoaded();
   }, [ensureClientesLoaded]);
 
+  useEffect(() => {
+    setSourceSolicitudId(getNuevaCotizacionSolicitudSourceId());
+  }, []);
+
   const pasoUnoCliente = usePasoUnoCliente({
     clientes,
     clientQuery,
     selectedClientId,
+    draftClienteNombre: draft.clienteNombre,
+    draftClienteTelefono: draft.clienteTelefono,
+    draftDireccion: draft.direccion,
     onClientQueryChange: setClientQuery,
     onSelectClient: setSelectedClientId,
     onAplicarClienteSeleccionado: (cliente) => {
@@ -703,6 +715,27 @@ function NuevaCotizacionPageContent() {
     isNewWorkflow: !editId && !duplicateId,
     persistenciaWizard,
     saveWorkflow,
+    onQuoteCreated: async () => {
+      if (!sourceSolicitudId) {
+        return;
+      }
+
+      try {
+        await fetch("/api/solicitudes", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: sourceSolicitudId,
+            estado: "cerrada",
+          }),
+        });
+      } finally {
+        clearNuevaCotizacionSolicitudSourceId();
+        setSourceSolicitudId(null);
+      }
+    },
     applyQuickEditDraftsToItems,
     resetWorkflowToBlank,
     openPrintViewer: (recordId) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { STATUS_COPY } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { STATUS_COPY, VALIDEZ_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { SaveIntent } from "../_hooks/use-paso-tres-guardado";
 import { PasoTresDetalleFinal } from "./paso-tres-detalle-final";
 import { PasoTresPanelAcciones } from "./paso-tres-panel-acciones";
@@ -21,6 +21,7 @@ type PasoTresResumenProps = {
   isSaving: boolean;
   saveIntent: SaveIntent | null;
   onDraftFleteChange: (value: string) => void;
+  onValidezChange: (value: string) => void;
   onGoToStepTwo: () => void;
   onSaveQuote: () => void;
   onSaveDraft: () => void;
@@ -40,6 +41,7 @@ export function PasoTresResumen({
   isSaving,
   saveIntent,
   onDraftFleteChange,
+  onValidezChange,
   onGoToStepTwo,
   onSaveQuote,
   onSaveDraft,
@@ -68,6 +70,8 @@ export function PasoTresResumen({
           savedRecord={savedRecord}
           isMobileViewport={isMobileViewport}
           onDraftFleteChange={onDraftFleteChange}
+          onValidezChange={onValidezChange}
+          validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}
         />
         <PasoTresPanelAcciones

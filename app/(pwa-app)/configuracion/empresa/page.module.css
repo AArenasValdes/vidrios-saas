@@ -206,6 +206,49 @@
   line-height: 1.5;
 }
 
+.publicLinkPanel {
+  display: grid;
+  gap: 10px;
+}
+
+.publicLinkBox {
+  border: 1px solid #d9e0ea;
+  border-radius: 16px;
+  background: #f7f9fc;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.publicLinkBox strong {
+  color: #143d7a;
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.publicLinkActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.secondaryAction {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid #d9e0ea;
+  background: #ffffff;
+  color: #243b6b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .divider {
   height: 1px;
   background: #e4eaf2;
@@ -528,5 +571,11 @@
 
   .saveButton {
     width: min(100%, 820px);
+  }
+}
+
+@media (max-width: 560px) {
+  .publicLinkActions {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,6 @@
 import type { CotizacionWorkflowRecord } from "@/types/cotizacion-workflow";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-CL", {
@@ -15,6 +16,12 @@ function extractValidezDays(validez: string) {
 }
 
 export function normalizeWhatsappPhone(phone: string) {
+  const normalizedChileMobile = normalizeChileMobilePhone(phone);
+
+  if (normalizedChileMobile) {
+    return normalizedChileMobile.replace(/^\+/, "");
+  }
+
   const digits = phone.replace(/\D/g, "");
 
   if (!digits) {
@@ -38,6 +45,42 @@ export function normalizeWhatsappPhone(phone: string) {
   }
 
   return null;
+}
+
+type BuildPublicLeadWhatsappOptions = {
+  nombre?: string;
+  tipoTrabajo?: string;
+  mensaje?: string | null;
+};
+
+export function buildPublicLeadWhatsappMessage(
+  options: BuildPublicLeadWhatsappOptions = {}
+) {
+  const tipoTrabajo = options.tipoTrabajo?.trim();
+  const nombre = options.nombre?.trim();
+  const mensaje = options.mensaje?.trim();
+
+  const firstLine = tipoTrabajo
+    ? `Hola, vengo desde su enlace de cotización. Quiero consultar por: ${tipoTrabajo}.`
+    : "Hola, vengo desde su enlace de cotización y quiero hacer una consulta.";
+
+  return [firstLine, nombre ? `Mi nombre es ${nombre}.` : null, mensaje || null]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function buildPublicLeadWhatsappUrl(
+  phone: string,
+  options: BuildPublicLeadWhatsappOptions = {}
+) {
+  const normalizedPhone = normalizeWhatsappPhone(phone);
+
+  if (!normalizedPhone) {
+    return null;
+  }
+
+  const message = buildPublicLeadWhatsappMessage(options);
+  return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
 }
 
 type BuildCotizacionWhatsappOptions = {
