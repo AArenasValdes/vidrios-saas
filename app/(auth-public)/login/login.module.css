@@ -14,6 +14,7 @@
   --login-primary-hover: #5a87de;
   --login-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(360px, 40%) minmax(0, 60%);
   background: linear-gradient(180deg, var(--login-bg) 0%, var(--login-bg-strong) 100%);
@@ -24,13 +25,15 @@
 .visualPanel {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .formPanel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  padding: calc(32px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-right, 0px))
+    calc(32px + env(safe-area-inset-bottom, 0px)) calc(32px + env(safe-area-inset-left, 0px));
   background: linear-gradient(180deg, #0b1a33 0%, #091427 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -409,7 +412,8 @@
   }
 
   .formPanel {
-    padding: 24px;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) calc(24px + env(safe-area-inset-right, 0px))
+      calc(24px + env(safe-area-inset-bottom, 0px)) calc(24px + env(safe-area-inset-left, 0px));
   }
 
   .visualCopy {
@@ -442,6 +446,7 @@
 
   .formPanel {
     min-height: 100vh;
+    min-height: 100dvh;
     background: transparent;
     border-right: none;
   }
@@ -453,7 +458,8 @@
 
 @media (max-width: 640px) {
   .formPanel {
-    padding: 16px;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+      calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
     align-items: stretch;
   }
 

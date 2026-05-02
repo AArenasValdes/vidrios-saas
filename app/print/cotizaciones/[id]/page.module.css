@@ -5,6 +5,7 @@
   --carbon: #111827;
   --font-sans: "Montserrat";
   min-height: 100vh;
+  min-height: 100dvh;
   background: #eef2f7;
   padding: 28px;
   print-color-adjust: exact;

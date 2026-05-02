@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   keywords: ["cotizaciones", "vidrios", "aluminio", "taller", "pwa"],
 };
 
+/* viewport-fit=cover requerido para que env(safe-area-inset-*) sea correcto en iPhone con notch / Dynamic Island. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

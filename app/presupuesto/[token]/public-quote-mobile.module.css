@@ -509,6 +509,7 @@
 
 .overlayDocument {
   min-height: 72vh;
+  min-height: 72dvh;
   border-radius: 18px;
   overflow: hidden;
   background: #f3f6fb;

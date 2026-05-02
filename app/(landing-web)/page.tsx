@@ -3,201 +3,33 @@
 import Image from "next/image";
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
-import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import type { IconType } from "react-icons";
 import {
   FaArrowRight,
   FaBars,
-  FaBell,
-  FaCalculator,
-  FaCheckCircle,
-  FaChrome,
-  FaClock,
-  FaDownload,
-  FaEnvelope,
-  FaFilePdf,
-  FaMapMarkerAlt,
-  FaPhoneAlt,
   FaPlus,
-  FaRulerCombined,
   FaTimes,
   FaWhatsapp,
 } from "react-icons/fa";
 
 import s from "./landing.module.css";
-import { FooterSection } from "@/components/footer-section";
-import { ProblemSection } from "@/components/landing/problem-section";
-import { TestimonialsSection } from "@/components/testimonials-with-marquee";
+
+const WHATSAPP_LANDING_HREF =
+  "https://wa.me/56987654321?text=Hola%20Ventora%2C%20quiero%20ver%20c%C3%B3mo%20funciona.";
+
+/** Pon `true` y coloca el archivo en `public/` para usar el mockup real en el hero (misma composición: inclinación, sombra, etiquetas flotantes). */
+const LANDING_HERO_USE_REAL_MOCKUP = false;
+const LANDING_HERO_MOCKUP_SRC = "/brand/ventora-hero-mockup.webp";
+const LANDING_HERO_MOCKUP_WIDTH = 900;
+const LANDING_HERO_MOCKUP_HEIGHT = 1100;
 
 const navLinks = [
   { href: "#problema", label: "Problema" },
-  { href: "#como-funciona", label: "Como funciona" },
-  { href: "#instalacion", label: "Instalacion" },
-  { href: "#producto", label: "Producto" },
-  { href: "/planes", label: "Planes" },
+  { href: "#funciones", label: "Funciones" },
+  { href: "#como-funciona", label: "Cómo funciona" },
+  { href: "#planes", label: "Planes" },
   { href: "#faq", label: "FAQ" },
-];
-
-const heroQuoteItems = [
-  {
-    code: "V1",
-    title: "Ventana aluminio",
-    detail: "Serie 25 · negro mate · 1200 x 1500 mm",
-    price: "$579.500",
-    tone: "window",
-  },
-  {
-    code: "S1",
-    title: "Shower door",
-    detail: "Templado 8 mm · herrajes cromo · 800 x 1900 mm",
-    price: "$421.800",
-    tone: "shower",
-  },
-];
-
-const steps: Array<{ icon: IconType; step: string; title: string; description: string; tag: string }> = [
-  {
-    icon: FaRulerCombined,
-    step: "01",
-    title: "Tomas datos de la obra",
-    description: "Cliente, medidas y componentes quedan listos en un flujo corto pensado para celular.",
-    tag: "Input",
-  },
-  {
-    icon: FaCalculator,
-    step: "02",
-    title: "El sistema arma el valor",
-    description: "Ingresas costo proveedor, margen e IVA. El presupuesto queda ordenado y sin formulas manuales.",
-    tag: "Proceso",
-  },
-  {
-    icon: FaFilePdf,
-    step: "03",
-    title: "Envias y haces seguimiento",
-    description: "Generas PDF profesional, compartes por WhatsApp y sigues la respuesta del cliente.",
-    tag: "Resultado",
-  },
-];
-
-const processVisuals = [
-  {
-    src: "/brand/landing-paso1.png",
-    alt: "Paso 1 real del flujo de cotizacion con cliente y obra",
-    width: 1325,
-    height: 753,
-    maskClassName: "captureMaskPaso1TopRight",
-  },
-  {
-    src: "/brand/landing-paso2.png",
-    alt: "Paso 2 real del flujo de cotizacion con componentes y resumen",
-    width: 1284,
-    height: 918,
-    maskClassName: "captureMaskPaso2TopRight",
-  },
-  {
-    src: "/brand/landing-paso3.png",
-    alt: "Paso 3 real del flujo con total final y acciones de cierre",
-    width: 1272,
-    height: 912,
-    maskClassName: "captureMaskPaso3TopRight",
-  },
-];
-
-const productBenefits: Array<{ icon: IconType; text: string }> = [
-  {
-    icon: FaClock,
-    text: "Ahorra hasta 1 hora diaria en cotizaciones",
-  },
-  {
-    icon: FaFilePdf,
-    text: "Envia presupuestos profesionales que generan confianza",
-  },
-];
-
-const productCallouts: Array<{ icon: IconType; label: string; detail: string }> = [
-  {
-    icon: FaCalculator,
-    label: "Cotizacion y cierre",
-    detail: "Valores, margen y total ordenados en una sola vista.",
-  },
-  {
-    icon: FaWhatsapp,
-    label: "Clientes y seguimiento",
-    detail: "Comparte y revisa el avance desde el mismo sistema.",
-  },
-];
-
-const installationSteps: Array<{ step: string; title: string; description: string; icon: IconType }> = [
-  {
-    step: "01",
-    icon: FaChrome,
-    title: "Abre Ventora en Chrome o Edge",
-    description:
-      "Asi te anda mas estable y las alertas del maestro funcionan mejor en el computador.",
-  },
-  {
-    step: "02",
-    icon: FaDownload,
-    title: "Instalala como app",
-    description:
-      "Aprieta instalar en el navegador y te queda un acceso directo para abrirla mas rapido.",
-  },
-  {
-    step: "03",
-    icon: FaBell,
-    title: "Activa las notificaciones",
-    description:
-      "Asi te avisa cuando una cotizacion se envia, se aprueba o se rechaza.",
-  },
-];
-
-const showcaseCards = [
-  {
-    title: "Ventana aluminio",
-    code: "V1",
-    detail: "Linea 5000 · living principal",
-    price: "$579.500",
-    status: "enviada",
-  },
-  {
-    title: "Shower door",
-    code: "S1",
-    detail: "Templado 8 mm · baño principal",
-    price: "$421.800",
-    status: "aprobada",
-  },
-];
-void showcaseCards;
-
-const landingTestimonials = [
-  {
-    author: {
-      name: "Carlos Mella",
-      handle: "San Marco Aluminios y PVC · La Serena",
-      avatar: "/brand/logosanmarco.jpg",
-    },
-    text:
-      "Antes mandabamos valores por WhatsApp y despues cada cliente entendia algo distinto. Ahora la cotizacion sale clara, con PDF serio, y nos responden mucho mas rapido.",
-  },
-  {
-    author: {
-      name: "Fernanda Araya",
-      handle: "Andina Aluminios · Antofagasta",
-      avatar: "/brand/screen2.png",
-    },
-    text:
-      "Lo mejor es que en terreno ya podemos cerrar una propuesta bien presentada. No volvemos a la oficina a ordenar notas ni a rehacer precios en Excel.",
-  },
-  {
-    author: {
-      name: "Jorge Bustos",
-      handle: "Litoral Glass · Santiago",
-      avatar: "/brand/screen.png",
-    },
-    text:
-      "Se siente hecho para el rubro. Me ayuda a cotizar rapido, a no perder seguimiento y a enviar algo que se ve mucho mas profesional que antes.",
-  },
-];
+  { href: "#contacto", label: "Contacto" },
+] as const;
 
 const faqs = [
   {
@@ -225,43 +57,180 @@ const faqs = [
     answer:
       "No. Esta pensado para vender mejor y mas rapido, no para obligarte a operar como si fuera software de ingenieria.",
   },
+  {
+    question: "Puedo enviar por WhatsApp y saber si el cliente respondió?",
+    answer:
+      "Sí. Envías el PDF o link por WhatsApp y luego ves el estado (enviada, aprobada o rechazada) para no perder el cierre.",
+  },
 ];
 
-const easeOut = [0.22, 1, 0.36, 1] as const;
+function PhoneFrame({
+  label,
+  children,
+  tilt = "right",
+}: {
+  label: string;
+  children: React.ReactNode;
+  tilt?: "right" | "none";
+}) {
+  return (
+    <div className={`${s.phoneWrap} ${tilt === "right" ? s.phoneTilt : ""}`}>
+      <div className={s.phoneGlow} aria-hidden />
+      <div className={s.phoneDevice} aria-label={label}>
+        <div className={s.phoneNotch} aria-hidden />
+        <div className={s.phoneScreen}>{children}</div>
+      </div>
+    </div>
+  );
+}
 
-const revealUp = {
-  hidden: { opacity: 0, y: 28 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, ease: easeOut },
-  },
-};
+function ScreenQuote() {
+  return (
+    <div className={s.screenQuote}>
+      <div className={s.screenHeader}>
+        <div>
+          <span className={s.miniKicker}>Nueva cotización</span>
+          <strong className={s.screenTitle}>Constructora Los Andes</strong>
+          <p className={s.screenSub}>Las Condes · Edificio Vista Apoquindo</p>
+        </div>
+        <span className={s.statusPill}>en proceso</span>
+      </div>
 
-const staggerList = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.06,
-    },
-  },
-};
+      <div className={s.screenGrid3}>
+        <div className={s.screenChip}>
+          <span>Cliente</span>
+          <strong>Pedro Araya</strong>
+        </div>
+        <div className={s.screenChip}>
+          <span>Obra</span>
+          <strong>Vista Apoquindo</strong>
+        </div>
+        <div className={s.screenChip}>
+          <span>Validez</span>
+          <strong>15 días</strong>
+        </div>
+      </div>
+
+      <div className={s.screenList}>
+        <div className={s.screenRow}>
+          <div className={s.screenThumb} aria-hidden />
+          <div className={s.screenRowBody}>
+            <div className={s.screenRowTop}>
+              <span className={s.codeTag}>V1</span>
+              <strong>Ventana aluminio</strong>
+            </div>
+            <p>Serie 25 · 1200 × 1500 mm</p>
+          </div>
+          <div className={s.screenPrice}>
+            <span>precio</span>
+            <strong>$579.500</strong>
+          </div>
+        </div>
+        <div className={s.screenRow}>
+          <div className={`${s.screenThumb} ${s.screenThumbAlt}`} aria-hidden />
+          <div className={s.screenRowBody}>
+            <div className={s.screenRowTop}>
+              <span className={s.codeTag}>S1</span>
+              <strong>Shower door</strong>
+            </div>
+            <p>Templado 8 mm · 800 × 1900 mm</p>
+          </div>
+          <div className={s.screenPrice}>
+            <span>precio</span>
+            <strong>$421.800</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className={s.screenTotals}>
+        <div>
+          <span>Subtotal</span>
+          <strong>$1.001.300</strong>
+        </div>
+        <div>
+          <span>IVA</span>
+          <strong>$190.247</strong>
+        </div>
+        <div className={s.totalStrong}>
+          <span>Total</span>
+          <strong>$1.191.547</strong>
+        </div>
+      </div>
+
+      <div className={s.screenActions}>
+        <span className={s.whatsPill}>
+          <FaWhatsapp aria-hidden />
+          Enviar por WhatsApp
+        </span>
+        <span className={s.lightPill}>PDF listo</span>
+      </div>
+    </div>
+  );
+}
+
+function ScreenList() {
+  return (
+    <div className={s.screenSimple}>
+      <div className={s.screenSimpleTop}>
+        <strong>Clientes</strong>
+        <span className={s.badge}>activos</span>
+      </div>
+      <div className={s.simpleRows}>
+        <div className={s.simpleRow}>
+          <div>
+            <strong>Pedro Araya</strong>
+            <p>Las Condes</p>
+          </div>
+          <span className={s.dot} aria-hidden />
+        </div>
+        <div className={s.simpleRow}>
+          <div>
+            <strong>Vidrios San Martín</strong>
+            <p>Ñuñoa</p>
+          </div>
+          <span className={s.dotAlt} aria-hidden />
+        </div>
+        <div className={s.simpleRow}>
+          <div>
+            <strong>Constructora Andes</strong>
+            <p>Providencia</p>
+          </div>
+          <span className={s.dot} aria-hidden />
+        </div>
+      </div>
+      <div className={s.simpleFooterHint}>Estado comercial a la vista</div>
+    </div>
+  );
+}
+
+function ScreenApproval() {
+  return (
+    <div className={s.screenSimple}>
+      <div className={s.screenSimpleTop}>
+        <strong>Presupuesto</strong>
+        <span className={s.badgeOk}>aprobación</span>
+      </div>
+      <div className={s.approvalCard}>
+        <p className={s.approvalLabel}>Total final</p>
+        <strong className={s.approvalTotal}>$1.191.547</strong>
+        <div className={s.approvalButtons}>
+          <span className={s.approveBtn}>Aprobar</span>
+          <span className={s.rejectBtn}>Rechazar</span>
+        </div>
+      </div>
+      <div className={s.simpleFooterHint}>El cliente responde desde el link</div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
   const [contactFeedback, setContactFeedback] = useState<{
     kind: "success" | "error";
     message: string;
   } | null>(null);
-  const { scrollY } = useScroll();
-
-  useMotionValueEvent(scrollY, "change", (value) => {
-    setIsScrolled(value > 18);
-  });
 
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -322,7 +291,7 @@ export default function LandingPage() {
 
   return (
     <main className={s.page}>
-      <nav className={`${s.navbar} ${isScrolled ? s.navbarScrolled : ""}`}>
+      <nav className={s.navbar} aria-label="Principal">
         <div className={s.container}>
           <div className={s.navbarInner}>
             <a href="#top" className={s.navLogo} aria-label="Ventora">
@@ -333,13 +302,6 @@ export default function LandingPage() {
                 height={44}
                 className={s.wordmark}
                 priority
-              />
-              <Image
-                src="/brand/ventora-icon.svg"
-                alt="Ventora"
-                width={40}
-                height={40}
-                className={s.iconmark}
               />
             </a>
 
@@ -352,585 +314,312 @@ export default function LandingPage() {
             </ul>
 
             <div className={s.navActions}>
-              <Link href="/login" className={s.navGhost}>
-                Ingresar
-              </Link>
-              <Link href="/planes" className={s.navPrimary}>
+              <a href={WHATSAPP_LANDING_HREF} className={s.navGhost}>
+                Hablar por WhatsApp
+              </a>
+              <Link href="/planes" className={s.navPrimary} prefetch={false}>
                 Probar demo
               </Link>
             </div>
 
-            <button
-              type="button"
-              className={s.hamburger}
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
-              aria-label="Abrir menu"
-            >
-              {menuOpen ? <FaTimes aria-hidden /> : <FaBars aria-hidden />}
-            </button>
+            <div className={s.navMobileCompact}>
+              <Link
+                href="/planes"
+                className={s.navDemoCompact}
+                prefetch={false}
+                onClick={() => setMenuOpen(false)}
+              >
+                Probar demo
+              </Link>
+              <button
+                type="button"
+                className={s.hamburger}
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-expanded={menuOpen}
+                aria-controls="landing-mobile-menu"
+                aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+              >
+                {menuOpen ? <FaTimes aria-hidden /> : <FaBars aria-hidden />}
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      <AnimatePresence>
-        {menuOpen ? (
-          <motion.div
-            className={`${s.mobileMenu} ${s.mobileMenuOpen}`}
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.22, ease: easeOut }}
-          >
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}>
-                {link.label}
-              </Link>
-            ))}
-            <Link href="/planes" onClick={() => setMenuOpen(false)} className={s.mobilePrimary}>
-              Probar demo
+      {menuOpen ? (
+        <div
+          id="landing-mobile-menu"
+          className={`${s.mobileMenu} ${s.mobileMenuOpen}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menú"
+        >
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}>
+              {link.label}
             </Link>
-            <Link href="/login" onClick={() => setMenuOpen(false)} className={s.mobileSecondary}>
-              Ingresar
-            </Link>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+          ))}
+          <a href={WHATSAPP_LANDING_HREF} className={s.mobileWhatsapp} onClick={() => setMenuOpen(false)}>
+            <FaWhatsapp aria-hidden />
+            Hablar por WhatsApp
+          </a>
+        </div>
+      ) : null}
 
       <section id="top" className={s.heroSection}>
-        <div className={s.heroBackdrop} />
+        <div className={s.heroBackdrop} aria-hidden />
         <div className={s.container}>
           <div className={s.heroShell}>
-            <motion.div
-              className={s.heroCopy}
-              initial="hidden"
-              animate="show"
-              variants={staggerList}
-            >
-              <motion.div className={s.sectionTag} variants={revealUp}>
-                Software para vidrierias y aluminio en Chile
-              </motion.div>
-              <motion.h1 className={s.heroTitle} variants={revealUp}>
-                Cotiza en terreno. <span>Cierra ventas mas rapido.</span>
-              </motion.h1>
-              <motion.p className={s.heroSubtitle} variants={revealUp}>
-                Crea presupuestos en minutos desde tu celular, sin Excel ni errores. Disenado para la industria del
-                vidrio y aluminio en Chile.
-              </motion.p>
+            <div className={s.heroCopy}>
+              <div className={s.sectionTag}>Software para vidrierías y aluminio en Chile</div>
+              <h1 className={s.heroTitle}>
+                Cotiza desde el celular y <span>cierra más trabajos</span>
+              </h1>
+              <p className={s.heroSubtitle}>
+                Ventora ayuda a maestros y empresas de vidrio y aluminio a crear cotizaciones profesionales en
+                minutos, enviarlas por WhatsApp y ordenar sus clientes sin depender de Excel.
+              </p>
 
-              <motion.div className={s.heroActions} variants={revealUp}>
-                <Link href="/planes" className={s.primaryButton}>
+              <div className={s.heroActions}>
+                <Link href="/planes" className={s.primaryButton} prefetch={false}>
                   Probar demo
                   <FaArrowRight aria-hidden />
                 </Link>
-                <a href="#como-funciona" className={s.secondaryButton}>
-                  Ver como funciona
+                <a className={s.secondaryButton} href={WHATSAPP_LANDING_HREF}>
+                  Hablar por WhatsApp
                 </a>
-              </motion.div>
-
-              <motion.div className={s.heroProofRow} variants={revealUp}>
-                <div className={s.heroProofDots} aria-hidden>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <p>Herramienta comercial pensada para terreno, taller y cierre de ventas.</p>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              className={s.heroStage}
-              initial={{ opacity: 0, x: 32, scale: 0.98 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              transition={{ duration: 0.7, ease: easeOut, delay: 0.12 }}
-            >
-              <div className={s.heroWorkspace}>
-                <div className={s.heroShotChrome}>
-                  <div className={s.captureDots} aria-hidden>
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <p>Cotizacion lista para enviar</p>
-                </div>
-
-                <div className={s.heroShotFrame}>
-                  <div className={s.heroQuoteCard}>
-                    <div className={s.heroQuoteHeader}>
-                      <div>
-                        <span className={s.itemCode}>Nueva cotizacion</span>
-                        <h3>Constructora Los Andes</h3>
-                        <p>Las Condes · Edificio Vista Apoquindo</p>
-                      </div>
-                      <span className={s.heroStatePill}>en proceso</span>
-                    </div>
-
-                    <div className={s.heroQuoteMetaRow}>
-                      <div className={s.heroMetaChip}>
-                        <span>Cliente</span>
-                        <strong>Pedro Araya</strong>
-                      </div>
-                      <div className={s.heroMetaChip}>
-                        <span>Ubicacion</span>
-                        <strong>Las Condes</strong>
-                      </div>
-                      <div className={s.heroMetaChip}>
-                        <span>Validez</span>
-                        <strong>15 dias</strong>
-                      </div>
-                    </div>
-
-                    <div className={s.heroQuoteItems}>
-                      {heroQuoteItems.map((item) => (
-                        <motion.div
-                          key={item.code}
-                          className={s.heroQuoteItem}
-                          initial={{ opacity: 0, y: 18 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, ease: easeOut }}
-                        >
-                          <div className={`${s.heroItemThumb} ${item.tone === "shower" ? s.heroItemThumbShower : ""}`} aria-hidden>
-                            <span />
-                            <span />
-                          </div>
-                          <div className={s.heroItemBody}>
-                            <div className={s.heroItemTop}>
-                              <span className={s.itemCode}>{item.code}</span>
-                              <strong>{item.title}</strong>
-                            </div>
-                            <p>{item.detail}</p>
-                          </div>
-                          <div className={s.heroItemPrice}>
-                            <span>precio</span>
-                            <strong>{item.price}</strong>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    <div className={s.heroQuoteSummary}>
-                      <div>
-                        <span>Subtotal</span>
-                        <strong>$1.001.300</strong>
-                      </div>
-                      <div>
-                        <span>IVA 19%</span>
-                        <strong>$190.247</strong>
-                      </div>
-                      <div className={s.heroQuoteTotal}>
-                        <span>Total final</span>
-                        <strong>$1.191.547</strong>
-                      </div>
-                    </div>
-
-                    <div className={s.heroQuoteActions}>
-                      <span className={s.heroWhatsappButton}>
-                        <FaWhatsapp aria-hidden />
-                        Enviar por WhatsApp
-                      </span>
-                      <span className={s.heroPdfReady}>PDF comercial listo</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              <motion.div
-                className={s.heroFloatingApproved}
-                animate={{ y: [0, -8, 0], scale: [1, 1.01, 1] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              >
-                <div className={s.heroFloatingApprovedIcon}>
-                  <FaCheckCircle aria-hidden />
+              <div className={s.quickValue}>
+                <div className={s.quickCard}>
+                  <strong>Cotizaciones en minutos</strong>
+                  <p>Flujo corto, pensado para terreno.</p>
                 </div>
-                <div>
-                  <span>Aprobado por cliente</span>
-                  <strong>Listo para cierre</strong>
+                <div className={s.quickCard}>
+                  <strong>Menos errores</strong>
+                  <p>Totales claros, sin fórmulas rotas.</p>
                 </div>
-              </motion.div>
-            </motion.div>
+                <div className={s.quickCard}>
+                  <strong>WhatsApp directo</strong>
+                  <p>Envía PDF o link y sigue el estado.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={s.heroStage}>
+              <div className={s.heroAccent} aria-hidden />
+              {LANDING_HERO_USE_REAL_MOCKUP ? (
+                <div className={`${s.phoneWrap} ${s.phoneTilt}`}>
+                  <div className={s.phoneGlow} aria-hidden />
+                  <Image
+                    src={LANDING_HERO_MOCKUP_SRC}
+                    alt="Ventora en el celular: cotización lista para enviar"
+                    width={LANDING_HERO_MOCKUP_WIDTH}
+                    height={LANDING_HERO_MOCKUP_HEIGHT}
+                    className={s.heroRealMockup}
+                    priority
+                    sizes="(max-width: 900px) min(92vw, 420px), 420px"
+                  />
+                </div>
+              ) : (
+                <PhoneFrame label="Mockup de cotización Ventora">
+                  <ScreenQuote />
+                </PhoneFrame>
+              )}
+
+              <div className={s.floatTags} aria-hidden>
+                <span className={s.floatTag}>Cotización lista</span>
+                <span className={s.floatTag}>Enviar por WhatsApp</span>
+                <span className={s.floatTagStrong}>Total calculado</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <ProblemSection />
+      <section id="problema" className={s.problemSection}>
+        <div className={s.container}>
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>El problema no es cotizar</p>
+            <h2 className={s.h2}>El problema es cotizar desordenado.</h2>
+            <p className={s.lead}>
+              Excel, notas sueltas y WhatsApp infinito hacen que se pierdan medidas, cambien costos y el cliente reciba
+              algo poco claro.
+            </p>
+          </div>
+
+          <div className={s.cardGrid3}>
+            <article className={s.card}>
+              <h3>Excel se rompe o se duplica</h3>
+              <p>Archivos distintos, fórmulas rotas y valores que cambian sin control.</p>
+            </article>
+            <article className={s.card}>
+              <h3>Medidas perdidas en WhatsApp</h3>
+              <p>La obra queda enterrada entre audios y mensajes. Después nadie encuentra nada.</p>
+            </article>
+            <article className={s.card}>
+              <h3>Presupuestos poco profesionales</h3>
+              <p>El cliente no entiende el total, pide aclaraciones y el cierre se enfría.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="funciones" className={s.featuresSection}>
+        <div className={s.container}>
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>La solución</p>
+            <h2 className={s.h2}>Ventora ordena tu proceso comercial desde el celular.</h2>
+            <p className={s.lead}>Todo lo necesario para cotizar, enviar y seguir el cierre sin llenar formularios eternos.</p>
+          </div>
+
+          <div className={s.featureCards}>
+            <article className={s.featureCard}>
+              <PhoneFrame label="Crear cotización" tilt="none">
+                <ScreenQuote />
+              </PhoneFrame>
+              <div className={s.featureCopy}>
+                <h3>Crear cotización</h3>
+                <p>Cliente, obra y componentes en una vista clara.</p>
+              </div>
+            </article>
+            <article className={s.featureCard}>
+              <PhoneFrame label="Clientes" tilt="none">
+                <ScreenList />
+              </PhoneFrame>
+              <div className={s.featureCopy}>
+                <h3>Clientes y seguimiento</h3>
+                <p>Historial simple para no perder oportunidades.</p>
+              </div>
+            </article>
+            <article className={s.featureCard}>
+              <PhoneFrame label="Aprobación cliente" tilt="none">
+                <ScreenApproval />
+              </PhoneFrame>
+              <div className={s.featureCopy}>
+                <h3>Aprobación por link</h3>
+                <p>El cliente revisa y responde desde el celular.</p>
+              </div>
+            </article>
+            <article className={s.featureCard}>
+              <div className={s.shareMock}>
+                <div className={s.shareTop}>
+                  <span className={s.badgeOk}>WhatsApp</span>
+                  <strong>Enviar PDF / link</strong>
+                </div>
+                <div className={s.shareBubble}>
+                  <span className={s.shareLabel}>Ventora</span>
+                  <p>Te envío la cotización. Total: <strong>$1.191.547</strong></p>
+                </div>
+                <div className={s.shareFooter}>
+                  <span className={s.lightPill}>PDF listo</span>
+                  <span className={s.whatsPill}>
+                    <FaWhatsapp aria-hidden />
+                    Enviar
+                  </span>
+                </div>
+              </div>
+              <div className={s.featureCopy}>
+                <h3>Salida comercial</h3>
+                <p>WhatsApp + PDF profesional, sin pasos extra.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
       <section id="como-funciona" className={s.processSection}>
         <div className={s.container}>
-          <div className={s.sectionHeadingLight}>
-            <div className={s.sectionTag}>Como funciona</div>
-            <h2 className={s.sectionTitleLight}>Tres pasos claros. Sin navegacion pesada. Sin vueltas.</h2>
-            <p className={s.sectionTextLight}>
-              La experiencia esta organizada como una herramienta de trabajo: entrar, calcular, enviar.
-            </p>
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>Cómo funciona</p>
+            <h2 className={s.h2}>De medir a enviar, en pasos simples.</h2>
+            <p className={s.lead}>Pensado para maestros: claro, corto y sin navegación pesada.</p>
           </div>
 
-          <div className={s.processRail} aria-hidden />
-
-          <motion.div
-            className={s.processFlow}
-            variants={staggerList}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.18 }}
-          >
-            {steps.map((item, index) => {
-              const Icon = item.icon;
-              const visual = processVisuals[index];
-              const alignRight = index % 2 === 1;
-
-              return (
-                <motion.article
-                  key={item.step}
-                  className={`${s.processRow} ${alignRight ? s.processRowRight : ""}`}
-                  variants={revealUp}
-                >
-                  <div className={s.processStepCard}>
-                    <div className={s.stepTop}>
-                      <span className={s.stepNumber}>{item.step}</span>
-                      <span className={s.stepPill}>{item.tag}</span>
-                    </div>
-                    <div className={s.stepIcon}>
-                      <Icon aria-hidden />
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </div>
-
-                  <div className={s.processShotWrap}>
-                    <div className={s.processShotFrame}>
-                      <div className={s.captureToolbar}>
-                        <div className={s.captureDots} aria-hidden>
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                        <p>{item.title}</p>
-                      </div>
-                      <div className={s.captureImageWrap}>
-                        <Image
-                          src={visual.src}
-                          alt={visual.alt}
-                          width={visual.width}
-                          height={visual.height}
-                          className={s.processShotImage}
-                        />
-                        <div className={`${s.captureMask} ${s[visual.maskClassName]}`} aria-hidden />
-                      </div>
-                    </div>
-
-                    {index === 2 ? (
-                      <motion.div
-                        className={s.processSuccessBadge}
-                        animate={{ y: [0, -8, 0], opacity: [0.92, 1, 0.92] }}
-                        transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
-                      >
-                        <div className={s.processSuccessIcon}>
-                          <FaCheckCircle aria-hidden />
-                        </div>
-                        <div>
-                          <span>Cotizacion enviada con exito</span>
-                          <strong>PDF + WhatsApp listos</strong>
-                        </div>
-                      </motion.div>
-                    ) : null}
-                  </div>
-                </motion.article>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      <section id="producto" className={s.productSection}>
-        <div className={s.container}>
-          <div className={s.productLayout}>
-            <div className={s.productCopy}>
-              <div className={s.sectionTagLight}>Beneficios reales</div>
-              <h2 className={s.sectionTitleDark}>Ventora ordena tu trabajo comercial sin sumar pasos extra.</h2>
-              <p className={s.sectionTextDark}>
-                Cotiza, envia y sigue cada presupuesto sin volver a planillas sueltas.
-              </p>
-
-              <div className={s.benefitGrid}>
-                {productBenefits.map((benefit) => {
-                  const Icon = benefit.icon;
-
-                  return (
-                    <article key={benefit.text} className={s.benefitCard}>
-                      <div className={s.benefitIcon}>
-                        <Icon aria-hidden />
-                      </div>
-                      <p>{benefit.text}</p>
-                    </article>
-                  );
-                })}
+          <div className={s.steps}>
+            <article className={s.step}>
+              <span className={s.stepNum}>1</span>
+              <div>
+                <h3>Crea el cliente y la obra</h3>
+                <p>Deja el contexto listo sin perder datos.</p>
               </div>
-            </div>
-
-            <div className={s.productVisual}>
-              <div className={s.productBoard}>
-                <div className={s.productBoardHeader}>
-                  <div>
-                    <span className={s.smallTagDark}>Vista real del sistema</span>
-                    <h3>Todo el trabajo comercial en una sola vista.</h3>
-                    <p className={s.productBoardText}>
-                      Cotizaciones, PDF, clientes y seguimiento dentro de un flujo simple y entendible.
-                    </p>
-                  </div>
-                </div>
-
-                <div className={s.productMock}>
-                  <div className={s.visualPanel}>
-                    <div className={s.windowVisual} aria-hidden>
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <div className={s.panelMeta}>
-                      <span className={s.itemCode}>V1</span>
-                      <strong>Ventana aluminio</strong>
-                      <p>Linea 5000 · living principal</p>
-                    </div>
-                  </div>
-
-                  <div className={s.visualPanelDark}>
-                    <div className={s.showerVisual} aria-hidden>
-                      <span />
-                      <span />
-                    </div>
-                    <div className={s.panelMetaDark}>
-                      <span className={s.itemCodeLight}>S1</span>
-                      <strong>Shower door</strong>
-                      <p>Templado 8 mm · baño principal</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={s.captureShowcase}>
-                  <article className={`${s.captureFrame} ${s.captureFrameWide}`}>
-                    <div className={s.captureToolbar}>
-                      <div className={s.captureDots} aria-hidden>
-                        <span />
-                        <span />
-                        <span />
-                      </div>
-                        <p>Panel comercial Ventora</p>
-                    </div>
-
-                    <div className={s.captureImageWrap}>
-                      <Image
-                        src="/brand/landing-dashboard.png"
-                        alt="Vista real del panel comercial de Ventora"
-                        width={240675}
-                        height={135343}
-                        className={s.captureImage}
-                      />
-                    </div>
-                  </article>
-
-                  <div className={s.captureColumn}>
-                    <article className={s.captureFrame}>
-                      <div className={s.captureToolbar}>
-                        <div className={s.captureDots} aria-hidden>
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                        <p>02 · Resumen y cierre</p>
-                      </div>
-
-                      <div className={s.captureImageWrap}>
-                        <Image
-                          src="/brand/landing-paso3.png"
-                          alt="Paso 3 real del flujo con total final y acciones de cierre"
-                          width={1272}
-                          height={912}
-                          className={s.captureImage}
-                        />
-                        <div className={`${s.captureMask} ${s.captureMaskPaso3TopRight}`} aria-hidden />
-                      </div>
-                    </article>
-
-                    <article className={`${s.captureFrame} ${s.captureFrameDark}`}>
-                      <div className={s.captureToolbar}>
-                        <div className={s.captureDots} aria-hidden>
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                        <p>03 · Salida comercial</p>
-                      </div>
-
-                      <div className={s.commerceGrid}>
-                        <div className={s.captureImageWrap}>
-                          <Image
-                            src="/brand/landing-pdf.png"
-                            alt="Vista previa real del PDF comercial"
-                            width={728}
-                            height={912}
-                            className={s.captureImage}
-                          />
-                          <div className={`${s.captureMask} ${s.captureMaskPdfLink}`} aria-hidden />
-                        </div>
-                        <div className={s.captureImageWrap}>
-                          <Image
-                            src="/brand/landing-share.png"
-                            alt="Compartir real del PDF por WhatsApp"
-                            width={526}
-                            height={506}
-                            className={s.captureImage}
-                          />
-                          <div className={`${s.captureMask} ${s.captureMaskShareTop}`} aria-hidden />
-                          <div className={`${s.captureMask} ${s.captureMaskShareFile}`} aria-hidden />
-                          <div className={`${s.captureMask} ${s.captureMaskSharePeople}`} aria-hidden />
-                        </div>
-                      </div>
-                    </article>
-
-                    <article className={s.captureFrame}>
-                      <div className={s.captureToolbar}>
-                        <div className={s.captureDots} aria-hidden>
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                        <p>04 · Clientes y seguimiento</p>
-                      </div>
-
-                      <div className={s.captureImageWrap}>
-                        <Image
-                          src="/brand/landing-clientes.png"
-                          alt="Vista real de clientes con estado y seguimiento comercial"
-                          width={1355}
-                          height={904}
-                          className={s.captureImage}
-                        />
-                        <div className={`${s.captureMask} ${s.captureMaskClientesTopRight}`} aria-hidden />
-                      </div>
-                    </article>
-                  </div>
-                </div>
-
-                <div className={s.productCalloutGrid}>
-                  {productCallouts.map((callout) => {
-                    const Icon = callout.icon;
-
-                    return (
-                      <article key={callout.label} className={s.productCallout}>
-                        <div className={s.productCalloutIcon}>
-                          <Icon aria-hidden />
-                        </div>
-                        <div className={s.productCalloutBody}>
-                          <strong>{callout.label}</strong>
-                          <p>{callout.detail}</p>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-
+            </article>
+            <article className={s.step}>
+              <span className={s.stepNum}>2</span>
+              <div>
+                <h3>Agrega productos y medidas</h3>
+                <p>Costos, margen e IVA quedan ordenados.</p>
               </div>
-            </div>
+            </article>
+            <article className={s.step}>
+              <span className={s.stepNum}>3</span>
+              <div>
+                <h3>Envía por WhatsApp</h3>
+                <p>PDF o link público listo para el cliente.</p>
+              </div>
+            </article>
+            <article className={s.step}>
+              <span className={s.stepNum}>4</span>
+              <div>
+                <h3>El cliente aprueba</h3>
+                <p>Ves el estado y sigues el cierre.</p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className={s.advantageSection}>
+      <section id="planes" className={s.pricingSection}>
         <div className={s.container}>
-          <div className={s.advantageShell}>
-            <div className={s.advantageCopy}>
-              <h2 className={s.sectionTitleLight}>Con la confianza de talleres e instaladores en Chile.</h2>
-              <p className={s.sectionTextLight}>
-                Sumate a equipos que ya estan cotizando mas rapido, con mejor presentacion y mas control comercial
-                desde la obra hasta el cierre.
-              </p>
-
-            </div>
-
-            <div className={s.proofPanel}>
-              <TestimonialsSection
-                as="div"
-                dark
-                compact
-                showHeader={false}
-                className={s.advantageTestimonials}
-                title="Testimonios"
-                description=""
-                testimonials={landingTestimonials}
-              />
-
-              <blockquote className={s.testimonial}>
-                <p>
-                  &ldquo;Se ve mas serio que cualquier PDF que sacabamos antes. Ahora el cliente entiende y responde
-                  mas rapido.&rdquo;
-                </p>
-                <footer>Instalador de aluminio · Santiago</footer>
-              </blockquote>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="instalacion" className={s.installationSection}>
-        <div className={s.container}>
-          <div className={s.sectionHeadingLight}>
-            <div className={s.sectionTag}>Instalacion y acceso</div>
-            <h2 className={s.sectionTitleDark}>
-              Entra, instalala y dejala lista para trabajar.
-            </h2>
-            <p className={s.sectionTextDark}>
-              Si la abres en Chrome o Edge en computador, y en Safari cuando usas iPhone,
-              Ventora se ve mejor, responde mejor y las alertas funcionan con menos problemas.
-            </p>
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>Planes</p>
+            <h2 className={s.h2}>Empieza con una demo y valida si Ventora te calza.</h2>
+            <p className={s.lead}>Sin inventar precios: te mostramos el flujo real y lo conversamos.</p>
           </div>
 
-          <div className={s.installationShell}>
-            <div className={s.installationGrid}>
-              {installationSteps.map((step) => {
-                const Icon = step.icon;
+          <div className={s.pricingGrid}>
+            <article className={s.priceCard}>
+              <p className={s.priceKicker}>Para maestros</p>
+              <h3>Maestro independiente</h3>
+              <p className={s.priceText}>Ideal si cotizas en terreno y quieres enviar algo profesional al tiro.</p>
+              <ul className={s.bullets}>
+                <li>PDF comercial + WhatsApp</li>
+                <li>Clientes y seguimiento</li>
+                <li>Aprobación por link</li>
+              </ul>
+              <Link href="/planes" className={s.priceCta} prefetch={false}>
+                Probar demo
+                <FaArrowRight aria-hidden />
+              </Link>
+            </article>
 
-                return (
-                  <article key={step.step} className={s.installationCard}>
-                    <div className={s.installationIcon}>
-                      <Icon aria-hidden />
-                    </div>
-                    <div className={s.installationCardBody}>
-                      <span className={s.installationCardStep}>{step.step}</span>
-                      <h3>{step.title}</h3>
-                      <p>{step.description}</p>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-
-            <aside className={s.installationNote}>
-              <span className={s.installationNoteLabel}>Recomendado</span>
-              <strong>Chrome o Edge en computador</strong>
-              <p>
-                Si quieres usar Ventora tranquilo y recibir alertas sin enredos, usa Chrome o Edge.
-                Brave puede bloquear notificaciones y hacerte perder avisos importantes.
-              </p>
-
-              <div className={s.installationPills} aria-label="Navegadores recomendados">
-                <span>Chrome</span>
-                <span>Edge</span>
-                <span>Instalar app</span>
-                <span>Alertas push</span>
-              </div>
-            </aside>
+            <article className={`${s.priceCard} ${s.priceCardStrong}`}>
+              <p className={s.priceKickerStrong}>Recomendado</p>
+              <h3>Taller / empresa</h3>
+              <p className={s.priceTextStrong}>Para equipos que necesitan orden comercial y control de estados.</p>
+              <ul className={s.bulletsStrong}>
+                <li>Cotizaciones por pasos, rápido</li>
+                <li>Historial y estados por cliente</li>
+                <li>PDF con branding + aprobación</li>
+              </ul>
+              <a
+                className={s.priceCtaStrong}
+                href="https://wa.me/56987654321?text=Hola%20Ventora%2C%20quiero%20una%20demo%20para%20mi%20taller."
+              >
+                Solicitar contacto
+                <FaWhatsapp aria-hidden />
+              </a>
+            </article>
           </div>
         </div>
       </section>
 
       <section id="faq" className={s.faqSection}>
         <div className={s.container}>
-          <div className={s.sectionHeadingDark}>
-            <div className={s.sectionTagLight}>FAQ</div>
-            <h2 className={s.sectionTitleDark}>Todo lo importante, sin ruido.</h2>
-            <p className={s.sectionTextDark}>
-              Respuestas claras para entender si Ventora encaja con la forma real en que hoy cotizas.
-            </p>
+          <div className={s.sectionHead}>
+            <p className={s.eyebrow}>FAQ</p>
+            <h2 className={s.h2}>Todo lo importante, sin ruido.</h2>
+            <p className={s.lead}>Respuestas cortas, pensando en terreno.</p>
           </div>
 
           <div className={s.faqList}>
@@ -958,96 +647,40 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.contactShell}>
             <div className={s.contactCopy}>
-              <span className={s.contactEyebrow}>Contactanos</span>
-              <h2 className={s.contactTitle}>
-                Hablemos.
-                <br />
-                Te mostramos
-                <br />
-                como funciona.
-              </h2>
-              <p className={s.contactDescription}>
-                Dejanos tus datos y un ejecutivo te contacta en menos de 24 horas habiles. Sin spam, sin compromiso.
-              </p>
+              <p className={s.eyebrow}>Contacto</p>
+              <h2 className={s.h2}>Te lo mostramos en 10–20 minutos.</h2>
+              <p className={s.lead}>Deja tus datos o escríbenos por WhatsApp. Cero spam.</p>
 
-              <div className={s.contactList}>
-                <div className={s.contactItem}>
-                  <div className={s.contactIconWrap}>
-                    <FaEnvelope aria-hidden />
-                  </div>
-                  <div className={s.contactItemBody}>
-                    <span>Correo</span>
-                    <a href="mailto:hola@ventora.cl">hola@ventora.cl</a>
-                  </div>
-                </div>
-
-                <div className={s.contactItem}>
-                  <div className={s.contactIconWrap}>
-                    <FaPhoneAlt aria-hidden />
-                  </div>
-                  <div className={s.contactItemBody}>
-                    <span>Telefono</span>
-                    <a href="tel:+56987654321">+56 9 8765 4321</a>
-                  </div>
-                </div>
-
-                <div className={s.contactItem}>
-                  <div className={s.contactIconWrap}>
-                    <FaMapMarkerAlt aria-hidden />
-                  </div>
-                  <div className={s.contactItemBody}>
-                    <span>Ubicacion</span>
-                    <p>Santiago, Chile</p>
-                  </div>
-                </div>
+              <div className={s.contactQuick}>
+                <a
+                  className={s.whatsBig}
+                  href="https://wa.me/56987654321?text=Hola%20Ventora%2C%20quiero%20una%20demo."
+                >
+                  <FaWhatsapp aria-hidden />
+                  Hablar por WhatsApp
+                </a>
+                <Link className={s.secondaryButton} href="/planes" prefetch={false}>
+                  Probar demo
+                  <FaArrowRight aria-hidden />
+                </Link>
               </div>
             </div>
 
             <div className={s.contactFormShell}>
               <div className={s.contactFormCard}>
                 <div className={s.contactFormHeading}>
-                  <h3>Solicita una demo o cotizacion</h3>
-                  <p>Completa el formulario y te contactamos a la brevedad</p>
+                  <h3>Quiero que me contacten</h3>
+                  <p>Formulario corto, pensado para celular.</p>
                 </div>
 
                 <form className={s.contactForm} onSubmit={handleContactSubmit}>
-                  <div className={s.contactFormGrid}>
-                    <label className={s.contactField}>
-                      <span>Nombre</span>
-                      <input
-                        type="text"
-                        name="nombre"
-                        placeholder="Juan Perez"
-                        autoComplete="name"
-                        required
-                      />
-                    </label>
-                    <label className={s.contactField}>
-                      <span>Empresa</span>
-                      <input
-                        type="text"
-                        name="empresa"
-                        placeholder="Vidrios Sur"
-                        autoComplete="organization"
-                        required
-                      />
-                    </label>
-                  </div>
-
                   <label className={s.contactField}>
-                    <span>Correo electronico</span>
-                    <input
-                      type="email"
-                      name="correo"
-                      placeholder="juan@empresa.cl"
-                      autoComplete="email"
-                      inputMode="email"
-                      required
-                    />
+                    <span>Nombre</span>
+                    <input type="text" name="nombre" placeholder="Juan Pérez" autoComplete="name" required />
                   </label>
 
                   <label className={s.contactField}>
-                    <span>Telefono</span>
+                    <span>WhatsApp</span>
                     <input
                       type="tel"
                       name="telefono"
@@ -1059,56 +692,66 @@ export default function LandingPage() {
                   </label>
 
                   <label className={s.contactField}>
-                    <span>En que te ayudamos?</span>
-                    <select name="ayuda" defaultValue="" required>
+                    <span>Tipo de negocio</span>
+                    <select name="empresa" defaultValue="" required>
                       <option value="" disabled>
-                        Selecciona una opcion
+                        Selecciona una opción
                       </option>
-                      <option value="demo">Quiero una demo</option>
-                      <option value="cotizacion">Necesito una cotizacion</option>
-                      <option value="ventas">Quiero hablar con ventas</option>
+                      <option value="maestro">Maestro independiente</option>
+                      <option value="vidrieria">Vidriería</option>
+                      <option value="taller">Taller / empresa</option>
+                      <option value="otro">Otro</option>
                     </select>
                   </label>
 
-                  <button
-                    type="submit"
-                    className={s.contactSubmit}
-                    disabled={isSubmittingContact}
-                    aria-busy={isSubmittingContact}
-                  >
-                    {isSubmittingContact ? "Enviando solicitud..." : "Enviar solicitud"}
+                  <label className={s.contactField}>
+                    <span>Mensaje (opcional)</span>
+                    <input type="text" name="correo" placeholder="Ej: necesito cotizar shower door y aluminio" />
+                  </label>
+
+                  <button type="submit" className={s.contactSubmit} disabled={isSubmittingContact} aria-busy={isSubmittingContact}>
+                    {isSubmittingContact ? "Enviando..." : "Enviar"}
                     <FaArrowRight aria-hidden />
                   </button>
                 </form>
 
                 {contactFeedback ? (
                   <p
-                    className={`${s.contactFeedback} ${
-                      contactFeedback.kind === "error"
-                        ? s.contactFeedbackError
-                        : ""
-                    }`}
+                    className={`${s.contactFeedback} ${contactFeedback.kind === "error" ? s.contactFeedbackError : ""}`}
                     role="status"
                   >
                     {contactFeedback.message}
                   </p>
                 ) : null}
-
-                <p className={s.contactLegal}>Sin spam · Tus datos son privados y seguros</p>
               </div>
             </div>
-          </div>
-
-          <div className={s.contactTrustRow}>
-            <span>Sin tarjeta de credito</span>
-            <span>Funciona desde el primer dia</span>
-            <span>Soporte en español</span>
-            <span>Hecho en Chile</span>
           </div>
         </div>
       </section>
 
-      <FooterSection navLinks={navLinks} />
+      <footer className={s.footer}>
+        <div className={s.container}>
+          <div className={s.footerInner}>
+            <div className={s.footerBrand}>
+              <Image src="/brand/ventora-logo-navy.svg" alt="Ventora" width={170} height={40} />
+              <p>
+                Software comercial para cotizar trabajos de vidrio y aluminio desde el celular. PDF, WhatsApp y aprobación por link.
+              </p>
+            </div>
+
+            <div className={s.footerLinks}>
+              <a href="#top">Inicio</a>
+              <a href="#planes">Demo</a>
+              <a href="#contacto">Contacto</a>
+              <a href="#faq">FAQ</a>
+            </div>
+          </div>
+          <div className={s.footerBottom}>
+            <span>Hecho para terreno · Chile</span>
+            <span>Sin tarjeta de crédito</span>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

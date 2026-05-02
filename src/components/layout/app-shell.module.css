@@ -2,9 +2,14 @@
 
 .bootRoot {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: clamp(24px, 4vw, 48px);
+  --boot-pad: clamp(24px, 4vw, 48px);
+  padding: calc(var(--boot-pad) + env(safe-area-inset-top, 0px))
+    calc(var(--boot-pad) + env(safe-area-inset-right, 0px))
+    calc(var(--boot-pad) + env(safe-area-inset-bottom, 0px))
+    calc(var(--boot-pad) + env(safe-area-inset-left, 0px));
   background:
     radial-gradient(circle at top, rgba(79, 125, 212, 0.16), transparent 32%),
     linear-gradient(180deg, #f6f8fc 0%, #edf2f8 100%);
@@ -89,8 +94,17 @@
   --success: #2f7d4e;
   --sidebar-w: 288px;
   --tabbar-h: 72px;
+  --shell-safe-top: env(safe-area-inset-top, 0px);
+  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --shell-safe-left: env(safe-area-inset-left, 0px);
+  --shell-safe-right: env(safe-area-inset-right, 0px);
+  --shell-tabbar-edge-bottom: max(12px, var(--shell-safe-bottom));
 
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top left, rgba(79, 125, 212, 0.1), transparent 24%),
     linear-gradient(180deg, #fafcff 0%, var(--bg) 34%);
@@ -113,7 +127,8 @@
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: var(--sidebar-w);
+  width: calc(var(--sidebar-w) + var(--shell-safe-left));
+  padding-left: var(--shell-safe-left);
   display: flex;
   flex-direction: column;
   background:
@@ -125,7 +140,7 @@
 }
 
 .sidebarTop {
-  padding: 28px 20px 18px;
+  padding: calc(28px + var(--shell-safe-top)) 20px 18px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -379,7 +394,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 16px 18px 18px;
+  padding: 16px 18px calc(18px + var(--shell-safe-bottom));
   border-top: 1px solid var(--border);
   background: rgba(250, 252, 255, 0.92);
   border-left: 0;
@@ -607,8 +622,9 @@
 }
 
 .main {
-  margin-left: var(--sidebar-w);
+  margin-left: calc(var(--sidebar-w) + var(--shell-safe-left));
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .topbar {
@@ -618,7 +634,8 @@
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  padding: 28px 32px 18px;
+  padding: calc(28px + var(--shell-safe-top)) calc(32px + var(--shell-safe-right)) 18px
+    calc(32px + var(--shell-safe-left));
   backdrop-filter: blur(16px);
   background: linear-gradient(180deg, rgba(243, 245, 249, 0.96), rgba(243, 245, 249, 0.82));
   border-bottom: 1px solid rgba(217, 224, 234, 0.88);
@@ -745,7 +762,7 @@
 }
 
 .pageContent {
-  padding: 24px 32px 40px;
+  padding: 24px calc(32px + var(--shell-safe-right)) 40px calc(32px + var(--shell-safe-left));
   max-width: 1320px;
 }
 
@@ -756,7 +773,8 @@
   z-index: 30;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: calc(14px + var(--shell-safe-top)) calc(16px + var(--shell-safe-right)) 14px
+    calc(16px + var(--shell-safe-left));
   backdrop-filter: blur(14px);
   background:
     radial-gradient(circle at top center, rgba(79, 125, 212, 0.09), transparent 42%),
@@ -766,7 +784,8 @@
 }
 
 .mobileHeaderCreateFlow {
-  padding: 9px 12px 8px;
+  padding: calc(9px + var(--shell-safe-top)) calc(12px + var(--shell-safe-right)) 8px
+    calc(12px + var(--shell-safe-left));
 }
 
 .mobileHeaderCreateFlow .mobileHeaderEyebrow {
@@ -812,10 +831,13 @@
 
 .alertsPanel {
   position: fixed;
-  top: 92px;
-  right: 32px;
-  width: min(420px, calc(100vw - 32px));
-  max-height: min(72vh, 720px);
+  top: calc(92px + var(--shell-safe-top));
+  right: calc(32px + var(--shell-safe-right));
+  width: min(
+    420px,
+    calc(100vw - 32px - var(--shell-safe-left) - var(--shell-safe-right))
+  );
+  max-height: min(72dvh, 720px);
   border: 1px solid rgba(217, 224, 234, 0.96);
   border-radius: 24px;
   padding: 18px;
@@ -948,7 +970,7 @@
   display: grid;
   gap: 10px;
   overflow-y: auto;
-  max-height: min(46vh, 460px);
+  max-height: min(46dvh, 460px);
   padding-right: 4px;
 }
 
@@ -1078,11 +1100,10 @@
 .tabBar {
   display: none;
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
+  left: max(12px, var(--shell-safe-left));
+  right: max(12px, var(--shell-safe-right));
+  bottom: var(--shell-tabbar-edge-bottom);
   z-index: 40;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tabBarInner {
@@ -1184,8 +1205,8 @@
 .mobileFab {
   display: none;
   position: fixed;
-  right: 18px;
-  bottom: calc(var(--tabbar-h) + 34px);
+  right: max(18px, var(--shell-safe-right));
+  bottom: calc(var(--shell-tabbar-edge-bottom) + var(--tabbar-h) + 18px);
   z-index: 45;
   width: 58px;
   height: 58px;
@@ -1203,19 +1224,22 @@
 
 @media (max-width: 1080px) {
   .sidebar {
-    width: 264px;
+    width: calc(264px + var(--shell-safe-left));
   }
 
   .main {
-    margin-left: 264px;
+    margin-left: calc(264px + var(--shell-safe-left));
   }
 
   .topbar {
-    padding-inline: 24px;
+    padding-left: calc(24px + var(--shell-safe-left));
+    padding-right: calc(24px + var(--shell-safe-right));
+    padding-bottom: 18px;
   }
 
   .pageContent {
-    padding-inline: 24px;
+    padding-left: calc(24px + var(--shell-safe-left));
+    padding-right: calc(24px + var(--shell-safe-right));
   }
 
   .teamBadge {
@@ -1223,7 +1247,7 @@
   }
 
   .alertsPanel {
-    right: 24px;
+    right: calc(24px + var(--shell-safe-right));
   }
 }
 
@@ -1234,7 +1258,7 @@
 
   .main {
     margin-left: 0;
-    padding-bottom: calc(var(--tabbar-h) + 110px);
+    padding-bottom: calc(var(--tabbar-h) + var(--shell-tabbar-edge-bottom) + 44px);
   }
 
   .topbar {
@@ -1254,15 +1278,15 @@
   }
 
   .pageContent {
-    padding: 18px 16px 24px;
+    padding: 18px max(16px, var(--shell-safe-right)) 24px max(16px, var(--shell-safe-left));
   }
 
   .alertsPanel {
-    top: 76px;
-    right: 16px;
-    left: 16px;
+    top: calc(76px + var(--shell-safe-top));
+    right: max(16px, var(--shell-safe-right));
+    left: max(16px, var(--shell-safe-left));
     width: auto;
-    max-height: min(68vh, 640px);
+    max-height: min(68dvh, 640px);
     border-radius: 22px;
   }
 
@@ -1273,9 +1297,9 @@
 
   .accountMenuMobile {
     position: fixed;
-    top: 72px;
-    right: 16px;
-    left: 16px;
+    top: calc(72px + var(--shell-safe-top));
+    right: max(16px, var(--shell-safe-right));
+    left: max(16px, var(--shell-safe-left));
     min-width: 0;
   }
 }
@@ -1290,7 +1314,7 @@
 
 @media (max-width: 860px) {
   .mainCreateFlow {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(16px + var(--shell-safe-bottom));
   }
 
   .pageContentCreateFlow {

@@ -1540,6 +1540,7 @@
 .stepTwoFormCard {
   min-width: 0;
   max-height: calc(100vh - 8rem);
+  max-height: calc(100dvh - 8rem);
   overflow-y: scroll;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -2223,6 +2224,7 @@
 .groupSheet {
   width: min(100%, 34rem);
   max-height: min(88vh, 52rem);
+  max-height: min(88dvh, 52rem);
   display: flex;
   flex-direction: column;
   gap: 0.95rem;
