@@ -1,0 +1,42 @@
+/* Optimizacion iPhone 15/17 y Android grandes (430px) */
+@media screen and (max-width: 430px) {
+  .mobileShell {
+    padding: 10px 10px calc(90px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+  
+  .topCard,
+  .summaryCard,
+  .detailsCard,
+  .pdfCard,
+  .finalCard {
+    border-radius: 18px;
+  }
+  
+  .topCard,
+  .summaryCard,
+  .detailsCard,
+  .pdfCard {
+    padding: 12px;
+  }
+  
+  .topRow {
+    gap: 10px;
+  }
+  
+  .logo {
+    width: 100px;
+  }
+  
+  .title {
+    font-size: clamp(20px, 5vw, 26px);
+  }
+  
+  .totalValue {
+    font-size: clamp(36px, 10vw, 54px);
+  }
+  
+  .pdfActions {
+    grid-template-columns: 1fr;
+  }
+}
