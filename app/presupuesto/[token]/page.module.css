@@ -7,6 +7,9 @@
     linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
   padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
     calc(40px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
 .mobileOnly {
@@ -15,6 +18,31 @@
 
 .desktopOnly {
   display: block;
+}
+
+/* Optimización Safari: media queries para tablet y mobile */
+@media screen and (max-width: 768px) and (min-width: 721px) {
+  .page {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+      calc(24px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+  
+  .shell {
+    gap: 16px;
+  }
+  
+  .hero {
+    padding: 20px;
+  }
+  
+  .heroLayout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .heroAside {
+    padding: 16px;
+  }
 }
 
 .shell {
@@ -755,7 +783,7 @@
   padding-top: clamp(2rem, 8dvh, 5rem);
 }
 
-@media (max-width: 720px) {
+@media screen and (max-width: 720px) {
   .page {
     padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
       env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);

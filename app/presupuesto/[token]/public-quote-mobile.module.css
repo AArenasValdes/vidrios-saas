@@ -2,6 +2,10 @@
   display: grid;
   gap: 14px;
   padding: 12px 12px calc(120px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 100vw;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
 .topCard,
@@ -515,7 +519,7 @@
   background: #f3f6fb;
 }
 
-@media (max-width: 760px) {
+@media screen and (max-width: 768px) {
   .mobileShell {
     gap: 12px;
   }
