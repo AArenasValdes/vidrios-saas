@@ -13,6 +13,12 @@
   -webkit-word-wrap: break-word;
 }
 
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobileShell {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+}
+
 .topCard,
 .summaryCard,
 .detailsCard,
