@@ -14,40 +14,6 @@
   text-size-adjust: 100%;
 }
 
-@media (max-width: 768px) {
-  .page {
-    padding: 14px 16px;
-  }
-}
-
-/* Safari iOS specific fixes */
-@supports (-webkit-touch-callout: none) {
-  .page {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .toolbar {
-    position: relative;
-    z-index: 10;
-    flex-shrink: 0;
-  }
-
-  .sheetViewport {
-    position: relative;
-    z-index: 5;
-    flex-shrink: 0;
-  }
-
-  .notice,
-  .successTicket,
-  .shareHint {
-    flex-shrink: 0;
-  }
-}
-
 .toolbar {
   max-width: 980px;
   margin: 0 auto 18px;
@@ -57,36 +23,11 @@
   gap: 12px;
 }
 
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .toolbar > *:first-child {
-    width: 100%;
-  }
-}
-
 .toolbarActions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
-}
-
-@media (max-width: 768px) {
-  .toolbarActions {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .toolbarActions > button,
-  .toolbarActions > a {
-    flex: 1;
-    min-width: 100px;
-  }
 }
 
 .actionPrimary,
@@ -115,16 +56,6 @@
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-}
-
-@media (max-width: 768px) {
-  .actionPrimary,
-  .actionSecondary {
-    min-height: 48px;
-    border-radius: 12px;
-    padding: 0 16px;
-    font-size: 14px;
-  }
 }
 
 .actionPrimary {
@@ -205,20 +136,6 @@
   line-height: 1.6;
 }
 
-@media (max-width: 768px) {
-  .notice,
-  .successTicket,
-  .shareHint {
-    margin: 0 auto 12px;
-    padding: 12px 14px;
-    font-size: 12px;
-  }
-
-  .successTicket strong {
-    font-size: 13px;
-  }
-}
-
 .sheet {
   display: grid;
   gap: 18px;
@@ -230,19 +147,10 @@
   overflow: hidden;
 }
 
-@media (max-width: 768px) {
-  .sheetViewport {
-    margin: 12px auto 0;
-  }
-}
-
 .sheetScaleFrame {
   width: max-content;
   backface-visibility: hidden;
   transform-style: preserve-3d;
-  -webkit-backface-visibility: hidden;
-  -webkit-transform-style: preserve-3d;
-  -webkit-perspective: 1000;
 }
 
 .exportRenderHost {
