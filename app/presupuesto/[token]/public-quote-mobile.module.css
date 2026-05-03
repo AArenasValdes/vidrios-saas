@@ -17,6 +17,10 @@
   .mobileShell {
     padding-top: max(12px, env(safe-area-inset-top));
   }
+  /* Aclare top notch for iOS: move header inside safe-area */
+  .topCard {
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
 }
 
 .topCard,

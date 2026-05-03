@@ -6,6 +6,12 @@
   min-height: 34px;
 }
 
+@supports (padding-top: env(safe-area-inset-top)) {
+  .header {
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;
