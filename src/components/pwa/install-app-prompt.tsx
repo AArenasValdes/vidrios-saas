@@ -45,28 +45,23 @@ function isIosSafari() {
 
 export function InstallAppPrompt() {
   const pathname = usePathname();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosHint, setShowIosHint] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
+  const [showIosHint, setShowIosHint] = useState(false);
+  const [dismissed, setDismissed] = useState(true);
 
-    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
-    const standalone = isStandaloneMode();
+  useEffect(() => {
+  // Marcar como hidratado e inicializar estados correctos
+  const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
+  const standalone = isStandaloneMode();
 
-    return !wasDismissed && !standalone && isIosSafari();
+  queueMicrotask(() => {
+    setShowIosHint(!wasDismissed && !standalone && isIosSafari());
+    setDismissed(wasDismissed || standalone);
+    setIsHydrated(true);
   });
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") {
-      return true;
-    }
-
-    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
-    const standalone = isStandaloneMode();
-
-    return wasDismissed || standalone;
-  });
+}, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -112,7 +107,7 @@ export function InstallAppPrompt() {
     setDeferredPrompt(null);
   };
 
-  if (pathname?.startsWith("/print") || dismissed || isStandaloneMode()) {
+  if (!isHydrated || pathname?.startsWith("/print") || dismissed || isStandaloneMode()) {
     return null;
   }
 

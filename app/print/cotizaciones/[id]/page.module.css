@@ -14,6 +14,13 @@
   text-size-adjust: 100%;
 }
 
+/* PWA instalada: reducir padding sin barras de navegador */
+@media (display-mode: standalone) {
+  .page {
+    padding: 14px 16px;
+  }
+}
+
 .toolbar {
   max-width: 980px;
   margin: 0 auto 18px;
@@ -21,6 +28,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+/* En PWA instalada (standalone), aumentar separación porque no hay barra de navegador */
+@media (display-mode: standalone) {
+  .toolbar {
+    margin-bottom: 24px;
+    padding-top: 8px;
+  }
 }
 
 .toolbarActions {
@@ -145,6 +160,13 @@
   max-width: 980px;
   margin: 0 auto;
   overflow: hidden;
+}
+
+/* En PWA instalada, agregar más espacio para que no se superponga con toolbar */
+@media (display-mode: standalone) {
+  .sheetViewport {
+    margin-top: 12px;
+  }
 }
 
 .sheetScaleFrame {
