@@ -1106,9 +1106,9 @@
 .tabBar {
   display: none;
   position: fixed;
-  left: max(12px, var(--shell-safe-left));
-  right: max(12px, var(--shell-safe-right));
-  bottom: var(--shell-tabbar-edge-bottom);
+  left: 16px;
+  right: 16px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
 }
 
@@ -1264,7 +1264,8 @@
 
   .main {
     margin-left: 0;
-    padding-bottom: calc(var(--tabbar-h) + var(--shell-tabbar-edge-bottom) + 44px);
+    min-height: 100dvh;
+    padding-bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0px));
   }
 
   .topbar {
@@ -1284,7 +1285,7 @@
   }
 
   .pageContent {
-    padding: 18px max(16px, var(--shell-safe-right)) 24px max(16px, var(--shell-safe-left));
+    padding: 18px max(16px, var(--shell-safe-right)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, var(--shell-safe-left));
   }
 
   .alertsPanel {
