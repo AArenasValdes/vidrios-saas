@@ -10,6 +10,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  --tabbar-h: 88px;
   --background: #ffffff;
   --foreground: #171717;
   --surface: #0f1522;
@@ -195,4 +196,9 @@ a {
   background: #0b0f16;
   color: #f3efe8;
   text-align: center;
+}
+.main {
+  margin-left: 0;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--tabbar-h) + 12px + var(--safe-bottom));
 }
