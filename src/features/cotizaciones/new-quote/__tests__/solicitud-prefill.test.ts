@@ -12,7 +12,7 @@ describe("solicitud prefill para nueva cotización", () => {
     });
 
     expect(result.version).toBe(2);
-    expect(result.step).toBe(1);
+    expect(result.step).toBe(2);
     expect(result.draft.clienteNombre).toBe("Pedro Araya");
     expect(result.draft.clienteTelefono).toBe("+56 9 7733 8906");
     expect(result.draft.obra).toBe("Ventana corredera");
