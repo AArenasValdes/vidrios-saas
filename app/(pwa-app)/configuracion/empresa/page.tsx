@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import {
   LuMapPin,
   LuPalette,
   LuPhone,
+  LuQrCode,
   LuSave,
   LuSettings2,
 } from "react-icons/lu";
@@ -33,6 +35,7 @@ import {
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
+import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
 
@@ -219,20 +222,16 @@ export default function ConfiguracionEmpresaPage() {
   );
 
   const publicRequestUrl = useMemo(() => {
-    const baseUrl =
-      typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
     const slug = form.solicitudPublicaSlug?.trim() || "mi-empresa";
-    return `${baseUrl}/solicitud/${slug}`;
+    return `${resolvePublicAppUrl()}/solicitud/${slug}`;
   }, [form.solicitudPublicaSlug]);
 
   const persistedPublicRequestUrl = useMemo(() => {
-    const baseUrl =
-      typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
     const slug =
       profile?.solicitudPublicaSlug?.trim() ||
       form.solicitudPublicaSlug?.trim() ||
       "mi-empresa";
-    return `${baseUrl}/solicitud/${slug}`;
+    return `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${slug}`;
   }, [form.solicitudPublicaSlug, profile?.solicitudPublicaSlug]);
 
   const syncDeviceAlertsState = useCallback(async () => {
@@ -724,11 +723,19 @@ export default function ConfiguracionEmpresaPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <LuExternalLink aria-hidden />
-                    Ver página pública
-                  </a>
+                      <LuExternalLink aria-hidden />
+                      Ver página pública
+                    </a>
+                    <Link
+                      href="/solicitudes/canales"
+                      className={s.secondaryAction}
+                      prefetch={false}
+                    >
+                      <LuQrCode aria-hidden />
+                      Canales y QR
+                    </Link>
+                  </div>
                 </div>
-              </div>
 
               <p className={s.helpText}>
                 Usa este enlace en Instagram, Facebook, tarjetas, QR o WhatsApp Business.

@@ -107,6 +107,10 @@
   opacity: 0.56;
 }
 
+.heroActionWide {
+  grid-column: 1 / -1;
+}
+
 .filtersSection {
   display: grid;
   gap: 8px;
@@ -441,7 +445,7 @@
 }
 
 .cardActions > .primaryAction {
-  flex: 1 1 140px;
+  flex: 1 1 100%;
   min-width: 0;
 }
 
@@ -453,30 +457,6 @@
 
 .cardActions > .iconAction {
   flex: 0 0 46px;
-}
-
-@media (min-width: 721px) {
-  .cardActions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 46px 42px;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .cardActions > .primaryAction {
-    flex: none;
-    min-width: auto;
-  }
-
-  .cardActions > .secondaryAction,
-  .cardActions > .whatsappAction {
-    flex: none;
-    min-width: auto;
-  }
-
-  .cardActions > .iconAction {
-    flex: none;
-  }
 }
 
 .primaryAction {
@@ -494,6 +474,11 @@
   box-shadow: 0 12px 22px rgba(51, 94, 169, 0.16);
 }
 
+.primaryWhatsappAction {
+  background: linear-gradient(180deg, #25d366, #128c7e);
+  box-shadow: 0 12px 22px rgba(18, 140, 126, 0.16);
+}
+
 .secondaryAction {
   min-height: 48px;
   border: 1px solid #d9e0ea;
@@ -506,6 +491,13 @@
   color: #243b6b;
   font-size: 14px;
   font-weight: 700;
+}
+
+.secondaryBlueAction {
+  border-color: transparent;
+  background: linear-gradient(180deg, #4f7dd4, #335ea9);
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(51, 94, 169, 0.16);
 }
 
 .iconAction {
@@ -531,27 +523,9 @@
   opacity: 0.46;
 }
 
-.whatsappAction {
-  min-height: 48px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(180deg, #25d366, #128c7e);
-  color: #ffffff;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 12px 22px rgba(18, 140, 126, 0.16);
-}
-
-.whatsappAction:hover {
-  filter: brightness(1.05);
-}
-
 .menuWrap {
   position: relative;
+  margin-left: auto;
 }
 
 .menuPanel {

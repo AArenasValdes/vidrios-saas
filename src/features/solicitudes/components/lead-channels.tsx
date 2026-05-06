@@ -11,9 +11,11 @@ import {
   LuLink,
   LuMessageCircle,
   LuQrCode,
+  LuScanLine,
 } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 import s from "./lead-channels.module.css";
 
@@ -32,15 +34,14 @@ export function LeadChannels() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const slug = profile?.solicitudPublicaSlug;
-  const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
+  const baseUrl = resolvePublicAppUrl();
 
   const channels = useMemo<ChannelDefinition[]>(
     () => [
       {
         id: "direct",
         label: "Link directo",
-        description: "Comparte este enlace en cualquier lugar.",
+        description: "Comparte este enlace donde quieras.",
         utmSource: "link_directo",
         utmMedium: "web",
         origin: "link_directo",
@@ -58,7 +59,7 @@ export function LeadChannels() {
       {
         id: "facebook",
         label: "Facebook",
-        description: "Úsalo en tu perfil o publicaciones.",
+        description: "Pensado para perfil o publicaciones.",
         utmSource: "facebook",
         utmMedium: "perfil",
         origin: "facebook",
@@ -67,7 +68,7 @@ export function LeadChannels() {
       {
         id: "whatsapp",
         label: "WhatsApp",
-        description: "Para mensajes, estados o respuestas rápidas.",
+        description: "Util para respuestas rapidas, estado o mensaje.",
         utmSource: "whatsapp",
         utmMedium: "mensaje",
         origin: "whatsapp",
@@ -75,8 +76,8 @@ export function LeadChannels() {
       },
       {
         id: "qr",
-        label: "QR físico",
-        description: "Tarjetas, camionetas, letreros o vitrina.",
+        label: "QR fisico",
+        description: "Ideal para camioneta, tarjeta o letrero.",
         utmSource: "qr",
         utmMedium: "offline",
         origin: "qr",
@@ -158,7 +159,7 @@ export function LeadChannels() {
   );
 
   if (!isReady || !slug) {
-    return <div className={s.loading}>Cargando configuración de captación...</div>;
+    return <div className={s.loading}>Cargando configuracion de captacion...</div>;
   }
 
   const qrChannel = channels.find((channel) => channel.id === "qr");
@@ -166,82 +167,137 @@ export function LeadChannels() {
 
   return (
     <div className={s.root}>
-      <h2 className={s.title}>Captación de clientes</h2>
-      <p className={s.subtitle}>
-        Copia enlaces listos por canal y descarga un QR que ya llega marcado como
-        origen QR.
-      </p>
+      <section className={s.overviewCard}>
+        <div className={s.overviewTop}>
+          <div className={s.overviewCopy}>
+            <span className={s.sectionLabel}>Base comercial activa</span>
+            <strong>{profile?.empresaNombre || "Tu empresa"}</strong>
+            <p>
+              Todos los links usan tu pagina publica y dejan origen marcado para
+              que la solicitud llegue ordenada al inbox comercial.
+            </p>
+          </div>
+          <div className={s.slugBadge}>/{slug}</div>
+        </div>
 
-      <div className={s.channelsList}>
-        {channels.map((channel) => {
-          const url = buildUrl(channel);
-          const Icon = channel.icon;
+        <div className={s.overviewGrid}>
+          <div className={s.infoCard}>
+            <span className={s.infoLabel}>Link base</span>
+            <code className={s.infoValue}>{`${baseUrl}/solicitud/${slug}`}</code>
+          </div>
+          <div className={s.infoCard}>
+            <span className={s.infoLabel}>Tracking</span>
+            <code className={s.infoValue}>origen + utm_source + utm_medium</code>
+          </div>
+        </div>
+      </section>
 
-          return (
-            <article key={channel.id} className={s.channelCard}>
-              <div className={s.channelHeader}>
-                <Icon className={s.channelIcon} aria-hidden />
-                <div>
-                  <h3 className={s.channelLabel}>{channel.label}</h3>
-                  <p className={s.channelDescription}>{channel.description}</p>
+      <section className={s.channelsSection}>
+        <div className={s.channelsHeader}>
+          <div>
+            <span className={s.sectionLabel}>Links por canal</span>
+            <h2 className={s.sectionTitle}>Comparte segun contexto real</h2>
+          </div>
+          <p className={s.sectionText}>
+            Cada boton copia URL completa lista para pegar y medir.
+          </p>
+        </div>
+
+        <div className={s.channelsGrid}>
+          {channels.map((channel) => {
+            const url = buildUrl(channel);
+            const Icon = channel.icon;
+            const isCopied = copiedId === channel.id;
+
+            return (
+              <article key={channel.id} className={s.channelCard}>
+                <div className={s.channelHeader}>
+                  <div className={s.channelIconWrap}>
+                    <Icon className={s.channelIcon} aria-hidden />
+                  </div>
+                  <div className={s.channelCopy}>
+                    <div className={s.channelTopRow}>
+                      <h3 className={s.channelLabel}>{channel.label}</h3>
+                      <span className={s.originBadge}>origen={channel.origin}</span>
+                    </div>
+                    <p className={s.channelDescription}>{channel.description}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className={s.linkRow}>
-                <input
-                  type="text"
-                  readOnly
-                  value={url}
-                  className={s.linkInput}
-                  aria-label={`Link para ${channel.label}`}
-                />
+                <div className={s.linkBox}>
+                  <span className={s.linkLabel}>Link listo</span>
+                  <code className={s.linkValue}>{url}</code>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => void handleCopy(channel.id, url)}
                   className={s.copyButton}
                   aria-label={`Copiar link de ${channel.label}`}
                 >
-                  {copiedId === channel.id ? (
-                    <LuCheck className={s.copyIcon} aria-hidden />
-                  ) : (
-                    <LuCopy className={s.copyIcon} aria-hidden />
-                  )}
+                  {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                  {isCopied ? "Copiado" : "Copiar link"}
                 </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       {qrChannel ? (
         <section className={s.qrCard}>
-          <div className={s.qrHeader}>
-            <LuQrCode className={s.qrIcon} aria-hidden />
-            <h3 className={s.qrTitle}>QR para imprimir</h3>
+          <div className={s.qrBody}>
+            <div className={s.qrCopy}>
+              <span className={s.sectionLabel}>QR listo para imprimir</span>
+              <h2 className={s.sectionTitle}>Captacion offline con tracking real</h2>
+              <p className={s.sectionText}>
+                Este QR abre tu landing con <code>origen=qr</code> y{" "}
+                <code>utm_source=qr</code> para medir tarjeta, camioneta, vitrina
+                o letrero.
+              </p>
+
+              <div className={s.qrHints}>
+                <div className={s.qrHint}>
+                  <LuScanLine aria-hidden />
+                  <span>Usa PNG nuevo cada vez que cambies slug o dominio.</span>
+                </div>
+                <div className={s.qrHint}>
+                  <LuLink aria-hidden />
+                  <span>Si compartes QR, no pierdes origen en solicitudes.</span>
+                </div>
+              </div>
+
+              <div className={s.qrActions}>
+                <button
+                  type="button"
+                  onClick={() => void handleCopy("qr", qrUrl)}
+                  className={s.secondaryAction}
+                >
+                  {copiedId === "qr" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                  {copiedId === "qr" ? "Copiado" : "Copiar link QR"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQR(qrUrl)}
+                  className={s.primaryAction}
+                >
+                  <LuDownload aria-hidden />
+                  Descargar QR PNG
+                </button>
+              </div>
+            </div>
+
+            <div className={s.qrPreviewWrap}>
+              <div className={s.qrPreview}>
+                <QRCode
+                  value={qrUrl}
+                  size={208}
+                  data-qr-url={qrUrl}
+                  style={{ maxWidth: "100%", height: "auto" }}
+                />
+              </div>
+            </div>
           </div>
-
-          <p className={s.qrDescription}>
-            Este QR abre tu landing con <code>origen=qr</code> y{" "}
-            <code>utm_source=qr</code> para rastrear bien cada lead.
-          </p>
-
-          <div className={s.qrPreview}>
-            <QRCode
-              value={qrUrl}
-              size={200}
-              data-qr-url={qrUrl}
-              style={{ maxWidth: "100%", height: "auto" }}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleDownloadQR(qrUrl)}
-            className={s.downloadButton}
-          >
-            <LuDownload aria-hidden />
-            Descargar QR (PNG)
-          </button>
         </section>
       ) : null}
     </div>

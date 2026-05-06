@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 type ChannelConfig = {
   id: string;
@@ -14,8 +15,7 @@ type ChannelConfig = {
 export function useLeadChannels() {
   const { profile } = useOrganizationProfile();
   const slug = profile?.solicitudPublicaSlug;
-  const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
+  const baseUrl = resolvePublicAppUrl();
 
   const buildUrl = useCallback(
     (source: string, medium: string, origin: string) => {

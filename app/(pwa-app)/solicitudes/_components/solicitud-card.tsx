@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import {
-  LuCheck,
   LuCopy,
   LuEllipsisVertical,
   LuFilePlus2,
@@ -44,7 +43,6 @@ type SolicitudCardProps = {
   filterLabels: Record<EstadoSolicitudContacto, string>;
   stateBadgeClasses: Record<EstadoSolicitudContacto, string>;
   onCreateQuote: (solicitud: SolicitudContacto) => void;
-  onMarkContacted: (solicitud: SolicitudContacto) => void;
   onToggleMenu: (solicitudId: string) => void;
   onUpdateStatus: (id: string, estado: EstadoSolicitudContacto) => Promise<void>;
   onCopyContact: (value: string) => Promise<void>;
@@ -59,7 +57,6 @@ export const SolicitudCard = memo(function SolicitudCard({
   filterLabels,
   stateBadgeClasses,
   onCreateQuote,
-  onMarkContacted,
   onToggleMenu,
   onUpdateStatus,
   onCopyContact,
@@ -101,33 +98,12 @@ export const SolicitudCard = memo(function SolicitudCard({
       <div className={s.messageBubble}>&ldquo;{item.message}&rdquo;</div>
 
       <div className={s.cardActions}>
-        <button
-          type="button"
-          className={s.primaryAction}
-          onClick={() => onCreateQuote(item.solicitud)}
-        >
-          <LuFilePlus2 aria-hidden />
-          Crear cotizacion
-        </button>
-
-        {item.solicitud.estado === "nueva" ? (
-          <button
-            type="button"
-            className={s.secondaryAction}
-            onClick={() => onMarkContacted(item.solicitud)}
-            disabled={isUpdating}
-          >
-            <LuCheck aria-hidden />
-            Marcar contactada
-          </button>
-        ) : null}
-
         {item.whatsappUrl ? (
           <a
             href={item.whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={s.whatsappAction}
+            className={`${s.primaryAction} ${s.primaryWhatsappAction}`}
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -137,15 +113,28 @@ export const SolicitudCard = memo(function SolicitudCard({
           </a>
         ) : null}
 
-        {item.contactLabel && item.contactHref ? (
+        <button
+          type="button"
+          className={
+            item.whatsappUrl
+              ? `${s.secondaryAction} ${s.secondaryBlueAction}`
+              : s.primaryAction
+          }
+          onClick={() => onCreateQuote(item.solicitud)}
+        >
+          <LuFilePlus2 aria-hidden />
+          Crear cotizacion
+        </button>
+
+        {!item.whatsappUrl && item.contactLabel && item.contactHref ? (
           <a href={item.contactHref} className={s.iconAction}>
             {item.contactIcon === "phone" ? <LuPhone aria-hidden /> : <LuMail aria-hidden />}
           </a>
-        ) : (
+        ) : !item.whatsappUrl ? (
           <button type="button" className={s.iconAction} disabled>
             <LuPhone aria-hidden />
           </button>
-        )}
+        ) : null}
 
         <div className={s.menuWrap}>
           <button

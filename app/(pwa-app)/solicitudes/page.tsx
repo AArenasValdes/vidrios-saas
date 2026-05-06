@@ -1,8 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LuArrowUpRight, LuCheck, LuChevronRight, LuCopy, LuInbox } from "react-icons/lu";
+import {
+  LuArrowUpRight,
+  LuCheck,
+  LuChevronRight,
+  LuCopy,
+  LuInbox,
+  LuQrCode,
+} from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -15,6 +23,7 @@ import type {
   SolicitudContacto,
 } from "@/features/solicitudes/types/solicitud-contacto";
 import { formatChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { relativeTime } from "@/utils/relative-time";
 import { SolicitudCard } from "./_components/solicitud-card";
 import s from "./page.module.css";
@@ -153,10 +162,7 @@ function buildPublicRequestUrl(slug: string | null | undefined) {
     return null;
   }
 
-  const baseUrl =
-    typeof window !== "undefined" ? window.location.origin : "https://ventorap.cl";
-
-  return `${baseUrl}/solicitud/${slug.trim()}`;
+  return `${resolvePublicAppUrl()}/solicitud/${slug.trim()}`;
 }
 
 function formatSolicitudContact(value: string | null) {
@@ -181,7 +187,7 @@ function buildWhatsappMessageUrl(phone: string, name: string, empresaNombre: str
   }
 
   const message = `Hola ${name}, recibimos tu solicitud en ${empresaNombre}. Te contacto para revisar los detalles y preparar tu cotizacion.`;
-  return `https://wa.me/56${cleanedPhone}?text=${encodeURIComponent(message)}`;
+  return `https://wa.me/${cleanedPhone.replace(/^\+/, "")}?text=${encodeURIComponent(message)}`;
 }
 
 function getInitials(value: string) {
@@ -266,6 +272,11 @@ export default function SolicitudesPage() {
         `Quiero consultar por ${
           solicitud.tipoTrabajo || AYUDA_LABEL[solicitud.ayuda] || "este trabajo"
         }.`;
+      const contactIcon: "phone" | "mail" | null = telefonoContacto
+        ? "phone"
+        : emailContacto
+          ? "mail"
+          : null;
 
       return {
         solicitud,
@@ -283,7 +294,7 @@ export default function SolicitudesPage() {
           : emailContacto
             ? `mailto:${emailContacto}`
             : null,
-        contactIcon: telefonoContacto ? "phone" : emailContacto ? "mail" : null,
+        contactIcon,
         originLabel,
         message,
         whatsappUrl: telefonoContacto
@@ -495,6 +506,10 @@ export default function SolicitudesPage() {
               Ver pagina
             </button>
           )}
+          <Link href="/solicitudes/canales" className={`${s.heroActionSecondary} ${s.heroActionWide}`} prefetch={false}>
+            <LuQrCode aria-hidden />
+            Canales y QR
+          </Link>
         </div>
       </PremiumPageSection>
 
@@ -612,13 +627,10 @@ export default function SolicitudesPage() {
               item={item}
               isUpdating={updatingSolicitudId === item.solicitud.id}
               menuOpen={menuSolicitudId === item.solicitud.id}
-              stateOptions={SOLICITUD_STATE_OPTIONS}
-              filterLabels={FILTRO_LABELS}
-              stateBadgeClasses={ESTADO_BADGE_CLASS}
+                stateOptions={SOLICITUD_STATE_OPTIONS}
+                filterLabels={FILTRO_LABELS}
+                stateBadgeClasses={ESTADO_BADGE_CLASS}
                 onCreateQuote={handleCreateQuoteFromSolicitud}
-                onMarkContacted={(solicitud) =>
-                  void handleUpdateStatus(solicitud.id, "contactada")
-                }
                 onToggleMenu={handleToggleMenu}
                 onUpdateStatus={handleUpdateStatus}
               onCopyContact={handleCopyContact}

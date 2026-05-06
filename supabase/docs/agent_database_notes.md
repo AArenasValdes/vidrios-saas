@@ -23,20 +23,19 @@ Si se detecta una diferencia entre el código y `current_schema.sql`, reportarla
 
 ### Tablas
 
-- Nombres en **español** para dominio de negocio: `cotizaciones`, `clients`, `solicitudes_contacto`, `historial_precios`.
+- Nombres en **español** para dominio de negocio: `cotizaciones`, `solicitudes_contacto`, `historial_precios`.
 - Nombres en **inglés** para infraestructura y legado técnico: `web_push_subscriptions`, `line_glass_compatibility`, `quote_item_breakdown`, `configuration_materials`.
-- Mezcla heredada: `clients` (inglés), `projects` (inglés), `users` (inglés) coexisten con `cotizaciones` (español), `solicitudes_contacto` (español).
+- Mezcla heredada: `clients`, `projects` y `users` coexisten con `cotizaciones` y `solicitudes_contacto`.
 
 ### Columnas
 
 - **Español** por defecto: `nombre`, `correo`, `telefono`, `direccion`, `creado_en`, `actualizado_en`, `eliminado_en`, `proyecto_id`, `cliente_id`.
 - **Inglés** para tablas técnicas: `endpoint`, `p256dh`, `auth`, `subscription`, `is_active`, `created_at`, `updated_at`, `last_seen_at`, `glass_material_id`, `system_line_id`.
-- Mezcla dentro de una misma tabla: `cotizacion_items` tiene `creado_en` (español) y `created_at` no, pero `quote_item_breakdown` usa `creado_en` (español).
 
 ### Constraint names
 
-- **Mezcla español/inglés**: `quotes_pkey`, `quote_items_pkey` vs `cotizacion_code_counters_pkey`, `solicitudes_contacto_pkey`.
-- FKs: algunas usan `organization_id` (`clients_organization_id_fkey`), otras usan `organizacion_id` (`historial_precios_organizacion_id_fkey`).
+- Mezcla heredada: `quotes_pkey`, `quote_items_pkey` vs `cotizacion_code_counters_pkey`, `solicitudes_contacto_pkey`.
+- Algunas FKs usan `organization_id`, otras `organizacion_id`.
 
 ### Secuencias
 
@@ -44,7 +43,7 @@ Si se detecta una diferencia entre el código y `current_schema.sql`, reportarla
 
 ### Regla práctica
 
-- Para nuevas tablas/columnas: usar **español** para dominio de negocio, **inglés** solo si es infraestructura pura.
+- Para nuevas tablas/columnas: usar **español** para dominio de negocio e **inglés** solo si es infraestructura pura.
 - No renombrar lo existente sin migración explícita.
 - Mantener consistencia dentro de una misma tabla.
 
@@ -57,15 +56,15 @@ Si se detecta una diferencia entre el código y `current_schema.sql`, reportarla
 - **Toda tabla operativa** debe tener `organization_id` bigint.
 - **Toda query** debe filtrar por `organization_id`.
 - Las tablas sin `organization_id` son catálogos globales: `product_types`, `material_types`, `formula_variables`.
-- Las tablas con `organization_id` nullable son catálogos mixtos (global + por org): `system_lines`, `system_configurations`. `NULL` = visible para todas las orgs.
+- Las tablas con `organization_id` nullable son catálogos mixtos: `system_lines`, `system_configurations`.
 
 ### Reglas estrictas
 
 1. **Nunca hacer una query que cruce organizaciones.** Siempre filtrar por `organization_id` del usuario autenticado.
-2. **Nunca exponer datos de otra org** via API, hooks, services o repositories.
+2. **Nunca exponer datos de otra org** vía API, hooks, services o repositories.
 3. **Todo repository** debe recibir `organization_id` como parámetro o derivarlo del contexto de autenticación.
 4. **Las páginas no importan repositories directo.** Flujo: `page → hook → service → repository → Supabase`.
-5. **`service_role` salta RLS.** Solo usar para operaciones server-side que necesiten cruzar orgs (ej: funciones de administración interna).
+5. **`service_role` salta RLS.** Solo usar para operaciones server-side que necesiten cruzar orgs.
 
 ### Casos especiales
 
@@ -77,31 +76,30 @@ Si se detecta una diferencia entre el código y `current_schema.sql`, reportarla
 ## Reglas sobre migrations
 
 1. **No modificar migraciones ya aplicadas.** Crear una nueva migración.
-2. **No borrar tablas legacy por inercia.** Si una tabla técnica está dormida, dejarla. No reintroducir lógica nueva en ella.
-3. **Toda nueva tabla en `public` debe tener RLS.** El event trigger `rls_auto_enable` lo hace automáticamente, pero verificar.
-4. **Toda nueva tabla operativa debe tener `organization_id`.** Incluir FK hacia `organizations.id`.
-5. **Toda nueva tabla operativa debe tener `eliminado_en`.** Soft delete, nunca hard delete desde la app.
+2. **No borrar tablas legacy por inercia.** Si una tabla técnica está dormida, dejarla.
+3. **Toda nueva tabla en `public` debe tener RLS.**
+4. **Toda nueva tabla operativa debe tener `organization_id`.**
+5. **Toda nueva tabla operativa debe tener `eliminado_en`.** Soft delete.
 6. **Incluir `creado_en` y `actualizado_en`** con defaults apropiados.
-7. **Los nombres de FK deben usar `organization_id`**, no `organizacion_id`. Ver inconsistencia documentada.
-8. **Verificar FKs duplicadas.** El schema actual tiene FKs dobles en varias tablas. No replicar este patrón en nuevas migraciones.
+7. **Los nombres de FK deben usar `organization_id`**, no `organizacion_id`.
+8. **Verificar FKs duplicadas.** El schema actual ya tiene varias.
 
 ---
 
 ## Reglas sobre RLS
 
 1. **RLS siempre habilitado.** Toda tabla en `public` debe tener `ENABLE ROW LEVEL SECURITY`.
-2. **Toda tabla operativa necesita policies.** RLS sin policies = tabla inaccesible desde el cliente.
-3. **Usar `get_org_id()` como mecanismo principal.** No inventar subqueries alternativos. La función centraliza la lógica de resolución de org.
-4. **Excepción justificada:** Si la policy necesita lógica diferente (ej: `organization_profile` con restricción a `authenticated`), documentar por qué se desvía del patrón.
+2. **Toda tabla operativa necesita policies.** RLS sin policies = tabla inaccesible desde cliente.
+3. **Usar `get_org_id()` como mecanismo principal.**
+4. **Excepción justificada:** si una policy usa lógica distinta, documentar por qué.
 5. **Tablas de catálogo global** deben tener policy SELECT con `true` o con `organization_id IS NULL OR organization_id = get_org_id()`.
-6. **No dar grants `ALL` a `anon`** sin considerar el impacto. Evaluar si `anon` realmente necesita escribir.
-7. **Verificar que `solicitudes_contacto` tenga policies para `anon` INSERT.** El formulario público lo necesita.
+6. **No dar grants `ALL` a `anon`** sin considerar impacto.
+7. **Verificar que `solicitudes_contacto` mantenga policy INSERT para `anon`.** El formulario público lo necesita.
 
 ### Tablas sin policies que requieren atención
 
 Ver detalle en `rls_policies.md`. Las más urgentes:
 
-- `solicitudes_contacto` — bloquea el flujo principal de captación de leads.
 - `web_push_subscriptions` — bloquea notificaciones push.
 - `quote_item_breakdown` — bloquea visualización de breakdowns.
 - `material_types` — bloquea listado de tipos de material.
@@ -112,10 +110,10 @@ Ver detalle en `rls_policies.md`. Las más urgentes:
 ## Reglas sobre `organization_id`
 
 1. **Tipo:** `bigint NOT NULL` en tablas operativas. `bigint` nullable en catálogos mixtos.
-2. **FK:** Siempre hacia `organizations.id`. No repetir el error de `web_push_subscriptions`, `cotizacion_code_counters`, `system_lines` y `system_configurations` que no tienen FK formal.
-3. **Naming:** Siempre `organization_id`, nunca `organizacion_id`. La FK `historial_precios_organizacion_id_fkey` es un bug de naming documentado.
-4. **RLS:** Toda policy de aislamiento usa `organization_id = get_org_id()` como base.
-5. **Índices:** Toda tabla con `organization_id` debe tener índice btree sobre esa columna. Preferir índices compuestos `(organization_id, ...)` con partial WHERE `eliminado_en IS NULL` para queries activas.
+2. **FK:** Siempre hacia `organizations.id`.
+3. **Naming:** Siempre `organization_id`, nunca `organizacion_id`.
+4. **RLS:** Toda policy de aislamiento usa `organization_id = get_org_id()`.
+5. **Índices:** Toda tabla con `organization_id` debe tener índice btree; preferir índices compuestos para queries activas.
 
 ---
 
@@ -130,7 +128,7 @@ Ver detalle en `rls_policies.md`. Las más urgentes:
 | INC-5 | `cotizacion_code_counters` sin FK para `organization_id` | Baja | Agregar FK en migración futura |
 | INC-6 | `system_lines` y `system_configurations` sin FK para `organization_id` | Baja | Agregar FK nullable en migración futura |
 | INC-7 | Nombres de secuencias en inglés vs tablas en español | Baja | No cambiar, documentar |
-| INC-8 | `solicitudes_contacto` sin policies RLS | Crítica | Agregar policies urgente |
+| INC-8 | `solicitudes_contacto` ya tiene policies base, pero falta validación fina de endurecimiento y smoke test real de captación | Media | Verificar flujo público + dashboard con usuarios reales |
 | INC-9 | `web_push_subscriptions` sin policies RLS | Alta | Agregar policies |
 | INC-10 | `quote_item_breakdown` sin policies RLS | Alta | Agregar policies |
 | INC-11 | `material_types` y `formula_variables` sin policies RLS | Media | Agregar policy SELECT |
@@ -141,8 +139,6 @@ Ver detalle en `rls_policies.md`. Las más urgentes:
 ---
 
 ## Funciones database existentes
-
-No duplicar lógica que ya existe:
 
 | Función | Uso | No hacer |
 |---|---|---|
@@ -157,8 +153,8 @@ No duplicar lógica que ya existe:
 
 - **Borrar = `eliminado_en: timestamp`**. Nunca `DELETE FROM`.
 - **Queries activas filtran `.is("eliminado_en", null)`**.
-- **Hard delete solo via `admin_purgar_clientes_eliminados`** con retención de 90 días por defecto.
-- **Los índices parciales** usan `WHERE eliminado_en IS NULL` para optimizar queries activas.
+- **Hard delete solo vía `admin_purgar_clientes_eliminados`** con retención de 90 días por defecto.
+- **Los índices parciales** usan `WHERE eliminado_en IS NULL`.
 
 ---
 

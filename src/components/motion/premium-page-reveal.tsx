@@ -6,7 +6,15 @@ import { motion, useReducedMotion } from "framer-motion";
 type PremiumRevealProps = {
   children: ReactNode;
   className?: string;
-} & HTMLAttributes<HTMLDivElement>;
+} & Omit<
+  HTMLAttributes<HTMLDivElement>,
+  | "onAnimationEnd"
+  | "onAnimationIteration"
+  | "onAnimationStart"
+  | "onDrag"
+  | "onDragEnd"
+  | "onDragStart"
+>;
 
 function joinClassNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ");

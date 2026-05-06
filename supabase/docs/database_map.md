@@ -250,6 +250,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `utm_medium` | text | |
 | `utm_campaign` | text | |
 | `source_url` | text | |
+| `contactada_at` | timestamptz | Timestamp comercial de primer contacto |
 | `ip` | text | |
 | `user_agent` | text | |
 | `creado_en` | timestamptz | |
@@ -257,6 +258,9 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 **PK:** `id`
 **FK salientes:** `organization_id` → `organizations.id` ON DELETE CASCADE
+**Índices notables:**
+- `(organization_id, creado_en DESC)` para inbox por empresa
+- `(organization_id, contactada_at DESC)` para seguimiento comercial
 
 ---
 
@@ -278,8 +282,13 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `modo_precio_preferido` | text NOT NULL | Default: `margen` |
 | `margen_defecto` | numeric | Default: 100 |
 | `solicitud_publica_slug` | text | UNIQUE parcial lower() WHERE no vacío |
+| `solicitud_publica_descripcion_corta` | text | Copy principal de mini-landing |
 | `solicitud_publica_valor` | text | |
+| `solicitud_publica_mensaje_confianza` | text | Refuerzo comercial / confianza |
 | `solicitud_publica_privacidad` | text | |
+| `solicitud_publica_horario_desde` | text | Inicio horario comercial |
+| `solicitud_publica_horario_hasta` | text | Fin horario comercial |
+| `solicitud_publica_dias_atencion` | text | CSV de días 0-6 para ON/OFF |
 | `creado_en` | timestamptz | |
 | `actualizado_en` | timestamptz | |
 

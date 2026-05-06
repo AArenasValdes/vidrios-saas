@@ -662,8 +662,13 @@ CREATE TABLE IF NOT EXISTS "public"."organization_profile" (
     "modo_precio_preferido" "text" DEFAULT 'margen'::"text" NOT NULL,
     "margen_defecto" numeric DEFAULT 100,
     "solicitud_publica_slug" "text",
+    "solicitud_publica_descripcion_corta" "text",
     "solicitud_publica_valor" "text",
-    "solicitud_publica_privacidad" "text"
+    "solicitud_publica_mensaje_confianza" "text",
+    "solicitud_publica_privacidad" "text",
+    "solicitud_publica_horario_desde" "text",
+    "solicitud_publica_horario_hasta" "text",
+    "solicitud_publica_dias_atencion" "text"
 );
 
 
@@ -698,11 +703,31 @@ COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_slug" IS 'I
 
 
 
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_descripcion_corta" IS 'Descripcion comercial breve visible en la landing publica /solicitud/[empresa].';
+
+
+
 COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_valor" IS 'Mensaje breve que explica que obtiene el prospecto al dejar su solicitud.';
 
 
 
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_mensaje_confianza" IS 'Mensaje breve de confianza para reforzar que la solicitud queda registrada y sera respondida.';
+
+
+
 COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_privacidad" IS 'Mensaje breve de privacidad para la solicitud publica de la organizacion.';
+
+
+
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_horario_desde" IS 'Hora de inicio de atencion comercial mostrada en la landing publica.';
+
+
+
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_horario_hasta" IS 'Hora de termino de atencion comercial mostrada en la landing publica.';
+
+
+
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_dias_atencion" IS 'Dias de atencion comercial de la landing publica, guardados como CSV de 0 a 6.';
 
 
 
@@ -850,6 +875,7 @@ CREATE TABLE IF NOT EXISTS "public"."solicitudes_contacto" (
     "utm_medium" "text",
     "utm_campaign" "text",
     "source_url" "text",
+    "contactada_at" timestamp with time zone,
     CONSTRAINT "solicitudes_contacto_ayuda_check" CHECK (("ayuda" = ANY (ARRAY['demo'::"text", 'cotizacion'::"text", 'ventas'::"text"]))),
     CONSTRAINT "solicitudes_contacto_contexto_check" CHECK (("contexto" = ANY (ARRAY['landing'::"text", 'empresa-publica'::"text"]))),
     CONSTRAINT "solicitudes_contacto_estado_check" CHECK (("estado" = ANY (ARRAY['nueva'::"text", 'contactada'::"text", 'cerrada'::"text", 'descartada'::"text"])))
@@ -880,6 +906,10 @@ COMMENT ON COLUMN "public"."solicitudes_contacto"."tipo_trabajo" IS 'Trabajo que
 
 
 COMMENT ON COLUMN "public"."solicitudes_contacto"."contexto" IS 'Origen funcional del lead: landing o empresa-publica.';
+
+
+
+COMMENT ON COLUMN "public"."solicitudes_contacto"."contactada_at" IS 'Fecha en que el equipo marco el lead como contactado.';
 
 
 
@@ -1256,6 +1286,10 @@ CREATE INDEX "solicitudes_contacto_creado_en_idx" ON "public"."solicitudes_conta
 
 
 
+CREATE INDEX "solicitudes_contacto_organization_id_contactada_at_idx" ON "public"."solicitudes_contacto" USING "btree" ("organization_id", "contactada_at" DESC);
+
+
+
 CREATE INDEX "solicitudes_contacto_organization_id_creado_en_idx" ON "public"."solicitudes_contacto" USING "btree" ("organization_id", "creado_en" DESC);
 
 
@@ -1629,6 +1663,18 @@ ALTER TABLE "public"."quote_item_breakdown" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."solicitudes_contacto" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "solicitudes_contacto_insert_public" ON "public"."solicitudes_contacto" FOR INSERT TO "anon", "authenticated" WITH CHECK ((("estado" = 'nueva'::"text") AND ((("contexto" = 'landing'::"text") AND ("organization_id" IS NULL)) OR (("contexto" = 'empresa-publica'::"text") AND ("organization_id" IS NOT NULL)))));
+
+
+
+CREATE POLICY "solicitudes_contacto_select_own" ON "public"."solicitudes_contacto" FOR SELECT TO "authenticated" USING (("organization_id" = "public"."get_org_id"()));
+
+
+
+CREATE POLICY "solicitudes_contacto_update_own" ON "public"."solicitudes_contacto" FOR UPDATE TO "authenticated" USING (("organization_id" = "public"."get_org_id"())) WITH CHECK (("organization_id" = "public"."get_org_id"()));
+
+
+
 ALTER TABLE "public"."system_configurations" ENABLE ROW LEVEL SECURITY;
 
 
@@ -1951,9 +1997,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
 
 
 
