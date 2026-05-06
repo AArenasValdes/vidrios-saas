@@ -1,6 +1,22 @@
 # Plan MVP - Presupuestos por Componentes
 
-Documento operativo para convertir el proyecto desde el cotizador tecnico hacia el nuevo MVP.
+## Estado de este documento
+
+**Documento historico de la capa de cotizaciones.**
+
+No usar este archivo como norte principal de producto.
+
+El norte vigente esta en:
+- `Agents.md`
+- `docs/contexto-rapido-web.md`
+- `docs/ia-handoff.md`
+
+Lectura correcta hoy:
+- Ventora ya no se define primero como cotizador
+- Ventora se define primero como sistema de captacion y cierre de leads
+- este documento solo sirve para entender decisiones tecnicas de la capa de cotizaciones
+
+Documento operativo del pivot anterior, cuando el foco era convertir el proyecto desde el cotizador tecnico hacia el MVP de presupuestos.
 
 ---
 

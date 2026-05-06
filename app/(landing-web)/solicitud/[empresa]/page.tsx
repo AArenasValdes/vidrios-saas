@@ -13,6 +13,7 @@ type PageProps = {
   params: Promise<{
     empresa: string;
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const dynamic = "force-dynamic";
@@ -61,8 +62,9 @@ function resolveAvailability() {
   return inBusinessDay && inBusinessHours;
 }
 
-export default async function SolicitudEmpresaPage({ params }: PageProps) {
+export default async function SolicitudEmpresaPage({ params, searchParams }: PageProps) {
   const { empresa } = await params;
+  const sp = await searchParams;
   const config = await solicitudesContactoService.getPublicRequestConfig(empresa);
 
   if (!config) {
@@ -122,6 +124,10 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           empresaEmail={config.empresaEmail}
           privacidad={config.solicitudPublicaPrivacidad}
           isAvailable={isAvailable}
+          utmSource={typeof sp.utm_source === "string" ? sp.utm_source : undefined}
+          utmMedium={typeof sp.utm_medium === "string" ? sp.utm_medium : undefined}
+          utmCampaign={typeof sp.utm_campaign === "string" ? sp.utm_campaign : undefined}
+          sourceUrl={typeof sp.source_url === "string" ? sp.source_url : undefined}
         />
       </div>
     </main>

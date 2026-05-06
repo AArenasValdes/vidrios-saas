@@ -1,14 +1,7 @@
 import type { CotizacionWorkflowRecord } from "@/types/cotizacion-workflow";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { formatCurrency } from "@/utils/formatCurrency";
 
 function extractValidezDays(validez: string) {
   const match = validez.match(/\d+/);
@@ -99,7 +92,7 @@ export function buildCotizacionWhatsappMessage(
   const pdfUrl = options.pdfUrl ?? null;
   const deliveryMode = options.deliveryMode ?? (pdfUrl ? "link" : "message");
   const quoteContext = record.obra?.trim() ? ` para ${record.obra.trim()}.` : ".";
-  const validezDays = extractValidezDays(record.validez);
+  const validezDays = extractValidezDays(record.validez ?? "15 dias");
 
   const publicLinkBlock =
     deliveryMode === "attachment"
@@ -120,7 +113,7 @@ export function buildCotizacionWhatsappMessage(
     "",
     `Te enviamos tu cotizacion${quoteContext}`,
     "",
-    `Total: ${formatCurrency(record.total)}`,
+    `Total: ${formatCurrency(record.total ?? 0)}`,
     `Vigencia: ${validezDays} dias`,
     "",
     publicLinkBlock,

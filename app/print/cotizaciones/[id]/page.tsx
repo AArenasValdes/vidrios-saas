@@ -17,11 +17,9 @@ import {
   exportCotizacionElementToPdf,
   formatCotizacionPdfError,
   requiresPdfOpenFallback,
-  shareCotizacionPdf,
 } from "@/utils/cotizacion-pdf";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
-import { getCotizacionShareExperience } from "@/utils/share-capabilities";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -325,7 +323,6 @@ export default function CotizacionPrintPage() {
   const [sheetPreviewScale, setSheetPreviewScale] = useState(1);
   const [sheetPreviewWidth, setSheetPreviewWidth] = useState(0);
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
-  const [shareExperience] = useState(getCotizacionShareExperience);
   const shareIntent = searchParams.get("intent");
   const previewMode = searchParams.get("preview");
   const fromWizard = searchParams.get("from") === "wizard";
@@ -473,26 +470,10 @@ export default function CotizacionPrintPage() {
     : null;
   const isAppleMobile =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isAndroidMobile =
-    typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
-  const shouldSharePdfToWhatsapp = shareExperience.canSharePdf && isAndroidMobile;
-  const shouldWarmPdf =
-    wasJustCreated ||
-    shareIntent === "warm" ||
-    (shareIntent === "whatsapp" && shouldSharePdfToWhatsapp);
-  const whatsappActionLabel = shouldSharePdfToWhatsapp
-    ? "Enviar PDF por WhatsApp"
-    : "Enviar link por WhatsApp";
+  const shouldWarmPdf = wasJustCreated || shareIntent === "warm";
+  const whatsappActionLabel = "Enviar link por WhatsApp";
   const shareHintText =
-    shareIntent === "whatsapp"
-      ? shouldSharePdfToWhatsapp
-        ? "En Android, toca 'Enviar PDF por WhatsApp' para adjuntar el archivo. Si el sistema no lo permite, abrimos WhatsApp con el link publico como respaldo."
-        : "Toca 'Enviar link por WhatsApp' para abrir el mensaje listo con el enlace publico de la cotizacion."
-      : isAppleMobile
-        ? "En iPhone, el boton abre el archivo PDF para que luego puedas guardarlo o compartirlo desde Safari."
-        : shouldSharePdfToWhatsapp
-        ? "En Android puedes enviar el PDF por WhatsApp desde aqui. Si el telefono no deja adjuntar el archivo, abrimos el mensaje de respaldo."
-        : shareExperience.helperText;
+    "Para mantener aprobacion y rechazo rastreables, este boton abre WhatsApp con el link publico de la cotizacion. Si ademas necesitas archivo, usa Descargar PDF.";
   const companyAddressLine = [
     organizationProfile.empresaDireccion,
     organizationProfile.empresaTelefono,
@@ -692,7 +673,7 @@ export default function CotizacionPrintPage() {
 
       if (downloadResult === "failed") {
         setExportError(
-          "No pudimos abrir el PDF en este telefono. Intenta nuevamente y, si sigue fallando, usa Compartir por WhatsApp para abrir el archivo final."
+          "No pudimos abrir el PDF en este telefono. Intenta nuevamente y, si sigue fallando, envia el link por WhatsApp y comparte el archivo manualmente."
         );
       } else if (
         downloadResult !== "downloaded" &&
@@ -714,52 +695,25 @@ export default function CotizacionPrintPage() {
     try {
       setIsExporting(true);
       setExportError(null);
+      setCopyFeedback(null);
       setShowWhatsappFallbackActions(false);
 
-      if (!shouldSharePdfToWhatsapp) {
-        if (!whatsappUrl) {
-          setExportError("El cliente no tiene un telefono valido para WhatsApp.");
-          return;
-        }
-
-        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-        markQuoteAsSentInBackground();
+      if (!whatsappUrl) {
+        setExportError("El cliente no tiene un telefono valido para WhatsApp.");
         return;
       }
 
-      const { blob, file } = await buildPdfFile();
-      const shareText = visibleCotizacion
-        ? buildCotizacionWhatsappMessage(visibleCotizacion, {
-            approvalUrl,
-            deliveryMode: "attachment",
-          })
-        : whatsappMessage;
-      const shared = await shareCotizacionPdf({
-        file,
-        title: visibleCotizacion?.codigo ?? "Cotizacion",
-        text: shareText,
-      });
+      const openedWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
-      if (!shared) {
+      if (!openedWindow) {
         setShowWhatsappFallbackActions(true);
-        downloadPdfBlob(blob, exportFileName);
-
-        const fallbackWhatsappUrl = visibleCotizacion
-          ? buildCotizacionWhatsappUrl(visibleCotizacion, {
-              approvalUrl,
-              deliveryMode: "message",
-            })
-          : whatsappUrl;
-
-        if (fallbackWhatsappUrl) {
-          window.open(fallbackWhatsappUrl, "_blank", "noopener,noreferrer");
-          markQuoteAsSentInBackground();
-        }
-
         setExportError(
-          "Tu navegador actual no pudo adjuntar el PDF directo a WhatsApp desde la web. Dejamos el archivo descargado o abierto y abrimos el mensaje con el link publico como respaldo. En Chrome Android o con la PWA instalada suele funcionar mejor."
+          "No pudimos abrir WhatsApp desde este navegador. Usa Copiar mensaje o Abrir WhatsApp como respaldo."
         );
+        return;
       }
+
+      markQuoteAsSentInBackground();
     } catch (error) {
       setShowWhatsappFallbackActions(true);
       setExportError(formatCotizacionPdfError(error));
@@ -767,13 +721,7 @@ export default function CotizacionPrintPage() {
       setIsExporting(false);
     }
   }, [
-    approvalUrl,
-    buildPdfFile,
     markQuoteAsSentInBackground,
-    visibleCotizacion,
-    exportFileName,
-    shouldSharePdfToWhatsapp,
-    whatsappMessage,
     whatsappUrl,
   ]);
 
@@ -802,7 +750,14 @@ export default function CotizacionPrintPage() {
       return;
     }
 
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    const openedWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+
+    if (!openedWindow) {
+      setShowWhatsappFallbackActions(true);
+      setExportError("No pudimos abrir WhatsApp automaticamente en este navegador.");
+      return;
+    }
+
     markQuoteAsSentInBackground();
   }, [markQuoteAsSentInBackground, whatsappUrl]);
 

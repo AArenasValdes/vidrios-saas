@@ -72,6 +72,10 @@ export async function POST(
       contacto?: string;
       tipoTrabajo?: string;
       mensaje?: string;
+      utmSource?: string | null;
+      utmMedium?: string | null;
+      utmCampaign?: string | null;
+      sourceUrl?: string | null;
     };
 
     const solicitud = await solicitudesContactoService.createPublicRequest({
@@ -81,9 +85,13 @@ export async function POST(
       contacto: body.contacto ?? "",
       tipoTrabajo: body.tipoTrabajo ?? "",
       mensaje: body.mensaje ?? "",
-      origen: "solicitud-publica",
-      ip,
+      origen: body.utmSource ?? "solicitud-publica",
+      ip: ip,
       userAgent: request.headers.get("user-agent"),
+      utmSource: body.utmSource,
+      utmMedium: body.utmMedium,
+      utmCampaign: body.utmCampaign,
+      sourceUrl: body.sourceUrl,
     });
 
     return NextResponse.json({ solicitud }, { status: 201 });

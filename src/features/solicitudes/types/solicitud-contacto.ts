@@ -25,6 +25,12 @@ export type SolicitudContacto = {
   userAgent: string | null;
   creadoEn: string | null;
   actualizadoEn: string | null;
+
+  // UTM tracking
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  sourceUrl: string | null;
 };
 
 export type CrearSolicitudContactoInput = {
@@ -36,6 +42,10 @@ export type CrearSolicitudContactoInput = {
   origen?: string;
   ip?: string | null;
   userAgent?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  sourceUrl?: string | null;
 };
 
 export type SolicitudEmpresaPublicaConfig = {
@@ -60,4 +70,8 @@ export type CrearSolicitudEmpresaInput = {
   origen?: string;
   ip?: string | null;
   userAgent?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  sourceUrl?: string | null;
 };

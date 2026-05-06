@@ -14,6 +14,11 @@ type PerfilRow = {
 };
 
 const AUTH_PROFILE_STORAGE_PREFIX = "vidrios-saas:auth-profile:";
+const AUTH_PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type CachedAuthProfile = AuthProfile & {
+  _cachedAt: number;
+};
 
 function getAuthProfileStorageKey(email: string) {
   return `${AUTH_PROFILE_STORAGE_PREFIX}${email.trim().toLowerCase()}`;
@@ -31,7 +36,15 @@ function readAuthProfileFromStorage(email: string) {
       return null;
     }
 
-    return JSON.parse(raw) as AuthProfile;
+    const cached = JSON.parse(raw) as CachedAuthProfile;
+
+    if (Date.now() - (cached._cachedAt ?? 0) > AUTH_PROFILE_CACHE_TTL_MS) {
+      window.sessionStorage.removeItem(getAuthProfileStorageKey(email));
+      return null;
+    }
+
+    const { _cachedAt, ...profile } = cached;
+    return profile as AuthProfile;
   } catch {
     return null;
   }
@@ -43,9 +56,14 @@ function persistAuthProfile(email: string, profile: AuthProfile) {
   }
 
   try {
+    const cached: CachedAuthProfile = {
+      ...profile,
+      _cachedAt: Date.now(),
+    };
+
     window.sessionStorage.setItem(
       getAuthProfileStorageKey(email),
-      JSON.stringify(profile)
+      JSON.stringify(cached)
     );
   } catch {
     return;

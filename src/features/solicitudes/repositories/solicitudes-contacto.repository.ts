@@ -31,6 +31,10 @@ type SolicitudContactoRow = {
   user_agent: string | null;
   creado_en: string | null;
   actualizado_en: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  source_url: string | null;
 };
 
 type SolicitudEmpresaPublicaConfigRow = {
@@ -47,25 +51,7 @@ type SolicitudEmpresaPublicaConfigRow = {
 
 const TABLE_NAME = "solicitudes_contacto";
 const ORGANIZATION_PROFILE_TABLE = "organization_profile";
-const SOLICITUD_SELECT = `
-  id,
-  organization_id,
-  nombre,
-  empresa,
-  correo,
-  telefono,
-  contacto,
-  tipo_trabajo,
-  mensaje,
-  ayuda,
-  contexto,
-  estado,
-  origen,
-  ip,
-  user_agent,
-  creado_en,
-  actualizado_en
-`;
+const SOLICITUD_SELECT = `id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, ip, user_agent, creado_en, actualizado_en, utm_source, utm_medium, utm_campaign, source_url`;
 
 function normalizePublicSlug(value: string | null | undefined) {
   return (value ?? "")
@@ -98,6 +84,10 @@ function mapSolicitudContacto(row: SolicitudContactoRow): SolicitudContacto {
     userAgent: row.user_agent,
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
+    utmSource: row.utm_source,
+    utmMedium: row.utm_medium,
+    utmCampaign: row.utm_campaign,
+    sourceUrl: row.source_url,
   };
 }
 
@@ -171,17 +161,7 @@ export function createSolicitudesContactoRepository(
       const { data, error } = await supabase
         .from(ORGANIZATION_PROFILE_TABLE as never)
         .select(
-          `
-          organization_id,
-          empresa_nombre,
-          empresa_logo_url,
-          empresa_telefono,
-          empresa_email,
-          brand_color,
-          solicitud_publica_slug,
-          solicitud_publica_valor,
-          solicitud_publica_privacidad
-        `
+          `organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_valor, solicitud_publica_privacidad`
         )
         .eq("solicitud_publica_slug", normalizedSlug)
         .maybeSingle();
@@ -202,17 +182,7 @@ export function createSolicitudesContactoRepository(
       const { data: fallbackRows, error: fallbackError } = await supabase
         .from(ORGANIZATION_PROFILE_TABLE as never)
         .select(
-          `
-          organization_id,
-          empresa_nombre,
-          empresa_logo_url,
-          empresa_telefono,
-          empresa_email,
-          brand_color,
-          solicitud_publica_slug,
-          solicitud_publica_valor,
-          solicitud_publica_privacidad
-        `
+          `organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_valor, solicitud_publica_privacidad`
         )
         .ilike("empresa_nombre", `%${fallbackNeedle}%`)
         .limit(12);
@@ -267,6 +237,10 @@ export function createSolicitudesContactoRepository(
           origen: input.origen ?? "landing",
           ip: input.ip ?? null,
           user_agent: input.userAgent ?? null,
+          utm_source: input.utmSource ?? null,
+          utm_medium: input.utmMedium ?? null,
+          utm_campaign: input.utmCampaign ?? null,
+          source_url: input.sourceUrl ?? null,
           actualizado_en: new Date().toISOString(),
         } as never)
         .select(SOLICITUD_SELECT)
@@ -298,6 +272,10 @@ export function createSolicitudesContactoRepository(
           origen: input.origen ?? "solicitud-publica",
           ip: input.ip ?? null,
           user_agent: input.userAgent ?? null,
+          utm_source: input.utmSource ?? null,
+          utm_medium: input.utmMedium ?? null,
+          utm_campaign: input.utmCampaign ?? null,
+          source_url: input.sourceUrl ?? null,
           actualizado_en: new Date().toISOString(),
         } as never)
         .select(SOLICITUD_SELECT)

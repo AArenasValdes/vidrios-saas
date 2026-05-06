@@ -2,6 +2,7 @@ import "server-only";
 
 import webpush, { type RequestOptions } from "web-push";
 
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   webPushSubscriptionsRepository,
   type WebPushSubscriptionsRepository,
@@ -69,6 +70,33 @@ function ensureWebPushConfigured() {
   webpush.setVapidDetails(subject, publicKey, privateKey);
   vapidConfigured = true;
   return true;
+}
+
+async function validateUserBelongsToOrganization(context: AuthPushContext) {
+  const supabase = createAdminClient();
+
+  const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(
+    context.authUserId
+  );
+
+  if (authError || !authUser?.user?.email) {
+    throw new Error("No se pudo validar la identidad del usuario.");
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("organization_id")
+    .ilike("correo", authUser.user.email)
+    .is("eliminado_en", null)
+    .maybeSingle<{ organization_id: string | number }>();
+
+  if (error) {
+    throw new Error("No se pudo validar la pertenencia a la organizacion.");
+  }
+
+  if (!data || String(data.organization_id) !== String(context.organizationId)) {
+    throw new Error("El usuario no pertenece a la organizacion indicada.");
+  }
 }
 
 function buildQuoteDecisionPushPayload(
@@ -179,6 +207,8 @@ export function createWebPushNotificationsService(
       if (!endpoint || !p256dh || !auth) {
         throw new Error("La suscripcion push del dispositivo no es valida.");
       }
+
+      await validateUserBelongsToOrganization(context);
 
       const payload: UpsertWebPushSubscriptionInput = {
         organizationId: context.organizationId,

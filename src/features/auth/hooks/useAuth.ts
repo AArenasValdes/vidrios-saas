@@ -28,12 +28,14 @@ let authStateCache: AuthUserState | null = null;
 let authStatePromise: Promise<AuthUserState> | null = null;
 let authSubscriptionCleanup: (() => void) | null = null;
 let authStateHydratedFromNetwork = false;
+let resolveAuthStateGeneration = 0;
 const authStoreListeners = new Set<() => void>();
 
 export function __resetAuthHookTestState() {
   authStateCache = null;
   authStatePromise = null;
   authStateHydratedFromNetwork = false;
+  resolveAuthStateGeneration = 0;
 
   if (authSubscriptionCleanup) {
     authSubscriptionCleanup();
@@ -149,6 +151,8 @@ function subscribeToAuthStore(listener: () => void) {
 }
 
 async function resolveAuthState() {
+  const currentGeneration = resolveAuthStateGeneration;
+
   if (authStateHydratedFromNetwork && authStateCache && !authStateCache.cargando) {
     return authStateCache;
   }
@@ -162,6 +166,10 @@ async function resolveAuthState() {
       }))
       .catch(() => unauthenticatedState)
       .then((nextState) => {
+        if (resolveAuthStateGeneration !== currentGeneration) {
+          return unauthenticatedState;
+        }
+
         authStateHydratedFromNetwork = true;
         setAuthState(nextState);
         return nextState;
@@ -206,6 +214,7 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    resolveAuthStateGeneration += 1;
     authStatePromise = null;
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();

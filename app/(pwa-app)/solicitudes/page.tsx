@@ -12,6 +12,7 @@ import {
   LuGlobe,
   LuInbox,
   LuMail,
+  LuMessageCircleMore,
   LuPhone,
   LuText,
 } from "react-icons/lu";
@@ -26,7 +27,7 @@ import type {
   SolicitudContacto,
 } from "@/features/solicitudes/types/solicitud-contacto";
 import { formatChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
-
+import { relativeTime } from "@/utils/relative-time";
 import s from "./page.module.css";
 
 const ESTADO_LABELS: Record<EstadoSolicitudContacto, string> = {
@@ -170,6 +171,13 @@ function formatSolicitudContact(value: string | null) {
   }
 
   return `+56 9 ${formatChileMobilePhone(normalizedPhone)}`;
+}
+
+function buildWhatsappMessageUrl(phone: string, name: string, empresaNombre: string) {
+  const cleanedPhone = normalizeChileMobilePhone(phone);
+  if (!cleanedPhone) return null;
+  const message = `Hola ${name}, recibimos tu solicitud en ${empresaNombre}. Te contacto para revisar los detalles y preparar tu cotización.`;
+  return `https://wa.me/56${cleanedPhone}?text=${encodeURIComponent(message)}`;
 }
 
 function getInitials(value: string) {
@@ -561,7 +569,9 @@ export default function SolicitudesPage() {
                     >
                       {ESTADO_LABELS[solicitud.estado]}
                     </span>
-                    <span className={s.dateText}>{formatListDate(solicitud.creadoEn)}</span>
+                    <span className={s.dateText}>
+                    {relativeTime(solicitud.creadoEn)} · {formatListDate(solicitud.creadoEn)}
+                  </span>
                   </div>
                 </div>
 
@@ -586,7 +596,7 @@ export default function SolicitudesPage() {
 
                 <div className={s.messageBubble}>“{mensaje}”</div>
 
-                <div className={s.cardActions}>
+                <div className={s.cardActions} style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     type="button"
                     className={s.primaryAction}
@@ -595,6 +605,22 @@ export default function SolicitudesPage() {
                     <LuFilePlus2 aria-hidden />
                     Crear cotización
                   </button>
+
+                  {telefonoContacto && (() => {
+                    const waUrl = buildWhatsappMessageUrl(telefonoContacto, solicitud.nombre, profile?.empresaNombre ?? "nosotros");
+                    return waUrl ? (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={s.whatsappAction}
+                        onClick={(e) => { e.stopPropagation(); }}
+                      >
+                        <LuMessageCircleMore aria-hidden />
+                        Contactar por WhatsApp
+                      </a>
+                    ) : null;
+                  })()}
 
                   {telefonoContacto ? (
                     <a href={`tel:${telefonoContacto}`} className={s.iconAction}>

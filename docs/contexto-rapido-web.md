@@ -1,56 +1,69 @@
 # Contexto Rapido Ventora
 
-Ventora es un cotizador comercial vertical para vidrios y aluminio. No es un ERP ni un sistema tecnico de ingenieria. El usuario principal es el maestro, taller o instalador que necesita cotizar rapido en terreno con una propuesta clara, un PDF profesional y salida por WhatsApp.
+Ventora ya no debe entenderse como un cotizador tecnico. Hoy es **software comercial para empresas de vidrios y aluminio que captura, centraliza y ayuda a cerrar leads**.
 
-## Lo que ya existe
+Frase clave:
+
+**"Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."**
+
+## Que ya existe
 
 - Login con Supabase y usuario `admin`
+- Solicitudes publicas por empresa en `/solicitud/[empresa]`
+- Tracking `utm_source`, `utm_medium`, `utm_campaign`, `source_url`
+- Generador de links por canal
+- QR descargable como PNG
+- Push al vendedor cuando entra lead
+- Email async para lead nuevo
+- Dashboard de solicitudes con origen y contacto por WhatsApp
 - Clientes
-- Cotizaciones con flujo guiado
-- Sistemas sugeridos y edicion rapida
-- Calculo simple con costo proveedor + margen
-- PDF profesional con branding
-- Compartir por WhatsApp
-- Aprobacion o rechazo publico por link
+- Cotizaciones
+- PDF con branding
+- Aprobacion publica por link
 - Perfil comercial de empresa
-- Push notifications para el maestro
-- Landing publica y base PWA
+- Base PWA
 - Produccion activa en `ventorap.cl`
-- Base de observabilidad tecnica en layout con Vercel Analytics y Speed Insights
 
-## Flujo principal
+## Flujo principal correcto
 
-1. Entra o inicia sesion.
-2. Crea cliente y cotizacion.
-3. El sistema propone un sistema base.
-4. Ajusta solo lo necesario.
-5. Genera PDF y comparte por WhatsApp.
-6. El cliente revisa el link publico y aprueba o rechaza.
+1. Empresa publica su link o QR.
+2. El lead entra desde canal trazable.
+3. Ventora centraliza la solicitud.
+4. El vendedor recibe aviso y responde rapido.
+5. El lead avanza en seguimiento comercial.
+6. Cuando corresponde, se crea cotizacion.
+7. Se cierra por PDF, WhatsApp o link publico.
 
 ## Reglas importantes
 
 - No reintroducir el cotizador tecnico complejo.
-- No convertir esto en ERP, logistica o inventario.
+- No convertir esto en ERP, logistica o produccion.
+- Pensar primero en captacion y conversion.
 - Mantener multi-tenant por `organization_id`.
 - Usar `admin` como rol operativo real del MVP.
-- Cuidar PDF, WhatsApp, aprobacion publica y push como core.
-- Chrome o Edge en desktop es lo recomendado para el maestro.
+- Cuidar solicitudes, origen, notificaciones y WhatsApp como core actual.
+- Cuidar cotizaciones, PDF y aprobacion publica como core de cierre.
+- Chrome o Edge en desktop es lo recomendado.
 - En iPhone, usar Safari y agregar a pantalla de inicio.
-- Brave no es navegador base recomendado para alertas push.
+- Brave no es navegador base recomendado para push.
 
-## Lo que aun falta cerrar o verificar
+## Foco actual
 
-- Validacion real de PWA en dispositivo
-- Guardado de cotizaciones mas robusto; hoy puede quedar estado parcial si falla un paso intermedio
-- Verificacion real de migraciones, bucket `organization-assets` y `SUPABASE_SERVICE_ROLE_KEY`
-- RLS y multi-tenant con usuarios reales
-- Seguimiento del paso 2 en movil; sigue siendo el punto mas sensible de UX
-- Landing y CTA con criterio de salida, no solo visual
-- Encodings rotos heredados en algunas vistas o tests
-- Onboarding comercial y validacion de salida
-- Observabilidad de produccion completa, mas alla de la base tecnica ya integrada
-- Evaluar luego billing, analytics de producto y monitoreo operativo
+- endurecer flujo real de captacion
+- validar UTM, QR, push y email
+- consolidar pipeline comercial de solicitudes
+- mantener cotizacion como herramienta de cierre
+- validar copy y promesa comercial del producto
+
+## No centrar ahora
+
+- multi-sucursal
+- round-robin
+- analytics por vendedor
+- Zapier/Make
+- WhatsApp Business API
+- automatizacion profunda
 
 ## Frase corta para resumir el producto
 
-Ventora ayuda a maestros y talleres a cotizar rapido con sistemas sugeridos, PDF profesional, WhatsApp y seguimiento comercial simple.
+Ventora ayuda a empresas de vidrios y aluminio a capturar leads, ordenarlos y convertirlos en cotizaciones cerradas sin perder conversaciones ni origenes.

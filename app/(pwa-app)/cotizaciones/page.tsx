@@ -20,6 +20,8 @@ import {
 
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
+import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 
 import { CotizacionMobileCard } from "./_components/cotizacion-mobile-card";
 import { CotizacionesFilterFields } from "./_components/cotizaciones-filter-fields";
@@ -181,6 +183,7 @@ export default function CotizacionesPage() {
     isRefreshing,
     isSaving,
     deleteWorkflow,
+    markQuoteAsSent,
     prefetchCotizacionById,
     updateManualResponseStatus,
     loadCotizacionById,
@@ -565,13 +568,25 @@ export default function CotizacionesPage() {
         throw new Error("El cliente no tiene un telefono valido para WhatsApp.");
       }
 
-      router.push(`/print/cotizaciones/${record.id}?intent=whatsapp`);
+      const approvalUrl = record.approvalToken
+        ? buildCotizacionApprovalUrl(record.approvalToken)
+        : null;
+      const whatsappUrl = buildCotizacionWhatsappUrl(record, { approvalUrl });
+
+      if (!whatsappUrl) {
+        throw new Error("No se pudo preparar el enlace de WhatsApp.");
+      }
+
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+      void markQuoteAsSent(String(record.id)).catch(() => {
+        return;
+      });
     } catch (error) {
       window.alert(getErrorMessage(error));
     } finally {
       setSendingId(null);
     }
-  }, [cotizaciones, loadCotizacionById, router]);
+  }, [cotizaciones, loadCotizacionById, markQuoteAsSent]);
 
   if (!isReady) {
     return (
@@ -893,13 +908,13 @@ export default function CotizacionesPage() {
                               <button
                                 className={s.accionBtn}
                                 onClick={() => void handleSendQuote(row.id)}
-                                title="Enviar por WhatsApp"
-                                aria-label="Enviar por WhatsApp"
-                                data-tooltip="Enviar por WhatsApp"
+                                title="Enviar link por WhatsApp"
+                                aria-label="Enviar link por WhatsApp"
+                                data-tooltip="Enviar link por WhatsApp"
                                 type="button"
                                 disabled={row.isSending}
                               >
-                                <span className={s.accionSrOnly}>Enviar por WhatsApp</span>
+                                <span className={s.accionSrOnly}>Enviar link por WhatsApp</span>
                                 <LuSend aria-hidden />
                               </button>
                             ) : (

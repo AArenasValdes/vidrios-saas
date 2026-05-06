@@ -7,6 +7,8 @@ import { LuArrowLeft } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 
 import { CotizacionDetalleMobileView } from "./_components/cotizacion-detalle-mobile-view";
 import { buildCotizacionDetalleMobileViewModel } from "./_components/cotizacion-detalle-mobile-view-model";
@@ -16,8 +18,14 @@ import s from "./page.module.css";
 export default function CotizacionDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { getCotizacionById, loadCotizacionById, isReady, isSaving, deleteWorkflow } =
-    useCotizacionesStore();
+  const {
+    getCotizacionById,
+    loadCotizacionById,
+    markQuoteAsSent,
+    isReady,
+    isSaving,
+    deleteWorkflow,
+  } = useCotizacionesStore();
   const cotizacion = getCotizacionById(params.id);
   const printUrl = `/print/cotizaciones/${params.id}`;
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
@@ -105,8 +113,25 @@ export default function CotizacionDetallePage() {
     }
   };
 
-  const handleOpenWhatsappShare = () => {
-    router.push(`${printUrl}?intent=whatsapp`);
+  const handleOpenWhatsappShare = async () => {
+    if (!cotizacion) {
+      return;
+    }
+
+    const approvalUrl = cotizacion.approvalToken
+      ? buildCotizacionApprovalUrl(cotizacion.approvalToken)
+      : null;
+    const whatsappUrl = buildCotizacionWhatsappUrl(cotizacion, { approvalUrl });
+
+    if (!whatsappUrl) {
+      window.alert("El cliente no tiene un telefono valido para WhatsApp.");
+      return;
+    }
+
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    void markQuoteAsSent(String(cotizacion.id)).catch(() => {
+      return;
+    });
   };
 
   if (isReady && hasResolvedInitialLoad && !cotizacion) {

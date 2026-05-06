@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | Ventora",
   },
   description:
-    "Ventora ayuda a talleres de vidrio y aluminio a cotizar rapido desde el celular y gestionar su operacion comercial.",
+    "Ventora ayuda a empresas de vidrio y aluminio a captar leads, ordenarlos y cerrarlos desde un solo lugar.",
   applicationName: "Ventora",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     title: "Ventora",
     statusBarStyle: "black-translucent",
   },
-  keywords: ["cotizaciones", "vidrios", "aluminio", "taller", "pwa"],
+  keywords: ["leads", "cotizaciones", "vidrios", "aluminio", "crm comercial", "pwa"],
 };
 
 /* viewport-fit=cover requerido para que env(safe-area-inset-*) sea correcto en iPhone con notch / Dynamic Island. */

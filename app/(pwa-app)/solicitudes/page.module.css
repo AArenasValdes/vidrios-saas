@@ -313,17 +313,17 @@
 }
 
 .card {
-  padding: 12px;
+  padding: 16px;
   border-radius: 20px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .cardTop {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 .cardIdentity {
@@ -434,10 +434,47 @@
 }
 
 .cardActions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 46px 42px;
-  gap: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
+}
+
+.cardActions > .primaryAction {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.cardActions > .whatsappAction {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.cardActions > .iconAction {
+  flex: 0 0 46px;
+}
+
+@media (min-width: 721px) {
+  .cardActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px 42px;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .cardActions > .primaryAction {
+    flex: none;
+    min-width: auto;
+  }
+
+  .cardActions > .whatsappAction {
+    flex: none;
+    min-width: auto;
+  }
+
+  .cardActions > .iconAction {
+    flex: none;
+  }
 }
 
 .primaryAction {
@@ -476,6 +513,25 @@
 
 .iconAction:disabled {
   opacity: 0.46;
+}
+
+.whatsappAction {
+  min-height: 48px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #25d366, #128c7e);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 12px 22px rgba(18, 140, 126, 0.16);
+}
+
+.whatsappAction:hover {
+  filter: brightness(1.05);
 }
 
 .menuWrap {

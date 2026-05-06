@@ -1,17 +1,10 @@
 import type { CotizacionWorkflowRecord } from "@/types/cotizacion-workflow";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 function escapeCsv(value: string) {
   const normalized = value.replaceAll('"', '""');
 
   return `"${normalized}"`;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function slugify(value: string) {

@@ -3,6 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 let adminClient: ReturnType<typeof createClient> | null = null;
 
 export function createAdminClient() {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "createAdminClient usa SUPABASE_SERVICE_ROLE_KEY y solo puede ejecutarse en servidor"
+    );
+  }
+
   if (adminClient) {
     return adminClient;
   }

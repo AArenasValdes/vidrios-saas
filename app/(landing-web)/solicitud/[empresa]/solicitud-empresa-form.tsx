@@ -30,6 +30,10 @@ type Props = {
   empresaEmail: string;
   privacidad: string;
   isAvailable: boolean;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  sourceUrl?: string;
 };
 
 type FormState = {
@@ -83,6 +87,10 @@ export function SolicitudEmpresaForm({
   empresaEmail,
   privacidad,
   isAvailable,
+  utmSource,
+  utmMedium,
+  utmCampaign,
+  sourceUrl,
 }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -265,6 +273,10 @@ export function SolicitudEmpresaForm({
         body: JSON.stringify({
           ...form,
           contacto: normalizedClienteWhatsapp,
+          utmSource: utmSource ?? null,
+          utmMedium: utmMedium ?? null,
+          utmCampaign: utmCampaign ?? null,
+          sourceUrl: sourceUrl ?? null,
         }),
       });
 

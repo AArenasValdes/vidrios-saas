@@ -52,12 +52,22 @@
 .menuDelete,
 .primaryCta,
 .ghostButton,
-.sectionAction {
+.sectionAction,
+.notesToggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   text-decoration: none;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 160ms ease,
+    opacity 160ms ease;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .menuDelete {
@@ -75,6 +85,31 @@
 
 .menuDelete:disabled {
   opacity: 0.56;
+}
+
+.menuDelete:not(:disabled):active,
+.primaryCta:not(:disabled):active,
+.ghostButton:not(:disabled):active,
+.sectionAction:active,
+.notesToggle:active {
+  transform: scale(0.975) translateY(1px);
+  filter: brightness(0.98);
+}
+
+.primaryCta:not(:disabled):hover,
+.ghostButton:not(:disabled):hover,
+.sectionAction:hover,
+.notesToggle:hover {
+  transform: translateY(-1px);
+}
+
+.menuDelete:focus-visible,
+.primaryCta:focus-visible,
+.ghostButton:focus-visible,
+.sectionAction:focus-visible,
+.notesToggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.16);
 }
 
 .quoteCode {

@@ -1,51 +1,116 @@
-# AGENTS.md - Vidrios SaaS
+# AGENTS.md - Ventora
 
 Lee antes de editar.
 
-Ultima consolidacion repo: 2026-04-30.
+Ultima consolidacion repo: 2026-05-05.
 
 Si trabajas fuera de repo: revisar `docs/contexto-rapido-web.md`.
 
 ---
 
-## Que es proyecto ahora
+## Que es el proyecto hoy
 
 No pensar como:
-- formulario tecnico
-- motor ingenieria ventanas
+- cotizador tecnico
+- motor de ingenieria de ventanas
 - ERP
 - logistica
+- sistema de produccion
 
 Pensar como:
 
-**presupuestario comercial vertical para vidrios y aluminio, basado en sistemas sugeridos, autocompletado y edicion rapida en terreno.**
+**software comercial para empresas de vidrios y aluminio que captura, centraliza y ayuda a cerrar leads.**
+
+La cotizacion sigue siendo importante, pero ahora cumple un rol claro:
+
+**cerrar oportunidades, no definir la identidad principal del producto.**
+
+Frase clave del producto:
+
+**"Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."**
 
 Resolver:
-- clientes
-- cotizaciones
-- proyectos implicitos dentro de cotizacion
-- sistemas sugeridos por tipo/proveedor
-- autocompletar material, vidrio, margen, linea, descripcion
-- editar solo necesario en movil
-- margen sobre costo proveedor
-- PDF con branding
-- WhatsApp
-- aprobacion publica
+- captacion de leads
+- enlaces por canal
+- tracking de origen
+- QR para captacion
+- solicitudes centralizadas
+- notificaciones al vendedor
+- seguimiento comercial
+- pipeline comercial
+- cotizacion cuando el lead ya avanzo
+- PDF, WhatsApp y aprobacion como herramientas de cierre
 
-Usuario principal:
+---
+
+## Contexto del pivot
+
+Antes:
 - maestro independiente
-- taller pequeno
-- instalador / vendedor tecnico
+- Ventora como generador de PDF con memoria
+- valor tipo "vitamina"
+- precio bajo
+- insuficiente para dolor real
 
-Modelo usuario MVP:
-- 1 cuenta = dueno o responsable comercial
-- rol operativo real hoy: `admin`
-- `tecnico` / `viewer` = legado o futuro, no alcance activo
+Ahora:
+- target principal = PYMES y empresas medianas de vidrios y aluminio
+- usuario comprador = dueno, responsable comercial o vendedor
+- dolor real = leads perdidos en WhatsApp, formularios y conversaciones dispersas
+- problema central = no saber de donde vienen los leads ni en que estado estan
+
+Conclusion:
+- el valor no esta en formulas complejas
+- el valor esta en capturar mejor y cerrar mas
+- la cotizacion existe para completar el cierre comercial
+- el sistema debe priorizar velocidad operativa y visibilidad del pipeline
+
+---
+
+## Objetivo del software
+
+**capturar solicitudes comerciales, centralizarlas, hacer seguimiento y convertirlas en cotizaciones cerradas.**
+
+Posicionamiento correcto:
+- software para captar y cerrar leads de vidrios y aluminio
+- CRM comercial liviano para empresas del rubro
+- sistema de solicitudes con origen trazable
+- pipeline comercial con cotizacion integrada
+- herramienta para ordenar WhatsApp, QR, links y seguimientos
+
+Posicionamiento incorrecto:
+- cotizador tecnico de perfiles o despiece
+- ERP de obra
+- software logistico
+- planificador de produccion
+- motor complejo de compatibilidades
+
+Modelo comercial actual:
+- captar lead
+- saber origen
+- responder rapido
+- mover estado comercial
+- crear cotizacion solo cuando corresponde
+- cerrar por WhatsApp, PDF o link publico
+
+---
+
+## Usuario y modelo operativo
+
+Usuario principal hoy:
+- dueño de pyme
+- responsable comercial
+- vendedor
+- equipo pequeno o mediano que hoy pierde leads por desorden
+
+Contexto operativo:
+- 1 cuenta = empresa
+- rol operativo real hoy = `admin`
+- `tecnico` y `viewer` quedan como legado o futuro
 - pruebas funcionales: asumir `rol = 'admin'`
 - login requiere `auth.users` + fila en `public.users` con `correo`, `organization_id`, `rol`
 - desktop recomendado: `Chrome` o `Edge`
 - iPhone correcto: `Safari` + agregar a inicio
-- `Brave` no navegador base para push
+- `Brave` no es navegador base para push
 
 Stack:
 - Next.js 16.1.6 App Router
@@ -57,124 +122,22 @@ Stack:
 
 ---
 
-## Cambio de enfoque
+## Norte de producto
 
-Antes:
-- perfiles
-- vidrio tecnico
-- compatibilidades
-- formulas
-- catalogos tecnicos
+Preguntas obligatorias antes de proponer o implementar algo:
 
-Ahora:
+1. Esto ayuda a capturar mas leads o a perder menos leads?
+2. Esto ayuda a cerrar mas oportunidades reales?
+3. Esto resuelve un dolor comercial del duenio o vendedor?
 
-**usuario no construye desde cero; sistema sugiere base y usuario corrige final.**
+Si la respuesta es no:
+- no empujar la idea por inercia
+- explicar por que se desvia del pivot
+- proponer una alternativa alineada
 
-Problema real:
-1. cotiza con proveedor
-2. recibe costo/config casi lista
-3. aplica margen
-4. arma presupuesto en Excel/Word/WhatsApp
-5. envia cliente
+Regla fuerte:
 
-Conclusion:
-- problema principal no es ingenieria
-- problema principal es velocidad util
-- MVP optimiza sugerencia + confirmacion
-- precision perfecta vale menos que rapidez en terreno
-
----
-
-## Objetivo software
-
-**crear presupuestos comerciales desde sistemas preconfigurados, con calculo simple, PDF claro, branding y salida por WhatsApp.**
-
-Posicionamiento correcto:
-- software para crear y enviar cotizaciones de vidrios y aluminio
-- presupuestario comercial con PDF, WhatsApp y aprobacion cliente
-- CRM operativo liviano para talleres y maestros
-- cotizador con sistemas sugeridos
-
-Posicionamiento incorrecto:
-- ERP obra
-- sistema logistico completo
-- planificacion produccion
-- cotizador tecnico de perfiles/despiece
-
-Hoy producto:
-- ayuda seguimiento comercial
-- da visibilidad basica cliente/obra
-- no resuelve inventario, despacho, taller, produccion
-
-Modelo calculo MVP:
-
-```text
-precio_final = costo_proveedor * (1 + margen_pct / 100)
-```
-
-No hacer en MVP:
-- calculo perfiles
-- calculo tecnico vidrio
-- ingenieria ventanas
-- integracion proveedor
-- compatibilidades complejas
-
----
-
-## Concepto clave: Sistemas
-
-Cotizacion no nace de formulario vacio.
-
-Nace de **sistema sugerido y editable**.
-
-Ejemplos:
-- ventana corredera aluminio basica
-- ventana corredera aluminio premium
-- puerta abatible aluminio
-- shower door estandar
-- cierre terraza piso-cielo
-
-Sistema puede incluir:
-- tipo componente
-- proveedor
-- linea
-- nivel
-- apertura
-- vidrio compatible
-- restricciones dimension
-- configuracion base
-- margen sugerido
-- descripcion base
-
-Lectura:
-- `sistema` = base sugerida
-- `componente` = item editable/calculable
-
----
-
-## Flujo vigente
-
-1. login
-2. dashboard
-3. clientes
-4. nueva cotizacion guiada
-5. elegir tipo
-6. recibir sistema sugerido
-7. ajustar minimo
-8. crear uno o varios componentes
-9. editar rapido lista
-10. calcular subtotal/neto/IVA/total
-11. guardar borrador o presupuesto
-12. ver detalle
-13. generar PDF
-14. compartir WhatsApp
-15. cliente revisa y responde por link publico
-16. configurar perfil empresa
-
-Notas:
-- proyecto se crea/reutiliza desde service cotizaciones
-- no hay UI separada de proyectos
-- paso 2 = asistente de configuracion, no formulario manual
+**no reintroducir el cotizador tecnico como centro del producto.**
 
 ---
 
@@ -182,105 +145,131 @@ Notas:
 
 Conclusion:
 
-**base funcional importante ya existe. Prioridad = endurecer, validar, vender.**
+**ya existe una base funcional valida para captacion y cierre. La prioridad es endurecer, validar y vender.**
 
-### Implementado
+### Implementado hoy
 
-- landing + login
-- branding publico `Ventora`
-- auth Supabase email/password
+- landing publica
+- login con Supabase email/password
 - shell operativa
-- dashboard con KPIs simples
+- dashboard interno
 - CRUD clientes
-- listado + detalle cotizaciones
-- nueva cotizacion por pasos
-- calculo por componente con costo proveedor + margen
-- guardado borrador/presupuesto
-- soft delete cotizaciones + items
+- listado y detalle de cotizaciones
+- nueva cotizacion guiada
 - PDF imprimible con branding
-- compartir WhatsApp
-- pagina `/planes`
+- compartir por WhatsApp
 - aprobacion/rechazo publico por token
-- link publico canonico `ventorap.cl` + `www.ventorap.cl`
-- push para maestro al enviar/aprobar/rechazar, segun navegador
-- landing con bloque instalacion/acceso para maestros
-- estados comerciales automaticos clientes
-- estados operativos cotizacion hasta proyecto terminado
-- perfil comercial empresa
-- logo a Supabase Storage
-- forma de pago visible en PDF
+- perfil comercial de empresa
 - multi-tenant por `organization_id`
 
-Paso 2 movil:
-- viewport lista estable
-- scroll interno controlado
-- editor rapido movil
-- copia parcial medidas/costo a componentes del mismo tipo
-- limite 200 componentes por cotizacion
-- copy mas simple
-- codigos autogenerados visibles
-- selector margen local con recalculo
-- tarjetas mas compactas y legibles
-- `con margen` convive con empresa en `valor directo`
-- si cotizacion trabaja con margen, lista prioriza costo y deja venta secundaria
-- overlay de ajuste por piezas para lotes
-- si una pieza cambia, resto del lote puede seguir agrupado
-- piezas separadas muestran `Ajustada` y referencia origen
-- `Edicion completa` de pieza derivada mantiene regreso a overlay de familia
-- `Datos del grupo` en mobile:
-  - footer fijo/compacto
-  - sin gran bloque vacio final
-  - toggle `con margen` / `valor directo` estabilizado
-- en `Valor directo`, bloque `Margen` se oculta
-- `Color perfil` unificado como etiqueta
-- aluminio:
-  - `Titanio`
-  - `Madera`
-  - `Bronce` fuera de flujo activo
-- PVC con paleta separada:
-  - directos: `Blanco`, `Gris`, `Roble Dorado`, `Nogal`
-  - `Mas opciones`: `Gris Antracita`, `Negro`, `Verde (Electrico)`, `Azul (Alta presion)`, `Naranja (Ventilacion)`
-- tests services/utils/hooks
-- build produccion pasa
+Captacion y solicitudes:
+- flujo publico `/solicitud/[empresa]`
+- tracking `utm_source`, `utm_medium`, `utm_campaign`, `source_url`
+- guardado automatico de UTM desde landing y links
+- generador de links por canal
+- canales listos para Instagram, Facebook, WhatsApp, QR y link directo
+- componente `LeadChannels`
+- generacion de QR en cliente
+- descarga QR a PNG
+- dashboard de solicitudes con badge de origen
+- boton `Contactar por WhatsApp`
+- tiempo relativo de llegada
+- push al vendedor cuando entra lead nuevo
+- email async desacoplado para leads nuevos
+
+Operativo/comercial ya existente:
+- dashboard con KPIs simples
+- cotizacion como herramienta de cierre
+- calculo simple por componente con costo proveedor + margen
+- guardado borrador/presupuesto
+- forma de pago visible en PDF
+- link publico canonico `ventorap.cl` + `www.ventorap.cl`
 - deploy productivo activo Vercel
 
 ### Incompleto o desalineado
 
-- no UI separada proyectos
+- pipeline comercial tipo kanban aun no consolidado
+- faltan metricas de conversion y tiempo de respuesta
 - landing necesita validacion comercial final
-- OAuth tiene callback/UI placeholder, proveedores no habilitados
-- PWA existe; offline real aun no validado en dispositivo
-- guardado cotizaciones no transaccional
-- Web Push depende de navegador/OS
-- guia comercial instalacion/navegador aun debe pulirse
-- no pagos ni billing
+- PWA existe, offline real aun no validado
 - observabilidad operativa incompleta
-- no onboarding comercial completo
+- Web Push depende de navegador/OS
+- email depende de configurar `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`
 - quedan textos con encoding roto en algunas vistas/tests
-- paso 2 sigue siendo punto mas sensible:
-  - no agregar funciones por inercia
-  - quitar friccion
-  - validar con maestro real antes de consolidar
-- flujo `con margen` vs `valor directo` mejoro, pero falta mas validacion real
-- lotes ajustados mejoraron, pero falta probar:
-  - 1 pieza distinta
-  - varias piezas distintas
-  - vuelta desde `Edicion completa`
-- creacion masiva y edicion rapida aun se pueden simplificar
-- paso 2 no debe volver a llenarse de texto
+- guardados sensibles aun deben endurecerse
+- hay copy y documentacion vieja que puede seguir empujando la narrativa de cotizador
 
 Lectura operativa:
-- no discovery
-- no falta inventar producto
-- etapa = endurecimiento final para beta / produccion inicial controlada
-- prioridad 24-48h = flujo real, Supabase real, errores reales, paso 2 movil real
-- visual importa, pero menos que validacion/robustez/despliegue
+- no estamos en discovery
+- no hay que inventar producto paralelo
+- etapa = salida comercial controlada con foco en leads y cierre
+- prioridad corta = validar flujo real de captacion, notificacion, seguimiento y cierre
 
-Lectura repo:
-- corazon = flujo comercial cotizaciones
-- no reabrir cotizador tecnico por inercia
-- valor actual = clientes + cotizaciones + PDF + branding + WhatsApp + respuesta publica
-- siguiente salto = consolidar sistemas sugeridos, estabilizar, vender
+---
+
+## Fases y foco actual
+
+### Fase 1 - Ya implementada
+
+- captacion publica por solicitud
+- tracking UTM y origen
+- links por canal
+- QR descargable
+- push + email al llegar lead
+- dashboard de solicitudes mejorado
+- multi-tenant base
+- cotizacion, PDF, WhatsApp y aprobacion como capa de cierre
+
+### Fase 2 - Siguiente foco real
+
+- pipeline comercial con kanban
+- estados de solicitud:
+  - `nueva`
+  - `contactada`
+  - `cotizacion_creada`
+  - `cerrada_ganada`
+  - `perdida`
+- metricas:
+  - leads por origen
+  - tasa de conversion
+  - tiempo de respuesta
+
+### Fase 3 en adelante - No centrar ahora
+
+Dejar explicitamente como futuro:
+- multi-sucursal
+- asignacion a vendedores
+- round-robin
+- analytics por vendedor
+- webhooks
+- integraciones Zapier/Make
+- WhatsApp Business API
+- automatizaciones profundas
+- CRM mas complejo
+
+Regla:
+- no gastar foco aqui salvo instruccion explicita
+- si aparece una idea de Fase 3+, registrarla como futuro y volver al foco actual
+
+---
+
+## Flujo principal vigente
+
+1. empresa configura o publica su enlace de solicitud
+2. lead entra por QR, link o landing
+3. el sistema guarda origen y UTM
+4. Ventora centraliza la solicitud
+5. vendedor recibe push y/o email
+6. equipo responde por WhatsApp
+7. lead avanza en seguimiento comercial
+8. cuando corresponde, se crea cotizacion
+9. se genera PDF o se comparte link publico
+10. cliente aprueba, rechaza o sigue conversacion
+
+Lectura correcta:
+- solicitud primero
+- seguimiento despues
+- cotizacion como etapa de cierre
 
 ---
 
@@ -292,39 +281,41 @@ Lectura repo:
 - login
 - offline page
 - base PWA
+- `/solicitud/[empresa]`
 - `/presupuesto/[token]`
 
-### Operativo
-- dashboard
-- clientes
-- cotizaciones
-- nueva cotizacion con sistemas sugeridos
-- configuracion empresa
-- paso 2 con edicion rapida, ajuste por piezas, copia parcial, recalculo runtime
+### Captacion
+- `src/features/solicitudes`
+- links por canal
+- QR
+- tracking UTM
+- formulario publico por empresa
+- dashboard de solicitudes
 
 ### Comercial
-- branding PDF
-- forma de pago comercial
-- WhatsApp
+- solicitudes
+- contacto por WhatsApp
+- notificaciones push
+- email async para leads
+- cotizaciones
+- PDF
 - aprobacion publica
-- seguimiento comercial liviano
-- cotizacion con sistemas sugeridos editables
 
-### Operacion liviana
-- estado cliente segun actividad comercial
-- proyecto implícito desde cotizacion
-- cierre operativo simple por estado
+### Configuracion empresa
+- perfil comercial
+- slug publico de solicitud
+- branding basico
 
-### Aun no presente
-- OAuth real
+### Aun no presente o no consolidado
+- pipeline kanban completo
+- metricas comerciales completas
+- multi-sucursal
+- reparto automatico de leads
+- analytics por vendedor
+- integraciones externas profundas
+- billing
 - checkout
-- suscripciones
-- analitica propia producto
-- observabilidad completa produccion
-- CRM profundo
-- gestion explicita proyectos
-- logistica / despacho / planificacion taller
-- catalogo versionado completo por proveedor/familia/nivel
+- observabilidad completa
 
 ---
 
@@ -350,7 +341,7 @@ page / component -> hook -> service -> repository -> Supabase
 
 Reglas:
 - excepciones actuales = deuda, no patron
-- no copiar `src/hooks`, `src/services`, `src/repositories`, `src/types` legacy como diseño nuevo
+- no copiar `src/hooks`, `src/services`, `src/repositories`, `src/types` legacy como diseno nuevo
 - dominio nuevo va en `src/features/<feature>/...`
 
 Features activas:
@@ -361,11 +352,9 @@ Features activas:
 - `src/features/organization-profile`
 - `src/features/solicitudes`
 
-Subdominios cotizaciones:
-- `new-quote`
-- `public-approval`
-- `pdf-cache`
-- workflow sugerencias + calculo comercial
+Lectura actual:
+- `solicitudes` y captacion ya son parte central del producto
+- `cotizaciones` sigue siendo core, pero como capa de cierre
 
 ---
 
@@ -386,7 +375,8 @@ vidrios-saas/
 |   |-- ia-handoff.md
 |   |-- mvp-componentes-plan.md
 |   |-- mvp-componentes-schema.sql
-|   `-- organization-profile-schema.sql
+|   |-- organization-profile-schema.sql
+|   `-- salida-beta-checklist.md
 |-- public/
 |   |-- icons/
 |   `-- sw.js
@@ -410,10 +400,10 @@ vidrios-saas/
 ```
 
 Notas:
-- `README.md` no fuente de verdad
+- `README.md` es resumen operativo, no fuente final
+- `Agents.md` y `docs/contexto-rapido-web.md` mandan mas que `README.md`
 - usar `proxy.ts`, no asumir `middleware.ts`
-- PWA base existe: `manifest.ts`, `public/sw.js`, registro SW
-- offline cache conservador; no asumir offline robusto en app autenticada
+- PWA base existe; no asumir offline robusto sin prueba real
 - `app/layout.tsx` ya inyecta `@vercel/analytics` + `@vercel/speed-insights`, pero eso no reemplaza monitoreo real
 
 ---
@@ -452,7 +442,7 @@ pagina/componente -> hook -> service -> repository -> Supabase
 
 5. Calculos financieros en services
 
-6. MVP usa:
+6. MVP de cotizacion usa:
 - `costoProveedorUnitario`
 - `costoProveedorTotal`
 - `margenPct`
@@ -466,9 +456,11 @@ pagina/componente -> hook -> service -> repository -> Supabase
 - `src/lib/supabase/server.ts`
 - uso preferente desde repositories o auth services
 
-9. PDF + WhatsApp = core MVP
+9. Solicitudes + tracking + notificaciones = core actual
 
-10. No abrir pagos/analitica antes de estabilizar core
+10. Cotizacion + PDF + WhatsApp = core de cierre
+
+11. No abrir Fase 3+ antes de consolidar Fase 2
 
 ---
 
@@ -516,6 +508,7 @@ Principios UI:
 - espaciado amplio
 - alto contraste
 - nunca depender solo color
+- mobile-first para solicitudes, seguimiento y acciones rapidas
 
 ---
 
@@ -525,21 +518,22 @@ Principios UI:
 |---|---|
 | `organization` | Empresa cliente SaaS |
 | `user` | Empleado organizacion |
-| `client` | Cliente final |
-| `project` | Obra/trabajo |
-| `cotizacion` | Presupuesto comercial |
+| `lead` / `solicitud` | Oportunidad comercial capturada |
+| `source` | Origen del lead |
+| `utm` | Metadata de captacion |
+| `client` | Cliente final ya trabajado comercialmente |
+| `project` | Obra o trabajo asociado |
+| `cotizacion` | Presupuesto comercial para cierre |
 | `componente` | Item cotizado |
-| `costo_proveedor` | Costo proveedor |
-| `margen` | % maestro |
-| `precio_final` | Valor vendido |
-| `organization_profile` | Branding PDF |
+| `organization_profile` | Branding PDF y presentacion |
 
-Ejemplos componente:
-- ventana living
-- ventana cocina
-- puerta corredera
-- shower door
-- cierre terraza
+Ejemplos de origen:
+- Instagram bio
+- Facebook perfil
+- WhatsApp mensaje
+- QR en camioneta
+- QR en tarjeta
+- link directo
 
 ---
 
@@ -547,32 +541,25 @@ Ejemplos componente:
 
 No borrar legacy aun.
 
-Usar:
+Usar y consolidar:
+- capa de `solicitudes`
+- tracking `utm_source`, `utm_medium`, `utm_campaign`, `source_url`
 - `cotizaciones`
-- `cotizacion_items` como componentes
+- `cotizacion_items`
 - `projects`
-- `codigo`, `tipo_componente`, `orden`
 - `organization_profile`
 
-Dormidas:
-- `product_types`
-- `system_lines`
-- `system_configurations`
-- `configuration_materials`
-- `line_glass_compatibility`
-- `materials`
-- `labor_costs`
-- `quote_item_breakdown`
-
 Regla:
-- no borrarlas
-- no depender de ellas en flujo principal
-- no meter logica nueva ahi
+- no borrar tablas legacy tecnicas por inercia
+- no volver a meter logica nueva del producto en flujo tecnico dormido
+- la base comercial manda sobre la tecnica
 
-Campos criticos:
-- `codigo`
-- `tipo_componente`
-- `orden`
+Campos criticos hoy:
+- `organization_id`
+- `utm_source`
+- `utm_medium`
+- `utm_campaign`
+- `source_url`
 - `approval_token`
 - `approval_token_expires_at`
 - `cliente_vio_en`
@@ -583,6 +570,7 @@ Infra que no puedes asumir lista:
 - bucket `organization-assets`
 - RLS por `organization_id`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- variables email
 - migraciones aplicadas en entorno real
 
 ---
@@ -593,18 +581,16 @@ Infra que no puedes asumir lista:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+EMAIL_PROVIDER=
+EMAIL_API_KEY=
+EMAIL_FROM=
 ```
-
-Revisar:
-- `supabase/migrations/20260317154500_organization_profile.sql`
-- `supabase/migrations/20260318093000_cotizacion_items_component_fields.sql`
-- `supabase/migrations/20260319183000_cotizaciones_approval_public_link.sql`
-- `supabase/migrations/20260327174500_normalize_legacy_color.sql`
 
 Notas:
 - logo requiere bucket `organization-assets`
 - perfil comercial requiere tabla `organization_profile`
 - aprobacion publica requiere `SUPABASE_SERVICE_ROLE_KEY`
+- email de leads requiere variables de proveedor configuradas
 
 ---
 
@@ -616,15 +602,14 @@ Objetivo:
 
 Cobertura visible:
 - auth service
-- auth server service
 - clientes service
 - cotizaciones workflow/app/public approval
 - organization profile service
-- hooks auth/clientes/cotizaciones/organization profile
+- solicitudes service y canales
+- hooks auth/clientes/cotizaciones/organization profile/solicitudes
 - registro service worker
 - PDF helpers
 - WhatsApp helpers
-- presentacion items y paginacion PDF
 
 Reglas:
 - cambio en `src/services/` o `src/utils/` = test nuevo o actualizado
@@ -640,39 +625,46 @@ Minimo por funcion publica:
 
 ## Riesgos criticos actuales
 
-1. escrituras cotizaciones no transaccionales
-2. observabilidad produccion insuficiente
-3. falta smoke test manual punta a punta real
-4. falta validar Supabase real, migraciones, bucket, `SUPABASE_SERVICE_ROLE_KEY`
+1. falta validar flujo real de captacion punta a punta
+2. notificaciones push/email pueden fallar por configuracion externa
+3. observabilidad produccion insuficiente
+4. falta smoke test manual real con solicitudes + cotizacion + cierre
 5. PWA valida solo como base tecnica; falta dispositivo real
-6. landing + CTA publicos aun deben validarse con criterio salida
-7. paso 2 movil sigue siendo principal riesgo UX/operativo
-8. lotes ajustados en paso 2 aun necesitan prueba real con distintos escenarios
-9. encoding roto puede reaparecer en vistas clave o tests
-10. push + aprobacion publica + PDF deben verificarse juntos
+6. landing y CTA aun deben validarse con criterio comercial
+7. pipeline comercial aun no consolidado
+8. copy vieja puede seguir empujando el producto como cotizador
+9. encoding roto puede reaparecer en vistas o tests
+10. push + solicitud + WhatsApp + PDF deben verificarse juntos
 
 ---
 
-## Falta verificar antes beta
+## Falta verificar antes beta comercial
 
 ### Infra real
 - migraciones aplicadas
 - bucket `organization-assets`
 - RLS por `organization_id`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`
 - `public.users` con `correo`, `organization_id`, `rol`
 - usuarios reales `admin`
 
-### Flujo comercial
+### Flujo de captacion
+- link publico por empresa
+- UTM guardadas
+- QR funcionando
+- badge de origen visible
+- push al llegar lead
+- email async al llegar lead
+- boton `Contactar por WhatsApp`
+
+### Flujo de cierre
+- cliente real
 - cotizacion punta a punta
-- paso 2 movil real
-- `con margen` y `valor directo`
-- ajuste por piezas dentro de lotes
 - guardado borrador y presupuesto
 - PDF
 - WhatsApp
 - aprobacion/rechazo por token
-- push en navegadores soportados
 
 ### PWA y acceso
 - iPhone Safari + instalar
@@ -685,14 +677,13 @@ Minimo por funcion publica:
 - CTA
 - copy no tecnico
 - planes
-- forma de pago en PDF/detalle
-- onboarding comercial basico
+- promesa comercial alineada a leads y cierre
 
 ### Tecnico
 - consistencia escrituras
 - manejo errores intermedios
 - logs/trazas minimas
-- performance paso 2
+- performance vistas clave
 - cobertura borde
 
 ---
@@ -700,82 +691,60 @@ Minimo por funcion publica:
 ## Prioridades recomendadas
 
 1. Validar entorno real
-   - `codigo`
-   - `tipo_componente`
-   - `orden`
    - `organization_profile`
    - `approval_token`
-   - `approval_token_expires_at`
-   - `cliente_vio_en`
-   - `cliente_respondio_en`
-   - `cliente_respuesta_canal`
    - bucket `organization-assets`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - variables email
    - RLS / multi-tenant con usuario real
 
-2. Endurecer paso 2 movil
-   - menos confusion labels
-   - tarjetas minimas y claras
-   - validar replicacion parcial por tipo
-   - validar `con margen` vs `valor directo`
-   - validar ajuste por piezas:
-     - una pieza distinta
-     - varias piezas distintas
-     - regreso desde `Edicion completa`
-   - confirmar lectura costo/venta/total
-   - pulir lotes, espacios, nombres
-   - confirmar paletas separadas PVC / aluminio en mobile, lista, PDF
-   - probar con maestros reales antes de congelar
+2. Endurecer captacion
+   - validar UTM reales
+   - validar links por canal
+   - validar QR descargable
+   - validar push y email
+   - validar dashboard de solicitudes
+   - validar contacto por WhatsApp
 
-3. Consolidar motor sugerencias / sistemas
-   - reglas base proveedor
-   - reglas por tipo componente
-   - sugerencias por dimension
-   - defaults editables
-   - fallback claro
+3. Consolidar pipeline comercial
+   - estados claros
+   - vista operativa
+   - criterio de avance
+   - metricas de conversion basicas
+   - tiempo de respuesta
 
-4. Estabilizar salida
-   - smoke tests reales
-   - validacion movil
-   - manejo errores
-   - estados vacios / edge cases
-   - PWA / offline real
-   - consistencia create/update cotizaciones
-   - push en Chrome y Edge, no solo Brave
+4. Estabilizar cierre
+   - cotizacion
+   - PDF
+   - WhatsApp
+   - aprobacion publica
+   - manejo de errores
 
 5. Revisar experiencia comercial final
-   - detalle cotizacion
-   - PDF
-   - mensaje WhatsApp
-   - `/presupuesto/[token]`
-   - forma de pago
-   - CTA / copy landing, login, `/planes`
+   - landing
+   - login
+   - `/planes`
+   - copy de captacion
+   - promesa comercial
    - limpiar encoding roto visible
-   - mejorar guia instalacion/acceso
 
-6. Definir despliegue inicial
-   - hosting
-   - env vars
-   - dominio
-   - politicas acceso
-
-7. Despues
-   - pago
-   - analitica producto
-   - onboarding comercial
+6. Dejar Fase 3+ explicitamente fuera
+   - multi-sucursal
+   - automatizacion compleja
+   - integraciones profundas
+   - analytics por vendedor
 
 ---
 
 ## Resumen ejecutivo para futuras IAs
 
 Si entras hoy:
-- MVP comercial ya tiene base real
+- el producto ya no debe describirse como cotizador
+- la promesa principal es capturar y centralizar leads
+- la cotizacion sigue viva, pero como herramienta de cierre
 - prioridad no es inventar mas producto
-- prioridad = cerrar salida mercado
-- flujo principal debe sentirse asistente de configuracion, no formulario
-- no meter pagos ni analitica antes de estabilizar
-- no reabrir cotizador tecnico salvo instruccion explicita
-- si tocas cotizaciones, cuida sugerencias, servicio, PDF, WhatsApp, aprobacion publica juntos
-- no vender como ERP o logistica
-- piensa primero en usuario no tecnico y navegadores compatibles reales
-- cuello de botella UX principal sigue siendo paso 2 movil
+- prioridad = validar captacion, seguimiento y cierre
+- Fase 2 importa; Fase 3+ se posterga
+- no meter ERP, logistica ni motor tecnico
+- cualquier tarea debe evaluarse por su impacto en leads y conversion
+

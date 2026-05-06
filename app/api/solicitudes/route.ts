@@ -83,9 +83,7 @@ export async function GET() {
         { status: 403 }
       );
     }
-    const solicitudes = canReviewAll
-      ? await solicitudesContactoService.listSolicitudes()
-      : await solicitudesContactoService.listSolicitudesByOrganizationId(
+    const solicitudes = await solicitudesContactoService.listSolicitudesByOrganizationId(
           perfil.organization_id
         );
 

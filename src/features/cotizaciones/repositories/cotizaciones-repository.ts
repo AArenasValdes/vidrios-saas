@@ -1121,6 +1121,7 @@ export function createCotizacionesRepository(
     ) {
       const updatePayload = buildCotizacionUpdatePayload(input);
       let data: CotizacionRow | null = null;
+      const createdItemIds: EntityId[] = [];
 
       try {
         {
@@ -1176,10 +1177,9 @@ export function createCotizacionesRepository(
           }
         }
 
-        await softDeleteActiveItems(id, input.organizationId);
-
         for (const item of input.items) {
           const createdItem = await createCotizacionItem(item, id);
+          createdItemIds.push(createdItem.id);
           await insertBreakdownEntries(
             item.breakdown ?? [],
             createdItem.id,
@@ -1187,13 +1187,25 @@ export function createCotizacionesRepository(
           );
         }
 
+        await softDeleteActiveItems(id, input.organizationId);
+
         return hydrateCotizacion(mapCotizacion(data as CotizacionRow));
       } catch (error) {
-        if (previousSnapshot) {
+        if (createdItemIds.length > 0) {
           try {
-            await restoreCotizacionSnapshot(previousSnapshot);
-          } catch (restoreError) {
-            console.error("No se pudo restaurar la cotización tras una actualización parcial.", restoreError);
+            const deletedAt = new Date().toISOString();
+            for (const itemId of createdItemIds) {
+              await supabase
+                .from("cotizacion_items")
+                .update({ eliminado_en: deletedAt })
+                .eq("id", itemId)
+                .is("eliminado_en", null);
+            }
+          } catch (cleanupError) {
+            console.error(
+              "No se pudo limpiar items huerfanos tras una actualizacion parcial de cotizacion.",
+              cleanupError
+            );
           }
         }
 

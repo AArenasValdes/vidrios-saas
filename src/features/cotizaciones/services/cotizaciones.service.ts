@@ -48,6 +48,7 @@ export type GuardarCotizacionWorkflowInput = {
   existingCode?: string | null;
   existingClientId?: EntityId | null;
   existingProjectId?: EntityId | null;
+  requestKey?: string;
 };
 
 type GetWorkflowByIdOptions = {
@@ -60,6 +61,8 @@ function round(value: number, digits = 2) {
 
   return Math.round(value * multiplier) / multiplier;
 }
+
+const inflightSaveKeys = new Map<string, Promise<CotizacionWorkflowRecord>>();
 
 function toDateOrNow(value: string | null | undefined) {
   return value ? new Date(value) : new Date();
@@ -490,7 +493,29 @@ export function createCotizacionesAppService(
     });
   }
 
-  async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
+async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
+    if (input.requestKey) {
+      const inflight = inflightSaveKeys.get(input.requestKey);
+      if (inflight) {
+        return inflight;
+      }
+    }
+
+    const savePromise = _saveWorkflow(input);
+
+    if (input.requestKey) {
+      inflightSaveKeys.set(input.requestKey, savePromise);
+      try {
+        return await savePromise;
+      } finally {
+        inflightSaveKeys.delete(input.requestKey);
+      }
+    }
+
+    return savePromise;
+  }
+
+  async function _saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     const existingCotizacion = input.existingId
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
@@ -579,7 +604,7 @@ export function createCotizacionesAppService(
         throw new Error("No se pudo recuperar la cotizacion guardada");
       }
 
-      return workflowRecord;
+return workflowRecord;
     } catch (error) {
       if (!input.existingId) {
         await rollbackEntities(rollbackStack);

@@ -43,6 +43,7 @@ type PageSlice = {
 };
 
 const PDF_BLOB_CACHE = new Map<string, Promise<Blob>>();
+const PDF_BLOB_CACHE_MAX_SIZE = 10;
 const EXPORT_ROOT_ATTR = "data-cotizacion-export-root";
 
 type CanvasScaleInput = {
@@ -185,7 +186,7 @@ async function waitForElementImages(element: HTMLElement) {
 
   await Promise.all(
     images.map(async (image) => {
-      if (image.complete && image.naturalWidth > 0) {
+      if (image.complete) {
         return;
       }
 
@@ -569,6 +570,14 @@ export async function exportCotizacionElementToPdf({
           throw error;
         });
         PDF_BLOB_CACHE.set(cacheKey, pending);
+
+        if (PDF_BLOB_CACHE.size > PDF_BLOB_CACHE_MAX_SIZE) {
+          const firstKey = PDF_BLOB_CACHE.keys().next().value;
+          if (firstKey) {
+            PDF_BLOB_CACHE.delete(firstKey);
+          }
+        }
+
         return pending;
       })()
     : buildBlob());

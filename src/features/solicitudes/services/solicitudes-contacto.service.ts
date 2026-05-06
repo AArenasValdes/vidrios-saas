@@ -1,32 +1,19 @@
-import {
-  solicitudesContactoRepository,
-  type SolicitudesContactoRepository,
-} from "@/features/solicitudes/repositories/solicitudes-contacto.repository";
+import { solicitudesContactoRepository } from "@/features/solicitudes/repositories/solicitudes-contacto.repository";
+import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
+import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import type {
   AyudaSolicitudContacto,
-  CrearSolicitudEmpresaInput,
-  CrearSolicitudContactoInput,
   EstadoSolicitudContacto,
+  SolicitudContacto,
+  CrearSolicitudContactoInput,
+  CrearSolicitudEmpresaInput,
 } from "@/features/solicitudes/types/solicitud-contacto";
-import {
-  webPushNotificationsService,
-  type WebPushNotificationsService,
-} from "@/features/notificaciones/services/web-push-notifications.service";
-import {
-  isValidChileMobilePhone,
-  normalizeChileMobilePhone,
-} from "@/utils/chile-mobile-phone";
 
-type SolicitudesContactoServiceDeps = {
-  repository?: SolicitudesContactoRepository;
-  notificationsService?: WebPushNotificationsService;
-};
+/* ------------------------------------------------------------------ */
+/*  Constantes                                                         */
+/* ------------------------------------------------------------------ */
 
-const AYUDAS_PERMITIDAS = new Set<AyudaSolicitudContacto>([
-  "demo",
-  "cotizacion",
-  "ventas",
-]);
+const AYUDAS_PERMITIDAS = new Set<AyudaSolicitudContacto>(["demo", "cotizacion", "ventas"]);
 const ESTADOS_PERMITIDOS = new Set<EstadoSolicitudContacto>([
   "nueva",
   "contactada",
@@ -35,6 +22,7 @@ const ESTADOS_PERMITIDOS = new Set<EstadoSolicitudContacto>([
 ]);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
 const FIELD_LIMITS = {
   nombre: 80,
   empresa: 100,
@@ -46,9 +34,15 @@ const FIELD_LIMITS = {
   origen: 40,
   ip: 80,
   userAgent: 240,
+  utmSource: 80,
+  utmMedium: 80,
+  utmCampaign: 160,
+  sourceUrl: 2048,
 } as const;
 
-export class SolicitudContactoValidationError extends Error {}
+/* ------------------------------------------------------------------ */
+/*  Utilidades                                                         */
+/* ------------------------------------------------------------------ */
 
 function normalizeText(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -62,114 +56,99 @@ function limitText(value: string, maxLength: number) {
   return value.slice(0, maxLength);
 }
 
+/* ------------------------------------------------------------------ */
+/*  Clase error                                                        */
+/* ------------------------------------------------------------------ */
+
+export class SolicitudContactoValidationError extends Error {}
+
+/* ------------------------------------------------------------------ */
+/*  Service                                                             */
+/* ------------------------------------------------------------------ */
+
+export interface SolicitudesContactoService {
+  listSolicitudes(): Promise<SolicitudContacto[]>;
+  listSolicitudesByOrganizationId(organizationId: string | number): Promise<SolicitudContacto[]>;
+  getPublicRequestConfig(slug: string): Promise<any>;
+  createSolicitud(input: CrearSolicitudContactoInput): Promise<SolicitudContacto>;
+  createPublicRequest(input: CrearSolicitudEmpresaInput): Promise<SolicitudContacto>;
+  updateSolicitudStatus(input: {
+    id: string;
+    estado: EstadoSolicitudContacto;
+    organizationId?: string | number | null;
+  }): Promise<SolicitudContacto>;
+}
+
 export function createSolicitudesContactoService(
-  deps: SolicitudesContactoServiceDeps = {}
-) {
-  const repository = deps.repository ?? solicitudesContactoRepository;
-  const notificationsService =
-    deps.notificationsService ?? webPushNotificationsService;
-
-  async function notifyOrganizationLead(input: {
-    organizationId: string | number;
-    nombre: string;
-    tipoTrabajo: string;
-    empresa: string;
-  }) {
-    void notificationsService
-      .sendLeadCreatedPush({
-        organizationId: input.organizationId,
-        prospectoNombre: input.nombre,
-        empresaNombre: input.empresa,
-        tipoTrabajo: input.tipoTrabajo,
-      })
-      .catch(() => undefined);
+  deps?: {
+    repository?: unknown;
+    notificationsService?: unknown;
   }
-
+): SolicitudesContactoService {
   return {
     async listSolicitudes() {
-      return repository.listRecent();
+      return solicitudesContactoRepository.listRecent();
     },
 
     async listSolicitudesByOrganizationId(organizationId: string | number) {
-      return repository.listByOrganizationId(organizationId);
+      return solicitudesContactoRepository.listByOrganizationId(organizationId);
     },
 
     async getPublicRequestConfig(slug: string) {
-      const normalizedSlug = limitText(
-        normalizeText(slug)
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9-]+/g, "-")
-          .replace(/^-+|-+$/g, ""),
-        48
-      );
-
-      if (!normalizedSlug) {
-        return null;
-      }
-
-      return repository.getPublicConfigBySlug(normalizedSlug);
+      // delegado al repository para mantener compatibilidad
+      return solicitudesContactoRepository.getPublicConfigBySlug(slug);
     },
 
     async createSolicitud(input: CrearSolicitudContactoInput) {
       const nombre = limitText(normalizeText(input.nombre), FIELD_LIMITS.nombre);
       const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
-      const correo = limitText(
-        normalizeText(input.correo).toLowerCase(),
-        FIELD_LIMITS.correo
-      );
-      const telefonoRaw = limitText(
-        normalizePhone(input.telefono),
-        FIELD_LIMITS.telefono
-      );
+      const correo = limitText(normalizeText(input.correo).toLowerCase(), FIELD_LIMITS.correo);
+      const telefonoRaw = limitText(normalizePhone(input.telefono), FIELD_LIMITS.telefono);
       const telefono = normalizeChileMobilePhone(telefonoRaw) ?? telefonoRaw;
       const ayuda = normalizeText(input.ayuda) as AyudaSolicitudContacto;
 
       if (nombre.length < 3) {
-        throw new SolicitudContactoValidationError(
-          "El nombre debe tener al menos 3 caracteres."
-        );
+        throw new SolicitudContactoValidationError("El nombre debe tener al menos 3 caracteres.");
       }
 
       if (empresa.length < 2) {
-        throw new SolicitudContactoValidationError(
-          "La empresa es obligatoria."
-        );
+        throw new SolicitudContactoValidationError("La empresa es obligatoria.");
       }
 
       if (!EMAIL_REGEX.test(correo)) {
-        throw new SolicitudContactoValidationError(
-          "El correo no es valido."
-        );
+        throw new SolicitudContactoValidationError("El correo no es válido.");
       }
 
       if (!isValidChileMobilePhone(telefonoRaw)) {
-        throw new SolicitudContactoValidationError(
-          "Ingresa un WhatsApp válido."
-        );
+        throw new SolicitudContactoValidationError("Ingresa un WhatsApp válido.");
       }
 
       if (!AYUDAS_PERMITIDAS.has(ayuda)) {
-        throw new SolicitudContactoValidationError(
-          "Selecciona el tipo de ayuda que necesitas."
-        );
+        throw new SolicitudContactoValidationError("Selecciona el tipo de ayuda que necesitas.");
       }
 
-      return repository.create({
+      return solicitudesContactoRepository.create({
         nombre,
         empresa,
         correo,
         telefono,
         ayuda,
-        origen:
-          limitText(normalizeText(input.origen ?? "landing"), FIELD_LIMITS.origen) ||
-          "landing",
-        ip: input.ip?.trim()
-          ? limitText(input.ip.trim(), FIELD_LIMITS.ip)
-          : null,
+        origen: limitText(normalizeText(input.origen ?? "landing"), FIELD_LIMITS.origen) || "landing",
+        ip: input.ip?.trim() ? limitText(input.ip.trim(), FIELD_LIMITS.ip) : null,
         userAgent: input.userAgent?.trim()
           ? limitText(input.userAgent.trim(), FIELD_LIMITS.userAgent)
+          : null,
+        utmSource: input.utmSource?.trim()
+          ? limitText(normalizeText(input.utmSource), FIELD_LIMITS.utmSource)
+          : null,
+        utmMedium: input.utmMedium?.trim()
+          ? limitText(normalizeText(input.utmMedium), FIELD_LIMITS.utmMedium)
+          : null,
+        utmCampaign: input.utmCampaign?.trim()
+          ? limitText(normalizeText(input.utmCampaign), FIELD_LIMITS.utmCampaign)
+          : null,
+        sourceUrl: input.sourceUrl?.trim()
+          ? limitText(input.sourceUrl.trim(), FIELD_LIMITS.sourceUrl)
           : null,
       });
     },
@@ -177,70 +156,62 @@ export function createSolicitudesContactoService(
     async createPublicRequest(input: CrearSolicitudEmpresaInput) {
       const nombre = limitText(normalizeText(input.nombre), FIELD_LIMITS.nombre);
       const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
-      const contactoRaw = limitText(
-        normalizeText(input.contacto),
-        FIELD_LIMITS.contacto
-      );
+      const contactoRaw = limitText(normalizeText(input.contacto), FIELD_LIMITS.contacto);
       const contacto = normalizeChileMobilePhone(contactoRaw);
-      const tipoTrabajo = limitText(
-        normalizeText(input.tipoTrabajo),
-        FIELD_LIMITS.tipoTrabajo
-      );
-      const mensaje = limitText(
-        normalizeText(input.mensaje ?? ""),
-        FIELD_LIMITS.mensaje
-      );
+      const tipoTrabajo = limitText(normalizeText(input.tipoTrabajo), FIELD_LIMITS.tipoTrabajo);
+      const mensaje = limitText(normalizeText(input.mensaje ?? ""), FIELD_LIMITS.mensaje);
 
       if (nombre.length < 3) {
-        throw new SolicitudContactoValidationError(
-          "El nombre debe tener al menos 3 caracteres."
-        );
+        throw new SolicitudContactoValidationError("El nombre debe tener al menos 3 caracteres.");
       }
 
       if (!empresa) {
-        throw new SolicitudContactoValidationError(
-          "No pudimos identificar la empresa de destino."
-        );
+        throw new SolicitudContactoValidationError("No pudimos identificar la empresa de destino.");
       }
 
       if (!contacto) {
-        throw new SolicitudContactoValidationError(
-          "Ingresa un WhatsApp válido."
-        );
+        throw new SolicitudContactoValidationError("Ingresa un WhatsApp válido.");
       }
 
       if (tipoTrabajo.length < 3) {
-        throw new SolicitudContactoValidationError(
-          "Cuéntanos brevemente qué trabajo necesitas."
-        );
+        throw new SolicitudContactoValidationError("Cuéntanos brevemente qué trabajo necesitas.");
       }
 
-      const solicitud = await repository.createPublicRequest({
+      const solicitud = await solicitudesContactoRepository.createPublicRequest({
         organizationId: input.organizationId,
         empresa,
         nombre,
         contacto,
         tipoTrabajo,
         mensaje,
-        origen:
-          limitText(
-            normalizeText(input.origen ?? "solicitud-publica"),
-            FIELD_LIMITS.origen
-          ) || "solicitud-publica",
-        ip: input.ip?.trim()
-          ? limitText(input.ip.trim(), FIELD_LIMITS.ip)
-          : null,
+        origen: limitText(normalizeText(input.origen ?? "solicitud-publica"), FIELD_LIMITS.origen) || "solicitud-publica",
+        ip: input.ip?.trim() ? limitText(input.ip.trim(), FIELD_LIMITS.ip) : null,
         userAgent: input.userAgent?.trim()
           ? limitText(input.userAgent.trim(), FIELD_LIMITS.userAgent)
           : null,
+        utmSource: input.utmSource?.trim()
+          ? limitText(normalizeText(input.utmSource), FIELD_LIMITS.utmSource)
+          : null,
+        utmMedium: input.utmMedium?.trim()
+          ? limitText(normalizeText(input.utmMedium), FIELD_LIMITS.utmMedium)
+          : null,
+        utmCampaign: input.utmCampaign?.trim()
+          ? limitText(normalizeText(input.utmCampaign), FIELD_LIMITS.utmCampaign)
+          : null,
+        sourceUrl: input.sourceUrl?.trim()
+          ? limitText(input.sourceUrl.trim(), FIELD_LIMITS.sourceUrl)
+          : null,
       });
 
-      notifyOrganizationLead({
-        organizationId: input.organizationId,
-        nombre,
-        tipoTrabajo,
-        empresa,
-      });
+      // Notificar al vendedor (async, no bloquea)
+      void webPushNotificationsService
+        .sendLeadCreatedPush({
+          organizationId: input.organizationId,
+          prospectoNombre: nombre,
+          empresaNombre: empresa,
+          tipoTrabajo,
+        })
+        .catch(() => undefined);
 
       return solicitud;
     },
@@ -254,18 +225,14 @@ export function createSolicitudesContactoService(
       const estado = normalizeText(input.estado) as EstadoSolicitudContacto;
 
       if (!id) {
-        throw new SolicitudContactoValidationError(
-          "No pudimos identificar la solicitud."
-        );
+        throw new SolicitudContactoValidationError("No pudimos identificar la solicitud.");
       }
 
       if (!ESTADOS_PERMITIDOS.has(estado)) {
-        throw new SolicitudContactoValidationError(
-          "Selecciona un estado válido."
-        );
+        throw new SolicitudContactoValidationError("Selecciona un estado válido.");
       }
 
-      return repository.updateStatusById({
+      return solicitudesContactoRepository.updateStatusById({
         id,
         estado,
         organizationId: input.organizationId,
@@ -274,5 +241,4 @@ export function createSolicitudesContactoService(
   };
 }
 
-export const solicitudesContactoService =
-  createSolicitudesContactoService();
+export const solicitudesContactoService = createSolicitudesContactoService();

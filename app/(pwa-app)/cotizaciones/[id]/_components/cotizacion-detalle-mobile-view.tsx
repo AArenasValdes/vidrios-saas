@@ -29,7 +29,7 @@ type Props = {
   editComponentsHref: string;
   onDelete: () => Promise<void> | void;
   onOpenPdf: () => Promise<void> | void;
-  onOpenWhatsappShare: () => void;
+  onOpenWhatsappShare: () => Promise<void> | void;
 };
 
 export function CotizacionDetalleMobileView({
@@ -108,11 +108,11 @@ export function CotizacionDetalleMobileView({
           <button
             type="button"
             className={`${s.primaryCta} ${whatsappDisabled ? s.btnDisabled : ""}`}
-            onClick={onOpenWhatsappShare}
+            onClick={() => void onOpenWhatsappShare()}
             disabled={whatsappDisabled}
           >
             <LuMessageCircle aria-hidden />
-            Enviar por WhatsApp
+            Enviar link por WhatsApp
           </button>
         </section>
 

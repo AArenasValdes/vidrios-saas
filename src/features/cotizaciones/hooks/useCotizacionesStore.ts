@@ -500,6 +500,7 @@ export function useCotizacionesStore() {
         existingCode: input.existingCode,
         existingClientId: input.existingClientId,
         existingProjectId: input.existingProjectId,
+        requestKey: `save:${input.existingId ?? "new"}:${input.estado}`,
       });
 
       const currentCotizaciones = cotizacionesRef.current;
@@ -510,11 +511,24 @@ export function useCotizacionesStore() {
       );
       let nextClientes = clientesRef.current;
 
-      try {
-        nextClientes = await loadClientes(organizacionId);
-      } catch (error) {
-        if (!isConnectivityError(error)) {
-          throw error;
+      if (currentCotizaciones.find((c) => c.clientId === record.clientId)) {
+        nextClientes = clientesRef.current.map((c) =>
+          c.id === record.clientId
+            ? {
+                ...c,
+                nombre: record.clienteNombre,
+                telefono: record.clienteTelefono,
+                direccion: record.direccion,
+              }
+            : c
+        );
+      } else {
+        try {
+          nextClientes = await loadClientes(organizacionId);
+        } catch (error) {
+          if (!isConnectivityError(error)) {
+            throw error;
+          }
         }
       }
 
