@@ -182,9 +182,9 @@ export function createClientesService(deps: ClientesServiceDeps = {}) {
       organizationId: EntityId
     ): Promise<ClienteResumen[]> {
       const [clientes, projects, cotizaciones] = await Promise.all([
-        clientesRepo.listByOrganizationId(organizationId),
-        projectsRepo.listByOrganizationId(organizationId),
-        cotizacionesRepo.listByOrganizationId(organizationId),
+        clientesRepo.listResumenBaseByOrganizationId(organizationId),
+        projectsRepo.listResumenByOrganizationId(organizationId),
+        cotizacionesRepo.listClientSummaryByOrganizationId(organizationId),
       ]);
 
       const {

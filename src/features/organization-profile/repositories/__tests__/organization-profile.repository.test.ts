@@ -24,8 +24,16 @@ describe("organization-profile.repository", () => {
         brand_color: "#335EA9",
         forma_pago: "50% anticipo",
         solicitud_publica_slug: "ventora-serena",
-        solicitud_publica_valor: "Recibe una orientación comercial inicial.",
-        solicitud_publica_privacidad: "Tus datos se usan solo para este contacto.",
+        solicitud_publica_descripcion_corta:
+          "Especialistas en vidrios y aluminio.",
+        solicitud_publica_valor: "Recibe una orientacion comercial inicial.",
+        solicitud_publica_mensaje_confianza:
+          "Tu solicitud queda registrada al instante.",
+        solicitud_publica_privacidad:
+          "Tus datos se usan solo para este contacto.",
+        solicitud_publica_horario_desde: "08:30",
+        solicitud_publica_horario_hasta: "18:30",
+        solicitud_publica_dias_atencion: "1,2,3,4,5",
         proveedor_preferido: "Indalum",
         modo_precio_preferido: "margen",
         margen_defecto: 100,
@@ -51,8 +59,14 @@ describe("organization-profile.repository", () => {
       organizationId: 3,
       empresaNombre: "Ventora",
       solicitudPublicaSlug: "ventora-serena",
-      solicitudPublicaValor: "Recibe una orientación comercial inicial.",
+      solicitudPublicaDescripcionCorta: "Especialistas en vidrios y aluminio.",
+      solicitudPublicaValor: "Recibe una orientacion comercial inicial.",
+      solicitudPublicaMensajeConfianza:
+        "Tu solicitud queda registrada al instante.",
       solicitudPublicaPrivacidad: "Tus datos se usan solo para este contacto.",
+      solicitudPublicaHorarioDesde: "08:30",
+      solicitudPublicaHorarioHasta: "18:30",
+      solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5"],
       modoPrecioPreferido: "margen",
       margenDefecto: 100,
     });

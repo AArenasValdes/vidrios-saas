@@ -1,5 +1,6 @@
 "use client";
 
+import { PremiumPageReveal } from "@/components/motion/premium-page-reveal";
 import { DashboardDesktop } from "./_components/desktop/dashboard-desktop";
 import { DashboardMobile } from "./_components/mobile/dashboard-mobile";
 import { useDashboardBreakpoint } from "./_hooks/use-dashboard-breakpoint";
@@ -10,8 +11,16 @@ export default function DashboardPage() {
   const isDesktop = useDashboardBreakpoint();
 
   if (isDesktop) {
-    return <DashboardDesktop {...viewModel.desktop} />;
+    return (
+      <PremiumPageReveal>
+        <DashboardDesktop {...viewModel.desktop} />
+      </PremiumPageReveal>
+    );
   }
 
-  return <DashboardMobile {...viewModel.mobile} />;
+  return (
+    <PremiumPageReveal>
+      <DashboardMobile {...viewModel.mobile} />
+    </PremiumPageReveal>
+  );
 }

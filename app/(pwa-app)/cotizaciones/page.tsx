@@ -18,6 +18,7 @@ import {
   LuTrash2,
 } from "react-icons/lu";
 
+import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
@@ -590,8 +591,8 @@ export default function CotizacionesPage() {
 
   if (!isReady) {
     return (
-      <div className={s.root}>
-        <div className={s.emptyState}>
+      <PremiumPageReveal className={s.root}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuFilePlus2 aria-hidden />
           </div>
@@ -599,14 +600,14 @@ export default function CotizacionesPage() {
           <p className={s.emptySub}>
             Estamos preparando tus presupuestos y el resumen comercial.
           </p>
-        </div>
-      </div>
+        </PremiumPageSection>
+      </PremiumPageReveal>
     );
   }
 
   return (
-    <div className={s.root}>
-      <div className={s.header}>
+    <PremiumPageReveal className={s.root}>
+      <PremiumPageSection className={s.header}>
         <div>
           <h1 className={s.title}>Cotizaciones</h1>
           <p className={s.subtitle}>
@@ -635,14 +636,16 @@ export default function CotizacionesPage() {
             </Link>
           </motion.div>
         </div>
-      </div>
+      </PremiumPageSection>
 
-      <CotizacionesMobileSummary
-        items={mobileStats}
-        onSelect={handleAtajoEstadoSelect}
-      />
+      <PremiumPageSection>
+        <CotizacionesMobileSummary
+          items={mobileStats}
+          onSelect={handleAtajoEstadoSelect}
+        />
+      </PremiumPageSection>
 
-      <div className={s.kpiRow}>
+      <PremiumPageSection className={s.kpiRow}>
         {kpis.map((kpi, index) => (
           <div
             key={kpi.label}
@@ -659,7 +662,7 @@ export default function CotizacionesPage() {
             <span className={s.kpiSub}>{kpi.sub}</span>
           </div>
         ))}
-      </div>
+      </PremiumPageSection>
 
       <motion.div
         className={s.mobileToolbar}
@@ -691,7 +694,7 @@ export default function CotizacionesPage() {
         </button>
       </motion.div>
 
-      <div className={s.filterBar}>
+      <PremiumPageSection className={s.filterBar}>
         <div className={s.searchWrap}>
           <span className={s.searchIcon}>
             <LuSearch aria-hidden />
@@ -726,7 +729,7 @@ export default function CotizacionesPage() {
           }
           onLimpiar={limpiar}
         />
-      </div>
+      </PremiumPageSection>
 
       <AnimatePresence initial={false}>
         {isFilterPanelOpen ? (
@@ -765,7 +768,7 @@ export default function CotizacionesPage() {
         ) : null}
       </AnimatePresence>
 
-      <div className={s.resultsBar}>
+      <PremiumPageSection className={s.resultsBar}>
         <div className={s.resultsSummary}>
           <p className={s.resultsLabel}>Resultados</p>
           <div className={s.resultsMain}>
@@ -793,10 +796,10 @@ export default function CotizacionesPage() {
           <span>&middot;</span>
           <span>Total {CLP(montoFiltrado)}</span>
         </div>
-      </div>
+      </PremiumPageSection>
 
       {filtradas.length === 0 ? (
-        <div className={s.emptyState}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuFilePlus2 aria-hidden />
           </div>
@@ -825,10 +828,10 @@ export default function CotizacionesPage() {
               Nueva cotizacion
             </Link>
           )}
-        </div>
+        </PremiumPageSection>
       ) : (
         <>
-          <div className={s.tableWrap}>
+          <PremiumPageSection className={s.tableWrap}>
             <table className={s.table}>
               <colgroup>
                 <col className={s.colCode} />
@@ -961,16 +964,16 @@ export default function CotizacionesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </PremiumPageSection>
 
-          <div className={s.cardList}>
+          <PremiumPageSection className={s.cardList}>
             {visibleRows.map((row, index) => (
               <CotizacionMobileCard key={row.id} row={row} index={index} />
             ))}
-          </div>
+          </PremiumPageSection>
 
           {totalPages > 1 ? (
-            <div className={s.pagination}>
+            <PremiumPageSection className={s.pagination}>
               <span className={s.pagInfo}>
                 Mostrando {pageStart + 1} - {Math.min(pageStart + PAGE_SIZE, filtradas.length)} de{" "}
                 {ordenadas.length} cotizaciones
@@ -1003,7 +1006,7 @@ export default function CotizacionesPage() {
                   {">"}
                 </button>
               </div>
-            </div>
+            </PremiumPageSection>
           ) : null}
         </>
       )}
@@ -1047,6 +1050,6 @@ export default function CotizacionesPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </PremiumPageReveal>
   );
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { clientesService } from "@/features/clientes/services/clientes.service";
+import { getClientesResumenByOrganizationId } from "@/features/clientes/services/clientes-summary.service";
 import type {
   ActualizarClienteInput,
   ClienteDetalle,
@@ -111,7 +112,9 @@ export function useClientes() {
   const [isSaving, setIsSaving] = useState(false);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
-  const lastOrganizationIdRef = useRef<string | null>(null);
+  const lastOrganizationIdRef = useRef<string | null>(
+    organizacionId ? String(organizacionId) : null
+  );
   const bootRetryCountRef = useRef(0);
   const bootRetryTimeoutRef = useRef<number | null>(null);
 
@@ -139,8 +142,7 @@ export function useClientes() {
       const inFlightPromise = clientesResumenPromiseByOrganization.get(organizationKey);
       const dataPromise =
         inFlightPromise ??
-        clientesService
-          .listResumenByOrganizationId(organizacionId)
+        getClientesResumenByOrganizationId(organizacionId)
           .finally(() => clientesResumenPromiseByOrganization.delete(organizationKey));
 
       if (!inFlightPromise) {
@@ -203,10 +205,11 @@ export function useClientes() {
         window.clearTimeout(bootRetryTimeoutRef.current);
         bootRetryTimeoutRef.current = null;
       }
-      setClientes([]);
+      const nextInitialState = readInitialClientesState(organizacionId);
+      setClientes(nextInitialState.clientes);
       setDetalleById({});
       setError(null);
-      setIsReady(false);
+      setIsReady(nextInitialState.isReady);
     }
 
     if (cargando) {

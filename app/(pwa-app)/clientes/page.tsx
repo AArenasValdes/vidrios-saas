@@ -15,6 +15,7 @@ import {
   LuUsers,
 } from "react-icons/lu";
 
+import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useClientes } from "@/hooks/useClientes";
 
 import s from "./page.module.css";
@@ -252,39 +253,39 @@ export default function ClientesPage() {
 
   if (!isReady) {
     return (
-      <div className={s.root}>
-        <div className={s.emptyState}>
+      <PremiumPageReveal className={s.root}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuUsers aria-hidden />
           </div>
           <p className={s.emptyTitle}>Cargando clientes</p>
           <p className={s.emptySub}>Estamos preparando el padron comercial de tu organizacion.</p>
-        </div>
-      </div>
+        </PremiumPageSection>
+      </PremiumPageReveal>
     );
   }
 
   return (
-    <div className={s.root}>
-      <div className={s.header}>
+    <PremiumPageReveal className={s.root}>
+      <PremiumPageSection className={s.header}>
         <div className={s.headerActions}>
           <Link className={s.btnPrimary} href="/clientes/nuevo">
             <LuUserPlus aria-hidden />
             Nuevo cliente
           </Link>
         </div>
-      </div>
+      </PremiumPageSection>
 
-      <div className={s.mobileKpiGrid}>
+      <PremiumPageSection className={s.mobileKpiGrid}>
         {mobileKpis.map((kpi) => (
           <div key={kpi.label} className={`${s.mobileKpiCard} ${s[`mobileKpi${kpi.tone[0].toUpperCase()}${kpi.tone.slice(1)}`]}`}>
             <strong>{kpi.value}</strong>
             <span>{kpi.label}</span>
           </div>
         ))}
-      </div>
+      </PremiumPageSection>
 
-      <div className={s.mobileSearchSection}>
+      <PremiumPageSection className={s.mobileSearchSection}>
         <div className={s.mobileSearchWrap}>
           <span className={s.searchIcon}>
             <LuSearch aria-hidden />
@@ -315,9 +316,9 @@ export default function ClientesPage() {
           <strong>{filtrados.length} clientes</strong>
           <span>{obrasFiltradas} obras activas</span>
         </div>
-      </div>
+      </PremiumPageSection>
 
-      <div className={s.kpiRow}>
+      <PremiumPageSection className={s.kpiRow}>
         {kpis.map((kpi) => (
           <div key={kpi.label} className={s.kpiCard}>
             <span className={s.kpiLabel}>{kpi.label}</span>
@@ -327,9 +328,9 @@ export default function ClientesPage() {
             <span className={s.kpiSub}>{kpi.sub}</span>
           </div>
         ))}
-      </div>
+      </PremiumPageSection>
 
-      <div className={s.filterBar}>
+      <PremiumPageSection className={s.filterBar}>
         <div className={s.searchWrap}>
           <span className={s.searchIcon}>
             <LuSearch aria-hidden />
@@ -372,9 +373,9 @@ export default function ClientesPage() {
           <LuFilterX aria-hidden />
           Limpiar
         </button>
-      </div>
+      </PremiumPageSection>
 
-      <div className={s.resultsBar}>
+      <PremiumPageSection className={s.resultsBar}>
         <div>
           <p className={s.resultsLabel}>Resultados</p>
           <div className={s.resultsMain}>
@@ -397,19 +398,19 @@ export default function ClientesPage() {
             <span className={s.resultsHint}>Sin filtros activos</span>
           )}
         </div>
-      </div>
+      </PremiumPageSection>
 
       {feedbackMessage ? (
-        <div className={s.feedbackBanner}>
+        <PremiumPageSection className={s.feedbackBanner}>
           <span>{feedbackMessage}</span>
           <button className={s.feedbackClose} onClick={() => setFeedbackMessage(null)} type="button">
             Cerrar
           </button>
-        </div>
+        </PremiumPageSection>
       ) : null}
 
       {filtrados.length === 0 ? (
-        <div className={s.emptyState}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuUsers aria-hidden />
           </div>
@@ -438,10 +439,10 @@ export default function ClientesPage() {
               Nuevo cliente
             </Link>
           )}
-        </div>
+        </PremiumPageSection>
       ) : (
         <>
-          <div className={s.tableWrap}>
+          <PremiumPageSection className={s.tableWrap}>
             <table className={s.table}>
               <colgroup>
                 <col className={s.colCliente} />
@@ -536,9 +537,9 @@ export default function ClientesPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </PremiumPageSection>
 
-          <div className={s.cardList}>
+          <PremiumPageSection className={s.cardList}>
             {visibleRows.map((row) => {
               return (
                 <div key={row.id} className={s.clientCard}>
@@ -610,10 +611,10 @@ export default function ClientesPage() {
                 </div>
               );
             })}
-          </div>
+          </PremiumPageSection>
 
           {totalPages > 1 ? (
-            <div className={s.pagination}>
+            <PremiumPageSection className={s.pagination}>
               <span className={s.pagInfo}>
                 Mostrando {pageStart + 1} - {Math.min(pageStart + PAGE_SIZE, filtrados.length)} de{" "}
                 {filtrados.length} clientes
@@ -646,7 +647,7 @@ export default function ClientesPage() {
                   {">"}
                 </button>
               </div>
-            </div>
+            </PremiumPageSection>
           ) : null}
         </>
       )}
@@ -690,6 +691,6 @@ export default function ClientesPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </PremiumPageReveal>
   );
 }

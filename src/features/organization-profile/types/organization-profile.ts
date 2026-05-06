@@ -12,8 +12,13 @@ export type OrganizationProfile = {
   brandColor: string;
   formaPago: string;
   solicitudPublicaSlug: string;
+  solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;
+  solicitudPublicaMensajeConfianza: string;
   solicitudPublicaPrivacidad: string;
+  solicitudPublicaHorarioDesde: string;
+  solicitudPublicaHorarioHasta: string;
+  solicitudPublicaDiasAtencion: string[];
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
@@ -30,8 +35,13 @@ export type UpdateOrganizationProfileInput = {
   brandColor: string;
   formaPago: string;
   solicitudPublicaSlug: string;
+  solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;
+  solicitudPublicaMensajeConfianza: string;
   solicitudPublicaPrivacidad: string;
+  solicitudPublicaHorarioDesde: string;
+  solicitudPublicaHorarioHasta: string;
+  solicitudPublicaDiasAtencion: string[];
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;

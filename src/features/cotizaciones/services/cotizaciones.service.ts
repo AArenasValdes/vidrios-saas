@@ -400,26 +400,15 @@ export function createCotizacionesAppService(
     }
   }
 
-  async function listWorkflowByOrganizationId(organizationId: EntityId) {
-    const cotizaciones = await cotizacionesRepo.listByOrganizationId(organizationId);
-    const projectIds = Array.from(
-      new Set(
-        cotizaciones
-          .map((cotizacion) => cotizacion.proyectoId)
-          .filter((value): value is EntityId => value !== null)
-      )
-    );
-    const projects = await projectsRepo.listByIds(projectIds, organizationId);
-    const projectsById = new Map(projects.map((project) => [String(project.id), project]));
-    const clientIds = Array.from(
-      new Set(
-        projects
-          .map((project) => project.clienteId)
-          .filter((value): value is EntityId => value !== null)
-      )
-    );
-    const clients = await clientesRepo.listByIds(clientIds, organizationId);
-    const clientsById = new Map(clients.map((client) => [String(client.id), client]));
+  async function listWorkflowSummaryByOrganizationId(organizationId: EntityId) {
+    const [cotizaciones, allProjects, allClients] = await Promise.all([
+      cotizacionesRepo.listByOrganizationId(organizationId),
+      projectsRepo.listByOrganizationId(organizationId),
+      clientesRepo.listByOrganizationId(organizationId),
+    ]);
+
+    const projectsById = new Map(allProjects.map((project) => [String(project.id), project]));
+    const clientsById = new Map(allClients.map((client) => [String(client.id), client]));
 
     return cotizaciones.map((cotizacion) => {
       const project = cotizacion.proyectoId
@@ -707,7 +696,8 @@ return workflowRecord;
 
   return {
     listClientsByOrganizationId,
-    listWorkflowByOrganizationId,
+    listWorkflowByOrganizationId: listWorkflowSummaryByOrganizationId,
+    listWorkflowSummaryByOrganizationId,
     getWorkflowById,
     saveWorkflow,
     deleteWorkflow,

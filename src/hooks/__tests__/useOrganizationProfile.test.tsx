@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+
 import { useOrganizationProfile } from "../useOrganizationProfile";
 import type { AuthUserState } from "@/types/auth";
 import type { OrganizationProfile } from "@/types/organization-profile";
@@ -43,14 +44,19 @@ function createProfile(
     brandColor: "#335ea9",
     formaPago: "",
     solicitudPublicaSlug: "mi-empresa",
-    solicitudPublicaValor: "Valor",
-    solicitudPublicaPrivacidad: "Privacidad",
+    solicitudPublicaDescripcionCorta: "Vidrios y aluminio.",
+    solicitudPublicaValor: "Respuesta comercial inicial.",
+    solicitudPublicaMensajeConfianza: "Tu solicitud queda guardada.",
+    solicitudPublicaPrivacidad: "Privacidad.",
+    solicitudPublicaHorarioDesde: "09:00",
+    solicitudPublicaHorarioHasta: "19:00",
+    solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5", "6"],
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
     creadoEn: "2026-03-27T10:00:00Z",
     actualizadoEn: "2026-03-27T10:00:00Z",
-    };
+  };
 }
 
 function ProbeOrganizationProfile() {

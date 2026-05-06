@@ -24,6 +24,17 @@ type ClienteRow = {
 
 const CLIENT_SELECT =
   "id, organization_id, nombre, telefono, direccion, correo, creado_en, actualizado_en, eliminado_en";
+const CLIENT_SUMMARY_SELECT =
+  "id, nombre, telefono, direccion, creado_en, actualizado_en";
+
+type ClienteSummaryRow = {
+  id: EntityId;
+  nombre: string;
+  telefono: string | null;
+  direccion: string | null;
+  creado_en: string | null;
+  actualizado_en: string | null;
+};
 
 function mapCliente(row: ClienteRow): Cliente {
   return {
@@ -52,6 +63,46 @@ export function createClientesRepository(
         .eq("organization_id", organizationId)
         .is("eliminado_en", null)
         .order("nombre", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as ClienteRow[]).map(mapCliente);
+    },
+
+    async listResumenBaseByOrganizationId(organizationId: EntityId) {
+      const { data, error } = await supabase
+        .from("clients")
+        .select(CLIENT_SUMMARY_SELECT)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .order("nombre", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as ClienteSummaryRow[] | null) ?? []).map((row) => ({
+        id: row.id,
+        nombre: row.nombre,
+        telefono: row.telefono,
+        direccion: row.direccion,
+        creadoEn: row.creado_en,
+        actualizadoEn: row.actualizado_en,
+      }));
+    },
+
+    async listByManyIds(ids: EntityId[]) {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select(CLIENT_SELECT)
+        .in("id", ids)
+        .is("eliminado_en", null);
 
       if (error) {
         throw error;
@@ -210,6 +261,12 @@ function getDefaultClientesRepository() {
 export const clientesRepository: ClientesRepository = {
   listByOrganizationId(...args) {
     return getDefaultClientesRepository().listByOrganizationId(...args);
+  },
+  listResumenBaseByOrganizationId(...args) {
+    return getDefaultClientesRepository().listResumenBaseByOrganizationId(...args);
+  },
+  listByManyIds(...args) {
+    return getDefaultClientesRepository().listByManyIds(...args);
   },
   listByIds(...args) {
     return getDefaultClientesRepository().listByIds(...args);

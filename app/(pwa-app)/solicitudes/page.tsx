@@ -2,21 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  LuArrowUpRight,
-  LuCheck,
-  LuChevronRight,
-  LuCopy,
-  LuEllipsisVertical,
-  LuFilePlus2,
-  LuGlobe,
-  LuInbox,
-  LuMail,
-  LuMessageCircleMore,
-  LuPhone,
-  LuText,
-} from "react-icons/lu";
+import { LuArrowUpRight, LuCheck, LuChevronRight, LuCopy, LuInbox } from "react-icons/lu";
 
+import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { persistNuevaCotizacionSolicitudPrefill } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -28,19 +16,20 @@ import type {
 } from "@/features/solicitudes/types/solicitud-contacto";
 import { formatChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import { relativeTime } from "@/utils/relative-time";
+import { SolicitudCard } from "./_components/solicitud-card";
 import s from "./page.module.css";
 
 const ESTADO_LABELS: Record<EstadoSolicitudContacto, string> = {
   nueva: "Nueva",
   contactada: "Contactada",
-  cerrada: "Cotización creada",
+  cerrada: "Cotizacion creada",
   descartada: "Descartada",
 };
 
 const FILTRO_LABELS: Record<EstadoSolicitudContacto, string> = {
   nueva: "Nuevas",
   contactada: "Contactadas",
-  cerrada: "Con cotización",
+  cerrada: "Con cotizacion",
   descartada: "Descartadas",
 };
 
@@ -60,9 +49,16 @@ const ESTADO_BADGE_CLASS: Record<EstadoSolicitudContacto, string> = {
 
 const AYUDA_LABEL: Record<string, string> = {
   demo: "Demo",
-  cotizacion: "Cotización",
+  cotizacion: "Cotizacion",
   ventas: "Ventas",
 };
+
+const SOLICITUD_STATE_OPTIONS: EstadoSolicitudContacto[] = [
+  "nueva",
+  "contactada",
+  "cerrada",
+  "descartada",
+];
 
 type FiltroSolicitud = EstadoSolicitudContacto | "all";
 
@@ -123,7 +119,11 @@ function formatListDate(value: string | null) {
 }
 
 function resolveOriginLabel(solicitud: SolicitudContacto) {
-  const origen = solicitud.origen.trim().toLowerCase();
+  const origen = (solicitud.utmSource || solicitud.origen).trim().toLowerCase();
+
+  if (origen.includes("qr")) {
+    return "QR";
+  }
 
   if (origen.includes("instagram")) {
     return "Instagram";
@@ -142,7 +142,7 @@ function resolveOriginLabel(solicitud: SolicitudContacto) {
   }
 
   if (solicitud.contexto === "empresa-publica") {
-    return "Página pública";
+    return "Pagina publica";
   }
 
   return "Landing";
@@ -175,8 +175,12 @@ function formatSolicitudContact(value: string | null) {
 
 function buildWhatsappMessageUrl(phone: string, name: string, empresaNombre: string) {
   const cleanedPhone = normalizeChileMobilePhone(phone);
-  if (!cleanedPhone) return null;
-  const message = `Hola ${name}, recibimos tu solicitud en ${empresaNombre}. Te contacto para revisar los detalles y preparar tu cotización.`;
+
+  if (!cleanedPhone) {
+    return null;
+  }
+
+  const message = `Hola ${name}, recibimos tu solicitud en ${empresaNombre}. Te contacto para revisar los detalles y preparar tu cotizacion.`;
   return `https://wa.me/56${cleanedPhone}?text=${encodeURIComponent(message)}`;
 }
 
@@ -192,6 +196,7 @@ export default function SolicitudesPage() {
   const router = useRouter();
   const { rol, user } = useAuth();
   const { profile } = useOrganizationProfile();
+  const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
   const canReviewSolicitudes = canAccessSolicitudes({
     email: user?.email,
     rol,
@@ -203,16 +208,15 @@ export default function SolicitudesPage() {
     error,
     refreshSolicitudes,
     updateSolicitudEstado,
-  } = useSolicitudesContacto(canReviewSolicitudes);
+  } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey);
   const [filtroActivo, setFiltroActivo] = useState<FiltroSolicitud>("all");
   const [menuSolicitudId, setMenuSolicitudId] = useState<string | null>(null);
   const [updatingSolicitudId, setUpdatingSolicitudId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const publicRequestUrl = useMemo(
-    () => buildPublicRequestUrl(profile?.solicitudPublicaSlug),
-    [profile?.solicitudPublicaSlug]
-  );
+  const publicRequestUrl = useMemo(() => {
+    return buildPublicRequestUrl(profile?.solicitudPublicaSlug);
+  }, [profile?.solicitudPublicaSlug]);
 
   const resumen = useMemo(() => {
     const counts: Record<EstadoSolicitudContacto, number> = {
@@ -245,6 +249,53 @@ export default function SolicitudesPage() {
 
     return solicitudes.filter((solicitud) => solicitud.estado === filtroActivo);
   }, [filtroActivo, solicitudes]);
+
+  const visibleSolicitudes = useMemo(() => {
+    return solicitudesFiltradas.map((solicitud) => {
+      const telefonoContacto =
+        solicitud.telefono ||
+        (solicitud.contacto && !solicitud.contacto.includes("@")
+          ? solicitud.contacto
+          : null);
+      const emailContacto =
+        solicitud.correo ||
+        (solicitud.contacto?.includes("@") ? solicitud.contacto : null);
+      const originLabel = resolveOriginLabel(solicitud);
+      const message =
+        solicitud.mensaje?.trim() ||
+        `Quiero consultar por ${
+          solicitud.tipoTrabajo || AYUDA_LABEL[solicitud.ayuda] || "este trabajo"
+        }.`;
+
+      return {
+        solicitud,
+        initials: getInitials(solicitud.nombre),
+        displayType: solicitud.tipoTrabajo || AYUDA_LABEL[solicitud.ayuda] || "Consulta",
+        statusLabel: ESTADO_LABELS[solicitud.estado],
+        statusClassName: ESTADO_BADGE_CLASS[solicitud.estado],
+        relativeLabel: relativeTime(solicitud.creadoEn),
+        calendarLabel: formatListDate(solicitud.creadoEn),
+        contactLabel: telefonoContacto
+          ? formatSolicitudContact(telefonoContacto)
+          : emailContacto,
+        contactHref: telefonoContacto
+          ? `tel:${telefonoContacto}`
+          : emailContacto
+            ? `mailto:${emailContacto}`
+            : null,
+        contactIcon: telefonoContacto ? "phone" : emailContacto ? "mail" : null,
+        originLabel,
+        message,
+        whatsappUrl: telefonoContacto
+          ? buildWhatsappMessageUrl(
+              telefonoContacto,
+              solicitud.nombre,
+              profile?.empresaNombre ?? "nosotros"
+            )
+          : null,
+      };
+    });
+  }, [profile?.empresaNombre, solicitudesFiltradas]);
 
   const nuevasCount = resumen.counts.nueva;
 
@@ -288,7 +339,7 @@ export default function SolicitudesPage() {
 
   const handleCopyPublicLink = useCallback(async () => {
     if (!publicRequestUrl) {
-      setFeedback("Primero configura el slug público en Empresa.");
+      setFeedback("Primero configura el slug publico en Empresa.");
       return;
     }
 
@@ -308,6 +359,22 @@ export default function SolicitudesPage() {
       setFeedback("No pudimos copiar el dato.");
     }
   }, []);
+
+  const handleCopyContact = useCallback(
+    async (value: string) => {
+      setMenuSolicitudId(null);
+      await handleCopyText(value, "Contacto copiado.");
+    },
+    [handleCopyText]
+  );
+
+  const handleCopyMessage = useCallback(
+    async (value: string) => {
+      setMenuSolicitudId(null);
+      await handleCopyText(value, "Mensaje copiado.");
+    },
+    [handleCopyText]
+  );
 
   const handleToggleMenu = useCallback((solicitudId: string) => {
     setMenuSolicitudId((current) => (current === solicitudId ? null : solicitudId));
@@ -334,11 +401,8 @@ export default function SolicitudesPage() {
         (solicitud.contacto && !solicitud.contacto.includes("@")
           ? solicitud.contacto
           : "");
-      const origenLabel = resolveOriginLabel(solicitud);
-      const observaciones = [
-        solicitud.mensaje?.trim() || "",
-        `Origen: ${origenLabel}.`,
-      ]
+      const originLabel = resolveOriginLabel(solicitud);
+      const observaciones = [solicitud.mensaje?.trim() || "", `Origen: ${originLabel}.`]
         .filter(Boolean)
         .join("\n\n");
 
@@ -352,49 +416,56 @@ export default function SolicitudesPage() {
         defaultMargin: profile?.margenDefecto,
       });
 
-      router.push("/cotizaciones/nueva");
+      const params = new URLSearchParams({
+        nombre: solicitud.nombre,
+        telefono: telefonoContacto,
+        tipoTrabajo: solicitud.tipoTrabajo?.trim() || "Solicitud comercial",
+        solicitudId: solicitud.id,
+      });
+
+      router.push(`/cotizaciones/nueva?${params.toString()}`);
     },
     [profile?.margenDefecto, profile?.modoPrecioPreferido, router]
   );
 
   if (!isReady) {
     return (
-      <div className={s.root}>
-        <div className={s.emptyState}>
+      <PremiumPageReveal className={s.root}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />
           </div>
           <p className={s.emptyTitle}>Cargando solicitudes</p>
           <p className={s.emptySub}>Estamos preparando tu bandeja comercial.</p>
-        </div>
-      </div>
+        </PremiumPageSection>
+      </PremiumPageReveal>
     );
   }
 
   if (!canReviewSolicitudes) {
     return (
-      <div className={s.root}>
-        <div className={s.emptyState}>
+      <PremiumPageReveal className={s.root}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />
           </div>
           <p className={s.emptyTitle}>Acceso restringido</p>
           <p className={s.emptySub}>
-            Esta bandeja está reservada para la cuenta autorizada.
+            Esta bandeja esta reservada para la cuenta autorizada.
           </p>
-        </div>
-      </div>
+        </PremiumPageSection>
+      </PremiumPageReveal>
     );
   }
 
   return (
-    <div className={s.root}>
-      <section className={s.heroCard}>
+    <PremiumPageReveal className={s.root}>
+      <PremiumPageSection className={s.heroCard}>
         <div className={s.heroTop}>
           <div>
             <span className={s.heroEyebrow}>Solicitudes recibidas</span>
             <strong className={s.heroTotal}>{resumen.total}</strong>
-            <p className={s.heroSub}>Desde tu enlace público</p>
+            <p className={s.heroSub}>Desde tu enlace publico</p>
           </div>
           <span className={s.todayBadge}>+{resumen.hoy} hoy</span>
         </div>
@@ -416,18 +487,18 @@ export default function SolicitudesPage() {
               rel="noopener noreferrer"
             >
               <LuArrowUpRight aria-hidden />
-              Ver página
+              Ver pagina
             </a>
           ) : (
             <button type="button" className={s.heroActionSecondary} disabled>
               <LuArrowUpRight aria-hidden />
-              Ver página
+              Ver pagina
             </button>
           )}
         </div>
-      </section>
+      </PremiumPageSection>
 
-      <section className={s.filtersSection}>
+      <PremiumPageSection className={s.filtersSection}>
         <button
           type="button"
           className={`${s.filterCard} ${s.filterCardAll} ${
@@ -449,264 +520,113 @@ export default function SolicitudesPage() {
         </button>
 
         <div className={s.filterGrid}>
-          {(["nueva", "contactada", "cerrada", "descartada"] as EstadoSolicitudContacto[]).map(
-            (estado) => (
-              <button
-                key={estado}
-                type="button"
-                className={`${s.filterCard} ${ESTADO_CARD_CLASS[estado]} ${
-                  filtroActivo === estado ? s.filterActive : ""
-                }`}
-                onClick={() => setFiltroActivo(estado)}
-              >
-                <div className={s.filterTop}>
-                  <div className={s.filterInline}>
-                    <strong className={s.filterInlineCount}>
-                      {resumen.counts[estado]}
-                    </strong>
-                    <span className={s.filterInlineLabel}>{FILTRO_LABELS[estado]}</span>
-                  </div>
-                  {filtroActivo === estado ? (
-                    <span className={s.filterCheck}>
-                      <LuCheck aria-hidden />
-                    </span>
-                  ) : null}
+          {SOLICITUD_STATE_OPTIONS.map((estado) => (
+            <button
+              key={estado}
+              type="button"
+              className={`${s.filterCard} ${ESTADO_CARD_CLASS[estado]} ${
+                filtroActivo === estado ? s.filterActive : ""
+              }`}
+              onClick={() => setFiltroActivo(estado)}
+            >
+              <div className={s.filterTop}>
+                <div className={s.filterInline}>
+                  <strong className={s.filterInlineCount}>{resumen.counts[estado]}</strong>
+                  <span className={s.filterInlineLabel}>{FILTRO_LABELS[estado]}</span>
                 </div>
-              </button>
-            )
-          )}
+                {filtroActivo === estado ? (
+                  <span className={s.filterCheck}>
+                    <LuCheck aria-hidden />
+                  </span>
+                ) : null}
+              </div>
+            </button>
+          ))}
         </div>
-      </section>
+      </PremiumPageSection>
 
       {nuevasCount > 0 ? (
-        <button
-          type="button"
-          className={s.alertCard}
-          onClick={() => setFiltroActivo("nueva")}
-        >
-          <div className={s.alertIcon}>
-            <LuInbox aria-hidden />
-          </div>
-          <div className={s.alertCopy}>
-            <strong>
-              Tienes {nuevasCount} solicitud{nuevasCount === 1 ? "" : "es"} nueva
-              {nuevasCount === 1 ? "" : "s"} esperando respuesta
-            </strong>
-            <span>Revisar nuevas</span>
-          </div>
-          <LuChevronRight className={s.alertArrow} aria-hidden />
-        </button>
+        <PremiumPageSection>
+          <button
+            type="button"
+            className={s.alertCard}
+            onClick={() => setFiltroActivo("nueva")}
+          >
+            <div className={s.alertIcon}>
+              <LuInbox aria-hidden />
+            </div>
+            <div className={s.alertCopy}>
+              <strong>
+                Tienes {nuevasCount} solicitud{nuevasCount === 1 ? "" : "es"} nueva
+                {nuevasCount === 1 ? "" : "s"} esperando respuesta
+              </strong>
+              <span>Revisar nuevas</span>
+            </div>
+            <LuChevronRight className={s.alertArrow} aria-hidden />
+          </button>
+        </PremiumPageSection>
       ) : null}
 
-      {feedback ? <div className={s.feedbackBanner}>{feedback}</div> : null}
+      {feedback ? (
+        <PremiumPageSection className={s.feedbackBanner}>{feedback}</PremiumPageSection>
+      ) : null}
 
       {error ? (
-        <div className={s.errorBanner}>
+        <PremiumPageSection className={s.errorBanner}>
           <span>{error}</span>
           <button type="button" onClick={() => void refreshSolicitudes()}>
             Reintentar
           </button>
-        </div>
+        </PremiumPageSection>
       ) : null}
 
-      {isRefreshing ? <p className={s.refreshText}>Actualizando solicitudes...</p> : null}
+      {isRefreshing ? (
+        <PremiumPageSection className={s.refreshText}>
+          Actualizando solicitudes...
+        </PremiumPageSection>
+      ) : null}
 
       {solicitudes.length === 0 ? (
-        <div className={s.emptyState}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />
           </div>
-          <p className={s.emptyTitle}>Aún no llegan solicitudes</p>
+          <p className={s.emptyTitle}>Aun no llegan solicitudes</p>
           <p className={s.emptySub}>
-            Cuando alguien escriba desde tu página pública, aparecerá aquí.
+            Cuando alguien escriba desde tu pagina publica, aparecera aqui.
           </p>
-        </div>
+        </PremiumPageSection>
       ) : solicitudesFiltradas.length === 0 ? (
-        <div className={s.emptyState}>
+        <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />
           </div>
           <p className={s.emptyTitle}>No hay solicitudes en este estado</p>
-          <p className={s.emptySub}>
-            Cambia el filtro para revisar el resto de tu bandeja.
-          </p>
-        </div>
+          <p className={s.emptySub}>Cambia el filtro para revisar el resto de tu bandeja.</p>
+        </PremiumPageSection>
       ) : (
-        <div className={s.list}>
-          {solicitudesFiltradas.map((solicitud) => {
-            const telefonoContacto =
-              solicitud.telefono ||
-              (solicitud.contacto && !solicitud.contacto.includes("@")
-                ? solicitud.contacto
-                : null);
-            const emailContacto =
-              solicitud.correo ||
-              (solicitud.contacto?.includes("@") ? solicitud.contacto : null);
-            const mensaje =
-              solicitud.mensaje?.trim() ||
-              `Quiero consultar por ${solicitud.tipoTrabajo || AYUDA_LABEL[solicitud.ayuda] || "este trabajo"}.`;
-            const menuOpen = menuSolicitudId === solicitud.id;
-            const isUpdating = updatingSolicitudId === solicitud.id;
-
-            return (
-              <article key={solicitud.id} className={s.card}>
-                <div className={s.cardTop}>
-                  <div className={s.cardIdentity}>
-                    <div className={s.avatar}>{getInitials(solicitud.nombre)}</div>
-                    <div className={s.identityCopy}>
-                      <h2 className={s.name}>{solicitud.nombre}</h2>
-                      <p className={s.workText}>
-                        {solicitud.tipoTrabajo ||
-                          AYUDA_LABEL[solicitud.ayuda] ||
-                          "Consulta"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className={s.cardMeta}>
-                    <span
-                      className={`${s.statusPill} ${ESTADO_BADGE_CLASS[solicitud.estado]}`}
-                    >
-                      {ESTADO_LABELS[solicitud.estado]}
-                    </span>
-                    <span className={s.dateText}>
-                    {relativeTime(solicitud.creadoEn)} · {formatListDate(solicitud.creadoEn)}
-                  </span>
-                  </div>
-                </div>
-
-                <div className={s.infoRows}>
-                  {telefonoContacto ? (
-                    <a href={`tel:${telefonoContacto}`} className={s.infoRow}>
-                      <LuPhone aria-hidden />
-                      <span>{formatSolicitudContact(telefonoContacto)}</span>
-                    </a>
-                  ) : emailContacto ? (
-                    <a href={`mailto:${emailContacto}`} className={s.infoRow}>
-                      <LuMail aria-hidden />
-                      <span>{emailContacto}</span>
-                    </a>
-                  ) : null}
-
-                  <div className={s.infoRow}>
-                    <LuGlobe aria-hidden />
-                    <span>{resolveOriginLabel(solicitud)}</span>
-                  </div>
-                </div>
-
-                <div className={s.messageBubble}>“{mensaje}”</div>
-
-                <div className={s.cardActions} style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    className={s.primaryAction}
-                    onClick={() => handleCreateQuoteFromSolicitud(solicitud)}
-                  >
-                    <LuFilePlus2 aria-hidden />
-                    Crear cotización
-                  </button>
-
-                  {telefonoContacto && (() => {
-                    const waUrl = buildWhatsappMessageUrl(telefonoContacto, solicitud.nombre, profile?.empresaNombre ?? "nosotros");
-                    return waUrl ? (
-                      <a
-                        href={waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={s.whatsappAction}
-                        onClick={(e) => { e.stopPropagation(); }}
-                      >
-                        <LuMessageCircleMore aria-hidden />
-                        Contactar por WhatsApp
-                      </a>
-                    ) : null;
-                  })()}
-
-                  {telefonoContacto ? (
-                    <a href={`tel:${telefonoContacto}`} className={s.iconAction}>
-                      <LuPhone aria-hidden />
-                    </a>
-                  ) : emailContacto ? (
-                    <a href={`mailto:${emailContacto}`} className={s.iconAction}>
-                      <LuMail aria-hidden />
-                    </a>
-                  ) : (
-                    <button type="button" className={s.iconAction} disabled>
-                      <LuPhone aria-hidden />
-                    </button>
-                  )}
-
-                  <div className={s.menuWrap}>
-                    <button
-                      type="button"
-                      className={`${s.iconAction} ${s.menuTrigger}`}
-                      data-solicitud-menu-trigger="true"
-                      onClick={() => handleToggleMenu(solicitud.id)}
-                      disabled={isUpdating}
-                    >
-                      <LuEllipsisVertical aria-hidden />
-                    </button>
-
-                    {menuOpen ? (
-                      <div className={s.menuPanel} data-solicitud-menu="true">
-                        <div className={s.menuSectionLabel}>Cambiar estado</div>
-                        {(["nueva", "contactada", "cerrada", "descartada"] as EstadoSolicitudContacto[]).map(
-                          (estado) => (
-                            <button
-                              key={estado}
-                              type="button"
-                              className={`${s.menuAction} ${
-                                solicitud.estado === estado ? s.menuActionActive : ""
-                              }`}
-                              onClick={() => void handleUpdateStatus(solicitud.id, estado)}
-                            >
-                              <span
-                                className={`${s.menuStatusDot} ${ESTADO_BADGE_CLASS[estado]}`}
-                                aria-hidden
-                              />
-                              {estado === "cerrada"
-                                ? "Con cotización"
-                                : FILTRO_LABELS[estado]}
-                            </button>
-                          )
-                        )}
-                        <div className={s.menuDivider} />
-                        {solicitud.contacto ? (
-                          <button
-                            type="button"
-                            className={s.menuAction}
-                            onClick={() => {
-                              setMenuSolicitudId(null);
-                              void handleCopyText(
-                                solicitud.contacto!,
-                                "Contacto copiado."
-                              );
-                            }}
-                          >
-                            <LuCopy aria-hidden />
-                            Copiar contacto
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={s.menuAction}
-                          onClick={() => {
-                            setMenuSolicitudId(null);
-                            void handleCopyText(mensaje, "Mensaje copiado.");
-                          }}
-                        >
-                          <LuText aria-hidden />
-                          Copiar mensaje
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <PremiumPageSection className={s.list}>
+          {visibleSolicitudes.map((item) => (
+            <SolicitudCard
+              key={item.solicitud.id}
+              item={item}
+              isUpdating={updatingSolicitudId === item.solicitud.id}
+              menuOpen={menuSolicitudId === item.solicitud.id}
+              stateOptions={SOLICITUD_STATE_OPTIONS}
+              filterLabels={FILTRO_LABELS}
+              stateBadgeClasses={ESTADO_BADGE_CLASS}
+                onCreateQuote={handleCreateQuoteFromSolicitud}
+                onMarkContacted={(solicitud) =>
+                  void handleUpdateStatus(solicitud.id, "contactada")
+                }
+                onToggleMenu={handleToggleMenu}
+                onUpdateStatus={handleUpdateStatus}
+              onCopyContact={handleCopyContact}
+              onCopyMessage={handleCopyMessage}
+            />
+          ))}
+        </PremiumPageSection>
       )}
-    </div>
+    </PremiumPageReveal>
   );
 }

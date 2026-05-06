@@ -24,6 +24,17 @@ type ProjectRow = {
 
 const PROJECT_SELECT =
   "id, titulo, descripcion, cliente_id, organization_id, creado_en, estado, actualizado_en, eliminado_en";
+const PROJECT_SUMMARY_SELECT =
+  "id, titulo, cliente_id, creado_en, estado, actualizado_en";
+
+type ProjectSummaryRow = {
+  id: EntityId;
+  titulo: string;
+  cliente_id: EntityId | null;
+  creado_en: string | null;
+  estado: string | null;
+  actualizado_en: string | null;
+};
 
 function mapProject(row: ProjectRow): Project {
   return {
@@ -50,6 +61,49 @@ export function createProjectsRepository(deps: ProjectsRepositoryDeps = {}) {
         .eq("organization_id", organizationId)
         .is("eliminado_en", null)
         .order("titulo", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as ProjectRow[]).map(mapProject);
+    },
+
+    async listResumenByOrganizationId(organizationId: EntityId) {
+      const { data, error } = await supabase
+        .from("projects")
+        .select(PROJECT_SUMMARY_SELECT)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .order("titulo", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as ProjectSummaryRow[] | null) ?? []).map((row) => ({
+        id: row.id,
+        titulo: row.titulo,
+        descripcion: null,
+        clienteId: row.cliente_id,
+        organizationId,
+        creadoEn: row.creado_en,
+        estado: row.estado,
+        actualizadoEn: row.actualizado_en,
+        eliminadoEn: null,
+      }));
+    },
+
+    async listByManyIds(ids: EntityId[]) {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select(PROJECT_SELECT)
+        .in("id", ids)
+        .is("eliminado_en", null);
 
       if (error) {
         throw error;
@@ -199,6 +253,12 @@ function getDefaultProjectsRepository() {
 export const projectsRepository: ProjectsRepository = {
   listByOrganizationId(...args) {
     return getDefaultProjectsRepository().listByOrganizationId(...args);
+  },
+  listResumenByOrganizationId(...args) {
+    return getDefaultProjectsRepository().listResumenByOrganizationId(...args);
+  },
+  listByManyIds(...args) {
+    return getDefaultProjectsRepository().listByManyIds(...args);
   },
   listByIds(...args) {
     return getDefaultProjectsRepository().listByIds(...args);

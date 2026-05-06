@@ -64,15 +64,56 @@ function persistOrganizationProfile(
   }
 }
 
+function readInitialOrganizationProfileState(organizationId: string | number | null) {
+  if (organizationId === null || organizationId === undefined) {
+    return {
+      profile: null as OrganizationProfile | null,
+      isReady: false,
+    };
+  }
+
+  const organizationKey = String(organizationId);
+  const warmCache = organizationProfileCache.get(organizationKey);
+
+  if (warmCache) {
+    return {
+      profile: warmCache.profile,
+      isReady: true,
+    };
+  }
+
+  const persisted = readOrganizationProfileFromStorage(organizationKey);
+
+  if (persisted) {
+    organizationProfileCache.set(organizationKey, {
+      organizationId: organizationKey,
+      profile: persisted,
+    });
+
+    return {
+      profile: persisted,
+      isReady: true,
+    };
+  }
+
+  return {
+    profile: null as OrganizationProfile | null,
+    isReady: false,
+  };
+}
+
 export function useOrganizationProfile() {
   const { organizacionId, cargando } = useAuth();
-  const [profile, setProfile] = useState<OrganizationProfile | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const initialStateRef = useRef(readInitialOrganizationProfileState(organizacionId));
+  const [profile, setProfile] = useState<OrganizationProfile | null>(
+    initialStateRef.current.profile
+  );
+  const [isReady, setIsReady] = useState(initialStateRef.current.isReady);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
-  const lastOrganizationIdRef = useRef<string | null>(null);
+  const lastOrganizationIdRef = useRef<string | null>(getOrganizationKey(organizacionId));
   const bootRetryCountRef = useRef(0);
   const bootRetryTimeoutRef = useRef<number | null>(null);
 
@@ -144,8 +185,9 @@ export function useOrganizationProfile() {
         window.clearTimeout(bootRetryTimeoutRef.current);
         bootRetryTimeoutRef.current = null;
       }
-      setProfile(null);
-      setIsReady(false);
+      const nextInitialState = readInitialOrganizationProfileState(organizacionId);
+      setProfile(nextInitialState.profile);
+      setIsReady(nextInitialState.isReady);
     }
 
     if (cargando) {

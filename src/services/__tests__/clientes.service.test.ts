@@ -18,6 +18,16 @@ function createClientesRepositoryMock(): jest.Mocked<ClientesRepository> {
         eliminadoEn: null,
       },
     ]),
+    listResumenBaseByOrganizationId: jest.fn().mockResolvedValue([
+      {
+        id: 1,
+        nombre: "Roberto Fuentes",
+        telefono: "+56 9 8234 5678",
+        direccion: "Los Pescadores 221, Coquimbo",
+        creadoEn: "2026-03-01T10:00:00.000Z",
+        actualizadoEn: "2026-03-10T10:00:00.000Z",
+      },
+    ]),
     listByIds: jest.fn(),
     getById: jest.fn().mockResolvedValue({
       id: 1,
@@ -50,6 +60,30 @@ function createClientesRepositoryMock(): jest.Mocked<ClientesRepository> {
 function createProjectsRepositoryMock(): jest.Mocked<ProjectsRepository> {
   return {
     listByOrganizationId: jest.fn().mockResolvedValue([
+      {
+        id: 10,
+        titulo: "Casa Coquimbo",
+        descripcion: null,
+        clienteId: 1,
+        organizationId: 77,
+        creadoEn: "2026-03-02T10:00:00.000Z",
+        estado: "activo",
+        actualizadoEn: "2026-03-11T10:00:00.000Z",
+        eliminadoEn: null,
+      },
+      {
+        id: 11,
+        titulo: "Oficina Serena",
+        descripcion: null,
+        clienteId: 1,
+        organizationId: 77,
+        creadoEn: "2026-03-03T10:00:00.000Z",
+        estado: "activo",
+        actualizadoEn: "2026-03-12T10:00:00.000Z",
+        eliminadoEn: null,
+      },
+    ]),
+    listResumenByOrganizationId: jest.fn().mockResolvedValue([
       {
         id: 10,
         titulo: "Casa Coquimbo",
@@ -130,6 +164,26 @@ function createCotizacionesRepositoryMock(): jest.Mocked<CotizacionesRepository>
         total: 238000,
       },
     ]),
+    listClientSummaryByOrganizationId: jest.fn().mockResolvedValue([
+      {
+        id: 100,
+        proyectoId: 10,
+        estado: "creada",
+        creadoEn: "2026-03-12T10:00:00.000Z",
+        actualizadoEn: "2026-03-13T10:00:00.000Z",
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+      },
+      {
+        id: 101,
+        proyectoId: 11,
+        estado: "enviada",
+        creadoEn: "2026-03-10T10:00:00.000Z",
+        actualizadoEn: "2026-03-14T10:00:00.000Z",
+        clienteVioEn: null,
+        clienteRespondioEn: null,
+      },
+    ]),
     getById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -142,33 +196,15 @@ function createCotizacionesRepositoryMock(): jest.Mocked<CotizacionesRepository>
 describe("clientes.service", () => {
   it("debe listar resumenes de clientes con obras y ultima gestion", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
-    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+    cotizacionesRepository.listClientSummaryByOrganizationId.mockResolvedValue([
       {
         id: 100,
         proyectoId: 10,
-        organizationId: 77,
-        numero: "COT-100",
         estado: "aprobada",
-        descuentoPct: 0,
-        flete: 0,
-        iva: 19000,
-        notas: "",
-        validoHasta: null,
-        subtotalNeto: 100000,
-        costoTotal: 80000,
-        margenPct: 25,
-        utilidadTotal: 20000,
-        estadoComercial: null,
-        approvalToken: null,
-        approvalTokenExpiresAt: null,
-        clienteVioEn: null,
-        clienteRespondioEn: null,
-        clienteRespuestaCanal: null,
         creadoEn: "2026-04-10T10:00:00.000Z",
         actualizadoEn: "2026-04-11T10:00:00.000Z",
-        eliminadoEn: null,
-        items: [],
-        total: 119000,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
       },
     ]);
     const service = createClientesService({
@@ -316,33 +352,15 @@ describe("clientes.service", () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
     const recentlyUpdatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
 
-    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+    cotizacionesRepository.listClientSummaryByOrganizationId.mockResolvedValue([
       {
         id: 101,
         proyectoId: 10,
-        organizationId: 77,
-        numero: "COT-101",
         estado: "enviada",
-        descuentoPct: 0,
-        flete: 0,
-        iva: 19000,
-        notas: "",
-        validoHasta: null,
-        subtotalNeto: 100000,
-        costoTotal: 80000,
-        margenPct: 25,
-        utilidadTotal: 20000,
-        estadoComercial: null,
-        approvalToken: null,
-        approvalTokenExpiresAt: null,
-        clienteVioEn: null,
-        clienteRespondioEn: null,
-        clienteRespuestaCanal: null,
         creadoEn: recentlyUpdatedAt,
         actualizadoEn: recentlyUpdatedAt,
-        eliminadoEn: null,
-        items: [],
-        total: 119000,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
       },
     ]);
 
@@ -361,60 +379,24 @@ describe("clientes.service", () => {
 
   it("debe mantener prospecto si el cliente solo tiene borradores o cotizaciones creadas", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
-    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+    cotizacionesRepository.listClientSummaryByOrganizationId.mockResolvedValue([
       {
         id: 100,
         proyectoId: 10,
-        organizationId: 77,
-        numero: "COT-100",
         estado: "borrador",
-        descuentoPct: 0,
-        flete: 0,
-        iva: 19000,
-        notas: "",
-        validoHasta: null,
-        subtotalNeto: 100000,
-        costoTotal: 80000,
-        margenPct: 25,
-        utilidadTotal: 20000,
-        estadoComercial: null,
-        approvalToken: null,
-        approvalTokenExpiresAt: null,
-        clienteVioEn: null,
-        clienteRespondioEn: null,
-        clienteRespuestaCanal: null,
         creadoEn: "2026-03-12T10:00:00.000Z",
         actualizadoEn: "2026-03-13T10:00:00.000Z",
-        eliminadoEn: null,
-        items: [],
-        total: 119000,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
       },
       {
         id: 101,
         proyectoId: 11,
-        organizationId: 77,
-        numero: "COT-101",
         estado: "creada",
-        descuentoPct: 0,
-        flete: 0,
-        iva: 38000,
-        notas: "",
-        validoHasta: null,
-        subtotalNeto: 200000,
-        costoTotal: 160000,
-        margenPct: 25,
-        utilidadTotal: 40000,
-        estadoComercial: null,
-        approvalToken: null,
-        approvalTokenExpiresAt: null,
-        clienteVioEn: null,
-        clienteRespondioEn: null,
-        clienteRespuestaCanal: null,
         creadoEn: "2026-03-10T10:00:00.000Z",
         actualizadoEn: "2026-03-14T10:00:00.000Z",
-        eliminadoEn: null,
-        items: [],
-        total: 238000,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
       },
     ]);
     const service = createClientesService({
@@ -432,7 +414,7 @@ describe("clientes.service", () => {
 
   it("debe marcar prospecto si el cliente aun no tiene cotizaciones", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
-    cotizacionesRepository.listByOrganizationId.mockResolvedValue([]);
+    cotizacionesRepository.listClientSummaryByOrganizationId.mockResolvedValue([]);
     const service = createClientesService({
       clientesRepository: createClientesRepositoryMock(),
       projectsRepository: createProjectsRepositoryMock(),
@@ -448,33 +430,15 @@ describe("clientes.service", () => {
 
   it("debe marcar inactivo si la ultima cotizacion es de hace mas de 30 dias", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
-    cotizacionesRepository.listByOrganizationId.mockResolvedValue([
+    cotizacionesRepository.listClientSummaryByOrganizationId.mockResolvedValue([
       {
         id: 100,
         proyectoId: 10,
-        organizationId: 77,
-        numero: "COT-100",
         estado: "aprobada",
-        descuentoPct: 0,
-        flete: 0,
-        iva: 19000,
-        notas: "",
-        validoHasta: null,
-        subtotalNeto: 100000,
-        costoTotal: 80000,
-        margenPct: 25,
-        utilidadTotal: 20000,
-        estadoComercial: null,
-        approvalToken: null,
-        approvalTokenExpiresAt: null,
-        clienteVioEn: null,
-        clienteRespondioEn: null,
-        clienteRespuestaCanal: null,
         creadoEn: "2025-12-01T10:00:00.000Z",
         actualizadoEn: "2026-01-01T10:00:00.000Z",
-        eliminadoEn: null,
-        items: [],
-        total: 119000,
+        clienteVioEn: null,
+        clienteRespondioEn: null,
       },
     ]);
     const service = createClientesService({

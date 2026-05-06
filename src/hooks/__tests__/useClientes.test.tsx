@@ -12,7 +12,10 @@ let authState: AuthUserState = {
   cargando: false,
 };
 
-const listResumenByOrganizationId = jest.fn<Promise<ClienteResumen[]>, [string | number]>();
+const getClientesResumenByOrganizationId = jest.fn<
+  Promise<ClienteResumen[]>,
+  [string | number]
+>();
 const getDetalleById = jest.fn<Promise<ClienteDetalle | null>, [string, string | number]>();
 const createClient = jest.fn();
 const updateClient = jest.fn();
@@ -25,8 +28,6 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
 
 jest.mock("@/features/clientes/services/clientes.service", () => ({
   clientesService: {
-    listResumenByOrganizationId: (organizationId: string | number) =>
-      listResumenByOrganizationId(organizationId),
     getDetalleById: (id: string, organizationId: string | number) =>
       getDetalleById(id, organizationId),
     createClient: (...args: unknown[]) => createClient(...args),
@@ -34,6 +35,11 @@ jest.mock("@/features/clientes/services/clientes.service", () => ({
     updateProjectStatus: (...args: unknown[]) => updateProjectStatus(...args),
     deleteClient: (...args: unknown[]) => deleteClient(...args),
   },
+}));
+
+jest.mock("@/features/clientes/services/clientes-summary.service", () => ({
+  getClientesResumenByOrganizationId: (organizationId: string | number) =>
+    getClientesResumenByOrganizationId(organizationId),
 }));
 
 function createResumen(id: string, nombre: string): ClienteResumen {
@@ -119,7 +125,7 @@ describe("useClientes", () => {
     };
     window.sessionStorage.clear();
     __resetClientesHookTestState();
-    listResumenByOrganizationId.mockReset();
+    getClientesResumenByOrganizationId.mockReset();
     getDetalleById.mockReset();
     createClient.mockReset();
     updateClient.mockReset();
@@ -129,7 +135,7 @@ describe("useClientes", () => {
 
   it("debe permitir refrescar clientes y limpiar detalle al cambiar de organizacion", async () => {
     const secondRefresh = createDeferred<ClienteResumen[]>();
-    listResumenByOrganizationId
+    getClientesResumenByOrganizationId
       .mockResolvedValueOnce([createResumen("cliente-1", "Cliente Uno")])
       .mockImplementationOnce(() => secondRefresh.promise)
       .mockResolvedValueOnce([createResumen("cliente-2", "Cliente Dos Actualizado")]);
@@ -173,9 +179,9 @@ describe("useClientes", () => {
       expect(screen.getByTestId("clientes")).toHaveTextContent("Cliente Dos Actualizado");
     });
 
-    expect(listResumenByOrganizationId).toHaveBeenNthCalledWith(1, 1);
-    expect(listResumenByOrganizationId).toHaveBeenNthCalledWith(2, 2);
-    expect(listResumenByOrganizationId).toHaveBeenNthCalledWith(3, 2);
+    expect(getClientesResumenByOrganizationId).toHaveBeenNthCalledWith(1, 1);
+    expect(getClientesResumenByOrganizationId).toHaveBeenNthCalledWith(2, 2);
+    expect(getClientesResumenByOrganizationId).toHaveBeenNthCalledWith(3, 2);
     expect(getDetalleById).toHaveBeenCalledWith("cliente-1", 1);
   });
 
@@ -184,7 +190,7 @@ describe("useClientes", () => {
       ...authState,
       organizacionId: 99,
     };
-    listResumenByOrganizationId.mockRejectedValueOnce(new Error("RLS roto"));
+    getClientesResumenByOrganizationId.mockRejectedValueOnce(new Error("RLS roto"));
 
     render(<ProbeClientes />);
 
@@ -197,13 +203,13 @@ describe("useClientes", () => {
 
   it("debe deduplicar refresh cuando ya hay una carga de clientes en curso", async () => {
     const deferredResumen = createDeferred<ClienteResumen[]>();
-    listResumenByOrganizationId.mockImplementation(() => deferredResumen.promise);
+    getClientesResumenByOrganizationId.mockImplementation(() => deferredResumen.promise);
 
     render(<ProbeClientes />);
 
     fireEvent.click(screen.getByRole("button", { name: "refrescar" }));
 
-    expect(listResumenByOrganizationId).toHaveBeenCalledTimes(1);
+    expect(getClientesResumenByOrganizationId).toHaveBeenCalledTimes(1);
 
     deferredResumen.resolve([createResumen("cliente-1", "Cliente Uno")]);
 
@@ -215,7 +221,7 @@ describe("useClientes", () => {
 
   it("debe quedar listo aunque la primera carga de clientes siga en progreso", async () => {
     const deferredResumen = createDeferred<ClienteResumen[]>();
-    listResumenByOrganizationId.mockImplementation(() => deferredResumen.promise);
+    getClientesResumenByOrganizationId.mockImplementation(() => deferredResumen.promise);
 
     render(<ProbeClientes />);
 
@@ -238,7 +244,7 @@ describe("useClientes", () => {
       deletedCotizaciones: 2,
     };
     deleteClient.mockResolvedValue(deletedCounts);
-    listResumenByOrganizationId
+    getClientesResumenByOrganizationId
       .mockResolvedValueOnce([createResumen("cliente-1", "Cliente Uno")])
       .mockResolvedValueOnce([]);
 
@@ -295,7 +301,9 @@ describe("useClientes", () => {
         },
       ],
     });
-    listResumenByOrganizationId.mockResolvedValue([createResumen("cliente-1", "Cliente Uno")]);
+    getClientesResumenByOrganizationId.mockResolvedValue([
+      createResumen("cliente-1", "Cliente Uno"),
+    ]);
 
     function ProbeProyectoEstado() {
       const { loadClienteDetalleById, getClienteDetalleById, updateProjectStatus } =

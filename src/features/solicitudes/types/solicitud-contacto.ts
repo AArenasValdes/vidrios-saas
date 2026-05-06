@@ -25,6 +25,7 @@ export type SolicitudContacto = {
   userAgent: string | null;
   creadoEn: string | null;
   actualizadoEn: string | null;
+  contactadaAt: string | null;
 
   // UTM tracking
   utmSource: string | null;
@@ -56,8 +57,13 @@ export type SolicitudEmpresaPublicaConfig = {
   empresaEmail: string;
   brandColor: string;
   solicitudPublicaSlug: string;
+  solicitudPublicaDescripcionCorta: string;
   solicitudPublicaValor: string;
+  solicitudPublicaMensajeConfianza: string;
   solicitudPublicaPrivacidad: string;
+  solicitudPublicaHorarioDesde: string;
+  solicitudPublicaHorarioHasta: string;
+  solicitudPublicaDiasAtencion: string[];
 };
 
 export type CrearSolicitudEmpresaInput = {

@@ -445,6 +445,7 @@
   min-width: 0;
 }
 
+.cardActions > .secondaryAction,
 .cardActions > .whatsappAction {
   flex: 1 1 140px;
   min-width: 0;
@@ -457,7 +458,7 @@
 @media (min-width: 721px) {
   .cardActions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px 42px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 46px 42px;
     gap: 10px;
     align-items: center;
   }
@@ -467,6 +468,7 @@
     min-width: auto;
   }
 
+  .cardActions > .secondaryAction,
   .cardActions > .whatsappAction {
     flex: none;
     min-width: auto;
@@ -490,6 +492,20 @@
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 12px 22px rgba(51, 94, 169, 0.16);
+}
+
+.secondaryAction {
+  min-height: 48px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #243b6b;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .iconAction {

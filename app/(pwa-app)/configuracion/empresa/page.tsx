@@ -22,8 +22,15 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import {
   buildOrganizationInitials,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
+  DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
+  DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION,
+  DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
+  DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
+  DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
   DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
   DEFAULT_SOLICITUD_PUBLICA_VALOR,
+  formatDiasAtencionLabel,
+  isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { subscribeToPushNotifications } from "@/utils/web-push";
@@ -41,6 +48,16 @@ const BRAND_PRESETS = [
   "#8B5CF6",
 ];
 
+const WEEK_DAY_OPTIONS = [
+  { value: "1", label: "Lun" },
+  { value: "2", label: "Mar" },
+  { value: "3", label: "Mié" },
+  { value: "4", label: "Jue" },
+  { value: "5", label: "Vie" },
+  { value: "6", label: "Sáb" },
+  { value: "0", label: "Dom" },
+];
+
 const EMPTY_FORM: UpdateOrganizationProfileInput = {
   empresaNombre: "",
   empresaLogoUrl: null,
@@ -50,8 +67,13 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   formaPago: "",
   solicitudPublicaSlug: "",
+  solicitudPublicaDescripcionCorta: DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
   solicitudPublicaValor: DEFAULT_SOLICITUD_PUBLICA_VALOR,
+  solicitudPublicaMensajeConfianza: DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
   solicitudPublicaPrivacidad: DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
+  solicitudPublicaHorarioDesde: DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
+  solicitudPublicaHorarioHasta: DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
+  solicitudPublicaDiasAtencion: [...DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION],
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
@@ -126,8 +148,13 @@ export default function ConfiguracionEmpresaPage() {
       brandColor: profile.brandColor,
       formaPago: profile.formaPago,
       solicitudPublicaSlug: profile.solicitudPublicaSlug,
+      solicitudPublicaDescripcionCorta: profile.solicitudPublicaDescripcionCorta,
       solicitudPublicaValor: profile.solicitudPublicaValor,
+      solicitudPublicaMensajeConfianza: profile.solicitudPublicaMensajeConfianza,
       solicitudPublicaPrivacidad: profile.solicitudPublicaPrivacidad,
+      solicitudPublicaHorarioDesde: profile.solicitudPublicaHorarioDesde,
+      solicitudPublicaHorarioHasta: profile.solicitudPublicaHorarioHasta,
+      solicitudPublicaDiasAtencion: profile.solicitudPublicaDiasAtencion,
       proveedorPreferido: profile.proveedorPreferido,
       modoPrecioPreferido: profile.modoPrecioPreferido,
       margenDefecto: profile.margenDefecto,
@@ -144,6 +171,16 @@ export default function ConfiguracionEmpresaPage() {
 
   const previewModel = useMemo(() => {
     const empresaNombre = deferredPreviewForm.empresaNombre || "Mi empresa";
+    const solicitudPublicaDiasAtencion =
+      deferredPreviewForm.solicitudPublicaDiasAtencion?.length
+        ? deferredPreviewForm.solicitudPublicaDiasAtencion
+        : [...DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION];
+    const solicitudPublicaHorarioDesde =
+      deferredPreviewForm.solicitudPublicaHorarioDesde ||
+      DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE;
+    const solicitudPublicaHorarioHasta =
+      deferredPreviewForm.solicitudPublicaHorarioHasta ||
+      DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA;
 
     return {
       initials: buildOrganizationInitials(empresaNombre),
@@ -153,6 +190,23 @@ export default function ConfiguracionEmpresaPage() {
       empresaTelefono: deferredPreviewForm.empresaTelefono || "Teléfono",
       empresaEmail: deferredPreviewForm.empresaEmail || "Email",
       brandColor: deferredPreviewForm.brandColor,
+      solicitudPublicaDescripcionCorta:
+        deferredPreviewForm.solicitudPublicaDescripcionCorta ||
+        DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
+      solicitudPublicaValor:
+        deferredPreviewForm.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR,
+      solicitudPublicaMensajeConfianza:
+        deferredPreviewForm.solicitudPublicaMensajeConfianza ||
+        DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
+      solicitudPublicaPrivacidad:
+        deferredPreviewForm.solicitudPublicaPrivacidad ||
+        DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
+      horarioLabel: `${formatDiasAtencionLabel(solicitudPublicaDiasAtencion)} · ${solicitudPublicaHorarioDesde} a ${solicitudPublicaHorarioHasta}`,
+      isAvailable: isOrganizationOpenAtDate({
+        days: solicitudPublicaDiasAtencion,
+        from: solicitudPublicaHorarioDesde,
+        to: solicitudPublicaHorarioHasta,
+      }),
     };
   }, [deferredPreviewForm, previewUrl]);
 
@@ -255,6 +309,28 @@ export default function ConfiguracionEmpresaPage() {
     },
     []
   );
+
+  const handleToggleBusinessDay = useCallback((day: string) => {
+    setForm((current) => {
+      const currentDays = new Set(current.solicitudPublicaDiasAtencion ?? []);
+
+      if (currentDays.has(day)) {
+        currentDays.delete(day);
+      } else {
+        currentDays.add(day);
+      }
+
+      return {
+        ...current,
+        solicitudPublicaDiasAtencion: Array.from(currentDays).sort(
+          (left, right) => Number(left) - Number(right)
+        ),
+      };
+    });
+    setStatusMessage(null);
+    setErrorMessage(null);
+    setPublicLinkMessage(null);
+  }, []);
 
   const handleCopyPublicLink = useCallback(async () => {
     try {
@@ -406,6 +482,9 @@ export default function ConfiguracionEmpresaPage() {
               <p>Así verá tu cliente tu empresa</p>
             </div>
             <div className={s.previewBody}>
+              <div className={s.previewAvailability} data-active={previewModel.isAvailable}>
+                {previewModel.isAvailable ? "ON" : "OFF"} · {previewModel.horarioLabel}
+              </div>
               <div className={s.previewIdentity}>
                 {previewModel.logoPreview ? (
                   <Image
@@ -435,6 +514,17 @@ export default function ConfiguracionEmpresaPage() {
                     <span>{previewModel.empresaEmail}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className={s.previewPublicContent}>
+                <p className={s.previewDescription}>
+                  {previewModel.solicitudPublicaDescripcionCorta}
+                </p>
+                <div className={s.previewTrustBox}>
+                  <strong>{previewModel.solicitudPublicaValor}</strong>
+                  <span>{previewModel.solicitudPublicaMensajeConfianza}</span>
+                </div>
+                <p className={s.previewPrivacy}>{previewModel.solicitudPublicaPrivacidad}</p>
               </div>
             </div>
           </div>
@@ -650,6 +740,25 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.divider} />
 
             <label className={s.field}>
+              <span className={s.label}>Descripción corta</span>
+              <textarea
+                className={s.textarea}
+                rows={3}
+                value={form.solicitudPublicaDescripcionCorta}
+                onChange={(event) =>
+                  handleFieldChange(
+                    "solicitudPublicaDescripcionCorta",
+                    event.target.value
+                  )
+                }
+                placeholder={DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA}
+              />
+              <span className={s.helpText}>
+                Debe explicar rápido qué hace tu empresa y qué tipo de trabajo recibe.
+              </span>
+            </label>
+
+            <label className={s.field}>
               <span className={s.label}>Mensaje de valor</span>
               <textarea
                 className={s.textarea}
@@ -661,6 +770,78 @@ export default function ConfiguracionEmpresaPage() {
                 placeholder={DEFAULT_SOLICITUD_PUBLICA_VALOR}
               />
             </label>
+
+            <label className={s.field}>
+              <span className={s.label}>Mensaje de confianza</span>
+              <textarea
+                className={s.textarea}
+                rows={3}
+                value={form.solicitudPublicaMensajeConfianza}
+                onChange={(event) =>
+                  handleFieldChange(
+                    "solicitudPublicaMensajeConfianza",
+                    event.target.value
+                  )
+                }
+                placeholder={DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA}
+              />
+            </label>
+
+            <div className={s.scheduleGrid}>
+              <label className={s.field}>
+                <span className={s.label}>Horario desde</span>
+                <input
+                  className={s.input}
+                  type="time"
+                  value={form.solicitudPublicaHorarioDesde}
+                  onChange={(event) =>
+                    handleFieldChange(
+                      "solicitudPublicaHorarioDesde",
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.label}>Horario hasta</span>
+                <input
+                  className={s.input}
+                  type="time"
+                  value={form.solicitudPublicaHorarioHasta}
+                  onChange={(event) =>
+                    handleFieldChange(
+                      "solicitudPublicaHorarioHasta",
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+            </div>
+
+            <div className={s.field}>
+              <span className={s.label}>Días de atención</span>
+              <div className={s.dayChips}>
+                {WEEK_DAY_OPTIONS.map((day) => {
+                  const isActive = form.solicitudPublicaDiasAtencion.includes(day.value);
+
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      className={`${s.dayChip} ${isActive ? s.dayChipActive : ""}`}
+                      onClick={() => handleToggleBusinessDay(day.value)}
+                      aria-pressed={isActive}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className={s.helpText}>
+                Esto define si la landing muestra tu empresa como ON u OFF.
+              </span>
+            </div>
 
             <label className={s.field}>
               <span className={s.label}>Mensaje de privacidad</span>

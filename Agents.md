@@ -539,6 +539,25 @@ Ejemplos de origen:
 
 ## Base de datos: estrategia
 
+## Database Context
+
+La fuente de verdad del modelo de datos está en:
+
+- supabase/docs/current_schema.sql
+- supabase/docs/database_map.md
+- supabase/docs/rls_policies.md
+- supabase/docs/seed_order.md
+- supabase/docs/agent_database_notes.md
+
+Antes de modificar queries, services, hooks, types, Supabase functions, migrations, seeds o RLS, leer esos archivos.
+
+Reglas:
+- No asumir tablas ni columnas.
+- No inventar relaciones.
+- Usar `organization_id` como estándar multi-tenant.
+- Revisar RLS antes de tocar datos sensibles.
+- Si se detecta diferencia entre el código y `current_schema.sql`, reportarla antes de modificar.
+- No modificar migraciones antiguas ya aplicadas; crear una nueva migración.
 No borrar legacy aun.
 
 Usar y consolidar:

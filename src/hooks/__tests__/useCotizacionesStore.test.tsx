@@ -16,7 +16,7 @@ let authState: AuthUserState = {
   cargando: false,
 };
 
-const listWorkflowByOrganizationId = jest.fn<
+const getCotizacionesResumenByOrganizationId = jest.fn<
   Promise<CotizacionWorkflowRecord[]>,
   [string | number]
 >();
@@ -31,10 +31,13 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
+jest.mock("@/features/cotizaciones/services/cotizaciones-summary.service", () => ({
+  getCotizacionesResumenByOrganizationId: (organizationId: string | number) =>
+    getCotizacionesResumenByOrganizationId(organizationId),
+}));
+
 jest.mock("@/features/cotizaciones/services/cotizaciones.service", () => ({
   cotizacionesAppService: {
-    listWorkflowByOrganizationId: (organizationId: string | number) =>
-      listWorkflowByOrganizationId(organizationId),
     listClientsByOrganizationId: (organizationId: string | number) =>
       listClientsByOrganizationId(organizationId),
     saveWorkflow: (...args: unknown[]) => saveWorkflow(...args),
@@ -197,7 +200,7 @@ describe("useCotizacionesStore", () => {
     };
     window.sessionStorage.clear();
     __resetCotizacionesStoreTestState();
-    listWorkflowByOrganizationId.mockReset();
+    getCotizacionesResumenByOrganizationId.mockReset();
     listClientsByOrganizationId.mockReset();
     saveWorkflow.mockReset();
     deleteWorkflow.mockReset();
@@ -208,7 +211,7 @@ describe("useCotizacionesStore", () => {
 
   it("debe refrescar cotizaciones y limpiar datos al cambiar de organizacion", async () => {
     const secondCotizaciones = createDeferred<CotizacionWorkflowRecord[]>();
-    listWorkflowByOrganizationId
+    getCotizacionesResumenByOrganizationId
       .mockResolvedValueOnce([createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z")])
       .mockImplementationOnce(() => secondCotizaciones.promise)
       .mockResolvedValueOnce([
@@ -261,9 +264,9 @@ describe("useCotizacionesStore", () => {
       expect(screen.getByTestId("clientes")).toHaveTextContent("Cliente Dos Actualizado");
     });
 
-    expect(listWorkflowByOrganizationId).toHaveBeenNthCalledWith(1, 1);
-    expect(listWorkflowByOrganizationId).toHaveBeenNthCalledWith(2, 2);
-    expect(listWorkflowByOrganizationId).toHaveBeenNthCalledWith(3, 2);
+    expect(getCotizacionesResumenByOrganizationId).toHaveBeenNthCalledWith(1, 1);
+    expect(getCotizacionesResumenByOrganizationId).toHaveBeenNthCalledWith(2, 2);
+    expect(getCotizacionesResumenByOrganizationId).toHaveBeenNthCalledWith(3, 2);
     expect(listClientsByOrganizationId).toHaveBeenNthCalledWith(1, 1);
     expect(listClientsByOrganizationId).toHaveBeenNthCalledWith(2, 2);
   });
@@ -273,7 +276,7 @@ describe("useCotizacionesStore", () => {
       ...authState,
       organizacionId: 99,
     };
-    listWorkflowByOrganizationId.mockRejectedValueOnce(new Error("Fallo RLS"));
+    getCotizacionesResumenByOrganizationId.mockRejectedValueOnce(new Error("Fallo RLS"));
     listClientsByOrganizationId.mockResolvedValue([]);
 
     render(<ProbeCotizacionesStore />);
@@ -287,7 +290,9 @@ describe("useCotizacionesStore", () => {
 
   it("debe quedar listo aunque la primera carga siga en progreso", async () => {
     const deferredCotizaciones = createDeferred<CotizacionWorkflowRecord[]>();
-    listWorkflowByOrganizationId.mockImplementation(() => deferredCotizaciones.promise);
+    getCotizacionesResumenByOrganizationId.mockImplementation(
+      () => deferredCotizaciones.promise
+    );
     listClientsByOrganizationId.mockResolvedValue([]);
 
     render(<ProbeCotizacionesStore />);
@@ -307,7 +312,7 @@ describe("useCotizacionesStore", () => {
 
   it("debe deduplicar la carga de clientes cuando se solicita mas de una vez", async () => {
     const deferredClientes = createDeferred<Cliente[]>();
-    listWorkflowByOrganizationId.mockResolvedValueOnce([
+    getCotizacionesResumenByOrganizationId.mockResolvedValueOnce([
       createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
     ]);
     listClientsByOrganizationId.mockImplementation(() => deferredClientes.promise);
@@ -332,7 +337,7 @@ describe("useCotizacionesStore", () => {
 
   it("debe deduplicar la carga de detalle por id mientras esta en vuelo", async () => {
     const deferredDetail = createDeferred<CotizacionWorkflowRecord | null>();
-    listWorkflowByOrganizationId.mockResolvedValueOnce([
+    getCotizacionesResumenByOrganizationId.mockResolvedValueOnce([
       createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
     ]);
     listClientsByOrganizationId.mockResolvedValue([]);
@@ -396,7 +401,7 @@ describe("useCotizacionesStore", () => {
   });
 
   it("debe conservar items cargados cuando un refresh trae solo resumenes", async () => {
-    listWorkflowByOrganizationId
+    getCotizacionesResumenByOrganizationId
       .mockResolvedValueOnce([createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z")])
       .mockResolvedValueOnce([createWorkflow("cot-1", "COT-001", "2026-03-21T00:00:00.000Z")]);
     listClientsByOrganizationId.mockResolvedValue([]);
@@ -446,7 +451,7 @@ describe("useCotizacionesStore", () => {
   });
 
   it("debe conservar las cotizaciones ya cargadas al guardar una nueva mientras sincroniza clientes", async () => {
-    listWorkflowByOrganizationId.mockResolvedValueOnce([
+    getCotizacionesResumenByOrganizationId.mockResolvedValueOnce([
       createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
       createWorkflow("cot-2", "COT-002", "2026-03-19T00:00:00.000Z"),
     ]);
@@ -473,7 +478,7 @@ describe("useCotizacionesStore", () => {
   });
 
   it("debe actualizar una cotizacion a enviada al marcarla como compartida", async () => {
-    listWorkflowByOrganizationId.mockResolvedValueOnce([
+    getCotizacionesResumenByOrganizationId.mockResolvedValueOnce([
       createWorkflow("cot-1", "COT-001", "2026-03-20T00:00:00.000Z"),
     ]);
     listClientsByOrganizationId.mockResolvedValue([]);

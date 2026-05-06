@@ -49,7 +49,7 @@
     "eslint-config-next": "16.1.6",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "supabase": "^2.81.2",
+    "supabase": "^2.98.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

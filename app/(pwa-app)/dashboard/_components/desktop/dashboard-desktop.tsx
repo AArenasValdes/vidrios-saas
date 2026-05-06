@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 
+import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.desktop.module.css";
 
@@ -27,7 +28,7 @@ export const DashboardDesktop = memo(function DashboardDesktop({
 }: DashboardDesktopProps) {
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <PremiumPageSection className={styles.header}>
         <div className={styles.headerMain}>
           <h1 className={styles.title}>Buen dia, {greetingName}</h1>
           <p className={styles.subtitle}>{subtitle}</p>
@@ -37,9 +38,9 @@ export const DashboardDesktop = memo(function DashboardDesktop({
           <span className={styles.newButtonIcon}>+</span>
           Nueva cotizacion
         </Link>
-      </header>
+      </PremiumPageSection>
 
-      <section className={styles.statsGrid}>
+      <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Pendientes</span>
           <strong className={styles.statValue}>{pendingCount}</strong>
@@ -56,9 +57,9 @@ export const DashboardDesktop = memo(function DashboardDesktop({
           <span className={styles.statLabel}>Aprobado mes</span>
           <strong className={`${styles.statValue} ${styles.statMono}`}>{approvedMonthLabel}</strong>
         </article>
-      </section>
+      </PremiumPageSection>
 
-      <section className={styles.section}>
+      <PremiumPageSection className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Ultimas cotizaciones</h2>
           <Link href={quotesHref} className={styles.sectionLink}>
@@ -101,9 +102,9 @@ export const DashboardDesktop = memo(function DashboardDesktop({
                 </Link>
               </li>
             ))}
-          </ul>
-        )}
-      </section>
+            </ul>
+          )}
+      </PremiumPageSection>
     </div>
   );
 });

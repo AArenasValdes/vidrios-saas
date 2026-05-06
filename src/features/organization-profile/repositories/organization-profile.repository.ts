@@ -21,8 +21,13 @@ type OrganizationProfileRow = {
   brand_color: string | null;
   forma_pago: string | null;
   solicitud_publica_slug?: string | null;
+  solicitud_publica_descripcion_corta?: string | null;
   solicitud_publica_valor?: string | null;
+  solicitud_publica_mensaje_confianza?: string | null;
   solicitud_publica_privacidad?: string | null;
+  solicitud_publica_horario_desde?: string | null;
+  solicitud_publica_horario_hasta?: string | null;
+  solicitud_publica_dias_atencion?: string | null;
   proveedor_preferido: string | null;
   modo_precio_preferido: string | null;
   margen_defecto: number | null;
@@ -90,8 +95,18 @@ function mapOrganizationProfile(
     brandColor: row.brand_color ?? "",
     formaPago: row.forma_pago ?? "",
     solicitudPublicaSlug: row.solicitud_publica_slug ?? "",
+    solicitudPublicaDescripcionCorta:
+      row.solicitud_publica_descripcion_corta ?? "",
     solicitudPublicaValor: row.solicitud_publica_valor ?? "",
+    solicitudPublicaMensajeConfianza:
+      row.solicitud_publica_mensaje_confianza ?? "",
     solicitudPublicaPrivacidad: row.solicitud_publica_privacidad ?? "",
+    solicitudPublicaHorarioDesde: row.solicitud_publica_horario_desde ?? "",
+    solicitudPublicaHorarioHasta: row.solicitud_publica_horario_hasta ?? "",
+    solicitudPublicaDiasAtencion: row.solicitud_publica_dias_atencion
+      ?.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean) ?? [],
     proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
     modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     margenDefecto: row.margen_defecto ?? 100,
@@ -151,8 +166,16 @@ export function createOrganizationProfileRepository(
             brand_color: input.brandColor,
             forma_pago: input.formaPago,
             solicitud_publica_slug: input.solicitudPublicaSlug,
+            solicitud_publica_descripcion_corta:
+              input.solicitudPublicaDescripcionCorta,
             solicitud_publica_valor: input.solicitudPublicaValor,
+            solicitud_publica_mensaje_confianza:
+              input.solicitudPublicaMensajeConfianza,
             solicitud_publica_privacidad: input.solicitudPublicaPrivacidad,
+            solicitud_publica_horario_desde: input.solicitudPublicaHorarioDesde,
+            solicitud_publica_horario_hasta: input.solicitudPublicaHorarioHasta,
+            solicitud_publica_dias_atencion:
+              input.solicitudPublicaDiasAtencion.join(","),
             proveedor_preferido: input.proveedorPreferido || null,
             modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
             margen_defecto: input.margenDefecto,

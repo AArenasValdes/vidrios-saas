@@ -1,5 +1,7 @@
 import { solicitudesContactoRepository } from "@/features/solicitudes/repositories/solicitudes-contacto.repository";
+import type { SolicitudesContactoRepository } from "@/features/solicitudes/repositories/solicitudes-contacto.repository";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
+import type { WebPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import type {
   AyudaSolicitudContacto,
@@ -7,6 +9,7 @@ import type {
   SolicitudContacto,
   CrearSolicitudContactoInput,
   CrearSolicitudEmpresaInput,
+  SolicitudEmpresaPublicaConfig,
 } from "@/features/solicitudes/types/solicitud-contacto";
 
 /* ------------------------------------------------------------------ */
@@ -69,7 +72,10 @@ export class SolicitudContactoValidationError extends Error {}
 export interface SolicitudesContactoService {
   listSolicitudes(): Promise<SolicitudContacto[]>;
   listSolicitudesByOrganizationId(organizationId: string | number): Promise<SolicitudContacto[]>;
-  getPublicRequestConfig(slug: string): Promise<any>;
+  listSolicitudesResumenByOrganizationId(
+    organizationId: string | number
+  ): Promise<SolicitudContacto[]>;
+  getPublicRequestConfig(slug: string): Promise<SolicitudEmpresaPublicaConfig | null>;
   createSolicitud(input: CrearSolicitudContactoInput): Promise<SolicitudContacto>;
   createPublicRequest(input: CrearSolicitudEmpresaInput): Promise<SolicitudContacto>;
   updateSolicitudStatus(input: {
@@ -81,22 +87,30 @@ export interface SolicitudesContactoService {
 
 export function createSolicitudesContactoService(
   deps?: {
-    repository?: unknown;
-    notificationsService?: unknown;
+    repository?: SolicitudesContactoRepository;
+    notificationsService?: WebPushNotificationsService;
   }
 ): SolicitudesContactoService {
+  const repository = deps?.repository ?? solicitudesContactoRepository;
+  const notificationsService =
+    deps?.notificationsService ?? webPushNotificationsService;
+
   return {
     async listSolicitudes() {
-      return solicitudesContactoRepository.listRecent();
+      return repository.listRecent();
     },
 
     async listSolicitudesByOrganizationId(organizationId: string | number) {
-      return solicitudesContactoRepository.listByOrganizationId(organizationId);
+      return repository.listByOrganizationId(organizationId);
+    },
+
+    async listSolicitudesResumenByOrganizationId(organizationId: string | number) {
+      return repository.listResumenByOrganizationId(organizationId);
     },
 
     async getPublicRequestConfig(slug: string) {
       // delegado al repository para mantener compatibilidad
-      return solicitudesContactoRepository.getPublicConfigBySlug(slug);
+      return repository.getPublicConfigBySlug(slug);
     },
 
     async createSolicitud(input: CrearSolicitudContactoInput) {
@@ -127,7 +141,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("Selecciona el tipo de ayuda que necesitas.");
       }
 
-      return solicitudesContactoRepository.create({
+      return repository.create({
         nombre,
         empresa,
         correo,
@@ -177,7 +191,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("Cuéntanos brevemente qué trabajo necesitas.");
       }
 
-      const solicitud = await solicitudesContactoRepository.createPublicRequest({
+      const solicitud = await repository.createPublicRequest({
         organizationId: input.organizationId,
         empresa,
         nombre,
@@ -204,7 +218,7 @@ export function createSolicitudesContactoService(
       });
 
       // Notificar al vendedor (async, no bloquea)
-      void webPushNotificationsService
+      void notificationsService
         .sendLeadCreatedPush({
           organizationId: input.organizationId,
           prospectoNombre: nombre,
@@ -232,7 +246,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("Selecciona un estado válido.");
       }
 
-      return solicitudesContactoRepository.updateStatusById({
+      return repository.updateStatusById({
         id,
         estado,
         organizationId: input.organizationId,

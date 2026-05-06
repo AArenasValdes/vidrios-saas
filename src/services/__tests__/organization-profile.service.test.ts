@@ -1,10 +1,15 @@
+import type { OrganizationProfileRepository } from "@/repositories/organization-profile.repository";
+
 import {
   createOrganizationProfileService,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
+  DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
+  DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
+  DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
+  DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
   DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
   DEFAULT_SOLICITUD_PUBLICA_VALOR,
 } from "../organization-profile.service";
-import type { OrganizationProfileRepository } from "@/repositories/organization-profile.repository";
 
 function createOrganizationProfileRepositoryMock(): jest.Mocked<OrganizationProfileRepository> {
   return {
@@ -33,8 +38,15 @@ describe("organization-profile.service", () => {
       empresaNombre: "Mi empresa",
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
       solicitudPublicaSlug: "mi-empresa",
+      solicitudPublicaDescripcionCorta:
+        DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
       solicitudPublicaValor: DEFAULT_SOLICITUD_PUBLICA_VALOR,
+      solicitudPublicaMensajeConfianza:
+        DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
       solicitudPublicaPrivacidad: DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
+      solicitudPublicaHorarioDesde: DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
+      solicitudPublicaHorarioHasta: DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
+      solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5", "6"],
       proveedorPreferido: "",
       modoPrecioPreferido: "margen",
     });
@@ -55,8 +67,13 @@ describe("organization-profile.service", () => {
         brandColor: "",
         formaPago: "",
         solicitudPublicaSlug: "",
+        solicitudPublicaDescripcionCorta: "",
         solicitudPublicaValor: "",
+        solicitudPublicaMensajeConfianza: "",
         solicitudPublicaPrivacidad: "",
+        solicitudPublicaHorarioDesde: "",
+        solicitudPublicaHorarioHasta: "",
+        solicitudPublicaDiasAtencion: [],
         proveedorPreferido: "",
         modoPrecioPreferido: "margen",
         margenDefecto: 100,
@@ -64,7 +81,7 @@ describe("organization-profile.service", () => {
     ).rejects.toThrow("El nombre de la empresa es obligatorio");
   });
 
-  it("debe normalizar color y correo al guardar", async () => {
+  it("debe normalizar color, correo y datos publicos al guardar", async () => {
     const repository = createOrganizationProfileRepositoryMock();
     const service = createOrganizationProfileService({
       organizationProfileRepository: repository,
@@ -79,8 +96,14 @@ describe("organization-profile.service", () => {
       brandColor: "azul",
       formaPago: " 50% anticipo ",
       solicitudPublicaSlug: " San Marco Norte ",
-      solicitudPublicaValor: " Respuesta comercial rápida ",
+      solicitudPublicaDescripcionCorta:
+        " Vidrios y aluminio para hogar y empresa ",
+      solicitudPublicaValor: " Respuesta comercial rapida ",
+      solicitudPublicaMensajeConfianza: " Tu solicitud queda guardada ",
       solicitudPublicaPrivacidad: " Tus datos quedan protegidos ",
+      solicitudPublicaHorarioDesde: "08:30",
+      solicitudPublicaHorarioHasta: "18:30",
+      solicitudPublicaDiasAtencion: ["5", "3", "1", "2", "4"],
       proveedorPreferido: "Indalum",
       modoPrecioPreferido: "precio_directo",
       margenDefecto: 100,
@@ -95,8 +118,14 @@ describe("organization-profile.service", () => {
       brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
       formaPago: "50% anticipo",
       solicitudPublicaSlug: "san-marco-norte",
-      solicitudPublicaValor: "Respuesta comercial rápida",
+      solicitudPublicaDescripcionCorta:
+        "Vidrios y aluminio para hogar y empresa",
+      solicitudPublicaValor: "Respuesta comercial rapida",
+      solicitudPublicaMensajeConfianza: "Tu solicitud queda guardada",
       solicitudPublicaPrivacidad: "Tus datos quedan protegidos",
+      solicitudPublicaHorarioDesde: "08:30",
+      solicitudPublicaHorarioHasta: "18:30",
+      solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5"],
       proveedorPreferido: "Indalum",
       modoPrecioPreferido: "precio_directo",
       margenDefecto: 100,

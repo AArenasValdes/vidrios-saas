@@ -104,6 +104,20 @@ const COTIZACION_BREAKDOWN_SELECT =
   "id, cotizacion_item_id, material_id, descripcion, unidad, cantidad, costo_unitario, costo_total, precio_unitario, precio_total, origen, creado_en, organization_id";
 const COTIZACION_DASHBOARD_SELECT =
   "id, proyecto_id, organization_id, numero, estado, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
+const COTIZACION_CLIENT_SUMMARY_SELECT =
+  "id, proyecto_id, estado, cliente_vio_en, cliente_respondio_en, creado_en, actualizado_en";
+const COTIZACION_CLIENT_SUMMARY_SELECT_LEGACY =
+  "id, proyecto_id, estado, creado_en, actualizado_en";
+
+export type CotizacionClienteSummary = {
+  id: EntityId;
+  proyectoId: EntityId | null;
+  estado: string;
+  creadoEn: string | null;
+  actualizadoEn: string | null;
+  clienteVioEn: string | null;
+  clienteRespondioEn: string | null;
+};
 
 type CotizacionesDashboardFilter = {
   estados?: string[];
@@ -290,6 +304,18 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     creadoEn: row.creado_en,
     items: [],
     total: row.total,
+  };
+}
+
+function mapCotizacionClientSummary(row: CotizacionRow): CotizacionClienteSummary {
+  return {
+    id: row.id,
+    proyectoId: row.proyecto_id,
+    estado: row.estado,
+    creadoEn: row.creado_en,
+    actualizadoEn: row.actualizado_en,
+    clienteVioEn: row.cliente_vio_en ?? null,
+    clienteRespondioEn: row.cliente_respondio_en ?? null,
   };
 }
 
@@ -786,6 +812,40 @@ export function createCotizacionesRepository(
     }));
   }
 
+  async function listClientSummaryBase(
+    organizationId: EntityId
+  ): Promise<CotizacionRow[]> {
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .select(COTIZACION_CLIENT_SUMMARY_SELECT)
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null);
+
+    if (!error) {
+      return (data as CotizacionRow[]) ?? [];
+    }
+
+    if (!isMissingApprovalFieldsError(error)) {
+      throw error;
+    }
+
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("cotizaciones")
+      .select(COTIZACION_CLIENT_SUMMARY_SELECT_LEGACY)
+      .eq("organization_id", organizationId)
+      .is("eliminado_en", null);
+
+    if (legacyError) {
+      throw legacyError;
+    }
+
+    return ((legacyData as CotizacionRow[]) ?? []).map((row) => ({
+      ...row,
+      cliente_vio_en: null,
+      cliente_respondio_en: null,
+    }));
+  }
+
   async function countCotizacionesBase(
     organizationId: EntityId,
     filters: CotizacionesDashboardFilter = {}
@@ -971,6 +1031,12 @@ export function createCotizacionesRepository(
       const rows = await listDashboardCotizacionesBase(organizationId, limit);
 
       return rows.map(mapCotizacion);
+    },
+
+    async listClientSummaryByOrganizationId(organizationId: EntityId) {
+      const rows = await listClientSummaryBase(organizationId);
+
+      return rows.map(mapCotizacionClientSummary);
     },
 
     async listDashboardAlertCandidatesByOrganizationId(
@@ -1378,6 +1444,9 @@ export const cotizacionesRepository: CotizacionesRepository = {
   },
   listRecentByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listRecentByOrganizationId(...args);
+  },
+  listClientSummaryByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().listClientSummaryByOrganizationId(...args);
   },
   listDashboardAlertCandidatesByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listDashboardAlertCandidatesByOrganizationId(

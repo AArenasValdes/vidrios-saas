@@ -1,15 +1,32 @@
+import type { SolicitudesContactoRepository } from "@/repositories/solicitudes-contacto.repository";
+import type { WebPushNotificationsService } from "@/services/web-push-notifications.service";
+
 import {
   createSolicitudesContactoService,
   SolicitudContactoValidationError,
 } from "../solicitudes-contacto.service";
-import type { SolicitudesContactoRepository } from "@/repositories/solicitudes-contacto.repository";
-import type { WebPushNotificationsService } from "@/services/web-push-notifications.service";
 
 function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesContactoRepository> {
   return {
     listRecent: jest.fn().mockResolvedValue([]),
     listByOrganizationId: jest.fn().mockResolvedValue([]),
-    getPublicConfigBySlug: jest.fn().mockResolvedValue(null),
+    listResumenByOrganizationId: jest.fn().mockResolvedValue([]),
+    getPublicConfigBySlug: jest.fn().mockResolvedValue({
+      organizationId: "org-7",
+      empresaNombre: "Ventora Norte",
+      empresaLogoUrl: null,
+      empresaTelefono: "+56998765432",
+      empresaEmail: "hola@ventora.cl",
+      brandColor: "#335ea9",
+      solicitudPublicaSlug: "ventora-norte",
+      solicitudPublicaDescripcionCorta: "Vidrios y aluminio.",
+      solicitudPublicaValor: "Respuesta comercial inicial.",
+      solicitudPublicaMensajeConfianza: "Tu solicitud queda guardada.",
+      solicitudPublicaPrivacidad: "Tus datos no se comparten.",
+      solicitudPublicaHorarioDesde: "09:00",
+      solicitudPublicaHorarioHasta: "19:00",
+      solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5", "6"],
+    }),
     create: jest.fn().mockImplementation(async (input) => ({
       id: "lead-1",
       organizationId: null,
@@ -28,6 +45,11 @@ function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesConta
       userAgent: input.userAgent ?? null,
       creadoEn: "2026-03-23T15:00:00.000Z",
       actualizadoEn: "2026-03-23T15:00:00.000Z",
+      contactadaAt: null,
+      utmSource: input.utmSource ?? null,
+      utmMedium: input.utmMedium ?? null,
+      utmCampaign: input.utmCampaign ?? null,
+      sourceUrl: input.sourceUrl ?? null,
     })),
     createPublicRequest: jest.fn().mockImplementation(async (input) => ({
       id: "lead-public-1",
@@ -47,6 +69,11 @@ function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesConta
       userAgent: input.userAgent ?? null,
       creadoEn: "2026-03-23T15:00:00.000Z",
       actualizadoEn: "2026-03-23T15:00:00.000Z",
+      contactadaAt: null,
+      utmSource: input.utmSource ?? null,
+      utmMedium: input.utmMedium ?? null,
+      utmCampaign: input.utmCampaign ?? null,
+      sourceUrl: input.sourceUrl ?? null,
     })),
     updateStatusById: jest.fn().mockImplementation(async (input) => ({
       id: input.id,
@@ -66,6 +93,12 @@ function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesConta
       userAgent: null,
       creadoEn: "2026-03-23T15:00:00.000Z",
       actualizadoEn: "2026-03-23T15:10:00.000Z",
+      contactadaAt:
+        input.estado === "contactada" ? "2026-03-23T15:10:00.000Z" : null,
+      utmSource: "qr",
+      utmMedium: "offline",
+      utmCampaign: null,
+      sourceUrl: null,
     })),
   } as jest.Mocked<SolicitudesContactoRepository>;
 }
@@ -102,6 +135,10 @@ describe("solicitudes-contacto.service", () => {
       origen: "landing",
       ip: null,
       userAgent: null,
+      utmSource: null,
+      utmMedium: null,
+      utmCampaign: null,
+      sourceUrl: null,
     });
   });
 
@@ -178,7 +215,9 @@ describe("solicitudes-contacto.service", () => {
       contacto: " +56 9 9876 5432 ",
       tipoTrabajo: " Cierre de terraza ",
       mensaje: " Tengo medidas aproximadas ",
-      origen: "solicitud-publica",
+      origen: "qr",
+      utmSource: "qr",
+      utmMedium: "offline",
     });
 
     expect(repository.createPublicRequest).toHaveBeenCalledWith({
@@ -188,9 +227,13 @@ describe("solicitudes-contacto.service", () => {
       contacto: "+56998765432",
       tipoTrabajo: "Cierre de terraza",
       mensaje: "Tengo medidas aproximadas",
-      origen: "solicitud-publica",
+      origen: "qr",
       ip: null,
       userAgent: null,
+      utmSource: "qr",
+      utmMedium: "offline",
+      utmCampaign: null,
+      sourceUrl: null,
     });
     expect(notificationsService.sendLeadCreatedPush).toHaveBeenCalledWith({
       organizationId: "org-7",
@@ -232,6 +275,15 @@ describe("solicitudes-contacto.service", () => {
       estado: "contactada",
       organizationId: "org-7",
     });
+  });
+
+  it("debe pedir el resumen liviano de solicitudes por organizacion", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const service = createSolicitudesContactoService({ repository });
+
+    await service.listSolicitudesResumenByOrganizationId("org-7");
+
+    expect(repository.listResumenByOrganizationId).toHaveBeenCalledWith("org-7");
   });
 
   it("debe rechazar un estado invalido al actualizar una solicitud", async () => {

@@ -31,6 +31,7 @@ type SolicitudContactoRow = {
   user_agent: string | null;
   creado_en: string | null;
   actualizado_en: string | null;
+  contactada_at: string | null;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
@@ -45,13 +46,56 @@ type SolicitudEmpresaPublicaConfigRow = {
   empresa_email: string | null;
   brand_color: string | null;
   solicitud_publica_slug: string | null;
+  solicitud_publica_descripcion_corta: string | null;
   solicitud_publica_valor: string | null;
+  solicitud_publica_mensaje_confianza: string | null;
   solicitud_publica_privacidad: string | null;
+  solicitud_publica_horario_desde: string | null;
+  solicitud_publica_horario_hasta: string | null;
+  solicitud_publica_dias_atencion: string | null;
 };
 
 const TABLE_NAME = "solicitudes_contacto";
 const ORGANIZATION_PROFILE_TABLE = "organization_profile";
-const SOLICITUD_SELECT = `id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, ip, user_agent, creado_en, actualizado_en, utm_source, utm_medium, utm_campaign, source_url`;
+const SOLICITUD_SELECT =
+  "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, ip, user_agent, creado_en, actualizado_en, contactada_at, utm_source, utm_medium, utm_campaign, source_url";
+const SOLICITUD_SELECT_LEGACY =
+  "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, ip, user_agent, creado_en, actualizado_en, utm_source, utm_medium, utm_campaign, source_url";
+const SOLICITUD_RESUMEN_SELECT =
+  "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, creado_en, actualizado_en, contactada_at";
+const SOLICITUD_RESUMEN_SELECT_LEGACY =
+  "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, creado_en, actualizado_en";
+const ORGANIZATION_PROFILE_PUBLIC_SELECT =
+  "organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion";
+
+function getErrorText(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  const candidate = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+  };
+
+  return [candidate.code, candidate.message, candidate.details, candidate.hint]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isMissingContactadaAtError(error: unknown) {
+  const haystack = getErrorText(error);
+
+  return (
+    haystack.includes("contactada_at") &&
+    (haystack.includes("column") ||
+      haystack.includes("schema cache") ||
+      haystack.includes("does not exist"))
+  );
+}
 
 function normalizePublicSlug(value: string | null | undefined) {
   return (value ?? "")
@@ -84,10 +128,58 @@ function mapSolicitudContacto(row: SolicitudContactoRow): SolicitudContacto {
     userAgent: row.user_agent,
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
+    contactadaAt: row.contactada_at,
     utmSource: row.utm_source,
     utmMedium: row.utm_medium,
     utmCampaign: row.utm_campaign,
     sourceUrl: row.source_url,
+  };
+}
+
+function mapSolicitudContactoResumen(
+  row: Pick<
+    SolicitudContactoRow,
+    | "id"
+    | "organization_id"
+    | "nombre"
+    | "empresa"
+    | "correo"
+    | "telefono"
+    | "contacto"
+    | "tipo_trabajo"
+    | "mensaje"
+    | "ayuda"
+    | "contexto"
+    | "estado"
+    | "origen"
+    | "creado_en"
+    | "actualizado_en"
+    | "contactada_at"
+  >
+): SolicitudContacto {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    nombre: row.nombre,
+    empresa: row.empresa,
+    correo: row.correo,
+    telefono: row.telefono,
+    contacto: row.contacto,
+    tipoTrabajo: row.tipo_trabajo,
+    mensaje: row.mensaje,
+    ayuda: row.ayuda as SolicitudContacto["ayuda"],
+    contexto: row.contexto as SolicitudContacto["contexto"],
+    estado: row.estado as SolicitudContacto["estado"],
+    origen: row.origen,
+    ip: null,
+    userAgent: null,
+    creadoEn: row.creado_en,
+    actualizadoEn: row.actualizado_en,
+    contactadaAt: row.contactada_at ?? null,
+    utmSource: null,
+    utmMedium: null,
+    utmCampaign: null,
+    sourceUrl: null,
   };
 }
 
@@ -110,13 +202,169 @@ function mapSolicitudEmpresaPublicaConfig(
     empresaEmail: row.empresa_email?.trim() || "",
     brandColor: row.brand_color?.trim() || "#1a3a5c",
     solicitudPublicaSlug: resolvedSlug,
+    solicitudPublicaDescripcionCorta:
+      row.solicitud_publica_descripcion_corta?.trim() ||
+      "Especialistas en vidrios y aluminio. Cuentanos que necesitas y te respondemos por WhatsApp.",
     solicitudPublicaValor:
       row.solicitud_publica_valor?.trim() ||
-      "Recibe una respuesta comercial inicial, orientación del trabajo y una base para tu cotización.",
+      "Recibe una respuesta comercial inicial, orientacion del trabajo y una base para tu cotizacion.",
+    solicitudPublicaMensajeConfianza:
+      row.solicitud_publica_mensaje_confianza?.trim() ||
+      "Tu solicitud queda registrada al instante para que no se pierda, incluso si estamos ocupados.",
     solicitudPublicaPrivacidad:
       row.solicitud_publica_privacidad?.trim() ||
       "Tus datos se usan solo para esta solicitud y no se comparten fuera de la empresa.",
+    solicitudPublicaHorarioDesde:
+      row.solicitud_publica_horario_desde?.trim() || "09:00",
+    solicitudPublicaHorarioHasta:
+      row.solicitud_publica_horario_hasta?.trim() || "19:00",
+    solicitudPublicaDiasAtencion:
+      row.solicitud_publica_dias_atencion
+        ?.split(",")
+        .map((value) => value.trim())
+        .filter(Boolean) ?? ["1", "2", "3", "4", "5", "6"],
   };
+}
+
+async function selectSolicitudes(
+  supabase: ReturnType<typeof createAdminClient>,
+  organizationId?: string | number
+) {
+  let query = supabase
+    .from(TABLE_NAME as never)
+    .select(SOLICITUD_SELECT)
+    .order("creado_en", { ascending: false });
+
+  if (organizationId !== undefined) {
+    query = query.eq("organization_id", organizationId as never);
+  }
+
+  const { data, error } = await query;
+
+  if (!error) {
+    return ((data as SolicitudContactoRow[] | null) ?? []).map(mapSolicitudContacto);
+  }
+
+  if (!isMissingContactadaAtError(error)) {
+    throw error;
+  }
+
+  let legacyQuery = supabase
+    .from(TABLE_NAME as never)
+    .select(SOLICITUD_SELECT_LEGACY)
+    .order("creado_en", { ascending: false });
+
+  if (organizationId !== undefined) {
+    legacyQuery = legacyQuery.eq("organization_id", organizationId as never);
+  }
+
+  const { data: legacyData, error: legacyError } = await legacyQuery;
+
+  if (legacyError) {
+    throw legacyError;
+  }
+
+  return (((legacyData as SolicitudContactoRow[] | null) ?? []).map((row) => ({
+    ...row,
+    contactada_at: null,
+  })) as SolicitudContactoRow[]).map(mapSolicitudContacto);
+}
+
+async function selectSolicitudesResumen(
+  supabase: ReturnType<typeof createAdminClient>,
+  organizationId: string | number
+) {
+  const { data, error } = await supabase
+    .from(TABLE_NAME as never)
+    .select(SOLICITUD_RESUMEN_SELECT)
+    .eq("organization_id", organizationId as never)
+    .order("creado_en", { ascending: false });
+
+  if (!error) {
+    return (
+      (data as Array<
+        Pick<
+          SolicitudContactoRow,
+          | "id"
+          | "organization_id"
+          | "nombre"
+          | "empresa"
+          | "correo"
+          | "telefono"
+          | "contacto"
+          | "tipo_trabajo"
+          | "mensaje"
+          | "ayuda"
+          | "contexto"
+          | "estado"
+          | "origen"
+          | "creado_en"
+          | "actualizado_en"
+          | "contactada_at"
+        >
+      > | null) ?? []
+    ).map(mapSolicitudContactoResumen);
+  }
+
+  if (!isMissingContactadaAtError(error)) {
+    throw error;
+  }
+
+  const { data: legacyData, error: legacyError } = await supabase
+    .from(TABLE_NAME as never)
+    .select(SOLICITUD_RESUMEN_SELECT_LEGACY)
+    .eq("organization_id", organizationId as never)
+    .order("creado_en", { ascending: false });
+
+  if (legacyError) {
+    throw legacyError;
+  }
+
+  return (
+    (((legacyData as Array<
+      Pick<
+        SolicitudContactoRow,
+        | "id"
+        | "organization_id"
+        | "nombre"
+        | "empresa"
+        | "correo"
+        | "telefono"
+        | "contacto"
+        | "tipo_trabajo"
+        | "mensaje"
+        | "ayuda"
+        | "contexto"
+        | "estado"
+        | "origen"
+        | "creado_en"
+        | "actualizado_en"
+      >
+    > | null) ?? []).map((row) => ({
+      ...row,
+      contactada_at: null,
+    })) as Array<
+      Pick<
+        SolicitudContactoRow,
+        | "id"
+        | "organization_id"
+        | "nombre"
+        | "empresa"
+        | "correo"
+        | "telefono"
+        | "contacto"
+        | "tipo_trabajo"
+        | "mensaje"
+        | "ayuda"
+        | "contexto"
+        | "estado"
+        | "origen"
+        | "creado_en"
+        | "actualizado_en"
+        | "contactada_at"
+      >
+    >)
+  ).map(mapSolicitudContactoResumen);
 }
 
 export function createSolicitudesContactoRepository(
@@ -126,43 +374,22 @@ export function createSolicitudesContactoRepository(
 
   return {
     async listRecent() {
-      const { data, error } = await supabase
-        .from(TABLE_NAME as never)
-        .select(SOLICITUD_SELECT)
-        .order("creado_en", { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      return ((data as SolicitudContactoRow[] | null) ?? []).map(
-        mapSolicitudContacto
-      );
+      return selectSolicitudes(supabase);
     },
 
     async listByOrganizationId(organizationId: string | number) {
-      const { data, error } = await supabase
-        .from(TABLE_NAME as never)
-        .select(SOLICITUD_SELECT)
-        .eq("organization_id", organizationId as never)
-        .order("creado_en", { ascending: false });
+      return selectSolicitudes(supabase, organizationId);
+    },
 
-      if (error) {
-        throw error;
-      }
-
-      return ((data as SolicitudContactoRow[] | null) ?? []).map(
-        mapSolicitudContacto
-      );
+    async listResumenByOrganizationId(organizationId: string | number) {
+      return selectSolicitudesResumen(supabase, organizationId);
     },
 
     async getPublicConfigBySlug(slug: string) {
       const normalizedSlug = normalizePublicSlug(slug);
       const { data, error } = await supabase
         .from(ORGANIZATION_PROFILE_TABLE as never)
-        .select(
-          `organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_valor, solicitud_publica_privacidad`
-        )
+        .select(ORGANIZATION_PROFILE_PUBLIC_SELECT)
         .eq("solicitud_publica_slug", normalizedSlug)
         .maybeSingle();
 
@@ -181,9 +408,7 @@ export function createSolicitudesContactoRepository(
       const fallbackNeedle = normalizedSlug.replace(/-/g, " ");
       const { data: fallbackRows, error: fallbackError } = await supabase
         .from(ORGANIZATION_PROFILE_TABLE as never)
-        .select(
-          `organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_valor, solicitud_publica_privacidad`
-        )
+        .select(ORGANIZATION_PROFILE_PUBLIC_SELECT)
         .ilike("empresa_nombre", `%${fallbackNeedle}%`)
         .limit(12);
 
@@ -213,10 +438,7 @@ export function createSolicitudesContactoRepository(
         }
       }
 
-      return mapSolicitudEmpresaPublicaConfig(
-        fallbackRow ?? null,
-        normalizedSlug
-      );
+      return mapSolicitudEmpresaPublicaConfig(fallbackRow ?? null, normalizedSlug);
     },
 
     async create(input: CrearSolicitudContactoInput) {
@@ -243,14 +465,17 @@ export function createSolicitudesContactoRepository(
           source_url: input.sourceUrl ?? null,
           actualizado_en: new Date().toISOString(),
         } as never)
-        .select(SOLICITUD_SELECT)
+        .select(SOLICITUD_SELECT_LEGACY)
         .single();
 
       if (error) {
         throw error;
       }
 
-      return mapSolicitudContacto(data as SolicitudContactoRow);
+      return mapSolicitudContacto({
+        ...(data as SolicitudContactoRow),
+        contactada_at: null,
+      });
     },
 
     async createPublicRequest(input: CrearSolicitudEmpresaInput) {
@@ -278,14 +503,17 @@ export function createSolicitudesContactoRepository(
           source_url: input.sourceUrl ?? null,
           actualizado_en: new Date().toISOString(),
         } as never)
-        .select(SOLICITUD_SELECT)
+        .select(SOLICITUD_SELECT_LEGACY)
         .single();
 
       if (error) {
         throw error;
       }
 
-      return mapSolicitudContacto(data as SolicitudContactoRow);
+      return mapSolicitudContacto({
+        ...(data as SolicitudContactoRow),
+        contactada_at: null,
+      });
     },
 
     async updateStatusById(input: {
@@ -293,12 +521,21 @@ export function createSolicitudesContactoRepository(
       estado: EstadoSolicitudContacto;
       organizationId?: string | number | null;
     }) {
+      const now = new Date().toISOString();
+      const basePayload = {
+        estado: input.estado,
+        actualizado_en: now,
+      } as Record<string, unknown>;
+
+      if (input.estado === "contactada") {
+        basePayload.contactada_at = now;
+      } else if (input.estado === "nueva") {
+        basePayload.contactada_at = null;
+      }
+
       let query = supabase
         .from(TABLE_NAME as never)
-        .update({
-          estado: input.estado,
-          actualizado_en: new Date().toISOString(),
-        } as never)
+        .update(basePayload as never)
         .eq("id", input.id as never);
 
       if (input.organizationId !== undefined && input.organizationId !== null) {
@@ -307,11 +544,39 @@ export function createSolicitudesContactoRepository(
 
       const { data, error } = await query.select(SOLICITUD_SELECT).single();
 
-      if (error) {
+      if (!error) {
+        return mapSolicitudContacto(data as SolicitudContactoRow);
+      }
+
+      if (!isMissingContactadaAtError(error)) {
         throw error;
       }
 
-      return mapSolicitudContacto(data as SolicitudContactoRow);
+      const legacyPayload = {
+        estado: input.estado,
+        actualizado_en: now,
+      };
+      let legacyQuery = supabase
+        .from(TABLE_NAME as never)
+        .update(legacyPayload as never)
+        .eq("id", input.id as never);
+
+      if (input.organizationId !== undefined && input.organizationId !== null) {
+        legacyQuery = legacyQuery.eq("organization_id", input.organizationId as never);
+      }
+
+      const { data: legacyData, error: legacyError } = await legacyQuery
+        .select(SOLICITUD_SELECT_LEGACY)
+        .single();
+
+      if (legacyError) {
+        throw legacyError;
+      }
+
+      return mapSolicitudContacto({
+        ...(legacyData as SolicitudContactoRow),
+        contactada_at: input.estado === "contactada" ? now : null,
+      });
     },
   };
 }
@@ -338,6 +603,11 @@ export const solicitudesContactoRepository: SolicitudesContactoRepository = {
   },
   listByOrganizationId(...args) {
     return getDefaultSolicitudesContactoRepository().listByOrganizationId(
+      ...args
+    );
+  },
+  listResumenByOrganizationId(...args) {
+    return getDefaultSolicitudesContactoRepository().listResumenByOrganizationId(
       ...args
     );
   },

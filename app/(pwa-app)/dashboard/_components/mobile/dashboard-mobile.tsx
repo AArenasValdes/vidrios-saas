@@ -4,6 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Plus } from "lucide-react";
 
+import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.mobile.module.css";
 
@@ -29,31 +30,35 @@ export const DashboardMobile = memo(function DashboardMobile({
 }: DashboardMobileProps) {
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
+      <PremiumPageSection className={styles.header}>
         <h1 className={styles.title}>Buen dia, {greetingName}</h1>
         <p className={styles.date}>{mobileDateLabel}</p>
-      </header>
+      </PremiumPageSection>
 
-      <Link href={newQuoteHref} className={styles.cta}>
-        <Plus size={18} strokeWidth={2.75} />
-        Crear cotizacion rapida
-      </Link>
+      <PremiumPageSection>
+        <Link href={newQuoteHref} className={styles.cta}>
+          <Plus size={18} strokeWidth={2.75} />
+          Crear cotizacion rapida
+        </Link>
+      </PremiumPageSection>
 
-      <Link href={attentionHref} className={styles.alertCard}>
-        <span className={styles.alertIcon}>
-          <AlertTriangle size={17} strokeWidth={2.25} />
-        </span>
-        <span className={styles.alertBody}>
-          <span className={styles.alertEyebrow}>ATENCION HOY</span>
-          <span className={styles.alertTitle}>{attentionTitle}</span>
-          <span className={styles.alertSuccess}>
-            {approvedTodayCount} aprobada{approvedTodayCount === 1 ? "" : "s"} hoy
+      <PremiumPageSection>
+        <Link href={attentionHref} className={styles.alertCard}>
+          <span className={styles.alertIcon}>
+            <AlertTriangle size={17} strokeWidth={2.25} />
           </span>
-        </span>
-        <ChevronRight size={18} strokeWidth={2.25} className={styles.alertArrow} />
-      </Link>
+          <span className={styles.alertBody}>
+            <span className={styles.alertEyebrow}>ATENCION HOY</span>
+            <span className={styles.alertTitle}>{attentionTitle}</span>
+            <span className={styles.alertSuccess}>
+              {approvedTodayCount} aprobada{approvedTodayCount === 1 ? "" : "s"} hoy
+            </span>
+          </span>
+          <ChevronRight size={18} strokeWidth={2.25} className={styles.alertArrow} />
+        </Link>
+      </PremiumPageSection>
 
-      <section className={styles.metricGrid}>
+      <PremiumPageSection className={styles.metricGrid}>
         <div className={styles.metricCard}>
           <Clock size={16} className={`${styles.metricIcon} ${styles.metricIconPrimary}`} />
           <span className={styles.metricLabel}>COTIZACIONES</span>
@@ -65,9 +70,9 @@ export const DashboardMobile = memo(function DashboardMobile({
           <span className={styles.metricLabel}>APROBADO MES</span>
           <strong className={styles.metricMono}>{approvedMonthLabel}</strong>
         </div>
-      </section>
+      </PremiumPageSection>
 
-      <section className={styles.section}>
+      <PremiumPageSection className={styles.section}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>ULTIMAS COTIZACIONES</h2>
           <Link href={quotesHref} className={styles.sectionLink}>
@@ -113,7 +118,7 @@ export const DashboardMobile = memo(function DashboardMobile({
             </ul>
           )}
         </div>
-      </section>
+      </PremiumPageSection>
     </div>
   );
 });

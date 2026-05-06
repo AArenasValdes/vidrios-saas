@@ -72,6 +72,7 @@ export async function POST(
       contacto?: string;
       tipoTrabajo?: string;
       mensaje?: string;
+      origen?: string | null;
       utmSource?: string | null;
       utmMedium?: string | null;
       utmCampaign?: string | null;
@@ -85,7 +86,7 @@ export async function POST(
       contacto: body.contacto ?? "",
       tipoTrabajo: body.tipoTrabajo ?? "",
       mensaje: body.mensaje ?? "",
-      origen: body.utmSource ?? "solicitud-publica",
+      origen: body.origen ?? body.utmSource ?? "solicitud-publica",
       ip: ip,
       userAgent: request.headers.get("user-agent"),
       utmSource: body.utmSource,

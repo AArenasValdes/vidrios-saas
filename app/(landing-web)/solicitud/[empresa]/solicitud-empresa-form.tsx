@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  LuCircleCheck,
-  LuClock3,
+  LuCheckCheck,
   LuLock,
   LuMessageCircleMore,
   LuSend,
-  LuShieldCheck,
-  LuX,
 } from "react-icons/lu";
 
 import {
@@ -34,6 +32,7 @@ type Props = {
   utmMedium?: string;
   utmCampaign?: string;
   sourceUrl?: string;
+  origin?: string;
 };
 
 type FormState = {
@@ -55,9 +54,9 @@ const EMPTY_FORM: FormState = {
 const QUICK_WORK_TYPES = [
   "Ventana",
   "Shower door",
-  "Cierre terraza",
+  "Cierre de terraza",
   "Puerta de vidrio",
-  "Mampara baño",
+  "Mampara de baño",
   "Termopanel",
   "Otro",
 ] as const;
@@ -68,7 +67,7 @@ function validateNombre(value: string) {
 
 function validateContacto(value: string) {
   if (!value.trim()) {
-    return "Ingresa un WhatsApp válido.";
+    return "Ingresa tu WhatsApp.";
   }
 
   return isValidChileMobilePhone(value) ? null : "Ingresa un WhatsApp válido.";
@@ -77,7 +76,7 @@ function validateContacto(value: string) {
 function validateTipoTrabajo(value: string) {
   return value.trim().length >= 3
     ? null
-    : "Describe brevemente el trabajo que necesitas.";
+    : "Cuéntanos brevemente qué necesitas.";
 }
 
 export function SolicitudEmpresaForm({
@@ -91,57 +90,33 @@ export function SolicitudEmpresaForm({
   utmMedium,
   utmCampaign,
   sourceUrl,
+  origin,
 }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [showForm, setShowForm] = useState(false);
-  const [isClosingForm, setIsClosingForm] = useState(false);
-  const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<keyof FormState, boolean>>({
     nombre: false,
     contacto: false,
     tipoTrabajo: false,
     mensaje: false,
   });
+  const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
+  const [resolvedSourceUrl, setResolvedSourceUrl] = useState<string | null>(
+    sourceUrl ?? null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const nombreInputRef = useRef<HTMLInputElement | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!showForm) {
+    if (sourceUrl) {
+      setResolvedSourceUrl(sourceUrl);
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showForm]);
-
-  useEffect(() => {
-    if (!showForm) {
-      return;
+    if (typeof window !== "undefined") {
+      setResolvedSourceUrl(window.location.href);
     }
-
-    const focusTimer = window.setTimeout(() => {
-      nombreInputRef.current?.focus();
-    }, 180);
-
-    return () => {
-      window.clearTimeout(focusTimer);
-    };
-  }, [showForm]);
-
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, []);
+  }, [sourceUrl]);
 
   const whatsappReady = Boolean(normalizeWhatsappPhone(empresaTelefono));
 
@@ -154,100 +129,54 @@ export function SolicitudEmpresaForm({
     [form]
   );
 
-  const isValid = !errors.nombre && !errors.contacto && !errors.tipoTrabajo;
-  const formattedWhatsappDigits = useMemo(
-    () => formatChileMobilePhone(form.contacto),
-    [form.contacto]
-  );
   const normalizedClienteWhatsapp = useMemo(
     () => normalizeChileMobilePhone(form.contacto),
     [form.contacto]
   );
-
-  const whatsappUrl = useMemo(
+  const displayWhatsapp = useMemo(
     () =>
-      whatsappReady
-        ? buildPublicLeadWhatsappUrl(empresaTelefono, {
-            nombre: form.nombre,
-            tipoTrabajo: form.tipoTrabajo,
-            mensaje: form.mensaje,
-          })
-        : null,
-    [empresaTelefono, form.mensaje, form.nombre, form.tipoTrabajo, whatsappReady]
+      normalizedClienteWhatsapp
+        ? formatChileMobilePhone(normalizedClienteWhatsapp)
+        : "",
+    [normalizedClienteWhatsapp]
   );
-
-  const directWhatsappUrl = useMemo(
-    () =>
-      whatsappReady
-        ? buildPublicLeadWhatsappUrl(empresaTelefono, {
-            nombre: form.nombre,
-            tipoTrabajo: form.tipoTrabajo,
-            mensaje: form.mensaje
-              ? `${form.mensaje}${normalizedClienteWhatsapp ? ` Mi WhatsApp es ${normalizedClienteWhatsapp}.` : ""}`
-              : normalizedClienteWhatsapp
-                ? `Mi WhatsApp es ${normalizedClienteWhatsapp}.`
-                : null,
-          })
-        : null,
-    [
-      empresaTelefono,
-      form.mensaje,
-      form.nombre,
-      form.tipoTrabajo,
-      normalizedClienteWhatsapp,
-      whatsappReady,
-    ]
-  );
-
-  const openForm = () => {
-    setIsClosingForm(false);
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    if (closeTimerRef.current) {
-      window.clearTimeout(closeTimerRef.current);
+  const isValid = !errors.nombre && !errors.contacto && !errors.tipoTrabajo;
+  const resolvedOrigin = origin?.trim() || utmSource?.trim() || "solicitud-publica";
+  const whatsappUrl = useMemo(() => {
+    if (!whatsappReady) {
+      return null;
     }
 
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    return buildPublicLeadWhatsappUrl(empresaTelefono, {
+      nombre: form.nombre,
+      tipoTrabajo: form.tipoTrabajo,
+      mensaje: form.mensaje,
+    });
+  }, [empresaTelefono, form.mensaje, form.nombre, form.tipoTrabajo, whatsappReady]);
 
-    setIsClosingForm(true);
-    closeTimerRef.current = window.setTimeout(() => {
-      setShowForm(false);
-      setIsClosingForm(false);
-      closeTimerRef.current = null;
-    }, 220);
-  };
-
-  const handleFieldChange = (field: keyof FormState, value: string) => {
+  function handleFieldChange(field: keyof FormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrorMessage(null);
     setSuccessMessage(null);
-  };
+  }
 
-  const handleTextBlur = (field: keyof FormState) => {
+  function handleBlur(field: keyof FormState) {
     setTouched((current) => ({ ...current, [field]: true }));
-  };
+  }
 
-  const handlePhoneBlur = () => {
-    setTouched((current) => ({ ...current, contacto: true }));
-  };
-
-  const handleWorkTypeSelect = (value: string) => {
+  function handleWorkTypeSelect(value: string) {
     setSelectedWorkType(value);
 
-    if (value !== "Otro") {
-      handleFieldChange("tipoTrabajo", value);
-      setTouched((current) => ({ ...current, tipoTrabajo: true }));
+    if (value === "Otro") {
+      handleFieldChange("tipoTrabajo", "");
       return;
     }
 
-    handleFieldChange("tipoTrabajo", "");
-  };
+    handleFieldChange("tipoTrabajo", value);
+    setTouched((current) => ({ ...current, tipoTrabajo: true }));
+  }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched({
       nombre: true,
@@ -273,10 +202,11 @@ export function SolicitudEmpresaForm({
         body: JSON.stringify({
           ...form,
           contacto: normalizedClienteWhatsapp,
+          origen: resolvedOrigin,
           utmSource: utmSource ?? null,
           utmMedium: utmMedium ?? null,
           utmCampaign: utmCampaign ?? null,
-          sourceUrl: sourceUrl ?? null,
+          sourceUrl: resolvedSourceUrl,
         }),
       });
 
@@ -290,12 +220,8 @@ export function SolicitudEmpresaForm({
         );
       }
 
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-
       setSuccessMessage(
-        `${empresaNombre} recibió tu solicitud. Puedes seguir por WhatsApp si quieres respuesta más rápida.`
+        `${empresaNombre} ya recibió tu solicitud. Te recomendamos seguir por WhatsApp si quieres acelerar respuesta.`
       );
     } catch (error) {
       setErrorMessage(
@@ -306,295 +232,144 @@ export function SolicitudEmpresaForm({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <>
-      <section className={s.ctaCard}>
-        <div className={s.ctaStack}>
-          {isAvailable ? (
-            <>
-              {whatsappUrl || directWhatsappUrl ? (
-                <div className={s.primaryActionBlock}>
-                  <a
-                    className={`${s.primaryButton} ${s.whatsappPrimary}`}
-                    href={
-                      successMessage
-                        ? whatsappUrl ?? directWhatsappUrl ?? "#"
-                        : directWhatsappUrl ?? "#"
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LuMessageCircleMore aria-hidden />
-                    {successMessage
-                      ? "Continuar por WhatsApp"
-                      : "Hablar por WhatsApp"}
-                  </a>
-                  <p className={s.primaryHint}>
-                    Recomendado · respuesta más rápida
-                  </p>
-                </div>
-              ) : (
-                <div className={s.whatsappWarning}>
-                  <strong>Esta empresa aún no configuró su WhatsApp.</strong>
-                  <span>
-                    {empresaEmail
-                      ? `Por ahora puedes usar el formulario o escribir a ${empresaEmail}.`
-                      : "Por ahora puedes usar el formulario de solicitud rápida."}
-                  </span>
-                </div>
-              )}
-
-              <div className={s.dividerRow}>
-                <span className={s.dividerLine} />
-                <span className={s.dividerText}>o</span>
-                <span className={s.dividerLine} />
-              </div>
-
-              <button className={s.secondaryButton} type="button" onClick={openForm}>
-                Dejar solicitud rápida
-              </button>
-            </>
-          ) : (
-            <>
-              <button className={s.primaryButton} type="button" onClick={openForm}>
-                <LuSend aria-hidden />
-                Dejar solicitud rápida
-              </button>
-              <p className={s.primaryHint}>
-                Tu solicitud queda registrada para preparar tu cotización
-              </p>
-
-              <div className={s.dividerRow}>
-                <span className={s.dividerLine} />
-                <span className={s.dividerText}>o</span>
-                <span className={s.dividerLine} />
-              </div>
-
-              {whatsappUrl || directWhatsappUrl ? (
-                <a
-                  className={s.secondaryButton}
-                  href={directWhatsappUrl ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <LuMessageCircleMore aria-hidden />
-                  Enviar WhatsApp igualmente
-                </a>
-              ) : (
-                <div className={s.whatsappWarning}>
-                  <strong>Esta empresa aún no configuró su WhatsApp.</strong>
-                  <span>
-                    {empresaEmail
-                      ? `Por ahora puedes usar el formulario o escribir a ${empresaEmail}.`
-                      : "Por ahora puedes usar el formulario de solicitud rápida."}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
+    <section className={s.formCard}>
+      <div className={s.formHeader}>
+        <div>
+          <span className={s.formTag}>Deja tu solicitud</span>
+          <h2 className={s.formTitle}>Te contactamos con contexto, no a ciegas.</h2>
         </div>
-      </section>
 
-      <section className={s.trustInfo}>
-        <div className={s.trustItem}>
-          <LuShieldCheck aria-hidden />
-          <span>Sin compromiso</span>
-        </div>
-        <div className={s.trustItem}>
-          <LuClock3 aria-hidden />
-          <span>Respuesta por WhatsApp</span>
-        </div>
-      </section>
-
-      <section className={s.howItWorksCard}>
-        <p className={s.howItWorksText}>
-          Deja tu solicitud para que no se pierda. La empresa te responderá
-          directamente por WhatsApp.
-        </p>
-      </section>
-
-      <footer className={s.ventoraFooter}>
-        <span className={s.ventoraMark}>V</span>
-        <span>Cotización gestionada con Ventora</span>
-      </footer>
-
-      {showForm ? (
-        <>
-          <button
-            type="button"
-            className={`${s.sheetBackdrop} ${isClosingForm ? s.sheetBackdropClosing : ""}`}
-            aria-label="Cerrar solicitud rápida"
-            onClick={closeForm}
-          />
-          <section
-            className={`${s.sheet} ${isClosingForm ? s.sheetClosing : ""}`}
-            aria-modal="true"
-            role="dialog"
+        {whatsappReady && whatsappUrl ? (
+          <a
+            className={s.formWhatsappButton}
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            <div className={s.sheetHandle} />
-            <div className={s.sheetHeader}>
-              <div>
-                <strong>Deja tu solicitud rápida</strong>
-                <span>Quedará registrada para preparar tu cotización.</span>
-              </div>
-              <button
-                type="button"
-                className={s.sheetClose}
-                onClick={closeForm}
-                aria-label="Cerrar"
-              >
-                <LuX aria-hidden />
-              </button>
-            </div>
+            <LuMessageCircleMore aria-hidden />
+            Hablar por WhatsApp
+          </a>
+        ) : null}
+      </div>
 
-            <form className={s.form} onSubmit={handleSubmit} noValidate>
-              <label className={s.field}>
-                <span className={s.label}>Nombre</span>
-                <input
-                  ref={nombreInputRef}
-                  className={`${s.input} ${
-                    touched.nombre && errors.nombre ? s.inputError : ""
-                  }`}
-                  value={form.nombre}
-                  onChange={(event) => handleFieldChange("nombre", event.target.value)}
-                  onBlur={() => handleTextBlur("nombre")}
-                  placeholder="Pedro Aguirre"
-                  autoComplete="name"
-                />
-                {touched.nombre && errors.nombre ? (
-                  <span className={s.errorText}>{errors.nombre}</span>
-                ) : null}
-              </label>
+      <form className={s.form} onSubmit={handleSubmit}>
+        <label className={s.field}>
+          <span className={s.label}>Nombre</span>
+          <input
+            className={s.input}
+            value={form.nombre}
+            onChange={(event) => handleFieldChange("nombre", event.target.value)}
+            onBlur={() => handleBlur("nombre")}
+            placeholder="Ej: Alejandro Flores"
+            autoComplete="name"
+          />
+          {touched.nombre && errors.nombre ? (
+            <span className={s.fieldError}>{errors.nombre}</span>
+          ) : null}
+        </label>
 
-              <label className={s.field}>
-                <span className={s.label}>Teléfono o WhatsApp</span>
-                <div
-                  className={`${s.phoneField} ${
-                    touched.contacto && errors.contacto ? s.inputError : ""
-                  }`}
+        <label className={s.field}>
+          <span className={s.label}>WhatsApp</span>
+          <input
+            className={s.input}
+            value={form.contacto}
+            onChange={(event) => handleFieldChange("contacto", event.target.value)}
+            onBlur={() => handleBlur("contacto")}
+            placeholder="+56 9 1234 5678"
+            autoComplete="tel"
+            inputMode="tel"
+          />
+          {displayWhatsapp ? (
+            <span className={s.fieldHint}>Formato detectado: +56 9 {displayWhatsapp}</span>
+          ) : null}
+          {touched.contacto && errors.contacto ? (
+            <span className={s.fieldError}>{errors.contacto}</span>
+          ) : null}
+        </label>
+
+        <div className={s.field}>
+          <span className={s.label}>Tipo de trabajo</span>
+          <div className={s.chipGrid}>
+            {QUICK_WORK_TYPES.map((workType) => {
+              const isActive =
+                selectedWorkType === workType ||
+                (workType !== "Otro" && form.tipoTrabajo === workType);
+
+              return (
+                <button
+                  key={workType}
+                  type="button"
+                  className={`${s.chipButton} ${isActive ? s.chipButtonActive : ""}`}
+                  onClick={() => handleWorkTypeSelect(workType)}
                 >
-                  <span className={s.phonePrefix}>+56 9</span>
-                  <input
-                    className={s.phoneInput}
-                    value={formattedWhatsappDigits}
-                    onChange={(event) => handleFieldChange("contacto", event.target.value)}
-                    onBlur={handlePhoneBlur}
-                    placeholder="XXXX XXXX"
-                    autoComplete="tel"
-                    inputMode="numeric"
-                  />
-                </div>
-                {touched.contacto && errors.contacto ? (
-                  <span className={s.errorText}>{errors.contacto}</span>
-                ) : null}
-              </label>
+                  {workType}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            className={s.input}
+            value={form.tipoTrabajo}
+            onChange={(event) => handleFieldChange("tipoTrabajo", event.target.value)}
+            onBlur={() => handleBlur("tipoTrabajo")}
+            placeholder="Ej: Ventana termopanel para living"
+          />
+          {touched.tipoTrabajo && errors.tipoTrabajo ? (
+            <span className={s.fieldError}>{errors.tipoTrabajo}</span>
+          ) : null}
+        </div>
 
-              <div className={s.field}>
-                <span className={s.label}>Tipo de trabajo</span>
-                <div className={s.chipGrid}>
-                  {QUICK_WORK_TYPES.map((option) => {
-                    const active =
-                      option === "Otro"
-                        ? selectedWorkType === option
-                        : form.tipoTrabajo === option;
+        <label className={s.field}>
+          <span className={s.label}>Mensaje adicional</span>
+          <textarea
+            className={s.textarea}
+            rows={4}
+            value={form.mensaje}
+            onChange={(event) => handleFieldChange("mensaje", event.target.value)}
+            onBlur={() => handleBlur("mensaje")}
+            placeholder="Cuéntanos medidas aproximadas, comuna, plazo o lo que ya tengas claro."
+          />
+        </label>
 
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        className={`${s.choiceChip} ${active ? s.choiceChipActive : ""}`}
-                        onClick={() => handleWorkTypeSelect(option)}
-                      >
-                        <span
-                          className={`${s.choiceCheck} ${active ? s.choiceCheckVisible : ""}`}
-                          aria-hidden
-                        >
-                          ✓
-                        </span>
-                        <span className={s.choiceLabel}>{option}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedWorkType === "Otro" ? (
-                  <input
-                    className={`${s.input} ${
-                      touched.tipoTrabajo && errors.tipoTrabajo ? s.inputError : ""
-                    }`}
-                    value={form.tipoTrabajo}
-                    onChange={(event) =>
-                      handleFieldChange("tipoTrabajo", event.target.value)
-                    }
-                    onBlur={() => handleTextBlur("tipoTrabajo")}
-                    placeholder="Ej: termopanel, espejo, otro"
-                  />
-                ) : null}
-                {touched.tipoTrabajo && errors.tipoTrabajo ? (
-                  <span className={s.errorText}>{errors.tipoTrabajo}</span>
-                ) : null}
-              </div>
+        {errorMessage ? <div className={s.errorBanner}>{errorMessage}</div> : null}
 
-              <label className={s.field}>
-                <span className={s.label}>
-                  Mensaje <span className={s.optionalLabel}>(opcional)</span>
-                </span>
-                <textarea
-                  className={s.textarea}
-                  value={form.mensaje}
-                  onChange={(event) => handleFieldChange("mensaje", event.target.value)}
-                  onBlur={() => handleTextBlur("mensaje")}
-                  placeholder="Ej: quiero cotizar un shower door para baño"
-                  rows={4}
-                />
-              </label>
+        {successMessage ? (
+          <div className={s.successBanner}>
+            <LuCheckCheck aria-hidden />
+            <div>
+              <strong>Solicitud enviada</strong>
+              <p>{successMessage}</p>
+            </div>
+          </div>
+        ) : null}
 
-              <div className={s.privacyBox}>
-                <LuLock aria-hidden />
-                <span>
-                  Puedes enviar fotos o medidas después por WhatsApp. Tus datos se
-                  usan solo para esta solicitud. {privacidad}
-                </span>
-              </div>
+        <button className={s.submitButton} type="submit" disabled={isSubmitting}>
+          <LuSend aria-hidden />
+          {isSubmitting ? "Enviando..." : "Enviar solicitud"}
+        </button>
+      </form>
 
-              {errorMessage ? (
-                <div className={s.submitError}>{errorMessage}</div>
-              ) : null}
+      <div className={s.formFooter}>
+        <div className={s.formFooterItem}>
+          <LuLock aria-hidden />
+          <span>{privacidad}</span>
+        </div>
 
-              {successMessage ? (
-                <div className={s.submitSuccess}>
-                  <LuCircleCheck aria-hidden />
-                  <span>{successMessage}</span>
-                </div>
-              ) : null}
+        {!whatsappReady && empresaEmail ? (
+          <div className={s.formFooterMuted}>
+            Si esta empresa aún no configuró WhatsApp, puedes escribir a {empresaEmail}.
+          </div>
+        ) : null}
 
-              <div className={s.sheetSubmitBar}>
-                {successMessage && (whatsappUrl || directWhatsappUrl) ? (
-                  <a
-                    className={`${s.submitButton} ${s.whatsappPrimary}`}
-                    href={whatsappUrl ?? directWhatsappUrl ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LuMessageCircleMore aria-hidden />
-                    Continuar por WhatsApp
-                  </a>
-                ) : (
-                  <button
-                    className={s.submitButton}
-                    type="submit"
-                    disabled={isSubmitting || !isValid || !normalizedClienteWhatsapp}
-                  >
-                    <LuSend aria-hidden />
-                    {isSubmitting ? "Enviando..." : "Enviar solicitud"}
-                  </button>
-                )}
-              </div>
-            </form>
-          </section>
-        </>
-      ) : null}
-    </>
+        {!isAvailable ? (
+          <div className={s.formFooterMuted}>
+            Si ahora están fuera de horario, tu solicitud igual queda guardada para seguimiento.
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }

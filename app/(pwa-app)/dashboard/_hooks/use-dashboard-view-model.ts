@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
-import { buildCotizacionAlerts } from "@/features/cotizaciones/services/cotizacion-alerts.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { useDashboardSummary } from "./use-dashboard-summary";
 
 export type DashboardQuoteStateColor = "success" | "warning" | "destructive";
 
@@ -80,9 +79,9 @@ function formatMobileDateLabel(value: string) {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { user } = useAuth();
+  const { user, organizacionId } = useAuth();
   const { profile } = useOrganizationProfile();
-  const { cotizaciones, isReady, isRefreshing, prefetchCotizacionById } = useCotizacionesStore();
+  const dashboardSummary = useDashboardSummary(organizacionId);
 
   const companyName = profile?.empresaNombre?.trim() || "Mi empresa";
   const greetingName = buildUserName(user?.email) || companyName;
@@ -97,56 +96,22 @@ export function useDashboardViewModel(): DashboardViewModel {
   );
   const subtitle = `${todayLabel} - ${companyName}`;
   const mobileDateLabel = formatMobileDateLabel(todayLabel);
+  const hasSeguimiento = dashboardSummary.alerts.some((a) => a.kind === "seguimiento");
 
-  const stats = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const pendingQuotes = cotizaciones.filter((record) =>
-      ["creada", "borrador", "enviada"].includes(record.estado)
-    );
-    const monthQuotes = cotizaciones.filter((record) => {
-      const date = new Date(record.updatedAt);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-    const approvedToday = cotizaciones.filter((record) => {
-      if (record.estado !== "aprobada") return false;
-      const date = new Date(record.updatedAt);
-      return date.toDateString() === now.toDateString();
-    });
-    const approvedThisMonth = cotizaciones.filter((record) => {
-      if (record.estado !== "aprobada") return false;
-      const date = new Date(record.updatedAt);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-
-    return {
-      pendingCount: pendingQuotes.length,
-      monthCount: monthQuotes.length,
-      approvedTodayCount: approvedToday.length,
-      totalApproved: approvedThisMonth.reduce((sum, record) => sum + record.total, 0),
-    };
-  }, [cotizaciones]);
-
-  const alerts = useMemo(() => buildCotizacionAlerts(cotizaciones, { limit: 3 }), [cotizaciones]);
-  const hasSeguimiento = alerts.some((a) => a.kind === "seguimiento");
-
-  const attentionHref = alerts[0]?.href ?? "/cotizaciones?estado=pendientes";
+  const attentionHref = dashboardSummary.alerts[0]?.href ?? "/cotizaciones?estado=pendientes";
   const attentionTitle = hasSeguimiento
     ? "Hay clientes esperando seguimiento"
-    : alerts.length > 0
-      ? `${alerts.length} respuesta${alerts.length === 1 ? "" : "s"} por revisar`
-      : `${stats.pendingCount} presupuesto${stats.pendingCount === 1 ? "" : "s"} pendiente${
-          stats.pendingCount === 1 ? "" : "s"
-        }`;
+    : dashboardSummary.alerts.length > 0
+      ? `${dashboardSummary.alerts.length} respuesta${
+          dashboardSummary.alerts.length === 1 ? "" : "s"
+        } por revisar`
+      : `${dashboardSummary.pendingCount} presupuesto${
+          dashboardSummary.pendingCount === 1 ? "" : "s"
+        } pendiente${dashboardSummary.pendingCount === 1 ? "" : "s"}`;
 
   const quoteCards = useMemo<DashboardQuoteCard[]>(() => {
-    return [...cotizaciones]
-      .sort(
-        (left, right) =>
-          new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-      )
+    return [...dashboardSummary.recentRecords]
+      .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
       .slice(0, 3)
       .map((record) => {
         let stateLabel = "PENDIENTE";
@@ -169,16 +134,13 @@ export function useDashboardViewModel(): DashboardViewModel {
           date: formatCotizacionDate(record.updatedAt),
           stateLabel,
           stateColor,
-          onPrefetchDetail: () => {
-            void prefetchCotizacionById(record.id);
-          },
         };
       });
-  }, [cotizaciones, prefetchCotizacionById]);
+  }, [dashboardSummary.recentRecords]);
 
-  const approvedMonthLabel = formatClp(stats.totalApproved);
-  const isLoading = isRefreshing && cotizaciones.length === 0;
-  const isEmpty = !isLoading && isReady && quoteCards.length === 0;
+  const approvedMonthLabel = formatClp(dashboardSummary.approvedMonthTotal);
+  const isLoading = dashboardSummary.isLoading && dashboardSummary.recentRecords.length === 0;
+  const isEmpty = !isLoading && dashboardSummary.isReady && quoteCards.length === 0;
 
   return {
     mobile: {
@@ -187,26 +149,26 @@ export function useDashboardViewModel(): DashboardViewModel {
       newQuoteHref: "/cotizaciones/nueva",
       attentionHref,
       attentionTitle,
-      totalCount: cotizaciones.length,
-      approvedTodayCount: stats.approvedTodayCount,
-      monthCount: stats.monthCount,
+      totalCount: dashboardSummary.totalCount,
+      approvedTodayCount: dashboardSummary.approvedTodayCount,
+      monthCount: dashboardSummary.monthCount,
       approvedMonthLabel,
       quotesHref: "/cotizaciones",
       quoteCards,
-      isLoading: isLoading || !isReady,
+      isLoading: isLoading || !dashboardSummary.isReady,
       isEmpty,
     },
     desktop: {
       greetingName,
       subtitle,
       newQuoteHref: "/cotizaciones/nueva",
-      pendingCount: stats.pendingCount,
-      monthCount: stats.monthCount,
-      approvedTodayCount: stats.approvedTodayCount,
+      pendingCount: dashboardSummary.pendingCount,
+      monthCount: dashboardSummary.monthCount,
+      approvedTodayCount: dashboardSummary.approvedTodayCount,
       approvedMonthLabel,
       quotesHref: "/cotizaciones",
       quoteCards,
-      isLoading: isLoading || !isReady,
+      isLoading: isLoading || !dashboardSummary.isReady,
       isEmpty,
     },
   };

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { getSolicitudesResumen } from "@/features/solicitudes/services/solicitudes-summary.service";
 import type {
   EstadoSolicitudContacto,
   SolicitudContacto,
@@ -15,9 +16,100 @@ function getErrorMessage(error: unknown) {
   return "No pudimos cargar las solicitudes por ahora.";
 }
 
-export function useSolicitudesContacto(enabled = true) {
-  const [solicitudes, setSolicitudes] = useState<SolicitudContacto[]>([]);
-  const [isReady, setIsReady] = useState(false);
+const STORAGE_KEY_PREFIX = "vidrios-saas:solicitudes";
+
+type SolicitudesCachePayload = {
+  solicitudes: SolicitudContacto[];
+};
+
+type SolicitudesCacheEntry = {
+  cacheKey: string;
+  solicitudes: SolicitudContacto[];
+};
+
+const solicitudesCache = new Map<string, SolicitudesCacheEntry>();
+const solicitudesPromiseByKey = new Map<string, Promise<SolicitudContacto[]>>();
+
+function buildSolicitudesStorageKey(cacheKey: string) {
+  return `${STORAGE_KEY_PREFIX}:${cacheKey}`;
+}
+
+function readSolicitudesCache(cacheKey: string) {
+  const warmCache = solicitudesCache.get(cacheKey);
+
+  if (warmCache) {
+    return warmCache.solicitudes;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(buildSolicitudesStorageKey(cacheKey));
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as SolicitudesCachePayload | null;
+
+    if (!parsed || !Array.isArray(parsed.solicitudes)) {
+      return null;
+    }
+
+    solicitudesCache.set(cacheKey, {
+      cacheKey,
+      solicitudes: parsed.solicitudes,
+    });
+
+    return parsed.solicitudes;
+  } catch {
+    return null;
+  }
+}
+
+function persistSolicitudesCache(cacheKey: string, solicitudes: SolicitudContacto[]) {
+  solicitudesCache.set(cacheKey, {
+    cacheKey,
+    solicitudes,
+  });
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      buildSolicitudesStorageKey(cacheKey),
+      JSON.stringify({ solicitudes } satisfies SolicitudesCachePayload)
+    );
+  } catch {
+    return;
+  }
+}
+
+function clearSolicitudesCache(cacheKey: string) {
+  solicitudesCache.delete(cacheKey);
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(buildSolicitudesStorageKey(cacheKey));
+  } catch {
+    return;
+  }
+}
+
+export function useSolicitudesContacto(enabled = true, cacheKey = "default") {
+  const [solicitudes, setSolicitudes] = useState<SolicitudContacto[]>(() => {
+    return readSolicitudesCache(cacheKey) ?? [];
+  });
+  const [isReady, setIsReady] = useState(() => {
+    return Boolean(readSolicitudesCache(cacheKey));
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,28 +118,28 @@ export function useSolicitudesContacto(enabled = true) {
       setIsRefreshing(true);
       setError(null);
 
-      const response = await fetch("/api/solicitudes", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { solicitudes?: SolicitudContacto[]; error?: string }
-        | null;
+      const inFlightPromise = solicitudesPromiseByKey.get(cacheKey);
+      const dataPromise =
+        inFlightPromise ??
+        getSolicitudesResumen()
+          .finally(() => {
+            solicitudesPromiseByKey.delete(cacheKey);
+          });
 
-      if (!response.ok) {
-        throw new Error(
-          payload?.error ?? "No pudimos cargar las solicitudes por ahora."
-        );
+      if (!inFlightPromise) {
+        solicitudesPromiseByKey.set(cacheKey, dataPromise);
       }
 
-      setSolicitudes(payload?.solicitudes ?? []);
+      const nextSolicitudes = await dataPromise;
+      setSolicitudes(nextSolicitudes);
+      persistSolicitudesCache(cacheKey, nextSolicitudes);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
     } finally {
       setIsRefreshing(false);
       setIsReady(true);
     }
-  }, []);
+  }, [cacheKey]);
 
   const updateSolicitudEstado = useCallback(
     async (id: string, estado: EstadoSolicitudContacto) => {
@@ -90,13 +182,20 @@ export function useSolicitudesContacto(enabled = true) {
             solicitud.id === id ? payload.solicitud! : solicitud
           )
         );
+        persistSolicitudesCache(
+          cacheKey,
+          previous.map((solicitud) =>
+            solicitud.id === id ? payload.solicitud! : solicitud
+          )
+        );
       } catch (nextError) {
         setSolicitudes(previous);
+        persistSolicitudesCache(cacheKey, previous);
         setError(getErrorMessage(nextError));
         throw nextError;
       }
     },
-    [solicitudes]
+    [cacheKey, solicitudes]
   );
 
   useEffect(() => {
@@ -105,11 +204,19 @@ export function useSolicitudesContacto(enabled = true) {
       setIsRefreshing(false);
       setIsReady(true);
       setError(null);
+      clearSolicitudesCache(cacheKey);
       return;
     }
 
+    const cachedSolicitudes = readSolicitudesCache(cacheKey);
+
+    if (cachedSolicitudes) {
+      setSolicitudes(cachedSolicitudes);
+      setIsReady(true);
+    }
+
     void loadSolicitudes();
-  }, [enabled, loadSolicitudes]);
+  }, [cacheKey, enabled, loadSolicitudes]);
 
   return {
     solicitudes,

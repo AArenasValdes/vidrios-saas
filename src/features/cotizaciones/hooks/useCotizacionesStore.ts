@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { getCotizacionesResumenByOrganizationId } from "@/features/cotizaciones/services/cotizaciones-summary.service";
 import { cotizacionesAppService } from "@/features/cotizaciones/services/cotizaciones.service";
 import type { Cliente } from "@/features/clientes/types/cliente";
 import type {
@@ -221,7 +222,9 @@ export function useCotizacionesStore() {
   const [isSaving, setIsSaving] = useState(false);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
-  const lastOrganizationIdRef = useRef<string | null>(null);
+  const lastOrganizationIdRef = useRef<string | null>(
+    organizacionId ? String(organizacionId) : null
+  );
   const cotizacionesRef = useRef<CotizacionWorkflowRecord[]>(
     initialStateRef.current.cotizaciones
   );
@@ -321,8 +324,7 @@ export function useCotizacionesStore() {
       const inFlightPromise = cotizacionesPromiseByOrganization.get(organizationKey);
       const recordsPromise =
         inFlightPromise ??
-        cotizacionesAppService
-          .listWorkflowByOrganizationId(organizacionId)
+        getCotizacionesResumenByOrganizationId(organizacionId)
           .finally(() => cotizacionesPromiseByOrganization.delete(organizationKey));
 
       if (!inFlightPromise) {
@@ -420,12 +422,13 @@ export function useCotizacionesStore() {
         window.clearTimeout(bootRetryTimeoutRef.current);
         bootRetryTimeoutRef.current = null;
       }
-      cotizacionesRef.current = [];
-      clientesRef.current = [];
-      setCotizaciones([]);
-      setClientes([]);
+      const nextInitialState = readInitialCotizacionesState(organizacionId);
+      cotizacionesRef.current = nextInitialState.cotizaciones;
+      clientesRef.current = nextInitialState.clientes;
+      setCotizaciones(nextInitialState.cotizaciones);
+      setClientes(nextInitialState.clientes);
       setError(null);
-      setIsReady(false);
+      setIsReady(nextInitialState.isReady);
     }
 
     if (cargando) {
