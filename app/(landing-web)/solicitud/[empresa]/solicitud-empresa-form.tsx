@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LuBadgeCheck,
   LuCheckCheck,
@@ -187,6 +187,7 @@ export function SolicitudEmpresaForm({
   sourceUrl,
   origin,
 }: Props) {
+  const sectionRef = useRef<HTMLElement | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
@@ -208,6 +209,64 @@ export function SolicitudEmpresaForm({
       setResolvedSourceUrl(window.location.href);
     }
   }, [sourceUrl]);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+
+    if (!section || typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const root = document.documentElement;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          root.dataset.solicitudFormActive = "true";
+          return;
+        }
+
+        if (!section.contains(document.activeElement)) {
+          delete root.dataset.solicitudFormActive;
+        }
+      },
+      {
+        threshold: 0.35,
+        rootMargin: "0px 0px -18% 0px",
+      }
+    );
+
+    const handleFocusIn = () => {
+      root.dataset.solicitudFormActive = "true";
+    };
+
+    const handleFocusOut = () => {
+      window.setTimeout(() => {
+        if (!section.contains(document.activeElement)) {
+          const rect = section.getBoundingClientRect();
+          const isVisible =
+            rect.top < window.innerHeight * 0.82 && rect.bottom > window.innerHeight * 0.18;
+
+          if (!isVisible) {
+            delete root.dataset.solicitudFormActive;
+          }
+        }
+      }, 0);
+    };
+
+    observer.observe(section);
+    section.addEventListener("focusin", handleFocusIn);
+    section.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      observer.disconnect();
+      section.removeEventListener("focusin", handleFocusIn);
+      section.removeEventListener("focusout", handleFocusOut);
+
+      if (root.dataset.solicitudFormActive === "true") {
+        delete root.dataset.solicitudFormActive;
+      }
+    };
+  }, []);
 
   const errors = useMemo<FieldErrors>(
     () => ({
@@ -339,7 +398,7 @@ export function SolicitudEmpresaForm({
   }
 
   return (
-    <section id="solicitud-rapida" className={s.formCard}>
+    <section id="solicitud-rapida" className={s.formCard} ref={sectionRef}>
       <div className={s.formIntro}>
         <span className={s.sectionEyebrow}>Solicitud rapida</span>
         <h2 className={s.formTitle}>Cuentanos que necesitas</h2>

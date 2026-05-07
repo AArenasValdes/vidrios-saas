@@ -2,13 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lato, Syne } from "next/font/google";
-import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
   LuBadgeCheck,
   LuClipboardCheck,
   LuClock3,
-  LuHammer,
   LuLock,
   LuMapPin,
   LuMessageCircleMore,
@@ -48,55 +46,22 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type BenefitItem = {
-  title: string;
-  copy: string;
-  icon: IconType;
-  tone: "brand" | "emerald" | "slate";
-};
-
 type StepItem = {
   title: string;
   copy: string;
 };
 
-const SPECIALTIES = [
-  "Ventanas termopanel",
-  "Shower doors",
-  "Cierres de terraza",
-  "Mamparas de bano",
-  "Puertas de vidrio",
-  "Reparaciones",
-] as const;
-
 const STEPS: StepItem[] = [
-  {
-    title: "Cuentanos que necesitas",
-    copy: "Tipo de trabajo, comuna, medidas o foto.",
-  },
-  {
-    title: "Te contactamos por WhatsApp",
-    copy: "Confirmamos detalles y revisamos mejor opcion.",
-  },
-  {
-    title: "Recibes tu cotizacion",
-    copy: "Propuesta comercial clara y sin compromiso.",
-  },
+  { title: "Elige", copy: "tu trabajo" },
+  { title: "Envia", copy: "tus datos" },
+  { title: "Te contactan", copy: "por WhatsApp" },
 ] as const;
 
 const PREVIEW_GALLERY = [
-  {
-    src: "/brand/logosanmarco.jpg",
-    alt: "Referencia visual 1",
-  },
-  {
-    src: "/brand/landing-pdf.png",
-    alt: "Referencia visual 2",
-  },
-  {
-    src: "/brand/screen2.png",
-    alt: "Referencia visual 3",
-  },
+  "/brand/screen2.png",
+  "/brand/screen.png",
+  "/brand/landing-pdf.png",
+  "/brand/logosanmarco.jpg",
 ] as const;
 
 export const dynamic = "force-dynamic";
@@ -148,7 +113,7 @@ export default async function SolicitudEmpresaPage({
     to: config.solicitudPublicaHorarioHasta,
   });
 
-  const availabilityLabel = isAvailable ? "Disponible ahora" : "Fuera de horario";
+  const availabilityLabel = isAvailable ? "Activo" : "Fuera de horario";
   const locationLabel = resolveLocationLabel(config.empresaDireccion);
   const descriptionShort =
     config.solicitudPublicaDescripcionCorta ||
@@ -163,29 +128,10 @@ export default async function SolicitudEmpresaPage({
   const responseCopy =
     config.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR;
   const heroLead = whatsappUrl
-    ? "Recibe una respuesta por WhatsApp y deja tu solicitud registrada."
-    : "Deja tu solicitud y recibe una respuesta comercial clara.";
-
-  const benefits: BenefitItem[] = [
-    {
-      title: "Te respondemos rapido",
-      copy: responseCopy,
-      icon: LuMessageCircleMore,
-      tone: "brand",
-    },
-    {
-      title: "Horario claro",
-      copy: horarioLabel,
-      icon: LuClock3,
-      tone: "emerald",
-    },
-    {
-      title: "Visita e instalacion",
-      copy: "Medicion, propuesta y montaje segun el trabajo.",
-      icon: LuHammer,
-      tone: "slate",
-    },
-  ];
+    ? "Te respondemos por WhatsApp y tu solicitud queda registrada."
+    : "Tu solicitud queda registrada y te responderemos con una propuesta clara.";
+  const heroImage = PREVIEW_GALLERY[0] ?? null;
+  const galleryImages = PREVIEW_GALLERY.slice(heroImage ? 1 : 0, 6);
 
   return (
     <main
@@ -214,140 +160,115 @@ export default async function SolicitudEmpresaPage({
         </header>
 
         <section className={s.heroSection}>
-          <div className={s.heroCard}>
-            <div className={s.heroIdentity}>
-              {config.empresaLogoUrl ? (
+          <article className={s.heroPanel}>
+            {heroImage ? (
+              <div className={s.heroBackgroundMedia} aria-hidden>
                 <Image
-                  className={s.logo}
-                  src={config.empresaLogoUrl}
-                  alt={config.empresaNombre}
-                  width={84}
-                  height={84}
+                  src={heroImage}
+                  alt=""
+                  fill
+                  className={s.heroBackgroundImage}
                   unoptimized
                 />
-              ) : (
-                <div className={s.logoFallback} aria-hidden>
-                  {getInitials(config.empresaNombre)}
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className={s.heroFallback} aria-hidden />
+            )}
 
-            <div className={s.heroCopy}>
-              <h1 className={s.title}>{config.empresaNombre}</h1>
-              <p className={s.heroMeta}>
-                Vidrios y aluminio
-                {locationLabel ? (
-                  <>
-                    <span className={s.heroMetaDot}>-</span>
-                    <span>{locationLabel}</span>
-                  </>
+            <div className={s.heroOverlay} />
+
+            <div className={s.heroContent}>
+              <div className={s.heroTopRow}>
+                <div className={s.heroIdentityBlock}>
+                  {config.empresaLogoUrl ? (
+                    <Image
+                      className={s.logo}
+                      src={config.empresaLogoUrl}
+                      alt={config.empresaNombre}
+                      width={64}
+                      height={64}
+                      unoptimized
+                    />
+                  ) : (
+                    <div className={s.logoFallback} aria-hidden>
+                      {getInitials(config.empresaNombre)}
+                    </div>
+                  )}
+
+                  <div className={s.heroIdentityCopy}>
+                    <strong>{config.empresaNombre}</strong>
+                    <span>
+                      Santiago RM - Vidrios y aluminio
+                      {locationLabel ? ` - ${locationLabel}` : ""}
+                    </span>
+                  </div>
+                </div>
+
+                <div className={s.heroStatusBadge} data-active={isAvailable}>
+                  <span className={s.availabilityDot} aria-hidden />
+                  {availabilityLabel}
+                </div>
+              </div>
+
+              <div className={s.heroMainCopy}>
+                <h1 className={s.heroTitle}>
+                  Cotiza vidrios y aluminio en menos de 1 minuto
+                </h1>
+                <p className={s.heroLead}>{heroLead}</p>
+                <p className={s.heroSupportNote}>{descriptionShort}</p>
+              </div>
+
+              <div className={s.heroActions}>
+                {whatsappUrl ? (
+                  <a
+                    className={s.primaryWhatsappCta}
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LuMessageCircleMore aria-hidden />
+                    Cotizar por WhatsApp
+                  </a>
                 ) : null}
-              </p>
 
-              <div className={s.availabilityPill} data-active={isAvailable}>
-                <span className={s.availabilityDot} aria-hidden />
-                {availabilityLabel}
-              </div>
-            </div>
-
-            <p className={s.heroLead}>{heroLead}</p>
-            <p className={s.heroDescription}>{descriptionShort}</p>
-
-            <div className={s.heroGuarantee}>
-              <LuClipboardCheck aria-hidden />
-              <div>
-                <strong>Tu solicitud queda registrada</strong>
-                <span>Aunque estemos ocupados, no se pierde.</span>
-              </div>
-            </div>
-
-            <div className={s.heroActions}>
-              {whatsappUrl ? (
-                <a
-                  className={s.primaryWhatsappCta}
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <LuMessageCircleMore aria-hidden />
-                  Hablar por WhatsApp
+                <a className={s.secondaryHeroCta} href="#solicitud-rapida">
+                  Dejar solicitud rapida
                 </a>
-              ) : null}
-
-              <a className={s.secondaryFormCta} href="#solicitud-rapida">
-                O deja tu solicitud en 1 minuto
-              </a>
-            </div>
-
-            <div className={s.microTrust}>
-              <div className={s.microTrustItem}>
-                <LuShieldCheck aria-hidden />
-                <span>Sin compromiso</span>
               </div>
-              <div className={s.microTrustItem}>
-                <LuBadgeCheck aria-hidden />
-                <span>Respuesta por WhatsApp</span>
-              </div>
-              <div className={s.microTrustItem}>
-                <LuLock aria-hidden />
-                <span>Datos solo para esta solicitud</span>
-              </div>
-            </div>
-          </div>
 
-          <aside className={s.heroSideCard}>
-            <span className={s.sideEyebrow}>Como atendemos</span>
-
-            <div className={s.sideRow}>
-              <LuClock3 aria-hidden />
-              <div>
-                <strong>Horario</strong>
-                <span>{horarioLabel}</span>
-              </div>
-            </div>
-
-            {locationLabel ? (
-              <div className={s.sideRow}>
-                <LuMapPin aria-hidden />
-                <div>
-                  <strong>Zona</strong>
-                  <span>{locationLabel}</span>
+              <div className={s.heroTrustRow}>
+                <div className={s.heroTrustPill}>
+                  <LuClipboardCheck aria-hidden />
+                  <span>Tu solicitud queda registrada</span>
+                </div>
+                <div className={s.heroTrustMeta}>
+                  <LuShieldCheck aria-hidden />
+                  <span>Sin compromiso</span>
+                  <span className={s.heroTrustSeparator}>-</span>
+                  <span>{responseCopy}</span>
                 </div>
               </div>
-            ) : null}
-
-            <div className={s.sideTrustBox}>
-              <strong>Atencion directa</strong>
-              <p>{trustMessage}</p>
             </div>
-          </aside>
+          </article>
         </section>
 
-        {PREVIEW_GALLERY.length ? (
-          <section className={s.gallerySection} aria-label="Referencias visuales">
+        {galleryImages.length ? (
+          <section className={s.gallerySection} aria-label="Trabajos recientes">
             <div className={s.galleryHeader}>
-              <span className={s.sectionEyebrow}>Referencias visuales</span>
-              <p className={s.galleryIntro}>
-                Asi se ve una seccion con imagenes cargadas. Luego se puede conectar
-                a trabajos reales del maestro.
-              </p>
+              <span className={s.sectionEyebrow}>Trabajos recientes</span>
             </div>
 
             <div className={s.galleryRail}>
-              {PREVIEW_GALLERY.map((image, index) => (
-                <article key={image.src} className={s.galleryCard}>
+              {galleryImages.map((image, index) => (
+                <article key={image} className={s.galleryCard}>
                   <div className={s.galleryImageWrap}>
                     <Image
-                      src={image.src}
-                      alt={image.alt}
+                      src={image}
+                      alt={`Trabajo reciente ${index + 1}`}
                       fill
                       className={s.galleryImage}
                       unoptimized
                     />
-                  </div>
-                  <div className={s.galleryCaption}>
-                    <strong>Referencia {index + 1}</strong>
-                    <span>Vista de ejemplo para la mini landing publica.</span>
                   </div>
                 </article>
               ))}
@@ -355,52 +276,38 @@ export default async function SolicitudEmpresaPage({
           </section>
         ) : null}
 
-        <section className={s.benefitsSection} aria-label="Beneficios de contacto">
-          {benefits.map((benefit) => {
-            const Icon = benefit.icon;
-
-            return (
-              <article key={benefit.title} className={s.benefitCard}>
-                <div className={s.benefitIconWrap} data-tone={benefit.tone}>
-                  <Icon className={s.benefitIcon} aria-hidden />
-                </div>
-                <div className={s.benefitCopy}>
-                  <strong>{benefit.title}</strong>
-                  <p>{benefit.copy}</p>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
         <section className={s.mainGrid}>
-          <div className={s.contentStack}>
-            <section className={s.sectionCard}>
-              <span className={s.sectionEyebrow}>Como funciona</span>
-              <div className={s.stepsList}>
-                {STEPS.map((step, index) => (
-                  <article key={step.title} className={s.stepCard}>
-                    <div className={s.stepNumber}>{index + 1}</div>
-                    <div className={s.stepCopy}>
-                      <strong>{step.title}</strong>
-                      <p>{step.copy}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
+          <section className={s.sectionCard}>
+            <span className={s.sectionEyebrow}>Como funciona</span>
+            <div className={s.stepsInline}>
+              {STEPS.map((step, index) => (
+                <article key={step.title} className={s.stepMiniCard}>
+                  <div className={s.stepNumber}>{index + 1}</div>
+                  <div className={s.stepMiniCopy}>
+                    <strong>{step.title}</strong>
+                    <span>{step.copy}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
 
-            <section className={s.sectionCard}>
-              <span className={s.sectionEyebrow}>Especialidades</span>
-              <div className={s.specialtiesList}>
-                {SPECIALTIES.map((item) => (
-                  <span key={item} className={s.specialtyChip}>
-                    {item}
-                  </span>
-                ))}
+            <div className={s.stepsSupportRow}>
+              <div className={s.stepsSupportItem}>
+                <LuClock3 aria-hidden />
+                <span>{horarioLabel}</span>
               </div>
-            </section>
-          </div>
+              {locationLabel ? (
+                <div className={s.stepsSupportItem}>
+                  <LuMapPin aria-hidden />
+                  <span>{locationLabel}</span>
+                </div>
+              ) : null}
+              <div className={s.stepsSupportItem}>
+                <LuLock aria-hidden />
+                <span>{trustMessage}</span>
+              </div>
+            </div>
+          </section>
 
           <section className={s.formSection} aria-label="Formulario de solicitud">
             <SolicitudEmpresaForm
