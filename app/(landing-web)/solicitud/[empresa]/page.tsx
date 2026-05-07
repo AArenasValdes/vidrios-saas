@@ -115,9 +115,6 @@ export default async function SolicitudEmpresaPage({
   const horarioLabel = `${formatDiasAtencionLabel(
     config.solicitudPublicaDiasAtencion
   )} - ${config.solicitudPublicaHorarioDesde} - ${config.solicitudPublicaHorarioHasta}`;
-  const heroLead = whatsappUrl
-    ? "Respuesta por WhatsApp. Tu solicitud queda registrada."
-    : "Tu solicitud queda registrada.";
   const heroImage = PREVIEW_GALLERY[0] ?? null;
   const galleryImages = PREVIEW_GALLERY.slice(heroImage ? 1 : 0, 6);
 
@@ -198,7 +195,6 @@ export default async function SolicitudEmpresaPage({
                 <h1 className={s.heroTitle}>
                   Cotiza vidrios y aluminio en menos de 1 minuto
                 </h1>
-                <p className={s.heroLead}>{heroLead}</p>
               </div>
 
               <div className={s.heroActions}>
@@ -313,7 +309,16 @@ export default async function SolicitudEmpresaPage({
         <footer className={s.brandFooter} aria-label="Ventora">
           <div className={s.brandFooterLine} aria-hidden />
           <div className={s.brandFooterSeal}>
-            <span className={s.brandFooterKicker}>Ventora</span>
+            <div className={s.brandFooterLogoWrap} aria-hidden>
+              <Image
+                src="/brand/ventora-logo-black.svg"
+                alt=""
+                width={112}
+                height={25}
+                className={s.brandFooterLogo}
+                unoptimized
+              />
+            </div>
             <p className={s.brandFooterText}>
               Esta empresa gestiona sus solicitudes con Ventora
             </p>
