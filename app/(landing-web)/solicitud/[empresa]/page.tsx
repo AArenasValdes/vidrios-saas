@@ -52,7 +52,7 @@ type BenefitItem = {
   title: string;
   copy: string;
   icon: IconType;
-  tone: "brand" | "emerald" | "sky" | "slate";
+  tone: "brand" | "emerald" | "slate";
 };
 
 type StepItem = {
@@ -81,6 +81,21 @@ const STEPS: StepItem[] = [
   {
     title: "Recibes tu cotizacion",
     copy: "Propuesta comercial clara y sin compromiso.",
+  },
+] as const;
+
+const PREVIEW_GALLERY = [
+  {
+    src: "/brand/logosanmarco.jpg",
+    alt: "Referencia visual 1",
+  },
+  {
+    src: "/brand/landing-pdf.png",
+    alt: "Referencia visual 2",
+  },
+  {
+    src: "/brand/screen2.png",
+    alt: "Referencia visual 3",
   },
 ] as const;
 
@@ -148,8 +163,8 @@ export default async function SolicitudEmpresaPage({
   const responseCopy =
     config.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR;
   const heroLead = whatsappUrl
-    ? "Habla por WhatsApp o deja tu solicitud y recibe una respuesta comercial clara."
-    : "Deja tu solicitud y te responderemos con una propuesta comercial clara.";
+    ? "Recibe una respuesta por WhatsApp y deja tu solicitud registrada."
+    : "Deja tu solicitud y recibe una respuesta comercial clara.";
 
   const benefits: BenefitItem[] = [
     {
@@ -159,16 +174,10 @@ export default async function SolicitudEmpresaPage({
       tone: "brand",
     },
     {
-      title: "Lun a Sab",
+      title: "Horario claro",
       copy: horarioLabel,
       icon: LuClock3,
       tone: "emerald",
-    },
-    {
-      title: "Solicitud al instante",
-      copy: "Tu solicitud queda registrada para seguimiento.",
-      icon: LuClipboardCheck,
-      tone: "sky",
     },
     {
       title: "Visita e instalacion",
@@ -244,6 +253,14 @@ export default async function SolicitudEmpresaPage({
             <p className={s.heroLead}>{heroLead}</p>
             <p className={s.heroDescription}>{descriptionShort}</p>
 
+            <div className={s.heroGuarantee}>
+              <LuClipboardCheck aria-hidden />
+              <div>
+                <strong>Tu solicitud queda registrada</strong>
+                <span>Aunque estemos ocupados, no se pierde.</span>
+              </div>
+            </div>
+
             <div className={s.heroActions}>
               {whatsappUrl ? (
                 <a
@@ -279,11 +296,7 @@ export default async function SolicitudEmpresaPage({
           </div>
 
           <aside className={s.heroSideCard}>
-            <span className={s.sideEyebrow}>Respuesta comercial</span>
-            <div className={s.sideAvailability} data-active={isAvailable}>
-              <span className={s.availabilityDot} aria-hidden />
-              {availabilityLabel}
-            </div>
+            <span className={s.sideEyebrow}>Como atendemos</span>
 
             <div className={s.sideRow}>
               <LuClock3 aria-hidden />
@@ -304,11 +317,43 @@ export default async function SolicitudEmpresaPage({
             ) : null}
 
             <div className={s.sideTrustBox}>
-              <strong>Atencion clara</strong>
+              <strong>Atencion directa</strong>
               <p>{trustMessage}</p>
             </div>
           </aside>
         </section>
+
+        {PREVIEW_GALLERY.length ? (
+          <section className={s.gallerySection} aria-label="Referencias visuales">
+            <div className={s.galleryHeader}>
+              <span className={s.sectionEyebrow}>Referencias visuales</span>
+              <p className={s.galleryIntro}>
+                Asi se ve una seccion con imagenes cargadas. Luego se puede conectar
+                a trabajos reales del maestro.
+              </p>
+            </div>
+
+            <div className={s.galleryRail}>
+              {PREVIEW_GALLERY.map((image, index) => (
+                <article key={image.src} className={s.galleryCard}>
+                  <div className={s.galleryImageWrap}>
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      fill
+                      className={s.galleryImage}
+                      unoptimized
+                    />
+                  </div>
+                  <div className={s.galleryCaption}>
+                    <strong>Referencia {index + 1}</strong>
+                    <span>Vista de ejemplo para la mini landing publica.</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className={s.benefitsSection} aria-label="Beneficios de contacto">
           {benefits.map((benefit) => {
