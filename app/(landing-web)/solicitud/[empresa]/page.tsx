@@ -1,22 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Lato, Syne } from "next/font/google";
 import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
   LuBadgeCheck,
-  LuCheck,
   LuClipboardCheck,
   LuClock3,
+  LuHammer,
+  LuLock,
+  LuMapPin,
   LuMessageCircleMore,
   LuShieldCheck,
-  LuStar,
 } from "react-icons/lu";
 
 import {
   DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
   DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
   DEFAULT_SOLICITUD_PUBLICA_VALOR,
+  formatDiasAtencionLabel,
   hexToRgbChannels,
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
@@ -25,6 +28,18 @@ import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
 import { SolicitudEmpresaForm } from "./solicitud-empresa-form";
 import s from "./page.module.css";
+
+const landingBodyFont = Lato({
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+  variable: "--font-landing-body",
+});
+
+const landingDisplayFont = Syne({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-landing-display",
+});
 
 type PageProps = {
   params: Promise<{
@@ -37,8 +52,37 @@ type BenefitItem = {
   title: string;
   copy: string;
   icon: IconType;
-  tone: "blue" | "green" | "indigo";
+  tone: "brand" | "emerald" | "sky" | "slate";
 };
+
+type StepItem = {
+  title: string;
+  copy: string;
+};
+
+const SPECIALTIES = [
+  "Ventanas termopanel",
+  "Shower doors",
+  "Cierres de terraza",
+  "Mamparas de bano",
+  "Puertas de vidrio",
+  "Reparaciones",
+] as const;
+
+const STEPS: StepItem[] = [
+  {
+    title: "Cuentanos que necesitas",
+    copy: "Tipo de trabajo, comuna, medidas o foto.",
+  },
+  {
+    title: "Te contactamos por WhatsApp",
+    copy: "Confirmamos detalles y revisamos mejor opcion.",
+  },
+  {
+    title: "Recibes tu cotizacion",
+    copy: "Propuesta comercial clara y sin compromiso.",
+  },
+] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -58,11 +102,16 @@ function readString(value: string | string[] | undefined) {
 
 function resolveLocationLabel(address: string) {
   const clean = address.trim();
-  if (!clean) return null;
+
+  if (!clean) {
+    return null;
+  }
+
   const chunks = clean
     .split(",")
     .map((chunk) => chunk.trim())
     .filter(Boolean);
+
   return chunks.at(-1) ?? clean;
 }
 
@@ -72,8 +121,7 @@ export default async function SolicitudEmpresaPage({
 }: PageProps) {
   const { empresa } = await params;
   const sp = await searchParams;
-  const config =
-    await solicitudesContactoService.getPublicRequestConfig(empresa);
+  const config = await solicitudesContactoService.getPublicRequestConfig(empresa);
 
   if (!config) {
     notFound();
@@ -85,88 +133,87 @@ export default async function SolicitudEmpresaPage({
     to: config.solicitudPublicaHorarioHasta,
   });
 
-  const availabilityLabel = isAvailable
-    ? "Disponible para responder"
-    : "Fuera de horario";
+  const availabilityLabel = isAvailable ? "Disponible ahora" : "Fuera de horario";
   const locationLabel = resolveLocationLabel(config.empresaDireccion);
-  const heroValue =
-    config.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR;
-  const trustMessage =
-    config.solicitudPublicaMensajeConfianza ||
-    DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA;
   const descriptionShort =
     config.solicitudPublicaDescripcionCorta ||
     DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA;
+  const trustMessage =
+    config.solicitudPublicaMensajeConfianza ||
+    DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA;
   const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
-  const coverageLabel = locationLabel ?? "Cobertura";
+  const horarioLabel = `${formatDiasAtencionLabel(
+    config.solicitudPublicaDiasAtencion
+  )} - ${config.solicitudPublicaHorarioDesde} - ${config.solicitudPublicaHorarioHasta}`;
+  const responseCopy =
+    config.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR;
+  const heroLead = whatsappUrl
+    ? "Habla por WhatsApp o deja tu solicitud y recibe una respuesta comercial clara."
+    : "Deja tu solicitud y te responderemos con una propuesta comercial clara.";
 
   const benefits: BenefitItem[] = [
     {
-      title: "Respuesta comercial rápida",
-      copy: heroValue,
+      title: "Te respondemos rapido",
+      copy: responseCopy,
       icon: LuMessageCircleMore,
-      tone: "blue",
+      tone: "brand",
     },
     {
-      title: "Horario de atención",
-      copy: `Lun–Sáb · ${config.solicitudPublicaHorarioDesde} a ${config.solicitudPublicaHorarioHasta} hrs`,
+      title: "Lun a Sab",
+      copy: horarioLabel,
       icon: LuClock3,
-      tone: "green",
+      tone: "emerald",
     },
     {
-      title: "Tu solicitud queda registrada",
-      copy: "No se pierde aunque el equipo esté ocupado.",
+      title: "Solicitud al instante",
+      copy: "Tu solicitud queda registrada para seguimiento.",
       icon: LuClipboardCheck,
-      tone: "indigo",
+      tone: "sky",
+    },
+    {
+      title: "Visita e instalacion",
+      copy: "Medicion, propuesta y montaje segun el trabajo.",
+      icon: LuHammer,
+      tone: "slate",
     },
   ];
 
   return (
     <main
-      className={s.root}
+      className={`${s.root} ${landingBodyFont.variable} ${landingDisplayFont.variable}`}
       style={{
         ["--brand" as string]: config.brandColor,
         ["--brand-rgb" as string]: hexToRgbChannels(config.brandColor),
       }}
     >
       <div className={s.shell}>
-        <div className={s.statusBar} aria-hidden>
-          <span className={s.statusTime}>9:41</span>
-          <div className={s.statusIcons}>
-            <span className={s.signalIcon} />
-            <span className={s.wifiIcon} />
-            <span className={s.batteryIcon} />
-          </div>
-        </div>
-
         <header className={s.topBar}>
           <Link href="/" className={s.backButton} aria-label="Volver al inicio">
             <LuArrowLeft aria-hidden />
           </Link>
-          <div className={s.topSlug}>
-            {`/SOLICITUD/${config.solicitudPublicaSlug.toUpperCase()}`}
+
+          <div className={s.topCenter}>
+            <span className={s.topSlug}>
+              {`VENTORAP.CL/${config.solicitudPublicaSlug.toUpperCase()}`}
+            </span>
           </div>
+
           <div className={s.topStatus} data-active={isAvailable}>
             <span className={s.topStatusDot} aria-hidden />
             {isAvailable ? "ON" : "OFF"}
           </div>
         </header>
 
-        <div className={s.scrollArea}>
-          <section
-            className={s.heroCard}
-            aria-label="Información de la empresa"
-          >
-            <div className={s.heroEyebrow}>Solicitud Comercial</div>
-
+        <section className={s.heroSection}>
+          <div className={s.heroCard}>
             <div className={s.heroIdentity}>
               {config.empresaLogoUrl ? (
                 <Image
                   className={s.logo}
                   src={config.empresaLogoUrl}
                   alt={config.empresaNombre}
-                  width={72}
-                  height={72}
+                  width={84}
+                  height={84}
                   unoptimized
                 />
               ) : (
@@ -174,88 +221,31 @@ export default async function SolicitudEmpresaPage({
                   {getInitials(config.empresaNombre)}
                 </div>
               )}
+            </div>
 
-              <div className={s.heroCopy}>
-                <h1 className={s.title}>{config.empresaNombre}</h1>
-                <div className={s.availabilityPill} data-active={isAvailable}>
-                  <span className={s.availabilityDot} aria-hidden />
-                  {availabilityLabel}
-                </div>
+            <div className={s.heroCopy}>
+              <h1 className={s.title}>{config.empresaNombre}</h1>
+              <p className={s.heroMeta}>
+                Vidrios y aluminio
+                {locationLabel ? (
+                  <>
+                    <span className={s.heroMetaDot}>-</span>
+                    <span>{locationLabel}</span>
+                  </>
+                ) : null}
+              </p>
+
+              <div className={s.availabilityPill} data-active={isAvailable}>
+                <span className={s.availabilityDot} aria-hidden />
+                {availabilityLabel}
               </div>
             </div>
 
+            <p className={s.heroLead}>{heroLead}</p>
             <p className={s.heroDescription}>{descriptionShort}</p>
 
-            <div className={s.trustChips}>
-              <span className={s.trustChip}>
-                <LuStar aria-hidden />
-                Sin compromiso
-              </span>
-              <span className={s.trustChip}>
-                <LuMessageCircleMore aria-hidden />
-                Respuesta por WhatsApp
-              </span>
-              <span className={s.trustChip}>
-                <LuCheck aria-hidden />
-                Solicitud registrada
-              </span>
-            </div>
-
-            <div className={s.benefitsList} aria-label="Beneficios de contacto">
-              {benefits.map((benefit) => {
-                const Icon = benefit.icon;
-                return (
-                  <article
-                    key={benefit.title}
-                    className={s.benefitCard}
-                    data-tone={benefit.tone}
-                  >
-                    <div className={s.benefitIconWrap}>
-                      <Icon className={s.benefitIcon} aria-hidden />
-                    </div>
-                    <div className={s.benefitCopy}>
-                      <strong>{benefit.title}</strong>
-                      <p>{benefit.copy}</p>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-
-          <section
-            className={s.proofStrip}
-            aria-label="Estadísticas de la empresa"
-          >
-            <div className={s.proofStat}>
-              <span className={s.proofNum}>+12</span>
-              <span className={s.proofLbl}>Años exp.</span>
-            </div>
-            <span className={s.proofSep} aria-hidden />
-            <div className={s.proofStat}>
-              <span className={s.proofNum}>+800</span>
-              <span className={s.proofLbl}>Trabajos</span>
-            </div>
-            <span className={s.proofSep} aria-hidden />
-            <div className={s.proofStat}>
-              <span className={s.proofNum}>4.9 ★</span>
-              <span className={s.proofLbl}>Rating</span>
-            </div>
-            <span className={s.proofSep} aria-hidden />
-            <div className={s.proofStat}>
-              <span className={s.proofNum}>
-                {coverageLabel.slice(0, 2).toUpperCase()}
-              </span>
-              <span className={s.proofLbl}>Cobertura</span>
-            </div>
-          </section>
-
-          <section
-            className={s.formSection}
-            aria-label="Formulario de solicitud"
-          >
-            {whatsappUrl ? (
-              <>
+            <div className={s.heroActions}>
+              {whatsappUrl ? (
                 <a
                   className={s.primaryWhatsappCta}
                   href={whatsappUrl}
@@ -265,16 +255,109 @@ export default async function SolicitudEmpresaPage({
                   <LuMessageCircleMore aria-hidden />
                   Hablar por WhatsApp
                 </a>
-                <p className={s.whatsappTrust}>
-                  <LuShieldCheck aria-hidden />
-                  Gratis · Sin compromiso · Respuesta el mismo día
-                </p>
-                <div className={s.separatorOr}>
-                  <span>o completa el formulario</span>
+              ) : null}
+
+              <a className={s.secondaryFormCta} href="#solicitud-rapida">
+                O deja tu solicitud en 1 minuto
+              </a>
+            </div>
+
+            <div className={s.microTrust}>
+              <div className={s.microTrustItem}>
+                <LuShieldCheck aria-hidden />
+                <span>Sin compromiso</span>
+              </div>
+              <div className={s.microTrustItem}>
+                <LuBadgeCheck aria-hidden />
+                <span>Respuesta por WhatsApp</span>
+              </div>
+              <div className={s.microTrustItem}>
+                <LuLock aria-hidden />
+                <span>Datos solo para esta solicitud</span>
+              </div>
+            </div>
+          </div>
+
+          <aside className={s.heroSideCard}>
+            <span className={s.sideEyebrow}>Respuesta comercial</span>
+            <div className={s.sideAvailability} data-active={isAvailable}>
+              <span className={s.availabilityDot} aria-hidden />
+              {availabilityLabel}
+            </div>
+
+            <div className={s.sideRow}>
+              <LuClock3 aria-hidden />
+              <div>
+                <strong>Horario</strong>
+                <span>{horarioLabel}</span>
+              </div>
+            </div>
+
+            {locationLabel ? (
+              <div className={s.sideRow}>
+                <LuMapPin aria-hidden />
+                <div>
+                  <strong>Zona</strong>
+                  <span>{locationLabel}</span>
                 </div>
-              </>
+              </div>
             ) : null}
 
+            <div className={s.sideTrustBox}>
+              <strong>Atencion clara</strong>
+              <p>{trustMessage}</p>
+            </div>
+          </aside>
+        </section>
+
+        <section className={s.benefitsSection} aria-label="Beneficios de contacto">
+          {benefits.map((benefit) => {
+            const Icon = benefit.icon;
+
+            return (
+              <article key={benefit.title} className={s.benefitCard}>
+                <div className={s.benefitIconWrap} data-tone={benefit.tone}>
+                  <Icon className={s.benefitIcon} aria-hidden />
+                </div>
+                <div className={s.benefitCopy}>
+                  <strong>{benefit.title}</strong>
+                  <p>{benefit.copy}</p>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className={s.mainGrid}>
+          <div className={s.contentStack}>
+            <section className={s.sectionCard}>
+              <span className={s.sectionEyebrow}>Como funciona</span>
+              <div className={s.stepsList}>
+                {STEPS.map((step, index) => (
+                  <article key={step.title} className={s.stepCard}>
+                    <div className={s.stepNumber}>{index + 1}</div>
+                    <div className={s.stepCopy}>
+                      <strong>{step.title}</strong>
+                      <p>{step.copy}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className={s.sectionCard}>
+              <span className={s.sectionEyebrow}>Especialidades</span>
+              <div className={s.specialtiesList}>
+                {SPECIALTIES.map((item) => (
+                  <span key={item} className={s.specialtyChip}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section className={s.formSection} aria-label="Formulario de solicitud">
             <SolicitudEmpresaForm
               slug={config.solicitudPublicaSlug}
               empresaTelefono={config.empresaTelefono}
@@ -287,19 +370,15 @@ export default async function SolicitudEmpresaPage({
               sourceUrl={readString(sp.source_url)}
               origin={readString(sp.origen)}
             />
-
-            <p className={s.heroTrustNote}>{trustMessage}</p>
           </section>
-
-          <div className={s.bottomSpacer} aria-hidden />
-        </div>
+        </section>
       </div>
 
       <div className={s.stickyBarWrap}>
         <div className={s.stickyBar}>
           <a className={s.stickySecondary} href="#solicitud-rapida">
             <LuBadgeCheck aria-hidden />
-            <span>Solicitud</span>
+            <span>Enviar solicitud</span>
           </a>
           {whatsappUrl ? (
             <a
@@ -309,13 +388,11 @@ export default async function SolicitudEmpresaPage({
               rel="noopener noreferrer"
             >
               <LuMessageCircleMore aria-hidden />
-              <span>WhatsApp</span>
+              <span>Escribir por WhatsApp</span>
             </a>
           ) : null}
         </div>
       </div>
-
-      <div className={s.bottomSafeSpacer} aria-hidden />
     </main>
   );
 }

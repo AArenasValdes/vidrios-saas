@@ -2,21 +2,14 @@
 
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { IconType } from "react-icons";
 import {
   LuBadgeCheck,
-  LuBuilding2,
   LuCheckCheck,
-  LuDoorOpen,
-  LuGrid2X2,
   LuImagePlus,
   LuLock,
   LuMapPin,
   LuRuler,
   LuSend,
-  LuSnowflake,
-  LuSparkles,
-  LuSquare,
 } from "react-icons/lu";
 
 import {
@@ -53,8 +46,91 @@ type FormState = {
 type QuickWorkType = {
   value: string;
   label: string;
-  icon: IconType;
+  drawing: string;
 };
+
+function WorkTypeDrawing({ type }: { type: string }) {
+  const glassFill = "rgba(103, 158, 219, 0.14)";
+  const accentFill = "rgba(79, 125, 212, 0.18)";
+
+  switch (type) {
+    case "window":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <rect x="13" y="12" width="38" height="40" rx="5" fill={glassFill} />
+          <rect x="13" y="12" width="38" height="40" rx="5" />
+          <path d="M32 12V52" />
+          <path d="M18 50H46" />
+          <circle cx="29" cy="32" r="1.8" fill="currentColor" stroke="none" />
+          <circle cx="35" cy="32" r="1.8" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "shower":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <path d="M16 50V18h16v32" fill={glassFill} />
+          <path d="M32 50V18h16v32" fill="rgba(79, 125, 212, 0.1)" />
+          <path d="M16 50V18h16v32" />
+          <path d="M32 50V18h16v32" />
+          <path d="M16 18l6-6h26" />
+          <path d="M24 34h4" />
+          <path d="M40 34h4" />
+          <path d="M14 52H50" />
+        </svg>
+      );
+    case "terrace":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <rect x="10" y="15" width="44" height="34" rx="4" fill={glassFill} />
+          <rect x="10" y="15" width="44" height="34" rx="4" />
+          <path d="M24 15V49" />
+          <path d="M40 15V49" />
+          <path d="M10 24H54" opacity="0.8" />
+          <path d="M10 49h44" />
+          <circle cx="22" cy="33" r="1.6" fill="currentColor" stroke="none" />
+          <circle cx="38" cy="33" r="1.6" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "door":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <path d="M20 10h24v42H20z" fill={glassFill} />
+          <path d="M20 10h24v42H20z" />
+          <path d="M20 52h28" />
+          <path d="M24 15h16v28" opacity="0.8" />
+          <circle cx="38" cy="32" r="2" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "partition":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <rect x="12" y="12" width="18" height="38" rx="4" fill={glassFill} />
+          <rect x="34" y="18" width="18" height="32" rx="4" fill="rgba(79, 125, 212, 0.1)" />
+          <rect x="12" y="12" width="18" height="38" rx="4" />
+          <rect x="34" y="18" width="18" height="32" rx="4" />
+          <path d="M10 52H54" />
+          <path d="M32 14V50" />
+        </svg>
+      );
+    case "thermal":
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <rect x="12" y="14" width="26" height="34" rx="4" fill={glassFill} />
+          <rect x="26" y="14" width="26" height="34" rx="4" fill="rgba(79, 125, 212, 0.09)" />
+          <rect x="12" y="14" width="26" height="34" rx="4" />
+          <rect x="26" y="14" width="26" height="34" rx="4" />
+          <path d="M46 10v10M46 42v10M40 16h12M40 46h12M41.5 14.5l9 9M50.5 14.5l-9 9M41.5 40.5l9 9M50.5 40.5l-9 9" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 64 64" className={s.workTypeDrawingSvg} aria-hidden>
+          <rect x="14" y="14" width="36" height="36" rx="6" fill={accentFill} />
+          <rect x="14" y="14" width="36" height="36" rx="6" />
+        </svg>
+      );
+  }
+}
 
 type FieldErrors = Partial<
   Record<"nombre" | "contacto" | "tipoTrabajo" | "consentimiento", string>
@@ -71,12 +147,12 @@ const EMPTY_FORM: FormState = {
 };
 
 const QUICK_WORK_TYPES: QuickWorkType[] = [
-  { value: "Ventana", label: "Ventana", icon: LuSquare },
-  { value: "Shower", label: "Shower", icon: LuSparkles },
-  { value: "Terraza", label: "Terraza", icon: LuGrid2X2 },
-  { value: "Puerta", label: "Puerta", icon: LuDoorOpen },
-  { value: "Mampara", label: "Mampara", icon: LuBuilding2 },
-  { value: "Termopanel", label: "Termopanel", icon: LuSnowflake },
+  { value: "Ventana", label: "Ventana", drawing: "window" },
+  { value: "Shower", label: "Shower", drawing: "shower" },
+  { value: "Terraza", label: "Terraza", drawing: "terrace" },
+  { value: "Puerta", label: "Puerta", drawing: "door" },
+  { value: "Mampara", label: "Mampara", drawing: "partition" },
+  { value: "Termopanel", label: "Termopanel", drawing: "thermal" },
 ] as const;
 
 function validateNombre(value: string) {
@@ -164,7 +240,10 @@ export function SolicitudEmpresaForm({
 
   const resolvedOrigin = origin?.trim() || utmSource?.trim() || "solicitud-publica";
 
-  function handleFieldChange<K extends keyof FormState>(field: K, value: FormState[K]) {
+  function handleFieldChange<K extends keyof FormState>(
+    field: K,
+    value: FormState[K]
+  ) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -264,7 +343,10 @@ export function SolicitudEmpresaForm({
       <div className={s.formIntro}>
         <span className={s.sectionEyebrow}>Solicitud rapida</span>
         <h2 className={s.formTitle}>Cuentanos que necesitas</h2>
-        <p className={s.formSubtitle}>Toma menos de 1 minuto · Sin compromiso</p>
+        <p className={s.formSubtitle}>Toma menos de 1 minuto - Sin compromiso</p>
+        <p className={s.formHelper}>
+          Empieza con 3 datos. Si quieres, despues agregas medidas, mensaje o foto.
+        </p>
       </div>
 
       <form className={s.form} onSubmit={handleSubmit}>
@@ -309,7 +391,6 @@ export function SolicitudEmpresaForm({
           <span className={s.fieldLabel}>Tipo de trabajo *</span>
           <div className={s.workTypeGrid}>
             {QUICK_WORK_TYPES.map((workType) => {
-              const Icon = workType.icon;
               const isActive = selectedWorkType === workType.value;
 
               return (
@@ -319,7 +400,9 @@ export function SolicitudEmpresaForm({
                   className={`${s.workTypeButton}${isActive ? ` ${s.workTypeButtonActive}` : ""}`}
                   onClick={() => handleWorkTypeSelect(workType.value)}
                 >
-                  <Icon aria-hidden />
+                  <span className={s.workTypeDrawing} aria-hidden>
+                    <WorkTypeDrawing type={workType.drawing} />
+                  </span>
                   <span>{workType.label}</span>
                 </button>
               );
@@ -340,66 +423,74 @@ export function SolicitudEmpresaForm({
           ) : null}
         </div>
 
-        <div className={s.optionalGrid}>
-          <label className={s.field}>
-            <span className={s.fieldLabel}>Medidas <em>(opcional)</em></span>
-            <div className={s.iconInput}>
-              <LuRuler aria-hidden />
-              <input
-                className={s.inlineInput}
-                value={form.medidas}
-                onChange={(event) => handleFieldChange("medidas", event.target.value)}
-                placeholder="1.2 x 0.8 m"
+        <details className={s.optionalDetails}>
+          <summary className={s.optionalSummary}>
+            Agregar mas detalles para cotizar mejor
+          </summary>
+
+          <div className={s.optionalContent}>
+            <div className={s.optionalGrid}>
+              <label className={s.field}>
+                <span className={s.fieldLabel}>Medidas <em>(opcional)</em></span>
+                <div className={s.iconInput}>
+                  <LuRuler aria-hidden />
+                  <input
+                    className={s.inlineInput}
+                    value={form.medidas}
+                    onChange={(event) => handleFieldChange("medidas", event.target.value)}
+                    placeholder="1.2 x 0.8 m"
+                  />
+                </div>
+              </label>
+
+              <label className={s.field}>
+                <span className={s.fieldLabel}>Comuna <em>(opcional)</em></span>
+                <div className={s.iconInput}>
+                  <LuMapPin aria-hidden />
+                  <input
+                    className={s.inlineInput}
+                    value={form.comuna}
+                    onChange={(event) => handleFieldChange("comuna", event.target.value)}
+                    placeholder="Nunoa"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <label className={s.field}>
+              <span className={s.fieldLabel}>Mensaje <em>(opcional)</em></span>
+              <textarea
+                className={s.textarea}
+                rows={4}
+                value={form.mensaje}
+                onChange={(event) => handleFieldChange("mensaje", event.target.value)}
+                placeholder="Cuentanos brevemente que necesitas..."
               />
-            </div>
-          </label>
+            </label>
 
-          <label className={s.field}>
-            <span className={s.fieldLabel}>Comuna <em>(opcional)</em></span>
-            <div className={s.iconInput}>
-              <LuMapPin aria-hidden />
-              <input
-                className={s.inlineInput}
-                value={form.comuna}
-                onChange={(event) => handleFieldChange("comuna", event.target.value)}
-                placeholder="Nunoa"
-              />
+            <div className={s.field}>
+              <span className={s.fieldLabel}>Foto o referencia <em>(opcional)</em></span>
+              <label className={s.uploadCard}>
+                <div className={s.uploadCardLeft}>
+                  <div className={s.uploadIconWrap}>
+                    <LuImagePlus aria-hidden />
+                  </div>
+                  <div className={s.uploadCopy}>
+                    <strong>{referenceFile ? referenceFile.name : "Adjuntar foto"}</strong>
+                    <span>Ayuda a cotizar mas rapido</span>
+                  </div>
+                </div>
+                <span className={s.uploadPlus} aria-hidden>
+                  +
+                </span>
+                <input type="file" accept="image/*" onChange={handleReferenceChange} />
+              </label>
+              <span className={s.fieldHint}>
+                Si adjuntas una imagen, por ahora registramos su referencia para seguimiento.
+              </span>
             </div>
-          </label>
-        </div>
-
-        <label className={s.field}>
-          <span className={s.fieldLabel}>Mensaje <em>(opcional)</em></span>
-          <textarea
-            className={s.textarea}
-            rows={4}
-            value={form.mensaje}
-            onChange={(event) => handleFieldChange("mensaje", event.target.value)}
-            placeholder="Cuentanos brevemente que necesitas..."
-          />
-        </label>
-
-        <div className={s.field}>
-          <span className={s.fieldLabel}>Foto o referencia <em>(opcional)</em></span>
-          <label className={s.uploadCard}>
-            <div className={s.uploadCardLeft}>
-              <div className={s.uploadIconWrap}>
-                <LuImagePlus aria-hidden />
-              </div>
-              <div className={s.uploadCopy}>
-                <strong>{referenceFile ? referenceFile.name : "Adjuntar foto"}</strong>
-                <span>Ayuda a cotizar mas rapido</span>
-              </div>
-            </div>
-            <span className={s.uploadPlus} aria-hidden>
-              +
-            </span>
-            <input type="file" accept="image/*" onChange={handleReferenceChange} />
-          </label>
-          <span className={s.fieldHint}>
-            Si adjuntas una imagen, por ahora registramos su referencia para seguimiento.
-          </span>
-        </div>
+          </div>
+        </details>
 
         <label className={s.checkboxRow}>
           <input
