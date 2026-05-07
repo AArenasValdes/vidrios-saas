@@ -34,6 +34,7 @@
   margin: 0 auto;
   display: grid;
   gap: 16px;
+  overflow-x: clip;
 }
 
 .topBar {
@@ -118,11 +119,12 @@
 .heroSection {
   display: grid;
   gap: 14px;
+  overflow-x: clip;
 }
 
 .heroPanel {
   position: relative;
-  min-height: clamp(392px, 72vw, 540px);
+  min-height: clamp(376px, 70vw, 520px);
   border-radius: 34px;
   overflow: hidden;
   border: 1px solid rgba(217, 224, 234, 0.72);
@@ -167,8 +169,8 @@
 
 .heroOverlay {
   background:
-    linear-gradient(180deg, rgba(7, 18, 34, 0.22) 0%, rgba(7, 18, 34, 0.48) 34%, rgba(7, 18, 34, 0.78) 100%),
-    linear-gradient(90deg, rgba(9, 22, 41, 0.52) 0%, rgba(9, 22, 41, 0.14) 52%, rgba(9, 22, 41, 0.26) 100%);
+    linear-gradient(180deg, rgba(7, 18, 34, 0.18) 0%, rgba(7, 18, 34, 0.52) 34%, rgba(7, 18, 34, 0.84) 100%),
+    linear-gradient(90deg, rgba(9, 22, 41, 0.58) 0%, rgba(9, 22, 41, 0.18) 52%, rgba(9, 22, 41, 0.3) 100%);
 }
 
 .heroContent {
@@ -177,8 +179,8 @@
   min-height: inherit;
   display: grid;
   align-content: space-between;
-  gap: 18px;
-  padding: 18px 16px 18px;
+  gap: 16px;
+  padding: 18px 16px 16px;
   color: #ffffff;
 }
 
@@ -320,11 +322,11 @@
 
 .heroLead {
   margin: 0;
-  max-width: 22ch;
+  max-width: 20ch;
   color: rgba(241, 246, 255, 0.94);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  line-height: 1.38;
+  line-height: 1.34;
 }
 
 .heroSupportNote {
@@ -414,6 +416,7 @@
 .gallerySection {
   display: grid;
   gap: 12px;
+  overflow-x: clip;
 }
 
 .galleryHeader {
@@ -432,7 +435,7 @@
 .galleryRail {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 78%);
+  grid-auto-columns: minmax(220px, 74%);
   gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -462,7 +465,7 @@
 
 .galleryImageWrap {
   position: relative;
-  height: clamp(176px, 44vw, 212px);
+  height: clamp(180px, 42vw, 208px);
   overflow: hidden;
   background: linear-gradient(180deg, #f0f4fa, #e8eef8);
 }
@@ -561,13 +564,13 @@
 
 .mainGrid {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .sectionCard,
 .formSection {
   border-radius: 30px;
-  padding: 20px 18px;
+  padding: 18px 18px;
 }
 
 .stepsInline {
@@ -617,19 +620,19 @@
 .stepsSupportRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .stepsSupportItem {
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 10px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--text-soft);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.4;
   background: var(--surface-soft);
   border: 1px solid rgba(217, 224, 234, 0.96);
@@ -687,13 +690,13 @@
   box-shadow: none;
   padding: 0;
   display: grid;
-  gap: 16px;
+  gap: 14px;
   scroll-margin-top: 28px;
 }
 
 .formIntro {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .formTitle {
@@ -708,26 +711,26 @@
 .formSubtitle {
   margin: 0;
   color: #6f86a7;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .formHelper {
   margin: 0;
-  color: var(--text-faint);
+  color: #7486a2;
   font-size: 13px;
-  line-height: 1.55;
-  max-width: 34ch;
+  line-height: 1.45;
+  max-width: 32ch;
 }
 
 .form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .fieldLabel {
@@ -760,7 +763,7 @@
 .textarea {
   width: 100%;
   border-radius: 20px;
-  padding: 16px;
+  padding: 14px 16px;
   color: var(--text-main);
   font-size: 16px;
   font-weight: 600;
@@ -772,7 +775,7 @@
 }
 
 .textarea {
-  min-height: 122px;
+  min-height: 110px;
   resize: vertical;
   line-height: 1.55;
   font-family: inherit;
@@ -797,7 +800,7 @@
 }
 
 .phoneField {
-  min-height: 62px;
+  min-height: 58px;
   border-radius: 20px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -838,7 +841,7 @@
 }
 
 .workTypeButton {
-  min-height: 96px;
+  min-height: 92px;
   border-radius: 22px;
   border: 1px solid rgba(217, 224, 234, 0.98);
   background: #ffffff;
@@ -846,7 +849,7 @@
   display: grid;
   gap: 8px;
   place-items: center;
-  padding: 12px 8px;
+  padding: 10px 8px;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.25;
@@ -904,16 +907,16 @@
 .optionalGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .optionalDetails {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   border: 1px solid rgba(217, 224, 234, 0.98);
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(247, 249, 252, 0.9), rgba(255, 255, 255, 0.92));
-  padding: 12px;
+  padding: 11px;
 }
 
 .optionalDetails[open] {
@@ -951,11 +954,11 @@
 
 .optionalContent {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .iconInput {
-  min-height: 62px;
+  min-height: 58px;
   border-radius: 20px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
@@ -969,9 +972,9 @@
 }
 
 .uploadCard {
-  min-height: 82px;
+  min-height: 76px;
   border-radius: 20px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -1024,11 +1027,11 @@
 .checkboxRow {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: start;
-  color: #516682;
-  font-size: 14px;
-  line-height: 1.45;
+  color: #4c6282;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .checkboxRow input {
@@ -1057,7 +1060,7 @@
 .errorBanner,
 .successBanner {
   border-radius: 18px;
-  padding: 14px 15px;
+  padding: 13px 14px;
 }
 
 .errorBanner {
@@ -1110,16 +1113,16 @@
 
 .formFooter {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .formFooterItem {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   color: var(--text-soft);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .formFooterItem svg {
@@ -1135,7 +1138,7 @@
   z-index: 30;
   pointer-events: none;
   background: linear-gradient(to top, rgba(238, 243, 250, 0.9) 0%, rgba(238, 243, 250, 0) 100%);
-  padding-top: 18px;
+  padding-top: 14px;
   transition:
     opacity 180ms ease,
     transform 180ms ease;
@@ -1147,7 +1150,7 @@
   padding:
     0
     16px
-    calc(10px + env(safe-area-inset-bottom, 0px));
+    calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -1156,7 +1159,7 @@
 
 .stickySecondary,
 .stickyPrimary {
-  min-height: 54px;
+  min-height: 52px;
   padding: 0 16px;
   border-radius: 20px;
   display: inline-flex;
@@ -1179,13 +1182,13 @@
   font-size: 12px;
 }
 
-.root:has(input:focus, textarea:focus) .stickyBarWrap {
+.root:has(.formCard :focus) .stickyBarWrap {
   opacity: 0;
   transform: translateY(18px);
 }
 
-.root:has(input:focus, textarea:focus) .stickySecondary,
-.root:has(input:focus, textarea:focus) .stickyPrimary {
+.root:has(.formCard :focus) .stickySecondary,
+.root:has(.formCard :focus) .stickyPrimary {
   pointer-events: none;
 }
 
@@ -1319,7 +1322,7 @@
   }
 
   .galleryRail {
-    grid-auto-columns: minmax(214px, 84%);
+    grid-auto-columns: minmax(210px, 82%);
   }
 }
 
@@ -1365,7 +1368,7 @@
   }
 
   .workTypeButton {
-    min-height: 92px;
+    min-height: 88px;
   }
 
   .workTypeDrawing {

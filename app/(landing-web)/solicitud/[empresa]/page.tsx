@@ -7,16 +7,12 @@ import {
   LuBadgeCheck,
   LuClipboardCheck,
   LuClock3,
-  LuLock,
   LuMapPin,
   LuMessageCircleMore,
   LuShieldCheck,
 } from "react-icons/lu";
 
 import {
-  DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
-  DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
-  DEFAULT_SOLICITUD_PUBLICA_VALOR,
   formatDiasAtencionLabel,
   hexToRgbChannels,
   isOrganizationOpenAtDate,
@@ -115,21 +111,13 @@ export default async function SolicitudEmpresaPage({
 
   const availabilityLabel = isAvailable ? "Activo" : "Fuera de horario";
   const locationLabel = resolveLocationLabel(config.empresaDireccion);
-  const descriptionShort =
-    config.solicitudPublicaDescripcionCorta ||
-    DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA;
-  const trustMessage =
-    config.solicitudPublicaMensajeConfianza ||
-    DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA;
   const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
   const horarioLabel = `${formatDiasAtencionLabel(
     config.solicitudPublicaDiasAtencion
   )} - ${config.solicitudPublicaHorarioDesde} - ${config.solicitudPublicaHorarioHasta}`;
-  const responseCopy =
-    config.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR;
   const heroLead = whatsappUrl
-    ? "Te respondemos por WhatsApp y tu solicitud queda registrada."
-    : "Tu solicitud queda registrada y te responderemos con una propuesta clara.";
+    ? "Respuesta por WhatsApp. Tu solicitud queda registrada."
+    : "Tu solicitud queda registrada.";
   const heroImage = PREVIEW_GALLERY[0] ?? null;
   const galleryImages = PREVIEW_GALLERY.slice(heroImage ? 1 : 0, 6);
 
@@ -215,7 +203,6 @@ export default async function SolicitudEmpresaPage({
                   Cotiza vidrios y aluminio en menos de 1 minuto
                 </h1>
                 <p className={s.heroLead}>{heroLead}</p>
-                <p className={s.heroSupportNote}>{descriptionShort}</p>
               </div>
 
               <div className={s.heroActions}>
@@ -244,8 +231,6 @@ export default async function SolicitudEmpresaPage({
                 <div className={s.heroTrustMeta}>
                   <LuShieldCheck aria-hidden />
                   <span>Sin compromiso</span>
-                  <span className={s.heroTrustSeparator}>-</span>
-                  <span>{responseCopy}</span>
                 </div>
               </div>
             </div>
@@ -304,8 +289,8 @@ export default async function SolicitudEmpresaPage({
                 </div>
               ) : null}
               <div className={s.stepsSupportItem}>
-                <LuLock aria-hidden />
-                <span>{trustMessage}</span>
+                <LuClipboardCheck aria-hidden />
+                <span>Solicitud registrada</span>
               </div>
             </div>
           </section>
