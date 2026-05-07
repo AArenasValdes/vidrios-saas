@@ -53,6 +53,7 @@ export type SolicitudEmpresaPublicaConfig = {
   organizationId: string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  empresaDireccion: string;
   empresaTelefono: string;
   empresaEmail: string;
   brandColor: string;

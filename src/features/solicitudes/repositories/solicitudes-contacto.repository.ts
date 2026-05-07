@@ -42,6 +42,7 @@ type SolicitudEmpresaPublicaConfigRow = {
   organization_id: string | number;
   empresa_nombre: string | null;
   empresa_logo_url: string | null;
+  empresa_direccion: string | null;
   empresa_telefono: string | null;
   empresa_email: string | null;
   brand_color: string | null;
@@ -66,7 +67,7 @@ const SOLICITUD_RESUMEN_SELECT =
 const SOLICITUD_RESUMEN_SELECT_LEGACY =
   "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, creado_en, actualizado_en";
 const ORGANIZATION_PROFILE_PUBLIC_SELECT =
-  "organization_id, empresa_nombre, empresa_logo_url, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion";
+  "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion";
 
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -198,6 +199,7 @@ function mapSolicitudEmpresaPublicaConfig(
     organizationId: row.organization_id,
     empresaNombre: row.empresa_nombre?.trim() || "Mi empresa",
     empresaLogoUrl: row.empresa_logo_url,
+    empresaDireccion: row.empresa_direccion?.trim() || "",
     empresaTelefono: row.empresa_telefono?.trim() || "",
     empresaEmail: row.empresa_email?.trim() || "",
     brandColor: row.brand_color?.trim() || "#1a3a5c",

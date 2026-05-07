@@ -1,12 +1,22 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import type { IconType } from "react-icons";
 import {
+  LuBadgeCheck,
+  LuBuilding2,
   LuCheckCheck,
+  LuDoorOpen,
+  LuGrid2X2,
+  LuImagePlus,
   LuLock,
-  LuMessageCircleMore,
+  LuMapPin,
+  LuRuler,
   LuSend,
+  LuSnowflake,
+  LuSparkles,
+  LuSquare,
 } from "react-icons/lu";
 
 import {
@@ -14,16 +24,11 @@ import {
   isValidChileMobilePhone,
   normalizeChileMobilePhone,
 } from "@/utils/chile-mobile-phone";
-import {
-  buildPublicLeadWhatsappUrl,
-  normalizeWhatsappPhone,
-} from "@/utils/whatsapp";
 
 import s from "./page.module.css";
 
 type Props = {
   slug: string;
-  empresaNombre: string;
   empresaTelefono: string;
   empresaEmail: string;
   privacidad: string;
@@ -39,26 +44,39 @@ type FormState = {
   nombre: string;
   contacto: string;
   tipoTrabajo: string;
+  medidas: string;
+  comuna: string;
   mensaje: string;
+  consentimiento: boolean;
 };
 
-type FieldErrors = Partial<Record<keyof FormState, string>>;
+type QuickWorkType = {
+  value: string;
+  label: string;
+  icon: IconType;
+};
+
+type FieldErrors = Partial<
+  Record<"nombre" | "contacto" | "tipoTrabajo" | "consentimiento", string>
+>;
 
 const EMPTY_FORM: FormState = {
   nombre: "",
   contacto: "",
   tipoTrabajo: "",
+  medidas: "",
+  comuna: "",
   mensaje: "",
+  consentimiento: false,
 };
 
-const QUICK_WORK_TYPES = [
-  "Ventana",
-  "Shower door",
-  "Cierre de terraza",
-  "Puerta de vidrio",
-  "Mampara de baño",
-  "Termopanel",
-  "Otro",
+const QUICK_WORK_TYPES: QuickWorkType[] = [
+  { value: "Ventana", label: "Ventana", icon: LuSquare },
+  { value: "Shower", label: "Shower", icon: LuSparkles },
+  { value: "Terraza", label: "Terraza", icon: LuGrid2X2 },
+  { value: "Puerta", label: "Puerta", icon: LuDoorOpen },
+  { value: "Mampara", label: "Mampara", icon: LuBuilding2 },
+  { value: "Termopanel", label: "Termopanel", icon: LuSnowflake },
 ] as const;
 
 function validateNombre(value: string) {
@@ -70,18 +88,19 @@ function validateContacto(value: string) {
     return "Ingresa tu WhatsApp.";
   }
 
-  return isValidChileMobilePhone(value) ? null : "Ingresa un WhatsApp válido.";
+  return isValidChileMobilePhone(value) ? null : "Ingresa un WhatsApp valido.";
 }
 
 function validateTipoTrabajo(value: string) {
-  return value.trim().length >= 3
-    ? null
-    : "Cuéntanos brevemente qué necesitas.";
+  return value.trim().length >= 2 ? null : "Selecciona o escribe el trabajo.";
+}
+
+function validateConsentimiento(value: boolean) {
+  return value ? null : "Debes aceptar el uso de datos para enviar la solicitud.";
 }
 
 export function SolicitudEmpresaForm({
   slug,
-  empresaNombre,
   empresaTelefono,
   empresaEmail,
   privacidad,
@@ -93,19 +112,15 @@ export function SolicitudEmpresaForm({
   origin,
 }: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [touched, setTouched] = useState<Record<keyof FormState, boolean>>({
-    nombre: false,
-    contacto: false,
-    tipoTrabajo: false,
-    mensaje: false,
-  });
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [resolvedSourceUrl, setResolvedSourceUrl] = useState<string | null>(
     sourceUrl ?? null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (sourceUrl) {
@@ -118,13 +133,12 @@ export function SolicitudEmpresaForm({
     }
   }, [sourceUrl]);
 
-  const whatsappReady = Boolean(normalizeWhatsappPhone(empresaTelefono));
-
   const errors = useMemo<FieldErrors>(
     () => ({
       nombre: validateNombre(form.nombre) ?? undefined,
       contacto: validateContacto(form.contacto) ?? undefined,
       tipoTrabajo: validateTipoTrabajo(form.tipoTrabajo) ?? undefined,
+      consentimiento: validateConsentimiento(form.consentimiento) ?? undefined,
     }),
     [form]
   );
@@ -133,6 +147,7 @@ export function SolicitudEmpresaForm({
     () => normalizeChileMobilePhone(form.contacto),
     [form.contacto]
   );
+
   const displayWhatsapp = useMemo(
     () =>
       normalizedClienteWhatsapp
@@ -140,21 +155,16 @@ export function SolicitudEmpresaForm({
         : "",
     [normalizedClienteWhatsapp]
   );
-  const isValid = !errors.nombre && !errors.contacto && !errors.tipoTrabajo;
+
+  const isValid =
+    !errors.nombre &&
+    !errors.contacto &&
+    !errors.tipoTrabajo &&
+    !errors.consentimiento;
+
   const resolvedOrigin = origin?.trim() || utmSource?.trim() || "solicitud-publica";
-  const whatsappUrl = useMemo(() => {
-    if (!whatsappReady) {
-      return null;
-    }
 
-    return buildPublicLeadWhatsappUrl(empresaTelefono, {
-      nombre: form.nombre,
-      tipoTrabajo: form.tipoTrabajo,
-      mensaje: form.mensaje,
-    });
-  }, [empresaTelefono, form.mensaje, form.nombre, form.tipoTrabajo, whatsappReady]);
-
-  function handleFieldChange(field: keyof FormState, value: string) {
+  function handleFieldChange<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -166,28 +176,37 @@ export function SolicitudEmpresaForm({
 
   function handleWorkTypeSelect(value: string) {
     setSelectedWorkType(value);
-
-    if (value === "Otro") {
-      handleFieldChange("tipoTrabajo", "");
-      return;
-    }
-
     handleFieldChange("tipoTrabajo", value);
     setTouched((current) => ({ ...current, tipoTrabajo: true }));
   }
 
+  function handleReferenceChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextFile = event.target.files?.[0] ?? null;
+    setReferenceFile(nextFile);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setTouched({
       nombre: true,
       contacto: true,
       tipoTrabajo: true,
-      mensaje: true,
+      consentimiento: true,
     });
 
     if (!isValid || !normalizedClienteWhatsapp) {
       return;
     }
+
+    const messageParts = [
+      form.mensaje.trim() || null,
+      form.medidas.trim() ? `Medidas aprox: ${form.medidas.trim()}` : null,
+      form.comuna.trim() ? `Comuna: ${form.comuna.trim()}` : null,
+      referenceFile ? `Referencia adjunta: ${referenceFile.name}` : null,
+    ].filter(Boolean);
 
     try {
       setIsSubmitting(true);
@@ -200,8 +219,10 @@ export function SolicitudEmpresaForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...form,
+          nombre: form.nombre,
           contacto: normalizedClienteWhatsapp,
+          tipoTrabajo: form.tipoTrabajo,
+          mensaje: messageParts.join("\n"),
           origen: resolvedOrigin,
           utmSource: utmSource ?? null,
           utmMedium: utmMedium ?? null,
@@ -221,8 +242,12 @@ export function SolicitudEmpresaForm({
       }
 
       setSuccessMessage(
-        `${empresaNombre} ya recibió tu solicitud. Te recomendamos seguir por WhatsApp si quieres acelerar respuesta.`
+        "Solicitud enviada. Te contactaremos por WhatsApp para continuar."
       );
+      setForm(EMPTY_FORM);
+      setSelectedWorkType(null);
+      setReferenceFile(null);
+      setTouched({});
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -235,35 +260,22 @@ export function SolicitudEmpresaForm({
   }
 
   return (
-    <section className={s.formCard}>
-      <div className={s.formHeader}>
-        <div>
-          <span className={s.formTag}>Deja tu solicitud</span>
-          <h2 className={s.formTitle}>Te contactamos con contexto, no a ciegas.</h2>
-        </div>
-
-        {whatsappReady && whatsappUrl ? (
-          <a
-            className={s.formWhatsappButton}
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <LuMessageCircleMore aria-hidden />
-            Hablar por WhatsApp
-          </a>
-        ) : null}
+    <section id="solicitud-rapida" className={s.formCard}>
+      <div className={s.formIntro}>
+        <span className={s.sectionEyebrow}>Solicitud rapida</span>
+        <h2 className={s.formTitle}>Cuentanos que necesitas</h2>
+        <p className={s.formSubtitle}>Toma menos de 1 minuto · Sin compromiso</p>
       </div>
 
       <form className={s.form} onSubmit={handleSubmit}>
         <label className={s.field}>
-          <span className={s.label}>Nombre</span>
+          <span className={s.fieldLabel}>Nombre *</span>
           <input
             className={s.input}
             value={form.nombre}
             onChange={(event) => handleFieldChange("nombre", event.target.value)}
             onBlur={() => handleBlur("nombre")}
-            placeholder="Ej: Alejandro Flores"
+            placeholder="Tu nombre completo"
             autoComplete="name"
           />
           {touched.nombre && errors.nombre ? (
@@ -272,16 +284,19 @@ export function SolicitudEmpresaForm({
         </label>
 
         <label className={s.field}>
-          <span className={s.label}>WhatsApp</span>
-          <input
-            className={s.input}
-            value={form.contacto}
-            onChange={(event) => handleFieldChange("contacto", event.target.value)}
-            onBlur={() => handleBlur("contacto")}
-            placeholder="+56 9 1234 5678"
-            autoComplete="tel"
-            inputMode="tel"
-          />
+          <span className={s.fieldLabel}>WhatsApp *</span>
+          <div className={s.phoneField}>
+            <span className={s.phonePrefix}>+56</span>
+            <input
+              className={s.phoneInput}
+              value={form.contacto}
+              onChange={(event) => handleFieldChange("contacto", event.target.value)}
+              onBlur={() => handleBlur("contacto")}
+              placeholder="9 1234 5678"
+              autoComplete="tel"
+              inputMode="tel"
+            />
+          </div>
           {displayWhatsapp ? (
             <span className={s.fieldHint}>Formato detectado: +56 9 {displayWhatsapp}</span>
           ) : null}
@@ -291,21 +306,21 @@ export function SolicitudEmpresaForm({
         </label>
 
         <div className={s.field}>
-          <span className={s.label}>Tipo de trabajo</span>
-          <div className={s.chipGrid}>
+          <span className={s.fieldLabel}>Tipo de trabajo *</span>
+          <div className={s.workTypeGrid}>
             {QUICK_WORK_TYPES.map((workType) => {
-              const isActive =
-                selectedWorkType === workType ||
-                (workType !== "Otro" && form.tipoTrabajo === workType);
+              const Icon = workType.icon;
+              const isActive = selectedWorkType === workType.value;
 
               return (
                 <button
-                  key={workType}
+                  key={workType.value}
                   type="button"
-                  className={`${s.chipButton} ${isActive ? s.chipButtonActive : ""}`}
-                  onClick={() => handleWorkTypeSelect(workType)}
+                  className={`${s.workTypeButton}${isActive ? ` ${s.workTypeButtonActive}` : ""}`}
+                  onClick={() => handleWorkTypeSelect(workType.value)}
                 >
-                  {workType}
+                  <Icon aria-hidden />
+                  <span>{workType.label}</span>
                 </button>
               );
             })}
@@ -313,31 +328,102 @@ export function SolicitudEmpresaForm({
           <input
             className={s.input}
             value={form.tipoTrabajo}
-            onChange={(event) => handleFieldChange("tipoTrabajo", event.target.value)}
+            onChange={(event) => {
+              setSelectedWorkType(null);
+              handleFieldChange("tipoTrabajo", event.target.value);
+            }}
             onBlur={() => handleBlur("tipoTrabajo")}
-            placeholder="Ej: Ventana termopanel para living"
+            placeholder="Otro trabajo o detalle principal"
           />
           {touched.tipoTrabajo && errors.tipoTrabajo ? (
             <span className={s.fieldError}>{errors.tipoTrabajo}</span>
           ) : null}
         </div>
 
+        <div className={s.optionalGrid}>
+          <label className={s.field}>
+            <span className={s.fieldLabel}>Medidas <em>(opcional)</em></span>
+            <div className={s.iconInput}>
+              <LuRuler aria-hidden />
+              <input
+                className={s.inlineInput}
+                value={form.medidas}
+                onChange={(event) => handleFieldChange("medidas", event.target.value)}
+                placeholder="1.2 x 0.8 m"
+              />
+            </div>
+          </label>
+
+          <label className={s.field}>
+            <span className={s.fieldLabel}>Comuna <em>(opcional)</em></span>
+            <div className={s.iconInput}>
+              <LuMapPin aria-hidden />
+              <input
+                className={s.inlineInput}
+                value={form.comuna}
+                onChange={(event) => handleFieldChange("comuna", event.target.value)}
+                placeholder="Nunoa"
+              />
+            </div>
+          </label>
+        </div>
+
         <label className={s.field}>
-          <span className={s.label}>Mensaje adicional</span>
+          <span className={s.fieldLabel}>Mensaje <em>(opcional)</em></span>
           <textarea
             className={s.textarea}
             rows={4}
             value={form.mensaje}
             onChange={(event) => handleFieldChange("mensaje", event.target.value)}
-            onBlur={() => handleBlur("mensaje")}
-            placeholder="Cuéntanos medidas aproximadas, comuna, plazo o lo que ya tengas claro."
+            placeholder="Cuentanos brevemente que necesitas..."
           />
         </label>
 
-        {errorMessage ? <div className={s.errorBanner}>{errorMessage}</div> : null}
+        <div className={s.field}>
+          <span className={s.fieldLabel}>Foto o referencia <em>(opcional)</em></span>
+          <label className={s.uploadCard}>
+            <div className={s.uploadCardLeft}>
+              <div className={s.uploadIconWrap}>
+                <LuImagePlus aria-hidden />
+              </div>
+              <div className={s.uploadCopy}>
+                <strong>{referenceFile ? referenceFile.name : "Adjuntar foto"}</strong>
+                <span>Ayuda a cotizar mas rapido</span>
+              </div>
+            </div>
+            <span className={s.uploadPlus} aria-hidden>
+              +
+            </span>
+            <input type="file" accept="image/*" onChange={handleReferenceChange} />
+          </label>
+          <span className={s.fieldHint}>
+            Si adjuntas una imagen, por ahora registramos su referencia para seguimiento.
+          </span>
+        </div>
+
+        <label className={s.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={form.consentimiento}
+            onChange={(event) =>
+              handleFieldChange("consentimiento", event.target.checked)
+            }
+            onBlur={() => handleBlur("consentimiento")}
+          />
+          <span>Acepto que mis datos se usen solo para responder esta solicitud.</span>
+        </label>
+        {touched.consentimiento && errors.consentimiento ? (
+          <span className={s.fieldError}>{errors.consentimiento}</span>
+        ) : null}
+
+        {errorMessage ? (
+          <div className={s.errorBanner} role="alert">
+            {errorMessage}
+          </div>
+        ) : null}
 
         {successMessage ? (
-          <div className={s.successBanner}>
+          <div className={s.successBanner} aria-live="polite">
             <LuCheckCheck aria-hidden />
             <div>
               <strong>Solicitud enviada</strong>
@@ -350,6 +436,11 @@ export function SolicitudEmpresaForm({
           <LuSend aria-hidden />
           {isSubmitting ? "Enviando..." : "Enviar solicitud"}
         </button>
+
+        <div className={s.submitTrust}>
+          <LuBadgeCheck aria-hidden />
+          <span>Te contactaremos por WhatsApp.</span>
+        </div>
       </form>
 
       <div className={s.formFooter}>
@@ -358,15 +449,21 @@ export function SolicitudEmpresaForm({
           <span>{privacidad}</span>
         </div>
 
-        {!whatsappReady && empresaEmail ? (
+        {!empresaTelefono && empresaEmail ? (
           <div className={s.formFooterMuted}>
-            Si esta empresa aún no configuró WhatsApp, puedes escribir a {empresaEmail}.
+            Si esta empresa aun no configuro WhatsApp, puedes escribir a {empresaEmail}.
           </div>
         ) : null}
 
         {!isAvailable ? (
           <div className={s.formFooterMuted}>
-            Si ahora están fuera de horario, tu solicitud igual queda guardada para seguimiento.
+            Aunque esten fuera de horario, tu solicitud queda guardada para seguimiento.
+          </div>
+        ) : null}
+
+        {referenceFile ? (
+          <div className={s.formFooterMuted}>
+            Referencia seleccionada: {referenceFile.name}
           </div>
         ) : null}
       </div>

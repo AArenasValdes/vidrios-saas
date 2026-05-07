@@ -15,6 +15,7 @@ function createSolicitudesContactoRepositoryMock(): jest.Mocked<SolicitudesConta
       organizationId: "org-7",
       empresaNombre: "Ventora Norte",
       empresaLogoUrl: null,
+      empresaDireccion: "Santiago RM",
       empresaTelefono: "+56998765432",
       empresaEmail: "hola@ventora.cl",
       brandColor: "#335ea9",
