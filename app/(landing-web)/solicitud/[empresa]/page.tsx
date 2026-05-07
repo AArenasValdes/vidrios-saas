@@ -310,6 +310,16 @@ export default async function SolicitudEmpresaPage({
             />
           </section>
         </section>
+
+        <footer className={s.brandFooter} aria-label="Ventora">
+          <div className={s.brandFooterLine} aria-hidden />
+          <div className={s.brandFooterSeal}>
+            <span className={s.brandFooterKicker}>Ventora</span>
+            <p className={s.brandFooterText}>
+              Esta empresa gestiona sus solicitudes con Ventora
+            </p>
+          </div>
+        </footer>
       </div>
 
       <div className={s.stickyBarWrap}>

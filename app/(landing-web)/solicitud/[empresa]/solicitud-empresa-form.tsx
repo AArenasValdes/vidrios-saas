@@ -403,8 +403,6 @@ export function SolicitudEmpresaForm({
       <div className={s.formIntro}>
         <span className={s.sectionEyebrow}>Solicitud rapida</span>
         <h2 className={s.formTitle}>Cuentanos que necesitas</h2>
-        <p className={s.formSubtitle}>Toma menos de 1 minuto - Sin compromiso</p>
-        <p className={s.formHelper}>Empieza con nombre, WhatsApp y tipo de trabajo.</p>
       </div>
 
       <form className={s.form} onSubmit={handleSubmit}>
