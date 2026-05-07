@@ -183,14 +183,10 @@ export default async function SolicitudEmpresaPage({
                     </div>
                   )}
 
-                  <div className={s.heroIdentityCopy}>
-                    <strong>{config.empresaNombre}</strong>
-                    <span>
-                      Santiago RM - Vidrios y aluminio
-                      {locationLabel ? ` - ${locationLabel}` : ""}
-                    </span>
+                    <div className={s.heroIdentityCopy}>
+                      <strong>{config.empresaNombre}</strong>
+                    </div>
                   </div>
-                </div>
 
                 <div className={s.heroStatusBadge} data-active={isAvailable}>
                   <span className={s.availabilityDot} aria-hidden />
@@ -219,19 +215,22 @@ export default async function SolicitudEmpresaPage({
                 ) : null}
 
                 <a className={s.secondaryHeroCta} href="#solicitud-rapida">
-                  Dejar solicitud rapida
+                  Dejar solicitud rápida
                 </a>
               </div>
 
               <div className={s.heroTrustRow}>
-                <div className={s.heroTrustPill}>
+                <span className={s.heroTrustMini}>
                   <LuClipboardCheck aria-hidden />
-                  <span>Tu solicitud queda registrada</span>
-                </div>
-                <div className={s.heroTrustMeta}>
+                  Solicitud registrada
+                </span>
+                <span className={s.heroTrustDivider} aria-hidden>
+                  ·
+                </span>
+                <span className={s.heroTrustMini}>
                   <LuShieldCheck aria-hidden />
-                  <span>Sin compromiso</span>
-                </div>
+                  Sin compromiso
+                </span>
               </div>
             </div>
           </article>

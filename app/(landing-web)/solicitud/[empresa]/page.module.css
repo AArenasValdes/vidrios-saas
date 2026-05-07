@@ -124,7 +124,7 @@
 
 .heroPanel {
   position: relative;
-  min-height: clamp(352px, 66vw, 492px);
+  min-height: clamp(332px, 62vw, 456px);
   border-radius: 34px;
   overflow: hidden;
   border: 1px solid rgba(217, 224, 234, 0.72);
@@ -141,12 +141,14 @@
 
 .heroBackgroundMedia {
   background: #102746;
+  opacity: 0.86;
 }
 
 .heroBackgroundImage {
   object-fit: cover;
-  object-position: center;
-  transform: scale(1.02);
+  object-position: 62% center;
+  transform: scale(1.04);
+  filter: saturate(0.9) contrast(0.96);
 }
 
 .heroFallback {
@@ -169,8 +171,8 @@
 
 .heroOverlay {
   background:
-    linear-gradient(180deg, rgba(7, 18, 34, 0.18) 0%, rgba(7, 18, 34, 0.52) 34%, rgba(7, 18, 34, 0.84) 100%),
-    linear-gradient(90deg, rgba(9, 22, 41, 0.58) 0%, rgba(9, 22, 41, 0.18) 52%, rgba(9, 22, 41, 0.3) 100%);
+    linear-gradient(180deg, rgba(7, 18, 34, 0.16) 0%, rgba(7, 18, 34, 0.48) 34%, rgba(7, 18, 34, 0.82) 100%),
+    linear-gradient(90deg, rgba(9, 22, 41, 0.62) 0%, rgba(9, 22, 41, 0.2) 52%, rgba(9, 22, 41, 0.26) 100%);
 }
 
 .heroContent {
@@ -179,8 +181,8 @@
   min-height: inherit;
   display: grid;
   align-content: space-between;
-  gap: 14px;
-  padding: 16px 16px 16px;
+  gap: 12px;
+  padding: 14px 16px 14px;
   color: #ffffff;
 }
 
@@ -188,7 +190,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -208,7 +210,7 @@
 
 .heroIdentityCopy strong {
   color: #ffffff;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.2;
 }
 
@@ -242,7 +244,7 @@
 
 .heroMainCopy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   align-content: end;
 }
 
@@ -250,7 +252,7 @@
   margin: 0;
   max-width: 10ch;
   font-family: var(--font-landing-display), sans-serif;
-  font-size: clamp(36px, 9vw, 68px);
+  font-size: clamp(34px, 8.4vw, 62px);
   line-height: 0.96;
   letter-spacing: -0.075em;
   color: #ffffff;
@@ -343,7 +345,7 @@
 
 .heroActions {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: min(100%, 360px);
 }
 
@@ -378,18 +380,20 @@
 }
 
 .secondaryHeroCta {
-  min-height: 56px;
+  min-height: 52px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: rgba(13, 31, 56, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  background: rgba(13, 31, 56, 0.18);
   color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 20px rgba(7, 18, 34, 0.12);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -742,45 +746,31 @@
 
 .heroTrustRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
   align-items: center;
+  min-height: 20px;
+  color: rgba(241, 246, 255, 0.84);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.heroTrustPill {
-  width: fit-content;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
+.heroTrustMini {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-size: 12px;
-  font-weight: 800;
+  gap: 5px;
 }
 
-.heroTrustMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: rgba(240, 246, 255, 0.92);
-  font-size: 12px;
-  line-height: 1.45;
-  min-height: 34px;
+.heroTrustMini svg {
+  width: 12px;
+  height: 12px;
+  color: rgba(206, 233, 255, 0.84);
 }
 
-.heroTrustMeta svg {
-  color: #9be4b4;
-}
-
-.heroTrustSeparator {
-  color: rgba(240, 246, 255, 0.55);
+.heroTrustDivider {
+  color: rgba(240, 246, 255, 0.48);
 }
 
 .formCard {
@@ -1468,12 +1458,12 @@
   }
 
   .heroTitle {
-    font-size: clamp(32px, 10vw, 44px);
+    font-size: clamp(30px, 9.2vw, 42px);
     max-width: 10ch;
   }
 
   .heroContent {
-    padding: 16px 14px 16px;
+    padding: 13px 14px 14px;
   }
 
   .heroStatusBadge {
@@ -1498,6 +1488,11 @@
 
   .heroStatusBadge {
     margin-left: 0;
+  }
+
+  .heroTrustRow {
+    font-size: 10px;
+    gap: 5px;
   }
 
   .galleryRail {
