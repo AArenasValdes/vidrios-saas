@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LuBadgeCheck,
+  LuCheck,
   LuCheckCheck,
   LuImagePlus,
   LuLock,
@@ -457,6 +458,12 @@ export function SolicitudEmpresaForm({
                   className={`${s.workTypeButton}${isActive ? ` ${s.workTypeButtonActive}` : ""}`}
                   onClick={() => handleWorkTypeSelect(workType.value)}
                 >
+                  <span
+                    className={`${s.workTypeCheck}${isActive ? ` ${s.workTypeCheckActive}` : ""}`}
+                    aria-hidden
+                  >
+                    <LuCheck />
+                  </span>
                   <span className={s.workTypeDrawing} aria-hidden>
                     <WorkTypeDrawing type={workType.drawing} />
                   </span>
@@ -466,14 +473,14 @@ export function SolicitudEmpresaForm({
             })}
           </div>
           <input
-            className={s.input}
+            className={`${s.input} ${s.detailInput}`}
             value={form.tipoTrabajo}
             onChange={(event) => {
               setSelectedWorkType(null);
               handleFieldChange("tipoTrabajo", event.target.value);
             }}
             onBlur={() => handleBlur("tipoTrabajo")}
-            placeholder="Otro trabajo o detalle principal"
+            placeholder="Si es otro trabajo, escribelo aqui"
           />
           {touched.tipoTrabajo && errors.tipoTrabajo ? (
             <span className={s.fieldError}>{errors.tipoTrabajo}</span>
