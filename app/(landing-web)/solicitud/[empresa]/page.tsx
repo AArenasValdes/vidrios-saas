@@ -58,10 +58,10 @@ const STEPS: StepItem[] = [
 ] as const;
 
 const PREVIEW_GALLERY = [
-  "/brand/screen2.png",
-  "/brand/screen.png",
-  "/brand/landing-pdf.png",
-  "/brand/logosanmarco.jpg",
+  { src: "/brand/screen2.png", label: "Ventanas" },
+  { src: "/brand/screen.png", label: "Shower" },
+  { src: "/brand/landing-pdf.png", label: "Terraza" },
+  { src: "/brand/logosanmarco.jpg", label: "Mampara" },
 ] as const;
 
 export const dynamic = "force-dynamic";
@@ -164,7 +164,7 @@ export default async function SolicitudEmpresaPage({
             {heroImage ? (
               <div className={s.heroBackgroundMedia} aria-hidden>
                 <Image
-                  src={heroImage}
+                  src={heroImage.src}
                   alt=""
                   fill
                   className={s.heroBackgroundImage}
@@ -260,15 +260,16 @@ export default async function SolicitudEmpresaPage({
 
             <div className={s.galleryRail}>
               {galleryImages.map((image, index) => (
-                <article key={image} className={s.galleryCard}>
+                <article key={image.src} className={s.galleryCard}>
                   <div className={s.galleryImageWrap}>
                     <Image
-                      src={image}
+                      src={image.src}
                       alt={`Trabajo reciente ${index + 1}`}
                       fill
                       className={s.galleryImage}
                       unoptimized
                     />
+                    <span className={s.galleryTag}>{image.label}</span>
                   </div>
                 </article>
               ))}

@@ -24,7 +24,7 @@
   padding:
     max(18px, env(safe-area-inset-top))
     16px
-    calc(120px + env(safe-area-inset-bottom, 0px));
+    calc(108px + env(safe-area-inset-bottom, 0px));
   color: var(--text-main);
   overflow-x: clip;
 }
@@ -33,7 +33,7 @@
   width: min(100%, 1180px);
   margin: 0 auto;
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .topBar {
@@ -122,7 +122,7 @@
 
 .heroPanel {
   position: relative;
-  min-height: clamp(420px, 72vw, 560px);
+  min-height: clamp(392px, 72vw, 540px);
   border-radius: 34px;
   overflow: hidden;
   border: 1px solid rgba(217, 224, 234, 0.72);
@@ -177,8 +177,8 @@
   min-height: inherit;
   display: grid;
   align-content: space-between;
-  gap: 22px;
-  padding: 20px 18px 20px;
+  gap: 18px;
+  padding: 18px 16px 18px;
   color: #ffffff;
 }
 
@@ -187,6 +187,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .heroIdentityBlock {
@@ -230,6 +231,7 @@
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
+  margin-left: auto;
 }
 
 .heroStatusBadge[data-active="true"] {
@@ -244,9 +246,9 @@
 
 .heroTitle {
   margin: 0;
-  max-width: 11ch;
+  max-width: 10ch;
   font-family: var(--font-landing-display), sans-serif;
-  font-size: clamp(40px, 9vw, 72px);
+  font-size: clamp(36px, 9vw, 68px);
   line-height: 0.96;
   letter-spacing: -0.075em;
   color: #ffffff;
@@ -318,11 +320,11 @@
 
 .heroLead {
   margin: 0;
-  max-width: 24ch;
+  max-width: 22ch;
   color: rgba(241, 246, 255, 0.94);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  line-height: 1.42;
+  line-height: 1.38;
 }
 
 .heroSupportNote {
@@ -331,6 +333,10 @@
   color: rgba(228, 237, 250, 0.84);
   font-size: 14px;
   line-height: 1.55;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .heroActions {
@@ -426,17 +432,18 @@
 .galleryRail {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(244px, 80%);
+  grid-auto-columns: minmax(220px, 78%);
   gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
 .galleryRail::-webkit-scrollbar {
-  height: 8px;
+  display: none;
 }
 
 .galleryRail::-webkit-scrollbar-thumb {
@@ -455,13 +462,32 @@
 
 .galleryImageWrap {
   position: relative;
-  height: clamp(180px, 48vw, 232px);
+  height: clamp(176px, 44vw, 212px);
   overflow: hidden;
   background: linear-gradient(180deg, #f0f4fa, #e8eef8);
 }
 
 .galleryImage {
   object-fit: cover;
+}
+
+.galleryTag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(10, 21, 40, 0.68);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .galleryCaption {
@@ -535,13 +561,13 @@
 
 .mainGrid {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .sectionCard,
 .formSection {
   border-radius: 30px;
-  padding: 22px 20px;
+  padding: 20px 18px;
 }
 
 .stepsInline {
@@ -589,23 +615,30 @@
 }
 
 .stepsSupportRow {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
 }
 
 .stepsSupportItem {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: 10px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--text-soft);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
+  background: var(--surface-soft);
+  border: 1px solid rgba(217, 224, 234, 0.96);
 }
 
 .stepsSupportItem svg {
   color: var(--brand);
-  margin-top: 1px;
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 .heroTrustRow {
@@ -654,8 +687,8 @@
   box-shadow: none;
   padding: 0;
   display: grid;
-  gap: 18px;
-  scroll-margin-top: 20px;
+  gap: 16px;
+  scroll-margin-top: 28px;
 }
 
 .formIntro {
@@ -666,7 +699,7 @@
 .formTitle {
   margin: 0;
   font-family: var(--font-landing-display), sans-serif;
-  font-size: clamp(28px, 4vw, 36px);
+  font-size: clamp(28px, 4vw, 34px);
   line-height: 1;
   letter-spacing: -0.05em;
   color: var(--text-main);
@@ -689,7 +722,7 @@
 
 .form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .field {
@@ -805,13 +838,13 @@
 }
 
 .workTypeButton {
-  min-height: 102px;
+  min-height: 96px;
   border-radius: 22px;
   border: 1px solid rgba(217, 224, 234, 0.98);
   background: #ffffff;
   color: #5c6f8a;
   display: grid;
-  gap: 9px;
+  gap: 8px;
   place-items: center;
   padding: 12px 8px;
   font-size: 13px;
@@ -856,7 +889,9 @@
 .workTypeButtonActive {
   border-color: rgba(var(--brand-rgb), 0.72);
   background: linear-gradient(180deg, rgba(var(--brand-rgb), 0.08), rgba(var(--brand-rgb), 0.03));
-  box-shadow: 0 12px 24px rgba(var(--brand-rgb), 0.12);
+  box-shadow:
+    0 12px 24px rgba(var(--brand-rgb), 0.12),
+    0 0 0 2px rgba(var(--brand-rgb), 0.12);
   transform: translateY(-1px);
   color: var(--brand);
 }
@@ -874,11 +909,11 @@
 
 .optionalDetails {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   border: 1px solid rgba(217, 224, 234, 0.98);
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(247, 249, 252, 0.9), rgba(255, 255, 255, 0.92));
-  padding: 14px;
+  padding: 12px;
 }
 
 .optionalDetails[open] {
@@ -911,7 +946,7 @@
 }
 
 .optionalDetails[open] .optionalSummary::after {
-  content: "−";
+  content: "-";
 }
 
 .optionalContent {
@@ -1100,7 +1135,7 @@
   z-index: 30;
   pointer-events: none;
   background: linear-gradient(to top, rgba(238, 243, 250, 0.9) 0%, rgba(238, 243, 250, 0) 100%);
-  padding-top: 22px;
+  padding-top: 18px;
   transition:
     opacity 180ms ease,
     transform 180ms ease;
@@ -1112,17 +1147,17 @@
   padding:
     0
     16px
-    calc(12px + env(safe-area-inset-bottom, 0px));
+    calc(10px + env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   pointer-events: none;
 }
 
 .stickySecondary,
 .stickyPrimary {
   min-height: 54px;
-  padding: 0 18px;
+  padding: 0 16px;
   border-radius: 20px;
   display: inline-flex;
   align-items: center;
@@ -1141,7 +1176,7 @@
   -webkit-backdrop-filter: blur(14px);
   color: var(--brand);
   box-shadow: 0 12px 24px rgba(36, 59, 107, 0.08);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .root:has(input:focus, textarea:focus) .stickyBarWrap {
@@ -1230,6 +1265,14 @@
     flex: 1 1 0;
   }
 
+  .stickyPrimary {
+    flex-grow: 1.25;
+  }
+
+  .stickySecondary {
+    flex-grow: 0.82;
+  }
+
   .stepsInline {
     gap: 8px;
   }
@@ -1245,16 +1288,16 @@
   }
 
   .heroLead {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .heroTitle {
-    font-size: clamp(34px, 10vw, 48px);
+    font-size: clamp(32px, 10vw, 44px);
     max-width: 10ch;
   }
 
   .heroContent {
-    padding: 18px 16px 18px;
+    padding: 16px 14px 16px;
   }
 
   .heroStatusBadge {
@@ -1271,8 +1314,12 @@
     font-size: 12px;
   }
 
+  .heroStatusBadge {
+    margin-left: 0;
+  }
+
   .galleryRail {
-    grid-auto-columns: minmax(232px, 86%);
+    grid-auto-columns: minmax(214px, 84%);
   }
 }
 
@@ -1301,11 +1348,34 @@
     padding-right: 12px;
   }
 
-  .heroCard,
+  .heroPanel,
   .sectionCard,
   .formSection {
-    padding-left: 16px;
-    padding-right: 16px;
+    border-radius: 26px;
+  }
+
+  .sectionCard,
+  .formSection {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .heroTrustMeta {
+    font-size: 12px;
+  }
+
+  .workTypeButton {
+    min-height: 92px;
+  }
+
+  .workTypeDrawing {
+    width: 54px;
+    height: 54px;
+  }
+
+  .workTypeDrawingSvg {
+    width: 40px;
+    height: 40px;
   }
 }
 

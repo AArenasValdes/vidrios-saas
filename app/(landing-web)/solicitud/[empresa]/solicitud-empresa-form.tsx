@@ -403,9 +403,7 @@ export function SolicitudEmpresaForm({
         <span className={s.sectionEyebrow}>Solicitud rapida</span>
         <h2 className={s.formTitle}>Cuentanos que necesitas</h2>
         <p className={s.formSubtitle}>Toma menos de 1 minuto - Sin compromiso</p>
-        <p className={s.formHelper}>
-          Empieza con 3 datos. Si quieres, despues agregas medidas, mensaje o foto.
-        </p>
+        <p className={s.formHelper}>Empieza con nombre, WhatsApp y tipo de trabajo.</p>
       </div>
 
       <form className={s.form} onSubmit={handleSubmit}>
@@ -438,7 +436,7 @@ export function SolicitudEmpresaForm({
               inputMode="tel"
             />
           </div>
-          {displayWhatsapp ? (
+          {touched.contacto && displayWhatsapp && !errors.contacto ? (
             <span className={s.fieldHint}>Formato detectado: +56 9 {displayWhatsapp}</span>
           ) : null}
           {touched.contacto && errors.contacto ? (
@@ -483,9 +481,7 @@ export function SolicitudEmpresaForm({
         </div>
 
         <details className={s.optionalDetails}>
-          <summary className={s.optionalSummary}>
-            Agregar mas detalles para cotizar mejor
-          </summary>
+          <summary className={s.optionalSummary}>Mas detalles para cotizar mejor</summary>
 
           <div className={s.optionalContent}>
             <div className={s.optionalGrid}>
@@ -607,7 +603,7 @@ export function SolicitudEmpresaForm({
 
         {!isAvailable ? (
           <div className={s.formFooterMuted}>
-            Aunque esten fuera de horario, tu solicitud queda guardada para seguimiento.
+            Si estamos fuera de horario, igual guardamos tu solicitud.
           </div>
         ) : null}
 
