@@ -49,7 +49,7 @@ type StepItem = {
 
 const STEPS: StepItem[] = [
   { title: "Elige", copy: "tu trabajo" },
-  { title: "Envia", copy: "tus datos" },
+  { title: "Envía", copy: "tus datos" },
   { title: "Te contactan", copy: "por WhatsApp" },
 ] as const;
 
@@ -180,10 +180,10 @@ export default async function SolicitudEmpresaPage({
                     </div>
                   )}
 
-                    <div className={s.heroIdentityCopy}>
-                      <strong>{config.empresaNombre}</strong>
-                    </div>
+                  <div className={s.heroIdentityCopy}>
+                    <strong>{config.empresaNombre}</strong>
                   </div>
+                </div>
 
                 <div className={s.heroStatusBadge} data-active={isAvailable}>
                   <span className={s.availabilityDot} aria-hidden />
@@ -259,7 +259,7 @@ export default async function SolicitudEmpresaPage({
 
         <section className={s.mainGrid}>
           <section className={s.sectionCard}>
-            <span className={s.sectionEyebrow}>Como funciona</span>
+            <span className={s.sectionEyebrow}>Cómo funciona</span>
             <div className={s.stepsInline}>
               {STEPS.map((step, index) => (
                 <article key={step.title} className={s.stepMiniCard}>
@@ -313,8 +313,8 @@ export default async function SolicitudEmpresaPage({
               <Image
                 src="/brand/ventora-logo-black.svg"
                 alt=""
-                width={112}
-                height={25}
+                width={148}
+                height={33}
                 className={s.brandFooterLogo}
                 unoptimized
               />
