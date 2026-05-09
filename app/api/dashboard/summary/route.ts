@@ -1,46 +1,38 @@
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  AuthRouteAccessError,
+  resolveAuthenticatedRouteContext,
+} from "@/features/auth/services/auth-route-access.service";
 import { getDashboardSummaryByOrganizationId } from "@/features/dashboard/services/dashboard-summary-server.service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const startedAt = performance.now();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const authReadyAt = performance.now();
+  let authReadyAt = startedAt;
+  let organizationId: string | number | null = null;
 
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  try {
+    const context = await resolveAuthenticatedRouteContext();
+    authReadyAt = performance.now();
+    organizationId = context.profile.organizationId;
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
 
-  const { data: perfil, error: perfilError } = await supabase
-    .from("users")
-    .select("organization_id")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
-
-  if (perfilError) {
     return NextResponse.json(
       { error: "No pudimos validar la organizacion activa." },
       { status: 500 }
     );
   }
 
-  if (!perfil?.organization_id) {
-    return NextResponse.json(
-      { error: "No pudimos identificar la organizacion activa." },
-      { status: 403 }
-    );
-  }
-
   try {
     const profileReadyAt = performance.now();
-    const summary = await getDashboardSummaryByOrganizationId(perfil.organization_id);
+    const summary = await getDashboardSummaryByOrganizationId(
+      organizationId as string | number
+    );
     const dataReadyAt = performance.now();
     const totalMs = Math.round(dataReadyAt - startedAt);
     const authMs = Math.round(authReadyAt - startedAt);

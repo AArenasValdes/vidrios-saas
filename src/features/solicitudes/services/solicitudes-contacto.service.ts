@@ -92,6 +92,7 @@ export class SolicitudContactoValidationError extends Error {}
 export interface SolicitudesContactoService {
   listSolicitudes(): Promise<SolicitudContacto[]>;
   listSolicitudesByOrganizationId(organizationId: string | number): Promise<SolicitudContacto[]>;
+  listSolicitudesResumen(): Promise<SolicitudContacto[]>;
   listSolicitudesResumenByOrganizationId(
     organizationId: string | number
   ): Promise<SolicitudContacto[]>;
@@ -122,6 +123,10 @@ export function createSolicitudesContactoService(
 
     async listSolicitudesByOrganizationId(organizationId: string | number) {
       return repository.listByOrganizationId(organizationId);
+    },
+
+    async listSolicitudesResumen() {
+      return repository.listResumen();
     },
 
     async listSolicitudesResumenByOrganizationId(organizationId: string | number) {

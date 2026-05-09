@@ -3,6 +3,7 @@ import "server-only";
 import webpush, { type RequestOptions } from "web-push";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { findActiveUserProfile } from "@/features/auth/services/active-user-profile.service";
 import {
   webPushSubscriptionsRepository,
   type WebPushSubscriptionsRepository,
@@ -84,14 +85,14 @@ async function validateUserBelongsToOrganization(context: AuthPushContext) {
     throw new Error("No se pudo validar la identidad del usuario.");
   }
 
-  const { data, error } = await supabase
-    .from("users")
-    .select("organization_id")
-    .ilike("correo", authUser.user.email)
-    .is("eliminado_en", null)
-    .maybeSingle<{ organization_id: string | number }>();
+  let data: { organization_id: string | number | null } | null = null;
 
-  if (error) {
+  try {
+    data = (await findActiveUserProfile(supabase, {
+      authUserId: context.authUserId,
+      email: authUser.user.email,
+    })) as { organization_id: string | number | null } | null;
+  } catch {
     throw new Error("No se pudo validar la pertenencia a la organizacion.");
   }
 
@@ -229,13 +230,17 @@ export function createWebPushNotificationsService(
 
     async unregisterSubscription(
       endpoint: string,
-      organizationId: string | number
+      context: Pick<AuthPushContext, "organizationId" | "authUserId">
     ) {
       if (!endpoint.trim()) {
         return;
       }
 
-      await repository.deactivateByEndpointAndOrganizationId(endpoint, organizationId);
+      await repository.deactivateByEndpointAndAuthUserId(
+        endpoint,
+        context.organizationId,
+        context.authUserId
+      );
     },
 
     async sendQuoteDecisionPush(input: SendQuoteDecisionPushInput) {

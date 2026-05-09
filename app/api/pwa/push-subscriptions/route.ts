@@ -1,31 +1,55 @@
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  AuthRouteAccessError,
+  resolveAuthenticatedRouteContext,
+} from "@/features/auth/services/auth-route-access.service";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 
 export const dynamic = "force-dynamic";
 
-async function resolveAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function parseJsonObjectBody<T extends Record<string, unknown>>(
+  request: Request
+): Promise<T | null> {
+  try {
+    const parsed = await request.json();
 
-  if (!user) {
-    return {
-      error: NextResponse.json({ error: "No autorizado." }, { status: 401 }),
-      context: null,
-    };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+
+    return parsed as T;
+  } catch {
+    return null;
   }
+}
 
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("organization_id, rol")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
+async function resolveAuthContext() {
+  try {
+    const context = await resolveAuthenticatedRouteContext({
+      messages: {
+        profileError: "No pudimos validar tu empresa activa.",
+        organizationMissing: "No encontramos tu organizacion activa.",
+      },
+    });
 
-  if (profileError) {
+    return {
+      error: null,
+      context: {
+        organizationId: context.profile.organizationId as string | number,
+        authUserId: context.user.id,
+        userEmail: context.user.email ?? null,
+        userAgent: null as string | null,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      return {
+        error: NextResponse.json({ error: error.message }, { status: error.status }),
+        context: null,
+      };
+    }
+
     return {
       error: NextResponse.json(
         { error: "No pudimos validar tu empresa activa." },
@@ -34,26 +58,6 @@ async function resolveAuthContext() {
       context: null,
     };
   }
-
-  if (!profile?.organization_id) {
-    return {
-      error: NextResponse.json(
-        { error: "No encontramos tu organizacion activa." },
-        { status: 403 }
-      ),
-      context: null,
-    };
-  }
-
-  return {
-    error: null,
-    context: {
-      organizationId: profile.organization_id,
-      authUserId: user.id,
-      userEmail: user.email ?? null,
-      userAgent: null as string | null,
-    },
-  };
 }
 
 export async function POST(request: Request) {
@@ -64,11 +68,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as {
+    const body = await parseJsonObjectBody<{
       subscription?: PushSubscriptionJSON;
-    };
+    }>(request);
 
-    if (!body.subscription) {
+    if (!body?.subscription) {
       return NextResponse.json(
         { error: "Falta la suscripcion push del dispositivo." },
         { status: 400 }
@@ -90,13 +94,10 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    console.error("No pudimos registrar la suscripcion push.", error);
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos activar las notificaciones push.",
-      },
+      { error: "No pudimos activar las notificaciones push." },
       { status: 500 }
     );
   }
@@ -110,11 +111,11 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as {
+    const body = await parseJsonObjectBody<{
       endpoint?: string;
-    };
+    }>(request);
 
-    if (!body.endpoint?.trim()) {
+    if (!body?.endpoint?.trim()) {
       return NextResponse.json(
         { error: "Falta el endpoint de la suscripcion." },
         { status: 400 }
@@ -123,18 +124,18 @@ export async function DELETE(request: Request) {
 
     await webPushNotificationsService.unregisterSubscription(
       body.endpoint,
-      authState.context.organizationId
+      {
+        organizationId: authState.context.organizationId,
+        authUserId: authState.context.authUserId,
+      }
     );
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("No pudimos desactivar la suscripcion push.", error);
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "No pudimos desactivar las notificaciones push.",
-      },
+      { error: "No pudimos desactivar las notificaciones push." },
       { status: 500 }
     );
   }

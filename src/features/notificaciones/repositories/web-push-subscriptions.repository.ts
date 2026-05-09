@@ -130,6 +130,27 @@ export function createWebPushSubscriptionsRepository() {
         throw error;
       }
     },
+
+    async deactivateByEndpointAndAuthUserId(
+      endpoint: string,
+      organizationId: string | number,
+      authUserId: string
+    ) {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from("web_push_subscriptions")
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("endpoint", endpoint)
+        .eq("organization_id", organizationId)
+        .eq("auth_user_id", authUserId);
+
+      if (error) {
+        throw error;
+      }
+    },
   };
 }
 
@@ -161,6 +182,11 @@ export const webPushSubscriptionsRepository: WebPushSubscriptionsRepository = {
   },
   deactivateByEndpointAndOrganizationId(...args) {
     return getDefaultWebPushSubscriptionsRepository().deactivateByEndpointAndOrganizationId(
+      ...args
+    );
+  },
+  deactivateByEndpointAndAuthUserId(...args) {
+    return getDefaultWebPushSubscriptionsRepository().deactivateByEndpointAndAuthUserId(
       ...args
     );
   },

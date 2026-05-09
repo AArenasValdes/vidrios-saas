@@ -1,6 +1,6 @@
 # AGENTS.md - Ventora
 
-Lee antes de editar. Ultima consolidacion: 2026-05-08.
+Lee antes de editar. Ultima consolidacion: 2026-05-09.
 
 ## Regla principal
 
@@ -18,7 +18,7 @@ Ahi esta el mapa tecnico completo del proyecto con rutas, features, tablas, comp
 
 ## Mapa tecnico
 
-```
+```text
 docs/agent-map/
   README.md              <- Indice maestro (EMPEZAR AQUI)
   PROJECT_OVERVIEW.md    <- Stack, arquitectura, carpetas
@@ -40,11 +40,105 @@ docs/agent-map/
 | `npm run lint` | Linter ESLint |
 | `npm test` | Tests Jest |
 
+## Estado actual
+
+Ultima actualizacion operativa: 2026-05-09
+
+- **Fase actual**: estabilizacion, hardening y limpieza de rutas criticas de captacion y cierre
+- **Estado del baseline**: `npm run lint`, `npm test` y `npm run build` estan pasando en el workspace principal
+- **Rutas ya estabilizadas en esta pasada**:
+  - `/api/solicitud/[empresa]`
+  - `/presupuesto/[token]`
+  - `/api/dashboard/summary`
+  - `/api/cotizaciones/resumen`
+  - `/api/clientes/resumen`
+  - `/api/solicitudes`
+  - `/api/solicitudes/resumen`
+  - `/api/pwa/push-subscriptions`
+- **Seguridad DB ya endurecida en esta pasada**:
+  - `web_push_subscriptions` ahora tiene policies RLS para `authenticated`
+- **Hardening adicional ya cerrado en esta pasada**:
+  - helper comun de auth resuelve primero por `auth_user_id` y cae a correo solo por compatibilidad
+  - `/api/pwa/push-subscriptions` ahora desactiva suscripciones por `organization_id + auth_user_id`
+  - `proxy.ts` ahora protege tambien `/solicitudes` y `/configuracion/*`
+- **QA autenticado ya cerrado en esta pasada**:
+  - smoke real completado en `next start` con login valido sobre `/dashboard`, `/clientes`, `/cotizaciones`, `/solicitudes` y `/configuracion/empresa`
+  - `dashboard` navega a `cotizaciones/nueva`
+  - busquedas base de `clientes` y `cotizaciones` responden
+  - `solicitudes` navega a `canales`
+  - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
+- **Objetivo inmediato**: seguir cerrando deuda tecnica de Fase 2 sin abrir Fase 3+
+
+### Ya resuelto en esta pasada
+
+- Se aislo `lint` y `jest` para que no escaneen worktrees auxiliares ni caches ajenas al repo principal
+- Se endurecio la entrada publica de solicitudes:
+  - validacion de slug de empresa
+  - parseo seguro del body
+  - mejor resolucion de IP
+  - sanitizacion de `sourceUrl` aceptando solo `http/https`
+- Se redujo la exposicion de errores internos en `/presupuesto/[token]`
+- Se unifico la resolucion de usuario, rol y organizacion para APIs privadas criticas con helper comun
+- Se corrigio el acceso global de solicitudes para admins allowlist, sin romper el filtro por `organization_id` para admins normales
+- Se endurecio el endpoint legacy `/api/solicitudes`:
+  - mejor resolucion de IP
+  - rechazo de JSON invalido
+  - limpieza menor del rate limiting en memoria
+- Se cerro la deuda activa de RLS en `web_push_subscriptions` con policies por `organization_id + auth_user_id`
+- Se cerro un endurecimiento adicional en auth y push:
+  - resolucion de perfil activo priorizando `auth_user_id`
+  - baja de push acotada al usuario autenticado duenio de la suscripcion
+- Se cerro una brecha de auth en el perimetro web:
+  - `proxy.ts` y su matcher ahora incluyen `/solicitudes` y `/configuracion/*`
+  - smoke sin sesion confirma redirect a `/login?next=...` en esas rutas
+- Se modularizaron helpers chicos de solicitudes publicas para:
+  - parseo seguro de JSON objeto
+  - resolucion consistente de IP
+  - rate limiting con limpieza de memoria en ventana deslizante
+- Se cerro el smoke autenticado de rutas privadas criticas en navegador usando una instancia controlada de `next start`
+- Se elimino ruido de consola en entornos fuera de Vercel:
+  - `Analytics` y `SpeedInsights` ya no se inyectan cuando `process.env.VERCEL !== "1"`
+- Se agrego cobertura de tests para:
+  - sanitizacion de `sourceUrl`
+  - flujo de aprobacion publica
+  - registro de push desacoplado de validacion real de membresia durante test
+  - acceso global y acceso por organizacion en solicitudes
+  - rechazo de body invalido en `/api/solicitudes`
+  - rechazo de JSON invalido en `/api/pwa/push-subscriptions`
+  - auth helper comun y fallback por correo
+  - rate limiting y slug invalido en `/api/solicitud/[empresa]`
+  - redirects codificados en acciones de `/presupuesto/[token]`
+  - contratos base de `/api/dashboard/summary`, `/api/clientes/resumen` y `/api/cotizaciones/resumen`
+
+### Falta por hacer
+
+- Auditar seguridad multi-tenant en queries nuevas o tocadas y confirmar `organization_id` en cada cadena critica
+- Revisar tablas advertidas sin RLS policies antes de ampliar superficies publicas:
+  - `quote_item_breakdown`
+  - `material_types`
+  - `formula_variables`
+  - `cotizacion_code_counters`
+- Correr smoke y QA manual con navegador sobre:
+  - captacion publica `/solicitud/[empresa]`
+  - cierre publico `/presupuesto/[token]`
+  - acciones clave de WhatsApp y PDF en cotizaciones
+- Validar de forma visual y funcional las vistas privadas que no se cubrieron completas en el smoke autenticado:
+  - `/cotizaciones/[id]`
+  - flujos profundos de `/cotizaciones/nueva`
+  - acciones de edicion/eliminacion en `/clientes`
+- Actualizar `docs/agent-map/` si cambian rutas, features, tablas o componentes en la siguiente pasada
+- Mantener foco en Fase 2: captacion, centralizacion y cierre comercial; no abrir pipeline Kanban ni modulos posteriores
+
+## Notas de QA
+
+- Para QA automatizado confiable, preferir `npm run build` + `npm run start`.
+- El `npm run dev` actual en `:3000` puede quedar con HMR degradado (`webpack-hmr` handshake invalido) y falsear pruebas de login/client hydration.
+
 ## Convenciones criticas
 
 - **Flujo obligatorio**: `page -> hook -> service -> repository -> Supabase`
 - **TypeScript estricto**: tipar todo, `any` solo si inevitable
-- **Multi-tenant**: toda query filtra `organization_id` — NUNCA eliminar este filtro
+- **Multi-tenant**: toda query filtra `organization_id` - NUNCA eliminar este filtro
 - **Soft delete**: `eliminado_en: timestamp`, queries activas filtran `.is("eliminado_en", null)`
 - **Calcular en services**: `precioFinalUnitario = costoProveedorUnitario * (1 + margenPct / 100)`
 - **Codigo nuevo en `src/features/<feature>/`**: NO en `src/hooks/`, `src/services/`, `src/repositories/`, `src/types/` (son re-exports legacy)
@@ -57,14 +151,14 @@ docs/agent-map/
 - **No romper PDF ni WhatsApp**: son herramientas de cierre activas
 - **No tocar tablas legacy**: `materials`, `product_types`, `system_lines`, etc. estan dormidas
 - **No abrir Fase 3+**: pipeline Kanban y metricas son Fase 2; lo demas se posterga
-- **5 tablas sin RLS policies**: web_push_subscriptions, quote_item_breakdown, material_types, formula_variables, cotizacion_code_counters
+- **4 tablas sin RLS policies**: quote_item_breakdown, material_types, formula_variables, cotizacion_code_counters
 - **Email push depende de env vars**: `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`
 - **Bucket Storage**: `organization-assets` requerido para logos y PDFs
 - **Service role key**: `SUPABASE_SERVICE_ROLE_KEY` requerida para aprobacion publica y operaciones admin
 
 ## DB: fuente de verdad
 
-- `supabase/docs/current_schema.sql` — schema
-- `supabase/docs/database_map.md` — mapa de tablas
-- `supabase/docs/rls_policies.md` — politicas RLS
-- `supabase/docs/agent_database_notes.md` — reglas para agentes
+- `supabase/docs/current_schema.sql` - schema
+- `supabase/docs/database_map.md` - mapa de tablas
+- `supabase/docs/rls_policies.md` - politicas RLS
+- `supabase/docs/agent_database_notes.md` - reglas para agentes

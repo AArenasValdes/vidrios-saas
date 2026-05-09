@@ -112,7 +112,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: Sin FKs (bug conocido INC-4)
 - **Usada por**: Notificaciones push
 - **Archivos donde aparece**: `src/features/notificaciones/repositories/web-push-subscriptions.repository.ts`, `app/api/pwa/push-subscriptions/route.ts`
-- **Riesgos**: SIN RLS POLICIES (bug INC-9). Sin FK a organizations. Cualquier usuario autenticado puede leer todas las suscripciones.
+- **Riesgos**: Sin FK a organizations/auth.users. RLS ya endurecido para `authenticated` por `organization_id + auth_user_id`, el API de suscripcion/baja ya se ata tambien al `auth_user_id`, pero el envio server-side sigue dependiendo de `service_role`.
 
 ---
 
@@ -215,7 +215,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |
 | SELECT publico | product_types |
-| **Sin policies** | cotizacion_code_counters, formula_variables, material_types, quote_item_breakdown, web_push_subscriptions |
+| **Sin policies** | cotizacion_code_counters, formula_variables, material_types, quote_item_breakdown |
 
 ### solicitudes_contacto - RLS especial
 
@@ -254,7 +254,6 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 | INC-3 | `unique_correo_clients` sin scope por org | Alta |
 | INC-4 | web_push_subscriptions sin FKs a organizations/auth.users | Media |
 | INC-5 | cotizacion_code_counters sin FK a organizations | Baja |
-| INC-9 | web_push_subscriptions sin RLS policies | Alta |
 | INC-10 | quote_item_breakdown sin RLS policies | Alta |
 | INC-13 | Sin CHECK en cotizaciones.estado, projects.estado, users.rol | Media |
 | INC-14 | Grants ALL a anon en todas las tablas | Media |

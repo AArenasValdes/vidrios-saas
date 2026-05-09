@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  AuthRouteAccessError,
+  resolveAuthenticatedRouteContext,
+} from "@/features/auth/services/auth-route-access.service";
 import {
   canAccessAllSolicitudes,
   canAccessSolicitudes,
@@ -11,31 +14,34 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const startedAt = performance.now();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const authReadyAt = performance.now();
+  let authReadyAt = startedAt;
+  let userEmail: string | null | undefined = null;
+  let organizationId: string | number | null = null;
+  let rol: string | null = null;
 
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  try {
+    const context = await resolveAuthenticatedRouteContext({
+      requireOrganization: false,
+      messages: {
+        profileError: "No pudimos validar tus permisos.",
+      },
+    });
+    authReadyAt = performance.now();
+    userEmail = context.user.email;
+    organizationId = context.profile.organizationId;
+    rol = context.profile.rol;
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
 
-  const { data: perfil, error: perfilError } = await supabase
-    .from("users")
-    .select("rol, organization_id")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
-
-  if (perfilError) {
     return NextResponse.json(
       { error: "No pudimos validar tus permisos." },
       { status: 500 }
     );
   }
 
-  if (!perfil || !canAccessSolicitudes({ email: user.email, rol: perfil.rol })) {
+  if (!canAccessSolicitudes({ email: userEmail, rol })) {
     return NextResponse.json(
       { error: "No tienes permisos para revisar las solicitudes." },
       { status: 403 }
@@ -44,19 +50,20 @@ export async function GET() {
 
   try {
     const profileReadyAt = performance.now();
-    const canReviewAll = canAccessAllSolicitudes(user.email);
+    const canReviewAll = canAccessAllSolicitudes(userEmail);
 
-    if (!canReviewAll && !perfil.organization_id) {
+    if (!canReviewAll && !organizationId) {
       return NextResponse.json(
         { error: "No pudimos identificar la organizacion activa." },
         { status: 403 }
       );
     }
 
-    const solicitudes =
-      await solicitudesContactoService.listSolicitudesResumenByOrganizationId(
-        perfil.organization_id
-      );
+    const solicitudes = canReviewAll
+      ? await solicitudesContactoService.listSolicitudesResumen()
+      : await solicitudesContactoService.listSolicitudesResumenByOrganizationId(
+          organizationId as string | number
+        );
     const dataReadyAt = performance.now();
     const totalMs = Math.round(dataReadyAt - startedAt);
     const authMs = Math.round(authReadyAt - startedAt);

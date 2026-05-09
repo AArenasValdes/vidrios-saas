@@ -368,13 +368,18 @@ async function selectSolicitudes(
 
 async function selectSolicitudesResumen(
   supabase: ReturnType<typeof createAdminClient>,
-  organizationId: string | number
+  organizationId?: string | number
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from(TABLE_NAME as never)
     .select(SOLICITUD_RESUMEN_SELECT)
-    .eq("organization_id", organizationId as never)
     .order("creado_en", { ascending: false });
+
+  if (organizationId !== undefined) {
+    query = query.eq("organization_id", organizationId as never);
+  }
+
+  const { data, error } = await query;
 
   if (!error) {
     return (
@@ -406,11 +411,16 @@ async function selectSolicitudesResumen(
     throw error;
   }
 
-  const { data: legacyData, error: legacyError } = await supabase
+  let legacyQuery = supabase
     .from(TABLE_NAME as never)
     .select(SOLICITUD_RESUMEN_SELECT_LEGACY)
-    .eq("organization_id", organizationId as never)
     .order("creado_en", { ascending: false });
+
+  if (organizationId !== undefined) {
+    legacyQuery = legacyQuery.eq("organization_id", organizationId as never);
+  }
+
+  const { data: legacyData, error: legacyError } = await legacyQuery;
 
   if (legacyError) {
     throw legacyError;
@@ -479,6 +489,10 @@ export function createSolicitudesContactoRepository(
 
     async listResumenByOrganizationId(organizationId: string | number) {
       return selectSolicitudesResumen(supabase, organizationId);
+    },
+
+    async listResumen() {
+      return selectSolicitudesResumen(supabase);
     },
 
     async getPublicConfigBySlug(slug: string) {
@@ -706,6 +720,9 @@ export const solicitudesContactoRepository: SolicitudesContactoRepository = {
     return getDefaultSolicitudesContactoRepository().listResumenByOrganizationId(
       ...args
     );
+  },
+  listResumen(...args) {
+    return getDefaultSolicitudesContactoRepository().listResumen(...args);
   },
   getPublicConfigBySlug(...args) {
     return getDefaultSolicitudesContactoRepository().getPublicConfigBySlug(

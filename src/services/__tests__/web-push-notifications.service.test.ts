@@ -14,6 +14,7 @@ jest.mock("@/repositories/web-push-subscriptions.repository", () => ({
     listActiveByOrganizationId: jest.fn(),
     deactivateByEndpoint: jest.fn(),
     deactivateByEndpointAndOrganizationId: jest.fn(),
+    deactivateByEndpointAndAuthUserId: jest.fn(),
   },
 }));
 
@@ -25,6 +26,7 @@ describe("web-push-notifications.service", () => {
     listActiveByOrganizationId: jest.fn(),
     deactivateByEndpoint: jest.fn(),
     deactivateByEndpointAndOrganizationId: jest.fn(),
+    deactivateByEndpointAndAuthUserId: jest.fn(),
   };
 
   const subscription = {
@@ -122,6 +124,24 @@ describe("web-push-notifications.service", () => {
       sent: 1,
       skipped: false,
     });
+  });
+
+  it("desactiva la suscripcion usando el auth user del duenio", async () => {
+    const service = createWebPushNotificationsService({
+      repository,
+      validateMembership: async () => undefined,
+    });
+
+    await service.unregisterSubscription("https://push.example.com/device-1", {
+      organizationId: 77,
+      authUserId: "user-77",
+    });
+
+    expect(repository.deactivateByEndpointAndAuthUserId).toHaveBeenCalledWith(
+      "https://push.example.com/device-1",
+      77,
+      "user-77"
+    );
   });
 
 });

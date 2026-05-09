@@ -4,29 +4,21 @@ import {
   SolicitudContactoValidationError,
   solicitudesContactoService,
 } from "@/features/solicitudes/services/solicitudes-contacto.service";
+import {
+  createSlidingWindowRateLimiter,
+  parseJsonObjectBody,
+  resolveRequestIp,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 const EMPRESA_SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
-const recentRequestsByIp = new Map<string, number[]>();
-
-function resolveIp(request: Request) {
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-
-  if (cfConnectingIp) {
-    return cfConnectingIp.trim();
-  }
-
-  const forwardedFor = request.headers.get("x-forwarded-for");
-
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? null;
-  }
-
-  return request.headers.get("x-real-ip");
-}
+const publicRequestRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  maxRequests: RATE_LIMIT_MAX_REQUESTS,
+});
 
 function normalizeEmpresaSlug(value: string) {
   const normalized = value.trim().toLowerCase();
@@ -38,58 +30,12 @@ function normalizeEmpresaSlug(value: string) {
   return normalized;
 }
 
-function isRateLimited(ip: string | null) {
-  const key = ip || "unknown";
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW_MS;
-  const recentRequests = (recentRequestsByIp.get(key) ?? []).filter(
-    (timestamp) => timestamp > windowStart
-  );
-
-  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
-    recentRequestsByIp.set(key, recentRequests);
-    return true;
-  }
-
-  recentRequests.push(now);
-  if (recentRequests.length > 0) {
-    recentRequestsByIp.set(key, recentRequests);
-  } else {
-    recentRequestsByIp.delete(key);
-  }
-  return false;
-}
-
-async function parseBody(request: Request) {
-  try {
-    const parsed = await request.json();
-
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    return parsed as {
-      nombre?: string;
-      contacto?: string;
-      tipoTrabajo?: string;
-      mensaje?: string;
-      origen?: string | null;
-      utmSource?: string | null;
-      utmMedium?: string | null;
-      utmCampaign?: string | null;
-      sourceUrl?: string | null;
-    };
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(
   request: Request,
   context: { params: Promise<{ empresa: string }> }
 ) {
   const { empresa: rawEmpresa } = await context.params;
-  const ip = resolveIp(request);
+  const ip = resolveRequestIp(request);
   const empresa = normalizeEmpresaSlug(rawEmpresa);
 
   if (!empresa) {
@@ -99,7 +45,7 @@ export async function POST(
     );
   }
 
-  if (isRateLimited(ip)) {
+  if (publicRequestRateLimiter.isRateLimited(ip)) {
     return NextResponse.json(
       {
         error:
@@ -110,7 +56,17 @@ export async function POST(
   }
 
   try {
-    const body = await parseBody(request);
+    const body = await parseJsonObjectBody<{
+      nombre?: string;
+      contacto?: string;
+      tipoTrabajo?: string;
+      mensaje?: string;
+      origen?: string | null;
+      utmSource?: string | null;
+      utmMedium?: string | null;
+      utmCampaign?: string | null;
+      sourceUrl?: string | null;
+    }>(request);
 
     if (!body) {
       return NextResponse.json(

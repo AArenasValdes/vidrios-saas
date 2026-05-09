@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  AuthRouteAccessError,
+  resolveAuthenticatedRouteContext,
+} from "@/features/auth/services/auth-route-access.service";
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClientesRepository } from "@/features/clientes/repositories/clientes-repository";
 import { createCotizacionesRepository } from "@/features/cotizaciones/repositories/cotizaciones-repository";
@@ -11,33 +15,21 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const startedAt = performance.now();
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const authReadyAt = performance.now();
+  let authReadyAt = startedAt;
+  let organizationId: string | number | null = null;
 
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
+  try {
+    const context = await resolveAuthenticatedRouteContext();
+    authReadyAt = performance.now();
+    organizationId = context.profile.organizationId;
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
 
-  const { data: perfil, error: perfilError } = await supabase
-    .from("users")
-    .select("organization_id")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
-
-  if (perfilError) {
     return NextResponse.json(
       { error: "No pudimos validar la organizacion activa." },
       { status: 500 }
-    );
-  }
-
-  if (!perfil?.organization_id) {
-    return NextResponse.json(
-      { error: "No pudimos identificar la organizacion activa." },
-      { status: 403 }
     );
   }
 
@@ -55,7 +47,7 @@ export async function GET() {
       }),
     });
     const clientes = await clientesService.listResumenByOrganizationId(
-      perfil.organization_id
+      organizationId as string | number
     );
     const dataReadyAt = performance.now();
     const totalMs = Math.round(dataReadyAt - startedAt);

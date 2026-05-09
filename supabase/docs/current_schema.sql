@@ -1828,6 +1828,17 @@ CREATE POLICY "users_update" ON "public"."users" FOR UPDATE USING (("organizatio
 ALTER TABLE "public"."web_push_subscriptions" ENABLE ROW LEVEL SECURITY;
 
 
+CREATE POLICY "web_push_subscriptions_insert_own" ON "public"."web_push_subscriptions" FOR INSERT TO "authenticated" WITH CHECK ((("organization_id" = "public"."get_org_id"()) AND ("auth_user_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "web_push_subscriptions_select_own" ON "public"."web_push_subscriptions" FOR SELECT TO "authenticated" USING ((("organization_id" = "public"."get_org_id"()) AND ("auth_user_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "web_push_subscriptions_update_own" ON "public"."web_push_subscriptions" FOR UPDATE TO "authenticated" USING ((("organization_id" = "public"."get_org_id"()) AND ("auth_user_id" = "auth"."uid"()))) WITH CHECK ((("organization_id" = "public"."get_org_id"()) AND ("auth_user_id" = "auth"."uid"())));
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
@@ -2118,6 +2129,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 

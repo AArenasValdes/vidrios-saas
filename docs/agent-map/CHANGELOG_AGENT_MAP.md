@@ -4,6 +4,33 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-09 - Hardening de auth comun y push activo
+
+### Resumen
+
+Se actualizo el mapa tecnico para reflejar una pasada adicional de hardening sobre superficies activas: el helper comun de rutas privadas ahora resuelve primero el perfil por `auth_user_id` y usa correo solo como compatibilidad, `push-subscriptions` ya restringe la baja al usuario autenticado duenio de la suscripcion, y `proxy.ts` ahora cubre tambien `solicitudes` y `configuracion`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `Agents.md` | Estado operativo actualizado, nuevos tests y warning de tablas sin RLS corregido |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Nota de `web_push_subscriptions` actualizada con alcance `auth_user_id` en el API |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
+## 2026-05-08 - Hardening RLS de web push
+
+### Resumen
+
+Se actualizo la documentacion del mapa tecnico para reflejar que `web_push_subscriptions` ya no esta en el grupo de tablas sin policies RLS. El acceso autenticado queda acotado por `organization_id` y `auth_user_id`, mientras el envio de notificaciones sigue usando `service_role` del lado servidor.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/DATA_MODEL_MAP.md` | `web_push_subscriptions` ya no figura sin policies |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
 ## 2026-05-08 - Creacion inicial
 
 ### Resumen

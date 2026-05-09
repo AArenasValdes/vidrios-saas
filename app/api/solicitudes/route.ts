@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/lib/supabase/server";
+import {
+  AuthRouteAccessError,
+  resolveAuthenticatedRouteContext,
+} from "@/features/auth/services/auth-route-access.service";
 import {
   canAccessAllSolicitudes,
   canAccessSolicitudes,
@@ -9,86 +12,83 @@ import {
   SolicitudContactoValidationError,
   solicitudesContactoService,
 } from "@/features/solicitudes/services/solicitudes-contacto.service";
+import {
+  createSlidingWindowRateLimiter,
+  parseJsonObjectBody,
+  resolveRequestIp,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
-const recentRequestsByIp = new Map<string, number[]>();
+const leadRequestRateLimiter = createSlidingWindowRateLimiter({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  maxRequests: RATE_LIMIT_MAX_REQUESTS,
+});
 
-function resolveIp(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
+async function resolveSolicitudesAccess() {
+  const context = await resolveAuthenticatedRouteContext({
+    requireOrganization: false,
+    messages: {
+      profileError: "No pudimos validar tus permisos.",
+    },
+  });
 
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? null;
+  if (!canAccessSolicitudes({ email: context.user.email, rol: context.profile.rol })) {
+    throw new AuthRouteAccessError(
+      403,
+      "No tienes permisos para revisar las solicitudes."
+    );
   }
 
-  return request.headers.get("x-real-ip");
+  return {
+    userEmail: context.user.email,
+    organizationId: context.profile.organizationId,
+    canReviewAll: canAccessAllSolicitudes(context.user.email),
+  };
 }
 
-function isRateLimited(ip: string | null) {
-  const key = ip || "unknown";
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW_MS;
-  const recentRequests = (recentRequestsByIp.get(key) ?? []).filter(
-    (timestamp) => timestamp > windowStart
-  );
+async function parsePatchBody(request: Request) {
+  return parseJsonObjectBody<{
+    id?: string;
+    estado?: "nueva" | "contactada" | "cerrada" | "descartada";
+  }>(request);
+}
 
-  if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
-    recentRequestsByIp.set(key, recentRequests);
-    return true;
-  }
-
-  recentRequests.push(now);
-  recentRequestsByIp.set(key, recentRequests);
-  return false;
+async function parseLeadRequestBody(request: Request) {
+  return parseJsonObjectBody<{
+    nombre?: string;
+    empresa?: string;
+    correo?: string;
+    telefono?: string;
+    ayuda?: "demo" | "cotizacion" | "ventas";
+  }>(request);
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
-
-  const { data: perfil, error: perfilError } = await supabase
-    .from("users")
-    .select("rol, organization_id")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
-
-  if (perfilError) {
-    return NextResponse.json(
-      { error: "No pudimos validar tus permisos." },
-      { status: 500 }
-    );
-  }
-
-  if (!perfil || !canAccessSolicitudes({ email: user.email, rol: perfil.rol })) {
-    return NextResponse.json(
-      { error: "No tienes permisos para revisar las solicitudes." },
-      { status: 403 }
-    );
-  }
-
   try {
-    const canReviewAll = canAccessAllSolicitudes(user.email);
-    if (!canReviewAll && !perfil.organization_id) {
+    const access = await resolveSolicitudesAccess();
+
+    if (!access.canReviewAll && !access.organizationId) {
       return NextResponse.json(
-        { error: "No pudimos identificar la organización activa." },
+        { error: "No pudimos identificar la organizacion activa." },
         { status: 403 }
       );
     }
-    const solicitudes = await solicitudesContactoService.listSolicitudesByOrganizationId(
-          perfil.organization_id
+
+    const solicitudes = access.canReviewAll
+      ? await solicitudesContactoService.listSolicitudes()
+      : await solicitudesContactoService.listSolicitudesByOrganizationId(
+          access.organizationId as string | number
         );
 
     return NextResponse.json({ solicitudes });
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     return NextResponse.json(
       { error: "No pudimos cargar las solicitudes." },
       { status: 500 }
@@ -97,47 +97,20 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
-
-  const { data: perfil, error: perfilError } = await supabase
-    .from("users")
-    .select("rol, organization_id")
-    .ilike("correo", user.email ?? "")
-    .is("eliminado_en", null)
-    .maybeSingle();
-
-  if (perfilError) {
-    return NextResponse.json(
-      { error: "No pudimos validar tus permisos." },
-      { status: 500 }
-    );
-  }
-
-  if (!perfil || !canAccessSolicitudes({ email: user.email, rol: perfil.rol })) {
-    return NextResponse.json(
-      { error: "No tienes permisos para actualizar solicitudes." },
-      { status: 403 }
-    );
-  }
-
   try {
-    const body = (await request.json()) as {
-      id?: string;
-      estado?: "nueva" | "contactada" | "cerrada" | "descartada";
-    };
+    const access = await resolveSolicitudesAccess();
+    const body = await parsePatchBody(request);
 
-    const canReviewAll = canAccessAllSolicitudes(user.email);
-
-    if (!canReviewAll && !perfil.organization_id) {
+    if (!body) {
       return NextResponse.json(
-        { error: "No pudimos identificar la organización activa." },
+        { error: "La solicitud no tiene un formato valido." },
+        { status: 400 }
+      );
+    }
+
+    if (!access.canReviewAll && !access.organizationId) {
+      return NextResponse.json(
+        { error: "No pudimos identificar la organizacion activa." },
         { status: 403 }
       );
     }
@@ -145,11 +118,20 @@ export async function PATCH(request: Request) {
     const solicitud = await solicitudesContactoService.updateSolicitudStatus({
       id: body.id ?? "",
       estado: body.estado ?? "nueva",
-      organizationId: canReviewAll ? undefined : perfil.organization_id,
+      organizationId: access.canReviewAll ? undefined : access.organizationId,
     });
 
     return NextResponse.json({ solicitud });
   } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      const message =
+        error.message === "No tienes permisos para revisar las solicitudes."
+          ? "No tienes permisos para actualizar solicitudes."
+          : error.message;
+
+      return NextResponse.json({ error: message }, { status: error.status });
+    }
+
     if (error instanceof SolicitudContactoValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
@@ -162,9 +144,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const ip = resolveIp(request);
+  const ip = resolveRequestIp(request);
 
-  if (isRateLimited(ip)) {
+  if (leadRequestRateLimiter.isRateLimited(ip)) {
     return NextResponse.json(
       { error: "Recibimos demasiadas solicitudes. Intenta nuevamente en unos minutos." },
       { status: 429 }
@@ -172,13 +154,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as {
-      nombre?: string;
-      empresa?: string;
-      correo?: string;
-      telefono?: string;
-      ayuda?: "demo" | "cotizacion" | "ventas";
-    };
+    const body = await parseLeadRequestBody(request);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "La solicitud no tiene un formato valido." },
+        { status: 400 }
+      );
+    }
 
     const solicitud = await solicitudesContactoService.createSolicitud({
       nombre: body.nombre ?? "",

@@ -9,6 +9,7 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const shouldRenderVercelInsights = process.env.VERCEL === "1";
 
 export const metadata: Metadata = {
   title: {
@@ -53,8 +54,8 @@ export default function RootLayout({
         <RegisterServiceWorker />
         <InstallAppPrompt />
         {children}
-        <Analytics />
-        <SpeedInsights />
+        {shouldRenderVercelInsights ? <Analytics /> : null}
+        {shouldRenderVercelInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

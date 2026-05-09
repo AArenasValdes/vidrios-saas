@@ -10,8 +10,8 @@ Fecha de generación: 2026-05-06.
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
 **Total tablas con RLS habilitado:** 22
-**Total tablas con policies definidas:** 17
-**Total tablas con RLS habilitado pero sin policies:** 5  
+**Total tablas con policies definidas:** 18
+**Total tablas con RLS habilitado pero sin policies:** 4  
 **Función de aislamiento principal:** `get_org_id()`
 
 ---
@@ -168,6 +168,18 @@ Lectura pública: Se usa admin client (`createAdminClient`) en el server reposit
 - `anon` puede insertar leads públicos.
 - `authenticated` puede ver y actualizar leads de su org.
 
+### 18. `web_push_subscriptions`
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `web_push_subscriptions_select_own` | SELECT | `organization_id = get_org_id()` y `auth_user_id = auth.uid()` | — | `authenticated` |
+| `web_push_subscriptions_insert_own` | INSERT | — | `organization_id = get_org_id()` y `auth_user_id = auth.uid()` | `authenticated` |
+| `web_push_subscriptions_update_own` | UPDATE | `organization_id = get_org_id()` y `auth_user_id = auth.uid()` | `organization_id = get_org_id()` y `auth_user_id = auth.uid()` | `authenticated` |
+
+Nota:
+- El flujo server-side actual sigue usando `service_role` para notificar y desactivar endpoints inválidos.
+- Las policies nuevas dejan consistente el acceso directo autenticado por organización y usuario.
+
 ---
 
 ## Tablas con RLS habilitado pero sin policies
@@ -180,7 +192,6 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 | `formula_variables` | No accesible desde cliente |
 | `material_types` | No accesible desde cliente |
 | `quote_item_breakdown` | No accesible desde cliente |
-| `web_push_subscriptions` | Bloquea registro/lectura de suscripciones push |
 
 ---
 
@@ -188,12 +199,12 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 
 | Mecanismo | Tablas |
 |---|---|
-| `get_org_id()` directo | `clients`, `cotizaciones`, `cotizacion_items`, `projects`, `users`, `materials`, `historial_precios`, `organizations`, `labor_costs`, `solicitudes_contacto` |
+| `get_org_id()` directo | `clients`, `cotizaciones`, `cotizacion_items`, `projects`, `users`, `materials`, `historial_precios`, `organizations`, `labor_costs`, `solicitudes_contacto`, `web_push_subscriptions` |
 | `get_org_id()` + nullable | `system_configurations`, `system_lines` |
 | Subquery directa a `users` | `organization_profile`, `public_landing_gallery` |
 | Subquery cruzada | `configuration_materials`, `line_glass_compatibility` |
 | Público total | `product_types` |
-| Sin policies | `cotizacion_code_counters`, `formula_variables`, `material_types`, `quote_item_breakdown`, `web_push_subscriptions` |
+| Sin policies | `cotizacion_code_counters`, `formula_variables`, `material_types`, `quote_item_breakdown` |
 
 ---
 
@@ -201,14 +212,13 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 
 ### Críticos
 
-1. **`web_push_subscriptions` sin policies:** El cliente no puede registrar ni consultar suscripciones push.
-2. **`quote_item_breakdown` sin policies:** Breakdown no visible desde app si se necesita en UI.
+1. **`quote_item_breakdown` sin policies:** Breakdown no visible desde app si se necesita en UI.
 
 ### Altos
 
-3. **`material_types` sin policies:** Si la UI depende de catálogo de tipos, falla.
-4. **`formula_variables` sin policies:** Si alguna UI requiere lectura directa, falla.
-5. **Sin diferenciación por rol en tablas operativas:** `admin`, `tecnico` y `viewer` comparten mismo nivel de acceso por org.
+2. **`material_types` sin policies:** Si la UI depende de catálogo de tipos, falla.
+3. **`formula_variables` sin policies:** Si alguna UI requiere lectura directa, falla.
+4. **Sin diferenciación por rol en tablas operativas:** `admin`, `tecnico` y `viewer` comparten mismo nivel de acceso por org.
 
 ### Moderados
 
