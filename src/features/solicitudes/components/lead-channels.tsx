@@ -1,17 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import QRCode from "react-qr-code";
 import {
   LuCheck,
   LuCopy,
   LuDownload,
+  LuExternalLink,
   LuFacebook,
   LuInstagram,
   LuLink,
   LuMessageCircle,
   LuQrCode,
-  LuScanLine,
+  LuShare2,
 } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -20,72 +22,95 @@ import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import s from "./lead-channels.module.css";
 
 type ChannelDefinition = {
-  id: string;
+  id: "direct" | "instagram" | "facebook" | "whatsapp";
   label: string;
   description: string;
+  quickLabel: string;
+  quickDescription: string;
   utmSource: string;
   utmMedium: string;
   origin: string;
   icon: typeof LuLink;
 };
 
+type DetailsState =
+  | null
+  | {
+      title: string;
+      url: string;
+      helper: string;
+    };
+
+const CHANNELS: ChannelDefinition[] = [
+  {
+    id: "direct",
+    label: "Link directo",
+    description: "Para compartir donde quieras.",
+    quickLabel: "Link",
+    quickDescription: "Copiar o compartir",
+    utmSource: "link_directo",
+    utmMedium: "web",
+    origin: "link_directo",
+    icon: LuLink,
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    description: "Enviar a clientes",
+    quickLabel: "WhatsApp",
+    quickDescription: "Enviar a clientes",
+    utmSource: "whatsapp",
+    utmMedium: "mensaje",
+    origin: "whatsapp",
+    icon: LuMessageCircle,
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    description: "Bio o historias",
+    quickLabel: "Instagram",
+    quickDescription: "Bio o historias",
+    utmSource: "instagram",
+    utmMedium: "bio",
+    origin: "instagram",
+    icon: LuInstagram,
+  },
+  {
+    id: "facebook",
+    label: "Facebook",
+    description: "Perfil o posts",
+    quickLabel: "Facebook",
+    quickDescription: "Perfil o posts",
+    utmSource: "facebook",
+    utmMedium: "perfil",
+    origin: "facebook",
+    icon: LuFacebook,
+  },
+] as const;
+
+const QUICK_ACTIONS = [
+  { id: "whatsapp", label: "WhatsApp", description: "Enviar a clientes", icon: LuMessageCircle },
+  { id: "instagram", label: "Instagram", description: "Bio o historias", icon: LuInstagram },
+  { id: "facebook", label: "Facebook", description: "Perfil o posts", icon: LuFacebook },
+  { id: "qr", label: "QR", description: "Imprimir o pegar", icon: LuQrCode },
+] as const;
+
+function getDisplayUrl(baseUrl: string, slug: string) {
+  try {
+    const host = new URL(baseUrl).host;
+    return `${host}/solicitud/${slug}`;
+  } catch {
+    return `${baseUrl.replace(/\/$/, "")}/solicitud/${slug}`;
+  }
+}
+
 export function LeadChannels() {
   const { profile, isReady } = useOrganizationProfile();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [details, setDetails] = useState<DetailsState>(null);
 
   const slug = profile?.solicitudPublicaSlug;
   const baseUrl = resolvePublicAppUrl();
-
-  const channels = useMemo<ChannelDefinition[]>(
-    () => [
-      {
-        id: "direct",
-        label: "Link directo",
-        description: "Comparte este enlace donde quieras.",
-        utmSource: "link_directo",
-        utmMedium: "web",
-        origin: "link_directo",
-        icon: LuLink,
-      },
-      {
-        id: "instagram",
-        label: "Instagram",
-        description: "Listo para bio o historias destacadas.",
-        utmSource: "instagram",
-        utmMedium: "bio",
-        origin: "instagram",
-        icon: LuInstagram,
-      },
-      {
-        id: "facebook",
-        label: "Facebook",
-        description: "Pensado para perfil o publicaciones.",
-        utmSource: "facebook",
-        utmMedium: "perfil",
-        origin: "facebook",
-        icon: LuFacebook,
-      },
-      {
-        id: "whatsapp",
-        label: "WhatsApp",
-        description: "Util para respuestas rapidas, estado o mensaje.",
-        utmSource: "whatsapp",
-        utmMedium: "mensaje",
-        origin: "whatsapp",
-        icon: LuMessageCircle,
-      },
-      {
-        id: "qr",
-        label: "QR fisico",
-        description: "Ideal para camioneta, tarjeta o letrero.",
-        utmSource: "qr",
-        utmMedium: "offline",
-        origin: "qr",
-        icon: LuQrCode,
-      },
-    ],
-    []
-  );
 
   const buildUrl = useCallback(
     (channel: Pick<ChannelDefinition, "origin" | "utmMedium" | "utmSource">) => {
@@ -102,6 +127,26 @@ export function LeadChannels() {
     [baseUrl, slug]
   );
 
+  const directUrl = useMemo(
+    () =>
+      buildUrl({
+        origin: "link_directo",
+        utmSource: "link_directo",
+        utmMedium: "web",
+      }),
+    [buildUrl]
+  );
+
+  const qrUrl = useMemo(
+    () =>
+      buildUrl({
+        origin: "qr",
+        utmSource: "qr",
+        utmMedium: "offline",
+      }),
+    [buildUrl]
+  );
+
   const handleCopy = useCallback(async (id: string, url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -113,6 +158,22 @@ export function LeadChannels() {
       return;
     }
   }, []);
+
+  const handleShare = useCallback(
+    async (id: string, title: string, text: string, url: string) => {
+      try {
+        if (typeof navigator !== "undefined" && navigator.share) {
+          await navigator.share({ title, text, url });
+          return;
+        }
+      } catch {
+        return;
+      }
+
+      await handleCopy(id, url);
+    },
+    [handleCopy]
+  );
 
   const handleDownloadQR = useCallback(
     (url: string) => {
@@ -158,85 +219,292 @@ export function LeadChannels() {
     [slug]
   );
 
+  const handleWhatsappShare = useCallback((url: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const text = encodeURIComponent(
+      `Hola, aquí te dejo mi página para que me envíes tu solicitud: ${url}`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const openExternal = useCallback((href: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.open(href, "_blank", "noopener,noreferrer");
+  }, []);
+
   if (!isReady || !slug) {
-    return <div className={s.loading}>Cargando configuracion de captacion...</div>;
+    return <div className={s.loading}>Cargando tu página pública...</div>;
   }
 
-  const qrChannel = channels.find((channel) => channel.id === "qr");
-  const qrUrl = qrChannel ? buildUrl(qrChannel) : "";
+  const displayUrl = getDisplayUrl(baseUrl, slug);
 
   return (
     <div className={s.root}>
-      <section className={s.overviewCard}>
-        <div className={s.overviewTop}>
-          <div className={s.overviewCopy}>
-            <span className={s.sectionLabel}>Base comercial activa</span>
+      <section className={s.publicCard}>
+        <div className={s.publicTop}>
+          <div className={s.publicCopy}>
+            <span className={s.sectionLabel}>Tu página pública</span>
             <strong>{profile?.empresaNombre || "Tu empresa"}</strong>
-            <p>
-              Todos los links usan tu pagina publica y dejan origen marcado para
-              que la solicitud llegue ordenada al inbox comercial.
-            </p>
+            <div className={s.publicMetaRow}>
+              <span className={s.statusPill}>
+                <LuCheck aria-hidden />
+                Publicada
+              </span>
+              <span className={s.urlPill}>{displayUrl}</span>
+            </div>
           </div>
-          <div className={s.slugBadge}>/{slug}</div>
         </div>
 
-        <div className={s.overviewGrid}>
-          <div className={s.infoCard}>
-            <span className={s.infoLabel}>Link base</span>
-            <code className={s.infoValue}>{`${baseUrl}/solicitud/${slug}`}</code>
-          </div>
-          <div className={s.infoCard}>
-            <span className={s.infoLabel}>Tracking</span>
-            <code className={s.infoValue}>origen + utm_source + utm_medium</code>
-          </div>
+        <div className={s.publicActions}>
+          <button
+            type="button"
+            className={s.primaryAction}
+            onClick={() =>
+              void handleShare(
+                "page-share",
+                "Tu página pública",
+                "Te comparto mi página para que me envíes tu solicitud.",
+                directUrl
+              )
+            }
+          >
+            <LuShare2 aria-hidden />
+            Compartir
+          </button>
+          <button
+            type="button"
+            className={s.secondaryAction}
+            onClick={() => void handleCopy("page-copy", directUrl)}
+          >
+            {copiedId === "page-copy" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+            {copiedId === "page-copy" ? "Copiado" : "Copiar link"}
+          </button>
+        </div>
+
+        <div className={s.publicLinks}>
+          <Link href="/configuracion/empresa" className={s.inlineLink}>
+            Editar página
+          </Link>
+          <button
+            type="button"
+            className={s.inlineLink}
+            onClick={() =>
+              setDetails({
+                title: "Tu página pública",
+                url: directUrl,
+                helper: "Este es el enlace general para compartir donde quieras.",
+              })
+            }
+          >
+            Ver enlace completo
+          </button>
         </div>
       </section>
 
-      <section className={s.channelsSection}>
-        <div className={s.channelsHeader}>
-          <div>
-            <span className={s.sectionLabel}>Links por canal</span>
-            <h2 className={s.sectionTitle}>Comparte segun contexto real</h2>
-          </div>
-          <p className={s.sectionText}>
-            Cada boton copia URL completa lista para pegar y medir.
-          </p>
+      <section className={s.trackingCard}>
+        <LuCheck aria-hidden />
+        <span>Tracking activo: cada solicitud queda marcada según el canal.</span>
+      </section>
+
+      <section className={s.quickSection}>
+        <div className={s.sectionIntro}>
+          <span className={s.sectionLabel}>Acciones rápidas</span>
+          <h2 className={s.sectionTitle}>Elige dónde la vas a mover</h2>
         </div>
 
-        <div className={s.channelsGrid}>
-          {channels.map((channel) => {
+        <div className={s.quickGrid}>
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+
+            return (
+              <button
+                key={action.id}
+                type="button"
+                className={s.quickCard}
+                onClick={() => {
+                  if (action.id === "qr") {
+                    document.getElementById("qr-imprimir")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                    return;
+                  }
+
+                  const channel = CHANNELS.find((item) => item.id === action.id);
+
+                  if (!channel) {
+                    return;
+                  }
+
+                  const url = buildUrl(channel);
+
+                  if (channel.id === "whatsapp") {
+                    handleWhatsappShare(url);
+                    return;
+                  }
+
+                  void handleCopy(`quick-${channel.id}`, url);
+                }}
+              >
+                <span className={s.quickIconWrap}>
+                  <Icon aria-hidden />
+                </span>
+                <span className={s.quickCardCopy}>
+                  <strong>{action.label}</strong>
+                  <span>{action.description}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={s.digitalSection}>
+        <div className={s.sectionIntro}>
+          <span className={s.sectionLabel}>Canales digitales</span>
+          <h2 className={s.sectionTitle}>Copiar, compartir y usar</h2>
+        </div>
+
+        <div className={s.channelList}>
+          {CHANNELS.map((channel) => {
             const url = buildUrl(channel);
             const Icon = channel.icon;
             const isCopied = copiedId === channel.id;
+            const isInstagram = channel.id === "instagram";
+            const isFacebook = channel.id === "facebook";
+            const isWhatsapp = channel.id === "whatsapp";
+            const isDirect = channel.id === "direct";
 
             return (
               <article key={channel.id} className={s.channelCard}>
-                <div className={s.channelHeader}>
+                <div className={s.channelMain}>
                   <div className={s.channelIconWrap}>
                     <Icon className={s.channelIcon} aria-hidden />
                   </div>
                   <div className={s.channelCopy}>
-                    <div className={s.channelTopRow}>
-                      <h3 className={s.channelLabel}>{channel.label}</h3>
-                      <span className={s.originBadge}>origen={channel.origin}</span>
-                    </div>
+                    <h3 className={s.channelLabel}>{channel.label}</h3>
                     <p className={s.channelDescription}>{channel.description}</p>
                   </div>
                 </div>
 
-                <div className={s.linkBox}>
-                  <span className={s.linkLabel}>Link listo</span>
-                  <code className={s.linkValue}>{url}</code>
+                <div className={s.channelActions}>
+                  {isDirect ? (
+                    <>
+                      <button
+                        type="button"
+                        className={s.primaryAction}
+                        onClick={() =>
+                          void handleShare(
+                            "direct-share",
+                            "Tu página pública",
+                            "Te comparto mi página para que me envíes tu solicitud.",
+                            url
+                          )
+                        }
+                      >
+                        <LuShare2 aria-hidden />
+                        Compartir
+                      </button>
+                      <button
+                        type="button"
+                        className={s.secondaryAction}
+                        onClick={() => void handleCopy(channel.id, url)}
+                      >
+                        {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                        {isCopied ? "Copiado" : "Copiar link"}
+                      </button>
+                    </>
+                  ) : null}
+
+                  {isWhatsapp ? (
+                    <>
+                      <button
+                        type="button"
+                        className={s.primaryAction}
+                        onClick={() => handleWhatsappShare(url)}
+                      >
+                        <LuMessageCircle aria-hidden />
+                        Compartir por WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        className={s.secondaryAction}
+                        onClick={() => void handleCopy(channel.id, url)}
+                      >
+                        {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                        {isCopied ? "Copiado" : "Copiar link"}
+                      </button>
+                    </>
+                  ) : null}
+
+                  {isInstagram ? (
+                    <>
+                      <button
+                        type="button"
+                        className={s.primaryAction}
+                        onClick={() => void handleCopy(channel.id, url)}
+                      >
+                        {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                        {isCopied ? "Copiado" : "Copiar para Instagram"}
+                      </button>
+                      <button
+                        type="button"
+                        className={s.secondaryAction}
+                        onClick={() => openExternal("https://www.instagram.com/")}
+                      >
+                        <LuExternalLink aria-hidden />
+                        Abrir Instagram
+                      </button>
+                    </>
+                  ) : null}
+
+                  {isFacebook ? (
+                    <>
+                      <button
+                        type="button"
+                        className={s.primaryAction}
+                        onClick={() => void handleCopy(channel.id, url)}
+                      >
+                        {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                        {isCopied ? "Copiado" : "Copiar para Facebook"}
+                      </button>
+                      <button
+                        type="button"
+                        className={s.secondaryAction}
+                        onClick={() => openExternal("https://www.facebook.com/")}
+                      >
+                        <LuExternalLink aria-hidden />
+                        Abrir Facebook
+                      </button>
+                    </>
+                  ) : null}
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => void handleCopy(channel.id, url)}
-                  className={s.copyButton}
-                  aria-label={`Copiar link de ${channel.label}`}
+                  className={s.inlineLink}
+                  onClick={() =>
+                    setDetails({
+                      title: channel.label,
+                      url,
+                      helper:
+                        channel.id === "instagram"
+                          ? "Pégalo en tu bio o en una historia destacada."
+                          : channel.id === "facebook"
+                            ? "Úsalo en perfil, publicación o botón."
+                            : channel.id === "whatsapp"
+                              ? "Sirve para estado, respuesta rápida o mensaje."
+                              : "Compártelo donde quieras.",
+                    })
+                  }
                 >
-                  {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                  {isCopied ? "Copiado" : "Copiar link"}
+                  Ver detalles
                 </button>
               </article>
             );
@@ -244,61 +512,97 @@ export function LeadChannels() {
         </div>
       </section>
 
-      {qrChannel ? (
-        <section className={s.qrCard}>
-          <div className={s.qrBody}>
-            <div className={s.qrCopy}>
-              <span className={s.sectionLabel}>QR listo para imprimir</span>
-              <h2 className={s.sectionTitle}>Captacion offline con tracking real</h2>
-              <p className={s.sectionText}>
-                Este QR abre tu landing con <code>origen=qr</code> y{" "}
-                <code>utm_source=qr</code> para medir tarjeta, camioneta, vitrina
-                o letrero.
-              </p>
+      <section className={s.qrCard} id="qr-imprimir">
+        <div className={s.qrCopy}>
+          <span className={s.sectionLabel}>QR para imprimir</span>
+          <h2 className={s.sectionTitle}>Úsalo en tarjeta, vitrina o camioneta</h2>
+          <p className={s.sectionText}>Descárgalo y compártelo donde tus clientes te vean.</p>
+        </div>
 
-              <div className={s.qrHints}>
-                <div className={s.qrHint}>
-                  <LuScanLine aria-hidden />
-                  <span>Usa PNG nuevo cada vez que cambies slug o dominio.</span>
-                </div>
-                <div className={s.qrHint}>
-                  <LuLink aria-hidden />
-                  <span>Si compartes QR, no pierdes origen en solicitudes.</span>
-                </div>
-              </div>
+        <div className={s.qrPreviewWrap}>
+          <div className={s.qrPreview}>
+            <QRCode
+              value={qrUrl}
+              size={208}
+              data-qr-url={qrUrl}
+              style={{ maxWidth: "100%", height: "auto" }}
+            />
+          </div>
+        </div>
 
-              <div className={s.qrActions}>
-                <button
-                  type="button"
-                  onClick={() => void handleCopy("qr", qrUrl)}
-                  className={s.secondaryAction}
-                >
-                  {copiedId === "qr" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                  {copiedId === "qr" ? "Copiado" : "Copiar link QR"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDownloadQR(qrUrl)}
-                  className={s.primaryAction}
-                >
-                  <LuDownload aria-hidden />
-                  Descargar QR PNG
-                </button>
-              </div>
+        <div className={s.qrActions}>
+          <button
+            type="button"
+            onClick={() => handleDownloadQR(qrUrl)}
+            className={s.primaryAction}
+          >
+            <LuDownload aria-hidden />
+            Descargar PNG
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              void handleShare(
+                "qr-share",
+                "QR para tus solicitudes",
+                "Te comparto el enlace de mi QR para que me envíes una solicitud.",
+                qrUrl
+              )
+            }
+            className={s.secondaryAction}
+          >
+            <LuShare2 aria-hidden />
+            Compartir QR
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className={s.inlineLink}
+          onClick={() => void handleCopy("qr-link", qrUrl)}
+        >
+          {copiedId === "qr-link" ? "Copiado" : "Copiar link QR"}
+        </button>
+      </section>
+
+      {details ? (
+        <div className={s.sheetBackdrop} role="presentation" onClick={() => setDetails(null)}>
+          <div
+            className={s.sheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detalle-enlace"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={s.sheetHandle} aria-hidden />
+            <div className={s.sheetCopy}>
+              <span className={s.sectionLabel}>Detalle del enlace</span>
+              <h3 id="detalle-enlace" className={s.sheetTitle}>
+                {details.title}
+              </h3>
+              <p className={s.sheetHelper}>{details.helper}</p>
+              <code className={s.sheetUrl}>{details.url}</code>
             </div>
 
-            <div className={s.qrPreviewWrap}>
-              <div className={s.qrPreview}>
-                <QRCode
-                  value={qrUrl}
-                  size={208}
-                  data-qr-url={qrUrl}
-                  style={{ maxWidth: "100%", height: "auto" }}
-                />
-              </div>
+            <div className={s.sheetActions}>
+              <button
+                type="button"
+                className={s.primaryAction}
+                onClick={() => void handleCopy("details", details.url)}
+              >
+                {copiedId === "details" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                {copiedId === "details" ? "Copiado" : "Copiar enlace"}
+              </button>
+              <button
+                type="button"
+                className={s.secondaryAction}
+                onClick={() => setDetails(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
-        </section>
+        </div>
       ) : null}
     </div>
   );

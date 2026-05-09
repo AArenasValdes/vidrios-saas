@@ -59,6 +59,26 @@ function limitText(value: string, maxLength: number) {
   return value.slice(0, maxLength);
 }
 
+function normalizeOptionalUrl(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const trimmed = limitText(value.trim(), FIELD_LIMITS.sourceUrl);
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Clase error                                                        */
 /* ------------------------------------------------------------------ */
@@ -161,9 +181,7 @@ export function createSolicitudesContactoService(
         utmCampaign: input.utmCampaign?.trim()
           ? limitText(normalizeText(input.utmCampaign), FIELD_LIMITS.utmCampaign)
           : null,
-        sourceUrl: input.sourceUrl?.trim()
-          ? limitText(input.sourceUrl.trim(), FIELD_LIMITS.sourceUrl)
-          : null,
+        sourceUrl: normalizeOptionalUrl(input.sourceUrl),
       });
     },
 
@@ -212,9 +230,7 @@ export function createSolicitudesContactoService(
         utmCampaign: input.utmCampaign?.trim()
           ? limitText(normalizeText(input.utmCampaign), FIELD_LIMITS.utmCampaign)
           : null,
-        sourceUrl: input.sourceUrl?.trim()
-          ? limitText(input.sourceUrl.trim(), FIELD_LIMITS.sourceUrl)
-          : null,
+        sourceUrl: normalizeOptionalUrl(input.sourceUrl),
       });
 
       // Notificar al vendedor (async, no bloquea)

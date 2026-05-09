@@ -34,8 +34,9 @@ Estas tablas no dependen de nada. Se cargan primero.
 | Orden | Tabla | PK | Depende de | Nota |
 |---|---|---|---|---|
 | 5 | `organization_profile` | organization_id (FK) | organizations | 1:1 con organizations. ON DELETE CASCADE. |
-| 6 | `system_lines` | bigint | organizations (inferida) | `organization_id` nullable. Las líneas globales van sin org_id. |
-| 7 | `materials` | bigint IDENTITY | organizations, material_types | `material_type_id` es nullable. |
+| 6 | `public_landing_gallery` | bigint IDENTITY | organizations, organization_profile | Galería de fotos para landing. ON DELETE CASCADE en ambas FKs. |
+| 7 | `system_lines` | bigint | organizations (inferida) | `organization_id` nullable. Las líneas globales van sin org_id. |
+| 8 | `materials` | bigint IDENTITY | organizations, material_types | `material_type_id` es nullable. |
 
 ### Nivel 3 — Configuraciones técnicas (dependen de system_lines + product_types)
 
@@ -71,6 +72,7 @@ Estas tablas no dependen de nada. Se cargan primero.
 | 20 | `solicitudes_contacto` | uuid | organizations (nullable) | Leads. `organization_id` puede ser null (leads de landing global). |
 | 21 | `web_push_subscriptions` | bigint IDENTITY | organizations (inferida), auth.users (inferida) | Suscripciones push. Sin FK formales. |
 | 22 | `cotizacion_code_counters` | (organization_id, quote_date) | organizations (inferida) | Contadores. Se genera automáticamente via `reserve_next_cotizacion_code()`. |
+| 23 | `public_landing_gallery` | bigint IDENTITY | organizations, organization_profile | Galería landing. ON DELETE CASCADE en ambas FKs. |
 
 ---
 
@@ -82,8 +84,9 @@ auth.users
               └── historial_precios
 
 organizations
-  ├── organization_profile
-  ├── users
+├── organization_profile
+│   └── public_landing_gallery
+├── users
   ├── clients
   │     └── projects
   │           └── cotizaciones

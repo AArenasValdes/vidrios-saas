@@ -11,7 +11,11 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    ".kilo/**",
+    ".jest-cache/**",
     "next-env.d.ts",
+    "caveman/**",
+    "supabase/docs/database.types.ts",
   ]),
 ]);
 

@@ -10,10 +10,13 @@ import {
   LuMapPin,
   LuMessageCircleMore,
   LuShieldCheck,
+  LuStar,
 } from "react-icons/lu";
 
+import { getPublicGalleryByOrganizationId } from "@/features/landing-gallery/repositories/landing-gallery-server.repository";
 import {
   formatDiasAtencionLabel,
+  formatHorarioPorDiaLabel,
   hexToRgbChannels,
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
@@ -49,7 +52,7 @@ type StepItem = {
 
 const STEPS: StepItem[] = [
   { title: "Elige", copy: "tu trabajo" },
-  { title: "Envía", copy: "tus datos" },
+  { title: "Envia", copy: "tus datos" },
   { title: "Te contactan", copy: "por WhatsApp" },
 ] as const;
 
@@ -104,6 +107,7 @@ export default async function SolicitudEmpresaPage({
   }
 
   const isAvailable = isOrganizationOpenAtDate({
+    schedule: config.solicitudPublicaHorarioPorDia,
     days: config.solicitudPublicaDiasAtencion,
     from: config.solicitudPublicaHorarioDesde,
     to: config.solicitudPublicaHorarioHasta,
@@ -112,11 +116,69 @@ export default async function SolicitudEmpresaPage({
   const availabilityLabel = isAvailable ? "Activo" : "Fuera de horario";
   const locationLabel = resolveLocationLabel(config.empresaDireccion);
   const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
-  const horarioLabel = `${formatDiasAtencionLabel(
-    config.solicitudPublicaDiasAtencion
-  )} - ${config.solicitudPublicaHorarioDesde} - ${config.solicitudPublicaHorarioHasta}`;
-  const heroImage = PREVIEW_GALLERY[0] ?? null;
-  const galleryImages = PREVIEW_GALLERY.slice(heroImage ? 1 : 0, 6);
+  const horarioLabel = config.solicitudPublicaHorarioPorDia.length
+    ? formatHorarioPorDiaLabel(config.solicitudPublicaHorarioPorDia)
+    : `${formatDiasAtencionLabel(
+        config.solicitudPublicaDiasAtencion
+      )} ${config.solicitudPublicaHorarioDesde}-${config.solicitudPublicaHorarioHasta}`;
+
+  const displayName = config.isPublished && config.publicName
+    ? config.publicName
+    : config.empresaNombre;
+
+  const heroTitle = config.isPublished && config.heroTitle
+    ? config.heroTitle
+    : "Cotiza vidrios y aluminio en menos de 1 minuto";
+
+  const heroSubtitle = config.isPublished && config.heroSubtitle
+    ? config.heroSubtitle
+    : null;
+
+  const heroMode = config.isPublished ? config.heroMode : "gradient";
+  const heroImageUrl = config.isPublished && heroMode === "image" && config.heroImageUrl
+    ? config.heroImageUrl
+    : null;
+
+  const secondaryColor = config.isPublished && config.secondaryColor
+    ? config.secondaryColor
+    : "#25d366";
+
+  const formTitle = config.isPublished && config.formTitle
+    ? config.formTitle
+    : "Deja tu solicitud";
+
+  const formSubtitle = config.isPublished && config.formSubtitle
+    ? config.formSubtitle
+    : null;
+
+  const showGallery = config.isPublished ? config.showGallery : true;
+  const showSchedule = config.isPublished ? config.showSchedule : true;
+  const showRating = config.isPublished ? config.showRating : false;
+
+  let galleryImages: { src: string; label: string }[] = [];
+
+  if (showGallery && config.isPublished) {
+    const realGallery = await getPublicGalleryByOrganizationId(
+      config.organizationId as number
+    );
+
+    if (realGallery.length > 0) {
+      galleryImages = realGallery.map((item) => ({
+        src: item.imageUrl,
+        label: item.label || "",
+      }));
+    } else {
+      galleryImages = PREVIEW_GALLERY.map((img) => ({
+        src: img.src,
+        label: img.label,
+      }));
+    }
+  } else if (showGallery) {
+    galleryImages = PREVIEW_GALLERY.map((img) => ({
+      src: img.src,
+      label: img.label,
+    }));
+  }
 
   return (
     <main
@@ -124,6 +186,7 @@ export default async function SolicitudEmpresaPage({
       style={{
         ["--brand" as string]: config.brandColor,
         ["--brand-rgb" as string]: hexToRgbChannels(config.brandColor),
+        ["--wa" as string]: secondaryColor,
       }}
     >
       <div className={s.shell}>
@@ -146,10 +209,10 @@ export default async function SolicitudEmpresaPage({
 
         <section className={s.heroSection}>
           <article className={s.heroPanel}>
-            {heroImage ? (
+            {heroImageUrl ? (
               <div className={s.heroBackgroundMedia} aria-hidden>
                 <Image
-                  src={heroImage.src}
+                  src={heroImageUrl}
                   alt=""
                   fill
                   className={s.heroBackgroundImage}
@@ -169,19 +232,22 @@ export default async function SolicitudEmpresaPage({
                     <Image
                       className={s.logo}
                       src={config.empresaLogoUrl}
-                      alt={config.empresaNombre}
+                      alt={displayName}
                       width={64}
                       height={64}
                       unoptimized
                     />
                   ) : (
                     <div className={s.logoFallback} aria-hidden>
-                      {getInitials(config.empresaNombre)}
+                      {getInitials(displayName)}
                     </div>
                   )}
 
                   <div className={s.heroIdentityCopy}>
-                    <strong>{config.empresaNombre}</strong>
+                    <strong>{displayName}</strong>
+                    {config.isPublished && config.publicSubtitle ? (
+                      <span className={s.heroSubtitleText}>{config.publicSubtitle}</span>
+                    ) : null}
                   </div>
                 </div>
 
@@ -193,8 +259,11 @@ export default async function SolicitudEmpresaPage({
 
               <div className={s.heroMainCopy}>
                 <h1 className={s.heroTitle}>
-                  Cotiza vidrios y aluminio en menos de 1 minuto
+                  {heroTitle}
                 </h1>
+                {heroSubtitle ? (
+                  <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
+                ) : null}
               </div>
 
               <div className={s.heroActions}>
@@ -211,7 +280,7 @@ export default async function SolicitudEmpresaPage({
                 ) : null}
 
                 <a className={s.secondaryHeroCta} href="#solicitud-rapida">
-                  Dejar solicitud rápida
+                  {formTitle}
                 </a>
               </div>
 
@@ -232,6 +301,22 @@ export default async function SolicitudEmpresaPage({
           </article>
         </section>
 
+        {showRating && config.isPublished && (config.ratingLabel || config.jobsCountLabel) ? (
+          <section className={s.ratingSection}>
+            {config.ratingLabel ? (
+              <div className={s.ratingBadge}>
+                <LuStar aria-hidden />
+                <strong>{config.ratingLabel}</strong>
+              </div>
+            ) : null}
+            {config.jobsCountLabel ? (
+              <div className={s.ratingBadge}>
+                <strong>{config.jobsCountLabel}</strong>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
         {galleryImages.length ? (
           <section className={s.gallerySection} aria-label="Trabajos recientes">
             <div className={s.galleryHeader}>
@@ -240,16 +325,18 @@ export default async function SolicitudEmpresaPage({
 
             <div className={s.galleryRail}>
               {galleryImages.map((image, index) => (
-                <article key={image.src} className={s.galleryCard}>
+                <article key={`${image.src}-${index}`} className={s.galleryCard}>
                   <div className={s.galleryImageWrap}>
                     <Image
                       src={image.src}
-                      alt={`Trabajo reciente ${index + 1}`}
+                      alt={image.label || `Trabajo reciente ${index + 1}`}
                       fill
                       className={s.galleryImage}
                       unoptimized
                     />
-                    <span className={s.galleryTag}>{image.label}</span>
+                    {image.label ? (
+                      <span className={s.galleryTag}>{image.label}</span>
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -259,7 +346,7 @@ export default async function SolicitudEmpresaPage({
 
         <section className={s.mainGrid}>
           <section className={s.sectionCard}>
-            <span className={s.sectionEyebrow}>Cómo funciona</span>
+            <span className={s.sectionEyebrow}>Como funciona</span>
             <div className={s.stepsInline}>
               {STEPS.map((step, index) => (
                 <article key={step.title} className={s.stepMiniCard}>
@@ -273,10 +360,12 @@ export default async function SolicitudEmpresaPage({
             </div>
 
             <div className={s.stepsSupportRow}>
-              <div className={s.stepsSupportItem}>
-                <LuClock3 aria-hidden />
-                <span>{horarioLabel}</span>
-              </div>
+              {showSchedule ? (
+                <div className={s.stepsSupportItem}>
+                  <LuClock3 aria-hidden />
+                  <span>{horarioLabel}</span>
+                </div>
+              ) : null}
               {locationLabel ? (
                 <div className={s.stepsSupportItem}>
                   <LuMapPin aria-hidden />
@@ -302,6 +391,8 @@ export default async function SolicitudEmpresaPage({
               utmCampaign={readString(sp.utm_campaign)}
               sourceUrl={readString(sp.source_url)}
               origin={readString(sp.origen)}
+              formTitle={formTitle}
+              formSubtitle={formSubtitle ?? undefined}
             />
           </section>
         </section>

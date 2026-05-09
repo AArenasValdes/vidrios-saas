@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { useOrganizationProfile } from "../useOrganizationProfile";
 import type { AuthUserState } from "@/types/auth";
-import type { OrganizationProfile } from "@/types/organization-profile";
+import type { OrganizationProfile } from "@/features/organization-profile/types/organization-profile";
 
 let authState: AuthUserState = {
   user: null,
@@ -54,9 +54,26 @@ function createProfile(
     proveedorPreferido: "",
     modoPrecioPreferido: "margen",
     margenDefecto: 100,
-    creadoEn: "2026-03-27T10:00:00Z",
-    actualizadoEn: "2026-03-27T10:00:00Z",
-  };
+ creadoEn: "2026-03-27T10:00:00Z",
+ actualizadoEn: "2026-03-27T10:00:00Z",
+ publicName: "",
+ publicSubtitle: "",
+ publicZone: "",
+ publicBusinessType: "",
+ secondaryColor: "#25d366",
+ heroMode: "gradient",
+ heroImageUrl: null,
+ heroTitle: "Cotiza vidrios y aluminio en menos de 1 minuto",
+ heroSubtitle: "",
+ showGallery: true,
+ showSchedule: true,
+ showRating: false,
+ ratingLabel: "",
+ jobsCountLabel: "",
+ formTitle: "Deja tu solicitud",
+ formSubtitle: "Cuentanos que necesitas y te contactamos por WhatsApp",
+ isPublished: false,
+ };
 }
 
 function ProbeOrganizationProfile() {

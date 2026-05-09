@@ -44,6 +44,7 @@ function readAuthProfileFromStorage(email: string) {
     }
 
     const { _cachedAt, ...profile } = cached;
+    void _cachedAt;
     return profile as AuthProfile;
   } catch {
     return null;

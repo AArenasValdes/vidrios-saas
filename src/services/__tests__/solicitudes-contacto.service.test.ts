@@ -185,6 +185,26 @@ describe("solicitudes-contacto.service", () => {
     expect(saved?.userAgent).toHaveLength(240);
   });
 
+  it("debe descartar sourceUrl con protocolos no permitidos", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const service = createSolicitudesContactoService({ repository });
+
+    await service.createSolicitud({
+      nombre: "Juan Perez",
+      empresa: "Vidrios Sur",
+      correo: "juan@empresa.cl",
+      telefono: "987654321",
+      ayuda: "demo",
+      sourceUrl: "javascript:alert('xss')",
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceUrl: null,
+      })
+    );
+  });
+
   it("debe rechazar ayudas fuera del catalogo", async () => {
     const service = createSolicitudesContactoService({
       repository: createSolicitudesContactoRepositoryMock(),

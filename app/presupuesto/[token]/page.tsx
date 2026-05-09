@@ -53,14 +53,8 @@ export default async function PresupuestoPublicoPage({
     ]);
     quote = resolvedQuote;
   } catch (error) {
-    if (error instanceof Error) {
-      loadError = error.message;
-    } else if (error && typeof error === "object" && "message" in error) {
-      const message = (error as { message?: unknown }).message;
-      loadError = typeof message === "string" ? message : "No se pudo abrir este presupuesto.";
-    } else {
-      loadError = "No se pudo abrir este presupuesto.";
-    }
+    console.error("No pudimos resolver el presupuesto publico.", error);
+    loadError = "No pudimos validar este presupuesto en este momento.";
   }
 
   if (loadError) {

@@ -57,6 +57,7 @@ describe("web-push-notifications.service", () => {
 
     const service = createWebPushNotificationsService({
       repository,
+      validateMembership: async () => undefined,
     });
 
     await service.registerSubscription(subscription, {
@@ -86,6 +87,7 @@ describe("web-push-notifications.service", () => {
 
     const service = createWebPushNotificationsService({
       repository,
+      validateMembership: async () => undefined,
     });
 
     const result = await service.sendQuoteDecisionPush({

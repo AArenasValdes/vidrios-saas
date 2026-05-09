@@ -32,6 +32,8 @@ type Props = {
   utmCampaign?: string;
   sourceUrl?: string;
   origin?: string;
+  formTitle?: string;
+  formSubtitle?: string;
 };
 
 type FormState = {
@@ -187,6 +189,8 @@ export function SolicitudEmpresaForm({
   utmCampaign,
   sourceUrl,
   origin,
+  formTitle,
+  formSubtitle,
 }: Props) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -400,10 +404,13 @@ export function SolicitudEmpresaForm({
 
   return (
     <section id="solicitud-rapida" className={s.formCard} ref={sectionRef}>
-      <div className={s.formIntro}>
-        <span className={s.sectionEyebrow}>Solicitud rapida</span>
-        <h2 className={s.formTitle}>Cuentanos que necesitas</h2>
-      </div>
+    <div className={s.formIntro}>
+      <span className={s.sectionEyebrow}>Solicitud rapida</span>
+      <h2 className={s.formTitle}>{formTitle ?? "Cuentanos que necesitas"}</h2>
+      {formSubtitle ? (
+        <p className={s.formSubtitle}>{formSubtitle}</p>
+      ) : null}
+    </div>
 
       <form className={s.form} onSubmit={handleSubmit}>
         <label className={s.field}>

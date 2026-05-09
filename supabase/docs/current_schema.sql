@@ -648,27 +648,45 @@ ALTER TABLE "public"."materials" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENT
 
 
 CREATE TABLE IF NOT EXISTS "public"."organization_profile" (
-    "organization_id" bigint NOT NULL,
-    "empresa_nombre" "text",
-    "empresa_logo_url" "text",
-    "empresa_direccion" "text",
-    "empresa_telefono" "text",
-    "empresa_email" "text",
-    "brand_color" "text" DEFAULT '#1a3a5c'::"text" NOT NULL,
-    "forma_pago" "text",
-    "creado_en" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    "actualizado_en" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    "proveedor_preferido" "text",
-    "modo_precio_preferido" "text" DEFAULT 'margen'::"text" NOT NULL,
-    "margen_defecto" numeric DEFAULT 100,
-    "solicitud_publica_slug" "text",
-    "solicitud_publica_descripcion_corta" "text",
-    "solicitud_publica_valor" "text",
-    "solicitud_publica_mensaje_confianza" "text",
-    "solicitud_publica_privacidad" "text",
-    "solicitud_publica_horario_desde" "text",
-    "solicitud_publica_horario_hasta" "text",
-    "solicitud_publica_dias_atencion" "text"
+  "organization_id" bigint NOT NULL,
+  "empresa_nombre" "text",
+  "empresa_logo_url" "text",
+  "empresa_direccion" "text",
+  "empresa_telefono" "text",
+  "empresa_email" "text",
+  "brand_color" "text" DEFAULT '#1a3a5c'::"text" NOT NULL,
+  "forma_pago" "text",
+  "creado_en" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+  "actualizado_en" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+  "proveedor_preferido" "text",
+  "modo_precio_preferido" "text" DEFAULT 'margen'::"text" NOT NULL,
+  "margen_defecto" numeric DEFAULT 100,
+  "solicitud_publica_slug" "text",
+  "solicitud_publica_descripcion_corta" "text",
+  "solicitud_publica_valor" "text",
+  "solicitud_publica_mensaje_confianza" "text",
+  "solicitud_publica_privacidad" "text",
+  "solicitud_publica_horario_desde" "text",
+  "solicitud_publica_horario_hasta" "text",
+  "solicitud_publica_dias_atencion" "text",
+  "solicitud_publica_horario_por_dia" "jsonb",
+  "public_name" "text",
+  "public_subtitle" "text",
+  "public_zone" "text",
+  "public_business_type" "text",
+  "secondary_color" "text",
+  "hero_mode" "text" NOT NULL DEFAULT 'gradient' CHECK (hero_mode IN ('image', 'gradient')),
+  "hero_image_url" "text",
+  "hero_title" "text",
+  "hero_subtitle" "text",
+  "show_gallery" boolean NOT NULL DEFAULT true,
+  "show_schedule" boolean NOT NULL DEFAULT true,
+  "show_rating" boolean NOT NULL DEFAULT false,
+  "rating_label" "text",
+  "jobs_count_label" "text",
+  "form_title" "text",
+  "form_subtitle" "text",
+  "is_published" boolean NOT NULL DEFAULT false
 );
 
 
@@ -728,6 +746,42 @@ COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_horario_has
 
 
 COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_dias_atencion" IS 'Dias de atencion comercial de la landing publica, guardados como CSV de 0 a 6.';
+
+COMMENT ON COLUMN "public"."organization_profile"."solicitud_publica_horario_por_dia" IS 'Horario visible por dia de la semana para la landing publica. Cada item guarda day, enabled, from y to.';
+
+COMMENT ON COLUMN "public"."organization_profile"."public_name" IS 'Nombre comercial visible en la landing publica. Si es NULL, se usa empresa_nombre.';
+
+COMMENT ON COLUMN "public"."organization_profile"."public_subtitle" IS 'Rubro o especialidad visible en la landing (ej: Vidrios y aluminio).';
+
+COMMENT ON COLUMN "public"."organization_profile"."public_zone" IS 'Zona o cobertura geografica visible en la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."public_business_type" IS 'Tipo de negocio: vidrios, aluminio, ambos, etc.';
+
+COMMENT ON COLUMN "public"."organization_profile"."secondary_color" IS 'Color secundario en formato hex para la landing. Si es NULL, se usa verde WhatsApp (#25d366).';
+
+COMMENT ON COLUMN "public"."organization_profile"."hero_mode" IS 'Modo del hero: image o gradient. Default: gradient.';
+
+COMMENT ON COLUMN "public"."organization_profile"."hero_image_url" IS 'URL de la imagen hero de la landing. Si hero_mode=image y esto es NULL, se muestra degradado.';
+
+COMMENT ON COLUMN "public"."organization_profile"."hero_title" IS 'Titulo principal del hero. Si es NULL, se usa un default.';
+
+COMMENT ON COLUMN "public"."organization_profile"."hero_subtitle" IS 'Subtitulo del hero de la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."show_gallery" IS 'Si true, se muestra la galeria de fotos en la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."show_schedule" IS 'Si true, se muestra el horario en la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."show_rating" IS 'Si true, se muestra el rating en la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."rating_label" IS 'Texto de rating visible (ej: 4.9/5 en Google).';
+
+COMMENT ON COLUMN "public"."organization_profile"."jobs_count_label" IS 'Texto de cantidad de trabajos (ej: +200 trabajos realizados).';
+
+COMMENT ON COLUMN "public"."organization_profile"."form_title" IS 'Titulo del formulario de solicitud en la landing.';
+
+COMMENT ON COLUMN "public"."organization_profile"."form_subtitle" IS 'Subtitulo del formulario de solicitud.';
+
+COMMENT ON COLUMN "public"."organization_profile"."is_published" IS 'Si true, la landing esta publicada y visible con configuracion custom. Si false, se muestra version basica.';
 
 
 
@@ -1010,13 +1064,80 @@ COMMENT ON TABLE "public"."web_push_subscriptions" IS 'Subscriptions Web Push pa
 
 
 ALTER TABLE "public"."web_push_subscriptions" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME "public"."web_push_subscriptions_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
+  SEQUENCE NAME "public"."web_push_subscriptions_id_seq"
+  START WITH 1
+  INCREMENT BY 1
+  NO MINVALUE
+  NO MAXVALUE
+  CACHE 1
 );
+
+
+CREATE TABLE IF NOT EXISTS "public"."public_landing_gallery" (
+  "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
+  "organization_id" bigint NOT NULL,
+  "landing_id" bigint,
+  "image_url" "text" NOT NULL,
+  "label" "text",
+  "sort_order" integer NOT NULL DEFAULT 0,
+  "is_visible" boolean NOT NULL DEFAULT true,
+  "creado_en" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+
+ALTER TABLE "public"."public_landing_gallery" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."public_landing_gallery" IS 'Fotos de galeria para la landing publica de cada organizacion.';
+
+
+COMMENT ON COLUMN "public"."public_landing_gallery"."image_url" IS 'URL publica de la imagen almacenada en Supabase Storage.';
+
+
+COMMENT ON COLUMN "public"."public_landing_gallery"."label" IS 'Etiqueta visible de la foto (ej: Ventana, Shower, Terraza).';
+
+
+COMMENT ON COLUMN "public"."public_landing_gallery"."sort_order" IS 'Orden visual de la foto dentro de la galeria. Menor = primero.';
+
+
+COMMENT ON COLUMN "public"."public_landing_gallery"."is_visible" IS 'Si false, la foto no se muestra en la landing publica pero se conserva en la base.';
+
+
+ALTER TABLE ONLY "public"."public_landing_gallery" ADD CONSTRAINT "public_landing_gallery_pkey" PRIMARY KEY ("id");
+
+
+ALTER TABLE ONLY "public"."public_landing_gallery" ADD CONSTRAINT "public_landing_gallery_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+
+ALTER TABLE ONLY "public"."public_landing_gallery" ADD CONSTRAINT "public_landing_gallery_landing_id_fkey" FOREIGN KEY ("landing_id") REFERENCES "public"."organization_profile"("organization_id") ON DELETE CASCADE;
+
+
+CREATE INDEX "public_landing_gallery_org_sort_idx" ON "public"."public_landing_gallery" USING "btree" ("organization_id", "sort_order");
+
+
+ALTER TABLE "public"."public_landing_gallery" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "landing_gallery_select_own" ON "public"."public_landing_gallery" FOR SELECT TO "authenticated" USING (("organization_id" IN ( SELECT "users"."organization_id" FROM "public"."users" "users" WHERE (("lower"("users"."correo") = "lower"("auth"."email"())) AND ("users"."eliminado_en" IS NULL)))));
+
+
+CREATE POLICY "landing_gallery_insert_own" ON "public"."public_landing_gallery" FOR INSERT TO "authenticated" WITH CHECK (("organization_id" IN ( SELECT "users"."organization_id" FROM "public"."users" "users" WHERE (("lower"("users"."correo") = "lower"("auth"."email"())) AND ("users"."eliminado_en" IS NULL)))));
+
+
+CREATE POLICY "landing_gallery_update_own" ON "public"."public_landing_gallery" FOR UPDATE TO "authenticated" USING (("organization_id" IN ( SELECT "users"."organization_id" FROM "public"."users" "users" WHERE (("lower"("users"."correo") = "lower"("auth"."email"())) AND ("users"."eliminado_en" IS NULL))))) WITH CHECK (("organization_id" IN ( SELECT "users"."organization_id" FROM "public"."users" "users" WHERE (("lower"("users"."correo") = "lower"("auth"."email"())) AND ("users"."eliminado_en" IS NULL)))));
+
+
+CREATE POLICY "landing_gallery_delete_own" ON "public"."public_landing_gallery" FOR DELETE TO "authenticated" USING (("organization_id" IN ( SELECT "users"."organization_id" FROM "public"."users" "users" WHERE (("lower"("users"."correo") = "lower"("auth"."email"())) AND ("users"."eliminado_en" IS NULL)))));
+
+
+GRANT ALL ON TABLE "public"."public_landing_gallery" TO "anon";
+GRANT ALL ON TABLE "public"."public_landing_gallery" TO "authenticated";
+GRANT ALL ON TABLE "public"."public_landing_gallery" TO "service_role";
+
+
+GRANT ALL ON SEQUENCE "public"."public_landing_gallery_id_seq" TO "anon";
+GRANT ALL ON SEQUENCE "public"."public_landing_gallery_id_seq" TO "authenticated";
+GRANT ALL ON SEQUENCE "public"."public_landing_gallery_id_seq" TO "service_role";
 
 
 
@@ -1997,7 +2118,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
 
 
 

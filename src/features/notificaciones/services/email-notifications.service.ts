@@ -23,7 +23,6 @@ class ConsoleEmailService implements EmailService {
   }
 
   async send(input: SendEmailInput) {
-    // eslint-disable-next-line no-console
     console.log("[EMAIL]", input.subject, "->", input.to);
   }
 }
@@ -42,9 +41,8 @@ class EmailClientManager {
     if (emailProvider === "resend" && apiKey) {
       // Lazy load Resend only if configured
         try {
-          // @ts-ignore dynamic import resend
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { default: Resend } = require("resend");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { default: Resend } = require("resend");
         const resend = new Resend(apiKey);
         return new ResendEmailService(resend);
       } catch {
@@ -83,8 +81,7 @@ class ResendEmailService implements EmailService {
         text: input.text,
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("Email send failed:", error);
+    console.error("Email send failed:", error);
     }
   }
 }

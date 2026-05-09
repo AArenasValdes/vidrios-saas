@@ -1,3 +1,5 @@
+import type { SolicitudPublicaHorarioDia } from "@/features/organization-profile/types/organization-profile";
+
 export type AyudaSolicitudContacto = "demo" | "cotizacion" | "ventas";
 export type ContextoSolicitudContacto = "landing" | "empresa-publica";
 
@@ -65,6 +67,24 @@ export type SolicitudEmpresaPublicaConfig = {
   solicitudPublicaHorarioDesde: string;
   solicitudPublicaHorarioHasta: string;
   solicitudPublicaDiasAtencion: string[];
+  solicitudPublicaHorarioPorDia: SolicitudPublicaHorarioDia[];
+  publicName: string;
+  publicSubtitle: string;
+  publicZone: string;
+  publicBusinessType: string;
+  secondaryColor: string;
+  heroMode: "image" | "gradient";
+  heroImageUrl: string | null;
+  heroTitle: string;
+  heroSubtitle: string;
+  showGallery: boolean;
+  showSchedule: boolean;
+  showRating: boolean;
+  ratingLabel: string;
+  jobsCountLabel: string;
+  formTitle: string;
+  formSubtitle: string;
+  isPublished: boolean;
 };
 
 export type CrearSolicitudEmpresaInput = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { organizationProfileService } from "@/features/organization-profile/services/organization-profile.service";
@@ -111,17 +111,20 @@ export function useOrganizationProfile() {
   const [isReady, setIsReady] = useState(initialStateRef.current.isReady);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
   const lastOrganizationIdRef = useRef<string | null>(getOrganizationKey(organizacionId));
   const bootRetryCountRef = useRef(0);
   const bootRetryTimeoutRef = useRef<number | null>(null);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfileRef = useRef<() => Promise<OrganizationProfile | null>>(async () => null as unknown as OrganizationProfile);
+
+  refreshProfileRef.current = async () => {
     const refreshId = ++activeRefreshIdRef.current;
     const organizationKey = getOrganizationKey(organizacionId);
 
-    if (!organizacionId) {
+    if (!organizationKey) {
       if (!isMountedRef.current || refreshId !== activeRefreshIdRef.current) {
         return null;
       }
@@ -131,32 +134,32 @@ export function useOrganizationProfile() {
       return null;
     }
 
-    let profilePromise = organizationProfilePromiseCache.get(organizationKey!);
+    let profilePromise = organizationProfilePromiseCache.get(organizationKey);
 
     if (!profilePromise) {
       profilePromise = organizationProfileService
-        .getByOrganizationId(organizacionId)
+        .getByOrganizationId(organizacionId as string | number)
         .finally(() => {
-          organizationProfilePromiseCache.delete(organizationKey!);
+          organizationProfilePromiseCache.delete(organizationKey);
         });
 
-      organizationProfilePromiseCache.set(organizationKey!, profilePromise);
+      organizationProfilePromiseCache.set(organizationKey, profilePromise);
     }
 
     const nextProfile = await profilePromise;
     const hasWarmCache =
-      nextProfile !== null || organizationProfileCache.has(organizationKey!);
+      nextProfile !== null || organizationProfileCache.has(organizationKey);
 
     if (!isMountedRef.current || refreshId !== activeRefreshIdRef.current) {
       return nextProfile;
     }
 
     setProfile(nextProfile);
-    organizationProfileCache.set(organizationKey!, {
-      organizationId: organizationKey!,
+    organizationProfileCache.set(organizationKey, {
+      organizationId: organizationKey,
       profile: nextProfile,
     });
-    persistOrganizationProfile(organizationKey!, nextProfile);
+    persistOrganizationProfile(organizationKey, nextProfile);
     setIsReady(true);
 
     if (
@@ -168,12 +171,16 @@ export function useOrganizationProfile() {
       bootRetryCountRef.current += 1;
       bootRetryTimeoutRef.current = window.setTimeout(() => {
         bootRetryTimeoutRef.current = null;
-        void refreshProfile();
+        void refreshProfileRef.current();
       }, 500);
     }
 
     return nextProfile;
-  }, [organizacionId]);
+  };
+
+  async function refreshProfile() {
+    return refreshProfileRef.current();
+  }
 
   useEffect(() => {
     const organizationKey = getOrganizationKey(organizacionId);
@@ -194,7 +201,7 @@ export function useOrganizationProfile() {
       return;
     }
 
-    if (!organizacionId) {
+    if (!organizacionId || !organizationKey) {
       setProfile(null);
       setIsReady(true);
       return;
@@ -206,12 +213,12 @@ export function useOrganizationProfile() {
       setProfile(cached.profile);
       setIsReady(true);
     } else {
-      const persisted = readOrganizationProfileFromStorage(organizationKey!);
+      const persisted = readOrganizationProfileFromStorage(organizationKey);
 
       if (persisted) {
         setProfile(persisted);
-        organizationProfileCache.set(organizationKey!, {
-          organizationId: organizationKey!,
+        organizationProfileCache.set(organizationKey, {
+          organizationId: organizationKey,
           profile: persisted,
         });
         setIsReady(true);
@@ -221,8 +228,8 @@ export function useOrganizationProfile() {
       }
     }
 
-    void refreshProfile();
-  }, [cargando, organizacionId, refreshProfile]);
+    void refreshProfileRef.current();
+  }, [cargando, organizacionId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -277,13 +284,29 @@ export function useOrganizationProfile() {
     }
   };
 
+  const uploadHeroImage = async (file: File) => {
+    if (!organizacionId) {
+      throw new Error("No hay organizacion activa");
+    }
+
+    setIsUploadingHero(true);
+
+    try {
+      return await organizationProfileService.uploadHeroImage(organizacionId, file);
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
   return {
     profile,
     isReady,
     isSaving,
     isUploading,
+    isUploadingHero,
     refreshProfile,
     saveProfile,
     uploadLogo,
+    uploadHeroImage,
   };
 }

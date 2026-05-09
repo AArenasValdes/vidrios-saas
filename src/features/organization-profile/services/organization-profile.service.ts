@@ -6,7 +6,10 @@ import { normalizePreferredProvider } from "@/features/cotizaciones/services/com
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { EntityId } from "@/types/common";
 import type {
+  HeroMode,
   OrganizationProfile,
+  PublicScheduleDay,
+  SolicitudPublicaHorarioDia,
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 
@@ -33,6 +36,30 @@ export const DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION = [
   "5",
   "6",
 ] as const;
+export const PUBLIC_SCHEDULE_DAY_ORDER: PublicScheduleDay[] = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "0",
+];
+export const DEFAULT_SECONDARY_COLOR = "#25d366";
+export const DEFAULT_HERO_TITLE = "Cotiza vidrios y aluminio en menos de 1 minuto";
+export const DEFAULT_FORM_TITLE = "Deja tu solicitud";
+export const DEFAULT_FORM_SUBTITLE =
+  "Cuentanos que necesitas y te contactamos por WhatsApp";
+
+const PUBLIC_SCHEDULE_DAY_LABELS: Record<PublicScheduleDay, string> = {
+  "0": "Dom",
+  "1": "Lun",
+  "2": "Mar",
+  "3": "Mie",
+  "4": "Jue",
+  "5": "Vie",
+  "6": "Sab",
+};
 
 function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? "";
@@ -62,6 +89,74 @@ export function normalizeDiasAtencion(value: string[] | null | undefined) {
   }
 
   return normalized;
+}
+
+export function buildDefaultSolicitudPublicaHorarioPorDia(input?: {
+  days?: string[] | null;
+  from?: string | null;
+  to?: string | null;
+}) {
+  const enabledDays = new Set(
+    normalizeDiasAtencion(input?.days ?? [...DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION])
+  );
+  const from = normalizeHorario(
+    input?.from,
+    DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE
+  );
+  const to = normalizeHorario(input?.to, DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA);
+
+  return PUBLIC_SCHEDULE_DAY_ORDER.map((day) => ({
+    day,
+    enabled: enabledDays.has(day),
+    from,
+    to,
+  }));
+}
+
+export function normalizeHorarioPorDia(
+  value: SolicitudPublicaHorarioDia[] | null | undefined,
+  fallback?: {
+    days?: string[] | null;
+    from?: string | null;
+    to?: string | null;
+  }
+) {
+  const baseSchedule = buildDefaultSolicitudPublicaHorarioPorDia(fallback);
+  const customMap = new Map(
+    (value ?? [])
+      .filter((entry): entry is SolicitudPublicaHorarioDia => Boolean(entry?.day))
+      .map((entry) => [entry.day, entry])
+  );
+
+  return PUBLIC_SCHEDULE_DAY_ORDER.map((day) => {
+    const fallbackEntry = baseSchedule.find((entry) => entry.day === day)!;
+    const customEntry = customMap.get(day);
+
+    if (!customEntry) {
+      return fallbackEntry;
+    }
+
+    return {
+      day,
+      enabled: Boolean(customEntry.enabled),
+      from: normalizeHorario(customEntry.from, fallbackEntry.from),
+      to: normalizeHorario(customEntry.to, fallbackEntry.to),
+    };
+  });
+}
+
+export function extractLegacyHorarioFields(schedule: SolicitudPublicaHorarioDia[]) {
+  const normalized = normalizeHorarioPorDia(schedule);
+  const enabledEntries = normalized.filter((entry) => entry.enabled);
+  const fallbackEntry = enabledEntries[0] ?? normalized[0];
+
+  return {
+    solicitudPublicaHorarioDesde:
+      fallbackEntry?.from ?? DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
+    solicitudPublicaHorarioHasta:
+      fallbackEntry?.to ?? DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
+    solicitudPublicaDiasAtencion: enabledEntries.map((entry) => entry.day),
+  };
 }
 
 export function normalizePublicRequestSlug(value: string | null | undefined) {
@@ -114,29 +209,66 @@ export function hexToRgbChannels(hex: string) {
 }
 
 export function formatDiasAtencionLabel(days: string[]) {
-  const labels: Record<string, string> = {
-    "0": "Dom",
-    "1": "Lun",
-    "2": "Mar",
-    "3": "Mie",
-    "4": "Jue",
-    "5": "Vie",
-    "6": "Sab",
-  };
-
   return normalizeDiasAtencion(days)
-    .map((day) => labels[day] ?? day)
+    .map((day) => PUBLIC_SCHEDULE_DAY_LABELS[day as PublicScheduleDay] ?? day)
+    .join(" · ");
+}
+
+function buildDayRangeLabel(days: PublicScheduleDay[]) {
+  if (days.length === 0) {
+    return "";
+  }
+
+  if (days.length === 1) {
+    return PUBLIC_SCHEDULE_DAY_LABELS[days[0]];
+  }
+
+  return `${PUBLIC_SCHEDULE_DAY_LABELS[days[0]]}-${PUBLIC_SCHEDULE_DAY_LABELS[days.at(-1)!]}`;
+}
+
+export function formatHorarioPorDiaLabel(schedule: SolicitudPublicaHorarioDia[]) {
+  const enabledEntries = normalizeHorarioPorDia(schedule).filter((entry) => entry.enabled);
+
+  if (enabledEntries.length === 0) {
+    return "Sin horario visible";
+  }
+
+  const groups: Array<{ days: PublicScheduleDay[]; from: string; to: string }> = [];
+
+  enabledEntries.forEach((entry) => {
+    const lastGroup = groups.at(-1);
+
+    if (
+      lastGroup &&
+      lastGroup.from === entry.from &&
+      lastGroup.to === entry.to &&
+      PUBLIC_SCHEDULE_DAY_ORDER.indexOf(entry.day) ===
+        PUBLIC_SCHEDULE_DAY_ORDER.indexOf(lastGroup.days.at(-1)!) + 1
+    ) {
+      lastGroup.days.push(entry.day);
+      return;
+    }
+
+    groups.push({
+      days: [entry.day],
+      from: entry.from,
+      to: entry.to,
+    });
+  });
+
+  return groups
+    .map((group) => `${buildDayRangeLabel(group.days)} ${group.from}-${group.to}`)
     .join(" · ");
 }
 
 export function isOrganizationOpenAtDate(input: {
-  days: string[];
-  from: string;
-  to: string;
+  schedule?: SolicitudPublicaHorarioDia[] | null;
+  days?: string[];
+  from?: string;
+  to?: string;
   date?: Date;
 }) {
   const currentDate = input.date ?? new Date();
-  const validDays = normalizeDiasAtencion(input.days);
   const weekday = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Santiago",
     weekday: "short",
@@ -147,7 +279,7 @@ export function isOrganizationOpenAtDate(input: {
     minute: "2-digit",
     hour12: false,
   }).format(currentDate);
-  const dayMap: Record<string, string> = {
+  const dayMap: Record<string, PublicScheduleDay> = {
     Sun: "0",
     Mon: "1",
     Tue: "2",
@@ -157,15 +289,27 @@ export function isOrganizationOpenAtDate(input: {
     Sat: "6",
   };
   const currentDay = dayMap[weekday] ?? "1";
+  const schedule = input.schedule?.length
+    ? normalizeHorarioPorDia(input.schedule, {
+        days: input.days,
+        from: input.from,
+        to: input.to,
+      })
+    : buildDefaultSolicitudPublicaHorarioPorDia({
+        days: input.days,
+        from: input.from,
+        to: input.to,
+      });
+  const currentSchedule = schedule.find((entry) => entry.day === currentDay);
 
-  if (!validDays.includes(currentDay)) {
+  if (!currentSchedule?.enabled) {
     return false;
   }
 
-  const from = normalizeHorario(input.from, DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE);
-  const to = normalizeHorario(input.to, DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA);
-
-  return currentHourMinute >= from && currentHourMinute < to;
+  return (
+    currentHourMinute >= currentSchedule.from &&
+    currentHourMinute < currentSchedule.to
+  );
 }
 
 function isDuplicatePublicRequestSlugError(error: unknown) {
@@ -185,6 +329,21 @@ function isDuplicatePublicRequestSlugError(error: unknown) {
   );
 }
 
+function normalizeHeroMode(value: string | null | undefined): HeroMode {
+  if (value === "image") return "image";
+  return "gradient";
+}
+
+function sanitizeSecondaryColor(value: string | null | undefined) {
+  const normalized = value?.trim() ?? "";
+
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) {
+    return normalized.toLowerCase();
+  }
+
+  return DEFAULT_SECONDARY_COLOR;
+}
+
 export function resolveOrganizationProfile(
   organizationId: EntityId | null,
   profile: OrganizationProfile | null
@@ -194,6 +353,15 @@ export function resolveOrganizationProfile(
     normalizePublicRequestSlug(profile?.solicitudPublicaSlug) ||
     normalizePublicRequestSlug(empresaNombre) ||
     "mi-empresa";
+  const solicitudPublicaHorarioPorDia = normalizeHorarioPorDia(
+    profile?.solicitudPublicaHorarioPorDia,
+    {
+      days: profile?.solicitudPublicaDiasAtencion,
+      from: profile?.solicitudPublicaHorarioDesde,
+      to: profile?.solicitudPublicaHorarioHasta,
+    }
+  );
+  const legacyHorario = extractLegacyHorarioFields(solicitudPublicaHorarioPorDia);
 
   return {
     organizationId,
@@ -217,22 +385,32 @@ export function resolveOrganizationProfile(
     solicitudPublicaPrivacidad:
       normalizeText(profile?.solicitudPublicaPrivacidad) ||
       DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
-    solicitudPublicaHorarioDesde: normalizeHorario(
-      profile?.solicitudPublicaHorarioDesde,
-      DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE
-    ),
-    solicitudPublicaHorarioHasta: normalizeHorario(
-      profile?.solicitudPublicaHorarioHasta,
-      DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA
-    ),
-    solicitudPublicaDiasAtencion: normalizeDiasAtencion(
-      profile?.solicitudPublicaDiasAtencion
-    ),
+    solicitudPublicaHorarioDesde: legacyHorario.solicitudPublicaHorarioDesde,
+    solicitudPublicaHorarioHasta: legacyHorario.solicitudPublicaHorarioHasta,
+    solicitudPublicaDiasAtencion: legacyHorario.solicitudPublicaDiasAtencion,
+    solicitudPublicaHorarioPorDia,
     proveedorPreferido: normalizePreferredProvider(profile?.proveedorPreferido),
     modoPrecioPreferido: normalizePricingMode(profile?.modoPrecioPreferido),
     margenDefecto: profile?.margenDefecto ?? 100,
     creadoEn: profile?.creadoEn ?? null,
     actualizadoEn: profile?.actualizadoEn ?? null,
+    publicName: normalizeText(profile?.publicName) || empresaNombre,
+    publicSubtitle: normalizeText(profile?.publicSubtitle),
+    publicZone: normalizeText(profile?.publicZone),
+    publicBusinessType: normalizeText(profile?.publicBusinessType),
+    secondaryColor: sanitizeSecondaryColor(profile?.secondaryColor),
+    heroMode: normalizeHeroMode(profile?.heroMode),
+    heroImageUrl: profile?.heroImageUrl ?? null,
+    heroTitle: normalizeText(profile?.heroTitle) || DEFAULT_HERO_TITLE,
+    heroSubtitle: normalizeText(profile?.heroSubtitle),
+    showGallery: profile?.showGallery ?? true,
+    showSchedule: profile?.showSchedule ?? true,
+    showRating: profile?.showRating ?? false,
+    ratingLabel: normalizeText(profile?.ratingLabel),
+    jobsCountLabel: normalizeText(profile?.jobsCountLabel),
+    formTitle: normalizeText(profile?.formTitle) || DEFAULT_FORM_TITLE,
+    formSubtitle: normalizeText(profile?.formSubtitle) || DEFAULT_FORM_SUBTITLE,
+    isPublished: profile?.isPublished ?? false,
   };
 }
 
@@ -268,6 +446,15 @@ export function createOrganizationProfileService(
         normalizePublicRequestSlug(input.solicitudPublicaSlug) ||
         normalizePublicRequestSlug(empresaNombre) ||
         "mi-empresa";
+      const solicitudPublicaHorarioPorDia = normalizeHorarioPorDia(
+        input.solicitudPublicaHorarioPorDia,
+        {
+          days: input.solicitudPublicaDiasAtencion,
+          from: input.solicitudPublicaHorarioDesde,
+          to: input.solicitudPublicaHorarioHasta,
+        }
+      );
+      const legacyHorario = extractLegacyHorarioFields(solicitudPublicaHorarioPorDia);
 
       try {
         const persisted = await repository.upsertByOrganizationId(organizationId, {
@@ -287,20 +474,30 @@ export function createOrganizationProfileService(
             input.solicitudPublicaMensajeConfianza
           ),
           solicitudPublicaPrivacidad: normalizeText(input.solicitudPublicaPrivacidad),
-          solicitudPublicaHorarioDesde: normalizeHorario(
-            input.solicitudPublicaHorarioDesde,
-            DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE
-          ),
-          solicitudPublicaHorarioHasta: normalizeHorario(
-            input.solicitudPublicaHorarioHasta,
-            DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA
-          ),
-          solicitudPublicaDiasAtencion: normalizeDiasAtencion(
-            input.solicitudPublicaDiasAtencion
-          ),
+          solicitudPublicaHorarioDesde: legacyHorario.solicitudPublicaHorarioDesde,
+          solicitudPublicaHorarioHasta: legacyHorario.solicitudPublicaHorarioHasta,
+          solicitudPublicaDiasAtencion: legacyHorario.solicitudPublicaDiasAtencion,
+          solicitudPublicaHorarioPorDia,
           proveedorPreferido: normalizePreferredProvider(input.proveedorPreferido),
           modoPrecioPreferido: normalizePricingMode(input.modoPrecioPreferido),
           margenDefecto: input.margenDefecto,
+          publicName: normalizeText(input.publicName),
+          publicSubtitle: normalizeText(input.publicSubtitle),
+          publicZone: normalizeText(input.publicZone),
+          publicBusinessType: normalizeText(input.publicBusinessType),
+          secondaryColor: sanitizeSecondaryColor(input.secondaryColor),
+          heroMode: normalizeHeroMode(input.heroMode),
+          heroImageUrl: input.heroImageUrl,
+          heroTitle: normalizeText(input.heroTitle),
+          heroSubtitle: normalizeText(input.heroSubtitle),
+          showGallery: input.showGallery,
+          showSchedule: input.showSchedule,
+          showRating: input.showRating,
+          ratingLabel: normalizeText(input.ratingLabel),
+          jobsCountLabel: normalizeText(input.jobsCountLabel),
+          formTitle: normalizeText(input.formTitle),
+          formSubtitle: normalizeText(input.formSubtitle),
+          isPublished: input.isPublished,
         });
 
         return resolveOrganizationProfile(organizationId, persisted);
@@ -323,6 +520,10 @@ export function createOrganizationProfileService(
       }
 
       return repository.uploadLogo(organizationId, file);
+    },
+
+    async uploadHeroImage(organizationId: EntityId, file: File) {
+      return repository.uploadHeroImage(organizationId, file);
     },
   };
 }

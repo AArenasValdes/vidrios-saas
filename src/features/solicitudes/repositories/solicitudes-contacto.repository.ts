@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SolicitudPublicaHorarioDia } from "@/features/organization-profile/types/organization-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CrearSolicitudEmpresaInput,
@@ -54,6 +55,24 @@ type SolicitudEmpresaPublicaConfigRow = {
   solicitud_publica_horario_desde: string | null;
   solicitud_publica_horario_hasta: string | null;
   solicitud_publica_dias_atencion: string | null;
+  solicitud_publica_horario_por_dia?: unknown;
+  public_name: string | null;
+  public_subtitle: string | null;
+  public_zone: string | null;
+  public_business_type: string | null;
+  secondary_color: string | null;
+  hero_mode: string | null;
+  hero_image_url: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  show_gallery: boolean | null;
+  show_schedule: boolean | null;
+  show_rating: boolean | null;
+  rating_label: string | null;
+  jobs_count_label: string | null;
+  form_title: string | null;
+  form_subtitle: string | null;
+  is_published: boolean | null;
 };
 
 const TABLE_NAME = "solicitudes_contacto";
@@ -67,7 +86,50 @@ const SOLICITUD_RESUMEN_SELECT =
 const SOLICITUD_RESUMEN_SELECT_LEGACY =
   "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, creado_en, actualizado_en";
 const ORGANIZATION_PROFILE_PUBLIC_SELECT =
-  "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion";
+  "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion, solicitud_publica_horario_por_dia, public_name, public_subtitle, public_zone, public_business_type, secondary_color, hero_mode, hero_image_url, hero_title, hero_subtitle, show_gallery, show_schedule, show_rating, rating_label, jobs_count_label, form_title, form_subtitle, is_published";
+
+const DEFAULT_PUBLIC_SCHEDULE_DAYS = ["1", "2", "3", "4", "5", "6"] as const;
+const PUBLIC_SCHEDULE_DAY_ORDER = ["1", "2", "3", "4", "5", "6", "0"] as const;
+
+function normalizePublicHorario(value: string | null | undefined, fallback: string) {
+  const normalized = (value ?? "").trim();
+
+  if (/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(normalized)) {
+    return normalized;
+  }
+
+  return fallback;
+}
+
+function normalizePublicScheduleByDay(input: {
+  schedule?: unknown;
+  days?: string[] | null;
+  from?: string | null;
+  to?: string | null;
+}) {
+  const enabledDays = new Set(
+    (input.days?.length ? input.days : [...DEFAULT_PUBLIC_SCHEDULE_DAYS]).filter((day) =>
+      /^[0-6]$/.test(day)
+    )
+  );
+  const fallbackFrom = normalizePublicHorario(input.from, "09:00");
+  const fallbackTo = normalizePublicHorario(input.to, "19:00");
+  const rows = Array.isArray(input.schedule)
+    ? (input.schedule as SolicitudPublicaHorarioDia[])
+    : [];
+  const rowMap = new Map(rows.map((row) => [row.day, row]));
+
+  return PUBLIC_SCHEDULE_DAY_ORDER.map((day) => {
+    const custom = rowMap.get(day);
+
+    return {
+      day,
+      enabled: custom ? Boolean(custom.enabled) : enabledDays.has(day),
+      from: normalizePublicHorario(custom?.from, fallbackFrom),
+      to: normalizePublicHorario(custom?.to, fallbackTo),
+    };
+  });
+}
 
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -195,6 +257,19 @@ function mapSolicitudEmpresaPublicaConfig(
     return null;
   }
 
+  const schedule = normalizePublicScheduleByDay(
+    {
+      schedule: row.solicitud_publica_horario_por_dia,
+      days:
+        row.solicitud_publica_dias_atencion
+          ?.split(",")
+          .map((value) => value.trim())
+          .filter(Boolean) ?? ["1", "2", "3", "4", "5", "6"],
+      from: row.solicitud_publica_horario_desde?.trim() || "09:00",
+      to: row.solicitud_publica_horario_hasta?.trim() || "19:00",
+    }
+  );
+
   return {
     organizationId: row.organization_id,
     empresaNombre: row.empresa_nombre?.trim() || "Mi empresa",
@@ -220,11 +295,30 @@ function mapSolicitudEmpresaPublicaConfig(
       row.solicitud_publica_horario_desde?.trim() || "09:00",
     solicitudPublicaHorarioHasta:
       row.solicitud_publica_horario_hasta?.trim() || "19:00",
-    solicitudPublicaDiasAtencion:
-      row.solicitud_publica_dias_atencion
-        ?.split(",")
-        .map((value) => value.trim())
-        .filter(Boolean) ?? ["1", "2", "3", "4", "5", "6"],
+    solicitudPublicaDiasAtencion: row.solicitud_publica_dias_atencion
+      ?.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean) ?? ["1", "2", "3", "4", "5", "6"],
+    solicitudPublicaHorarioPorDia: schedule,
+    publicName: row.public_name?.trim() || row.empresa_nombre?.trim() || "Mi empresa",
+    publicSubtitle: row.public_subtitle?.trim() || "",
+    publicZone: row.public_zone?.trim() || "",
+    publicBusinessType: row.public_business_type?.trim() || "",
+    secondaryColor: row.secondary_color?.trim() || "#25d366",
+    heroMode: row.hero_mode === "image" ? "image" : "gradient",
+    heroImageUrl: row.hero_image_url,
+    heroTitle: row.hero_title?.trim() || "Cotiza vidrios y aluminio en menos de 1 minuto",
+    heroSubtitle: row.hero_subtitle?.trim() || "",
+    showGallery: row.show_gallery ?? true,
+    showSchedule: row.show_schedule ?? true,
+    showRating: row.show_rating ?? false,
+    ratingLabel: row.rating_label?.trim() || "",
+    jobsCountLabel: row.jobs_count_label?.trim() || "",
+    formTitle: row.form_title?.trim() || "Deja tu solicitud",
+    formSubtitle:
+      row.form_subtitle?.trim() ||
+      "Cuentanos que necesitas y te contactamos por WhatsApp",
+    isPublished: row.is_published ?? false,
   };
 }
 

@@ -14,6 +14,7 @@ import {
   LuClock3,
   LuFilePlus2,
   LuFileText,
+LuGlobe,
   LuInbox,
   LuLayoutDashboard,
   LuLogOut,
@@ -82,6 +83,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Empresa",
     mobileLabel: "Empresa",
     description: "Marca, logo y datos comerciales del negocio",
+  },
+  {
+    href: "/configuracion/pagina-venta",
+    icon: LuGlobe,
+    label: "Pagina de venta",
+    mobileLabel: "Pagina",
+    description: "Configura tu mini landing publica",
   },
 ];
 
@@ -334,6 +342,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <LuSettings aria-hidden />
           Configuracion de empresa
         </Link>
+        <Link
+          href="/configuracion/pagina-venta"
+          className={s.accountMenuLink}
+          prefetch={false}
+          onClick={() => setProfileMenuAnchor(null)}
+        >
+          <LuGlobe aria-hidden />
+          Pagina de venta
+        </Link>
         <button
           className={s.accountMenuAction}
           type="button"
@@ -472,7 +489,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       "/cotizaciones",
       "/clientes",
       "/solicitudes",
-      "/configuracion/empresa",
+        "/configuracion/empresa",
+        "/configuracion/pagina-venta",
       "/cotizaciones/nueva",
     ].filter((href) => href !== pathname);
     const timeouts: number[] = [];

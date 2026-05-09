@@ -1,15 +1,17 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ChangeEvent, FormEvent } from "react";
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LuBellRing,
   LuBuilding2,
   LuCheck,
+  LuChevronDown,
   LuCopy,
-  LuExternalLink,
+  LuEye,
+  LuGlobe,
   LuImagePlus,
   LuMail,
   LuMapPin,
@@ -23,43 +25,17 @@ import {
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildOrganizationInitials,
+  buildDefaultSolicitudPublicaHorarioPorDia,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
-  DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
-  DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION,
-  DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
-  DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
-  DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
-  DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
-  DEFAULT_SOLICITUD_PUBLICA_VALOR,
-  formatDiasAtencionLabel,
-  isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
+import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
-import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
 
 import s from "./page.module.css";
 
-const BRAND_PRESETS = [
-  "#4F7DD4",
-  "#243B6B",
-  "#2EA5E6",
-  "#1DB98B",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-];
-
-const WEEK_DAY_OPTIONS = [
-  { value: "1", label: "Lun" },
-  { value: "2", label: "Mar" },
-  { value: "3", label: "Mié" },
-  { value: "4", label: "Jue" },
-  { value: "5", label: "Vie" },
-  { value: "6", label: "Sáb" },
-  { value: "0", label: "Dom" },
-];
+const BRAND_PRESETS = ["#4F7DD4", "#243B6B", "#2EA5E6", "#1DB98B", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 const EMPTY_FORM: UpdateOrganizationProfileInput = {
   empresaNombre: "",
@@ -70,28 +46,49 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   brandColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   formaPago: "",
   solicitudPublicaSlug: "",
-  solicitudPublicaDescripcionCorta: DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
-  solicitudPublicaValor: DEFAULT_SOLICITUD_PUBLICA_VALOR,
-  solicitudPublicaMensajeConfianza: DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
-  solicitudPublicaPrivacidad: DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
-  solicitudPublicaHorarioDesde: DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE,
-  solicitudPublicaHorarioHasta: DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA,
-  solicitudPublicaDiasAtencion: [...DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION],
+  solicitudPublicaDescripcionCorta: "",
+  solicitudPublicaValor: "",
+  solicitudPublicaMensajeConfianza: "",
+  solicitudPublicaPrivacidad: "",
+  solicitudPublicaHorarioDesde: "09:00",
+  solicitudPublicaHorarioHasta: "19:00",
+  solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5", "6"],
+  solicitudPublicaHorarioPorDia: buildDefaultSolicitudPublicaHorarioPorDia(),
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
+  publicName: "",
+  publicSubtitle: "",
+  publicZone: "",
+  publicBusinessType: "",
+  secondaryColor: "",
+  heroMode: "gradient",
+  heroImageUrl: null,
+  heroTitle: "",
+  heroSubtitle: "",
+  showGallery: true,
+  showSchedule: true,
+  showRating: false,
+  ratingLabel: "",
+  jobsCountLabel: "",
+  formTitle: "",
+  formSubtitle: "",
+  isPublished: false,
 };
 
+type SectionId = "empresa" | "marca" | "comercial" | "notificaciones";
 type DeviceAlertsState = {
   kind: "checking" | "enabled" | "available" | "unsupported" | "error";
   message: string;
 };
+type SectionFeedback = {
+  section: SectionId;
+  kind: "success" | "error";
+  message: string;
+};
 
 function supportsPushAlerts() {
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return false;
-  }
-
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
   return (
     "serviceWorker" in navigator &&
     "PushManager" in window &&
@@ -103,45 +100,48 @@ function supportsPushAlerts() {
 async function persistSubscription(subscription: PushSubscription) {
   const response = await fetch("/api/pwa/push-subscriptions", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      subscription: subscription.toJSON(),
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscription: subscription.toJSON() }),
   });
-
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-
-    throw new Error(
-      payload?.error ?? "No pudimos guardar las alertas para este dispositivo."
-    );
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? "No pudimos guardar las alertas para este dispositivo.");
   }
 }
+
+const compactJoin = (values: Array<string | null | undefined>) => values.filter(Boolean).join(" · ");
+const shorten = (text: string, max = 32) =>
+  text.trim().length > max ? `${text.trim().slice(0, max - 1)}...` : text.trim();
+const pricingLabel = (value: UpdateOrganizationProfileInput["modoPrecioPreferido"]) =>
+  value === "precio_directo" ? "Precio directo" : "Margen sobre costo";
+const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
+  kind === "enabled"
+    ? "Activadas en este dispositivo"
+    : kind === "available"
+      ? "Listas para activar"
+      : kind === "unsupported"
+        ? "No disponibles aqui"
+        : kind === "error"
+          ? "Revisar configuracion"
+          : "Revisando dispositivo";
 
 export default function ConfiguracionEmpresaPage() {
   const { profile, isReady, isSaving, isUploading, saveProfile, uploadLogo } =
     useOrganizationProfile();
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [publicLinkMessage, setPublicLinkMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [openSection, setOpenSection] = useState<SectionId | null>("empresa");
+  const [savingSection, setSavingSection] = useState<SectionId | null>(null);
+  const [sectionFeedback, setSectionFeedback] = useState<SectionFeedback | null>(null);
+  const [publicLinkCopied, setPublicLinkCopied] = useState(false);
   const [deviceAlertsState, setDeviceAlertsState] = useState<DeviceAlertsState>({
     kind: "checking",
-    message: "Revisando si este dispositivo puede recibir notificaciones.",
+    message: "Revisando este dispositivo.",
   });
   const [isActivatingAlerts, setIsActivatingAlerts] = useState(false);
-  const deferredPreviewForm = useDeferredValue(form);
 
   useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
+    if (!profile) return;
     setForm({
       empresaNombre: profile.empresaNombre,
       empresaLogoUrl: profile.empresaLogoUrl,
@@ -158,98 +158,68 @@ export default function ConfiguracionEmpresaPage() {
       solicitudPublicaHorarioDesde: profile.solicitudPublicaHorarioDesde,
       solicitudPublicaHorarioHasta: profile.solicitudPublicaHorarioHasta,
       solicitudPublicaDiasAtencion: profile.solicitudPublicaDiasAtencion,
+      solicitudPublicaHorarioPorDia: profile.solicitudPublicaHorarioPorDia,
       proveedorPreferido: profile.proveedorPreferido,
       modoPrecioPreferido: profile.modoPrecioPreferido,
       margenDefecto: profile.margenDefecto,
+      publicName: profile.publicName,
+      publicSubtitle: profile.publicSubtitle,
+      publicZone: profile.publicZone,
+      publicBusinessType: profile.publicBusinessType,
+      secondaryColor: profile.secondaryColor,
+      heroMode: profile.heroMode,
+      heroImageUrl: profile.heroImageUrl,
+      heroTitle: profile.heroTitle,
+      heroSubtitle: profile.heroSubtitle,
+      showGallery: profile.showGallery,
+      showSchedule: profile.showSchedule,
+      showRating: profile.showRating,
+      ratingLabel: profile.ratingLabel,
+      jobsCountLabel: profile.jobsCountLabel,
+      formTitle: profile.formTitle,
+      formSubtitle: profile.formSubtitle,
+      isPublished: profile.isPublished,
     });
   }, [profile]);
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const previewModel = useMemo(() => {
-    const empresaNombre = deferredPreviewForm.empresaNombre || "Mi empresa";
-    const solicitudPublicaDiasAtencion =
-      deferredPreviewForm.solicitudPublicaDiasAtencion?.length
-        ? deferredPreviewForm.solicitudPublicaDiasAtencion
-        : [...DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION];
-    const solicitudPublicaHorarioDesde =
-      deferredPreviewForm.solicitudPublicaHorarioDesde ||
-      DEFAULT_SOLICITUD_PUBLICA_HORARIO_DESDE;
-    const solicitudPublicaHorarioHasta =
-      deferredPreviewForm.solicitudPublicaHorarioHasta ||
-      DEFAULT_SOLICITUD_PUBLICA_HORARIO_HASTA;
-
-    return {
-      initials: buildOrganizationInitials(empresaNombre),
-      logoPreview: previewUrl ?? deferredPreviewForm.empresaLogoUrl,
-      empresaNombre,
-      empresaDireccion: deferredPreviewForm.empresaDireccion || "Dirección comercial",
-      empresaTelefono: deferredPreviewForm.empresaTelefono || "Teléfono",
-      empresaEmail: deferredPreviewForm.empresaEmail || "Email",
-      brandColor: deferredPreviewForm.brandColor,
-      solicitudPublicaDescripcionCorta:
-        deferredPreviewForm.solicitudPublicaDescripcionCorta ||
-        DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA,
-      solicitudPublicaValor:
-        deferredPreviewForm.solicitudPublicaValor || DEFAULT_SOLICITUD_PUBLICA_VALOR,
-      solicitudPublicaMensajeConfianza:
-        deferredPreviewForm.solicitudPublicaMensajeConfianza ||
-        DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA,
-      solicitudPublicaPrivacidad:
-        deferredPreviewForm.solicitudPublicaPrivacidad ||
-        DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD,
-      horarioLabel: `${formatDiasAtencionLabel(solicitudPublicaDiasAtencion)} · ${solicitudPublicaHorarioDesde} a ${solicitudPublicaHorarioHasta}`,
-      isAvailable: isOrganizationOpenAtDate({
-        days: solicitudPublicaDiasAtencion,
-        from: solicitudPublicaHorarioDesde,
-        to: solicitudPublicaHorarioHasta,
-      }),
-    };
-  }, [deferredPreviewForm, previewUrl]);
-
-  const isCustomBrandColor = useMemo(
-    () =>
-      !BRAND_PRESETS.some(
-        (color) => color.toLowerCase() === form.brandColor.toLowerCase()
-      ),
-    [form.brandColor]
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl]
   );
 
-  const publicRequestUrl = useMemo(() => {
-    const slug = form.solicitudPublicaSlug?.trim() || "mi-empresa";
-    return `${resolvePublicAppUrl()}/solicitud/${slug}`;
-  }, [form.solicitudPublicaSlug]);
+  useEffect(() => {
+    if (!sectionFeedback) return;
+    const timeoutId = window.setTimeout(() => {
+      setSectionFeedback((current) =>
+        current?.section === sectionFeedback.section ? null : current
+      );
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [sectionFeedback]);
 
-  const persistedPublicRequestUrl = useMemo(() => {
-    const slug =
-      profile?.solicitudPublicaSlug?.trim() ||
-      form.solicitudPublicaSlug?.trim() ||
-      "mi-empresa";
-    return `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${slug}`;
-  }, [form.solicitudPublicaSlug, profile?.solicitudPublicaSlug]);
+  useEffect(() => {
+    if (!publicLinkCopied) return;
+    const timeoutId = window.setTimeout(() => setPublicLinkCopied(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [publicLinkCopied]);
 
   const syncDeviceAlertsState = useCallback(async () => {
     if (!supportsPushAlerts()) {
       setDeviceAlertsState({
         kind: "unsupported",
         message:
-          "Este acceso no admite alertas push. En iPhone usa Safari instalado como app; en desktop usa Chrome o Edge.",
+          "En iPhone usa Safari instalado como app; en escritorio usa Chrome o Edge.",
       });
       return;
     }
 
     const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
-
     if (!vapidPublicKey) {
       setDeviceAlertsState({
         kind: "error",
-        message: "Falta la clave pública de notificaciones en la configuración del proyecto.",
+        message: "Falta la clave publica de notificaciones.",
       });
       return;
     }
@@ -258,20 +228,17 @@ export default function ConfiguracionEmpresaPage() {
       if (Notification.permission !== "granted") {
         setDeviceAlertsState({
           kind: "available",
-          message:
-            "Activa alertas en este dispositivo para enterarte cuando un cliente apruebe, rechace o requiera seguimiento.",
+          message: "Activa alertas para enterarte cuando llegue una respuesta.",
         });
         return;
       }
 
       const registration = await resolvePushServiceWorkerRegistration();
       const existingSubscription = await registration.pushManager.getSubscription();
-
       if (!existingSubscription) {
         setDeviceAlertsState({
           kind: "available",
-          message:
-            "Las alertas están permitidas, pero este dispositivo todavía no quedó suscrito.",
+          message: "El navegador permite alertas, pero aun no queda suscrito.",
         });
         return;
       }
@@ -279,15 +246,13 @@ export default function ConfiguracionEmpresaPage() {
       await persistSubscription(existingSubscription);
       setDeviceAlertsState({
         kind: "enabled",
-        message: "Este dispositivo ya recibe alertas de respuesta y seguimiento comercial.",
+        message: "Este dispositivo ya recibe alertas de respuesta y seguimiento.",
       });
     } catch (error) {
       setDeviceAlertsState({
         kind: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "No pudimos revisar el estado de alertas de este dispositivo.",
+          error instanceof Error ? error.message : "No pudimos revisar el estado de alertas.",
       });
     }
   }, []);
@@ -296,116 +261,20 @@ export default function ConfiguracionEmpresaPage() {
     void syncDeviceAlertsState();
   }, [syncDeviceAlertsState]);
 
-  const handleFieldChange = useCallback(
-    <K extends keyof UpdateOrganizationProfileInput>(
-      key: K,
-      value: UpdateOrganizationProfileInput[K]
-    ) => {
-      setForm((current) => ({ ...current, [key]: value }));
-      setStatusMessage(null);
-      setErrorMessage(null);
-      setPublicLinkMessage(null);
-    },
-    []
-  );
-
-  const handleToggleBusinessDay = useCallback((day: string) => {
-    setForm((current) => {
-      const currentDays = new Set(current.solicitudPublicaDiasAtencion ?? []);
-
-      if (currentDays.has(day)) {
-        currentDays.delete(day);
-      } else {
-        currentDays.add(day);
-      }
-
-      return {
-        ...current,
-        solicitudPublicaDiasAtencion: Array.from(currentDays).sort(
-          (left, right) => Number(left) - Number(right)
-        ),
-      };
-    });
-    setStatusMessage(null);
-    setErrorMessage(null);
-    setPublicLinkMessage(null);
-  }, []);
-
-  const handleCopyPublicLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(publicRequestUrl);
-      setPublicLinkMessage("Enlace copiado.");
-    } catch {
-      setPublicLinkMessage("No pudimos copiar el enlace en este dispositivo.");
-    }
-  }, [publicRequestUrl]);
-
-  const handleLogoChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-
-      if (!file) {
-        return;
-      }
-
-      const nextPreview = URL.createObjectURL(file);
-      setPreviewUrl((current) => {
-        if (current) {
-          URL.revokeObjectURL(current);
-        }
-
-        return nextPreview;
-      });
-      setErrorMessage(null);
-      setStatusMessage(null);
-
-      try {
-        const logoUrl = await uploadLogo(file);
-        handleFieldChange("empresaLogoUrl", logoUrl);
-        setPreviewUrl((current) => {
-          if (current) {
-            URL.revokeObjectURL(current);
-          }
-
-          return null;
-        });
-        setStatusMessage("Logo subido. Guarda la configuración para dejarlo aplicado.");
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : "No se pudo subir el logo"
-        );
-      } finally {
-        event.target.value = "";
-      }
-    },
-    [handleFieldChange, uploadLogo]
-  );
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      try {
-        setErrorMessage(null);
-        setStatusMessage(null);
-        await saveProfile(form);
-        setStatusMessage("Configuración guardada correctamente.");
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : "No se pudo guardar la configuración"
-        );
-      }
-    },
-    [form, saveProfile]
-  );
+  const canToggleNotifications =
+    deviceAlertsState.kind === "available" || deviceAlertsState.kind === "error";
+  const notificationsEnabled = deviceAlertsState.kind === "enabled";
+  const notificationsDisabled =
+    isActivatingAlerts ||
+    deviceAlertsState.kind === "checking" ||
+    deviceAlertsState.kind === "unsupported";
 
   const handleEnableDeviceAlerts = useCallback(async () => {
     const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
-
     if (!vapidPublicKey) {
       setDeviceAlertsState({
         kind: "error",
-        message: "Falta la clave pública de notificaciones en la configuración del proyecto.",
+        message: "Falta la clave publica de notificaciones.",
       });
       return;
     }
@@ -413,509 +282,464 @@ export default function ConfiguracionEmpresaPage() {
     try {
       setIsActivatingAlerts(true);
       const permission = await Notification.requestPermission();
-
       if (permission !== "granted") {
         setDeviceAlertsState({
           kind: "available",
-          message: "Debes permitir las notificaciones del navegador para activarlas.",
+          message: "Debes permitir las notificaciones del navegador.",
         });
         return;
       }
 
       const subscription = await subscribeToPushNotifications(vapidPublicKey);
-
       await persistSubscription(subscription);
       setDeviceAlertsState({
         kind: "enabled",
-        message: "Alertas activas. Este dispositivo quedó listo para respuestas y seguimiento.",
+        message: "Alertas activas en este dispositivo.",
       });
+      setSectionFeedback({
+        section: "notificaciones",
+        kind: "success",
+        message: "Alertas activadas.",
+      });
+      setOpenSection(null);
     } catch (error) {
-      setDeviceAlertsState({
+      setSectionFeedback({
+        section: "notificaciones",
         kind: "error",
         message:
-          error instanceof Error
-            ? error.message
-            : "No pudimos activar las alertas en este dispositivo.",
+          error instanceof Error ? error.message : "No pudimos activar las alertas.",
       });
     } finally {
       setIsActivatingAlerts(false);
     }
   }, []);
 
-  const notificationsEnabled = deviceAlertsState.kind === "enabled";
-  const canToggleNotifications =
-    deviceAlertsState.kind === "available" || deviceAlertsState.kind === "error";
-  const notificationsDisabled =
-    isActivatingAlerts ||
-    deviceAlertsState.kind === "checking" ||
-    deviceAlertsState.kind === "unsupported";
-
   const handleNotificationsToggle = useCallback(() => {
     if (notificationsEnabled) {
       void syncDeviceAlertsState();
       return;
     }
-
     if (canToggleNotifications) {
       void handleEnableDeviceAlerts();
     }
   }, [canToggleNotifications, handleEnableDeviceAlerts, notificationsEnabled, syncDeviceAlertsState]);
 
+  const handleFieldChange = useCallback(
+    <K extends keyof UpdateOrganizationProfileInput>(
+      key: K,
+      value: UpdateOrganizationProfileInput[K]
+    ) => {
+      setForm((current) => ({ ...current, [key]: value }));
+      setSectionFeedback(null);
+    },
+    []
+  );
+
+  const handleLogoChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const nextPreview = URL.createObjectURL(file);
+      setPreviewUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return nextPreview;
+      });
+      setSectionFeedback(null);
+
+      try {
+        const logoUrl = await uploadLogo(file);
+        handleFieldChange("empresaLogoUrl", logoUrl);
+        setPreviewUrl((current) => {
+          if (current) URL.revokeObjectURL(current);
+          return null;
+        });
+        setSectionFeedback({
+          section: "marca",
+          kind: "success",
+          message: "Logo subido. Guarda Marca para dejarlo aplicado.",
+        });
+      } catch (error) {
+        setSectionFeedback({
+          section: "marca",
+          kind: "error",
+          message: error instanceof Error ? error.message : "No se pudo subir el logo.",
+        });
+      } finally {
+        event.target.value = "";
+      }
+    },
+    [handleFieldChange, uploadLogo]
+  );
+
+  const handleSaveSection = useCallback(
+    async (section: SectionId) => {
+      try {
+        setSavingSection(section);
+        setSectionFeedback(null);
+        await saveProfile(form);
+        setSectionFeedback({ section, kind: "success", message: "Guardado." });
+        setOpenSection((current) => (current === section ? null : current));
+      } catch (error) {
+        setSectionFeedback({
+          section,
+          kind: "error",
+          message:
+            error instanceof Error ? error.message : "No se pudo guardar esta seccion.",
+        });
+      } finally {
+        setSavingSection(null);
+      }
+    },
+    [form, saveProfile]
+  );
+
+  const publicRequestUrl = useMemo(() => {
+    const slug = form.solicitudPublicaSlug?.trim() || "mi-empresa";
+    return `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${slug}`;
+  }, [form.solicitudPublicaSlug]);
+
+  const handleCopyPublicLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(publicRequestUrl);
+      setPublicLinkCopied(true);
+    } catch {
+      setSectionFeedback({
+        section: "empresa",
+        kind: "error",
+        message: "No pudimos copiar el link en este dispositivo.",
+      });
+    }
+  }, [publicRequestUrl]);
+
+  const companyComplete = Boolean(
+    form.empresaNombre.trim() &&
+      form.empresaTelefono.trim() &&
+      form.empresaEmail.trim() &&
+      form.empresaDireccion.trim()
+  );
+  const brandComplete = Boolean(form.brandColor.trim() && (form.empresaLogoUrl || previewUrl));
+  const commercialComplete = Boolean(form.formaPago.trim() && form.modoPrecioPreferido);
+  const notificationsComplete = notificationsEnabled;
+
+  const companySummary = compactJoin([
+    form.empresaNombre.trim() || "Empresa sin nombre",
+    form.empresaTelefono.trim() || "Sin telefono",
+    form.empresaEmail.trim() || "Sin email",
+  ]);
+  const brandSummary = compactJoin([
+    form.brandColor.toUpperCase(),
+    form.empresaLogoUrl || previewUrl ? "Logo subido" : "Sin logo",
+  ]);
+  const commercialSummary = compactJoin([
+    shorten(form.formaPago || "Forma de pago pendiente", 34),
+    pricingLabel(form.modoPrecioPreferido),
+    "IVA incluido",
+  ]);
+  const previewIdentity = previewUrl ?? form.empresaLogoUrl;
+  const previewInitials = buildOrganizationInitials(form.empresaNombre || "Mi empresa");
+
   if (!isReady && !profile) {
     return (
       <div className={s.root}>
-        <div className={s.loadingState}>Cargando tu configuración comercial...</div>
+        <div className={s.loadingState}>Cargando tu configuracion comercial...</div>
       </div>
     );
   }
 
   return (
     <div className={s.root}>
-      <form id="organization-profile-form" className={s.content} onSubmit={handleSubmit}>
-        <section className={s.previewCard}>
-          <div
-            className={s.previewShell}
-            style={{ ["--brand" as string]: previewModel.brandColor }}
-          >
-            <div className={s.previewTop}>
-              <p>Así verá tu cliente tu empresa</p>
-            </div>
-            <div className={s.previewBody}>
-              <div className={s.previewAvailability} data-active={previewModel.isAvailable}>
-                {previewModel.isAvailable ? "ON" : "OFF"} · {previewModel.horarioLabel}
-              </div>
-              <div className={s.previewIdentity}>
-                {previewModel.logoPreview ? (
+      <section className={s.publicCard}>
+        <div className={s.publicCardTop}>
+          <span className={s.cardEyebrow}>
+            <LuEye aria-hidden />
+            Vista de cotizacion
+          </span>
+          <span className={s.previewModePill}>PDF y presupuesto</span>
+        </div>
+
+        <div className={s.quotePreviewBox} style={{ ["--brand" as string]: form.brandColor }}>
+          <div className={s.quoteDocBar}>
+            <span>Presupuesto comercial</span>
+            <span>Tu marca visible</span>
+          </div>
+
+          <div className={s.quoteAvailability}>
+            <span className={s.quoteDot} aria-hidden />
+            Marca aplicada en tu cotizacion
+          </div>
+
+          <div className={s.quoteIdentity}>
+            <div className={s.quoteLogoFrame}>
+              <div className={s.publicLogo} style={{ ["--brand" as string]: form.brandColor }}>
+                {previewIdentity ? (
                   <Image
-                    className={s.previewLogoImage}
-                    src={previewModel.logoPreview}
-                    alt={previewModel.empresaNombre || "Logo de la empresa"}
-                    width={72}
-                    height={72}
+                    src={previewIdentity}
+                    alt={form.empresaNombre || "Logo de la empresa"}
+                    width={56}
+                    height={56}
+                    className={s.publicLogoImage}
                     unoptimized
                   />
                 ) : (
-                  <div className={s.previewLogoFallback}>{previewModel.initials}</div>
+                  <span>{previewInitials}</span>
                 )}
-
-                <div className={s.previewData}>
-                  <strong>{previewModel.empresaNombre}</strong>
-                  <div className={s.previewLine}>
-                    <LuMapPin aria-hidden />
-                    <span>{previewModel.empresaDireccion}</span>
-                  </div>
-                  <div className={s.previewLine}>
-                    <LuPhone aria-hidden />
-                    <span>{previewModel.empresaTelefono}</span>
-                  </div>
-                  <div className={s.previewLine}>
-                    <LuMail aria-hidden />
-                    <span>{previewModel.empresaEmail}</span>
-                  </div>
-                </div>
               </div>
+            </div>
 
-              <div className={s.previewPublicContent}>
-                <p className={s.previewDescription}>
-                  {previewModel.solicitudPublicaDescripcionCorta}
-                </p>
-                <div className={s.previewTrustBox}>
-                  <strong>{previewModel.solicitudPublicaValor}</strong>
-                  <span>{previewModel.solicitudPublicaMensajeConfianza}</span>
-                </div>
-                <p className={s.previewPrivacy}>{previewModel.solicitudPublicaPrivacidad}</p>
+            <div className={s.quoteIdentityCopy}>
+              <strong>{form.empresaNombre || "Tu empresa"}</strong>
+              <div className={s.quoteMetaList}>
+                <span>
+                  <LuMapPin aria-hidden />
+                  {form.empresaDireccion || "Direccion comercial"}
+                </span>
+                <span>
+                  <LuPhone aria-hidden />
+                  {form.empresaTelefono || "Telefono de contacto"}
+                </span>
+                <span>
+                  <LuMail aria-hidden />
+                  {form.empresaEmail || "Email comercial"}
+                </span>
               </div>
             </div>
           </div>
-        </section>
 
-        <section className={s.section}>
-          <div className={s.sectionTitle}>
-            <LuBuilding2 aria-hidden />
-            <span>Datos de empresa</span>
+          <div className={s.quoteDivider} />
+
+          <p className={s.quoteSupportCopy}>
+            Estos datos y tu color de marca se muestran en el presupuesto que recibe tu cliente.
+          </p>
+
+          <div className={s.quotePaymentCard}>
+            <strong>Forma de pago visible</strong>
+            <span>{form.formaPago.trim() || "Define tu forma de pago en Configuracion comercial."}</span>
           </div>
+        </div>
+      </section>
 
-          <div className={s.card}>
-            <label className={s.field}>
-              <span className={s.label}>Nombre empresa</span>
-              <input
-                className={s.input}
-                value={form.empresaNombre}
-                onChange={(event) => handleFieldChange("empresaNombre", event.target.value)}
-                placeholder="Ej: Vidrios Ventora SpA"
-              />
-            </label>
+      <div className={s.accordionList}>
+        <section className={`${s.accordion} ${openSection === "empresa" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "empresa" ? null : "empresa"))} aria-expanded={openSection === "empresa"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuBuilding2 aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Datos de empresa</span>
+                <strong>Datos de empresa</strong>
+                <p>{companySummary}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={companyComplete}>{companyComplete ? "Completo" : "Pendiente"}</span>
+              {sectionFeedback?.section === "empresa" && sectionFeedback.kind === "success" ? <span className={s.savedPill}>Guardado</span> : null}
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
 
-            <label className={s.field}>
-              <span className={s.label}>Teléfono</span>
-              <input
-                className={s.input}
-                value={form.empresaTelefono}
-                onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)}
-                placeholder="+56 9 1234 5678"
-              />
-            </label>
-
-            <label className={s.field}>
-              <span className={s.label}>Dirección</span>
-              <input
-                className={s.input}
-                value={form.empresaDireccion}
-                onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)}
-                placeholder="Ej: Av. Apoquindo 4501, Las Condes"
-              />
-            </label>
-
-            <label className={s.field}>
-              <span className={s.label}>Email</span>
-              <input
-                className={s.input}
-                value={form.empresaEmail}
-                onChange={(event) => handleFieldChange("empresaEmail", event.target.value)}
-                placeholder="contacto@ventora.cl"
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className={s.section}>
-          <div className={s.sectionTitle}>
-            <LuPalette aria-hidden />
-            <span>Marca</span>
-          </div>
-
-          <div className={s.card}>
-            <div className={s.field}>
-              <span className={s.label}>Color de marca</span>
-              <div className={s.swatchRow}>
-                {BRAND_PRESETS.map((color) => {
-                  const isActive = form.brandColor.toLowerCase() === color.toLowerCase();
-
-                  return (
-                    <button
-                      key={color}
-                      className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => handleFieldChange("brandColor", color)}
-                      type="button"
-                      aria-label={`Usar color ${color}`}
-                      aria-pressed={isActive}
-                    >
-                      {isActive ? <LuCheck aria-hidden /> : null}
-                    </button>
-                  );
-                })}
-
-                <label
-                  className={`${s.customColor} ${isCustomBrandColor ? s.customColorActive : ""}`}
-                >
-                  <span
-                    className={s.customColorPreview}
-                    style={{ backgroundColor: form.brandColor }}
-                    aria-hidden
-                  />
-                  <span className={s.customColorLabel}>Otro</span>
-                  <input
-                    type="color"
-                    value={form.brandColor}
-                    onChange={(event) => handleFieldChange("brandColor", event.target.value)}
-                    aria-label="Elegir color personalizado"
-                  />
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.fieldGrid}>
+                <label className={s.field}>
+                  <span className={s.label}>Nombre empresa</span>
+                  <input className={s.input} value={form.empresaNombre} onChange={(event) => handleFieldChange("empresaNombre", event.target.value)} placeholder="Ej: Vidrieria San Marco" />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Telefono</span>
+                  <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder="+56 9 1234 5678" />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Direccion</span>
+                  <input className={s.input} value={form.empresaDireccion} onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)} placeholder="Ej: Apoquindo 4501, Las Condes" />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Email</span>
+                  <input className={s.input} value={form.empresaEmail} onChange={(event) => handleFieldChange("empresaEmail", event.target.value)} placeholder="contacto@empresa.cl" />
                 </label>
               </div>
-              <span className={s.helpText}>Este color se aplicará en tu PDF.</span>
-            </div>
-
-            <div className={s.divider} />
-
-            <div className={s.field}>
-              <span className={s.label}>Logo</span>
-              <label className={s.logoUpload}>
-                <div className={s.logoUploadIcon}>
-                  <LuImagePlus aria-hidden />
-                </div>
-                <div className={s.logoUploadBody}>
-                  <strong>{isUploading ? "Subiendo logo..." : "Subir logo"}</strong>
-                  <span>PNG o JPG · mínimo 256×256</span>
-                </div>
-                <div className={s.logoUploadAction}>↑</div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoChange}
-                  disabled={isUploading}
-                />
-              </label>
+              {sectionFeedback?.section === "empresa" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
+              <div className={s.sectionActions}>
+                <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("empresa")} disabled={isSaving || savingSection === "empresa"}>
+                  <LuSave aria-hidden />
+                  {savingSection === "empresa" ? "Guardando..." : "Guardar datos"}
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className={s.section}>
-          <div className={s.sectionTitle}>
-            <LuSettings2 aria-hidden />
-            <span>Configuración comercial</span>
-          </div>
-
-          <div className={s.card}>
-            <label className={s.field}>
-              <span className={s.label}>Forma de pago</span>
-              <textarea
-                className={s.textarea}
-                rows={3}
-                value={form.formaPago}
-                onChange={(event) => handleFieldChange("formaPago", event.target.value)}
-                placeholder="Ej: 50% al iniciar, 50% contra entrega"
-              />
-            </label>
-
-            <p className={s.helpText}>Aparecerá en cada cotización enviada al cliente.</p>
-
-            <div className={s.divider} />
-
-            <div className={s.staticInfo}>
-              <span className={s.label}>Modo de precio</span>
-              <strong>Todos los valores incluyen IVA (19%)</strong>
+        <section className={`${s.accordion} ${openSection === "marca" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "marca" ? null : "marca"))} aria-expanded={openSection === "marca"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuPalette aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Marca</span>
+                <strong>Marca</strong>
+                <p>{brandSummary}</p>
+              </div>
             </div>
-          </div>
-        </section>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={brandComplete}>{brandComplete ? "Completo" : "Pendiente"}</span>
+              {sectionFeedback?.section === "marca" && sectionFeedback.kind === "success" ? <span className={s.savedPill}>Guardado</span> : null}
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
 
-        <section className={s.section}>
-          <div className={s.sectionTitle}>
-            <LuBuilding2 aria-hidden />
-            <span>Solicitud pública</span>
-          </div>
-
-          <div className={s.card}>
-            <label className={s.field}>
-              <span className={s.label}>Slug público</span>
-              <input
-                className={s.input}
-                value={form.solicitudPublicaSlug}
-                onChange={(event) =>
-                  handleFieldChange("solicitudPublicaSlug", event.target.value)
-                }
-                placeholder="ej: vidrios-ventora"
-              />
-            </label>
-
-              <p className={s.helpText}>
-                Tu enlace quedará como <strong>/solicitud/{form.solicitudPublicaSlug || "mi-empresa"}</strong>.
-              </p>
-
-              <div className={s.publicLinkPanel}>
-                <div className={s.publicLinkBox}>
-                  <span className={s.label}>Enlace público</span>
-                  <strong>{publicRequestUrl}</strong>
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.field}>
+                <span className={s.label}>Color de marca</span>
+                <div className={s.swatchRow}>
+                  {BRAND_PRESETS.map((color) => {
+                    const isActive = form.brandColor.toLowerCase() === color.toLowerCase();
+                    return (
+                      <button key={color} type="button" className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`} style={{ backgroundColor: color }} onClick={() => handleFieldChange("brandColor", color)} aria-label={`Usar color ${color}`} aria-pressed={isActive}>
+                        {isActive ? <LuCheck aria-hidden /> : null}
+                      </button>
+                    );
+                  })}
+                  <label className={s.customColor}>
+                    <span className={s.customColorPreview} style={{ backgroundColor: form.brandColor }} />
+                    <span className={s.customColorLabel}>Otro</span>
+                    <input type="color" value={form.brandColor} onChange={(event) => handleFieldChange("brandColor", event.target.value)} aria-label="Elegir color personalizado" />
+                  </label>
                 </div>
+              </div>
 
-                <div className={s.publicLinkActions}>
-                  <button
-                    type="button"
-                    className={s.secondaryAction}
-                    onClick={() => void handleCopyPublicLink()}
-                  >
-                    <LuCopy aria-hidden />
-                    Copiar enlace
-                  </button>
-                  <a
-                    className={s.secondaryAction}
-                    href={persistedPublicRequestUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                      <LuExternalLink aria-hidden />
-                      Ver página pública
-                    </a>
-                    <Link
-                      href="/solicitudes/canales"
-                      className={s.secondaryAction}
-                      prefetch={false}
-                    >
-                      <LuQrCode aria-hidden />
-                      Canales y QR
-                    </Link>
+              <div className={s.field}>
+                <span className={s.label}>Logo</span>
+                <label className={s.logoUpload}>
+                  <div className={s.logoUploadIcon}><LuImagePlus aria-hidden /></div>
+                  <div className={s.logoUploadBody}>
+                    <strong>{isUploading ? "Subiendo logo..." : "Subir logo"}</strong>
+                    <span>PNG o JPG</span>
                   </div>
+                  <div className={s.logoUploadAction}>↑</div>
+                  <input type="file" accept="image/*" onChange={handleLogoChange} disabled={isUploading} />
+                </label>
+              </div>
+
+              {sectionFeedback?.section === "marca" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
+              <div className={s.sectionActions}>
+                <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("marca")} disabled={isSaving || savingSection === "marca"}>
+                  <LuSave aria-hidden />
+                  {savingSection === "marca" ? "Guardando..." : "Guardar marca"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.accordion} ${openSection === "comercial" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "comercial" ? null : "comercial"))} aria-expanded={openSection === "comercial"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuSettings2 aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Configuracion comercial</span>
+                <strong>Configuracion comercial</strong>
+                <p>{commercialSummary}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={commercialComplete}>{commercialComplete ? "Completo" : "Pendiente"}</span>
+              {sectionFeedback?.section === "comercial" && sectionFeedback.kind === "success" ? <span className={s.savedPill}>Guardado</span> : null}
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
+
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <label className={s.field}>
+                <span className={s.label}>Forma de pago</span>
+                <textarea className={s.textarea} rows={3} value={form.formaPago} onChange={(event) => handleFieldChange("formaPago", event.target.value)} placeholder="Ej: 50% al inicio y 50% al finalizar" />
+              </label>
+
+              <div className={s.field}>
+                <span className={s.label}>Modo de precio</span>
+                <div className={s.modeGrid}>
+                  {[
+                    { value: "margen" as const, label: "Margen sobre costo", hint: "Recomendado para cotizar" },
+                    { value: "precio_directo" as const, label: "Precio directo", hint: "Precio final manual" },
+                  ].map((option) => {
+                    const isActive = form.modoPrecioPreferido === option.value;
+                    return (
+                      <button key={option.value} type="button" className={`${s.modeCard} ${isActive ? s.modeCardActive : ""}`} onClick={() => handleFieldChange("modoPrecioPreferido", option.value)} aria-pressed={isActive}>
+                        <strong>{option.label}</strong>
+                        <span>{option.hint}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-
-              <p className={s.helpText}>
-                Usa este enlace en Instagram, Facebook, tarjetas, QR o WhatsApp Business.
-              </p>
-              {publicLinkMessage ? (
-                <p className={s.helpText}>{publicLinkMessage}</p>
-              ) : null}
-
-              <div className={s.divider} />
-
-            <label className={s.field}>
-              <span className={s.label}>Descripción corta</span>
-              <textarea
-                className={s.textarea}
-                rows={3}
-                value={form.solicitudPublicaDescripcionCorta}
-                onChange={(event) =>
-                  handleFieldChange(
-                    "solicitudPublicaDescripcionCorta",
-                    event.target.value
-                  )
-                }
-                placeholder={DEFAULT_SOLICITUD_PUBLICA_DESCRIPCION_CORTA}
-              />
-              <span className={s.helpText}>
-                Debe explicar rápido qué hace tu empresa y qué tipo de trabajo recibe.
-              </span>
-            </label>
-
-            <label className={s.field}>
-              <span className={s.label}>Mensaje de valor</span>
-              <textarea
-                className={s.textarea}
-                rows={3}
-                value={form.solicitudPublicaValor}
-                onChange={(event) =>
-                  handleFieldChange("solicitudPublicaValor", event.target.value)
-                }
-                placeholder={DEFAULT_SOLICITUD_PUBLICA_VALOR}
-              />
-            </label>
-
-            <label className={s.field}>
-              <span className={s.label}>Mensaje de confianza</span>
-              <textarea
-                className={s.textarea}
-                rows={3}
-                value={form.solicitudPublicaMensajeConfianza}
-                onChange={(event) =>
-                  handleFieldChange(
-                    "solicitudPublicaMensajeConfianza",
-                    event.target.value
-                  )
-                }
-                placeholder={DEFAULT_SOLICITUD_PUBLICA_MENSAJE_CONFIANZA}
-              />
-            </label>
-
-            <div className={s.scheduleGrid}>
-              <label className={s.field}>
-                <span className={s.label}>Horario desde</span>
-                <input
-                  className={s.input}
-                  type="time"
-                  value={form.solicitudPublicaHorarioDesde}
-                  onChange={(event) =>
-                    handleFieldChange(
-                      "solicitudPublicaHorarioDesde",
-                      event.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Horario hasta</span>
-                <input
-                  className={s.input}
-                  type="time"
-                  value={form.solicitudPublicaHorarioHasta}
-                  onChange={(event) =>
-                    handleFieldChange(
-                      "solicitudPublicaHorarioHasta",
-                      event.target.value
-                    )
-                  }
-                />
-              </label>
-            </div>
-
-            <div className={s.field}>
-              <span className={s.label}>Días de atención</span>
-              <div className={s.dayChips}>
-                {WEEK_DAY_OPTIONS.map((day) => {
-                  const isActive = form.solicitudPublicaDiasAtencion.includes(day.value);
-
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      className={`${s.dayChip} ${isActive ? s.dayChipActive : ""}`}
-                      onClick={() => handleToggleBusinessDay(day.value)}
-                      aria-pressed={isActive}
-                    >
-                      {day.label}
-                    </button>
-                  );
-                })}
               </div>
-              <span className={s.helpText}>
-                Esto define si la landing muestra tu empresa como ON u OFF.
-              </span>
-            </div>
 
-            <label className={s.field}>
-              <span className={s.label}>Mensaje de privacidad</span>
-              <textarea
-                className={s.textarea}
-                rows={3}
-                value={form.solicitudPublicaPrivacidad}
-                onChange={(event) =>
-                  handleFieldChange(
-                    "solicitudPublicaPrivacidad",
-                    event.target.value
-                  )
-                }
-                placeholder={DEFAULT_SOLICITUD_PUBLICA_PRIVACIDAD}
-              />
-            </label>
+              <p className={s.inlineInfo}>Todos los valores de tus cotizaciones incluyen IVA.</p>
+              {sectionFeedback?.section === "comercial" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
+              <div className={s.sectionActions}>
+                <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("comercial")} disabled={isSaving || savingSection === "comercial"}>
+                  <LuSave aria-hidden />
+                  {savingSection === "comercial" ? "Guardando..." : "Guardar configuracion"}
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className={s.section}>
-          <div className={s.sectionTitle}>
-            <LuBellRing aria-hidden />
-            <span>Notificaciones</span>
-          </div>
-
-          <div className={s.card}>
-            <div className={s.notificationsRow}>
-              <div className={s.notificationsCopy}>
-                <strong>Recibir notificaciones</strong>
-                <p>Avisos de cotizaciones nuevas, aprobadas y recordatorios.</p>
+        <section className={`${s.accordion} ${openSection === "notificaciones" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "notificaciones" ? null : "notificaciones"))} aria-expanded={openSection === "notificaciones"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuBellRing aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Notificaciones</span>
+                <strong>Notificaciones</strong>
+                <p>{notificationsSummary(deviceAlertsState.kind)}</p>
               </div>
-
-              <button
-                className={`${s.switch} ${notificationsEnabled ? s.switchOn : ""}`}
-                type="button"
-                role="switch"
-                aria-checked={notificationsEnabled}
-                aria-label="Recibir notificaciones"
-                onClick={handleNotificationsToggle}
-                disabled={notificationsDisabled}
-              >
-                <span className={s.switchThumb} />
-              </button>
             </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={notificationsComplete}>{notificationsComplete ? "Activas" : "Pendiente"}</span>
+              {sectionFeedback?.section === "notificaciones" && sectionFeedback.kind === "success" ? <span className={s.savedPill}>Listo</span> : null}
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
 
-            <p className={s.helpText}>{deviceAlertsState.message}</p>
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.notificationsRow}>
+                <div className={s.notificationsCopy}>
+                  <strong>Recibir notificaciones</strong>
+                  <p>{deviceAlertsState.message}</p>
+                </div>
+                <button type="button" className={`${s.switch} ${notificationsEnabled ? s.switchOn : ""}`} onClick={handleNotificationsToggle} disabled={notificationsDisabled} aria-pressed={notificationsEnabled} aria-label="Activar notificaciones">
+                  <span className={s.switchThumb} />
+                </button>
+              </div>
+              {sectionFeedback?.section === "notificaciones" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
+              <div className={s.sectionActions}>
+                <button type="button" className={s.secondaryAction} onClick={() => void syncDeviceAlertsState()} disabled={isActivatingAlerts}>
+                  {isActivatingAlerts ? "Activando..." : notificationsEnabled ? "Revisar estado" : "Activar alertas"}
+                </button>
+              </div>
+            </div>
           </div>
         </section>
-
-        {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
-        {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
-
-      </form>
-
-      <div className={s.footerActions}>
-        <button
-          className={s.saveButton}
-          type="submit"
-          form="organization-profile-form"
-          disabled={isSaving || isUploading}
-        >
-          <LuSave aria-hidden />
-          {isSaving ? "Guardando..." : "Guardar configuración"}
-        </button>
       </div>
+
+      <section className={s.utilityCard}>
+        <span className={s.cardEyebrow}>Herramientas publicas</span>
+        <div className={s.utilityActions}>
+          <Link href="/configuracion/pagina-venta" className={s.secondaryLink}>
+            <LuGlobe aria-hidden />
+            Pagina publica
+          </Link>
+          <Link href="/solicitudes/canales" className={s.secondaryLink} prefetch={false}>
+            <LuQrCode aria-hidden />
+            Canales y QR
+          </Link>
+          <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
+            {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+            {publicLinkCopied ? "Copiado" : "Copiar link"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
-
-

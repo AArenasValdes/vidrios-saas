@@ -16,6 +16,7 @@ import type {
 
 type WebPushNotificationsServiceDeps = {
   repository?: WebPushSubscriptionsRepository;
+  validateMembership?: (context: AuthPushContext) => Promise<void>;
 };
 
 type SendQuoteDecisionPushInput = {
@@ -189,6 +190,8 @@ export function createWebPushNotificationsService(
   deps: WebPushNotificationsServiceDeps = {}
 ) {
   const repository = deps.repository ?? webPushSubscriptionsRepository;
+  const validateMembership =
+    deps.validateMembership ?? validateUserBelongsToOrganization;
 
   return {
     isConfigured() {
@@ -208,7 +211,7 @@ export function createWebPushNotificationsService(
         throw new Error("La suscripcion push del dispositivo no es valida.");
       }
 
-      await validateUserBelongsToOrganization(context);
+      await validateMembership(context);
 
       const payload: UpsertWebPushSubscriptionInput = {
         organizationId: context.organizationId,

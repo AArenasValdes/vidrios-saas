@@ -1,0 +1,260 @@
+# Data Model Map - Ventora
+
+Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_map.md`, `supabase/docs/rls_policies.md`
+
+---
+
+## Tablas activas (core del producto)
+
+### Tabla: organizations
+
+- **Proposito**: Raiz del multi-tenant. Cada empresa cliente SaaS es una organizacion.
+- **Campos importantes**: `id` (bigint PK), `nombre`, `correo`, `telefono`, `direccion`, `logo_url`, `plan`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery
+- **Usada por**: Auth (resolver org), todas las features (filtro tenant)
+- **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
+- **Riesgos**: No eliminar organizaciones con datos asociados (CASCADE en algunos FK)
+
+---
+
+### Tabla: users
+
+- **Proposito**: Empleados de la organizacion vinculados a auth.users
+- **Campos importantes**: `id` (bigint PK), `correo` (UNIQUE), `organization_id` (FK), `rol` (admin/tecnico/viewer por convencion, sin CHECK), `auth_user_id` (FK auth.users), `eliminado_en`
+- **Relaciones**: N:1 organizations, N:1 auth.users
+- **Usada por**: Auth (perfil post-login), RLS (`get_org_id()`), solicitudes access control
+- **Archivos donde aparece**: `src/features/auth/repositories/auth.repository.ts`, `src/features/solicitudes/services/solicitudes-contacto-access.ts`
+- **Riesgos**: `rol` no tiene CHECK constraint. Si se agrega un rol nuevo, actualizar `UserRole` type en `src/features/auth/types/auth.ts`
+
+---
+
+### Tabla: clients
+
+- **Proposito**: Clientes finales de la empresa. Se crean manualmente o auto-creados al hacer cotizacion.
+- **Campos importantes**: `id` (bigint PK), `nombre` (NOT NULL), `telefono`, `direccion`, `correo`, `organization_id` (FK), `estado_manual` (CHECK: activo/seguimiento/prospecto/inactivo), `eliminado_en`
+- **Relaciones**: N:1 organizations, 1:N projects, 1:N cotizaciones (via projects)
+- **Usada por**: Clientes, Cotizaciones, Dashboard
+- **Archivos donde aparece**: `src/features/clientes/repositories/clientes-repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
+- **Riesgos**: `unique_correo_clients` es GLOBAL (no por org) - bug conocido INC-3. Impide mismo correo en distintas organizaciones.
+
+---
+
+### Tabla: projects
+
+- **Proposito**: Obras/trabajos vinculados a un cliente
+- **Campos importantes**: `id` (bigint PK), `titulo` (NOT NULL), `descripcion`, `cliente_id` (FK), `organization_id` (FK), `estado`, `eliminado_en`
+- **Relaciones**: N:1 organizations, N:1 clients, 1:N cotizaciones
+- **Usada por**: Clientes (ficha), Cotizaciones (auto-creacion)
+- **Archivos donde aparece**: `src/features/projects/repositories/projects.repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/clientes/services/clientes.service.ts`
+- **Riesgos**: `estado` no tiene CHECK constraint
+
+---
+
+### Tabla: cotizaciones
+
+- **Proposito**: Presupuestos comerciales. Herramienta de cierre, no cotizador tecnico.
+- **Campos importantes**: `id` (bigint PK), `proyecto_id` (FK), `organization_id` (FK), `numero` (COT-DDMMYY-NNN, unique por org), `estado` (sin CHECK), `estado_comercial`, `total` (NOT NULL), `subtotal_neto`, `costo_total`, `margen_pct`, `utilidad_total`, `descuento_pct`, `flete`, `iva`, `notas`, `valido_hasta`, `approval_token` (UNIQUE partial WHERE NOT NULL), `approval_token_expires_at`, `cliente_vio_en`, `cliente_respondio_en`, `cliente_respuesta_canal`, `eliminado_en`
+- **Relaciones**: N:1 organizations, N:1 projects, 1:N cotizacion_items
+- **Usada por**: Cotizaciones, Dashboard, Aprobacion publica, PDF, WhatsApp
+- **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/cotizaciones/resumen/route.ts`
+- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK.
+
+---
+
+### Tabla: cotizacion_items
+
+- **Proposito**: Items/componentes de una cotizacion
+- **Campos importantes**: `id` (bigint PK), `cotizacion_id` (FK), `organization_id` (FK), `nombre`, `descripcion`, `tipo_item`, `tipo_componente`, `codigo` (V1, P1), `cantidad` (NOT NULL), `unidad`, `ancho`, `alto`, `area_m2`, `linea`, `color`, `vidrio`, `precio_unitario` (NOT NULL), `subtotal` (NOT NULL), `costo_unitario`, `costo_total`, `margen_pct`, `utilidad`, `product_type_id` (FK legacy), `system_line_id` (FK legacy), `configuration_id` (FK legacy), `observaciones`, `orden`, `eliminado_en`
+- **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
+- **Usada por**: Cotizaciones, PDF
+- **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
+- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual).
+
+---
+
+### Tabla: solicitudes_contacto
+
+- **Proposito**: Leads capturados. Tabla CORE de captacion.
+- **Campos importantes**: `id` (uuid PK, gen_random_uuid), `nombre` (NOT NULL), `empresa` (NOT NULL), `correo`, `telefono`, `contacto`, `ayuda` (CHECK: demo/cotizacion/ventas), `mensaje`, `tipo_trabajo`, `estado` (CHECK: nueva/contactada/cerrada/descartada), `origen` (DEFAULT 'landing'), `contexto` (CHECK: landing/empresa-publica), `organization_id` (FK, nullable, ON DELETE CASCADE), `utm_source`, `utm_medium`, `utm_campaign`, `source_url`, `contactada_at`, `ip`, `user_agent`, `creado_en`, `actualizado_en`
+- **Relaciones**: N:1 organizations (ON DELETE CASCADE)
+- **Usada por**: Solicitudes, Captacion, Notificaciones (push al crear lead)
+- **Archivos donde aparece**: `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`, `app/api/solicitud/[empresa]/route.ts`
+- **Riesgos**: RLS permite INSERT publico (anon) con estado='nueva'. `organization_id` nullable (leads de landing general sin empresa destino). Rate limiting por IP en API route.
+
+---
+
+### Tabla: organization_profile
+
+- **Proposito**: Perfil de empresa 1:1 con organizations. Branding, config landing, config solicitud publica.
+- **Campos importantes**: `organization_id` (PK, FK ON DELETE CASCADE), `empresa_nombre`, `empresa_logo_url`, `empresa_direccion`, `empresa_telefono`, `empresa_email`, `brand_color` (DEFAULT '#1a3a5c'), `forma_pago`, `proveedor_preferido`, `modo_precio_preferido` (DEFAULT 'margen'), `margen_defecto` (DEFAULT 100), `solicitud_publica_slug` (UNIQUE partial), `solicitud_publica_descripcion_corta`, `solicitud_publica_valor`, `solicitud_publica_mensaje_confianza`, `solicitud_publica_privacidad`, `solicitud_publica_horario_desde`, `solicitud_publica_horario_hasta`, `solicitud_publica_dias_atencion`, `solicitud_publica_horario_por_dia` (jsonb), `public_name`, `public_subtitle`, `public_zone`, `public_business_type`, `secondary_color` (DEFAULT '#25d366'), `hero_mode` (CHECK: image/gradient), `hero_image_url`, `hero_title`, `hero_subtitle`, `show_gallery`, `show_schedule`, `show_rating`, `rating_label`, `jobs_count_label`, `form_title`, `form_subtitle`, `is_published`
+- **Relaciones**: 1:1 organizations, 1:N public_landing_gallery (ON DELETE CASCADE)
+- **Usada por**: Empresa config, Pagina venta, Solicitud publica, PDF (branding), Aprobacion publica
+- **Archivos donde aparece**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`, `app/(landing-web)/solicitud/[empresa]/page.tsx`
+- **Riesgos**: Slug UNIQUE parcial. Cambios afectan landing publica, PDF y aprobacion simultaneamente. 30+ campos en mapping complejo.
+
+---
+
+### Tabla: public_landing_gallery
+
+- **Proposito**: Galeria de imagenes para landing publica de empresa
+- **Campos importantes**: `id` (bigint PK), `organization_id` (FK ON DELETE CASCADE), `landing_id` (FK organization_profile ON DELETE CASCADE), `image_url` (NOT NULL), `label`, `sort_order` (NOT NULL, DEFAULT 0), `is_visible` (NOT NULL, DEFAULT true)
+- **Relaciones**: N:1 organizations, N:1 organization_profile
+- **Usada por**: Landing gallery, Pagina venta
+- **Archivos donde aparece**: `src/features/landing-gallery/repositories/landing-gallery.repository.ts`, `src/features/landing-gallery/repositories/landing-gallery-server.repository.ts`
+- **Riesgos**: Max 8 items por org (limita en service). Imagenes en Storage bucket `organization-assets`.
+
+---
+
+### Tabla: web_push_subscriptions
+
+- **Proposito**: Suscripciones push de navegadores de usuarios
+- **Campos importantes**: `id` (bigint PK), `organization_id` (NOT NULL, sin FK), `auth_user_id` (uuid, sin FK), `endpoint` (UNIQUE), `p256dh`, `auth`, `subscription` (jsonb), `user_email`, `user_agent`, `is_active`, `created_at`, `updated_at`, `last_seen_at`
+- **Relaciones**: Sin FKs (bug conocido INC-4)
+- **Usada por**: Notificaciones push
+- **Archivos donde aparece**: `src/features/notificaciones/repositories/web-push-subscriptions.repository.ts`, `app/api/pwa/push-subscriptions/route.ts`
+- **Riesgos**: SIN RLS POLICIES (bug INC-9). Sin FK a organizations. Cualquier usuario autenticado puede leer todas las suscripciones.
+
+---
+
+### Tabla: cotizacion_code_counters
+
+- **Proposito**: Contador atomico para generacion de codigos COT-DDMMYY-NNN
+- **Campos importantes**: `organization_id` (PK parcial), `quote_date` (date, PK parcial), `last_number` (NOT NULL, DEFAULT 0)
+- **Relaciones**: Sin FK a organizations (bug INC-5)
+- **Usada por**: Cotizaciones (generacion de codigo)
+- **Archivos donde aparece**: Funcion DB `reserve_next_cotizacion_code()`, `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
+- **Riesgos**: SIN RLS POLICIES. Solo accesible via funcion SECURITY DEFINER.
+
+---
+
+## Tablas legacy/dormidas (NO tocar sin instruccion explicita)
+
+### Tabla: materials
+
+- **Proposito**: Catalogo de materiales del antiguo cotizador tecnico. DORMIDA.
+- **Campos importantes**: `id`, `nombre`, `organization_id`, `material_type_id`, `costo`, `inventario`, `unidad`, `categoria`, `precio_venta`
+- **Riesgos**: No reactivar. Pertenece al enfoque de cotizador tecnico descartado.
+
+### Tabla: material_types
+
+- **Proposito**: Tipos globales de materiales. DORMIDA.
+- **Riesgos**: Sin `organization_id`. Catalogo global. Sin RLS policies.
+
+### Tabla: product_types
+
+- **Proposito**: Tipos de producto globales. DORMIDA.
+- **Riesgos**: Sin `organization_id`. SELECT publico via RLS.
+
+### Tabla: system_lines
+
+- **Proposito**: Lineas de sistema (perfiles). DORMIDA.
+- **Riesgos**: `organization_id` nullable (mixto). Sin RLS efectiva.
+
+### Tabla: system_configurations
+
+- **Proposito**: Configuraciones de sistema. DORMIDA.
+- **Riesgos**: FKs a product_types y system_lines (dormidos).
+
+### Tabla: configuration_materials
+
+- **Proposito**: Pivot configuracion-material. DORMIDA.
+- **Riesgos**: FKs duplicados (INC-1).
+
+### Tabla: line_glass_compatibility
+
+- **Proposito**: Compatibilidad linea-vidrio. DORMIDA.
+- **Riesgos**: Sin RLS directa (via subquery).
+
+### Tabla: formula_variables
+
+- **Proposito**: Variables de formula. DORMIDA.
+- **Riesgos**: Sin `organization_id`. Sin RLS policies.
+
+### Tabla: labor_costs
+
+- **Proposito**: Costos de mano de obra. DORMIDA.
+- **Riesgos**: Tiene `organization_id` pero no se usa activamente.
+
+### Tabla: historial_precios
+
+- **Proposito**: Historial de precios de materiales. DORMIDA.
+- **Riesgos**: FK con tilde en nombre (INC-2).
+
+### Tabla: quote_item_breakdown
+
+- **Proposito**: Breakdown de costos por item. DORMIDA.
+- **Riesgos**: FKs duplicados (INC-1). SIN RLS POLICIES (bug INC-10).
+
+---
+
+## Vista: admin_clientes_eliminados
+
+- **Proposito**: Muestra clientes soft-deleted con conteos de proyectos/cotizaciones eliminados
+- **Security invoker**: true
+- **Usada por**: Funcion `admin_purgar_clientes_eliminados()`
+
+---
+
+## Funciones DB
+
+| Funcion | Tipo | Proposito |
+|---|---|---|
+| `get_org_id()` | SQL STABLE SECURITY DEFINER | Resuelve organization_id desde auth.email() via public.users |
+| `reserve_next_cotizacion_code(org_id, date)` | PLPGSQL SECURITY DEFINER | Generacion atomica de codigo COT-DDMMYY-NNN |
+| `admin_purgar_clientes_eliminados(retention_days)` | PLPGSQL SECURITY DEFINER | Purga hard de registros soft-deleted > retention |
+| `rls_auto_enable()` | EVENT TRIGGER | Auto-habilita RLS en nuevas tablas publicas |
+
+---
+
+## RLS - Resumen de aislamiento
+
+| Mecanismo | Tablas |
+|---|---|
+| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
+| `get_org_id()` + nullable | system_configurations, system_lines |
+| Subquery a users | organization_profile, public_landing_gallery |
+| Cross-table subquery | configuration_materials, line_glass_compatibility |
+| SELECT publico | product_types |
+| **Sin policies** | cotizacion_code_counters, formula_variables, material_types, quote_item_breakdown, web_push_subscriptions |
+
+### solicitudes_contacto - RLS especial
+
+- `anon`/`authenticated` pueden INSERT con `estado='nueva'` y `contexto` valido
+- `authenticated` pueden SELECT/UPDATE leads de su propia org
+
+---
+
+## Indexes principales
+
+| Tabla | Index | Tipo |
+|---|---|---|
+| clients | `(organization_id, id)` WHERE eliminado_en IS NULL | Partial btree |
+| clients | `(organization_id, estado_manual)` WHERE eliminado_en IS NULL | Partial btree |
+| clients | `(organization_id, correo)` WHERE eliminado_en IS NULL | Unique partial |
+| cotizaciones | `(organization_id, actualizado_en DESC)` WHERE eliminado_en IS NULL | Partial btree |
+| cotizaciones | `(organization_id, creado_en DESC)` WHERE eliminado_en IS NULL | Partial btree |
+| cotizaciones | `(organization_id, estado)` WHERE eliminado_en IS NULL | Partial btree |
+| cotizaciones | `(organization_id, numero)` | Unique |
+| cotizaciones | `approval_token` WHERE NOT NULL | Unique partial |
+| cotizacion_items | `(organization_id, cotizacion_id, orden, creado_en)` WHERE eliminado_en IS NULL | Partial btree |
+| solicitudes_contacto | `(organization_id, creado_en DESC)` | btree |
+| solicitudes_contacto | `(utm_source)` | btree |
+| organization_profile | `lower(solicitud_publica_slug)` WHERE non-empty | Unique partial |
+| public_landing_gallery | `(organization_id, sort_order)` | btree |
+| web_push_subscriptions | `(organization_id, is_active)` | btree |
+
+---
+
+## Issues conocidos de DB (no arreglar sin instruccion)
+
+| ID | Issue | Severidad |
+|---|---|---|
+| INC-1 | FKs duplicados en cotizacion_items, configuration_materials, quote_item_breakdown | Alta |
+| INC-2 | `historial_precios_organizacion_id_fkey` usa tilde en nombre | Media |
+| INC-3 | `unique_correo_clients` sin scope por org | Alta |
+| INC-4 | web_push_subscriptions sin FKs a organizations/auth.users | Media |
+| INC-5 | cotizacion_code_counters sin FK a organizations | Baja |
+| INC-9 | web_push_subscriptions sin RLS policies | Alta |
+| INC-10 | quote_item_breakdown sin RLS policies | Alta |
+| INC-13 | Sin CHECK en cotizaciones.estado, projects.estado, users.rol | Media |
+| INC-14 | Grants ALL a anon en todas las tablas | Media |

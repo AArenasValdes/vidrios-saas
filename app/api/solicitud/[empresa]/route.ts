@@ -9,9 +9,16 @@ export const dynamic = "force-dynamic";
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
+const EMPRESA_SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
 const recentRequestsByIp = new Map<string, number[]>();
 
 function resolveIp(request: Request) {
+  const cfConnectingIp = request.headers.get("cf-connecting-ip");
+
+  if (cfConnectingIp) {
+    return cfConnectingIp.trim();
+  }
+
   const forwardedFor = request.headers.get("x-forwarded-for");
 
   if (forwardedFor) {
@@ -19,6 +26,16 @@ function resolveIp(request: Request) {
   }
 
   return request.headers.get("x-real-ip");
+}
+
+function normalizeEmpresaSlug(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (!EMPRESA_SLUG_REGEX.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
 }
 
 function isRateLimited(ip: string | null) {
@@ -35,16 +52,52 @@ function isRateLimited(ip: string | null) {
   }
 
   recentRequests.push(now);
-  recentRequestsByIp.set(key, recentRequests);
+  if (recentRequests.length > 0) {
+    recentRequestsByIp.set(key, recentRequests);
+  } else {
+    recentRequestsByIp.delete(key);
+  }
   return false;
+}
+
+async function parseBody(request: Request) {
+  try {
+    const parsed = await request.json();
+
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return parsed as {
+      nombre?: string;
+      contacto?: string;
+      tipoTrabajo?: string;
+      mensaje?: string;
+      origen?: string | null;
+      utmSource?: string | null;
+      utmMedium?: string | null;
+      utmCampaign?: string | null;
+      sourceUrl?: string | null;
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ empresa: string }> }
 ) {
-  const { empresa } = await context.params;
+  const { empresa: rawEmpresa } = await context.params;
   const ip = resolveIp(request);
+  const empresa = normalizeEmpresaSlug(rawEmpresa);
+
+  if (!empresa) {
+    return NextResponse.json(
+      { error: "No encontramos la empresa solicitada." },
+      { status: 404 }
+    );
+  }
 
   if (isRateLimited(ip)) {
     return NextResponse.json(
@@ -57,6 +110,15 @@ export async function POST(
   }
 
   try {
+    const body = await parseBody(request);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "La solicitud no tiene un formato valido." },
+        { status: 400 }
+      );
+    }
+
     const publicConfig =
       await solicitudesContactoService.getPublicRequestConfig(empresa);
 
@@ -66,18 +128,6 @@ export async function POST(
         { status: 404 }
       );
     }
-
-    const body = (await request.json()) as {
-      nombre?: string;
-      contacto?: string;
-      tipoTrabajo?: string;
-      mensaje?: string;
-      origen?: string | null;
-      utmSource?: string | null;
-      utmMedium?: string | null;
-      utmCampaign?: string | null;
-      sourceUrl?: string | null;
-    };
 
     const solicitud = await solicitudesContactoService.createPublicRequest({
       organizationId: publicConfig.organizationId,

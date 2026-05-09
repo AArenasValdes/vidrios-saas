@@ -523,7 +523,8 @@ export function createCotizacionesRepository(
     }
   }
 
-  async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     const snapshotInput: CrearCotizacionInput = {
       organizationId: snapshot.organizationId,
       proyectoId: snapshot.proyectoId,
@@ -1180,11 +1181,12 @@ export function createCotizacionesRepository(
       }
     },
 
-    async update(
-      id: EntityId,
-      input: CrearCotizacionInput,
-      previousSnapshot: Cotizacion | null = null
+  async update(
+    id: EntityId,
+    input: CrearCotizacionInput,
+    _previousSnapshot: Cotizacion | null = null
     ) {
+      void _previousSnapshot;
       const updatePayload = buildCotizacionUpdatePayload(input);
       let data: CotizacionRow | null = null;
       const createdItemIds: EntityId[] = [];

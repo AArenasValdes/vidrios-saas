@@ -9,8 +9,8 @@ Fecha de generación: 2026-05-06.
 
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
-**Total tablas con RLS habilitado:** 21  
-**Total tablas con policies definidas:** 16  
+**Total tablas con RLS habilitado:** 22
+**Total tablas con policies definidas:** 17
 **Total tablas con RLS habilitado pero sin policies:** 5  
 **Función de aislamiento principal:** `get_org_id()`
 
@@ -149,10 +149,21 @@ Usa subquery cruzada hacia `system_lines`.
 | Policy | Operación | USING | WITH CHECK | Rol |
 |---|---|---|---|---|
 | `solicitudes_contacto_insert_public` | INSERT | — | `estado = 'nueva'` y contexto válido | `anon`, `authenticated` |
-| `solicitudes_contacto_select_own` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
+| `solicitudes_contacto_select_own` | SELECT | `organization_id = get_org_id()` | `authenticated` |
 | `solicitudes_contacto_update_own` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
 
-Lectura operativa:
+### 17. `public_landing_gallery`
+
+Usa subquery directa a `public.users` (mismo patrón que `organization_profile`).
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `landing_gallery_select_own` | SELECT | subquery users | — | `authenticated` |
+| `landing_gallery_insert_own` | INSERT | — | subquery users | `authenticated` |
+| `landing_gallery_update_own` | UPDATE | subquery users | subquery users | `authenticated` |
+| `landing_gallery_delete_own` | DELETE | subquery users | — | `authenticated` |
+
+Lectura pública: Se usa admin client (`createAdminClient`) en el server repository `landing-gallery-server.repository.ts` para bypassear RLS en la landing pública.
 - Ya no bloquea captación.
 - `anon` puede insertar leads públicos.
 - `authenticated` puede ver y actualizar leads de su org.
@@ -179,7 +190,7 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 |---|---|
 | `get_org_id()` directo | `clients`, `cotizaciones`, `cotizacion_items`, `projects`, `users`, `materials`, `historial_precios`, `organizations`, `labor_costs`, `solicitudes_contacto` |
 | `get_org_id()` + nullable | `system_configurations`, `system_lines` |
-| Subquery directa a `users` | `organization_profile` |
+| Subquery directa a `users` | `organization_profile`, `public_landing_gallery` |
 | Subquery cruzada | `configuration_materials`, `line_glass_compatibility` |
 | Público total | `product_types` |
 | Sin policies | `cotizacion_code_counters`, `formula_variables`, `material_types`, `quote_item_breakdown`, `web_push_subscriptions` |

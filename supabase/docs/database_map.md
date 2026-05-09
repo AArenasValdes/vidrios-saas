@@ -9,7 +9,7 @@ Fecha de generación: 2026-05-06.
 
 La base de datos soporta un SaaS multi-tenant para captación y cierre de leads en empresas de vidrios y aluminio. El modelo se organiza alrededor de `organizations` como raíz de aislamiento. Cada tabla operativa filtra por `organization_id`. Existe una capa de catálogos técnicos (legado del cotizador) y una capa comercial activa (solicitudes, cotizaciones, clientes). El soft delete está estandarizado con `eliminado_en`. La seguridad se basa en RLS + `get_org_id()`.
 
-**Total de tablas:** 18
+**Total de tablas:** 19
 **Total de vistas:** 1
 **Total de funciones:** 4
 **Esquema:** `public` exclusivamente
@@ -266,7 +266,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ### 9. `organization_profile`
 
-**Propósito:** Perfil comercial de la organización para branding PDF y captación.
+**Propósito:** Perfil comercial de la organización para branding PDF, captación y landing configurable.
 
 | Columna | Tipo | Notable |
 |---|---|---|
@@ -289,6 +289,23 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `solicitud_publica_horario_desde` | text | Inicio horario comercial |
 | `solicitud_publica_horario_hasta` | text | Fin horario comercial |
 | `solicitud_publica_dias_atencion` | text | CSV de días 0-6 para ON/OFF |
+| `public_name` | text | Nombre comercial landing (fallback: empresa_nombre) |
+| `public_subtitle` | text | Rubro/especialidad |
+| `public_zone` | text | Zona/cobertura |
+| `public_business_type` | text | Tipo de negocio |
+| `secondary_color` | text | Color secundario hex (default: #25d366) |
+| `hero_mode` | text NOT NULL | CHECK: `image`, `gradient`. Default: `gradient` |
+| `hero_image_url` | text | URL imagen hero |
+| `hero_title` | text | Título hero (fallback: default) |
+| `hero_subtitle` | text | Subtítulo hero |
+| `show_gallery` | boolean NOT NULL | Default: true |
+| `show_schedule` | boolean NOT NULL | Default: true |
+| `show_rating` | boolean NOT NULL | Default: false |
+| `rating_label` | text | Texto de rating (ej: 4.9/5) |
+| `jobs_count_label` | text | Texto trabajos (ej: +200) |
+| `form_title` | text | Título formulario landing |
+| `form_subtitle` | text | Subtítulo formulario landing |
+| `is_published` | boolean NOT NULL | Default: false |
 | `creado_en` | timestamptz | |
 | `actualizado_en` | timestamptz | |
 
@@ -556,6 +573,29 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ---
 
+### 22. `public_landing_gallery`
+
+**Propósito:** Fotos de galería para la landing pública de cada organización. Relación 1:N con `organization_profile`.
+
+| Columna | Tipo | Notable |
+|---|---|---|
+| `id` | bigint IDENTITY | PK |
+| `organization_id` | bigint NOT NULL | FK → organizations ON DELETE CASCADE |
+| `landing_id` | bigint | FK → organization_profile ON DELETE CASCADE |
+| `image_url` | text NOT NULL | URL pública de la imagen |
+| `label` | text | Etiqueta visible (ej: Ventana, Shower) |
+| `sort_order` | integer NOT NULL | Default: 0 |
+| `is_visible` | boolean NOT NULL | Default: true |
+| `creado_en` | timestamptz | |
+
+**PK:** `id`
+**FK salientes:**
+- `organization_id` → `organizations.id` ON DELETE CASCADE
+- `landing_id` → `organization_profile.organization_id` ON DELETE CASCADE
+**Índice:** `(organization_id, sort_order)`
+
+---
+
 ## Vista
 
 ### `admin_clientes_eliminados`
@@ -592,6 +632,8 @@ organizations (1) ──── (N) materials
 organizations (1) ──── (N) historial_precios
 organizations (1) ──── (N) labor_costs
 organizations (1) ──── (N) solicitudes_contacto [ON DELETE CASCADE]
+organizations (1) ──── (N) public_landing_gallery [ON DELETE CASCADE]
+organization_profile (1) ──── (N) public_landing_gallery [ON DELETE CASCADE]
 
 clients (1) ──── (N) projects
 projects (1) ──── (N) cotizaciones

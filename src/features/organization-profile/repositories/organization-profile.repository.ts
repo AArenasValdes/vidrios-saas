@@ -3,9 +3,11 @@ import { normalizePreferredProvider } from "@/features/cotizaciones/services/com
 import type { EntityId } from "@/types/common";
 import type {
   OrganizationProfile,
+  SolicitudPublicaHorarioDia,
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import { sanitizeFileName } from "@/utils/sanitize-file-name";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -28,11 +30,29 @@ type OrganizationProfileRow = {
   solicitud_publica_horario_desde?: string | null;
   solicitud_publica_horario_hasta?: string | null;
   solicitud_publica_dias_atencion?: string | null;
+  solicitud_publica_horario_por_dia?: unknown;
   proveedor_preferido: string | null;
   modo_precio_preferido: string | null;
   margen_defecto: number | null;
   creado_en: string | null;
   actualizado_en: string | null;
+  public_name: string | null;
+  public_subtitle: string | null;
+  public_zone: string | null;
+  public_business_type: string | null;
+  secondary_color: string | null;
+  hero_mode: string | null;
+  hero_image_url: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  show_gallery: boolean | null;
+  show_schedule: boolean | null;
+  show_rating: boolean | null;
+  rating_label: string | null;
+  jobs_count_label: string | null;
+  form_title: string | null;
+  form_subtitle: string | null;
+  is_published: boolean | null;
 };
 
 const TABLE_NAME = "organization_profile";
@@ -107,22 +127,32 @@ function mapOrganizationProfile(
       ?.split(",")
       .map((value) => value.trim())
       .filter(Boolean) ?? [],
+    solicitudPublicaHorarioPorDia: Array.isArray(row.solicitud_publica_horario_por_dia)
+      ? (row.solicitud_publica_horario_por_dia as SolicitudPublicaHorarioDia[])
+      : [],
     proveedorPreferido: normalizePreferredProvider(row.proveedor_preferido),
     modoPrecioPreferido: normalizePricingMode(row.modo_precio_preferido),
     margenDefecto: row.margen_defecto ?? 100,
     creadoEn: row.creado_en,
     actualizadoEn: row.actualizado_en,
+    publicName: row.public_name ?? "",
+    publicSubtitle: row.public_subtitle ?? "",
+    publicZone: row.public_zone ?? "",
+    publicBusinessType: row.public_business_type ?? "",
+    secondaryColor: row.secondary_color ?? "",
+    heroMode: (row.hero_mode === "image" ? "image" : "gradient") as "image" | "gradient",
+    heroImageUrl: row.hero_image_url,
+    heroTitle: row.hero_title ?? "",
+    heroSubtitle: row.hero_subtitle ?? "",
+    showGallery: row.show_gallery ?? true,
+    showSchedule: row.show_schedule ?? true,
+    showRating: row.show_rating ?? false,
+    ratingLabel: row.rating_label ?? "",
+    jobsCountLabel: row.jobs_count_label ?? "",
+    formTitle: row.form_title ?? "",
+    formSubtitle: row.form_subtitle ?? "",
+    isPublished: row.is_published ?? false,
   };
-}
-
-function sanitizeFileName(fileName: string) {
-  return fileName
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9.\-_]+/g, "-")
-    .replace(/-+/g, "-");
 }
 
 export function createOrganizationProfileRepository(
@@ -149,44 +179,62 @@ export function createOrganizationProfileRepository(
       return mapOrganizationProfile(data as OrganizationProfileRow | null);
     },
 
-    async upsertByOrganizationId(
-      organizationId: EntityId,
-      input: UpdateOrganizationProfileInput
-    ) {
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
-        .upsert(
-          {
-            organization_id: organizationId,
-            empresa_nombre: input.empresaNombre,
-            empresa_logo_url: input.empresaLogoUrl,
-            empresa_direccion: input.empresaDireccion,
-            empresa_telefono: input.empresaTelefono,
-            empresa_email: input.empresaEmail,
-            brand_color: input.brandColor,
-            forma_pago: input.formaPago,
-            solicitud_publica_slug: input.solicitudPublicaSlug,
-            solicitud_publica_descripcion_corta:
-              input.solicitudPublicaDescripcionCorta,
-            solicitud_publica_valor: input.solicitudPublicaValor,
-            solicitud_publica_mensaje_confianza:
-              input.solicitudPublicaMensajeConfianza,
-            solicitud_publica_privacidad: input.solicitudPublicaPrivacidad,
-            solicitud_publica_horario_desde: input.solicitudPublicaHorarioDesde,
-            solicitud_publica_horario_hasta: input.solicitudPublicaHorarioHasta,
-            solicitud_publica_dias_atencion:
-              input.solicitudPublicaDiasAtencion.join(","),
-            proveedor_preferido: input.proveedorPreferido || null,
-            modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
-            margen_defecto: input.margenDefecto,
-            actualizado_en: new Date().toISOString(),
-          },
-          {
-            onConflict: "organization_id",
-          }
-        )
-        .select("*")
-        .single();
+  async upsertByOrganizationId(
+    organizationId: EntityId,
+    input: UpdateOrganizationProfileInput
+  ) {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .upsert(
+        {
+          organization_id: organizationId,
+          empresa_nombre: input.empresaNombre,
+          empresa_logo_url: input.empresaLogoUrl,
+          empresa_direccion: input.empresaDireccion,
+          empresa_telefono: input.empresaTelefono,
+          empresa_email: input.empresaEmail,
+          brand_color: input.brandColor,
+          forma_pago: input.formaPago,
+          solicitud_publica_slug: input.solicitudPublicaSlug,
+          solicitud_publica_descripcion_corta:
+          input.solicitudPublicaDescripcionCorta,
+          solicitud_publica_valor: input.solicitudPublicaValor,
+          solicitud_publica_mensaje_confianza:
+          input.solicitudPublicaMensajeConfianza,
+          solicitud_publica_privacidad: input.solicitudPublicaPrivacidad,
+          solicitud_publica_horario_desde: input.solicitudPublicaHorarioDesde,
+          solicitud_publica_horario_hasta: input.solicitudPublicaHorarioHasta,
+          solicitud_publica_dias_atencion:
+          input.solicitudPublicaDiasAtencion.join(","),
+          solicitud_publica_horario_por_dia: input.solicitudPublicaHorarioPorDia,
+          proveedor_preferido: input.proveedorPreferido || null,
+          modo_precio_preferido: normalizePricingMode(input.modoPrecioPreferido),
+          margen_defecto: input.margenDefecto,
+          actualizado_en: new Date().toISOString(),
+          public_name: input.publicName || null,
+          public_subtitle: input.publicSubtitle || null,
+          public_zone: input.publicZone || null,
+          public_business_type: input.publicBusinessType || null,
+          secondary_color: input.secondaryColor || null,
+          hero_mode: input.heroMode || "gradient",
+          hero_image_url: input.heroImageUrl || null,
+          hero_title: input.heroTitle || null,
+          hero_subtitle: input.heroSubtitle || null,
+          show_gallery: input.showGallery,
+          show_schedule: input.showSchedule,
+          show_rating: input.showRating,
+          rating_label: input.ratingLabel || null,
+          jobs_count_label: input.jobsCountLabel || null,
+          form_title: input.formTitle || null,
+          form_subtitle: input.formSubtitle || null,
+          is_published: input.isPublished,
+        },
+        {
+          onConflict: "organization_id",
+        }
+      )
+      .select("*")
+      .single();
 
       if (error) {
         if (isMissingOrganizationProfileTableError(error)) {
@@ -201,34 +249,71 @@ export function createOrganizationProfileRepository(
       return mapOrganizationProfile(data as OrganizationProfileRow)!;
     },
 
-    async uploadLogo(organizationId: EntityId, file: File) {
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-      const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
-      const storagePath = `${organizationId}/brand/logo-${Date.now()}-${sanitizedName}.${extension}`;
+  async uploadLogo(organizationId: EntityId, file: File) {
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
+    const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
+    const storagePath = `${organizationId}/brand/logo-${Date.now()}-${sanitizedName}.${extension}`;
 
-      const { error } = await supabase.storage
-        .from(LOGO_BUCKET)
-        .upload(storagePath, file, {
-          upsert: true,
-          contentType: file.type,
-        });
+    const { error } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(storagePath, file, {
+        upsert: true,
+        contentType: file.type,
+      });
 
-      if (error) {
-        if (isOrganizationAssetsBucketError(error)) {
-          throw new Error(
-            "Falta crear el bucket organization-assets en Supabase antes de subir logos."
-          );
-        }
-
-        throw error;
+    if (error) {
+      if (isOrganizationAssetsBucketError(error)) {
+        throw new Error(
+          "Falta crear el bucket organization-assets en Supabase antes de subir logos."
+        );
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
+      throw error;
+    }
 
-      return publicUrl;
-    },
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
+
+    return publicUrl;
+  },
+
+  async uploadHeroImage(organizationId: EntityId, file: File) {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("La imagen hero debe ser una imagen");
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error("La imagen hero no puede pesar mas de 10 MB");
+    }
+
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
+    const storagePath = `${organizationId}/hero/hero-${Date.now()}-${sanitizedName}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(storagePath, file, {
+        upsert: true,
+        contentType: file.type,
+      });
+
+    if (error) {
+      if (isOrganizationAssetsBucketError(error)) {
+        throw new Error(
+          "Falta crear el bucket organization-assets en Supabase antes de subir la imagen hero."
+        );
+      }
+
+      throw error;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
+
+    return publicUrl;
+  },
   };
 }
 
@@ -255,5 +340,8 @@ export const organizationProfileRepository: OrganizationProfileRepository = {
   },
   uploadLogo(...args) {
     return getDefaultOrganizationProfileRepository().uploadLogo(...args);
+  },
+  uploadHeroImage(...args) {
+    return getDefaultOrganizationProfileRepository().uploadHeroImage(...args);
   },
 };

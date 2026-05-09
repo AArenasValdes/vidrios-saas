@@ -124,33 +124,33 @@ describe("public-cotizacion-approval.repository", () => {
       error: null,
     });
 
-    createAdminClientMock.mockReturnValue({
-      from: jest.fn((table: string) => {
-        if (table === "cotizaciones") {
-          return cotizacionQuery;
-        }
+createAdminClientMock.mockReturnValue({
+ from: jest.fn((table: string) => {
+   if (table === "cotizaciones") {
+     return cotizacionQuery;
+   }
 
-        if (table === "projects") {
-          return projectQuery;
-        }
+   if (table === "projects") {
+     return projectQuery;
+   }
 
-        if (table === "cotizacion_items") {
-          return itemsQuery;
-        }
+   if (table === "cotizacion_items") {
+     return itemsQuery;
+   }
 
-        if (table === "organization_profile") {
-          return profilePrimaryQuery.maybeSingle.mock.calls.length === 0
-            ? profilePrimaryQuery
-            : profileFallbackQuery;
-        }
+   if (table === "organization_profile") {
+     return profilePrimaryQuery.maybeSingle.mock.calls.length === 0
+       ? profilePrimaryQuery
+       : profileFallbackQuery;
+   }
 
-        if (table === "clients") {
-          return clientQuery;
-        }
+   if (table === "clients") {
+     return clientQuery;
+   }
 
-        throw new Error(`Tabla inesperada en test: ${table}`);
-      }),
-    });
+   throw new Error(`Tabla inesperada en test: ${table}`);
+ }),
+} as never);
 
     const repository = createPublicCotizacionApprovalRepository();
 

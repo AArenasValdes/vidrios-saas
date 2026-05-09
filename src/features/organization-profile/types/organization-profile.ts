@@ -2,6 +2,15 @@ import type { PreferredProvider } from "@/features/cotizaciones/services/compone
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { EntityId } from "@/types/common";
 
+export type HeroMode = "image" | "gradient";
+export type PublicScheduleDay = "0" | "1" | "2" | "3" | "4" | "5" | "6";
+export type SolicitudPublicaHorarioDia = {
+  day: PublicScheduleDay;
+  enabled: boolean;
+  from: string;
+  to: string;
+};
+
 export type OrganizationProfile = {
   organizationId: EntityId | null;
   empresaNombre: string;
@@ -19,11 +28,29 @@ export type OrganizationProfile = {
   solicitudPublicaHorarioDesde: string;
   solicitudPublicaHorarioHasta: string;
   solicitudPublicaDiasAtencion: string[];
+  solicitudPublicaHorarioPorDia: SolicitudPublicaHorarioDia[];
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
   creadoEn: string | null;
   actualizadoEn: string | null;
+  publicName: string;
+  publicSubtitle: string;
+  publicZone: string;
+  publicBusinessType: string;
+  secondaryColor: string;
+  heroMode: HeroMode;
+  heroImageUrl: string | null;
+  heroTitle: string;
+  heroSubtitle: string;
+  showGallery: boolean;
+  showSchedule: boolean;
+  showRating: boolean;
+  ratingLabel: string;
+  jobsCountLabel: string;
+  formTitle: string;
+  formSubtitle: string;
+  isPublished: boolean;
 };
 
 export type UpdateOrganizationProfileInput = {
@@ -42,7 +69,25 @@ export type UpdateOrganizationProfileInput = {
   solicitudPublicaHorarioDesde: string;
   solicitudPublicaHorarioHasta: string;
   solicitudPublicaDiasAtencion: string[];
+  solicitudPublicaHorarioPorDia: SolicitudPublicaHorarioDia[];
   proveedorPreferido: PreferredProvider;
   modoPrecioPreferido: PricingMode;
   margenDefecto: number;
+  publicName: string;
+  publicSubtitle: string;
+  publicZone: string;
+  publicBusinessType: string;
+  secondaryColor: string;
+  heroMode: HeroMode;
+  heroImageUrl: string | null;
+  heroTitle: string;
+  heroSubtitle: string;
+  showGallery: boolean;
+  showSchedule: boolean;
+  showRating: boolean;
+  ratingLabel: string;
+  jobsCountLabel: string;
+  formTitle: string;
+  formSubtitle: string;
+  isPublished: boolean;
 };

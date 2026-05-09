@@ -9,6 +9,7 @@ export async function acceptPublicQuoteAction(token: string) {
   const current = await publicCotizacionApprovalService.resolveByToken(token);
   const shouldNotify = Boolean(current?.canRespond && !current.isExpired);
   const quote = await publicCotizacionApprovalService.accept(token);
+  const redirectToken = encodeURIComponent(token);
 
   if (shouldNotify && quote) {
     try {
@@ -24,13 +25,14 @@ export async function acceptPublicQuoteAction(token: string) {
     }
   }
 
-  redirect(`/presupuesto/${token}?decision=aceptada`);
+  redirect(`/presupuesto/${redirectToken}?decision=aceptada`);
 }
 
 export async function rejectPublicQuoteAction(token: string) {
   const current = await publicCotizacionApprovalService.resolveByToken(token);
   const shouldNotify = Boolean(current?.canRespond && !current.isExpired);
   const quote = await publicCotizacionApprovalService.reject(token);
+  const redirectToken = encodeURIComponent(token);
 
   if (shouldNotify && quote) {
     try {
@@ -46,5 +48,5 @@ export async function rejectPublicQuoteAction(token: string) {
     }
   }
 
-  redirect(`/presupuesto/${token}?decision=rechazada`);
+  redirect(`/presupuesto/${redirectToken}?decision=rechazada`);
 }
