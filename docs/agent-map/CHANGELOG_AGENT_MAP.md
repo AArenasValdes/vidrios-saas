@@ -4,6 +4,22 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-10 - Video explicativo en Remotion
+
+### Resumen
+
+Se agrego un modulo nuevo de marketing video con Remotion para generar el video explicativo de Ventora en formato 16:9 y 9:16, usando assets estaticos en `public/video-assets/` y componentes reutilizables en `src/features/video/`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/FEATURES_MAP.md` | Se agrego la feature `Marketing Video / Remotion` |
+| `docs/agent-map/COMPONENTS_MAP.md` | Se documentaron `VentoraExplainer`, `SceneWrapper`, `PhoneMockup`, `FloatingMessage`, `StepCard`, `CTAButton`, `GlassGridBackground` y `VentoraLogo` |
+| `package.json` | Scripts `video:preview`, `video:render` y `video:render:vertical` |
+| `src/features/video/` | Nuevo modulo Remotion del video explicativo |
+| `public/video-assets/` | Capturas y logo del video |
+
 ## 2026-05-09 - Hardening de auth comun y push activo
 
 ### Resumen

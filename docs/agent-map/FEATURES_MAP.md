@@ -392,3 +392,23 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Tablas Supabase**: `projects`
 - **Donde editar persistencia**: `src/features/projects/repositories/projects.repository.ts`
 - **Riesgos al modificar**: No romper FK con clients ni cotizaciones
+
+---
+
+## Feature: Marketing Video / Remotion
+
+- **Que hace**: Video explicativo comercial de Ventora para landing, WhatsApp, redes y presentaciones
+- **Rutas involucradas**: Sin ruta directa. Se renderiza desde `remotion/`
+- **Archivos principales**:
+  - `remotion/index.tsx`
+  - `remotion/Root.tsx`
+  - `src/features/video/VentoraExplainer.tsx`
+  - `src/features/video/components.tsx`
+  - `src/features/video/video-assets.ts`
+  - `public/video-assets/`
+- **Componentes principales**: `VentoraExplainer`, `SceneWrapper`, `PhoneMockup`, `FloatingMessage`, `StepCard`, `CTAButton`, `GlassGridBackground`, `VentoraLogo`
+- **Hooks/servicios/actions**: N/A
+- **Tablas Supabase**: Ninguna
+- **Flujo de datos**: escenas de Remotion -> assets en `public/video-assets` -> render MP4/vertical
+- **Consideraciones UX**: Mantener mobile-first, texto legible y sin palabras tipo leads/CRM/pipeline/funnel
+- **Riesgos al modificar**: No romper paths de assets ni compatibilidad con Remotion render/preview

@@ -239,3 +239,49 @@
 - **Archivo**: `app/presupuesto/[token]/public-quote-preview.tsx`
 - **Proposito**: Vista preview de cotizacion publica
 - **Usado en**: Pagina presupuesto publico
+
+---
+
+## Marketing Video / Remotion
+
+### Componente: VentoraExplainer
+
+- **Archivo**: `src/features/video/VentoraExplainer.tsx`
+- **Proposito**: Composicion principal del video explicativo Ventora con escenas por guion
+- **Usado en**: Remotion compositions `VentoraExplainer` y `VentoraExplainerVertical`
+- **Props importantes**: `layout?: "landscape" | "portrait"`
+
+### Componente: SceneWrapper
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Fondo, grilla de vidrio/aluminio y envoltura base para cada escena
+
+### Componente: PhoneMockup
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Marco visual para capturas reales de la app dentro del video
+
+### Componente: FloatingMessage
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Burbujas flotantes para representar mensajes y desorden comercial
+
+### Componente: StepCard
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Bloques numerados para explicar el flujo comercial
+
+### Componente: CTAButton
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Botones visuales de cierre y llamada a la accion
+
+### Componente: GlassGridBackground
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Fondo claro con reticula y luz sutil inspirada en vidrio/aluminio
+
+### Componente: VentoraLogo
+
+- **Archivo**: `src/features/video/components.tsx`
+- **Proposito**: Logo reutilizable basado en el asset `public/video-assets/logo-ventora.svg`
