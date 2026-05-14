@@ -10,6 +10,7 @@ export type CotizacionWorkflowItem = {
   id: string;
   codigo: string;
   tipo: string;
+  lineaComercial: string;
   vidrio: string;
   nombre: string;
   descripcion: string;
@@ -23,6 +24,12 @@ export type CotizacionWorkflowItem = {
   margenPct: number;
   precioUnitario: number;
   precioTotal: number;
+  precioPorM2: number | null;
+  minimoCobrable: number | null;
+  redondeoPrecio: number | null;
+  precioPlantillaSugerido: number | null;
+  precioAjustadoManual: boolean;
+  origenPrecio: "margen" | "plantilla" | "manual";
   observaciones: string;
 };
 

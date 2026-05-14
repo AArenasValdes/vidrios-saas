@@ -4,6 +4,21 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-13 - Cotizacion asistida por linea y precios rapidos
+
+### Resumen
+
+Se actualizo el mapa tecnico para reflejar la nueva V1 de cotizacion asistida: lineas comerciales por empresa con precio por m², minimo cobrable, redondeo y uso directo en Paso 2 de `/cotizaciones/nueva`, mas calculo automatico por medidas y guardado rapido desde la cotizacion.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `Agents.md` | Estado operativo actualizado con la nueva pasada de cotizaciones |
+| `docs/agent-map/FEATURES_MAP.md` | Feature Cotizaciones ahora incluye `cotizacion_line_templates`, pricing automatico por medidas y bloque compacto en Configuracion Empresa |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Nueva tabla `cotizacion_line_templates` y nota de snapshot comercial en `cotizacion_items.linea` |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
 ## 2026-05-10 - Video explicativo en Remotion
 
 ### Resumen

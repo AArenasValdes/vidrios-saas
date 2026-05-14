@@ -63,8 +63,9 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Rutas involucradas**: `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
 - **Archivos principales**:
   - `app/(pwa-app)/cotizaciones/page.tsx` (listado, 1055 lineas)
-  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1198 lineas)
+  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1198+ lineas)
   - `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle)
+  - `app/(pwa-app)/configuracion/empresa/page.tsx` (bloque compacto `Lineas y precios base`)
   - `app/(pwa-app)/cotizaciones/_components/cotizacion-mobile-card.tsx`
   - `app/(pwa-app)/cotizaciones/_components/cotizaciones-mobile-summary.tsx`
   - `app/(pwa-app)/cotizaciones/_components/cotizaciones-filter-fields.tsx`
@@ -76,9 +77,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/services/cotizaciones-workflow.service.ts` (318 lineas)
   - `src/features/cotizaciones/services/cotizaciones-summary.service.ts`
   - `src/features/cotizaciones/services/cotizacion-alerts.service.ts`
+  - `src/features/cotizaciones/services/cotizacion-line-pricing.service.ts`
   - `src/features/cotizaciones/services/component-catalog.service.ts`
   - `src/features/cotizaciones/services/component-suggestions.service.ts`
   - `src/features/cotizaciones/services/glass-recommendations.service.ts`
+  - `src/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates.ts`
+  - `src/features/cotizaciones/line-templates/services/cotizacion-line-templates.service.ts`
+  - `src/features/cotizaciones/line-templates/repositories/cotizacion-line-templates.repository.ts`
+  - `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
   - `src/features/cotizaciones/repositories/cotizaciones-repository.ts` (1486 lineas)
   - `src/features/cotizaciones/types/cotizacion.ts`
   - `src/features/cotizaciones/types/cotizacion-item.ts`
@@ -96,7 +102,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/api/cotizaciones/resumen/route.ts`
 - **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleMobileView`, `QuoteComponentSketch`
 - **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`
-- **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `cotizacion_code_counters`
+- **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `cotizacion_line_templates`, `clients`, `projects`, `cotizacion_code_counters`
 - **Flujo de datos**:
   - Listado: Page -> `useCotizacionesStore` -> API `/api/cotizaciones/resumen` -> server service -> repositories
   - Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
@@ -105,8 +111,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Calculo: `precioFinalUnitario = costoProveedorUnitario * (1 + margenPct / 100)`.
-- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido y calculadora secundaria.
+- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida.
 
 ---
 

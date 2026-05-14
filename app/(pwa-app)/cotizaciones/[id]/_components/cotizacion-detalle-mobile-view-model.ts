@@ -1,8 +1,9 @@
-import { repairBrokenText } from "@/utils/repair-broken-text";
 import type {
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { repairBrokenText } from "@/utils/repair-broken-text";
 
 const CLP_FORMATTER = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -58,8 +59,12 @@ function safeText(value: string | null | undefined, fallback: string) {
 }
 
 function buildItemMeta(item: CotizacionWorkflowItem) {
-  const size = item.ancho && item.alto ? `${item.ancho} × ${item.alto} mm` : "Medidas por definir";
-  return `${size} · ${item.cantidad} ud`;
+  const size =
+    item.ancho && item.alto ? `${item.ancho} × ${item.alto} mm` : "Medidas por definir";
+  const { referencia } = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const lineLabel = referencia.trim() ? `Línea ${referencia.trim()}` : null;
+
+  return [size, `${item.cantidad} ud`, lineLabel].filter(Boolean).join(" · ");
 }
 
 export function buildCotizacionDetalleMobileViewModel(

@@ -502,6 +502,16 @@
 .stepTwoListCardMobile {}
 .stepTwoMobileDockEnhanced {}
 .mobileQuickEditorEnhanced {}
+.stepTwoPanelModeMobile {}
+.stepTwoPanelModeDesktop {}
+.stepTwoListViewportModeMobile {}
+.stepTwoListViewportModeDesktop {}
+.stepTwoListModeMobile {}
+.stepTwoListModeDesktop {}
+.stepTwoListCardModeMobile {}
+.stepTwoListCardModeDesktop {}
+.mobileQuickEditorModeMobile {}
+.mobileQuickEditorModeDesktop {}
 .heroCardHeader {
   display: flex;
   align-items: flex-start;
@@ -1249,6 +1259,10 @@
   color: var(--color-text-secondary);
 }
 
+.materialChoiceGridCompact {}
+
+.materialChoiceCompact {}
+
 .providerOptionRow {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1732,6 +1746,14 @@
   overflow-anchor: none;
 }
 
+.stepTwoPanelModeDesktop {
+  min-height: clamp(36rem, 72vh, 52rem);
+}
+
+.stepTwoPanelModeMobile {
+  min-height: 0;
+}
+
 .stepTwoPanelHeader,
 .stepTwoPanelFooter {
   flex-shrink: 0;
@@ -1909,6 +1931,14 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+.stepTwoListViewportModeDesktop {
+  flex: 1 1 auto;
+}
+
+.stepTwoListViewportModeMobile {
+  flex: 0 0 auto;
+}
+
 .stepTwoVirtualSpacer {
   flex: 0 0 auto;
   width: 100%;
@@ -1926,6 +1956,16 @@
   scrollbar-width: auto;
   scrollbar-color: rgba(122, 168, 255, 0.7) rgba(255, 255, 255, 0.12);
   overflow-anchor: none;
+}
+
+.stepTwoListViewportModeDesktop.stepTwoListViewportScrollable {
+  height: clamp(28rem, 58vh, 34rem);
+  max-height: clamp(28rem, 58vh, 34rem);
+}
+
+.stepTwoListViewportModeMobile.stepTwoListViewportScrollable {
+  height: calc(3 * 108px + 2 * 0.72rem);
+  max-height: calc(3 * 108px + 2 * 0.72rem);
 }
 
 .stepTwoPanelEmpty {
@@ -2182,6 +2222,82 @@
   overflow-anchor: none;
 }
 
+.mobileQuickEditorModeMobile {
+  margin: 0 0.9rem 0.9rem;
+  padding: 1rem;
+  border-radius: 22px;
+}
+
+.mobileQuickEditorModeDesktop {
+  margin: 0 1rem 0.85rem;
+  padding: 0.82rem 0.9rem;
+  border-radius: 18px;
+  gap: 0.62rem;
+}
+
+.mobileQuickEditorModeMobile .mobileQuickEditorNavButtons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobileQuickEditorModeMobile .quickEditRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.mobileQuickEditorModeMobile .quickEditFieldWide {
+  grid-column: 1 / -1;
+}
+
+.mobileQuickEditorModeMobile .quickEditInput {
+  min-height: 48px;
+  padding: 0.7rem 0.75rem;
+  border-radius: 14px;
+  font-size: 0.95rem;
+}
+
+.mobileQuickEditorModeMobile .quickTemplatePanel {
+  gap: 0.75rem;
+  padding: 0.95rem;
+  border-radius: 18px;
+}
+
+.mobileQuickEditorModeMobile .quickTemplateSummaryGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobileQuickEditorModeMobile .quickTemplateActions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.mobileQuickEditorModeMobile .quickTemplateActions > * {
+  width: 100%;
+  justify-content: center;
+}
+
+.mobileQuickEditorModeDesktop .quickEditRow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mobileQuickEditorModeDesktop .quickEditFieldWide {
+  grid-column: auto;
+}
+
+.mobileQuickEditorModeDesktop .quickTemplatePanel {
+  gap: 0.68rem;
+  padding: 0.85rem 0.9rem;
+}
+
+.mobileQuickEditorModeDesktop .quickTemplateSummaryGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mobileQuickEditorModeDesktop .quickTemplateActions > * {
+  flex: 1 1 12rem;
+}
+
 .quickEditorDesktop {
   margin: 0 0.95rem 0.8rem;
   padding: 0.78rem 0.9rem;
@@ -2285,6 +2401,22 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.stepTwoListModeDesktop {
+  padding-inline: 1.05rem;
+}
+
+.stepTwoListModeMobile {
+  padding-inline: 0.82rem;
+}
+
+.stepTwoListCardModeDesktop {
+  min-height: 112px;
+}
+
+.stepTwoListCardModeMobile {
+  min-height: 108px;
 }
 
 .groupSheetProgress {
@@ -2907,6 +3039,7 @@
     linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 16px 30px rgba(23, 34, 56, 0.08);
   scroll-margin-top: 1rem;
+  overflow: hidden;
 }
 
 .stepTwoMobileLoadedHeader {
@@ -3253,6 +3386,18 @@
   position: sticky;
   bottom: 0;
   z-index: 6;
+}
+
+.stepTwoMobileFooterActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.stepTwoMobileFooterActions .btnGhost,
+.stepTwoMobileFooterActions .btnPrimary {
+  width: 100%;
+  justify-content: center;
 }
 
 .stepTwoMobileFooterTotals {
@@ -5699,6 +5844,18 @@
     min-height: 68px;
     padding: 0.82rem 0.85rem;
   }
+  .materialChoiceGridCompact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .materialChoiceCompact {
+    min-height: 52px;
+    padding: 0.68rem 0.72rem;
+    border-radius: 14px;
+  }
+  .materialChoiceCompact .segmentedChoiceTitle {
+    font-size: 0.88rem;
+    text-align: center;
+  }
   .batchCountRow {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -7328,6 +7485,328 @@
   gap: 0.45rem;
 }
 
+.stepTwoMobileMaterialGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.stepTwoMobileMaterialButton {
+  min-height: 3.2rem;
+  border: 1px solid #d6dfec;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  color: #243b6b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.62rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.stepTwoMobileMaterialButtonActive {
+  border-color: #4F7DD4;
+  background: linear-gradient(180deg, #f7fbff 0%, #edf4ff 100%);
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.1);
+}
+
+.stepTwoMobileMaterialButtonLabel {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.stepTwoMobileLineTrigger {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.78rem 0.88rem;
+  border: 1px solid #d6dfec;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  color: #243b6b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.stepTwoMobileLineTriggerOpen {
+  border-color: #4F7DD4;
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.1);
+}
+
+.stepTwoMobileLineTriggerLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.stepTwoMobileLineTriggerIcon {
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: rgba(79, 125, 212, 0.12);
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.stepTwoMobileLineOption {
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.82rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(214, 223, 236, 0.96);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 255, 0.98));
+  color: #243b6b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  text-align: left;
+  box-shadow: 0 8px 18px rgba(30, 55, 95, 0.05);
+}
+
+.stepTwoMobileLineOptionBody {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.stepTwoMobileLineOptionTop {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.stepTwoMobileLineOption span {
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepTwoMobileLineOption small {
+  font-size: 0.74rem;
+  color: #667a96;
+  line-height: 1.2;
+}
+
+.stepTwoMobileLineOptionActive {
+  border-color: rgba(79, 125, 212, 0.36);
+  background: linear-gradient(180deg, #eef4ff 0%, #f7faff 100%);
+  box-shadow:
+    0 0 0 3px rgba(79, 125, 212, 0.08),
+    0 10px 22px rgba(30, 55, 95, 0.08);
+}
+
+.stepTwoMobileLineOptionUtility {
+  background: linear-gradient(180deg, rgba(242, 246, 255, 0.98), rgba(250, 252, 255, 0.98));
+}
+
+.stepTwoMobileLineOptionState {
+  flex: 0 0 auto;
+  min-height: 1.5rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(79, 125, 212, 0.12);
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.stepTwoMobileLineOptionMaterialChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.3rem;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.stepTwoMobileLineOptionMaterialChipAluminio {
+  background: #eef3fa;
+  color: #5c6f91;
+}
+
+.stepTwoMobileLineOptionMaterialChipPvc {
+  background: #edf7f1;
+  color: #4f7a62;
+}
+
+.stepTwoMobileLineSheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+}
+
+.stepTwoMobileLineSheetBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(17, 28, 48, 0.24);
+}
+
+.stepTwoMobileLineSheet {
+  position: absolute;
+  left: 0.72rem;
+  right: 0.72rem;
+  bottom: calc(0.72rem + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+  border: 1px solid rgba(210, 221, 238, 0.96);
+  box-shadow: 0 18px 36px rgba(18, 34, 62, 0.18);
+  padding: 0.78rem;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.7rem;
+  max-height: min(68dvh, 35rem);
+}
+
+.stepTwoMobileLineSheetHandle {
+  width: 2.6rem;
+  height: 0.24rem;
+  border-radius: 999px;
+  background: rgba(140, 156, 179, 0.46);
+  justify-self: center;
+}
+
+.stepTwoMobileLineSheetHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.stepTwoMobileLineSheetHeading {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.stepTwoMobileLineSheetTitle {
+  display: block;
+  margin-top: 0.08rem;
+  color: #16376f;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.stepTwoMobileLineSheetSubtitle {
+  font-size: 0.76rem;
+  color: #6b7f9f;
+  line-height: 1.35;
+}
+
+.stepTwoMobileLineSheetClose {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid #d6dfec;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #335ea9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepTwoMobileLineSearchWrap {
+  position: relative;
+}
+
+.stepTwoMobileLineSearchIcon {
+  position: absolute;
+  left: 0.82rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8aa0bf;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.stepTwoMobileLineSearchInput {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0 0.9rem 0 2.35rem;
+  border-radius: 14px;
+  border: 1px solid #d6dfec;
+  background: #ffffff;
+  color: #243b6b;
+  font-size: 0.9rem;
+}
+
+.stepTwoMobileLineFilterBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.18rem 0.1rem 0.05rem;
+}
+
+.stepTwoMobileLineFilterChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.65rem;
+  padding: 0.14rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.stepTwoMobileLineFilterChipAluminio {
+  background: #eef3fa;
+  color: #5c6f91;
+}
+
+.stepTwoMobileLineFilterChipPvc {
+  background: #edf7f1;
+  color: #4f7a62;
+}
+
+.stepTwoMobileLineFilterText {
+  font-size: 0.74rem;
+  color: #6b7f9f;
+  text-align: right;
+}
+
+.stepTwoMobileLineSheetList {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.55rem;
+  padding-right: 0.1rem;
+}
+
+.stepTwoMobileLineEmptyState {
+  padding: 0.95rem 0.8rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #667a96;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .stepTwoMobileBlockHeaderInline {
   display: flex;
   align-items: flex-start;
@@ -7771,6 +8250,22 @@
   /* Bloques secundarios más compactos */
   .stepTwoMobileBlockSecundario {
     padding: 0.64rem 0.74rem;
+  }
+
+  .stepTwoMobileMaterialButton {
+    min-height: 3rem;
+    padding: 0.46rem 0.56rem;
+  }
+
+  .stepTwoMobileMaterialButtonLabel {
+    font-size: 0.86rem;
+  }
+
+  .stepTwoMobileLineSheet {
+    left: 0.56rem;
+    right: 0.56rem;
+    bottom: calc(0.56rem + env(safe-area-inset-bottom, 0px));
+    max-height: min(70dvh, 33rem);
   }
 
   .stepTwoMobileBlockHero,
@@ -9166,6 +9661,253 @@
   .layout,
   .rootStepTwoMobile .layout {
     padding-top: 0.48rem;
+  }
+
+  .stepTwoMobileFooterActions,
+  .mobileQuickEditorModeMobile .quickTemplateSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mobileQuickEditorModeMobile .quickEditRow {
+    grid-template-columns: 1fr;
+  }
+
+  .materialChoiceCompact {
+    min-height: 50px;
+    padding: 0.62rem 0.66rem;
+  }
+
+  .materialChoiceCompact .segmentedChoiceTitle {
+    font-size: 0.84rem;
+  }
+}
+
+.lineTemplateSummaryCard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(79, 125, 212, 0.16);
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.98));
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+}
+
+.lineTemplateSummaryHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.lineTemplateSummaryEyebrow {
+  display: block;
+  margin-bottom: 0.22rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4f7dd4;
+}
+
+.lineTemplateSummaryTitle {
+  display: block;
+  font-size: 0.96rem;
+  color: #16376f;
+}
+
+.lineTemplateSummaryStatus {
+  padding: 0.38rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lineTemplateSummaryStatusAutomatic,
+.quickTemplateStatusAutomatic {
+  background: rgba(79, 125, 212, 0.12);
+  color: #27457f;
+}
+
+.lineTemplateSummaryStatusManual,
+.quickTemplateStatusManual {
+  background: rgba(216, 155, 60, 0.14);
+  color: #8a5a07;
+}
+
+.lineTemplateSummaryGrid,
+.quickTemplateSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lineTemplateSummaryGrid > div,
+.quickTemplateSummaryGrid > div {
+  display: grid;
+  gap: 3px;
+}
+
+.lineTemplateSummaryLabel,
+.quickTemplateSummaryGrid span {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.lineTemplateSummaryActions,
+.quickTemplateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lineTemplateBreakdown {
+  display: grid;
+  gap: 0.7rem;
+  border-top: 1px solid rgba(79, 125, 212, 0.1);
+  padding-top: 0.2rem;
+}
+
+.lineTemplateBreakdownSummary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #335ea9;
+}
+
+.lineTemplateBreakdownSummary::-webkit-details-marker {
+  display: none;
+}
+
+.lineTemplateBreakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lineTemplateBreakdownGrid > div {
+  display: grid;
+  gap: 3px;
+}
+
+.lineTemplateBreakdownGrid span {
+  font-size: 0.73rem;
+  color: #64748b;
+}
+
+.quickTemplatePanel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(79, 125, 212, 0.14);
+  background: rgba(248, 251, 255, 0.98);
+}
+
+.quickTemplatePanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quickTemplateEyebrow {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4f7dd4;
+}
+
+.quickTemplateStatus {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(79, 125, 212, 0.12);
+  color: #27457f;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.quickCalculatorPanel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.quickCalculatorModeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quickCalculatorModeButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #fff;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quickCalculatorModeButtonActive {
+  border-color: rgba(79, 125, 212, 0.28);
+  background: rgba(79, 125, 212, 0.12);
+  color: #1f4eb0;
+}
+
+.quickCalculatorResult {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(241, 245, 249, 0.85);
+  color: #0f172a;
+}
+
+.stepTwoMobileLineSummary {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(79, 125, 212, 0.08), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(79, 125, 212, 0.16);
+}
+
+.stepTwoMobileLineSummary span {
+  font-size: 0.76rem;
+  color: #4a5e80;
+}
+
+.stepTwoMobileLineSummary strong {
+  font-size: 0.84rem;
+  color: #16376f;
+}
+
+@media (max-width: 640px) {
+  .lineTemplateSummaryGrid,
+  .quickTemplateSummaryGrid,
+  .lineTemplateBreakdownGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .quickTemplatePanelHeader {
+    flex-direction: column;
+  }
+
+  .lineTemplateSummaryHeader {
+    flex-direction: column;
   }
 }
  

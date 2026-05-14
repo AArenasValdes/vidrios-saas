@@ -7,8 +7,17 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
-import { LuArrowLeft, LuCheck, LuChevronRight, LuCopy } from "react-icons/lu";
+import {
+  LuArrowLeft,
+  LuCalculator,
+  LuCheck,
+  LuChevronRight,
+  LuCopy,
+  LuRefreshCw,
+  LuSave,
+} from "react-icons/lu";
 
 import {
   CLP,
@@ -19,6 +28,7 @@ import {
   type QuickEditDraftState,
   type QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -48,6 +58,9 @@ type EditorRapidoMovilProps = {
   onToggleBatchTarget: (itemId: string) => void;
   onApplyToSameType: () => void;
   onCancelBatchSelection: () => void;
+  onRecalculateTemplatePrice: () => void;
+  onSaveQuickPriceTemplate: () => void;
+  isSavingQuickPriceTemplate: boolean;
 };
 
 export const EditorRapidoMovil = memo(function EditorRapidoMovil({
@@ -70,19 +83,91 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
   onToggleBatchTarget,
   onApplyToSameType,
   onCancelBatchSelection,
+  onRecalculateTemplatePrice,
+  onSaveQuickPriceTemplate,
+  isSavingQuickPriceTemplate,
 }: EditorRapidoMovilProps) {
   const editorRef = useRef<HTMLElement | null>(null);
-  const { pricingMode } = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const {
+    pricingMode,
+    referencia,
+    precioPorM2,
+    minimoCobrable,
+    redondeoPrecio,
+    precioAjustadoManual,
+  } = decodeCotizacionItemPresentationMeta(item.observaciones);
   const inputRefs = useRef<Record<QuickEditFieldKey, HTMLInputElement | null>>({
     ancho: null,
     alto: null,
     costoProveedorUnitario: null,
   });
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calculatorMode, setCalculatorMode] = useState<"libre" | "area" | "conversion">("libre");
+  const [calculatorValueA, setCalculatorValueA] = useState("");
+  const [calculatorValueB, setCalculatorValueB] = useState("");
+  const [calculatorOperator, setCalculatorOperator] = useState<"+" | "-" | "*" | "/">("*");
 
   const isAndroidDevice = useMemo(
     () => typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent),
     []
   );
+  const hasLinePricing = Boolean(referencia.trim() && precioPorM2 && precioPorM2 > 0);
+  const linePricingSummary = useMemo(
+    () =>
+      calculateLineTemplatePricing({
+        ancho: draft.ancho ? Number(draft.ancho) : item.ancho,
+        alto: draft.alto ? Number(draft.alto) : item.alto,
+        cantidad: item.cantidad,
+        precioM2Sugerido: precioPorM2,
+        minimoCobrable,
+        redondeoPrecio,
+      }),
+    [draft.alto, draft.ancho, item.alto, item.ancho, item.cantidad, minimoCobrable, precioPorM2, redondeoPrecio]
+  );
+
+  const calculatorResult = useMemo(() => {
+    if (calculatorMode === "libre") {
+      const left = Number(calculatorValueA);
+      const right = Number(calculatorValueB);
+
+      if (!Number.isFinite(left) || !Number.isFinite(right)) {
+        return "";
+      }
+
+      if (calculatorOperator === "/" && right === 0) {
+        return "";
+      }
+
+      const result =
+        calculatorOperator === "+"
+          ? left + right
+          : calculatorOperator === "-"
+            ? left - right
+            : calculatorOperator === "*"
+              ? left * right
+              : left / right;
+
+      return Number.isFinite(result) ? String(Math.round(Number(result))) : "";
+    }
+
+    if (calculatorMode === "area") {
+      const ancho = Number(calculatorValueA);
+      const alto = Number(calculatorValueB);
+
+      if (!Number.isFinite(ancho) || !Number.isFinite(alto) || ancho <= 0 || alto <= 0) {
+        return "";
+      }
+
+      return String(Math.round(((ancho * alto) / 1_000_000) * 100) / 100);
+    }
+
+    const mmValue = Number(calculatorValueA);
+    if (!Number.isFinite(mmValue) || mmValue <= 0) {
+      return "";
+    }
+
+    return String(Math.round((mmValue / 1000) * 1000) / 1000);
+  }, [calculatorMode, calculatorOperator, calculatorValueA, calculatorValueB]);
 
   useEffect(() => {
     if (!initialFocusField) {
@@ -114,6 +199,20 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
     },
     [item.id, onDraftChange]
   );
+
+  function handleApplyCalculatorResult(target: QuickEditFieldKey) {
+    if (!calculatorResult) {
+      return;
+    }
+
+    const normalizedValue =
+      target === "costoProveedorUnitario"
+        ? normalizeCurrencyInput(calculatorResult)
+        : calculatorResult.replace(/[^\d]/g, "");
+
+    onDraftChange(item.id, target, normalizedValue);
+    setIsCalculatorOpen(false);
+  }
 
   const handleBlur = useCallback(() => {
     onCommit(item.id, draft);
@@ -181,9 +280,17 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
   );
 
   const currentItemReady = isQuickEditDraftComplete(draft);
+  const editorModeClass = isMobileViewport
+    ? s.mobileQuickEditorModeMobile
+    : s.mobileQuickEditorModeDesktop;
 
   return (
-    <section ref={editorRef} className={`${s.mobileQuickEditor} ${s.mobileQuickEditorEnhanced} ${isMobileViewport ? "" : s.quickEditorDesktop}`}>
+    <section
+      ref={editorRef}
+      className={`${s.mobileQuickEditor} ${s.mobileQuickEditorEnhanced} ${editorModeClass} ${
+        isMobileViewport ? "" : s.quickEditorDesktop
+      }`}
+    >
       <div className={s.mobileQuickEditorHeader}>
         <div>
           <span className={s.mobileQuickEditorEyebrow}>Editar rapido</span>
@@ -305,6 +412,108 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
         </div>
       ) : null}
 
+      {hasLinePricing ? (
+        <div className={s.quickTemplatePanel}>
+          <div className={s.quickTemplatePanelHeader}>
+            <div>
+              <span className={s.quickTemplateEyebrow}>Precio rapido</span>
+              <strong>{referencia}</strong>
+            </div>
+            {precioAjustadoManual ? (
+              <span className={`${s.quickTemplateStatus} ${s.quickTemplateStatusManual}`}>Precio ajustado manualmente</span>
+            ) : (
+              <span className={`${s.quickTemplateStatus} ${s.quickTemplateStatusAutomatic}`}>Precio automático por línea</span>
+            )}
+          </div>
+          <div className={s.quickTemplateSummaryGrid}>
+            <div>
+              <span>Precio por m2</span>
+              <strong>{CLP(precioPorM2 ?? 0)}</strong>
+            </div>
+            <div>
+              <span>Minimo</span>
+              <strong>{minimoCobrable && minimoCobrable > 0 ? CLP(minimoCobrable) : "Sin mínimo"}</strong>
+            </div>
+            <div>
+              <span>Area</span>
+              <strong>{linePricingSummary.areaM2 !== null ? `${linePricingSummary.areaM2} m2` : "-"}</strong>
+            </div>
+            <div>
+              <span>Precio sugerido</span>
+              <strong>
+                {linePricingSummary.precioUnitarioSugerido !== null
+                  ? CLP(linePricingSummary.precioUnitarioSugerido)
+                  : linePricingSummary.motivoNoCalculado ?? "Completa medidas"}
+              </strong>
+            </div>
+          </div>
+          <details className={s.lineTemplateBreakdown}>
+            <summary className={s.lineTemplateBreakdownSummary}>Ver cálculo</summary>
+            <div className={s.lineTemplateBreakdownGrid}>
+              <div>
+                <span>Área calculada</span>
+                <strong>
+                  {linePricingSummary.areaM2 !== null ? `${linePricingSummary.areaM2} m²` : "-"}
+                </strong>
+              </div>
+              <div>
+                <span>Precio base aplicado</span>
+                <strong>
+                  {linePricingSummary.precioBaseUnitario !== null
+                    ? CLP(linePricingSummary.precioBaseUnitario)
+                    : "-"}
+                </strong>
+              </div>
+              <div>
+                <span>Mínimo</span>
+                <strong>
+                  {linePricingSummary.minimoCobrable !== null
+                    ? linePricingSummary.minimoAplicado !== null
+                      ? `Aplicado · ${CLP(linePricingSummary.minimoAplicado)}`
+                      : `No aplicado · ${CLP(linePricingSummary.minimoCobrable)}`
+                    : "Sin mínimo"}
+                </strong>
+              </div>
+              <div>
+                <span>Redondeo</span>
+                <strong>
+                  {linePricingSummary.redondeoPrecio && linePricingSummary.redondeoPrecio > 0
+                    ? linePricingSummary.redondeoAplicado && linePricingSummary.redondeoAplicado > 0
+                      ? `+${CLP(linePricingSummary.redondeoAplicado)}`
+                      : "No aplicado"
+                    : "Sin redondeo"}
+                </strong>
+              </div>
+              <div>
+                <span>Cantidad</span>
+                <strong>{item.cantidad}</strong>
+              </div>
+              <div>
+                <span>Total sugerido</span>
+                <strong>
+                  {linePricingSummary.totalSugerido !== null ? CLP(linePricingSummary.totalSugerido) : "-"}
+                </strong>
+              </div>
+            </div>
+          </details>
+          <div className={s.quickTemplateActions}>
+            <button type="button" className={s.mobileQuickEditorRepeatSecondary} onClick={onRecalculateTemplatePrice}>
+              <LuRefreshCw aria-hidden />
+              Recalcular con línea
+            </button>
+            <button
+              type="button"
+              className={s.mobileQuickEditorRepeatSecondary}
+              onClick={onSaveQuickPriceTemplate}
+              disabled={isSavingQuickPriceTemplate}
+            >
+              <LuSave aria-hidden />
+              {isSavingQuickPriceTemplate ? "Guardando..." : "Guardar como precio rapido"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className={s.quickEditRow}>
         <label className={s.quickEditField}>
           <span>Ancho</span>
@@ -352,6 +561,147 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
           />
         </label>
       </div>
+
+      <div className={s.quickTemplateActions}>
+        <button
+          type="button"
+          className={s.mobileQuickEditorRepeatSecondary}
+          onClick={() => setIsCalculatorOpen((current) => !current)}
+        >
+          <LuCalculator aria-hidden />
+          {isCalculatorOpen ? "Cerrar calculadora" : "Calculadora"}
+        </button>
+      </div>
+
+      {isCalculatorOpen ? (
+        <div className={s.quickCalculatorPanel}>
+          <div className={s.quickCalculatorModeRow}>
+            {(
+              [
+                { key: "libre", label: "Libre" },
+                { key: "area", label: "Area m2" },
+                { key: "conversion", label: "mm a m" },
+              ] as const
+            ).map((mode) => (
+              <button
+                key={mode.key}
+                type="button"
+                className={`${s.quickCalculatorModeButton} ${
+                  calculatorMode === mode.key ? s.quickCalculatorModeButtonActive : ""
+                }`}
+                onClick={() => setCalculatorMode(mode.key)}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          {calculatorMode === "libre" ? (
+            <div className={s.quickEditRow}>
+              <label className={s.quickEditField}>
+                <span>Valor A</span>
+                <input
+                  className={s.quickEditInput}
+                  inputMode="decimal"
+                  value={calculatorValueA}
+                  onChange={(event) =>
+                    setCalculatorValueA(event.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="1200"
+                />
+              </label>
+              <label className={s.quickEditField}>
+                <span>Operacion</span>
+                <select
+                  className={s.quickEditInput}
+                  value={calculatorOperator}
+                  onChange={(event) =>
+                    setCalculatorOperator(event.target.value as "+" | "-" | "*" | "/")
+                  }
+                >
+                  <option value="+">+</option>
+                  <option value="-">-</option>
+                  <option value="*">x</option>
+                  <option value="/">/</option>
+                </select>
+              </label>
+              <label className={s.quickEditField}>
+                <span>Valor B</span>
+                <input
+                  className={s.quickEditInput}
+                  inputMode="decimal"
+                  value={calculatorValueB}
+                  onChange={(event) =>
+                    setCalculatorValueB(event.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder="1500"
+                />
+              </label>
+            </div>
+          ) : (
+            <div className={s.quickEditRow}>
+              <label className={s.quickEditField}>
+                <span>{calculatorMode === "area" ? "Ancho (mm)" : "Milimetros"}</span>
+                <input
+                  className={s.quickEditInput}
+                  inputMode="numeric"
+                  value={calculatorValueA}
+                  onChange={(event) =>
+                    setCalculatorValueA(event.target.value.replace(/[^\d.]/g, ""))
+                  }
+                  placeholder="1200"
+                />
+              </label>
+              {calculatorMode === "area" ? (
+                <label className={s.quickEditField}>
+                  <span>Alto (mm)</span>
+                  <input
+                    className={s.quickEditInput}
+                    inputMode="numeric"
+                    value={calculatorValueB}
+                    onChange={(event) =>
+                      setCalculatorValueB(event.target.value.replace(/[^\d.]/g, ""))
+                    }
+                    placeholder="1500"
+                  />
+                </label>
+              ) : null}
+            </div>
+          )}
+
+          <div className={s.quickCalculatorResult}>
+            <span>Resultado</span>
+            <strong>{calculatorResult || "-"}</strong>
+          </div>
+
+          <div className={s.quickTemplateActions}>
+            <button
+              type="button"
+              className={s.mobileQuickEditorRepeatSecondary}
+              onClick={() => handleApplyCalculatorResult("ancho")}
+              disabled={!calculatorResult}
+            >
+              Usar en ancho
+            </button>
+            <button
+              type="button"
+              className={s.mobileQuickEditorRepeatSecondary}
+              onClick={() => handleApplyCalculatorResult("alto")}
+              disabled={!calculatorResult}
+            >
+              Usar en alto
+            </button>
+            <button
+              type="button"
+              className={s.mobileQuickEditorRepeatButton}
+              onClick={() => handleApplyCalculatorResult("costoProveedorUnitario")}
+              disabled={!calculatorResult}
+            >
+              Usar en precio
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 });

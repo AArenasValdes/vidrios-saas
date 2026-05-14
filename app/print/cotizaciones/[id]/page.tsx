@@ -522,7 +522,7 @@ export default function CotizacionPrintPage() {
           { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
           { key: "Material", value: material },
           { key: "Color", value: colorName },
-          { key: "Referencia", value: referencia || "-" },
+          { key: "Línea", value: referencia || "-" },
           { key: "Vidrio", value: item.vidrio || "-" },
           { key: "Superficie", value: surface },
         ],
@@ -860,7 +860,7 @@ export default function CotizacionPrintPage() {
                     { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
                     { key: "Material", value: material },
                     { key: "Color", value: colorName },
-                    { key: "Referencia", value: "-" },
+                    { key: "Línea", value: "-" },
                     { key: "Vidrio", value: item.vidrio || "-" },
                     { key: "Superficie", value: surface },
                   ];

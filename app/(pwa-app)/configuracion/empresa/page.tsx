@@ -17,11 +17,13 @@ import {
   LuMapPin,
   LuPalette,
   LuPhone,
+  LuPlus,
   LuQrCode,
   LuSave,
   LuSettings2,
 } from "react-icons/lu";
 
+import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildOrganizationInitials,
@@ -76,7 +78,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   isPublished: false,
 };
 
-type SectionId = "empresa" | "marca" | "comercial" | "notificaciones";
+type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones";
 type DeviceAlertsState = {
   kind: "checking" | "enabled" | "available" | "unsupported" | "error";
   message: string;
@@ -112,8 +114,6 @@ async function persistSubscription(subscription: PushSubscription) {
 const compactJoin = (values: Array<string | null | undefined>) => values.filter(Boolean).join(" · ");
 const shorten = (text: string, max = 32) =>
   text.trim().length > max ? `${text.trim().slice(0, max - 1)}...` : text.trim();
-const pricingLabel = (value: UpdateOrganizationProfileInput["modoPrecioPreferido"]) =>
-  value === "precio_directo" ? "Precio directo" : "Margen sobre costo";
 const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
   kind === "enabled"
     ? "Activadas en este dispositivo"
@@ -128,9 +128,14 @@ const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
 export default function ConfiguracionEmpresaPage() {
   const { profile, isReady, isSaving, isUploading, saveProfile, uploadLogo } =
     useOrganizationProfile();
+  const {
+    templates: lineTemplates,
+    isLoading: isLoadingLineTemplates,
+    error: lineTemplatesError,
+  } = useCotizacionLineTemplates();
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [openSection, setOpenSection] = useState<SectionId | null>("empresa");
+  const [openSection, setOpenSection] = useState<SectionId | null>(null);
   const [savingSection, setSavingSection] = useState<SectionId | null>(null);
   const [sectionFeedback, setSectionFeedback] = useState<SectionFeedback | null>(null);
   const [publicLinkCopied, setPublicLinkCopied] = useState(false);
@@ -419,7 +424,7 @@ export default function ConfiguracionEmpresaPage() {
       form.empresaDireccion.trim()
   );
   const brandComplete = Boolean(form.brandColor.trim() && (form.empresaLogoUrl || previewUrl));
-  const commercialComplete = Boolean(form.formaPago.trim() && form.modoPrecioPreferido);
+  const commercialComplete = Boolean(form.formaPago.trim());
   const notificationsComplete = notificationsEnabled;
 
   const companySummary = compactJoin([
@@ -433,9 +438,10 @@ export default function ConfiguracionEmpresaPage() {
   ]);
   const commercialSummary = compactJoin([
     shorten(form.formaPago || "Forma de pago pendiente", 34),
-    pricingLabel(form.modoPrecioPreferido),
+    "Vigencia por cotizacion",
     "IVA incluido",
   ]);
+  const activeLineTemplatesCount = lineTemplates.filter((item) => item.isActive).length;
   const previewIdentity = previewUrl ?? form.empresaLogoUrl;
   const previewInitials = buildOrganizationInitials(form.empresaNombre || "Mi empresa");
 
@@ -630,6 +636,68 @@ export default function ConfiguracionEmpresaPage() {
           </div>
         </section>
 
+        <section className={`${s.accordion} ${openSection === "catalogo" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "catalogo" ? null : "catalogo"))} aria-expanded={openSection === "catalogo"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuQrCode aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Configuracion de catalogo</span>
+                <strong>Lineas y precios base</strong>
+                <p>{isLoadingLineTemplates ? "Cargando lineas..." : `${lineTemplates.length} guardadas · ${activeLineTemplatesCount} activas`}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={activeLineTemplatesCount > 0}>{activeLineTemplatesCount > 0 ? "Activo" : "Pendiente"}</span>
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
+
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+          <article className={s.catalogSummaryCard}>
+            <div className={s.catalogSummaryTop}>
+              <div className={s.triggerMain}>
+                <div className={s.triggerIcon}>
+                  <LuQrCode aria-hidden />
+                </div>
+                <div className={s.triggerCopy}>
+                  <span className={s.cardEyebrow}>Lineas y precios base</span>
+                  <strong>Lineas y precios base</strong>
+                  <p>Guarda tus precios por m² para cotizar mas rapido.</p>
+                </div>
+              </div>
+
+              <div className={s.catalogSummaryMeta}>
+                <span className={s.catalogSummaryPill}>
+                  {isLoadingLineTemplates
+                    ? "Cargando..."
+                    : `${lineTemplates.length} lineas guardadas`}
+                </span>
+                <span className={s.catalogSummaryPillMuted}>
+                  {activeLineTemplatesCount} activas
+                </span>
+              </div>
+            </div>
+
+            <div className={s.catalogSummaryActions}>
+              <Link href="/configuracion/empresa/lineas-precios" scroll className={s.secondaryLink}>
+                Administrar
+              </Link>
+              <Link
+                href="/configuracion/empresa/lineas-precios?nueva=1"
+                scroll
+                className={s.primaryLink}
+              >
+                <LuPlus aria-hidden />
+                Nueva linea
+              </Link>
+            </div>
+          </article>
+          {lineTemplatesError ? <p className={s.error}>{lineTemplatesError}</p> : null}
+            </div>
+          </div>
+        </section>
+
         <section className={`${s.accordion} ${openSection === "comercial" ? s.accordionOpen : ""}`}>
           <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "comercial" ? null : "comercial"))} aria-expanded={openSection === "comercial"}>
             <div className={s.triggerMain}>
@@ -654,30 +722,29 @@ export default function ConfiguracionEmpresaPage() {
                 <textarea className={s.textarea} rows={3} value={form.formaPago} onChange={(event) => handleFieldChange("formaPago", event.target.value)} placeholder="Ej: 50% al inicio y 50% al finalizar" />
               </label>
 
-              <div className={s.field}>
-                <span className={s.label}>Modo de precio</span>
-                <div className={s.modeGrid}>
-                  {[
-                    { value: "margen" as const, label: "Margen sobre costo", hint: "Recomendado para cotizar" },
-                    { value: "precio_directo" as const, label: "Precio directo", hint: "Precio final manual" },
-                  ].map((option) => {
-                    const isActive = form.modoPrecioPreferido === option.value;
-                    return (
-                      <button key={option.value} type="button" className={`${s.modeCard} ${isActive ? s.modeCardActive : ""}`} onClick={() => handleFieldChange("modoPrecioPreferido", option.value)} aria-pressed={isActive}>
-                        <strong>{option.label}</strong>
-                        <span>{option.hint}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className={s.commercialInfoGrid}>
+                <article className={s.commercialInfoCard}>
+                  <span className={s.label}>Vigencia</span>
+                  <strong>Se define por cotizacion</strong>
+                  <p>La ajustas al momento de preparar el presupuesto final.</p>
+                </article>
+                <article className={s.commercialInfoCard}>
+                  <span className={s.label}>IVA incluido</span>
+                  <strong>Visible en cada cotizacion</strong>
+                  <p>El total comercial se sigue mostrando con IVA incluido.</p>
+                </article>
+                <article className={s.commercialInfoCard}>
+                  <span className={s.label}>Notas comerciales</span>
+                  <strong>Se agregan al crear presupuesto</strong>
+                  <p>No se pierden dentro de Empresa ni te alargan esta configuracion.</p>
+                </article>
               </div>
 
-              <p className={s.inlineInfo}>Todos los valores de tus cotizaciones incluyen IVA.</p>
               {sectionFeedback?.section === "comercial" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
               <div className={s.sectionActions}>
                 <button type="button" className={s.saveButton} onClick={() => void handleSaveSection("comercial")} disabled={isSaving || savingSection === "comercial"}>
                   <LuSave aria-hidden />
-                  {savingSection === "comercial" ? "Guardando..." : "Guardar configuracion"}
+                  {savingSection === "comercial" ? "Guardando..." : "Guardar forma de pago"}
                 </button>
               </div>
             </div>

@@ -16,6 +16,7 @@ import {
 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   calculateCotizacionWorkflowTotals,
@@ -52,7 +53,10 @@ import {
   validateComponentForm,
   validateStep1,
   applyQuotePricingToItems,
+  applyLineTemplateToComponentForm,
+  buildComponentFormLinePricingSummary,
   type PreferredProvider,
+  syncTemplatePricingInComponentForm,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   clearNuevaCotizacionSolicitudSourceId,
@@ -98,6 +102,11 @@ function NuevaCotizacionPageContent() {
 
   const [draft, setDraft] = useState<CotizacionWorkflowDraft>(createCotizacionWorkflowDraft);
   const { profile: organizationProfile } = useOrganizationProfile();
+  const {
+    activeTemplates: activeLineTemplates,
+    createTemplate: createLineTemplate,
+    isSaving: isSavingQuickPriceTemplate,
+  } = useCotizacionLineTemplates({ activeOnly: true });
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
     createEmptyComponentForm([], "", "margen", organizationProfile?.margenDefecto)
   );
@@ -269,6 +278,7 @@ function NuevaCotizacionPageContent() {
     items: draft.items,
     pricingMode: componentForm.pricingMode,
     provider: suggestionProvider,
+    activeLineTemplates,
     seedForm: componentForm,
   });
 
@@ -436,7 +446,10 @@ function NuevaCotizacionPageContent() {
             ? String(Math.min(availableSlots, numericValue))
             : digitsOnly;
 
-        return { ...cur, loteCantidad: nextBatch as ComponentFormState[K] };
+        return {
+          ...cur,
+          loteCantidad: nextBatch,
+        } as ComponentFormState;
       }
 
       if (key === "tipo" && !editingItemId) {
@@ -450,12 +463,19 @@ function NuevaCotizacionPageContent() {
             tipo: value as string,
             codigo: "",
             referencia: "",
+            lineTemplateId: "",
             nombre: "",
             descripcion: "",
             vidrio: "",
             material: cur.material,
             loteCantidad: cur.loteCantidad,
             cantidad: cur.cantidad,
+            precioPorM2: cur.precioPorM2,
+            minimoCobrable: cur.minimoCobrable,
+            redondeoPrecio: cur.redondeoPrecio,
+            precioPlantillaSugerido: cur.precioPlantillaSugerido,
+            precioAjustadoManual: cur.precioAjustadoManual,
+            origenPrecio: cur.origenPrecio,
             observaciones: cur.observaciones,
             colorHex: cur.colorHex,
             pricingMode: cur.pricingMode,
@@ -472,6 +492,26 @@ function NuevaCotizacionPageContent() {
       if (key === "material") {
         const material = value as ComponentFormState["material"];
         next.colorHex = resolveMaterialColorHex(material, cur.colorHex);
+        if (cur.lineTemplateId) {
+          next.lineTemplateId = "";
+        }
+      }
+      if (key === "referencia" && value !== cur.referencia && cur.lineTemplateId) {
+        next.lineTemplateId = "";
+      }
+      if (key === "costoProveedorUnitario") {
+        const normalizedPrice = String(value || "");
+        next.precioAjustadoManual =
+          Boolean(cur.referencia.trim() && cur.precioPorM2.trim()) &&
+          normalizedPrice !== cur.precioPlantillaSugerido;
+        next.origenPrecio =
+          cur.referencia.trim() && cur.precioPorM2.trim()
+            ? next.precioAjustadoManual
+              ? "manual"
+              : "plantilla"
+            : cur.pricingMode === "precio_directo"
+              ? "manual"
+              : "margen";
       }
       if (key === "margenPct" && cur.pricingMode === "margen") {
         const nextMarginValue = String(value || "0");
@@ -479,6 +519,17 @@ function NuevaCotizacionPageContent() {
           ...current,
           items: applyQuotePricingToItems(current.items, "margen", nextMarginValue),
         }));
+      }
+      if (
+        key === "ancho" ||
+        key === "alto" ||
+        key === "cantidad" ||
+        key === "precioPorM2" ||
+        key === "minimoCobrable" ||
+        key === "redondeoPrecio" ||
+        key === "referencia"
+      ) {
+        return syncTemplatePricingInComponentForm(next);
       }
       return next;
     });
@@ -488,6 +539,161 @@ function NuevaCotizacionPageContent() {
     if (key === "loteCantidad" && fieldErrors.step2) {
       setFieldErrors((current) => ({ ...current, step2: undefined }));
     }
+  };
+
+  const handleSelectLineTemplate = (templateId: string) => {
+    setComponentForm((current) => {
+      if (!templateId) {
+        return {
+          ...current,
+          lineTemplateId: "",
+          precioPorM2: "",
+          minimoCobrable: "",
+          redondeoPrecio: "1000",
+          precioPlantillaSugerido: "",
+          precioAjustadoManual: false,
+          origenPrecio: current.pricingMode === "precio_directo" ? "manual" : "margen",
+        };
+      }
+
+      const template = activeLineTemplates.find(
+        (currentTemplate) => String(currentTemplate.id) === templateId
+      );
+
+      return template ? applyLineTemplateToComponentForm(current, template) : current;
+    });
+    setFieldErrors((current) => ({
+      ...current,
+      costoProveedorUnitario: undefined,
+      margenPct: undefined,
+    }));
+    setGlobalError(null);
+  };
+
+  const handleSaveQuickPriceTemplate = async () => {
+    const lineName = componentForm.referencia.trim();
+    const pricePerSquareMeter = Number(componentForm.precioPorM2 || 0);
+
+    if (!lineName || pricePerSquareMeter <= 0) {
+      setGlobalError("Primero define una linea y un precio por m² valido.");
+      return;
+    }
+
+    try {
+      const created = await createLineTemplate({
+        nombre: lineName,
+        material: componentForm.material,
+        precioM2Sugerido: pricePerSquareMeter,
+        minimoCobrable: Number(componentForm.minimoCobrable || 0),
+        redondeoPrecio: Number(componentForm.redondeoPrecio || 1000),
+        isActive: true,
+      });
+
+      setComponentForm((current) => applyLineTemplateToComponentForm(current, created));
+      setGlobalError(null);
+    } catch (error) {
+      setGlobalError(
+        error instanceof Error ? error.message : "No pudimos guardar el precio rapido."
+      );
+    }
+  };
+
+  const handleSaveQuickPriceTemplateFromItem = async (itemId: string) => {
+    const sourceItem = effectiveWorkflowItems.find((item) => item.id === itemId);
+
+    if (!sourceItem) {
+      return;
+    }
+
+    const itemForm = mapItemToForm(sourceItem);
+    const lineName = itemForm.referencia.trim() || `${sourceItem.tipo} ${sourceItem.codigo}`;
+    const pricingSummary = buildComponentFormLinePricingSummary(itemForm);
+    const fallbackPrecioM2 =
+      pricingSummary.areaM2 && sourceItem.precioUnitario > 0
+        ? Math.round(sourceItem.precioUnitario / pricingSummary.areaM2)
+        : 0;
+    const precioM2Sugerido = Number(itemForm.precioPorM2 || fallbackPrecioM2);
+
+    if (!lineName || precioM2Sugerido <= 0) {
+      setGlobalError("Completa una linea y un precio valido antes de guardarlo.");
+      return;
+    }
+
+    try {
+      await createLineTemplate({
+        nombre: lineName,
+        material: itemForm.material,
+        precioM2Sugerido,
+        minimoCobrable: Number(itemForm.minimoCobrable || sourceItem.precioUnitario || 0),
+        redondeoPrecio: Number(itemForm.redondeoPrecio || 1000),
+        isActive: true,
+      });
+      setGlobalError(null);
+    } catch (error) {
+      setGlobalError(
+        error instanceof Error ? error.message : "No pudimos guardar el precio rapido."
+      );
+    }
+  };
+
+  const handleRecalculateCurrentTemplatePrice = () => {
+    const recalculatedForm = syncTemplatePricingInComponentForm(
+      {
+        ...componentForm,
+        precioAjustadoManual: false,
+      },
+      { forceSuggestedPrice: true }
+    );
+
+    if (!recalculatedForm.costoProveedorUnitario) {
+      setGlobalError(
+        recalculatedForm.referencia.trim() && recalculatedForm.precioPorM2.trim()
+          ? "Completa ancho y alto para recalcular con la línea."
+          : "Primero elige una línea con precio por m² válido."
+      );
+      return;
+    }
+
+    setComponentForm(recalculatedForm);
+    setGlobalError(null);
+  };
+
+  const handleRecalculateTemplatePrice = (itemId: string) => {
+    const sourceItem = effectiveWorkflowItems.find((item) => item.id === itemId);
+
+    if (!sourceItem) {
+      return;
+    }
+
+    const currentForm = mapItemToForm(sourceItem);
+    const recalculatedForm = syncTemplatePricingInComponentForm(
+      {
+        ...currentForm,
+        precioAjustadoManual: false,
+      },
+      { forceSuggestedPrice: true }
+    );
+
+    if (!recalculatedForm.costoProveedorUnitario) {
+      setGlobalError("Completa ancho y alto para recalcular con la linea.");
+      return;
+    }
+
+    handleQuickItemFieldChange(itemId, "ancho", recalculatedForm.ancho);
+    handleQuickItemFieldChange(itemId, "alto", recalculatedForm.alto);
+    handleQuickItemFieldChange(
+      itemId,
+      "costoProveedorUnitario",
+      recalculatedForm.costoProveedorUnitario
+    );
+
+    setDraft((current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.id === itemId ? buildItemFromForm(recalculatedForm, current.items, itemId) : item
+      ),
+    }));
+    setGlobalError(null);
   };
 
   const handleAddOrUpdateItem = () => {
@@ -814,10 +1020,16 @@ function NuevaCotizacionPageContent() {
         },
       });
 
-      return {
+      const normalizedNext = {
         ...next,
         pricingMode,
       };
+
+      return current.referencia.trim() && current.precioPorM2.trim()
+        ? syncTemplatePricingInComponentForm(normalizedNext, {
+            forceSuggestedPrice: !current.precioAjustadoManual,
+          })
+        : normalizedNext;
     });
     setDraft((current) => ({
       ...current,
@@ -854,12 +1066,6 @@ function NuevaCotizacionPageContent() {
     setFieldErrors((cur) => ({ ...cur, step1: undefined }));
     setStep(2);
     scrollPageToTop();
-
-    if (isMobileViewport && draft.items.length === 0) {
-      window.requestAnimationFrame(() => {
-        pasoDosAgregarGrupoMovil.openSheet(componentForm);
-      });
-    }
   }
 
   function handleStep1KeyDown(
@@ -918,8 +1124,11 @@ function NuevaCotizacionPageContent() {
   }
 
   const goToStep = (target: StepKey) => {
+    const itemsForNextStep =
+      target >= 3 && step === 2 ? flushQuickEditDrafts() : draft.items;
+
     if (target >= 3 && step === 2) {
-      flushQuickEditDrafts();
+      setFieldErrors((current) => ({ ...current, items: undefined }));
     }
 
     if (target === 2) {
@@ -938,7 +1147,7 @@ function NuevaCotizacionPageContent() {
         return;
       }
     }
-    if (target === 3 && draft.items.length === 0) {
+    if (target === 3 && itemsForNextStep.length === 0) {
       setFieldErrors((cur) => ({ ...cur, items: "Agrega al menos un componente" }));
       setStep(2);
       return;
@@ -966,7 +1175,9 @@ function NuevaCotizacionPageContent() {
     onRegisterStep1InputRef: registerStep1InputRef,
     editingItemId,
     componentForm,
+    activeLineTemplates,
     globalError,
+    isSavingQuickPriceTemplate,
     isGlassPanelOpen,
     glassQuery,
     items: draft.items,
@@ -1020,6 +1231,7 @@ function NuevaCotizacionPageContent() {
     onContinueStep1: goNextFromStep1,
     onPricingModeSelection: handlePricingModeSelection,
     onComponentChange: handleComponentChange,
+    onSelectLineTemplate: handleSelectLineTemplate,
     onToggleGlassPanel: () => {
       setIsGlassPanelOpen((current) => {
         const next = !current;
@@ -1037,7 +1249,8 @@ function NuevaCotizacionPageContent() {
       }
     },
     onResetStep2Form: handleResetStep2Form,
-    onAddOrUpdateItem: editingItemId ? handleAddOrUpdateItem : handleOpenAddGroupSheet,
+    onAddOrUpdateItem: handleAddOrUpdateItem,
+    onRecalculateCurrentTemplatePrice: handleRecalculateCurrentTemplatePrice,
     onToggleShowOnlyPendingItems: pasoDosEdicionRapida.toggleMostrarSoloPendientes,
     onQuickDraftChange: handleQuickItemFieldChange,
     onQuickCommit: commitQuickEditDraft,
@@ -1051,6 +1264,9 @@ function NuevaCotizacionPageContent() {
     onSelectQuickEditItem: handleSelectQuickEditItem,
     onEditItem: handleEditItem,
     onRemoveItem: handleRemoveItem,
+    onRecalculateTemplatePrice: handleRecalculateTemplatePrice,
+    onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
+    onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
     onDraftFleteChange: handleDraftFleteChange,
     formatCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
@@ -1116,6 +1332,8 @@ function NuevaCotizacionPageContent() {
               systemOptions: pasoDosAgregarGrupoMovil.systemOptions,
               configurationOptions: pasoDosAgregarGrupoMovil.configurationOptions,
               glassOptions: pasoDosAgregarGrupoMovil.glassOptions,
+              visibleLineTemplates: pasoDosAgregarGrupoMovil.visibleLineTemplates,
+              linePricingSummary: pasoDosAgregarGrupoMovil.linePricingSummary,
               onOpen: handleOpenAddGroupSheet,
               onClose: pasoDosAgregarGrupoMovil.closeSheet,
               onGoToStep: pasoDosAgregarGrupoMovil.goToStep,
@@ -1127,6 +1345,7 @@ function NuevaCotizacionPageContent() {
               onSelectCantidad: pasoDosAgregarGrupoMovil.selectCantidad,
               onCantidadChange: pasoDosAgregarGrupoMovil.updateCantidad,
               onMaterialChange: pasoDosAgregarGrupoMovil.updateMaterial,
+              onSelectLineTemplate: pasoDosAgregarGrupoMovil.selectLineTemplate,
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
               onSistemaChange: pasoDosAgregarGrupoMovil.updateSistema,
               onConfiguracionChange: pasoDosAgregarGrupoMovil.updateConfiguracion,

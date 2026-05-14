@@ -338,7 +338,14 @@ describe("cotizaciones.service", () => {
             precioUnitario: 600000,
             precioTotal: 600000,
             vidrio: "Incoloro monolitico 5mm",
-            observaciones: "",
+            lineaComercial: "Serie 25",
+            precioPorM2: 145000,
+            minimoCobrable: 95000,
+            redondeoPrecio: 1000,
+            precioPlantillaSugerido: 600000,
+            precioAjustadoManual: false,
+            origenPrecio: "plantilla",
+            observaciones: "Cierre comercial",
           },
         ],
       },
@@ -356,7 +363,9 @@ describe("cotizaciones.service", () => {
         approvalToken: expect.any(String),
         items: [
           expect.objectContaining({
+            linea: "Serie 25",
             vidrio: "Incoloro monolitico 5mm",
+            observaciones: "Cierre comercial",
           }),
         ],
       })

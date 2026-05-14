@@ -12,10 +12,13 @@ import {
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
   normalizeSearchValue,
+  syncTemplatePricingInComponentForm,
   type ComponentFormState,
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import {
   normalizePricingMode,
   type PricingMode,
@@ -44,9 +47,14 @@ export type PasoDosGrupoDraft = {
   sistema: string;
   configuracion: string;
   vidrio: string;
+  lineTemplateId: string;
+  referencia: string;
   ancho: string;
   alto: string;
   precio: string;
+  precioPorM2: string;
+  minimoCobrable: string;
+  redondeoPrecio: string;
   margenPct: string;
 };
 
@@ -70,6 +78,50 @@ type BuildSelectionPatchParams = CreateInitialDraftParams & {
 
 function sanitizeDigits(value: string) {
   return value.replace(/[^\d]/g, "");
+}
+
+export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
+  if (!draft.referencia.trim() || !draft.precioPorM2.trim()) {
+    return draft;
+  }
+
+  const pricing = calculateLineTemplatePricing({
+    ancho: draft.ancho ? Number(draft.ancho) : null,
+    alto: draft.alto ? Number(draft.alto) : null,
+    cantidad: draft.cantidad,
+    precioM2Sugerido: draft.precioPorM2 ? Number(draft.precioPorM2) : null,
+    minimoCobrable: draft.minimoCobrable ? Number(draft.minimoCobrable) : 0,
+    redondeoPrecio: draft.redondeoPrecio ? Number(draft.redondeoPrecio) : 1000,
+  });
+
+  if (pricing.precioUnitarioSugerido === null) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    precio: String(Math.round(pricing.precioUnitarioSugerido)),
+  };
+}
+
+export function applyLineTemplateToGrupoDraft(
+  draft: PasoDosGrupoDraft,
+  template: Pick<
+    CotizacionLineTemplate,
+    "id" | "nombre" | "material" | "precioM2Sugerido" | "minimoCobrable" | "redondeoPrecio"
+  >
+): PasoDosGrupoDraft {
+  return syncDraftTemplatePricing({
+    ...draft,
+    material: template.material,
+    lineTemplateId: String(template.id),
+    referencia: template.nombre,
+    pricingMode: "precio_directo",
+    precioPorM2: String(Math.round(template.precioM2Sugerido)),
+    minimoCobrable: String(Math.round(template.minimoCobrable)),
+    redondeoPrecio: String(Math.round(template.redondeoPrecio || 1000)),
+    margenPct: "0",
+  });
 }
 
 function resolveDefaultCategory(subtipo: string) {
@@ -179,9 +231,14 @@ export function createInitialPasoDosGrupoDraft({
     sistema: referenceParts.sistema || systemOptions[0] || "",
     configuracion: referenceParts.configuracion,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
+    lineTemplateId: seedForm?.lineTemplateId ?? "",
+    referencia: seedForm?.referencia ?? suggestedForm.referencia,
     ancho: sanitizeDigits(seedForm?.ancho ?? ""),
     alto: sanitizeDigits(seedForm?.alto ?? ""),
     precio: sanitizeDigits(seedForm?.costoProveedorUnitario ?? ""),
+    precioPorM2: sanitizeDigits(seedForm?.precioPorM2 ?? ""),
+    minimoCobrable: sanitizeDigits(seedForm?.minimoCobrable ?? ""),
+    redondeoPrecio: sanitizeDigits(seedForm?.redondeoPrecio ?? "1000"),
     margenPct: sanitizeDigits(seedForm?.margenPct ?? suggestedForm.margenPct ?? "0"),
   };
 }
@@ -213,11 +270,12 @@ export function buildPasoDosGrupoComponentForm({
     },
   });
 
-  return {
+  return syncTemplatePricingInComponentForm({
     ...baseForm,
     material: draft.material,
     colorHex: draft.colorHex,
-    referencia: composeComponentReference(draft.sistema, draft.configuracion),
+    referencia: draft.referencia.trim() || composeComponentReference(draft.sistema, draft.configuracion),
+    lineTemplateId: draft.lineTemplateId,
     pricingMode: draft.pricingMode,
     vidrio: draft.vidrio,
     ancho: draft.ancho,
@@ -225,8 +283,11 @@ export function buildPasoDosGrupoComponentForm({
     cantidad: String(Math.max(1, draft.cantidad)),
     costoProveedorUnitario: draft.precio,
     margenPct: draft.pricingMode === "precio_directo" ? "0" : draft.margenPct || "0",
+    precioPorM2: draft.precioPorM2,
+    minimoCobrable: draft.minimoCobrable,
+    redondeoPrecio: draft.redondeoPrecio || "1000",
     loteCantidad: "1",
-  };
+  });
 }
 
 export function buildPasoDosGrupoSelectionPatch({

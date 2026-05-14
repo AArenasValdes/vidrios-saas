@@ -221,7 +221,7 @@ describe("clientes.service", () => {
       obras: 2,
       direccion: "Los Pescadores 221, Coquimbo",
       referencia: "Oficina Serena",
-      estado: "activo",
+      estado: "inactivo",
     });
   });
 

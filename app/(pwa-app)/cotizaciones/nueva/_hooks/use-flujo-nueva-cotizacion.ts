@@ -13,6 +13,7 @@ import {
   type QuickEditFieldKey,
   type Step1FieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowDraft, CotizacionWorkflowItem, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { VisibleComponentListState } from "../_types/paso-dos";
 import { usePasoDosPresentacion } from "./use-paso-dos-presentacion";
@@ -39,7 +40,9 @@ type UseFlujoNuevaCotizacionParams = {
   ) => void;
   editingItemId: string | null;
   componentForm: ComponentFormState;
+  activeLineTemplates: CotizacionLineTemplate[];
   globalError: string | null;
+  isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
   items: CotizacionWorkflowItem[];
@@ -84,11 +87,13 @@ type UseFlujoNuevaCotizacionParams = {
   onContinueStep1: () => void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
+  onSelectLineTemplate: (templateId: string) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
   onResetStep2Form: () => void;
   onAddOrUpdateItem: () => void;
+  onRecalculateCurrentTemplatePrice: () => void;
   onToggleShowOnlyPendingItems: () => void;
   onQuickDraftChange: (itemId: string, key: QuickEditFieldKey, value: string) => void;
   onQuickCommit: (itemId: string, draft: QuickEditDraftState) => void;
@@ -102,6 +107,9 @@ type UseFlujoNuevaCotizacionParams = {
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onRecalculateTemplatePrice: (itemId: string) => void;
+  onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
+  onSaveQuickPriceTemplate: () => void;
   onDraftFleteChange: (value: string) => void;
   formatCurrencyInput: (value: string) => string;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
@@ -136,8 +144,10 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     items: params.items,
     editingItemId: params.editingItemId,
     componentForm: params.componentForm,
+    activeLineTemplates: params.activeLineTemplates,
     fieldErrors: params.fieldErrors,
     globalError: params.globalError,
+    isSavingQuickPriceTemplate: params.isSavingQuickPriceTemplate,
     isGlassPanelOpen: params.isGlassPanelOpen,
     glassQuery: params.glassQuery,
     pendingItemsCount: params.pendingItemsCount,
@@ -162,12 +172,14 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onGoToSummary: () => params.onGoToStep(3),
     onPricingModeSelection: params.onPricingModeSelection,
     onComponentChange: params.onComponentChange,
+    onSelectLineTemplate: params.onSelectLineTemplate,
     onToggleGlassPanel: params.onToggleGlassPanel,
     onGlassQueryChange: params.onGlassQueryChange,
     onGlassSelect: params.onGlassSelect,
     onResetStep2Form: params.onResetStep2Form,
     onSaveDraft: params.onSaveDraft,
     onAddOrUpdateItem: params.onAddOrUpdateItem,
+    onRecalculateCurrentTemplatePrice: params.onRecalculateCurrentTemplatePrice,
     stepTwoListRef: params.stepTwoListRef,
     stepTwoSummaryRef: params.stepTwoSummaryRef,
     onToggleShowOnlyPendingItems: params.onToggleShowOnlyPendingItems,
@@ -183,6 +195,9 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onSelectQuickEditItem: params.onSelectQuickEditItem,
     onEditItem: params.onEditItem,
     onRemoveItem: params.onRemoveItem,
+    onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
+    onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,
+    onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
   });
 
   const propsPasoUno = useMemo(() => ({

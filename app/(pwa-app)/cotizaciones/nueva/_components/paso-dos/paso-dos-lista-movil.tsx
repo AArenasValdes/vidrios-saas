@@ -173,7 +173,7 @@ export function PasoDosListaMovil({
                   {incomplete ? (
                     <>
                       <div className={s.stepTwoMobileItemWarning}>
-                        <span aria-hidden>⚠</span>
+                        <span aria-hidden>!</span>
                         Falta configuracion
                         <span className={s.stepTwoMobileItemWarningPrice}>$0</span>
                       </div>
@@ -227,21 +227,21 @@ export function PasoDosListaMovil({
         <footer className={s.stepTwoMobileFooterBar}>
           <div className={s.stepTwoMobileFooterTotals}>
             <span>
-              {items.length} componente{items.length !== 1 ? "s" : ""} · Subtotal {subtotal}
+              {items.length} componente{items.length !== 1 ? "s" : ""} - Subtotal {subtotal}
             </span>
             <strong>Total {total}</strong>
           </div>
           <div className={s.stepTwoMobileFooterActions}>
+            <button className={s.btnPrimary} onClick={onOpenWizard} type="button">
+              <LuPlus aria-hidden />
+              Agregar
+            </button>
             <button
               className={s.btnGhost}
               onClick={items.length > 0 ? onGoToSummary : onSaveAndExit}
               type="button"
             >
               {items.length > 0 ? "Ir al resumen" : "Guardar borrador"}
-            </button>
-            <button className={s.btnPrimary} onClick={onOpenWizard} type="button">
-              <LuPlus aria-hidden />
-              Agregar
             </button>
           </div>
         </footer>

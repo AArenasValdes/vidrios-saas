@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   buildItemFromForm,
@@ -155,8 +155,8 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     itemVistaSeleccionado &&
     decodeCotizacionItemPresentationMeta(itemVistaSeleccionado.observaciones).pricingMode ===
       "precio_directo"
-      ? "Valor"
-      : "Costo";
+      ? "Precio final"
+      : "Precio base";
 
   const seleccionarItemEdicionRapida = useCallback(
     (itemId: string | null, focusField: QuickEditFieldKey | null = "ancho") => {
@@ -211,9 +211,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
   const flushBorradoresRapidos = useCallback(() => {
     const siguientesItems = aplicarBorradoresRapidosAItems(params.items);
 
-    startTransition(() => {
-      params.setDraft((current) => ({ ...current, items: siguientesItems }));
-    });
+    params.setDraft((current) => ({ ...current, items: siguientesItems }));
 
     return siguientesItems;
   }, [aplicarBorradoresRapidosAItems, params]);
@@ -246,41 +244,44 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
         });
       }
 
-      startTransition(() => {
-        params.setDraft((current) => {
-          const target = current.items.find((item) => item.id === itemId);
+      params.setDraft((current) => {
+        const target = current.items.find((item) => item.id === itemId);
 
-          if (!target) {
+        if (!target) {
+          return current;
+        }
+
+        try {
+          const currentDraft = buildQuickEditDraft(target);
+          const currentForm = mapItemToForm(target);
+
+          if (
+            currentDraft.ancho === draftResuelto.ancho &&
+            currentDraft.alto === draftResuelto.alto &&
+            currentDraft.costoProveedorUnitario === draftResuelto.costoProveedorUnitario
+          ) {
             return current;
           }
 
-          try {
-            const currentDraft = buildQuickEditDraft(target);
+          const nextForm = {
+            ...currentForm,
+            ancho: draftResuelto.ancho,
+            alto: draftResuelto.alto,
+            costoProveedorUnitario: draftResuelto.costoProveedorUnitario,
+            precioAjustadoManual:
+              currentForm.precioAjustadoManual ||
+              (Boolean(currentForm.referencia.trim() && currentForm.precioPorM2.trim()) &&
+                currentDraft.costoProveedorUnitario !== draftResuelto.costoProveedorUnitario),
+          } as ComponentFormState;
+          const nextItem = buildItemFromForm(nextForm, current.items, target.id);
 
-            if (
-              currentDraft.ancho === draftResuelto.ancho &&
-              currentDraft.alto === draftResuelto.alto &&
-              currentDraft.costoProveedorUnitario === draftResuelto.costoProveedorUnitario
-            ) {
-              return current;
-            }
-
-            const nextForm = {
-              ...mapItemToForm(target),
-              ancho: draftResuelto.ancho,
-              alto: draftResuelto.alto,
-              costoProveedorUnitario: draftResuelto.costoProveedorUnitario,
-            } as ComponentFormState;
-            const nextItem = buildItemFromForm(nextForm, current.items, target.id);
-
-            return {
-              ...current,
-              items: current.items.map((item) => (item.id === itemId ? nextItem : item)),
-            };
-          } catch {
-            return current;
-          }
-        });
+          return {
+            ...current,
+            items: current.items.map((item) => (item.id === itemId ? nextItem : item)),
+          };
+        } catch {
+          return current;
+        }
       });
     },
     [borradoresRapidosSincronizados, params]
@@ -340,6 +341,11 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
       const nextForm = {
         ...mapItemToForm(item),
         ...draftCompartido,
+        precioAjustadoManual: Boolean(
+          mapItemToForm(item).referencia.trim() &&
+            mapItemToForm(item).precioPorM2.trim() &&
+            draftCompartido.costoProveedorUnitario
+        ),
       } as ComponentFormState;
 
       return buildItemFromForm(nextForm, itemsFlusheados, item.id);

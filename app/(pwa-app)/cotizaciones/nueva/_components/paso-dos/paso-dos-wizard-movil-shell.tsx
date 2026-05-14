@@ -5,6 +5,8 @@ import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { ComponentFormLinePricingSummary } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   ALUMINUM_COLOR_OPTIONS,
   buildGlassValue,
@@ -47,6 +49,8 @@ export type WizardActions = {
   systemOptions: readonly string[];
   configurationOptions: readonly string[];
   glassOptions: readonly string[];
+  visibleLineTemplates: readonly CotizacionLineTemplate[];
+  linePricingSummary: ComponentFormLinePricingSummary;
   onOpen: () => void;
   onClose: () => void;
   onGoToStep: (paso: PasoDosGrupoPasoMovil) => void;
@@ -58,6 +62,7 @@ export type WizardActions = {
   onSelectCantidad: (cantidad: number) => void;
   onCantidadChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
+  onSelectLineTemplate: (templateId: string) => void;
   onColorChange: (colorHex: string) => void;
   onSistemaChange: (value: string) => void;
   onConfiguracionChange: (value: string) => void;
@@ -396,10 +401,13 @@ export function PasoDosWizardMovil({
                   isRecommendedGlass={(option) =>
                     isRecommendedGlass(option, glassRecommendation.recommendedOptions)
                   }
+                  linePricingSummary={wizard.linePricingSummary}
+                  lineTemplateOptions={wizard.visibleLineTemplates}
                   onAltoChange={wizard.onAltoChange}
                   onAnchoChange={wizard.onAnchoChange}
                   onMargenChange={wizard.onMargenChange}
                   onMaterialChange={wizard.onMaterialChange}
+                  onSelectLineTemplate={wizard.onSelectLineTemplate}
                   onColorChange={wizard.onColorChange}
                   onConfiguracionChange={wizard.onConfiguracionChange}
                   onPrecioChange={wizard.onPrecioChange}

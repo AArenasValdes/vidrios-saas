@@ -14,6 +14,7 @@ type CalculateComponentItemInput = {
   id?: string;
   codigo: string;
   tipo: string;
+  lineaComercial?: string;
   vidrio?: string;
   nombre: string;
   descripcion?: string;
@@ -23,6 +24,12 @@ type CalculateComponentItemInput = {
   unidad?: string;
   costoProveedorUnitario: number;
   margenPct?: number;
+  precioPorM2?: number | null;
+  minimoCobrable?: number | null;
+  redondeoPrecio?: number | null;
+  precioPlantillaSugerido?: number | null;
+  precioAjustadoManual?: boolean;
+  origenPrecio?: "margen" | "plantilla" | "manual";
   observaciones?: string;
 };
 
@@ -167,6 +174,7 @@ export function calculateComponentItem(
 ): CotizacionWorkflowItem {
   const codigo = input.codigo.trim();
   const tipo = input.tipo.trim();
+  const lineaComercial = input.lineaComercial?.trim() ?? "";
   const vidrio = (input.vidrio ?? "").trim();
   const nombre = input.nombre.trim();
   const descripcion = (input.descripcion ?? input.nombre).trim();
@@ -206,6 +214,7 @@ export function calculateComponentItem(
     id: input.id ?? `item-${codigo.toLowerCase()}-${Date.now()}`,
     codigo,
     tipo,
+    lineaComercial,
     vidrio,
     nombre,
     descripcion,
@@ -219,6 +228,14 @@ export function calculateComponentItem(
     margenPct: round(margenPct, 2),
     precioUnitario,
     precioTotal,
+    precioPorM2: normalizePositiveNumber(input.precioPorM2),
+    minimoCobrable: Number.isFinite(input.minimoCobrable) ? Number(input.minimoCobrable) : null,
+    redondeoPrecio: Number.isFinite(input.redondeoPrecio) ? Number(input.redondeoPrecio) : null,
+    precioPlantillaSugerido: Number.isFinite(input.precioPlantillaSugerido)
+      ? Number(input.precioPlantillaSugerido)
+      : null,
+    precioAjustadoManual: Boolean(input.precioAjustadoManual),
+    origenPrecio: input.origenPrecio ?? (margenPct > 0 ? "margen" : "manual"),
     observaciones: input.observaciones?.trim() ?? "",
   };
 }

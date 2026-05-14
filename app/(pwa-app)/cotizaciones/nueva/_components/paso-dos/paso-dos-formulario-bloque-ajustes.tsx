@@ -23,25 +23,10 @@ export function PasoDosFormularioBloqueAjustes({
 
       <div className={s.formSectionHead}>
         <span className={s.formSectionEyebrow}>Ajustes</span>
-        <strong>{isMobileViewport ? "Linea y color" : "Linea, color y ajustes"}</strong>
+        <strong>{isMobileViewport ? "Color y detalles" : "Color y detalles visuales"}</strong>
         {!isMobileViewport ? (
-          <p>Aqui puedes corregir la sugerencia si este componente necesita algo distinto.</p>
+          <p>Aqui puedes ajustar color y otros detalles visuales del componente.</p>
         ) : null}
-      </div>
-
-      <div className={s.formGrid2}>
-        <label className={s.field}>
-          <span className={s.label}>Referencia o linea habitual</span>
-          <input
-            className={s.input}
-            value={componentForm.referencia}
-            onChange={(event) => onComponentChange("referencia", event.target.value)}
-            placeholder="Ej: S60, Serie 25, linea propia del maestro"
-          />
-          {!isMobileViewport ? (
-            <span className={s.helpText}>Opcional. Solo aparece en el PDF si la cargas.</span>
-          ) : null}
-        </label>
       </div>
 
       <div className={`${s.field} ${s.fieldFull}`}>

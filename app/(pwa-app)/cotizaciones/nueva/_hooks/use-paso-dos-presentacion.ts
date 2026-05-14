@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 
 import {
+  buildComponentFormLinePricingSummary,
   buildUpcomingComponentCodes,
   filterGlassOptions,
   getComponentTypeLabelForBatch,
@@ -12,6 +13,7 @@ import {
   type QuickEditDraftState,
   type QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -27,8 +29,10 @@ type UsePasoDosPresentacionParams = {
   items: CotizacionWorkflowItem[];
   editingItemId: string | null;
   componentForm: ComponentFormState;
+  activeLineTemplates: CotizacionLineTemplate[];
   fieldErrors: FieldErrors;
   globalError: string | null;
+  isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
   pendingItemsCount: number;
@@ -53,12 +57,14 @@ type UsePasoDosPresentacionParams = {
   onGoToSummary: () => void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
+  onSelectLineTemplate: (templateId: string) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveDraft: () => void;
   onAddOrUpdateItem: () => void;
+  onRecalculateCurrentTemplatePrice: () => void;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: React.RefObject<HTMLDivElement | null>;
   onToggleShowOnlyPendingItems: () => void;
@@ -78,6 +84,9 @@ type UsePasoDosPresentacionParams = {
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onRecalculateTemplatePrice: (itemId: string) => void;
+  onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
+  onSaveQuickPriceTemplate: () => void;
 };
 
 export function usePasoDosPresentacion(
@@ -87,6 +96,10 @@ export function usePasoDosPresentacion(
   propsPasoDosPanel: PasoDosPanelComponentesProps;
 } {
   const filteredGlassGroups = useMemo(() => filterGlassOptions(params.glassQuery), [params.glassQuery]);
+  const linePricingSummary = useMemo(
+    () => buildComponentFormLinePricingSummary(params.componentForm),
+    [params.componentForm]
+  );
 
   const currentComponentPreviewSvg = useMemo(
     () =>
@@ -144,17 +157,23 @@ export function usePasoDosPresentacion(
       visibleBatchPreviewCodes,
       hiddenBatchPreviewCount,
       batchPreviewTypeLabel,
+      activeLineTemplates: params.activeLineTemplates,
+      linePricingSummary,
+      isSavingQuickPriceTemplate: params.isSavingQuickPriceTemplate,
       isGlassPanelOpen: params.isGlassPanelOpen,
       glassQuery: params.glassQuery,
       filteredGlassGroups,
       onPricingModeSelection: params.onPricingModeSelection,
       onComponentChange: params.onComponentChange,
+      onSelectLineTemplate: params.onSelectLineTemplate,
       onToggleGlassPanel: params.onToggleGlassPanel,
       onGlassQueryChange: params.onGlassQueryChange,
       onGlassSelect: params.onGlassSelect,
       onResetStep2Form: params.onResetStep2Form,
       onSaveAndExit: guardarBorradorYSalir,
       onAddOrUpdateItem: params.onAddOrUpdateItem,
+      onRecalculateCurrentTemplatePrice: params.onRecalculateCurrentTemplatePrice,
+      onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
     }),
     [
       batchPreviewCodes,
@@ -163,6 +182,7 @@ export function usePasoDosPresentacion(
       filteredGlassGroups,
       guardarBorradorYSalir,
       hiddenBatchPreviewCount,
+      linePricingSummary,
       params,
       visibleBatchPreviewCodes,
     ]
@@ -209,6 +229,9 @@ export function usePasoDosPresentacion(
       onSelectQuickEditItem: params.onSelectQuickEditItem,
       onEditItem: params.onEditItem,
       onRemoveItem: params.onRemoveItem,
+      onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
+      onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,
+      isSavingQuickPriceTemplate: params.isSavingQuickPriceTemplate,
       onGoToSummary: params.onGoToSummary,
     }),
     [params]

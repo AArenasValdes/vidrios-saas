@@ -1,0 +1,8 @@
+
+> vidrios-saas@0.1.0 start
+> next start --port 3111
+
+▲ Next.js 16.2.6
+- Local:         http://localhost:3111
+- Network:       http://192.168.0.12:3111
+✓ Ready in 206ms

@@ -6,6 +6,8 @@ import {
   calculateComponentItem,
   createCotizacionWorkflowDraft,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
@@ -29,6 +31,7 @@ export type ComponentFormState = {
   tipo: string;
   material: "Aluminio" | "PVC";
   referencia: string;
+  lineTemplateId: string;
   pricingMode: PricingMode;
   vidrio: string;
   nombre: string;
@@ -38,6 +41,12 @@ export type ComponentFormState = {
   cantidad: string;
   costoProveedorUnitario: string;
   margenPct: string;
+  precioPorM2: string;
+  minimoCobrable: string;
+  redondeoPrecio: string;
+  precioPlantillaSugerido: string;
+  precioAjustadoManual: boolean;
+  origenPrecio: "margen" | "plantilla" | "manual";
   observaciones: string;
   colorHex: string;
   loteCantidad: string;
@@ -51,7 +60,7 @@ export type FieldErrors = Partial<
 >;
 
 export type PersistedWorkflowState = {
-  version: 2;
+  version: 3;
   step: StepKey;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
@@ -99,6 +108,10 @@ export type ComponentListCardViewModel = {
   svgMarkup: string;
   isComplete: boolean;
 };
+
+export type ComponentFormLinePricingSummary = ReturnType<
+  typeof calculateLineTemplatePricing
+>;
 
 export const COMPONENT_TYPE_GROUPS = CATALOG_COMPONENT_TYPE_GROUPS;
 
@@ -266,7 +279,7 @@ export function loadPersistedWorkflowState(
       showStep1MoreData?: boolean;
     };
 
-    if (parsed.version !== 1 && parsed.version !== 2) {
+    if (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3) {
       return null;
     }
 
@@ -499,11 +512,18 @@ export function applyQuickEditDraftStatesToItems(
     }
 
     try {
+      const currentForm = mapItemToForm(item);
+      const currentQuickDraft = buildQuickEditDraft(item);
+      const isManualTemplateOverride =
+        Boolean(currentForm.referencia.trim() && currentForm.precioPorM2.trim()) &&
+        draftState.costoProveedorUnitario !== currentQuickDraft.costoProveedorUnitario;
       const nextForm = {
-        ...mapItemToForm(item),
+        ...currentForm,
         ancho: draftState.ancho,
         alto: draftState.alto,
         costoProveedorUnitario: draftState.costoProveedorUnitario,
+        precioAjustadoManual:
+          currentForm.precioAjustadoManual || isManualTemplateOverride,
       } as ComponentFormState;
 
       return buildItemFromForm(nextForm, items, item.id);
@@ -607,6 +627,90 @@ function resolveSuggestedMarginValue(
   return pickSuggestedString(currentValue, String(baseValue));
 }
 
+export function buildComponentFormLinePricingSummary(
+  form: Pick<
+    ComponentFormState,
+    | "ancho"
+    | "alto"
+    | "cantidad"
+    | "precioPorM2"
+    | "minimoCobrable"
+    | "redondeoPrecio"
+  >
+) {
+  return calculateLineTemplatePricing({
+    ancho: form.ancho ? Number(form.ancho) : null,
+    alto: form.alto ? Number(form.alto) : null,
+    cantidad: form.cantidad ? Number(form.cantidad) : 1,
+    precioM2Sugerido: form.precioPorM2 ? Number(form.precioPorM2) : null,
+    minimoCobrable: form.minimoCobrable ? Number(form.minimoCobrable) : 0,
+    redondeoPrecio: form.redondeoPrecio ? Number(form.redondeoPrecio) : 1000,
+  });
+}
+
+export function syncTemplatePricingInComponentForm(
+  form: ComponentFormState,
+  options?: { forceSuggestedPrice?: boolean }
+) {
+  const referencia = typeof form.referencia === "string" ? form.referencia.trim() : "";
+  const precioPorM2 = typeof form.precioPorM2 === "string" ? form.precioPorM2.trim() : "";
+
+  if (!referencia || !precioPorM2) {
+    return form;
+  }
+
+  const pricingSummary = buildComponentFormLinePricingSummary(form);
+  const suggestedPrice =
+    pricingSummary.precioUnitarioSugerido !== null
+      ? String(Math.round(pricingSummary.precioUnitarioSugerido))
+      : "";
+
+  const nextForm: ComponentFormState = {
+    ...form,
+    pricingMode: "precio_directo",
+    margenPct: "0",
+    precioPlantillaSugerido: suggestedPrice,
+    origenPrecio: form.precioAjustadoManual ? "manual" : "plantilla",
+  };
+
+  if (
+    !form.precioAjustadoManual &&
+    suggestedPrice &&
+    (options?.forceSuggestedPrice || form.costoProveedorUnitario !== suggestedPrice)
+  ) {
+    nextForm.costoProveedorUnitario = suggestedPrice;
+  }
+
+  return nextForm;
+}
+
+export function applyLineTemplateToComponentForm(
+  form: ComponentFormState,
+  template: Pick<
+    CotizacionLineTemplate,
+    "id" | "nombre" | "material" | "precioM2Sugerido" | "minimoCobrable" | "redondeoPrecio"
+  >
+) {
+  const preserveManualPrice = form.precioAjustadoManual;
+
+  return syncTemplatePricingInComponentForm(
+    {
+      ...form,
+      material: template.material,
+      referencia: template.nombre,
+      lineTemplateId: String(template.id),
+      pricingMode: "precio_directo",
+      margenPct: "0",
+      precioPorM2: String(Math.round(template.precioM2Sugerido)),
+      minimoCobrable: String(Math.round(template.minimoCobrable)),
+      redondeoPrecio: String(Math.round(template.redondeoPrecio ?? 0)),
+      precioAjustadoManual: preserveManualPrice,
+      origenPrecio: preserveManualPrice ? "manual" : "plantilla",
+    },
+    { forceSuggestedPrice: !preserveManualPrice }
+  );
+}
+
 export function filterGlassOptions(query: string) {
   const normalizedQuery = normalizeSearchValue(query);
 
@@ -658,6 +762,7 @@ export function buildSuggestedComponentForm(
         ? current.material
         : suggestion.material,
     referencia: pickSuggestedString(current.referencia, suggestion.referencia),
+    lineTemplateId: current.lineTemplateId ?? "",
     pricingMode,
     vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
     nombre: current.nombre ?? "",
@@ -672,6 +777,13 @@ export function buildSuggestedComponentForm(
       current.margenPct,
       input.defaultMargin
     ),
+    precioPorM2: current.precioPorM2 ?? "",
+    minimoCobrable: current.minimoCobrable ?? "",
+    redondeoPrecio: current.redondeoPrecio ?? "1000",
+    precioPlantillaSugerido: current.precioPlantillaSugerido ?? "",
+    precioAjustadoManual: current.precioAjustadoManual ?? false,
+    origenPrecio:
+      current.origenPrecio ?? (pricingMode === "precio_directo" ? "manual" : "margen"),
     observaciones: current.observaciones ?? "",
     colorHex:
       typeof current.colorHex === "string" && /^#[0-9a-fA-F]{3,8}$/.test(current.colorHex)
@@ -711,14 +823,28 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
 }
 
 export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
-  const { colorHex, referencia, material, pricingMode, raw } =
+  const {
+    colorHex,
+    referencia,
+    material,
+    pricingMode,
+    raw,
+    lineTemplateId,
+    precioPorM2,
+    minimoCobrable,
+    redondeoPrecio,
+    precioPlantillaSugerido,
+    precioAjustadoManual,
+    origenPrecio,
+  } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
   return {
     codigo: item.codigo,
     tipo: item.tipo,
     material,
-    referencia,
+    referencia: referencia || item.lineaComercial || "",
+    lineTemplateId,
     pricingMode,
     vidrio: item.vidrio ?? "",
     nombre: item.nombre,
@@ -728,6 +854,32 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     cantidad: String(item.cantidad),
     costoProveedorUnitario: String(item.costoProveedorUnitario),
     margenPct: String(item.margenPct),
+    precioPorM2:
+      precioPorM2 !== null
+        ? String(Math.round(precioPorM2))
+        : item.precioPorM2 !== null
+          ? String(Math.round(item.precioPorM2))
+          : "",
+    minimoCobrable:
+      minimoCobrable !== null
+        ? String(Math.round(minimoCobrable))
+        : item.minimoCobrable !== null
+          ? String(Math.round(item.minimoCobrable))
+          : "",
+    redondeoPrecio:
+      redondeoPrecio !== null
+        ? String(Math.round(redondeoPrecio))
+        : item.redondeoPrecio !== null
+          ? String(Math.round(item.redondeoPrecio))
+          : "1000",
+    precioPlantillaSugerido:
+      precioPlantillaSugerido !== null
+        ? String(Math.round(precioPlantillaSugerido))
+        : item.precioPlantillaSugerido !== null
+          ? String(Math.round(item.precioPlantillaSugerido))
+          : "",
+    precioAjustadoManual: precioAjustadoManual || item.precioAjustadoManual,
+    origenPrecio: origenPrecio || item.origenPrecio,
     observaciones: raw,
     colorHex: normalizeLegacyAluminumColorHex(colorHex),
     loteCantidad: "1",
@@ -749,29 +901,57 @@ export function buildItemFromForm(
       ? rawDescription
       : "";
   const pricingMode = normalizePricingMode(form.pricingMode);
-  const costoProveedorUnitario = Number(form.costoProveedorUnitario || 0);
+  const syncedForm = syncTemplatePricingInComponentForm(form);
+  const costoProveedorUnitario = Number(syncedForm.costoProveedorUnitario || 0);
   const margenPct =
-    pricingMode === "precio_directo" ? 0 : Number(form.margenPct || 0);
+    pricingMode === "precio_directo" ? 0 : Number(syncedForm.margenPct || 0);
+  const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
+  const hasTemplateReference =
+    typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
+  const hasTemplatePrice =
+    typeof syncedForm.precioPorM2 === "string" && syncedForm.precioPorM2.trim().length > 0;
+  const origenPrecio =
+    hasTemplateReference && hasTemplatePrice
+      ? syncedForm.precioAjustadoManual
+        ? "manual"
+        : "plantilla"
+      : pricingMode === "precio_directo"
+        ? "manual"
+        : "margen";
 
   return calculateComponentItem({
     id: editingItemId ?? undefined,
-    codigo: form.codigo.trim() || buildNextComponentCode(items, form.tipo),
-    tipo: form.tipo,
-    vidrio: form.vidrio,
+    codigo: syncedForm.codigo.trim() || buildNextComponentCode(items, syncedForm.tipo),
+    tipo: syncedForm.tipo,
+    lineaComercial: syncedForm.referencia.trim(),
+    vidrio: syncedForm.vidrio,
     nombre: autoName,
     descripcion,
-    ancho: form.ancho ? Number(form.ancho) : null,
-    alto: form.alto ? Number(form.alto) : null,
-    cantidad: Number(form.cantidad || 1),
+    ancho: syncedForm.ancho ? Number(syncedForm.ancho) : null,
+    alto: syncedForm.alto ? Number(syncedForm.alto) : null,
+    cantidad: Number(syncedForm.cantidad || 1),
     unidad: "unidad",
     costoProveedorUnitario,
     margenPct,
+    precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
+    minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
+    redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
+    precioPlantillaSugerido: linePricingSummary.precioUnitarioSugerido,
+    precioAjustadoManual: syncedForm.precioAjustadoManual,
+    origenPrecio,
     observaciones: encodeCotizacionItemPresentationMeta({
-      colorHex: form.colorHex,
-      referencia: form.referencia,
-      material: form.material,
+      colorHex: syncedForm.colorHex,
+      referencia: syncedForm.referencia,
+      material: syncedForm.material,
       pricingMode,
-      raw: form.observaciones,
+      lineTemplateId: syncedForm.lineTemplateId,
+      precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
+      minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
+      redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
+      precioPlantillaSugerido: linePricingSummary.precioUnitarioSugerido,
+      precioAjustadoManual: syncedForm.precioAjustadoManual,
+      origenPrecio,
+      raw: syncedForm.observaciones,
     }),
   });
 }
@@ -784,14 +964,23 @@ export function applyQuotePricingToItems(
   const normalizedMargin = pricingMode === "precio_directo" ? 0 : Number(marginValue || 0);
 
   return items.map((item) => {
-    const { colorHex, referencia, material, raw } = decodeCotizacionItemPresentationMeta(
-      item.observaciones
-    );
+    const {
+      colorHex,
+      referencia,
+      material,
+      raw,
+      lineTemplateId,
+      precioPorM2,
+      minimoCobrable,
+      redondeoPrecio,
+      precioAjustadoManual,
+    } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return calculateComponentItem({
       id: item.id,
       codigo: item.codigo,
       tipo: item.tipo,
+      lineaComercial: item.lineaComercial || referencia,
       vidrio: item.vidrio,
       nombre: item.nombre,
       descripcion: item.descripcion,
@@ -801,11 +990,30 @@ export function applyQuotePricingToItems(
       unidad: item.unidad,
       costoProveedorUnitario: item.costoProveedorUnitario,
       margenPct: normalizedMargin,
+      precioPorM2: precioPorM2 ?? item.precioPorM2,
+      minimoCobrable: minimoCobrable ?? item.minimoCobrable,
+      redondeoPrecio: redondeoPrecio ?? item.redondeoPrecio,
+      precioPlantillaSugerido: item.precioPlantillaSugerido,
+      precioAjustadoManual:
+        pricingMode === "precio_directo"
+          ? precioAjustadoManual || item.precioAjustadoManual
+          : false,
+      origenPrecio: pricingMode === "precio_directo" ? item.origenPrecio : "margen",
       observaciones: encodeCotizacionItemPresentationMeta({
         colorHex,
         referencia,
         material,
         pricingMode,
+        lineTemplateId,
+        precioPorM2: precioPorM2 ?? item.precioPorM2,
+        minimoCobrable: minimoCobrable ?? item.minimoCobrable,
+        redondeoPrecio: redondeoPrecio ?? item.redondeoPrecio,
+        precioPlantillaSugerido: item.precioPlantillaSugerido,
+        precioAjustadoManual:
+          pricingMode === "precio_directo"
+            ? precioAjustadoManual || item.precioAjustadoManual
+            : false,
+        origenPrecio: pricingMode === "precio_directo" ? item.origenPrecio : "margen",
         raw,
       }),
     });
@@ -835,8 +1043,8 @@ export function validateComponentForm(
   if (hasCostValue && (Number.isNaN(costo) || costo < 0)) {
     errors.costoProveedorUnitario =
       form.pricingMode === "precio_directo"
-        ? "Ingresa el valor unitario"
-        : "Ingresa el costo del proveedor";
+        ? "Ingresa el precio final"
+        : "Ingresa el precio base";
   }
   if (form.pricingMode === "margen") {
     const margen = Number(form.margenPct);

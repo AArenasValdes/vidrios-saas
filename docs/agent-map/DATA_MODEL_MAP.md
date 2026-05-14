@@ -10,7 +10,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 - **Proposito**: Raiz del multi-tenant. Cada empresa cliente SaaS es una organizacion.
 - **Campos importantes**: `id` (bigint PK), `nombre`, `correo`, `telefono`, `direccion`, `logo_url`, `plan`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery
+- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery
 - **Usada por**: Auth (resolver org), todas las features (filtro tenant)
 - **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
 - **Riesgos**: No eliminar organizaciones con datos asociados (CASCADE en algunos FK)
@@ -68,7 +68,18 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
 - **Usada por**: Cotizaciones, PDF
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual).
+- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion.
+
+---
+
+### Tabla: cotizacion_line_templates
+
+- **Proposito**: Precios rapidos por linea comercial para cotizar por m² sin salir del flujo de cotizacion
+- **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Relaciones**: N:1 organizations
+- **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`
+- **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
+- **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea`. Multi-tenant estricto y soft delete obligatorio.
 
 ---
 
@@ -210,7 +221,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 | Mecanismo | Tablas |
 |---|---|
-| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
+| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, cotizacion_line_templates, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
 | `get_org_id()` + nullable | system_configurations, system_lines |
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |

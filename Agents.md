@@ -42,7 +42,7 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-05-09
+Ultima actualizacion operativa: 2026-05-13
 
 - **Fase actual**: estabilizacion, hardening y limpieza de rutas criticas de captacion y cierre
 - **Estado del baseline**: `npm run lint`, `npm test` y `npm run build` estan pasando en el workspace principal
@@ -68,6 +68,12 @@ Ultima actualizacion operativa: 2026-05-09
   - `solicitudes` navega a `canales`
   - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
 - **Objetivo inmediato**: seguir cerrando deuda tecnica de Fase 2 sin abrir Fase 3+
+- **Nueva pasada cerrada en cotizaciones**:
+  - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
+  - nueva tabla activa `cotizacion_line_templates`
+  - `/configuracion/empresa` ahora expone bloque compacto `Lineas y precios base`
+  - override manual protegido con accion `Recalcular con plantilla`
+  - calculadora integrada secundaria en edicion rapida
 
 ### Ya resuelto en esta pasada
 
@@ -109,6 +115,26 @@ Ultima actualizacion operativa: 2026-05-09
   - rate limiting y slug invalido en `/api/solicitud/[empresa]`
   - redirects codificados en acciones de `/presupuesto/[token]`
   - contratos base de `/api/dashboard/summary`, `/api/clientes/resumen` y `/api/cotizaciones/resumen`
+  - metadata comercial de items de cotizacion
+  - pricing por linea con minimo y redondeo
+  - override manual en edicion rapida
+
+### Ya resuelto en la pasada 2026-05-13
+
+- Se creo `cotizacion_line_templates` con RLS por `organization_id` y soft delete
+- Se agrego calculo automatico por linea en Paso 2 de `/cotizaciones/nueva`:
+  - area
+  - precio por m²
+  - minimo cobrable
+  - redondeo
+  - precio final editable
+- Se agregaron acciones:
+  - `Guardar como precio rapido`
+  - `Duplicar`
+  - `Recalcular con plantilla`
+- Se corrigio persistencia de snapshot comercial:
+  - `cotizacion_items.linea` ya sale de la linea/referencia elegida y no del codigo del item
+- Se expone metadata de linea en detalle movil y print sin redisenar PDF
 
 ### Falta por hacer
 

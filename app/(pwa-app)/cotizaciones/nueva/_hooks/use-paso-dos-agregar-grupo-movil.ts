@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   normalizeCurrencyInput,
+  buildComponentFormLinePricingSummary,
   type ComponentFormState,
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
 import {
+  applyLineTemplateToGrupoDraft,
   createInitialPasoDosGrupoDraft,
   buildPasoDosGrupoSelectionPatch,
   getConfigurationOptionsForSubtype,
@@ -19,6 +22,7 @@ import {
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
   resolveMaterialColorHex,
+  syncDraftTemplatePricing,
   type PasoDosGrupoCategoria,
 } from "./use-paso-dos-agregar-grupo";
 
@@ -28,6 +32,7 @@ type Params = {
   items: CotizacionWorkflowItem[];
   pricingMode: PricingMode;
   provider: PreferredProvider;
+  activeLineTemplates: CotizacionLineTemplate[];
   seedForm?: ComponentFormState | null;
 };
 
@@ -89,6 +94,25 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo),
     [draft.subtipo]
+  );
+  const visibleLineTemplates = useMemo(
+    () =>
+      params.activeLineTemplates.filter(
+        (template) => template.material === draft.material
+      ),
+    [draft.material, params.activeLineTemplates]
+  );
+  const linePricingSummary = useMemo(
+    () =>
+      buildComponentFormLinePricingSummary({
+        ancho: draft.ancho,
+        alto: draft.alto,
+        cantidad: String(Math.max(1, draft.cantidad)),
+        precioPorM2: draft.precioPorM2,
+        minimoCobrable: draft.minimoCobrable,
+        redondeoPrecio: draft.redondeoPrecio,
+      }),
+    [draft.alto, draft.ancho, draft.cantidad, draft.minimoCobrable, draft.precioPorM2, draft.redondeoPrecio]
   );
 
   const openSheet = (seedForm?: ComponentFormState | null) => {
@@ -168,8 +192,37 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({
       ...current,
       material,
+      lineTemplateId: "",
+      referencia: "",
+      precioPorM2: "",
+      minimoCobrable: "",
+      redondeoPrecio: "1000",
       colorHex: resolveMaterialColorHex(material, current.colorHex),
     }));
+  };
+
+  const selectLineTemplate = (templateId: string) => {
+    if (!templateId) {
+      setDraft((current) => ({
+        ...current,
+        lineTemplateId: "",
+        referencia: "",
+        precioPorM2: "",
+        minimoCobrable: "",
+        redondeoPrecio: "1000",
+      }));
+      return;
+    }
+
+    const template = params.activeLineTemplates.find(
+      (currentTemplate) => String(currentTemplate.id) === templateId
+    );
+
+    if (!template) {
+      return;
+    }
+
+    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
   };
 
   const updateColorHex = (colorHex: string) => {
@@ -189,11 +242,11 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateAncho = (value: string) => {
-    setDraft((current) => ({ ...current, ancho: sanitizeDigits(value) }));
+    setDraft((current) => syncDraftTemplatePricing({ ...current, ancho: sanitizeDigits(value) }));
   };
 
   const updateAlto = (value: string) => {
-    setDraft((current) => ({ ...current, alto: sanitizeDigits(value) }));
+    setDraft((current) => syncDraftTemplatePricing({ ...current, alto: sanitizeDigits(value) }));
   };
 
   const updatePrecio = (value: string) => {
@@ -243,6 +296,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     systemOptions,
     configurationOptions,
     glassOptions,
+    visibleLineTemplates,
+    linePricingSummary,
     openSheet,
     closeSheet,
     goToStep,
@@ -251,6 +306,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     selectCantidad,
     updateCantidad,
     updateMaterial,
+    selectLineTemplate,
     updateColorHex,
     updateSistema,
     updateConfiguracion,

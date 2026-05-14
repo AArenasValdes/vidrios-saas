@@ -39,6 +39,9 @@ type Props = Pick<
   | "onSelectQuickEditItem"
   | "onEditItem"
   | "onRemoveItem"
+  | "onRecalculateTemplatePrice"
+  | "onSaveQuickPriceTemplateFromItem"
+  | "isSavingQuickPriceTemplate"
 >;
 
 export function PasoDosPanelLista({
@@ -72,7 +75,18 @@ export function PasoDosPanelLista({
   onSelectQuickEditItem,
   onEditItem,
   onRemoveItem,
+  onRecalculateTemplatePrice,
+  onSaveQuickPriceTemplateFromItem,
+  isSavingQuickPriceTemplate,
 }: Props) {
+  const viewportModeClass = isMobileViewport
+    ? s.stepTwoListViewportModeMobile
+    : s.stepTwoListViewportModeDesktop;
+  const listModeClass = isMobileViewport ? s.stepTwoListModeMobile : s.stepTwoListModeDesktop;
+  const cardModeClass = isMobileViewport
+    ? s.stepTwoListCardModeMobile
+    : s.stepTwoListCardModeDesktop;
+
   return (
     <>
       {selectedQuickEditItem && selectedQuickEditViewItem && selectedQuickEditDraft ? (
@@ -97,6 +111,11 @@ export function PasoDosPanelLista({
           onToggleBatchTarget={onToggleBatchTarget}
           onApplyToSameType={onApplyQuickEditToSameType}
           onCancelBatchSelection={onCancelBatchSelection}
+          onRecalculateTemplatePrice={() => onRecalculateTemplatePrice(selectedQuickEditViewItem.id)}
+          onSaveQuickPriceTemplate={() =>
+            onSaveQuickPriceTemplateFromItem(selectedQuickEditViewItem.id)
+          }
+          isSavingQuickPriceTemplate={isSavingQuickPriceTemplate}
         />
       ) : null}
 
@@ -110,10 +129,12 @@ export function PasoDosPanelLista({
         </div>
       ) : (
         <div
-          className={`${s.stepTwoListViewport} ${shouldUseStepTwoListScroll ? s.stepTwoListViewportScrollable : ""}`}
+          className={`${s.stepTwoListViewport} ${viewportModeClass} ${
+            shouldUseStepTwoListScroll ? s.stepTwoListViewportScrollable : ""
+          }`}
           ref={stepTwoListRef}
         >
-          <div className={`${s.stepTwoList} ${s.stepTwoListMobile}`}>
+          <div className={`${s.stepTwoList} ${s.stepTwoListMobile} ${listModeClass}`}>
             {visibleComponentListState.paddingTop > 0 ? (
               <div
                 aria-hidden
@@ -138,7 +159,7 @@ export function PasoDosPanelLista({
                   onClick={() => onSelectQuickEditItem(item.id)}
                   className={`${s.stepTwoListCard} ${s.stepTwoListCardMobile} ${isEditing ? s.stepTwoListCardEditing : ""} ${
                     isQuickEditSelected ? s.stepTwoListCardSelected : ""
-                  }`}
+                  } ${cardModeClass}`}
                 >
                   <div className={s.stepTwoListThumb}>
                     <div

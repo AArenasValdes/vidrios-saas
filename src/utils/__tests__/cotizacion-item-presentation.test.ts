@@ -10,6 +10,13 @@ describe("cotizacion-item-presentation", () => {
       material: "Aluminio",
       referencia: "Serie 25",
       pricingMode: "precio_directo",
+      lineTemplateId: "tpl-1",
+      precioPorM2: 145000,
+      minimoCobrable: 95000,
+      redondeoPrecio: 1000,
+      precioPlantillaSugerido: 261000,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
       raw: "Ventana living con vidrio claro",
     });
 
@@ -17,12 +24,26 @@ describe("cotizacion-item-presentation", () => {
     expect(encoded).toContain("[r:Serie 25]");
     expect(encoded).toContain("[m:Aluminio]");
     expect(encoded).toContain("[pm:precio_directo]");
+    expect(encoded).toContain("[lti:tpl-1]");
+    expect(encoded).toContain("[pm2:145000]");
+    expect(encoded).toContain("[min:95000]");
+    expect(encoded).toContain("[rnd:1000]");
+    expect(encoded).toContain("[psu:261000]");
+    expect(encoded).toContain("[man:1]");
+    expect(encoded).toContain("[po:manual]");
 
     expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual({
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
       pricingMode: "precio_directo",
+      lineTemplateId: "tpl-1",
+      precioPorM2: 145000,
+      minimoCobrable: 95000,
+      redondeoPrecio: 1000,
+      precioPlantillaSugerido: 261000,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -35,6 +56,13 @@ describe("cotizacion-item-presentation", () => {
       material: "PVC",
       referencia: "S60",
       pricingMode: "margen",
+      lineTemplateId: "",
+      precioPorM2: null,
+      minimoCobrable: null,
+      redondeoPrecio: null,
+      precioPlantillaSugerido: null,
+      precioAjustadoManual: false,
+      origenPrecio: "margen",
       raw: "Cierre de terraza",
     });
   });
@@ -51,6 +79,7 @@ describe("cotizacion-item-presentation", () => {
     expect(decodeCotizacionItemPresentationMeta(encoded).referencia).toBe(
       "Fijo - Premium"
     );
+    expect(decodeCotizacionItemPresentationMeta(encoded).origenPrecio).toBe("margen");
   });
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {
@@ -59,6 +88,13 @@ describe("cotizacion-item-presentation", () => {
       material: "PVC",
       referencia: "",
       pricingMode: "margen",
+      lineTemplateId: "",
+      precioPorM2: null,
+      minimoCobrable: null,
+      redondeoPrecio: null,
+      precioPlantillaSugerido: null,
+      precioAjustadoManual: false,
+      origenPrecio: "margen",
       raw: "",
     });
   });
@@ -71,6 +107,13 @@ describe("cotizacion-item-presentation", () => {
       material: "Aluminio",
       referencia: "",
       pricingMode: "margen",
+      lineTemplateId: "",
+      precioPorM2: null,
+      minimoCobrable: null,
+      redondeoPrecio: null,
+      precioPlantillaSugerido: null,
+      precioAjustadoManual: false,
+      origenPrecio: "margen",
       raw: "Ventana corredera",
     });
   });

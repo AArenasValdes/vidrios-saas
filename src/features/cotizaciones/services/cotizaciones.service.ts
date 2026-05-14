@@ -28,6 +28,7 @@ import type {
   CotizacionWorkflowRecord,
   EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -118,7 +119,8 @@ function mapDatabaseItemToWorkflowItem(
   item: CotizacionItem,
   index: number
 ): CotizacionWorkflowItem {
-  const codigo = item.codigo?.trim() || item.linea?.trim() || `I${index + 1}`;
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const codigo = item.codigo?.trim() || `I${index + 1}`;
   const tipo =
     item.tipoComponente?.trim() || item.color?.trim() || item.tipoItem || "Componente";
   const nombre = item.nombre?.trim() || `Componente ${index + 1}`;
@@ -130,6 +132,7 @@ function mapDatabaseItemToWorkflowItem(
     id: String(item.id),
     codigo,
     tipo,
+    lineaComercial: presentation.referencia || item.linea?.trim() || "",
     vidrio: item.vidrio ?? "",
     nombre,
     descripcion,
@@ -139,6 +142,12 @@ function mapDatabaseItemToWorkflowItem(
     unidad: item.unidad ?? "unidad",
     costoProveedorUnitario,
     margenPct,
+    precioPorM2: presentation.precioPorM2,
+    minimoCobrable: presentation.minimoCobrable,
+    redondeoPrecio: presentation.redondeoPrecio,
+    precioPlantillaSugerido: presentation.precioPlantillaSugerido,
+    precioAjustadoManual: presentation.precioAjustadoManual,
+    origenPrecio: presentation.origenPrecio,
     observaciones: item.observaciones ?? "",
   });
 }
@@ -219,6 +228,7 @@ function normalizeWorkflowItem(
     id: item.id,
     codigo: item.codigo || `I${index + 1}`,
     tipo: item.tipo || "Componente",
+    lineaComercial: item.lineaComercial,
     vidrio: item.vidrio,
     nombre: item.nombre || item.descripcion || `Componente ${index + 1}`,
     descripcion: item.descripcion || item.nombre || `Componente ${index + 1}`,
@@ -228,6 +238,12 @@ function normalizeWorkflowItem(
     unidad: item.unidad,
     costoProveedorUnitario: item.costoProveedorUnitario,
     margenPct: item.margenPct,
+    precioPorM2: item.precioPorM2,
+    minimoCobrable: item.minimoCobrable,
+    redondeoPrecio: item.redondeoPrecio,
+    precioPlantillaSugerido: item.precioPlantillaSugerido,
+    precioAjustadoManual: item.precioAjustadoManual,
+    origenPrecio: item.origenPrecio,
     observaciones: item.observaciones,
   });
 }
@@ -250,7 +266,7 @@ function mapWorkflowItemToRepositoryItem(
     ancho: item.ancho,
     alto: item.alto,
     areaM2: item.areaM2,
-    linea: item.codigo,
+    linea: item.lineaComercial || null,
     color: item.tipo,
     vidrio: item.vidrio || null,
     nombre: item.nombre,

@@ -382,6 +382,8 @@
   gap: 12px;
   text-align: left;
   cursor: pointer;
+  position: relative;
+  z-index: 0;
 }
 
 .triggerMain {
@@ -450,6 +452,10 @@
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.24s ease;
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .accordionOpen .accordionPanel {
@@ -461,6 +467,9 @@
   padding: 0 16px 0;
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 1;
+  min-height: 0;
 }
 
 .accordionOpen .accordionInner {
@@ -711,6 +720,190 @@
   gap: 8px;
 }
 
+.sectionBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionHeading {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.catalogSummaryCard {
+  border: 1px solid #d9e0ea;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 253, 0.98));
+  box-shadow: 0 14px 30px rgba(36, 59, 107, 0.06);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.catalogSummaryTop,
+.catalogSummaryMeta,
+.catalogSummaryActions,
+.commercialInfoGrid {
+  display: grid;
+}
+
+.catalogSummaryTop {
+  gap: 12px;
+}
+
+.catalogSummaryMeta {
+  gap: 8px;
+}
+
+.catalogSummaryPill,
+.catalogSummaryPillMuted {
+  min-height: 30px;
+  width: fit-content;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.catalogSummaryPill {
+  background: #eef4ff;
+  color: #335ea9;
+}
+
+.catalogSummaryPillMuted {
+  background: #f3f5f9;
+  color: #667085;
+}
+
+.catalogSummaryActions,
+.commercialInfoGrid {
+  gap: 10px;
+}
+
+.commercialInfoCard {
+  border-radius: 18px;
+  border: 1px solid #d9e0ea;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.95));
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
+}
+
+.commercialInfoCard strong {
+  color: #243b6b;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.commercialInfoCard p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lineTemplatesBlock {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(79, 125, 212, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 255, 0.96));
+}
+
+.lineTemplatesHeader,
+.lineTemplateRowTop,
+.lineTemplateActions,
+.lineTemplatesCreateActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lineTemplatesTitle {
+  display: block;
+  color: #243b6b;
+  font-size: 16px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.lineTemplatesCount,
+.lineTemplateState {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lineTemplatesCount {
+  background: #eef4ff;
+  color: #335ea9;
+}
+
+.lineTemplateState {
+  background: #f4f6f9;
+  color: #667085;
+}
+
+.lineTemplateState[data-active="true"] {
+  background: #e7f8ec;
+  color: #1f8f58;
+}
+
+.lineTemplatesCreateCard,
+.lineTemplateRow {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid #d9e0ea;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.05);
+}
+
+.lineTemplatesCreateGrid,
+.lineTemplateGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.lineTemplateMeta {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.lineTemplatesList {
+  display: grid;
+  gap: 10px;
+}
+
+.lineTemplatesEmpty {
+  border-radius: 16px;
+  border: 1px dashed #d9e0ea;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 14px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .error,
 .success {
   border-radius: 16px;
@@ -737,7 +930,20 @@
   .fieldGrid,
   .publicCardActions,
   .modeGrid,
-  .utilityActions {
+  .utilityActions,
+  .lineTemplatesCreateGrid,
+  .lineTemplateGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalogSummaryMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .commercialInfoGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -754,5 +960,18 @@
   .scheduleNote {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .catalogSummaryTop {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .catalogSummaryActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commercialInfoGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

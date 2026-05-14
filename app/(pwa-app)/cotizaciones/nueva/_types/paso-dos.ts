@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import type {
+  ComponentFormLinePricingSummary,
   ComponentFormState,
   ComponentListCardViewModel,
   FieldErrors,
@@ -9,6 +10,7 @@ import type {
   QuickEditDraftState,
   QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 export type VisibleComponentListState = {
@@ -30,6 +32,9 @@ export type PasoDosFormularioComponenteProps = {
   visibleBatchPreviewCodes: string[];
   hiddenBatchPreviewCount: number;
   batchPreviewTypeLabel: string;
+  activeLineTemplates: CotizacionLineTemplate[];
+  linePricingSummary: ComponentFormLinePricingSummary;
+  isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
   filteredGlassGroups: Array<{
@@ -39,12 +44,15 @@ export type PasoDosFormularioComponenteProps = {
   }>;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
+  onSelectLineTemplate: (templateId: string) => void;
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveAndExit: () => void;
   onAddOrUpdateItem: () => void;
+  onRecalculateCurrentTemplatePrice: () => void;
+  onSaveQuickPriceTemplate: () => void;
 };
 
 export type PasoDosPanelComponentesProps = {
@@ -91,5 +99,8 @@ export type PasoDosPanelComponentesProps = {
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onRecalculateTemplatePrice: (itemId: string) => void;
+  onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
+  isSavingQuickPriceTemplate: boolean;
   onGoToSummary: () => void;
 };

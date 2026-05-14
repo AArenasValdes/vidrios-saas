@@ -9,7 +9,12 @@ import s from "../page.module.css";
 
 export function PasoDosPanelComponentes(props: PasoDosPanelComponentesProps) {
   return (
-    <aside className={`${s.card} ${s.stepTwoPanel} ${s.stepTwoPanelMobile}`} id="component-list">
+    <aside
+      className={`${s.card} ${s.stepTwoPanel} ${s.stepTwoPanelMobile} ${
+        props.isMobileViewport ? s.stepTwoPanelModeMobile : s.stepTwoPanelModeDesktop
+      }`}
+      id="component-list"
+    >
       <PasoDosPanelHeader {...props} />
       <PasoDosPanelLista {...props} />
       <PasoDosPanelResumen {...props} />
