@@ -80,6 +80,12 @@ export const COMPONENT_CATALOG = [
     title: "Especiales",
     items: [
       {
+        tipo: "Componente manual",
+        descripcion: "Trabajo libre para piezas no catalogadas o cobro manual.",
+        sistemas: ["Manual"],
+        configuraciones: ["Libre"],
+      },
+      {
         tipo: "Proyecto a medida",
         descripcion: "Trabajo especial con definicion propia.",
         sistemas: ["A medida"],

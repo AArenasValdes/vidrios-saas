@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   LuCalendarDays,
   LuChevronDown,
+  LuCopy,
   LuEye,
   LuMapPin,
   LuMessageCircle,
@@ -23,11 +24,17 @@ type Props = {
   isHydratingItems: boolean;
   isPreparingPdf: boolean;
   isSaving: boolean;
+  isUpdatingResponse: boolean;
   whatsappDisabled: boolean;
   updatedLabel: string;
   editHref: string;
   editComponentsHref: string;
+  copyFeedback: string | null;
   onDelete: () => Promise<void> | void;
+  onCopyApprovalLink: () => Promise<void> | void;
+  onManualResponseChange: (
+    nextStatus: "pendiente" | "aprobada" | "rechazada" | "terminada"
+  ) => Promise<boolean> | boolean;
   onOpenPdf: () => Promise<void> | void;
   onOpenWhatsappShare: () => Promise<void> | void;
 };
@@ -37,16 +44,21 @@ export function CotizacionDetalleMobileView({
   isHydratingItems,
   isPreparingPdf,
   isSaving,
+  isUpdatingResponse,
   whatsappDisabled,
   updatedLabel,
   editHref,
   editComponentsHref,
+  copyFeedback,
   onDelete,
+  onCopyApprovalLink,
+  onManualResponseChange,
   onOpenPdf,
   onOpenWhatsappShare,
 }: Props) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -120,6 +132,16 @@ export function CotizacionDetalleMobileView({
           <button
             type="button"
             className={s.ghostButton}
+            onClick={() => void onCopyApprovalLink()}
+            disabled={isSaving}
+          >
+            <LuCopy aria-hidden />
+            Copiar link
+          </button>
+
+          <button
+            type="button"
+            className={s.ghostButton}
             onClick={() => void onOpenPdf()}
             disabled={isPreparingPdf}
           >
@@ -131,6 +153,25 @@ export function CotizacionDetalleMobileView({
             <LuPencil aria-hidden />
             Editar
           </Link>
+        </section>
+
+        {copyFeedback ? <p className={s.copyFeedback}>{copyFeedback}</p> : null}
+
+        <section className={s.trackingInline}>
+          <div className={s.trackingInlineCopy}>
+            <div className={s.sectionLabel}>SEGUIMIENTO</div>
+            <span className={`${s.statusBadge} ${s[model.responseStatusClass]}`}>
+              {model.responseStatusLabel}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={s.statusTrigger}
+            onClick={() => setIsStatusSheetOpen(true)}
+            disabled={isSaving || isUpdatingResponse}
+          >
+            Cambiar estado
+          </button>
         </section>
 
         <section className={s.sectionPlain}>
@@ -221,6 +262,71 @@ export function CotizacionDetalleMobileView({
           {isNotesOpen ? <p className={s.notesText}>{model.notes}</p> : null}
         </section>
       </div>
+
+      <div
+        className={`${s.statusSheetOverlay}${isStatusSheetOpen ? ` ${s.statusSheetOverlayOpen}` : ""}`}
+        aria-hidden={!isStatusSheetOpen}
+        onClick={() => setIsStatusSheetOpen(false)}
+      />
+      <section
+        className={`${s.statusSheet}${isStatusSheetOpen ? ` ${s.statusSheetOpen}` : ""}`}
+        aria-hidden={!isStatusSheetOpen}
+      >
+        <div className={s.statusSheetHandle} />
+        <div className={s.statusSheetHeader}>
+          <div>
+            <div className={s.sectionLabel}>SEGUIMIENTO</div>
+            <h2 className={s.statusSheetTitle}>Cambiar estado</h2>
+            <p className={s.statusSheetText}>
+              El PDF se sigue enviando igual. Aqui solo marcas el avance comercial.
+            </p>
+          </div>
+          <button
+            type="button"
+            className={s.statusSheetClose}
+            onClick={() => setIsStatusSheetOpen(false)}
+          >
+            ×
+          </button>
+        </div>
+
+        <div className={s.statusOptionList}>
+          {[
+            { value: "pendiente", label: "Pendiente" },
+            { value: "aprobada", label: "Aprobada" },
+            { value: "rechazada", label: "Rechazada" },
+            { value: "terminada", label: "Proyecto terminado" },
+          ].map((option) => {
+            const selected = model.responseStatus === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`${s.statusOption}${selected ? ` ${s.statusOptionSelected}` : ""}`}
+                disabled={isSaving || isUpdatingResponse}
+                onClick={async () => {
+                  setIsStatusSheetOpen(false);
+                  const updated = await onManualResponseChange(
+                    option.value as "pendiente" | "aprobada" | "rechazada" | "terminada"
+                  );
+                  if (updated === false) {
+                    setIsStatusSheetOpen(true);
+                  }
+                }}
+              >
+                <span>{option.label}</span>
+                {selected ? <span className={s.statusOptionCheck}>Actual</span> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={s.statusSheetMeta}>
+          <span>{model.responseChannelLabel}</span>
+          <span>{model.responseUpdatedLabel}</span>
+        </div>
+      </section>
     </div>
   );
 }

@@ -2,15 +2,17 @@ import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cot
 
 import { buildCotizacionDetalleMobileViewModel } from "../cotizacion-detalle-mobile-view-model";
 
-function createRecord(overrides: Partial<CotizacionWorkflowRecord> = {}): CotizacionWorkflowRecord {
+function createRecord(
+  overrides: Partial<CotizacionWorkflowRecord> = {}
+): CotizacionWorkflowRecord {
   return {
     id: "q1",
     codigo: "COT-010526-001",
     clienteNombre: "Alejandro Flores",
     clienteTelefono: "+56 9 7733 8906",
-    obra: "Viña del Mar 2722",
-    direccion: "Viña del Mar 2722",
-    validez: "15 días",
+    obra: "Vina del Mar 2722",
+    direccion: "Vina del Mar 2722",
+    validez: "15 dias",
     descuentoPct: 0,
     observaciones: "",
     estado: "creada",
@@ -53,13 +55,15 @@ function createRecord(overrides: Partial<CotizacionWorkflowRecord> = {}): Cotiza
 }
 
 describe("buildCotizacionDetalleMobileViewModel", () => {
-  it("arma jerarquía principal y estado comercial", () => {
+  it("arma jerarquia principal y estado comercial", () => {
     const model = buildCotizacionDetalleMobileViewModel(createRecord());
 
     expect(model.code).toBe("COT-010526-001");
     expect(model.statusLabel).toBe("Pendiente");
+    expect(model.responseStatus).toBe("pendiente");
+    expect(model.responseChannelLabel).toBe("Sin seguimiento registrado");
     expect(model.total).toBe("$1.190.000");
-    expect(model.heroSubtext).toBe("Alejandro Flores · Viña del Mar 2722 · 1 componente");
+    expect(model.heroSubtext).toBe("Alejandro Flores · Vina del Mar 2722 · 1 componente");
   });
 
   it("arma items compactos y usa fallbacks seguros", () => {
@@ -102,5 +106,27 @@ describe("buildCotizacionDetalleMobileViewModel", () => {
       meta: "Medidas por definir · 1 ud",
       price: "$200.000",
     });
+  });
+
+  it("traduce el canal de seguimiento para enlace publico y app", () => {
+    const publicModel = buildCotizacionDetalleMobileViewModel(
+      createRecord({
+        estado: "aprobada",
+        clienteRespondioEn: "2026-05-02T15:30:00.000Z",
+        clienteRespuestaCanal: "link_publico",
+      })
+    );
+    const manualModel = buildCotizacionDetalleMobileViewModel(
+      createRecord({
+        estado: "terminada",
+        clienteRespondioEn: "2026-05-03T12:00:00.000Z",
+        clienteRespuestaCanal: "manual_app",
+      })
+    );
+
+    expect(publicModel.responseStatus).toBe("aprobada");
+    expect(publicModel.responseChannelLabel).toBe("Respondio desde el enlace");
+    expect(manualModel.responseStatus).toBe("terminada");
+    expect(manualModel.responseChannelLabel).toBe("Marcado manualmente en la app");
   });
 });

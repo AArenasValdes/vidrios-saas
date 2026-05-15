@@ -31,6 +31,11 @@ export type CotizacionDetalleMobileViewModel = {
   code: string;
   statusClass: string;
   statusLabel: string;
+  responseStatus: "pendiente" | "aprobada" | "rechazada" | "terminada";
+  responseStatusClass: string;
+  responseStatusLabel: string;
+  responseChannelLabel: string;
+  responseUpdatedLabel: string;
   total: string;
   heroSubtext: string;
   clientName: string;
@@ -58,6 +63,57 @@ function safeText(value: string | null | undefined, fallback: string) {
   return trimmed ? repairBrokenText(trimmed) : fallback;
 }
 
+function resolveManualResponseMeta(estado: CotizacionWorkflowRecord["estado"]) {
+  if (estado === "aprobada") {
+    return { cls: "stAprobada", label: "Aprobada" };
+  }
+
+  if (estado === "rechazada") {
+    return { cls: "stRechazada", label: "Rechazada" };
+  }
+
+  if (estado === "terminada") {
+    return { cls: "stTerminada", label: "Terminada" };
+  }
+
+  return { cls: "stEnviada", label: "Pendiente" };
+}
+
+function formatTrackingDate(value: string | null | undefined) {
+  if (!value) {
+    return "Sin registro todavia";
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "Sin registro todavia";
+  }
+
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
+
+function resolveResponseChannelLabel(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return "Sin seguimiento registrado";
+  }
+
+  if (value === "manual_app") {
+    return "Marcado manualmente en la app";
+  }
+
+  if (value === "link_publico") {
+    return "Respondio desde el enlace";
+  }
+
+  return repairBrokenText(value);
+}
+
 function buildItemMeta(item: CotizacionWorkflowItem) {
   const size =
     item.ancho && item.alto ? `${item.ancho} × ${item.alto} mm` : "Medidas por definir";
@@ -72,6 +128,7 @@ export function buildCotizacionDetalleMobileViewModel(
   options: BuildCotizacionDetalleMobileViewModelOptions = {}
 ): CotizacionDetalleMobileViewModel {
   const status = STATUS_META[record.estado] ?? STATUS_META.borrador;
+  const response = resolveManualResponseMeta(record.estado);
   const items = record.items.map((item, index) => ({
     id: item.id,
     code: item.codigo || `I${index + 1}`,
@@ -92,6 +149,18 @@ export function buildCotizacionDetalleMobileViewModel(
     code: record.codigo,
     statusClass: status.cls,
     statusLabel: status.label,
+    responseStatus:
+      response.label === "Aprobada"
+        ? "aprobada"
+        : response.label === "Rechazada"
+          ? "rechazada"
+          : response.label === "Terminada"
+            ? "terminada"
+            : "pendiente",
+    responseStatusClass: response.cls,
+    responseStatusLabel: response.label,
+    responseChannelLabel: resolveResponseChannelLabel(record.clienteRespuestaCanal),
+    responseUpdatedLabel: formatTrackingDate(record.clienteRespondioEn),
     total: clp(record.total),
     heroSubtext: [
       safeText(record.clienteNombre, "Sin cliente"),
