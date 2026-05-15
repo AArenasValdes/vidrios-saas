@@ -8,8 +8,6 @@ import {
   LuBadgeCheck,
   LuCircleCheck,
   LuClipboardCheck,
-  LuClock3,
-  LuMapPin,
   LuMessageCircleMore,
   LuShieldCheck,
   LuStar,
@@ -285,8 +283,8 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
     },
     {
       icon: LuBadgeCheck,
-      title: "Atencion local",
-      copy: config.publicZone || locationLabel || "Atendemos segun tu zona.",
+      title: "Sin compromiso",
+      copy: "Solicita y cotiza sin costo.",
     },
   ];
 
@@ -452,6 +450,10 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                 </span>
               ))}
             </div>
+
+            <p className={s.serviceLegend}>
+              {"\u2717 Ventanas, \u2717 Shower, \u2717 Terraza, etc..."}
+            </p>
           </section>
         ) : null}
 
@@ -491,79 +493,39 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        {config.publicZone || showSchedule ? (
-          <section className={s.sectionCard}>
-            <div className={s.sectionHeader}>
-              <span className={s.sectionEyebrow}>Atendemos en</span>
-            </div>
-
-            <div className={s.coverageCard}>
-              {config.publicZone ? (
-                <p className={s.coverageTitle}>{config.publicZone}</p>
-              ) : null}
-              {showSchedule ? (
-                <p className={s.coverageMeta}>
-                  <LuClock3 aria-hidden />
-                  <span>{horarioLabel}</span>
-                </p>
-              ) : null}
-              {config.businessHoursNote ? (
-                <p className={s.coverageText}>{config.businessHoursNote}</p>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        <section className={s.mainGrid}>
-          <section className={s.sectionCard}>
-            <span className={s.sectionEyebrow}>Como funciona</span>
-            <div className={s.stepsInline}>
-              {[
-                { title: "Envias", copy: "tu necesidad" },
-                { title: "Ordenamos", copy: "la solicitud" },
-                { title: "Respondemos", copy: "por WhatsApp" },
-              ].map((step, index) => (
-                <article key={step.title} className={s.stepMiniCard}>
-                  <div className={s.stepNumber}>{index + 1}</div>
-                  <div className={s.stepMiniCopy}>
-                    <strong>{step.title}</strong>
-                    <span>{step.copy}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className={s.stepsSupportRow}>
-              {showSchedule ? (
-                <div className={s.stepsSupportItem}>
-                  <LuClock3 aria-hidden />
-                  <span>{horarioLabel}</span>
+        <section className={s.sectionCard}>
+          <span className={s.sectionEyebrow}>Como funciona</span>
+          <div className={s.stepsInline}>
+            {[
+              { title: "Envias tu necesidad", copy: "" },
+              { title: "Revisamos medidas o fotos", copy: "" },
+              { title: "Respondemos por WhatsApp", copy: "" },
+            ].map((step, index) => (
+              <article key={step.title} className={s.stepMiniCard}>
+                <div className={s.stepNumber}>{index + 1}</div>
+                <div className={s.stepMiniCopy}>
+                  <strong>{step.title}</strong>
+                  <span>{step.copy}</span>
                 </div>
-              ) : null}
-              {locationLabel ? (
-                <div className={s.stepsSupportItem}>
-                  <LuMapPin aria-hidden />
-                  <span>{locationLabel}</span>
-                </div>
-              ) : null}
-              <div className={s.stepsSupportItem}>
-                <LuClipboardCheck aria-hidden />
-                <span>{config.solicitudPublicaMensajeConfianza}</span>
-              </div>
-            </div>
-          </section>
+              </article>
+            ))}
+          </div>
 
-          <section className={s.formSection} aria-label="Formulario de solicitud">
-            <SolicitudEmpresaForm
-              slug={config.solicitudPublicaSlug}
-              empresaTelefono={config.empresaTelefono}
-              empresaEmail={config.empresaEmail}
-              privacidad={config.solicitudPublicaPrivacidad}
-              isAvailable={isAvailable}
-              formTitle={formTitle}
-              formSubtitle={formSubtitle ?? undefined}
-            />
-          </section>
+          <p className={s.stepsSupportNote}>
+            Tu solicitud queda registrada para que no se pierda.
+          </p>
+        </section>
+
+        <section className={s.formSection} aria-label="Formulario de solicitud">
+          <SolicitudEmpresaForm
+            slug={config.solicitudPublicaSlug}
+            empresaTelefono={config.empresaTelefono}
+            empresaEmail={config.empresaEmail}
+            privacidad={config.solicitudPublicaPrivacidad}
+            isAvailable={isAvailable}
+            formTitle={formTitle}
+            formSubtitle={formSubtitle ?? undefined}
+          />
         </section>
 
         {showRating && approvedTestimonialsCount > 0 ? (
@@ -571,7 +533,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
             <div className={s.sectionHeader}>
               <span className={s.sectionEyebrow}>Clientes que confiaron en nosotros</span>
               <div className={s.testimonialSummaryPublic}>
-                <strong>{`★★★★★ ${averageRating}`}</strong>
+                <strong>{`\u2605\u2605\u2605\u2605\u2605 ${averageRating}`}</strong>
                 <span>{`${approvedTestimonialsCount} valoraciones`}</span>
               </div>
             </div>
@@ -581,7 +543,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                 <article key={String(item.id)} className={s.testimonialPublicCard}>
                   <div className={s.testimonialPublicTop}>
                     <strong>{item.nombreCorto || "Cliente"}</strong>
-                    <span>{`${"★".repeat(item.estrellas)}${"☆".repeat(
+                    <span>{`${"\u2605".repeat(item.estrellas)}${"\u2606".repeat(
                       5 - item.estrellas
                     )}`}</span>
                   </div>
@@ -592,18 +554,11 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        <section className={s.finalCtaSection}>
-          <div className={s.finalCtaCard}>
-            <div className={s.finalCtaCopy}>
-              <span className={s.sectionEyebrow}>Solicitud directa</span>
-              <h2>{config.finalCtaTitle}</h2>
-              <p>{config.finalCtaSubtitle}</p>
-            </div>
-            <a className={s.finalCtaButton} href="#solicitud-rapida">
-              {config.finalCtaLabel}
-            </a>
-          </div>
-        </section>
+        {showRating ? (
+          <section className={s.testimonialSection}>
+            <SolicitudEmpresaTestimonialForm slug={config.solicitudPublicaSlug} />
+          </section>
+        ) : null}
 
         <footer className={s.companyFooter} aria-label="Datos de la empresa">
           <div className={s.companyFooterAccent} aria-hidden />
@@ -654,28 +609,8 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                   })}
                 </div>
               ) : null}
-
-              {whatsappUrl ? (
-                <a
-                  className={s.footerWhatsappButton}
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <LuMessageCircleMore aria-hidden />
-                  Escribir por WhatsApp
-                </a>
-              ) : (
-                <a className={s.footerWhatsappButton} href="#solicitud-rapida">
-                  Solicitar cotizacion
-                </a>
-              )}
             </div>
           </div>
-
-          {showRating ? (
-            <SolicitudEmpresaTestimonialForm slug={config.solicitudPublicaSlug} />
-          ) : null}
 
           <p className={s.brandFooterText}>Solicitudes gestionadas con Ventora</p>
         </footer>
