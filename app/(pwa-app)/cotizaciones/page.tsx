@@ -183,6 +183,8 @@ export default function CotizacionesPage() {
   const {
     cotizaciones,
     totalCount,
+    isReady: resumenReady,
+    isRefreshing: resumenRefreshing,
     refreshCotizacionesResumen,
   } = useCotizacionesResumenPage({
     page: currentPage,
@@ -193,7 +195,7 @@ export default function CotizacionesPage() {
     order: ordenFiltro,
     search: busquedaDiferida,
   });
-  const isInitialSync = isRefreshing && cotizaciones.length === 0;
+  const isInitialSync = (!resumenReady || resumenRefreshing) && cotizaciones.length === 0;
   const {
     clientes,
     filtradas,
@@ -514,7 +516,7 @@ export default function CotizacionesPage() {
     }
   }, [cotizaciones, loadCotizacionById, markQuoteAsSent, refreshCotizacionesResumen]);
 
-  if (!isReady) {
+  if (!isReady || !resumenReady) {
     return (
       <PremiumPageReveal className={s.root}>
         <PremiumPageSection className={s.emptyState}>
