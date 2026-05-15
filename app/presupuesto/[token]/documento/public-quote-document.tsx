@@ -199,6 +199,26 @@ function formatDueDate(baseDateValue: string | null, validez: string) {
   return formatCotizacionDate(baseDate.toISOString());
 }
 
+function formatCompanyPhoneNumber(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  const normalized = digits.startsWith("56")
+    ? digits
+    : digits.startsWith("9") && digits.length === 9
+      ? `56${digits}`
+      : digits;
+
+  if (normalized.length === 11 && normalized.startsWith("569")) {
+    return `+56 9 ${normalized.slice(3, 7)} ${normalized.slice(7)}`;
+  }
+
+  return phone.trim();
+}
+
 function buildPublicQuotePdfFileName(quote: PublicPreviewQuote) {
   const slug = `${quote.codigo}-${quote.obra}`
     .trim()
@@ -311,13 +331,15 @@ export function PublicQuoteDocument({
     };
   }, [embedded, quote.codigo, quote.items.length]);
 
-  const companyAddressLine = [
-    quote.organizationProfile.empresaDireccion,
-    quote.organizationProfile.empresaTelefono,
+  const companyAddressPrimary = quote.organizationProfile.empresaDireccion;
+  const companyAddressSecondary = [
+    formatCompanyPhoneNumber(quote.organizationProfile.empresaTelefono),
     quote.organizationProfile.empresaEmail,
   ]
     .filter(Boolean)
-    .join(" | ");
+    .join(" · ");
+  const hasCompanyAddress = Boolean(companyAddressPrimary || companyAddressSecondary);
+  const companyAddressSecondaryDisplay = companyAddressSecondary.replaceAll("Â·", "·");
   const paymentTerms = quote.organizationProfile.formaPago.trim();
   const baseDate = quote.updatedAt ?? quote.createdAt ?? new Date().toISOString();
   const dueDate = formatDueDate(baseDate, quote.validez);
@@ -475,18 +497,36 @@ export function PublicQuoteDocument({
                         <strong className={printStyles.companyName}>
                           {quote.organizationProfile.empresaNombre}
                         </strong>
-                        <span className={printStyles.companyAddress}>
-                          {companyAddressLine || "Perfil comercial aun no configurado"}
-                        </span>
+                        <div className={printStyles.companyAddress}>
+                          {hasCompanyAddress ? (
+                            <>
+                              {companyAddressPrimary ? (
+                                <span className={printStyles.companyAddressPrimary}>
+                                  {companyAddressPrimary}
+                                </span>
+                              ) : null}
+                              {companyAddressSecondary ? (
+                                <span className={printStyles.companyAddressSecondary}>
+                                  {companyAddressSecondaryDisplay}
+                                </span>
+                              ) : null}
+                            </>
+                          ) : (
+                            <span className={printStyles.companyAddressSecondary}>
+                              Perfil comercial aún no configurado
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     <div className={printStyles.quoteMeta}>
-                      <span className={printStyles.quoteMetaDate}>
-                        Creada {formatCotizacionDate(baseDate)}
-                      </span>
-                      <span className={printStyles.quoteMetaDue}>Vence {dueDate}</span>
+                      <span className={printStyles.quoteMetaEyebrow}>Cotización N°</span>
                       <strong>{quote.codigo}</strong>
+                      <span className={printStyles.quoteMetaDate}>
+                        Fecha: {formatCotizacionDate(baseDate)}
+                      </span>
+                      <span className={printStyles.quoteMetaDue}>Vigencia: hasta {dueDate}</span>
                     </div>
                   </header>
 
@@ -515,7 +555,6 @@ export function PublicQuoteDocument({
                     {pagePlan.items.map((item, itemIndex) => {
                       const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                       const presentation = itemPresentationMap.get(item.id);
-                      const componentCode = item.codigo || `I${absoluteIndex}`;
                       const colorHex = presentation?.colorHex ?? "#a8a8a8";
                       const material = presentation?.material ?? "Material a definir";
                       const colorName = presentation?.colorName ?? "Color a definir";
@@ -550,7 +589,6 @@ export function PublicQuoteDocument({
 
                           <div className={printStyles.componentHeader}>
                             <div className={printStyles.componentTitleRow}>
-                              <span className={printStyles.itemCode}>{componentCode}</span>
                               <h2 className={printStyles.itemName}>{item.nombre}</h2>
                             </div>
 

@@ -7,6 +7,7 @@ import type {
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 const DEFAULT_FLETE = 0;
+const DEFAULT_COTIZACION_COMMERCIAL_ROUNDING = 1000;
 const COTIZACION_CODE_STORAGE_PREFIX = "vidrios-saas:cotizacion-code:";
 const cotizacionCodeCounters = new Map<string, number>();
 
@@ -46,6 +47,14 @@ function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;
 
   return Math.round(value * multiplier) / multiplier;
+}
+
+function roundUpToIncrement(value: number, increment: number) {
+  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(increment) || increment <= 0) {
+    return round(Math.max(value, 0), 2);
+  }
+
+  return Math.ceil(value / increment) * increment;
 }
 
 function normalizePositiveNumber(value: number | null | undefined) {
@@ -252,7 +261,10 @@ export function calculateCotizacionWorkflowTotals(
 
   const descuentoValor = round(subtotal * (descuentoPct / 100), 2);
   const neto = round(subtotal - descuentoValor, 2);
-  const iva = round(neto * impuestos.iva, 2);
+  // La cotizacion usa redondeo comercial para evitar montos "raros" en IVA/total.
+  // No es documento tributario; priorizamos valores redondos y faciles de comunicar.
+  const ivaBase = round(neto * impuestos.iva, 2);
+  const iva = roundUpToIncrement(ivaBase, DEFAULT_COTIZACION_COMMERCIAL_ROUNDING);
   const total = round(neto + iva + flete, 2);
 
   return {

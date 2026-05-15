@@ -133,6 +133,26 @@ function formatDueDate(baseDateValue: string, validez: string) {
   return formatCotizacionDate(baseDate.toISOString());
 }
 
+function formatCompanyPhoneNumber(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  const normalized = digits.startsWith("56")
+    ? digits
+    : digits.startsWith("9") && digits.length === 9
+      ? `56${digits}`
+      : digits;
+
+  if (normalized.length === 11 && normalized.startsWith("569")) {
+    return `+56 9 ${normalized.slice(3, 7)} ${normalized.slice(7)}`;
+  }
+
+  return phone.trim();
+}
+
 function ClientField({
   label,
   value,
@@ -222,15 +242,12 @@ function ExportChip({
 }
 
 function ExportTitleRow({
-  code,
   name,
 }: {
-  code: string;
   name: string;
 }) {
-  const codeWidth = estimatePillWidth(code, 12, 4.2);
-  const nameWidth = estimatePillWidth(name, 76, 6.8);
-  const totalWidth = codeWidth + nameWidth + 10;
+  const nameWidth = estimatePillWidth(name, 92, 7);
+  const totalWidth = nameWidth;
 
   return (
     <svg
@@ -242,17 +259,6 @@ function ExportTitleRow({
     >
       <text
         x="0"
-        y="11"
-        fill="#6b7280"
-        fontFamily="Montserrat, Arial, sans-serif"
-        fontSize="8.5"
-        fontWeight="500"
-        dominantBaseline="middle"
-      >
-        {code}
-      </text>
-      <text
-        x={codeWidth + 6}
         y="11.4"
         fill="#111111"
         fontFamily="Georgia, Times New Roman, serif"
@@ -481,13 +487,15 @@ export default function CotizacionPrintPage() {
   const whatsappActionLabel = "Enviar link por WhatsApp";
   const shareHintText =
     "Para mantener aprobacion y rechazo rastreables, este boton abre WhatsApp con el link publico de la cotizacion. Si ademas necesitas archivo, usa Descargar PDF.";
-  const companyAddressLine = [
-    organizationProfile.empresaDireccion,
-    organizationProfile.empresaTelefono,
+  const companyAddressPrimary = organizationProfile.empresaDireccion;
+  const companyAddressSecondary = [
+    formatCompanyPhoneNumber(organizationProfile.empresaTelefono),
     organizationProfile.empresaEmail,
   ]
     .filter(Boolean)
-    .join(" | ");
+    .join(" · ");
+  const hasCompanyAddress = Boolean(companyAddressPrimary || companyAddressSecondary);
+  const companyAddressSecondaryDisplay = companyAddressSecondary.replaceAll("Â·", "·");
   const paymentTerms = organizationProfile.formaPago.trim();
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
@@ -822,20 +830,38 @@ export default function CotizacionPrintPage() {
                   )}
                 </div>
 
-                <div className={s.companyMeta}>
-                  <strong className={s.companyName}>{organizationProfile.empresaNombre}</strong>
-                  <span className={s.companyAddress}>
-                    {companyAddressLine || "Perfil comercial aun no configurado"}
-                  </span>
-                </div>
+                        <div className={s.companyMeta}>
+                          <strong className={s.companyName}>{organizationProfile.empresaNombre}</strong>
+                          <div className={s.companyAddress}>
+                            {hasCompanyAddress ? (
+                              <>
+                                {companyAddressPrimary ? (
+                                  <span className={s.companyAddressPrimary}>
+                                    {companyAddressPrimary}
+                                  </span>
+                                ) : null}
+                                {companyAddressSecondary ? (
+                                  <span className={s.companyAddressSecondary}>
+                                    {companyAddressSecondaryDisplay}
+                                  </span>
+                                ) : null}
+                              </>
+                            ) : (
+                              <span className={s.companyAddressSecondary}>
+                                Perfil comercial aún no configurado
+                              </span>
+                            )}
+                          </div>
+                        </div>
               </div>
 
               <div className={s.quoteMeta}>
-                <span className={s.quoteMetaDate}>
-                  Creada {formatCotizacionDate(visibleCotizacion.updatedAt)}
-                </span>
-                <span className={s.quoteMetaDue}>Vence {dueDate}</span>
+                <span className={s.quoteMetaEyebrow}>Cotización N°</span>
                 <strong>{visibleCotizacion.codigo}</strong>
+                <span className={s.quoteMetaDate}>
+                  Fecha: {formatCotizacionDate(visibleCotizacion.updatedAt)}
+                </span>
+                <span className={s.quoteMetaDue}>Vigencia: hasta {dueDate}</span>
               </div>
             </header>
 
@@ -862,7 +888,6 @@ export default function CotizacionPrintPage() {
               {pagePlan.items.map((item, itemIndex) => {
                 const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                 const presentation = itemPresentationMap.get(item.id);
-                const componentCode = item.codigo || `I${absoluteIndex}`;
                 const colorHex = presentation?.colorHex ?? "#a8a8a8";
                 const material = presentation?.material ?? "Material a definir";
                 const colorName = presentation?.colorName ?? "Color a definir";
@@ -899,10 +924,9 @@ export default function CotizacionPrintPage() {
                     <div className={s.componentHeader}>
                       <div className={s.componentTitleRow}>
                         {mode === "export" ? (
-                          <ExportTitleRow code={componentCode} name={item.nombre} />
+                          <ExportTitleRow name={item.nombre} />
                         ) : (
                           <>
-                            <span className={s.itemCode}>{componentCode}</span>
                             <h2 className={s.itemName}>{item.nombre}</h2>
                           </>
                         )}
@@ -1063,7 +1087,8 @@ export default function CotizacionPrintPage() {
       });
     },
     [
-      companyAddressLine,
+      companyAddressPrimary,
+      companyAddressSecondary,
       itemPresentationMap,
       organizationProfile.empresaLogoUrl,
       organizationProfile.empresaNombre,
