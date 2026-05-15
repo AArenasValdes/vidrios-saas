@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import {
   LuBadgeCheck,
@@ -10,7 +11,7 @@ import {
 
 import { acceptPublicQuoteAction, rejectPublicQuoteAction } from "./actions";
 import { PublicQuoteMobile } from "./public-quote-mobile";
-import { PublicQuotePreview } from "./public-quote-preview";
+import { PublicQuotePreviewLoader } from "./public-quote-preview-loader";
 import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
 
 import s from "./page.module.css";
@@ -34,6 +35,23 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function isMobileRequest(
+  userAgent: string | null,
+  clientHintMobile: string | null
+) {
+  if (clientHintMobile === "?1") {
+    return true;
+  }
+
+  if (!userAgent) {
+    return false;
+  }
+
+  return /android|iphone|ipad|ipod|mobile|phone|opera mini|iemobile/i.test(
+    userAgent
+  );
+}
+
 export default async function PresupuestoPublicoPage({
   params,
   searchParams,
@@ -43,6 +61,11 @@ export default async function PresupuestoPublicoPage({
 }) {
   const { token } = await params;
   const query = await searchParams;
+  const headerStore = await headers();
+  const mobileRequest = isMobileRequest(
+    headerStore.get("user-agent"),
+    headerStore.get("sec-ch-ua-mobile")
+  );
   let quote = null;
   let loadError: string | null = null;
 
@@ -107,16 +130,14 @@ export default async function PresupuestoPublicoPage({
 
   return (
     <main className={s.page} style={brandStyle}>
-      <div className={s.mobileOnly}>
+      {mobileRequest ? (
         <PublicQuoteMobile
           quote={quote}
           decisionMessage={decisionMessage}
           acceptAction={hasDecisionState ? null : acceptAction}
           rejectAction={hasDecisionState ? null : rejectAction}
         />
-      </div>
-
-      <div className={s.desktopOnly}>
+      ) : (
         <section className={s.shell}>
         <article className={s.hero}>
           <div className={s.heroTop}>
@@ -341,9 +362,9 @@ export default async function PresupuestoPublicoPage({
           </article>
         ) : null}
 
-        {!hasDecisionState ? <PublicQuotePreview quote={quote} /> : null}
+        {!hasDecisionState ? <PublicQuotePreviewLoader quote={quote} /> : null}
         </section>
-      </div>
+      )}
     </main>
   );
 }

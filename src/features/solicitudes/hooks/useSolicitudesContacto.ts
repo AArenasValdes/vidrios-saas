@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getSolicitudesResumen,
@@ -177,6 +177,16 @@ export function useSolicitudesContacto(
       },
     }
   );
+  const solicitudesRef = useRef(solicitudes);
+  const summaryRef = useRef(summary);
+
+  useEffect(() => {
+    solicitudesRef.current = solicitudes;
+  }, [solicitudes]);
+
+  useEffect(() => {
+    summaryRef.current = summary;
+  }, [summary]);
 
   const loadSolicitudes = useCallback(
     async (targetPage = 1, mode: "replace" | "append" = "replace") => {
@@ -208,7 +218,13 @@ export function useSolicitudesContacto(
         const nextPage = await dataPromise;
         const nextSolicitudes =
           mode === "append"
-            ? [...solicitudes, ...nextPage.solicitudes.filter((item) => !solicitudes.some((current) => current.id === item.id))]
+            ? [
+                ...solicitudesRef.current,
+                ...nextPage.solicitudes.filter(
+                  (item) =>
+                    !solicitudesRef.current.some((current) => current.id === item.id)
+                ),
+              ]
             : nextPage.solicitudes;
 
         setSolicitudes(nextSolicitudes);
@@ -228,12 +244,12 @@ export function useSolicitudesContacto(
         setIsReady(true);
       }
     },
-    [options.estado, options.search, pageSize, queryKey, solicitudes]
+    [options.estado, options.search, pageSize, queryKey]
   );
 
   const updateSolicitudEstado = useCallback(
     async (id: string, estado: EstadoSolicitudContacto) => {
-      const previous = solicitudes;
+      const previous = solicitudesRef.current;
 
       try {
         setError(null);
@@ -274,14 +290,17 @@ export function useSolicitudesContacto(
         const nextSummary =
           previousState && previousState !== estado
             ? {
-                ...summary,
+                ...summaryRef.current,
                 counts: {
-                  ...summary.counts,
-                  [previousState]: Math.max(0, summary.counts[previousState] - 1),
-                  [estado]: summary.counts[estado] + 1,
+                  ...summaryRef.current.counts,
+                  [previousState]: Math.max(
+                    0,
+                    summaryRef.current.counts[previousState] - 1
+                  ),
+                  [estado]: summaryRef.current.counts[estado] + 1,
                 },
               }
-            : summary;
+            : summaryRef.current;
 
         setSolicitudes(nextSolicitudes);
         setSummary(nextSummary);
@@ -301,13 +320,13 @@ export function useSolicitudesContacto(
           hasMore,
           page,
           pageSize,
-          summary,
+          summary: summaryRef.current,
         });
         setError(getErrorMessage(nextError));
         throw nextError;
       }
     },
-    [hasMore, page, pageSize, queryKey, solicitudes, summary, totalCount]
+    [hasMore, page, pageSize, queryKey, totalCount]
   );
 
   useEffect(() => {

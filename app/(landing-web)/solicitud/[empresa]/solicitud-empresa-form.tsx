@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   LuBadgeCheck,
   LuCheck,
@@ -27,11 +28,6 @@ type Props = {
   empresaEmail: string;
   privacidad: string;
   isAvailable: boolean;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  sourceUrl?: string;
-  origin?: string;
   formTitle?: string;
   formSubtitle?: string;
 };
@@ -184,36 +180,35 @@ export function SolicitudEmpresaForm({
   empresaEmail,
   privacidad,
   isAvailable,
-  utmSource,
-  utmMedium,
-  utmCampaign,
-  sourceUrl,
-  origin,
   formTitle,
   formSubtitle,
 }: Props) {
+  const searchParams = useSearchParams();
   const sectionRef = useRef<HTMLElement | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
-  const [resolvedSourceUrl, setResolvedSourceUrl] = useState<string | null>(
-    sourceUrl ?? null
-  );
+  const [resolvedSourceUrl, setResolvedSourceUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const utmSource = searchParams.get("utm_source")?.trim() || undefined;
+  const utmMedium = searchParams.get("utm_medium")?.trim() || undefined;
+  const utmCampaign = searchParams.get("utm_campaign")?.trim() || undefined;
+  const sourceUrlParam = searchParams.get("source_url")?.trim() || undefined;
+  const originParam = searchParams.get("origen")?.trim() || undefined;
 
   useEffect(() => {
-    if (sourceUrl) {
-      setResolvedSourceUrl(sourceUrl);
+    if (sourceUrlParam) {
+      setResolvedSourceUrl(sourceUrlParam);
       return;
     }
 
     if (typeof window !== "undefined") {
       setResolvedSourceUrl(window.location.href);
     }
-  }, [sourceUrl]);
+  }, [sourceUrlParam]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -302,7 +297,7 @@ export function SolicitudEmpresaForm({
     !errors.tipoTrabajo &&
     !errors.consentimiento;
 
-  const resolvedOrigin = origin?.trim() || utmSource?.trim() || "solicitud-publica";
+  const resolvedOrigin = originParam || utmSource || "solicitud-publica";
 
   function handleFieldChange<K extends keyof FormState>(
     field: K,

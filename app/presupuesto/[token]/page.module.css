@@ -765,6 +765,17 @@
   gap: 8px;
 }
 
+.previewLoadingCard {
+  padding: 22px 24px;
+  border-radius: 28px;
+  border: 1px solid rgba(184, 198, 223, 0.68);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+  box-shadow: 0 24px 60px rgba(36, 59, 107, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
 .stateTitle {
   margin: 0;
   font-family: "Syne", sans-serif;

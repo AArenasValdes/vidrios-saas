@@ -37,7 +37,7 @@ type PublicPreviewItem = {
   observaciones: string;
 };
 
-type PublicPreviewQuote = {
+export type PublicPreviewQuote = {
   codigo: string;
   clienteNombre: string;
   obra: string;

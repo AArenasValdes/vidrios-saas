@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import type { ComponentPropsWithoutRef } from "react";
 import { useEffect, useState } from "react";
@@ -12,9 +13,21 @@ import {
 } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
-import { PublicQuoteDocument } from "./documento/public-quote-document";
 
 import s from "./public-quote-mobile.module.css";
+
+const PublicQuoteDocument = dynamic(
+  () => import("./documento/public-quote-document").then((mod) => mod.PublicQuoteDocument),
+  {
+    ssr: false,
+    loading: () => (
+      <div className={s.overlayLoading}>
+        <strong>Preparando documento...</strong>
+        <span>Tu PDF se abre sin recargar pagina.</span>
+      </div>
+    ),
+  }
+);
 
 const CLP = (value: number) =>
   new Intl.NumberFormat("es-CL", {

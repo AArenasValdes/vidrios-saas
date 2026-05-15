@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 
-import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
+import {
+  publicCotizacionApprovalService,
+  revalidatePublicApprovalQuotesCache,
+} from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 
 export async function acceptPublicQuoteAction(token: string) {
@@ -24,6 +27,8 @@ export async function acceptPublicQuoteAction(token: string) {
       console.error("No pudimos enviar el push de aprobacion.", error);
     }
   }
+
+  revalidatePublicApprovalQuotesCache();
 
   redirect(`/presupuesto/${redirectToken}?decision=aceptada`);
 }
@@ -47,6 +52,8 @@ export async function rejectPublicQuoteAction(token: string) {
       console.error("No pudimos enviar el push de rechazo.", error);
     }
   }
+
+  revalidatePublicApprovalQuotesCache();
 
   redirect(`/presupuesto/${redirectToken}?decision=rechazada`);
 }

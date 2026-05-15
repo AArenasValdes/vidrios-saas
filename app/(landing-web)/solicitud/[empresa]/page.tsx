@@ -44,7 +44,6 @@ type PageProps = {
   params: Promise<{
     empresa: string;
   }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type StepItem = {
@@ -65,7 +64,7 @@ const PREVIEW_GALLERY = [
   { src: "/brand/logosanmarco.jpg", label: "Mampara" },
 ] as const;
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 function getInitials(value: string) {
   return value
@@ -75,10 +74,6 @@ function getInitials(value: string) {
     .map((chunk) => chunk[0]?.toUpperCase() ?? "")
     .join("")
     .slice(0, 2);
-}
-
-function readString(value: string | string[] | undefined) {
-  return typeof value === "string" ? value : undefined;
 }
 
 function resolveLocationLabel(address: string) {
@@ -98,10 +93,8 @@ function resolveLocationLabel(address: string) {
 
 export default async function SolicitudEmpresaPage({
   params,
-  searchParams,
 }: PageProps) {
   const { empresa } = await params;
-  const sp = await searchParams;
   const config = await getCachedPublicRequestConfig(empresa);
 
   if (!config) {
@@ -388,11 +381,6 @@ export default async function SolicitudEmpresaPage({
               empresaEmail={config.empresaEmail}
               privacidad={config.solicitudPublicaPrivacidad}
               isAvailable={isAvailable}
-              utmSource={readString(sp.utm_source)}
-              utmMedium={readString(sp.utm_medium)}
-              utmCampaign={readString(sp.utm_campaign)}
-              sourceUrl={readString(sp.source_url)}
-              origin={readString(sp.origen)}
               formTitle={formTitle}
               formSubtitle={formSubtitle ?? undefined}
             />

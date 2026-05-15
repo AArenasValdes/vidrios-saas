@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   LuArrowUpRight,
   LuCheck,
@@ -10,6 +10,7 @@ import {
   LuCopy,
   LuInbox,
   LuQrCode,
+  LuSearch,
 } from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
@@ -203,6 +204,9 @@ export default function SolicitudesPage() {
   const { rol, user } = useAuth();
   const { profile } = useOrganizationProfile();
   const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
+  const [busqueda, setBusqueda] = useState("");
+  const busquedaDiferida = useDeferredValue(busqueda);
+  const [filtroActivo, setFiltroActivo] = useState<FiltroSolicitud>("all");
   const canReviewSolicitudes = canAccessSolicitudes({
     email: user?.email,
     rol,
@@ -219,8 +223,10 @@ export default function SolicitudesPage() {
     refreshSolicitudes,
     loadMoreSolicitudes,
     updateSolicitudEstado,
-  } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey);
-  const [filtroActivo, setFiltroActivo] = useState<FiltroSolicitud>("all");
+  } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey, {
+    estado: filtroActivo,
+    search: busquedaDiferida,
+  });
   const [menuSolicitudId, setMenuSolicitudId] = useState<string | null>(null);
   const [updatingSolicitudId, setUpdatingSolicitudId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -237,16 +243,8 @@ export default function SolicitudesPage() {
     };
   }, [solicitudes.length, summary, totalCount]);
 
-  const solicitudesFiltradas = useMemo(() => {
-    if (filtroActivo === "all") {
-      return solicitudes;
-    }
-
-    return solicitudes.filter((solicitud) => solicitud.estado === filtroActivo);
-  }, [filtroActivo, solicitudes]);
-
   const visibleSolicitudes = useMemo(() => {
-    return solicitudesFiltradas.map((solicitud) => {
+    return solicitudes.map((solicitud) => {
       const telefonoContacto =
         solicitud.telefono ||
         (solicitud.contacto && !solicitud.contacto.includes("@")
@@ -295,7 +293,7 @@ export default function SolicitudesPage() {
           : null,
       };
     });
-  }, [profile?.empresaNombre, solicitudesFiltradas]);
+  }, [profile?.empresaNombre, solicitudes]);
 
   const nuevasCount = resumen.counts.nueva;
 
@@ -503,6 +501,16 @@ export default function SolicitudesPage() {
       </PremiumPageSection>
 
       <PremiumPageSection className={s.filtersSection}>
+        <div className={s.searchBar}>
+          <LuSearch aria-hidden className={s.searchIcon} />
+          <input
+            className={s.searchInput}
+            type="search"
+            value={busqueda}
+            onChange={(event) => setBusqueda(event.target.value)}
+            placeholder="Buscar por nombre, contacto o trabajo"
+          />
+        </div>
         <button
           type="button"
           className={`${s.filterCard} ${s.filterCardAll} ${
@@ -584,29 +592,21 @@ export default function SolicitudesPage() {
         </PremiumPageSection>
       ) : null}
 
-      {isRefreshing ? (
-        <PremiumPageSection className={s.refreshText}>
-          Actualizando solicitudes...
-        </PremiumPageSection>
-      ) : null}
-
       {solicitudes.length === 0 ? (
         <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />
           </div>
-          <p className={s.emptyTitle}>Aun no llegan solicitudes</p>
-          <p className={s.emptySub}>
-            Cuando alguien escriba desde tu pagina publica, aparecera aqui.
+          <p className={s.emptyTitle}>
+            {busquedaDiferida.trim()
+              ? "No encontramos solicitudes"
+              : "Aun no llegan solicitudes"}
           </p>
-        </PremiumPageSection>
-      ) : solicitudesFiltradas.length === 0 ? (
-        <PremiumPageSection className={s.emptyState}>
-          <div className={s.emptyIcon}>
-            <LuInbox aria-hidden />
-          </div>
-          <p className={s.emptyTitle}>No hay solicitudes en este estado</p>
-          <p className={s.emptySub}>Cambia el filtro para revisar el resto de tu bandeja.</p>
+          <p className={s.emptySub}>
+            {busquedaDiferida.trim()
+              ? "Prueba con otro nombre o cambia el filtro actual."
+              : "Cuando alguien escriba desde tu pagina publica, aparecera aqui."}
+          </p>
         </PremiumPageSection>
       ) : (
         <PremiumPageSection className={s.list}>
@@ -631,7 +631,7 @@ export default function SolicitudesPage() {
               type="button"
               className={s.loadMoreBtn}
               onClick={() => void loadMoreSolicitudes()}
-              disabled={isLoadingMore}
+              disabled={isLoadingMore || isRefreshing}
             >
               {isLoadingMore ? "Cargando..." : "Cargar más"}
             </button>

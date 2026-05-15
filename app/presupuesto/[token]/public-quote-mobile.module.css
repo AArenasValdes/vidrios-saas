@@ -537,6 +537,34 @@
   background: #f3f6fb;
 }
 
+.overlayLoading {
+  min-height: 72vh;
+  min-height: 72dvh;
+  border-radius: 18px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  background:
+    radial-gradient(circle at top, rgba(79, 125, 212, 0.08), transparent 42%),
+    #f3f6fb;
+  color: #243b6b;
+  font-family: "Lato", sans-serif;
+}
+
+.overlayLoading strong {
+  font-family: "Syne", sans-serif;
+  font-size: 22px;
+}
+
+.overlayLoading span {
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 @media screen and (max-width: 768px) {
   .mobileShell {
     gap: 12px;
