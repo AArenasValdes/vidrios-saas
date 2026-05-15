@@ -138,7 +138,7 @@ function NuevaCotizacionPageContent() {
     saveWorkflow,
     isReady,
     isSaving,
-  } = useCotizacionesStore();
+  } = useCotizacionesStore({ autoLoadSummary: false });
 
   const suggestionProvider: PreferredProvider = "";
   const preferredPricingMode = normalizePricingMode(

@@ -14,6 +14,27 @@ type SolicitudesContactoRepositoryDeps = {
   clientFactory?: ReturnType<typeof createAdminClient>;
 };
 
+type SolicitudesResumenPageOptions = {
+  page: number;
+  pageSize: number;
+  estado?: EstadoSolicitudContacto | null;
+  search?: string | null;
+};
+
+type SolicitudesResumenPageResult = {
+  solicitudes: SolicitudContacto[];
+  totalCount: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+};
+
+type SolicitudesResumenGlobal = {
+  total: number;
+  hoy: number;
+  counts: Record<EstadoSolicitudContacto, number>;
+};
+
 type SolicitudContactoRow = {
   id: string;
   organization_id: string | number | null;
@@ -473,6 +494,221 @@ async function selectSolicitudesResumen(
   ).map(mapSolicitudContactoResumen);
 }
 
+async function selectSolicitudesResumenPage(
+  supabase: ReturnType<typeof createAdminClient>,
+  options: SolicitudesResumenPageOptions,
+  organizationId?: string | number
+): Promise<SolicitudesResumenPageResult> {
+  const page = Math.max(1, options.page);
+  const pageSize = Math.max(1, Math.min(50, options.pageSize));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const normalizedSearch = options.search?.trim() ?? "";
+
+  const applyFilters = (query: any) => {
+    let nextQuery = query;
+
+    if (organizationId !== undefined) {
+      nextQuery = nextQuery.eq("organization_id", organizationId as never);
+    }
+
+    if (options.estado) {
+      nextQuery = nextQuery.eq("estado", options.estado as never);
+    }
+
+    if (normalizedSearch) {
+      const safeSearch = normalizedSearch.replace(/,/g, " ").replace(/\./g, " ");
+      nextQuery = nextQuery.or?.(
+        `nombre.ilike.%${safeSearch}%,empresa.ilike.%${safeSearch}%,contacto.ilike.%${safeSearch}%,tipo_trabajo.ilike.%${safeSearch}%`
+      ) ?? nextQuery;
+    }
+
+    return nextQuery;
+  };
+
+  let query = applyFilters(
+    supabase
+      .from(TABLE_NAME as never)
+      .select(SOLICITUD_RESUMEN_SELECT, { count: "exact" })
+      .order("creado_en", { ascending: false })
+      .range(from, to)
+  );
+
+  const { data, error, count } = await query;
+
+  if (!error) {
+    const rows =
+      ((data as Array<
+        Pick<
+          SolicitudContactoRow,
+          | "id"
+          | "organization_id"
+          | "nombre"
+          | "empresa"
+          | "correo"
+          | "telefono"
+          | "contacto"
+          | "tipo_trabajo"
+          | "mensaje"
+          | "ayuda"
+          | "contexto"
+          | "estado"
+          | "origen"
+          | "creado_en"
+          | "actualizado_en"
+          | "contactada_at"
+        >
+      > | null) ?? []
+    ).map(mapSolicitudContactoResumen);
+
+    return {
+      solicitudes: rows,
+      totalCount: count ?? rows.length,
+      hasMore: from + rows.length < (count ?? rows.length),
+      page,
+      pageSize,
+    };
+  }
+
+  if (!isMissingContactadaAtError(error)) {
+    throw error;
+  }
+
+  const legacyQuery = applyFilters(
+    supabase
+      .from(TABLE_NAME as never)
+      .select(SOLICITUD_RESUMEN_SELECT_LEGACY, { count: "exact" })
+      .order("creado_en", { ascending: false })
+      .range(from, to)
+  );
+
+  const {
+    data: legacyData,
+    error: legacyError,
+    count: legacyCount,
+  } = await legacyQuery;
+
+  if (legacyError) {
+    throw legacyError;
+  }
+
+  const rows = (
+    (((legacyData as Array<
+      Pick<
+        SolicitudContactoRow,
+        | "id"
+        | "organization_id"
+        | "nombre"
+        | "empresa"
+        | "correo"
+        | "telefono"
+        | "contacto"
+        | "tipo_trabajo"
+        | "mensaje"
+        | "ayuda"
+        | "contexto"
+        | "estado"
+        | "origen"
+        | "creado_en"
+        | "actualizado_en"
+      >
+    > | null) ?? []).map((row) => ({
+      ...row,
+      contactada_at: null,
+    })) as Array<
+      Pick<
+        SolicitudContactoRow,
+        | "id"
+        | "organization_id"
+        | "nombre"
+        | "empresa"
+        | "correo"
+        | "telefono"
+        | "contacto"
+        | "tipo_trabajo"
+        | "mensaje"
+        | "ayuda"
+        | "contexto"
+        | "estado"
+        | "origen"
+        | "creado_en"
+        | "actualizado_en"
+        | "contactada_at"
+      >
+    >)
+  ).map(mapSolicitudContactoResumen);
+
+  return {
+    solicitudes: rows,
+    totalCount: legacyCount ?? rows.length,
+    hasMore: from + rows.length < (legacyCount ?? rows.length),
+    page,
+    pageSize,
+  };
+}
+
+async function countSolicitudesBase(
+  supabase: ReturnType<typeof createAdminClient>,
+  options: {
+    organizationId?: string | number;
+    estado?: EstadoSolicitudContacto;
+    createdFrom?: string;
+  }
+) {
+  let query = supabase
+    .from(TABLE_NAME as never)
+    .select("id", { count: "exact", head: true });
+
+  if (options.organizationId !== undefined) {
+    query = query.eq("organization_id", options.organizationId as never);
+  }
+
+  if (options.estado) {
+    query = query.eq("estado", options.estado as never);
+  }
+
+  if (options.createdFrom) {
+    query = query.gte("creado_en", options.createdFrom);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
+async function selectSolicitudesResumenGlobal(
+  supabase: ReturnType<typeof createAdminClient>,
+  organizationId?: string | number
+): Promise<SolicitudesResumenGlobal> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = today.toISOString();
+
+  const [total, hoy, nueva, contactada, cerrada, descartada] = await Promise.all([
+    countSolicitudesBase(supabase, { organizationId }),
+    countSolicitudesBase(supabase, { organizationId, createdFrom: todayIso }),
+    countSolicitudesBase(supabase, { organizationId, estado: "nueva" }),
+    countSolicitudesBase(supabase, { organizationId, estado: "contactada" }),
+    countSolicitudesBase(supabase, { organizationId, estado: "cerrada" }),
+    countSolicitudesBase(supabase, { organizationId, estado: "descartada" }),
+  ]);
+
+  return {
+    total,
+    hoy,
+    counts: {
+      nueva,
+      contactada,
+      cerrada,
+      descartada,
+    },
+  };
+}
+
 export function createSolicitudesContactoRepository(
   deps: SolicitudesContactoRepositoryDeps = {}
 ) {
@@ -493,6 +729,25 @@ export function createSolicitudesContactoRepository(
 
     async listResumen() {
       return selectSolicitudesResumen(supabase);
+    },
+
+    async listResumenPageByOrganizationId(
+      organizationId: string | number,
+      options: SolicitudesResumenPageOptions
+    ) {
+      return selectSolicitudesResumenPage(supabase, options, organizationId);
+    },
+
+    async listResumenPage(options: SolicitudesResumenPageOptions) {
+      return selectSolicitudesResumenPage(supabase, options);
+    },
+
+    async getResumenGlobalByOrganizationId(organizationId: string | number) {
+      return selectSolicitudesResumenGlobal(supabase, organizationId);
+    },
+
+    async getResumenGlobal() {
+      return selectSolicitudesResumenGlobal(supabase);
     },
 
     async getPublicConfigBySlug(slug: string) {
@@ -723,6 +978,22 @@ export const solicitudesContactoRepository: SolicitudesContactoRepository = {
   },
   listResumen(...args) {
     return getDefaultSolicitudesContactoRepository().listResumen(...args);
+  },
+  listResumenPageByOrganizationId(...args) {
+    return getDefaultSolicitudesContactoRepository().listResumenPageByOrganizationId(
+      ...args
+    );
+  },
+  listResumenPage(...args) {
+    return getDefaultSolicitudesContactoRepository().listResumenPage(...args);
+  },
+  getResumenGlobalByOrganizationId(...args) {
+    return getDefaultSolicitudesContactoRepository().getResumenGlobalByOrganizationId(
+      ...args
+    );
+  },
+  getResumenGlobal(...args) {
+    return getDefaultSolicitudesContactoRepository().getResumenGlobal(...args);
   },
   getPublicConfigBySlug(...args) {
     return getDefaultSolicitudesContactoRepository().getPublicConfigBySlug(

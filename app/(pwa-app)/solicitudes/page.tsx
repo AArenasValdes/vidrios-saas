@@ -211,8 +211,13 @@ export default function SolicitudesPage() {
     solicitudes,
     isReady,
     isRefreshing,
+    isLoadingMore,
     error,
+    totalCount,
+    hasMore,
+    summary,
     refreshSolicitudes,
+    loadMoreSolicitudes,
     updateSolicitudEstado,
   } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey);
   const [filtroActivo, setFiltroActivo] = useState<FiltroSolicitud>("all");
@@ -225,28 +230,12 @@ export default function SolicitudesPage() {
   }, [profile?.solicitudPublicaSlug]);
 
   const resumen = useMemo(() => {
-    const counts: Record<EstadoSolicitudContacto, number> = {
-      nueva: 0,
-      contactada: 0,
-      cerrada: 0,
-      descartada: 0,
-    };
-    let hoy = 0;
-
-    for (const solicitud of solicitudes) {
-      counts[solicitud.estado] += 1;
-
-      if (isToday(solicitud.creadoEn)) {
-        hoy += 1;
-      }
-    }
-
     return {
-      total: solicitudes.length,
-      hoy,
-      counts,
+      total: summary.total || totalCount || solicitudes.length,
+      hoy: summary.hoy,
+      counts: summary.counts,
     };
-  }, [solicitudes]);
+  }, [solicitudes.length, summary, totalCount]);
 
   const solicitudesFiltradas = useMemo(() => {
     if (filtroActivo === "all") {
@@ -637,6 +626,16 @@ export default function SolicitudesPage() {
               onCopyMessage={handleCopyMessage}
             />
           ))}
+          {hasMore ? (
+            <button
+              type="button"
+              className={s.loadMoreBtn}
+              onClick={() => void loadMoreSolicitudes()}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? "Cargando..." : "Cargar más"}
+            </button>
+          ) : null}
         </PremiumPageSection>
       )}
     </PremiumPageReveal>

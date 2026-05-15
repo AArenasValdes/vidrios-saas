@@ -131,6 +131,51 @@ export function createProjectsRepository(deps: ProjectsRepositoryDeps = {}) {
       return (data as ProjectRow[]).map(mapProject);
     },
 
+    async searchIdsByTitulo(
+      organizationId: EntityId,
+      query: string,
+      limit = 50
+    ) {
+      const normalized = query.trim();
+
+      if (!normalized) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .ilike("titulo", `%${normalized}%`)
+        .limit(limit);
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as Array<{ id: EntityId }> | null) ?? []).map((row) => row.id);
+    },
+
+    async listIdsByClientIds(ids: EntityId[], organizationId: EntityId) {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .in("cliente_id", ids);
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as Array<{ id: EntityId }> | null) ?? []).map((row) => row.id);
+    },
+
     async getById(id: EntityId, organizationId: EntityId) {
       const { data, error } = await supabase
         .from("projects")
@@ -262,6 +307,12 @@ export const projectsRepository: ProjectsRepository = {
   },
   listByIds(...args) {
     return getDefaultProjectsRepository().listByIds(...args);
+  },
+  searchIdsByTitulo(...args) {
+    return getDefaultProjectsRepository().searchIdsByTitulo(...args);
+  },
+  listIdsByClientIds(...args) {
+    return getDefaultProjectsRepository().listIdsByClientIds(...args);
   },
   getById(...args) {
     return getDefaultProjectsRepository().getById(...args);

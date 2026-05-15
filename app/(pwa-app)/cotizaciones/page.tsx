@@ -19,6 +19,7 @@ import {
 } from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
+import { useCotizacionesResumenPage } from "@/features/cotizaciones/hooks/useCotizacionesResumenPage";
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
@@ -60,15 +61,6 @@ const ESTADO_META: Record<string, { cls: string; label: string }> = {
   creada: { cls: "stCreada", label: "Creada" },
   rechazada: { cls: "stRechazada", label: "Rechazada" },
   terminada: { cls: "stTerminada", label: "Terminada" },
-};
-
-const ESTADO_SORT_PRIORITY: Record<string, number> = {
-  creada: 0,
-  enviada: 1,
-  borrador: 2,
-  aprobada: 3,
-  rechazada: 4,
-  terminada: 5,
 };
 
 const clpFormatter = new Intl.NumberFormat("es-CL", {
@@ -125,41 +117,6 @@ function getManualResponseValue(estado: string): ManualResponseStatus {
   return "pendiente";
 }
 
-function isWithinPeriod(
-  value: string,
-  period: (typeof PERIODOS)[number]["value"],
-  now: Date
-) {
-  if (period === "all") {
-    return true;
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return false;
-  }
-
-  if (period === "this_month") {
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth()
-    );
-  }
-
-  if (period === "last_month") {
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-    return (
-      date.getFullYear() === lastMonth.getFullYear() &&
-      date.getMonth() === lastMonth.getMonth()
-    );
-  }
-
-  const diffMs = now.getTime() - date.getTime();
-  return diffMs <= 90 * 24 * 60 * 60 * 1000;
-}
-
 const PAGE_SIZE = 8;
 
 function buildPageNumbers(currentPage: number, totalPages: number) {
@@ -179,7 +136,7 @@ export default function CotizacionesPage() {
   const reduceMotion = useReducedMotion();
   const router = useRouter();
   const {
-    cotizaciones,
+    clientes: clientesDisponibles,
     isReady,
     isRefreshing,
     isSaving,
@@ -188,7 +145,8 @@ export default function CotizacionesPage() {
     prefetchCotizacionById,
     updateManualResponseStatus,
     loadCotizacionById,
-  } = useCotizacionesStore();
+    ensureClientesLoaded,
+  } = useCotizacionesStore({ autoLoadSummary: false });
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
   const [clienteFiltro, setClienteFiltro] = useState("Todos");
   const [periodoFiltro, setPeriodoFiltro] = useState<(typeof PERIODOS)[number]["value"]>(
@@ -222,68 +180,29 @@ export default function CotizacionesPage() {
     id: string;
     codigo: string;
   } | null>(null);
+  const {
+    cotizaciones,
+    totalCount,
+    refreshCotizacionesResumen,
+  } = useCotizacionesResumenPage({
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    estado: estadoFiltro,
+    cliente: clienteFiltro,
+    period: periodoFiltro,
+    order: ordenFiltro,
+    search: busquedaDiferida,
+  });
   const isInitialSync = isRefreshing && cotizaciones.length === 0;
-  const now = useMemo(() => new Date(), []);
   const {
     clientes,
     filtradas,
     filtrosActivos,
     kpis,
     mobileStats,
-    ordenadas,
     montoFiltrado,
   } = useMemo(() => {
-    const clientesSet = new Set<string>();
-
-    for (const item of cotizaciones) {
-      clientesSet.add(item.clienteNombre);
-    }
-
-    const query = busquedaDiferida.trim().toLowerCase();
-    const nextFiltradas = cotizaciones.filter((cotizacion) => {
-      const matchAtajoEstado =
-        atajoEstado === "todos" ||
-        (atajoEstado === "aprobadas" && cotizacion.estado === "aprobada") ||
-        (atajoEstado === "rechazadas" && cotizacion.estado === "rechazada") ||
-        (atajoEstado === "pendientes" &&
-          ["enviada", "borrador", "creada"].includes(cotizacion.estado));
-      const matchEstado =
-        matchAtajoEstado &&
-        (estadoFiltro === "Todos" || cotizacion.estado === estadoFiltro.toLowerCase());
-      const matchCliente =
-        clienteFiltro === "Todos" || cotizacion.clienteNombre === clienteFiltro;
-      const matchPeriodo = isWithinPeriod(cotizacion.updatedAt, periodoFiltro, now);
-      const matchBusqueda =
-        !query ||
-        cotizacion.clienteNombre.toLowerCase().includes(query) ||
-        cotizacion.codigo.toLowerCase().includes(query) ||
-        cotizacion.obra.toLowerCase().includes(query);
-
-      return matchEstado && matchCliente && matchPeriodo && matchBusqueda;
-    });
-    const nextOrdenadas = [...nextFiltradas].sort((left, right) => {
-      if (ordenFiltro === "total_desc") {
-        return right.total - left.total;
-      }
-
-      if (ordenFiltro === "codigo_desc") {
-        return right.codigo.localeCompare(left.codigo, "es-CL", {
-          numeric: true,
-          sensitivity: "base",
-        });
-      }
-
-      if (ordenFiltro === "estado") {
-        const leftPriority = ESTADO_SORT_PRIORITY[left.estado] ?? 99;
-        const rightPriority = ESTADO_SORT_PRIORITY[right.estado] ?? 99;
-
-        if (leftPriority !== rightPriority) {
-          return leftPriority - rightPriority;
-        }
-      }
-
-      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
-    });
+    const nextFiltradas = cotizaciones;
     const nextMontoFiltrado = nextFiltradas.reduce(
       (accumulator, cotizacion) => accumulator + cotizacion.total,
       0
@@ -321,9 +240,11 @@ export default function CotizacionesPage() {
     ] as const;
 
     return {
-      clientes: ["Todos", ...clientesSet],
+      clientes: [
+        "Todos",
+        ...Array.from(new Set(clientesDisponibles.map((cliente) => cliente.nombre))),
+      ],
       filtradas: nextFiltradas,
-      ordenadas: nextOrdenadas,
       montoFiltrado: nextMontoFiltrado,
       filtrosActivos: [
         atajoEstado === "aprobadas"
@@ -350,7 +271,7 @@ export default function CotizacionesPage() {
       kpis: [
         {
           label: "Total",
-          value: String(cotizaciones.length),
+          value: String(totalCount),
           sub: "cotizaciones",
           tone: "blue",
         },
@@ -389,11 +310,12 @@ export default function CotizacionesPage() {
     atajoEstado,
     busquedaDiferida,
     clienteFiltro,
+    clientesDisponibles,
     cotizaciones,
     estadoFiltro,
-    now,
     ordenFiltro,
     periodoFiltro,
+    totalCount,
   ]);
 
   const limpiar = () => {
@@ -407,16 +329,16 @@ export default function CotizacionesPage() {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(ordenadas.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const pageNumbers = useMemo(
     () => buildPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
   );
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const paginatedCotizaciones = useMemo(
-    () => ordenadas.slice(pageStart, pageStart + PAGE_SIZE),
-    [ordenadas, pageStart]
-  );
+
+  useEffect(() => {
+    void ensureClientesLoaded();
+  }, [ensureClientesLoaded]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -463,7 +385,7 @@ export default function CotizacionesPage() {
 
   const visibleRows = useMemo(
     () =>
-      paginatedCotizaciones.map((cotizacion) => {
+      filtradas.map((cotizacion) => {
         const meta = ESTADO_META[cotizacion.estado] ?? {
           cls: "stBorrador",
           label: cotizacion.estado,
@@ -502,7 +424,7 @@ export default function CotizacionesPage() {
           deleteDisabled: isSaving,
         };
       }),
-    [handlePrefetchDetail, isSaving, paginatedCotizaciones, responseUpdatingId, sendingId]
+    [filtradas, handlePrefetchDetail, isSaving, responseUpdatingId, sendingId]
   );
 
   const handleDuplicate = useCallback((id: string) => {
@@ -531,6 +453,7 @@ export default function CotizacionesPage() {
 
     try {
       await deleteWorkflow(deleteCandidate.id);
+      await refreshCotizacionesResumen();
       setDeleteCandidate(null);
     } catch (error) {
       window.alert(
@@ -539,7 +462,7 @@ export default function CotizacionesPage() {
           : "No se pudo eliminar la cotizacion"
       );
     }
-  }, [deleteCandidate, deleteWorkflow]);
+  }, [deleteCandidate, deleteWorkflow, refreshCotizacionesResumen]);
 
   const handleManualResponseChange = useCallback(async (
     id: string,
@@ -548,12 +471,13 @@ export default function CotizacionesPage() {
     try {
       setResponseUpdatingId(id);
       await updateManualResponseStatus(id, estado);
+      await refreshCotizacionesResumen();
     } catch (error) {
       window.alert(getErrorMessage(error));
     } finally {
       setResponseUpdatingId(null);
     }
-  }, [updateManualResponseStatus]);
+  }, [refreshCotizacionesResumen, updateManualResponseStatus]);
 
   const handleSendQuote = useCallback(async (id: string) => {
     try {
@@ -579,15 +503,16 @@ export default function CotizacionesPage() {
       }
 
       window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-      void markQuoteAsSent(String(record.id)).catch(() => {
-        return;
+      await markQuoteAsSent(String(record.id)).catch(() => {
+        return null;
       });
+      await refreshCotizacionesResumen();
     } catch (error) {
       window.alert(getErrorMessage(error));
     } finally {
       setSendingId(null);
     }
-  }, [cotizaciones, loadCotizacionById, markQuoteAsSent]);
+  }, [cotizaciones, loadCotizacionById, markQuoteAsSent, refreshCotizacionesResumen]);
 
   if (!isReady) {
     return (
@@ -976,7 +901,7 @@ export default function CotizacionesPage() {
             <PremiumPageSection className={s.pagination}>
               <span className={s.pagInfo}>
                 Mostrando {pageStart + 1} - {Math.min(pageStart + PAGE_SIZE, filtradas.length)} de{" "}
-                {ordenadas.length} cotizaciones
+                {totalCount} cotizaciones
               </span>
               <div className={s.pagBtns}>
                 <button

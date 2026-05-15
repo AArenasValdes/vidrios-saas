@@ -57,6 +57,24 @@ type GetWorkflowByIdOptions = {
   ensureApprovalToken?: boolean;
 };
 
+type WorkflowSummaryPageOptions = {
+  page: number;
+  pageSize: number;
+  estado?: string | null;
+  clienteNombre?: string | null;
+  period?: "all" | "this_month" | "last_month" | "last_90_days";
+  order?: "updated_desc" | "total_desc" | "codigo_desc" | "estado";
+  search?: string | null;
+};
+
+type WorkflowSummaryPageResult = {
+  cotizaciones: CotizacionWorkflowRecord[];
+  totalCount: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+};
+
 function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;
 
@@ -402,7 +420,7 @@ export function createCotizacionesAppService(
     };
   }
 
-  async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefined>) {
+async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefined>) {
     for (const rollback of [...rollbacks].reverse()) {
       if (!rollback) {
         continue;
@@ -414,6 +432,114 @@ export function createCotizacionesAppService(
         console.error("No se pudo revertir una entidad auxiliar de la cotización.", error);
       }
     }
+  }
+
+  async function listWorkflowSummaryPageByOrganizationId(
+    organizationId: EntityId,
+    options: WorkflowSummaryPageOptions
+  ): Promise<WorkflowSummaryPageResult> {
+    let allowedProjectIds: EntityId[] | null = null;
+
+    if (options.clienteNombre?.trim()) {
+      const clientIds = await clientesRepo.listIdsByExactNombre(
+        organizationId,
+        options.clienteNombre.trim()
+      );
+
+      if (clientIds.length === 0) {
+        return {
+          cotizaciones: [],
+          totalCount: 0,
+          hasMore: false,
+          page: options.page,
+          pageSize: options.pageSize,
+        };
+      }
+
+      allowedProjectIds = await projectsRepo.listIdsByClientIds(clientIds, organizationId);
+
+      if (allowedProjectIds.length === 0) {
+        return {
+          cotizaciones: [],
+          totalCount: 0,
+          hasMore: false,
+          page: options.page,
+          pageSize: options.pageSize,
+        };
+      }
+    }
+
+    let searchProjectIds: EntityId[] | null = null;
+    const normalizedSearch = options.search?.trim() ?? "";
+
+    if (normalizedSearch) {
+      const [matchedClientIds, matchedProjectIds] = await Promise.all([
+        clientesRepo.searchIdsByNombre(organizationId, normalizedSearch),
+        projectsRepo.searchIdsByTitulo(organizationId, normalizedSearch),
+      ]);
+      const projectIdsFromClients = matchedClientIds.length
+        ? await projectsRepo.listIdsByClientIds(matchedClientIds, organizationId)
+        : [];
+
+      searchProjectIds = Array.from(
+        new Set([...matchedProjectIds, ...projectIdsFromClients].map(String))
+      ) as unknown as EntityId[];
+    }
+
+    const pageResult = await cotizacionesRepo.listPageByOrganizationId(organizationId, {
+      page: options.page,
+      pageSize: options.pageSize,
+      estado: options.estado,
+      period: options.period,
+      order: options.order,
+      search: normalizedSearch || null,
+      allowedProjectIds,
+      searchProjectIds,
+    });
+
+    const projectIds = Array.from(
+      new Set(
+        pageResult.cotizaciones
+          .map((cotizacion) => cotizacion.proyectoId)
+          .filter((value): value is EntityId => value !== null && value !== undefined)
+      )
+    );
+    const projects = await projectsRepo.listByIds(projectIds, organizationId);
+    const projectsById = new Map(projects.map((project) => [String(project.id), project]));
+    const clientIds = Array.from(
+      new Set(
+        projects
+          .map((project) => project.clienteId)
+          .filter((value): value is EntityId => value !== null && value !== undefined)
+      )
+    );
+    const clients = await clientesRepo.listByIds(clientIds, organizationId);
+    const clientsById = new Map(clients.map((client) => [String(client.id), client]));
+
+    return {
+      ...pageResult,
+      cotizaciones: pageResult.cotizaciones.map((cotizacion) => {
+        const project = cotizacion.proyectoId
+          ? projectsById.get(String(cotizacion.proyectoId))
+          : null;
+        const client =
+          project?.clienteId !== null && project?.clienteId !== undefined
+            ? clientsById.get(String(project.clienteId))
+            : null;
+
+        return mapCotizacionToWorkflowRecord({
+          cotizacion: {
+            ...cotizacion,
+            items: [],
+          },
+          clientId: project?.clienteId ?? null,
+          clientName: client?.nombre ?? "Cliente sin nombre",
+          clientPhone: client?.telefono ?? "",
+          clientAddress: client?.direccion ?? "",
+          projectTitle: project?.titulo ?? "Proyecto sin nombre",
+        });
+      }),
+    };
   }
 
   async function listWorkflowSummaryByOrganizationId(organizationId: EntityId) {
@@ -714,6 +840,7 @@ return workflowRecord;
     listClientsByOrganizationId,
     listWorkflowByOrganizationId: listWorkflowSummaryByOrganizationId,
     listWorkflowSummaryByOrganizationId,
+    listWorkflowSummaryPageByOrganizationId,
     getWorkflowById,
     saveWorkflow,
     deleteWorkflow,

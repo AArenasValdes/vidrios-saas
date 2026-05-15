@@ -47,11 +47,10 @@ export default async function PresupuestoPublicoPage({
   let loadError: string | null = null;
 
   try {
-    const [, resolvedQuote] = await Promise.all([
-      publicCotizacionApprovalService.markViewed(token),
-      publicCotizacionApprovalService.resolveByToken(token),
-    ]);
-    quote = resolvedQuote;
+    quote = await publicCotizacionApprovalService.resolveByToken(token);
+    void publicCotizacionApprovalService.markViewed(token).catch(() => {
+      return null;
+    });
   } catch (error) {
     console.error("No pudimos resolver el presupuesto publico.", error);
     loadError = "No pudimos validar este presupuesto en este momento.";

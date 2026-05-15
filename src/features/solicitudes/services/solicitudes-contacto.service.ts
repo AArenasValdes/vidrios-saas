@@ -96,6 +96,45 @@ export interface SolicitudesContactoService {
   listSolicitudesResumenByOrganizationId(
     organizationId: string | number
   ): Promise<SolicitudContacto[]>;
+  listSolicitudesResumenPage(options: {
+    page: number;
+    pageSize: number;
+    estado?: EstadoSolicitudContacto | null;
+    search?: string | null;
+  }): Promise<{
+    solicitudes: SolicitudContacto[];
+    totalCount: number;
+    hasMore: boolean;
+    page: number;
+    pageSize: number;
+  }>;
+  listSolicitudesResumenPageByOrganizationId(
+    organizationId: string | number,
+    options: {
+      page: number;
+      pageSize: number;
+      estado?: EstadoSolicitudContacto | null;
+      search?: string | null;
+    }
+  ): Promise<{
+    solicitudes: SolicitudContacto[];
+    totalCount: number;
+    hasMore: boolean;
+    page: number;
+    pageSize: number;
+  }>;
+  getSolicitudesResumenGlobal(): Promise<{
+    total: number;
+    hoy: number;
+    counts: Record<EstadoSolicitudContacto, number>;
+  }>;
+  getSolicitudesResumenGlobalByOrganizationId(
+    organizationId: string | number
+  ): Promise<{
+    total: number;
+    hoy: number;
+    counts: Record<EstadoSolicitudContacto, number>;
+  }>;
   getPublicRequestConfig(slug: string): Promise<SolicitudEmpresaPublicaConfig | null>;
   createSolicitud(input: CrearSolicitudContactoInput): Promise<SolicitudContacto>;
   createPublicRequest(input: CrearSolicitudEmpresaInput): Promise<SolicitudContacto>;
@@ -131,6 +170,22 @@ export function createSolicitudesContactoService(
 
     async listSolicitudesResumenByOrganizationId(organizationId: string | number) {
       return repository.listResumenByOrganizationId(organizationId);
+    },
+
+    async listSolicitudesResumenPage(options) {
+      return repository.listResumenPage(options);
+    },
+
+    async listSolicitudesResumenPageByOrganizationId(organizationId, options) {
+      return repository.listResumenPageByOrganizationId(organizationId, options);
+    },
+
+    async getSolicitudesResumenGlobal() {
+      return repository.getResumenGlobal();
+    },
+
+    async getSolicitudesResumenGlobalByOrganizationId(organizationId) {
+      return repository.getResumenGlobalByOrganizationId(organizationId);
     },
 
     async getPublicRequestConfig(slug: string) {

@@ -209,8 +209,13 @@ type RefreshCotizacionesOptions = {
   includeClientes?: boolean;
 };
 
-export function useCotizacionesStore() {
+type UseCotizacionesStoreOptions = {
+  autoLoadSummary?: boolean;
+};
+
+export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) {
   const { organizacionId, cargando } = useAuth();
+  const autoLoadSummary = options.autoLoadSummary ?? true;
   const initialStateRef = useRef(readInitialCotizacionesState(organizacionId));
   const [cotizaciones, setCotizaciones] = useState<CotizacionWorkflowRecord[]>(
     initialStateRef.current.cotizaciones
@@ -471,8 +476,14 @@ export function useCotizacionesStore() {
       }
     }
 
-    void refreshCotizaciones({ includeClientes: false });
-  }, [cargando, organizacionId, refreshCotizaciones]);
+    if (autoLoadSummary) {
+      void refreshCotizaciones({ includeClientes: false });
+      return;
+    }
+
+    setIsRefreshing(false);
+    setIsReady(true);
+  }, [autoLoadSummary, cargando, organizacionId, refreshCotizaciones]);
 
   useEffect(() => {
     isMountedRef.current = true;

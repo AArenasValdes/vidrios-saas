@@ -21,8 +21,30 @@ function buildTiming(totalMs: number, authMs: number, profileMs: number, dataMs:
   ].join(", ");
 }
 
-export async function GET() {
+function parsePositiveInt(
+  value: string | null,
+  fallback: number,
+  max = 50
+) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.min(Math.floor(parsed), max);
+}
+
+export async function GET(request: Request) {
   const startedAt = performance.now();
+  const url = new URL(request.url);
+  const page = parsePositiveInt(url.searchParams.get("page"), 1);
+  const pageSize = parsePositiveInt(url.searchParams.get("pageSize"), 25);
+  const estado = url.searchParams.get("estado");
+  const clienteNombre = url.searchParams.get("cliente");
+  const period = url.searchParams.get("period");
+  const order = url.searchParams.get("order");
+  const search = url.searchParams.get("search");
   const supabase = await createServerSupabaseClient();
   let authReadyAt = startedAt;
   let organizationId: string | number | null = null;
@@ -55,8 +77,25 @@ export async function GET() {
         clientFactory: supabase as never,
       }),
     });
-    const cotizaciones = await cotizacionesService.listWorkflowSummaryByOrganizationId(
-      organizationId as string | number
+    const payload = await cotizacionesService.listWorkflowSummaryPageByOrganizationId(
+      organizationId as string | number,
+      {
+        page,
+        pageSize,
+        estado: estado && estado !== "Todos" ? estado.toLowerCase() : null,
+        clienteNombre: clienteNombre && clienteNombre !== "Todos" ? clienteNombre : null,
+        period:
+          period === "this_month" ||
+          period === "last_month" ||
+          period === "last_90_days"
+            ? period
+            : "all",
+        order:
+          order === "total_desc" || order === "codigo_desc" || order === "estado"
+            ? order
+            : "updated_desc",
+        search: search?.trim() ?? null,
+      }
     );
     const dataReadyAt = performance.now();
     const totalMs = Math.round(dataReadyAt - startedAt);
@@ -65,7 +104,7 @@ export async function GET() {
     const dataMs = Math.round(dataReadyAt - profileReadyAt);
 
     return NextResponse.json(
-      { cotizaciones },
+      payload,
       {
         headers: {
           "Server-Timing": buildTiming(totalMs, authMs, profileMs, dataMs),

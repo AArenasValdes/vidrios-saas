@@ -26,7 +26,7 @@ export default function CotizacionDetallePage() {
     isReady,
     isSaving,
     deleteWorkflow,
-  } = useCotizacionesStore();
+  } = useCotizacionesStore({ autoLoadSummary: false });
   const cotizacion = getCotizacionById(params.id);
   const printUrl = `/print/cotizaciones/${params.id}`;
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);

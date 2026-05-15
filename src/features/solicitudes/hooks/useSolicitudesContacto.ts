@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getSolicitudesResumen } from "@/features/solicitudes/services/solicitudes-summary.service";
+import {
+  getSolicitudesResumen,
+  type SolicitudesResumenPage,
+  type SolicitudesResumenGlobal,
+} from "@/features/solicitudes/services/solicitudes-summary.service";
 import type {
   EstadoSolicitudContacto,
   SolicitudContacto,
@@ -18,27 +22,40 @@ function getErrorMessage(error: unknown) {
 
 const STORAGE_KEY_PREFIX = "vidrios-saas:solicitudes";
 
-type SolicitudesCachePayload = {
-  solicitudes: SolicitudContacto[];
-};
+type SolicitudesCachePayload = SolicitudesResumenPage;
 
 type SolicitudesCacheEntry = {
   cacheKey: string;
-  solicitudes: SolicitudContacto[];
+  page: SolicitudesResumenPage;
+};
+
+type UseSolicitudesContactoOptions = {
+  pageSize?: number;
+  estado?: EstadoSolicitudContacto | "all";
+  search?: string;
 };
 
 const solicitudesCache = new Map<string, SolicitudesCacheEntry>();
-const solicitudesPromiseByKey = new Map<string, Promise<SolicitudContacto[]>>();
+const solicitudesPromiseByKey = new Map<string, Promise<SolicitudesResumenPage>>();
 
 function buildSolicitudesStorageKey(cacheKey: string) {
   return `${STORAGE_KEY_PREFIX}:${cacheKey}`;
 }
 
-function readSolicitudesCache(cacheKey: string) {
-  const warmCache = solicitudesCache.get(cacheKey);
+function buildQueryKey(cacheKey: string, options: UseSolicitudesContactoOptions) {
+  return [
+    cacheKey,
+    options.pageSize ?? 25,
+    options.estado ?? "all",
+    options.search?.trim().toLowerCase() ?? "",
+  ].join(":");
+}
+
+function readSolicitudesCache(queryKey: string) {
+  const warmCache = solicitudesCache.get(queryKey);
 
   if (warmCache) {
-    return warmCache.solicitudes;
+    return warmCache.page;
   }
 
   if (typeof window === "undefined") {
@@ -46,7 +63,7 @@ function readSolicitudesCache(cacheKey: string) {
   }
 
   try {
-    const raw = window.sessionStorage.getItem(buildSolicitudesStorageKey(cacheKey));
+    const raw = window.sessionStorage.getItem(buildSolicitudesStorageKey(queryKey));
 
     if (!raw) {
       return null;
@@ -58,21 +75,21 @@ function readSolicitudesCache(cacheKey: string) {
       return null;
     }
 
-    solicitudesCache.set(cacheKey, {
-      cacheKey,
-      solicitudes: parsed.solicitudes,
+    solicitudesCache.set(queryKey, {
+      cacheKey: queryKey,
+      page: parsed,
     });
 
-    return parsed.solicitudes;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-function persistSolicitudesCache(cacheKey: string, solicitudes: SolicitudContacto[]) {
-  solicitudesCache.set(cacheKey, {
-    cacheKey,
-    solicitudes,
+function persistSolicitudesCache(queryKey: string, page: SolicitudesResumenPage) {
+  solicitudesCache.set(queryKey, {
+    cacheKey: queryKey,
+    page,
   });
 
   if (typeof window === "undefined") {
@@ -81,65 +98,138 @@ function persistSolicitudesCache(cacheKey: string, solicitudes: SolicitudContact
 
   try {
     window.sessionStorage.setItem(
-      buildSolicitudesStorageKey(cacheKey),
-      JSON.stringify({ solicitudes } satisfies SolicitudesCachePayload)
+      buildSolicitudesStorageKey(queryKey),
+      JSON.stringify(page satisfies SolicitudesCachePayload)
     );
   } catch {
     return;
   }
 }
 
-function clearSolicitudesCache(cacheKey: string) {
-  solicitudesCache.delete(cacheKey);
+function clearSolicitudesCache(queryKey: string) {
+  solicitudesCache.delete(queryKey);
 
   if (typeof window === "undefined") {
     return;
   }
 
   try {
-    window.sessionStorage.removeItem(buildSolicitudesStorageKey(cacheKey));
+    window.sessionStorage.removeItem(buildSolicitudesStorageKey(queryKey));
   } catch {
     return;
   }
 }
 
-export function useSolicitudesContacto(enabled = true, cacheKey = "default") {
-  const [solicitudes, setSolicitudes] = useState<SolicitudContacto[]>(() => {
-    return readSolicitudesCache(cacheKey) ?? [];
-  });
-  const [isReady, setIsReady] = useState(() => {
-    return Boolean(readSolicitudesCache(cacheKey));
-  });
+function scheduleIdleRefresh(callback: () => void) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = globalThis as Window &
+    typeof globalThis & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const handle = browserWindow.requestIdleCallback(callback, { timeout: 1500 });
+    return () => browserWindow.cancelIdleCallback?.(handle);
+  }
+
+  const timer = globalThis.setTimeout(callback, 900);
+  return () => globalThis.clearTimeout(timer);
+}
+
+export function useSolicitudesContacto(
+  enabled = true,
+  cacheKey = "default",
+  options: UseSolicitudesContactoOptions = {}
+) {
+  const queryKey = useMemo(
+    () => buildQueryKey(cacheKey, options),
+    [cacheKey, options.estado, options.pageSize, options.search]
+  );
+  const cachedPage = useMemo(() => readSolicitudesCache(queryKey), [queryKey]);
+  const [solicitudes, setSolicitudes] = useState<SolicitudContacto[]>(
+    () => cachedPage?.solicitudes ?? []
+  );
+  const [isReady, setIsReady] = useState(() => Boolean(cachedPage));
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(() => cachedPage?.page ?? 1);
+  const [pageSize] = useState(options.pageSize ?? 25);
+  const [totalCount, setTotalCount] = useState(() => cachedPage?.totalCount ?? 0);
+  const [hasMore, setHasMore] = useState(() => cachedPage?.hasMore ?? false);
+  const [summary, setSummary] = useState<SolicitudesResumenGlobal>(() =>
+    cachedPage?.summary ?? {
+      total: 0,
+      hoy: 0,
+      counts: {
+        nueva: 0,
+        contactada: 0,
+        cerrada: 0,
+        descartada: 0,
+      },
+    }
+  );
 
-  const loadSolicitudes = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      setError(null);
+  const loadSolicitudes = useCallback(
+    async (targetPage = 1, mode: "replace" | "append" = "replace") => {
+      try {
+        if (mode === "append") {
+          setIsLoadingMore(true);
+        } else {
+          setIsRefreshing(true);
+        }
+        setError(null);
 
-      const inFlightPromise = solicitudesPromiseByKey.get(cacheKey);
-      const dataPromise =
-        inFlightPromise ??
-        getSolicitudesResumen()
-          .finally(() => {
-            solicitudesPromiseByKey.delete(cacheKey);
+        const requestKey = `${queryKey}:page:${targetPage}`;
+        const inFlightPromise = solicitudesPromiseByKey.get(requestKey);
+        const dataPromise =
+          inFlightPromise ??
+          getSolicitudesResumen({
+            page: targetPage,
+            pageSize,
+            estado: options.estado,
+            search: options.search,
+          }).finally(() => {
+            solicitudesPromiseByKey.delete(requestKey);
           });
 
-      if (!inFlightPromise) {
-        solicitudesPromiseByKey.set(cacheKey, dataPromise);
-      }
+        if (!inFlightPromise) {
+          solicitudesPromiseByKey.set(requestKey, dataPromise);
+        }
 
-      const nextSolicitudes = await dataPromise;
-      setSolicitudes(nextSolicitudes);
-      persistSolicitudesCache(cacheKey, nextSolicitudes);
-    } catch (nextError) {
-      setError(getErrorMessage(nextError));
-    } finally {
-      setIsRefreshing(false);
-      setIsReady(true);
-    }
-  }, [cacheKey]);
+        const nextPage = await dataPromise;
+        const nextSolicitudes =
+          mode === "append"
+            ? [...solicitudes, ...nextPage.solicitudes.filter((item) => !solicitudes.some((current) => current.id === item.id))]
+            : nextPage.solicitudes;
+
+        setSolicitudes(nextSolicitudes);
+        setPage(nextPage.page);
+        setTotalCount(nextPage.totalCount);
+        setHasMore(nextPage.hasMore);
+        setSummary(nextPage.summary);
+        persistSolicitudesCache(queryKey, {
+          ...nextPage,
+          solicitudes: nextSolicitudes,
+        });
+      } catch (nextError) {
+        setError(getErrorMessage(nextError));
+      } finally {
+        setIsLoadingMore(false);
+        setIsRefreshing(false);
+        setIsReady(true);
+      }
+    },
+    [options.estado, options.search, pageSize, queryKey, solicitudes]
+  );
 
   const updateSolicitudEstado = useCallback(
     async (id: string, estado: EstadoSolicitudContacto) => {
@@ -177,53 +267,118 @@ export function useSolicitudesContacto(enabled = true, cacheKey = "default") {
           );
         }
 
-        setSolicitudes((current) =>
-          current.map((solicitud) =>
-            solicitud.id === id ? payload.solicitud! : solicitud
-          )
+        const nextSolicitudes = previous.map((solicitud) =>
+          solicitud.id === id ? payload.solicitud! : solicitud
         );
-        persistSolicitudesCache(
-          cacheKey,
-          previous.map((solicitud) =>
-            solicitud.id === id ? payload.solicitud! : solicitud
-          )
-        );
+        const previousState = previous.find((solicitud) => solicitud.id === id)?.estado ?? null;
+        const nextSummary =
+          previousState && previousState !== estado
+            ? {
+                ...summary,
+                counts: {
+                  ...summary.counts,
+                  [previousState]: Math.max(0, summary.counts[previousState] - 1),
+                  [estado]: summary.counts[estado] + 1,
+                },
+              }
+            : summary;
+
+        setSolicitudes(nextSolicitudes);
+        setSummary(nextSummary);
+        persistSolicitudesCache(queryKey, {
+          solicitudes: nextSolicitudes,
+          totalCount,
+          hasMore,
+          page,
+          pageSize,
+          summary: nextSummary,
+        });
       } catch (nextError) {
         setSolicitudes(previous);
-        persistSolicitudesCache(cacheKey, previous);
+        persistSolicitudesCache(queryKey, {
+          solicitudes: previous,
+          totalCount,
+          hasMore,
+          page,
+          pageSize,
+          summary,
+        });
         setError(getErrorMessage(nextError));
         throw nextError;
       }
     },
-    [cacheKey, solicitudes]
+    [hasMore, page, pageSize, queryKey, solicitudes, summary, totalCount]
   );
 
   useEffect(() => {
     if (!enabled) {
       setSolicitudes([]);
       setIsRefreshing(false);
+      setIsLoadingMore(false);
       setIsReady(true);
       setError(null);
-      clearSolicitudesCache(cacheKey);
+      setPage(1);
+      setTotalCount(0);
+      setHasMore(false);
+      clearSolicitudesCache(queryKey);
       return;
     }
 
-    const cachedSolicitudes = readSolicitudesCache(cacheKey);
+    const currentCachedPage = readSolicitudesCache(queryKey);
 
-    if (cachedSolicitudes) {
-      setSolicitudes(cachedSolicitudes);
+    if (currentCachedPage) {
+      setSolicitudes(currentCachedPage.solicitudes);
+      setPage(currentCachedPage.page);
+      setTotalCount(currentCachedPage.totalCount);
+      setHasMore(currentCachedPage.hasMore);
+      setSummary(currentCachedPage.summary);
       setIsReady(true);
+      const cleanup = scheduleIdleRefresh(() => {
+        void loadSolicitudes(1, "replace");
+      });
+
+      return cleanup;
     }
 
-    void loadSolicitudes();
-  }, [cacheKey, enabled, loadSolicitudes]);
+    setSolicitudes([]);
+    setPage(1);
+    setTotalCount(0);
+    setHasMore(false);
+    setSummary({
+      total: 0,
+      hoy: 0,
+      counts: {
+        nueva: 0,
+        contactada: 0,
+        cerrada: 0,
+        descartada: 0,
+      },
+    });
+    setIsReady(false);
+    void loadSolicitudes(1, "replace");
+  }, [enabled, loadSolicitudes, queryKey]);
+
+  const loadMoreSolicitudes = useCallback(async () => {
+    if (!hasMore || isLoadingMore || isRefreshing) {
+      return;
+    }
+
+    await loadSolicitudes(page + 1, "append");
+  }, [hasMore, isLoadingMore, isRefreshing, loadSolicitudes, page]);
 
   return {
     solicitudes,
     isReady,
     isRefreshing,
+    isLoadingMore,
     error,
-    refreshSolicitudes: loadSolicitudes,
+    page,
+    pageSize,
+    totalCount,
+    hasMore,
+    summary,
+    refreshSolicitudes: () => loadSolicitudes(1, "replace"),
+    loadMoreSolicitudes,
     updateSolicitudEstado,
   };
 }

@@ -129,6 +129,25 @@ type CotizacionesDashboardFilter = {
   respondedOnly?: boolean;
 };
 
+type CotizacionesResumenPageOptions = {
+  page: number;
+  pageSize: number;
+  estado?: string | null;
+  period?: "all" | "this_month" | "last_month" | "last_90_days";
+  order?: "updated_desc" | "total_desc" | "codigo_desc" | "estado";
+  search?: string | null;
+  allowedProjectIds?: EntityId[] | null;
+  searchProjectIds?: EntityId[] | null;
+};
+
+type CotizacionesResumenPageResult = {
+  cotizaciones: Cotizacion[];
+  totalCount: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+};
+
 type HydrateCotizacionOptions = {
   includeBreakdown?: boolean;
 };
@@ -928,6 +947,134 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     );
   }
 
+  async function listCotizacionesPageBase(
+    organizationId: EntityId,
+    options: CotizacionesResumenPageOptions
+  ): Promise<CotizacionesResumenPageResult> {
+    const page = Math.max(1, options.page);
+    const pageSize = Math.max(1, Math.min(50, options.pageSize));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    const normalizedSearch = options.search?.trim() ?? "";
+    const normalizedOrder = options.order ?? "updated_desc";
+    const normalizedPeriod = options.period ?? "all";
+
+    const applyFilters = (query: any) => {
+      let nextQuery = query
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null);
+
+      if (options.estado) {
+        nextQuery = nextQuery.eq("estado", options.estado);
+      }
+
+      if (options.allowedProjectIds?.length) {
+        nextQuery = nextQuery.in("proyecto_id", options.allowedProjectIds);
+      }
+
+      if (normalizedPeriod !== "all") {
+        const now = new Date();
+        let fromDate: Date | null = null;
+        let toDate: Date | null = null;
+
+        if (normalizedPeriod === "this_month") {
+          fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          toDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        } else if (normalizedPeriod === "last_month") {
+          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          toDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        } else if (normalizedPeriod === "last_90_days") {
+          fromDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        }
+
+        if (fromDate) {
+          nextQuery = nextQuery.gte("actualizado_en", fromDate.toISOString());
+        }
+
+        if (toDate) {
+          nextQuery = nextQuery.lt("actualizado_en", toDate.toISOString());
+        }
+      }
+
+      if (normalizedSearch) {
+        const safeSearch = normalizedSearch.replace(/,/g, " ").replace(/\./g, " ");
+        if (options.searchProjectIds?.length) {
+          nextQuery = nextQuery.or(
+            `numero.ilike.%${safeSearch}%,proyecto_id.in.(${options.searchProjectIds.join(",")})`
+          );
+        } else {
+          nextQuery = nextQuery.ilike("numero", `%${safeSearch}%`);
+        }
+      }
+
+      if (normalizedOrder === "total_desc") {
+        nextQuery = nextQuery.order("total", { ascending: false });
+      } else if (normalizedOrder === "codigo_desc") {
+        nextQuery = nextQuery.order("numero", { ascending: false });
+      } else if (normalizedOrder === "estado") {
+        nextQuery = nextQuery
+          .order("estado", { ascending: true })
+          .order("actualizado_en", { ascending: false });
+      } else {
+        nextQuery = nextQuery.order("actualizado_en", { ascending: false });
+      }
+
+      return nextQuery.range(from, to);
+    };
+
+    let query = applyFilters(
+      supabase.from("cotizaciones").select(COTIZACION_LIST_SELECT, { count: "exact" })
+    );
+    const { data, error, count } = await query;
+
+    if (!error) {
+      const rows = ((data as CotizacionRow[]) ?? []).map(mapCotizacion);
+      return {
+        cotizaciones: rows,
+        totalCount: count ?? rows.length,
+        hasMore: from + rows.length < (count ?? rows.length),
+        page,
+        pageSize,
+      };
+    }
+
+    if (!isMissingApprovalFieldsError(error)) {
+      throw error;
+    }
+
+    const legacyQuery = applyFilters(
+      supabase
+        .from("cotizaciones")
+        .select(COTIZACION_LIST_SELECT_LEGACY, { count: "exact" })
+    );
+    const {
+      data: legacyData,
+      error: legacyError,
+      count: legacyCount,
+    } = await legacyQuery;
+
+    if (legacyError) {
+      throw legacyError;
+    }
+
+    const rows = (((legacyData as CotizacionRow[]) ?? []).map((row) => ({
+      ...row,
+      approval_token: null,
+      approval_token_expires_at: null,
+      cliente_vio_en: null,
+      cliente_respondio_en: null,
+      cliente_respuesta_canal: null,
+    })) as CotizacionRow[]).map(mapCotizacion);
+
+    return {
+      cotizaciones: rows,
+      totalCount: legacyCount ?? rows.length,
+      hasMore: from + rows.length < (legacyCount ?? rows.length),
+      page,
+      pageSize,
+    };
+  }
+
   async function listDashboardAlertCandidatesBase(
     organizationId: EntityId,
     recentResponseDays = 21
@@ -1026,6 +1173,13 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       const rows = await listCotizacionesBase(organizationId);
 
       return rows.map(mapCotizacion);
+    },
+
+    async listPageByOrganizationId(
+      organizationId: EntityId,
+      options: CotizacionesResumenPageOptions
+    ) {
+      return listCotizacionesPageBase(organizationId, options);
     },
 
     async listRecentByOrganizationId(organizationId: EntityId, limit = 50) {
@@ -1443,6 +1597,9 @@ function getDefaultCotizacionesRepository() {
 export const cotizacionesRepository: CotizacionesRepository = {
   listByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listByOrganizationId(...args);
+  },
+  listPageByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().listPageByOrganizationId(...args);
   },
   listRecentByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listRecentByOrganizationId(...args);

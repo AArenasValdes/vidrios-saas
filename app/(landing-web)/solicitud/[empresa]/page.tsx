@@ -13,14 +13,16 @@ import {
   LuStar,
 } from "react-icons/lu";
 
-import { getPublicGalleryByOrganizationId } from "@/features/landing-gallery/repositories/landing-gallery-server.repository";
 import {
   formatDiasAtencionLabel,
   formatHorarioPorDiaLabel,
   hexToRgbChannels,
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
-import { solicitudesContactoService } from "@/features/solicitudes/services/solicitudes-contacto.service";
+import {
+  getCachedPublicGalleryByOrganizationId,
+  getCachedPublicRequestConfig,
+} from "@/features/solicitudes/services/solicitudes-public-cache.server";
 import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
 import { SolicitudEmpresaForm } from "./solicitud-empresa-form";
@@ -100,7 +102,7 @@ export default async function SolicitudEmpresaPage({
 }: PageProps) {
   const { empresa } = await params;
   const sp = await searchParams;
-  const config = await solicitudesContactoService.getPublicRequestConfig(empresa);
+  const config = await getCachedPublicRequestConfig(empresa);
 
   if (!config) {
     notFound();
@@ -158,7 +160,7 @@ export default async function SolicitudEmpresaPage({
   let galleryImages: { src: string; label: string }[] = [];
 
   if (showGallery && config.isPublished) {
-    const realGallery = await getPublicGalleryByOrganizationId(
+    const realGallery = await getCachedPublicGalleryByOrganizationId(
       config.organizationId as number
     );
 

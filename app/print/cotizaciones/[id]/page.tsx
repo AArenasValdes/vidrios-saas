@@ -11,15 +11,9 @@ import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizacio
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
-import {
-  buildCotizacionPdfFileName,
-  downloadPdfBlob,
-  exportCotizacionElementToPdf,
-  formatCotizacionPdfError,
-  requiresPdfOpenFallback,
-} from "@/utils/cotizacion-pdf";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -35,6 +29,7 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 });
 
 const CLP = (value: number) => clpFormatter.format(value);
+type CotizacionPdfModule = typeof import("@/utils/cotizacion-pdf");
 
 function resolvePrintRuntimeMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
@@ -107,6 +102,18 @@ function formatSurface(ancho: number | null, alto: number | null, cantidad: numb
 
 function formatPageNumber(current: number, total: number) {
   return `${String(current).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
+}
+
+async function loadCotizacionPdfModule(): Promise<CotizacionPdfModule> {
+  return import("@/utils/cotizacion-pdf");
+}
+
+function buildPrintPdfFileName(record: {
+  codigo: string;
+  obra: string;
+}) {
+  const obra = sanitizeFileNamePart(record.obra) || "proyecto";
+  return `${record.codigo.toLowerCase()}-${obra}.pdf`;
 }
 
 function formatDueDate(baseDateValue: string, validez: string) {
@@ -302,7 +309,7 @@ export default function CotizacionPrintPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const { getCotizacionById, loadCotizacionById, markQuoteAsSent, isReady } =
-    useCotizacionesStore();
+    useCotizacionesStore({ autoLoadSummary: false });
   const { profile: rawOrganizationProfile, isReady: isProfileReady } = useOrganizationProfile();
   const cotizacion = getCotizacionById(params.id);
   const renderableCotizacion = cotizacion && cotizacion.items.length > 0 ? cotizacion : null;
@@ -456,7 +463,7 @@ export default function CotizacionPrintPage() {
     "--carbon": "#111827",
   } as CSSProperties;
 
-  const exportFileName = visibleCotizacion ? buildCotizacionPdfFileName(visibleCotizacion) : "cotizacion.pdf";
+  const exportFileName = visibleCotizacion ? buildPrintPdfFileName(visibleCotizacion) : "cotizacion.pdf";
   const pdfCacheKey = visibleCotizacion
     ? `${visibleCotizacion.id}:${visibleCotizacion.updatedAt}:${organizationProfile.brandColor}`
     : null;
@@ -585,6 +592,7 @@ export default function CotizacionPrintPage() {
           throw new Error("La hoja de impresion ya no esta disponible para exportar");
         }
 
+        const { exportCotizacionElementToPdf } = await loadCotizacionPdfModule();
         const result = await exportCotizacionElementToPdf({
           element: sourceSheet,
           fileName: exportFileName,
@@ -669,6 +677,8 @@ export default function CotizacionPrintPage() {
       setExportError(null);
       setShowWhatsappFallbackActions(false);
       const { blob } = await buildPdfFile();
+      const { downloadPdfBlob, requiresPdfOpenFallback } =
+        await loadCotizacionPdfModule();
       const downloadResult = downloadPdfBlob(blob, exportFileName);
 
       if (downloadResult === "failed") {
@@ -685,6 +695,7 @@ export default function CotizacionPrintPage() {
         );
       }
     } catch (error) {
+      const { formatCotizacionPdfError } = await loadCotizacionPdfModule();
       setExportError(formatCotizacionPdfError(error));
     } finally {
       setIsExporting(false);
@@ -716,6 +727,7 @@ export default function CotizacionPrintPage() {
       markQuoteAsSentInBackground();
     } catch (error) {
       setShowWhatsappFallbackActions(true);
+      const { formatCotizacionPdfError } = await loadCotizacionPdfModule();
       setExportError(formatCotizacionPdfError(error));
     } finally {
       setIsExporting(false);

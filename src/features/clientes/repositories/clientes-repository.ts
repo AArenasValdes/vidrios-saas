@@ -130,6 +130,53 @@ export function createClientesRepository(
       return (data as ClienteRow[]).map(mapCliente);
     },
 
+    async searchIdsByNombre(
+      organizationId: EntityId,
+      query: string,
+      limit = 50
+    ) {
+      const normalized = query.trim();
+
+      if (!normalized) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .ilike("nombre", `%${normalized}%`)
+        .limit(limit);
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as Array<{ id: EntityId }> | null) ?? []).map((row) => row.id);
+    },
+
+    async listIdsByExactNombre(organizationId: EntityId, nombre: string) {
+      const normalized = nombre.trim();
+
+      if (!normalized) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .eq("nombre", normalized);
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data as Array<{ id: EntityId }> | null) ?? []).map((row) => row.id);
+    },
+
     async getById(id: EntityId, organizationId: EntityId) {
       const { data, error } = await supabase
         .from("clients")
@@ -270,6 +317,12 @@ export const clientesRepository: ClientesRepository = {
   },
   listByIds(...args) {
     return getDefaultClientesRepository().listByIds(...args);
+  },
+  searchIdsByNombre(...args) {
+    return getDefaultClientesRepository().searchIdsByNombre(...args);
+  },
+  listIdsByExactNombre(...args) {
+    return getDefaultClientesRepository().listIdsByExactNombre(...args);
   },
   getById(...args) {
     return getDefaultClientesRepository().getById(...args);

@@ -66,6 +66,30 @@ function persistDashboardSummary(
   }
 }
 
+function scheduleIdleRefresh(callback: () => void) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = globalThis as Window &
+    typeof globalThis & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const handle = browserWindow.requestIdleCallback(callback, { timeout: 1500 });
+    return () => browserWindow.cancelIdleCallback?.(handle);
+  }
+
+  const timer = globalThis.setTimeout(callback, 900);
+  return () => globalThis.clearTimeout(timer);
+}
+
 function readInitialDashboardSummaryState(
   organizationId: string | number | null | undefined
 ): DashboardSummaryState {
@@ -205,16 +229,30 @@ export function useDashboardSummary(organizationId: string | number | null | und
       lastOrganizationIdRef.current = organizationKey;
     }
 
-    queueMicrotask(() => {
-      if (organizationChanged && isMountedRef.current) {
-        setState(readInitialDashboardSummaryState(organizationId));
-      }
+    const hasWarmState =
+      organizationKey !== null &&
+      (dashboardSummaryCache.has(organizationKey) ||
+        Boolean(readDashboardSummaryFromStorage(organizationKey)));
 
-      void refresh();
-    });
+    if (organizationChanged && isMountedRef.current) {
+      setState(readInitialDashboardSummaryState(organizationId));
+    }
+
+    const cleanup = hasWarmState
+      ? scheduleIdleRefresh(() => {
+          void refresh();
+        })
+      : (() => {
+          queueMicrotask(() => {
+            void refresh();
+          });
+
+          return () => undefined;
+        })();
 
     return () => {
       isMountedRef.current = false;
+      cleanup();
     };
   }, [organizationId, refresh]);
 
