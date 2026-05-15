@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
+  LuBlocks,
   LuChevronDown,
   LuChevronUp,
   LuCheck,
@@ -14,26 +15,34 @@ import {
   LuImagePlus,
   LuMessageSquare,
   LuPalette,
+  LuPhone,
   LuSave,
+  LuStar,
   LuToggleLeft,
   LuTrash2,
   LuX,
 } from "react-icons/lu";
 
 import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGallery";
+import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildDefaultSolicitudPublicaHorarioPorDia,
   DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION,
+  DEFAULT_FINAL_CTA_LABEL,
+  DEFAULT_FINAL_CTA_SUBTITLE,
+  DEFAULT_FINAL_CTA_TITLE,
   DEFAULT_FORM_SUBTITLE,
   DEFAULT_FORM_TITLE,
   DEFAULT_HERO_TITLE,
   DEFAULT_SECONDARY_COLOR,
   extractLegacyHorarioFields,
   formatHorarioPorDiaLabel,
+  PUBLIC_LANDING_SERVICE_OPTIONS,
 } from "@/features/organization-profile/services/organization-profile.service";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import type {
+  PublicLandingService,
   PublicScheduleDay,
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
@@ -83,6 +92,15 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   publicSubtitle: "",
   publicZone: "",
   publicBusinessType: "",
+  instagramUrl: "",
+  facebookUrl: "",
+  tiktokUrl: "",
+  websiteUrl: "",
+  publicServices: [],
+  finalCtaTitle: DEFAULT_FINAL_CTA_TITLE,
+  finalCtaSubtitle: DEFAULT_FINAL_CTA_SUBTITLE,
+  finalCtaLabel: DEFAULT_FINAL_CTA_LABEL,
+  businessHoursNote: "",
   secondaryColor: DEFAULT_SECONDARY_COLOR,
   heroMode: "gradient",
   heroImageUrl: null,
@@ -98,7 +116,43 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   isPublished: false,
 };
 
-type ActiveSection = "identidad" | "estilo" | "hero" | "galeria" | "formulario" | "publicacion";
+type ActiveSection =
+  | "identidad"
+  | "estilo"
+  | "hero"
+  | "servicios"
+  | "galeria"
+  | "redes"
+  | "formulario"
+  | "valoraciones"
+  | "publicacion";
+
+const SOCIAL_FIELDS: Array<{
+  key: "instagramUrl" | "facebookUrl" | "tiktokUrl" | "websiteUrl";
+  label: string;
+  placeholder: string;
+}> = [
+  {
+    key: "instagramUrl",
+    label: "Instagram",
+    placeholder: "https://instagram.com/tuempresa",
+  },
+  {
+    key: "facebookUrl",
+    label: "Facebook",
+    placeholder: "https://facebook.com/tuempresa",
+  },
+  {
+    key: "tiktokUrl",
+    label: "TikTok",
+    placeholder: "https://tiktok.com/@tuempresa",
+  },
+  {
+    key: "websiteUrl",
+    label: "Sitio web",
+    placeholder: "https://tuempresa.cl",
+  },
+];
 
 const SCHEDULE_GROUPS: Array<{
   key: string;
@@ -120,6 +174,11 @@ export default function PaginaVentaPage() {
     updateImage,
     deleteImage,
   } = useLandingGallery();
+  const {
+    testimonials,
+    isLoading: isLoadingTestimonials,
+    updateStatus: updateTestimonialStatus,
+  } = usePublicLandingTestimonials();
 
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -156,6 +215,15 @@ export default function PaginaVentaPage() {
       publicSubtitle: profile.publicSubtitle,
       publicZone: profile.publicZone,
       publicBusinessType: profile.publicBusinessType,
+      instagramUrl: profile.instagramUrl,
+      facebookUrl: profile.facebookUrl,
+      tiktokUrl: profile.tiktokUrl,
+      websiteUrl: profile.websiteUrl,
+      publicServices: profile.publicServices,
+      finalCtaTitle: profile.finalCtaTitle,
+      finalCtaSubtitle: profile.finalCtaSubtitle,
+      finalCtaLabel: profile.finalCtaLabel,
+      businessHoursNote: profile.businessHoursNote,
       secondaryColor: profile.secondaryColor,
       heroMode: profile.heroMode,
       heroImageUrl: profile.heroImageUrl,
@@ -185,6 +253,65 @@ export default function PaginaVentaPage() {
     setForm((current) => ({ ...current, [key]: value }));
     setStatusMessage(null);
     setErrorMessage(null);
+  }
+
+  function handleServiceToggle(service: PublicLandingService) {
+    setForm((current) => {
+      const nextServices = current.publicServices.includes(service)
+        ? current.publicServices.filter((item) => item !== service)
+        : [...current.publicServices, service];
+
+      return {
+        ...current,
+        publicServices: nextServices,
+      };
+    });
+    setStatusMessage(null);
+    setErrorMessage(null);
+  }
+
+  async function handleGalleryMetadataChange(
+    item: typeof gallery[number],
+    patch: {
+      label?: string;
+      workTitle?: string;
+      workType?: string;
+      workZone?: string;
+      workBadge?: string;
+    }
+  ) {
+    try {
+      await updateImage(item.id, {
+        label: patch.label ?? item.label,
+        workTitle: patch.workTitle ?? item.workTitle,
+        workType: patch.workType ?? item.workType,
+        workZone: patch.workZone ?? item.workZone,
+        workBadge: patch.workBadge ?? item.workBadge,
+        isVisible: item.isVisible,
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la foto."
+      );
+    }
+  }
+
+  async function handleTestimonialStatusChange(
+    id: string | number,
+    estado: "pendiente" | "aprobada" | "oculta"
+  ) {
+    try {
+      await updateTestimonialStatus(id, estado);
+      setStatusMessage("Valoracion actualizada.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la valoracion."
+      );
+    }
   }
 
   function handleScheduleGroupToggle(days: readonly string[]) {
@@ -286,7 +413,12 @@ export default function PaginaVentaPage() {
     setErrorMessage(null);
 
     try {
-      await uploadAndAddImage(file, "");
+      await uploadAndAddImage(file, "", {
+        workTitle: "",
+        workType: "",
+        workZone: "",
+        workBadge: "",
+      });
       setStatusMessage("Foto agregada a la galeria.");
     } catch (error) {
       setErrorMessage(
@@ -330,6 +462,12 @@ export default function PaginaVentaPage() {
 
   const heroPreview = heroPreviewUrl ?? form.heroImageUrl;
   const scheduleSummary = formatHorarioPorDiaLabel(form.solicitudPublicaHorarioPorDia);
+  const approvedTestimonials = testimonials.filter(
+    (item) => item.estado === "aprobada"
+  );
+  const pendingTestimonials = testimonials.filter(
+    (item) => item.estado === "pendiente"
+  );
   const groupedSchedule = SCHEDULE_GROUPS.map((group) => {
     const entries = form.solicitudPublicaHorarioPorDia.filter((entry) =>
       group.days.includes(entry.day)
@@ -349,8 +487,11 @@ export default function PaginaVentaPage() {
     { key: "identidad", label: "Tu pagina", icon: LuGlobe },
     { key: "estilo", label: "Colores", icon: LuPalette },
     { key: "hero", label: "Portada", icon: LuImage },
+    { key: "servicios", label: "Servicios", icon: LuBlocks },
     { key: "galeria", label: "Trabajos", icon: LuImagePlus },
+    { key: "redes", label: "Redes", icon: LuPhone },
     { key: "formulario", label: "Formulario", icon: LuMessageSquare },
+    { key: "valoraciones", label: "Valoraciones", icon: LuStar },
     { key: "publicacion", label: "Publicar", icon: LuToggleLeft },
   ];
 
@@ -705,6 +846,114 @@ export default function PaginaVentaPage() {
           </section>
         ) : null}
 
+        {activeSection === "servicios" ? (
+          <section className={s.section}>
+            <div className={s.sectionTitle}>
+              <LuBlocks aria-hidden />
+              <span>Servicios y conversion</span>
+            </div>
+
+            <div className={s.card}>
+              <div className={s.field}>
+                <span className={s.label}>Servicios que realizas</span>
+                <span className={s.helpText}>
+                  El cliente vera solo lo que realmente ofreces.
+                </span>
+                <div className={s.serviceGrid}>
+                  {PUBLIC_LANDING_SERVICE_OPTIONS.map((service) => {
+                    const isActive = form.publicServices.includes(service);
+
+                    return (
+                      <button
+                        key={service}
+                        type="button"
+                        className={`${s.serviceChip} ${isActive ? s.serviceChipActive : ""}`}
+                        onClick={() => handleServiceToggle(service)}
+                        aria-pressed={isActive}
+                      >
+                        {service}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={s.divider} />
+
+              <label className={s.field}>
+                <span className={s.label}>Zona de cobertura</span>
+                <input
+                  className={s.input}
+                  value={form.publicZone}
+                  onChange={(e) => handleFieldChange("publicZone", e.target.value)}
+                  placeholder="Ej: La Serena, Coquimbo, Ovalle y alrededores"
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.label}>Horario o nota comercial</span>
+                <input
+                  className={s.input}
+                  value={form.businessHoursNote}
+                  onChange={(e) =>
+                    handleFieldChange("businessHoursNote", e.target.value)
+                  }
+                  placeholder="Ej: Atencion en terreno y visitas coordinadas"
+                />
+              </label>
+
+              <div className={s.divider} />
+
+              <label className={s.field}>
+                <span className={s.label}>Titulo CTA final</span>
+                <input
+                  className={s.input}
+                  value={form.finalCtaTitle}
+                  onChange={(e) => handleFieldChange("finalCtaTitle", e.target.value)}
+                  placeholder={DEFAULT_FINAL_CTA_TITLE}
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.label}>Bajada CTA final</span>
+                <textarea
+                  className={s.textarea}
+                  rows={3}
+                  value={form.finalCtaSubtitle}
+                  onChange={(e) =>
+                    handleFieldChange("finalCtaSubtitle", e.target.value)
+                  }
+                  placeholder={DEFAULT_FINAL_CTA_SUBTITLE}
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.label}>Boton CTA final</span>
+                <input
+                  className={s.input}
+                  value={form.finalCtaLabel}
+                  onChange={(e) => handleFieldChange("finalCtaLabel", e.target.value)}
+                  placeholder={DEFAULT_FINAL_CTA_LABEL}
+                />
+              </label>
+
+              {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
+              {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
+
+              <div className={s.sectionActions}>
+                <button
+                  className={s.saveButton}
+                  type="submit"
+                  disabled={isSaving || isUploadingHero}
+                >
+                  <LuSave aria-hidden />
+                  {isSaving ? "Guardando..." : "Guardar esta parte"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {activeSection === "galeria" ? (
           <section className={s.section}>
             <div className={s.sectionTitle}>
@@ -748,27 +997,69 @@ export default function PaginaVentaPage() {
                             unoptimized
                           />
                         </div>
-                        <div className={s.galleryItemFooter}>
+                        <div className={s.galleryItemMeta}>
                           <input
-                            className={s.galleryItemLabel}
-                            value={item.label}
-                            placeholder="Etiqueta"
-                      onChange={(e) =>
-                          void updateImage(
-                            item.id,
-                            e.target.value,
-                            item.isVisible
-                          )
-                        }
+                            className={s.galleryItemField}
+                            value={item.workTitle}
+                            placeholder="Titulo corto"
+                            onChange={(e) =>
+                              void handleGalleryMetadataChange(item, {
+                                workTitle: e.target.value,
+                              })
+                            }
                           />
-                          <button
-                            className={s.galleryItemDelete}
-                            type="button"
-                            onClick={() => void handleDeleteGalleryImage(item.id)}
-                            aria-label="Eliminar foto"
-                          >
-                            <LuTrash2 aria-hidden />
-                          </button>
+                          <input
+                            className={s.galleryItemField}
+                            value={item.workType}
+                            placeholder="Tipo de trabajo"
+                            onChange={(e) =>
+                              void handleGalleryMetadataChange(item, {
+                                workType: e.target.value,
+                              })
+                            }
+                          />
+                          <div className={s.galleryMetaRow}>
+                            <input
+                              className={s.galleryItemField}
+                              value={item.workZone}
+                              placeholder="Comuna o zona"
+                              onChange={(e) =>
+                                void handleGalleryMetadataChange(item, {
+                                  workZone: e.target.value,
+                                })
+                              }
+                            />
+                            <input
+                              className={s.galleryItemField}
+                              value={item.workBadge}
+                              placeholder="Etiqueta"
+                              onChange={(e) =>
+                                void handleGalleryMetadataChange(item, {
+                                  workBadge: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className={s.galleryMetaRow}>
+                            <input
+                              className={s.galleryItemField}
+                              value={item.label}
+                              placeholder="Categoria interna"
+                              onChange={(e) =>
+                                void handleGalleryMetadataChange(item, {
+                                  label: e.target.value,
+                                })
+                              }
+                            />
+                            <button
+                              className={s.galleryItemDelete}
+                              type="button"
+                              onClick={() => void handleDeleteGalleryImage(item.id)}
+                              aria-label="Eliminar foto"
+                            >
+                              <LuTrash2 aria-hidden />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -831,53 +1122,21 @@ export default function PaginaVentaPage() {
                 />
               </label>
 
+              <label className={s.field}>
+                <span className={s.label}>Bajada del formulario</span>
+                <textarea
+                  className={s.textarea}
+                  rows={3}
+                  value={form.formSubtitle}
+                  onChange={(e) => handleFieldChange("formSubtitle", e.target.value)}
+                  placeholder={DEFAULT_FORM_SUBTITLE}
+                />
+                <span className={s.helpText}>
+                  Recomendacion: Mientras mas detalles agregue el cliente, mas rapido podras cotizar.
+                </span>
+              </label>
+
               <div className={s.divider} />
-
-              <div className={s.toggleRow}>
-                <div className={s.toggleCopy}>
-                  <strong>Mostrar calificacion</strong>
-                  <p>Muestra una calificacion o cantidad de trabajos.</p>
-                </div>
-
-                <button
-                  className={`${s.switch} ${form.showRating ? s.switchOn : ""}`}
-                  type="button"
-                  role="switch"
-                  aria-checked={form.showRating}
-                  aria-label="Mostrar calificacion"
-                  onClick={() => handleFieldChange("showRating", !form.showRating)}
-                >
-                  <span className={s.switchThumb} />
-                </button>
-              </div>
-
-              {form.showRating ? (
-                <div className={s.row2}>
-                  <label className={s.field}>
-                    <span className={s.label}>Texto de calificacion</span>
-                    <input
-                      className={s.input}
-                      value={form.ratingLabel}
-                      onChange={(e) =>
-                        handleFieldChange("ratingLabel", e.target.value)
-                      }
-                      placeholder="Ej: 4.9 / 5.0"
-                    />
-                  </label>
-
-                  <label className={s.field}>
-                    <span className={s.label}>Texto de trabajos</span>
-                    <input
-                      className={s.input}
-                      value={form.jobsCountLabel}
-                      onChange={(e) =>
-                        handleFieldChange("jobsCountLabel", e.target.value)
-                      }
-                      placeholder="Ej: +200 trabajos"
-                    />
-                  </label>
-                </div>
-              ) : null}
 
               {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
               {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
@@ -890,6 +1149,163 @@ export default function PaginaVentaPage() {
                 >
                   <LuSave aria-hidden />
                   {isSaving ? "Guardando..." : "Guardar esta parte"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {activeSection === "redes" ? (
+          <section className={s.section}>
+            <div className={s.sectionTitle}>
+              <LuPhone aria-hidden />
+              <span>Redes y footer</span>
+            </div>
+
+            <div className={s.card}>
+              {SOCIAL_FIELDS.map((field) => (
+                <label key={field.key} className={s.field}>
+                  <span className={s.label}>{field.label}</span>
+                  <input
+                    className={s.input}
+                    value={form[field.key]}
+                    onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                  />
+                </label>
+              ))}
+
+              <div className={s.divider} />
+
+              <div className={s.staticInfo}>
+                <span className={s.label}>Se mostrara en el footer</span>
+                <strong>{form.publicName || form.empresaNombre || "Mi empresa"}</strong>
+                <span className={s.helpText}>
+                  Mostramos solo las redes que completes. El WhatsApp y la zona salen desde tu perfil comercial.
+                </span>
+              </div>
+
+              {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
+              {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
+
+              <div className={s.sectionActions}>
+                <button
+                  className={s.saveButton}
+                  type="submit"
+                  disabled={isSaving || isUploadingHero}
+                >
+                  <LuSave aria-hidden />
+                  {isSaving ? "Guardando..." : "Guardar esta parte"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {activeSection === "valoraciones" ? (
+          <section className={s.section}>
+            <div className={s.sectionTitle}>
+              <LuStar aria-hidden />
+              <span>Valoraciones publicas</span>
+            </div>
+
+            <div className={s.card}>
+              <div className={s.toggleRow}>
+                <div className={s.toggleCopy}>
+                  <strong>Mostrar valoraciones</strong>
+                  <p>Solo se publican las valoraciones aprobadas por ti.</p>
+                </div>
+
+                <button
+                  className={`${s.switch} ${form.showRating ? s.switchOn : ""}`}
+                  type="button"
+                  role="switch"
+                  aria-checked={form.showRating}
+                  aria-label="Mostrar valoraciones"
+                  onClick={() => handleFieldChange("showRating", !form.showRating)}
+                >
+                  <span className={s.switchThumb} />
+                </button>
+              </div>
+
+              <div className={s.divider} />
+
+              <div className={s.testimonialSummary}>
+                <span>{pendingTestimonials.length} pendientes</span>
+                <span>{approvedTestimonials.length} aprobadas</span>
+              </div>
+
+              {isLoadingTestimonials ? (
+                <div className={s.loadingState}>Cargando valoraciones...</div>
+              ) : testimonials.length === 0 ? (
+                <div className={s.staticInfo}>
+                  <strong>Aun no recibes valoraciones.</strong>
+                  <span className={s.helpText}>
+                    Cuando un cliente deje una reseña desde tu pagina, aparecera aqui para aprobarla u ocultarla.
+                  </span>
+                </div>
+              ) : (
+                <div className={s.testimonialList}>
+                  {testimonials.map((item) => (
+                    <article key={String(item.id)} className={s.testimonialCard}>
+                      <div className={s.testimonialCardTop}>
+                        <strong>{item.nombreCorto || "Cliente"}</strong>
+                        <span className={s.testimonialStars}>
+                          {"★".repeat(item.estrellas)}
+                        </span>
+                      </div>
+                      <p>{item.comentario}</p>
+                      <div className={s.testimonialActions}>
+                        <button
+                          type="button"
+                          className={`${s.miniAction} ${
+                            item.estado === "aprobada" ? s.miniActionActive : ""
+                          }`}
+                          onClick={() =>
+                            void handleTestimonialStatusChange(item.id, "aprobada")
+                          }
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          type="button"
+                          className={`${s.miniAction} ${
+                            item.estado === "pendiente" ? s.miniActionActive : ""
+                          }`}
+                          onClick={() =>
+                            void handleTestimonialStatusChange(item.id, "pendiente")
+                          }
+                        >
+                          Pendiente
+                        </button>
+                        <button
+                          type="button"
+                          className={`${s.miniAction} ${
+                            item.estado === "oculta" ? s.miniActionDanger : ""
+                          }`}
+                          onClick={() =>
+                            void handleTestimonialStatusChange(item.id, "oculta")
+                          }
+                        >
+                          Ocultar
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
+              {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
+
+              <div className={s.sectionActions}>
+                <button
+                  className={s.saveButton}
+                  type="submit"
+                  disabled={isSaving || isUploadingHero}
+                >
+                  <LuSave aria-hidden />
+                  {isSaving ? "Guardando..." : "Guardar visibilidad"}
                 </button>
               </div>
             </div>

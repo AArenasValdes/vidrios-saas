@@ -2,9 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lato, Syne } from "next/font/google";
+import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
   LuBadgeCheck,
+  LuCircleCheck,
   LuClipboardCheck,
   LuClock3,
   LuMapPin,
@@ -12,20 +14,28 @@ import {
   LuShieldCheck,
   LuStar,
 } from "react-icons/lu";
+import { FaFacebookF, FaGlobe, FaInstagram, FaTiktok } from "react-icons/fa6";
 
 import {
   formatDiasAtencionLabel,
   formatHorarioPorDiaLabel,
   hexToRgbChannels,
+  isLightHexColor,
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
 import {
+  getCachedApprovedPublicTestimonialsByOrganizationId,
   getCachedPublicGalleryByOrganizationId,
   getCachedPublicRequestConfig,
 } from "@/features/solicitudes/services/solicitudes-public-cache.server";
+import {
+  formatChileMobilePhone,
+  normalizeChileMobilePhone,
+} from "@/utils/chile-mobile-phone";
 import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
 import { SolicitudEmpresaForm } from "./solicitud-empresa-form";
+import { SolicitudEmpresaTestimonialForm } from "./solicitud-empresa-testimonial-form";
 import s from "./page.module.css";
 
 const landingBodyFont = Lato({
@@ -46,22 +56,31 @@ type PageProps = {
   }>;
 };
 
-type StepItem = {
-  title: string;
-  copy: string;
-};
-
-const STEPS: StepItem[] = [
-  { title: "Elige", copy: "tu trabajo" },
-  { title: "Envia", copy: "tus datos" },
-  { title: "Te contactan", copy: "por WhatsApp" },
-] as const;
-
 const PREVIEW_GALLERY = [
-  { src: "/brand/screen2.png", label: "Ventanas" },
-  { src: "/brand/screen.png", label: "Shower" },
-  { src: "/brand/landing-pdf.png", label: "Terraza" },
-  { src: "/brand/logosanmarco.jpg", label: "Mampara" },
+  {
+    src: "/brand/screen2.png",
+    label: "Ventanas",
+    workTitle: "Ventana corredera",
+    workType: "Ventanas de aluminio",
+    workZone: "Trabajo a medida",
+    workBadge: "Instalado",
+  },
+  {
+    src: "/brand/screen.png",
+    label: "Shower",
+    workTitle: "Shower door templado",
+    workType: "Puertas de vidrio",
+    workZone: "",
+    workBadge: "Vidrio templado",
+  },
+  {
+    src: "/brand/landing-pdf.png",
+    label: "Terraza",
+    workTitle: "Cierre de terraza",
+    workType: "Cierres de terraza",
+    workZone: "",
+    workBadge: "A medida",
+  },
 ] as const;
 
 export const revalidate = 300;
@@ -91,15 +110,85 @@ function resolveLocationLabel(address: string) {
   return chunks.at(-1) ?? clean;
 }
 
-export default async function SolicitudEmpresaPage({
-  params,
-}: PageProps) {
+function resolveServiceItems(config: {
+  publicServices: string[];
+  publicBusinessType: string;
+}) {
+  if (config.publicServices.length > 0) {
+    return config.publicServices;
+  }
+
+  const fallback = config.publicBusinessType
+    .split(/[·,|/]/g)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(fallback));
+}
+
+function formatPublicPhone(phone: string) {
+  const normalized = normalizeChileMobilePhone(phone);
+
+  if (!normalized) {
+    return phone.trim();
+  }
+
+  return `+56 9 ${formatChileMobilePhone(normalized)}`;
+}
+
+function buildSocialLinks(config: {
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  websiteUrl: string;
+}) {
+  return [
+    config.instagramUrl
+      ? {
+          href: config.instagramUrl,
+          label: "Instagram",
+          icon: FaInstagram,
+        }
+      : null,
+    config.facebookUrl
+      ? {
+          href: config.facebookUrl,
+          label: "Facebook",
+          icon: FaFacebookF,
+        }
+      : null,
+    config.tiktokUrl
+      ? {
+          href: config.tiktokUrl,
+          label: "TikTok",
+          icon: FaTiktok,
+        }
+      : null,
+    config.websiteUrl
+      ? {
+          href: config.websiteUrl,
+          label: "Sitio web",
+          icon: FaGlobe,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    href: string;
+    label: string;
+    icon: IconType;
+  }>;
+}
+
+export default async function SolicitudEmpresaPage({ params }: PageProps) {
   const { empresa } = await params;
   const config = await getCachedPublicRequestConfig(empresa);
 
   if (!config) {
     notFound();
   }
+
+  const accentColor = isLightHexColor(config.brandColor)
+    ? "#335ea9"
+    : config.brandColor;
 
   const isAvailable = isOrganizationOpenAtDate({
     schedule: config.solicitudPublicaHorarioPorDia,
@@ -117,71 +206,97 @@ export default async function SolicitudEmpresaPage({
         config.solicitudPublicaDiasAtencion
       )} ${config.solicitudPublicaHorarioDesde}-${config.solicitudPublicaHorarioHasta}`;
 
-  const displayName = config.isPublished && config.publicName
-    ? config.publicName
-    : config.empresaNombre;
+  const displayName =
+    config.isPublished && config.publicName ? config.publicName : config.empresaNombre;
 
-  const heroTitle = config.isPublished && config.heroTitle
-    ? config.heroTitle
-    : "Cotiza vidrios y aluminio en menos de 1 minuto";
+  const heroTitle =
+    config.isPublished && config.heroTitle
+      ? config.heroTitle
+      : "Cotiza vidrios y aluminio en menos de 1 minuto";
 
-  const heroSubtitle = config.isPublished && config.heroSubtitle
-    ? config.heroSubtitle
-    : null;
+  const heroSubtitle =
+    config.isPublished && config.heroSubtitle ? config.heroSubtitle : null;
 
   const heroMode = config.isPublished ? config.heroMode : "gradient";
-  const heroImageUrl = config.isPublished && heroMode === "image" && config.heroImageUrl
-    ? config.heroImageUrl
-    : null;
+  const heroImageUrl =
+    config.isPublished && heroMode === "image" && config.heroImageUrl
+      ? config.heroImageUrl
+      : null;
 
-  const secondaryColor = config.isPublished && config.secondaryColor
-    ? config.secondaryColor
-    : "#25d366";
+  const formTitle =
+    config.isPublished && config.formTitle ? config.formTitle : "Deja tu solicitud";
 
-  const formTitle = config.isPublished && config.formTitle
-    ? config.formTitle
-    : "Deja tu solicitud";
-
-  const formSubtitle = config.isPublished && config.formSubtitle
-    ? config.formSubtitle
-    : null;
+  const formSubtitle =
+    config.isPublished && config.formSubtitle ? config.formSubtitle : null;
 
   const showGallery = config.isPublished ? config.showGallery : true;
   const showSchedule = config.isPublished ? config.showSchedule : true;
   const showRating = config.isPublished ? config.showRating : false;
+  const serviceItems = resolveServiceItems(config);
+  const socialLinks = buildSocialLinks(config);
+  const formattedPhone = formatPublicPhone(config.empresaTelefono);
 
-  let galleryImages: { src: string; label: string }[] = [];
+  const [galleryImages, approvedTestimonials] = await Promise.all([
+    showGallery
+      ? getCachedPublicGalleryByOrganizationId(config.organizationId)
+      : Promise.resolve([]),
+    showRating
+      ? getCachedApprovedPublicTestimonialsByOrganizationId(config.organizationId)
+      : Promise.resolve([]),
+  ]);
 
-  if (showGallery && config.isPublished) {
-    const realGallery = await getCachedPublicGalleryByOrganizationId(
-      config.organizationId as number
-    );
+  const resolvedGallery =
+    galleryImages.length > 0
+      ? galleryImages
+      : showGallery
+        ? PREVIEW_GALLERY.map((item, index) => ({
+            id: `preview-${index}`,
+            organizationId: config.organizationId,
+            imageUrl: item.src,
+            label: item.label,
+            workTitle: item.workTitle,
+            workType: item.workType,
+            workZone: item.workZone,
+            workBadge: item.workBadge,
+            sortOrder: index,
+            isVisible: true,
+            creadoEn: null,
+          }))
+        : [];
 
-    if (realGallery.length > 0) {
-      galleryImages = realGallery.map((item) => ({
-        src: item.imageUrl,
-        label: item.label || "",
-      }));
-    } else {
-      galleryImages = PREVIEW_GALLERY.map((img) => ({
-        src: img.src,
-        label: img.label,
-      }));
-    }
-  } else if (showGallery) {
-    galleryImages = PREVIEW_GALLERY.map((img) => ({
-      src: img.src,
-      label: img.label,
-    }));
-  }
+  const approvedTestimonialsCount = approvedTestimonials.length;
+  const averageRating = approvedTestimonialsCount
+    ? (
+        approvedTestimonials.reduce((sum, item) => sum + item.estrellas, 0) /
+        approvedTestimonialsCount
+      ).toFixed(1)
+    : null;
+
+  const trustItems = [
+    {
+      icon: LuClipboardCheck,
+      title: "Solicitud registrada",
+      copy: "Aunque estemos ocupados, tu consulta no se pierde.",
+    },
+    {
+      icon: LuShieldCheck,
+      title: "Respuesta comercial",
+      copy: config.solicitudPublicaValor,
+    },
+    {
+      icon: LuBadgeCheck,
+      title: "Atencion local",
+      copy: config.publicZone || locationLabel || "Atendemos segun tu zona.",
+    },
+  ];
 
   return (
     <main
       className={`${s.root} ${landingBodyFont.variable} ${landingDisplayFont.variable}`}
       style={{
-        ["--brand" as string]: config.brandColor,
-        ["--brand-rgb" as string]: hexToRgbChannels(config.brandColor),
-        ["--wa" as string]: secondaryColor,
+        ["--brand" as string]: accentColor,
+        ["--brand-rgb" as string]: hexToRgbChannels(accentColor),
+        ["--wa" as string]: config.secondaryColor,
       }}
     >
       <div className={s.shell}>
@@ -241,7 +356,9 @@ export default async function SolicitudEmpresaPage({
                   <div className={s.heroIdentityCopy}>
                     <strong>{displayName}</strong>
                     {config.isPublished && config.publicSubtitle ? (
-                      <span className={s.heroSubtitleText}>{config.publicSubtitle}</span>
+                      <span className={s.heroSubtitleText}>
+                        {config.publicSubtitle}
+                      </span>
                     ) : null}
                   </div>
                 </div>
@@ -253,9 +370,7 @@ export default async function SolicitudEmpresaPage({
               </div>
 
               <div className={s.heroMainCopy}>
-                <h1 className={s.heroTitle}>
-                  {heroTitle}
-                </h1>
+                <h1 className={s.heroTitle}>{heroTitle}</h1>
                 {heroSubtitle ? (
                   <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
                 ) : null}
@@ -280,13 +395,18 @@ export default async function SolicitudEmpresaPage({
               </div>
 
               <div className={s.heroTrustRow}>
-                <span className={s.heroTrustMini}>
-                  <LuClipboardCheck aria-hidden />
-                  Solicitud registrada
-                </span>
-                <span className={s.heroTrustDivider} aria-hidden>
-                  ·
-                </span>
+                {showRating && config.ratingLabel ? (
+                  <span className={s.heroTrustMini}>
+                    <LuStar aria-hidden />
+                    {config.ratingLabel}
+                  </span>
+                ) : null}
+                {showRating && config.jobsCountLabel ? (
+                  <span className={s.heroTrustMini}>
+                    <LuCircleCheck aria-hidden />
+                    {config.jobsCountLabel}
+                  </span>
+                ) : null}
                 <span className={s.heroTrustMini}>
                   <LuShieldCheck aria-hidden />
                   Sin compromiso
@@ -296,45 +416,100 @@ export default async function SolicitudEmpresaPage({
           </article>
         </section>
 
-        {showRating && config.isPublished && (config.ratingLabel || config.jobsCountLabel) ? (
-          <section className={s.ratingSection}>
-            {config.ratingLabel ? (
-              <div className={s.ratingBadge}>
-                <LuStar aria-hidden />
-                <strong>{config.ratingLabel}</strong>
-              </div>
-            ) : null}
-            {config.jobsCountLabel ? (
-              <div className={s.ratingBadge}>
-                <strong>{config.jobsCountLabel}</strong>
-              </div>
-            ) : null}
+        <section className={s.quickTrustSection} aria-label="Senales rapidas de confianza">
+          <div className={s.quickTrustRail}>
+            {trustItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <article key={item.title} className={s.quickTrustCard}>
+                  <div className={s.quickTrustIcon}>
+                    <Icon aria-hidden />
+                  </div>
+                  <div className={s.quickTrustCopy}>
+                    <strong>{item.title}</strong>
+                    <span>{item.copy}</span>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {serviceItems.length > 0 ? (
+          <section className={s.sectionCard}>
+            <div className={s.sectionHeader}>
+              <span className={s.sectionEyebrow}>Servicios que realizamos</span>
+              <p className={s.sectionLead}>
+                Tipos de trabajo que mas nos piden nuestros clientes.
+              </p>
+            </div>
+
+            <div className={s.serviceRail}>
+              {serviceItems.map((service) => (
+                <span key={service} className={s.serviceChip}>
+                  {service}
+                </span>
+              ))}
+            </div>
           </section>
         ) : null}
 
-        {galleryImages.length ? (
+        {resolvedGallery.length > 0 ? (
           <section className={s.gallerySection} aria-label="Trabajos recientes">
-            <div className={s.galleryHeader}>
+            <div className={s.sectionHeader}>
               <span className={s.sectionEyebrow}>Trabajos recientes</span>
+              <p className={s.sectionLead}>
+                Algunas referencias reales de trabajos hechos a medida.
+              </p>
             </div>
 
             <div className={s.galleryRail}>
-              {galleryImages.map((image, index) => (
-                <article key={`${image.src}-${index}`} className={s.galleryCard}>
+              {resolvedGallery.map((image, index) => (
+                <article key={`${image.imageUrl}-${index}`} className={s.portfolioCard}>
                   <div className={s.galleryImageWrap}>
                     <Image
-                      src={image.src}
-                      alt={image.label || `Trabajo reciente ${index + 1}`}
+                      src={image.imageUrl}
+                      alt={image.workTitle || image.label || `Trabajo ${index + 1}`}
                       fill
                       className={s.galleryImage}
                       unoptimized
                     />
-                    {image.label ? (
-                      <span className={s.galleryTag}>{image.label}</span>
+                    {image.workBadge ? (
+                      <span className={s.galleryTag}>{image.workBadge}</span>
                     ) : null}
+                  </div>
+                  <div className={s.portfolioBody}>
+                    <strong>{image.workTitle || image.label || "Trabajo reciente"}</strong>
+                    <span>
+                      {[image.workType, image.workZone].filter(Boolean).join(" · ")}
+                    </span>
                   </div>
                 </article>
               ))}
+            </div>
+          </section>
+        ) : null}
+
+        {config.publicZone || showSchedule ? (
+          <section className={s.sectionCard}>
+            <div className={s.sectionHeader}>
+              <span className={s.sectionEyebrow}>Atendemos en</span>
+            </div>
+
+            <div className={s.coverageCard}>
+              {config.publicZone ? (
+                <p className={s.coverageTitle}>{config.publicZone}</p>
+              ) : null}
+              {showSchedule ? (
+                <p className={s.coverageMeta}>
+                  <LuClock3 aria-hidden />
+                  <span>{horarioLabel}</span>
+                </p>
+              ) : null}
+              {config.businessHoursNote ? (
+                <p className={s.coverageText}>{config.businessHoursNote}</p>
+              ) : null}
             </div>
           </section>
         ) : null}
@@ -343,7 +518,11 @@ export default async function SolicitudEmpresaPage({
           <section className={s.sectionCard}>
             <span className={s.sectionEyebrow}>Como funciona</span>
             <div className={s.stepsInline}>
-              {STEPS.map((step, index) => (
+              {[
+                { title: "Envias", copy: "tu necesidad" },
+                { title: "Ordenamos", copy: "la solicitud" },
+                { title: "Respondemos", copy: "por WhatsApp" },
+              ].map((step, index) => (
                 <article key={step.title} className={s.stepMiniCard}>
                   <div className={s.stepNumber}>{index + 1}</div>
                   <div className={s.stepMiniCopy}>
@@ -369,7 +548,7 @@ export default async function SolicitudEmpresaPage({
               ) : null}
               <div className={s.stepsSupportItem}>
                 <LuClipboardCheck aria-hidden />
-                <span>Solicitud registrada</span>
+                <span>{config.solicitudPublicaMensajeConfianza}</span>
               </div>
             </div>
           </section>
@@ -387,23 +566,118 @@ export default async function SolicitudEmpresaPage({
           </section>
         </section>
 
-        <footer className={s.brandFooter} aria-label="Ventora">
-          <div className={s.brandFooterLine} aria-hidden />
-          <div className={s.brandFooterSeal}>
-            <div className={s.brandFooterLogoWrap} aria-hidden>
-              <Image
-                src="/brand/ventora-logo-black.svg"
-                alt=""
-                width={148}
-                height={33}
-                className={s.brandFooterLogo}
-                unoptimized
-              />
+        {showRating && approvedTestimonialsCount > 0 ? (
+          <section className={s.sectionCard}>
+            <div className={s.sectionHeader}>
+              <span className={s.sectionEyebrow}>Clientes que confiaron en nosotros</span>
+              <div className={s.testimonialSummaryPublic}>
+                <strong>{`★★★★★ ${averageRating}`}</strong>
+                <span>{`${approvedTestimonialsCount} valoraciones`}</span>
+              </div>
             </div>
-            <p className={s.brandFooterText}>
-              Esta empresa gestiona sus solicitudes con Ventora
-            </p>
+
+            <div className={s.testimonialPublicRail}>
+              {approvedTestimonials.slice(0, 3).map((item) => (
+                <article key={String(item.id)} className={s.testimonialPublicCard}>
+                  <div className={s.testimonialPublicTop}>
+                    <strong>{item.nombreCorto || "Cliente"}</strong>
+                    <span>{`${"★".repeat(item.estrellas)}${"☆".repeat(
+                      5 - item.estrellas
+                    )}`}</span>
+                  </div>
+                  <p>{item.comentario}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className={s.finalCtaSection}>
+          <div className={s.finalCtaCard}>
+            <div className={s.finalCtaCopy}>
+              <span className={s.sectionEyebrow}>Solicitud directa</span>
+              <h2>{config.finalCtaTitle}</h2>
+              <p>{config.finalCtaSubtitle}</p>
+            </div>
+            <a className={s.finalCtaButton} href="#solicitud-rapida">
+              {config.finalCtaLabel}
+            </a>
           </div>
+        </section>
+
+        <footer className={s.companyFooter} aria-label="Datos de la empresa">
+          <div className={s.companyFooterAccent} aria-hidden />
+          <div className={s.companyFooterMain}>
+            <div className={s.companyFooterIdentity}>
+              {config.empresaLogoUrl ? (
+                <Image
+                  className={s.footerLogo}
+                  src={config.empresaLogoUrl}
+                  alt={displayName}
+                  width={56}
+                  height={56}
+                  unoptimized
+                />
+              ) : (
+                <div className={s.footerLogoFallback} aria-hidden>
+                  {getInitials(displayName)}
+                </div>
+              )}
+
+              <div className={s.companyFooterCopy}>
+                <strong>{displayName}</strong>
+                <span>{config.publicSubtitle || config.publicBusinessType}</span>
+                {formattedPhone ? <span>{formattedPhone}</span> : null}
+                {config.publicZone ? <span>{config.publicZone}</span> : null}
+                {showSchedule ? <span>{horarioLabel}</span> : null}
+              </div>
+            </div>
+
+            <div className={s.footerActions}>
+              {socialLinks.length > 0 ? (
+                <div className={s.socialRail}>
+                  {socialLinks.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <a
+                        key={item.label}
+                        className={s.socialLink}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={item.label}
+                      >
+                        <Icon aria-hidden />
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {whatsappUrl ? (
+                <a
+                  className={s.footerWhatsappButton}
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <LuMessageCircleMore aria-hidden />
+                  Escribir por WhatsApp
+                </a>
+              ) : (
+                <a className={s.footerWhatsappButton} href="#solicitud-rapida">
+                  Solicitar cotizacion
+                </a>
+              )}
+            </div>
+          </div>
+
+          {showRating ? (
+            <SolicitudEmpresaTestimonialForm slug={config.solicitudPublicaSlug} />
+          ) : null}
+
+          <p className={s.brandFooterText}>Solicitudes gestionadas con Ventora</p>
         </footer>
       </div>
 
@@ -411,7 +685,7 @@ export default async function SolicitudEmpresaPage({
         <div className={s.stickyBar}>
           <a className={s.stickySecondary} href="#solicitud-rapida">
             <LuBadgeCheck aria-hidden />
-            <span>Enviar solicitud</span>
+            <span>Solicitar cotizacion</span>
           </a>
           {whatsappUrl ? (
             <a
@@ -421,7 +695,7 @@ export default async function SolicitudEmpresaPage({
               rel="noopener noreferrer"
             >
               <LuMessageCircleMore aria-hidden />
-              <span>Escribir por WhatsApp</span>
+              <span>WhatsApp</span>
             </a>
           ) : null}
         </div>

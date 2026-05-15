@@ -4,6 +4,18 @@ import type { EntityId } from "@/types/common";
 
 export type HeroMode = "image" | "gradient";
 export type PublicScheduleDay = "0" | "1" | "2" | "3" | "4" | "5" | "6";
+export type PublicLandingService =
+  | "Ventanas de aluminio"
+  | "Ventanas PVC"
+  | "Termopanel"
+  | "Shower door"
+  | "Cierres de terraza"
+  | "Barandas de vidrio"
+  | "Puertas de vidrio"
+  | "Mamparas"
+  | "Espejos"
+  | "Reparaciones"
+  | "Otros";
 export type SolicitudPublicaHorarioDia = {
   day: PublicScheduleDay;
   enabled: boolean;
@@ -38,6 +50,15 @@ export type OrganizationProfile = {
   publicSubtitle: string;
   publicZone: string;
   publicBusinessType: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  websiteUrl: string;
+  publicServices: PublicLandingService[];
+  finalCtaTitle: string;
+  finalCtaSubtitle: string;
+  finalCtaLabel: string;
+  businessHoursNote: string;
   secondaryColor: string;
   heroMode: HeroMode;
   heroImageUrl: string | null;
@@ -77,6 +98,15 @@ export type UpdateOrganizationProfileInput = {
   publicSubtitle: string;
   publicZone: string;
   publicBusinessType: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  websiteUrl: string;
+  publicServices: PublicLandingService[];
+  finalCtaTitle: string;
+  finalCtaSubtitle: string;
+  finalCtaLabel: string;
+  businessHoursNote: string;
   secondaryColor: string;
   heroMode: HeroMode;
   heroImageUrl: string | null;

@@ -31,6 +31,10 @@ export function createLandingGalleryService(deps: LandingGalleryServiceDeps = {}
         organizationId,
         imageUrl: input.imageUrl,
         label: input.label,
+        workTitle: input.workTitle,
+        workType: input.workType,
+        workZone: input.workZone,
+        workBadge: input.workBadge,
         sortOrder: input.sortOrder ?? existing.length,
         isVisible: input.isVisible ?? true,
       });

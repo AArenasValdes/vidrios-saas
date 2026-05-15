@@ -17,6 +17,10 @@ type LandingGalleryRow = {
   organization_id: EntityId;
   image_url: string;
   label: string | null;
+  work_title: string | null;
+  work_type: string | null;
+  work_zone: string | null;
+  work_badge: string | null;
   sort_order: number;
   is_visible: boolean;
   creado_en: string | null;
@@ -24,7 +28,8 @@ type LandingGalleryRow = {
 
 const TABLE_NAME = "public_landing_gallery";
 const STORAGE_BUCKET = "organization-assets";
-const GALLERY_SELECT = "id, organization_id, image_url, label, sort_order, is_visible, creado_en";
+const GALLERY_SELECT =
+  "id, organization_id, image_url, label, work_title, work_type, work_zone, work_badge, sort_order, is_visible, creado_en";
 
 function mapRow(row: LandingGalleryRow): LandingGalleryItem {
   return {
@@ -32,6 +37,10 @@ function mapRow(row: LandingGalleryRow): LandingGalleryItem {
     organizationId: row.organization_id,
     imageUrl: row.image_url,
     label: row.label ?? "",
+    workTitle: row.work_title ?? "",
+    workType: row.work_type ?? "",
+    workZone: row.work_zone ?? "",
+    workBadge: row.work_badge ?? "",
     sortOrder: row.sort_order,
     isVisible: row.is_visible,
     creadoEn: row.creado_en,
@@ -63,6 +72,10 @@ export function createLandingGalleryRepository(deps: LandingGalleryRepositoryDep
           organization_id: input.organizationId,
           image_url: input.imageUrl,
           label: input.label || null,
+          work_title: input.workTitle || null,
+          work_type: input.workType || null,
+          work_zone: input.workZone || null,
+          work_badge: input.workBadge || null,
           sort_order: input.sortOrder ?? 0,
           is_visible: input.isVisible ?? true,
         })
@@ -81,6 +94,18 @@ export function createLandingGalleryRepository(deps: LandingGalleryRepositoryDep
 
       if (input.label !== undefined) {
         payload.label = input.label || null;
+      }
+      if (input.workTitle !== undefined) {
+        payload.work_title = input.workTitle || null;
+      }
+      if (input.workType !== undefined) {
+        payload.work_type = input.workType || null;
+      }
+      if (input.workZone !== undefined) {
+        payload.work_zone = input.workZone || null;
+      }
+      if (input.workBadge !== undefined) {
+        payload.work_badge = input.workBadge || null;
       }
       if (input.sortOrder !== undefined) {
         payload.sort_order = input.sortOrder;

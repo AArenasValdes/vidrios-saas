@@ -8,6 +8,7 @@ import type { EntityId } from "@/types/common";
 import type {
   HeroMode,
   OrganizationProfile,
+  PublicLandingService,
   PublicScheduleDay,
   SolicitudPublicaHorarioDia,
   UpdateOrganizationProfileInput,
@@ -50,6 +51,23 @@ export const DEFAULT_HERO_TITLE = "Cotiza vidrios y aluminio en menos de 1 minut
 export const DEFAULT_FORM_TITLE = "Deja tu solicitud";
 export const DEFAULT_FORM_SUBTITLE =
   "Cuentanos que necesitas y te contactamos por WhatsApp";
+export const DEFAULT_FINAL_CTA_TITLE = "Tienes una medida o una foto del trabajo?";
+export const DEFAULT_FINAL_CTA_SUBTITLE =
+  "Envíala y te responderemos por WhatsApp.";
+export const DEFAULT_FINAL_CTA_LABEL = "Solicitar cotizacion";
+export const PUBLIC_LANDING_SERVICE_OPTIONS: PublicLandingService[] = [
+  "Ventanas de aluminio",
+  "Ventanas PVC",
+  "Termopanel",
+  "Shower door",
+  "Cierres de terraza",
+  "Barandas de vidrio",
+  "Puertas de vidrio",
+  "Mamparas",
+  "Espejos",
+  "Reparaciones",
+  "Otros",
+];
 
 const PUBLIC_SCHEDULE_DAY_LABELS: Record<PublicScheduleDay, string> = {
   "0": "Dom",
@@ -63,6 +81,40 @@ const PUBLIC_SCHEDULE_DAY_LABELS: Record<PublicScheduleDay, string> = {
 
 function normalizeText(value: string | null | undefined) {
   return value?.trim() ?? "";
+}
+
+function normalizeOptionalUrl(value: string | null | undefined) {
+  const normalized = value?.trim() ?? "";
+
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(normalized);
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "";
+    }
+
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function normalizePublicServices(
+  value: PublicLandingService[] | string[] | null | undefined
+) {
+  const allowed = new Set<string>(PUBLIC_LANDING_SERVICE_OPTIONS);
+
+  return Array.from(
+    new Set(
+      (value ?? [])
+        .map((entry) => normalizeText(entry))
+        .filter((entry): entry is PublicLandingService => allowed.has(entry))
+    )
+  );
 }
 
 function normalizeHorario(value: string | null | undefined, fallback: string) {
@@ -206,6 +258,16 @@ export function hexToRgbChannels(hex: string) {
   const blue = Number.parseInt(normalized.slice(4, 6), 16);
 
   return `${red} ${green} ${blue}`;
+}
+
+export function isLightHexColor(hex: string) {
+  const normalized = sanitizeBrandColor(hex).replace("#", "");
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+  return luminance > 0.68;
 }
 
 export function formatDiasAtencionLabel(days: string[]) {
@@ -398,6 +460,18 @@ export function resolveOrganizationProfile(
     publicSubtitle: normalizeText(profile?.publicSubtitle),
     publicZone: normalizeText(profile?.publicZone),
     publicBusinessType: normalizeText(profile?.publicBusinessType),
+    instagramUrl: normalizeOptionalUrl(profile?.instagramUrl),
+    facebookUrl: normalizeOptionalUrl(profile?.facebookUrl),
+    tiktokUrl: normalizeOptionalUrl(profile?.tiktokUrl),
+    websiteUrl: normalizeOptionalUrl(profile?.websiteUrl),
+    publicServices: normalizePublicServices(profile?.publicServices),
+    finalCtaTitle:
+      normalizeText(profile?.finalCtaTitle) || DEFAULT_FINAL_CTA_TITLE,
+    finalCtaSubtitle:
+      normalizeText(profile?.finalCtaSubtitle) || DEFAULT_FINAL_CTA_SUBTITLE,
+    finalCtaLabel:
+      normalizeText(profile?.finalCtaLabel) || DEFAULT_FINAL_CTA_LABEL,
+    businessHoursNote: normalizeText(profile?.businessHoursNote),
     secondaryColor: sanitizeSecondaryColor(profile?.secondaryColor),
     heroMode: normalizeHeroMode(profile?.heroMode),
     heroImageUrl: profile?.heroImageUrl ?? null,
@@ -485,6 +559,15 @@ export function createOrganizationProfileService(
           publicSubtitle: normalizeText(input.publicSubtitle),
           publicZone: normalizeText(input.publicZone),
           publicBusinessType: normalizeText(input.publicBusinessType),
+          instagramUrl: normalizeOptionalUrl(input.instagramUrl),
+          facebookUrl: normalizeOptionalUrl(input.facebookUrl),
+          tiktokUrl: normalizeOptionalUrl(input.tiktokUrl),
+          websiteUrl: normalizeOptionalUrl(input.websiteUrl),
+          publicServices: normalizePublicServices(input.publicServices),
+          finalCtaTitle: normalizeText(input.finalCtaTitle),
+          finalCtaSubtitle: normalizeText(input.finalCtaSubtitle),
+          finalCtaLabel: normalizeText(input.finalCtaLabel),
+          businessHoursNote: normalizeText(input.businessHoursNote),
           secondaryColor: sanitizeSecondaryColor(input.secondaryColor),
           heroMode: normalizeHeroMode(input.heroMode),
           heroImageUrl: input.heroImageUrl,

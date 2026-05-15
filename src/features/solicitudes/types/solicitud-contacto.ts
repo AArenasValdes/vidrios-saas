@@ -1,4 +1,5 @@
 import type { SolicitudPublicaHorarioDia } from "@/features/organization-profile/types/organization-profile";
+import type { PublicLandingService } from "@/features/organization-profile/types/organization-profile";
 
 export type AyudaSolicitudContacto = "demo" | "cotizacion" | "ventas";
 export type ContextoSolicitudContacto = "landing" | "empresa-publica";
@@ -72,6 +73,15 @@ export type SolicitudEmpresaPublicaConfig = {
   publicSubtitle: string;
   publicZone: string;
   publicBusinessType: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  websiteUrl: string;
+  publicServices: PublicLandingService[];
+  finalCtaTitle: string;
+  finalCtaSubtitle: string;
+  finalCtaLabel: string;
+  businessHoursNote: string;
   secondaryColor: string;
   heroMode: "image" | "gradient";
   heroImageUrl: string | null;

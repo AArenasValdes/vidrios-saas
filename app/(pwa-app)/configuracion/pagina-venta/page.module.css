@@ -624,6 +624,36 @@
   padding: 6px 8px;
 }
 
+.galleryItemMeta {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+
+.galleryMetaRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.galleryItemField {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 12px;
+  border: 1px solid #e4eaf2;
+  background: #f8fbff;
+  color: #243b6b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+  outline: none;
+}
+
+.galleryItemField::placeholder {
+  color: #98a2b3;
+}
+
 .galleryItemLabel {
   flex: 1;
   border: 0;
@@ -647,6 +677,118 @@
   place-items: center;
   cursor: pointer;
   font-size: 14px;
+}
+
+.serviceGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.serviceChip {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #d9e0ea;
+  background: #ffffff;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.serviceChipActive {
+  border-color: #4f7dd4;
+  background: #eef4ff;
+  color: #243b6b;
+  box-shadow: 0 10px 18px rgba(79, 125, 212, 0.12);
+}
+
+.testimonialSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.testimonialSummary span {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: #eef4ff;
+  color: #243b6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.testimonialList {
+  display: grid;
+  gap: 10px;
+}
+
+.testimonialCard {
+  border-radius: 18px;
+  border: 1px solid #d9e0ea;
+  background: #fbfcfe;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.testimonialCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.testimonialCardTop strong {
+  color: #143d7a;
+  font-size: 14px;
+}
+
+.testimonialCard p {
+  margin: 0;
+  color: #516682;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.testimonialStars {
+  color: #d89b3c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.testimonialActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.miniAction {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #d9e0ea;
+  background: #ffffff;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.miniActionActive {
+  border-color: #4f7dd4;
+  background: #eef4ff;
+  color: #243b6b;
+}
+
+.miniActionDanger {
+  border-color: #f3c7c7;
+  color: #b24141;
+  background: #fff5f5;
 }
 
 .galleryAddCard {

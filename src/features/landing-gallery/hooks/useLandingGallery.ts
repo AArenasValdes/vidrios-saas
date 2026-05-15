@@ -51,7 +51,16 @@ export function useLandingGallery() {
     };
   }, [organizacionId]);
 
-  async function uploadAndAddImage(file: File, label: string) {
+  async function uploadAndAddImage(
+    file: File,
+    label: string,
+    metadata?: {
+      workTitle?: string;
+      workType?: string;
+      workZone?: string;
+      workBadge?: string;
+    }
+  ) {
     if (!organizacionId) {
       throw new Error("No hay organizacion activa");
     }
@@ -64,6 +73,10 @@ export function useLandingGallery() {
       const item = await landingGalleryService.addGalleryItem(organizacionId, {
         imageUrl,
         label,
+        workTitle: metadata?.workTitle,
+        workType: metadata?.workType,
+        workZone: metadata?.workZone,
+        workBadge: metadata?.workBadge,
       });
 
       setGallery((current) => [...current, item]);
@@ -77,7 +90,17 @@ export function useLandingGallery() {
     }
   }
 
-  async function updateImage(id: string | number, label: string, isVisible: boolean) {
+  async function updateImage(
+    id: string | number,
+    input: {
+      label?: string;
+      workTitle?: string;
+      workType?: string;
+      workZone?: string;
+      workBadge?: string;
+      isVisible: boolean;
+    }
+  ) {
     if (!organizacionId) {
       throw new Error("No hay organizacion activa");
     }
@@ -86,8 +109,12 @@ export function useLandingGallery() {
 
     try {
       const updated = await landingGalleryService.updateGalleryItem(id, organizacionId, {
-        label,
-        isVisible,
+        label: input.label,
+        workTitle: input.workTitle,
+        workType: input.workType,
+        workZone: input.workZone,
+        workBadge: input.workBadge,
+        isVisible: input.isVisible,
       });
 
       setGallery((current) =>

@@ -40,6 +40,15 @@ type OrganizationProfileRow = {
   public_subtitle: string | null;
   public_zone: string | null;
   public_business_type: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  tiktok_url: string | null;
+  website_url: string | null;
+  public_services: string[] | null;
+  final_cta_title: string | null;
+  final_cta_subtitle: string | null;
+  final_cta_label: string | null;
+  business_hours_note: string | null;
   secondary_color: string | null;
   hero_mode: string | null;
   hero_image_url: string | null;
@@ -139,6 +148,15 @@ function mapOrganizationProfile(
     publicSubtitle: row.public_subtitle ?? "",
     publicZone: row.public_zone ?? "",
     publicBusinessType: row.public_business_type ?? "",
+    instagramUrl: row.instagram_url ?? "",
+    facebookUrl: row.facebook_url ?? "",
+    tiktokUrl: row.tiktok_url ?? "",
+    websiteUrl: row.website_url ?? "",
+    publicServices: (row.public_services ?? []) as OrganizationProfile["publicServices"],
+    finalCtaTitle: row.final_cta_title ?? "",
+    finalCtaSubtitle: row.final_cta_subtitle ?? "",
+    finalCtaLabel: row.final_cta_label ?? "",
+    businessHoursNote: row.business_hours_note ?? "",
     secondaryColor: row.secondary_color ?? "",
     heroMode: (row.hero_mode === "image" ? "image" : "gradient") as "image" | "gradient",
     heroImageUrl: row.hero_image_url,
@@ -215,6 +233,15 @@ export function createOrganizationProfileRepository(
           public_subtitle: input.publicSubtitle || null,
           public_zone: input.publicZone || null,
           public_business_type: input.publicBusinessType || null,
+          instagram_url: input.instagramUrl || null,
+          facebook_url: input.facebookUrl || null,
+          tiktok_url: input.tiktokUrl || null,
+          website_url: input.websiteUrl || null,
+          public_services: input.publicServices,
+          final_cta_title: input.finalCtaTitle || null,
+          final_cta_subtitle: input.finalCtaSubtitle || null,
+          final_cta_label: input.finalCtaLabel || null,
+          business_hours_note: input.businessHoursNote || null,
           secondary_color: input.secondaryColor || null,
           hero_mode: input.heroMode || "gradient",
           hero_image_url: input.heroImageUrl || null,
