@@ -73,6 +73,25 @@ type WorkflowSummaryPageResult = {
   hasMore: boolean;
   page: number;
   pageSize: number;
+  summary: {
+    totalCount: number;
+    totalAmount: number;
+    approvedAmount: number;
+    counts: {
+      borrador: number;
+      creada: number;
+      enviada: number;
+      aprobada: number;
+      rechazada: number;
+      terminada: number;
+    };
+  };
+};
+
+type WorkflowSummaryScope = {
+  allowedProjectIds: EntityId[] | null;
+  searchProjectIds: EntityId[] | null;
+  normalizedSearch: string;
 };
 
 function round(value: number, digits = 2) {
@@ -434,10 +453,37 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
     }
   }
 
-  async function listWorkflowSummaryPageByOrganizationId(
+  function resolvePeriodRange(period: WorkflowSummaryPageOptions["period"]) {
+    if (!period || period === "all") {
+      return { updatedFrom: undefined, updatedTo: undefined };
+    }
+
+    const now = new Date();
+
+    if (period === "this_month") {
+      return {
+        updatedFrom: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+        updatedTo: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+      };
+    }
+
+    if (period === "last_month") {
+      return {
+        updatedFrom: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString(),
+        updatedTo: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+      };
+    }
+
+    return {
+      updatedFrom: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedTo: undefined,
+    };
+  }
+
+  async function resolveWorkflowSummaryScope(
     organizationId: EntityId,
-    options: WorkflowSummaryPageOptions
-  ): Promise<WorkflowSummaryPageResult> {
+    options: Pick<WorkflowSummaryPageOptions, "clienteNombre" | "search">
+  ): Promise<WorkflowSummaryScope> {
     let allowedProjectIds: EntityId[] | null = null;
 
     if (options.clienteNombre?.trim()) {
@@ -448,11 +494,9 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
 
       if (clientIds.length === 0) {
         return {
-          cotizaciones: [],
-          totalCount: 0,
-          hasMore: false,
-          page: options.page,
-          pageSize: options.pageSize,
+          allowedProjectIds: [],
+          searchProjectIds: [],
+          normalizedSearch: options.search?.trim() ?? "",
         };
       }
 
@@ -460,11 +504,9 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
 
       if (allowedProjectIds.length === 0) {
         return {
-          cotizaciones: [],
-          totalCount: 0,
-          hasMore: false,
-          page: options.page,
-          pageSize: options.pageSize,
+          allowedProjectIds: [],
+          searchProjectIds: [],
+          normalizedSearch: options.search?.trim() ?? "",
         };
       }
     }
@@ -486,16 +528,63 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
       ) as unknown as EntityId[];
     }
 
-    const pageResult = await cotizacionesRepo.listPageByOrganizationId(organizationId, {
+    return {
+      allowedProjectIds,
+      searchProjectIds,
+      normalizedSearch,
+    };
+  }
+
+  async function listWorkflowSummaryPageByOrganizationId(
+    organizationId: EntityId,
+    options: WorkflowSummaryPageOptions
+  ): Promise<WorkflowSummaryPageResult> {
+    const scope = await resolveWorkflowSummaryScope(organizationId, options);
+
+    if (scope.allowedProjectIds && scope.allowedProjectIds.length === 0) {
+      return {
+        cotizaciones: [],
+        totalCount: 0,
+        hasMore: false,
+        page: options.page,
+        pageSize: options.pageSize,
+        summary: {
+          totalCount: 0,
+          totalAmount: 0,
+          approvedAmount: 0,
+          counts: {
+            borrador: 0,
+            creada: 0,
+            enviada: 0,
+            aprobada: 0,
+            rechazada: 0,
+            terminada: 0,
+          },
+        },
+      };
+    }
+
+    const periodRange = resolvePeriodRange(options.period);
+    const [pageResult, summary] = await Promise.all([
+      cotizacionesRepo.listPageByOrganizationId(organizationId, {
       page: options.page,
       pageSize: options.pageSize,
       estado: options.estado,
       period: options.period,
       order: options.order,
-      search: normalizedSearch || null,
-      allowedProjectIds,
-      searchProjectIds,
-    });
+      search: scope.normalizedSearch || null,
+      allowedProjectIds: scope.allowedProjectIds,
+      searchProjectIds: scope.searchProjectIds,
+      }),
+      cotizacionesRepo.getResumenGlobalByOrganizationId(organizationId, {
+        estados: options.estado ? [options.estado] : undefined,
+        allowedProjectIds: scope.allowedProjectIds,
+        searchProjectIds: scope.searchProjectIds,
+        search: scope.normalizedSearch || null,
+        updatedFrom: periodRange.updatedFrom,
+        updatedTo: periodRange.updatedTo,
+      }),
+    ]);
 
     const projectIds = Array.from(
       new Set(
@@ -518,6 +607,7 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
 
     return {
       ...pageResult,
+      summary,
       cotizaciones: pageResult.cotizaciones.map((cotizacion) => {
         const project = cotizacion.proyectoId
           ? projectsById.get(String(cotizacion.proyectoId))

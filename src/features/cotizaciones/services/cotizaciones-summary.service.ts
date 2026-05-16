@@ -1,11 +1,26 @@
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 
+export type CotizacionesResumenGlobal = {
+  totalCount: number;
+  totalAmount: number;
+  approvedAmount: number;
+  counts: {
+    borrador: number;
+    creada: number;
+    enviada: number;
+    aprobada: number;
+    rechazada: number;
+    terminada: number;
+  };
+};
+
 export type CotizacionesResumenPage = {
   cotizaciones: CotizacionWorkflowRecord[];
   totalCount: number;
   hasMore: boolean;
   page: number;
   pageSize: number;
+  summary: CotizacionesResumenGlobal;
 };
 
 export type GetCotizacionesResumenParams = {
@@ -65,6 +80,19 @@ export async function getCotizacionesResumenPage(
     hasMore: payload.hasMore ?? false,
     page: payload.page ?? params.page ?? 1,
     pageSize: payload.pageSize ?? params.pageSize ?? 25,
+    summary: payload.summary ?? {
+      totalCount: payload.totalCount ?? 0,
+      totalAmount: 0,
+      approvedAmount: 0,
+      counts: {
+        borrador: 0,
+        creada: 0,
+        enviada: 0,
+        aprobada: 0,
+        rechazada: 0,
+        terminada: 0,
+      },
+    },
   };
 }
 

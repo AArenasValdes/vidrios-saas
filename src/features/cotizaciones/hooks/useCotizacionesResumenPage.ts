@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   getCotizacionesResumenPage,
+  type CotizacionesResumenGlobal,
   type CotizacionesResumenPage,
   type GetCotizacionesResumenParams,
 } from "@/features/cotizaciones/services/cotizaciones-summary.service";
@@ -17,7 +18,7 @@ function getErrorMessage(error: unknown) {
   return "No se pudieron cargar las cotizaciones.";
 }
 
-const STORAGE_KEY_PREFIX = "vidrios-saas:cotizaciones:resumen";
+const STORAGE_KEY_PREFIX = "vidrios-saas:cotizaciones:resumen:v2";
 
 type CotizacionesCachePayload = CotizacionesResumenPage;
 
@@ -156,6 +157,21 @@ export function useCotizacionesResumenPage(
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(() => cachedPage?.totalCount ?? 0);
   const [hasMore, setHasMore] = useState(() => cachedPage?.hasMore ?? false);
+  const [summary, setSummary] = useState<CotizacionesResumenGlobal>(() =>
+    cachedPage?.summary ?? {
+      totalCount: cachedPage?.totalCount ?? 0,
+      totalAmount: 0,
+      approvedAmount: 0,
+      counts: {
+        borrador: 0,
+        creada: 0,
+        enviada: 0,
+        aprobada: 0,
+        rechazada: 0,
+        terminada: 0,
+      },
+    }
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -177,6 +193,7 @@ export function useCotizacionesResumenPage(
       setCotizaciones(page.cotizaciones);
       setTotalCount(page.totalCount);
       setHasMore(page.hasMore);
+      setSummary(page.summary);
       persistCotizacionesCache(queryKey, page);
     } catch (nextError) {
       setError(getErrorMessage(nextError));
@@ -193,6 +210,21 @@ export function useCotizacionesResumenPage(
       setCotizaciones(currentCachedPage.cotizaciones);
       setTotalCount(currentCachedPage.totalCount);
       setHasMore(currentCachedPage.hasMore);
+      setSummary(
+        currentCachedPage.summary ?? {
+          totalCount: currentCachedPage.totalCount,
+          totalAmount: 0,
+          approvedAmount: 0,
+          counts: {
+            borrador: 0,
+            creada: 0,
+            enviada: 0,
+            aprobada: 0,
+            rechazada: 0,
+            terminada: 0,
+          },
+        }
+      );
       setIsReady(true);
 
       const cleanup = scheduleIdleRefresh(() => {
@@ -205,6 +237,19 @@ export function useCotizacionesResumenPage(
     setCotizaciones([]);
     setTotalCount(0);
     setHasMore(false);
+    setSummary({
+      totalCount: 0,
+      totalAmount: 0,
+      approvedAmount: 0,
+      counts: {
+        borrador: 0,
+        creada: 0,
+        enviada: 0,
+        aprobada: 0,
+        rechazada: 0,
+        terminada: 0,
+      },
+    });
     setIsReady(false);
     void refresh();
   }, [queryKey, refresh]);
@@ -216,6 +261,7 @@ export function useCotizacionesResumenPage(
     error,
     totalCount,
     hasMore,
+    summary,
     refreshCotizacionesResumen: refresh,
   };
 }

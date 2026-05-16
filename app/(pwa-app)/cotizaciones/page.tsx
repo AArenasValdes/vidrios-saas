@@ -180,16 +180,32 @@ export default function CotizacionesPage() {
     id: string;
     codigo: string;
   } | null>(null);
+  const estadoActivo = useMemo(() => {
+    if (atajoEstado === "aprobadas") {
+      return "Aprobada";
+    }
+
+    if (atajoEstado === "rechazadas") {
+      return "Rechazada";
+    }
+
+    if (atajoEstado === "pendientes") {
+      return "Pendiente";
+    }
+
+    return estadoFiltro;
+  }, [atajoEstado, estadoFiltro]);
   const {
     cotizaciones,
     totalCount,
+    summary,
     isReady: resumenReady,
     isRefreshing: resumenRefreshing,
     refreshCotizacionesResumen,
   } = useCotizacionesResumenPage({
     page: currentPage,
     pageSize: PAGE_SIZE,
-    estado: estadoFiltro,
+    estado: estadoActivo,
     cliente: clienteFiltro,
     period: periodoFiltro,
     order: ordenFiltro,
@@ -209,34 +225,31 @@ export default function CotizacionesPage() {
       (accumulator, cotizacion) => accumulator + cotizacion.total,
       0
     );
-    const aprobadas = nextFiltradas.filter((item) => item.estado === "aprobada");
-    const rechazadas = nextFiltradas.filter((item) => item.estado === "rechazada");
-    const pendientes = nextFiltradas.filter((item) =>
-      ["enviada", "borrador", "creada"].includes(item.estado)
-    );
+    const totalPendientes =
+      summary.counts.borrador + summary.counts.creada + summary.counts.enviada;
     const mobileStatsBase = [
       {
         key: "todos",
         label: "Total",
-        value: formatCompactAmount(nextMontoFiltrado),
+        value: formatCompactAmount(summary.totalAmount),
         tone: "blue",
       },
       {
         key: "aprobadas",
         label: "Aprob.",
-        value: String(aprobadas.length),
+        value: String(summary.counts.aprobada),
         tone: "green",
       },
       {
         key: "pendientes",
         label: "Pend.",
-        value: String(pendientes.length),
+        value: String(totalPendientes),
         tone: "amber",
       },
       {
         key: "rechazadas",
         label: "Rech.",
-        value: String(rechazadas.length),
+        value: String(summary.counts.rechazada),
         tone: "red",
       },
     ] as const;
@@ -273,31 +286,31 @@ export default function CotizacionesPage() {
       kpis: [
         {
           label: "Total",
-          value: String(totalCount),
+          value: String(summary.totalCount),
           sub: "cotizaciones",
           tone: "blue",
         },
         {
           label: "Aprobadas",
-          value: String(aprobadas.length),
-          sub: "este mes",
+          value: String(summary.counts.aprobada),
+          sub: "aprobadas",
           tone: "green",
         },
         {
           label: "Pendientes",
-          value: String(pendientes.length),
+          value: String(totalPendientes),
           sub: "por revisar",
           tone: "amber",
         },
         {
           label: "Terminadas",
-          value: String(nextFiltradas.filter((item) => item.estado === "terminada").length),
+          value: String(summary.counts.terminada),
           sub: "obras cerradas",
           tone: "strong",
         },
         {
           label: "Aprobado",
-          value: CLP(aprobadas.reduce((accumulator, item) => accumulator + item.total, 0)),
+          value: CLP(summary.approvedAmount),
           sub: "monto total",
           tone: "blue",
           mono: true,
@@ -317,7 +330,7 @@ export default function CotizacionesPage() {
     estadoFiltro,
     ordenFiltro,
     periodoFiltro,
-    totalCount,
+    summary,
   ]);
 
   const limpiar = () => {
@@ -362,22 +375,6 @@ export default function CotizacionesPage() {
 
   const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
     setAtajoEstado(key);
-
-    if (key === "todos") {
-      setEstadoFiltro("Todos");
-      return;
-    }
-
-    if (key === "aprobadas") {
-      setEstadoFiltro("Aprobada");
-      return;
-    }
-
-    if (key === "rechazadas") {
-      setEstadoFiltro("Rechazada");
-      return;
-    }
-
     setEstadoFiltro("Todos");
   }, []);
 
@@ -902,7 +899,7 @@ export default function CotizacionesPage() {
           {totalPages > 1 ? (
             <PremiumPageSection className={s.pagination}>
               <span className={s.pagInfo}>
-                Mostrando {pageStart + 1} - {Math.min(pageStart + PAGE_SIZE, filtradas.length)} de{" "}
+                Mostrando {pageStart + 1} - {pageStart + filtradas.length} de{" "}
                 {totalCount} cotizaciones
               </span>
               <div className={s.pagBtns}>

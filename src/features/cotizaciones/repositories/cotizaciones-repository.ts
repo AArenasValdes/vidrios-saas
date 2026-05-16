@@ -127,6 +127,9 @@ type CotizacionesDashboardFilter = {
   respondedTo?: string;
   viewedOnly?: boolean;
   respondedOnly?: boolean;
+  allowedProjectIds?: EntityId[] | null;
+  searchProjectIds?: EntityId[] | null;
+  search?: string | null;
 };
 
 type CotizacionesResumenPageOptions = {
@@ -146,6 +149,20 @@ type CotizacionesResumenPageResult = {
   hasMore: boolean;
   page: number;
   pageSize: number;
+};
+
+type CotizacionesResumenGlobalResult = {
+  totalCount: number;
+  totalAmount: number;
+  approvedAmount: number;
+  counts: {
+    borrador: number;
+    creada: number;
+    enviada: number;
+    aprobada: number;
+    rechazada: number;
+    terminada: number;
+  };
 };
 
 type HydrateCotizacionOptions = {
@@ -336,6 +353,71 @@ function mapCotizacionClientSummary(row: CotizacionRow): CotizacionClienteSummar
     clienteVioEn: row.cliente_vio_en ?? null,
     clienteRespondioEn: row.cliente_respondio_en ?? null,
   };
+}
+
+function applyCotizacionesDashboardFilters(
+  query: any,
+  organizationId: EntityId,
+  filters: CotizacionesDashboardFilter = {}
+) {
+  let nextQuery = query
+    .eq("organization_id", organizationId)
+    .is("eliminado_en", null);
+
+  if (filters.estados && filters.estados.length > 0) {
+    if (
+      filters.estados.length === 1 &&
+      filters.estados[0]?.toLowerCase() === "pendiente"
+    ) {
+      nextQuery = nextQuery.in("estado", ["borrador", "creada", "enviada"]);
+    } else {
+      nextQuery = nextQuery.in("estado", filters.estados);
+    }
+  }
+
+  if (filters.allowedProjectIds?.length) {
+    nextQuery = nextQuery.in("proyecto_id", filters.allowedProjectIds);
+  }
+
+  if (filters.viewedOnly) {
+    nextQuery = nextQuery.not("cliente_vio_en", "is", null);
+  }
+
+  if (filters.respondedOnly) {
+    nextQuery = nextQuery.not("cliente_respondio_en", "is", null);
+  }
+
+  if (filters.updatedFrom) {
+    nextQuery = nextQuery.gte("actualizado_en", filters.updatedFrom);
+  }
+
+  if (filters.updatedTo) {
+    nextQuery = nextQuery.lt("actualizado_en", filters.updatedTo);
+  }
+
+  if (filters.respondedFrom) {
+    nextQuery = nextQuery.gte("cliente_respondio_en", filters.respondedFrom);
+  }
+
+  if (filters.respondedTo) {
+    nextQuery = nextQuery.lt("cliente_respondio_en", filters.respondedTo);
+  }
+
+  const normalizedSearch = filters.search?.trim() ?? "";
+
+  if (normalizedSearch) {
+    const safeSearch = normalizedSearch.replace(/,/g, " ").replace(/\./g, " ");
+
+    if (filters.searchProjectIds?.length) {
+      nextQuery = nextQuery.or(
+        `numero.ilike.%${safeSearch}%,proyecto_id.in.(${filters.searchProjectIds.join(",")})`
+      );
+    } else {
+      nextQuery = nextQuery.ilike("numero", `%${safeSearch}%`);
+    }
+  }
+
+  return nextQuery;
 }
 
 function buildItemInsert(
@@ -870,39 +952,11 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     organizationId: EntityId,
     filters: CotizacionesDashboardFilter = {}
   ) {
-    let query = supabase
-      .from("cotizaciones")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", organizationId)
-      .is("eliminado_en", null);
-
-    if (filters.estados && filters.estados.length > 0) {
-      query = query.in("estado", filters.estados);
-    }
-
-    if (filters.viewedOnly) {
-      query = query.not("cliente_vio_en", "is", null);
-    }
-
-    if (filters.respondedOnly) {
-      query = query.not("cliente_respondio_en", "is", null);
-    }
-
-    if (filters.updatedFrom) {
-      query = query.gte("actualizado_en", filters.updatedFrom);
-    }
-
-    if (filters.updatedTo) {
-      query = query.lt("actualizado_en", filters.updatedTo);
-    }
-
-    if (filters.respondedFrom) {
-      query = query.gte("cliente_respondio_en", filters.respondedFrom);
-    }
-
-    if (filters.respondedTo) {
-      query = query.lt("cliente_respondio_en", filters.respondedTo);
-    }
+    const query = applyCotizacionesDashboardFilters(
+      supabase.from("cotizaciones").select("id", { count: "exact", head: true }),
+      organizationId,
+      filters
+    );
 
     const { count, error } = await query;
 
@@ -917,23 +971,11 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     organizationId: EntityId,
     filters: CotizacionesDashboardFilter = {}
   ) {
-    let query = supabase
-      .from("cotizaciones")
-      .select("total")
-      .eq("organization_id", organizationId)
-      .is("eliminado_en", null);
-
-    if (filters.estados && filters.estados.length > 0) {
-      query = query.in("estado", filters.estados);
-    }
-
-    if (filters.updatedFrom) {
-      query = query.gte("actualizado_en", filters.updatedFrom);
-    }
-
-    if (filters.updatedTo) {
-      query = query.lt("actualizado_en", filters.updatedTo);
-    }
+    const query = applyCotizacionesDashboardFilters(
+      supabase.from("cotizaciones").select("total"),
+      organizationId,
+      filters
+    );
 
     const { data, error } = await query;
 
@@ -960,17 +1002,12 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     const normalizedPeriod = options.period ?? "all";
 
     const applyFilters = (query: any) => {
-      let nextQuery = query
-        .eq("organization_id", organizationId)
-        .is("eliminado_en", null);
-
-      if (options.estado) {
-        nextQuery = nextQuery.eq("estado", options.estado);
-      }
-
-      if (options.allowedProjectIds?.length) {
-        nextQuery = nextQuery.in("proyecto_id", options.allowedProjectIds);
-      }
+      let nextQuery = applyCotizacionesDashboardFilters(query, organizationId, {
+        estados: options.estado ? [options.estado] : undefined,
+        allowedProjectIds: options.allowedProjectIds,
+        searchProjectIds: options.searchProjectIds,
+        search: normalizedSearch || null,
+      });
 
       if (normalizedPeriod !== "all") {
         const now = new Date();
@@ -993,17 +1030,6 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
 
         if (toDate) {
           nextQuery = nextQuery.lt("actualizado_en", toDate.toISOString());
-        }
-      }
-
-      if (normalizedSearch) {
-        const safeSearch = normalizedSearch.replace(/,/g, " ").replace(/\./g, " ");
-        if (options.searchProjectIds?.length) {
-          nextQuery = nextQuery.or(
-            `numero.ilike.%${safeSearch}%,proyecto_id.in.(${options.searchProjectIds.join(",")})`
-          );
-        } else {
-          nextQuery = nextQuery.ilike("numero", `%${safeSearch}%`);
         }
       }
 
@@ -1073,6 +1099,65 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       page,
       pageSize,
     };
+  }
+
+  async function getCotizacionesResumenGlobalBase(
+    organizationId: EntityId,
+    filters: CotizacionesDashboardFilter = {}
+  ): Promise<CotizacionesResumenGlobalResult> {
+    const query = applyCotizacionesDashboardFilters(
+      supabase.from("cotizaciones").select("estado, total"),
+      organizationId,
+      filters
+    );
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    const rows =
+      ((data as Array<{ estado: string | null; total: number | string | null }>) ?? []);
+
+    return rows.reduce<CotizacionesResumenGlobalResult>(
+      (summary, row) => {
+        const estado = (row.estado ?? "borrador").toLowerCase();
+        const total = Number(row.total ?? 0);
+
+        summary.totalCount += 1;
+        summary.totalAmount += total;
+
+        if (estado === "borrador") {
+          summary.counts.borrador += 1;
+        } else if (estado === "creada") {
+          summary.counts.creada += 1;
+        } else if (estado === "enviada") {
+          summary.counts.enviada += 1;
+        } else if (estado === "aprobada") {
+          summary.counts.aprobada += 1;
+          summary.approvedAmount += total;
+        } else if (estado === "rechazada") {
+          summary.counts.rechazada += 1;
+        } else if (estado === "terminada") {
+          summary.counts.terminada += 1;
+        }
+
+        return summary;
+      },
+      {
+        totalCount: 0,
+        totalAmount: 0,
+        approvedAmount: 0,
+        counts: {
+          borrador: 0,
+          creada: 0,
+          enviada: 0,
+          aprobada: 0,
+          rechazada: 0,
+          terminada: 0,
+        },
+      }
+    );
   }
 
   async function listDashboardAlertCandidatesBase(
@@ -1180,6 +1265,13 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       options: CotizacionesResumenPageOptions
     ) {
       return listCotizacionesPageBase(organizationId, options);
+    },
+
+    async getResumenGlobalByOrganizationId(
+      organizationId: EntityId,
+      filters: CotizacionesDashboardFilter = {}
+    ) {
+      return getCotizacionesResumenGlobalBase(organizationId, filters);
     },
 
     async listRecentByOrganizationId(organizationId: EntityId, limit = 50) {
@@ -1600,6 +1692,9 @@ export const cotizacionesRepository: CotizacionesRepository = {
   },
   listPageByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listPageByOrganizationId(...args);
+  },
+  getResumenGlobalByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().getResumenGlobalByOrganizationId(...args);
   },
   listRecentByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listRecentByOrganizationId(...args);
