@@ -250,19 +250,8 @@
 }
 
 .submitButton {
+  width: 100%;
   min-height: 52px;
-  border: 0;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
-  box-shadow: 0 4px 6px -1px rgba(var(--brand-rgb), 0.2);
 }
 
 .secondaryHeroCta {
@@ -325,44 +314,65 @@
   display: none;
 }
 
+.quickTrustRail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 82%);
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.quickTrustRail::-webkit-scrollbar {
+  display: none;
+}
+
 .quickTrustCard {
-  flex: 1;
-  min-width: 0;
-  border-radius: 16px;
-  border: 1px solid rgba(217, 224, 234, 0.5);
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(217, 224, 234, 0.98);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 32px rgba(36, 59, 107, 0.07);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
 }
 
 .quickTrustIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  background: var(--brand-soft);
+  background: rgba(var(--brand-rgb), 0.1);
   color: var(--brand);
   flex-shrink: 0;
 }
 
 .quickTrustCopy {
+  display: grid;
+  gap: 4px;
   min-width: 0;
 }
 
 .quickTrustCopy strong {
   color: var(--text-main);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
   line-height: 1.3;
+  font-weight: 700;
 }
 
 .quickTrustCopy span {
   color: var(--text-soft);
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* ========== SERVICES ========== */
@@ -681,18 +691,18 @@
 .phoneField,
 .iconInput,
 .uploadCard {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid rgba(217, 224, 234, 0.98);
+  background: var(--surface-soft);
 }
 
 .input,
 .textarea {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 20px;
   padding: 13px 15px;
   color: var(--text-main);
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   outline: none;
   transition:
     border-color 160ms ease,
@@ -720,8 +730,8 @@
 .phoneField:focus-within,
 .iconInput:focus-within,
 .uploadCard:focus-within {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(var(--brand-rgb), 0.1);
+  border-color: rgba(var(--brand-rgb), 0.44);
+  box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.12);
   background: #ffffff;
 }
 
@@ -769,41 +779,96 @@
 
 .workTypeButton {
   position: relative;
-  min-height: 80px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  min-height: 76px;
+  border-radius: 20px;
+  border: 1px solid rgba(217, 224, 234, 0.98);
   background: #ffffff;
-  color: #475569;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  color: #5c6f8a;
+  display: grid;
   gap: 6px;
-  padding: 8px 4px;
+  place-items: center;
+  padding: 8px 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.25;
-  transition: all 150ms ease;
-  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+  box-shadow: 0 10px 20px rgba(36, 59, 107, 0.04);
 }
 
-.workTypeButtonActive {
-  border-color: var(--brand);
-  background: var(--brand-soft);
-  color: var(--brand);
-  box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.1);
+.workTypeCheck {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(217, 224, 234, 0.98);
+  color: transparent;
+  box-shadow: 0 8px 16px rgba(36, 59, 107, 0.08);
+}
+
+.workTypeCheck svg {
+  width: 11px;
+  height: 11px;
+}
+
+.workTypeCheckActive {
+  background: linear-gradient(180deg, #4f7dd4, #335ea9);
+  border-color: rgba(var(--brand-rgb), 0.48);
+  color: #ffffff;
+}
+
+.workTypeButton span:last-child {
+  color: inherit;
 }
 
 .workTypeDrawing {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.72), transparent 34%),
+    linear-gradient(180deg, #f8fbff, #edf3fb);
+  border: 1px solid rgba(217, 224, 234, 0.98);
+  color: #70819a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .workTypeDrawingSvg {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.workTypeButtonActive {
+  border-color: rgba(var(--brand-rgb), 0.72);
+  background: linear-gradient(180deg, rgba(var(--brand-rgb), 0.08), rgba(var(--brand-rgb), 0.03));
+  box-shadow:
+    0 12px 24px rgba(var(--brand-rgb), 0.12),
+    0 0 0 2px rgba(var(--brand-rgb), 0.14);
+  transform: translateY(-1px);
+  color: var(--brand);
+}
+
+.workTypeButtonActive .workTypeDrawing {
+  border-color: rgba(var(--brand-rgb), 0.28);
+  color: var(--brand);
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.76), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(var(--brand-rgb), 0.08));
 }
 
 .detailInput {

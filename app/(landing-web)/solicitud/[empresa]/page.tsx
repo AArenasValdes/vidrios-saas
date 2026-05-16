@@ -303,18 +303,18 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
   const trustItems = [
     {
       icon: LuClipboardCheck,
-      title: "Registro",
-      copy: "Solicitud registrada",
+      title: "Solicitud registrada",
+      copy: "Aunque estemos ocupados, tu consulta no se pierde.",
     },
     {
       icon: LuShieldCheck,
-      title: "Rapido",
+      title: "Respuesta comercial",
       copy: config.solicitudPublicaValor,
     },
     {
       icon: LuBadgeCheck,
       title: "Sin compromiso",
-      copy: "Sin costo",
+      copy: "Solicita y cotiza sin costo.",
     },
   ];
 
