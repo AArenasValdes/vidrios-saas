@@ -726,9 +726,13 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
       {/* Sticky CTA */}
       <div className={s.stickyBarWrap}>
         <div className={s.stickyBar}>
-          <a className={s.stickySecondary} href="tel:{config.empresaTelefono}">
-            <LuPhone aria-hidden />
-            <span className="sr-only">Telefono</span>
+          <a
+            className={s.stickySecondary}
+            href="#solicitud-rapida"
+            aria-label="Solicitar cotizacion"
+          >
+            <LuBadgeCheck aria-hidden />
+            <span className="sr-only">Solicitar cotizacion</span>
           </a>
           {whatsappUrl ? (
             <a

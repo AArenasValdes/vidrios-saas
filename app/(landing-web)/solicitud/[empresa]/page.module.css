@@ -249,10 +249,7 @@
   box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.2);
 }
 
-.submitButton {
-  width: 100%;
-  min-height: 52px;
-}
+
 
 .secondaryHeroCta {
   min-height: 48px;
@@ -1087,9 +1084,18 @@
 .submitButton {
   width: 100%;
   min-height: 52px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
+  border: 0;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 16px 28px rgba(var(--brand-rgb), 0.24);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
 }
 
 .submitTrust {

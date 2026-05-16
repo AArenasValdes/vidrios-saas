@@ -185,6 +185,7 @@ export function SolicitudEmpresaForm({
 }: Props) {
   const searchParams = useSearchParams();
   const sectionRef = useRef<HTMLElement | null>(null);
+  const formTopRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
@@ -398,7 +399,12 @@ export function SolicitudEmpresaForm({
   }
 
   return (
-    <section id="solicitud-rapida" className={s.formCard} ref={sectionRef}>
+    <section id="solicitud-rapida" className={s.formCard} ref={(node) => {
+      sectionRef.current = node;
+      if (node) {
+        (node as HTMLElement).dataset.formSection = "true";
+      }
+    }}>
     <div className={s.formIntro}>
       <span className={s.sectionEyebrow}>Solicitud rapida</span>
       <h2 className={s.formTitle}>{formTitle ?? "Cuentanos que necesitas"}</h2>
