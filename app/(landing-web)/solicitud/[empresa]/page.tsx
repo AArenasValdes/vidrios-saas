@@ -6,9 +6,13 @@ import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
   LuBadgeCheck,
+  LuChevronRight,
   LuCircleCheck,
+  LuClock3,
   LuClipboardCheck,
+  LuMapPin,
   LuMessageCircleMore,
+  LuPhone,
   LuShieldCheck,
   LuStar,
 } from "react-icons/lu";
@@ -81,7 +85,30 @@ const PREVIEW_GALLERY = [
   },
 ] as const;
 
+const SERVICE_ICONS: Record<string, string> = {
+  Ventanas: "window",
+  Ventana: "window",
+  Shower: "shower",
+  Terraza: "terrace",
+  Terrazas: "terrace",
+  Puerta: "door",
+  Puertas: "door",
+  Mampara: "partition",
+  Mamparas: "partition",
+  Termopanel: "thermal",
+  Termopanels: "thermal",
+};
+
 export const revalidate = 300;
+
+function getServiceIcon(name: string) {
+  for (const key of Object.keys(SERVICE_ICONS)) {
+    if (name.toLowerCase().includes(key.toLowerCase())) {
+      return SERVICE_ICONS[key];
+    }
+  }
+  return "default";
+}
 
 function getInitials(value: string) {
   return value
@@ -195,13 +222,13 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
     to: config.solicitudPublicaHorarioHasta,
   });
 
-  const availabilityLabel = isAvailable ? "Activo" : "Fuera de horario";
+  const availabilityLabel = isAvailable ? "Abierto" : "Cerrado";
   const locationLabel = resolveLocationLabel(config.empresaDireccion);
   const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
   const horarioLabel = config.solicitudPublicaHorarioPorDia.length
     ? formatHorarioPorDiaLabel(config.solicitudPublicaHorarioPorDia)
     : `${formatDiasAtencionLabel(
-        config.solicitudPublicaDiasAtencion
+        config.solicitudPublicaDiasAtencion,
       )} ${config.solicitudPublicaHorarioDesde}-${config.solicitudPublicaHorarioHasta}`;
 
   const displayName =
@@ -213,7 +240,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
       : "Cotiza vidrios y aluminio en menos de 1 minuto";
 
   const heroSubtitle =
-    config.isPublished && config.heroSubtitle ? config.heroSubtitle : null;
+    config.isPublished && config.heroSubtitle ? config.heroSubtitle : "Especialistas en instalaciones a medida con terminaciones premium.";
 
   const heroMode = config.isPublished ? config.heroMode : "gradient";
   const heroImageUrl =
@@ -270,21 +297,24 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
       ).toFixed(1)
     : null;
 
+  const featuredServices = serviceItems.slice(0, 3);
+  const chipServices = serviceItems.slice(3);
+
   const trustItems = [
     {
       icon: LuClipboardCheck,
-      title: "Solicitud registrada",
-      copy: "Aunque estemos ocupados, tu consulta no se pierde.",
+      title: "Registro",
+      copy: "Solicitud registrada",
     },
     {
       icon: LuShieldCheck,
-      title: "Respuesta comercial",
+      title: "Rapido",
       copy: config.solicitudPublicaValor,
     },
     {
       icon: LuBadgeCheck,
       title: "Sin compromiso",
-      copy: "Solicita y cotiza sin costo.",
+      copy: "Sin costo",
     },
   ];
 
@@ -298,6 +328,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
       }}
     >
       <div className={s.shell}>
+        {/* Header */}
         <header className={s.topBar}>
           <Link href="/" className={s.backButton} aria-label="Volver al inicio">
             <LuArrowLeft aria-hidden />
@@ -305,16 +336,17 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
 
           <div className={s.topCenter}>
             <span className={s.topSlug}>
-              {`VENTORAP.CL/${config.solicitudPublicaSlug.toUpperCase()}`}
+              {`ventorap.cl/${config.solicitudPublicaSlug.toLowerCase()}`}
             </span>
           </div>
 
           <div className={s.topStatus} data-active={isAvailable}>
             <span className={s.topStatusDot} aria-hidden />
-            {isAvailable ? "ON" : "OFF"}
+            {availabilityLabel}
           </div>
         </header>
 
+        {/* Hero */}
         <section className={s.heroSection}>
           <article className={s.heroPanel}>
             {heroImageUrl ? (
@@ -360,18 +392,11 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                     ) : null}
                   </div>
                 </div>
-
-                <div className={s.heroStatusBadge} data-active={isAvailable}>
-                  <span className={s.availabilityDot} aria-hidden />
-                  {availabilityLabel}
-                </div>
               </div>
 
               <div className={s.heroMainCopy}>
                 <h1 className={s.heroTitle}>{heroTitle}</h1>
-                {heroSubtitle ? (
-                  <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
-                ) : null}
+                <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
               </div>
 
               <div className={s.heroActions}>
@@ -388,7 +413,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                 ) : null}
 
                 <a className={s.secondaryHeroCta} href="#solicitud-rapida">
-                  {formTitle}
+                  Dejar solicitud en linea
                 </a>
               </div>
 
@@ -414,6 +439,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </article>
         </section>
 
+        {/* Quick Trust */}
         <section className={s.quickTrustSection} aria-label="Senales rapidas de confianza">
           <div className={s.quickTrustRail}>
             {trustItems.map((item) => {
@@ -434,36 +460,92 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* Featured Services */}
         {serviceItems.length > 0 ? (
           <section className={s.sectionCard}>
             <div className={s.sectionHeader}>
-              <span className={s.sectionEyebrow}>Servicios que realizamos</span>
-              <p className={s.sectionLead}>
-                Tipos de trabajo que mas nos piden nuestros clientes.
-              </p>
+              <h2 className={s.sectionTitle}>Servicios Destacados</h2>
             </div>
 
-            <div className={s.serviceRail}>
-              {serviceItems.map((service) => (
-                <span key={service} className={s.serviceChip}>
-                  {service}
-                </span>
+            <div className={s.featuredServiceList}>
+              {featuredServices.map((service) => (
+                <div key={service} className={s.featuredServiceCard}>
+                  <div className={s.featuredServiceIconWrap}>
+                    <div className={s.featuredServiceIcon}>
+                      {getServiceIcon(service) === "window" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M12 3v18" />
+                          <path d="M3 12h18" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "shower" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 20h16" />
+                          <path d="M8 20v-8a4 4 0 018 0v8" />
+                          <path d="M12 4v4" />
+                          <path d="M8 8h8" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "terrace" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 21h18" />
+                          <path d="M5 21V7l8-4 8 4v14" />
+                          <path d="M9 21v-6h6v6" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "door" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3v18" />
+                          <rect x="3" y="3" width="9" height="18" rx="1" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "partition" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M12 3v18" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "thermal" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M8 3v18" />
+                          <path d="M16 3v18" />
+                        </svg>
+                      )}
+                      {getServiceIcon(service) === "default" && (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <div className={s.featuredServiceInfo}>
+                    <strong>{service}</strong>
+                    <span>Aislamiento termico y acustico...</span>
+                  </div>
+                  <LuChevronRight aria-hidden className={s.featuredServiceChevron} />
+                </div>
               ))}
             </div>
 
-            <p className={s.serviceLegend}>
-              {"\u2717 Ventanas, \u2717 Shower, \u2717 Terraza, etc..."}
-            </p>
+            {chipServices.length > 0 ? (
+              <div className={s.serviceRail}>
+                {chipServices.map((service) => (
+                  <span key={service} className={s.serviceChip}>
+                    {service}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </section>
         ) : null}
 
+        {/* Gallery */}
         {resolvedGallery.length > 0 ? (
           <section className={s.gallerySection} aria-label="Trabajos recientes">
             <div className={s.sectionHeader}>
-              <span className={s.sectionEyebrow}>Trabajos recientes</span>
-              <p className={s.sectionLead}>
-                Algunas referencias reales de trabajos hechos a medida.
-              </p>
+              <h2 className={s.sectionTitle}>Trabajos Recientes</h2>
             </div>
 
             <div className={s.galleryRail}>
@@ -481,11 +563,9 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                       <span className={s.galleryTag}>{image.workBadge}</span>
                     ) : null}
                   </div>
-                  <div className={s.portfolioBody}>
+                  <div className={s.galleryCardOverlay}>
                     <strong>{image.workTitle || image.label || "Trabajo reciente"}</strong>
-                    <span>
-                      {[image.workType, image.workZone].filter(Boolean).join(" · ")}
-                    </span>
+                    <span>{[image.workType, image.workZone].filter(Boolean).join(" · ")}</span>
                   </div>
                 </article>
               ))}
@@ -493,29 +573,36 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </section>
         ) : null}
 
+        {/* How it works */}
         <section className={s.sectionCard}>
-          <span className={s.sectionEyebrow}>Como funciona</span>
-          <div className={s.stepsInline}>
+          <h2 className={s.sectionTitle}>El proceso es simple</h2>
+          <div className={s.stepsVertical}>
             {[
-              { title: "Envias tu necesidad", copy: "" },
-              { title: "Revisamos medidas o fotos", copy: "" },
-              { title: "Respondemos por WhatsApp", copy: "" },
+              {
+                title: "Envias los detalles",
+                copy: "Cuentanos que necesitas y adjunta medidas o fotos de referencia.",
+              },
+              {
+                title: "Revisamos tecnicamente",
+                copy: "Un especialista evalua la viabilidad y los materiales optimos.",
+              },
+              {
+                title: "Recibes tu cotizacion",
+                copy: "Te entregamos un presupuesto detallado con opciones y tiempos.",
+              },
             ].map((step, index) => (
-              <article key={step.title} className={s.stepMiniCard}>
-                <div className={s.stepNumber}>{index + 1}</div>
-                <div className={s.stepMiniCopy}>
+              <article key={step.title} className={s.stepVerticalCard}>
+                <div className={s.stepVerticalNumber}>{index + 1}</div>
+                <div className={s.stepVerticalCopy}>
                   <strong>{step.title}</strong>
                   <span>{step.copy}</span>
                 </div>
               </article>
             ))}
           </div>
-
-          <p className={s.stepsSupportNote}>
-            Tu solicitud queda registrada para que no se pierda.
-          </p>
         </section>
 
+        {/* Form */}
         <section className={s.formSection} aria-label="Formulario de solicitud">
           <SolicitudEmpresaForm
             slug={config.solicitudPublicaSlug}
@@ -528,6 +615,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           />
         </section>
 
+        {/* Testimonials */}
         {showRating && approvedTestimonialsCount > 0 ? (
           <section className={s.sectionCard}>
             <div className={s.sectionHeader}>
@@ -544,7 +632,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                   <div className={s.testimonialPublicTop}>
                     <strong>{item.nombreCorto || "Cliente"}</strong>
                     <span>{`${"\u2605".repeat(item.estrellas)}${"\u2606".repeat(
-                      5 - item.estrellas
+                      5 - item.estrellas,
                     )}`}</span>
                   </div>
                   <p>{item.comentario}</p>
@@ -560,6 +648,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
           </section>
         ) : null}
 
+        {/* Footer */}
         <footer className={s.companyFooter} aria-label="Datos de la empresa">
           <div className={s.companyFooterAccent} aria-hidden />
           <div className={s.companyFooterMain}>
@@ -582,10 +671,28 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
               <div className={s.companyFooterCopy}>
                 <strong>{displayName}</strong>
                 <span>{config.publicSubtitle || config.publicBusinessType}</span>
-                {formattedPhone ? <span>{formattedPhone}</span> : null}
-                {config.publicZone ? <span>{config.publicZone}</span> : null}
-                {showSchedule ? <span>{horarioLabel}</span> : null}
               </div>
+            </div>
+
+            <div className={s.footerInfoGrid}>
+              {config.empresaDireccion ? (
+                <div className={s.footerInfoItem}>
+                  <LuMapPin aria-hidden />
+                  <span>{config.empresaDireccion}</span>
+                </div>
+              ) : null}
+              {showSchedule ? (
+                <div className={s.footerInfoItem}>
+                  <LuClock3 aria-hidden />
+                  <span>{horarioLabel}</span>
+                </div>
+              ) : null}
+              {formattedPhone ? (
+                <div className={s.footerInfoItem}>
+                  <LuPhone aria-hidden />
+                  <span>{formattedPhone}</span>
+                </div>
+              ) : null}
             </div>
 
             <div className={s.footerActions}>
@@ -616,11 +723,12 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
         </footer>
       </div>
 
+      {/* Sticky CTA */}
       <div className={s.stickyBarWrap}>
         <div className={s.stickyBar}>
-          <a className={s.stickySecondary} href="#solicitud-rapida">
-            <LuBadgeCheck aria-hidden />
-            <span>Solicitar cotizacion</span>
+          <a className={s.stickySecondary} href="tel:{config.empresaTelefono}">
+            <LuPhone aria-hidden />
+            <span className="sr-only">Telefono</span>
           </a>
           {whatsappUrl ? (
             <a
@@ -630,7 +738,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
               rel="noopener noreferrer"
             >
               <LuMessageCircleMore aria-hidden />
-              <span>WhatsApp</span>
+              <span>Hablar por WhatsApp</span>
             </a>
           ) : null}
         </div>
