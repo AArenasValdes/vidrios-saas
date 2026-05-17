@@ -364,6 +364,7 @@ export function createPublicCotizacionApprovalRepository() {
         )
         .eq("approval_token", token)
         .is("eliminado_en", null)
+        .in("estado", ["borrador", "creada", "enviada"])
         .is("cliente_respondio_en", null)
         .select(COTIZACION_APPROVAL_SELECT)
         .maybeSingle();
@@ -381,7 +382,8 @@ export function createPublicCotizacionApprovalRepository() {
             } as never
           )
           .eq("approval_token", token)
-          .is("eliminado_en", null);
+          .is("eliminado_en", null)
+          .in("estado", ["borrador", "creada", "enviada"]);
 
         if (fallbackError) {
           throw fallbackError;

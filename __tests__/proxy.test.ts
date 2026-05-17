@@ -50,7 +50,11 @@ describe("proxy", () => {
       createSupabaseMock({ id: "auth-1" })
     );
 
-    const request = new NextRequest("http://localhost:3000/solicitudes");
+    const request = new NextRequest("http://localhost:3000/solicitudes", {
+      headers: {
+        cookie: "sb-test-auth-token=abc123",
+      },
+    });
     const response = await proxy(request);
 
     expect(response.status).toBe(200);

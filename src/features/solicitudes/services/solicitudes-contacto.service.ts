@@ -2,6 +2,7 @@ import { solicitudesContactoRepository } from "@/features/solicitudes/repositori
 import type { SolicitudesContactoRepository } from "@/features/solicitudes/repositories/solicitudes-contacto.repository";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 import type { WebPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
+import { resolvePublicLandingConfig } from "@/features/organization-profile/services/organization-profile.service";
 import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import type {
   AyudaSolicitudContacto,
@@ -141,7 +142,7 @@ export interface SolicitudesContactoService {
   updateSolicitudStatus(input: {
     id: string;
     estado: EstadoSolicitudContacto;
-    organizationId?: string | number | null;
+    organizationId: string | number;
   }): Promise<SolicitudContacto>;
 }
 
@@ -189,8 +190,13 @@ export function createSolicitudesContactoService(
     },
 
     async getPublicRequestConfig(slug: string) {
-      // delegado al repository para mantener compatibilidad
-      return repository.getPublicConfigBySlug(slug);
+      const config = await repository.getPublicConfigBySlug(slug);
+
+      if (!config || !config.isPublished) {
+        return null;
+      }
+
+      return resolvePublicLandingConfig(config);
     },
 
     async createSolicitud(input: CrearSolicitudContactoInput) {
@@ -309,7 +315,7 @@ export function createSolicitudesContactoService(
     async updateSolicitudStatus(input: {
       id: string;
       estado: EstadoSolicitudContacto;
-      organizationId?: string | number | null;
+      organizationId: string | number;
     }) {
       const id = normalizeText(input.id);
       const estado = normalizeText(input.estado) as EstadoSolicitudContacto;

@@ -94,7 +94,7 @@ export function createProjectsRepository(deps: ProjectsRepositoryDeps = {}) {
       }));
     },
 
-    async listByManyIds(ids: EntityId[]) {
+    async listByManyIds(ids: EntityId[], organizationId: EntityId) {
       if (ids.length === 0) {
         return [];
       }
@@ -102,6 +102,7 @@ export function createProjectsRepository(deps: ProjectsRepositoryDeps = {}) {
       const { data, error } = await supabase
         .from("projects")
         .select(PROJECT_SELECT)
+        .eq("organization_id", organizationId)
         .in("id", ids)
         .is("eliminado_en", null);
 

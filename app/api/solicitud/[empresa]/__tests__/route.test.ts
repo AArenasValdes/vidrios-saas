@@ -49,6 +49,33 @@ describe("/api/solicitud/[empresa]", () => {
     });
   });
 
+  it("rechaza captacion en una pagina despublicada", async () => {
+    (solicitudesContactoService.getPublicRequestConfig as jest.Mock).mockResolvedValue(null);
+
+    const request = new Request("http://localhost/api/solicitud/ventora", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        nombre: "Ana",
+        contacto: "+56912345678",
+        tipoTrabajo: "Ventanas",
+      }),
+    });
+
+    const response = await POST(request, {
+      params: Promise.resolve({ empresa: "ventora" }),
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(solicitudesContactoService.createPublicRequest).not.toHaveBeenCalled();
+    expect(payload).toEqual({
+      error: "No encontramos la empresa solicitada.",
+    });
+  });
+
   it("aplica rate limiting por IP en la ruta publica critica", async () => {
     (solicitudesContactoService.getPublicRequestConfig as jest.Mock).mockResolvedValue({
       organizationId: "org-1",

@@ -37,14 +37,14 @@ describe("solicitudes-summary.service", () => {
       }),
     } as Response);
 
-    const solicitudes = await getSolicitudesResumen();
+    const page = await getSolicitudesResumen();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/solicitudes/resumen", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/solicitudes/resumen?page=1&pageSize=25", {
       method: "GET",
       cache: "no-store",
     });
-    expect(solicitudes).toHaveLength(1);
-    expect(solicitudes[0]?.nombre).toBe("Ana Soto");
+    expect(page.solicitudes).toHaveLength(1);
+    expect(page.solicitudes[0]?.nombre).toBe("Ana Soto");
   });
 
   it("debe propagar error legible si el endpoint falla", async () => {

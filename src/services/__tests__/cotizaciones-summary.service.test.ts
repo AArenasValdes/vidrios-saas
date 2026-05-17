@@ -44,7 +44,7 @@ describe("cotizaciones-summary.service", () => {
 
     const cotizaciones = await getCotizacionesResumenByOrganizationId(77);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/cotizaciones/resumen", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/cotizaciones/resumen?page=1&pageSize=50", {
       method: "GET",
       cache: "no-store",
     });

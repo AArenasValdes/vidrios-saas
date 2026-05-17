@@ -28,7 +28,9 @@ export async function acceptPublicQuoteAction(token: string) {
     }
   }
 
-  revalidatePublicApprovalQuotesCache();
+  if (typeof revalidatePublicApprovalQuotesCache === "function") {
+    revalidatePublicApprovalQuotesCache();
+  }
 
   redirect(`/presupuesto/${redirectToken}?decision=aceptada`);
 }
@@ -53,7 +55,9 @@ export async function rejectPublicQuoteAction(token: string) {
     }
   }
 
-  revalidatePublicApprovalQuotesCache();
+  if (typeof revalidatePublicApprovalQuotesCache === "function") {
+    revalidatePublicApprovalQuotesCache();
+  }
 
   redirect(`/presupuesto/${redirectToken}?decision=rechazada`);
 }

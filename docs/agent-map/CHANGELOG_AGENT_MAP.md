@@ -4,6 +4,38 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-16 - Estabilizacion de rutas criticas para piloto
+
+### Resumen
+
+Se cerro una pasada de hardening sobre captacion publica, aprobacion publica y cotizaciones activas. La landing publica ahora respeta `is_published` como restriccion real, se elimino el write-on-read del slug publico, la aprobacion publica tolera revalidacion fuera del runtime completo de Next, y se blindaron crashes reales del Paso 2 movil/comercial en `/cotizaciones/nueva`. Tambien se alinearon contratos de resumen paginado y tests de rutas criticas.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/(landing-web)/solicitud/[empresa]/page.tsx` | Ruta publica ahora corta si la pagina no esta publicada |
+| `app/presupuesto/[token]/actions.ts` | Revalidacion publica tolerante a mocks/runtime parcial |
+| `app/(pwa-app)/cotizaciones/nueva/` | Guards para templates, referencias y arrays opcionales en flujo movil/comercial |
+| `app/(pwa-app)/cotizaciones/[id]/page.tsx` | Estados de error mas explicitos para detalle, PDF y WhatsApp |
+| `app/print/cotizaciones/[id]/page.tsx` | Menor fragilidad del visor al retener ultimo registro renderizable sin leer refs en render |
+| `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts` | Se elimino sincronizacion implicita de slug durante lectura publica |
+| `src/features/solicitudes/services/solicitudes-contacto.service.ts` | Solo expone configuracion publica cuando `is_published` es verdadero |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
+## 2026-05-16 - Documento maestro para IAs, BI y marketing
+
+### Resumen
+
+Se agrego un documento maestro de contexto de negocio y producto para compartir con otras IAs, orientar inteligencia de negocios y alinear marketing. Resume posicionamiento, fase actual, fortalezas reales, funcionalidades activas, restricciones de producto, oportunidades de BI y mensajes comerciales.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `docs/ventora-master-brief.md` | Nuevo resumen maestro de producto, negocio, fase y funcionalidades |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
 ## 2026-05-13 - Cotizacion asistida por linea y precios rapidos
 
 ### Resumen

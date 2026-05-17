@@ -80,8 +80,12 @@ function sanitizeDigits(value: string) {
   return value.replace(/[^\d]/g, "");
 }
 
+function safeTrim(value: string | null | undefined) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
-  if (!draft.referencia.trim() || !draft.precioPorM2.trim()) {
+  if (!safeTrim(draft.referencia) || !safeTrim(draft.precioPorM2)) {
     return draft;
   }
 
@@ -218,6 +222,7 @@ export function createInitialPasoDosGrupoDraft({
     seedForm?.referencia || suggestedForm.referencia,
     seededSubtype
   );
+  const referencia = seedForm?.referencia ?? suggestedForm.referencia ?? "";
 
   return {
     categoria,
@@ -232,7 +237,7 @@ export function createInitialPasoDosGrupoDraft({
     configuracion: referenceParts.configuracion,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
-    referencia: seedForm?.referencia ?? suggestedForm.referencia,
+    referencia,
     ancho: sanitizeDigits(seedForm?.ancho ?? ""),
     alto: sanitizeDigits(seedForm?.alto ?? ""),
     precio: sanitizeDigits(seedForm?.costoProveedorUnitario ?? ""),
@@ -274,7 +279,9 @@ export function buildPasoDosGrupoComponentForm({
     ...baseForm,
     material: draft.material,
     colorHex: draft.colorHex,
-    referencia: draft.referencia.trim() || composeComponentReference(draft.sistema, draft.configuracion),
+    referencia:
+      safeTrim(draft.referencia) ||
+      composeComponentReference(draft.sistema, draft.configuracion),
     lineTemplateId: draft.lineTemplateId,
     pricingMode: draft.pricingMode,
     vidrio: draft.vidrio,

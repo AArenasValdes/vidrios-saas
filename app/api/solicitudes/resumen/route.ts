@@ -73,7 +73,9 @@ export async function GET(request: Request) {
 
   try {
     const profileReadyAt = performance.now();
-    const canReviewAll = canAccessAllSolicitudes(userEmail);
+    const canReviewAll =
+      canAccessAllSolicitudes(userEmail) &&
+      (organizationId === null || organizationId === undefined);
 
     if (!canReviewAll && !organizationId) {
       return NextResponse.json(

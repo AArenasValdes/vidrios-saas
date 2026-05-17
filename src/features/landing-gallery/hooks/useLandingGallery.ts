@@ -92,14 +92,17 @@ export function useLandingGallery() {
 
   async function updateImage(
     id: string | number,
-    input: {
-      label?: string;
-      workTitle?: string;
-      workType?: string;
-      workZone?: string;
-      workBadge?: string;
-      isVisible: boolean;
-    }
+    input:
+      | {
+          label?: string;
+          workTitle?: string;
+          workType?: string;
+          workZone?: string;
+          workBadge?: string;
+          isVisible: boolean;
+        }
+      | string,
+    legacyIsVisible?: boolean
   ) {
     if (!organizacionId) {
       throw new Error("No hay organizacion activa");
@@ -107,14 +110,22 @@ export function useLandingGallery() {
 
     setError(null);
 
+    const normalizedInput =
+      typeof input === "string"
+        ? {
+            label: input,
+            isVisible: legacyIsVisible ?? true,
+          }
+        : input;
+
     try {
       const updated = await landingGalleryService.updateGalleryItem(id, organizacionId, {
-        label: input.label,
-        workTitle: input.workTitle,
-        workType: input.workType,
-        workZone: input.workZone,
-        workBadge: input.workBadge,
-        isVisible: input.isVisible,
+        label: normalizedInput.label,
+        workTitle: normalizedInput.workTitle,
+        workType: normalizedInput.workType,
+        workZone: normalizedInput.workZone,
+        workBadge: normalizedInput.workBadge,
+        isVisible: normalizedInput.isVisible,
       });
 
       setGallery((current) =>

@@ -41,6 +41,7 @@ function sanitizeDigits(value: string) {
 }
 
 export function usePasoDosAgregarGrupoMovil(params: Params) {
+  const activeLineTemplates = params.activeLineTemplates ?? [];
   const [isOpen, setIsOpen] = useState(false);
   const [paso, setPaso] = useState<PasoDosGrupoPasoMovil>(1);
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() =>
@@ -97,10 +98,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   );
   const visibleLineTemplates = useMemo(
     () =>
-      params.activeLineTemplates.filter(
+      activeLineTemplates.filter(
         (template) => template.material === draft.material
       ),
-    [draft.material, params.activeLineTemplates]
+    [activeLineTemplates, draft.material]
   );
   const linePricingSummary = useMemo(
     () =>
@@ -214,7 +215,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       return;
     }
 
-    const template = params.activeLineTemplates.find(
+    const template = activeLineTemplates.find(
       (currentTemplate) => String(currentTemplate.id) === templateId
     );
 

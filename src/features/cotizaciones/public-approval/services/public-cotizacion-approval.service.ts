@@ -58,6 +58,25 @@ export type PublicApprovalQuoteView = {
   canRespond: boolean;
 };
 
+function safelyRevalidatePublicApprovalQuotesCache() {
+  try {
+    revalidateTag(PUBLIC_APPROVAL_QUOTES_TAG, "max");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    if (
+      message.includes("static generation store missing") ||
+      message.includes("incrementalcache missing") ||
+      message.includes("invariant")
+    ) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 function normalizeToken(token: string) {
   return token.trim().toLowerCase();
 }
@@ -95,6 +114,12 @@ function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;
 
   return Math.round(value * multiplier) / multiplier;
+}
+
+function isClosedPublicApprovalStatus(status: string | null | undefined) {
+  const normalized = status?.trim().toLowerCase();
+
+  return normalized === "aprobada" || normalized === "rechazada" || normalized === "terminada";
 }
 
 async function buildPublicApprovalQuoteView(
@@ -135,7 +160,9 @@ async function buildPublicApprovalQuoteView(
 
   const expiresAt = payload.cotizacion.approval_token_expires_at;
   const isExpired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
-  const alreadyResponded = Boolean(payload.cotizacion.cliente_respondio_en);
+  const alreadyResponded =
+    Boolean(payload.cotizacion.cliente_respondio_en) ||
+    isClosedPublicApprovalStatus(payload.cotizacion.estado);
 
   return {
     id: String(payload.cotizacion.id),
@@ -233,7 +260,7 @@ const resolveByTokenCached = unstable_cache(
 );
 
 export function revalidatePublicApprovalQuotesCache() {
-  revalidateTag(PUBLIC_APPROVAL_QUOTES_TAG, "max");
+  safelyRevalidatePublicApprovalQuotesCache();
 }
 
 export function createPublicCotizacionApprovalService(
@@ -295,7 +322,7 @@ export function createPublicCotizacionApprovalService(
       }
 
       await repository.respond(normalized, "aprobada");
-      revalidatePublicApprovalQuotesCache();
+      safelyRevalidatePublicApprovalQuotesCache();
       return buildPublicApprovalQuoteView(repository, normalized);
     },
 
@@ -321,7 +348,7 @@ export function createPublicCotizacionApprovalService(
       }
 
       await repository.respond(normalized, "rechazada");
-      revalidatePublicApprovalQuotesCache();
+      safelyRevalidatePublicApprovalQuotesCache();
       return buildPublicApprovalQuoteView(repository, normalized);
     },
   };

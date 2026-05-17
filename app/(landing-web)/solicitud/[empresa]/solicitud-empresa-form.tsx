@@ -185,11 +185,9 @@ export function SolicitudEmpresaForm({
 }: Props) {
   const searchParams = useSearchParams();
   const sectionRef = useRef<HTMLElement | null>(null);
-  const formTopRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
-  const [resolvedSourceUrl, setResolvedSourceUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -199,17 +197,6 @@ export function SolicitudEmpresaForm({
   const utmCampaign = searchParams.get("utm_campaign")?.trim() || undefined;
   const sourceUrlParam = searchParams.get("source_url")?.trim() || undefined;
   const originParam = searchParams.get("origen")?.trim() || undefined;
-
-  useEffect(() => {
-    if (sourceUrlParam) {
-      setResolvedSourceUrl(sourceUrlParam);
-      return;
-    }
-
-    if (typeof window !== "undefined") {
-      setResolvedSourceUrl(window.location.href);
-    }
-  }, [sourceUrlParam]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -300,6 +287,18 @@ export function SolicitudEmpresaForm({
 
   const resolvedOrigin = originParam || utmSource || "solicitud-publica";
 
+  function resolveSubmissionSourceUrl() {
+    if (sourceUrlParam) {
+      return sourceUrlParam;
+    }
+
+    if (typeof window !== "undefined") {
+      return window.location.href;
+    }
+
+    return null;
+  }
+
   function handleFieldChange<K extends keyof FormState>(
     field: K,
     value: FormState[K]
@@ -366,7 +365,7 @@ export function SolicitudEmpresaForm({
           utmSource: utmSource ?? null,
           utmMedium: utmMedium ?? null,
           utmCampaign: utmCampaign ?? null,
-          sourceUrl: resolvedSourceUrl,
+          sourceUrl: resolveSubmissionSourceUrl(),
         }),
       });
 

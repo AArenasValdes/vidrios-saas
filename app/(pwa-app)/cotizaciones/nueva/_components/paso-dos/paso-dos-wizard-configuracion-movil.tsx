@@ -94,6 +94,9 @@ export function PasoDosWizardConfiguracionMovil({
   const [showAllColors, setShowAllColors] = useState(false);
   const [isLineSelectorOpen, setIsLineSelectorOpen] = useState(false);
   const [lineSelectorQuery, setLineSelectorQuery] = useState("");
+  const availableLineTemplates = lineTemplateOptions ?? [];
+  const referencia = draft.referencia?.trim() ?? "";
+  const precioPorM2 = draft.precioPorM2?.trim() ?? "";
 
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
@@ -103,21 +106,21 @@ export function PasoDosWizardConfiguracionMovil({
     }
 
     return (
-      lineTemplateOptions.find((template) => String(template.id) === draft.lineTemplateId)?.nombre ??
-      draft.referencia ??
+      availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId)?.nombre ??
+      referencia ??
       "Precio manual o sin linea"
     );
-  }, [draft.lineTemplateId, draft.referencia, lineTemplateOptions]);
+  }, [availableLineTemplates, draft.lineTemplateId, referencia]);
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
 
     if (!normalizedQuery) {
-      return lineTemplateOptions;
+      return availableLineTemplates;
     }
 
-    return lineTemplateOptions.filter((template) => template.nombre.toLowerCase().includes(normalizedQuery));
-  }, [lineSelectorQuery, lineTemplateOptions]);
+    return availableLineTemplates.filter((template) => template.nombre.toLowerCase().includes(normalizedQuery));
+  }, [availableLineTemplates, lineSelectorQuery]);
 
   const openLineSelector = () => {
     setLineSelectorQuery("");
@@ -213,7 +216,7 @@ export function PasoDosWizardConfiguracionMovil({
       <div className={s.stepTwoMobileBlockSecundario}>
         <div className={s.stepTwoMobileBlockHeaderInline}>
           <div className={s.stepTwoMobileBlockLabel}>Línea comercial</div>
-          {lineTemplateOptions.length > 0 ? (
+          {availableLineTemplates.length > 0 ? (
             <button className={s.stepTwoMobileSecondaryLink} onClick={openLineSelector} type="button">
               Ver líneas
             </button>
@@ -225,13 +228,13 @@ export function PasoDosWizardConfiguracionMovil({
             +
           </span>
         </button>
-        {draft.referencia.trim() && draft.precioPorM2.trim() ? (
+        {referencia && precioPorM2 ? (
           <div className={s.stepTwoMobileLineSummary}>
-            <span>{draft.referencia}</span>
+            <span>{referencia}</span>
             <strong>
               {linePricingSummary.precioUnitarioSugerido !== null
                 ? `Sugerido: $${linePricingSummary.precioUnitarioSugerido.toLocaleString("es-CL")}`
-                : `Base: $${Number(draft.precioPorM2 || 0).toLocaleString("es-CL")}/m²`}
+                : `Base: $${Number(precioPorM2 || 0).toLocaleString("es-CL")}/m²`}
             </strong>
           </div>
         ) : null}

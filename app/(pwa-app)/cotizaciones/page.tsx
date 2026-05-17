@@ -359,10 +359,6 @@ export default function CotizacionesPage() {
   }, [ensureClientesLoaded]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [atajoEstado, estadoFiltro, clienteFiltro, periodoFiltro, ordenFiltro, busqueda]);
-
-  useEffect(() => {
     try {
       window.sessionStorage.setItem(COTIZACIONES_ORDER_STORAGE_KEY, ordenFiltro);
     } catch {
@@ -379,6 +375,7 @@ export default function CotizacionesPage() {
   const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
     setAtajoEstado(key);
     setEstadoFiltro("Todos");
+    setCurrentPage(1);
   }, []);
 
   const handlePrefetchDetail = useCallback((id: string) => {
@@ -589,7 +586,10 @@ export default function CotizacionesPage() {
             className={s.searchInput}
             placeholder="Buscar cliente o codigo"
             value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
+            onChange={(event) => {
+              setBusqueda(event.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         <button
@@ -614,7 +614,10 @@ export default function CotizacionesPage() {
             className={s.searchInput}
             placeholder="Buscar por cliente, codigo u obra..."
             value={busqueda}
-            onChange={(event) => setBusqueda(event.target.value)}
+            onChange={(event) => {
+              setBusqueda(event.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
 
@@ -630,13 +633,23 @@ export default function CotizacionesPage() {
           onEstadoChange={(value) => {
             setAtajoEstado("todos");
             setEstadoFiltro(value);
+            setCurrentPage(1);
           }}
-          onClienteChange={setClienteFiltro}
+          onClienteChange={(value) => {
+            setClienteFiltro(value);
+            setCurrentPage(1);
+          }}
           onPeriodoChange={(value) =>
-            setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"])
+            {
+              setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"]);
+              setCurrentPage(1);
+            }
           }
           onOrdenChange={(value) =>
-            setOrdenFiltro(value as (typeof ORDENES)[number]["value"])
+            {
+              setOrdenFiltro(value as (typeof ORDENES)[number]["value"]);
+              setCurrentPage(1);
+            }
           }
           onLimpiar={limpiar}
         />
@@ -665,13 +678,23 @@ export default function CotizacionesPage() {
               onEstadoChange={(value) => {
                 setAtajoEstado("todos");
                 setEstadoFiltro(value);
+                setCurrentPage(1);
               }}
-              onClienteChange={setClienteFiltro}
+              onClienteChange={(value) => {
+                setClienteFiltro(value);
+                setCurrentPage(1);
+              }}
               onPeriodoChange={(value) =>
-                setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"])
+                {
+                  setPeriodoFiltro(value as (typeof PERIODOS)[number]["value"]);
+                  setCurrentPage(1);
+                }
               }
               onOrdenChange={(value) =>
-                setOrdenFiltro(value as (typeof ORDENES)[number]["value"])
+                {
+                  setOrdenFiltro(value as (typeof ORDENES)[number]["value"]);
+                  setCurrentPage(1);
+                }
               }
               onLimpiar={limpiar}
             />

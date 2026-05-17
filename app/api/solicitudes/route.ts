@@ -45,7 +45,10 @@ async function resolveSolicitudesAccess() {
   return {
     userEmail: context.user.email,
     organizationId: context.profile.organizationId,
-    canReviewAll: canAccessAllSolicitudes(context.user.email),
+    canReviewAll:
+      canAccessAllSolicitudes(context.user.email) &&
+      (context.profile.organizationId === null ||
+        context.profile.organizationId === undefined),
   };
 }
 
@@ -108,7 +111,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!access.canReviewAll && !access.organizationId) {
+    if (!access.organizationId) {
       return NextResponse.json(
         { error: "No pudimos identificar la organizacion activa." },
         { status: 403 }
@@ -118,7 +121,7 @@ export async function PATCH(request: Request) {
     const solicitud = await solicitudesContactoService.updateSolicitudStatus({
       id: body.id ?? "",
       estado: body.estado ?? "nueva",
-      organizationId: access.canReviewAll ? undefined : access.organizationId,
+      organizationId: access.organizationId,
     });
 
     return NextResponse.json({ solicitud });

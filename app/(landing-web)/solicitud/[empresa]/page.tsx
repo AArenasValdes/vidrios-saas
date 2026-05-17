@@ -120,21 +120,6 @@ function getInitials(value: string) {
     .slice(0, 2);
 }
 
-function resolveLocationLabel(address: string) {
-  const clean = address.trim();
-
-  if (!clean) {
-    return null;
-  }
-
-  const chunks = clean
-    .split(",")
-    .map((chunk) => chunk.trim())
-    .filter(Boolean);
-
-  return chunks.at(-1) ?? clean;
-}
-
 function resolveServiceItems(config: {
   publicServices: string[];
   publicBusinessType: string;
@@ -207,7 +192,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
   const { empresa } = await params;
   const config = await getCachedPublicRequestConfig(empresa);
 
-  if (!config) {
+  if (!config || !config.isPublished) {
     notFound();
   }
 
@@ -223,40 +208,23 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
   });
 
   const availabilityLabel = isAvailable ? "Abierto" : "Cerrado";
-  const locationLabel = resolveLocationLabel(config.empresaDireccion);
   const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
   const horarioLabel = config.solicitudPublicaHorarioPorDia.length
     ? formatHorarioPorDiaLabel(config.solicitudPublicaHorarioPorDia)
     : `${formatDiasAtencionLabel(
         config.solicitudPublicaDiasAtencion,
       )} ${config.solicitudPublicaHorarioDesde}-${config.solicitudPublicaHorarioHasta}`;
-
-  const displayName =
-    config.isPublished && config.publicName ? config.publicName : config.empresaNombre;
-
-  const heroTitle =
-    config.isPublished && config.heroTitle
-      ? config.heroTitle
-      : "Cotiza vidrios y aluminio en menos de 1 minuto";
-
-  const heroSubtitle =
-    config.isPublished && config.heroSubtitle ? config.heroSubtitle : "Especialistas en instalaciones a medida con terminaciones premium.";
-
-  const heroMode = config.isPublished ? config.heroMode : "gradient";
+  const displayName = config.publicName;
+  const heroTitle = config.heroTitle;
+  const heroSubtitle = config.heroSubtitle;
+  const heroMode = config.heroMode;
   const heroImageUrl =
-    config.isPublished && heroMode === "image" && config.heroImageUrl
-      ? config.heroImageUrl
-      : null;
-
-  const formTitle =
-    config.isPublished && config.formTitle ? config.formTitle : "Deja tu solicitud";
-
-  const formSubtitle =
-    config.isPublished && config.formSubtitle ? config.formSubtitle : null;
-
-  const showGallery = config.isPublished ? config.showGallery : true;
-  const showSchedule = config.isPublished ? config.showSchedule : true;
-  const showRating = config.isPublished ? config.showRating : false;
+    heroMode === "image" && config.heroImageUrl ? config.heroImageUrl : null;
+  const formTitle = config.formTitle;
+  const formSubtitle = config.formSubtitle;
+  const showGallery = config.showGallery;
+  const showSchedule = config.showSchedule;
+  const showRating = config.showRating;
   const serviceItems = resolveServiceItems(config);
   const socialLinks = buildSocialLinks(config);
   const formattedPhone = formatPublicPhone(config.empresaTelefono);
@@ -385,7 +353,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
 
                   <div className={s.heroIdentityCopy}>
                     <strong>{displayName}</strong>
-                    {config.isPublished && config.publicSubtitle ? (
+                    {config.publicSubtitle ? (
                       <span className={s.heroSubtitleText}>
                         {config.publicSubtitle}
                       </span>

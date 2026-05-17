@@ -15,6 +15,14 @@ import { buildCotizacionDetalleMobileViewModel } from "./_components/cotizacion-
 
 import s from "./page.module.css";
 
+function getRuntimeMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export default function CotizacionDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -34,6 +42,8 @@ export default function CotizacionDetallePage() {
   const [hasResolvedInitialLoad, setHasResolvedInitialLoad] = useState(() => Boolean(cotizacion));
   const [isUpdatingResponse, setIsUpdatingResponse] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [optimisticResponse, setOptimisticResponse] = useState<{
     estado: "creada" | "aprobada" | "rechazada" | "terminada";
     clienteRespondioEn: string | null;
@@ -44,12 +54,14 @@ export default function CotizacionDetallePage() {
     let cancelled = false;
 
     if (!params.id) {
+      setLoadError(null);
       setIsLoadingItems(false);
       setHasResolvedInitialLoad(true);
       return;
     }
 
     if (cotizacion && cotizacion.items.length > 0) {
+      setLoadError(null);
       setIsLoadingItems(false);
       setHasResolvedInitialLoad(true);
       return () => {
@@ -59,12 +71,23 @@ export default function CotizacionDetallePage() {
 
     setIsLoadingItems(true);
 
-    void loadCotizacionById(params.id).finally(() => {
-      if (!cancelled) {
-        setIsLoadingItems(false);
-        setHasResolvedInitialLoad(true);
-      }
-    });
+    void loadCotizacionById(params.id)
+      .then(() => {
+        if (!cancelled) {
+          setLoadError(null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadError(getRuntimeMessage(error, "No se pudo cargar la cotizacion."));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingItems(false);
+          setHasResolvedInitialLoad(true);
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -81,7 +104,7 @@ export default function CotizacionDetallePage() {
     }
 
     const confirmed = window.confirm(
-      `Vas a eliminar la cotización ${cotizacion.codigo}. Desaparecerá del sistema operativo de la app.`
+      `Vas a eliminar la cotizacion ${cotizacion.codigo}. Desaparecera del sistema operativo de la app.`
     );
 
     if (!confirmed) {
@@ -90,12 +113,11 @@ export default function CotizacionDetallePage() {
 
     try {
       await deleteWorkflow(cotizacion.id);
+      setActionError(null);
       router.push("/cotizaciones");
       router.refresh();
     } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "No se pudo eliminar la cotización"
-      );
+      setActionError(getRuntimeMessage(error, "No se pudo eliminar la cotizacion."));
     }
   };
 
@@ -106,6 +128,7 @@ export default function CotizacionDetallePage() {
 
     try {
       setIsPreparingPdf(true);
+      setActionError(null);
 
       if (cotizacion.items.length === 0) {
         await loadCotizacionById(cotizacion.id);
@@ -113,8 +136,8 @@ export default function CotizacionDetallePage() {
 
       router.push(printUrl);
     } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : "No se pudo abrir la vista final del PDF"
+      setActionError(
+        getRuntimeMessage(error, "No se pudo abrir la vista final del PDF.")
       );
     } finally {
       setIsPreparingPdf(false);
@@ -132,10 +155,11 @@ export default function CotizacionDetallePage() {
     const whatsappUrl = buildCotizacionWhatsappUrl(cotizacion, { approvalUrl });
 
     if (!whatsappUrl) {
-      window.alert("El cliente no tiene un telefono valido para WhatsApp.");
+      setActionError("El cliente no tiene un telefono valido para WhatsApp.");
       return;
     }
 
+    setActionError(null);
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
     void markQuoteAsSent(String(cotizacion.id)).catch(() => {
       return;
@@ -143,29 +167,31 @@ export default function CotizacionDetallePage() {
   };
 
   const handleCopyApprovalLink = async () => {
-    const latestCotizacion = cotizacion ?? (params.id ? await loadCotizacionById(params.id) : null);
+    const latestCotizacion =
+      cotizacion ?? (params.id ? await loadCotizacionById(params.id) : null);
 
     if (!latestCotizacion?.approvalToken) {
-      window.alert("No se pudo preparar el link de seguimiento.");
+      setActionError("No se pudo preparar el link de seguimiento.");
       return;
     }
 
     const approvalUrl = buildCotizacionApprovalUrl(latestCotizacion.approvalToken);
 
     if (!approvalUrl) {
-      window.alert("No se pudo preparar el link de seguimiento.");
+      setActionError("No se pudo preparar el link de seguimiento.");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(approvalUrl);
+      setActionError(null);
       setCopyFeedback("Link copiado. Puedes pegarlo donde lo necesites.");
       void markQuoteAsSent(String(latestCotizacion.id)).catch(() => {
         return;
       });
       window.setTimeout(() => setCopyFeedback(null), 2400);
     } catch {
-      window.alert("No se pudo copiar el link en este telefono.");
+      setActionError("No se pudo copiar el link en este telefono.");
     }
   };
 
@@ -180,11 +206,8 @@ export default function CotizacionDetallePage() {
     const respondedAt =
       nextStatus === "pendiente"
         ? null
-        : nextStatus === "terminada"
-          ? cotizacion.clienteRespondioEn ?? new Date().toISOString()
-          : cotizacion.clienteRespondioEn ?? new Date().toISOString();
-    const estadoOptimista =
-      nextStatus === "pendiente" ? "creada" : nextStatus;
+        : cotizacion.clienteRespondioEn ?? new Date().toISOString();
+    const estadoOptimista = nextStatus === "pendiente" ? "creada" : nextStatus;
 
     try {
       setOptimisticResponse({
@@ -192,14 +215,15 @@ export default function CotizacionDetallePage() {
         clienteRespondioEn: respondedAt,
         clienteRespuestaCanal: nextStatus === "pendiente" ? null : "manual_app",
       });
+      setActionError(null);
       setIsUpdatingResponse(true);
       await updateManualResponseStatus(String(cotizacion.id), nextStatus);
       setOptimisticResponse(null);
       return true;
     } catch (error) {
       setOptimisticResponse(previousOptimistic ?? null);
-      window.alert(
-        error instanceof Error ? error.message : "No se pudo actualizar el estado del presupuesto."
+      setActionError(
+        getRuntimeMessage(error, "No se pudo actualizar el estado del presupuesto.")
       );
       return false;
     } finally {
@@ -215,8 +239,10 @@ export default function CotizacionDetallePage() {
             <LuArrowLeft aria-hidden />
             Cotizaciones
           </Link>
-          <h1 className={s.stateTitle}>Cotización no encontrada</h1>
-          <p className={s.stateText}>No existe una cotización guardada con ese identificador.</p>
+          <h1 className={s.stateTitle}>Cotizacion no encontrada</h1>
+          <p className={s.stateText}>
+            {loadError || "No existe una cotizacion guardada con ese identificador."}
+          </p>
         </div>
       </div>
     );
@@ -229,7 +255,7 @@ export default function CotizacionDetallePage() {
           <div className={s.loadingState}>
             <span className={s.loadingSpinner} aria-hidden />
             <div>
-              <strong>Cargando cotización</strong>
+              <strong>Cargando cotizacion</strong>
               <p>Estamos trayendo el detalle completo del presupuesto.</p>
             </div>
           </div>
@@ -247,27 +273,37 @@ export default function CotizacionDetallePage() {
       }
     : cotizacion;
 
+  const isHydratingItems = isLoadingItems && cotizacion.items.length === 0;
   const model = buildCotizacionDetalleMobileViewModel(effectiveCotizacion, {
-    isHydratingItems: isLoadingItems && cotizacion.items.length === 0,
+    isHydratingItems,
   });
 
   return (
-    <CotizacionDetalleMobileView
-      model={model}
-      isHydratingItems={isLoadingItems && cotizacion.items.length === 0}
-      isPreparingPdf={isPreparingPdf}
-      isSaving={isSaving}
-      isUpdatingResponse={isUpdatingResponse}
-      whatsappDisabled={!cotizacion.clienteTelefono?.trim()}
-      updatedLabel={formatCotizacionDate(cotizacion.updatedAt)}
-      editHref={`/cotizaciones/nueva?edit=${cotizacion.id}`}
-      editComponentsHref={`/cotizaciones/nueva?edit=${cotizacion.id}&step=2`}
-      copyFeedback={copyFeedback}
-      onDelete={handleDelete}
-      onCopyApprovalLink={handleCopyApprovalLink}
-      onManualResponseChange={handleManualResponseChange}
-      onOpenPdf={handleOpenPdf}
-      onOpenWhatsappShare={handleOpenWhatsappShare}
-    />
+    <>
+      {actionError ? (
+        <div className={s.stateRoot}>
+          <div className={s.stateCard}>
+            <p className={s.stateText}>{actionError}</p>
+          </div>
+        </div>
+      ) : null}
+      <CotizacionDetalleMobileView
+        model={model}
+        isHydratingItems={isHydratingItems}
+        isPreparingPdf={isPreparingPdf}
+        isSaving={isSaving}
+        isUpdatingResponse={isUpdatingResponse}
+        whatsappDisabled={!cotizacion.clienteTelefono?.trim()}
+        updatedLabel={formatCotizacionDate(cotizacion.updatedAt)}
+        editHref={`/cotizaciones/nueva?edit=${cotizacion.id}`}
+        editComponentsHref={`/cotizaciones/nueva?edit=${cotizacion.id}&step=2`}
+        copyFeedback={copyFeedback}
+        onDelete={handleDelete}
+        onCopyApprovalLink={handleCopyApprovalLink}
+        onManualResponseChange={handleManualResponseChange}
+        onOpenPdf={handleOpenPdf}
+        onOpenWhatsappShare={handleOpenWhatsappShare}
+      />
+    </>
   );
 }

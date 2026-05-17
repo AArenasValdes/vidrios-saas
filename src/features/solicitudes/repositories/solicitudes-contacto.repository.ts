@@ -310,27 +310,19 @@ function mapSolicitudEmpresaPublicaConfig(
     brandColor: row.brand_color?.trim() || "#1a3a5c",
     solicitudPublicaSlug: resolvedSlug,
     solicitudPublicaDescripcionCorta:
-      row.solicitud_publica_descripcion_corta?.trim() ||
-      "Especialistas en vidrios y aluminio. Cuentanos que necesitas y te respondemos por WhatsApp.",
-    solicitudPublicaValor:
-      row.solicitud_publica_valor?.trim() ||
-      "Recibe una respuesta comercial inicial, orientacion del trabajo y una base para tu cotizacion.",
+      row.solicitud_publica_descripcion_corta?.trim() || "",
+    solicitudPublicaValor: row.solicitud_publica_valor?.trim() || "",
     solicitudPublicaMensajeConfianza:
-      row.solicitud_publica_mensaje_confianza?.trim() ||
-      "Tu solicitud queda registrada al instante para que no se pierda, incluso si estamos ocupados.",
-    solicitudPublicaPrivacidad:
-      row.solicitud_publica_privacidad?.trim() ||
-      "Tus datos se usan solo para esta solicitud y no se comparten fuera de la empresa.",
-    solicitudPublicaHorarioDesde:
-      row.solicitud_publica_horario_desde?.trim() || "09:00",
-    solicitudPublicaHorarioHasta:
-      row.solicitud_publica_horario_hasta?.trim() || "19:00",
+      row.solicitud_publica_mensaje_confianza?.trim() || "",
+    solicitudPublicaPrivacidad: row.solicitud_publica_privacidad?.trim() || "",
+    solicitudPublicaHorarioDesde: row.solicitud_publica_horario_desde?.trim() || "",
+    solicitudPublicaHorarioHasta: row.solicitud_publica_horario_hasta?.trim() || "",
     solicitudPublicaDiasAtencion: row.solicitud_publica_dias_atencion
       ?.split(",")
       .map((value) => value.trim())
       .filter(Boolean) ?? ["1", "2", "3", "4", "5", "6"],
     solicitudPublicaHorarioPorDia: schedule,
-    publicName: row.public_name?.trim() || row.empresa_nombre?.trim() || "Mi empresa",
+    publicName: row.public_name?.trim() || "",
     publicSubtitle: row.public_subtitle?.trim() || "",
     publicZone: row.public_zone?.trim() || "",
     publicBusinessType: row.public_business_type?.trim() || "",
@@ -341,25 +333,22 @@ function mapSolicitudEmpresaPublicaConfig(
     publicServices: (row.public_services ?? [])
       .map((value) => value.trim())
       .filter(Boolean) as SolicitudEmpresaPublicaConfig["publicServices"],
-    finalCtaTitle: row.final_cta_title?.trim() || "Tienes una medida o una foto del trabajo?",
-    finalCtaSubtitle:
-      row.final_cta_subtitle?.trim() || "Envíala y te responderemos por WhatsApp.",
-    finalCtaLabel: row.final_cta_label?.trim() || "Solicitar cotizacion",
+    finalCtaTitle: row.final_cta_title?.trim() || "",
+    finalCtaSubtitle: row.final_cta_subtitle?.trim() || "",
+    finalCtaLabel: row.final_cta_label?.trim() || "",
     businessHoursNote: row.business_hours_note?.trim() || "",
-    secondaryColor: row.secondary_color?.trim() || "#25d366",
+    secondaryColor: row.secondary_color?.trim() || "",
     heroMode: row.hero_mode === "image" ? "image" : "gradient",
     heroImageUrl: row.hero_image_url,
-    heroTitle: row.hero_title?.trim() || "Cotiza vidrios y aluminio en menos de 1 minuto",
+    heroTitle: row.hero_title?.trim() || "",
     heroSubtitle: row.hero_subtitle?.trim() || "",
     showGallery: row.show_gallery ?? true,
     showSchedule: row.show_schedule ?? true,
     showRating: row.show_rating ?? false,
     ratingLabel: row.rating_label?.trim() || "",
     jobsCountLabel: row.jobs_count_label?.trim() || "",
-    formTitle: row.form_title?.trim() || "Deja tu solicitud",
-    formSubtitle:
-      row.form_subtitle?.trim() ||
-      "Cuentanos que necesitas y te contactamos por WhatsApp",
+    formTitle: row.form_title?.trim() || "",
+    formSubtitle: row.form_subtitle?.trim() || "",
     isPublished: row.is_published ?? false,
   };
 }
@@ -773,6 +762,11 @@ export function createSolicitudesContactoRepository(
 
     async getPublicConfigBySlug(slug: string) {
       const normalizedSlug = normalizePublicSlug(slug);
+
+      if (!normalizedSlug) {
+        return null;
+      }
+
       const { data, error } = await supabase
         .from(ORGANIZATION_PROFILE_TABLE as never)
         .select(ORGANIZATION_PROFILE_PUBLIC_SELECT)
@@ -810,19 +804,6 @@ export function createSolicitudesContactoRepository(
             candidate.solicitud_publica_slug || candidate.empresa_nombre
           ) === normalizedSlug
       );
-
-      if (fallbackRow && !fallbackRow.solicitud_publica_slug?.trim()) {
-        const { error: syncSlugError } = await supabase
-          .from(ORGANIZATION_PROFILE_TABLE as never)
-          .update({
-            solicitud_publica_slug: normalizedSlug,
-          } as never)
-          .eq("organization_id", fallbackRow.organization_id as never);
-
-        if (!syncSlugError) {
-          fallbackRow.solicitud_publica_slug = normalizedSlug;
-        }
-      }
 
       return mapSolicitudEmpresaPublicaConfig(fallbackRow ?? null, normalizedSlug);
     },
@@ -905,7 +886,7 @@ export function createSolicitudesContactoRepository(
     async updateStatusById(input: {
       id: string;
       estado: EstadoSolicitudContacto;
-      organizationId?: string | number | null;
+      organizationId: string | number;
     }) {
       const now = new Date().toISOString();
       const basePayload = {
@@ -922,11 +903,8 @@ export function createSolicitudesContactoRepository(
       let query = supabase
         .from(TABLE_NAME as never)
         .update(basePayload as never)
-        .eq("id", input.id as never);
-
-      if (input.organizationId !== undefined && input.organizationId !== null) {
-        query = query.eq("organization_id", input.organizationId as never);
-      }
+        .eq("id", input.id as never)
+        .eq("organization_id", input.organizationId as never);
 
       const { data, error } = await query.select(SOLICITUD_SELECT).single();
 
@@ -945,11 +923,8 @@ export function createSolicitudesContactoRepository(
       let legacyQuery = supabase
         .from(TABLE_NAME as never)
         .update(legacyPayload as never)
-        .eq("id", input.id as never);
-
-      if (input.organizationId !== undefined && input.organizationId !== null) {
-        legacyQuery = legacyQuery.eq("organization_id", input.organizationId as never);
-      }
+        .eq("id", input.id as never)
+        .eq("organization_id", input.organizationId as never);
 
       const { data: legacyData, error: legacyError } = await legacyQuery
         .select(SOLICITUD_SELECT_LEGACY)

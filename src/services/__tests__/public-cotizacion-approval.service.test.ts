@@ -108,6 +108,78 @@ function createRepositoryMock(): jest.Mocked<PublicCotizacionApprovalRepository>
   };
 }
 
+function createClosedStatusWithoutTrackingRepositoryMock(): jest.Mocked<PublicCotizacionApprovalRepository> {
+  const repository = createRepositoryMock();
+
+  repository.getByApprovalToken.mockResolvedValue({
+    cotizacion: {
+      id: 1,
+      organization_id: 77,
+      proyecto_id: 12,
+      numero: "COT-100001",
+      estado: "aprobada",
+      notas: "Pago 50% al inicio.",
+      valido_hasta: "2026-03-30",
+      subtotal_neto: 100000,
+      descuento_pct: 0,
+      flete: 0,
+      iva: 19000,
+      total: 119000,
+      approval_token: "abc123abc123abc123abc123abc123ab",
+      approval_token_expires_at: null,
+      cliente_vio_en: null,
+      cliente_respondio_en: null,
+      cliente_respuesta_canal: null,
+      creado_en: "2026-03-10T10:00:00.000Z",
+      actualizado_en: "2026-03-10T10:00:00.000Z",
+      eliminado_en: null,
+    },
+    project: {
+      id: 12,
+      titulo: "Casa Coquimbo",
+      cliente_id: 8,
+    },
+    client: {
+      id: 8,
+      nombre: "Roberto Fuentes",
+      telefono: "+56 9 8234 5678",
+      direccion: "Los Pescadores 221",
+    },
+    organizationProfile: {
+      organization_id: 77,
+      empresa_nombre: "San Marco Vidrios y Aluminios",
+      empresa_logo_url: null,
+      empresa_direccion: "La Serena",
+      empresa_telefono: "+56 9 7733 8906",
+      empresa_email: "sanmarco@gmail.com",
+      brand_color: "#1a2744",
+      forma_pago: "50% al inicio",
+    },
+    items: [
+      {
+        id: 200,
+        cotizacion_id: 1,
+        codigo: "V1",
+        tipo_componente: "Ventana",
+        cantidad: 1,
+        precio_unitario: 119000,
+        subtotal: 119000,
+        ancho: 1200,
+        alto: 1000,
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "Ventana living",
+        descripcion: "Ventana corredera",
+        unidad: "unidad",
+        observaciones: null,
+        orden: 0,
+        eliminado_en: null,
+      },
+    ],
+  });
+
+  return repository;
+}
+
 describe("public-cotizacion-approval.service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -175,6 +247,17 @@ describe("public-cotizacion-approval.service", () => {
     const quote = await service.reject("abc123abc123abc123abc123abc123ab");
 
     expect(repository.respond).toHaveBeenCalledTimes(1);
+    expect(quote?.estado).toBe("aprobada");
+    expect(quote?.canRespond).toBe(false);
+  });
+
+  it("no debe reabrir una aprobacion ya cerrada aunque falte tracking historico", async () => {
+    const repository = createClosedStatusWithoutTrackingRepositoryMock();
+    const service = createPublicCotizacionApprovalService({ repository });
+
+    const quote = await service.reject("abc123abc123abc123abc123abc123ab");
+
+    expect(repository.respond).not.toHaveBeenCalled();
     expect(quote?.estado).toBe("aprobada");
     expect(quote?.canRespond).toBe(false);
   });

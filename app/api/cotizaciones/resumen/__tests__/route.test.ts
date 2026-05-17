@@ -49,7 +49,8 @@ describe("/api/cotizaciones/resumen", () => {
       new AuthRouteAccessError(401, "No autorizado.")
     );
 
-    const response = await GET();
+    const request = new Request("http://localhost/api/cotizaciones/resumen");
+    const response = await GET(request);
     const payload = await response.json();
 
     expect(response.status).toBe(401);
@@ -57,23 +58,70 @@ describe("/api/cotizaciones/resumen", () => {
   });
 
   it("mantiene el resumen de cotizaciones acotado a la organizacion activa", async () => {
+    const listWorkflowSummaryPageByOrganizationId = jest.fn().mockResolvedValue({
+      cotizaciones: [{ id: 100 }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+      summary: {
+        totalCount: 1,
+        totalAmount: 714000,
+        approvedAmount: 0,
+        counts: {
+          borrador: 0,
+          creada: 1,
+          enviada: 0,
+          aprobada: 0,
+          rechazada: 0,
+          terminada: 0,
+        },
+      },
+    });
+
     (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
       user: { id: "auth-2", email: "seller@ventora.cl" },
       profile: { organizationId: "org-55", rol: "admin" },
     });
     (createCotizacionesAppService as jest.Mock).mockReturnValue({
-      listWorkflowSummaryByOrganizationId: jest.fn().mockResolvedValue([{ id: 100 }]),
+      listWorkflowSummaryPageByOrganizationId,
     });
 
-    const response = await GET();
+    const request = new Request(
+      "http://localhost/api/cotizaciones/resumen?page=1&pageSize=25"
+    );
+    const response = await GET(request);
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(createCotizacionesAppService).toHaveReturnedWith(
-      expect.objectContaining({
-        listWorkflowSummaryByOrganizationId: expect.any(Function),
-      })
-    );
-    expect(payload).toEqual({ cotizaciones: [{ id: 100 }] });
+    expect(listWorkflowSummaryPageByOrganizationId).toHaveBeenCalledWith("org-55", {
+      page: 1,
+      pageSize: 25,
+      estado: null,
+      clienteNombre: null,
+      period: "all",
+      order: "updated_desc",
+      search: null,
+    });
+    expect(payload).toEqual({
+      cotizaciones: [{ id: 100 }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+      summary: {
+        totalCount: 1,
+        totalAmount: 714000,
+        approvedAmount: 0,
+        counts: {
+          borrador: 0,
+          creada: 1,
+          enviada: 0,
+          aprobada: 0,
+          rechazada: 0,
+          terminada: 0,
+        },
+      },
+    });
   });
 });

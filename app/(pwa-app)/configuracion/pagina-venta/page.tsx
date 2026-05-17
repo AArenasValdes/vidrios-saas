@@ -1,20 +1,20 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   LuBlocks,
+  LuBuilding2,
   LuChevronDown,
   LuChevronUp,
-  LuCheck,
   LuCopy,
   LuExternalLink,
   LuGlobe,
   LuImage,
   LuImagePlus,
   LuMessageSquare,
-  LuPalette,
   LuPhone,
   LuSave,
   LuStar,
@@ -27,15 +27,12 @@ import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGa
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
+  buildPaginaVentaProfileInput,
   buildDefaultSolicitudPublicaHorarioPorDia,
   DEFAULT_SOLICITUD_PUBLICA_DIAS_ATENCION,
-  DEFAULT_FINAL_CTA_LABEL,
-  DEFAULT_FINAL_CTA_SUBTITLE,
-  DEFAULT_FINAL_CTA_TITLE,
   DEFAULT_FORM_SUBTITLE,
   DEFAULT_FORM_TITLE,
   DEFAULT_HERO_TITLE,
-  DEFAULT_SECONDARY_COLOR,
   extractLegacyHorarioFields,
   formatHorarioPorDiaLabel,
   PUBLIC_LANDING_SERVICE_OPTIONS,
@@ -49,26 +46,8 @@ import type {
 
 import s from "./page.module.css";
 
-const BRAND_PRESETS = [
-  "#4F7DD4",
-  "#243B6B",
-  "#2EA5E6",
-  "#1DB98B",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-];
-
-const SECONDARY_PRESETS = [
-  "#25d366",
-  "#2EA5E6",
-  "#1DB98B",
-  "#F59E0B",
-  "#8B5CF6",
-  "#EF4444",
-];
-
-const EMPTY_FORM: UpdateOrganizationProfileInput = {
+const EMPTY_FORM: UpdateOrganizationProfileInput = buildPaginaVentaProfileInput({
+  organizationId: null,
   empresaNombre: "",
   empresaLogoUrl: null,
   empresaDireccion: "",
@@ -88,6 +67,8 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
+  creadoEn: null,
+  actualizadoEn: null,
   publicName: "",
   publicSubtitle: "",
   publicZone: "",
@@ -97,11 +78,11 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   tiktokUrl: "",
   websiteUrl: "",
   publicServices: [],
-  finalCtaTitle: DEFAULT_FINAL_CTA_TITLE,
-  finalCtaSubtitle: DEFAULT_FINAL_CTA_SUBTITLE,
-  finalCtaLabel: DEFAULT_FINAL_CTA_LABEL,
+  finalCtaTitle: "",
+  finalCtaSubtitle: "",
+  finalCtaLabel: "",
   businessHoursNote: "",
-  secondaryColor: DEFAULT_SECONDARY_COLOR,
+  secondaryColor: "",
   heroMode: "gradient",
   heroImageUrl: null,
   heroTitle: DEFAULT_HERO_TITLE,
@@ -114,11 +95,9 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   formTitle: DEFAULT_FORM_TITLE,
   formSubtitle: DEFAULT_FORM_SUBTITLE,
   isPublished: false,
-};
+});
 
 type ActiveSection =
-  | "identidad"
-  | "estilo"
   | "hero"
   | "servicios"
   | "galeria"
@@ -183,61 +162,14 @@ export default function PaginaVentaPage() {
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<ActiveSection>("identidad");
+  const [activeSection, setActiveSection] = useState<ActiveSection>("hero");
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!profile) return;
-
-    setForm({
-      empresaNombre: profile.empresaNombre,
-      empresaLogoUrl: profile.empresaLogoUrl,
-      empresaDireccion: profile.empresaDireccion,
-      empresaTelefono: profile.empresaTelefono,
-      empresaEmail: profile.empresaEmail,
-      brandColor: profile.brandColor,
-      formaPago: profile.formaPago,
-      solicitudPublicaSlug: profile.solicitudPublicaSlug,
-      solicitudPublicaDescripcionCorta: profile.solicitudPublicaDescripcionCorta,
-      solicitudPublicaValor: profile.solicitudPublicaValor,
-      solicitudPublicaMensajeConfianza: profile.solicitudPublicaMensajeConfianza,
-      solicitudPublicaPrivacidad: profile.solicitudPublicaPrivacidad,
-      solicitudPublicaHorarioDesde: profile.solicitudPublicaHorarioDesde,
-      solicitudPublicaHorarioHasta: profile.solicitudPublicaHorarioHasta,
-      solicitudPublicaDiasAtencion: profile.solicitudPublicaDiasAtencion,
-      solicitudPublicaHorarioPorDia: profile.solicitudPublicaHorarioPorDia,
-      proveedorPreferido: profile.proveedorPreferido,
-      modoPrecioPreferido: profile.modoPrecioPreferido,
-      margenDefecto: profile.margenDefecto,
-      publicName: profile.publicName,
-      publicSubtitle: profile.publicSubtitle,
-      publicZone: profile.publicZone,
-      publicBusinessType: profile.publicBusinessType,
-      instagramUrl: profile.instagramUrl,
-      facebookUrl: profile.facebookUrl,
-      tiktokUrl: profile.tiktokUrl,
-      websiteUrl: profile.websiteUrl,
-      publicServices: profile.publicServices,
-      finalCtaTitle: profile.finalCtaTitle,
-      finalCtaSubtitle: profile.finalCtaSubtitle,
-      finalCtaLabel: profile.finalCtaLabel,
-      businessHoursNote: profile.businessHoursNote,
-      secondaryColor: profile.secondaryColor,
-      heroMode: profile.heroMode,
-      heroImageUrl: profile.heroImageUrl,
-      heroTitle: profile.heroTitle,
-      heroSubtitle: profile.heroSubtitle,
-      showGallery: profile.showGallery,
-      showSchedule: profile.showSchedule,
-      showRating: profile.showRating,
-      ratingLabel: profile.ratingLabel,
-      jobsCountLabel: profile.jobsCountLabel,
-      formTitle: profile.formTitle,
-      formSubtitle: profile.formSubtitle,
-      isPublished: profile.isPublished,
-    });
+    setForm(buildPaginaVentaProfileInput(profile));
   }, [profile]);
 
   useEffect(() => {
@@ -456,10 +388,6 @@ export default function PaginaVentaPage() {
     }
   }
 
-  const isCustomBrandColor = !BRAND_PRESETS.some((c) => c.toLowerCase() === form.brandColor.toLowerCase());
-
-  const isCustomSecondaryColor = !SECONDARY_PRESETS.some((c) => c.toLowerCase() === form.secondaryColor.toLowerCase());
-
   const heroPreview = heroPreviewUrl ?? form.heroImageUrl;
   const scheduleSummary = formatHorarioPorDiaLabel(form.solicitudPublicaHorarioPorDia);
   const approvedTestimonials = testimonials.filter(
@@ -484,8 +412,6 @@ export default function PaginaVentaPage() {
   });
 
   const sections: { key: ActiveSection; label: string; icon: typeof LuGlobe }[] = [
-    { key: "identidad", label: "Tu pagina", icon: LuGlobe },
-    { key: "estilo", label: "Colores", icon: LuPalette },
     { key: "hero", label: "Portada", icon: LuImage },
     { key: "servicios", label: "Servicios", icon: LuBlocks },
     { key: "galeria", label: "Trabajos", icon: LuImagePlus },
@@ -510,7 +436,7 @@ export default function PaginaVentaPage() {
           <p className={s.headerEyebrow}>Ajuste comercial</p>
           <h1 className={s.headerTitle}>Tu pagina publica</h1>
           <p className={s.headerText}>
-            Ajusta textos, colores y horario para que tu empresa se vea clara y profesional.
+            Edita solo el contenido propio de tu landing. La identidad comercial base se gestiona desde Empresa.
           </p>
         </div>
 
@@ -523,6 +449,45 @@ export default function PaginaVentaPage() {
           </span>
         </div>
       </div>
+
+      <section className={s.linkedIdentityCard}>
+        <div className={s.linkedIdentityTop}>
+          <div className={s.sectionTitle}>
+            <LuBuilding2 aria-hidden />
+            <span>Datos que vienen desde Empresa</span>
+          </div>
+          <Link href="/configuracion/empresa" className={s.inlineLink}>
+            Editar en Empresa
+          </Link>
+        </div>
+
+        <div className={s.linkedIdentityGrid}>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Nombre publico</span>
+            <strong>{form.publicName || form.empresaNombre || "Mi empresa"}</strong>
+          </div>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Nombre del enlace</span>
+            <strong>{`/${form.solicitudPublicaSlug || "mi-empresa"}`}</strong>
+          </div>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Rubro o especialidad</span>
+            <strong>{form.publicBusinessType || "Define tu rubro en Empresa"}</strong>
+          </div>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Direccion visible</span>
+            <strong>{form.empresaDireccion || "Define tu direccion en Empresa"}</strong>
+          </div>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Color principal</span>
+            <strong>{form.brandColor.toUpperCase()}</strong>
+          </div>
+          <div className={s.staticInfo}>
+            <span className={s.label}>Color secundario</span>
+            <strong>{form.secondaryColor.toUpperCase()}</strong>
+          </div>
+        </div>
+      </section>
 
       <nav className={s.tabNav}>
         {sections.map((section) => {
@@ -544,194 +509,6 @@ export default function PaginaVentaPage() {
       </nav>
 
       <form id="pagina-venta-form" className={s.content} onSubmit={handleSubmit}>
-        {activeSection === "identidad" ? (
-          <section className={s.section}>
-            <div className={s.sectionTitle}>
-              <LuGlobe aria-hidden />
-              <span>Como te veran</span>
-            </div>
-
-            <div className={s.card}>
-              <label className={s.field}>
-                <span className={s.label}>Nombre que vera tu cliente</span>
-                <input
-                  className={s.input}
-                  value={form.publicName}
-                  onChange={(e) => handleFieldChange("publicName", e.target.value)}
-                  placeholder={form.empresaNombre || "Mi empresa"}
-                />
-                <span className={s.helpText}>
-                  Si lo dejas vacio, usamos el nombre de tu empresa.
-                </span>
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Nombre del enlace</span>
-                <input
-                  className={s.input}
-                  value={form.solicitudPublicaSlug}
-                  onChange={(e) => handleFieldChange("solicitudPublicaSlug", e.target.value)}
-                  placeholder="ej: empresa-vidriera"
-                />
-                <span className={s.helpText}>
-                  Tu link quedara como {publicRequestUrl}
-                </span>
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Rubro o especialidad</span>
-                <input
-                  className={s.input}
-                  value={form.publicSubtitle}
-                  onChange={(e) => handleFieldChange("publicSubtitle", e.target.value)}
-                  placeholder="Ej: Vidrios y aluminio"
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Zona o cobertura</span>
-                <input
-                  className={s.input}
-                  value={form.publicZone}
-                  onChange={(e) => handleFieldChange("publicZone", e.target.value)}
-                  placeholder="Ej: Santiago, Region Metropolitana"
-                />
-              </label>
-
-              {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
-              {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
-
-              <div className={s.sectionActions}>
-                <button
-                  className={s.saveButton}
-                  type="submit"
-                  disabled={isSaving || isUploadingHero}
-                >
-                  <LuSave aria-hidden />
-                  {isSaving ? "Guardando..." : "Aplicar publicacion"}
-                </button>
-              </div>
-            </div>
-          </section>
-        ) : null}
-
-        {activeSection === "estilo" ? (
-          <section className={s.section}>
-            <div className={s.sectionTitle}>
-              <LuPalette aria-hidden />
-              <span>Colores que venden</span>
-            </div>
-
-            <div className={s.card}>
-              <div className={s.field}>
-                <span className={s.label}>Color principal</span>
-                <div className={s.swatchRow}>
-                  {BRAND_PRESETS.map((color) => {
-                    const isActive =
-                      form.brandColor.toLowerCase() === color.toLowerCase();
-
-                    return (
-                      <button
-                        key={color}
-                        className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => handleFieldChange("brandColor", color)}
-                        type="button"
-                        aria-label={`Usar color ${color}`}
-                        aria-pressed={isActive}
-                      >
-                        {isActive ? <LuCheck aria-hidden /> : null}
-                      </button>
-                    );
-                  })}
-
-                  <label
-                    className={`${s.customColor} ${isCustomBrandColor ? s.customColorActive : ""}`}
-                  >
-                    <span
-                      className={s.customColorPreview}
-                      style={{ backgroundColor: form.brandColor }}
-                      aria-hidden
-                    />
-                    <span className={s.customColorLabel}>Otro</span>
-                    <input
-                      type="color"
-                      value={form.brandColor}
-                      onChange={(e) => handleFieldChange("brandColor", e.target.value)}
-                      aria-label="Elegir color personalizado"
-                    />
-                  </label>
-                </div>
-                <span className={s.helpText}>
-                  Es el color principal de tu pagina y de los detalles visuales.
-                </span>
-              </div>
-
-              <div className={s.divider} />
-
-              <div className={s.field}>
-                <span className={s.label}>Color secundario</span>
-                <div className={s.swatchRow}>
-                  {SECONDARY_PRESETS.map((color) => {
-                    const isActive =
-                      form.secondaryColor.toLowerCase() === color.toLowerCase();
-
-                    return (
-                      <button
-                        key={color}
-                        className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => handleFieldChange("secondaryColor", color)}
-                        type="button"
-                        aria-label={`Usar color ${color}`}
-                        aria-pressed={isActive}
-                      >
-                        {isActive ? <LuCheck aria-hidden /> : null}
-                      </button>
-                    );
-                  })}
-
-                  <label
-                    className={`${s.customColor} ${isCustomSecondaryColor ? s.customColorActive : ""}`}
-                  >
-                    <span
-                      className={s.customColorPreview}
-                      style={{ backgroundColor: form.secondaryColor }}
-                      aria-hidden
-                    />
-                    <span className={s.customColorLabel}>Otro</span>
-                    <input
-                      type="color"
-                      value={form.secondaryColor}
-                      onChange={(e) =>
-                        handleFieldChange("secondaryColor", e.target.value)
-                      }
-                      aria-label="Elegir color secundario personalizado"
-                    />
-                  </label>
-                </div>
-                <span className={s.helpText}>
-                  Se usa en botones y llamados de accion.
-                </span>
-              </div>
-
-              {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}
-              {statusMessage ? <div className={s.success}>{statusMessage}</div> : null}
-
-              <div className={s.sectionActions}>
-                <button
-                  className={s.saveButton}
-                  type="submit"
-                  disabled={isSaving || isUploadingHero}
-                >
-                  <LuSave aria-hidden />
-                  {isSaving ? "Guardando..." : "Guardar esta parte"}
-                </button>
-              </div>
-            </div>
-          </section>
-        ) : null}
-
         {activeSection === "hero" ? (
           <section className={s.section}>
             <div className={s.sectionTitle}>
@@ -850,7 +627,7 @@ export default function PaginaVentaPage() {
           <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuBlocks aria-hidden />
-              <span>Servicios y conversion</span>
+              <span>Servicios y cobertura</span>
             </div>
 
             <div className={s.card}>
@@ -888,53 +665,9 @@ export default function PaginaVentaPage() {
                   onChange={(e) => handleFieldChange("publicZone", e.target.value)}
                   placeholder="Ej: La Serena, Coquimbo, Ovalle y alrededores"
                 />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Horario o nota comercial</span>
-                <input
-                  className={s.input}
-                  value={form.businessHoursNote}
-                  onChange={(e) =>
-                    handleFieldChange("businessHoursNote", e.target.value)
-                  }
-                  placeholder="Ej: Atencion en terreno y visitas coordinadas"
-                />
-              </label>
-
-              <div className={s.divider} />
-
-              <label className={s.field}>
-                <span className={s.label}>Titulo CTA final</span>
-                <input
-                  className={s.input}
-                  value={form.finalCtaTitle}
-                  onChange={(e) => handleFieldChange("finalCtaTitle", e.target.value)}
-                  placeholder={DEFAULT_FINAL_CTA_TITLE}
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Bajada CTA final</span>
-                <textarea
-                  className={s.textarea}
-                  rows={3}
-                  value={form.finalCtaSubtitle}
-                  onChange={(e) =>
-                    handleFieldChange("finalCtaSubtitle", e.target.value)
-                  }
-                  placeholder={DEFAULT_FINAL_CTA_SUBTITLE}
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Boton CTA final</span>
-                <input
-                  className={s.input}
-                  value={form.finalCtaLabel}
-                  onChange={(e) => handleFieldChange("finalCtaLabel", e.target.value)}
-                  placeholder={DEFAULT_FINAL_CTA_LABEL}
-                />
+                <span className={s.helpText}>
+                  Esto si es propio de la landing. La direccion comercial se sigue tomando desde Empresa.
+                </span>
               </label>
 
               {errorMessage ? <div className={s.error}>{errorMessage}</div> : null}

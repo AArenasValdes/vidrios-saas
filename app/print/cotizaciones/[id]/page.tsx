@@ -320,7 +320,6 @@ export default function CotizacionPrintPage() {
   const cotizacion = getCotizacionById(params.id);
   const renderableCotizacion = cotizacion && cotizacion.items.length > 0 ? cotizacion : null;
   const hasRenderableRecord = Boolean(renderableCotizacion);
-  const lastRenderableCotizacionRef = useRef(renderableCotizacion);
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetScaleFrameRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
@@ -411,12 +410,6 @@ export default function CotizacionPrintPage() {
   }, [loadCotizacionById, params.id]);
 
   useEffect(() => {
-    if (renderableCotizacion) {
-      lastRenderableCotizacionRef.current = renderableCotizacion;
-    }
-  }, [renderableCotizacion]);
-
-  useEffect(() => {
     if (typeof window === "undefined" || typeof ResizeObserver === "undefined") {
       return;
     }
@@ -462,7 +455,7 @@ export default function CotizacionPrintPage() {
     rawOrganizationProfile?.organizationId ?? null,
     rawOrganizationProfile
   );
-  const visibleCotizacion = renderableCotizacion ?? lastRenderableCotizacionRef.current;
+  const visibleCotizacion = renderableCotizacion;
 
   const pageStyle = {
     "--brand": organizationProfile.brandColor,

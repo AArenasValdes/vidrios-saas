@@ -10,6 +10,7 @@ import type {
   OrganizationProfile,
   PublicLandingService,
   PublicScheduleDay,
+  ResolvedPublicLandingConfig,
   SolicitudPublicaHorarioDia,
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
@@ -48,6 +49,8 @@ export const PUBLIC_SCHEDULE_DAY_ORDER: PublicScheduleDay[] = [
 ];
 export const DEFAULT_SECONDARY_COLOR = "#25d366";
 export const DEFAULT_HERO_TITLE = "Cotiza vidrios y aluminio en menos de 1 minuto";
+export const DEFAULT_HERO_SUBTITLE =
+  "Especialistas en instalaciones a medida con terminaciones premium.";
 export const DEFAULT_FORM_TITLE = "Deja tu solicitud";
 export const DEFAULT_FORM_SUBTITLE =
   "Cuentanos que necesitas y te contactamos por WhatsApp";
@@ -404,6 +407,221 @@ function sanitizeSecondaryColor(value: string | null | undefined) {
   }
 
   return DEFAULT_SECONDARY_COLOR;
+}
+
+function buildNormalizedProfileInput(
+  profile?: OrganizationProfile | null
+): UpdateOrganizationProfileInput {
+  const resolved = resolveOrganizationProfile(profile?.organizationId ?? null, profile ?? null);
+
+  return {
+    empresaNombre: resolved.empresaNombre,
+    empresaLogoUrl: resolved.empresaLogoUrl,
+    empresaDireccion: resolved.empresaDireccion,
+    empresaTelefono: resolved.empresaTelefono,
+    empresaEmail: resolved.empresaEmail,
+    brandColor: resolved.brandColor,
+    formaPago: resolved.formaPago,
+    solicitudPublicaSlug: resolved.solicitudPublicaSlug,
+    solicitudPublicaDescripcionCorta: resolved.solicitudPublicaDescripcionCorta,
+    solicitudPublicaValor: resolved.solicitudPublicaValor,
+    solicitudPublicaMensajeConfianza: resolved.solicitudPublicaMensajeConfianza,
+    solicitudPublicaPrivacidad: resolved.solicitudPublicaPrivacidad,
+    solicitudPublicaHorarioDesde: resolved.solicitudPublicaHorarioDesde,
+    solicitudPublicaHorarioHasta: resolved.solicitudPublicaHorarioHasta,
+    solicitudPublicaDiasAtencion: resolved.solicitudPublicaDiasAtencion,
+    solicitudPublicaHorarioPorDia: resolved.solicitudPublicaHorarioPorDia,
+    proveedorPreferido: resolved.proveedorPreferido,
+    modoPrecioPreferido: resolved.modoPrecioPreferido,
+    margenDefecto: resolved.margenDefecto,
+    publicName: resolved.publicName,
+    publicSubtitle: resolved.publicSubtitle,
+    publicZone: resolved.publicZone,
+    publicBusinessType: resolved.publicBusinessType,
+    instagramUrl: resolved.instagramUrl,
+    facebookUrl: resolved.facebookUrl,
+    tiktokUrl: resolved.tiktokUrl,
+    websiteUrl: resolved.websiteUrl,
+    publicServices: resolved.publicServices,
+    finalCtaTitle: resolved.finalCtaTitle,
+    finalCtaSubtitle: resolved.finalCtaSubtitle,
+    finalCtaLabel: resolved.finalCtaLabel,
+    businessHoursNote: resolved.businessHoursNote,
+    secondaryColor: resolved.secondaryColor,
+    heroMode: resolved.heroMode,
+    heroImageUrl: resolved.heroImageUrl,
+    heroTitle: resolved.heroTitle,
+    heroSubtitle: resolved.heroSubtitle,
+    showGallery: resolved.showGallery,
+    showSchedule: resolved.showSchedule,
+    showRating: resolved.showRating,
+    ratingLabel: resolved.ratingLabel,
+    jobsCountLabel: resolved.jobsCountLabel,
+    formTitle: resolved.formTitle,
+    formSubtitle: resolved.formSubtitle,
+    isPublished: resolved.isPublished,
+  };
+}
+
+export function buildEmpresaProfileInput(profile?: OrganizationProfile | null) {
+  return buildNormalizedProfileInput(profile);
+}
+
+export function buildPaginaVentaProfileInput(profile?: OrganizationProfile | null) {
+  return buildNormalizedProfileInput(profile);
+}
+
+export function resolvePublicLandingConfig(source: {
+  organizationId: EntityId | string | number;
+  empresaNombre: string;
+  empresaLogoUrl: string | null;
+  empresaDireccion: string;
+  empresaTelefono: string;
+  empresaEmail: string;
+  brandColor: string;
+  solicitudPublicaSlug: string;
+  solicitudPublicaDescripcionCorta: string;
+  solicitudPublicaValor: string;
+  solicitudPublicaMensajeConfianza: string;
+  solicitudPublicaPrivacidad: string;
+  solicitudPublicaHorarioDesde: string;
+  solicitudPublicaHorarioHasta: string;
+  solicitudPublicaDiasAtencion: string[];
+  solicitudPublicaHorarioPorDia: SolicitudPublicaHorarioDia[];
+  publicName: string;
+  publicSubtitle: string;
+  publicZone: string;
+  publicBusinessType: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  websiteUrl: string;
+  publicServices: PublicLandingService[] | string[];
+  finalCtaTitle: string;
+  finalCtaSubtitle: string;
+  finalCtaLabel: string;
+  businessHoursNote: string;
+  secondaryColor: string;
+  heroMode: HeroMode;
+  heroImageUrl: string | null;
+  heroTitle: string;
+  heroSubtitle: string;
+  showGallery: boolean;
+  showSchedule: boolean;
+  showRating: boolean;
+  ratingLabel: string;
+  jobsCountLabel: string;
+  formTitle: string;
+  formSubtitle: string;
+  isPublished: boolean;
+}): ResolvedPublicLandingConfig {
+  const resolved = resolveOrganizationProfile(source.organizationId, {
+    organizationId: source.organizationId,
+    empresaNombre: source.empresaNombre,
+    empresaLogoUrl: source.empresaLogoUrl,
+    empresaDireccion: source.empresaDireccion,
+    empresaTelefono: source.empresaTelefono,
+    empresaEmail: source.empresaEmail,
+    brandColor: source.brandColor,
+    formaPago: "",
+    solicitudPublicaSlug: source.solicitudPublicaSlug,
+    solicitudPublicaDescripcionCorta: source.solicitudPublicaDescripcionCorta,
+    solicitudPublicaValor: source.solicitudPublicaValor,
+    solicitudPublicaMensajeConfianza: source.solicitudPublicaMensajeConfianza,
+    solicitudPublicaPrivacidad: source.solicitudPublicaPrivacidad,
+    solicitudPublicaHorarioDesde: source.solicitudPublicaHorarioDesde,
+    solicitudPublicaHorarioHasta: source.solicitudPublicaHorarioHasta,
+    solicitudPublicaDiasAtencion: source.solicitudPublicaDiasAtencion,
+    solicitudPublicaHorarioPorDia: source.solicitudPublicaHorarioPorDia,
+    proveedorPreferido: "",
+    modoPrecioPreferido: "margen",
+    margenDefecto: 100,
+    creadoEn: null,
+    actualizadoEn: null,
+    publicName: source.publicName,
+    publicSubtitle: source.publicSubtitle,
+    publicZone: source.publicZone,
+    publicBusinessType: source.publicBusinessType,
+    instagramUrl: source.instagramUrl,
+    facebookUrl: source.facebookUrl,
+    tiktokUrl: source.tiktokUrl,
+    websiteUrl: source.websiteUrl,
+    publicServices: source.publicServices as PublicLandingService[],
+    finalCtaTitle: source.finalCtaTitle,
+    finalCtaSubtitle: source.finalCtaSubtitle,
+    finalCtaLabel: source.finalCtaLabel,
+    businessHoursNote: source.businessHoursNote,
+    secondaryColor: source.secondaryColor,
+    heroMode: source.heroMode,
+    heroImageUrl: source.heroImageUrl,
+    heroTitle: source.heroTitle,
+    heroSubtitle: source.heroSubtitle,
+    showGallery: source.showGallery,
+    showSchedule: source.showSchedule,
+    showRating: source.showRating,
+    ratingLabel: source.ratingLabel,
+    jobsCountLabel: source.jobsCountLabel,
+    formTitle: source.formTitle,
+    formSubtitle: source.formSubtitle,
+    isPublished: source.isPublished,
+  });
+
+  return {
+    organizationId: source.organizationId,
+    empresaNombre: resolved.empresaNombre,
+    empresaLogoUrl: resolved.empresaLogoUrl,
+    empresaDireccion: resolved.empresaDireccion,
+    empresaTelefono: resolved.empresaTelefono,
+    empresaEmail: resolved.empresaEmail,
+    brandColor: resolved.brandColor,
+    secondaryColor: resolved.secondaryColor,
+    solicitudPublicaSlug: resolved.solicitudPublicaSlug,
+    solicitudPublicaDescripcionCorta: resolved.solicitudPublicaDescripcionCorta,
+    solicitudPublicaValor: resolved.solicitudPublicaValor,
+    solicitudPublicaMensajeConfianza: resolved.solicitudPublicaMensajeConfianza,
+    solicitudPublicaPrivacidad: resolved.solicitudPublicaPrivacidad,
+    solicitudPublicaHorarioDesde: resolved.solicitudPublicaHorarioDesde,
+    solicitudPublicaHorarioHasta: resolved.solicitudPublicaHorarioHasta,
+    solicitudPublicaDiasAtencion: resolved.solicitudPublicaDiasAtencion,
+    solicitudPublicaHorarioPorDia: resolved.solicitudPublicaHorarioPorDia,
+    publicName: resolved.publicName,
+    publicSubtitle:
+      resolved.isPublished
+        ? resolved.publicSubtitle || resolved.publicBusinessType
+        : resolved.publicBusinessType,
+    publicZone: resolved.publicZone,
+    publicBusinessType: resolved.publicBusinessType,
+    instagramUrl: resolved.instagramUrl,
+    facebookUrl: resolved.facebookUrl,
+    tiktokUrl: resolved.tiktokUrl,
+    websiteUrl: resolved.websiteUrl,
+    publicServices: resolved.publicServices,
+    finalCtaTitle: DEFAULT_FINAL_CTA_TITLE,
+    finalCtaSubtitle: DEFAULT_FINAL_CTA_SUBTITLE,
+    finalCtaLabel: DEFAULT_FINAL_CTA_LABEL,
+    businessHoursNote: "",
+    heroMode: resolved.isPublished ? resolved.heroMode : "gradient",
+    heroImageUrl:
+      resolved.isPublished && resolved.heroMode === "image"
+        ? resolved.heroImageUrl
+        : null,
+    heroTitle: resolved.isPublished ? resolved.heroTitle : DEFAULT_HERO_TITLE,
+    heroSubtitle:
+      resolved.isPublished && resolved.heroSubtitle
+        ? resolved.heroSubtitle
+        : DEFAULT_HERO_SUBTITLE,
+    showGallery: resolved.isPublished ? resolved.showGallery : true,
+    showSchedule: resolved.isPublished ? resolved.showSchedule : true,
+    showRating: resolved.isPublished ? resolved.showRating : false,
+    ratingLabel: resolved.isPublished ? resolved.ratingLabel : "",
+    jobsCountLabel: resolved.isPublished ? resolved.jobsCountLabel : "",
+    formTitle: resolved.isPublished ? resolved.formTitle : DEFAULT_FORM_TITLE,
+    formSubtitle:
+      resolved.isPublished && resolved.formSubtitle
+        ? resolved.formSubtitle
+        : DEFAULT_FORM_SUBTITLE,
+    isPublished: resolved.isPublished,
+  };
 }
 
 export function resolveOrganizationProfile(

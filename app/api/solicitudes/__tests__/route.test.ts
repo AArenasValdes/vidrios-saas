@@ -25,7 +25,7 @@ jest.mock("@/features/solicitudes/services/solicitudes-contacto.service", () => 
   SolicitudContactoValidationError: class SolicitudContactoValidationError extends Error {},
 }));
 
-import { GET, POST } from "../route";
+import { GET, PATCH, POST } from "../route";
 import { resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
 import {
   canAccessAllSolicitudes,
@@ -76,6 +76,48 @@ describe("/api/solicitudes", () => {
     expect(solicitudesContactoService.createSolicitud).not.toHaveBeenCalled();
     expect(payload).toEqual({
       error: "La solicitud no tiene un formato valido.",
+    });
+  });
+
+  it("mantiene el scope por organizacion al actualizar solicitudes aunque el email este allowlist", async () => {
+    (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
+      user: { email: "admin@ventora.cl" },
+      profile: { rol: "admin", organizationId: "org-7" },
+    });
+    (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
+    (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
+    (solicitudesContactoService.updateSolicitudStatus as jest.Mock).mockResolvedValue({
+      id: "lead-1",
+      organizationId: "org-7",
+      estado: "contactada",
+    });
+
+    const request = new Request("http://localhost/api/solicitudes", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: "lead-1",
+        estado: "contactada",
+      }),
+    });
+
+    const response = await PATCH(request);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(solicitudesContactoService.updateSolicitudStatus).toHaveBeenCalledWith({
+      id: "lead-1",
+      estado: "contactada",
+      organizationId: "org-7",
+    });
+    expect(payload).toEqual({
+      solicitud: {
+        id: "lead-1",
+        organizationId: "org-7",
+        estado: "contactada",
+      },
     });
   });
 });

@@ -26,8 +26,8 @@ import {
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
+  buildEmpresaProfileInput,
   buildOrganizationInitials,
-  buildDefaultSolicitudPublicaHorarioPorDia,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
 } from "@/features/organization-profile/services/organization-profile.service";
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
@@ -38,8 +38,10 @@ import { subscribeToPushNotifications } from "@/utils/web-push";
 import s from "./page.module.css";
 
 const BRAND_PRESETS = ["#4F7DD4", "#243B6B", "#2EA5E6", "#1DB98B", "#F59E0B", "#EF4444", "#8B5CF6"];
+const SECONDARY_PRESETS = ["#25D366", "#2EA5E6", "#1DB98B", "#F59E0B", "#8B5CF6", "#EF4444"];
 
-const EMPTY_FORM: UpdateOrganizationProfileInput = {
+const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
+  organizationId: null,
   empresaNombre: "",
   empresaLogoUrl: null,
   empresaDireccion: "",
@@ -54,11 +56,13 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   solicitudPublicaPrivacidad: "",
   solicitudPublicaHorarioDesde: "09:00",
   solicitudPublicaHorarioHasta: "19:00",
-  solicitudPublicaDiasAtencion: ["1", "2", "3", "4", "5", "6"],
-  solicitudPublicaHorarioPorDia: buildDefaultSolicitudPublicaHorarioPorDia(),
+  solicitudPublicaDiasAtencion: [],
+  solicitudPublicaHorarioPorDia: [],
   proveedorPreferido: "",
   modoPrecioPreferido: "margen",
   margenDefecto: 100,
+  creadoEn: null,
+  actualizadoEn: null,
   publicName: "",
   publicSubtitle: "",
   publicZone: "",
@@ -85,7 +89,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = {
   formTitle: "",
   formSubtitle: "",
   isPublished: false,
-};
+});
 
 type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones";
 type DeviceAlertsState = {
@@ -156,53 +160,7 @@ export default function ConfiguracionEmpresaPage() {
 
   useEffect(() => {
     if (!profile) return;
-    setForm({
-      empresaNombre: profile.empresaNombre,
-      empresaLogoUrl: profile.empresaLogoUrl,
-      empresaDireccion: profile.empresaDireccion,
-      empresaTelefono: profile.empresaTelefono,
-      empresaEmail: profile.empresaEmail,
-      brandColor: profile.brandColor,
-      formaPago: profile.formaPago,
-      solicitudPublicaSlug: profile.solicitudPublicaSlug,
-      solicitudPublicaDescripcionCorta: profile.solicitudPublicaDescripcionCorta,
-      solicitudPublicaValor: profile.solicitudPublicaValor,
-      solicitudPublicaMensajeConfianza: profile.solicitudPublicaMensajeConfianza,
-      solicitudPublicaPrivacidad: profile.solicitudPublicaPrivacidad,
-      solicitudPublicaHorarioDesde: profile.solicitudPublicaHorarioDesde,
-      solicitudPublicaHorarioHasta: profile.solicitudPublicaHorarioHasta,
-      solicitudPublicaDiasAtencion: profile.solicitudPublicaDiasAtencion,
-      solicitudPublicaHorarioPorDia: profile.solicitudPublicaHorarioPorDia,
-      proveedorPreferido: profile.proveedorPreferido,
-      modoPrecioPreferido: profile.modoPrecioPreferido,
-      margenDefecto: profile.margenDefecto,
-      publicName: profile.publicName,
-      publicSubtitle: profile.publicSubtitle,
-      publicZone: profile.publicZone,
-      publicBusinessType: profile.publicBusinessType,
-      instagramUrl: profile.instagramUrl,
-      facebookUrl: profile.facebookUrl,
-      tiktokUrl: profile.tiktokUrl,
-      websiteUrl: profile.websiteUrl,
-      publicServices: profile.publicServices,
-      finalCtaTitle: profile.finalCtaTitle,
-      finalCtaSubtitle: profile.finalCtaSubtitle,
-      finalCtaLabel: profile.finalCtaLabel,
-      businessHoursNote: profile.businessHoursNote,
-      secondaryColor: profile.secondaryColor,
-      heroMode: profile.heroMode,
-      heroImageUrl: profile.heroImageUrl,
-      heroTitle: profile.heroTitle,
-      heroSubtitle: profile.heroSubtitle,
-      showGallery: profile.showGallery,
-      showSchedule: profile.showSchedule,
-      showRating: profile.showRating,
-      ratingLabel: profile.ratingLabel,
-      jobsCountLabel: profile.jobsCountLabel,
-      formTitle: profile.formTitle,
-      formSubtitle: profile.formSubtitle,
-      isPublished: profile.isPublished,
-    });
+    setForm(buildEmpresaProfileInput(profile));
   }, [profile]);
 
   useEffect(
@@ -437,21 +395,29 @@ export default function ConfiguracionEmpresaPage() {
 
   const companyComplete = Boolean(
     form.empresaNombre.trim() &&
+      form.publicName.trim() &&
+      form.publicBusinessType.trim() &&
+      form.solicitudPublicaSlug.trim() &&
       form.empresaTelefono.trim() &&
       form.empresaEmail.trim() &&
       form.empresaDireccion.trim()
   );
-  const brandComplete = Boolean(form.brandColor.trim() && (form.empresaLogoUrl || previewUrl));
+  const brandComplete = Boolean(
+    form.brandColor.trim() &&
+      form.secondaryColor.trim() &&
+      (form.empresaLogoUrl || previewUrl)
+  );
   const commercialComplete = Boolean(form.formaPago.trim());
   const notificationsComplete = notificationsEnabled;
 
   const companySummary = compactJoin([
-    form.empresaNombre.trim() || "Empresa sin nombre",
-    form.empresaTelefono.trim() || "Sin telefono",
-    form.empresaEmail.trim() || "Sin email",
+    form.publicName.trim() || form.empresaNombre.trim() || "Empresa sin nombre",
+    form.publicBusinessType.trim() || "Sin rubro",
+    `/${form.solicitudPublicaSlug.trim() || "mi-empresa"}`,
   ]);
   const brandSummary = compactJoin([
     form.brandColor.toUpperCase(),
+    form.secondaryColor.toUpperCase(),
     form.empresaLogoUrl || previewUrl ? "Logo subido" : "Sin logo",
   ]);
   const commercialSummary = compactJoin([
@@ -567,18 +533,37 @@ export default function ConfiguracionEmpresaPage() {
                 <label className={s.field}>
                   <span className={s.label}>Nombre empresa</span>
                   <input className={s.input} value={form.empresaNombre} onChange={(event) => handleFieldChange("empresaNombre", event.target.value)} placeholder="Ej: Vidrieria San Marco" />
+                  <span className={s.inlineInfo}>Base interna de tu empresa.</span>
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Nombre que veran tus clientes</span>
+                  <input className={s.input} value={form.publicName} onChange={(event) => handleFieldChange("publicName", event.target.value)} placeholder={form.empresaNombre || "Mi empresa"} />
+                  <span className={s.inlineInfo}>Esto se refleja en tu landing publica.</span>
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Rubro o especialidad</span>
+                  <input className={s.input} value={form.publicBusinessType} onChange={(event) => handleFieldChange("publicBusinessType", event.target.value)} placeholder="Ej: Vidrios y aluminio" />
+                  <span className={s.inlineInfo}>Se muestra como presentacion comercial en tu landing.</span>
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Nombre del enlace</span>
+                  <input className={s.input} value={form.solicitudPublicaSlug} onChange={(event) => handleFieldChange("solicitudPublicaSlug", event.target.value)} placeholder="ej: mi-vidrieria" />
+                  <span className={s.inlineInfo}>Tu landing publica quedara como {publicRequestUrl}.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Telefono</span>
                   <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder="+56 9 1234 5678" />
+                  <span className={s.inlineInfo}>Esto se usa en PDF, WhatsApp y landing publica.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Direccion</span>
                   <input className={s.input} value={form.empresaDireccion} onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)} placeholder="Ej: Apoquindo 4501, Las Condes" />
+                  <span className={s.inlineInfo}>Tambien se muestra automaticamente en tu landing.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Email</span>
                   <input className={s.input} value={form.empresaEmail} onChange={(event) => handleFieldChange("empresaEmail", event.target.value)} placeholder="contacto@empresa.cl" />
+                  <span className={s.inlineInfo}>Se usa como dato de contacto visible.</span>
                 </label>
               </div>
               {sectionFeedback?.section === "empresa" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}
@@ -628,6 +613,27 @@ export default function ConfiguracionEmpresaPage() {
                     <input type="color" value={form.brandColor} onChange={(event) => handleFieldChange("brandColor", event.target.value)} aria-label="Elegir color personalizado" />
                   </label>
                 </div>
+                <span className={s.inlineInfo}>Se refleja en presupuesto, landing publica y elementos activos.</span>
+              </div>
+
+              <div className={s.field}>
+                <span className={s.label}>Color secundario</span>
+                <div className={s.swatchRow}>
+                  {SECONDARY_PRESETS.map((color) => {
+                    const isActive = form.secondaryColor.toLowerCase() === color.toLowerCase();
+                    return (
+                      <button key={color} type="button" className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`} style={{ backgroundColor: color }} onClick={() => handleFieldChange("secondaryColor", color)} aria-label={`Usar color secundario ${color}`} aria-pressed={isActive}>
+                        {isActive ? <LuCheck aria-hidden /> : null}
+                      </button>
+                    );
+                  })}
+                  <label className={s.customColor}>
+                    <span className={s.customColorPreview} style={{ backgroundColor: form.secondaryColor }} />
+                    <span className={s.customColorLabel}>Otro</span>
+                    <input type="color" value={form.secondaryColor} onChange={(event) => handleFieldChange("secondaryColor", event.target.value)} aria-label="Elegir color secundario personalizado" />
+                  </label>
+                </div>
+                <span className={s.inlineInfo}>Se usa en WhatsApp, botones y acentos de la landing.</span>
               </div>
 
               <div className={s.field}>

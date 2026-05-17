@@ -129,7 +129,9 @@ function NuevaCotizacionPageContent() {
     clientId?: string | number | null;
     projectId?: string | number | null;
   } | null>(null);
-  const [sourceSolicitudId, setSourceSolicitudId] = useState<string | null>(null);
+  const [sourceSolicitudId, setSourceSolicitudId] = useState<string | null>(() =>
+    getNuevaCotizacionSolicitudSourceId()
+  );
   const {
     clientes,
     ensureClientesLoaded,
@@ -205,10 +207,6 @@ function NuevaCotizacionPageContent() {
   useEffect(() => {
     void ensureClientesLoaded();
   }, [ensureClientesLoaded]);
-
-  useEffect(() => {
-    setSourceSolicitudId(getNuevaCotizacionSolicitudSourceId());
-  }, []);
 
   const pasoUnoCliente = usePasoUnoCliente({
     clientes,

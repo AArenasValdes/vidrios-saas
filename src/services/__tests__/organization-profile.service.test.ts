@@ -22,6 +22,7 @@ function createOrganizationProfileRepositoryMock(): jest.Mocked<OrganizationProf
       actualizadoEn: "2026-03-17T10:00:00.000Z",
     })),
     uploadLogo: jest.fn().mockResolvedValue("https://cdn.example.com/logo.png"),
+    uploadHeroImage: jest.fn().mockResolvedValue("https://cdn.example.com/hero.png"),
   } as unknown as jest.Mocked<OrganizationProfileRepository>;
 }
 
@@ -150,7 +151,7 @@ await service.updateByOrganizationId("org-1", {
  isPublished: false,
  });
 
- expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", {
+ expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", expect.objectContaining({
  empresaNombre: "San Marco",
  empresaLogoUrl: null,
  empresaDireccion: "La Serena",
@@ -196,7 +197,7 @@ await service.updateByOrganizationId("org-1", {
  formTitle: "",
  formSubtitle: "",
  isPublished: false,
- });
+ }));
   });
 
   it("debe validar que el logo sea una imagen", async () => {

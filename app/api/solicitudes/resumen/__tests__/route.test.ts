@@ -17,8 +17,10 @@ jest.mock("@/features/solicitudes/services/solicitudes-contacto-access", () => (
 
 jest.mock("@/features/solicitudes/services/solicitudes-contacto.service", () => ({
   solicitudesContactoService: {
-    listSolicitudesResumen: jest.fn(),
-    listSolicitudesResumenByOrganizationId: jest.fn(),
+    listSolicitudesResumenPage: jest.fn(),
+    listSolicitudesResumenPageByOrganizationId: jest.fn(),
+    getSolicitudesResumenGlobal: jest.fn(),
+    getSolicitudesResumenGlobalByOrganizationId: jest.fn(),
   },
 }));
 
@@ -42,19 +44,59 @@ describe("/api/solicitudes/resumen", () => {
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
     (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
-    (solicitudesContactoService.listSolicitudesResumen as jest.Mock).mockResolvedValue([
-      { id: "lead-1" },
-    ]);
+    (
+      solicitudesContactoService.listSolicitudesResumenPage as jest.Mock
+    ).mockResolvedValue({
+      solicitudes: [{ id: "lead-1" }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+    });
+    (
+      solicitudesContactoService.getSolicitudesResumenGlobal as jest.Mock
+    ).mockResolvedValue({
+      total: 1,
+      hoy: 1,
+      counts: {
+        nueva: 1,
+        contactada: 0,
+        cerrada: 0,
+        descartada: 0,
+      },
+    });
 
-    const response = await GET();
+    const request = new Request("http://localhost/api/solicitudes/resumen");
+    const response = await GET(request);
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(solicitudesContactoService.listSolicitudesResumen).toHaveBeenCalled();
+    expect(solicitudesContactoService.listSolicitudesResumenPage).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 25,
+      estado: null,
+      search: null,
+    });
     expect(
-      solicitudesContactoService.listSolicitudesResumenByOrganizationId
+      solicitudesContactoService.listSolicitudesResumenPageByOrganizationId
     ).not.toHaveBeenCalled();
-    expect(payload).toEqual({ solicitudes: [{ id: "lead-1" }] });
+    expect(payload).toEqual({
+      solicitudes: [{ id: "lead-1" }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+      summary: {
+        total: 1,
+        hoy: 1,
+        counts: {
+          nueva: 1,
+          contactada: 0,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+    });
   });
 
   it("mantiene el filtro por organizacion para admins normales", async () => {
@@ -63,19 +105,59 @@ describe("/api/solicitudes/resumen", () => {
       profile: { rol: "admin", organizationId: "org-7" },
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
-    (canAccessAllSolicitudes as jest.Mock).mockReturnValue(false);
+    (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
     (
-      solicitudesContactoService.listSolicitudesResumenByOrganizationId as jest.Mock
-    ).mockResolvedValue([{ id: "lead-2" }]);
+      solicitudesContactoService.listSolicitudesResumenPageByOrganizationId as jest.Mock
+    ).mockResolvedValue({
+      solicitudes: [{ id: "lead-2" }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+    });
+    (
+      solicitudesContactoService.getSolicitudesResumenGlobalByOrganizationId as jest.Mock
+    ).mockResolvedValue({
+      total: 1,
+      hoy: 0,
+      counts: {
+        nueva: 0,
+        contactada: 1,
+        cerrada: 0,
+        descartada: 0,
+      },
+    });
 
-    const response = await GET();
+    const request = new Request("http://localhost/api/solicitudes/resumen");
+    const response = await GET(request);
     const payload = await response.json();
 
     expect(response.status).toBe(200);
     expect(
-      solicitudesContactoService.listSolicitudesResumenByOrganizationId
-    ).toHaveBeenCalledWith("org-7");
-    expect(solicitudesContactoService.listSolicitudesResumen).not.toHaveBeenCalled();
-    expect(payload).toEqual({ solicitudes: [{ id: "lead-2" }] });
+      solicitudesContactoService.listSolicitudesResumenPageByOrganizationId
+    ).toHaveBeenCalledWith("org-7", {
+      page: 1,
+      pageSize: 25,
+      estado: null,
+      search: null,
+    });
+    expect(solicitudesContactoService.listSolicitudesResumenPage).not.toHaveBeenCalled();
+    expect(payload).toEqual({
+      solicitudes: [{ id: "lead-2" }],
+      totalCount: 1,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+      summary: {
+        total: 1,
+        hoy: 0,
+        counts: {
+          nueva: 0,
+          contactada: 1,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+    });
   });
 });
