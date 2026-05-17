@@ -25,7 +25,7 @@ export function createCotizacionPdfCacheService(
       return buildCotizacionPdfStoragePath(identity);
     },
 
-    getPublicUrl(identity: QuotePdfCacheIdentity) {
+    async getPublicUrl(identity: QuotePdfCacheIdentity) {
       return repository.getPublicUrl(identity);
     },
 

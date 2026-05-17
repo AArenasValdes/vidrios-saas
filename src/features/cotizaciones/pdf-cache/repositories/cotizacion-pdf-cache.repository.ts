@@ -11,7 +11,8 @@ type QuotePdfIdentity = {
   updatedAt: string;
 };
 
-const BUCKET_NAME = "organization-assets";
+const BUCKET_NAME = "quote-pdfs";
+const SIGNED_URL_TTL_SECONDS = 60 * 15;
 
 function sanitizeSegment(value: string) {
   return value
@@ -36,18 +37,27 @@ export function createCotizacionPdfCacheRepository(
 ) {
   const supabase = deps.clientFactory ?? createClient();
 
+  async function createSignedAccessUrl(path: string) {
+    const { data, error } = await supabase
+      .storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+
+    if (error) {
+      throw error;
+    }
+
+    return { path, publicUrl: data.signedUrl };
+  }
+
   return {
     buildPath(identity: QuotePdfIdentity) {
       return buildCotizacionPdfStoragePath(identity);
     },
 
-    getPublicUrl(identity: QuotePdfIdentity) {
+    async getPublicUrl(identity: QuotePdfIdentity) {
       const path = buildCotizacionPdfStoragePath(identity);
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-
-      return { path, publicUrl };
+      return createSignedAccessUrl(path);
     },
 
     async exists(identity: QuotePdfIdentity) {
@@ -84,11 +94,7 @@ export function createCotizacionPdfCacheRepository(
         throw error;
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-
-      return { path, publicUrl };
+      return createSignedAccessUrl(path);
     },
   };
 }

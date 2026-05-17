@@ -4,6 +4,21 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-17 - Hardening multi-tenant en Supabase y PDFs privados
+
+### Resumen
+
+Se cerro una pasada de seguridad multi-tenant sobre Supabase. `get_org_id()` y objetos dependientes ahora resuelven organizacion por `auth_user_id/auth.uid()` en vez de correo, `quote_item_breakdown` ya tiene policies RLS reales para cliente autenticado, se restringieron grants/ejecucion innecesarios en funciones y tablas sensibles, y los PDFs cacheados de cotizaciones salieron del bucket publico `organization-assets` hacia el bucket privado `quote-pdfs` con acceso por URL firmada.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260517123000_multi_tenant_hardening_auth_uid_and_private_pdfs.sql` | Migracion de hardening multi-tenant, funciones, grants, policies y bucket privado de PDFs |
+| `src/features/cotizaciones/pdf-cache/repositories/cotizacion-pdf-cache.repository.ts` | Cache PDF ahora usa bucket privado `quote-pdfs` y URLs firmadas |
+| `src/features/cotizaciones/pdf-cache/services/cotizacion-pdf-cache.service.ts` | Servicio PDF alineado con acceso firmado asincrono |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Registro de este cambio |
+
 ## 2026-05-16 - Estabilizacion de rutas criticas para piloto
 
 ### Resumen
