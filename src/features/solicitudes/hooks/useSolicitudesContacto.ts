@@ -179,6 +179,7 @@ export function useSolicitudesContacto(
   );
   const solicitudesRef = useRef(solicitudes);
   const summaryRef = useRef(summary);
+  const requestVersionRef = useRef(0);
 
   useEffect(() => {
     solicitudesRef.current = solicitudes;
@@ -190,6 +191,8 @@ export function useSolicitudesContacto(
 
   const loadSolicitudes = useCallback(
     async (targetPage = 1, mode: "replace" | "append" = "replace") => {
+      const requestVersion = ++requestVersionRef.current;
+
       try {
         if (mode === "append") {
           setIsLoadingMore(true);
@@ -216,6 +219,9 @@ export function useSolicitudesContacto(
         }
 
         const nextPage = await dataPromise;
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
         const nextSolicitudes =
           mode === "append"
             ? [
@@ -237,8 +243,14 @@ export function useSolicitudesContacto(
           solicitudes: nextSolicitudes,
         });
       } catch (nextError) {
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
         setError(getErrorMessage(nextError));
       } finally {
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
         setIsLoadingMore(false);
         setIsRefreshing(false);
         setIsReady(true);

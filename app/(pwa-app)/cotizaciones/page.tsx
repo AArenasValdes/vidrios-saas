@@ -137,8 +137,6 @@ export default function CotizacionesPage() {
   const router = useRouter();
   const {
     clientes: clientesDisponibles,
-    isReady,
-    isRefreshing,
     isSaving,
     deleteWorkflow,
     markQuoteAsSent,
@@ -211,7 +209,9 @@ export default function CotizacionesPage() {
     order: ordenFiltro,
     search: busquedaDiferida,
   });
-  const isInitialSync = (!resumenReady || resumenRefreshing) && cotizaciones.length === 0;
+  const isColdBoot = !resumenReady && cotizaciones.length === 0 && totalCount === 0;
+  const shouldShowSummaryPlaceholder =
+    !resumenReady && summary.totalCount === 0 && cotizaciones.length === 0;
   const {
     clientes,
     filtradas,
@@ -231,25 +231,27 @@ export default function CotizacionesPage() {
       {
         key: "todos",
         label: "Total",
-        value: formatCompactAmount(summary.totalAmount),
+        value: shouldShowSummaryPlaceholder
+          ? "..."
+          : formatCompactAmount(summary.totalAmount),
         tone: "blue",
       },
       {
         key: "aprobadas",
         label: "Aprob.",
-        value: String(summary.counts.aprobada),
+        value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.aprobada),
         tone: "green",
       },
       {
         key: "pendientes",
         label: "Pend.",
-        value: String(totalPendientes),
+        value: shouldShowSummaryPlaceholder ? "..." : String(totalPendientes),
         tone: "amber",
       },
       {
         key: "rechazadas",
         label: "Rech.",
-        value: String(summary.counts.rechazada),
+        value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.rechazada),
         tone: "red",
       },
     ] as const;
@@ -286,31 +288,31 @@ export default function CotizacionesPage() {
       kpis: [
         {
           label: "Total",
-          value: String(summary.totalCount),
+          value: shouldShowSummaryPlaceholder ? "..." : String(summary.totalCount),
           sub: "cotizaciones",
           tone: "blue",
         },
         {
           label: "Aprobadas",
-          value: String(summary.counts.aprobada),
+          value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.aprobada),
           sub: "aprobadas",
           tone: "green",
         },
         {
           label: "Pendientes",
-          value: String(totalPendientes),
+          value: shouldShowSummaryPlaceholder ? "..." : String(totalPendientes),
           sub: "por revisar",
           tone: "amber",
         },
         {
           label: "Terminadas",
-          value: String(summary.counts.terminada),
+          value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.terminada),
           sub: "obras cerradas",
           tone: "strong",
         },
         {
           label: "Aprobado",
-          value: CLP(summary.approvedAmount),
+          value: shouldShowSummaryPlaceholder ? "..." : CLP(summary.approvedAmount),
           sub: "monto total",
           tone: "blue",
           mono: true,
@@ -331,6 +333,7 @@ export default function CotizacionesPage() {
     ordenFiltro,
     periodoFiltro,
     summary,
+    shouldShowSummaryPlaceholder,
   ]);
 
   const limpiar = () => {
@@ -368,10 +371,10 @@ export default function CotizacionesPage() {
   }, [ordenFiltro]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
+    if (resumenReady && !resumenRefreshing && currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, resumenReady, resumenRefreshing, totalPages]);
 
   const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
     setAtajoEstado(key);
@@ -512,22 +515,6 @@ export default function CotizacionesPage() {
       setSendingId(null);
     }
   }, [cotizaciones, loadCotizacionById, markQuoteAsSent, refreshCotizacionesResumen]);
-
-  if (!isReady || !resumenReady) {
-    return (
-      <PremiumPageReveal className={s.root}>
-        <PremiumPageSection className={s.emptyState}>
-          <div className={s.emptyIcon}>
-            <LuFilePlus2 aria-hidden />
-          </div>
-          <p className={s.emptyTitle}>Cargando cotizaciones</p>
-          <p className={s.emptySub}>
-            Estamos preparando tus presupuestos y el resumen comercial.
-          </p>
-        </PremiumPageSection>
-      </PremiumPageReveal>
-    );
-  }
 
   return (
     <PremiumPageReveal className={s.root}>
@@ -696,14 +683,27 @@ export default function CotizacionesPage() {
         <div className={s.resultsSummary}>
           <p className={s.resultsLabel}>Resultados</p>
           <div className={s.resultsMain}>
-            <strong>{filtradas.length}</strong>
-            <span>cotizaciones visibles</span>
+            {isColdBoot ? (
+              <>
+                <span className={s.skeletonValue} aria-hidden />
+                <span className={s.skeletonText} aria-hidden />
+              </>
+            ) : (
+              <>
+                <strong>{filtradas.length}</strong>
+                <span>cotizaciones visibles</span>
+              </>
+            )}
           </div>
         </div>
 
         <div className={s.resultsMeta}>
-          <span>Monto filtrado: {CLP(montoFiltrado)}</span>
-          {filtrosActivos.length > 0 ? (
+          {isColdBoot ? (
+            <span className={s.skeletonMeta} aria-hidden />
+          ) : (
+            <span>Monto filtrado: {CLP(montoFiltrado)}</span>
+          )}
+          {!isColdBoot && filtrosActivos.length > 0 ? (
             <div className={s.activeFilters}>
               {filtrosActivos.map((filtro) => (
                 <span key={filtro} className={s.filterPill}>
@@ -711,37 +711,59 @@ export default function CotizacionesPage() {
                 </span>
               ))}
             </div>
-          ) : (
-              <span className={s.resultsHint}>Sin filtros activos</span>
-          )}
+          ) : !isColdBoot ? (
+            <span className={s.resultsHint}>Sin filtros activos</span>
+          ) : null}
         </div>
         <div className={s.resultsCompactMobile}>
-          <strong>{filtradas.length} cotizaciones</strong>
-          <span>&middot;</span>
-          <span>Total {CLP(montoFiltrado)}</span>
+          {isColdBoot ? (
+            <>
+              <span className={s.skeletonTextCompact} aria-hidden />
+              <span className={s.skeletonDot} aria-hidden />
+              <span className={s.skeletonTextCompact} aria-hidden />
+            </>
+          ) : (
+            <>
+              <strong>{filtradas.length} cotizaciones</strong>
+              <span>&middot;</span>
+              <span>Total {CLP(montoFiltrado)}</span>
+            </>
+          )}
         </div>
       </PremiumPageSection>
 
-      {filtradas.length === 0 ? (
+      {isColdBoot ? (
+        <PremiumPageSection className={s.loadingTableState}>
+          <div className={s.loadingTableHeader}>
+            <span className={s.skeletonLineShort} aria-hidden />
+            <span className={s.skeletonLineMedium} aria-hidden />
+          </div>
+          <div className={s.loadingTableGrid}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={`cotizacion-skeleton-${index}`} className={s.loadingTableRow}>
+                <span className={s.skeletonBadge} aria-hidden />
+                <span className={s.skeletonLineLong} aria-hidden />
+                <span className={s.skeletonLineMedium} aria-hidden />
+              </div>
+            ))}
+          </div>
+        </PremiumPageSection>
+      ) : filtradas.length === 0 ? (
         <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuFilePlus2 aria-hidden />
           </div>
           <p className={s.emptyTitle}>
-            {isInitialSync
-              ? "Sincronizando cotizaciones"
-              : cotizaciones.length === 0
+            {cotizaciones.length === 0
               ? "Todavia no tienes cotizaciones"
               : "Sin cotizaciones para mostrar"}
           </p>
           <p className={s.emptySub}>
-            {isInitialSync
-              ? "Estamos cargando tus presupuestos guardados. Espera un momento antes de crear uno nuevo."
-              : cotizaciones.length === 0
+            {cotizaciones.length === 0
               ? "Crea tu primer presupuesto para empezar a generar PDF y compartirlo por WhatsApp."
               : "No encontramos resultados con los filtros actuales. Ajusta la busqueda o limpia los filtros para volver a ver todas las cotizaciones."}
           </p>
-          {isInitialSync ? null : filtrosActivos.length > 0 ? (
+          {filtrosActivos.length > 0 ? (
             <button className={s.btnPrimary} onClick={limpiar} type="button">
               <LuFilterX aria-hidden />
               Limpiar filtros
@@ -907,7 +929,7 @@ export default function CotizacionesPage() {
                   className={s.pagBtn}
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || resumenRefreshing}
                 >
                   {"<"}
                 </button>
@@ -917,6 +939,8 @@ export default function CotizacionesPage() {
                     className={`${s.pagBtn}${page === currentPage ? ` ${s.pagActive}` : ""}`}
                     type="button"
                     onClick={() => setCurrentPage(page)}
+                    aria-current={page === currentPage ? "page" : undefined}
+                    disabled={resumenRefreshing && page === currentPage}
                   >
                     {page}
                   </button>
@@ -925,7 +949,7 @@ export default function CotizacionesPage() {
                   className={s.pagBtn}
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || resumenRefreshing}
                 >
                   {">"}
                 </button>

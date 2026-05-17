@@ -278,6 +278,46 @@ describe("CotizacionesPage", () => {
     expect(screen.getByTestId("cotizaciones-mobile-filter-panel")).toBeInTheDocument();
   });
 
+  it("no debe mostrar una pantalla completa de cargando durante el primer bootstrap", () => {
+    mockUseCotizacionesStore.mockReturnValue({
+      clientes: [],
+      isSaving: false,
+      deleteWorkflow: jest.fn(),
+      markQuoteAsSent: jest.fn(),
+      prefetchCotizacionById: jest.fn(),
+      updateManualResponseStatus: jest.fn(),
+      loadCotizacionById: jest.fn(),
+      ensureClientesLoaded: jest.fn().mockResolvedValue(undefined),
+    });
+    mockUseCotizacionesResumenPage.mockReturnValue({
+      cotizaciones: [],
+      totalCount: 0,
+      hasMore: false,
+      summary: {
+        totalCount: 0,
+        totalAmount: 0,
+        approvedAmount: 0,
+        counts: {
+          borrador: 0,
+          creada: 0,
+          enviada: 0,
+          aprobada: 0,
+          rechazada: 0,
+          terminada: 0,
+        },
+      },
+      isReady: false,
+      isRefreshing: true,
+      refreshCotizacionesResumen: jest.fn(),
+    });
+
+    render(<CotizacionesPage />);
+
+    expect(screen.queryByText("Cargando cotizaciones")).not.toBeInTheDocument();
+    expect(screen.getByText("Cotizaciones")).toBeInTheDocument();
+    expect(screen.getByText("Resultados")).toBeInTheDocument();
+  });
+
   it("debe buscar y luego limpiar filtros para restaurar la lista", () => {
     renderPage();
 

@@ -62,7 +62,6 @@ export default function ClientesPage() {
   const {
     clientes,
     isReady,
-    isRefreshing,
     isSaving,
     deleteCliente,
     loadClienteDetalleById,
@@ -77,7 +76,7 @@ export default function ClientesPage() {
   } | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const busquedaDiferida = useDeferredValue(busqueda);
-  const isInitialSync = isRefreshing && clientes.length === 0;
+  const isColdBoot = !isReady && clientes.length === 0;
 
   const { direcciones, filtrados, filtrosActivos, kpis, mobileKpis, obrasFiltradas } = useMemo(() => {
     const query = busquedaDiferida.trim().toLowerCase();
@@ -251,20 +250,6 @@ export default function ClientesPage() {
     }
   };
 
-  if (!isReady) {
-    return (
-      <PremiumPageReveal className={s.root}>
-        <PremiumPageSection className={s.emptyState}>
-          <div className={s.emptyIcon}>
-            <LuUsers aria-hidden />
-          </div>
-          <p className={s.emptyTitle}>Cargando clientes</p>
-          <p className={s.emptySub}>Estamos preparando el padron comercial de tu organizacion.</p>
-        </PremiumPageSection>
-      </PremiumPageReveal>
-    );
-  }
-
   return (
     <PremiumPageReveal className={s.root}>
       <PremiumPageSection className={s.header}>
@@ -277,12 +262,19 @@ export default function ClientesPage() {
       </PremiumPageSection>
 
       <PremiumPageSection className={s.mobileKpiGrid}>
-        {mobileKpis.map((kpi) => (
-          <div key={kpi.label} className={`${s.mobileKpiCard} ${s[`mobileKpi${kpi.tone[0].toUpperCase()}${kpi.tone.slice(1)}`]}`}>
-            <strong>{kpi.value}</strong>
-            <span>{kpi.label}</span>
-          </div>
-        ))}
+        {isColdBoot
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <div key={`clientes-kpi-skeleton-${index}`} className={s.mobileKpiCardSkeleton}>
+                <span className={s.mobileSkeletonValue} aria-hidden />
+                <span className={s.mobileSkeletonLabel} aria-hidden />
+              </div>
+            ))
+          : mobileKpis.map((kpi) => (
+              <div key={kpi.label} className={`${s.mobileKpiCard} ${s[`mobileKpi${kpi.tone[0].toUpperCase()}${kpi.tone.slice(1)}`]}`}>
+                <strong>{kpi.value}</strong>
+                <span>{kpi.label}</span>
+              </div>
+            ))}
       </PremiumPageSection>
 
       <PremiumPageSection className={s.mobileSearchSection}>
@@ -295,6 +287,7 @@ export default function ClientesPage() {
             placeholder="Buscar cliente"
             value={busqueda}
             onChange={(event) => handleBusquedaChange(event.target.value)}
+            disabled={isColdBoot}
           />
         </div>
 
@@ -313,8 +306,17 @@ export default function ClientesPage() {
         </div>
 
         <div className={s.mobileResultsLine}>
-          <strong>{filtrados.length} clientes</strong>
-          <span>{obrasFiltradas} obras activas</span>
+          {isColdBoot ? (
+            <>
+              <span className={s.mobileSkeletonInline} aria-hidden />
+              <span className={s.mobileSkeletonInlineShort} aria-hidden />
+            </>
+          ) : (
+            <>
+              <strong>{filtrados.length} clientes</strong>
+              <span>{obrasFiltradas} obras activas</span>
+            </>
+          )}
         </div>
       </PremiumPageSection>
 
@@ -409,26 +411,56 @@ export default function ClientesPage() {
         </PremiumPageSection>
       ) : null}
 
-      {filtrados.length === 0 ? (
+      {isColdBoot ? (
+        <>
+          <PremiumPageSection className={s.loadingTableState}>
+            <div className={s.loadingTableHeader}>
+              <span className={s.mobileLoadingLineStrong} aria-hidden />
+              <span className={s.mobileLoadingLineMedium} aria-hidden />
+            </div>
+            <div className={s.loadingTableGrid}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`clientes-table-skeleton-${index}`} className={s.loadingTableRow}>
+                  <span className={s.mobileLoadingBadge} aria-hidden />
+                  <span className={s.mobileLoadingLineStrong} aria-hidden />
+                  <span className={s.mobileLoadingLineMedium} aria-hidden />
+                </div>
+              ))}
+            </div>
+          </PremiumPageSection>
+          <PremiumPageSection className={s.mobileLoadingList}>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={`clientes-card-skeleton-${index}`} className={s.mobileLoadingCard}>
+                <div className={s.mobileLoadingCardTop}>
+                  <span className={s.mobileLoadingAvatar} aria-hidden />
+                  <div className={s.mobileLoadingCopy}>
+                    <span className={s.mobileLoadingLineStrong} aria-hidden />
+                    <span className={s.mobileLoadingLine} aria-hidden />
+                  </div>
+                  <span className={s.mobileLoadingBadge} aria-hidden />
+                </div>
+                <span className={s.mobileLoadingLineMedium} aria-hidden />
+                <span className={s.mobileLoadingLine} aria-hidden />
+              </div>
+            ))}
+          </PremiumPageSection>
+        </>
+      ) : filtrados.length === 0 ? (
         <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuUsers aria-hidden />
           </div>
           <p className={s.emptyTitle}>
-            {isInitialSync
-              ? "Sincronizando clientes"
-              : clientes.length === 0
+            {clientes.length === 0
                 ? "Todavia no tienes clientes"
                 : "Sin clientes para mostrar"}
           </p>
           <p className={s.emptySub}>
-            {isInitialSync
-              ? "Estamos cargando tu padron comercial. Espera un momento antes de asumir que no hay registros."
-              : clientes.length === 0
+            {clientes.length === 0
               ? "Crea tu primer cliente para empezar a registrar obras y generar presupuestos mas rapido."
               : "No encontramos clientes con los filtros actuales. Ajusta la busqueda o limpia filtros para ver todo el padron."}
           </p>
-          {isInitialSync ? null : filtrosActivos.length > 0 ? (
+          {filtrosActivos.length > 0 ? (
             <button className={s.btnPrimary} onClick={limpiar} type="button">
               <LuFilterX aria-hidden />
               Limpiar filtros

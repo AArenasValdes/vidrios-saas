@@ -54,6 +54,169 @@
   display: none;
 }
 
+.mobileKpiCardSkeleton,
+.mobileSkeletonValue,
+.mobileSkeletonLabel,
+.mobileSkeletonInline,
+.mobileSkeletonInlineShort,
+.mobileLoadingAvatar,
+.mobileLoadingBadge,
+.mobileLoadingLineStrong,
+.mobileLoadingLine,
+.mobileLoadingLineMedium {
+  background: linear-gradient(
+    90deg,
+    rgba(231, 237, 246, 0.95) 0%,
+    rgba(245, 248, 252, 1) 50%,
+    rgba(231, 237, 246, 0.95) 100%
+  );
+  background-size: 220% 100%;
+  animation: clientesSkeletonPulse 1.25s ease-in-out infinite;
+}
+
+.mobileKpiCardSkeleton {
+  min-height: 74px;
+  padding: 14px;
+  border: 1px solid rgba(217, 224, 234, 0.92);
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  background-color: #ffffff;
+}
+
+.mobileSkeletonValue {
+  display: inline-flex;
+  width: 56px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.mobileSkeletonLabel {
+  display: inline-flex;
+  width: 84px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.mobileSkeletonInline,
+.mobileSkeletonInlineShort {
+  display: inline-flex;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.mobileSkeletonInline {
+  width: 108px;
+}
+
+.mobileSkeletonInlineShort {
+  width: 92px;
+}
+
+.mobileLoadingList {
+  display: none;
+  gap: 12px;
+}
+
+.loadingTableState {
+  display: grid;
+  gap: 12px;
+}
+
+.loadingTableHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 2px;
+}
+
+.loadingTableGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.loadingTableRow {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 128px;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 253, 0.98));
+  box-shadow: 0 12px 24px rgba(28, 44, 79, 0.05);
+}
+
+.mobileLoadingCard {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 253, 0.98));
+  box-shadow: 0 12px 24px rgba(28, 44, 79, 0.05);
+  display: grid;
+  gap: 12px;
+}
+
+.mobileLoadingCardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileLoadingAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.mobileLoadingCopy {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+}
+
+.mobileLoadingBadge {
+  width: 72px;
+  height: 24px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.mobileLoadingLineStrong,
+.mobileLoadingLine,
+.mobileLoadingLineMedium {
+  display: inline-flex;
+  border-radius: 999px;
+}
+
+.mobileLoadingLineStrong {
+  width: min(100%, 170px);
+  height: 14px;
+}
+
+.mobileLoadingLine {
+  width: min(100%, 210px);
+  height: 11px;
+}
+
+.mobileLoadingLineMedium {
+  width: min(100%, 128px);
+  height: 11px;
+}
+
+@keyframes clientesSkeletonPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 .btnPrimary,
 .btnGhost,
 .accionBtnMobile {
@@ -1152,6 +1315,14 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .loadingTableState {
+    display: none;
+  }
+
+  .mobileLoadingList {
+    display: grid;
   }
 
   .mobileKpiCard {

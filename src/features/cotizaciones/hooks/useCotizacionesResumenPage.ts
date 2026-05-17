@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getCotizacionesResumenPage,
@@ -172,8 +172,11 @@ export function useCotizacionesResumenPage(
       },
     }
   );
+  const requestVersionRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestVersion = ++requestVersionRef.current;
+
     try {
       setIsRefreshing(true);
       setError(null);
@@ -190,14 +193,23 @@ export function useCotizacionesResumenPage(
       }
 
       const page = await pagePromise;
+      if (requestVersion !== requestVersionRef.current) {
+        return;
+      }
       setCotizaciones(page.cotizaciones);
       setTotalCount(page.totalCount);
       setHasMore(page.hasMore);
       setSummary(page.summary);
       persistCotizacionesCache(queryKey, page);
     } catch (nextError) {
+      if (requestVersion !== requestVersionRef.current) {
+        return;
+      }
       setError(getErrorMessage(nextError));
     } finally {
+      if (requestVersion !== requestVersionRef.current) {
+        return;
+      }
       setIsRefreshing(false);
       setIsReady(true);
     }

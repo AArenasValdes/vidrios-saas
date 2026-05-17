@@ -242,6 +242,7 @@ export default function SolicitudesPage() {
       counts: summary.counts,
     };
   }, [solicitudes.length, summary, totalCount]);
+  const isColdBoot = !isReady && solicitudes.length === 0 && resumen.total === 0;
 
   const visibleSolicitudes = useMemo(() => {
     return solicitudes.map((solicitud) => {
@@ -426,20 +427,6 @@ export default function SolicitudesPage() {
     [profile?.margenDefecto, profile?.modoPrecioPreferido, router]
   );
 
-  if (!isReady) {
-    return (
-      <PremiumPageReveal className={s.root}>
-        <PremiumPageSection className={s.emptyState}>
-          <div className={s.emptyIcon}>
-            <LuInbox aria-hidden />
-          </div>
-          <p className={s.emptyTitle}>Cargando solicitudes</p>
-          <p className={s.emptySub}>Estamos preparando tu bandeja comercial.</p>
-        </PremiumPageSection>
-      </PremiumPageReveal>
-    );
-  }
-
   if (!canReviewSolicitudes) {
     return (
       <PremiumPageReveal className={s.root}>
@@ -462,10 +449,14 @@ export default function SolicitudesPage() {
         <div className={s.heroTop}>
           <div>
             <span className={s.heroEyebrow}>Solicitudes recibidas</span>
-            <strong className={s.heroTotal}>{resumen.total}</strong>
+            <strong className={s.heroTotal}>
+              {isColdBoot ? <span className={s.heroTotalSkeleton} aria-hidden /> : resumen.total}
+            </strong>
             <p className={s.heroSub}>Desde tu enlace publico</p>
           </div>
-          <span className={s.todayBadge}>+{resumen.hoy} hoy</span>
+          <span className={s.todayBadge}>
+            {isColdBoot ? <span className={s.todayBadgeSkeleton} aria-hidden /> : `+${resumen.hoy} hoy`}
+          </span>
         </div>
 
         <div className={s.heroActions}>
@@ -509,6 +500,7 @@ export default function SolicitudesPage() {
             value={busqueda}
             onChange={(event) => setBusqueda(event.target.value)}
             placeholder="Buscar por nombre, contacto o trabajo"
+            disabled={isColdBoot}
           />
         </div>
         <button
@@ -592,7 +584,24 @@ export default function SolicitudesPage() {
         </PremiumPageSection>
       ) : null}
 
-      {solicitudes.length === 0 ? (
+      {isColdBoot ? (
+        <PremiumPageSection className={s.loadingList}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={`solicitud-skeleton-${index}`} className={s.loadingCard}>
+              <div className={s.loadingCardTop}>
+                <span className={s.loadingAvatar} aria-hidden />
+                <div className={s.loadingIdentity}>
+                  <span className={s.loadingLineStrong} aria-hidden />
+                  <span className={s.loadingLine} aria-hidden />
+                </div>
+                <span className={s.loadingPill} aria-hidden />
+              </div>
+              <span className={s.loadingLineWide} aria-hidden />
+              <span className={s.loadingLine} aria-hidden />
+            </div>
+          ))}
+        </PremiumPageSection>
+      ) : solicitudes.length === 0 ? (
         <PremiumPageSection className={s.emptyState}>
           <div className={s.emptyIcon}>
             <LuInbox aria-hidden />

@@ -577,7 +577,6 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
       searchProjectIds: scope.searchProjectIds,
       }),
       cotizacionesRepo.getResumenGlobalByOrganizationId(organizationId, {
-        estados: options.estado ? [options.estado] : undefined,
         allowedProjectIds: scope.allowedProjectIds,
         searchProjectIds: scope.searchProjectIds,
         search: scope.normalizedSearch || null,
