@@ -18,6 +18,15 @@ const organizationProfileCache = new Map<string, OrganizationProfileCacheEntry>(
 const organizationProfilePromiseCache = new Map<string, Promise<OrganizationProfile>>();
 const ORGANIZATION_PROFILE_STORAGE_PREFIX = "vidrios-saas:organization-profile:";
 
+type BrowserWindowWithIdleCallback = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
 function getOrganizationKey(organizationId: string | number | null) {
   return organizationId === null ? null : String(organizationId);
 }
@@ -62,6 +71,28 @@ function persistOrganizationProfile(
   } catch {
     return;
   }
+}
+
+function scheduleDeferredProfileRefresh(callback: () => void, delayMs = 500) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = window as BrowserWindowWithIdleCallback;
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const handle = browserWindow.requestIdleCallback(callback, {
+      timeout: Math.max(1500, delayMs),
+    });
+
+    return () => {
+      browserWindow.cancelIdleCallback?.(handle);
+    };
+  }
+
+  const timeoutId = window.setTimeout(callback, delayMs);
+  return () => window.clearTimeout(timeoutId);
 }
 
 function readInitialOrganizationProfileState(organizationId: string | number | null) {
@@ -209,6 +240,8 @@ export function useOrganizationProfile() {
 
     const cached = organizationProfileCache.get(String(organizacionId));
 
+    const hasWarmProfile = Boolean(cached);
+
     if (cached) {
       setProfile(cached.profile);
       setIsReady(true);
@@ -216,16 +249,26 @@ export function useOrganizationProfile() {
       const persisted = readOrganizationProfileFromStorage(organizationKey);
 
       if (persisted) {
+        const nextProfile = persisted;
         setProfile(persisted);
         organizationProfileCache.set(organizationKey, {
           organizationId: organizationKey,
-          profile: persisted,
+          profile: nextProfile,
         });
         setIsReady(true);
+        return scheduleDeferredProfileRefresh(() => {
+          void refreshProfileRef.current();
+        });
       } else {
         setProfile(null);
         setIsReady(false);
       }
+    }
+
+    if (hasWarmProfile) {
+      return scheduleDeferredProfileRefresh(() => {
+        void refreshProfileRef.current();
+      });
     }
 
     void refreshProfileRef.current();

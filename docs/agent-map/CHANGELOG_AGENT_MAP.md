@@ -304,3 +304,19 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - `src/components/pwa/install-app-prompt.tsx`
   - `scripts/pilot-users.mjs`
   - `package.json`
+
+### 2026-05-18 - Optimizacion de entrada para pilotos
+
+- Se optimizo la percepcion de carga en entrada/login y primer acceso al workspace:
+  - `useAuth` ahora difiere la revalidacion de red cuando ya existe una sesion util persistida en `sessionStorage`
+  - el primer paint puede entrar con estado util y refrescar en background
+- `useOrganizationProfile` ahora tambien difiere la revalidacion cuando ya existe perfil cacheado o persistido
+  - reduce trabajo de red justo despues del login
+  - mantiene refresco en segundo plano sin romper datos visibles
+- `/login` ahora precalienta `/dashboard` en tiempo ocioso con `router.prefetch("/dashboard")`
+  - acelera el salto despues de `signIn`
+- No se cambiaron flujos, roles, RLS, PDF, WhatsApp ni rutas publicas.
+- Archivos tocados:
+  - `src/features/auth/hooks/useAuth.ts`
+  - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
+  - `app/(auth-public)/login/login-view.tsx`

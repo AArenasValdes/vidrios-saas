@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import LoginView from "../login-view";
 
 const mockSignIn = jest.fn();
+const mockPrefetch = jest.fn();
 
 jest.mock("next/image", () => {
   return function MockImage(
@@ -37,6 +38,12 @@ jest.mock("next/link", () => {
   };
 });
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    prefetch: mockPrefetch,
+  }),
+}));
+
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({
     signIn: mockSignIn,
@@ -47,6 +54,7 @@ describe("LoginView", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSignIn.mockResolvedValue(undefined);
+    mockPrefetch.mockClear();
   });
 
   it("usa los valores reales del formulario cuando autofill no dispara onChange", async () => {

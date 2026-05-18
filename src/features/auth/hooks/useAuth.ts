@@ -32,6 +32,15 @@ let authStateHydratedFromNetwork = false;
 let resolveAuthStateGeneration = 0;
 const authStoreListeners = new Set<() => void>();
 
+type BrowserWindowWithIdleCallback = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
 export function __resetAuthHookTestState() {
   authStateCache = null;
   authStatePromise = null;
@@ -98,6 +107,28 @@ function clearAuthStateStorage() {
   } catch {
     return;
   }
+}
+
+function scheduleDeferredAuthRefresh(callback: () => void, delayMs = 450) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = window as BrowserWindowWithIdleCallback;
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const handle = browserWindow.requestIdleCallback(callback, {
+      timeout: Math.max(1500, delayMs),
+    });
+
+    return () => {
+      browserWindow.cancelIdleCallback?.(handle);
+    };
+  }
+
+  const timeoutId = window.setTimeout(callback, delayMs);
+  return () => window.clearTimeout(timeoutId);
 }
 
 function createAuthResolveTimeout() {
@@ -219,6 +250,15 @@ export function useAuth() {
       setAuthState({
         ...persisted,
         cargando: true,
+      });
+    }
+
+    const shouldDeferNetworkRefresh =
+      persisted !== null && hasUsablePersistedAuthState(persisted);
+
+    if (shouldDeferNetworkRefresh) {
+      return scheduleDeferredAuthRefresh(() => {
+        void resolveAuthState();
       });
     }
 

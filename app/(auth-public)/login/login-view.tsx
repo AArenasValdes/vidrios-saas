@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, Mail } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -42,6 +43,15 @@ const copy = {
 
 const LOGIN_TIMEOUT_MS = 12000;
 
+type BrowserWindowWithIdleCallback = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
 function waitForLoginTimeout() {
   return new Promise<never>((_, reject) => {
     window.setTimeout(() => {
@@ -50,14 +60,43 @@ function waitForLoginTimeout() {
   });
 }
 
+function scheduleLoginPrefetch(callback: () => void, delayMs = 350) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = window as BrowserWindowWithIdleCallback;
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const handle = browserWindow.requestIdleCallback(callback, {
+      timeout: Math.max(1200, delayMs),
+    });
+
+    return () => {
+      browserWindow.cancelIdleCallback?.(handle);
+    };
+  }
+
+  const timeoutId = window.setTimeout(callback, delayMs);
+  return () => window.clearTimeout(timeoutId);
+}
+
 export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
   const { signIn } = useAuth();
+  const router = useRouter();
 
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [mantenerSesion, setMantenerSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return scheduleLoginPrefetch(() => {
+      router.prefetch("/dashboard");
+    });
+  }, [router]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
