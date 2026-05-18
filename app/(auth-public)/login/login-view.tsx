@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Lock, Mail } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -36,11 +35,22 @@ const copy = {
     "Este usuario no quedo vinculado a una empresa. Entra con un usuario valido o termina de vincularlo en base de datos.",
   brokenDatabasePermissionError:
     "Tu clave esta bien, pero produccion tiene roto un permiso interno de base de datos. Hay que corregir get_org_id en Supabase.",
+  timeoutError:
+    "No pudimos abrir tu sesion en este dispositivo. Cierra la ventana y vuelve a intentar.",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
+const LOGIN_TIMEOUT_MS = 12000;
+
+function waitForLoginTimeout() {
+  return new Promise<never>((_, reject) => {
+    window.setTimeout(() => {
+      reject(new Error("LOGIN_TIMEOUT"));
+    }, LOGIN_TIMEOUT_MS);
+  });
+}
+
 export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
-  const router = useRouter();
   const { signIn } = useAuth();
 
   const [correo, setCorreo] = useState("");
@@ -67,15 +77,20 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
     }
 
     try {
-      await signIn({
-        email: submittedCorreo,
-        password: submittedPassword,
-      });
+      await Promise.race([
+        signIn({
+          email: submittedCorreo,
+          password: submittedPassword,
+        }),
+        waitForLoginTimeout(),
+      ]);
     } catch (signInError) {
       const rawMessage =
         signInError instanceof Error ? signInError.message.toLowerCase() : "";
       const message =
-        rawMessage.includes("get_org_id")
+        rawMessage.includes("login_timeout")
+          ? copy.timeoutError
+          : rawMessage.includes("get_org_id")
           ? copy.brokenDatabasePermissionError
           : rawMessage.includes("no esta vinculado a una empresa")
           ? copy.missingProfileError
@@ -89,8 +104,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
     const redirectTarget =
       nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
 
-    router.push(redirectTarget);
-    router.refresh();
+    window.location.replace(redirectTarget);
   };
 
   return (

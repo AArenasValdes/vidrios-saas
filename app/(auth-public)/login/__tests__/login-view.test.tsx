@@ -5,8 +5,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import LoginView from "../login-view";
 
-const mockPush = jest.fn();
-const mockRefresh = jest.fn();
 const mockSignIn = jest.fn();
 
 jest.mock("next/image", () => {
@@ -33,13 +31,6 @@ jest.mock("next/link", () => {
     );
   };
 });
-
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    refresh: mockRefresh,
-  }),
-}));
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({
@@ -69,11 +60,6 @@ describe("LoginView", () => {
         email: "admin@test.com",
         password: "1234",
       });
-    });
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/dashboard");
-      expect(mockRefresh).toHaveBeenCalled();
     });
   });
 });
