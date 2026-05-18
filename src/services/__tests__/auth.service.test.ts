@@ -105,8 +105,7 @@ describe("authService", () => {
   it("debe normalizar el correo antes de iniciar sesion", async () => {
     const repository = createRepositoryMock();
     const user = createUser("admin@vidrios.cl");
-    repository.signInWithPassword.mockResolvedValue();
-    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.signInWithPassword.mockResolvedValue(user);
     repository.getUserProfile.mockResolvedValue({
       organizacionId: 17,
       rol: "admin",
@@ -169,8 +168,7 @@ describe("authService", () => {
     const repository = createRepositoryMock();
     const user = createUser("sinempresa@vidrios.cl");
 
-    repository.signInWithPassword.mockResolvedValue();
-    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.signInWithPassword.mockResolvedValue(user);
     repository.getUserProfile.mockResolvedValue(null);
     repository.signOut.mockResolvedValue();
 

@@ -243,4 +243,33 @@ describe("useAuth", () => {
       resolveSignOut?.();
     });
   });
+
+  it("debe cortar el loop si la resolucion de auth se cuelga", async () => {
+    jest.useFakeTimers();
+    subscribeToAuthChanges.mockImplementation(() => jest.fn());
+    getCurrentAuthState.mockImplementation(
+      () =>
+        new Promise<AuthUserState>(() => {
+          return;
+        })
+    );
+    signOut.mockResolvedValue();
+
+    render(<ProbeAuth />);
+
+    expect(screen.getByTestId("estado")).toHaveTextContent("cargando");
+
+    await act(async () => {
+      jest.advanceTimersByTime(8100);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("estado")).toHaveTextContent("listo");
+      expect(screen.getByTestId("email")).toHaveTextContent("anon");
+      expect(screen.getByTestId("org")).toHaveTextContent("sin-org");
+    });
+
+    jest.useRealTimers();
+  });
 });

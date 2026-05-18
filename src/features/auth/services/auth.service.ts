@@ -114,16 +114,10 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("La contrasena es obligatoria");
       }
 
-      await repository.signInWithPassword({
+      const authenticatedUser = await repository.signInWithPassword({
         email,
         password: credentials.password,
       });
-
-      const authenticatedUser = await repository.getAuthenticatedUser();
-
-      if (!authenticatedUser) {
-        throw new Error("No pudimos abrir la sesion.");
-      }
 
       if (!authenticatedUser.email) {
         await repository.signOut();

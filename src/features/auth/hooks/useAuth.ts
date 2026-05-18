@@ -23,6 +23,7 @@ const unauthenticatedState: AuthUserState = {
 };
 
 const AUTH_STORAGE_KEY = "vidrios-saas:auth-state";
+const AUTH_RESOLVE_TIMEOUT_MS = 8000;
 
 let authStateCache: AuthUserState | null = null;
 let authStatePromise: Promise<AuthUserState> | null = null;
@@ -99,6 +100,19 @@ function clearAuthStateStorage() {
   }
 }
 
+function createAuthResolveTimeout() {
+  return new Promise<AuthUserState>((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(unauthenticatedState);
+      return;
+    }
+
+    window.setTimeout(() => {
+      resolve(unauthenticatedState);
+    }, AUTH_RESOLVE_TIMEOUT_MS);
+  });
+}
+
 function setAuthState(nextState: AuthUserState) {
   authStateCache = nextState;
   persistAuthState(nextState);
@@ -158,8 +172,10 @@ async function resolveAuthState() {
   }
 
   if (!authStatePromise) {
-    authStatePromise = authService
-      .getCurrentAuthState()
+    authStatePromise = Promise.race([
+      authService.getCurrentAuthState(),
+      createAuthResolveTimeout(),
+    ])
       .then((currentAuth) => ({
         ...currentAuth,
         cargando: false,
@@ -168,6 +184,11 @@ async function resolveAuthState() {
       .then((nextState) => {
         if (resolveAuthStateGeneration !== currentGeneration) {
           return unauthenticatedState;
+        }
+
+        if (!nextState.user) {
+          clearAuthStateStorage();
+          void authService.signOut().catch(() => undefined);
         }
 
         authStateHydratedFromNetwork = true;

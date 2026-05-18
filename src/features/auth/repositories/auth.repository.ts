@@ -142,7 +142,7 @@ function isConnectivityError(error: unknown) {
 export interface AuthRepository {
   getAuthenticatedUser(): Promise<User | null>;
   getUserProfile(identity: AuthProfileIdentity): Promise<AuthProfile | null>;
-  signInWithPassword(credentials: AuthSignInInput): Promise<void>;
+  signInWithPassword(credentials: AuthSignInInput): Promise<User>;
   signOut(): Promise<void>;
   subscribeToAuthStateChange(listener: () => void): () => void;
 }
@@ -261,7 +261,7 @@ export function createAuthRepository(
 
     async signInWithPassword(credentials) {
       const supabase = browserClientFactory();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
       });
@@ -269,6 +269,12 @@ export function createAuthRepository(
       if (error) {
         throw error;
       }
+
+      if (!data.user) {
+        throw new Error("No pudimos abrir la sesion.");
+      }
+
+      return data.user;
     },
 
     async signOut() {
