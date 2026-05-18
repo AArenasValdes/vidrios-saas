@@ -54,13 +54,50 @@ export function RegisterServiceWorker() {
         const registration = await serviceWorker.register("/sw.js", {
           scope: "/",
         });
+
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const installing = registration.installing;
+
+          if (!installing) {
+            return;
+          }
+
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "installed" && serviceWorker.controller) {
+              installing.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+
         void registration.update();
       } catch {
         return;
       }
     };
 
+    let hasReloadedForNewServiceWorker = false;
+    const handleControllerChange = () => {
+      if (hasReloadedForNewServiceWorker) {
+        return;
+      }
+
+      hasReloadedForNewServiceWorker = true;
+      window.location.reload();
+    };
+
+    serviceWorker.addEventListener("controllerchange", handleControllerChange);
     void registerServiceWorker();
+
+    return () => {
+      serviceWorker.removeEventListener(
+        "controllerchange",
+        handleControllerChange
+      );
+    };
   }, []);
 
   return null;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "vidrios-saas-v4";
+const CACHE_NAME = "vidrios-saas-v5";
 const APP_SHELL = [
   "/",
   "/login",
@@ -108,6 +108,12 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })()
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
