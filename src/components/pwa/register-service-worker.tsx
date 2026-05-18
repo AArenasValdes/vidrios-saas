@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-const SERVICE_WORKER_VERSION = "v6";
+const SERVICE_WORKER_VERSION = "v7";
 
 async function unregisterAllServiceWorkers() {
   try {

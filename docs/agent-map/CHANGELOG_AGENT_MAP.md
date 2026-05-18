@@ -320,3 +320,31 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - `src/features/auth/hooks/useAuth.ts`
   - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
   - `app/(auth-public)/login/login-view.tsx`
+
+### 2026-05-18 - Hardening de uploads en Pagina de venta y limpieza de service worker
+
+- Se reprodujo en Supabase el error real de `new row violates row-level security policy` y se confirmo que:
+  - `organization_profile` y `public_landing_gallery` estaban operativos
+  - el rechazo venia de `storage.objects` al subir assets a `organization-assets`
+- Se saco la subida de assets del cliente para configuracion comercial:
+  - logo
+  - portada hero
+  - galeria de trabajos
+- Nuevo flujo:
+  - cliente autenticado pide upload a `/api/organization-assets/upload`
+  - el servidor valida bearer, resuelve `organization_id` activo y sube con `service_role`
+  - la URL publica vuelve al cliente sin depender de RLS de Storage en browser
+- Beneficios:
+  - desaparece el error RLS en `Pagina de venta` y `Empresa`
+  - el flujo queda mas estable para pilotos nuevos y usuarios con `auth_user_id` reciente
+  - el aislamiento multi-tenant se conserva server-side por organizacion autenticada
+- Se desactivo `navigationPreload` en `sw.js` para eliminar el warning:
+  - `The service worker navigation preload request was cancelled before preloadResponse settled`
+- Archivos tocados:
+  - `app/api/organization-assets/upload/route.ts`
+  - `src/features/organization-assets/repositories/organization-assets-upload.repository.ts`
+  - `src/features/organization-profile/repositories/organization-profile.repository.ts`
+  - `src/features/landing-gallery/repositories/landing-gallery.repository.ts`
+  - `public/sw.js`
+  - `src/components/pwa/register-service-worker.tsx`
+  - `supabase/migrations/20260518153000_fix_organization_assets_storage_policies.sql`

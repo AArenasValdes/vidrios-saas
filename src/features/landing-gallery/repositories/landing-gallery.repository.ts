@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { organizationAssetsUploadRepository } from "@/features/organization-assets/repositories/organization-assets-upload.repository";
 import type { EntityId } from "@/types/common";
 import type {
   CreateLandingGalleryItemInput,
@@ -6,7 +7,6 @@ import type {
   ReorderLandingGalleryItemInput,
   UpdateLandingGalleryItemInput,
 } from "@/features/landing-gallery/types/landing-gallery";
-import { sanitizeFileName } from "@/utils/sanitize-file-name";
 
 type LandingGalleryRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -27,7 +27,6 @@ type LandingGalleryRow = {
 };
 
 const TABLE_NAME = "public_landing_gallery";
-const STORAGE_BUCKET = "organization-assets";
 const GALLERY_SELECT =
   "id, organization_id, image_url, label, work_title, work_type, work_zone, work_badge, sort_order, is_visible, creado_en";
 
@@ -158,7 +157,7 @@ export function createLandingGalleryRepository(deps: LandingGalleryRepositoryDep
       }
     },
 
-    async uploadGalleryImage(organizationId: EntityId, file: File) {
+    async uploadGalleryImage(_organizationId: EntityId, file: File) {
       if (!file.type.startsWith("image/")) {
         throw new Error("La foto de galeria debe ser una imagen");
       }
@@ -167,26 +166,7 @@ export function createLandingGalleryRepository(deps: LandingGalleryRepositoryDep
         throw new Error("La foto no puede pesar mas de 10 MB");
       }
 
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
-      const storagePath = `${organizationId}/gallery/gallery-${Date.now()}-${sanitizedName}.${extension}`;
-
-      const { error } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .upload(storagePath, file, {
-          upsert: true,
-          contentType: file.type,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-
-      return publicUrl;
+      return organizationAssetsUploadRepository.uploadAsset("gallery", file);
     },
   };
 }

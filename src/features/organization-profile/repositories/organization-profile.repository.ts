@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { normalizePreferredProvider } from "@/features/cotizaciones/services/component-suggestions.service";
+import { organizationAssetsUploadRepository } from "@/features/organization-assets/repositories/organization-assets-upload.repository";
 import type { EntityId } from "@/types/common";
 import type {
   OrganizationProfile,
@@ -7,7 +8,6 @@ import type {
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
-import { sanitizeFileName } from "@/utils/sanitize-file-name";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -65,8 +65,6 @@ type OrganizationProfileRow = {
 };
 
 const TABLE_NAME = "organization_profile";
-const LOGO_BUCKET = "organization-assets";
-
 function getErrorText(error: unknown) {
   if (!error || typeof error !== "object") {
     return "";
@@ -276,19 +274,10 @@ export function createOrganizationProfileRepository(
       return mapOrganizationProfile(data as OrganizationProfileRow)!;
     },
 
-  async uploadLogo(organizationId: EntityId, file: File) {
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "png";
-    const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
-    const storagePath = `${organizationId}/brand/logo-${Date.now()}-${sanitizedName}.${extension}`;
-
-    const { error } = await supabase.storage
-      .from(LOGO_BUCKET)
-      .upload(storagePath, file, {
-        upsert: true,
-        contentType: file.type,
-      });
-
-    if (error) {
+  async uploadLogo(_organizationId: EntityId, file: File) {
+    try {
+      return await organizationAssetsUploadRepository.uploadAsset("logo", file);
+    } catch (error) {
       if (isOrganizationAssetsBucketError(error)) {
         throw new Error(
           "Falta crear el bucket organization-assets en Supabase antes de subir logos."
@@ -297,15 +286,9 @@ export function createOrganizationProfileRepository(
 
       throw error;
     }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
-
-    return publicUrl;
   },
 
-  async uploadHeroImage(organizationId: EntityId, file: File) {
+  async uploadHeroImage(_organizationId: EntityId, file: File) {
     if (!file.type.startsWith("image/")) {
       throw new Error("La imagen hero debe ser una imagen");
     }
@@ -314,18 +297,9 @@ export function createOrganizationProfileRepository(
       throw new Error("La imagen hero no puede pesar mas de 10 MB");
     }
 
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
-    const storagePath = `${organizationId}/hero/hero-${Date.now()}-${sanitizedName}.${extension}`;
-
-    const { error } = await supabase.storage
-      .from(LOGO_BUCKET)
-      .upload(storagePath, file, {
-        upsert: true,
-        contentType: file.type,
-      });
-
-    if (error) {
+    try {
+      return await organizationAssetsUploadRepository.uploadAsset("hero", file);
+    } catch (error) {
       if (isOrganizationAssetsBucketError(error)) {
         throw new Error(
           "Falta crear el bucket organization-assets en Supabase antes de subir la imagen hero."
@@ -334,12 +308,6 @@ export function createOrganizationProfileRepository(
 
       throw error;
     }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
-
-    return publicUrl;
   },
   };
 }

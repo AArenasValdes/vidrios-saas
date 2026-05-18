@@ -1,4 +1,4 @@
-const CACHE_NAME = "vidrios-saas-v6";
+const CACHE_NAME = "vidrios-saas-v7";
 const APP_SHELL = [
   "/",
   "/login",
@@ -46,18 +46,10 @@ async function cleanupOldCaches() {
   );
 }
 
-async function networkFirstNavigation(request, preloadResponsePromise) {
+async function networkFirstNavigation(request) {
   const cache = await caches.open(CACHE_NAME);
 
   try {
-    const preloadResponse = preloadResponsePromise
-      ? await preloadResponsePromise
-      : null;
-
-    if (preloadResponse) {
-      return preloadResponse;
-    }
-
     const response = await fetch(request, { cache: "no-store" });
 
     if (response && response.ok) {
@@ -102,7 +94,7 @@ self.addEventListener("activate", (event) => {
       await cleanupOldCaches();
       if ("navigationPreload" in self.registration) {
         try {
-          await self.registration.navigationPreload.enable();
+          await self.registration.navigationPreload.disable();
         } catch {}
       }
       await self.clients.claim();
@@ -129,7 +121,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     if (isPublicNavigation(requestUrl.pathname)) {
-      event.respondWith(networkFirstNavigation(event.request, event.preloadResponse));
+      event.respondWith(networkFirstNavigation(event.request));
     }
     return;
   }

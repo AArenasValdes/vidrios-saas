@@ -1,5 +1,12 @@
 import { createLandingGalleryRepository } from "../landing-gallery.repository";
 import type { LandingGalleryItem } from "@/features/landing-gallery/types/landing-gallery";
+import { organizationAssetsUploadRepository } from "@/features/organization-assets/repositories/organization-assets-upload.repository";
+
+jest.mock("@/features/organization-assets/repositories/organization-assets-upload.repository", () => ({
+  organizationAssetsUploadRepository: {
+    uploadAsset: jest.fn(),
+  },
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createMockItem(overrides: Partial<LandingGalleryItem> = {}): LandingGalleryItem {
@@ -17,17 +24,11 @@ function createMockItem(overrides: Partial<LandingGalleryItem> = {}): LandingGal
 
 type MockClient = {
   from: jest.Mock;
-  storage: {
-    from: jest.Mock;
-  };
 };
 
 function createMockClient(overrides: Partial<MockClient> = {}): MockClient {
   return {
     from: jest.fn(),
-    storage: {
-      from: jest.fn(),
-    },
     ...overrides,
   };
 }
@@ -296,6 +297,10 @@ describe("landing-gallery.repository", () => {
   });
 
   describe("uploadGalleryImage", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
     it("debe rechazar archivos que no son imagenes", async () => {
       const client = createMockClient();
       const repository = createLandingGalleryRepository({ clientFactory: client as never });
@@ -321,66 +326,33 @@ describe("landing-gallery.repository", () => {
     });
 
     it("debe subir imagen y retornar URL publica", async () => {
-      const mockUpload = jest.fn().mockResolvedValue({ error: null });
-      const mockGetPublicUrl = jest.fn().mockReturnValue({
-        data: { publicUrl: "https://cdn.example.com/uploaded.jpg" },
-      });
-      const mockStorageFrom = jest.fn().mockReturnValue({
-        upload: mockUpload,
-        getPublicUrl: mockGetPublicUrl,
-      });
+      (organizationAssetsUploadRepository.uploadAsset as jest.Mock).mockResolvedValue(
+        "https://cdn.example.com/uploaded.jpg"
+      );
 
-      const client = createMockClient({
-        storage: { from: mockStorageFrom },
-      });
+      const client = createMockClient();
       const repository = createLandingGalleryRepository({ clientFactory: client as never });
       const file = new File(["data"], "foto.jpg", { type: "image/jpeg" });
 
       const url = await repository.uploadGalleryImage(10, file);
 
       expect(url).toBe("https://cdn.example.com/uploaded.jpg");
-      expect(mockUpload).toHaveBeenCalled();
-      expect(mockGetPublicUrl).toHaveBeenCalled();
+      expect(organizationAssetsUploadRepository.uploadAsset).toHaveBeenCalledWith(
+        "gallery",
+        file
+      );
     });
 
-    it("debe lanzar error si storage falla", async () => {
-      const mockUpload = jest.fn().mockResolvedValue({ error: { message: "Storage error" } });
-      const mockGetPublicUrl = jest.fn();
-      const mockStorageFrom = jest.fn().mockReturnValue({
-        upload: mockUpload,
-        getPublicUrl: mockGetPublicUrl,
-      });
+    it("debe lanzar error si la API de upload falla", async () => {
+      (organizationAssetsUploadRepository.uploadAsset as jest.Mock).mockRejectedValue(
+        new Error("Storage error")
+      );
 
-      const client = createMockClient({
-        storage: { from: mockStorageFrom },
-      });
+      const client = createMockClient();
       const repository = createLandingGalleryRepository({ clientFactory: client as never });
       const file = new File(["data"], "foto.jpg", { type: "image/jpeg" });
 
       await expect(repository.uploadGalleryImage(10, file)).rejects.toBeDefined();
-    });
-
-    it("debe sanitizar el nombre del archivo en el path", async () => {
-      const mockUpload = jest.fn().mockResolvedValue({ error: null });
-      const mockGetPublicUrl = jest.fn().mockReturnValue({
-        data: { publicUrl: "https://cdn.example.com/uploaded.jpg" },
-      });
-      const mockStorageFrom = jest.fn().mockReturnValue({
-        upload: mockUpload,
-        getPublicUrl: mockGetPublicUrl,
-      });
-
-      const client = createMockClient({
-        storage: { from: mockStorageFrom },
-      });
-      const repository = createLandingGalleryRepository({ clientFactory: client as never });
-      const file = new File(["data"], "Mi Ventana Especial.jpg", { type: "image/jpeg" });
-
-      await repository.uploadGalleryImage(10, file);
-
-      const uploadPath = mockUpload.mock.calls[0][0];
-      expect(uploadPath).toContain("10/gallery/gallery-");
-      expect(uploadPath).toMatch(/mi-ventana-especial\.jpg$/);
     });
   });
 });

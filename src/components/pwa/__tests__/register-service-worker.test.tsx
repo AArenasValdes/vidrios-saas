@@ -57,7 +57,7 @@ describe("RegisterServiceWorker", () => {
     render(<RegisterServiceWorker />);
 
     await waitFor(() =>
-      expect(register).toHaveBeenCalledWith("/sw.js?version=v6", {
+      expect(register).toHaveBeenCalledWith("/sw.js?version=v7", {
         scope: "/",
         updateViaCache: "none",
       })
@@ -123,7 +123,7 @@ describe("RegisterServiceWorker", () => {
     const cacheDelete = jest.fn().mockResolvedValue(true);
     const cacheKeys = jest
       .fn()
-      .mockResolvedValue(["vidrios-saas-v6", "otra-cache"]);
+      .mockResolvedValue(["vidrios-saas-v7", "otra-cache"]);
 
     Object.defineProperty(window, "caches", {
       configurable: true,
@@ -150,7 +150,7 @@ describe("RegisterServiceWorker", () => {
     await waitFor(() => expect(cacheKeys).toHaveBeenCalled());
 
     expect(register).not.toHaveBeenCalled();
-    expect(cacheDelete).toHaveBeenCalledWith("vidrios-saas-v6");
+    expect(cacheDelete).toHaveBeenCalledWith("vidrios-saas-v7");
     expect(cacheDelete).not.toHaveBeenCalledWith("otra-cache");
   });
 });
