@@ -114,6 +114,12 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("La contrasena es obligatoria");
       }
 
+      try {
+        await repository.signOut();
+      } catch {
+        // Si no habia sesion previa o el cliente tiene estado viejo, igual seguimos con el login nuevo.
+      }
+
       const authenticatedUser = await repository.signInWithPassword({
         email,
         password: credentials.password,

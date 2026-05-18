@@ -8,6 +8,8 @@ declare global {
   }
 }
 
+const SERVICE_WORKER_VERSION = "v6";
+
 async function unregisterAllServiceWorkers() {
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -51,9 +53,13 @@ export function RegisterServiceWorker() {
 
     const registerServiceWorker = async () => {
       try {
-        const registration = await serviceWorker.register("/sw.js", {
+        const registration = await serviceWorker.register(
+          `/sw.js?version=${SERVICE_WORKER_VERSION}`,
+          {
           scope: "/",
-        });
+            updateViaCache: "none",
+          }
+        );
 
         if (registration.waiting) {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
