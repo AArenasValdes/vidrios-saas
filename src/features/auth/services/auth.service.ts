@@ -33,6 +33,57 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
   const bootstrapRetryDelayMs =
     deps.bootstrapRetryDelayMs ?? DEFAULT_BOOTSTRAP_RETRY_DELAY_MS;
 
+  async function resolveAuthenticatedState(
+    user: NonNullable<AuthenticatedUser["user"]>,
+    options?: { throwOnMissingOrganization?: boolean }
+  ): Promise<AuthenticatedUser> {
+    let lastState: AuthenticatedUser = {
+      user,
+      organizacionId: null,
+      rol: null,
+    };
+
+    for (let attempt = 0; attempt <= bootstrapRetryCount; attempt += 1) {
+      const perfil = await repository.getUserProfile({
+        authUserId: user.id,
+        email: user.email,
+      });
+
+      lastState = {
+        user,
+        organizacionId: perfil?.organizacionId ?? null,
+        rol: perfil?.rol ?? null,
+      };
+
+      const needsRetry =
+        attempt < bootstrapRetryCount && !lastState.organizacionId;
+
+      if (!needsRetry) {
+        break;
+      }
+
+      await wait(bootstrapRetryDelayMs);
+    }
+
+    if (lastState.organizacionId) {
+      return lastState;
+    }
+
+    await repository.signOut();
+
+    if (options?.throwOnMissingOrganization) {
+      throw new Error(
+        "Tu usuario existe, pero no esta vinculado a una empresa en Ventora."
+      );
+    }
+
+    return {
+      user: null,
+      organizacionId: null,
+      rol: null,
+    };
+  }
+
   return {
     async getCurrentAuthState(): Promise<AuthenticatedUser> {
       const user = await repository.getAuthenticatedUser();
@@ -49,35 +100,7 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      let lastState: AuthenticatedUser = {
-        user,
-        organizacionId: null,
-        rol: null,
-      };
-
-      for (let attempt = 0; attempt <= bootstrapRetryCount; attempt += 1) {
-        const perfil = await repository.getUserProfile({
-          authUserId: user.id,
-          email: user.email,
-        });
-
-        lastState = {
-          user,
-          organizacionId: perfil?.organizacionId ?? null,
-          rol: perfil?.rol ?? null,
-        };
-
-        const needsRetry =
-          attempt < bootstrapRetryCount && !lastState.organizacionId;
-
-        if (!needsRetry) {
-          return lastState;
-        }
-
-        await wait(bootstrapRetryDelayMs);
-      }
-
-      return lastState;
+      return resolveAuthenticatedState(user);
     },
 
     async signIn(credentials: AuthSignInInput) {
@@ -94,6 +117,21 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       await repository.signInWithPassword({
         email,
         password: credentials.password,
+      });
+
+      const authenticatedUser = await repository.getAuthenticatedUser();
+
+      if (!authenticatedUser) {
+        throw new Error("No pudimos abrir la sesion.");
+      }
+
+      if (!authenticatedUser.email) {
+        await repository.signOut();
+        throw new Error("El usuario autenticado no tiene correo");
+      }
+
+      await resolveAuthenticatedState(authenticatedUser, {
+        throwOnMissingOrganization: true,
       });
     },
 

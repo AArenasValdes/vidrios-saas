@@ -104,7 +104,13 @@ describe("authService", () => {
 
   it("debe normalizar el correo antes de iniciar sesion", async () => {
     const repository = createRepositoryMock();
+    const user = createUser("admin@vidrios.cl");
     repository.signInWithPassword.mockResolvedValue();
+    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.getUserProfile.mockResolvedValue({
+      organizacionId: 17,
+      rol: "admin",
+    });
 
     const service = createAuthService({ repository });
 
@@ -116,6 +122,10 @@ describe("authService", () => {
     expect(repository.signInWithPassword).toHaveBeenCalledWith({
       email: "admin@vidrios.cl",
       password: "secreta123",
+    });
+    expect(repository.getUserProfile).toHaveBeenCalledWith({
+      authUserId: "user-1",
+      email: "admin@vidrios.cl",
     });
   });
 
@@ -129,5 +139,54 @@ describe("authService", () => {
         password: "secreta123",
       })
     ).rejects.toThrow("El correo es obligatorio");
+  });
+
+  it("debe cerrar sesion si detecta un usuario autenticado sin empresa vinculada", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser();
+
+    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.getUserProfile.mockResolvedValue(null);
+    repository.signOut.mockResolvedValue();
+
+    const service = createAuthService({
+      repository,
+      bootstrapRetryCount: 1,
+      bootstrapRetryDelayMs: 0,
+    });
+    const resultado = await service.getCurrentAuthState();
+
+    expect(repository.getUserProfile).toHaveBeenCalledTimes(2);
+    expect(repository.signOut).toHaveBeenCalledTimes(1);
+    expect(resultado).toEqual({
+      user: null,
+      organizacionId: null,
+      rol: null,
+    });
+  });
+
+  it("debe bloquear el login si el usuario no esta vinculado a una empresa", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser("sinempresa@vidrios.cl");
+
+    repository.signInWithPassword.mockResolvedValue();
+    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.getUserProfile.mockResolvedValue(null);
+    repository.signOut.mockResolvedValue();
+
+    const service = createAuthService({
+      repository,
+      bootstrapRetryCount: 0,
+      bootstrapRetryDelayMs: 0,
+    });
+
+    await expect(
+      service.signIn({
+        email: "sinempresa@vidrios.cl",
+        password: "secreta123",
+      })
+    ).rejects.toThrow("Tu usuario existe, pero no esta vinculado a una empresa en Ventora.");
+
+    expect(repository.signOut).toHaveBeenCalledTimes(1);
   });
 });

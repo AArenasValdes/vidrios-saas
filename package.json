@@ -10,6 +10,8 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "pilot:user:audit": "node scripts/pilot-users.mjs audit",
+    "pilot:user:create": "node scripts/pilot-users.mjs create",
     "video:preview": "remotion preview remotion/index.tsx",
     "video:render": "remotion render remotion/index.tsx VentoraExplainer out/ventora-explainer-16x9.mp4",
     "video:render:vertical": "remotion render remotion/index.tsx VentoraExplainerVertical out/ventora-explainer-9x16.mp4",

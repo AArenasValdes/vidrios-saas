@@ -4,6 +4,33 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-18 - Script seguro para cuentas piloto
+
+### Resumen
+
+Se agrego un script operativo para crear y auditar usuarios piloto sin dejar cuentas rotas entre `auth.users` y `public.users`. Esto evita repetir el bug de login infinito causado por usuarios creados solo en Auth.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `scripts/pilot-users.mjs` | Alta y auditoria de usuarios piloto con `organization_id`, `rol` y `auth_user_id` |
+| `package.json` | Scripts `pilot:user:audit` y `pilot:user:create` |
+
+## 2026-05-18 - Hardening de login para sesiones sin empresa
+
+### Resumen
+
+Se cerro un loop critico de autenticacion: si existe sesion en `auth.users` pero no hay perfil valido en `public.users` con `organization_id`, la app ya no queda en "Cargando tu espacio de trabajo". Ahora se cierra esa sesion invalida y el login muestra un error entendible para usuarios creados solo en Auth.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/auth/services/auth.service.ts` | Sesiones sin empresa se invalidan en bootstrap y en login |
+| `app/(auth-public)/login/login-view.tsx` | Mensaje mas claro para usuarios no vinculados a empresa |
+| `src/services/__tests__/auth.service.test.ts` | Cobertura para usuario sin empresa |
+
 ## 2026-05-17 - Vidrio recomendado por linea comercial
 
 ### Resumen

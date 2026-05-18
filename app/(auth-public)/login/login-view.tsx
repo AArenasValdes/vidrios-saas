@@ -22,17 +22,19 @@ const copy = {
   emailLabel: "Email",
   emailPlaceholder: "tu@empresa.cl",
   passwordLabel: "Password",
-  passwordPlaceholder: "Ingresa tu contraseña",
-  rememberSession: "Mantener sesión",
-  forgotPassword: "Olvidé mi contraseña",
-  submit: "Iniciar sesión",
+  passwordPlaceholder: "Ingresa tu contrasena",
+  rememberSession: "Mantener sesion",
+  forgotPassword: "Olvide mi contrasena",
+  submit: "Iniciar sesion",
   submitting: "Ingresando...",
-  signupPrompt: "¿No tienes cuenta?",
+  signupPrompt: "No tienes cuenta?",
   signupAction: "Crear cuenta",
   oauthError:
-    "No pudimos completar el acceso con Google. Intenta con tu correo y contraseña.",
-  credentialError: "Correo o contraseña incorrectos",
-  visualTitle: "Cotiza rápido, sin errores y desde cualquier lugar.",
+    "No pudimos completar el acceso con Google. Intenta con tu correo y contrasena.",
+  credentialError: "Correo o contrasena incorrectos",
+  missingProfileError:
+    "Este usuario no quedo vinculado a una empresa. Entra con un usuario valido o termina de vincularlo en base de datos.",
+  visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
 export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
@@ -55,8 +57,16 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
         email: correo,
         password,
       });
-    } catch {
-      setError(copy.credentialError);
+    } catch (signInError) {
+      const message =
+        signInError instanceof Error &&
+        signInError.message
+          .toLowerCase()
+          .includes("no esta vinculado a una empresa")
+          ? copy.missingProfileError
+          : copy.credentialError;
+
+      setError(message);
       setCargando(false);
       return;
     }
