@@ -435,7 +435,7 @@ export default function PaginaVentaPage() {
           <p className={s.headerEyebrow}>Ajuste comercial</p>
           <h1 className={s.headerTitle}>Tu pagina publica</h1>
           <p className={s.headerText}>
-            Edita solo el contenido propio de tu landing. La identidad comercial base se gestiona desde Empresa.
+            Edita solo el contenido propio de tu pagina. La identidad comercial base se gestiona desde Empresa.
           </p>
         </div>
 
@@ -616,7 +616,7 @@ export default function PaginaVentaPage() {
                   placeholder="Ej: La Serena, Coquimbo, Ovalle y alrededores"
                 />
                 <span className={s.helpText}>
-                  Esto si es propio de la landing. La direccion comercial se sigue tomando desde Empresa.
+                  Esto si es propio de la pagina. La direccion comercial se sigue tomando desde Empresa.
                 </span>
               </label>
 
