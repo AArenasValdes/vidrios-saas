@@ -248,6 +248,12 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Se confirmo que el fallo previo no era la contrasena sino una brecha temporal de permisos DB sobre `public.get_org_id()`.
 - Se endurecio el mensaje de login para no mostrar `Correo o contrasena incorrectos` cuando el problema real sea `permission denied for function get_org_id`.
 - Se corrigio un bug de autofill/Face ID en `/login`: el submit ahora toma los valores reales del formulario y no solo el estado React, evitando rechazos falsos cuando iOS/Android rellenan email/password sin disparar `onChange`.
+- Se agrego fallback interno `/api/auth/profile` para bootstrap de auth:
+  - si la lectura cliente de `public.users` falla o sale vacia durante login/autofill
+  - el cliente consulta una ruta server-side con token bearer
+  - la ruta valida el usuario por `auth.getUser(token)` con `service_role`
+  - y resuelve `organization_id` + `rol` desde `public.users` sin depender del RLS cliente en ese momento
+- Esto reduce falsos errores en iPhone/PWA/Face ID cuando el token se persiste bien pero la lectura inicial del perfil se comporta inestable.
 - Archivos tocados:
   - `src/features/auth/services/auth.service.ts`
   - `app/(auth-public)/login/login-view.tsx`

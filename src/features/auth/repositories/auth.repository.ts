@@ -25,6 +25,15 @@ type CachedAuthProfile = AuthProfile & {
   _cachedAt: number;
 };
 
+type ServerAuthProfileResponse = {
+  profile:
+    | {
+        organizacionId: string | number | null;
+        rol: string | null;
+      }
+    | null;
+};
+
 function buildAuthProfileCacheKey(identity: AuthProfileIdentity) {
   if (identity.authUserId?.trim()) {
     return `auth-user:${identity.authUserId.trim()}`;
@@ -139,6 +148,46 @@ function isConnectivityError(error: unknown) {
   );
 }
 
+function getErrorText(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.toLowerCase();
+  }
+
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  const candidate = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+    status?: number;
+    name?: string;
+  };
+
+  return [
+    candidate.code,
+    candidate.message,
+    candidate.details,
+    candidate.hint,
+    candidate.name,
+    String(candidate.status ?? ""),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isGetOrgIdPermissionError(error: unknown) {
+  const haystack = getErrorText(error);
+
+  return (
+    haystack.includes("get_org_id") &&
+    (haystack.includes("permission denied") || haystack.includes("42501"))
+  );
+}
+
 export interface AuthRepository {
   getAuthenticatedUser(): Promise<User | null>;
   getUserProfile(identity: AuthProfileIdentity): Promise<AuthProfile | null>;
@@ -151,6 +200,51 @@ export function createAuthRepository(
   deps: AuthRepositoryDeps = {}
 ): AuthRepository {
   const browserClientFactory = deps.browserClientFactory ?? createBrowserClient;
+
+  async function getUserProfileFromServer(
+    supabase: BrowserSupabaseClient,
+    cacheKey: string
+  ) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        return null;
+      }
+
+      const response = await fetch("/api/auth/profile", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = (await response.json()) as ServerAuthProfileResponse;
+      const profile = payload.profile;
+
+      if (!profile?.organizacionId) {
+        return null;
+      }
+
+      persistAuthProfile(cacheKey, profile);
+
+      return profile;
+    } catch (error) {
+      if (isConnectivityError(error)) {
+        return null;
+      }
+
+      return null;
+    }
+  }
 
   return {
     async getAuthenticatedUser() {
@@ -229,6 +323,12 @@ export function createAuthRepository(
         }
 
         if (error) {
+          const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
+
+          if (serverProfile) {
+            return serverProfile;
+          }
+
           if (isConnectivityError(error)) {
             return null;
           }
@@ -239,7 +339,7 @@ export function createAuthRepository(
         const perfil = data as PerfilRow | null;
 
         if (!perfil) {
-          return null;
+          return getUserProfileFromServer(supabase, cacheKey);
         }
 
         const profile = {
@@ -251,6 +351,14 @@ export function createAuthRepository(
 
         return profile;
       } catch (error) {
+        if (isGetOrgIdPermissionError(error)) {
+          const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
+
+          if (serverProfile) {
+            return serverProfile;
+          }
+        }
+
         if (isConnectivityError(error)) {
           return null;
         }
