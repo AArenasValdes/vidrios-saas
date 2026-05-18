@@ -650,9 +650,9 @@ export default function CotizacionPrintPage() {
       prewarmedCacheKeyRef.current = pdfCacheKey;
       void buildPdfFile().catch(() => {
         prewarmedCacheKeyRef.current = null;
-                setExportError(
-          "No pudimos dejar el PDF listo en segundo plano. Puedes abrirlo o descargarlo manualmente desde aqui."
-        );
+        // El precalentado del PDF es solo una optimizacion. Si falla, no
+        // debemos ensuciar la UI con un error porque el archivo aun puede
+        // abrirse o descargarse manualmente unos segundos despues.
       });
     };
 
