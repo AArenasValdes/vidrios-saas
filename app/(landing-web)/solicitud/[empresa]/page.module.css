@@ -478,12 +478,13 @@
 .galleryRail {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(250px, 86%);
-  gap: 12px;
+  grid-auto-columns: minmax(290px, 84vw);
+  gap: 14px;
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: 18px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -497,7 +498,7 @@
   border-radius: 16px;
   overflow: hidden;
   position: relative;
-  aspect-ratio: 4/5;
+  aspect-ratio: 4/5.55;
   background: #0f172a;
 }
 
@@ -545,13 +546,17 @@
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 4px;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .galleryCardOverlay span {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ========== STEPS ========== */
@@ -718,14 +723,14 @@
   min-height: 46px;
   border-radius: 12px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 74px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
+  gap: 10px;
+  padding: 0 10px;
 }
 
 .phonePrefix {
-  min-width: 50px;
+  width: 100%;
   height: 36px;
   border-radius: 8px;
   background: #ffffff;
@@ -741,6 +746,7 @@
 .phoneInput,
 .inlineInput {
   width: 100%;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--text-main);
@@ -1530,7 +1536,7 @@
   }
 
   .galleryRail {
-    grid-auto-columns: minmax(240px, 88%);
+    grid-auto-columns: minmax(280px, 84vw);
   }
 
   .footerActions {
@@ -1579,7 +1585,7 @@
   }
 
   .galleryRail {
-    grid-auto-columns: minmax(0, 90%);
+    grid-auto-columns: minmax(264px, 86vw);
   }
 
   .testimonialPublicRail {
@@ -1595,16 +1601,15 @@
   }
 
   .phoneField {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 70px minmax(0, 1fr);
     gap: 8px;
-    padding: 12px;
+    padding: 0 8px;
   }
 
   .phonePrefix {
-    width: 100%;
     min-width: 0;
-    justify-content: flex-start;
-    padding: 0 12px;
+    justify-content: center;
+    padding: 0;
   }
 
   .uploadCard {
@@ -1618,7 +1623,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 960px) {
   .heroPanel {
     min-height: 560px;
   }
@@ -1659,6 +1664,7 @@
     grid-auto-flow: row;
     overflow: visible;
     grid-auto-columns: minmax(0, 1fr);
+    scroll-padding-inline: 0;
   }
 
   .portfolioCard {
