@@ -11,7 +11,12 @@ jest.mock("next/image", () => {
   return function MockImage(
     props: React.ImgHTMLAttributes<HTMLImageElement> & { alt: string }
   ) {
-    return <img {...props} alt={props.alt} />;
+    const { priority: _priority, fill: _fill, ...rest } = props as typeof props & {
+      priority?: boolean;
+      fill?: boolean;
+    };
+
+    return <img {...rest} alt={props.alt} />;
   };
 });
 

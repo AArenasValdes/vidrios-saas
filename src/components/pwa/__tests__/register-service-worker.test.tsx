@@ -4,7 +4,17 @@ import { render, waitFor } from "@testing-library/react";
 
 import { RegisterServiceWorker } from "../register-service-worker";
 
+const mockIsCanonicalPwaHost = jest.fn();
+
+jest.mock("@/utils/pwa-host", () => ({
+  isCanonicalPwaHost: (hostname: string) => mockIsCanonicalPwaHost(hostname),
+}));
+
 describe("RegisterServiceWorker", () => {
+  beforeEach(() => {
+    mockIsCanonicalPwaHost.mockReturnValue(true);
+  });
+
   afterEach(() => {
     delete window.__VIDRIOS_SAAS_SW_ENV__;
     jest.restoreAllMocks();
@@ -100,6 +110,47 @@ describe("RegisterServiceWorker", () => {
 
     expect(register).not.toHaveBeenCalled();
     expect(cacheDelete).toHaveBeenCalledWith("vidrios-saas-v2");
+    expect(cacheDelete).not.toHaveBeenCalledWith("otra-cache");
+  });
+
+  it("debe desactivar la PWA en produccion cuando el host no es canonico", async () => {
+    window.__VIDRIOS_SAAS_SW_ENV__ = "production";
+    mockIsCanonicalPwaHost.mockReturnValue(false);
+
+    const unregister = jest.fn().mockResolvedValue(true);
+    const getRegistrations = jest.fn().mockResolvedValue([{ unregister }]);
+    const register = jest.fn();
+    const cacheDelete = jest.fn().mockResolvedValue(true);
+    const cacheKeys = jest
+      .fn()
+      .mockResolvedValue(["vidrios-saas-v6", "otra-cache"]);
+
+    Object.defineProperty(window, "caches", {
+      configurable: true,
+      value: {
+        keys: cacheKeys,
+        delete: cacheDelete,
+      },
+    });
+
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register,
+        getRegistrations,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      },
+    });
+
+    render(<RegisterServiceWorker />);
+
+    await waitFor(() => expect(getRegistrations).toHaveBeenCalled());
+    await waitFor(() => expect(unregister).toHaveBeenCalled());
+    await waitFor(() => expect(cacheKeys).toHaveBeenCalled());
+
+    expect(register).not.toHaveBeenCalled();
+    expect(cacheDelete).toHaveBeenCalledWith("vidrios-saas-v6");
     expect(cacheDelete).not.toHaveBeenCalledWith("otra-cache");
   });
 });

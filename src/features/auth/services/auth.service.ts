@@ -16,7 +16,7 @@ type AuthServiceDeps = {
 const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
 const DEFAULT_BOOTSTRAP_RETRY_DELAY_MS = 300;
 const GET_ORG_ID_PERMISSION_ERROR_MESSAGE =
-  "Tu acceso esta bien, pero la base de datos de produccion tiene roto el permiso interno get_org_id.";
+  "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta de nuevo en unos segundos.";
 
 function wait(delayMs: number) {
   if (delayMs <= 0) {
@@ -173,7 +173,7 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      await resolveAuthenticatedState(authenticatedUser, {
+      return resolveAuthenticatedState(authenticatedUser, {
         throwOnMissingOrganization: true,
       });
     },

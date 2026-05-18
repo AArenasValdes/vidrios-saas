@@ -21,14 +21,23 @@ describe("proxy", () => {
     jest.clearAllMocks();
   });
 
-  it("redirige ventorap.cl hacia www antes de resolver auth", async () => {
-    const request = new NextRequest("https://ventorap.cl/api/auth/profile?x=1");
+  it("redirige rutas privadas de ventorap.cl hacia www", async () => {
+    const request = new NextRequest("https://ventorap.cl/dashboard?x=1");
     const response = await proxy(request);
 
     expect(response.status).toBe(308);
     expect(response.headers.get("location")).toBe(
-      "https://www.ventorap.cl/api/auth/profile?x=1"
+      "https://www.ventorap.cl/dashboard?x=1"
     );
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it("permite abrir login en ventorap.cl sin redirigir de host", async () => {
+    const request = new NextRequest("https://ventorap.cl/login");
+    const response = await proxy(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
     expect(createServerClient).not.toHaveBeenCalled();
   });
 

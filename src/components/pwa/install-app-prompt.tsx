@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import s from "./install-app-prompt.module.css";
+import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 type InstallOutcome = "accepted" | "dismissed";
 
@@ -52,19 +53,31 @@ export function InstallAppPrompt() {
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-  // Marcar como hidratado e inicializar estados correctos
-  const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
-  const standalone = isStandaloneMode();
+    if (!isCanonicalPwaHost(window.location.hostname)) {
+      queueMicrotask(() => {
+        setShowIosHint(false);
+        setDismissed(true);
+        setIsHydrated(true);
+      });
+      return;
+    }
 
-  queueMicrotask(() => {
-    setShowIosHint(!wasDismissed && !standalone && isIosSafari());
-    setDismissed(wasDismissed || standalone);
-    setIsHydrated(true);
-  });
-}, []);
+    const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
+    const standalone = isStandaloneMode();
+
+    queueMicrotask(() => {
+      setShowIosHint(!wasDismissed && !standalone && isIosSafari());
+      setDismissed(wasDismissed || standalone);
+      setIsHydrated(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!isCanonicalPwaHost(window.location.hostname)) {
       return;
     }
 
@@ -107,7 +120,12 @@ export function InstallAppPrompt() {
     setDeferredPrompt(null);
   };
 
-  if (!isHydrated || pathname?.startsWith("/print") || dismissed || isStandaloneMode()) {
+  if (
+    !isHydrated ||
+    pathname?.startsWith("/print") ||
+    dismissed ||
+    isStandaloneMode()
+  ) {
     return null;
   }
 

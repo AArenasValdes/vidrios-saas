@@ -34,7 +34,7 @@ const copy = {
   missingProfileError:
     "Este usuario no quedo vinculado a una empresa. Entra con un usuario valido o termina de vincularlo en base de datos.",
   brokenDatabasePermissionError:
-    "Tu clave esta bien, pero produccion tiene roto un permiso interno de base de datos. Hay que corregir get_org_id en Supabase.",
+    "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta otra vez en unos segundos.",
   timeoutError:
     "No pudimos abrir tu sesion en este dispositivo. Cierra la ventana y vuelve a intentar.",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",

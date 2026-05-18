@@ -258,3 +258,49 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - `src/features/auth/services/auth.service.ts`
   - `app/(auth-public)/login/login-view.tsx`
   - `src/services/__tests__/auth.service.test.ts`
+
+### 2026-05-18 - Estabilizacion final de hosts, PWA y provision de cuentas piloto
+
+- Se elimino la dependencia de doble bootstrap al iniciar sesion:
+  - `authService.signIn()` ahora devuelve el estado autenticado ya resuelto
+  - `useAuth.signIn()` deja de relanzar una segunda rehidratacion completa
+- Se endurecio `logout` para no quedar pegado en `Cerrando sesion...`:
+  - la UI limpia estado y storage primero
+  - la invalidacion real de Supabase se dispara en background
+- El bootstrap del perfil autenticado ahora prioriza `/api/auth/profile` server-side antes de consultar `public.users` directo desde cliente.
+- Se fijo la politica real de hosts:
+  - web valida en `ventorap.cl` y `www.ventorap.cl`
+  - PWA e install prompt solo se activan en host canonico `www.ventorap.cl`
+  - las rutas privadas y `auth/callback` siguen canonicalizandose a `www`
+  - `/api/auth/profile` deja de canonicalizarse por `proxy.ts` para no perder el bearer token en redirects cross-host
+- Se agrego configuracion de cookies compartidas de Supabase para `ventorap.cl` y `www.ventorap.cl`:
+  - dominio `.ventorap.cl`
+  - `sameSite=lax`
+  - `secure=true`
+  - esto permite que el login iniciado en un host sobreviva al paso controlado al host canonico sin partir la sesion
+- Se endurecio el script oficial `scripts/pilot-users.mjs`:
+  - nuevos comandos `repair` y `reset-password`
+  - `audit` ahora detecta tambien filas activas en `public.users` sin `auth.users`
+  - `create` y `repair` verifican login real contra Supabase Auth
+  - `create` y `repair` verifican resolucion real de perfil via `/api/auth/profile`
+  - el verificador ya soporta redirects `ventorap.cl -> www.ventorap.cl` preservando el bearer en el segundo request
+- Se agrego cobertura para:
+  - host canonico PWA
+  - cookies compartidas de Supabase
+  - proxy con rutas privadas canonicalizadas y login permitido en apex
+- Verificacion real cerrada en esta pasada:
+  - `admin@test.com / 1234` validado via `repair` contra `https://www.ventorap.cl`
+  - `admin@test.com / 1234` validado via `repair` contra `https://ventorap.cl` con fallback correcto a `www`
+  - `vidriorivera@empresa.cl / clave123` validado via `repair` contra `https://www.ventorap.cl`
+- Archivos tocados:
+  - `proxy.ts`
+  - `src/features/auth/hooks/useAuth.ts`
+  - `src/features/auth/services/auth.service.ts`
+  - `src/features/auth/repositories/auth.repository.ts`
+  - `src/lib/supabase/client.ts`
+  - `src/lib/supabase/server.ts`
+  - `src/lib/supabase/cookie-options.ts`
+  - `src/components/pwa/register-service-worker.tsx`
+  - `src/components/pwa/install-app-prompt.tsx`
+  - `scripts/pilot-users.mjs`
+  - `package.json`

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 declare global {
   interface Window {
@@ -44,8 +45,9 @@ export function RegisterServiceWorker() {
     }
 
     const runtimeEnv = window.__VIDRIOS_SAAS_SW_ENV__ ?? process.env.NODE_ENV;
+    const shouldUseCanonicalHost = isCanonicalPwaHost(window.location.hostname);
 
-    if (runtimeEnv !== "production") {
+    if (runtimeEnv !== "production" || !shouldUseCanonicalHost) {
       void unregisterAllServiceWorkers();
       void clearAppCaches();
       return;

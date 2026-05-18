@@ -1,6 +1,7 @@
 /* Para componentes client  */
 /* */
 import { createBrowserClient } from "@supabase/ssr";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -11,7 +12,12 @@ export function createClient() {
 
   browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieOptions: getSupabaseCookieOptions(
+        typeof window !== "undefined" ? window.location.hostname : null
+      ),
+    }
   );
 
   return browserClient;

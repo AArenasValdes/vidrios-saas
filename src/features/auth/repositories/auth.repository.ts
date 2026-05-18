@@ -294,6 +294,12 @@ export function createAuthRepository(
       }
 
       const supabase = browserClientFactory();
+      const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
+
+      if (serverProfile) {
+        return serverProfile;
+      }
+
       try {
         let data: PerfilRow | null = null;
         let error: unknown = null;
@@ -323,12 +329,6 @@ export function createAuthRepository(
         }
 
         if (error) {
-          const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
-
-          if (serverProfile) {
-            return serverProfile;
-          }
-
           if (isConnectivityError(error)) {
             return null;
           }
@@ -352,11 +352,7 @@ export function createAuthRepository(
         return profile;
       } catch (error) {
         if (isGetOrgIdPermissionError(error)) {
-          const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
-
-          if (serverProfile) {
-            return serverProfile;
-          }
+          return null;
         }
 
         if (isConnectivityError(error)) {

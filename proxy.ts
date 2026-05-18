@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 const protectedPrefixes = [
   "/dashboard",
@@ -25,12 +26,32 @@ const hasSupabaseSessionCookie = (request: NextRequest) => {
   });
 };
 
-const getCanonicalHost = (hostname: string) => {
-  return hostname === "ventorap.cl" ? "www.ventorap.cl" : null;
+const canonicalPrefixes = [...protectedPrefixes, "/auth/callback"];
+const canonicalExactPaths = new Set<string>(["/dashboard"]);
+
+const shouldUseCanonicalHost = (pathname: string) => {
+  if (canonicalExactPaths.has(pathname)) {
+    return true;
+  }
+
+  return canonicalPrefixes.some((prefix) => {
+    return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  });
+};
+
+const getCanonicalHost = (hostname: string, pathname: string) => {
+  if (hostname !== "ventorap.cl") {
+    return null;
+  }
+
+  return shouldUseCanonicalHost(pathname) ? "www.ventorap.cl" : null;
 };
 
 export async function proxy(request: NextRequest) {
-  const canonicalHost = getCanonicalHost(request.nextUrl.hostname);
+  const canonicalHost = getCanonicalHost(
+    request.nextUrl.hostname,
+    request.nextUrl.pathname
+  );
 
   if (canonicalHost) {
     const url = request.nextUrl.clone();
@@ -60,6 +81,7 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getSupabaseCookieOptions(request.nextUrl.hostname),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -100,7 +122,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
-    "/api/auth/profile",
+    "/auth/callback",
     "/dashboard/:path*",
     "/clientes/:path*",
     "/cotizaciones/:path*",
