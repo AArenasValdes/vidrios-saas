@@ -241,3 +241,14 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 4. **Al crear componente reutilizable**: Agregar a `COMPONENTS_MAP.md`
 5. **Al cambiar logica de feature**: Actualizar `FEATURES_MAP.md` si cambian archivos principales
 6. **Mensualmente**: Revisar que los mapas coincidan con el codigo real (auditoria rapida)
+
+### 2026-05-18 - Auth de produccion y mensaje de login
+
+- Se confirmo con reproduccion real sobre `https://ventorap.cl/login` y `https://www.ventorap.cl/login` que `admin@test.com / 1234` autentica y abre `/dashboard` en produccion.
+- Se confirmo que el fallo previo no era la contrasena sino una brecha temporal de permisos DB sobre `public.get_org_id()`.
+- Se endurecio el mensaje de login para no mostrar `Correo o contrasena incorrectos` cuando el problema real sea `permission denied for function get_org_id`.
+- Se corrigio un bug de autofill/Face ID en `/login`: el submit ahora toma los valores reales del formulario y no solo el estado React, evitando rechazos falsos cuando iOS/Android rellenan email/password sin disparar `onChange`.
+- Archivos tocados:
+  - `src/features/auth/services/auth.service.ts`
+  - `app/(auth-public)/login/login-view.tsx`
+  - `src/services/__tests__/auth.service.test.ts`

@@ -1,4 +1,7 @@
-import { createAuthService } from "../auth.service";
+import {
+  createAuthService,
+  GET_ORG_ID_PERMISSION_ERROR_MESSAGE,
+} from "../auth.service";
 import type { AuthRepository } from "@/repositories/auth.repository";
 import type { User } from "@supabase/supabase-js";
 
@@ -187,5 +190,29 @@ describe("authService", () => {
     ).rejects.toThrow("Tu usuario existe, pero no esta vinculado a una empresa en Ventora.");
 
     expect(repository.signOut).toHaveBeenCalledTimes(2);
+  });
+
+  it("debe exponer un error claro cuando get_org_id no tiene execute para authenticated", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser("admin@test.com");
+
+    repository.signOut.mockResolvedValue();
+    repository.signInWithPassword.mockResolvedValue(user);
+    repository.getUserProfile.mockRejectedValue(
+      new Error("42501 permission denied for function get_org_id")
+    );
+
+    const service = createAuthService({
+      repository,
+      bootstrapRetryCount: 0,
+      bootstrapRetryDelayMs: 0,
+    });
+
+    await expect(
+      service.signIn({
+        email: "admin@test.com",
+        password: "1234",
+      })
+    ).rejects.toThrow(GET_ORG_ID_PERMISSION_ERROR_MESSAGE);
   });
 });

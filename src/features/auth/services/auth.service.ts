@@ -15,6 +15,8 @@ type AuthServiceDeps = {
 
 const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
 const DEFAULT_BOOTSTRAP_RETRY_DELAY_MS = 300;
+const GET_ORG_ID_PERMISSION_ERROR_MESSAGE =
+  "Tu acceso esta bien, pero la base de datos de produccion tiene roto el permiso interno get_org_id.";
 
 function wait(delayMs: number) {
   if (delayMs <= 0) {
@@ -24,6 +26,37 @@ function wait(delayMs: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, delayMs);
   });
+}
+
+function getErrorText(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.toLowerCase();
+  }
+
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  const candidate = error as {
+    code?: string;
+    message?: string;
+    details?: string;
+    hint?: string;
+  };
+
+  return [candidate.code, candidate.message, candidate.details, candidate.hint]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function isGetOrgIdPermissionError(error: unknown) {
+  const haystack = getErrorText(error);
+
+  return (
+    haystack.includes("get_org_id") &&
+    (haystack.includes("permission denied") || haystack.includes("42501"))
+  );
 }
 
 export function createAuthService(deps: AuthServiceDeps = {}) {
@@ -44,10 +77,20 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
     };
 
     for (let attempt = 0; attempt <= bootstrapRetryCount; attempt += 1) {
-      const perfil = await repository.getUserProfile({
-        authUserId: user.id,
-        email: user.email,
-      });
+      let perfil;
+
+      try {
+        perfil = await repository.getUserProfile({
+          authUserId: user.id,
+          email: user.email,
+        });
+      } catch (error) {
+        if (isGetOrgIdPermissionError(error)) {
+          throw new Error(GET_ORG_ID_PERMISSION_ERROR_MESSAGE);
+        }
+
+        throw error;
+      }
 
       lastState = {
         user,
@@ -146,3 +189,4 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
 }
 
 export const authService = createAuthService();
+export { GET_ORG_ID_PERMISSION_ERROR_MESSAGE };

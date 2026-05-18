@@ -34,6 +34,8 @@ const copy = {
   credentialError: "Correo o contrasena incorrectos",
   missingProfileError:
     "Este usuario no quedo vinculado a una empresa. Entra con un usuario valido o termina de vincularlo en base de datos.",
+  brokenDatabasePermissionError:
+    "Tu clave esta bien, pero produccion tiene roto un permiso interno de base de datos. Hay que corregir get_org_id en Supabase.",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
@@ -52,17 +54,30 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
     setCargando(true);
     setError(null);
 
+    const formData = new FormData(e.currentTarget);
+    const submittedCorreo = String(formData.get("correo") ?? correo);
+    const submittedPassword = String(formData.get("password") ?? password);
+
+    if (submittedCorreo !== correo) {
+      setCorreo(submittedCorreo);
+    }
+
+    if (submittedPassword !== password) {
+      setPassword(submittedPassword);
+    }
+
     try {
       await signIn({
-        email: correo,
-        password,
+        email: submittedCorreo,
+        password: submittedPassword,
       });
     } catch (signInError) {
+      const rawMessage =
+        signInError instanceof Error ? signInError.message.toLowerCase() : "";
       const message =
-        signInError instanceof Error &&
-        signInError.message
-          .toLowerCase()
-          .includes("no esta vinculado a una empresa")
+        rawMessage.includes("get_org_id")
+          ? copy.brokenDatabasePermissionError
+          : rawMessage.includes("no esta vinculado a una empresa")
           ? copy.missingProfileError
           : copy.credentialError;
 
@@ -108,6 +123,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                   <Mail size={18} aria-hidden />
                   <input
                     id="correo"
+                    name="correo"
                     type="email"
                     className={s.fieldInput}
                     placeholder={copy.emailPlaceholder}
@@ -131,6 +147,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                   <Lock size={18} aria-hidden />
                   <input
                     id="password"
+                    name="password"
                     type="password"
                     className={s.fieldInput}
                     placeholder={copy.passwordPlaceholder}
