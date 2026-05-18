@@ -291,6 +291,23 @@ export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
   };
 }
 
+export function resolveWorkflowObraTitle(input: {
+  obra: string;
+  clienteNombre: string;
+}): string {
+  const normalizedObra = input.obra.trim();
+  if (normalizedObra) {
+    return normalizedObra;
+  }
+
+  const normalizedClientName = input.clienteNombre.trim();
+  if (normalizedClientName) {
+    return `Trabajo de ${normalizedClientName}`.slice(0, 80);
+  }
+
+  return "Solicitud comercial";
+}
+
 export function createCotizacionRecord(
   input: CreateCotizacionRecordInput
 ): CotizacionWorkflowRecord {
@@ -307,7 +324,10 @@ export function createCotizacionRecord(
     codigo: input.existingCode ?? buildCotizacionCode(now),
     clienteNombre: input.draft.clienteNombre.trim(),
     clienteTelefono: input.draft.clienteTelefono.trim(),
-    obra: input.draft.obra.trim(),
+    obra: resolveWorkflowObraTitle({
+      obra: input.draft.obra,
+      clienteNombre: input.draft.clienteNombre,
+    }),
     direccion: input.draft.direccion.trim(),
     validez: input.draft.validez,
     descuentoPct: input.draft.descuentoPct,

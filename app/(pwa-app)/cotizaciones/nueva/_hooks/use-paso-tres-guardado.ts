@@ -6,6 +6,7 @@ import {
   isConnectivityError,
   scrollPageToTop,
   validateStep1,
+  withResolvedWorkflowObra,
   type ComponentFormState,
   type FieldErrors,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -91,10 +92,10 @@ export function preparePasoTresGuardado({
   applyQuickEditDraftsToItems,
 }: PreparePasoTresGuardadoParams): PreparePasoTresGuardadoResult {
   const nextItems = applyQuickEditDraftsToItems(draft.items);
-  const draftToSave = {
+  const draftToSave = withResolvedWorkflowObra({
     ...draft,
     items: nextItems,
-  };
+  });
   const step1Errors = validateStep1(draftToSave);
   const finalErrors: FieldErrors = { ...step1Errors };
 

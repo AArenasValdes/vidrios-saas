@@ -5,6 +5,7 @@ import {
 import {
   calculateComponentItem,
   createCotizacionWorkflowDraft,
+  resolveWorkflowObraTitle,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -1072,9 +1073,28 @@ export function validateComponentForm(
 export function validateStep1(draft: CotizacionWorkflowDraft): FieldErrors {
   const errors: FieldErrors = {};
   if (!draft.clienteNombre.trim()) errors.clienteNombre = "El nombre del cliente es obligatorio";
-  if (!draft.obra.trim()) errors.obra = "La obra o proyecto es obligatoria";
-  if (Object.keys(errors).length > 0) errors.step1 = "Completa cliente y obra para continuar.";
+  if (Object.keys(errors).length > 0) {
+    errors.step1 = "Completa al menos el nombre del cliente para continuar.";
+  }
   return errors;
+}
+
+export function withResolvedWorkflowObra(
+  draft: CotizacionWorkflowDraft
+): CotizacionWorkflowDraft {
+  const resolvedObra = resolveWorkflowObraTitle({
+    obra: draft.obra,
+    clienteNombre: draft.clienteNombre,
+  });
+
+  if (resolvedObra === draft.obra) {
+    return draft;
+  }
+
+  return {
+    ...draft,
+    obra: resolvedObra,
+  };
 }
 
 export function scrollPageToTop() {

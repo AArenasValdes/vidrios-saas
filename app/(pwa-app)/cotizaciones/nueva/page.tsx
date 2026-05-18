@@ -57,6 +57,7 @@ import {
   buildComponentFormLinePricingSummary,
   type PreferredProvider,
   syncTemplatePricingInComponentForm,
+  withResolvedWorkflowObra,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   clearNuevaCotizacionSolicitudSourceId,
@@ -316,6 +317,16 @@ function NuevaCotizacionPageContent() {
     node: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
   ) {
     step1InputRefs.current[field] = node;
+  }
+
+  function resolveStep1Draft(currentDraft: CotizacionWorkflowDraft) {
+    const nextDraft = withResolvedWorkflowObra(currentDraft);
+
+    if (nextDraft !== currentDraft) {
+      setDraft(nextDraft);
+    }
+
+    return nextDraft;
   }
 
   function resetWorkflowToBlank() {
@@ -1056,7 +1067,8 @@ function NuevaCotizacionPageContent() {
   };
 
   function goNextFromStep1() {
-    const errors = validateStep1(draft);
+    const nextDraft = resolveStep1Draft(draft);
+    const errors = validateStep1(nextDraft);
     if (errors.step1) {
       setFieldErrors((cur) => ({ ...cur, ...errors }));
       return;
@@ -1130,7 +1142,7 @@ function NuevaCotizacionPageContent() {
     }
 
     if (target === 2) {
-      const errors = validateStep1(draft);
+      const errors = validateStep1(resolveStep1Draft(draft));
       if (errors.step1) {
         setFieldErrors((cur) => ({ ...cur, ...errors }));
         setStep(1);
@@ -1138,7 +1150,7 @@ function NuevaCotizacionPageContent() {
       }
     }
     if (target >= 3) {
-      const e1 = validateStep1(draft);
+      const e1 = validateStep1(resolveStep1Draft(draft));
       if (e1.step1) {
         setFieldErrors((cur) => ({ ...cur, ...e1 }));
         setStep(1);

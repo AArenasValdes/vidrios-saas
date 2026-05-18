@@ -377,6 +377,78 @@ describe("cotizaciones.service", () => {
     expect(record.items[0].vidrio).toBe("Incoloro monolitico 5mm");
   });
 
+  it("debe autocompletar la obra con el nombre del cliente cuando viene vacia", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    projectsRepository.listByIds.mockResolvedValueOnce([
+      {
+        id: 10,
+        titulo: "Trabajo de Roberto Fuentes",
+        descripcion: null,
+        clienteId: 1,
+        organizationId: 77,
+        creadoEn: null,
+        estado: "activo",
+        actualizadoEn: null,
+        eliminadoEn: null,
+      },
+    ]);
+    projectsRepository.getById.mockResolvedValueOnce({
+      id: 10,
+      titulo: "Trabajo de Roberto Fuentes",
+      descripcion: null,
+      clienteId: 1,
+      organizationId: 77,
+      creadoEn: null,
+      estado: "activo",
+      actualizadoEn: null,
+      eliminadoEn: null,
+    });
+    projectsRepository.findByTitleAndClientId.mockResolvedValueOnce(null);
+    projectsRepository.create.mockResolvedValueOnce({
+      id: 10,
+      titulo: "Trabajo de Roberto Fuentes",
+      descripcion: null,
+      clienteId: 1,
+      organizationId: 77,
+      creadoEn: null,
+      estado: "activo",
+      actualizadoEn: null,
+      eliminadoEn: null,
+    });
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    const record = await service.saveWorkflow({
+      organizationId: 77,
+      estado: "borrador",
+      draft: {
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "   ",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        items: [],
+      },
+    });
+
+    expect(projectsRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 77,
+        clienteId: 1,
+        titulo: "Trabajo de Roberto Fuentes",
+      })
+    );
+    expect(record.obra).toBe("Trabajo de Roberto Fuentes");
+  });
+
   it("debe persistir el flete y sumarlo al total guardado", async () => {
     const clientesRepository = createClientesRepositoryMock();
     const projectsRepository = createProjectsRepositoryMock();

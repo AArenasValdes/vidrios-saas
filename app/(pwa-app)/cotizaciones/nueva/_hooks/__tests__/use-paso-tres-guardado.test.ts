@@ -79,7 +79,29 @@ describe("preparePasoTresGuardado", () => {
       applyQuickEditDraftsToItems: (items) => items,
     });
 
-    expect(resultado.step1Errors.step1).toBe("Completa cliente y obra para continuar.");
-    expect(resultado.finalErrors.step1).toBe("Completa cliente y obra para continuar.");
+    expect(resultado.step1Errors.step1).toBe("Completa al menos el nombre del cliente para continuar.");
+    expect(resultado.finalErrors.step1).toBe("Completa al menos el nombre del cliente para continuar.");
+  });
+
+  it("debe autocompletar la obra cuando el cliente existe y el campo viene vacio", () => {
+    const resultado = preparePasoTresGuardado({
+      estado: "borrador",
+      draft: {
+        clienteNombre: "Jose Fuentes",
+        clienteTelefono: "",
+        obra: "   ",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        items: [],
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(resultado.draftToSave.obra).toBe("Trabajo de Jose Fuentes");
+    expect(resultado.step1Errors).toEqual({});
+    expect(resultado.finalErrors).toEqual({});
   });
 });

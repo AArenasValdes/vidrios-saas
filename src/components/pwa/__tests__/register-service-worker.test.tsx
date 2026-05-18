@@ -14,10 +14,17 @@ describe("RegisterServiceWorker", () => {
     window.__VIDRIOS_SAAS_SW_ENV__ = "production";
 
     const update = jest.fn();
-    const register = jest.fn().mockResolvedValue({ update });
+    const register = jest.fn().mockResolvedValue({
+      update,
+      waiting: null,
+      installing: null,
+      addEventListener: jest.fn(),
+    });
     const getRegistrations = jest.fn();
     const cacheKeys = jest.fn();
     const cacheDelete = jest.fn();
+    const addEventListener = jest.fn();
+    const removeEventListener = jest.fn();
 
     Object.defineProperty(window, "caches", {
       configurable: true,
@@ -32,18 +39,25 @@ describe("RegisterServiceWorker", () => {
       value: {
         register,
         getRegistrations,
+        addEventListener,
+        removeEventListener,
       },
     });
 
     render(<RegisterServiceWorker />);
 
     await waitFor(() =>
-      expect(register).toHaveBeenCalledWith("/sw.js", {
+      expect(register).toHaveBeenCalledWith("/sw.js?version=v6", {
         scope: "/",
+        updateViaCache: "none",
       })
     );
 
     expect(update).toHaveBeenCalled();
+    expect(addEventListener).toHaveBeenCalledWith(
+      "controllerchange",
+      expect.any(Function)
+    );
     expect(getRegistrations).not.toHaveBeenCalled();
     expect(cacheKeys).not.toHaveBeenCalled();
     expect(cacheDelete).not.toHaveBeenCalled();
@@ -73,6 +87,8 @@ describe("RegisterServiceWorker", () => {
       value: {
         register,
         getRegistrations,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
       },
     });
 

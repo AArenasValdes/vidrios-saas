@@ -15,6 +15,7 @@ import {
   buildLegacyCotizacionCode,
   calculateComponentItem,
   calculateCotizacionWorkflowTotals,
+  resolveWorkflowObraTitle,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { impuestos } from "@/constants/impuestos";
 import { createApprovalToken } from "@/utils/cotizacion-approval";
@@ -387,15 +388,17 @@ export function createCotizacionesAppService(
     organizationId: EntityId;
     existingProjectId?: EntityId | null;
     clientId: EntityId;
+    clientName: string;
     titulo: string;
   }): Promise<
     EnsuredEntity<Awaited<ReturnType<ProjectsRepository["create"]>>>
   > {
-    const titulo = normalizeString(input.titulo);
-
-    if (!titulo) {
-      throw new Error("La obra o proyecto es obligatorio");
-    }
+    const titulo = normalizeString(
+      resolveWorkflowObraTitle({
+        obra: input.titulo,
+        clienteNombre: input.clientName,
+      })
+    );
 
     const existingById = input.existingProjectId
       ? await projectsRepo.getById(input.existingProjectId, input.organizationId)
@@ -760,6 +763,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         organizationId: input.organizationId,
         existingProjectId: input.existingProjectId,
         clientId: client.id,
+        clientName: client.nombre,
         titulo: input.draft.obra,
       });
       rollbackStack.push(projectResult.rollback);
