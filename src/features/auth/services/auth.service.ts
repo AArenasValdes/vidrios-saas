@@ -173,7 +173,7 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      return resolveAuthenticatedState(authenticatedUser, {
+      await resolveAuthenticatedState(authenticatedUser, {
         throwOnMissingOrganization: true,
       });
     },

@@ -226,13 +226,12 @@ export function useAuth() {
   }, []);
 
   const signIn = async (credentials: AuthSignInInput) => {
-    const authenticatedState = await authService.signIn(credentials);
-    authStatePromise = null;
-    authStateHydratedFromNetwork = true;
+    await authService.signIn(credentials);
+    authStateCache = null;
     setAuthState({
-      ...authenticatedState,
-      cargando: false,
+      ...emptyAuthUser,
     });
+    await resolveAuthState();
   };
 
   const signOut = async () => {
@@ -241,7 +240,7 @@ export function useAuth() {
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();
     setAuthState(unauthenticatedState);
-    void authService.signOut().catch(() => undefined);
+    await authService.signOut();
   };
 
   return {

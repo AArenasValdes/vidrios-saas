@@ -8,9 +8,7 @@ import type { AuthSignInInput, AuthUserState } from "@/types/auth";
 const getCurrentAuthState: jest.MockedFunction<() => Promise<AuthUserState>> = jest.fn();
 const subscribeToAuthChanges: jest.MockedFunction<(listener: () => void) => () => void> =
   jest.fn();
-const signIn: jest.MockedFunction<
-  (credentials: AuthSignInInput) => Promise<AuthUserState>
-> = jest.fn();
+const signIn: jest.MockedFunction<(credentials: AuthSignInInput) => Promise<void>> = jest.fn();
 const signOut: jest.MockedFunction<() => Promise<void>> = jest.fn();
 
 jest.mock("@/features/auth/services/auth.service", () => ({
@@ -71,12 +69,6 @@ describe("useAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     __resetAuthHookTestState();
-    signIn.mockResolvedValue({
-      user: createUser("ventas@vidrios.cl"),
-      organizacionId: 21,
-      rol: "admin",
-      cargando: false,
-    });
   });
 
   it("debe cargar la sesion, reaccionar a cambios y cerrar sesion sin romper el estado", async () => {
@@ -143,20 +135,22 @@ describe("useAuth", () => {
   it("debe esperar la rehidratacion completa al iniciar sesion", async () => {
     const usuarioAutenticado = createUser("ventas@vidrios.cl");
 
-    getCurrentAuthState.mockResolvedValueOnce({
-      user: null,
-      organizacionId: null,
-      rol: null,
-      cargando: false,
-    });
+    getCurrentAuthState
+      .mockResolvedValueOnce({
+        user: null,
+        organizacionId: null,
+        rol: null,
+        cargando: false,
+      })
+      .mockResolvedValueOnce({
+        user: usuarioAutenticado,
+        organizacionId: 21,
+        rol: "admin",
+        cargando: false,
+      });
 
     subscribeToAuthChanges.mockImplementation(() => jest.fn());
-    signIn.mockResolvedValue({
-      user: usuarioAutenticado,
-      organizacionId: 21,
-      rol: "admin",
-      cargando: false,
-    });
+    signIn.mockResolvedValue();
 
     render(<ProbeAuth />);
 
