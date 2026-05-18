@@ -13,6 +13,11 @@ type PerfilRow = {
   rol: string | null;
 };
 
+type AuthProfileIdentity = {
+  authUserId?: string | null;
+  email?: string | null;
+};
+
 const AUTH_PROFILE_STORAGE_PREFIX = "vidrios-saas:auth-profile:";
 const AUTH_PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -20,17 +25,31 @@ type CachedAuthProfile = AuthProfile & {
   _cachedAt: number;
 };
 
-function getAuthProfileStorageKey(email: string) {
-  return `${AUTH_PROFILE_STORAGE_PREFIX}${email.trim().toLowerCase()}`;
+function buildAuthProfileCacheKey(identity: AuthProfileIdentity) {
+  if (identity.authUserId?.trim()) {
+    return `auth-user:${identity.authUserId.trim()}`;
+  }
+
+  const normalizedEmail = identity.email?.trim().toLowerCase() ?? "";
+
+  if (normalizedEmail) {
+    return `email:${normalizedEmail}`;
+  }
+
+  return null;
 }
 
-function readAuthProfileFromStorage(email: string) {
+function getAuthProfileStorageKey(cacheKey: string) {
+  return `${AUTH_PROFILE_STORAGE_PREFIX}${cacheKey}`;
+}
+
+function readAuthProfileFromStorage(cacheKey: string) {
   if (typeof window === "undefined") {
     return null;
   }
 
   try {
-    const raw = window.sessionStorage.getItem(getAuthProfileStorageKey(email));
+    const raw = window.sessionStorage.getItem(getAuthProfileStorageKey(cacheKey));
 
     if (!raw) {
       return null;
@@ -39,7 +58,7 @@ function readAuthProfileFromStorage(email: string) {
     const cached = JSON.parse(raw) as CachedAuthProfile;
 
     if (Date.now() - (cached._cachedAt ?? 0) > AUTH_PROFILE_CACHE_TTL_MS) {
-      window.sessionStorage.removeItem(getAuthProfileStorageKey(email));
+      window.sessionStorage.removeItem(getAuthProfileStorageKey(cacheKey));
       return null;
     }
 
@@ -51,7 +70,7 @@ function readAuthProfileFromStorage(email: string) {
   }
 }
 
-function persistAuthProfile(email: string, profile: AuthProfile) {
+function persistAuthProfile(cacheKey: string, profile: AuthProfile) {
   if (typeof window === "undefined") {
     return;
   }
@@ -63,7 +82,7 @@ function persistAuthProfile(email: string, profile: AuthProfile) {
     };
 
     window.sessionStorage.setItem(
-      getAuthProfileStorageKey(email),
+      getAuthProfileStorageKey(cacheKey),
       JSON.stringify(cached)
     );
   } catch {
@@ -122,7 +141,7 @@ function isConnectivityError(error: unknown) {
 
 export interface AuthRepository {
   getAuthenticatedUser(): Promise<User | null>;
-  getUserProfile(email: string): Promise<AuthProfile | null>;
+  getUserProfile(identity: AuthProfileIdentity): Promise<AuthProfile | null>;
   signInWithPassword(credentials: AuthSignInInput): Promise<void>;
   signOut(): Promise<void>;
   subscribeToAuthStateChange(listener: () => void): () => void;
@@ -165,8 +184,16 @@ export function createAuthRepository(
       }
     },
 
-    async getUserProfile(email) {
-      const cachedProfile = readAuthProfileFromStorage(email);
+    async getUserProfile(identity) {
+      const cacheKey = buildAuthProfileCacheKey(identity);
+      const normalizedAuthUserId = identity.authUserId?.trim() ?? "";
+      const normalizedEmail = identity.email?.trim().toLowerCase() ?? "";
+
+      if (!cacheKey) {
+        return null;
+      }
+
+      const cachedProfile = readAuthProfileFromStorage(cacheKey);
 
       if (cachedProfile) {
         return cachedProfile;
@@ -174,12 +201,32 @@ export function createAuthRepository(
 
       const supabase = browserClientFactory();
       try {
-        const { data, error } = await supabase
-          .from("users")
-          .select("organization_id, rol")
-          .ilike("correo", email.trim().toLowerCase())
-          .is("eliminado_en", null)
-          .maybeSingle();
+        let data: PerfilRow | null = null;
+        let error: unknown = null;
+
+        if (normalizedAuthUserId) {
+          const authUserLookup = await supabase
+            .from("users")
+            .select("organization_id, rol")
+            .eq("auth_user_id", normalizedAuthUserId)
+            .is("eliminado_en", null)
+            .maybeSingle();
+
+          data = (authUserLookup.data as PerfilRow | null) ?? null;
+          error = authUserLookup.error;
+        }
+
+        if (!data && !error && normalizedEmail) {
+          const emailLookup = await supabase
+            .from("users")
+            .select("organization_id, rol")
+            .ilike("correo", normalizedEmail)
+            .is("eliminado_en", null)
+            .maybeSingle();
+
+          data = (emailLookup.data as PerfilRow | null) ?? null;
+          error = emailLookup.error;
+        }
 
         if (error) {
           if (isConnectivityError(error)) {
@@ -200,7 +247,7 @@ export function createAuthRepository(
           rol: perfil.rol,
         };
 
-        persistAuthProfile(email, profile);
+        persistAuthProfile(cacheKey, profile);
 
         return profile;
       } catch (error) {

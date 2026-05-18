@@ -48,6 +48,15 @@ type ContextItem = {
   description: string;
 };
 
+type BrowserWindowWithIdleCallback = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/dashboard",
@@ -158,6 +167,47 @@ function getSolicitudesSeenStorageKey(
     .toLowerCase()}`;
 }
 
+function scheduleDeferredShellWork(callback: () => void, delayMs = 650) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  const browserWindow = window as BrowserWindowWithIdleCallback;
+
+  if (typeof browserWindow.requestIdleCallback === "function") {
+    const idleCallbackId = browserWindow.requestIdleCallback(() => {
+      callback();
+    }, { timeout: Math.max(1800, delayMs) });
+
+    return () => {
+      browserWindow.cancelIdleCallback?.(idleCallbackId);
+    };
+  }
+
+  const timeoutId = window.setTimeout(callback, delayMs);
+  return () => window.clearTimeout(timeoutId);
+}
+
+function shouldSkipRoutePrefetch() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const navigatorWithConnection = navigator as Navigator & {
+    connection?: {
+      saveData?: boolean;
+      effectiveType?: string;
+    };
+  };
+
+  return (
+    navigatorWithConnection.connection?.saveData === true ||
+    navigatorWithConnection.connection?.effectiveType === "slow-2g" ||
+    navigatorWithConnection.connection?.effectiveType === "2g"
+  );
+}
+
 function formatAlertDate(value: string) {
   const timestamp = new Date(value).getTime();
 
@@ -217,10 +267,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, rol, signOut, organizacionId, cargando } = useAuth();
   const { profile } = useOrganizationProfile();
+  const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(() =>
+    pathname.startsWith("/solicitudes")
+  );
   const { alerts, isLoading: isAlertsLoading, error: alertsError, refresh } =
     useCotizacionAlerts(organizacionId, {
-      autoRefresh: true,
-      refreshOnVisibility: true,
+      autoRefresh: shouldLoadShellFeeds,
+      refreshOnVisibility: shouldLoadShellFeeds,
+      pollingIntervalMs: shouldLoadShellFeeds ? 45000 : 0,
     });
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
@@ -250,7 +304,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [rol, user?.email]
   );
   const { solicitudes: solicitudesShell } = useSolicitudesContacto(
-    canReviewSolicitudes && !cargando
+    canReviewSolicitudes &&
+      !cargando &&
+      (shouldLoadShellFeeds || pathname.startsWith("/solicitudes"))
   );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
@@ -457,6 +513,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
+    setShouldLoadShellFeeds(true);
+
     const latestSolicitudSeenAt = solicitudesShell.reduce((latest, solicitud) => {
       if (solicitud.estado !== "nueva") {
         return latest;
@@ -480,7 +538,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [pathname, solicitudesSeenAt, solicitudesSeenStorageKey, solicitudesShell]);
 
   useEffect(() => {
-    if (isWorkspaceBooting) {
+    if (isWorkspaceBooting || shouldLoadShellFeeds) {
+      return;
+    }
+
+    return scheduleDeferredShellWork(() => {
+      setShouldLoadShellFeeds(true);
+    });
+  }, [isWorkspaceBooting, shouldLoadShellFeeds]);
+
+  useEffect(() => {
+    if (isWorkspaceBooting || !shouldLoadShellFeeds || shouldSkipRoutePrefetch()) {
       return;
     }
 
@@ -507,7 +575,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
       const idleCallbackId = window.requestIdleCallback(() => {
         schedulePrefetch();
-      });
+      }, { timeout: 2400 });
 
       return () => {
         window.cancelIdleCallback(idleCallbackId);
@@ -520,7 +588,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => {
       timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };
-  }, [isWorkspaceBooting, pathname, router]);
+  }, [isWorkspaceBooting, pathname, router, shouldLoadShellFeeds]);
 
   useEffect(() => {
     if (!isAlertsOpen && !isProfileMenuOpen) {
@@ -577,6 +645,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const handleToggleAlerts = () => {
     const nextIsOpen = !isAlertsOpen;
+    setShouldLoadShellFeeds(true);
     setProfileMenuAnchor(null);
     setIsAlertsOpen(nextIsOpen);
 

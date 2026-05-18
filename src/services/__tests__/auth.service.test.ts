@@ -52,7 +52,10 @@ describe("authService", () => {
     const service = createAuthService({ repository });
     const resultado = await service.getCurrentAuthState();
 
-    expect(repository.getUserProfile).toHaveBeenCalledWith("dueno@vidrios.cl");
+    expect(repository.getUserProfile).toHaveBeenCalledWith({
+      authUserId: "user-1",
+      email: "dueno@vidrios.cl",
+    });
     expect(resultado).toEqual({
       user,
       organizacionId: 17,

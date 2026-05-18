@@ -12,6 +12,15 @@ import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import {
+  buildDocumentCompanyName,
+  buildDocumentContactLine,
+  buildDocumentInitials,
+  formatDocumentCompanyPhoneNumber,
+  normalizeDocumentOptionalText,
+  resolveDocumentConditionsText,
+  resolveDocumentPaymentTerms,
+} from "@/utils/cotizacion-document";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
@@ -133,24 +142,10 @@ function formatDueDate(baseDateValue: string, validez: string) {
   return formatCotizacionDate(baseDate.toISOString());
 }
 
-function formatCompanyPhoneNumber(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-
-  if (!digits) {
-    return "";
-  }
-
-  const normalized = digits.startsWith("56")
-    ? digits
-    : digits.startsWith("9") && digits.length === 9
-      ? `56${digits}`
-      : digits;
-
-  if (normalized.length === 11 && normalized.startsWith("569")) {
-    return `+56 9 ${normalized.slice(3, 7)} ${normalized.slice(7)}`;
-  }
-
-  return phone.trim();
+function hasWorkflowItemData(record: {
+  items: Array<unknown>;
+}) {
+  return record.items.length > 0;
 }
 
 function ClientField({
@@ -318,8 +313,13 @@ export default function CotizacionPrintPage() {
     useCotizacionesStore({ autoLoadSummary: false });
   const { profile: rawOrganizationProfile, isReady: isProfileReady } = useOrganizationProfile();
   const cotizacion = getCotizacionById(params.id);
-  const renderableCotizacion = cotizacion && cotizacion.items.length > 0 ? cotizacion : null;
-  const hasRenderableRecord = Boolean(renderableCotizacion);
+  const [hasResolvedDetailRecord, setHasResolvedDetailRecord] = useState(
+    Boolean(cotizacion && hasWorkflowItemData(cotizacion))
+  );
+  const renderableCotizacion =
+    cotizacion && (hasWorkflowItemData(cotizacion) || hasResolvedDetailRecord)
+      ? cotizacion
+      : null;
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetScaleFrameRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
@@ -331,7 +331,10 @@ export default function CotizacionPrintPage() {
   const [recordLoadError, setRecordLoadError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [showWhatsappFallbackActions, setShowWhatsappFallbackActions] = useState(false);
-  const [isHydratingRecord, setIsHydratingRecord] = useState(!hasRenderableRecord);
+  const [isHydratingRecord, setIsHydratingRecord] = useState(
+    !Boolean(cotizacion && hasWorkflowItemData(cotizacion))
+  );
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const [sheetPreviewScale, setSheetPreviewScale] = useState(1);
   const [sheetPreviewWidth, setSheetPreviewWidth] = useState(0);
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
@@ -349,9 +352,10 @@ export default function CotizacionPrintPage() {
         return;
       }
 
-      const hasWarmRecord = Boolean(cotizacion && cotizacion.items.length > 0);
+      const hasWarmRecord = Boolean(cotizacion && hasWorkflowItemData(cotizacion));
 
       if (hasWarmRecord) {
+        setHasResolvedDetailRecord(true);
         setRecordLoadError(null);
         setIsHydratingRecord(false);
         return;
@@ -362,6 +366,7 @@ export default function CotizacionPrintPage() {
       try {
         await loadCotizacionById(params.id);
         if (!isCancelled) {
+          setHasResolvedDetailRecord(true);
           setRecordLoadError(null);
         }
       } catch (error) {
@@ -397,6 +402,7 @@ export default function CotizacionPrintPage() {
 
     try {
       await loadCotizacionById(params.id);
+      setHasResolvedDetailRecord(true);
     } catch (error) {
       setRecordLoadError(
         resolvePrintRuntimeMessage(
@@ -456,6 +462,11 @@ export default function CotizacionPrintPage() {
     rawOrganizationProfile
   );
   const visibleCotizacion = renderableCotizacion;
+  const companyName = buildDocumentCompanyName(organizationProfile.empresaNombre);
+  const companyLogoFallbackLabel = buildDocumentInitials(companyName);
+  const companyLogoUrl = organizationProfile.empresaLogoUrl;
+  const shouldShowCompanyLogo =
+    Boolean(companyLogoUrl) && failedLogoUrl !== companyLogoUrl;
 
   const pageStyle = {
     "--brand": organizationProfile.brandColor,
@@ -480,16 +491,19 @@ export default function CotizacionPrintPage() {
   const whatsappActionLabel = "Enviar link por WhatsApp";
   const shareHintText =
     "Para mantener aprobacion y rechazo rastreables, este boton abre WhatsApp con el link publico de la cotizacion. Si ademas necesitas archivo, usa Descargar PDF.";
-  const companyAddressPrimary = organizationProfile.empresaDireccion;
-  const companyAddressSecondary = [
-    formatCompanyPhoneNumber(organizationProfile.empresaTelefono),
+  const companyAddressPrimaryDisplay = normalizeDocumentOptionalText(
+    organizationProfile.empresaDireccion
+  );
+  const companyAddressSecondaryClean = buildDocumentContactLine([
+    formatDocumentCompanyPhoneNumber(organizationProfile.empresaTelefono),
     organizationProfile.empresaEmail,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const hasCompanyAddress = Boolean(companyAddressPrimary || companyAddressSecondary);
-  const companyAddressSecondaryDisplay = companyAddressSecondary.replaceAll("Â·", "·");
-  const paymentTerms = organizationProfile.formaPago.trim();
+  ]);
+  const hasNormalizedCompanyAddress = Boolean(
+    companyAddressPrimaryDisplay || companyAddressSecondaryClean
+  );
+  const paymentTermsDisplay = resolveDocumentPaymentTerms(
+    organizationProfile.formaPago
+  );
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
     const items = visibleCotizacion?.items ?? [];
@@ -808,34 +822,33 @@ export default function CotizacionPrintPage() {
             <header className={s.pageHeader}>
               <div className={s.companyBlock}>
                 <div className={s.companyLogoWrap}>
-                  {organizationProfile.empresaLogoUrl ? (
+                  {shouldShowCompanyLogo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      alt={organizationProfile.empresaNombre}
+                      alt={companyName}
                       className={s.companyLogo}
                       loading="eager"
-                      src={organizationProfile.empresaLogoUrl}
+                      onError={() => setFailedLogoUrl(companyLogoUrl)}
+                      src={companyLogoUrl ?? undefined}
                     />
                   ) : (
-                    <div className={s.companyLogoFallback}>
-                      {organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
-                    </div>
+                    <div className={s.companyLogoFallback}>{companyLogoFallbackLabel}</div>
                   )}
                 </div>
 
                         <div className={s.companyMeta}>
-                          <strong className={s.companyName}>{organizationProfile.empresaNombre}</strong>
+                          <strong className={s.companyName}>{companyName}</strong>
                           <div className={s.companyAddress}>
-                            {hasCompanyAddress ? (
+                            {hasNormalizedCompanyAddress ? (
                               <>
-                                {companyAddressPrimary ? (
+                                {companyAddressPrimaryDisplay ? (
                                   <span className={s.companyAddressPrimary}>
-                                    {companyAddressPrimary}
+                                    {companyAddressPrimaryDisplay}
                                   </span>
                                 ) : null}
-                                {companyAddressSecondary ? (
+                                {companyAddressSecondaryClean ? (
                                   <span className={s.companyAddressSecondary}>
-                                    {companyAddressSecondaryDisplay}
+                                    {companyAddressSecondaryClean}
                                   </span>
                                 ) : null}
                               </>
@@ -878,6 +891,12 @@ export default function CotizacionPrintPage() {
             </section>
 
             <div className={s.componentList}>
+              {pagePlan.items.length === 0 ? (
+                <p className={s.emptyText}>
+                  Esta cotizacion aun no tiene items cargados. Puedes volver al detalle y
+                  completarla antes de compartir el PDF definitivo.
+                </p>
+              ) : null}
               {pagePlan.items.map((item, itemIndex) => {
                 const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                 const presentation = itemPresentationMap.get(item.id);
@@ -1002,10 +1021,10 @@ export default function CotizacionPrintPage() {
 
             {isLastPage ? (
               <>
-                {paymentTerms ? (
+                {paymentTermsDisplay ? (
                   <section className={s.paymentBand}>
                     <span className={s.paymentLabel}>Forma de pago:</span>
-                    <span className={s.paymentValue}>{paymentTerms}</span>
+                    <span className={s.paymentValue}>{paymentTermsDisplay}</span>
                   </section>
                 ) : null}
 
@@ -1013,7 +1032,7 @@ export default function CotizacionPrintPage() {
                   <section className={s.conditionsColumn}>
                     <span className={s.summaryLabel}>CONDICIONES</span>
                     <p className={s.conditionsText}>
-                      {visibleCotizacion.observaciones.trim() || "Sin observaciones adicionales."}
+                      {resolveDocumentConditionsText(visibleCotizacion.observaciones)}
                     </p>
                   </section>
 
@@ -1080,13 +1099,17 @@ export default function CotizacionPrintPage() {
       });
     },
     [
-      companyAddressPrimary,
-      companyAddressSecondary,
+      companyAddressPrimaryDisplay,
+      companyAddressSecondaryClean,
+      companyName,
+      companyLogoFallbackLabel,
+      companyLogoUrl,
+      hasNormalizedCompanyAddress,
       itemPresentationMap,
-      organizationProfile.empresaLogoUrl,
-      organizationProfile.empresaNombre,
-      paymentTerms,
+      failedLogoUrl,
+      paymentTermsDisplay,
       printPages,
+      shouldShowCompanyLogo,
       totalSurfaceM2,
       visibleCotizacion,
     ]

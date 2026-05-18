@@ -1,11 +1,18 @@
 import type { CotizacionWorkflowRecord } from "@/types/cotizacion-workflow";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
+import {
+  normalizeDocumentOptionalText,
+  normalizeDocumentText,
+  truncateDocumentText,
+} from "@/utils/cotizacion-document";
 import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 function extractValidezDays(validez: string) {
   const match = validez.match(/\d+/);
-  return match?.[0] ?? validez.trim();
+  const normalized = normalizeDocumentText(validez, "15 dias");
+
+  return match?.[0] ?? normalized;
 }
 
 export function normalizeWhatsappPhone(phone: string) {
@@ -49,13 +56,22 @@ type BuildPublicLeadWhatsappOptions = {
 export function buildPublicLeadWhatsappMessage(
   options: BuildPublicLeadWhatsappOptions = {}
 ) {
-  const tipoTrabajo = options.tipoTrabajo?.trim();
-  const nombre = options.nombre?.trim();
-  const mensaje = options.mensaje?.trim();
+  const tipoTrabajo = truncateDocumentText(
+    normalizeDocumentOptionalText(options.tipoTrabajo),
+    80
+  );
+  const nombre = truncateDocumentText(
+    normalizeDocumentOptionalText(options.nombre),
+    60
+  );
+  const mensaje = truncateDocumentText(
+    normalizeDocumentOptionalText(options.mensaje),
+    280
+  );
 
   const firstLine = tipoTrabajo
-    ? `Hola, vengo desde su enlace de cotización. Quiero consultar por: ${tipoTrabajo}.`
-    : "Hola, vengo desde su enlace de cotización y quiero hacer una consulta.";
+    ? `Hola, vengo desde su enlace de cotizacion. Quiero consultar por: ${tipoTrabajo}.`
+    : "Hola, vengo desde su enlace de cotizacion y quiero hacer una consulta.";
 
   return [firstLine, nombre ? `Mi nombre es ${nombre}.` : null, mensaje || null]
     .filter(Boolean)
@@ -86,12 +102,20 @@ export function buildCotizacionWhatsappMessage(
   record: CotizacionWorkflowRecord,
   options: BuildCotizacionWhatsappOptions = {}
 ) {
+  const clientName = truncateDocumentText(
+    normalizeDocumentOptionalText(record.clienteNombre),
+    60
+  );
+  const projectName = truncateDocumentText(
+    normalizeDocumentOptionalText(record.obra),
+    80
+  );
   const approvalUrl =
-    options.approvalUrl ??
+    normalizeDocumentOptionalText(options.approvalUrl) ||
     (record.approvalToken ? buildCotizacionApprovalUrl(record.approvalToken) : null);
-  const pdfUrl = options.pdfUrl ?? null;
+  const pdfUrl = normalizeDocumentOptionalText(options.pdfUrl) || null;
   const deliveryMode = options.deliveryMode ?? (pdfUrl ? "link" : "message");
-  const quoteContext = record.obra?.trim() ? ` para ${record.obra.trim()}.` : ".";
+  const quoteContext = projectName ? ` para ${projectName}.` : ".";
   const validezDays = extractValidezDays(record.validez ?? "15 dias");
 
   const publicLinkBlock =
@@ -109,7 +133,7 @@ export function buildCotizacionWhatsappMessage(
     : "Si quieres avanzar o revisar ajustes, responde a este mensaje y la empresa seguira contigo.";
 
   return [
-    `Hola ${record.clienteNombre},`,
+    clientName ? `Hola ${clientName},` : "Hola,",
     "",
     `Te enviamos tu cotizacion${quoteContext}`,
     "",

@@ -6,7 +6,19 @@ import { LuArrowLeft, LuDownload } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
-import { downloadPdfBlob, exportCotizacionElementToPdf } from "@/utils/cotizacion-pdf";
+import {
+  buildDocumentCompanyName,
+  buildDocumentContactLine,
+  buildDocumentInitials,
+  formatDocumentCompanyPhoneNumber,
+  resolveDocumentConditionsText,
+  resolveDocumentPaymentTerms,
+} from "@/utils/cotizacion-document";
+import {
+  downloadPdfBlob,
+  exportCotizacionElementToPdf,
+  formatCotizacionPdfError,
+} from "@/utils/cotizacion-pdf";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -199,26 +211,6 @@ function formatDueDate(baseDateValue: string | null, validez: string) {
   return formatCotizacionDate(baseDate.toISOString());
 }
 
-function formatCompanyPhoneNumber(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-
-  if (!digits) {
-    return "";
-  }
-
-  const normalized = digits.startsWith("56")
-    ? digits
-    : digits.startsWith("9") && digits.length === 9
-      ? `56${digits}`
-      : digits;
-
-  if (normalized.length === 11 && normalized.startsWith("569")) {
-    return `+56 9 ${normalized.slice(3, 7)} ${normalized.slice(7)}`;
-  }
-
-  return phone.trim();
-}
-
 function buildPublicQuotePdfFileName(quote: PublicPreviewQuote) {
   const slug = `${quote.codigo}-${quote.obra}`
     .trim()
@@ -258,9 +250,18 @@ export function PublicQuoteDocument({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
   const didAutoDownloadRef = useRef(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const [embeddedScale, setEmbeddedScale] = useState(1);
   const [embeddedWidth, setEmbeddedWidth] = useState(0);
   const [embeddedHeight, setEmbeddedHeight] = useState(0);
+  const companyName = buildDocumentCompanyName(
+    quote.organizationProfile.empresaNombre
+  );
+  const companyLogoFallbackLabel = buildDocumentInitials(companyName);
+  const companyLogoUrl = quote.organizationProfile.empresaLogoUrl;
+  const shouldShowCompanyLogo =
+    Boolean(companyLogoUrl) && failedLogoUrl !== companyLogoUrl;
 
   useEffect(() => {
     if (!downloadOnLoad || didAutoDownloadRef.current) {
@@ -275,15 +276,20 @@ export function PublicQuoteDocument({
           return;
         }
 
-        const fileName = buildPublicQuotePdfFileName(quote);
-        const { blob } = await exportCotizacionElementToPdf({
-          element: sheetRef.current,
-          fileName,
-          cacheKey: `public-document-${quote.codigo}-${quote.updatedAt ?? quote.createdAt ?? "0"}`,
-          pageSelector: `.${printStyles.pdfPage}`,
-        });
+        try {
+          setDownloadError(null);
+          const fileName = buildPublicQuotePdfFileName(quote);
+          const { blob } = await exportCotizacionElementToPdf({
+            element: sheetRef.current,
+            fileName,
+            cacheKey: `public-document-${quote.codigo}-${quote.updatedAt ?? quote.createdAt ?? "0"}`,
+            pageSelector: `.${printStyles.pdfPage}`,
+          });
 
-        downloadPdfBlob(blob, fileName);
+          downloadPdfBlob(blob, fileName);
+        } catch (error) {
+          setDownloadError(formatCotizacionPdfError(error));
+        }
       };
 
       void run();
@@ -331,18 +337,19 @@ export function PublicQuoteDocument({
     };
   }, [embedded, quote.codigo, quote.items.length]);
 
-  const companyAddressPrimary = quote.organizationProfile.empresaDireccion;
-  const companyAddressSecondary = [
-    formatCompanyPhoneNumber(quote.organizationProfile.empresaTelefono),
-    quote.organizationProfile.empresaEmail,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const hasCompanyAddress = Boolean(companyAddressPrimary || companyAddressSecondary);
-  const companyAddressSecondaryDisplay = companyAddressSecondary.replaceAll("Â·", "·");
-  const paymentTerms = quote.organizationProfile.formaPago.trim();
   const baseDate = quote.updatedAt ?? quote.createdAt ?? new Date().toISOString();
   const dueDate = formatDueDate(baseDate, quote.validez);
+  const companyAddressPrimaryDisplay = quote.organizationProfile.empresaDireccion.trim();
+  const companyAddressSecondaryClean = buildDocumentContactLine([
+    formatDocumentCompanyPhoneNumber(quote.organizationProfile.empresaTelefono),
+    quote.organizationProfile.empresaEmail,
+  ]);
+  const hasNormalizedCompanyAddress = Boolean(
+    companyAddressPrimaryDisplay || companyAddressSecondaryClean
+  );
+  const paymentTermsDisplay = resolveDocumentPaymentTerms(
+    quote.organizationProfile.formaPago
+  );
 
   const discountValue = useMemo(
     () => Math.round(quote.subtotal * (quote.descuentoPct / 100)),
@@ -428,7 +435,9 @@ export function PublicQuoteDocument({
 
         {!embedded ? (
           <p className={s.note}>
-            {downloadOnLoad
+            {downloadError
+              ? `No pudimos generar el PDF automaticamente: ${downloadError}`
+              : downloadOnLoad
               ? "Estamos preparando el PDF para que puedas guardarlo desde el telefono."
               : "Aqui ves la propuesta completa lista para revisar, guardar o imprimir."}
           </p>
@@ -478,36 +487,37 @@ export function PublicQuoteDocument({
                   <header className={printStyles.pageHeader}>
                     <div className={printStyles.companyBlock}>
                       <div className={printStyles.companyLogoWrap}>
-                        {quote.organizationProfile.empresaLogoUrl ? (
+                        {shouldShowCompanyLogo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            alt={quote.organizationProfile.empresaNombre}
+                            alt={companyName}
                             className={printStyles.companyLogo}
                             loading="eager"
-                            src={quote.organizationProfile.empresaLogoUrl}
+                            onError={() => setFailedLogoUrl(companyLogoUrl)}
+                            src={companyLogoUrl ?? undefined}
                           />
                         ) : (
                           <div className={printStyles.companyLogoFallback}>
-                            {quote.organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
+                            {companyLogoFallbackLabel}
                           </div>
                         )}
                       </div>
 
                       <div className={printStyles.companyMeta}>
                         <strong className={printStyles.companyName}>
-                          {quote.organizationProfile.empresaNombre}
+                          {companyName}
                         </strong>
                         <div className={printStyles.companyAddress}>
-                          {hasCompanyAddress ? (
+                          {hasNormalizedCompanyAddress ? (
                             <>
-                              {companyAddressPrimary ? (
+                              {companyAddressPrimaryDisplay ? (
                                 <span className={printStyles.companyAddressPrimary}>
-                                  {companyAddressPrimary}
+                                  {companyAddressPrimaryDisplay}
                                 </span>
                               ) : null}
-                              {companyAddressSecondary ? (
+                              {companyAddressSecondaryClean ? (
                                 <span className={printStyles.companyAddressSecondary}>
-                                  {companyAddressSecondaryDisplay}
+                                  {companyAddressSecondaryClean}
                                 </span>
                               ) : null}
                             </>
@@ -552,6 +562,12 @@ export function PublicQuoteDocument({
                   </section>
 
                   <div className={printStyles.componentList}>
+                    {pagePlan.items.length === 0 ? (
+                      <p className={printStyles.conditionsText}>
+                        Esta cotizacion aun no tiene items cargados. Vuelve al detalle si
+                        necesitas completarla antes de compartir el PDF definitivo.
+                      </p>
+                    ) : null}
                     {pagePlan.items.map((item, itemIndex) => {
                       const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                       const presentation = itemPresentationMap.get(item.id);
@@ -659,20 +675,22 @@ export function PublicQuoteDocument({
 
                   {isLastPage ? (
                     <>
-                      {paymentTerms ? (
-                        <section className={printStyles.paymentBand}>
-                          <span className={printStyles.paymentLabel}>Forma de pago:</span>
-                          <span className={printStyles.paymentValue}>{paymentTerms}</span>
-                        </section>
-                      ) : null}
+                        {paymentTermsDisplay ? (
+                          <section className={printStyles.paymentBand}>
+                            <span className={printStyles.paymentLabel}>Forma de pago:</span>
+                            <span className={printStyles.paymentValue}>
+                              {paymentTermsDisplay}
+                            </span>
+                          </section>
+                        ) : null}
 
                       <section className={printStyles.summarySection}>
-                        <section className={printStyles.conditionsColumn}>
-                          <span className={printStyles.summaryLabel}>CONDICIONES</span>
-                          <p className={printStyles.conditionsText}>
-                            {quote.observaciones.trim() || "Sin observaciones adicionales."}
-                          </p>
-                        </section>
+                          <section className={printStyles.conditionsColumn}>
+                            <span className={printStyles.summaryLabel}>CONDICIONES</span>
+                            <p className={printStyles.conditionsText}>
+                              {resolveDocumentConditionsText(quote.observaciones)}
+                            </p>
+                          </section>
 
                         <aside className={printStyles.totalsColumn}>
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>

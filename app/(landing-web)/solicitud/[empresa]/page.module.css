@@ -25,6 +25,13 @@
   overflow-x: clip;
 }
 
+.root,
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
 .shell {
   width: min(100%, 1180px);
   margin: 0 auto;
@@ -35,9 +42,9 @@
 
 /* ========== HEADER ========== */
 .topBar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 4px 0;
 }
@@ -64,7 +71,6 @@
   min-width: 0;
   display: flex;
   justify-content: center;
-  flex: 1;
 }
 
 .topSlug,
@@ -74,6 +80,7 @@
 }
 
 .topSlug {
+  width: 100%;
   min-width: 0;
   color: #475569;
   font-size: 11px;
@@ -207,6 +214,7 @@
   letter-spacing: -0.02em;
   color: #ffffff;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .heroSubtitleMain {
@@ -386,6 +394,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
@@ -456,11 +466,13 @@
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 2px;
+  overflow-wrap: anywhere;
 }
 
 .featuredServiceInfo span {
   color: var(--text-soft);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .featuredServiceChevron {
@@ -565,11 +577,13 @@
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 4px;
+  overflow-wrap: anywhere;
 }
 
 .galleryCardOverlay span {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
+  overflow-wrap: anywhere;
 }
 
 /* ========== STEPS ========== */
@@ -1187,6 +1201,8 @@
   color: var(--text-main);
   font-size: 14px;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .testimonialPublicTop span {
@@ -1293,6 +1309,8 @@
   gap: 10px;
   color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .footerInfoItem svg {
@@ -1517,12 +1535,51 @@
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 640px) {
+  .topBar {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "back status"
+      "slug slug";
+    gap: 10px 12px;
+  }
+
+  .backButton {
+    grid-area: back;
+  }
+
+  .topCenter {
+    grid-area: slug;
+    justify-content: stretch;
+  }
+
+  .topSlug {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .topStatus {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .heroSection {
+    margin-top: 0;
+  }
+
+  .heroPanel {
+    border-radius: 22px;
+  }
+
   .heroContent {
     padding: 24px 16px;
   }
 
   .heroTitle {
     font-size: clamp(24px, 7vw, 32px);
+  }
+
+  .heroIdentityCopy strong {
+    font-size: 17px;
   }
 
   .sectionCard,
@@ -1553,6 +1610,7 @@
 
   .featuredServiceCard {
     padding: 12px;
+    align-items: flex-start;
   }
 
   .featuredServiceInfo strong {
@@ -1561,6 +1619,124 @@
 
   .galleryRail {
     grid-auto-columns: minmax(200px, 74%);
+  }
+
+  .footerActions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      12px
+      calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .topBar {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "back status"
+      "slug slug";
+    gap: 8px 10px;
+  }
+
+  .backButton {
+    grid-area: back;
+  }
+
+  .topCenter {
+    grid-area: slug;
+    justify-content: stretch;
+  }
+
+  .topSlug {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .topStatus {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .heroSection {
+    margin-top: 0;
+  }
+
+  .heroContent {
+    padding: 22px 14px 18px;
+  }
+
+  .heroTrustRow {
+    gap: 10px;
+  }
+
+  .sectionCard,
+  .formSection,
+  .testimonialSection,
+  .companyFooter {
+    padding: 18px 14px;
+    border-radius: 20px;
+  }
+
+  .sectionHeader {
+    align-items: flex-start;
+  }
+
+  .featuredServiceCard {
+    align-items: flex-start;
+  }
+
+  .galleryRail {
+    grid-auto-columns: minmax(0, 86%);
+  }
+
+  .testimonialPublicRail {
+    grid-auto-columns: minmax(0, 88%);
+  }
+
+  .workTypeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .optionalGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .phoneField {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .phonePrefix {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 0 12px;
+  }
+
+  .uploadCard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stickyBar {
+    gap: 8px;
+  }
+
+  .stickyPrimary {
+    min-width: 0;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .stickyPrimary span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

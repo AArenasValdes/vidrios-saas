@@ -5,6 +5,14 @@ import { LuFileText, LuLayers3, LuShieldCheck } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
+import {
+  buildDocumentCompanyName,
+  buildDocumentContactLine,
+  buildDocumentInitials,
+  formatDocumentCompanyPhoneNumber,
+  resolveDocumentConditionsText,
+  resolveDocumentPaymentTerms,
+} from "@/utils/cotizacion-document";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -215,18 +223,26 @@ function ClientField({
 export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
   const sheetViewportRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const [sheetPreviewScale, setSheetPreviewScale] = useState(1);
   const [sheetPreviewWidth, setSheetPreviewWidth] = useState(0);
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
+  const companyName = buildDocumentCompanyName(
+    quote.organizationProfile.empresaNombre
+  );
+  const companyLogoFallbackLabel = buildDocumentInitials(companyName);
+  const companyLogoUrl = quote.organizationProfile.empresaLogoUrl;
+  const shouldShowCompanyLogo =
+    Boolean(companyLogoUrl) && failedLogoUrl !== companyLogoUrl;
 
-  const companyAddressLine = [
+  const companyAddressLine = buildDocumentContactLine([
     quote.organizationProfile.empresaDireccion,
-    quote.organizationProfile.empresaTelefono,
+    formatDocumentCompanyPhoneNumber(quote.organizationProfile.empresaTelefono),
     quote.organizationProfile.empresaEmail,
-  ]
-    .filter(Boolean)
-    .join(" | ");
-  const paymentTerms = quote.organizationProfile.formaPago.trim();
+  ]);
+  const paymentTermsDisplay = resolveDocumentPaymentTerms(
+    quote.organizationProfile.formaPago
+  );
   const baseDate = quote.updatedAt ?? quote.createdAt ?? new Date().toISOString();
   const dueDate = formatDueDate(baseDate, quote.validez);
 
@@ -435,24 +451,25 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                     <header className={printStyles.pageHeader}>
                       <div className={printStyles.companyBlock}>
                         <div className={printStyles.companyLogoWrap}>
-                          {quote.organizationProfile.empresaLogoUrl ? (
+                          {shouldShowCompanyLogo ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              alt={quote.organizationProfile.empresaNombre}
+                              alt={companyName}
                               className={printStyles.companyLogo}
                               loading="eager"
-                              src={quote.organizationProfile.empresaLogoUrl}
+                              onError={() => setFailedLogoUrl(companyLogoUrl)}
+                              src={companyLogoUrl ?? undefined}
                             />
                           ) : (
                             <div className={printStyles.companyLogoFallback}>
-                              {quote.organizationProfile.empresaNombre.slice(0, 2).toUpperCase()}
+                              {companyLogoFallbackLabel}
                             </div>
                           )}
                         </div>
 
                         <div className={printStyles.companyMeta}>
                           <strong className={printStyles.companyName}>
-                            {quote.organizationProfile.empresaNombre}
+                            {companyName}
                           </strong>
                           <span className={printStyles.companyAddress}>
                             {companyAddressLine || "Perfil comercial aun no configurado"}
@@ -491,6 +508,12 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                     </section>
 
                     <div className={printStyles.componentList}>
+                      {pagePlan.items.length === 0 ? (
+                        <p className={printStyles.conditionsText}>
+                          Esta cotizacion aun no tiene items cargados. Vuelve al detalle si
+                          necesitas completarla antes de compartirla.
+                        </p>
+                      ) : null}
                       {pagePlan.items.map((item, itemIndex) => {
                         const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                         const presentation = itemPresentationMap.get(item.id);
@@ -600,10 +623,12 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
 
                     {isLastPage ? (
                       <>
-                        {paymentTerms ? (
+                        {paymentTermsDisplay ? (
                           <section className={printStyles.paymentBand}>
                             <span className={printStyles.paymentLabel}>Forma de pago:</span>
-                            <span className={printStyles.paymentValue}>{paymentTerms}</span>
+                            <span className={printStyles.paymentValue}>
+                              {paymentTermsDisplay}
+                            </span>
                           </section>
                         ) : null}
 
@@ -611,7 +636,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           <section className={printStyles.conditionsColumn}>
                             <span className={printStyles.summaryLabel}>CONDICIONES</span>
                             <p className={printStyles.conditionsText}>
-                              {quote.observaciones.trim() || "Sin observaciones adicionales."}
+                              {resolveDocumentConditionsText(quote.observaciones)}
                             </p>
                           </section>
 

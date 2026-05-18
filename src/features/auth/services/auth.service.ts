@@ -56,7 +56,10 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       };
 
       for (let attempt = 0; attempt <= bootstrapRetryCount; attempt += 1) {
-        const perfil = await repository.getUserProfile(user.email);
+        const perfil = await repository.getUserProfile({
+          authUserId: user.id,
+          email: user.email,
+        });
 
         lastState = {
           user,

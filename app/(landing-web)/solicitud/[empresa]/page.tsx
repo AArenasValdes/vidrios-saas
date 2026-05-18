@@ -58,33 +58,6 @@ type PageProps = {
   }>;
 };
 
-const PREVIEW_GALLERY = [
-  {
-    src: "/brand/screen2.png",
-    label: "Ventanas",
-    workTitle: "Ventana corredera",
-    workType: "Ventanas de aluminio",
-    workZone: "Trabajo a medida",
-    workBadge: "Instalado",
-  },
-  {
-    src: "/brand/screen.png",
-    label: "Shower",
-    workTitle: "Shower door templado",
-    workType: "Puertas de vidrio",
-    workZone: "",
-    workBadge: "Vidrio templado",
-  },
-  {
-    src: "/brand/landing-pdf.png",
-    label: "Terraza",
-    workTitle: "Cierre de terraza",
-    workType: "Cierres de terraza",
-    workZone: "",
-    workBadge: "A medida",
-  },
-] as const;
-
 const SERVICE_ICONS: Record<string, string> = {
   Ventanas: "window",
   Ventana: "window",
@@ -238,24 +211,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
       : Promise.resolve([]),
   ]);
 
-  const resolvedGallery =
-    galleryImages.length > 0
-      ? galleryImages
-      : showGallery
-        ? PREVIEW_GALLERY.map((item, index) => ({
-            id: `preview-${index}`,
-            organizationId: config.organizationId,
-            imageUrl: item.src,
-            label: item.label,
-            workTitle: item.workTitle,
-            workType: item.workType,
-            workZone: item.workZone,
-            workBadge: item.workBadge,
-            sortOrder: index,
-            isVisible: true,
-            creadoEn: null,
-          }))
-        : [];
+  const resolvedGallery = galleryImages;
 
   const approvedTestimonialsCount = approvedTestimonials.length;
   const averageRating = approvedTestimonialsCount

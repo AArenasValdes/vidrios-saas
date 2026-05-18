@@ -102,7 +102,7 @@ describe("whatsapp utils", () => {
     });
 
     expect(message).toContain(
-      "Hola, vengo desde su enlace de cotización. Quiero consultar por: shower door."
+      "Hola, vengo desde su enlace de cotizacion. Quiero consultar por: shower door."
     );
     expect(message).toContain("Mi nombre es Ana Soto.");
     expect(message).toContain("Tengo medidas aproximadas.");
@@ -115,6 +115,20 @@ describe("whatsapp utils", () => {
     });
 
     expect(url).toContain("https://wa.me/56982345678");
-    expect(url).toContain("vengo%20desde%20su%20enlace%20de%20cotizaci%C3%B3n");
+    expect(url).toContain("vengo%20desde%20su%20enlace%20de%20cotizacion");
+  });
+
+  it("debe manejar cotizaciones sin nombre de cliente ni obra sin romper el saludo", () => {
+    const message = buildCotizacionWhatsappMessage({
+      ...record,
+      clienteNombre: "   ",
+      obra: "   ",
+      validez: "",
+    });
+
+    expect(message).toContain("Hola,");
+    expect(message).not.toContain("Hola ,");
+    expect(message).toContain("Te enviamos tu cotizacion.");
+    expect(message).toContain("Vigencia: 15 dias");
   });
 });
