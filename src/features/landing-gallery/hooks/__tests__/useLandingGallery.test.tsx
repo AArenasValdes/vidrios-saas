@@ -38,6 +38,7 @@ const updateGalleryItem = jest.fn();
 const deleteGalleryItem = jest.fn();
 const reorderGalleryItems = jest.fn();
 const uploadGalleryImage = jest.fn();
+const revalidatePublicLanding = jest.fn();
 
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
@@ -51,6 +52,12 @@ jest.mock("@/features/landing-gallery/services/landing-gallery.service", () => (
     deleteGalleryItem: (...args: unknown[]) => deleteGalleryItem(...args),
     reorderGalleryItems: (...args: unknown[]) => reorderGalleryItems(...args),
     uploadGalleryImage: (...args: unknown[]) => uploadGalleryImage(...args),
+  },
+}));
+
+jest.mock("@/features/solicitudes/repositories/public-landing-cache.repository", () => ({
+  publicLandingCacheRepository: {
+    revalidate: (...args: unknown[]) => revalidatePublicLanding(...args),
   },
 }));
 
@@ -80,6 +87,7 @@ describe("useLandingGallery", () => {
     deleteGalleryItem.mockResolvedValue(undefined);
     reorderGalleryItems.mockResolvedValue(undefined);
     uploadGalleryImage.mockResolvedValue("https://cdn.example.com/uploaded.jpg");
+    revalidatePublicLanding.mockResolvedValue(true);
   });
 
   it("carga la galeria al montar", async () => {

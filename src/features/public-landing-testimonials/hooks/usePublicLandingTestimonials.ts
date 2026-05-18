@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
 import {
   publicLandingTestimonialService,
   PublicLandingTestimonialValidationError,
@@ -58,6 +59,7 @@ export function usePublicLandingTestimonials() {
     setTestimonials((current) =>
       current.map((item) => (item.id === updated.id ? updated : item))
     );
+    void publicLandingCacheRepository.revalidate().catch(() => false);
 
     return updated;
   }

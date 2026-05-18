@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { landingGalleryService } from "@/features/landing-gallery/services/landing-gallery.service";
+import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
 import type {
   LandingGalleryItem,
   ReorderLandingGalleryItemInput,
@@ -80,6 +81,7 @@ export function useLandingGallery() {
       });
 
       setGallery((current) => [...current, item]);
+      void publicLandingCacheRepository.revalidate().catch(() => false);
 
       return item;
     } catch (err) {
@@ -131,6 +133,7 @@ export function useLandingGallery() {
       setGallery((current) =>
         current.map((item) => (item.id === updated.id ? updated : item))
       );
+      void publicLandingCacheRepository.revalidate().catch(() => false);
 
       return updated;
     } catch (err) {
@@ -149,6 +152,7 @@ export function useLandingGallery() {
     try {
       await landingGalleryService.deleteGalleryItem(id, organizacionId);
       setGallery((current) => current.filter((item) => item.id !== id));
+      void publicLandingCacheRepository.revalidate().catch(() => false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo eliminar la foto");
       throw err;
@@ -174,6 +178,7 @@ export function useLandingGallery() {
           }))
           .sort((a, b) => a.sortOrder - b.sortOrder);
       });
+      void publicLandingCacheRepository.revalidate().catch(() => false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo reordenar la galeria");
       throw err;

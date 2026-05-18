@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { organizationProfileService } from "@/features/organization-profile/services/organization-profile.service";
+import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
 import type {
   OrganizationProfile,
   UpdateOrganizationProfileInput,
@@ -306,6 +307,7 @@ export function useOrganizationProfile() {
         profile: nextProfile,
       });
       persistOrganizationProfile(String(organizacionId), nextProfile);
+      void publicLandingCacheRepository.revalidate().catch(() => false);
 
       return nextProfile;
     } finally {

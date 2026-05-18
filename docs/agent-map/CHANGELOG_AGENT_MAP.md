@@ -348,3 +348,32 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - `public/sw.js`
   - `src/components/pwa/register-service-worker.tsx`
   - `supabase/migrations/20260518153000_fix_organization_assets_storage_policies.sql`
+
+### 2026-05-18 - Invalidacion inmediata de cache en landing publica
+
+- Se detecto que la landing publica podia mostrar datos viejos aunque `organization_profile` ya estuviera actualizado en base.
+- Causa real:
+  - la ruta publica `/solicitud/[empresa]` lee configuracion, galeria y valoraciones desde `unstable_cache`
+  - el guardado en `Empresa`, `Pagina de venta`, galeria y valoraciones no invalidaba ese cache
+  - resultado: la base quedaba correcta, pero la landing podia seguir mostrando nombre, slug o contenido anterior por hasta 5 minutos
+- Se agrego invalidacion server-side segura mediante `/api/public-landing/revalidate`:
+  - valida bearer del usuario autenticado
+  - resuelve su `organization_id`
+  - obtiene el `solicitud_publica_slug` vigente
+  - ejecuta `revalidateTag` y `revalidatePath` para refrescar la landing al instante
+- Se conecto esta invalidacion a:
+  - `useOrganizationProfile.saveProfile`
+  - `useLandingGallery` en crear/editar/eliminar/reordenar
+  - `usePublicLandingTestimonials.updateStatus`
+- Se agregaron tags explicitos al cache publico de:
+  - configuracion de solicitud publica
+  - galeria publica
+  - valoraciones publicas
+- Archivos tocados:
+  - `src/features/solicitudes/services/solicitudes-public-cache.server.ts`
+  - `src/features/solicitudes/services/solicitudes-public-cache-revalidation.server.ts`
+  - `app/api/public-landing/revalidate/route.ts`
+  - `src/features/solicitudes/repositories/public-landing-cache.repository.ts`
+  - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
+  - `src/features/landing-gallery/hooks/useLandingGallery.ts`
+  - `src/features/public-landing-testimonials/hooks/usePublicLandingTestimonials.ts`

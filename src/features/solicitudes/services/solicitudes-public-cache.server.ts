@@ -9,6 +9,9 @@ import { solicitudesContactoService } from "@/features/solicitudes/services/soli
 const PUBLIC_REQUEST_CONFIG_REVALIDATE_SECONDS = 300;
 const PUBLIC_GALLERY_REVALIDATE_SECONDS = 300;
 const PUBLIC_TESTIMONIALS_REVALIDATE_SECONDS = 300;
+export const PUBLIC_REQUEST_CONFIG_CACHE_TAG = "solicitudes-public-request-config";
+export const PUBLIC_GALLERY_CACHE_TAG = "solicitudes-public-gallery";
+export const PUBLIC_TESTIMONIALS_CACHE_TAG = "solicitudes-public-testimonials";
 
 const getCachedPublicRequestConfigBySlug = unstable_cache(
   async (slug: string) => {
@@ -17,6 +20,7 @@ const getCachedPublicRequestConfigBySlug = unstable_cache(
   ["solicitudes-public-request-config"],
   {
     revalidate: PUBLIC_REQUEST_CONFIG_REVALIDATE_SECONDS,
+    tags: [PUBLIC_REQUEST_CONFIG_CACHE_TAG],
   }
 );
 
@@ -27,6 +31,7 @@ const getCachedPublicGalleryItems = unstable_cache(
   ["solicitudes-public-gallery"],
   {
     revalidate: PUBLIC_GALLERY_REVALIDATE_SECONDS,
+    tags: [PUBLIC_GALLERY_CACHE_TAG],
   }
 );
 
@@ -37,6 +42,7 @@ const getCachedApprovedTestimonials = unstable_cache(
   ["solicitudes-public-testimonials"],
   {
     revalidate: PUBLIC_TESTIMONIALS_REVALIDATE_SECONDS,
+    tags: [PUBLIC_TESTIMONIALS_CACHE_TAG],
   }
 );
 
