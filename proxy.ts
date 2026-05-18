@@ -25,7 +25,19 @@ const hasSupabaseSessionCookie = (request: NextRequest) => {
   });
 };
 
+const getCanonicalHost = (hostname: string) => {
+  return hostname === "ventorap.cl" ? "www.ventorap.cl" : null;
+};
+
 export async function proxy(request: NextRequest) {
+  const canonicalHost = getCanonicalHost(request.nextUrl.hostname);
+
+  if (canonicalHost) {
+    const url = request.nextUrl.clone();
+    url.hostname = canonicalHost;
+    return NextResponse.redirect(url, 308);
+  }
+
   const { pathname } = request.nextUrl;
   const isProtected = isProtectedPath(pathname);
   const isLogin = pathname === "/login";
@@ -88,6 +100,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/api/auth/profile",
     "/dashboard/:path*",
     "/clientes/:path*",
     "/cotizaciones/:path*",

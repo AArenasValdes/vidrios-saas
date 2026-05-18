@@ -21,6 +21,17 @@ describe("proxy", () => {
     jest.clearAllMocks();
   });
 
+  it("redirige ventorap.cl hacia www antes de resolver auth", async () => {
+    const request = new NextRequest("https://ventorap.cl/api/auth/profile?x=1");
+    const response = await proxy(request);
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://www.ventorap.cl/api/auth/profile?x=1"
+    );
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
   it("redirige solicitudes privadas no autenticadas al login con next", async () => {
     (createServerClient as jest.Mock).mockReturnValue(createSupabaseMock(null));
 
