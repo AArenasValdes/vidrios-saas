@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowRight, Lock, Mail } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -52,12 +52,37 @@ function waitForLoginTimeout() {
 
 export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
   const { signIn } = useAuth();
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [mantenerSesion, setMantenerSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isClientReady, setIsClientReady] = useState(false);
+
+  useEffect(() => {
+    setIsClientReady(true);
+  }, []);
+
+  const triggerControlledSubmit = () => {
+    if (!isClientReady || cargando) {
+      return;
+    }
+
+    formRef.current?.requestSubmit();
+  };
+
+  const handleCredentialKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (event.key !== "Enter" || !isClientReady || cargando) {
+      return;
+    }
+
+    event.preventDefault();
+    triggerControlledSubmit();
+  };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -128,7 +153,14 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
               <p className={s.formSubtitle}>{copy.subtitle}</p>
             </header>
 
-            <form className={s.form} onSubmit={onSubmit} noValidate>
+            <form
+              ref={formRef}
+              className={s.form}
+              onSubmit={onSubmit}
+              noValidate
+              method="post"
+              action="javascript:void(0)"
+            >
               <div className={s.field}>
                 <label className={s.fieldLabel} htmlFor="correo">
                   {copy.emailLabel}
@@ -148,6 +180,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                     }}
                     autoComplete="email"
                     inputMode="email"
+                    onKeyDown={handleCredentialKeyDown}
                     required
                   />
                 </div>
@@ -171,6 +204,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                       setError(null);
                     }}
                     autoComplete="current-password"
+                    onKeyDown={handleCredentialKeyDown}
                     required
                   />
                 </div>
@@ -205,7 +239,12 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                 </div>
               )}
 
-              <button type="submit" className={s.primaryButton} disabled={cargando}>
+              <button
+                type="button"
+                className={s.primaryButton}
+                disabled={cargando}
+                onClick={triggerControlledSubmit}
+              >
                 <span className={s.buttonContent}>
                   {cargando ? <span className={s.spinner} aria-hidden /> : null}
                   {cargando ? copy.submitting : copy.submit}
