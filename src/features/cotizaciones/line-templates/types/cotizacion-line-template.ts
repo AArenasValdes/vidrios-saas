@@ -8,6 +8,7 @@ export type CotizacionLineTemplate = {
   organizationId: EntityId;
   nombre: string;
   material: CotizacionLineTemplateMaterial;
+  vidrioPrincipalRecomendado: string | null;
   precioM2Sugerido: number;
   minimoCobrable: number;
   redondeoPrecio: number;
@@ -22,6 +23,7 @@ export type CreateCotizacionLineTemplateInput = {
   organizationId: EntityId;
   nombre: string;
   material: CotizacionLineTemplateMaterial;
+  vidrioPrincipalRecomendado?: string | null;
   precioM2Sugerido: number;
   minimoCobrable?: number;
   redondeoPrecio?: number;
@@ -32,6 +34,7 @@ export type CreateCotizacionLineTemplateInput = {
 export type UpdateCotizacionLineTemplateInput = {
   nombre?: string;
   material?: CotizacionLineTemplateMaterial;
+  vidrioPrincipalRecomendado?: string | null;
   precioM2Sugerido?: number;
   minimoCobrable?: number;
   redondeoPrecio?: number;

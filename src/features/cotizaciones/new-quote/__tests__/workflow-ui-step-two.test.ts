@@ -165,6 +165,7 @@ describe("workflow-ui paso 2", () => {
         id: "tpl-new",
         nombre: "Serie 25",
         material: "Aluminio",
+        vidrioPrincipalRecomendado: "Templado 8mm",
         precioM2Sugerido: 150000,
         minimoCobrable: 95000,
         redondeoPrecio: 5000,
@@ -173,6 +174,7 @@ describe("workflow-ui paso 2", () => {
 
     expect(actualizado.lineTemplateId).toBe("tpl-new");
     expect(actualizado.referencia).toBe("Serie 25");
+    expect(actualizado.vidrio).toBe("Templado 8mm");
     expect(actualizado.costoProveedorUnitario).toBe("160000");
     expect(actualizado.precioAjustadoManual).toBe(true);
     expect(actualizado.origenPrecio).toBe("manual");

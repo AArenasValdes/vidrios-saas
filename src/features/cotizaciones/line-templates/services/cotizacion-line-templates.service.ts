@@ -53,12 +53,18 @@ function normalizeTemplateMaterial(value: string | null | undefined): Cotizacion
   throw new Error("Debes elegir si la linea es de Aluminio o PVC.");
 }
 
+function normalizeRecommendedGlass(value: string | null | undefined) {
+  const normalized = normalizeText(value ?? "");
+  return normalized ? normalized.slice(0, 120) : null;
+}
+
 function normalizeCreateInput(
   input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
 ) {
   return {
     nombre: normalizeTemplateName(input.nombre),
     material: normalizeTemplateMaterial(input.material),
+    vidrioPrincipalRecomendado: normalizeRecommendedGlass(input.vidrioPrincipalRecomendado),
     precioM2Sugerido: normalizeMoney(input.precioM2Sugerido),
     minimoCobrable: normalizeMoney(input.minimoCobrable ?? 0),
     redondeoPrecio: normalizeRound(input.redondeoPrecio),
@@ -78,6 +84,11 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
   }
   if (input.material !== undefined) {
     payload.material = normalizeTemplateMaterial(input.material);
+  }
+  if (input.vidrioPrincipalRecomendado !== undefined) {
+    payload.vidrioPrincipalRecomendado = normalizeRecommendedGlass(
+      input.vidrioPrincipalRecomendado
+    );
   }
   if (input.minimoCobrable !== undefined) {
     payload.minimoCobrable = normalizeMoney(input.minimoCobrable);
@@ -158,6 +169,7 @@ export function createCotizacionLineTemplatesService(
         nombre: duplicateName,
         precioM2Sugerido: source.precioM2Sugerido,
         material: source.material,
+        vidrioPrincipalRecomendado: source.vidrioPrincipalRecomendado,
         minimoCobrable: source.minimoCobrable,
         redondeoPrecio: source.redondeoPrecio,
         isActive: source.isActive,

@@ -13,6 +13,9 @@ type Props = Pick<
   | "isMobileViewport"
   | "isGlassPanelOpen"
   | "glassQuery"
+  | "recommendedGlassOptions"
+  | "recommendedGlassReason"
+  | "lineTemplateRecommendedGlass"
   | "filteredGlassGroups"
   | "onToggleGlassPanel"
   | "onGlassQueryChange"
@@ -24,6 +27,9 @@ export function PasoDosFormularioBloqueVidrio({
   isMobileViewport,
   isGlassPanelOpen,
   glassQuery,
+  recommendedGlassOptions,
+  recommendedGlassReason,
+  lineTemplateRecommendedGlass,
   filteredGlassGroups,
   onToggleGlassPanel,
   onGlassQueryChange,
@@ -69,6 +75,35 @@ export function PasoDosFormularioBloqueVidrio({
                   placeholder="Buscar por vidrio o categoria"
                 />
               </div>
+
+              {recommendedGlassOptions.length > 0 ? (
+                <div className={s.stepTwoMobileGlassRecommendedBox}>
+                  <div className={s.stepTwoMobileGlassRecommendedHeader}>
+                    <strong>
+                      {lineTemplateRecommendedGlass
+                        ? "Recomendado para esta linea"
+                        : "Vidrios sugeridos"}
+                    </strong>
+                    <span>{recommendedGlassReason}</span>
+                  </div>
+                  <div className={s.glassChipGrid}>
+                    {recommendedGlassOptions.map((option) => {
+                      const isActive = componentForm.vidrio === option;
+
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`${s.glassChip} ${isActive ? s.glassChipActive : ""}`}
+                          onClick={() => onGlassSelect(option)}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
               <div className={s.glassGroups}>
                 {filteredGlassGroups.length === 0 ? (

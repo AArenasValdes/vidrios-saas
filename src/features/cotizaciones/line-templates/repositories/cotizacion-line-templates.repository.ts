@@ -16,6 +16,7 @@ type CotizacionLineTemplateRow = {
   organization_id: EntityId;
   nombre: string;
   material: CotizacionLineTemplateMaterial | null;
+  vidrio_principal_recomendado: string | null;
   precio_m2_sugerido: number | string;
   minimo_cobrable: number | string | null;
   redondeo_precio: number | string | null;
@@ -28,20 +29,29 @@ type CotizacionLineTemplateRow = {
 
 const TABLE_NAME = "cotizacion_line_templates";
 const SELECT_FIELDS =
+  "id, organization_id, nombre, material, vidrio_principal_recomendado, precio_m2_sugerido, minimo_cobrable, redondeo_precio, is_active, sort_order, creado_en, actualizado_en, eliminado_en";
+const SELECT_FIELDS_WITHOUT_RECOMMENDED_GLASS =
   "id, organization_id, nombre, material, precio_m2_sugerido, minimo_cobrable, redondeo_precio, is_active, sort_order, creado_en, actualizado_en, eliminado_en";
 const LEGACY_SELECT_FIELDS =
   "id, organization_id, nombre, precio_m2_sugerido, minimo_cobrable, redondeo_precio, is_active, sort_order, creado_en, actualizado_en, eliminado_en";
 
-function isMissingMaterialColumnError(error: unknown) {
+function isMissingColumnError(error: unknown, column: string) {
   if (!error || typeof error !== "object") return false;
   const message = "message" in error ? String(error.message ?? "") : "";
-  return message.toLowerCase().includes("material");
+  return message.toLowerCase().includes(column.toLowerCase());
 }
 
 function mapLegacyRow(
-  row: Omit<CotizacionLineTemplateRow, "material"> & { material?: CotizacionLineTemplateMaterial | null }
+  row: Omit<CotizacionLineTemplateRow, "material" | "vidrio_principal_recomendado"> & {
+    material?: CotizacionLineTemplateMaterial | null;
+    vidrio_principal_recomendado?: string | null;
+  }
 ): CotizacionLineTemplate {
-  return mapRow({ ...row, material: row.material ?? "Aluminio" });
+  return mapRow({
+    ...row,
+    material: row.material ?? "Aluminio",
+    vidrio_principal_recomendado: row.vidrio_principal_recomendado ?? null,
+  });
 }
 
 function mapRow(row: CotizacionLineTemplateRow): CotizacionLineTemplate {
@@ -50,6 +60,7 @@ function mapRow(row: CotizacionLineTemplateRow): CotizacionLineTemplate {
     organizationId: row.organization_id,
     nombre: row.nombre,
     material: row.material === "PVC" ? "PVC" : "Aluminio",
+    vidrioPrincipalRecomendado: row.vidrio_principal_recomendado?.trim() || null,
     precioM2Sugerido: Number(row.precio_m2_sugerido),
     minimoCobrable: Number(row.minimo_cobrable ?? 0),
     redondeoPrecio: Number(row.redondeo_precio ?? 1000),
@@ -83,7 +94,35 @@ export function createCotizacionLineTemplatesRepository(
       const { data, error } = await query;
 
       if (error) {
-        if (!isMissingMaterialColumnError(error)) {
+        if (isMissingColumnError(error, "vidrio_principal_recomendado")) {
+          let fallbackQuery = supabase
+            .from(TABLE_NAME)
+            .select(SELECT_FIELDS_WITHOUT_RECOMMENDED_GLASS)
+            .eq("organization_id", organizationId)
+            .is("eliminado_en", null)
+            .order("sort_order", { ascending: true })
+            .order("nombre", { ascending: true });
+
+          if (options?.activeOnly) {
+            fallbackQuery = fallbackQuery.eq("is_active", true);
+          }
+
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+          if (fallbackError) {
+            throw fallbackError;
+          }
+
+          return (
+            fallbackData as Array<
+              Omit<CotizacionLineTemplateRow, "vidrio_principal_recomendado"> & {
+                vidrio_principal_recomendado?: string | null;
+              }
+            >
+          ).map(mapLegacyRow);
+        }
+
+        if (!isMissingColumnError(error, "material")) {
           throw error;
         }
 
@@ -107,7 +146,10 @@ export function createCotizacionLineTemplatesRepository(
 
         return (
           legacyData as Array<
-            Omit<CotizacionLineTemplateRow, "material"> & { material?: CotizacionLineTemplateMaterial | null }
+            Omit<CotizacionLineTemplateRow, "material" | "vidrio_principal_recomendado"> & {
+              material?: CotizacionLineTemplateMaterial | null;
+              vidrio_principal_recomendado?: string | null;
+            }
           >
         ).map(mapLegacyRow);
       }
@@ -125,7 +167,29 @@ export function createCotizacionLineTemplatesRepository(
         .maybeSingle();
 
       if (error) {
-        if (!isMissingMaterialColumnError(error)) {
+        if (isMissingColumnError(error, "vidrio_principal_recomendado")) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from(TABLE_NAME)
+            .select(SELECT_FIELDS_WITHOUT_RECOMMENDED_GLASS)
+            .eq("id", id)
+            .eq("organization_id", organizationId)
+            .is("eliminado_en", null)
+            .maybeSingle();
+
+          if (fallbackError) {
+            throw fallbackError;
+          }
+
+          return fallbackData
+            ? mapLegacyRow(
+                fallbackData as Omit<CotizacionLineTemplateRow, "vidrio_principal_recomendado"> & {
+                  vidrio_principal_recomendado?: string | null;
+                }
+              )
+            : null;
+        }
+
+        if (!isMissingColumnError(error, "material")) {
           throw error;
         }
 
@@ -143,8 +207,9 @@ export function createCotizacionLineTemplatesRepository(
 
         return legacyData
           ? mapLegacyRow(
-              legacyData as Omit<CotizacionLineTemplateRow, "material"> & {
+              legacyData as Omit<CotizacionLineTemplateRow, "material" | "vidrio_principal_recomendado"> & {
                 material?: CotizacionLineTemplateMaterial | null;
+                vidrio_principal_recomendado?: string | null;
               }
             )
           : null;
@@ -160,6 +225,7 @@ export function createCotizacionLineTemplatesRepository(
           organization_id: input.organizationId,
           nombre: input.nombre,
           material: input.material,
+          vidrio_principal_recomendado: input.vidrioPrincipalRecomendado ?? null,
           precio_m2_sugerido: input.precioM2Sugerido,
           minimo_cobrable: input.minimoCobrable ?? 0,
           redondeo_precio: input.redondeoPrecio ?? 1000,
@@ -170,8 +236,13 @@ export function createCotizacionLineTemplatesRepository(
         .single();
 
       if (error) {
-        if (isMissingMaterialColumnError(error)) {
-          throw new Error("Falta aplicar la migración nueva de líneas y precios para guardar material.");
+        if (isMissingColumnError(error, "material")) {
+          throw new Error("Falta aplicar la migracion nueva de lineas y precios para guardar material.");
+        }
+        if (isMissingColumnError(error, "vidrio_principal_recomendado")) {
+          throw new Error(
+            "Falta aplicar la migracion nueva de lineas y precios para guardar el vidrio recomendado."
+          );
         }
         throw error;
       }
@@ -190,6 +261,9 @@ export function createCotizacionLineTemplatesRepository(
 
       if (input.nombre !== undefined) payload.nombre = input.nombre;
       if (input.material !== undefined) payload.material = input.material;
+      if (input.vidrioPrincipalRecomendado !== undefined) {
+        payload.vidrio_principal_recomendado = input.vidrioPrincipalRecomendado;
+      }
       if (input.precioM2Sugerido !== undefined) {
         payload.precio_m2_sugerido = input.precioM2Sugerido;
       }
@@ -212,8 +286,13 @@ export function createCotizacionLineTemplatesRepository(
         .single();
 
       if (error) {
-        if (isMissingMaterialColumnError(error)) {
-          throw new Error("Falta aplicar la migración nueva de líneas y precios para editar material.");
+        if (isMissingColumnError(error, "material")) {
+          throw new Error("Falta aplicar la migracion nueva de lineas y precios para editar material.");
+        }
+        if (isMissingColumnError(error, "vidrio_principal_recomendado")) {
+          throw new Error(
+            "Falta aplicar la migracion nueva de lineas y precios para editar el vidrio recomendado."
+          );
         }
         throw error;
       }

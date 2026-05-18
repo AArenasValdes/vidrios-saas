@@ -3,11 +3,13 @@ import { normalizeBrokenText } from "@/utils/repair-broken-text";
 export type GlassRecommendationContext = {
   subtipo: string;
   sistema: string;
+  lineTemplateRecommendedGlass?: string | null;
 };
 
 export type GlassRecommendationResult = {
   recommendedOptions: string[];
   reason: string;
+  lineTemplateRecommendedOption: string | null;
 };
 
 type GlassRecommendationRule = {
@@ -146,17 +148,31 @@ export function getGlassRecommendations(
     availableOptions,
     matchingRule?.recommendations ?? FALLBACK_RECOMMENDATIONS
   );
+  const lineTemplateRecommendedOption = context.lineTemplateRecommendedGlass
+    ? resolveRecommendedOptions(availableOptions, [context.lineTemplateRecommendedGlass])[0] ?? null
+    : null;
+  const mergedRecommendations = Array.from(
+    new Set(
+      [lineTemplateRecommendedOption, ...recommendedOptions].filter(
+        (option): option is string => Boolean(option)
+      )
+    )
+  );
 
-  if (recommendedOptions.length > 0) {
+  if (mergedRecommendations.length > 0) {
     return {
-      recommendedOptions,
-      reason: matchingRule?.reason ?? "Opciones frecuentes para partir rapido.",
+      recommendedOptions: mergedRecommendations,
+      reason: lineTemplateRecommendedOption
+        ? "Recomendado para esta linea. Igual puedes cambiarlo."
+        : matchingRule?.reason ?? "Opciones frecuentes para partir rapido.",
+      lineTemplateRecommendedOption,
     };
   }
 
   return {
     recommendedOptions: availableOptions.slice(0, 3),
     reason: "Opciones frecuentes para partir rapido.",
+    lineTemplateRecommendedOption,
   };
 }
 

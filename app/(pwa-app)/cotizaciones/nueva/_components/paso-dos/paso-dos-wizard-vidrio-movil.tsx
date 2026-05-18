@@ -42,7 +42,9 @@ export function PasoDosWizardVidrioMovil({
         <div className={s.stepTwoMobileBlockHeaderInline}>
           <div>
             <div className={s.stepTwoMobileBlockLabel}>Cristal / Vidrio</div>
-            <p className={s.stepTwoMobileGlassIntro}>Solo sugeridos aqui. Catalogo completo en cambiar.</p>
+            <p className={s.stepTwoMobileGlassIntro}>
+              {recommendedReason}
+            </p>
           </div>
           <button
             className={s.stepTwoMobileSecondaryLink}

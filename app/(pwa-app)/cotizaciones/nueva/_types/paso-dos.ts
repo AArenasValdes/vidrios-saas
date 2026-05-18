@@ -37,6 +37,9 @@ export type PasoDosFormularioComponenteProps = {
   isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
+  recommendedGlassOptions: string[];
+  recommendedGlassReason: string;
+  lineTemplateRecommendedGlass: string | null;
   filteredGlassGroups: Array<{
     grupo: string;
     prefix: string;

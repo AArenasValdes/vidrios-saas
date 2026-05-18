@@ -14,7 +14,11 @@ import {
   LuX,
 } from "react-icons/lu";
 
-import { formatCurrencyInput } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  buildGlassValue,
+  formatCurrencyInput,
+  GLASS_OPTIONS,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type {
   CotizacionLineTemplate,
@@ -27,6 +31,7 @@ import s from "./lineas-precios-page-client.module.css";
 type LineTemplateFormDraft = {
   nombre: string;
   material: CotizacionLineTemplateMaterial | "";
+  vidrioPrincipalRecomendado: string;
   precioM2Sugerido: string;
   minimoCobrable: string;
   redondeoPrecio: string;
@@ -46,11 +51,15 @@ const ROUNDING_OPTIONS = [
   { value: "5000", label: "Redondear a $5.000" },
   { value: "10000", label: "Redondear a $10.000" },
 ] as const;
+const GLASS_SELECT_OPTIONS = GLASS_OPTIONS.flatMap((group) =>
+  group.items.map((item) => buildGlassValue(group.prefix, item))
+);
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
   return {
     nombre: template?.nombre ?? "",
     material: template?.material ?? "",
+    vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
     precioM2Sugerido:
       template && template.precioM2Sugerido > 0 ? String(template.precioM2Sugerido) : "",
     minimoCobrable:
@@ -186,6 +195,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     const payload = {
       nombre: draft.nombre,
       material: draft.material,
+      vidrioPrincipalRecomendado: draft.vidrioPrincipalRecomendado || null,
       precioM2Sugerido: pricePerM2,
       minimoCobrable: minimum,
       redondeoPrecio: Number(draft.redondeoPrecio || "1000") || 1000,
@@ -452,6 +462,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
                 <div className={s.cardDivider} />
 
+                {template.vidrioPrincipalRecomendado ? (
+                  <span className={s.roundingMeta}>
+                    Vidrio habitual: {template.vidrioPrincipalRecomendado}
+                  </span>
+                ) : null}
+
                 <div className={s.cardBottom}>
                   <span className={s.roundingMeta}>
                     Redondeo: {buildRoundingLabel(template.redondeoPrecio)}
@@ -581,6 +597,27 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className={s.fieldBlock}>
+                <span className={s.fieldLabel}>Vidrio usado normalmente</span>
+                <select
+                  className={s.selectInput}
+                  value={draft.vidrioPrincipalRecomendado}
+                  onChange={(event) =>
+                    handleDraftChange("vidrioPrincipalRecomendado", event.target.value)
+                  }
+                >
+                  <option value="">Sin sugerencia fija</option>
+                  {GLASS_SELECT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <p className={s.fieldHint}>
+                  Este vidrio aparecera primero al cotizar con esta linea.
+                </p>
               </label>
 
               <div className={s.activeCard}>

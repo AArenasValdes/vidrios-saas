@@ -112,7 +112,13 @@ export function applyLineTemplateToGrupoDraft(
   draft: PasoDosGrupoDraft,
   template: Pick<
     CotizacionLineTemplate,
-    "id" | "nombre" | "material" | "precioM2Sugerido" | "minimoCobrable" | "redondeoPrecio"
+    | "id"
+    | "nombre"
+    | "material"
+    | "vidrioPrincipalRecomendado"
+    | "precioM2Sugerido"
+    | "minimoCobrable"
+    | "redondeoPrecio"
   >
 ): PasoDosGrupoDraft {
   return syncDraftTemplatePricing({
@@ -120,6 +126,7 @@ export function applyLineTemplateToGrupoDraft(
     material: template.material,
     lineTemplateId: String(template.id),
     referencia: template.nombre,
+    vidrio: template.vidrioPrincipalRecomendado?.trim() || draft.vidrio,
     pricingMode: "precio_directo",
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
     minimoCobrable: String(Math.round(template.minimoCobrable)),

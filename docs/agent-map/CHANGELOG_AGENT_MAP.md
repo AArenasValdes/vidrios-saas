@@ -4,6 +4,22 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-17 - Vidrio recomendado por linea comercial
+
+### Resumen
+
+Se agrego soporte para sugerir un vidrio habitual por linea comercial sin bloquear otros vidrios ni abrir reglas tecnicas duras. La linea ahora puede guardar `vidrio_principal_recomendado` y, al cotizar, ese vidrio aparece primero como recomendado mientras el usuario mantiene libertad total para cambiarlo.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260517164000_cotizacion_line_templates_recommended_glass.sql` | Nueva columna opcional `vidrio_principal_recomendado` en `cotizacion_line_templates` |
+| `src/features/cotizaciones/line-templates/` | Tipos, servicio y repository alineados con vidrio recomendado por linea |
+| `src/features/cotizaciones/new-quote/workflow-ui.ts` | Aplicar linea ahora puede precargar vidrio sugerido |
+| `app/(pwa-app)/cotizaciones/nueva/` | Selector de vidrio prioriza el recomendado de la linea antes de las sugerencias generales |
+| `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx` | Configuracion de linea ahora permite elegir vidrio usado normalmente |
+
 ## 2026-05-17 - Hardening multi-tenant en Supabase y PDFs privados
 
 ### Resumen

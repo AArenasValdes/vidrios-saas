@@ -14,8 +14,10 @@ import {
   type QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
 
 import type {
   PasoDosFormularioComponenteProps,
@@ -96,6 +98,29 @@ export function usePasoDosPresentacion(
   propsPasoDosPanel: PasoDosPanelComponentesProps;
 } {
   const filteredGlassGroups = useMemo(() => filterGlassOptions(params.glassQuery), [params.glassQuery]);
+  const selectedLineTemplate = useMemo(
+    () =>
+      params.activeLineTemplates.find(
+        (template) => String(template.id) === params.componentForm.lineTemplateId
+      ) ?? null,
+    [params.activeLineTemplates, params.componentForm.lineTemplateId]
+  );
+  const glassRecommendation = useMemo(
+    () =>
+      getGlassRecommendations(
+        {
+          subtipo: params.componentForm.tipo,
+          sistema: params.componentForm.referencia,
+          lineTemplateRecommendedGlass: selectedLineTemplate?.vidrioPrincipalRecomendado ?? null,
+        },
+        getGlassOptionsForSubtype(params.componentForm.tipo)
+      ),
+    [
+      params.componentForm.referencia,
+      params.componentForm.tipo,
+      selectedLineTemplate?.vidrioPrincipalRecomendado,
+    ]
+  );
   const linePricingSummary = useMemo(
     () => buildComponentFormLinePricingSummary(params.componentForm),
     [params.componentForm]
@@ -162,6 +187,9 @@ export function usePasoDosPresentacion(
       isSavingQuickPriceTemplate: params.isSavingQuickPriceTemplate,
       isGlassPanelOpen: params.isGlassPanelOpen,
       glassQuery: params.glassQuery,
+      recommendedGlassOptions: glassRecommendation.recommendedOptions,
+      recommendedGlassReason: glassRecommendation.reason,
+      lineTemplateRecommendedGlass: glassRecommendation.lineTemplateRecommendedOption,
       filteredGlassGroups,
       onPricingModeSelection: params.onPricingModeSelection,
       onComponentChange: params.onComponentChange,
@@ -180,6 +208,9 @@ export function usePasoDosPresentacion(
       batchPreviewTypeLabel,
       currentComponentPreviewSvg,
       filteredGlassGroups,
+      glassRecommendation.lineTemplateRecommendedOption,
+      glassRecommendation.reason,
+      glassRecommendation.recommendedOptions,
       guardarBorradorYSalir,
       hiddenBatchPreviewCount,
       linePricingSummary,

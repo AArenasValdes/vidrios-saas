@@ -230,6 +230,7 @@ export function PasoDosWizardMovil({
     pricingMode,
   });
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
+  const visibleLineTemplates = wizard.visibleLineTemplates ?? [];
 
   const orderedGlassOptions = useMemo(
     () => sortGlassOptions(wizard.glassOptions),
@@ -242,10 +243,14 @@ export function PasoDosWizardMovil({
         {
           subtipo: wizard.draft.subtipo,
           sistema: wizard.draft.sistema,
+          lineTemplateRecommendedGlass:
+            visibleLineTemplates.find(
+              (template) => String(template.id) === wizard.draft.lineTemplateId
+            )?.vidrioPrincipalRecomendado ?? null,
         },
         orderedGlassOptions
       ),
-    [orderedGlassOptions, wizard.draft.sistema, wizard.draft.subtipo]
+    [orderedGlassOptions, visibleLineTemplates, wizard.draft.lineTemplateId, wizard.draft.sistema, wizard.draft.subtipo]
   );
 
   const searchResults = useMemo(
@@ -402,7 +407,7 @@ export function PasoDosWizardMovil({
                     isRecommendedGlass(option, glassRecommendation.recommendedOptions)
                   }
                   linePricingSummary={wizard.linePricingSummary}
-                  lineTemplateOptions={wizard.visibleLineTemplates}
+                  lineTemplateOptions={visibleLineTemplates}
                   onAltoChange={wizard.onAltoChange}
                   onAnchoChange={wizard.onAnchoChange}
                   onMargenChange={wizard.onMargenChange}

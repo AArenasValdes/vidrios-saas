@@ -688,7 +688,13 @@ export function applyLineTemplateToComponentForm(
   form: ComponentFormState,
   template: Pick<
     CotizacionLineTemplate,
-    "id" | "nombre" | "material" | "precioM2Sugerido" | "minimoCobrable" | "redondeoPrecio"
+    | "id"
+    | "nombre"
+    | "material"
+    | "vidrioPrincipalRecomendado"
+    | "precioM2Sugerido"
+    | "minimoCobrable"
+    | "redondeoPrecio"
   >
 ) {
   const preserveManualPrice = form.precioAjustadoManual;
@@ -699,6 +705,7 @@ export function applyLineTemplateToComponentForm(
       material: template.material,
       referencia: template.nombre,
       lineTemplateId: String(template.id),
+      vidrio: template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
       pricingMode: "precio_directo",
       margenPct: "0",
       precioPorM2: String(Math.round(template.precioM2Sugerido)),

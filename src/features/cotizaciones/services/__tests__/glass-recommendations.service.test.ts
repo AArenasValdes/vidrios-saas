@@ -73,4 +73,19 @@ describe("glass-recommendations service", () => {
       false
     );
   });
+
+  it("debe poner primero el vidrio recomendado por la linea sin bloquear el resto", () => {
+    const result = getGlassRecommendations(
+      {
+        subtipo: "Ventana",
+        sistema: "Corredera",
+        lineTemplateRecommendedGlass: "Templado 10mm",
+      },
+      catalogo
+    );
+
+    expect(result.lineTemplateRecommendedOption).toBe("Templado 10mm");
+    expect(result.recommendedOptions[0]).toBe("Templado 10mm");
+    expect(result.recommendedOptions).toContain("DVH 4+12+4");
+  });
 });
