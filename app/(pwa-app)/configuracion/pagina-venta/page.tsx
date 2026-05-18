@@ -20,6 +20,7 @@ import {
   LuTrash2,
   LuX,
 } from "react-icons/lu";
+import type { LandingGalleryItem } from "@/features/landing-gallery/types/landing-gallery";
 
 import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGallery";
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
@@ -141,6 +142,12 @@ const SCHEDULE_GROUPS: Array<{
   { key: "sunday", label: "Domingo", days: ["0"] },
 ];
 
+type PendingGalleryUpload = {
+  id: string;
+  previewUrl: string;
+  workTitle: string;
+};
+
 export default function PaginaVentaPage() {
   const { profile, isReady, isSaving, isUploadingHero, saveProfile, uploadHeroImage } =
     useOrganizationProfile();
@@ -163,10 +170,16 @@ export default function PaginaVentaPage() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("hero");
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
+  const [galleryDrafts, setGalleryDrafts] = useState<Record<string, string>>({});
+  const [pendingGalleryUploads, setPendingGalleryUploads] = useState<
+    PendingGalleryUpload[]
+  >([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const lastSavedSnapshotRef = useRef<string>(JSON.stringify(EMPTY_FORM));
   const hasHydratedRef = useRef(false);
   const autosaveTimeoutRef = useRef<number | null>(null);
+  const galleryMetadataTimeoutsRef = useRef<Record<string, number>>({});
+  const pendingGalleryUploadsRef = useRef<PendingGalleryUpload[]>([]);
 
   function serializeFormState(value: UpdateOrganizationProfileInput) {
     return JSON.stringify(value);
@@ -215,11 +228,34 @@ export default function PaginaVentaPage() {
   }, [profile]);
 
   useEffect(() => {
+    pendingGalleryUploadsRef.current = pendingGalleryUploads;
+  }, [pendingGalleryUploads]);
+
+  useEffect(() => {
     return () => {
       if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+      pendingGalleryUploadsRef.current.forEach((item) =>
+        URL.revokeObjectURL(item.previewUrl)
+      );
+      Object.values(galleryMetadataTimeoutsRef.current).forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
       clearAutosaveTimeout();
     };
   }, [heroPreviewUrl]);
+
+  useEffect(() => {
+    setGalleryDrafts((current) => {
+      const nextDrafts: Record<string, string> = {};
+
+      gallery.forEach((item) => {
+        const key = String(item.id);
+        nextDrafts[key] = current[key] ?? item.workTitle;
+      });
+
+      return nextDrafts;
+    });
+  }, [gallery]);
 
   useEffect(() => {
     if (!statusMessage) {
@@ -290,8 +326,8 @@ export default function PaginaVentaPage() {
     setErrorMessage(null);
   }
 
-  async function handleGalleryMetadataChange(
-    item: typeof gallery[number],
+  function scheduleGalleryMetadataSave(
+    item: LandingGalleryItem,
     patch: {
       label?: string;
       workTitle?: string;
@@ -300,22 +336,70 @@ export default function PaginaVentaPage() {
       workBadge?: string;
     }
   ) {
-    try {
-      await updateImage(item.id, {
+    const itemKey = String(item.id);
+    const existingTimeout = galleryMetadataTimeoutsRef.current[itemKey];
+
+    if (existingTimeout) {
+      window.clearTimeout(existingTimeout);
+    }
+
+    galleryMetadataTimeoutsRef.current[itemKey] = window.setTimeout(() => {
+      void updateImage(item.id, {
         label: patch.label ?? item.label,
         workTitle: patch.workTitle ?? item.workTitle,
         workType: patch.workType ?? item.workType,
         workZone: patch.workZone ?? item.workZone,
         workBadge: patch.workBadge ?? item.workBadge,
         isVisible: item.isVisible,
+      }).catch((error) => {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "No se pudo actualizar la foto."
+        );
       });
-    } catch (error) {
+
+      delete galleryMetadataTimeoutsRef.current[itemKey];
+    }, 550);
+  }
+
+  function handleGalleryTitleDraftChange(item: LandingGalleryItem, value: string) {
+    const itemKey = String(item.id);
+    setGalleryDrafts((current) => ({
+      ...current,
+      [itemKey]: value,
+    }));
+    setStatusMessage(null);
+    setErrorMessage(null);
+    scheduleGalleryMetadataSave(item, {
+      workTitle: value,
+    });
+  }
+
+  function flushGalleryTitleSave(item: LandingGalleryItem) {
+    const itemKey = String(item.id);
+    const pendingTimeout = galleryMetadataTimeoutsRef.current[itemKey];
+    const nextValue = galleryDrafts[itemKey] ?? item.workTitle;
+
+    if (pendingTimeout) {
+      window.clearTimeout(pendingTimeout);
+      delete galleryMetadataTimeoutsRef.current[itemKey];
+    }
+
+    void updateImage(item.id, {
+      label: item.label,
+      workTitle: nextValue,
+      workType: item.workType,
+      workZone: item.workZone,
+      workBadge: item.workBadge,
+      isVisible: item.isVisible,
+    }).catch((error) => {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "No se pudo actualizar la foto."
       );
-    }
+    });
   }
 
   async function handleTestimonialStatusChange(
@@ -432,20 +516,41 @@ export default function PaginaVentaPage() {
     if (!file) return;
 
     setErrorMessage(null);
+    const previewUrl = URL.createObjectURL(file);
+    const pendingId = `pending-${Date.now()}`;
+    setPendingGalleryUploads((current) => [
+      ...current,
+      {
+        id: pendingId,
+        previewUrl,
+        workTitle: "",
+      },
+    ]);
 
     try {
-      await uploadAndAddImage(file, "", {
+      const createdItem = await uploadAndAddImage(file, "", {
         workTitle: "",
         workType: "",
         workZone: "",
         workBadge: "",
       });
+      setGalleryDrafts((current) => ({
+        ...current,
+        [String(createdItem.id)]: createdItem.workTitle,
+      }));
       setStatusMessage("Foto agregada a la galeria.");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "No se pudo subir la foto"
       );
     } finally {
+      setPendingGalleryUploads((current) => {
+        const removed = current.find((item) => item.id === pendingId);
+        if (removed) {
+          URL.revokeObjectURL(removed.previewUrl);
+        }
+        return current.filter((item) => item.id !== pendingId);
+      });
       event.target.value = "";
     }
   }
@@ -753,6 +858,30 @@ export default function PaginaVentaPage() {
                   <div className={s.divider} />
 
                   <div className={s.galleryGrid}>
+                    {pendingGalleryUploads.map((item) => (
+                      <div key={item.id} className={s.galleryItem}>
+                        <div className={s.galleryImageWrap}>
+                          <Image
+                            src={item.previewUrl}
+                            alt="Trabajo subiendose"
+                            fill
+                            className={s.galleryImage}
+                            sizes="(max-width: 560px) 42vw, 160px"
+                            unoptimized
+                          />
+                        </div>
+                        <div className={s.galleryItemMeta}>
+                          <input
+                            className={s.galleryItemField}
+                            value="Subiendo foto..."
+                            disabled
+                            readOnly
+                          />
+                          <div className={s.galleryMetaRow} />
+                        </div>
+                      </div>
+                    ))}
+
                     {gallery.map((item) => (
                       <div key={String(item.id)} className={s.galleryItem}>
                         <div className={s.galleryImageWrap}>
@@ -768,13 +897,12 @@ export default function PaginaVentaPage() {
                         <div className={s.galleryItemMeta}>
                           <input
                             className={s.galleryItemField}
-                            value={item.workTitle}
+                            value={galleryDrafts[String(item.id)] ?? item.workTitle}
                             placeholder="Titulo corto"
                             onChange={(e) =>
-                              void handleGalleryMetadataChange(item, {
-                                workTitle: e.target.value,
-                              })
+                              handleGalleryTitleDraftChange(item, e.target.value)
                             }
+                            onBlur={() => flushGalleryTitleSave(item)}
                           />
                           <div className={s.galleryMetaRow}>
                             <button
@@ -790,7 +918,7 @@ export default function PaginaVentaPage() {
                       </div>
                     ))}
 
-                    {gallery.length < 8 ? (
+                    {gallery.length + pendingGalleryUploads.length < 8 ? (
                       <label className={s.galleryAddCard}>
                         <div className={s.galleryAddIcon}>
                           <LuImagePlus aria-hidden />
@@ -808,7 +936,10 @@ export default function PaginaVentaPage() {
                   </div>
 
                   <span className={s.helpText}>
-                    {gallery.length}/8 fotos · {isGalleryUploading ? "Subiendo..." : "Sube solo tus mejores trabajos"}
+                    {gallery.length + pendingGalleryUploads.length}/8 fotos ·{" "}
+                    {isGalleryUploading
+                      ? "Subiendo..."
+                      : "Sube solo tus mejores trabajos"}
                   </span>
                 </>
               ) : null}
