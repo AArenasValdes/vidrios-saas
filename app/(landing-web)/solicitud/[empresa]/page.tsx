@@ -345,6 +345,24 @@ export default async function SolicitudEmpresaPage({
                 <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
               </div>
 
+              <div className={s.heroActions}>
+                {whatsappUrl ? (
+                  <a
+                    className={s.primaryWhatsappCta}
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <LuMessageCircleMore aria-hidden />
+                    Cotizar por WhatsApp
+                  </a>
+                ) : null}
+
+                <a className={s.secondaryHeroCta} href="#solicitud-rapida">
+                  Dejar solicitud en linea
+                </a>
+              </div>
+
               <div className={s.heroTrustRow}>
                 {showRating && config.ratingLabel ? (
                   <span className={s.heroTrustMini}>
@@ -387,6 +405,67 @@ export default async function SolicitudEmpresaPage({
                 </article>
               );
             })}
+          </div>
+        </section>
+
+        {/* Gallery */}
+        {resolvedGallery.length > 0 ? (
+          <section className={s.gallerySection} aria-label="Trabajos recientes">
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Trabajos Recientes</h2>
+            </div>
+
+            <div className={s.galleryRail}>
+              {resolvedGallery.map((image, index) => (
+                <article key={`${image.imageUrl}-${index}`} className={s.portfolioCard}>
+                  <div className={s.galleryImageWrap}>
+                    <Image
+                      src={image.imageUrl}
+                      alt={image.workTitle || image.label || `Trabajo ${index + 1}`}
+                      fill
+                      className={s.galleryImage}
+                      unoptimized
+                    />
+                    {image.workBadge ? (
+                      <span className={s.galleryTag}>{image.workBadge}</span>
+                    ) : null}
+                  </div>
+                  <div className={s.galleryCardOverlay}>
+                    <strong>{image.workTitle || image.label || "Trabajo reciente"}</strong>
+                    <span>{[image.workType, image.workZone].filter(Boolean).join(" · ")}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* How it works */}
+        <section className={s.sectionCard}>
+          <h2 className={s.sectionTitle}>El proceso es simple</h2>
+          <div className={s.stepsVertical}>
+            {[
+              {
+                title: "Envias los detalles",
+                copy: "Cuentanos que necesitas y adjunta medidas o fotos de referencia.",
+              },
+              {
+                title: "Revisamos tecnicamente",
+                copy: "Un especialista evalua la viabilidad y los materiales optimos.",
+              },
+              {
+                title: "Recibes tu cotizacion",
+                copy: "Te entregamos un presupuesto detallado con opciones y tiempos.",
+              },
+            ].map((step, index) => (
+              <article key={step.title} className={s.stepVerticalCard}>
+                <div className={s.stepVerticalNumber}>{index + 1}</div>
+                <div className={s.stepVerticalCopy}>
+                  <strong>{step.title}</strong>
+                  <span>{step.copy}</span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -470,23 +549,6 @@ export default async function SolicitudEmpresaPage({
           </section>
         ) : null}
 
-        {whatsappUrl ? (
-          <section className={s.actionBand} aria-label="Acciones principales">
-            <a
-              className={s.actionBandPrimary}
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <LuMessageCircleMore aria-hidden />
-              Hablar por WhatsApp
-            </a>
-            <a className={s.actionBandSecondary} href="#solicitud-rapida">
-              Dejar solicitud en linea
-            </a>
-          </section>
-        ) : null}
-
         {/* Form */}
         <section className={s.formSection} aria-label="Formulario de solicitud">
           <SolicitudEmpresaForm
@@ -498,67 +560,6 @@ export default async function SolicitudEmpresaPage({
             formTitle={formTitle}
             formSubtitle={formSubtitle ?? undefined}
           />
-        </section>
-
-        {/* Gallery */}
-        {resolvedGallery.length > 0 ? (
-          <section className={s.gallerySection} aria-label="Trabajos recientes">
-            <div className={s.sectionHeader}>
-              <h2 className={s.sectionTitle}>Trabajos Recientes</h2>
-            </div>
-
-            <div className={s.galleryRail}>
-              {resolvedGallery.map((image, index) => (
-                <article key={`${image.imageUrl}-${index}`} className={s.portfolioCard}>
-                  <div className={s.galleryImageWrap}>
-                    <Image
-                      src={image.imageUrl}
-                      alt={image.workTitle || image.label || `Trabajo ${index + 1}`}
-                      fill
-                      className={s.galleryImage}
-                      unoptimized
-                    />
-                    {image.workBadge ? (
-                      <span className={s.galleryTag}>{image.workBadge}</span>
-                    ) : null}
-                  </div>
-                  <div className={s.galleryCardOverlay}>
-                    <strong>{image.workTitle || image.label || "Trabajo reciente"}</strong>
-                    <span>{[image.workType, image.workZone].filter(Boolean).join(" · ")}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {/* How it works */}
-        <section className={s.sectionCard}>
-          <h2 className={s.sectionTitle}>El proceso es simple</h2>
-          <div className={s.stepsVertical}>
-            {[
-              {
-                title: "Envias los detalles",
-                copy: "Cuentanos que necesitas y adjunta medidas o fotos de referencia.",
-              },
-              {
-                title: "Revisamos tecnicamente",
-                copy: "Un especialista evalua la viabilidad y los materiales optimos.",
-              },
-              {
-                title: "Recibes tu cotizacion",
-                copy: "Te entregamos un presupuesto detallado con opciones y tiempos.",
-              },
-            ].map((step, index) => (
-              <article key={step.title} className={s.stepVerticalCard}>
-                <div className={s.stepVerticalNumber}>{index + 1}</div>
-                <div className={s.stepVerticalCopy}>
-                  <strong>{step.title}</strong>
-                  <span>{step.copy}</span>
-                </div>
-              </article>
-            ))}
-          </div>
         </section>
 
         {/* Testimonials */}

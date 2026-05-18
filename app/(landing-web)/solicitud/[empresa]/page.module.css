@@ -48,7 +48,7 @@
 .heroPanel {
   position: relative;
   overflow: hidden;
-  min-height: min(92svh, 760px);
+  min-height: min(74svh, 620px);
   border-radius: 0 0 30px 30px;
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
 }
@@ -151,9 +151,9 @@
   display: grid;
   align-items: end;
   padding:
-    max(18px, env(safe-area-inset-top))
+    calc(env(safe-area-inset-top, 0px) + 18px)
     20px
-    28px;
+    24px;
   color: #ffffff;
 }
 
@@ -161,7 +161,7 @@
   width: min(100%, 440px);
   margin: 0 auto;
   display: grid;
-  gap: 26px;
+  gap: 18px;
   text-align: center;
 }
 
@@ -192,8 +192,8 @@
 .heroTitle {
   margin: 0;
   font-family: var(--font-landing-display), sans-serif;
-  font-size: clamp(32px, 7vw, 54px);
-  line-height: 1.1;
+  font-size: clamp(30px, 6.2vw, 48px);
+  line-height: 1.06;
   letter-spacing: -0.02em;
   color: #ffffff;
   text-wrap: balance;
@@ -203,9 +203,17 @@
 .heroSubtitleMain {
   margin: 0;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.45;
   max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.heroActions {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 360px);
   margin-left: auto;
   margin-right: auto;
 }
@@ -274,7 +282,7 @@
 /* ========== TRUST ========== */
 .quickTrustSection {
   display: grid;
-  margin-top: -30px;
+  margin-top: -18px;
   position: relative;
   z-index: 2;
 }
@@ -458,16 +466,6 @@
   color: var(--text-soft);
   font-size: 13px;
   font-weight: 500;
-}
-
-.actionBand {
-  display: grid;
-  gap: 10px;
-}
-
-.actionBandPrimary,
-.actionBandSecondary {
-  width: 100%;
 }
 
 /* ========== GALLERY ========== */
@@ -1458,27 +1456,42 @@
   }
 
   .heroPanel {
-    min-height: min(88svh, 680px);
+    min-height: min(66svh, 560px);
     border-radius: 0 0 24px 24px;
   }
 
   .heroContent {
     padding:
-      max(14px, env(safe-area-inset-top))
+      calc(env(safe-area-inset-top, 0px) + 14px)
       16px
-      24px;
+      20px;
   }
 
   .heroInner {
-    gap: 20px;
+    gap: 14px;
   }
 
   .heroTitle {
-    font-size: clamp(26px, 8vw, 36px);
+    font-size: clamp(24px, 7.2vw, 34px);
   }
 
   .heroIdentityCopy strong {
-    font-size: 17px;
+    font-size: 16px;
+  }
+
+  .heroSubtitleMain {
+    font-size: 13px;
+  }
+
+  .heroActions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .primaryWhatsappCta,
+  .secondaryHeroCta {
+    min-height: 46px;
+    font-size: 14px;
   }
 
   .sectionCard,
@@ -1535,11 +1548,14 @@
   }
 
   .heroPanel {
-    min-height: min(84svh, 620px);
+    min-height: min(62svh, 520px);
   }
 
   .heroContent {
-    padding: 22px 14px 18px;
+    padding:
+      calc(env(safe-area-inset-top, 0px) + 12px)
+      14px
+      18px;
   }
 
   .heroTrustRow {
@@ -1595,22 +1611,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .actionBandPrimary,
-  .actionBandSecondary {
-    min-height: 46px;
+  .heroStatus {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 }
 
 @media (min-width: 768px) {
   .heroPanel {
-    min-height: 620px;
+    min-height: 560px;
   }
 
   .heroContent {
     padding:
-      max(24px, env(safe-area-inset-top))
+      calc(env(safe-area-inset-top, 0px) + 22px)
       32px
-      42px;
+      34px;
   }
 
   .heroTitle {
