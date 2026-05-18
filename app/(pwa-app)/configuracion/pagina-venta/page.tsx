@@ -164,17 +164,107 @@ export default function PaginaVentaPage() {
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const lastSavedSnapshotRef = useRef<string>(JSON.stringify(EMPTY_FORM));
+  const hasHydratedRef = useRef(false);
+  const autosaveTimeoutRef = useRef<number | null>(null);
+
+  function serializeFormState(value: UpdateOrganizationProfileInput) {
+    return JSON.stringify(value);
+  }
+
+  function clearAutosaveTimeout() {
+    if (autosaveTimeoutRef.current !== null && typeof window !== "undefined") {
+      window.clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+  }
+
+  async function persistCurrentForm(
+    nextForm: UpdateOrganizationProfileInput,
+    options?: {
+      successMessage?: string;
+      errorMessage?: string;
+    }
+  ) {
+    try {
+      setErrorMessage(null);
+      const savedProfile = await saveProfile(nextForm);
+      const normalized = buildPaginaVentaProfileInput(savedProfile);
+      lastSavedSnapshotRef.current = serializeFormState(normalized);
+      setForm(normalized);
+      setStatusMessage(
+        options?.successMessage ?? "Configuracion guardada correctamente."
+      );
+      return normalized;
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : options?.errorMessage ?? "No se pudo guardar la configuracion"
+      );
+      throw error;
+    }
+  }
 
   useEffect(() => {
     if (!profile) return;
-    setForm(buildPaginaVentaProfileInput(profile));
+    const nextForm = buildPaginaVentaProfileInput(profile);
+    setForm(nextForm);
+    lastSavedSnapshotRef.current = serializeFormState(nextForm);
+    hasHydratedRef.current = true;
   }, [profile]);
 
   useEffect(() => {
     return () => {
       if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
+      clearAutosaveTimeout();
     };
   }, [heroPreviewUrl]);
+
+  useEffect(() => {
+    if (!statusMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStatusMessage(null);
+    }, 2200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [statusMessage]);
+
+  useEffect(() => {
+    if (!errorMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setErrorMessage(null);
+    }, 4200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (!hasHydratedRef.current || !isReady || !profile) {
+      return;
+    }
+
+    const nextSnapshot = serializeFormState(form);
+
+    if (nextSnapshot === lastSavedSnapshotRef.current) {
+      return;
+    }
+
+    clearAutosaveTimeout();
+    autosaveTimeoutRef.current = window.setTimeout(() => {
+      void persistCurrentForm(form, {
+        successMessage: "Cambios guardados.",
+      });
+    }, 700);
+
+    return () => clearAutosaveTimeout();
+  }, [form, isReady, profile]);
 
   function handleFieldChange(
     key: keyof UpdateOrganizationProfileInput,
@@ -327,7 +417,7 @@ export default function PaginaVentaPage() {
         if (current) URL.revokeObjectURL(current);
         return null;
       });
-      setStatusMessage("Imagen hero subida. Guarda para aplicar.");
+      setStatusMessage("Imagen de portada subida.");
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "No se pudo subir la imagen hero"
@@ -374,17 +464,12 @@ export default function PaginaVentaPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    clearAutosaveTimeout();
 
     try {
-      setErrorMessage(null);
       setStatusMessage(null);
-      await saveProfile(form);
-      setStatusMessage("Configuracion guardada correctamente.");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo guardar la configuracion"
-      );
-    }
+      await persistCurrentForm(form);
+    } catch {}
   }
 
   const heroPreview = heroPreviewUrl ?? form.heroImageUrl;
