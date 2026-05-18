@@ -1,12 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   LuBlocks,
-  LuBuilding2,
   LuChevronDown,
   LuChevronUp,
   LuCopy,
@@ -451,45 +449,6 @@ export default function PaginaVentaPage() {
         </div>
       </div>
 
-      <section className={s.linkedIdentityCard}>
-        <div className={s.linkedIdentityTop}>
-          <div className={s.sectionTitle}>
-            <LuBuilding2 aria-hidden />
-            <span>Datos que vienen desde Empresa</span>
-          </div>
-          <Link href="/configuracion/empresa" className={s.inlineLink}>
-            Editar en Empresa
-          </Link>
-        </div>
-
-        <div className={s.linkedIdentityGrid}>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Nombre publico</span>
-            <strong>{form.publicName || form.empresaNombre || "Mi empresa"}</strong>
-          </div>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Nombre del enlace</span>
-            <strong>{`/${form.solicitudPublicaSlug || "mi-empresa"}`}</strong>
-          </div>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Rubro o especialidad</span>
-            <strong>{form.publicBusinessType || "Define tu rubro en Empresa"}</strong>
-          </div>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Direccion visible</span>
-            <strong>{form.empresaDireccion || "Define tu direccion en Empresa"}</strong>
-          </div>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Color principal</span>
-            <strong>{form.brandColor.toUpperCase()}</strong>
-          </div>
-          <div className={s.staticInfo}>
-            <span className={s.label}>Color secundario</span>
-            <strong>{form.secondaryColor.toUpperCase()}</strong>
-          </div>
-        </div>
-      </section>
-
       <nav className={s.tabNav}>
         {sections.map((section) => {
           const Icon = section.icon;
@@ -594,16 +553,6 @@ export default function PaginaVentaPage() {
                   value={form.heroTitle}
                   onChange={(e) => handleFieldChange("heroTitle", e.target.value)}
                   placeholder={DEFAULT_HERO_TITLE}
-                />
-              </label>
-
-              <label className={s.field}>
-                <span className={s.label}>Bajada corta</span>
-                <input
-                  className={s.input}
-                  value={form.heroSubtitle}
-                  onChange={(e) => handleFieldChange("heroSubtitle", e.target.value)}
-                  placeholder="Ej: Respuesta por WhatsApp y solicitud registrada"
                 />
               </label>
 
@@ -742,49 +691,7 @@ export default function PaginaVentaPage() {
                               })
                             }
                           />
-                          <input
-                            className={s.galleryItemField}
-                            value={item.workType}
-                            placeholder="Tipo de trabajo"
-                            onChange={(e) =>
-                              void handleGalleryMetadataChange(item, {
-                                workType: e.target.value,
-                              })
-                            }
-                          />
                           <div className={s.galleryMetaRow}>
-                            <input
-                              className={s.galleryItemField}
-                              value={item.workZone}
-                              placeholder="Comuna o zona"
-                              onChange={(e) =>
-                                void handleGalleryMetadataChange(item, {
-                                  workZone: e.target.value,
-                                })
-                              }
-                            />
-                            <input
-                              className={s.galleryItemField}
-                              value={item.workBadge}
-                              placeholder="Etiqueta"
-                              onChange={(e) =>
-                                void handleGalleryMetadataChange(item, {
-                                  workBadge: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className={s.galleryMetaRow}>
-                            <input
-                              className={s.galleryItemField}
-                              value={item.label}
-                              placeholder="Categoria interna"
-                              onChange={(e) =>
-                                void handleGalleryMetadataChange(item, {
-                                  label: e.target.value,
-                                })
-                              }
-                            />
                             <button
                               className={s.galleryItemDelete}
                               type="button"
