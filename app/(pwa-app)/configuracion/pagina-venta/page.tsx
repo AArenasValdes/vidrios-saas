@@ -300,6 +300,7 @@ export default function PaginaVentaPage() {
   const publicRequestUrl = `${resolvePublicAppUrl()}/solicitud/${form.solicitudPublicaSlug?.trim() || "mi-empresa"}`;
 
   const persistedPublicRequestUrl = `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${profile?.solicitudPublicaSlug?.trim() || form.solicitudPublicaSlug?.trim() || "mi-empresa"}`;
+  const previewPublicRequestUrl = `${persistedPublicRequestUrl}?preview=1`;
 
   async function handleCopyPublicLink() {
     try {
@@ -1192,7 +1193,7 @@ export default function PaginaVentaPage() {
                   </button>
                   <a
                     className={s.secondaryAction}
-                    href={persistedPublicRequestUrl}
+                    href={previewPublicRequestUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

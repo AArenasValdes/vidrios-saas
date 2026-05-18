@@ -6,7 +6,6 @@ import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
   LuBadgeCheck,
-  LuChevronRight,
   LuCircleCheck,
   LuClock3,
   LuClipboardCheck,
@@ -56,6 +55,9 @@ type PageProps = {
   params: Promise<{
     empresa: string;
   }>;
+  searchParams?: Promise<{
+    preview?: string | string[];
+  }>;
 };
 
 const SERVICE_ICONS: Record<string, string> = {
@@ -73,6 +75,16 @@ const SERVICE_ICONS: Record<string, string> = {
 };
 
 export const revalidate = 300;
+
+function isPreviewEnabled(value: string | string[] | undefined) {
+  const normalized = Array.isArray(value) ? value[0] : value;
+
+  if (!normalized) {
+    return false;
+  }
+
+  return ["1", "true", "preview"].includes(normalized.trim().toLowerCase());
+}
 
 function getServiceIcon(name: string) {
   for (const key of Object.keys(SERVICE_ICONS)) {
@@ -161,8 +173,19 @@ function buildSocialLinks(config: {
   }>;
 }
 
-export default async function SolicitudEmpresaPage({ params }: PageProps) {
-  const { empresa } = await params;
+export default async function SolicitudEmpresaPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ empresa }, resolvedSearchParams] = await Promise.all([
+    params,
+    (searchParams ??
+      Promise.resolve({
+        preview: undefined,
+      })) as Promise<{
+      preview?: string | string[];
+    }>,
+  ]);
   const config = await getCachedPublicRequestConfig(empresa);
 
   if (!config || !config.isPublished) {
@@ -201,6 +224,7 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
   const serviceItems = resolveServiceItems(config);
   const socialLinks = buildSocialLinks(config);
   const formattedPhone = formatPublicPhone(config.empresaTelefono);
+  const isPreview = isPreviewEnabled(resolvedSearchParams.preview);
 
   const [galleryImages, approvedTestimonials] = await Promise.all([
     showGallery
@@ -251,94 +275,74 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
         ["--wa" as string]: config.secondaryColor,
       }}
     >
-      <div className={s.shell}>
-        {/* Header */}
-        <header className={s.topBar}>
-          <Link href="/" className={s.backButton} aria-label="Volver al inicio">
-            <LuArrowLeft aria-hidden />
-          </Link>
+      <section className={s.heroSection}>
+        <article className={s.heroPanel}>
+          {heroImageUrl ? (
+            <div className={s.heroBackgroundMedia} aria-hidden>
+              <Image
+                src={heroImageUrl}
+                alt=""
+                fill
+                className={s.heroBackgroundImage}
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className={s.heroFallback} aria-hidden />
+          )}
 
-          <div className={s.topCenter}>
-            <span className={s.topSlug}>
-              {`ventorap.cl/${config.solicitudPublicaSlug.toLowerCase()}`}
-            </span>
-          </div>
+          <div className={s.heroOverlay} />
 
-          <div className={s.topStatus} data-active={isAvailable}>
-            <span className={s.topStatusDot} aria-hidden />
-            {availabilityLabel}
-          </div>
-        </header>
+          <div className={s.heroContent}>
+            <div className={s.heroInner}>
+              <div
+                className={`${s.heroTopBar}${isPreview ? ` ${s.heroTopBarWithBack}` : ""}`}
+              >
+                {isPreview ? (
+                  <Link
+                    href="/dashboard"
+                    className={s.heroBackButton}
+                    aria-label="Volver a Ventora"
+                  >
+                    <LuArrowLeft aria-hidden />
+                  </Link>
+                ) : null}
 
-        {/* Hero */}
-        <section className={s.heroSection}>
-          <article className={s.heroPanel}>
-            {heroImageUrl ? (
-              <div className={s.heroBackgroundMedia} aria-hidden>
-                <Image
-                  src={heroImageUrl}
-                  alt=""
-                  fill
-                  className={s.heroBackgroundImage}
-                  unoptimized
-                />
+                <div className={s.heroStatus} data-active={isAvailable}>
+                  <span className={s.heroStatusDot} aria-hidden />
+                  {availabilityLabel}
+                </div>
               </div>
-            ) : (
-              <div className={s.heroFallback} aria-hidden />
-            )}
 
-            <div className={s.heroOverlay} />
-
-            <div className={s.heroContent}>
-              <div className={s.heroTopRow}>
-                <div className={s.heroIdentityBlock}>
-                  {config.empresaLogoUrl ? (
-                    <Image
-                      className={s.logo}
-                      src={config.empresaLogoUrl}
-                      alt={displayName}
-                      width={64}
-                      height={64}
-                      unoptimized
-                    />
-                  ) : (
-                    <div className={s.logoFallback} aria-hidden>
-                      {getInitials(displayName)}
-                    </div>
-                  )}
-
-                  <div className={s.heroIdentityCopy}>
-                    <strong>{displayName}</strong>
-                    {config.publicSubtitle ? (
-                      <span className={s.heroSubtitleText}>
-                        {config.publicSubtitle}
-                      </span>
-                    ) : null}
+              <div className={s.heroIdentityBlock}>
+                {config.empresaLogoUrl ? (
+                  <Image
+                    className={s.logo}
+                    src={config.empresaLogoUrl}
+                    alt={displayName}
+                    width={64}
+                    height={64}
+                    unoptimized
+                  />
+                ) : (
+                  <div className={s.logoFallback} aria-hidden>
+                    {getInitials(displayName)}
                   </div>
+                )}
+
+                <div className={s.heroIdentityCopy}>
+                  <strong>{displayName}</strong>
+                  {config.publicSubtitle ? (
+                    <span className={s.heroSubtitleText}>
+                      {config.publicSubtitle}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
               <div className={s.heroMainCopy}>
                 <h1 className={s.heroTitle}>{heroTitle}</h1>
                 <p className={s.heroSubtitleMain}>{heroSubtitle}</p>
-              </div>
-
-              <div className={s.heroActions}>
-                {whatsappUrl ? (
-                  <a
-                    className={s.primaryWhatsappCta}
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <LuMessageCircleMore aria-hidden />
-                    Cotizar por WhatsApp
-                  </a>
-                ) : null}
-
-                <a className={s.secondaryHeroCta} href="#solicitud-rapida">
-                  Dejar solicitud en linea
-                </a>
               </div>
 
               <div className={s.heroTrustRow}>
@@ -360,9 +364,11 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                 </span>
               </div>
             </div>
-          </article>
-        </section>
+          </div>
+        </article>
+      </section>
 
+      <div className={s.shell}>
         {/* Quick Trust */}
         <section className={s.quickTrustSection} aria-label="Senales rapidas de confianza">
           <div className={s.quickTrustRail}>
@@ -448,7 +454,6 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
                     <strong>{service}</strong>
                     <span>Aislamiento termico y acustico...</span>
                   </div>
-                  <LuChevronRight aria-hidden className={s.featuredServiceChevron} />
                 </div>
               ))}
             </div>
@@ -464,6 +469,36 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
             ) : null}
           </section>
         ) : null}
+
+        {whatsappUrl ? (
+          <section className={s.actionBand} aria-label="Acciones principales">
+            <a
+              className={s.actionBandPrimary}
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <LuMessageCircleMore aria-hidden />
+              Hablar por WhatsApp
+            </a>
+            <a className={s.actionBandSecondary} href="#solicitud-rapida">
+              Dejar solicitud en linea
+            </a>
+          </section>
+        ) : null}
+
+        {/* Form */}
+        <section className={s.formSection} aria-label="Formulario de solicitud">
+          <SolicitudEmpresaForm
+            slug={config.solicitudPublicaSlug}
+            empresaTelefono={config.empresaTelefono}
+            empresaEmail={config.empresaEmail}
+            privacidad={config.solicitudPublicaPrivacidad}
+            isAvailable={isAvailable}
+            formTitle={formTitle}
+            formSubtitle={formSubtitle ?? undefined}
+          />
+        </section>
 
         {/* Gallery */}
         {resolvedGallery.length > 0 ? (
@@ -524,19 +559,6 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
               </article>
             ))}
           </div>
-        </section>
-
-        {/* Form */}
-        <section className={s.formSection} aria-label="Formulario de solicitud">
-          <SolicitudEmpresaForm
-            slug={config.solicitudPublicaSlug}
-            empresaTelefono={config.empresaTelefono}
-            empresaEmail={config.empresaEmail}
-            privacidad={config.solicitudPublicaPrivacidad}
-            isAvailable={isAvailable}
-            formTitle={formTitle}
-            formSubtitle={formSubtitle ?? undefined}
-          />
         </section>
 
         {/* Testimonials */}
@@ -647,30 +669,6 @@ export default async function SolicitudEmpresaPage({ params }: PageProps) {
         </footer>
       </div>
 
-      {/* Sticky CTA */}
-      <div className={s.stickyBarWrap}>
-        <div className={s.stickyBar}>
-          <a
-            className={s.stickySecondary}
-            href="#solicitud-rapida"
-            aria-label="Solicitar cotizacion"
-          >
-            <LuBadgeCheck aria-hidden />
-            <span className="sr-only">Solicitar cotizacion</span>
-          </a>
-          {whatsappUrl ? (
-            <a
-              className={s.stickyPrimary}
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <LuMessageCircleMore aria-hidden />
-              <span>Hablar por WhatsApp</span>
-            </a>
-          ) : null}
-        </div>
-      </div>
     </main>
   );
 }

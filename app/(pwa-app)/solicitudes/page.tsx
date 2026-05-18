@@ -234,6 +234,13 @@ export default function SolicitudesPage() {
   const publicRequestUrl = useMemo(() => {
     return buildPublicRequestUrl(profile?.solicitudPublicaSlug);
   }, [profile?.solicitudPublicaSlug]);
+  const previewPublicRequestUrl = useMemo(() => {
+    if (!publicRequestUrl) {
+      return null;
+    }
+
+    return `${publicRequestUrl}${publicRequestUrl.includes("?") ? "&" : "?"}preview=1`;
+  }, [publicRequestUrl]);
 
   const resumen = useMemo(() => {
     return {
@@ -468,10 +475,10 @@ export default function SolicitudesPage() {
             <LuCopy aria-hidden />
             Copiar enlace
           </button>
-          {publicRequestUrl ? (
+          {previewPublicRequestUrl ? (
             <a
               className={s.heroActionSecondary}
-              href={publicRequestUrl}
+              href={previewPublicRequestUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
