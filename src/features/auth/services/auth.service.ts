@@ -19,6 +19,10 @@ const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
 const DEFAULT_BOOTSTRAP_RETRY_DELAY_MS = 300;
 const GET_ORG_ID_PERMISSION_ERROR_MESSAGE =
   "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta de nuevo en unos segundos.";
+const DEFAULT_AUTH_BOOTSTRAP_LOOKUP_OPTIONS: AuthProfileLookupOptions = {
+  preferServerLookup: true,
+  retryServerOnUnauthorized: true,
+};
 
 function wait(delayMs: number) {
   if (delayMs <= 0) {
@@ -172,7 +176,10 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      return resolveAuthenticatedState(user, options);
+      return resolveAuthenticatedState(user, {
+        ...DEFAULT_AUTH_BOOTSTRAP_LOOKUP_OPTIONS,
+        ...options,
+      });
     },
 
     async signIn(credentials: AuthSignInInput) {

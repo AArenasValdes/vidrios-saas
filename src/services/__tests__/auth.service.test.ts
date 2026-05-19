@@ -55,10 +55,16 @@ describe("authService", () => {
     const service = createAuthService({ repository });
     const resultado = await service.getCurrentAuthState();
 
-    expect(repository.getUserProfile).toHaveBeenCalledWith({
-      authUserId: "user-1",
-      email: "dueno@vidrios.cl",
-    });
+    expect(repository.getUserProfile).toHaveBeenCalledWith(
+      {
+        authUserId: "user-1",
+        email: "dueno@vidrios.cl",
+      },
+      {
+        preferServerLookup: true,
+        retryServerOnUnauthorized: true,
+      }
+    );
     expect(resultado).toEqual({
       user,
       organizacionId: 17,
@@ -90,6 +96,36 @@ describe("authService", () => {
     expect(resultado).toEqual({
       user,
       organizacionId: 17,
+      rol: "admin",
+    });
+  });
+
+  it("debe usar lookup server-side por defecto en el bootstrap autenticado", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser("bootstrap@vidrios.cl");
+
+    repository.getAuthenticatedUser.mockResolvedValue(user);
+    repository.getUserProfile.mockResolvedValue({
+      organizacionId: 88,
+      rol: "admin",
+    });
+
+    const service = createAuthService({ repository });
+    const resultado = await service.getCurrentAuthState();
+
+    expect(repository.getUserProfile).toHaveBeenCalledWith(
+      {
+        authUserId: "user-1",
+        email: "bootstrap@vidrios.cl",
+      },
+      {
+        preferServerLookup: true,
+        retryServerOnUnauthorized: true,
+      }
+    );
+    expect(resultado).toEqual({
+      user,
+      organizacionId: 88,
       rol: "admin",
     });
   });
