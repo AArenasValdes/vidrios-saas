@@ -121,7 +121,7 @@ export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
 export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
 
 export const ALUMINUM_COLOR_OPTIONS = [
-  { label: "Aluminio natural", hex: "#a8a8a8" },
+  { label: "Aluminio mate", hex: "#a8a8a8" },
   { label: "Blanco", hex: "#f0eeeb" },
   { label: "Blanco hueso", hex: "#dfd5c4" },
   { label: "Negro", hex: "#2a2a2a" },

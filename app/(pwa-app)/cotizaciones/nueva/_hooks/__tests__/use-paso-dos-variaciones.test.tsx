@@ -98,6 +98,15 @@ function ProbeVariaciones() {
       <button
         type="button"
         onClick={() => {
+          variaciones.restorePendingForcedFullEditIfNeeded(editingItemId);
+          setEditingItemId(null);
+        }}
+      >
+        cancelar-edicion
+      </button>
+      <button
+        type="button"
+        onClick={() => {
           if (firstFamily) {
             variaciones.openVariationQuickEditForFamily(firstFamily);
           }
@@ -191,5 +200,28 @@ describe("usePasoDosVariaciones", () => {
 
     expect(screen.getByTestId("abierto")).toHaveTextContent("si");
     expect(screen.getByTestId("piezas-overlay")).toHaveTextContent("2");
+  });
+
+  it("debe recomponer el lote si abres edicion completa sin cambios y cancelas", () => {
+    render(<ProbeVariaciones />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByText("editar-completa"));
+    });
+
+    expect(screen.getByTestId("items")).toHaveTextContent("V1:1");
+    expect(screen.getByTestId("items")).toHaveTextContent("V1-2:1");
+
+    act(() => {
+      fireEvent.click(screen.getByText("cancelar-edicion"));
+    });
+
+    expect(screen.getByTestId("items")).toHaveTextContent("V1:2");
+    expect(screen.getByTestId("items")).not.toHaveTextContent("V1-2:1");
+    expect(screen.getByTestId("familias")).toHaveTextContent("0");
   });
 });

@@ -726,7 +726,8 @@ function NuevaCotizacionPageContent() {
 
       if (editingItemId) {
         const item = buildItemFromForm(componentForm, draft.items, editingItemId);
-        nextItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
+        const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
+        nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
       } else {
         const nextItemStartIndex = draft.items.length;
         const availableSlots = getRemainingComponentSlots(draft.items.length);
@@ -899,6 +900,7 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleResetStep2Form = () => {
+    pasoDosVariaciones.restorePendingForcedFullEditIfNeeded(editingItemId);
     setEditingItemId(null);
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     setComponentForm(

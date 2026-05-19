@@ -7,7 +7,7 @@ import { PasoDosWizardConfiguracionMovil } from "../paso-dos-wizard-configuracio
 const baseProps = {
   activePricingMode: "margen" as const,
   colorOptions: [
-    { label: "Aluminio natural", hex: "#a8a8a8" },
+    { label: "Aluminio mate", hex: "#a8a8a8" },
     { label: "Blanco", hex: "#f0eeeb" },
   ],
   displayConfigurationOptions: ["2 hojas"],

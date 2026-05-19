@@ -99,7 +99,7 @@ type ItemPresentation = {
 // Compat temporal: mantener mapa local hasta limpiar encoding histórico de este bloque.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const COLOR_NAMES: Record<string, string> = {
-  "#a8a8a8": "Aluminio natural",
+  "#a8a8a8": "Aluminio mate",
   "#f0eeeb": "Blanco",
   "#b7bcc4": "Gris",
   "#b7834a": "Roble Dorado",

@@ -59,6 +59,13 @@ type MaterializedVariationResult = {
   builtItemsByDraftId: Map<string, CotizacionWorkflowItem>;
 };
 
+type PendingForcedFullEdit = {
+  familyId: string;
+  targetItemId: string;
+  originalItems: CotizacionWorkflowItem[];
+  originalSourceItem: CotizacionWorkflowItem;
+};
+
 type Params = {
   items: CotizacionWorkflowItem[];
   setItems: (nextItems: CotizacionWorkflowItem[]) => void;
@@ -87,6 +94,39 @@ export function usePasoDosVariaciones({
   const [variationFamilies, setVariationFamilies] = useState<VariationFamily[]>([]);
   const [variationQuickEditDraft, setVariationQuickEditDraft] =
     useState<VariationQuickEditDraft | null>(null);
+  const [pendingForcedFullEdit, setPendingForcedFullEdit] =
+    useState<PendingForcedFullEdit | null>(null);
+
+  const isSameUnitConfiguration = (
+    item: CotizacionWorkflowItem,
+    originalSourceItem: CotizacionWorkflowItem
+  ) => {
+    const itemForm = mapItemToForm(item);
+    const sourceForm = mapItemToForm(originalSourceItem);
+
+    return (
+      itemForm.tipo === sourceForm.tipo &&
+      itemForm.material === sourceForm.material &&
+      itemForm.referencia === sourceForm.referencia &&
+      itemForm.lineTemplateId === sourceForm.lineTemplateId &&
+      itemForm.pricingMode === sourceForm.pricingMode &&
+      itemForm.vidrio === sourceForm.vidrio &&
+      itemForm.nombre === sourceForm.nombre &&
+      itemForm.descripcion === sourceForm.descripcion &&
+      itemForm.ancho === sourceForm.ancho &&
+      itemForm.alto === sourceForm.alto &&
+      itemForm.costoProveedorUnitario === sourceForm.costoProveedorUnitario &&
+      itemForm.margenPct === sourceForm.margenPct &&
+      itemForm.precioPorM2 === sourceForm.precioPorM2 &&
+      itemForm.minimoCobrable === sourceForm.minimoCobrable &&
+      itemForm.redondeoPrecio === sourceForm.redondeoPrecio &&
+      itemForm.precioPlantillaSugerido === sourceForm.precioPlantillaSugerido &&
+      itemForm.precioAjustadoManual === sourceForm.precioAjustadoManual &&
+      itemForm.origenPrecio === sourceForm.origenPrecio &&
+      itemForm.observaciones === sourceForm.observaciones &&
+      itemForm.colorHex === sourceForm.colorHex
+    );
+  };
 
   const openVariationQuickEdit = (item: CotizacionWorkflowItem) => {
     const parsed = mapItemToForm(item);
@@ -327,6 +367,9 @@ export function usePasoDosVariaciones({
   };
 
   const handleEditVariationFull = (itemId: string) => {
+    const shouldTrackForcedFullEdit =
+      variationQuickEditDraft?.familyItemIds.length === 1 &&
+      !variationQuickEditDraft.dirty;
     const materialized = materializeVariationQuickEdit(true, itemId);
 
     if (!materialized) {
@@ -339,9 +382,64 @@ export function usePasoDosVariaciones({
       return;
     }
 
+    if (shouldTrackForcedFullEdit) {
+      const originalSourceItem =
+        items.find((item) => item.id === variationQuickEditDraft?.sourceItemId) ?? null;
+
+      if (originalSourceItem && materialized.family) {
+        setPendingForcedFullEdit({
+          familyId: materialized.family.familyId,
+          targetItemId: targetItem.id,
+          originalItems: items,
+          originalSourceItem,
+        });
+      }
+    } else {
+      setPendingForcedFullEdit(null);
+    }
+
     syncMaterializedResult(materialized);
     setVariationQuickEditDraft(null);
     openItemForEditing(targetItem, materialized.nextItems);
+  };
+
+  const restorePendingForcedFullEditIfNeeded = (editingItemId: string | null) => {
+    if (!pendingForcedFullEdit || pendingForcedFullEdit.targetItemId !== editingItemId) {
+      return false;
+    }
+
+    setItems(pendingForcedFullEdit.originalItems);
+    setVariationFamilies((current) =>
+      current.filter((family) => family.familyId !== pendingForcedFullEdit.familyId)
+    );
+    setPendingForcedFullEdit(null);
+    return true;
+  };
+
+  const resolveItemsAfterFullEditSave = (
+    editingItemId: string | null,
+    nextItems: CotizacionWorkflowItem[]
+  ) => {
+    if (!pendingForcedFullEdit || pendingForcedFullEdit.targetItemId !== editingItemId) {
+      return nextItems;
+    }
+
+    const savedTarget =
+      nextItems.find((item) => item.id === pendingForcedFullEdit.targetItemId) ?? null;
+
+    if (
+      savedTarget &&
+      isSameUnitConfiguration(savedTarget, pendingForcedFullEdit.originalSourceItem)
+    ) {
+      setVariationFamilies((current) =>
+        current.filter((family) => family.familyId !== pendingForcedFullEdit.familyId)
+      );
+      setPendingForcedFullEdit(null);
+      return pendingForcedFullEdit.originalItems;
+    }
+
+    setPendingForcedFullEdit(null);
+    return nextItems;
   };
 
   const handleCloseVariationQuickEdit = () => {
@@ -417,6 +515,7 @@ export function usePasoDosVariaciones({
   const resetVariationState = () => {
     setVariationFamilies([]);
     setVariationQuickEditDraft(null);
+    setPendingForcedFullEdit(null);
   };
 
   return {
@@ -430,6 +529,8 @@ export function usePasoDosVariaciones({
     handleEditVariationFull,
     handleCloseVariationQuickEdit,
     handleItemRemoved,
+    restorePendingForcedFullEditIfNeeded,
+    resolveItemsAfterFullEditSave,
     resetVariationState,
     setVariationQuickEditDraft,
   };
