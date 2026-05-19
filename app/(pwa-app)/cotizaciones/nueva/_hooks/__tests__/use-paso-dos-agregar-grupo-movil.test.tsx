@@ -9,6 +9,7 @@ function ProbePasoDosAgregarGrupoMovil() {
     items: [],
     pricingMode: "margen",
     provider: "",
+    activeLineTemplates: [],
   });
 
   return (
@@ -17,6 +18,9 @@ function ProbePasoDosAgregarGrupoMovil() {
       <span data-testid="paso">{String(wizard.paso)}</span>
       <span data-testid="subtipo">{wizard.draft.subtipo}</span>
       <span data-testid="cantidad">{String(wizard.draft.cantidad)}</span>
+      <span data-testid="linea">{wizard.draft.referencia}</span>
+      <span data-testid="vidrio">{wizard.draft.vidrio}</span>
+      <span data-testid="linea-id">{wizard.draft.lineTemplateId}</span>
       <button type="button" onClick={() => wizard.openSheet()}>
         abrir
       </button>
@@ -31,6 +35,28 @@ function ProbePasoDosAgregarGrupoMovil() {
       </button>
       <button type="button" onClick={() => wizard.goBack()}>
         atras
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          wizard.applyCreatedLineTemplate({
+            id: "tmpl-1",
+            organizationId: "org-1",
+            nombre: "Línea 5000",
+            material: "Aluminio",
+            vidrioPrincipalRecomendado: "Templado 8mm",
+            precioM2Sugerido: 180000,
+            minimoCobrable: 120000,
+            redondeoPrecio: 1000,
+            isActive: true,
+            sortOrder: 1,
+            creadoEn: null,
+            actualizadoEn: null,
+            eliminadoEn: null,
+          })
+        }
+      >
+        plantilla
       </button>
       <button type="button" onClick={() => wizard.closeSheet()}>
         cerrar
@@ -80,5 +106,18 @@ describe("usePasoDosAgregarGrupoMovil", () => {
 
     expect(screen.getByTestId("abierto")).toHaveTextContent("no");
     expect(screen.getByTestId("paso")).toHaveTextContent("1");
+  });
+
+  it("debe aplicar una línea creada en el draft actual", () => {
+    render(<ProbePasoDosAgregarGrupoMovil />);
+
+    act(() => {
+      fireEvent.click(screen.getByText("abrir"));
+      fireEvent.click(screen.getByText("plantilla"));
+    });
+
+    expect(screen.getByTestId("linea")).toHaveTextContent("Línea 5000");
+    expect(screen.getByTestId("vidrio")).toHaveTextContent("Templado 8mm");
+    expect(screen.getByTestId("linea-id")).toHaveTextContent("tmpl-1");
   });
 });

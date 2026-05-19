@@ -114,7 +114,7 @@ export function PasoUnoDatosCliente({
   const [clienteCorreoDraft, setClienteCorreoDraft] = useState("");
   const [isEditingDraftClientName, setIsEditingDraftClientName] = useState(false);
 
-  const canContinue = draft.clienteNombre.trim() !== "" && draft.obra.trim() !== "";
+  const canContinue = draft.clienteNombre.trim() !== "";
   const clientList = (isMobileViewport ? mobileRecentClients : recentClients).slice(0, 3);
   const trimmedQuery = clientQuery.trim();
   const hasQuery = trimmedQuery.length > 0;
@@ -125,7 +125,9 @@ export function PasoUnoDatosCliente({
   const showNewClientForm = !selectedClient && isCreatingClient;
   const shouldShowOptionalClientFields = !selectedClient && showOptionalClientFields;
   const compactClientLine = stepOneSummary.clienteMuted ? "Sin cliente" : stepOneSummary.cliente;
-  const compactProjectLine = stepOneSummary.proyectoMuted ? "sin obra" : stepOneSummary.proyecto;
+  const compactProjectLine = stepOneSummary.proyectoMuted
+    ? "se completa sola"
+    : stepOneSummary.proyecto;
   const piezasLabel = `${stepOneSummary.piezas} ${
     stepOneSummary.piezas === "1" ? "pieza" : "piezas"
   }`;
@@ -430,9 +432,7 @@ export function PasoUnoDatosCliente({
 
       <div className={s.stepOneSection}>
         <label className={s.field}>
-          <span className={s.stepOneSectionLabel}>
-            OBRA O TRABAJO <span className={s.required}>*</span>
-          </span>
+          <span className={s.stepOneSectionLabel}>OBRA O TRABAJO</span>
           <input
             ref={(node) => onRegisterInputRef("obra", node)}
             className={`${s.stepOnePrimaryInput} ${fieldErrors.obra ? s.inputError : ""}`}
@@ -442,6 +442,9 @@ export function PasoUnoDatosCliente({
             onKeyDown={(event) => onStep1KeyDown("obra", event)}
             placeholder="Ej. Ventanas living casa Las Condes"
           />
+          <span className={s.stepOneHelperText}>
+            Si la dejas vacía, la completamos sola para que puedas seguir cotizando.
+          </span>
           {fieldErrors.obra ? <span className={s.fieldError}>{fieldErrors.obra}</span> : null}
         </label>
 
@@ -563,8 +566,10 @@ export function PasoUnoDatosCliente({
             </div>
             <div className={s.stepOneBottomBarMeta}>
               {canContinue
-                ? "Listo para agregar componentes"
-                : "Completa cliente y obra para continuar"}
+                ? draft.obra.trim() !== ""
+                  ? "Listo para agregar componentes"
+                  : "Puedes seguir y completar la obra automaticamente."
+                : "Completa al menos el cliente para continuar"}
             </div>
           </div>
         </div>

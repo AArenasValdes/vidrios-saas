@@ -41,7 +41,7 @@ function sanitizeDigits(value: string) {
 }
 
 export function usePasoDosAgregarGrupoMovil(params: Params) {
-  const activeLineTemplates = params.activeLineTemplates ?? [];
+  const activeLineTemplates = params.activeLineTemplates;
   const [isOpen, setIsOpen] = useState(false);
   const [paso, setPaso] = useState<PasoDosGrupoPasoMovil>(1);
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() =>
@@ -226,6 +226,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
   };
 
+  const applyCreatedLineTemplate = (template: CotizacionLineTemplate) => {
+    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
+  };
+
   const updateColorHex = (colorHex: string) => {
     setDraft((current) => ({ ...current, colorHex }));
   };
@@ -308,6 +312,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateCantidad,
     updateMaterial,
     selectLineTemplate,
+    applyCreatedLineTemplate,
     updateColorHex,
     updateSistema,
     updateConfiguracion,

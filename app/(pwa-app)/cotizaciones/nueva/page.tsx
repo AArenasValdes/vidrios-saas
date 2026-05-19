@@ -27,6 +27,7 @@ import type {
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   normalizePricingMode,
   type PricingMode,
@@ -605,6 +606,14 @@ function NuevaCotizacionPageContent() {
         error instanceof Error ? error.message : "No pudimos guardar el precio rapido."
       );
     }
+  };
+
+  const handleCreateMobileLineTemplate = async (
+    input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
+  ) => {
+    const created = await createLineTemplate(input);
+    setGlobalError(null);
+    return created;
   };
 
   const handleSaveQuickPriceTemplateFromItem = async (itemId: string) => {
@@ -1344,6 +1353,7 @@ function NuevaCotizacionPageContent() {
               glassOptions: pasoDosAgregarGrupoMovil.glassOptions,
               visibleLineTemplates: pasoDosAgregarGrupoMovil.visibleLineTemplates,
               linePricingSummary: pasoDosAgregarGrupoMovil.linePricingSummary,
+              isSavingLineTemplate: isSavingQuickPriceTemplate,
               onOpen: handleOpenAddGroupSheet,
               onClose: pasoDosAgregarGrupoMovil.closeSheet,
               onGoToStep: pasoDosAgregarGrupoMovil.goToStep,
@@ -1356,6 +1366,8 @@ function NuevaCotizacionPageContent() {
               onCantidadChange: pasoDosAgregarGrupoMovil.updateCantidad,
               onMaterialChange: pasoDosAgregarGrupoMovil.updateMaterial,
               onSelectLineTemplate: pasoDosAgregarGrupoMovil.selectLineTemplate,
+              onApplyCreatedLineTemplate: pasoDosAgregarGrupoMovil.applyCreatedLineTemplate,
+              onCreateLineTemplate: handleCreateMobileLineTemplate,
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
               onSistemaChange: pasoDosAgregarGrupoMovil.updateSistema,
               onConfiguracionChange: pasoDosAgregarGrupoMovil.updateConfiguracion,

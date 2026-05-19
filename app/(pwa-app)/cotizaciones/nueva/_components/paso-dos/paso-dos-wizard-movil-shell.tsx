@@ -5,7 +5,10 @@ import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type {
+  CotizacionLineTemplate,
+  CreateCotizacionLineTemplateInput,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { ComponentFormLinePricingSummary } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   ALUMINUM_COLOR_OPTIONS,
@@ -51,6 +54,7 @@ export type WizardActions = {
   glassOptions: readonly string[];
   visibleLineTemplates: readonly CotizacionLineTemplate[];
   linePricingSummary: ComponentFormLinePricingSummary;
+  isSavingLineTemplate: boolean;
   onOpen: () => void;
   onClose: () => void;
   onGoToStep: (paso: PasoDosGrupoPasoMovil) => void;
@@ -63,6 +67,10 @@ export type WizardActions = {
   onCantidadChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
   onSelectLineTemplate: (templateId: string) => void;
+  onApplyCreatedLineTemplate: (template: CotizacionLineTemplate) => void;
+  onCreateLineTemplate: (
+    input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
+  ) => Promise<CotizacionLineTemplate>;
   onColorChange: (colorHex: string) => void;
   onSistemaChange: (value: string) => void;
   onConfiguracionChange: (value: string) => void;
@@ -230,7 +238,7 @@ export function PasoDosWizardMovil({
     pricingMode,
   });
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
-  const visibleLineTemplates = wizard.visibleLineTemplates ?? [];
+  const visibleLineTemplates = wizard.visibleLineTemplates;
 
   const orderedGlassOptions = useMemo(
     () => sortGlassOptions(wizard.glassOptions),
@@ -408,8 +416,11 @@ export function PasoDosWizardMovil({
                   }
                   linePricingSummary={wizard.linePricingSummary}
                   lineTemplateOptions={visibleLineTemplates}
+                  isSavingLineTemplate={wizard.isSavingLineTemplate}
                   onAltoChange={wizard.onAltoChange}
                   onAnchoChange={wizard.onAnchoChange}
+                  onApplyCreatedLineTemplate={wizard.onApplyCreatedLineTemplate}
+                  onCreateLineTemplate={wizard.onCreateLineTemplate}
                   onMargenChange={wizard.onMargenChange}
                   onMaterialChange={wizard.onMaterialChange}
                   onSelectLineTemplate={wizard.onSelectLineTemplate}

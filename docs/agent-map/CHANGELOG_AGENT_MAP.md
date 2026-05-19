@@ -4,6 +4,25 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-18 - Paso 1 flexible y linea comercial rapida en cotizaciones moviles
+
+### Resumen
+
+Se elimino la friccion falsa de `Obra o trabajo` en el paso 1 de `/cotizaciones/nueva`: la UI ya no la trata como obligatoria y explica que, si queda vacia, se completa sola al avanzar o guardar. Ademas, el selector movil de lineas comerciales ahora incluye un modo rapido dentro del mismo bottom sheet para crear una linea, heredar el material actual, guardarla en `cotizacion_line_templates`, aplicarla al draft activo y seguir cotizando sin salir del flujo.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-uno-datos-cliente.tsx` | `obra` deja de bloquear el avance visual y muestra ayuda de autocompletado |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` | Nuevo modo rapido de alta de linea comercial dentro del selector movil |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil-shell.tsx` | El wizard movil ahora recibe acciones para crear y aplicar lineas rapidas |
+| `app/(pwa-app)/cotizaciones/nueva/_hooks/use-paso-dos-agregar-grupo-movil.ts` | Soporte para aplicar al draft una linea recien creada sin depender del lookup por id |
+| `app/(pwa-app)/cotizaciones/nueva/page.tsx` | Orquesta `createLineTemplate` para el flujo movil rapido |
+| `app/(pwa-app)/cotizaciones/nueva/page.module.css` | Estilos mobile-first para el formulario rapido en bottom sheet |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/__tests__/` | Cobertura para crear y aplicar linea rapida en movil |
+| `app/(pwa-app)/cotizaciones/nueva/_hooks/__tests__/use-paso-dos-agregar-grupo-movil.test.tsx` | Cobertura para aplicar una plantilla creada al draft movil |
+
 ## 2026-05-18 - Cierre de carrera de sesion al cambiar de cuenta
 
 ### Resumen
