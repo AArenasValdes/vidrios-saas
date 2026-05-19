@@ -133,7 +133,7 @@ export default async function PresupuestoPublicoPage({
   const rejectAction = rejectPublicQuoteAction.bind(null, token);
 
   return (
-    <main className={s.page} style={brandStyle}>
+    <main className={s.page} style={brandStyle} key={cacheBuster}>
       {mobileRequest ? (
         <PublicQuoteMobile
           quote={quote}

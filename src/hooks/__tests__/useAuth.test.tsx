@@ -304,4 +304,46 @@ describe("useAuth", () => {
 
     jest.useRealTimers();
   });
+
+  it("no debe cerrar una sesion nueva por una resolucion vieja abortada", async () => {
+    jest.useFakeTimers();
+    subscribeToAuthChanges.mockImplementation(() => jest.fn());
+    getCurrentAuthState.mockImplementation(
+      () =>
+        new Promise<AuthUserState>(() => {
+          return;
+        })
+    );
+    signIn.mockResolvedValue({
+      user: createUser("ventas@vidrios.cl"),
+      organizacionId: 21,
+      rol: "admin",
+      cargando: false,
+    });
+
+    render(<ProbeAuth />);
+
+    expect(screen.getByTestId("estado")).toHaveTextContent("cargando");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "entrar" }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("estado")).toHaveTextContent("listo");
+      expect(screen.getByTestId("email")).toHaveTextContent("ventas@vidrios.cl");
+      expect(screen.getByTestId("org")).toHaveTextContent("21");
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(8100);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("estado")).toHaveTextContent("listo");
+    expect(screen.getByTestId("email")).toHaveTextContent("ventas@vidrios.cl");
+    expect(screen.getByTestId("org")).toHaveTextContent("21");
+
+    jest.useRealTimers();
+  });
 });

@@ -24,7 +24,7 @@ const unauthenticatedState: AuthUserState = {
 };
 
 const AUTH_STORAGE_KEY = "vidrios-saas:auth-state";
-const AUTH_RESOLVE_TIMEOUT_MS = 15000;
+const AUTH_RESOLVE_TIMEOUT_MS = 8000;
 
 let authStateCache: AuthUserState | null = null;
 let authStatePromise: Promise<AuthUserState> | null = null;
@@ -33,6 +33,15 @@ let authStateHydratedFromNetwork = false;
 let resolveAuthStateGeneration = 0;
 const authStoreListeners = new Set<() => void>();
 let currentAuthAbortController: AbortController | null = null;
+
+type AuthResolveOutcome =
+  | {
+      kind: "resolved";
+      state: AuthUserState;
+    }
+  | {
+      kind: "timed_out";
+    };
 
 type BrowserWindowWithIdleCallback = Window &
   typeof globalThis & {
@@ -139,19 +148,26 @@ function scheduleDeferredAuthRefresh(callback: () => void, delayMs = 450) {
 }
 
 function createAuthResolveTimeout(abortSignal?: AbortSignal) {
-  return new Promise<AuthUserState>((resolve) => {
+  return new Promise<AuthResolveOutcome>((resolve) => {
     if (typeof window === "undefined") {
-      resolve(unauthenticatedState);
+      resolve({
+        kind: "resolved",
+        state: unauthenticatedState,
+      });
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
-      resolve(unauthenticatedState);
+      resolve({
+        kind: "timed_out",
+      });
     }, AUTH_RESOLVE_TIMEOUT_MS);
 
     abortSignal?.addEventListener("abort", () => {
       window.clearTimeout(timeoutId);
-      resolve(unauthenticatedState);
+      resolve({
+        kind: "timed_out",
+      });
     });
   });
 }
@@ -193,9 +209,9 @@ function ensureAuthSubscription() {
 
 function handleAuthSessionChange(payload: AuthSessionChangePayload) {
   authStatePromise = null;
+  resolveAuthStateGeneration += 1;
 
   if (payload.event === "SIGNED_OUT") {
-    resolveAuthStateGeneration += 1;
     authStateCache = null;
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();
@@ -255,22 +271,42 @@ async function resolveAuthState(options: {
     currentAuthAbortController = abortController;
 
     authStatePromise = Promise.race([
-      authService.getCurrentAuthState(options),
+      authService.getCurrentAuthState(options).then((state) => ({
+        kind: "resolved" as const,
+        state,
+      })),
       createAuthResolveTimeout(abortController.signal),
     ])
-      .then((currentAuth) => ({
-        ...currentAuth,
-        cargando: false,
-      }))
-      .catch(() => unauthenticatedState)
-      .then(async (nextState) => {
+      .catch(
+        () =>
+          ({
+            kind: "timed_out",
+          }) satisfies AuthResolveOutcome
+      )
+      .then((outcome) => {
         if (resolveAuthStateGeneration !== currentGeneration) {
-          return unauthenticatedState;
+          return authStateCache ?? unauthenticatedState;
         }
+
+        if (outcome.kind === "timed_out") {
+          const fallbackState = authStateCache
+            ? {
+                ...authStateCache,
+                cargando: false,
+              }
+            : unauthenticatedState;
+
+          setAuthState(fallbackState);
+          return fallbackState;
+        }
+
+        const nextState = {
+          ...outcome.state,
+          cargando: false,
+        };
 
         if (!nextState.user) {
           clearAuthStateStorage();
-          void authService.signOut().catch(() => undefined);
         }
 
         authStateHydratedFromNetwork = true;
@@ -330,8 +366,11 @@ export function useAuth() {
   }, []);
 
   const signIn = async (credentials: AuthSignInInput) => {
-    const authenticatedState = await authService.signIn(credentials);
+    resolveAuthStateGeneration += 1;
     authStatePromise = null;
+    currentAuthAbortController?.abort("signIn");
+    currentAuthAbortController = null;
+    const authenticatedState = await authService.signIn(credentials);
     authStateHydratedFromNetwork = true;
     setAuthState({
       ...authenticatedState,
