@@ -7,7 +7,7 @@ import type {
   AuthSignInResult,
   AuthSignOutOptions,
 } from "@/features/auth/types/auth";
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 type BrowserSupabaseClient = ReturnType<typeof createBrowserClient>;
 
@@ -499,10 +499,13 @@ export function createAuthRepository(
       const supabase = browserClientFactory();
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((event, session) => {
+      } = supabase.auth.onAuthStateChange((
+        event: AuthChangeEvent,
+        session: Session | null
+      ) => {
         listener({
           event,
-          session: session as Session | null,
+          session,
         });
       });
 
