@@ -29,6 +29,7 @@ import {
   buildEmpresaProfileInput,
   buildOrganizationInitials,
   DEFAULT_ORGANIZATION_BRAND_COLOR,
+  normalizePublicRequestSlug,
 } from "@/features/organization-profile/services/organization-profile.service";
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
@@ -316,6 +317,28 @@ export default function ConfiguracionEmpresaPage() {
     []
   );
 
+  const handleEmpresaNombreChange = useCallback((value: string) => {
+    setForm((current) => {
+      const currentSlug = current.solicitudPublicaSlug.trim();
+      const previousDerivedSlug = normalizePublicRequestSlug(current.empresaNombre);
+      const nextDerivedSlug = normalizePublicRequestSlug(value);
+      const shouldSyncSlug =
+        currentSlug === "" || currentSlug === previousDerivedSlug;
+
+      return {
+        ...current,
+        empresaNombre: value,
+        publicName: value,
+        solicitudPublicaSlug: shouldSyncSlug ? nextDerivedSlug : currentSlug,
+      };
+    });
+    setSectionFeedback(null);
+  }, []);
+
+  const handleSolicitudSlugChange = useCallback((value: string) => {
+    handleFieldChange("solicitudPublicaSlug", normalizePublicRequestSlug(value));
+  }, [handleFieldChange]);
+
   const handleLogoChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -358,7 +381,19 @@ export default function ConfiguracionEmpresaPage() {
       try {
         setSavingSection(section);
         setSectionFeedback(null);
-        await saveProfile(form);
+        const nextForm =
+          section === "empresa"
+            ? {
+                ...form,
+                publicName: form.empresaNombre,
+              }
+            : form;
+
+        if (nextForm !== form) {
+          setForm(nextForm);
+        }
+
+        await saveProfile(nextForm);
         setSectionFeedback({ section, kind: "success", message: "Guardado." });
         setOpenSection((current) => (current === section ? null : current));
       } catch (error) {
@@ -395,7 +430,6 @@ export default function ConfiguracionEmpresaPage() {
 
   const companyComplete = Boolean(
     form.empresaNombre.trim() &&
-      form.publicName.trim() &&
       form.publicBusinessType.trim() &&
       form.solicitudPublicaSlug.trim() &&
       form.empresaTelefono.trim() &&
@@ -411,7 +445,7 @@ export default function ConfiguracionEmpresaPage() {
   const notificationsComplete = notificationsEnabled;
 
   const companySummary = compactJoin([
-    form.publicName.trim() || form.empresaNombre.trim() || "Empresa sin nombre",
+    form.empresaNombre.trim() || "Empresa sin nombre",
     form.publicBusinessType.trim() || "Sin rubro",
     `/${form.solicitudPublicaSlug.trim() || "mi-empresa"}`,
   ]);
@@ -531,34 +565,29 @@ export default function ConfiguracionEmpresaPage() {
             <div className={s.accordionInner}>
               <div className={s.fieldGrid}>
                 <label className={s.field}>
-                  <span className={s.label}>Nombre empresa</span>
-                  <input className={s.input} value={form.empresaNombre} onChange={(event) => handleFieldChange("empresaNombre", event.target.value)} placeholder="Ej: Vidrieria San Marco" />
+                  <span className={s.label}>Nombre de empresa</span>
+                  <input className={s.input} value={form.empresaNombre} onChange={(event) => handleEmpresaNombreChange(event.target.value)} placeholder="Ej: Vidrieria San Marco" />
                   <span className={s.inlineInfo}>Base interna de tu empresa.</span>
-                </label>
-                <label className={s.field}>
-                  <span className={s.label}>Nombre que veran tus clientes</span>
-                  <input className={s.input} value={form.publicName} onChange={(event) => handleFieldChange("publicName", event.target.value)} placeholder={form.empresaNombre || "Mi empresa"} />
-                  <span className={s.inlineInfo}>Esto se refleja en tu landing publica.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Rubro o especialidad</span>
                   <input className={s.input} value={form.publicBusinessType} onChange={(event) => handleFieldChange("publicBusinessType", event.target.value)} placeholder="Ej: Vidrios y aluminio" />
-                  <span className={s.inlineInfo}>Se muestra como presentacion comercial en tu landing.</span>
+                  <span className={s.inlineInfo}>Se muestra como presentación comercial en tu página pública.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Nombre del enlace</span>
-                  <input className={s.input} value={form.solicitudPublicaSlug} onChange={(event) => handleFieldChange("solicitudPublicaSlug", event.target.value)} placeholder="ej: mi-vidrieria" />
-                  <span className={s.inlineInfo}>Tu landing publica quedara como {publicRequestUrl}.</span>
+                  <input className={s.input} value={form.solicitudPublicaSlug} onChange={(event) => handleSolicitudSlugChange(event.target.value)} placeholder="ej: mi-vidrieria" />
+                  <span className={s.inlineInfo}>Tu página pública de venta quedará como {publicRequestUrl}.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Telefono</span>
                   <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder="+56 9 1234 5678" />
-                  <span className={s.inlineInfo}>Esto se usa en PDF, WhatsApp y landing publica.</span>
+                  <span className={s.inlineInfo}>Esto se usa en PDF, WhatsApp y página pública.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Direccion</span>
                   <input className={s.input} value={form.empresaDireccion} onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)} placeholder="Ej: Apoquindo 4501, Las Condes" />
-                  <span className={s.inlineInfo}>Tambien se muestra automaticamente en tu landing.</span>
+                  <span className={s.inlineInfo}>También se muestra automáticamente en tu página pública.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Email</span>
@@ -613,7 +642,7 @@ export default function ConfiguracionEmpresaPage() {
                     <input type="color" value={form.brandColor} onChange={(event) => handleFieldChange("brandColor", event.target.value)} aria-label="Elegir color personalizado" />
                   </label>
                 </div>
-                <span className={s.inlineInfo}>Se refleja en presupuesto, landing publica y elementos activos.</span>
+                <span className={s.inlineInfo}>Se refleja en presupuesto, página pública y elementos activos.</span>
               </div>
 
               <div className={s.field}>
@@ -633,7 +662,7 @@ export default function ConfiguracionEmpresaPage() {
                     <input type="color" value={form.secondaryColor} onChange={(event) => handleFieldChange("secondaryColor", event.target.value)} aria-label="Elegir color secundario personalizado" />
                   </label>
                 </div>
-                <span className={s.inlineInfo}>Se usa en WhatsApp, botones y acentos de la landing.</span>
+                <span className={s.inlineInfo}>Se usa en WhatsApp, botones y acentos de la página pública.</span>
               </div>
 
               <div className={s.field}>

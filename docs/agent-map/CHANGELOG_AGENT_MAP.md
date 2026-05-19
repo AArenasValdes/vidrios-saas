@@ -4,6 +4,18 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-18 - Configuracion empresa con nombre publico unificado
+
+### Resumen
+
+En `/configuracion/empresa` se simplifico la UX de identidad comercial: el campo visible `Nombre que veran tus clientes` se retiro por redundante y `publicName` ahora queda sincronizado con `empresaNombre` desde esta pantalla. Tambien se reemplazo el lenguaje de `landing` por `pagina publica` o `pagina publica de venta`, y el slug del enlace se autocompleta desde el nombre de la empresa mientras no haya una personalizacion manual.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/(pwa-app)/configuracion/empresa/page.tsx` | Sincroniza `publicName` con `empresaNombre`, autocompleta slug y ajusta copy visible de `landing` a `pagina publica` |
+
 ## 2026-05-18 - Paso 1 flexible y linea comercial rapida en cotizaciones moviles
 
 ### Resumen
