@@ -1,13 +1,19 @@
 /** @jest-environment jsdom */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { __resetAuthHookTestState, useAuth } from "../useAuth";
-import type { AuthSignInInput, AuthUserState } from "@/types/auth";
+import type {
+  AuthSessionChangePayload,
+  AuthSignInInput,
+  AuthUserState,
+} from "@/types/auth";
 
 const getCurrentAuthState: jest.MockedFunction<() => Promise<AuthUserState>> = jest.fn();
-const subscribeToAuthChanges: jest.MockedFunction<(listener: () => void) => () => void> =
-  jest.fn();
+const subscribeToAuthChanges: jest.MockedFunction<
+  (listener: (payload: AuthSessionChangePayload) => void) => () => void
+> = jest.fn();
 const signIn: jest.MockedFunction<
   (credentials: AuthSignInInput) => Promise<AuthUserState>
 > = jest.fn();
@@ -16,7 +22,8 @@ const signOut: jest.MockedFunction<() => Promise<void>> = jest.fn();
 jest.mock("@/features/auth/services/auth.service", () => ({
   authService: {
     getCurrentAuthState: () => getCurrentAuthState(),
-    subscribeToAuthChanges: (listener: () => void) => subscribeToAuthChanges(listener),
+    subscribeToAuthChanges: (listener: (payload: AuthSessionChangePayload) => void) =>
+      subscribeToAuthChanges(listener),
     signIn: (credentials: AuthSignInInput) => signIn(credentials),
     signOut: () => signOut(),
   },
@@ -34,6 +41,7 @@ function createUser(email = "dueno@vidrios.cl") {
 }
 
 function ProbeAuth() {
+  const [logoutStatus, setLogoutStatus] = useState("idle");
   const {
     user,
     organizacionId,
@@ -49,6 +57,7 @@ function ProbeAuth() {
       <span data-testid="email">{user?.email ?? "anon"}</span>
       <span data-testid="org">{organizacionId ?? "sin-org"}</span>
       <span data-testid="rol">{rol ?? "sin-rol"}</span>
+      <span data-testid="logout-status">{logoutStatus}</span>
       <button
         type="button"
         onClick={() =>
@@ -60,7 +69,15 @@ function ProbeAuth() {
       >
         entrar
       </button>
-      <button type="button" onClick={() => void logout()}>
+      <button
+        type="button"
+        onClick={() => {
+          setLogoutStatus("pending");
+          void logout()
+            .then(() => setLogoutStatus("resolved"))
+            .catch(() => setLogoutStatus("rejected"));
+        }}
+      >
         salir
       </button>
     </div>
@@ -82,7 +99,7 @@ describe("useAuth", () => {
   it("debe cargar la sesion, reaccionar a cambios y cerrar sesion sin romper el estado", async () => {
     const usuarioInicial = createUser();
     const usuarioActualizado = createUser("ventas@vidrios.cl");
-    let authListener: (() => void) | null = null;
+    let authListener: ((payload: AuthSessionChangePayload) => void) | null = null;
 
     getCurrentAuthState
       .mockResolvedValueOnce({
@@ -118,7 +135,10 @@ describe("useAuth", () => {
     expect(authListener).not.toBeNull();
 
     await act(async () => {
-      authListener?.();
+      authListener?.({
+        event: "SIGNED_IN",
+        session: null,
+      });
     });
 
     await waitFor(() => {
@@ -137,6 +157,7 @@ describe("useAuth", () => {
       expect(screen.getByTestId("email")).toHaveTextContent("anon");
       expect(screen.getByTestId("org")).toHaveTextContent("sin-org");
       expect(screen.getByTestId("rol")).toHaveTextContent("sin-rol");
+      expect(screen.getByTestId("logout-status")).toHaveTextContent("resolved");
     });
   });
 
@@ -244,9 +265,14 @@ describe("useAuth", () => {
     expect(screen.getByTestId("email")).toHaveTextContent("anon");
     expect(screen.getByTestId("org")).toHaveTextContent("sin-org");
     expect(screen.getByTestId("rol")).toHaveTextContent("sin-rol");
+    expect(screen.getByTestId("logout-status")).toHaveTextContent("pending");
 
     await act(async () => {
       resolveSignOut?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("logout-status")).toHaveTextContent("resolved");
     });
   });
 

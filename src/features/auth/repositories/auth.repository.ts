@@ -1,6 +1,13 @@
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import type { AuthProfile, AuthSignInInput } from "@/features/auth/types/auth";
-import type { User } from "@supabase/supabase-js";
+import type {
+  AuthProfile,
+  AuthProfileLookupOptions,
+  AuthSessionChangePayload,
+  AuthSignInInput,
+  AuthSignInResult,
+  AuthSignOutOptions,
+} from "@/features/auth/types/auth";
+import type { Session, User } from "@supabase/supabase-js";
 
 type BrowserSupabaseClient = ReturnType<typeof createBrowserClient>;
 
@@ -32,6 +39,17 @@ type ServerAuthProfileResponse = {
         rol: string | null;
       }
     | null;
+};
+
+type ServerProfileFetchStatus =
+  | "ok"
+  | "not_found"
+  | "unauthorized"
+  | "unavailable";
+
+type ServerProfileFetchResult = {
+  profile: AuthProfile | null;
+  status: ServerProfileFetchStatus;
 };
 
 function buildAuthProfileCacheKey(identity: AuthProfileIdentity) {
@@ -188,12 +206,42 @@ function isGetOrgIdPermissionError(error: unknown) {
   );
 }
 
+function wait(delayMs: number) {
+  if (delayMs <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+async function resolveAccessToken(
+  supabase: BrowserSupabaseClient,
+  accessToken?: string | null
+) {
+  if (accessToken?.trim()) {
+    return accessToken.trim();
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.access_token ?? null;
+}
+
 export interface AuthRepository {
   getAuthenticatedUser(): Promise<User | null>;
-  getUserProfile(identity: AuthProfileIdentity): Promise<AuthProfile | null>;
-  signInWithPassword(credentials: AuthSignInInput): Promise<User>;
-  signOut(): Promise<void>;
-  subscribeToAuthStateChange(listener: () => void): () => void;
+  getUserProfile(
+    identity: AuthProfileIdentity,
+    options?: AuthProfileLookupOptions
+  ): Promise<AuthProfile | null>;
+  signInWithPassword(credentials: AuthSignInInput): Promise<AuthSignInResult>;
+  signOut(options?: AuthSignOutOptions): Promise<void>;
+  subscribeToAuthStateChange(
+    listener: (payload: AuthSessionChangePayload) => void
+  ): () => void;
 }
 
 export function createAuthRepository(
@@ -203,46 +251,82 @@ export function createAuthRepository(
 
   async function getUserProfileFromServer(
     supabase: BrowserSupabaseClient,
-    cacheKey: string
-  ) {
+    cacheKey: string,
+    options: {
+      accessToken?: string | null;
+      retryOnUnauthorized?: boolean;
+    } = {}
+  ): Promise<ServerProfileFetchResult> {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const accessToken = session?.access_token;
+      const accessToken = await resolveAccessToken(supabase, options.accessToken);
 
       if (!accessToken) {
-        return null;
+        return {
+          profile: null,
+          status: "unavailable",
+        };
       }
 
-      const response = await fetch("/api/auth/profile", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const fetchProfile = async () => {
+        const response = await fetch("/api/auth/profile", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
 
-      if (!response.ok) {
-        return null;
+        if (response.status === 401) {
+          return {
+            profile: null,
+            status: "unauthorized" as const,
+          };
+        }
+
+        if (!response.ok) {
+          return {
+            profile: null,
+            status: "unavailable" as const,
+          };
+        }
+
+        const payload = (await response.json()) as ServerAuthProfileResponse;
+        const profile = payload.profile;
+
+        if (!profile?.organizacionId) {
+          return {
+            profile: null,
+            status: "not_found" as const,
+          };
+        }
+
+        persistAuthProfile(cacheKey, profile);
+
+        return {
+          profile,
+          status: "ok" as const,
+        };
+      };
+
+      let result = await fetchProfile();
+
+      if (result.status === "unauthorized" && options.retryOnUnauthorized) {
+        await wait(150);
+        result = await fetchProfile();
       }
 
-      const payload = (await response.json()) as ServerAuthProfileResponse;
-      const profile = payload.profile;
-
-      if (!profile?.organizacionId) {
-        return null;
-      }
-
-      persistAuthProfile(cacheKey, profile);
-
-      return profile;
+      return result;
     } catch (error) {
       if (isConnectivityError(error)) {
-        return null;
+        return {
+          profile: null,
+          status: "unavailable",
+        };
       }
 
-      return null;
+      return {
+        profile: null,
+        status: "unavailable",
+      };
     }
   }
 
@@ -278,7 +362,7 @@ export function createAuthRepository(
       }
     },
 
-    async getUserProfile(identity) {
+    async getUserProfile(identity, options = {}) {
       const cacheKey = buildAuthProfileCacheKey(identity);
       const normalizedAuthUserId = identity.authUserId?.trim() ?? "";
       const normalizedEmail = identity.email?.trim().toLowerCase() ?? "";
@@ -294,10 +378,19 @@ export function createAuthRepository(
       }
 
       const supabase = browserClientFactory();
-      const serverProfile = await getUserProfileFromServer(supabase, cacheKey);
+      const shouldPreferServerLookup =
+        options.preferServerLookup === true || Boolean(options.accessToken);
+      const serverProfileResult = await getUserProfileFromServer(supabase, cacheKey, {
+        accessToken: options.accessToken,
+        retryOnUnauthorized: options.retryServerOnUnauthorized,
+      });
 
-      if (serverProfile) {
-        return serverProfile;
+      if (serverProfileResult.profile) {
+        return serverProfileResult.profile;
+      }
+
+      if (shouldPreferServerLookup) {
+        return null;
       }
 
       try {
@@ -339,7 +432,8 @@ export function createAuthRepository(
         const perfil = data as PerfilRow | null;
 
         if (!perfil) {
-          return getUserProfileFromServer(supabase, cacheKey);
+          const fallbackResult = await getUserProfileFromServer(supabase, cacheKey);
+          return fallbackResult.profile;
         }
 
         const profile = {
@@ -378,13 +472,23 @@ export function createAuthRepository(
         throw new Error("No pudimos abrir la sesion.");
       }
 
-      return data.user;
+      if (!data.session?.access_token) {
+        throw new Error("No pudimos confirmar la sesion nueva.");
+      }
+
+      return {
+        user: data.user,
+        session: data.session,
+        accessToken: data.session.access_token,
+      };
     },
 
-    async signOut() {
+    async signOut(options) {
       const supabase = browserClientFactory();
       clearAuthRepositoryStorage();
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({
+        scope: options?.scope ?? "global",
+      });
 
       if (error) {
         throw error;
@@ -395,8 +499,11 @@ export function createAuthRepository(
       const supabase = browserClientFactory();
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange(() => {
-        listener();
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        listener({
+          event,
+          session: session as Session | null,
+        });
       });
 
       return () => subscription.unsubscribe();

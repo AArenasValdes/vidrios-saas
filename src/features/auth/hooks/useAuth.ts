@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 
 import { authService } from "@/features/auth/services/auth.service";
 import type {
+  AuthSessionChangePayload,
   AuthSignInInput,
   AuthUserState,
 } from "@/features/auth/types/auth";
@@ -174,11 +175,42 @@ function ensureAuthSubscription() {
     return;
   }
 
-  authSubscriptionCleanup = authService.subscribeToAuthChanges(() => {
+  authSubscriptionCleanup = authService.subscribeToAuthChanges((payload) => {
+    handleAuthSessionChange(payload);
+  });
+}
+
+function handleAuthSessionChange(payload: AuthSessionChangePayload) {
+  authStatePromise = null;
+
+  if (payload.event === "SIGNED_OUT") {
+    resolveAuthStateGeneration += 1;
+    authStateCache = null;
+    authStateHydratedFromNetwork = true;
+    clearAuthStateStorage();
+    setAuthState(unauthenticatedState);
+    return;
+  }
+
+  if (
+    payload.event === "SIGNED_IN" ||
+    payload.event === "TOKEN_REFRESHED" ||
+    payload.event === "INITIAL_SESSION" ||
+    payload.event === "USER_UPDATED"
+  ) {
     authStateCache = null;
     authStateHydratedFromNetwork = false;
-    void resolveAuthState();
-  });
+    void resolveAuthState({
+      accessToken: payload.session?.access_token ?? null,
+      preferServerLookup: Boolean(payload.session?.access_token),
+      retryServerOnUnauthorized: payload.event === "SIGNED_IN",
+    });
+    return;
+  }
+
+  authStateCache = null;
+  authStateHydratedFromNetwork = false;
+  void resolveAuthState();
 }
 
 function subscribeToAuthStore(listener: () => void) {
@@ -195,7 +227,11 @@ function subscribeToAuthStore(listener: () => void) {
   };
 }
 
-async function resolveAuthState() {
+async function resolveAuthState(options: {
+  accessToken?: string | null;
+  preferServerLookup?: boolean;
+  retryServerOnUnauthorized?: boolean;
+} = {}) {
   const currentGeneration = resolveAuthStateGeneration;
 
   if (authStateHydratedFromNetwork && authStateCache && !authStateCache.cargando) {
@@ -204,7 +240,7 @@ async function resolveAuthState() {
 
   if (!authStatePromise) {
     authStatePromise = Promise.race([
-      authService.getCurrentAuthState(),
+      authService.getCurrentAuthState(options),
       createAuthResolveTimeout(),
     ])
       .then((currentAuth) => ({
@@ -276,12 +312,23 @@ export function useAuth() {
   };
 
   const signOut = async () => {
+    const previousState = getAuthSnapshot();
+
     resolveAuthStateGeneration += 1;
     authStatePromise = null;
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();
     setAuthState(unauthenticatedState);
-    void authService.signOut().catch(() => undefined);
+
+    try {
+      await authService.signOut();
+    } catch (error) {
+      authStatePromise = null;
+      authStateHydratedFromNetwork =
+        Boolean(previousState.user) && !previousState.cargando;
+      setAuthState(previousState);
+      throw error;
+    }
   };
 
   return {

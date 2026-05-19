@@ -1,4 +1,4 @@
-import type { User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 export type OrganizacionId = string | number;
 
@@ -20,4 +20,27 @@ export interface AuthUserState extends AuthenticatedUser {
 export interface AuthSignInInput {
   email: string;
   password: string;
+}
+
+export interface AuthProfileLookupOptions {
+  accessToken?: string | null;
+  preferServerLookup?: boolean;
+  retryServerOnUnauthorized?: boolean;
+}
+
+export interface AuthSignInResult {
+  user: User;
+  session: Session;
+  accessToken: string;
+}
+
+export type AuthSignOutScope = "global" | "local" | "others";
+
+export interface AuthSignOutOptions {
+  scope?: AuthSignOutScope;
+}
+
+export interface AuthSessionChangePayload {
+  event: AuthChangeEvent;
+  session: Session | null;
 }

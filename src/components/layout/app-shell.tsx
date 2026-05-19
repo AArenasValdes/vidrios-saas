@@ -360,8 +360,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     try {
       setIsSigningOut(true);
       setIsAlertsOpen(false);
-      router.replace("/login");
       await signOut();
+      router.replace("/login");
     } finally {
       setIsSigningOut(false);
     }
@@ -437,7 +437,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!cargando && !user) {
       if (isSigningOut) {
-        router.replace("/login");
         return;
       }
 

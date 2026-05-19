@@ -3,7 +3,9 @@ import {
   type AuthRepository,
 } from "@/features/auth/repositories/auth.repository";
 import type {
+  AuthProfileLookupOptions,
   AuthSignInInput,
+  AuthSessionChangePayload,
   AuthenticatedUser,
 } from "@/features/auth/types/auth";
 
@@ -59,6 +61,22 @@ function isGetOrgIdPermissionError(error: unknown) {
   );
 }
 
+function buildProfileLookupOptions(options?: AuthProfileLookupOptions) {
+  if (
+    !options?.accessToken &&
+    options?.preferServerLookup !== true &&
+    options?.retryServerOnUnauthorized !== true
+  ) {
+    return undefined;
+  }
+
+  return {
+    accessToken: options.accessToken,
+    preferServerLookup: options.preferServerLookup,
+    retryServerOnUnauthorized: options.retryServerOnUnauthorized,
+  } satisfies AuthProfileLookupOptions;
+}
+
 export function createAuthService(deps: AuthServiceDeps = {}) {
   const repository = deps.repository ?? authRepository;
   const bootstrapRetryCount =
@@ -68,7 +86,9 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
 
   async function resolveAuthenticatedState(
     user: NonNullable<AuthenticatedUser["user"]>,
-    options?: { throwOnMissingOrganization?: boolean }
+    options?: AuthProfileLookupOptions & {
+      throwOnMissingOrganization?: boolean;
+    }
   ): Promise<AuthenticatedUser> {
     let lastState: AuthenticatedUser = {
       user,
@@ -80,10 +100,15 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       let perfil;
 
       try {
-        perfil = await repository.getUserProfile({
+        const profileLookupOptions = buildProfileLookupOptions(options);
+        const profileIdentity = {
           authUserId: user.id,
           email: user.email,
-        });
+        };
+
+        perfil = profileLookupOptions
+          ? await repository.getUserProfile(profileIdentity, profileLookupOptions)
+          : await repository.getUserProfile(profileIdentity);
       } catch (error) {
         if (isGetOrgIdPermissionError(error)) {
           throw new Error(GET_ORG_ID_PERMISSION_ERROR_MESSAGE);
@@ -112,7 +137,9 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       return lastState;
     }
 
-    await repository.signOut();
+    await repository.signOut({
+      scope: "local",
+    });
 
     if (options?.throwOnMissingOrganization) {
       throw new Error(
@@ -128,7 +155,9 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
   }
 
   return {
-    async getCurrentAuthState(): Promise<AuthenticatedUser> {
+    async getCurrentAuthState(
+      options: AuthProfileLookupOptions = {}
+    ): Promise<AuthenticatedUser> {
       const user = await repository.getAuthenticatedUser();
 
       if (!user) {
@@ -143,7 +172,7 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      return resolveAuthenticatedState(user);
+      return resolveAuthenticatedState(user, options);
     },
 
     async signIn(credentials: AuthSignInInput) {
@@ -158,7 +187,9 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       }
 
       try {
-        await repository.signOut();
+        await repository.signOut({
+          scope: "local",
+        });
       } catch {
         // Si no habia sesion previa o el cliente tiene estado viejo, igual seguimos con el login nuevo.
       }
@@ -168,21 +199,28 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         password: credentials.password,
       });
 
-      if (!authenticatedUser.email) {
-        await repository.signOut();
+      if (!authenticatedUser.user.email) {
+        await repository.signOut({
+          scope: "local",
+        });
         throw new Error("El usuario autenticado no tiene correo");
       }
 
-      return resolveAuthenticatedState(authenticatedUser, {
+      return resolveAuthenticatedState(authenticatedUser.user, {
+        accessToken: authenticatedUser.accessToken,
+        preferServerLookup: true,
+        retryServerOnUnauthorized: true,
         throwOnMissingOrganization: true,
       });
     },
 
     async signOut() {
-      await repository.signOut();
+      await repository.signOut({
+        scope: "local",
+      });
     },
 
-    subscribeToAuthChanges(listener: () => void) {
+    subscribeToAuthChanges(listener: (payload: AuthSessionChangePayload) => void) {
       return repository.subscribeToAuthStateChange(listener);
     },
   };

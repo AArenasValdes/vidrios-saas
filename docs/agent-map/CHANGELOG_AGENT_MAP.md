@@ -4,6 +4,25 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-18 - Cierre de carrera de sesion al cambiar de cuenta
+
+### Resumen
+
+Se corrigio la carrera de sesion que aparecia al salir e ingresar rapido con otra cuenta en la misma pestana. El logout ahora espera el cierre real de Supabase en scope local antes de redirigir, el login usa el token fresco devuelto por `signInWithPassword` para resolver `/api/auth/profile`, y los eventos de auth ya propagan `SIGNED_IN`, `SIGNED_OUT` y `TOKEN_REFRESHED` con su sesion asociada para rehidratar sin depender de un token viejo.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/auth/types/auth.ts` | Nuevos contratos para token fresco, eventos de auth y `signOut` con scope |
+| `src/features/auth/repositories/auth.repository.ts` | Login devuelve sesion fresca, lookup server-side prioriza bearer nuevo y logout usa scope local |
+| `src/features/auth/services/auth.service.ts` | Bootstrap/auth coordina server lookup preferente para login nuevo y cierre local de sesion |
+| `src/features/auth/hooks/useAuth.ts` | Hook espera el signOut real, restaura estado si falla y reacciona a eventos de sesion |
+| `src/components/layout/app-shell.tsx` | La redireccion a `/login` ocurre solo despues del cierre real de sesion |
+| `src/hooks/__tests__/useAuth.test.tsx` | Cobertura para promesa de logout pendiente mientras el cierre real sigue en curso |
+| `src/services/__tests__/auth.service.test.ts` | Cobertura para token fresco en login y logout local |
+| `src/features/auth/repositories/__tests__/auth.repository.test.ts` | Cobertura para retry server-side con `401`, sesion fresca y `signOut` local |
+
 ## 2026-05-18 - Script seguro para cuentas piloto
 
 ### Resumen

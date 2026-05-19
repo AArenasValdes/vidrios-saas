@@ -1,6 +1,7 @@
 /** @jest-environment jsdom */
 
 import { createAuthRepository } from "../auth.repository";
+import type { Session } from "@supabase/supabase-js";
 
 function createQueryBuilder(result: { data: unknown; error: unknown }) {
   return {
@@ -71,6 +72,137 @@ describe("authRepository", () => {
       headers: {
         Authorization: "Bearer token-123",
       },
+    });
+  });
+
+  it("debe priorizar el token fresco del login y reintentar una vez si /api/auth/profile responde 401", async () => {
+    const usersQuery = createQueryBuilder({
+      data: {
+        organization_id: 999,
+        rol: "viewer",
+      },
+      error: null,
+    });
+
+    const supabaseMock = {
+      from: jest.fn().mockReturnValue(usersQuery),
+      auth: {
+        getSession: jest.fn().mockResolvedValue({
+          data: {
+            session: {
+              access_token: "token-viejo",
+            } satisfies Partial<Session>,
+          },
+        }),
+      },
+    };
+
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({
+        status: 401,
+        ok: false,
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        json: async () => ({
+          profile: {
+            organizacionId: 21,
+            rol: "admin",
+          },
+        }),
+      }) as typeof fetch;
+
+    const repository = createAuthRepository({
+      browserClientFactory: () => supabaseMock as never,
+    });
+
+    const profile = await repository.getUserProfile(
+      {
+        authUserId: "user-2",
+        email: "ventas@test.com",
+      },
+      {
+        accessToken: "token-fresco",
+        preferServerLookup: true,
+        retryServerOnUnauthorized: true,
+      }
+    );
+
+    expect(profile).toEqual({
+      organizacionId: 21,
+      rol: "admin",
+    });
+    expect(global.fetch).toHaveBeenNthCalledWith(1, "/api/auth/profile", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer token-fresco",
+      },
+    });
+    expect(global.fetch).toHaveBeenNthCalledWith(2, "/api/auth/profile", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer token-fresco",
+      },
+    });
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+    expect(supabaseMock.auth.getSession).not.toHaveBeenCalled();
+  });
+
+  it("debe devolver sesion fresca al iniciar con password", async () => {
+    const supabaseMock = {
+      auth: {
+        signInWithPassword: jest.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: "user-3",
+              email: "admin@test.com",
+            },
+            session: {
+              access_token: "token-sesion",
+            } as never,
+          },
+          error: null,
+        }),
+      },
+    };
+
+    const repository = createAuthRepository({
+      browserClientFactory: () => supabaseMock as never,
+    });
+
+    const result = await repository.signInWithPassword({
+      email: "admin@test.com",
+      password: "1234",
+    });
+
+    expect(result.user).toMatchObject({
+      id: "user-3",
+      email: "admin@test.com",
+    });
+    expect(result.accessToken).toBe("token-sesion");
+  });
+
+  it("debe cerrar sesion solo localmente cuando se pide scope local", async () => {
+    const supabaseMock = {
+      auth: {
+        signOut: jest.fn().mockResolvedValue({
+          error: null,
+        }),
+      },
+    };
+
+    const repository = createAuthRepository({
+      browserClientFactory: () => supabaseMock as never,
+    });
+
+    await repository.signOut({
+      scope: "local",
+    });
+
+    expect(supabaseMock.auth.signOut).toHaveBeenCalledWith({
+      scope: "local",
     });
   });
 });

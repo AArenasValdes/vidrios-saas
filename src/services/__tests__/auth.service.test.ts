@@ -109,7 +109,13 @@ describe("authService", () => {
     const repository = createRepositoryMock();
     const user = createUser("admin@vidrios.cl");
     repository.signOut.mockResolvedValue();
-    repository.signInWithPassword.mockResolvedValue(user);
+    repository.signInWithPassword.mockResolvedValue({
+      user,
+      session: {
+        access_token: "token-login",
+      } as never,
+      accessToken: "token-login",
+    });
     repository.getUserProfile.mockResolvedValue({
       organizacionId: 17,
       rol: "admin",
@@ -129,6 +135,13 @@ describe("authService", () => {
     expect(repository.getUserProfile).toHaveBeenCalledWith({
       authUserId: "user-1",
       email: "admin@vidrios.cl",
+    }, {
+      accessToken: "token-login",
+      preferServerLookup: true,
+      retryServerOnUnauthorized: true,
+    });
+    expect(repository.signOut).toHaveBeenCalledWith({
+      scope: "local",
     });
   });
 
@@ -172,7 +185,13 @@ describe("authService", () => {
     const repository = createRepositoryMock();
     const user = createUser("sinempresa@vidrios.cl");
 
-    repository.signInWithPassword.mockResolvedValue(user);
+    repository.signInWithPassword.mockResolvedValue({
+      user,
+      session: {
+        access_token: "token-sin-org",
+      } as never,
+      accessToken: "token-sin-org",
+    });
     repository.getUserProfile.mockResolvedValue(null);
     repository.signOut.mockResolvedValue();
 
@@ -197,7 +216,13 @@ describe("authService", () => {
     const user = createUser("admin@test.com");
 
     repository.signOut.mockResolvedValue();
-    repository.signInWithPassword.mockResolvedValue(user);
+    repository.signInWithPassword.mockResolvedValue({
+      user,
+      session: {
+        access_token: "token-1234",
+      } as never,
+      accessToken: "token-1234",
+    });
     repository.getUserProfile.mockRejectedValue(
       new Error("42501 permission denied for function get_org_id")
     );
@@ -214,5 +239,17 @@ describe("authService", () => {
         password: "1234",
       })
     ).rejects.toThrow(GET_ORG_ID_PERMISSION_ERROR_MESSAGE);
+  });
+
+  it("debe cerrar sesion local al salir", async () => {
+    const repository = createRepositoryMock();
+    repository.signOut.mockResolvedValue();
+
+    const service = createAuthService({ repository });
+    await service.signOut();
+
+    expect(repository.signOut).toHaveBeenCalledWith({
+      scope: "local",
+    });
   });
 });
