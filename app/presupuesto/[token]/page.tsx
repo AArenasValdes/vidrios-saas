@@ -14,6 +14,8 @@ import { PublicQuoteMobile } from "./public-quote-mobile";
 import { PublicQuotePreviewLoader } from "./public-quote-preview-loader";
 import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
 
+export const dynamic = "force-dynamic";
+
 import s from "./page.module.css";
 
 const CLP = (value: number) =>
@@ -78,6 +80,8 @@ export default async function PresupuestoPublicoPage({
     console.error("No pudimos resolver el presupuesto publico.", error);
     loadError = "No pudimos validar este presupuesto en este momento.";
   }
+
+  const cacheBuster = new Date().getTime().toString(36).slice(-5);
 
   if (loadError) {
     return (

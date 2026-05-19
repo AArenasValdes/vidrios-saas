@@ -24,7 +24,7 @@ const unauthenticatedState: AuthUserState = {
 };
 
 const AUTH_STORAGE_KEY = "vidrios-saas:auth-state";
-const AUTH_RESOLVE_TIMEOUT_MS = 8000;
+const AUTH_RESOLVE_TIMEOUT_MS = 15000;
 
 let authStateCache: AuthUserState | null = null;
 let authStatePromise: Promise<AuthUserState> | null = null;
@@ -32,6 +32,7 @@ let authSubscriptionCleanup: (() => void) | null = null;
 let authStateHydratedFromNetwork = false;
 let resolveAuthStateGeneration = 0;
 const authStoreListeners = new Set<() => void>();
+let currentAuthAbortController: AbortController | null = null;
 
 type BrowserWindowWithIdleCallback = Window &
   typeof globalThis & {
@@ -57,6 +58,11 @@ export function __resetAuthHookTestState() {
 
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+
+  if (currentAuthAbortController) {
+    currentAuthAbortController.abort("__resetAuthHookTestState");
+    currentAuthAbortController = null;
   }
 }
 
@@ -132,16 +138,21 @@ function scheduleDeferredAuthRefresh(callback: () => void, delayMs = 450) {
   return () => window.clearTimeout(timeoutId);
 }
 
-function createAuthResolveTimeout() {
+function createAuthResolveTimeout(abortSignal?: AbortSignal) {
   return new Promise<AuthUserState>((resolve) => {
     if (typeof window === "undefined") {
       resolve(unauthenticatedState);
       return;
     }
 
-    window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       resolve(unauthenticatedState);
     }, AUTH_RESOLVE_TIMEOUT_MS);
+
+    abortSignal?.addEventListener("abort", () => {
+      window.clearTimeout(timeoutId);
+      resolve(unauthenticatedState);
+    });
   });
 }
 
@@ -239,16 +250,20 @@ async function resolveAuthState(options: {
   }
 
   if (!authStatePromise) {
+    currentAuthAbortController?.abort("new-resolve-auth-state");
+    const abortController = new AbortController();
+    currentAuthAbortController = abortController;
+
     authStatePromise = Promise.race([
       authService.getCurrentAuthState(options),
-      createAuthResolveTimeout(),
+      createAuthResolveTimeout(abortController.signal),
     ])
       .then((currentAuth) => ({
         ...currentAuth,
         cargando: false,
       }))
       .catch(() => unauthenticatedState)
-      .then((nextState) => {
+      .then(async (nextState) => {
         if (resolveAuthStateGeneration !== currentGeneration) {
           return unauthenticatedState;
         }
@@ -264,6 +279,9 @@ async function resolveAuthState(options: {
       })
       .finally(() => {
         authStatePromise = null;
+        if (currentAuthAbortController === abortController) {
+          currentAuthAbortController = null;
+        }
       });
   }
 
@@ -292,13 +310,23 @@ export function useAuth() {
     const shouldDeferNetworkRefresh =
       persisted !== null && hasUsablePersistedAuthState(persisted);
 
+    let cleanupDefer: (() => void) | undefined;
+
     if (shouldDeferNetworkRefresh) {
-      return scheduleDeferredAuthRefresh(() => {
+      cleanupDefer = scheduleDeferredAuthRefresh(() => {
         void resolveAuthState();
       });
+    } else {
+      void resolveAuthState();
     }
 
-    void resolveAuthState();
+    return () => {
+      if (cleanupDefer) {
+        cleanupDefer();
+      }
+
+      currentAuthAbortController?.abort("useEffect-cleanup");
+    };
   }, []);
 
   const signIn = async (credentials: AuthSignInInput) => {
@@ -312,21 +340,20 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    const previousState = getAuthSnapshot();
-
     resolveAuthStateGeneration += 1;
     authStatePromise = null;
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();
     setAuthState(unauthenticatedState);
+    currentAuthAbortController?.abort("signOut");
+    currentAuthAbortController = null;
 
     try {
       await authService.signOut();
     } catch (error) {
       authStatePromise = null;
-      authStateHydratedFromNetwork =
-        Boolean(previousState.user) && !previousState.cargando;
-      setAuthState(previousState);
+      authStateHydratedFromNetwork = false;
+      setAuthState(unauthenticatedState);
       throw error;
     }
   };

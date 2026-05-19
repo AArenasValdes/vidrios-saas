@@ -7,7 +7,6 @@ import {
   revalidatePublicApprovalQuotesCache,
 } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
-
 export async function acceptPublicQuoteAction(token: string) {
   const current = await publicCotizacionApprovalService.resolveByToken(token);
   const shouldNotify = Boolean(current?.canRespond && !current.isExpired);
@@ -28,8 +27,10 @@ export async function acceptPublicQuoteAction(token: string) {
     }
   }
 
-  if (typeof revalidatePublicApprovalQuotesCache === "function") {
+  try {
     revalidatePublicApprovalQuotesCache();
+  } catch (error) {
+    console.error("No pudimos invalidar el cache publico de cotizaciones.", error);
   }
 
   redirect(`/presupuesto/${redirectToken}?decision=aceptada`);
@@ -55,8 +56,10 @@ export async function rejectPublicQuoteAction(token: string) {
     }
   }
 
-  if (typeof revalidatePublicApprovalQuotesCache === "function") {
+  try {
     revalidatePublicApprovalQuotesCache();
+  } catch (error) {
+    console.error("No pudimos invalidar el cache publico de cotizaciones.", error);
   }
 
   redirect(`/presupuesto/${redirectToken}?decision=rechazada`);

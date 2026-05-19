@@ -12,15 +12,26 @@ export function resolveRequestIp(request: Request) {
     return cfConnectingIp.trim();
   }
 
+  const realIp = request.headers.get("x-real-ip");
+
+  if (realIp) {
+    return realIp.trim();
+  }
+
   const forwardedFor = request.headers.get("x-forwarded-for");
 
   if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() ?? null;
+    const segments = forwardedFor.split(",").map((segment) => segment.trim()).filter(Boolean);
+    let trustedIndex = segments.length - 1;
+
+    if (trustedIndex >= 0 && segments[trustedIndex] === "127.0.0.1") {
+      trustedIndex -= 1;
+    }
+
+    return segments[Math.max(0, trustedIndex)] ?? null;
   }
 
-  const realIp = request.headers.get("x-real-ip");
-
-  return realIp?.trim() ?? null;
+  return null;
 }
 
 export async function parseJsonObjectBody<T extends Record<string, unknown>>(

@@ -2,6 +2,7 @@
 
 import {
   buildCotizacionPdfFileName,
+  buildReadableCotizacionPdfFileName,
   canSharePdfFile,
   downloadPdfBlob,
   formatCotizacionPdfError,
@@ -46,9 +47,18 @@ describe("cotizacion-pdf utils", () => {
   });
 
   it("debe construir un nombre de archivo limpio para la cotizacion", () => {
-    expect(buildCotizacionPdfFileName(record)).toBe(
-      "cot-123456-casa-los-pescadores-la-serena.pdf"
-    );
+    expect(buildCotizacionPdfFileName(record)).toBe("cot-roberto-fuentes-140326.pdf");
+  });
+
+  it("debe priorizar cliente y fecha para un nombre corto y entendible", () => {
+    expect(
+      buildReadableCotizacionPdfFileName({
+        codigo: "COT-9988",
+        clienteNombre: "Rodrigo Perez",
+        obra: "Ventanas condominio",
+        createdAt: "2025-05-19T14:00:00.000Z",
+      })
+    ).toBe("cot-rodrigo-perez-190525.pdf");
   });
 
   it("debe detectar cuando el navegador no puede compartir archivos", () => {
@@ -136,7 +146,7 @@ describe("cotizacion-pdf utils", () => {
     ).toBe(true);
   });
 
-  it("debe abrir el PDF publico en iPhone cuando existe fallbackUrl", () => {
+  it("debe abrir el PDF publico en iPhone cuando existe fallbackUrl", async () => {
     const openSpy = jest.spyOn(window, "open").mockReturnValue(null);
     Object.defineProperty(window.URL, "createObjectURL", {
       value: jest.fn(() => "blob:test"),
@@ -149,7 +159,7 @@ describe("cotizacion-pdf utils", () => {
     const createObjectUrlSpy = jest.spyOn(window.URL, "createObjectURL");
     const revokeObjectUrlSpy = jest.spyOn(window.URL, "revokeObjectURL");
 
-    const result = downloadPdfBlob(new Blob(["pdf"], { type: "application/pdf" }), "cot.pdf", {
+    const result = await downloadPdfBlob(new Blob(["pdf"], { type: "application/pdf" }), "cot.pdf", {
       fallbackUrl: "https://example.com/cot.pdf",
       userAgent:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
@@ -165,13 +175,13 @@ describe("cotizacion-pdf utils", () => {
     expect(revokeObjectUrlSpy).not.toHaveBeenCalled();
   });
 
-  it("debe reutilizar una ventana ya abierta en iPhone para mostrar el PDF", () => {
+  it("debe reutilizar una ventana ya abierta en iPhone para mostrar el PDF", async () => {
     const targetWindow = {
       closed: false,
       location: { href: "" },
     } as unknown as Window;
 
-    const result = downloadPdfBlob(new Blob(["pdf"], { type: "application/pdf" }), "cot.pdf", {
+    const result = await downloadPdfBlob(new Blob(["pdf"], { type: "application/pdf" }), "cot.pdf", {
       fallbackUrl: "https://example.com/cot.pdf",
       userAgent:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",

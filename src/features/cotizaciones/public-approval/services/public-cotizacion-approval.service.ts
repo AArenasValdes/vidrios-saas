@@ -297,6 +297,8 @@ export function createPublicCotizacionApprovalService(
       }
 
       await repository.markViewed(normalized);
+      // Rebuild fresh after mutating the record to avoid stale cache reads
+      safelyRevalidatePublicApprovalQuotesCache();
       return buildPublicApprovalQuoteView(repository, normalized);
     },
 

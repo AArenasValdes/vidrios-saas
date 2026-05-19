@@ -15,6 +15,7 @@ import {
   resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
 import {
+  buildReadableCotizacionPdfFileName,
   downloadPdfBlob,
   exportCotizacionElementToPdf,
   formatCotizacionPdfError,
@@ -212,15 +213,7 @@ function formatDueDate(baseDateValue: string | null, validez: string) {
 }
 
 function buildPublicQuotePdfFileName(quote: PublicPreviewQuote) {
-  const slug = `${quote.codigo}-${quote.obra}`
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return `${slug || "presupuesto"}.pdf`;
+  return buildReadableCotizacionPdfFileName(quote);
 }
 
 function ClientField({
@@ -286,7 +279,7 @@ export function PublicQuoteDocument({
             pageSelector: `.${printStyles.pdfPage}`,
           });
 
-          downloadPdfBlob(blob, fileName);
+      await downloadPdfBlob(blob, fileName);
         } catch (error) {
           setDownloadError(formatCotizacionPdfError(error));
         }

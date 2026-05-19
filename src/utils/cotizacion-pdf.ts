@@ -1,9 +1,55 @@
 import type { CotizacionWorkflowRecord } from "@/types/cotizacion-workflow";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 
+type CotizacionPdfFileNameInput = {
+  codigo?: string | null;
+  clienteNombre?: string | null;
+  obra?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+function formatPdfDateStamp(value?: string | null) {
+  const baseDate = value ? new Date(value) : new Date();
+
+  if (Number.isNaN(baseDate.getTime())) {
+    return "sin-fecha";
+  }
+
+  const day = String(baseDate.getDate()).padStart(2, "0");
+  const month = String(baseDate.getMonth() + 1).padStart(2, "0");
+  const year = String(baseDate.getFullYear()).slice(-2);
+
+  return `${day}${month}${year}`;
+}
+
+function pickPdfSubjectLabel(input: CotizacionPdfFileNameInput) {
+  const primarySource =
+    input.clienteNombre?.trim() || input.obra?.trim() || input.codigo?.trim() || "";
+  const sanitized = sanitizeFileNamePart(primarySource, 36);
+
+  if (!sanitized) {
+    return "cotizacion";
+  }
+
+  const parts = sanitized.split("-").filter(Boolean);
+
+  if (parts.length === 0) {
+    return "cotizacion";
+  }
+
+  return parts.slice(0, 2).join("-");
+}
+
+export function buildReadableCotizacionPdfFileName(input: CotizacionPdfFileNameInput) {
+  const subject = pickPdfSubjectLabel(input);
+  const dateStamp = formatPdfDateStamp(input.createdAt ?? input.updatedAt);
+
+  return `cot-${subject}-${dateStamp}.pdf`;
+}
+
 export function buildCotizacionPdfFileName(record: CotizacionWorkflowRecord) {
-  const obra = sanitizeFileNamePart(record.obra) || "proyecto";
-  return `${record.codigo.toLowerCase()}-${obra}.pdf`;
+  return buildReadableCotizacionPdfFileName(record);
 }
 
 type ExportCotizacionPdfInput = {
@@ -598,7 +644,7 @@ type DownloadPdfBlobOptions = {
   targetWindow?: Window | null;
 };
 
-export function downloadPdfBlob(
+export async function downloadPdfBlob(
   blob: Blob,
   fileName: string,
   options: DownloadPdfBlobOptions = {}
@@ -631,6 +677,22 @@ export function downloadPdfBlob(
 
   if (mustOpenPdf && options.fallbackUrl) {
     return openPdfTarget(options.fallbackUrl) ? "opened_fallback" : "failed";
+  }
+
+  if (mustOpenPdf && typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    const file = new File([blob], fileName, { type: blob.type || "application/pdf" });
+
+    try {
+      if (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: fileName.replace(/\.pdf$/i, ""),
+          files: [file],
+        });
+        return "downloaded";
+      }
+    } catch {
+      // Si el usuario cancela o el navegador falla, continuamos con el fallback blob.
+    }
   }
 
   const objectUrl = window.URL.createObjectURL(blob);

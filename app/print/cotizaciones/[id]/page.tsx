@@ -21,8 +21,8 @@ import {
   resolveDocumentConditionsText,
   resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
+import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
-import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -119,10 +119,12 @@ async function loadCotizacionPdfModule(): Promise<CotizacionPdfModule> {
 
 function buildPrintPdfFileName(record: {
   codigo: string;
+  clienteNombre: string;
   obra: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }) {
-  const obra = sanitizeFileNamePart(record.obra) || "proyecto";
-  return `${record.codigo.toLowerCase()}-${obra}.pdf`;
+  return buildReadableCotizacionPdfFileName(record);
 }
 
 function formatDueDate(baseDateValue: string, validez: string) {
@@ -694,7 +696,7 @@ export default function CotizacionPrintPage() {
       const { blob } = await buildPdfFile();
       const { downloadPdfBlob, requiresPdfOpenFallback } =
         await loadCotizacionPdfModule();
-      const downloadResult = downloadPdfBlob(blob, exportFileName);
+      const downloadResult = await downloadPdfBlob(blob, exportFileName);
 
       if (downloadResult === "failed") {
         setExportError(
