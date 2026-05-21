@@ -12,6 +12,7 @@ declare global {
     ) => void;
     __ventoraTrackedPaths?: Record<string, boolean>;
     __ventoraTrackedConversions?: Record<string, boolean>;
+    __ventoraTrackedInteractions?: Record<string, boolean>;
   }
 }
 

@@ -60,15 +60,17 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 ## Feature: Analytics / Google Tag
 
 - **Que hace**: Carga la etiqueta de Google para GA4 y Google Ads, mide pageviews SPA y registra eventos comerciales base en captacion, WhatsApp, PDF y cierre.
-- **Rutas involucradas**: Global (`app/layout.tsx`), `/`, `/solicitud/[empresa]`, `/presupuesto/[token]`, `/cotizaciones`
+- **Rutas involucradas**: Global (`app/layout.tsx`), `/`, `/planes`, `/solicitud/[empresa]`, `/presupuesto/[token]`, `/cotizaciones`
 - **Archivos principales**:
   - `app/layout.tsx`
   - `src/features/analytics/components/google-tag-provider.tsx`
   - `src/features/analytics/services/google-tag.service.ts`
   - `src/features/analytics/types/google-tag.ts`
   - `app/(landing-web)/page.tsx`
+  - `app/(landing-web)/planes/page.tsx`
   - `app/(landing-web)/solicitud/[empresa]/page.tsx`
   - `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-form.tsx`
+  - `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-testimonial-form.tsx`
   - `app/(pwa-app)/cotizaciones/page.tsx`
   - `app/presupuesto/[token]/public-quote-mobile.tsx`
 - **Componentes principales**: `GoogleTagProvider`, `TrackedExternalLink`
@@ -77,7 +79,10 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Flujo de datos**:
   - Root layout -> `Script` Google tag -> `GoogleTagProvider` -> `googleTagService.trackPageView()`
   - CTA de landing y WhatsApp -> `googleTagService.trackEvent()` / `trackWhatsappClick()`
+  - Inicio de formularios publicos y demo -> `googleTagService.trackFormStart()`
+  - Intento de envio de formularios publicos -> `googleTagService.trackFormSubmitIntent()`
   - Solicitud publica exitosa -> `googleTagService.trackLeadSubmitted()`
+  - Valoracion publica enviada -> `googleTagService.trackTestimonialSubmitted()`
   - Envio de cotizacion por WhatsApp -> `googleTagService.trackWhatsappClick()`
   - Vista/descarga de PDF publico -> `googleTagService.trackPdfAction()`
   - Decision publica de cotizacion -> `googleTagService.trackQuoteDecision()`

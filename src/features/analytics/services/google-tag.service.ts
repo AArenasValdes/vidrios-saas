@@ -27,6 +27,7 @@ function ensureTrackedMaps() {
 
   window.__ventoraTrackedPaths ??= {};
   window.__ventoraTrackedConversions ??= {};
+  window.__ventoraTrackedInteractions ??= {};
 }
 
 function gtag(command: "js" | "config" | "set" | "event" | "consent", target: string | Date, params?: GoogleTagEventParams) {
@@ -127,6 +128,43 @@ export const googleTagService = {
       source: params.source,
     });
   },
+  trackFormStart(params: {
+    formName: string;
+    source: string;
+    empresaSlug?: string;
+  }) {
+    this.trackInteractionOnce(`form-start:${params.source}:${params.formName}:${params.empresaSlug ?? ""}`, "form_start", {
+      event_category: "formularios",
+      event_label: params.formName,
+      form_name: params.formName,
+      source: params.source,
+      empresa_slug: params.empresaSlug,
+    });
+  },
+  trackFormSubmitIntent(params: {
+    formName: string;
+    source: string;
+    empresaSlug?: string;
+  }) {
+    this.trackEvent("form_submit_intent", {
+      event_category: "formularios",
+      event_label: params.formName,
+      form_name: params.formName,
+      source: params.source,
+      empresa_slug: params.empresaSlug,
+    });
+  },
+  trackTestimonialSubmitted(params: {
+    slug: string;
+    estrellas: number;
+  }) {
+    this.trackEvent("testimonial_submit", {
+      event_category: "valoraciones",
+      event_label: params.slug,
+      empresa_slug: params.slug,
+      rating: params.estrellas,
+    });
+  },
   trackLeadSubmitted(params: {
     slug: string;
     workType: string;
@@ -202,5 +240,19 @@ export const googleTagService = {
 
     window.__ventoraTrackedConversions![key] = true;
     gtag("event", "conversion", params);
+  },
+  trackInteractionOnce(key: string, eventName: string, params: GoogleTagEventParams) {
+    if (!hasGoogleTag()) {
+      return;
+    }
+
+    ensureTrackedMaps();
+
+    if (window.__ventoraTrackedInteractions?.[key]) {
+      return;
+    }
+
+    window.__ventoraTrackedInteractions![key] = true;
+    gtag("event", eventName, params);
   },
 };

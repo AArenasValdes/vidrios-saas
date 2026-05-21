@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   type FormEvent,
   type ReactNode,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -261,6 +262,7 @@ export default function LandingPage() {
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const hasStartedContactFormRef = useRef(false);
 
   function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
     if (kind === "whatsapp") {
@@ -277,6 +279,18 @@ export default function LandingPage() {
       event_label: location,
       source: "landing",
       location,
+    });
+  }
+
+  function trackLandingFormStart() {
+    if (hasStartedContactFormRef.current) {
+      return;
+    }
+
+    hasStartedContactFormRef.current = true;
+    googleTagService.trackFormStart({
+      formName: "landing-demo",
+      source: "landing",
     });
   }
 
@@ -309,6 +323,10 @@ export default function LandingPage() {
 
       const href = `https://wa.me/56977338906?text=${encodeURIComponent(mensaje)}`;
 
+      googleTagService.trackFormSubmitIntent({
+        formName: "landing-demo",
+        source: "landing",
+      });
       trackLandingCta("formulario-demo", "whatsapp");
       window.location.href = href;
     } catch (error) {
@@ -741,6 +759,7 @@ export default function LandingPage() {
                     name="nombre"
                     placeholder="Juan Perez"
                     autoComplete="name"
+                    onFocus={trackLandingFormStart}
                     required
                   />
                 </label>
@@ -753,13 +772,14 @@ export default function LandingPage() {
                     placeholder="+56 9 0000 0000"
                     autoComplete="tel"
                     inputMode="tel"
+                    onFocus={trackLandingFormStart}
                     required
                   />
                 </label>
 
                 <label className={s.field}>
                   <span>Tipo de negocio</span>
-                  <select name="empresa" defaultValue="" required>
+                  <select name="empresa" defaultValue="" onFocus={trackLandingFormStart} required>
                     <option value="" disabled>
                       Selecciona una opcion
                     </option>
@@ -776,6 +796,7 @@ export default function LandingPage() {
                     type="text"
                     name="correo"
                     placeholder="Ej: solicitudes por WhatsApp, seguimiento o cotizaciones"
+                    onFocus={trackLandingFormStart}
                   />
                 </label>
 

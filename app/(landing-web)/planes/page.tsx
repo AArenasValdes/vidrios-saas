@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaArrowRight, FaCheckCircle, FaClock, FaComments, FaPhoneAlt } from "react-icons/fa";
 
+import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
 import s from "./page.module.css";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 
@@ -88,13 +89,17 @@ export default function PlanesPage() {
               </p>
 
               <div className={s.heroActions}>
-                <a
+                <TrackedExternalLink
                   className={s.primaryButton}
                   href={VENTORA_CONTACT.demoMailto}
+                  trackingSource="planes"
+                  trackingLocation="hero-demo"
+                  trackingLabel="planes:hero-demo"
+                  trackingEventName="demo_click"
                 >
                   Probar demo
                   <FaArrowRight aria-hidden />
-                </a>
+                </TrackedExternalLink>
                 <Link className={s.secondaryButton} href="/login">
                   Entrar a mi cuenta
                 </Link>
@@ -144,9 +149,16 @@ export default function PlanesPage() {
                 </ul>
 
                 {option.cta.external ? (
-                  <a className={s.cardButton} href={option.cta.href}>
+                  <TrackedExternalLink
+                    className={s.cardButton}
+                    href={option.cta.href}
+                    trackingSource="planes"
+                    trackingLocation={`card-${option.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    trackingLabel={`planes:${option.name}`}
+                    trackingEventName="demo_click"
+                  >
                     {option.cta.label}
-                  </a>
+                  </TrackedExternalLink>
                 ) : (
                   <Link className={s.cardButton} href={option.cta.href}>
                     {option.cta.label}

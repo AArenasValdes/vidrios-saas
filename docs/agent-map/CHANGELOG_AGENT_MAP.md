@@ -27,7 +27,7 @@ Se agrego la nueva ruta privada `/admin/growth` como panel operativo de growth p
 
 ### Resumen
 
-Se agrego una capa base de medicion con Google tag para GA4 + Google Ads usando variables de entorno publicas. La app ahora puede cargar la etiqueta global una sola vez en `app/layout.tsx`, medir pageviews en navegacion App Router y disparar eventos comerciales en los puntos mas sensibles del flujo: clics a WhatsApp desde landing, envio exitoso de solicitud publica, envio de cotizacion por WhatsApp, vista/descarga de PDF publico y decision publica de cotizacion. En este proyecto ademas se dejo configurado el `Measurement ID` `G-Y0LCR4NRDN` como fallback local para no depender del placeholder durante desarrollo.
+Se agrego una capa base de medicion con Google tag para GA4 + Google Ads usando variables de entorno publicas. La app ahora puede cargar la etiqueta global una sola vez en `app/layout.tsx`, medir pageviews en navegacion App Router y disparar eventos comerciales en los puntos mas sensibles del flujo: clics a WhatsApp desde landing, inicio e intento de envio de formularios publicos, envio exitoso de solicitud publica, clics de demo en `/planes`, envio de cotizacion por WhatsApp, vista/descarga de PDF publico, valoraciones publicas y decision publica de cotizacion. En este proyecto ademas se dejo configurado el `Measurement ID` `G-Y0LCR4NRDN` como fallback local para no depender del placeholder durante desarrollo.
 
 ### Archivos actualizados
 
@@ -36,8 +36,10 @@ Se agrego una capa base de medicion con Google tag para GA4 + Google Ads usando 
 | `app/layout.tsx` | Carga condicional del Google tag y provider de pageviews |
 | `src/features/analytics/` | Nueva feature de analitica (`service`, `component`, `types`) |
 | `app/(landing-web)/page.tsx` | Eventos de CTA y WhatsApp en landing |
+| `app/(landing-web)/planes/page.tsx` | Eventos de clic de demo |
 | `app/(landing-web)/solicitud/[empresa]/page.tsx` | CTA publica de WhatsApp con tracking |
 | `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-form.tsx` | Evento de lead enviado |
+| `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-testimonial-form.tsx` | Eventos de valoracion publica |
 | `app/(pwa-app)/cotizaciones/page.tsx` | Evento de envio de cotizacion por WhatsApp |
 | `app/presupuesto/[token]/public-quote-mobile.tsx` | Evento de decision/aprobacion publica |
 | `docs/agent-map/FEATURES_MAP.md` | Nueva feature documentada |

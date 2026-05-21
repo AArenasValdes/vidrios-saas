@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { LuSend, LuStar } from "react-icons/lu";
 
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import s from "./page.module.css";
 
 type Props = {
@@ -31,6 +32,12 @@ export function SolicitudEmpresaTestimonialForm({ slug }: Props) {
     setErrorMessage(null);
 
     try {
+      googleTagService.trackFormSubmitIntent({
+        formName: "valoracion-publica",
+        source: "solicitud-publica",
+        empresaSlug: slug,
+      });
+
       const response = await fetch(`/api/solicitud/${slug}/valoraciones`, {
         method: "POST",
         headers: {
@@ -49,6 +56,10 @@ export function SolicitudEmpresaTestimonialForm({ slug }: Props) {
         );
       }
 
+      googleTagService.trackTestimonialSubmitted({
+        slug,
+        estrellas: form.estrellas,
+      });
       setSuccessMessage(
         "Gracias. Tu valoracion quedo pendiente de revision antes de publicarse."
       );
@@ -70,7 +81,21 @@ export function SolicitudEmpresaTestimonialForm({ slug }: Props) {
       <button
         type="button"
         className={s.testimonialToggle}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() =>
+          setIsOpen((current) => {
+            const nextOpen = !current;
+
+            if (nextOpen) {
+              googleTagService.trackFormStart({
+                formName: "valoracion-publica",
+                source: "solicitud-publica",
+                empresaSlug: slug,
+              });
+            }
+
+            return nextOpen;
+          })
+        }
       >
         <span>Ya trabajaste con nosotros?</span>
         <strong>{isOpen ? "Cerrar valoracion" : "Dejar valoracion"}</strong>

@@ -186,6 +186,7 @@ export function SolicitudEmpresaForm({
 }: Props) {
   const searchParams = useSearchParams();
   const sectionRef = useRef<HTMLElement | null>(null);
+  const hasTrackedFormStartRef = useRef(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [selectedWorkType, setSelectedWorkType] = useState<string | null>(null);
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
@@ -309,17 +310,32 @@ export function SolicitudEmpresaForm({
     setSuccessMessage(null);
   }
 
+  function trackFormStartOnce() {
+    if (hasTrackedFormStartRef.current) {
+      return;
+    }
+
+    hasTrackedFormStartRef.current = true;
+    googleTagService.trackFormStart({
+      formName: "solicitud-publica",
+      source: "solicitud-publica",
+      empresaSlug: slug,
+    });
+  }
+
   function handleBlur(field: keyof FormState) {
     setTouched((current) => ({ ...current, [field]: true }));
   }
 
   function handleWorkTypeSelect(value: string) {
+    trackFormStartOnce();
     setSelectedWorkType(value);
     handleFieldChange("tipoTrabajo", value);
     setTouched((current) => ({ ...current, tipoTrabajo: true }));
   }
 
   function handleReferenceChange(event: ChangeEvent<HTMLInputElement>) {
+    trackFormStartOnce();
     const nextFile = event.target.files?.[0] ?? null;
     setReferenceFile(nextFile);
     setErrorMessage(null);
@@ -351,6 +367,11 @@ export function SolicitudEmpresaForm({
       setIsSubmitting(true);
       setErrorMessage(null);
       setSuccessMessage(null);
+      googleTagService.trackFormSubmitIntent({
+        formName: "solicitud-publica",
+        source: "solicitud-publica",
+        empresaSlug: slug,
+      });
 
       const response = await fetch(`/api/solicitud/${slug}`, {
         method: "POST",
@@ -427,7 +448,10 @@ export function SolicitudEmpresaForm({
           <input
             className={s.input}
             value={form.nombre}
-            onChange={(event) => handleFieldChange("nombre", event.target.value)}
+            onChange={(event) => {
+              trackFormStartOnce();
+              handleFieldChange("nombre", event.target.value);
+            }}
             onBlur={() => handleBlur("nombre")}
             placeholder="Tu nombre completo"
             autoComplete="name"
@@ -444,7 +468,10 @@ export function SolicitudEmpresaForm({
             <input
               className={s.phoneInput}
               value={form.contacto}
-              onChange={(event) => handleFieldChange("contacto", event.target.value)}
+              onChange={(event) => {
+                trackFormStartOnce();
+                handleFieldChange("contacto", event.target.value);
+              }}
               onBlur={() => handleBlur("contacto")}
               placeholder="9 1234 5678"
               autoComplete="tel"
@@ -490,6 +517,7 @@ export function SolicitudEmpresaForm({
             className={`${s.input} ${s.detailInput}`}
             value={form.tipoTrabajo}
             onChange={(event) => {
+              trackFormStartOnce();
               setSelectedWorkType(null);
               handleFieldChange("tipoTrabajo", event.target.value);
             }}
@@ -513,7 +541,10 @@ export function SolicitudEmpresaForm({
                   <input
                     className={s.inlineInput}
                     value={form.medidas}
-                    onChange={(event) => handleFieldChange("medidas", event.target.value)}
+                    onChange={(event) => {
+                      trackFormStartOnce();
+                      handleFieldChange("medidas", event.target.value);
+                    }}
                     placeholder="1.2 x 0.8 m"
                   />
                 </div>
@@ -526,7 +557,10 @@ export function SolicitudEmpresaForm({
                   <input
                     className={s.inlineInput}
                     value={form.comuna}
-                    onChange={(event) => handleFieldChange("comuna", event.target.value)}
+                    onChange={(event) => {
+                      trackFormStartOnce();
+                      handleFieldChange("comuna", event.target.value);
+                    }}
                     placeholder="Nunoa"
                   />
                 </div>
@@ -539,7 +573,10 @@ export function SolicitudEmpresaForm({
                 className={s.textarea}
                 rows={4}
                 value={form.mensaje}
-                onChange={(event) => handleFieldChange("mensaje", event.target.value)}
+                onChange={(event) => {
+                  trackFormStartOnce();
+                  handleFieldChange("mensaje", event.target.value);
+                }}
                 placeholder="Cuentanos brevemente que necesitas..."
               />
             </label>
@@ -573,7 +610,10 @@ export function SolicitudEmpresaForm({
             type="checkbox"
             checked={form.consentimiento}
             onChange={(event) =>
-              handleFieldChange("consentimiento", event.target.checked)
+              {
+                trackFormStartOnce();
+                handleFieldChange("consentimiento", event.target.checked);
+              }
             }
             onBlur={() => handleBlur("consentimiento")}
           />
