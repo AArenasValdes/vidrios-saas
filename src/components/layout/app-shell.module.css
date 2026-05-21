@@ -98,7 +98,7 @@
   --gold: #4f7dd4;
   --goldStrong: #243b6b;
   --success: #2f7d4e;
-  --sidebar-w: 288px;
+  --sidebar-w: 264px;
   --tabbar-h: 72px;
   --shell-safe-top: env(safe-area-inset-top, 0px);
   --shell-safe-bottom: env(safe-area-inset-bottom, 0px);

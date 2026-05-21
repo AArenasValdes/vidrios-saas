@@ -88,6 +88,24 @@
 
 ---
 
+## Ruta: /admin/growth
+
+- **Tipo**: Privada (autenticada + admin allowlist)
+- **Archivo principal**: `app/admin/growth/page.tsx`
+- **Layout usado**: `app/layout.tsx` (standalone, sin `AppShell`)
+- **Proposito**: Panel operativo privado de growth para fundador/admin autorizado. Organiza trabajo diario, prospectos prioritarios, metas, MRR y proyecciones simples sin depender del shell principal.
+- **Usuario objetivo**: Fundador o admin autorizado por correo
+- **Funcionalidades visibles**: Header compacto con periodo/meta/MRR, bloque principal `Trabajo de hoy`, tabla editable de prospectos prioritarios, metricas compactas, embudo compacto, canales, datos manuales, experimentos secundarios y modal `Configurar crecimiento`
+- **Componentes principales**: `GrowthPageClient`
+- **Hooks**: `useGrowthDashboard`
+- **Datos que consume**: Mock repository conectable (`growthDashboardRepository`) en esta primera implementacion
+- **Tablas Supabase relacionadas**: Ninguna todavia. La conexion futura deberia leer `solicitudes_contacto`, `cotizaciones` y eventualmente un ledger manual definido aparte.
+- **Acciones principales**: Agregar prospecto, editar estado/proximo paso/fecha, cambiar metas, actualizar datos manuales, registrar experimentos y filtrar trabajo operativo del dia
+- **Archivos a tocar para modificar**: `app/admin/growth/*`, `src/features/growth/*`, `proxy.ts`
+- **Riesgos**: No exponer esta ruta a usuarios normales. No mostrar mocks como si fueran datos reales. No usar esta ruta para tocar `/solicitud/[empresa]`, `/presupuesto/[token]`, PDF ni WhatsApp.
+
+---
+
 ## Ruta: /cotizaciones
 
 - **Tipo**: Privada (autenticada)

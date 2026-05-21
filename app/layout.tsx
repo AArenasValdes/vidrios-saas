@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
+import { GoogleTagProvider } from "@/features/analytics/components/google-tag-provider";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
 import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
 import "./globals.css";
@@ -10,6 +14,9 @@ import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
+const gaMeasurementId = googleTagService.getGaMeasurementId();
+const googleAdsId = googleTagService.getGoogleAdsId();
+const googleTagId = gaMeasurementId || googleAdsId;
 
 export const metadata: Metadata = {
   title: {
@@ -51,6 +58,25 @@ export default function RootLayout({
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
+        {googleTagId ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ventora-google-tag" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                window.gtag = gtag;
+                gtag('js', new Date());
+              `}
+            </Script>
+            <Suspense fallback={null}>
+              <GoogleTagProvider />
+            </Suspense>
+          </>
+        ) : null}
         <RegisterServiceWorker />
         <InstallAppPrompt />
         {children}

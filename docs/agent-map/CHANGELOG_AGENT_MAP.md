@@ -4,6 +4,46 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-21 - Panel privado de growth para fundador
+
+### Resumen
+
+Se agrego la nueva ruta privada `/admin/growth` como panel operativo de growth para fundador/admin autorizado. Esta primera version funciona como pagina standalone fuera de `AppShell`, persiste estado local en `localStorage`, pone `Trabajo de hoy` y `Prospectos prioritarios` como foco principal, y deja `Datos manuales` + `Experimentos` como capas secundarias. Ademas, la ruta sigue aislada para usuarios normales y `proxy.ts` ahora soporta tambien el modo `growth-only` por correo para cuentas que deban quedar atrapadas solo en `/admin/growth`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/admin/growth/` | Nueva ruta privada standalone del panel de growth |
+| `src/features/growth/` | Nuevo modulo mockeado con cadena `hook -> service -> repository` |
+| `proxy.ts` | Protege `/admin/:path*` |
+| `docs/agent-map/ROUTES_MAP.md` | Nueva ruta documentada |
+| `docs/agent-map/FEATURES_MAP.md` | Nueva feature documentada |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Se actualiza esta entrada con el rediseno operativo y el modo `growth-only` |
+
+---
+
+## 2026-05-21 - Google Analytics y Google Ads base
+
+### Resumen
+
+Se agrego una capa base de medicion con Google tag para GA4 + Google Ads usando variables de entorno publicas. La app ahora puede cargar la etiqueta global una sola vez en `app/layout.tsx`, medir pageviews en navegacion App Router y disparar eventos comerciales en los puntos mas sensibles del flujo: clics a WhatsApp desde landing, envio exitoso de solicitud publica, envio de cotizacion por WhatsApp, vista/descarga de PDF publico y decision publica de cotizacion. En este proyecto ademas se dejo configurado el `Measurement ID` `G-Y0LCR4NRDN` como fallback local para no depender del placeholder durante desarrollo.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/layout.tsx` | Carga condicional del Google tag y provider de pageviews |
+| `src/features/analytics/` | Nueva feature de analitica (`service`, `component`, `types`) |
+| `app/(landing-web)/page.tsx` | Eventos de CTA y WhatsApp en landing |
+| `app/(landing-web)/solicitud/[empresa]/page.tsx` | CTA publica de WhatsApp con tracking |
+| `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-form.tsx` | Evento de lead enviado |
+| `app/(pwa-app)/cotizaciones/page.tsx` | Evento de envio de cotizacion por WhatsApp |
+| `app/presupuesto/[token]/public-quote-mobile.tsx` | Evento de decision/aprobacion publica |
+| `docs/agent-map/FEATURES_MAP.md` | Nueva feature documentada |
+
+---
+
 ## 2026-05-18 - Configuracion empresa con nombre publico unificado
 
 ### Resumen

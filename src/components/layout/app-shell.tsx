@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -265,7 +265,7 @@ function getAlertMeta(alert: CotizacionAlert) {
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, rol, signOut, organizacionId, cargando } = useAuth();
+  const { user, rol, signOut, organizacionId, cargando: authCargando } = useAuth();
   const { profile } = useOrganizationProfile();
   const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(() =>
     pathname.startsWith("/solicitudes")
@@ -282,10 +282,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
     "sidebar" | "mobile" | "topbar" | null
   >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [authBootStuck, setAuthBootStuck] = useState(false);
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
   const [solicitudesSeenAt, setSolicitudesSeenAt] = useState(0);
   const [isCompactMobile, setIsCompactMobile] = useState(false);
+  const isMountedRef = useRef(true);
 
   const currentItem = useMemo(
     () =>
@@ -303,6 +305,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       }),
     [rol, user?.email]
   );
+  const cargando = authCargando;
   const { solicitudes: solicitudesShell } = useSolicitudesContacto(
     canReviewSolicitudes &&
       !cargando &&
@@ -444,6 +447,32 @@ export default function AppShell({ children }: { children: ReactNode }) {
       router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
     }
   }, [cargando, isSigningOut, pathname, router, user]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cargando) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setAuthBootStuck(true);
+    }, 10000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [cargando]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -681,6 +710,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className={s.bootProgress} aria-hidden>
             <span className={s.bootProgressBar} />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+    if (authBootStuck && !user && !isSigningOut) {
+    return (
+      <div className={s.bootRoot}>
+        <div className={s.bootCard}>
+          <div className={s.bootBadge}>Error de conexion</div>
+          <h1 className={s.bootTitle}>No pudimos conectar con tu espacio</h1>
+          <p className={s.bootText}>
+            Tu conexion parece inestable o el servidor esta tardando en responder.
+            Intenta refrescar la pagina en unos segundos.
+          </p>
+          <button
+            className={s.primaryButton}
+            type="button"
+            onClick={() => window.location.reload()}
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );

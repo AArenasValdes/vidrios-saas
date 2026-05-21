@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import s from "./landing.module.css";
 
 const WHATSAPP_LANDING_HREF =
@@ -261,6 +262,24 @@ export default function LandingPage() {
     message: string;
   } | null>(null);
 
+  function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
+    if (kind === "whatsapp") {
+      googleTagService.trackWhatsappClick({
+        source: "landing",
+        location,
+        label: `landing:${location}`,
+      });
+      return;
+    }
+
+    googleTagService.trackEvent("landing_cta_click", {
+      event_category: "landing",
+      event_label: location,
+      source: "landing",
+      location,
+    });
+  }
+
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -290,6 +309,7 @@ export default function LandingPage() {
 
       const href = `https://wa.me/56977338906?text=${encodeURIComponent(mensaje)}`;
 
+      trackLandingCta("formulario-demo", "whatsapp");
       window.location.href = href;
     } catch (error) {
       setContactFeedback({
@@ -329,16 +349,30 @@ export default function LandingPage() {
             </ul>
 
             <div className={s.navActions}>
-              <a href={WHATSAPP_LANDING_HREF} className={s.navGhost}>
+              <a
+                href={WHATSAPP_LANDING_HREF}
+                className={s.navGhost}
+                onClick={() => trackLandingCta("nav-whatsapp", "whatsapp")}
+              >
                 Hablar por WhatsApp
               </a>
-              <Link href="/planes" className={s.navPrimary} prefetch={false}>
+              <Link
+                href="/planes"
+                className={s.navPrimary}
+                prefetch={false}
+                onClick={() => trackLandingCta("nav-probar-demo", "internal")}
+              >
                 Probar demo
               </Link>
             </div>
 
             <div className={s.navMobile}>
-              <Link href="/planes" className={s.navPrimaryMobile} prefetch={false}>
+              <Link
+                href="/planes"
+                className={s.navPrimaryMobile}
+                prefetch={false}
+                onClick={() => trackLandingCta("mobile-probar-demo", "internal")}
+              >
                 Demo
               </Link>
               <button
@@ -369,7 +403,13 @@ export default function LandingPage() {
               {link.label}
             </Link>
           ))}
-          <a href={WHATSAPP_LANDING_HREF} onClick={() => setMenuOpen(false)}>
+          <a
+            href={WHATSAPP_LANDING_HREF}
+            onClick={() => {
+              trackLandingCta("mobile-menu-whatsapp", "whatsapp");
+              setMenuOpen(false);
+            }}
+          >
             Hablar por WhatsApp
           </a>
         </div>
@@ -401,11 +441,20 @@ export default function LandingPage() {
 
               <SectionReveal>
                 <div className={s.heroActions}>
-                  <Link href="/planes" className={s.primaryButton} prefetch={false}>
+                  <Link
+                    href="/planes"
+                    className={s.primaryButton}
+                    prefetch={false}
+                    onClick={() => trackLandingCta("hero-probar-demo", "internal")}
+                  >
                     Probar demo
                     <ArrowRight size={18} aria-hidden />
                   </Link>
-                  <Link href="#contacto" className={s.secondaryButton}>
+                  <Link
+                    href="#contacto"
+                    className={s.secondaryButton}
+                    onClick={() => trackLandingCta("hero-crear-link", "internal")}
+                  >
                     Crear mi link comercial
                   </Link>
                 </div>
@@ -642,11 +691,20 @@ export default function LandingPage() {
               />
 
               <div className={s.contactActions}>
-                <Link href="/planes" className={s.primaryButton} prefetch={false}>
+                <Link
+                  href="/planes"
+                  className={s.primaryButton}
+                  prefetch={false}
+                  onClick={() => trackLandingCta("contacto-probar-demo", "internal")}
+                >
                   Probar demo
                   <ArrowRight size={18} aria-hidden />
                 </Link>
-                <Link href="#contacto" className={s.secondaryButton}>
+                <Link
+                  href="#contacto"
+                  className={s.secondaryButton}
+                  onClick={() => trackLandingCta("contacto-configurar-link", "internal")}
+                >
                   Configurar mi link comercial
                 </Link>
               </div>
@@ -743,7 +801,11 @@ export default function LandingPage() {
                 </p>
               ) : null}
 
-              <a className={s.contactWhatsapp} href={WHATSAPP_LANDING_HREF}>
+              <a
+                className={s.contactWhatsapp}
+                href={WHATSAPP_LANDING_HREF}
+                onClick={() => trackLandingCta("contacto-whatsapp", "whatsapp")}
+              >
                 Hablar por WhatsApp
               </a>
             </SectionReveal>

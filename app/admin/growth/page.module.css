@@ -1,0 +1,567 @@
+.page {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --text: #1f2937;
+  --muted: #64748b;
+  --line: #d9e1ea;
+  --blue: #2f5ee5;
+  --blue-soft: #e9f0ff;
+  --green-soft: #e8f7ee;
+  --amber-soft: #fff4da;
+  --red-soft: #fde9e8;
+  --shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  display: grid;
+  gap: 16px;
+  padding: 20px 0 28px;
+  color: var(--text);
+}
+
+.header,
+.tabRow,
+.sectionCard,
+.checklistCard,
+.errorBanner {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.98));
+  box-shadow: var(--shadow);
+}
+
+.header {
+  padding: 18px 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.headerMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title,
+.sectionTitle {
+  margin: 0;
+  font-family: "Syne", sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.title {
+  font-size: clamp(2rem, 3vw, 2.7rem);
+  line-height: .95;
+}
+
+.headerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.metaItem,
+.updatedAt,
+.headerFooter,
+.sectionDescription,
+.workPreview,
+.workNext,
+.channelRow p,
+.sourceText {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.metaItem {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.headerActions,
+.formActions,
+.inlineTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton,
+.workButton,
+.rowActionButton,
+.filterButton,
+.tabButton,
+.iconButton {
+  font: inherit;
+  border: 0;
+}
+
+.primaryButton,
+.secondaryButton,
+.workButton,
+.rowActionButton {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primaryButton,
+.workButton,
+.rowActionButton {
+  background: var(--blue);
+  color: #ffffff;
+}
+
+.secondaryButton {
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.headerFooter,
+.updatedAt {
+  font-size: 12px;
+}
+
+.tabRow {
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tabButton,
+.filterButton {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.tabButtonActive,
+.filterButtonActive {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.sectionCard,
+.checklistCard {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.sectionTitle {
+  font-size: 1.45rem;
+}
+
+.workGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workCard,
+.kpiCard,
+.projectionCard,
+.experimentCard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.workCard {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.workTop,
+.kpiTop,
+.experimentCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.workCount {
+  font-family: "Syne", sans-serif;
+  font-size: 2rem;
+  line-height: .9;
+}
+
+.priorityText {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th,
+.kpiLabel,
+.filterLabel,
+.sourceText {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.filterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.cellInput,
+.cellSelect,
+.formInput,
+.formTextarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+}
+
+.cellInput,
+.cellSelect,
+.formInput {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.formTextarea {
+  min-height: 96px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.priorityPillHigh {
+  background: #fff3f1;
+}
+
+.priorityPill {
+  font-weight: 700;
+}
+
+.priorityPillMedium {
+  background: #fff7e2;
+}
+
+.priorityPillLow {
+  background: #f3f5f8;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.kpiCard {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.kpiValue {
+  font-family: "Syne", sans-serif;
+  font-size: 1.9rem;
+  line-height: .9;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.miniFunnel {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.miniFunnelItem {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.miniFunnelItem strong {
+  font-family: "Syne", sans-serif;
+  font-size: 1.6rem;
+}
+
+.miniFunnelItem span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.channelList,
+.projectionList,
+.experimentGrid,
+.checklist,
+.checkboxGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.channelRow {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.projectionList {
+  grid-template-columns: 1fr 1fr;
+}
+
+.projectionCard {
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.manualGrid,
+.formGrid,
+.experimentFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.formField {
+  display: grid;
+  gap: 6px;
+}
+
+.formField span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+.experimentCard {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.iconButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.checklist {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.drawer {
+  width: min(100%, 820px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.18);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.checkboxGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.checkboxItem {
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceText {
+  font-size: 10px;
+}
+
+.sourceTextReal {
+  color: #1f7a4d;
+}
+
+.sourceTextManual {
+  color: #3563d6;
+}
+
+.sourceTextMock {
+  color: #9a6b00;
+}
+
+.loadingHeader,
+.loadingBlock,
+.loadingTable {
+  border-radius: 22px;
+  background: linear-gradient(90deg, #e9eef5 0%, #f8fbff 50%, #e9eef5 100%);
+  background-size: 220% 100%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.loadingHeader {
+  min-height: 120px;
+}
+
+.loadingBlock {
+  min-height: 200px;
+}
+
+.loadingTable {
+  min-height: 320px;
+}
+
+.errorBanner {
+  padding: 18px;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (max-width: 1180px) {
+  .workGrid,
+  .kpiGrid,
+  .summaryGrid,
+  .manualGrid,
+  .formGrid,
+  .experimentFields,
+  .checkboxGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .miniFunnel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding-top: 12px;
+  }
+
+  .headerMain,
+  .sectionHeader,
+  .drawerHeader {
+    flex-direction: column;
+  }
+
+  .workGrid,
+  .kpiGrid,
+  .summaryGrid,
+  .manualGrid,
+  .formGrid,
+  .experimentFields,
+  .projectionList,
+  .checkboxGrid,
+  .miniFunnel {
+    grid-template-columns: 1fr;
+  }
+
+  .headerActions,
+  .formActions,
+  .inlineTools {
+    width: 100%;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    flex: 1 1 auto;
+  }
+}

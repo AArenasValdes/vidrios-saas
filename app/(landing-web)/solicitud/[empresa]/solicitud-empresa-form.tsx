@@ -19,6 +19,7 @@ import {
   isValidChileMobilePhone,
   normalizeChileMobilePhone,
 } from "@/utils/chile-mobile-phone";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 
 import s from "./page.module.css";
 
@@ -382,6 +383,14 @@ export function SolicitudEmpresaForm({
       setSuccessMessage(
         "Solicitud enviada. Te contactaremos por WhatsApp para continuar."
       );
+      googleTagService.trackLeadSubmitted({
+        slug,
+        workType: form.tipoTrabajo,
+        source: resolvedOrigin,
+        utmSource: utmSource ?? null,
+        utmMedium: utmMedium ?? null,
+        utmCampaign: utmCampaign ?? null,
+      });
       setForm(EMPTY_FORM);
       setSelectedWorkType(null);
       setReferenceFile(null);

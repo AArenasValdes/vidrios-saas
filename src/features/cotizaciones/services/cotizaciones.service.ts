@@ -739,6 +739,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
   }
 
   async function _saveWorkflow(input: GuardarCotizacionWorkflowInput) {
+    const SAVE_TIMEOUT_MS = 30000;
     const existingCotizacion = input.existingId
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
@@ -759,14 +760,37 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     const client = clientResult.record;
 
     try {
-      const projectResult = await ensureProject({
-        organizationId: input.organizationId,
-        existingProjectId: input.existingProjectId,
-        clientId: client.id,
-        clientName: client.nombre,
-        titulo: input.draft.obra,
-      });
-      rollbackStack.push(projectResult.rollback);
+      const withTimeout = <T>(promise: Promise<T>, label: string): Promise<T> => {
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error(`Timeout: ${label} excedio ${SAVE_TIMEOUT_MS}ms`));
+          }, SAVE_TIMEOUT_MS);
+          promise
+            .then((result) => {
+              clearTimeout(timeoutId);
+              resolve(result);
+            })
+            .catch((error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            });
+        });
+      };
+
+      const projectResult = await withTimeout(
+        ensureProject({
+          organizationId: input.organizationId,
+          existingProjectId: input.existingProjectId,
+          clientId: client.id,
+          clientName: client.nombre,
+          titulo: input.draft.obra,
+        }),
+        "crear o actualizar proyecto"
+      );
+
+      if (projectResult.rollback) {
+        rollbackStack.push(projectResult.rollback);
+      }
       const project = projectResult.record;
 
       const totals = calculateCotizacionWorkflowTotals(
@@ -815,14 +839,16 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       };
 
       const persisted = input.existingId
-        ? await cotizacionesRepo.update(
-            input.existingId,
-            cotizacionInput,
-            existingCotizacion
+        ? await withTimeout(
+            cotizacionesRepo.update(input.existingId, cotizacionInput, existingCotizacion),
+            "actualizar cotización"
           )
-        : await cotizacionesRepo.create(cotizacionInput);
+        : await withTimeout(cotizacionesRepo.create(cotizacionInput), "crear cotización");
 
-      const workflowRecord = await getWorkflowById(persisted.id, input.organizationId);
+      const workflowRecord = await withTimeout(
+        getWorkflowById(persisted.id, input.organizationId),
+        "recuperar cotización guardada"
+      );
 
       if (!workflowRecord) {
         throw new Error("No se pudo recuperar la cotizacion guardada");

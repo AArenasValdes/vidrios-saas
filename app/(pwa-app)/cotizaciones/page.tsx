@@ -19,6 +19,7 @@ import {
 } from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useCotizacionesResumenPage } from "@/features/cotizaciones/hooks/useCotizacionesResumenPage";
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
@@ -501,6 +502,12 @@ export default function CotizacionesPage() {
         throw new Error("No se pudo preparar el enlace de WhatsApp.");
       }
 
+      googleTagService.trackWhatsappClick({
+        source: "cotizaciones",
+        location: "enviar-cotizacion",
+        label: record.codigo,
+        quoteCode: record.codigo,
+      });
       window.open(whatsappUrl, "_blank", "noopener,noreferrer");
       await markQuoteAsSent(String(record.id)).catch(() => {
         return null;

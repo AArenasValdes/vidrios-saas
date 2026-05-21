@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lato, Syne } from "next/font/google";
+import { Suspense } from "react";
 import type { IconType } from "react-icons";
 import {
   LuArrowLeft,
@@ -24,6 +25,7 @@ import {
   isLightHexColor,
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
+import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
 import {
   getCachedApprovedPublicTestimonialsByOrganizationId,
   getCachedPublicGalleryByOrganizationId,
@@ -347,15 +349,19 @@ export default async function SolicitudEmpresaPage({
 
               <div className={s.heroActions}>
                 {whatsappUrl ? (
-                  <a
+                  <TrackedExternalLink
                     className={s.primaryWhatsappCta}
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    trackingSource="solicitud-publica"
+                    trackingLocation="hero-whatsapp"
+                    trackingLabel={`solicitud-publica:${config.solicitudPublicaSlug}`}
+                    empresaSlug={config.solicitudPublicaSlug}
                   >
                     <LuMessageCircleMore aria-hidden />
                     Cotizar por WhatsApp
-                  </a>
+                  </TrackedExternalLink>
                 ) : null}
 
                 <a className={s.secondaryHeroCta} href="#solicitud-rapida">
@@ -551,15 +557,17 @@ export default async function SolicitudEmpresaPage({
 
         {/* Form */}
         <section className={s.formSection} aria-label="Formulario de solicitud">
-          <SolicitudEmpresaForm
-            slug={config.solicitudPublicaSlug}
-            empresaTelefono={config.empresaTelefono}
-            empresaEmail={config.empresaEmail}
-            privacidad={config.solicitudPublicaPrivacidad}
-            isAvailable={isAvailable}
-            formTitle={formTitle}
-            formSubtitle={formSubtitle ?? undefined}
-          />
+          <Suspense fallback={null}>
+            <SolicitudEmpresaForm
+              slug={config.solicitudPublicaSlug}
+              empresaTelefono={config.empresaTelefono}
+              empresaEmail={config.empresaEmail}
+              privacidad={config.solicitudPublicaPrivacidad}
+              isAvailable={isAvailable}
+              formTitle={formTitle}
+              formSubtitle={formSubtitle ?? undefined}
+            />
+          </Suspense>
         </section>
 
         {/* Testimonials */}

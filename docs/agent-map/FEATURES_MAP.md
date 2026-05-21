@@ -57,6 +57,66 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
+## Feature: Analytics / Google Tag
+
+- **Que hace**: Carga la etiqueta de Google para GA4 y Google Ads, mide pageviews SPA y registra eventos comerciales base en captacion, WhatsApp, PDF y cierre.
+- **Rutas involucradas**: Global (`app/layout.tsx`), `/`, `/solicitud/[empresa]`, `/presupuesto/[token]`, `/cotizaciones`
+- **Archivos principales**:
+  - `app/layout.tsx`
+  - `src/features/analytics/components/google-tag-provider.tsx`
+  - `src/features/analytics/services/google-tag.service.ts`
+  - `src/features/analytics/types/google-tag.ts`
+  - `app/(landing-web)/page.tsx`
+  - `app/(landing-web)/solicitud/[empresa]/page.tsx`
+  - `app/(landing-web)/solicitud/[empresa]/solicitud-empresa-form.tsx`
+  - `app/(pwa-app)/cotizaciones/page.tsx`
+  - `app/presupuesto/[token]/public-quote-mobile.tsx`
+- **Componentes principales**: `GoogleTagProvider`, `TrackedExternalLink`
+- **Hooks/servicios/actions**: `googleTagService`
+- **Tablas Supabase**: Ninguna
+- **Flujo de datos**:
+  - Root layout -> `Script` Google tag -> `GoogleTagProvider` -> `googleTagService.trackPageView()`
+  - CTA de landing y WhatsApp -> `googleTagService.trackEvent()` / `trackWhatsappClick()`
+  - Solicitud publica exitosa -> `googleTagService.trackLeadSubmitted()`
+  - Envio de cotizacion por WhatsApp -> `googleTagService.trackWhatsappClick()`
+  - Vista/descarga de PDF publico -> `googleTagService.trackPdfAction()`
+  - Decision publica de cotizacion -> `googleTagService.trackQuoteDecision()`
+- **Estados importantes**: `disabled` (sin IDs configurados), `ready`
+- **Donde editar UI**: `app/layout.tsx`
+- **Donde editar logica**: `src/features/analytics/services/google-tag.service.ts`
+- **Donde editar persistencia**: N/A
+- **Consideraciones UX**: El proyecto trae fallback local para GA4 si falta el env var, pero el valor preferido sigue siendo `NEXT_PUBLIC_GA_MEASUREMENT_ID`. La medicion de Ads usa conversion labels opcionales por evento.
+- **Riesgos al modificar**: No duplicar scripts ni pageviews. No meter tags ad hoc dentro de rutas criticas. Mantener un solo punto global de carga y centralizar eventos en `googleTagService`.
+
+---
+
+## Feature: Founder Growth Panel
+
+- **Que hace**: Panel privado de growth para el fundador con foco en trabajo diario de prospeccion, follow-up, demos, pilotos, pagos y metas. En esta primera version usa estado local persistido en `localStorage` y separa de forma explicita `Real`, `Manual` y `Mock`.
+- **Rutas involucradas**: `/admin/growth`
+- **Archivos principales**:
+  - `app/admin/growth/page.tsx`
+  - `app/admin/growth/page-client.tsx`
+  - `app/admin/growth/page.module.css`
+  - `src/features/growth/hooks/useGrowthDashboard.ts`
+  - `src/features/growth/services/growth-dashboard.service.ts`
+  - `src/features/growth/services/growth-access.service.ts`
+  - `src/features/growth/repositories/growth-dashboard.repository.ts`
+  - `src/features/growth/types/growth-dashboard.ts`
+  - `proxy.ts`
+- **Componentes principales**: `GrowthPageClient`
+- **Hooks/servicios/actions**: `useGrowthDashboard`, `growthDashboardService`, `growthDashboardRepository`, `canAccessGrowthPanel`
+- **Tablas Supabase**: Ninguna en esta V1 local
+- **Flujo de datos**: Page server -> access guard (`resolveAuthenticatedRouteContext` + `canAccessGrowthPanel`) -> client page -> hook -> service -> repository `localStorage`
+- **Estados importantes**: tabs `resumen`, `manuales`, `experimentos`; focus filters `todos`, `followups`, `contactar`, `demos`, `pilotos`
+- **Donde editar UI**: `app/admin/growth/`
+- **Donde editar logica**: `src/features/growth/services/growth-dashboard.service.ts`
+- **Donde editar persistencia**: `src/features/growth/repositories/growth-dashboard.repository.ts`
+- **Consideraciones UX**: Ruta standalone fuera de `AppShell`. El CTA principal es `Agregar prospecto`. `Trabajo de hoy` manda la pantalla y la tabla de prospectos debe quedar visible y editable sin scroll excesivo.
+- **Riesgos al modificar**: No volver esto un BI decorativo. No mostrar datos mock como reales. No abrir CRM enterprise ni tocar rutas publicas criticas. Mantener acceso restringido a admin allowlist y soportar modo `growth-only` por correo.
+
+---
+
 ## Feature: Cotizaciones
 
 - **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp, estados

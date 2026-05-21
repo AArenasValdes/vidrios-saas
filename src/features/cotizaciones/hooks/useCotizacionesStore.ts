@@ -225,6 +225,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
   const [isReady, setIsReady] = useState(initialStateRef.current.isReady);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const activeRefreshIdRef = useRef(0);
   const isMountedRef = useRef(true);
   const lastOrganizationIdRef = useRef<string | null>(
@@ -336,7 +337,21 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
         cotizacionesPromiseByOrganization.set(organizationKey, recordsPromise);
       }
 
-      const records = await recordsPromise;
+      const refreshTimeoutMs = 30000; // 30 segundos
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("timeout")), refreshTimeoutMs);
+      });
+
+      const records = await Promise.race([recordsPromise, timeoutPromise]).catch((raceError) => {
+        if (raceError instanceof Error && raceError.message === "timeout") {
+          if (isMountedRef.current && refreshId === activeRefreshIdRef.current) {
+            setError("La carga de cotizaciones tardó demasiado. Intenta de nuevo.");
+            setIsReady(true);
+          }
+        }
+
+        throw raceError;
+      });
       const nextCotizaciones = sortCotizaciones(
         mergeWorkflowRecords(cotizacionesRef.current, records)
       );
@@ -504,6 +519,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     }
 
     setIsSaving(true);
+    setSaveError(null);
 
     try {
       const record = await cotizacionesAppService.saveWorkflow({
@@ -558,7 +574,12 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       cotizacionesCache.set(String(organizacionId), nextCacheEntry);
       persistCotizacionesCache(nextCacheEntry);
 
+      setSaveError(null);
       return record;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo guardar la cotización";
+      setSaveError(message);
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -570,6 +591,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     }
 
     setIsSaving(true);
+    setSaveError(null);
 
     try {
       await cotizacionesAppService.deleteWorkflow(id, organizacionId);
@@ -585,6 +607,10 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       };
       cotizacionesCache.set(String(organizacionId), nextCacheEntry);
       persistCotizacionesCache(nextCacheEntry);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo eliminar la cotización";
+      setSaveError(message);
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -636,6 +662,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     }
 
     setIsSaving(true);
+    setSaveError(null);
 
     try {
       const record = await cotizacionesAppService.markWorkflowAsSent({
@@ -660,7 +687,12 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       cotizacionesCache.set(String(organizacionId), nextCacheEntry);
       persistCotizacionesCache(nextCacheEntry);
 
+      setSaveError(null);
       return record;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo marcar la cotización como enviada";
+      setSaveError(message);
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -674,11 +706,13 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     );
   }, [cotizaciones]);
 
-  const loadCotizacionById = useCallback(async (id: string) => {
+  const loadCotizacionById = useCallback(async (id: string, options?: { silent?: boolean }) => {
     if (!organizacionId) {
       return null;
     }
     const organizationKey = String(organizacionId);
+    const startTime = Date.now();
+    const loadTimeoutMs = 30000; // 30 segundos
     const existingRecord =
       cotizacionesRef.current.find((record) => record.id === id) ??
       cotizaciones.find((record) => record.id === id) ??
@@ -703,7 +737,19 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       cotizacionDetailPromiseByKey.set(detailCacheKey, recordPromise);
     }
 
-    const record = await recordPromise;
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), loadTimeoutMs);
+    });
+
+    const record = await Promise.race([recordPromise, timeoutPromise]);
+
+    if (Date.now() - startTime >= loadTimeoutMs) {
+      if (!options?.silent) {
+        setError("La carga de la cotización tardó demasiado. Intenta de nuevo.");
+      }
+
+      return null;
+    }
 
     if (record) {
       const currentCotizaciones = cotizacionesRef.current;
@@ -729,8 +775,12 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
 
   const prefetchCotizacionById = useCallback(async (id: string) => {
     try {
-      await loadCotizacionById(id);
-    } catch {
+      await loadCotizacionById(id, { silent: true });
+    } catch (loadError) {
+      if (!isConnectivityError(loadError)) {
+        console.error("Error inesperado al pre-cargar cotización:", loadError);
+      }
+
       return null;
     }
 
@@ -744,6 +794,8 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     isReady,
     isRefreshing,
     isSaving,
+    saveError,
+    setSaveError,
     saveWorkflow,
     deleteWorkflow,
     updateManualResponseStatus,

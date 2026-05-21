@@ -13,6 +13,7 @@ import {
 } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
 
 import s from "./public-quote-mobile.module.css";
 
@@ -129,6 +130,22 @@ export function PublicQuoteMobile({
   const [isDocumentOpen, setIsDocumentOpen] = useState(false);
 
   useEffect(() => {
+    if (!decisionMessage) {
+      return;
+    }
+
+    if (quote.estado !== "aprobada" && quote.estado !== "rechazada") {
+      return;
+    }
+
+    googleTagService.trackQuoteDecision({
+      quoteCode: quote.codigo,
+      decision: quote.estado,
+      total: quote.total,
+    });
+  }, [decisionMessage, quote.codigo, quote.estado, quote.total]);
+
+  useEffect(() => {
     if (!isDocumentOpen) {
       return;
     }
@@ -161,7 +178,20 @@ export function PublicQuoteMobile({
       : quote.estado === "rechazada"
         ? s.statusRechazada
         : s.statusPendiente;
+  const handleOpenDocument = () => {
+    googleTagService.trackPdfAction({
+      action: "view",
+      quoteCode: quote.codigo,
+      source: "public-quote",
+    });
+    setIsDocumentOpen(true);
+  };
   const handleDownload = () => {
+    googleTagService.trackPdfAction({
+      action: "download",
+      quoteCode: quote.codigo,
+      source: "public-quote",
+    });
     window.open(downloadUrl, "_blank", "noopener,noreferrer");
   };
 
@@ -257,7 +287,7 @@ export function PublicQuoteMobile({
           </div>
 
           <div className={s.pdfActions}>
-            <button className={s.pdfActionSecondary} type="button" onClick={() => setIsDocumentOpen(true)}>
+            <button className={s.pdfActionSecondary} type="button" onClick={handleOpenDocument}>
               <LuFileText aria-hidden />
               Ver
             </button>

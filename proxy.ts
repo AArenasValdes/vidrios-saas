@@ -1,9 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { isGrowthOnlyUser } from "@/features/growth/services/growth-access.service";
 
 const protectedPrefixes = [
   "/dashboard",
+  "/admin",
   "/clientes",
   "/cotizaciones",
   "/solicitudes",
@@ -110,9 +112,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  const growthOnly = isGrowthOnlyUser(user?.email);
+
+  if (
+    user &&
+    growthOnly &&
+    pathname !== "/admin/growth" &&
+    !pathname.startsWith("/admin/growth/")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/growth";
+    return NextResponse.redirect(url);
+  }
+
   if (user && isLogin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = growthOnly ? "/admin/growth" : "/dashboard";
     return NextResponse.redirect(url);
   }
 
@@ -124,6 +139,7 @@ export const config = {
     "/login",
     "/auth/callback",
     "/dashboard/:path*",
+    "/admin/:path*",
     "/clientes/:path*",
     "/cotizaciones/:path*",
     "/solicitudes/:path*",
