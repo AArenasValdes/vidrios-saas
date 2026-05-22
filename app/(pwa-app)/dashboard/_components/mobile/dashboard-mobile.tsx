@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Plus } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.mobile.module.css";
@@ -34,23 +34,26 @@ export const DashboardMobile = memo(function DashboardMobile({
 
   return (
     <div className={styles.page}>
-      <PremiumPageSection className={styles.header}>
+      <PremiumPageSection
+        className={styles.header}
+        data-onboarding-target="dashboard-header"
+      >
         <h1 className={styles.title}>Buen dia, {greetingName}</h1>
         <p className={styles.date}>{mobileDateLabel}</p>
       </PremiumPageSection>
 
       <PremiumPageSection>
-        <Link href={newQuoteHref} className={styles.cta}>
+        <Link
+          href={newQuoteHref}
+          className={styles.cta}
+          data-onboarding-target="dashboard-new-quote"
+        >
           <Plus size={18} strokeWidth={2.75} />
           Crear cotizacion rapida
         </Link>
       </PremiumPageSection>
 
-      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
-        <PremiumPageSection>
-          <OnboardingChecklistCard controller={onboarding} variant="compact" />
-        </PremiumPageSection>
-      ) : null}
+      <OnboardingJoyride controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection>
         <Link href={attentionHref} className={styles.alertCard}>

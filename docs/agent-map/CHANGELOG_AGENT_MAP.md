@@ -10,6 +10,10 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 Se agrego el MVP de onboarding comercial guiado para administradores dentro de Ventora. El nuevo checklist persiste por organizacion en `onboarding_checklists`, deriva pasos reales desde `organization_profile`, `solicitudes_contacto` y `cotizaciones`, y solo marca los pasos manuales (`channel_ready`, `first_share`) cuando el usuario ejecuta acciones reales de copiar, compartir, descargar QR, abrir PDF o abrir WhatsApp. El onboarding aparece en `dashboard`, configuracion, canales y cotizaciones privadas, sin tocar `/solicitud/[empresa]` ni `/presupuesto/[token]`.
 
+### Ajuste posterior del mismo dia
+
+Se reemplazo el card/checklist visual por un onboarding mas liviano con `react-joyride`. Ahora solo se muestra a administradores mientras `first_quote` siga incompleto, se presenta una sola vez por paso y ruta usando `localStorage`, y deja de aparecer apenas existe una primera cotizacion real. Tambien se retiro el recordatorio visual de `/cotizaciones` y `/cotizaciones/[id]` para reducir ruido operativo.
+
 ### Archivos actualizados
 
 | Archivo | Cambio |

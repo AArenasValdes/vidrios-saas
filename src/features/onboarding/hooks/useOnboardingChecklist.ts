@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -12,10 +13,15 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 
 export type UseOnboardingChecklistResult = {
   checklist: OnboardingChecklistViewModel | null;
+  organizationId: string | number | null;
   isLoading: boolean;
   isVisible: boolean;
+  isPreviewMode: boolean;
   error: string | null;
+  isDismissed: boolean;
+  hasCompletedFirstQuote: boolean;
   refreshChecklist: () => Promise<void>;
+  dismissChecklist: () => void;
   markChannelReady: (input: {
     completionSource: string;
     metadataJson?: Record<string, unknown>;
@@ -30,15 +36,40 @@ export type UseOnboardingChecklistResult = {
   ) => boolean;
 };
 
+function getDismissStorageKey(organizationId: string | number | null) {
+  return organizationId ? `vidrios-saas:onboarding:dismissed:${organizationId}` : null;
+}
+
 export function useOnboardingChecklist(): UseOnboardingChecklistResult {
+  const searchParams = useSearchParams();
   const { user, organizacionId, rol, cargando } = useAuth();
   const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const [checklist, setChecklist] = useState<OnboardingChecklistViewModel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDismissed, setIsDismissed] = useState(false);
   const activeLoadIdRef = useRef(0);
+  const dismissStorageKey = getDismissStorageKey(organizacionId);
+  const isPreviewRequested = searchParams.get("onboarding_preview");
+  const isPreviewMode =
+    isPreviewRequested === "1" ||
+    isPreviewRequested === "true" ||
+    isPreviewRequested === "si";
 
   const isEnabled = !cargando && rol === "admin" && Boolean(organizacionId) && isProfileReady;
+
+  useEffect(() => {
+    if (!dismissStorageKey || typeof window === "undefined") {
+      setIsDismissed(false);
+      return;
+    }
+
+    try {
+      setIsDismissed(window.localStorage.getItem(dismissStorageKey) === "1");
+    } catch {
+      setIsDismissed(false);
+    }
+  }, [dismissStorageKey]);
 
   const refreshChecklist = useCallback(async () => {
     if (!isEnabled || !organizacionId) {
@@ -83,6 +114,20 @@ export function useOnboardingChecklist(): UseOnboardingChecklistResult {
   useEffect(() => {
     void refreshChecklist();
   }, [refreshChecklist]);
+
+  const dismissChecklist = useCallback(() => {
+    setIsDismissed(true);
+
+    if (!dismissStorageKey || typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(dismissStorageKey, "1");
+    } catch {
+      return;
+    }
+  }, [dismissStorageKey]);
 
   const markChannelReady = useCallback(
     async (input: {
@@ -140,24 +185,41 @@ export function useOnboardingChecklist(): UseOnboardingChecklistResult {
     [checklist]
   );
 
+  const hasCompletedFirstQuote =
+    checklist?.steps.find((step) => step.key === "first_quote")?.isCompleted ?? false;
+
   return useMemo(
     () => ({
       checklist,
+      organizationId: organizacionId ?? null,
       isLoading,
-      isVisible: Boolean(isEnabled && checklist && !checklist.isComplete),
+      isPreviewMode,
+      isVisible: Boolean(
+        isEnabled &&
+          checklist &&
+          (isPreviewMode || (!hasCompletedFirstQuote && !isDismissed))
+      ),
       error,
+      isDismissed,
+      hasCompletedFirstQuote,
       refreshChecklist,
+      dismissChecklist,
       markChannelReady,
       markFirstShare,
       shouldHighlightStep,
     }),
     [
       checklist,
+      dismissChecklist,
       error,
+      hasCompletedFirstQuote,
       isEnabled,
+      isDismissed,
       isLoading,
+      isPreviewMode,
       markChannelReady,
       markFirstShare,
+      organizacionId,
       refreshChecklist,
       shouldHighlightStep,
     ]

@@ -17,7 +17,7 @@ import {
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
@@ -1319,8 +1319,9 @@ function NuevaCotizacionPageContent() {
       className={`${s.root} ${
         flujo.paso === 2 && flujo.esVistaMovil ? s.rootStepTwoMobile : ""
       }`}
+      data-onboarding-target="cotizacion-nueva-root"
     >
-      <OnboardingChecklistCard controller={onboarding} variant="compact" />
+      <OnboardingJoyride controller={onboarding} routeKey="cotizacion_nueva" />
 
       {flujo.esVistaMovil ? (
         <NuevaCotizacionMobile

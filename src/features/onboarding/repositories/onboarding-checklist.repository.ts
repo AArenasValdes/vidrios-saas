@@ -116,8 +116,7 @@ export function createOnboardingChecklistRepository(
       const { count, error } = await supabase
         .from("solicitudes_contacto")
         .select("id", { count: "exact", head: true })
-        .eq("organization_id", organizationId)
-        .is("eliminado_en", null);
+        .eq("organization_id", organizationId);
 
       if (error) {
         throw error;

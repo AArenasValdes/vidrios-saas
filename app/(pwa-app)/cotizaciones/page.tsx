@@ -22,7 +22,6 @@ import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premi
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useCotizacionesResumenPage } from "@/features/cotizaciones/hooks/useCotizacionesResumenPage";
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
@@ -772,12 +771,6 @@ export default function CotizacionesPage() {
           )}
         </div>
       </PremiumPageSection>
-
-      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
-        <PremiumPageSection>
-          <OnboardingChecklistCard controller={onboarding} variant="compact" />
-        </PremiumPageSection>
-      ) : null}
 
       {isColdBoot ? (
         <PremiumPageSection className={s.loadingTableState}>

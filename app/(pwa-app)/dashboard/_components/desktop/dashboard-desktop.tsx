@@ -4,7 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.desktop.module.css";
@@ -32,23 +32,26 @@ export const DashboardDesktop = memo(function DashboardDesktop({
 
   return (
     <div className={styles.page}>
-      <PremiumPageSection className={styles.header}>
+      <PremiumPageSection
+        className={styles.header}
+        data-onboarding-target="dashboard-header"
+      >
         <div className={styles.headerMain}>
           <h1 className={styles.title}>Buen dia, {greetingName}</h1>
           <p className={styles.subtitle}>{subtitle}</p>
         </div>
 
-        <Link href={newQuoteHref} className={styles.newButton}>
+        <Link
+          href={newQuoteHref}
+          className={styles.newButton}
+          data-onboarding-target="dashboard-new-quote"
+        >
           <span className={styles.newButtonIcon}>+</span>
           Nueva cotizacion
         </Link>
       </PremiumPageSection>
 
-      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
-        <PremiumPageSection>
-          <OnboardingChecklistCard controller={onboarding} />
-        </PremiumPageSection>
-      ) : null}
+      <OnboardingJoyride controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>

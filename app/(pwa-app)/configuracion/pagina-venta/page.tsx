@@ -23,7 +23,7 @@ import {
 import type { LandingGalleryItem } from "@/features/landing-gallery/types/landing-gallery";
 
 import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGallery";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -630,7 +630,7 @@ export default function PaginaVentaPage() {
 
   return (
     <div className={s.root}>
-      <OnboardingChecklistCard controller={onboarding} variant="compact" />
+      <OnboardingJoyride controller={onboarding} routeKey="pagina_venta" />
 
       <div className={s.header}>
         <div>
@@ -645,6 +645,7 @@ export default function PaginaVentaPage() {
           <span
             className={s.statusBadge}
             data-published={form.isPublished}
+            data-onboarding-target="pagina-venta-publicacion"
           >
             {form.isPublished ? "Publicada" : "Borrador"}
           </span>

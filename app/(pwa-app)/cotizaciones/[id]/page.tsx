@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { LuArrowLeft } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
@@ -307,13 +306,6 @@ export default function CotizacionDetallePage() {
 
   return (
     <>
-      <OnboardingChecklistCard
-        controller={onboarding}
-        variant="compact"
-        focusStepKey="first_share"
-        showOnlyFocusedStep
-      />
-
       {actionError ? (
         <div className={s.stateRoot}>
           <div className={s.stateCard}>

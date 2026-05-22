@@ -78,7 +78,7 @@
 - **Proposito**: Dashboard operativo con KPIs y cotizaciones recientes
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Saludo, onboarding comercial guiado, KPIs (total, pendientes, mes, aprobadas hoy), cotizaciones recientes, CTA nueva cotizacion
-- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingChecklistCard`, `PremiumPageReveal`
+- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingJoyride`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
@@ -114,14 +114,14 @@
 - **CSS**: `app/(pwa-app)/cotizaciones/page.module.css`
 - **Proposito**: Listado de cotizaciones con filtros, busqueda y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, cards mobile, onboarding compacto, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
+- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, cards mobile, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
 - **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`
 - **Hooks**: `useCotizacionesStore`, `useCotizacionAlerts`
 - **Datos que consume**: Resumen cotizaciones via `/api/cotizaciones/resumen`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Listar, filtrar, copiar link, descargar PDF, enviar WhatsApp, editar, eliminar (soft delete)
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/page.tsx`, `app/(pwa-app)/cotizaciones/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: Pagina grande (1055 lineas). No romper filtros, onboarding compacto ni acciones de WhatsApp/PDF.
+- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF.
 
 ---
 
@@ -132,14 +132,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Formulario guiado de nueva cotizacion. Workflow con pasos, items por componente, calculo de totales.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), checklist compacto de onboarding, selector de componentes, costo proveedor + margen, pricing mode, guardado borrador/presupuesto
+- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), Joyride contextual de onboarding, selector de componentes, costo proveedor + margen, pricing mode, guardado borrador/presupuesto
 - **Componentes principales**: Internos de la pagina (1198 lineas)
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing, onboarding compacto ni auto-creacion de cliente/proyecto.
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing, Joyride contextual ni auto-creacion de cliente/proyecto.
 
 ---
 
@@ -246,7 +246,7 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Generador de canales de captacion. Compartir pagina de solicitud, generar QR, copiar links por canal.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Cards de canal (directo, Instagram, Facebook, WhatsApp), onboarding compacto, QR, copiar link, descargar QR PNG
+- **Funcionalidades visibles**: Cards de canal (directo, Instagram, Facebook, WhatsApp), Joyride contextual, QR, copiar link, descargar QR PNG
 - **Componentes principales**: `LeadChannels`
 - **Hooks**: `useLeadChannels`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (slug publico)
@@ -264,7 +264,7 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Configuracion del perfil de empresa: datos basicos, telefono, email, direccion, brand color, logo, push, slug publico, QR
 - **Usuario objetivo**: Admin autenticado
-- **Funcionalidades visibles**: Formulario datos empresa, onboarding compacto, color picker con presets, upload logo, push notifications, slug publico, preview QR
+- **Funcionalidades visibles**: Formulario datos empresa, Joyride contextual, color picker con presets, upload logo, push notifications, slug publico, preview QR
 - **Componentes principales**: Internos de la pagina
 - **Hooks**: `useOrganizationProfile`
 - **Datos que consume**: Perfil org
@@ -282,7 +282,7 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Configuracion de la pagina publica de venta/lead: hero, galeria, horario, colores, toggle formulario, preview
 - **Usuario objetivo**: Admin autenticado
-- **Funcionalidades visibles**: Hero title/subtitle, onboarding compacto, galeria imagenes (max 8), horario por dia, colores, toggle publicacion, preview
+- **Funcionalidades visibles**: Hero title/subtitle, Joyride contextual, galeria imagenes (max 8), horario por dia, colores, toggle publicacion, preview
 - **Componentes principales**: Internos de la pagina
 - **Hooks**: `useOrganizationProfile`, `useLandingGallery`
 - **Datos que consume**: Perfil org + galeria

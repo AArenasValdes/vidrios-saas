@@ -7,7 +7,7 @@ import {
   PremiumPageReveal,
   PremiumPageSection,
 } from "@/components/motion/premium-page-reveal";
-import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { LeadChannels } from "@/features/solicitudes/components/lead-channels";
 
@@ -18,7 +18,7 @@ export default function LeadChannelsPage() {
 
   return (
     <PremiumPageReveal className={s.root}>
-      <PremiumPageSection className={s.heroCard}>
+      <PremiumPageSection className={s.heroCard} data-onboarding-target="canales-hero">
         <div className={s.heroCopy}>
           <span className={s.heroEyebrow}>Área operativa / Solicitudes</span>
           <h1 className={s.heroTitle}>Comparte tu página y recibe solicitudes por el canal correcto</h1>
@@ -43,11 +43,7 @@ export default function LeadChannelsPage() {
         </div>
       </PremiumPageSection>
 
-      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
-        <PremiumPageSection>
-          <OnboardingChecklistCard controller={onboarding} variant="compact" />
-        </PremiumPageSection>
-      ) : null}
+      <OnboardingJoyride controller={onboarding} routeKey="canales" />
 
       <LeadChannels
         onChannelDistributed={(input) =>

@@ -281,7 +281,7 @@ export function LeadChannels(props?: {
 
   return (
     <div className={s.root}>
-      <section className={s.publicCard}>
+      <section className={s.publicCard} data-onboarding-target="canales-public-card">
         <div className={s.publicTop}>
           <div className={s.publicCopy}>
             <span className={s.sectionLabel}>Tu página pública</span>
@@ -296,7 +296,7 @@ export function LeadChannels(props?: {
           </div>
         </div>
 
-        <div className={s.publicActions}>
+        <div className={s.publicActions} data-onboarding-target="canales-share-actions">
           <button
             type="button"
             className={s.primaryAction}
