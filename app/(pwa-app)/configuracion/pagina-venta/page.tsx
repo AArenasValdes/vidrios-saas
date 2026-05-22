@@ -27,6 +27,7 @@ import { OnboardingGuide } from "@/features/onboarding/components/onboarding-gui
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
 import {
   buildPaginaVentaProfileInput,
   buildDefaultSolicitudPublicaHorarioPorDia,
@@ -473,23 +474,28 @@ export default function PaginaVentaPage() {
   }
 
   const publicRequestUrl = `${resolvePublicAppUrl()}/solicitud/${form.solicitudPublicaSlug?.trim() || "mi-empresa"}`;
+  const publicRequestShareText = buildPublicRequestShareClipboardText({
+    url: publicRequestUrl,
+    empresaNombre: form.empresaNombre || profile?.empresaNombre,
+    channel: "direct",
+  });
 
   const persistedPublicRequestUrl = `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${profile?.solicitudPublicaSlug?.trim() || form.solicitudPublicaSlug?.trim() || "mi-empresa"}`;
   const previewPublicRequestUrl = `${persistedPublicRequestUrl}?preview=1`;
 
   async function handleCopyPublicLink() {
     try {
-      await navigator.clipboard.writeText(publicRequestUrl);
-      setStatusMessage("Enlace copiado.");
+      await navigator.clipboard.writeText(publicRequestShareText);
+      setStatusMessage("Texto y enlace copiados.");
       await onboarding.markChannelReady({
         completionSource: "configuracion_pagina_venta_copy_public_link",
         metadataJson: {
           route: "/configuracion/pagina-venta",
           url: publicRequestUrl,
         },
-      });
+        });
     } catch {
-      setErrorMessage("No pudimos copiar el enlace.");
+      setErrorMessage("No pudimos copiar el texto con el enlace.");
     }
   }
 
@@ -1319,14 +1325,14 @@ export default function PaginaVentaPage() {
                 </div>
 
                 <div className={s.publicLinkActions}>
-                  <button
-                    type="button"
-                    className={s.secondaryAction}
-                    onClick={() => void handleCopyPublicLink()}
-                  >
-                    <LuCopy aria-hidden />
-                    Copiar enlace
-                  </button>
+                    <button
+                      type="button"
+                      className={s.secondaryAction}
+                      onClick={() => void handleCopyPublicLink()}
+                    >
+                      <LuCopy aria-hidden />
+                      Copiar texto + link
+                    </button>
                   <a
                     className={s.secondaryAction}
                     href={previewPublicRequestUrl}

@@ -1,3 +1,5 @@
+import { PWA_SERVICE_WORKER_VERSION } from "@/utils/pwa-sw-version";
+
 const DEFAULT_READY_TIMEOUT_MS = 6000;
 
 function createReadyTimeout(timeoutMs: number) {
@@ -10,6 +12,10 @@ function createReadyTimeout(timeoutMs: number) {
       );
     }, timeoutMs);
   });
+}
+
+function getVersionedServiceWorkerUrl() {
+  return `/sw.js?version=${PWA_SERVICE_WORKER_VERSION}`;
 }
 
 export async function resolvePushServiceWorkerRegistration(
@@ -25,8 +31,9 @@ export async function resolvePushServiceWorkerRegistration(
     null;
 
   if (!registration) {
-    registration = await navigator.serviceWorker.register("/sw.js", {
+    registration = await navigator.serviceWorker.register(getVersionedServiceWorkerUrl(), {
       scope: "/",
+      updateViaCache: "none",
     });
   }
 

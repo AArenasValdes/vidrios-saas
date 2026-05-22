@@ -7,11 +7,11 @@
 }
 
 .mobileRootBottom {
-  bottom: calc(var(--tabbar-h, 72px) + var(--shell-tabbar-edge-bottom, 12px) + 10px);
+  bottom: calc(var(--tabbar-h, 72px) + var(--shell-tabbar-edge-bottom, 12px) + env(safe-area-inset-bottom, 0px) + 6px);
 }
 
 .mobileRootTop {
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  top: calc(env(safe-area-inset-top, 0px) + 72px);
 }
 
 .sheetCard {
@@ -25,13 +25,13 @@
 }
 
 .sheetCardCompact {
-  max-height: 156px;
+  max-height: 148px;
 }
 
 .cardBody {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px 12px;
+  gap: 8px;
+  padding: 10px 12px;
 }
 
 .cardTop {
@@ -87,7 +87,7 @@
 
 .title {
   color: #243b6b;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.12;
   letter-spacing: -0.03em;
@@ -95,19 +95,20 @@
 
 .text {
   color: #667085;
-  font-size: 13px;
-  line-height: 1.42;
+  font-size: 12.5px;
+  line-height: 1.35;
 }
 
 .actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 8px;
 }
 
 .secondaryButton,
 .primaryButton {
-  min-height: 38px;
+  min-height: 36px;
   border-radius: 12px;
   padding: 0 12px;
   display: inline-flex;
@@ -135,6 +136,62 @@
 .primaryButtonDisabled {
   opacity: 0.6;
   box-shadow: none;
+}
+
+@media (max-width: 420px) {
+  .mobileRoot {
+    left: max(10px, env(safe-area-inset-left, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+  }
+
+  .mobileRootBottom {
+    bottom: calc(var(--tabbar-h, 72px) + var(--shell-tabbar-edge-bottom, 12px) + env(safe-area-inset-bottom, 0px) + 4px);
+  }
+
+  .mobileRootTop {
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+  }
+
+  .sheetCardCompact {
+    max-height: 142px;
+  }
+
+  .cardBody {
+    gap: 7px;
+    padding: 10px 11px;
+  }
+
+  .progressText,
+  .inlinePill {
+    font-size: 9px;
+  }
+
+  .progressTrack {
+    width: 40px;
+    height: 5px;
+  }
+
+  .closeButton {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    border-radius: 11px;
+  }
+
+  .title {
+    font-size: 14px;
+  }
+
+  .text {
+    font-size: 12px;
+  }
+
+  .secondaryButton,
+  .primaryButton {
+    min-height: 35px;
+    padding: 0 11px;
+    font-size: 12.5px;
+  }
 }
 
 .inlineRoot {

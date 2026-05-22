@@ -55,6 +55,10 @@ describe("LoginView", () => {
     jest.clearAllMocks();
     mockSignIn.mockResolvedValue(undefined);
     mockPrefetch.mockClear();
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      get: () => "sb-test-auth-token=ok",
+    });
   });
 
   it("usa los valores reales del formulario cuando autofill no dispara onChange", async () => {

@@ -151,6 +151,11 @@ describe("authRepository", () => {
   });
 
   it("debe devolver sesion fresca al iniciar con password", async () => {
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      get: () => "sb-project-auth-token=token-sesion",
+    });
+
     const supabaseMock = {
       auth: {
         signInWithPassword: jest.fn().mockResolvedValue({

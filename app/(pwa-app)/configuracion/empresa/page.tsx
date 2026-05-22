@@ -27,6 +27,7 @@ import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templat
 import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
 import {
   buildEmpresaProfileInput,
   buildOrganizationInitials,
@@ -417,10 +418,19 @@ export default function ConfiguracionEmpresaPage() {
     const slug = form.solicitudPublicaSlug?.trim() || "mi-empresa";
     return `${resolvePublicAppUrl({ preferLocal: true })}/solicitud/${slug}`;
   }, [form.solicitudPublicaSlug]);
+  const publicRequestShareText = useMemo(
+    () =>
+      buildPublicRequestShareClipboardText({
+        url: publicRequestUrl,
+        empresaNombre: form.empresaNombre || profile?.empresaNombre,
+        channel: "direct",
+      }),
+    [form.empresaNombre, profile?.empresaNombre, publicRequestUrl]
+  );
 
   const handleCopyPublicLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(publicRequestUrl);
+      await navigator.clipboard.writeText(publicRequestShareText);
       setPublicLinkCopied(true);
       await onboarding.markChannelReady({
         completionSource: "configuracion_empresa_copy_public_link",
@@ -429,14 +439,14 @@ export default function ConfiguracionEmpresaPage() {
           url: publicRequestUrl,
         },
       });
-    } catch {
-      setSectionFeedback({
-        section: "empresa",
-        kind: "error",
-        message: "No pudimos copiar el link en este dispositivo.",
-      });
-    }
-  }, [onboarding, publicRequestUrl]);
+      } catch {
+        setSectionFeedback({
+          section: "empresa",
+          kind: "error",
+          message: "No pudimos copiar el texto con el link en este dispositivo.",
+        });
+      }
+    }, [onboarding, publicRequestShareText, publicRequestUrl]);
 
   const companyComplete = Boolean(
     form.empresaNombre.trim() &&
@@ -866,10 +876,10 @@ export default function ConfiguracionEmpresaPage() {
             <LuQrCode aria-hidden />
             Canales y QR
           </Link>
-          <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
-            {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-            {publicLinkCopied ? "Copiado" : "Copiar link"}
-          </button>
+            <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
+              {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+              {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
+            </button>
         </div>
       </section>
     </div>

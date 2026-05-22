@@ -42,6 +42,8 @@ const copy = {
 };
 
 const LOGIN_TIMEOUT_MS = 12000;
+const LOGIN_COOKIE_READY_TIMEOUT_MS = 4000;
+const LOGIN_COOKIE_POLL_INTERVAL_MS = 120;
 
 type BrowserWindowWithIdleCallback = Window &
   typeof globalThis & {
@@ -58,6 +60,46 @@ function waitForLoginTimeout() {
       reject(new Error("LOGIN_TIMEOUT"));
     }, LOGIN_TIMEOUT_MS);
   });
+}
+
+function hasSupabaseAuthCookie() {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  return document.cookie
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .some((chunk) => {
+      const [name] = chunk.split("=", 1);
+      return (
+        name.startsWith("sb-") ||
+        name.startsWith("supabase-auth-token") ||
+        name.includes("-auth-token")
+      );
+    });
+}
+
+async function waitForAuthCookieReady() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (hasSupabaseAuthCookie()) {
+    return;
+  }
+
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < LOGIN_COOKIE_READY_TIMEOUT_MS) {
+    await new Promise((resolve) =>
+      window.setTimeout(resolve, LOGIN_COOKIE_POLL_INTERVAL_MS)
+    );
+
+    if (hasSupabaseAuthCookie()) {
+      return;
+    }
+  }
 }
 
 function scheduleLoginPrefetch(callback: () => void, delayMs = 350) {
@@ -123,6 +165,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
         }),
         waitForLoginTimeout(),
       ]);
+      await waitForAuthCookieReady();
     } catch (signInError) {
       const rawMessage =
         signInError instanceof Error ? signInError.message.toLowerCase() : "";

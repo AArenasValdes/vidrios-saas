@@ -17,6 +17,11 @@ import {
 } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import {
+  buildPublicRequestShareClipboardText,
+  buildPublicRequestSharePayload,
+  type PublicRequestShareChannel,
+} from "@/features/solicitudes/services/public-request-share.service";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 import s from "./lead-channels.module.css";
@@ -152,9 +157,33 @@ export function LeadChannels(props?: {
     [buildUrl]
   );
 
-  const handleCopy = useCallback(async (id: string, url: string) => {
+  const buildShareClipboardText = useCallback(
+    (url: string, channel: PublicRequestShareChannel) =>
+      buildPublicRequestShareClipboardText({
+        url,
+        empresaNombre: profile?.empresaNombre,
+        channel,
+      }),
+    [profile?.empresaNombre]
+  );
+
+  const buildSharePayload = useCallback(
+    (url: string, channel: PublicRequestShareChannel) =>
+      buildPublicRequestSharePayload({
+        url,
+        empresaNombre: profile?.empresaNombre,
+        channel,
+      }),
+    [profile?.empresaNombre]
+  );
+
+  const handleCopy = useCallback(async (
+    id: string,
+    url: string,
+    channel: PublicRequestShareChannel = "generic"
+  ) => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(buildShareClipboardText(url, channel));
       setCopiedId(id);
       await props?.onChannelDistributed?.({
         completionSource: `solicitudes_canales_copy_${id}`,
@@ -162,6 +191,7 @@ export function LeadChannels(props?: {
           route: "/solicitudes/canales",
           actionId: id,
           url,
+          channel,
         },
       });
       window.setTimeout(() => {
@@ -170,19 +200,24 @@ export function LeadChannels(props?: {
     } catch {
       return;
     }
-  }, [props]);
+  }, [buildShareClipboardText, props]);
 
   const handleShare = useCallback(
-    async (id: string, title: string, text: string, url: string) => {
+    async (
+      id: string,
+      url: string,
+      channel: PublicRequestShareChannel = "generic"
+    ) => {
       try {
         if (typeof navigator !== "undefined" && navigator.share) {
-          await navigator.share({ title, text, url });
+          await navigator.share(buildSharePayload(url, channel));
           await props?.onChannelDistributed?.({
             completionSource: `solicitudes_canales_share_${id}`,
             metadataJson: {
               route: "/solicitudes/canales",
               actionId: id,
               url,
+              channel,
             },
           });
           return;
@@ -191,9 +226,9 @@ export function LeadChannels(props?: {
         return;
       }
 
-      await handleCopy(id, url);
+      await handleCopy(id, url, channel);
     },
-    [handleCopy, props]
+    [buildSharePayload, handleCopy, props]
   );
 
   const handleDownloadQR = useCallback(
@@ -252,9 +287,7 @@ export function LeadChannels(props?: {
       return;
     }
 
-    const text = encodeURIComponent(
-      `Hola, aquí te dejo mi página para que me envíes tu solicitud: ${url}`
-    );
+    const text = encodeURIComponent(buildShareClipboardText(url, "whatsapp"));
     window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
     void props?.onChannelDistributed?.({
       completionSource: "solicitudes_canales_whatsapp_share",
@@ -263,7 +296,7 @@ export function LeadChannels(props?: {
         url,
       },
     });
-  }, [props]);
+  }, [buildShareClipboardText, props]);
 
   const openExternal = useCallback((href: string) => {
     if (typeof window === "undefined") {
@@ -300,14 +333,7 @@ export function LeadChannels(props?: {
           <button
             type="button"
             className={s.primaryAction}
-            onClick={() =>
-              void handleShare(
-                "page-share",
-                "Tu página pública",
-                "Te comparto mi página para que me envíes tu solicitud.",
-                directUrl
-              )
-            }
+            onClick={() => void handleShare("page-share", directUrl, "direct")}
           >
             <LuShare2 aria-hidden />
             Compartir
@@ -315,10 +341,10 @@ export function LeadChannels(props?: {
           <button
             type="button"
             className={s.secondaryAction}
-            onClick={() => void handleCopy("page-copy", directUrl)}
+            onClick={() => void handleCopy("page-copy", directUrl, "direct")}
           >
             {copiedId === "page-copy" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-            {copiedId === "page-copy" ? "Copiado" : "Copiar link"}
+            {copiedId === "page-copy" ? "Copiado" : "Copiar texto + link"}
           </button>
         </div>
 
@@ -333,7 +359,7 @@ export function LeadChannels(props?: {
               setDetails({
                 title: "Tu página pública",
                 url: directUrl,
-                helper: "Este es el enlace general para compartir donde quieras.",
+                helper: "Te copia un texto general con el link, listo para pegar donde quieras.",
               })
             }
           >
@@ -384,7 +410,7 @@ export function LeadChannels(props?: {
                     return;
                   }
 
-                  void handleCopy(`quick-${channel.id}`, url);
+                  void handleCopy(`quick-${channel.id}`, url, channel.id);
                 }}
               >
                 <span className={s.quickIconWrap}>
@@ -434,14 +460,7 @@ export function LeadChannels(props?: {
                       <button
                         type="button"
                         className={s.primaryAction}
-                        onClick={() =>
-                          void handleShare(
-                            "direct-share",
-                            "Tu página pública",
-                            "Te comparto mi página para que me envíes tu solicitud.",
-                            url
-                          )
-                        }
+                        onClick={() => void handleShare("direct-share", url, "direct")}
                       >
                         <LuShare2 aria-hidden />
                         Compartir
@@ -449,10 +468,10 @@ export function LeadChannels(props?: {
                       <button
                         type="button"
                         className={s.secondaryAction}
-                        onClick={() => void handleCopy(channel.id, url)}
+                        onClick={() => void handleCopy(channel.id, url, "direct")}
                       >
                         {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                        {isCopied ? "Copiado" : "Copiar link"}
+                        {isCopied ? "Copiado" : "Copiar texto + link"}
                       </button>
                     </>
                   ) : null}
@@ -470,10 +489,10 @@ export function LeadChannels(props?: {
                       <button
                         type="button"
                         className={s.secondaryAction}
-                        onClick={() => void handleCopy(channel.id, url)}
+                        onClick={() => void handleCopy(channel.id, url, "whatsapp")}
                       >
                         {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                        {isCopied ? "Copiado" : "Copiar link"}
+                        {isCopied ? "Copiado" : "Copiar texto + link"}
                       </button>
                     </>
                   ) : null}
@@ -483,7 +502,7 @@ export function LeadChannels(props?: {
                       <button
                         type="button"
                         className={s.primaryAction}
-                        onClick={() => void handleCopy(channel.id, url)}
+                        onClick={() => void handleCopy(channel.id, url, "instagram")}
                       >
                         {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
                         {isCopied ? "Copiado" : "Copiar para Instagram"}
@@ -504,7 +523,7 @@ export function LeadChannels(props?: {
                       <button
                         type="button"
                         className={s.primaryAction}
-                        onClick={() => void handleCopy(channel.id, url)}
+                        onClick={() => void handleCopy(channel.id, url, "facebook")}
                       >
                         {isCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
                         {isCopied ? "Copiado" : "Copiar para Facebook"}
@@ -530,12 +549,12 @@ export function LeadChannels(props?: {
                       url,
                       helper:
                         channel.id === "instagram"
-                          ? "Pégalo en tu bio o en una historia destacada."
+                          ? "Te copia una version corta para bio o historia."
                           : channel.id === "facebook"
-                            ? "Úsalo en perfil, publicación o botón."
+                            ? "Te copia una version pensada para post, perfil o boton."
                             : channel.id === "whatsapp"
-                              ? "Sirve para estado, respuesta rápida o mensaje."
-                              : "Compártelo donde quieras.",
+                              ? "Te deja un mensaje mas directo para enviar por WhatsApp."
+                              : "Te copia un texto general listo para compartir.",
                     })
                   }
                 >
@@ -577,12 +596,7 @@ export function LeadChannels(props?: {
           <button
             type="button"
             onClick={() =>
-              void handleShare(
-                "qr-share",
-                "QR para tus solicitudes",
-                "Te comparto el enlace de mi QR para que me envíes una solicitud.",
-                qrUrl
-              )
+              void handleShare("qr-share", qrUrl, "qr")
             }
             className={s.secondaryAction}
           >
@@ -594,9 +608,9 @@ export function LeadChannels(props?: {
         <button
           type="button"
           className={s.inlineLink}
-          onClick={() => void handleCopy("qr-link", qrUrl)}
+          onClick={() => void handleCopy("qr-link", qrUrl, "qr")}
         >
-          {copiedId === "qr-link" ? "Copiado" : "Copiar link QR"}
+          {copiedId === "qr-link" ? "Copiado" : "Copiar texto + link QR"}
         </button>
       </section>
 
@@ -623,10 +637,10 @@ export function LeadChannels(props?: {
               <button
                 type="button"
                 className={s.primaryAction}
-                onClick={() => void handleCopy("details", details.url)}
+                onClick={() => void handleCopy("details", details.url, "direct")}
               >
                 {copiedId === "details" ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                {copiedId === "details" ? "Copiado" : "Copiar enlace"}
+                {copiedId === "details" ? "Copiado" : "Copiar texto + link"}
               </button>
               <button
                 type="button"

@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import { readPwaInstallPromptVisible, PWA_INSTALL_PROMPT_VISIBILITY_EVENT } from "@/components/pwa/install-app-prompt-events";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 import type { UseOnboardingChecklistResult } from "../hooks/useOnboardingChecklist";
@@ -146,7 +147,7 @@ function resolveGuideCopy(stepKey: OnboardingStepKey) {
     return {
       title: "Comparte tu link o QR",
       text: "Usalo en WhatsApp, Instagram, Facebook o tarjetas.",
-      ctaLabel: "Copiar link",
+      ctaLabel: "Copiar texto + link",
     };
   }
 
@@ -260,6 +261,17 @@ export function OnboardingGuide({
   const guideCopy = activeStep ? resolveGuideCopy(activeStep.key) : null;
   const publicShareUrl = getPublicShareUrl(profile?.solicitudPublicaSlug);
   const publicPreviewUrl = getPublicPreviewUrl(profile?.solicitudPublicaSlug);
+  const publicShareClipboardText = useMemo(() => {
+    if (!publicShareUrl) {
+      return null;
+    }
+
+    return buildPublicRequestShareClipboardText({
+      url: publicShareUrl,
+      empresaNombre: profile?.empresaNombre,
+      channel: "direct",
+    });
+  }, [profile?.empresaNombre, publicShareUrl]);
 
   const primaryAction = useMemo(() => {
     if (!activeStep || !guideCopy) {
@@ -267,7 +279,7 @@ export function OnboardingGuide({
     }
 
     if (activeStep.key === "channel_ready") {
-      if (!publicShareUrl) {
+      if (!publicShareUrl || !publicShareClipboardText) {
         return {
           kind: "link" as const,
           label: guideCopy.ctaLabel,
@@ -280,7 +292,7 @@ export function OnboardingGuide({
         label: guideCopy.ctaLabel,
         onClick: async () => {
           try {
-            await navigator.clipboard.writeText(publicShareUrl);
+            await navigator.clipboard.writeText(publicShareClipboardText);
             await controller.markChannelReady({
               completionSource: "onboarding_mobile_copy_public_link",
               metadataJson: {
@@ -354,7 +366,15 @@ export function OnboardingGuide({
       href: activeStep.href,
       openInNewTab: activeStep.openInNewTab,
     };
-  }, [activeStep, controller, guideCopy, publicPreviewUrl, publicShareUrl, routeKey]);
+  }, [
+    activeStep,
+    controller,
+    guideCopy,
+    publicPreviewUrl,
+    publicShareClipboardText,
+    publicShareUrl,
+    routeKey,
+  ]);
 
   if (
     !controller.isVisible ||

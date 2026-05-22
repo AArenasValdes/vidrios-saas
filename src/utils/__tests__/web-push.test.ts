@@ -93,8 +93,9 @@ describe("web push utils", () => {
 
     expect(resolved).toBe(retriedSubscription);
     expect(staleRegistration.unregister).toHaveBeenCalled();
-    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith("/sw.js", {
+    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith("/sw.js?version=v8", {
       scope: "/",
+      updateViaCache: "none",
     });
     expect(freshRegistration.pushManager.subscribe).toHaveBeenCalled();
   });

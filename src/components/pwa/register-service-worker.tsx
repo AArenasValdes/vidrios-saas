@@ -2,14 +2,13 @@
 
 import { useEffect } from "react";
 import { isCanonicalPwaHost } from "@/utils/pwa-host";
+import { PWA_SERVICE_WORKER_VERSION } from "@/utils/pwa-sw-version";
 
 declare global {
   interface Window {
     __VIDRIOS_SAAS_SW_ENV__?: string;
   }
 }
-
-const SERVICE_WORKER_VERSION = "v7";
 
 async function unregisterAllServiceWorkers() {
   try {
@@ -56,7 +55,7 @@ export function RegisterServiceWorker() {
     const registerServiceWorker = async () => {
       try {
         const registration = await serviceWorker.register(
-          `/sw.js?version=${SERVICE_WORKER_VERSION}`,
+          `/sw.js?version=${PWA_SERVICE_WORKER_VERSION}`,
           {
           scope: "/",
             updateViaCache: "none",

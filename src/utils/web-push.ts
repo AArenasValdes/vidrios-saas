@@ -1,4 +1,5 @@
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
+import { PWA_SERVICE_WORKER_VERSION } from "@/utils/pwa-sw-version";
 
 function sanitizeWebPushKey(value: string) {
   return value.trim().replace(/^['"]|['"]$/g, "").replace(/\s+/g, "");
@@ -89,7 +90,10 @@ async function resetPushRegistration() {
     })
   );
 
-  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  await navigator.serviceWorker.register(`/sw.js?version=${PWA_SERVICE_WORKER_VERSION}`, {
+    scope: "/",
+    updateViaCache: "none",
+  });
   return resolvePushServiceWorkerRegistration();
 }
 

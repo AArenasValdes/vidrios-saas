@@ -1,4 +1,4 @@
-const CACHE_NAME = "vidrios-saas-v7";
+const CACHE_NAME = "vidrios-saas-v8";
 const APP_SHELL = [
   "/",
   "/login",

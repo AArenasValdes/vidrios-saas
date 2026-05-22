@@ -19,6 +19,10 @@ const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
 const DEFAULT_BOOTSTRAP_RETRY_DELAY_MS = 300;
 const GET_ORG_ID_PERMISSION_ERROR_MESSAGE =
   "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta de nuevo en unos segundos.";
+const AUTH_PROFILE_BOOTSTRAP_LOOKUP_OPTIONS: AuthProfileLookupOptions = {
+  preferServerLookup: false,
+  retryServerOnUnauthorized: true,
+};
 const DEFAULT_AUTH_BOOTSTRAP_LOOKUP_OPTIONS: AuthProfileLookupOptions = {
   preferServerLookup: true,
   retryServerOnUnauthorized: true,
@@ -94,6 +98,10 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
       throwOnMissingOrganization?: boolean;
     }
   ): Promise<AuthenticatedUser> {
+    const profileIdentity = {
+      authUserId: user.id,
+      email: user.email,
+    };
     let lastState: AuthenticatedUser = {
       user,
       organizacionId: null,
@@ -105,11 +113,6 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
 
       try {
         const profileLookupOptions = buildProfileLookupOptions(options);
-        const profileIdentity = {
-          authUserId: user.id,
-          email: user.email,
-        };
-
         perfil = profileLookupOptions
           ? await repository.getUserProfile(profileIdentity, profileLookupOptions)
           : await repository.getUserProfile(profileIdentity);
@@ -139,6 +142,29 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
 
     if (lastState.organizacionId) {
       return lastState;
+    }
+
+    if (options?.accessToken) {
+      try {
+        const fallbackProfile = await repository.getUserProfile(profileIdentity, {
+          ...AUTH_PROFILE_BOOTSTRAP_LOOKUP_OPTIONS,
+          accessToken: options.accessToken,
+        });
+
+        if (fallbackProfile?.organizacionId) {
+          return {
+            user,
+            organizacionId: fallbackProfile.organizacionId,
+            rol: fallbackProfile.rol,
+          };
+        }
+      } catch (error) {
+        if (isGetOrgIdPermissionError(error)) {
+          throw new Error(GET_ORG_ID_PERMISSION_ERROR_MESSAGE);
+        }
+
+        throw error;
+      }
     }
 
     await repository.signOut({

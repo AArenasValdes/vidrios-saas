@@ -247,6 +247,67 @@ describe("authService", () => {
     expect(repository.signOut).toHaveBeenCalledTimes(2);
   });
 
+  it("debe caer a lookup directo si el bootstrap server-side del login no devuelve organizacion al primer intento", async () => {
+    const repository = createRepositoryMock();
+    const user = createUser("movil@vidrios.cl");
+
+    repository.signOut.mockResolvedValue();
+    repository.signInWithPassword.mockResolvedValue({
+      user,
+      session: {
+        access_token: "token-movil",
+      } as never,
+      accessToken: "token-movil",
+    });
+    repository.getUserProfile
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        organizacionId: 44,
+        rol: "admin",
+      });
+
+    const service = createAuthService({
+      repository,
+      bootstrapRetryCount: 0,
+      bootstrapRetryDelayMs: 0,
+    });
+
+    const resultado = await service.signIn({
+      email: "movil@vidrios.cl",
+      password: "secreta123",
+    });
+
+    expect(repository.getUserProfile).toHaveBeenNthCalledWith(
+      1,
+      {
+        authUserId: "user-1",
+        email: "movil@vidrios.cl",
+      },
+      {
+        accessToken: "token-movil",
+        preferServerLookup: true,
+        retryServerOnUnauthorized: true,
+      }
+    );
+    expect(repository.getUserProfile).toHaveBeenNthCalledWith(
+      2,
+      {
+        authUserId: "user-1",
+        email: "movil@vidrios.cl",
+      },
+      {
+        accessToken: "token-movil",
+        preferServerLookup: false,
+        retryServerOnUnauthorized: true,
+      }
+    );
+    expect(resultado).toEqual({
+      user,
+      organizacionId: 44,
+      rol: "admin",
+    });
+  });
+
   it("debe exponer un error claro cuando get_org_id no tiene execute para authenticated", async () => {
     const repository = createRepositoryMock();
     const user = createUser("admin@test.com");

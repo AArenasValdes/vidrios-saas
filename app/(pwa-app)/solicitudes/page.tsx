@@ -20,6 +20,7 @@ import { OnboardingGuide } from "@/features/onboarding/components/onboarding-gui
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
+import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
 import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 import type {
   EstadoSolicitudContacto,
@@ -244,6 +245,17 @@ export default function SolicitudesPage() {
 
     return `${publicRequestUrl}${publicRequestUrl.includes("?") ? "&" : "?"}preview=1`;
   }, [publicRequestUrl]);
+  const publicRequestShareText = useMemo(() => {
+    if (!publicRequestUrl) {
+      return null;
+    }
+
+    return buildPublicRequestShareClipboardText({
+      url: publicRequestUrl,
+      empresaNombre: profile?.empresaNombre,
+      channel: "direct",
+    });
+  }, [profile?.empresaNombre, publicRequestUrl]);
 
   const resumen = useMemo(() => {
     return {
@@ -347,18 +359,18 @@ export default function SolicitudesPage() {
   }, [menuSolicitudId]);
 
   const handleCopyPublicLink = useCallback(async () => {
-    if (!publicRequestUrl) {
+    if (!publicRequestUrl || !publicRequestShareText) {
       setFeedback("Primero configura el slug publico en Empresa.");
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(publicRequestUrl);
-      setFeedback("Enlace copiado.");
+      await navigator.clipboard.writeText(publicRequestShareText);
+      setFeedback("Texto y enlace copiados.");
     } catch {
-      setFeedback("No pudimos copiar el enlace.");
+      setFeedback("No pudimos copiar el texto con el enlace.");
     }
-  }, [publicRequestUrl]);
+  }, [publicRequestShareText, publicRequestUrl]);
 
   const handleCopyText = useCallback(async (value: string, message: string) => {
     try {
@@ -470,14 +482,14 @@ export default function SolicitudesPage() {
         </div>
 
         <div className={s.heroActions}>
-          <button
-            type="button"
-            className={s.heroActionPrimary}
-            onClick={() => void handleCopyPublicLink()}
-          >
-            <LuCopy aria-hidden />
-            Copiar enlace
-          </button>
+            <button
+              type="button"
+              className={s.heroActionPrimary}
+              onClick={() => void handleCopyPublicLink()}
+            >
+              <LuCopy aria-hidden />
+              Copiar texto + link
+            </button>
           {previewPublicRequestUrl ? (
             <a
               className={s.heroActionSecondary}
