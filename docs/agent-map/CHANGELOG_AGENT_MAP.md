@@ -12,7 +12,7 @@ Se agrego el MVP de onboarding comercial guiado para administradores dentro de V
 
 ### Ajuste posterior del mismo dia
 
-Se reemplazo el card/checklist visual por un onboarding mas liviano con `react-joyride`. Ahora solo se muestra a administradores mientras `first_quote` siga incompleto, se presenta una sola vez por paso y ruta usando `localStorage`, y deja de aparecer apenas existe una primera cotizacion real. Tambien se retiro el recordatorio visual de `/cotizaciones` y `/cotizaciones/[id]` para reducir ruido operativo.
+Se retiro `react-joyride` y se reemplazo por una guia propia mobile-first. En movil ahora usa una tarjeta compacta tipo bottom sheet con CTA corto, progreso y acciones `Cerrar` / `Despues`, sin flechas ni overlay invasivo. En desktop usa una version inline liviana. Ademas se coordina con el banner PWA para no mostrar ambos a la vez, se agrego soporte en `/solicitudes`, y el onboarding sigue apareciendo solo mientras `first_quote` siga incompleto o cuando se fuerce `?onboarding_preview=1`.
 
 ### Archivos actualizados
 

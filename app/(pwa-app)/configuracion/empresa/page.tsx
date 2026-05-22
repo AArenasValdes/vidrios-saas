@@ -24,7 +24,7 @@ import {
 } from "react-icons/lu";
 
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
+import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
@@ -483,7 +483,7 @@ export default function ConfiguracionEmpresaPage() {
 
   return (
     <div className={s.root} data-onboarding-target="empresa-config">
-      <OnboardingJoyride controller={onboarding} routeKey="empresa" />
+      <OnboardingGuide controller={onboarding} routeKey="empresa" />
 
       <section className={s.publicCard}>
         <div className={s.publicCardTop}>

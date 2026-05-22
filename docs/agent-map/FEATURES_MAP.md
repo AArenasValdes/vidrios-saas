@@ -67,10 +67,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/onboarding/repositories/onboarding-checklist.repository.ts`
   - `src/features/onboarding/services/onboarding-checklist.service.ts`
   - `src/features/onboarding/hooks/useOnboardingChecklist.ts`
-  - `src/features/onboarding/components/onboarding-joyride.tsx`
-  - `src/features/onboarding/components/onboarding-joyride.module.css`
+  - `src/features/onboarding/components/onboarding-guide.tsx`
+  - `src/features/onboarding/components/onboarding-mobile-guide.tsx`
+  - `src/features/onboarding/components/onboarding-inline-hint.tsx`
+  - `src/features/onboarding/components/onboarding-step-card.tsx`
+  - `src/features/onboarding/components/onboarding-progress.tsx`
+  - `src/features/onboarding/components/onboarding-guide.module.css`
   - `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Componentes principales**: `OnboardingJoyride`
+- **Componentes principales**: `OnboardingGuide`, `OnboardingMobileGuide`, `OnboardingInlineHint`, `OnboardingStepCard`, `OnboardingProgress`
 - **Hooks/servicios/actions**: `useOnboardingChecklist`, `onboardingChecklistService`, `createOnboardingChecklistRepository`
 - **Tablas Supabase**: `onboarding_checklists`, `organization_profile`, `solicitudes_contacto`, `cotizaciones`, `users`
 - **Flujo de datos**:
@@ -81,7 +85,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `src/features/onboarding/components/`, rutas privadas que montan Joyride
 - **Donde editar logica**: `src/features/onboarding/services/onboarding-checklist.service.ts`
 - **Donde editar persistencia**: `src/features/onboarding/repositories/onboarding-checklist.repository.ts`, `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Consideraciones UX**: Solo visible para `rol === "admin"` y solo mientras `first_quote` siga incompleto. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`. Se muestra una vez por paso/ruta usando `localStorage` para no interrumpir en cada carga.
+- **Consideraciones UX**: Solo visible para `rol === "admin"` y solo mientras `first_quote` siga incompleto. En movil usa una guia propia tipo bottom sheet y se pausa si aparece el banner PWA de instalacion. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`. Se muestra una vez por paso/ruta usando `localStorage` para no interrumpir en cada carga.
 - **Riesgos al modificar**: No marcar pasos por UI decorativa ni por visitas pasivas. `channel_ready` y `first_share` deben salir de acciones reales. No romper el flujo de PDF, WhatsApp ni el aislamiento por `organization_id`.
 
 ---

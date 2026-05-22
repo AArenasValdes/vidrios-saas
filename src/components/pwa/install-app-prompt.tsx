@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import s from "./install-app-prompt.module.css";
+import { setPwaInstallPromptVisible } from "./install-app-prompt-events";
 import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 type InstallOutcome = "accepted" | "dismissed";
@@ -119,6 +120,22 @@ export function InstallAppPrompt() {
 
     setDeferredPrompt(null);
   };
+
+  useEffect(() => {
+    const isVisible = Boolean(
+      isHydrated &&
+        !pathname?.startsWith("/print") &&
+        !dismissed &&
+        !isStandaloneMode() &&
+        (deferredPrompt || showIosHint)
+    );
+
+    setPwaInstallPromptVisible(isVisible);
+
+    return () => {
+      setPwaInstallPromptVisible(false);
+    };
+  }, [deferredPrompt, dismissed, isHydrated, pathname, showIosHint]);
 
   if (
     !isHydrated ||

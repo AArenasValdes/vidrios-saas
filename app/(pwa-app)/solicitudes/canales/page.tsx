@@ -7,7 +7,7 @@ import {
   PremiumPageReveal,
   PremiumPageSection,
 } from "@/components/motion/premium-page-reveal";
-import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
+import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { LeadChannels } from "@/features/solicitudes/components/lead-channels";
 
@@ -43,7 +43,7 @@ export default function LeadChannelsPage() {
         </div>
       </PremiumPageSection>
 
-      <OnboardingJoyride controller={onboarding} routeKey="canales" />
+      <OnboardingGuide controller={onboarding} routeKey="canales" />
 
       <LeadChannels
         onChannelDistributed={(input) =>

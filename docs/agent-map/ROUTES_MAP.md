@@ -78,7 +78,7 @@
 - **Proposito**: Dashboard operativo con KPIs y cotizaciones recientes
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Saludo, onboarding comercial guiado, KPIs (total, pendientes, mes, aprobadas hoy), cotizaciones recientes, CTA nueva cotizacion
-- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingJoyride`, `PremiumPageReveal`
+- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingGuide`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`

@@ -17,7 +17,7 @@ import {
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
+import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
@@ -1321,7 +1321,7 @@ function NuevaCotizacionPageContent() {
       }`}
       data-onboarding-target="cotizacion-nueva-root"
     >
-      <OnboardingJoyride controller={onboarding} routeKey="cotizacion_nueva" />
+      <OnboardingGuide controller={onboarding} routeKey="cotizacion_nueva" />
 
       {flujo.esVistaMovil ? (
         <NuevaCotizacionMobile

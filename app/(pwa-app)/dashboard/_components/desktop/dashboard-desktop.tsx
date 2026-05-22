@@ -4,7 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
+import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.desktop.module.css";
@@ -51,7 +51,7 @@ export const DashboardDesktop = memo(function DashboardDesktop({
         </Link>
       </PremiumPageSection>
 
-      <OnboardingJoyride controller={onboarding} routeKey="dashboard" />
+      <OnboardingGuide controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>

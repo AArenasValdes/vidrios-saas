@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Plus } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingJoyride } from "@/features/onboarding/components/onboarding-joyride";
+import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.mobile.module.css";
@@ -53,7 +53,7 @@ export const DashboardMobile = memo(function DashboardMobile({
         </Link>
       </PremiumPageSection>
 
-      <OnboardingJoyride controller={onboarding} routeKey="dashboard" />
+      <OnboardingGuide controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection>
         <Link href={attentionHref} className={styles.alertCard}>
