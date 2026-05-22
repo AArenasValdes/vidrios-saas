@@ -282,6 +282,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     "sidebar" | "mobile" | "topbar" | null
   >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [logoutRedirectPending, setLogoutRedirectPending] = useState(false);
   const [authBootStuck, setAuthBootStuck] = useState(false);
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
@@ -356,18 +357,22 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
 
   const handleLogout = async () => {
-    if (isSigningOut) {
+    if (isSigningOut || logoutRedirectPending) {
       return;
     }
 
-    try {
-      setIsSigningOut(true);
-      setIsAlertsOpen(false);
-      await signOut();
-      router.replace("/login");
-    } finally {
+    setIsSigningOut(true);
+    setLogoutRedirectPending(true);
+    setIsAlertsOpen(false);
+    setProfileMenuAnchor(null);
+
+    void signOut().finally(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
       setIsSigningOut(false);
-    }
+    });
   };
 
   const handleToggleProfileMenu = (anchor: "sidebar" | "mobile" | "topbar") => {
@@ -439,6 +444,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!cargando && !user) {
+      if (logoutRedirectPending) {
+        router.replace("/login");
+        return;
+      }
+
       if (isSigningOut) {
         return;
       }
@@ -446,7 +456,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       const nextPath = pathname?.startsWith("/") ? pathname : "/dashboard";
       router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
     }
-  }, [cargando, isSigningOut, pathname, router, user]);
+  }, [cargando, isSigningOut, logoutRedirectPending, pathname, router, user]);
 
   useEffect(() => {
     isMountedRef.current = true;

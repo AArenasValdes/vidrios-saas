@@ -4,6 +4,21 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-21 - Logout sin loop visual en AppShell
+
+### Resumen
+
+Se corrigio el loop visual al cerrar sesion desde rutas privadas. `AppShell` ya no espera a que termine la promesa completa de `signOut()` para empezar la salida: apenas el estado local queda anonimo, redirige a `/login` y deja el cierre real de Supabase continuar en paralelo. Con esto desaparece la pantalla infinita de "Saliendo del panel" cuando el logout local ya se aplico pero la promesa queda pendiente.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `src/components/layout/app-shell.tsx` | La salida dispara redireccion por estado local de auth y no bloquea la navegacion esperando la promesa completa |
+| `src/components/layout/__tests__/app-shell.test.tsx` | Cobertura para logout con promesa pendiente que igual debe navegar a `/login` |
+
+---
+
 ## 2026-05-21 - Panel privado de growth para fundador
 
 ### Resumen
