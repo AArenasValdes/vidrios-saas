@@ -6,7 +6,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Autenticacion
 
-- **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol
+- **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol. Revalida sesion al volver a foco/rehidratar pestaña o PWA para evitar estado viejo.
 - **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
@@ -26,7 +26,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(auth-public)/login/page.tsx`
 - **Donde editar logica**: `src/features/auth/services/auth.service.ts`
 - **Donde editar persistencia**: `src/features/auth/repositories/auth.repository.ts`
-- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR.
+- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI.
 - **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas.
 
 ---

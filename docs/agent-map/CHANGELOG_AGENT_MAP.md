@@ -18,6 +18,12 @@ Se corrigio el loop de cierre de sesion desde rutas privadas endureciendo la sal
 | `app/(auth-public)/auth/logout/route.ts` | Nueva ruta interna que expira cookies de sesion y redirige a `/login` |
 | `src/components/layout/__tests__/app-shell.test.tsx` | Cobertura para logout pendiente que igual debe salir por la ruta server-side |
 | `app/(auth-public)/auth/logout/__tests__/route.test.ts` | Cobertura para expiracion de cookies y redirect final al login |
+| `src/components/pwa/__tests__/service-worker-navigation.test.ts` | Regresion para asegurar que el service worker no trate rutas privadas como app shell navegable |
+| `playwright.config.ts` | Config base de Playwright para smoke E2E movil |
+| `tests/e2e/auth-logout.mobile.spec.ts` | E2E real movil para logout, bloqueo de ruta privada y refresh post-logout |
+| `src/features/auth/hooks/useAuth.ts` | Revalida sesion al volver a foco/pageshow/visible para evitar estado viejo al reingresar |
+| `src/hooks/__tests__/useAuth.test.tsx` | Cobertura para rehidratacion de sesion al volver a foco |
+| `package.json` | Scripts `test:e2e:auth-mobile` y `test:e2e:list` |
 | `docs/agent-map/ROUTES_MAP.md` | Se documenta la nueva ruta interna `/auth/logout` |
 | `docs/agent-map/FEATURES_MAP.md` | Se actualiza la feature de autenticacion con el logout server-side |
 

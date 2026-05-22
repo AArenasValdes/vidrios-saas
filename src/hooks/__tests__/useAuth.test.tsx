@@ -346,4 +346,48 @@ describe("useAuth", () => {
 
     jest.useRealTimers();
   });
+
+  it("rehidrata la sesion otra vez cuando la app vuelve a foco", async () => {
+    jest.useFakeTimers();
+    const usuarioInicial = createUser("dueno@vidrios.cl");
+    const usuarioActualizado = createUser("ventas@vidrios.cl");
+
+    getCurrentAuthState
+      .mockResolvedValueOnce({
+        user: usuarioInicial,
+        organizacionId: 17,
+        rol: "admin",
+        cargando: false,
+      })
+      .mockResolvedValueOnce({
+        user: usuarioActualizado,
+        organizacionId: 21,
+        rol: "viewer",
+        cargando: false,
+      });
+
+    subscribeToAuthChanges.mockImplementation(() => jest.fn());
+
+    render(<ProbeAuth />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("email")).toHaveTextContent("dueno@vidrios.cl");
+      expect(screen.getByTestId("org")).toHaveTextContent("17");
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(getCurrentAuthState).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId("email")).toHaveTextContent("ventas@vidrios.cl");
+      expect(screen.getByTestId("org")).toHaveTextContent("21");
+      expect(screen.getByTestId("rol")).toHaveTextContent("viewer");
+    });
+
+    jest.useRealTimers();
+  });
 });

@@ -254,6 +254,19 @@ function subscribeToAuthStore(listener: () => void) {
   };
 }
 
+function invalidateAuthResolution(reason: string) {
+  resolveAuthStateGeneration += 1;
+  authStatePromise = null;
+  authStateHydratedFromNetwork = false;
+  currentAuthAbortController?.abort(reason);
+  currentAuthAbortController = null;
+}
+
+function refreshAuthStateInBackground() {
+  invalidateAuthResolution("background-refresh");
+  void resolveAuthState();
+}
+
 async function resolveAuthState(options: {
   accessToken?: string | null;
   preferServerLookup?: boolean;
@@ -365,11 +378,50 @@ export function useAuth() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const scheduleRefresh = () => {
+      return scheduleDeferredAuthRefresh(() => {
+        refreshAuthStateInBackground();
+      }, 150);
+    };
+
+    const handleFocus = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      scheduleRefresh();
+    };
+
+    const handlePageShow = () => {
+      scheduleRefresh();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      scheduleRefresh();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const signIn = async (credentials: AuthSignInInput) => {
-    resolveAuthStateGeneration += 1;
-    authStatePromise = null;
-    currentAuthAbortController?.abort("signIn");
-    currentAuthAbortController = null;
+    invalidateAuthResolution("signIn");
     const authenticatedState = await authService.signIn(credentials);
     authStateHydratedFromNetwork = true;
     setAuthState({
@@ -379,13 +431,10 @@ export function useAuth() {
   };
 
   const signOut = async () => {
-    resolveAuthStateGeneration += 1;
-    authStatePromise = null;
+    invalidateAuthResolution("signOut");
     authStateHydratedFromNetwork = true;
     clearAuthStateStorage();
     setAuthState(unauthenticatedState);
-    currentAuthAbortController?.abort("signOut");
-    currentAuthAbortController = null;
 
     try {
       await authService.signOut();
