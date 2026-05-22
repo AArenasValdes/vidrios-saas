@@ -8,14 +8,18 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ### Resumen
 
-Se corrigio el loop visual al cerrar sesion desde rutas privadas. `AppShell` ya no espera a que termine la promesa completa de `signOut()` para empezar la salida: apenas el estado local queda anonimo, redirige a `/login` y deja el cierre real de Supabase continuar en paralelo. Con esto desaparece la pantalla infinita de "Saliendo del panel" cuando el logout local ya se aplico pero la promesa queda pendiente.
+Se corrigio el loop de cierre de sesion desde rutas privadas endureciendo la salida del panel. `AppShell` ahora dispara un `window.location.replace("/auth/logout")` para salir del App Router y evitar la carrera con `proxy.ts`, mientras `/auth/logout` expira cookies Supabase SSR y recien despues redirige a `/login`. Con esto el navegador ya no rebota de vuelta a `/dashboard` cuando el estado local se cerro pero las cookies compartidas todavia no terminaban de sincronizarse.
 
 ### Archivos actualizados
 
 | Archivo | Cambio |
 |---|---|
-| `src/components/layout/app-shell.tsx` | La salida dispara redireccion por estado local de auth y no bloquea la navegacion esperando la promesa completa |
-| `src/components/layout/__tests__/app-shell.test.tsx` | Cobertura para logout con promesa pendiente que igual debe navegar a `/login` |
+| `src/components/layout/app-shell.tsx` | La salida usa navegacion dura hacia `/auth/logout` y evita el rebote del App Router |
+| `app/(auth-public)/auth/logout/route.ts` | Nueva ruta interna que expira cookies de sesion y redirige a `/login` |
+| `src/components/layout/__tests__/app-shell.test.tsx` | Cobertura para logout pendiente que igual debe salir por la ruta server-side |
+| `app/(auth-public)/auth/logout/__tests__/route.test.ts` | Cobertura para expiracion de cookies y redirect final al login |
+| `docs/agent-map/ROUTES_MAP.md` | Se documenta la nueva ruta interna `/auth/logout` |
+| `docs/agent-map/FEATURES_MAP.md` | Se actualiza la feature de autenticacion con el logout server-side |
 
 ---
 

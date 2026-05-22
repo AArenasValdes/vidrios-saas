@@ -18,6 +18,7 @@ const mockRouterReplace = jest.fn();
 const mockRouterPrefetch = jest.fn();
 const mockRefreshAlerts = jest.fn();
 const authListeners = new Set<() => void>();
+const mockWindowLocationReplace = jest.fn();
 
 let authSnapshot: MockAuthState = {
   user: {
@@ -96,6 +97,10 @@ jest.mock("@/features/auth/hooks/useAuth", () => {
   };
 });
 
+jest.mock("@/features/auth/services/logout-navigation.service", () => ({
+  navigateToLogoutRoute: () => mockWindowLocationReplace("/auth/logout"),
+}));
+
 jest.mock("@/features/organization-profile/hooks/useOrganizationProfile", () => ({
   useOrganizationProfile: () => ({
     profile: {
@@ -138,7 +143,7 @@ describe("AppShell", () => {
     };
   });
 
-  it("redirige al login aunque el cierre real de sesion siga pendiente", async () => {
+  it("sale por la ruta server-side de logout aunque el cierre real siga pendiente", async () => {
     render(
       <AppShell>
         <div>contenido</div>
@@ -151,7 +156,7 @@ describe("AppShell", () => {
     expect(mockSignOut).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
-      expect(mockRouterReplace).toHaveBeenCalledWith("/login");
+      expect(mockWindowLocationReplace).toHaveBeenCalledWith("/auth/logout");
     });
 
     expect(screen.getByText("Saliendo del panel")).toBeInTheDocument();

@@ -338,6 +338,18 @@
 
 ---
 
+## Ruta: /auth/logout
+
+- **Tipo**: Interna
+- **Archivo principal**: `app/(auth-public)/auth/logout/route.ts`
+- **Proposito**: Cierre server-side de sesion para limpiar cookies SSR y redirigir de forma segura a `/login`
+- **Usuario objetivo**: Usuario autenticado saliendo del panel
+- **Acciones principales**: Expirar cookies Supabase activas y redirigir al login sin pasar por una navegacion SPA protegida
+- **Archivos a tocar para modificar**: `app/(auth-public)/auth/logout/route.ts`, `src/components/layout/app-shell.tsx`
+- **Riesgos**: No dejar cookies de sesion vivas en dominios compartidos (`.ventorap.cl`). No redirigir de vuelta a rutas privadas durante el logout.
+
+---
+
 ## API Routes
 
 | Ruta | Metodo | Proposito | Archivo |

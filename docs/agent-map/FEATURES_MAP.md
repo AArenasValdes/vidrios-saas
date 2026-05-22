@@ -7,9 +7,10 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 ## Feature: Autenticacion
 
 - **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol
-- **Rutas involucradas**: `/login`, `/auth` (callback)
+- **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
+  - `app/(auth-public)/auth/logout/route.ts`
   - `src/features/auth/hooks/useAuth.ts`
   - `src/features/auth/services/auth.service.ts`
   - `src/features/auth/services/auth-server.service.ts`
@@ -25,8 +26,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(auth-public)/login/page.tsx`
 - **Donde editar logica**: `src/features/auth/services/auth.service.ts`
 - **Donde editar persistencia**: `src/features/auth/repositories/auth.repository.ts`
-- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`
-- **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage
+- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR.
+- **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas.
 
 ---
 

@@ -24,6 +24,7 @@ LuGlobe,
 } from "react-icons/lu";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { navigateToLogoutRoute } from "@/features/auth/services/logout-navigation.service";
 import { useCotizacionAlerts } from "@/features/cotizaciones/hooks/useCotizacionAlerts";
 import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -282,7 +283,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     "sidebar" | "mobile" | "topbar" | null
   >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [logoutRedirectPending, setLogoutRedirectPending] = useState(false);
   const [authBootStuck, setAuthBootStuck] = useState(false);
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
@@ -357,22 +357,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
 
   const handleLogout = async () => {
-    if (isSigningOut || logoutRedirectPending) {
+    if (isSigningOut) {
       return;
     }
 
     setIsSigningOut(true);
-    setLogoutRedirectPending(true);
     setIsAlertsOpen(false);
     setProfileMenuAnchor(null);
-
-    void signOut().finally(() => {
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      setIsSigningOut(false);
-    });
+    void signOut().catch(() => undefined);
+    navigateToLogoutRoute();
   };
 
   const handleToggleProfileMenu = (anchor: "sidebar" | "mobile" | "topbar") => {
@@ -444,11 +437,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!cargando && !user) {
-      if (logoutRedirectPending) {
-        router.replace("/login");
-        return;
-      }
-
       if (isSigningOut) {
         return;
       }
@@ -456,7 +444,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       const nextPath = pathname?.startsWith("/") ? pathname : "/dashboard";
       router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
     }
-  }, [cargando, isSigningOut, logoutRedirectPending, pathname, router, user]);
+  }, [cargando, isSigningOut, pathname, router, user]);
 
   useEffect(() => {
     isMountedRef.current = true;
