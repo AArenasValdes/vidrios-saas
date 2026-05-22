@@ -14,9 +14,7 @@ import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
-const gaMeasurementId = googleTagService.getGaMeasurementId();
-const googleAdsId = googleTagService.getGoogleAdsId();
-const googleTagId = gaMeasurementId || googleAdsId;
+const gtmContainerId = googleTagService.getGtmContainerId();
 
 export const metadata: Metadata = {
   title: {
@@ -58,24 +56,31 @@ export default function RootLayout({
   return (
     <html lang="es" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
-        {googleTagId ? (
+        {gtmContainerId ? (
           <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ventora-google-tag" strategy="afterInteractive">
+            <Script id="ventora-google-tag-manager" strategy="beforeInteractive">
               {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                window.gtag = gtag;
-                gtag('js', new Date());
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${gtmContainerId}');
               `}
             </Script>
             <Suspense fallback={null}>
               <GoogleTagProvider />
             </Suspense>
           </>
+        ) : null}
+        {gtmContainerId ? (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${gtmContainerId}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
         ) : null}
         <RegisterServiceWorker />
         <InstallAppPrompt />

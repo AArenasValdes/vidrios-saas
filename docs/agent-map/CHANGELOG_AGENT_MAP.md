@@ -23,17 +23,17 @@ Se agrego la nueva ruta privada `/admin/growth` como panel operativo de growth p
 
 ---
 
-## 2026-05-21 - Google Analytics y Google Ads base
+## 2026-05-21 - Google Analytics, Google Ads y GTM base
 
 ### Resumen
 
-Se agrego una capa base de medicion con Google tag para GA4 + Google Ads usando variables de entorno publicas. La app ahora puede cargar la etiqueta global una sola vez en `app/layout.tsx`, medir pageviews en navegacion App Router y disparar eventos comerciales en los puntos mas sensibles del flujo: clics a WhatsApp desde landing, inicio e intento de envio de formularios publicos, envio exitoso de solicitud publica, clics de demo en `/planes`, envio de cotizacion por WhatsApp, vista/descarga de PDF publico, valoraciones publicas y decision publica de cotizacion. En este proyecto ademas se dejo configurado el `Measurement ID` `G-Y0LCR4NRDN` como fallback local para no depender del placeholder durante desarrollo.
+Se agrego una capa base de medicion con Google Tag Manager como contenedor global para GA4 + Google Ads usando variables de entorno publicas. La app ahora carga GTM una sola vez en `app/layout.tsx`, expone `dataLayer` para navegacion App Router y dispara eventos comerciales en los puntos mas sensibles del flujo: clics a WhatsApp desde landing, inicio e intento de envio de formularios publicos, envio exitoso de solicitud publica, clics de demo en `/planes`, envio de cotizacion por WhatsApp, vista/descarga de PDF publico, valoraciones publicas y decision publica de cotizacion. En este proyecto ademas se dejaron configurados como fallback local el contenedor `GTM-N4X44QW6` y el `Measurement ID` `G-Y0LCR4NRDN`.
 
 ### Archivos actualizados
 
 | Archivo | Cambio |
 |---|---|
-| `app/layout.tsx` | Carga condicional del Google tag y provider de pageviews |
+| `app/layout.tsx` | Carga condicional del contenedor GTM, `noscript` y provider de pageviews |
 | `src/features/analytics/` | Nueva feature de analitica (`service`, `component`, `types`) |
 | `app/(landing-web)/page.tsx` | Eventos de CTA y WhatsApp en landing |
 | `app/(landing-web)/planes/page.tsx` | Eventos de clic de demo |

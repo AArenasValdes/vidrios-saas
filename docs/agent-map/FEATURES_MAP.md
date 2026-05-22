@@ -57,9 +57,9 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
-## Feature: Analytics / Google Tag
+## Feature: Analytics / Google Tag / GTM
 
-- **Que hace**: Carga la etiqueta de Google para GA4 y Google Ads, mide pageviews SPA y registra eventos comerciales base en captacion, WhatsApp, PDF y cierre.
+- **Que hace**: Carga Google Tag Manager de forma global, empuja eventos a `dataLayer` para GA4/Ads y mide pageviews SPA mas eventos comerciales base en captacion, WhatsApp, PDF y cierre.
 - **Rutas involucradas**: Global (`app/layout.tsx`), `/`, `/planes`, `/solicitud/[empresa]`, `/presupuesto/[token]`, `/cotizaciones`
 - **Archivos principales**:
   - `app/layout.tsx`
@@ -77,7 +77,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Hooks/servicios/actions**: `googleTagService`
 - **Tablas Supabase**: Ninguna
 - **Flujo de datos**:
-  - Root layout -> `Script` Google tag -> `GoogleTagProvider` -> `googleTagService.trackPageView()`
+  - Root layout -> snippet GTM + `noscript` -> `GoogleTagProvider` -> `googleTagService.trackPageView()`
   - CTA de landing y WhatsApp -> `googleTagService.trackEvent()` / `trackWhatsappClick()`
   - Inicio de formularios publicos y demo -> `googleTagService.trackFormStart()`
   - Intento de envio de formularios publicos -> `googleTagService.trackFormSubmitIntent()`
@@ -90,8 +90,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/layout.tsx`
 - **Donde editar logica**: `src/features/analytics/services/google-tag.service.ts`
 - **Donde editar persistencia**: N/A
-- **Consideraciones UX**: El proyecto trae fallback local para GA4 si falta el env var, pero el valor preferido sigue siendo `NEXT_PUBLIC_GA_MEASUREMENT_ID`. La medicion de Ads usa conversion labels opcionales por evento.
-- **Riesgos al modificar**: No duplicar scripts ni pageviews. No meter tags ad hoc dentro de rutas criticas. Mantener un solo punto global de carga y centralizar eventos en `googleTagService`.
+- **Consideraciones UX**: El proyecto trae fallback local para GTM (`GTM-N4X44QW6`) y GA4 (`G-Y0LCR4NRDN`), pero los valores preferidos siguen siendo `NEXT_PUBLIC_GTM_CONTAINER_ID` y `NEXT_PUBLIC_GA_MEASUREMENT_ID`. La medicion de Ads usa conversion labels opcionales por evento.
+- **Riesgos al modificar**: No duplicar GTM con GA4 directo si el mismo `Measurement ID` ya vive dentro del contenedor. No meter tags ad hoc dentro de rutas criticas. Mantener un solo punto global de carga y centralizar eventos en `googleTagService`.
 
 ---
 

@@ -1,6 +1,9 @@
 import type { GoogleTagDataStatus, GoogleTagEventParams } from "@/features/analytics/types/google-tag";
 
 const DEFAULT_GA_MEASUREMENT_ID = "G-Y0LCR4NRDN";
+const DEFAULT_GTM_CONTAINER_ID = "GTM-N4X44QW6";
+const GTM_CONTAINER_ID =
+  process.env.NEXT_PUBLIC_GTM_CONTAINER_ID?.trim() || DEFAULT_GTM_CONTAINER_ID;
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || DEFAULT_GA_MEASUREMENT_ID;
 const GOOGLE_ADS_ID =
@@ -16,8 +19,20 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
+function ensureDataLayer() {
+  if (!isBrowser()) {
+    return;
+  }
+
+  window.dataLayer = window.dataLayer || [];
+}
+
+function hasDataLayer() {
+  return isBrowser() && Array.isArray(window.dataLayer);
+}
+
 function hasGoogleTag() {
-  return isBrowser() && typeof window.gtag === "function";
+  return hasDataLayer() || (isBrowser() && typeof window.gtag === "function");
 }
 
 function ensureTrackedMaps() {
@@ -31,7 +46,15 @@ function ensureTrackedMaps() {
 }
 
 function gtag(command: "js" | "config" | "set" | "event" | "consent", target: string | Date, params?: GoogleTagEventParams) {
-  if (!hasGoogleTag()) {
+  if (!isBrowser()) {
+    return;
+  }
+
+  if (typeof window.gtag !== "function") {
+    if (command === "event") {
+      ensureDataLayer();
+      window.dataLayer.push({ event: String(target), ...params });
+    }
     return;
   }
 
@@ -50,27 +73,24 @@ export const googleTagService = {
   getGaMeasurementId() {
     return GA_MEASUREMENT_ID;
   },
+  getGtmContainerId() {
+    return GTM_CONTAINER_ID;
+  },
   getGoogleAdsId() {
     return GOOGLE_ADS_ID;
   },
   getStatus(): GoogleTagDataStatus {
-    return GA_MEASUREMENT_ID || GOOGLE_ADS_ID ? "ready" : "disabled";
+    return GTM_CONTAINER_ID || GA_MEASUREMENT_ID || GOOGLE_ADS_ID ? "ready" : "disabled";
   },
   hasAnyTagConfigured() {
     return this.getStatus() === "ready";
   },
   configurePage() {
-    if (!hasGoogleTag()) {
+    if (!isBrowser()) {
       return;
     }
 
-    if (GA_MEASUREMENT_ID) {
-      gtag("config", GA_MEASUREMENT_ID, { send_page_view: false });
-    }
-
-    if (GOOGLE_ADS_ID) {
-      gtag("config", GOOGLE_ADS_ID);
-    }
+    ensureDataLayer();
   },
   trackPageView(pathname: string, title?: string | null) {
     if (!GA_MEASUREMENT_ID || !hasGoogleTag()) {
