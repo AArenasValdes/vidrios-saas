@@ -230,3 +230,16 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 
 9. **Sin policies DELETE en tablas con soft delete:** Intencional, pero debe seguir documentado.
 10. **Catálogos técnicos con solo SELECT:** correcto si la administración queda interna o por `service_role`.
+---
+
+## Addendum 2026-05-22 - `onboarding_checklists`
+
+| Policy | OperaciÃ³n | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `onboarding_checklists_select_own` | SELECT | `organization_id = get_org_id()` | â€” | `authenticated` |
+| `onboarding_checklists_insert_own` | INSERT | â€” | `organization_id = get_org_id()` | `authenticated` |
+| `onboarding_checklists_update_own` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
+
+Notas:
+- No se expone a `anon`.
+- Los pasos manuales (`channel_ready`, `first_share`) se marcan desde acciones reales del usuario dentro de la app.

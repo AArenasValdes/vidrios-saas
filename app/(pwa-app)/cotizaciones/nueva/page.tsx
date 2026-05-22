@@ -17,6 +17,8 @@ import {
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   calculateCotizacionWorkflowTotals,
@@ -84,6 +86,7 @@ import { usePersistenciaNuevaCotizacion } from "./_hooks/use-persistencia-nueva-
 import s from "./page.module.css";
 
 function NuevaCotizacionPageContent() {
+  const onboarding = useOnboardingChecklist();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -1317,6 +1320,8 @@ function NuevaCotizacionPageContent() {
         flujo.paso === 2 && flujo.esVistaMovil ? s.rootStepTwoMobile : ""
       }`}
     >
+      <OnboardingChecklistCard controller={onboarding} variant="compact" />
+
       {flujo.esVistaMovil ? (
         <NuevaCotizacionMobile
           rootClassName={`${s.root} ${flujo.paso === 2 ? s.rootStepTwoMobile : ""}`}

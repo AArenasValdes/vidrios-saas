@@ -23,6 +23,8 @@ import {
 import type { LandingGalleryItem } from "@/features/landing-gallery/types/landing-gallery";
 
 import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGallery";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
@@ -149,6 +151,7 @@ type PendingGalleryUpload = {
 };
 
 export default function PaginaVentaPage() {
+  const onboarding = useOnboardingChecklist();
   const { profile, isReady, isSaving, isUploadingHero, saveProfile, uploadHeroImage } =
     useOrganizationProfile();
   const {
@@ -478,6 +481,13 @@ export default function PaginaVentaPage() {
     try {
       await navigator.clipboard.writeText(publicRequestUrl);
       setStatusMessage("Enlace copiado.");
+      await onboarding.markChannelReady({
+        completionSource: "configuracion_pagina_venta_copy_public_link",
+        metadataJson: {
+          route: "/configuracion/pagina-venta",
+          url: publicRequestUrl,
+        },
+      });
     } catch {
       setErrorMessage("No pudimos copiar el enlace.");
     }
@@ -620,6 +630,8 @@ export default function PaginaVentaPage() {
 
   return (
     <div className={s.root}>
+      <OnboardingChecklistCard controller={onboarding} variant="compact" />
+
       <div className={s.header}>
         <div>
           <p className={s.headerEyebrow}>Ajuste comercial</p>

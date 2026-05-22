@@ -7,11 +7,15 @@ import {
   PremiumPageReveal,
   PremiumPageSection,
 } from "@/components/motion/premium-page-reveal";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { LeadChannels } from "@/features/solicitudes/components/lead-channels";
 
 import s from "./page.module.css";
 
 export default function LeadChannelsPage() {
+  const onboarding = useOnboardingChecklist();
+
   return (
     <PremiumPageReveal className={s.root}>
       <PremiumPageSection className={s.heroCard}>
@@ -39,7 +43,20 @@ export default function LeadChannelsPage() {
         </div>
       </PremiumPageSection>
 
-      <LeadChannels />
+      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
+        <PremiumPageSection>
+          <OnboardingChecklistCard controller={onboarding} variant="compact" />
+        </PremiumPageSection>
+      ) : null}
+
+      <LeadChannels
+        onChannelDistributed={(input) =>
+          onboarding.markChannelReady({
+            completionSource: input.completionSource,
+            metadataJson: input.metadataJson,
+          })
+        }
+      />
     </PremiumPageReveal>
   );
 }

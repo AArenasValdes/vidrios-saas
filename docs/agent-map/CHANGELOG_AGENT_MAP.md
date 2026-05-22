@@ -4,6 +4,32 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-22 - Onboarding comercial guiado dentro de rutas privadas
+
+### Resumen
+
+Se agrego el MVP de onboarding comercial guiado para administradores dentro de Ventora. El nuevo checklist persiste por organizacion en `onboarding_checklists`, deriva pasos reales desde `organization_profile`, `solicitudes_contacto` y `cotizaciones`, y solo marca los pasos manuales (`channel_ready`, `first_share`) cuando el usuario ejecuta acciones reales de copiar, compartir, descargar QR, abrir PDF o abrir WhatsApp. El onboarding aparece en `dashboard`, configuracion, canales y cotizaciones privadas, sin tocar `/solicitud/[empresa]` ni `/presupuesto/[token]`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260522113000_onboarding_checklists.sql` | Nueva tabla y policies RLS para onboarding comercial |
+| `src/features/onboarding/` | Nueva feature completa `types -> repository -> service -> hook -> components` |
+| `app/(pwa-app)/dashboard/_components/*` | Checklist principal en dashboard desktop/mobile |
+| `app/(pwa-app)/configuracion/empresa/page.tsx` | Banner compacto y marca manual al copiar link |
+| `app/(pwa-app)/configuracion/pagina-venta/page.tsx` | Banner compacto y marca manual al copiar link |
+| `app/(pwa-app)/solicitudes/canales/page.tsx` | Banner compacto + cableado al checklist |
+| `src/features/solicitudes/components/lead-channels.tsx` | Marca `channel_ready` en copy/share/QR/WhatsApp |
+| `app/(pwa-app)/cotizaciones/page.tsx` | Banner compacto + marca `first_share` desde listado |
+| `app/(pwa-app)/cotizaciones/[id]/page.tsx` | Recordatorio contextual + marcas por PDF/link/WhatsApp |
+| `app/(pwa-app)/cotizaciones/nueva/page.tsx` | Banner compacto del onboarding |
+| `docs/agent-map/FEATURES_MAP.md` | Nueva feature documentada |
+| `docs/agent-map/ROUTES_MAP.md` | Rutas privadas actualizadas con onboarding |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Nueva tabla documentada |
+
+---
+
 ## 2026-05-21 - Logout sin loop visual en AppShell
 
 ### Resumen

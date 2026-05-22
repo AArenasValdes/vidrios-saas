@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { LuArrowLeft } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
@@ -24,6 +26,7 @@ function getRuntimeMessage(error: unknown, fallback: string) {
 }
 
 export default function CotizacionDetallePage() {
+  const onboarding = useOnboardingChecklist();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const {
@@ -134,6 +137,14 @@ export default function CotizacionDetallePage() {
         await loadCotizacionById(cotizacion.id);
       }
 
+      await onboarding.markFirstShare({
+        completionSource: "cotizacion_detalle_open_pdf",
+        metadataJson: {
+          route: `/cotizaciones/${cotizacion.id}`,
+          quoteId: String(cotizacion.id),
+          quoteCode: cotizacion.codigo,
+        },
+      });
       router.push(printUrl);
     } catch (error) {
       setActionError(
@@ -164,6 +175,14 @@ export default function CotizacionDetallePage() {
     void markQuoteAsSent(String(cotizacion.id)).catch(() => {
       return;
     });
+    void onboarding.markFirstShare({
+      completionSource: "cotizacion_detalle_whatsapp_share",
+      metadataJson: {
+        route: `/cotizaciones/${cotizacion.id}`,
+        quoteId: String(cotizacion.id),
+        quoteCode: cotizacion.codigo,
+      },
+    });
   };
 
   const handleCopyApprovalLink = async () => {
@@ -188,6 +207,14 @@ export default function CotizacionDetallePage() {
       setCopyFeedback("Link copiado. Puedes pegarlo donde lo necesites.");
       void markQuoteAsSent(String(latestCotizacion.id)).catch(() => {
         return;
+      });
+      void onboarding.markFirstShare({
+        completionSource: "cotizacion_detalle_copy_public_link",
+        metadataJson: {
+          route: `/cotizaciones/${latestCotizacion.id}`,
+          quoteId: String(latestCotizacion.id),
+          quoteCode: latestCotizacion.codigo,
+        },
       });
       window.setTimeout(() => setCopyFeedback(null), 2400);
     } catch {
@@ -280,6 +307,13 @@ export default function CotizacionDetallePage() {
 
   return (
     <>
+      <OnboardingChecklistCard
+        controller={onboarding}
+        variant="compact"
+        focusStepKey="first_share"
+        showOnlyFocusedStep
+      />
+
       {actionError ? (
         <div className={s.stateRoot}>
           <div className={s.stateCard}>

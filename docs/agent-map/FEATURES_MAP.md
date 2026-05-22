@@ -58,6 +58,34 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
+## Feature: Onboarding Comercial Guiado
+
+- **Que hace**: Checklist admin-only de activacion comercial con persistencia compartida por organizacion. Orquesta el primer circuito de valor: empresa lista, pagina publicada, canal compartido, primera solicitud, primera cotizacion y primer PDF/link compartido.
+- **Rutas involucradas**: `/dashboard`, `/configuracion/empresa`, `/configuracion/pagina-venta`, `/solicitudes/canales`, `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
+- **Archivos principales**:
+  - `src/features/onboarding/types/onboarding-checklist.ts`
+  - `src/features/onboarding/repositories/onboarding-checklist.repository.ts`
+  - `src/features/onboarding/services/onboarding-checklist.service.ts`
+  - `src/features/onboarding/hooks/useOnboardingChecklist.ts`
+  - `src/features/onboarding/components/onboarding-checklist-card.tsx`
+  - `src/features/onboarding/components/onboarding-checklist-card.module.css`
+  - `supabase/migrations/20260522113000_onboarding_checklists.sql`
+- **Componentes principales**: `OnboardingChecklistCard`, `OnboardingStepRow`, `OnboardingProgressPill`
+- **Hooks/servicios/actions**: `useOnboardingChecklist`, `onboardingChecklistService`, `createOnboardingChecklistRepository`
+- **Tablas Supabase**: `onboarding_checklists`, `organization_profile`, `solicitudes_contacto`, `cotizaciones`, `users`
+- **Flujo de datos**:
+  - Ruta privada -> `useOnboardingChecklist()` -> `onboardingChecklistService.getChecklistByOrganizationId()` -> repository -> Supabase
+  - Pasos derivados: `organization_profile` + `solicitudes_contacto` + `cotizaciones`
+  - Pasos manuales: interacciones reales en copy/share/QR/PDF/WhatsApp -> `markChannelReady()` / `markFirstShare()`
+- **Estados importantes**: `pendiente`, `en_progreso`, `completado`, `omitido`
+- **Donde editar UI**: `src/features/onboarding/components/`, rutas privadas que montan el card
+- **Donde editar logica**: `src/features/onboarding/services/onboarding-checklist.service.ts`
+- **Donde editar persistencia**: `src/features/onboarding/repositories/onboarding-checklist.repository.ts`, `supabase/migrations/20260522113000_onboarding_checklists.sql`
+- **Consideraciones UX**: Solo visible para `rol === "admin"`. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`. En `/cotizaciones/[id]` solo se muestra el recordatorio de `first_share` cuando sigue pendiente.
+- **Riesgos al modificar**: No marcar pasos por UI decorativa ni por visitas pasivas. `channel_ready` y `first_share` deben salir de acciones reales. No romper el flujo de PDF, WhatsApp ni el aislamiento por `organization_id`.
+
+---
+
 ## Feature: Analytics / Google Tag / GTM
 
 - **Que hace**: Carga Google Tag Manager de forma global, empuja eventos a `dataLayer` para GA4/Ads y mide pageviews SPA mas eventos comerciales base en captacion, WhatsApp, PDF y cierre.

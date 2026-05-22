@@ -2130,4 +2130,39 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
 
+-- Addendum 2026-05-22: onboarding_checklists
+CREATE TABLE IF NOT EXISTS "public"."onboarding_checklists" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" bigint NOT NULL,
+    "step_key" "text" NOT NULL,
+    "estado" "text" DEFAULT 'pendiente'::"text" NOT NULL,
+    "completed_at" timestamp with time zone,
+    "completed_by_user_id" bigint,
+    "completion_source" "text",
+    "metadata_json" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "creado_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "actualizado_en" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "eliminado_en" timestamp with time zone,
+    CONSTRAINT "onboarding_checklists_estado_check" CHECK (("estado" = ANY (ARRAY['pendiente'::"text", 'en_progreso'::"text", 'completado'::"text", 'omitido'::"text"]))),
+    CONSTRAINT "onboarding_checklists_step_key_check" CHECK (("step_key" = ANY (ARRAY['company_ready'::"text", 'public_page_live'::"text", 'channel_ready'::"text", 'first_lead'::"text", 'first_quote'::"text", 'first_share'::"text"])))
+);
 
+ALTER TABLE ONLY "public"."onboarding_checklists"
+    ADD CONSTRAINT "onboarding_checklists_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."onboarding_checklists"
+    ADD CONSTRAINT "onboarding_checklists_completed_by_user_id_fkey" FOREIGN KEY ("completed_by_user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL;
+
+CREATE UNIQUE INDEX "onboarding_checklists_org_step_active_idx" ON "public"."onboarding_checklists" USING "btree" ("organization_id", "step_key") WHERE ("eliminado_en" IS NULL);
+CREATE INDEX "onboarding_checklists_org_estado_idx" ON "public"."onboarding_checklists" USING "btree" ("organization_id", "estado") WHERE ("eliminado_en" IS NULL);
+
+ALTER TABLE "public"."onboarding_checklists" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE "public"."onboarding_checklists" FROM PUBLIC;
+REVOKE ALL ON TABLE "public"."onboarding_checklists" FROM "anon";
+REVOKE ALL ON TABLE "public"."onboarding_checklists" FROM "authenticated";
+GRANT SELECT, INSERT, UPDATE ON TABLE "public"."onboarding_checklists" TO "authenticated";
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "public"."onboarding_checklists" TO "service_role";
+
+CREATE POLICY "onboarding_checklists_select_own" ON "public"."onboarding_checklists" FOR SELECT TO "authenticated" USING (("organization_id" = "public"."get_org_id"()));
+CREATE POLICY "onboarding_checklists_insert_own" ON "public"."onboarding_checklists" FOR INSERT TO "authenticated" WITH CHECK (("organization_id" = "public"."get_org_id"()));
+CREATE POLICY "onboarding_checklists_update_own" ON "public"."onboarding_checklists" FOR UPDATE TO "authenticated" USING (("organization_id" = "public"."get_org_id"())) WITH CHECK (("organization_id" = "public"."get_org_id"()));

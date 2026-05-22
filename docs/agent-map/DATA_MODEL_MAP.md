@@ -83,6 +83,17 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ---
 
+### Tabla: onboarding_checklists
+
+- **Proposito**: Persistir el progreso compartido del onboarding comercial por organizacion.
+- **Campos importantes**: `id` (uuid PK), `organization_id` (FK), `step_key` (CHECK: company_ready/public_page_live/channel_ready/first_lead/first_quote/first_share), `estado` (CHECK: pendiente/en_progreso/completado/omitido), `completed_at`, `completed_by_user_id` (FK users), `completion_source`, `metadata_json`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Relaciones**: N:1 organizations, N:1 users
+- **Usada por**: Onboarding comercial guiado en dashboard, configuracion, canales y cotizaciones privadas
+- **Archivos donde aparece**: `src/features/onboarding/repositories/onboarding-checklist.repository.ts`, `src/features/onboarding/services/onboarding-checklist.service.ts`
+- **Riesgos**: Los pasos `channel_ready` y `first_share` no deben derivarse por lectura pasiva. Mantener unique parcial por `organization_id + step_key` y soft delete activo.
+
+---
+
 ### Tabla: solicitudes_contacto
 
 - **Proposito**: Leads capturados. Tabla CORE de captacion.
@@ -221,7 +232,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 | Mecanismo | Tablas |
 |---|---|
-| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, cotizacion_line_templates, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
+| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, cotizacion_line_templates, onboarding_checklists, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
 | `get_org_id()` + nullable | system_configurations, system_lines |
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |

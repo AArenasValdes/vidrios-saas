@@ -77,14 +77,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Dashboard operativo con KPIs y cotizaciones recientes
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Saludo, KPIs (total, pendientes, mes, aprobadas hoy), cotizaciones recientes, CTA nueva cotizacion
-- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `PremiumPageReveal`
+- **Funcionalidades visibles**: Saludo, onboarding comercial guiado, KPIs (total, pendientes, mes, aprobadas hoy), cotizaciones recientes, CTA nueva cotizacion
+- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingChecklistCard`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
 - **Acciones principales**: Navegacion a nueva cotizacion, ver cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/dashboard/page.tsx`, `app/(pwa-app)/dashboard/_components/*`, `app/(pwa-app)/dashboard/_hooks/*`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/dashboard/summary/route.ts`
-- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs.
+- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding.
 
 ---
 
@@ -114,14 +114,14 @@
 - **CSS**: `app/(pwa-app)/cotizaciones/page.module.css`
 - **Proposito**: Listado de cotizaciones con filtros, busqueda y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, cards mobile, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
+- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, cards mobile, onboarding compacto, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
 - **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`
 - **Hooks**: `useCotizacionesStore`, `useCotizacionAlerts`
 - **Datos que consume**: Resumen cotizaciones via `/api/cotizaciones/resumen`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Listar, filtrar, copiar link, descargar PDF, enviar WhatsApp, editar, eliminar (soft delete)
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/page.tsx`, `app/(pwa-app)/cotizaciones/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF.
+- **Riesgos**: Pagina grande (1055 lineas). No romper filtros, onboarding compacto ni acciones de WhatsApp/PDF.
 
 ---
 
@@ -132,14 +132,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Formulario guiado de nueva cotizacion. Workflow con pasos, items por componente, calculo de totales.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), selector de componentes, costo proveedor + margen, pricing mode, guardado borrador/presupuesto
+- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), checklist compacto de onboarding, selector de componentes, costo proveedor + margen, pricing mode, guardado borrador/presupuesto
 - **Componentes principales**: Internos de la pagina (1198 lineas)
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing ni auto-creacion de cliente/proyecto.
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing, onboarding compacto ni auto-creacion de cliente/proyecto.
 
 ---
 
@@ -150,14 +150,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Detalle de cotizacion con items, totales y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Header con estado, items, totales, acciones (PDF, WhatsApp, editar, eliminar)
+- **Funcionalidades visibles**: Header con estado, items, totales, recordatorio contextual para compartir la primera cotizacion, acciones (PDF, WhatsApp, editar, eliminar)
 - **Componentes principales**: `CotizacionDetalleMobileView`, `CotizacionDetalleMobileViewModel`
 - **Hooks**: `useCotizacionesStore`
 - **Datos que consume**: Cotizacion por ID con items
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Ver detalle, generar PDF, compartir WhatsApp, editar, eliminar
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`
-- **Riesgos**: No romper generacion de PDF ni link de WhatsApp.
+- **Riesgos**: No romper generacion de PDF, link de WhatsApp ni la marca de `first_share`.
 
 ---
 
@@ -246,14 +246,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Generador de canales de captacion. Compartir pagina de solicitud, generar QR, copiar links por canal.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Cards de canal (directo, Instagram, Facebook, WhatsApp), QR, copiar link, descargar QR PNG
+- **Funcionalidades visibles**: Cards de canal (directo, Instagram, Facebook, WhatsApp), onboarding compacto, QR, copiar link, descargar QR PNG
 - **Componentes principales**: `LeadChannels`
 - **Hooks**: `useLeadChannels`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (slug publico)
 - **Tablas Supabase relacionadas**: `organization_profile`
 - **Acciones principales**: Copiar link, descargar QR, ver URLs por canal
 - **Archivos a tocar para modificar**: `app/(pwa-app)/solicitudes/canales/page.tsx`, `src/features/solicitudes/components/lead-channels.tsx`, `src/features/solicitudes/components/lead-channels.module.css`, `src/features/solicitudes/hooks/useLeadChannels.ts`
-- **Riesgos**: No romper generacion de QR ni URLs con UTM.
+- **Riesgos**: No romper generacion de QR, URLs con UTM ni la marca de `channel_ready`.
 
 ---
 
@@ -264,14 +264,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Configuracion del perfil de empresa: datos basicos, telefono, email, direccion, brand color, logo, push, slug publico, QR
 - **Usuario objetivo**: Admin autenticado
-- **Funcionalidades visibles**: Formulario datos empresa, color picker con presets, upload logo, push notifications, slug publico, preview QR
+- **Funcionalidades visibles**: Formulario datos empresa, onboarding compacto, color picker con presets, upload logo, push notifications, slug publico, preview QR
 - **Componentes principales**: Internos de la pagina
 - **Hooks**: `useOrganizationProfile`
 - **Datos que consume**: Perfil org
 - **Tablas Supabase relacionadas**: `organization_profile`, Storage bucket `organization-assets`
 - **Acciones principales**: Actualizar perfil, subir logo
 - **Archivos a tocar para modificar**: `app/(pwa-app)/configuracion/empresa/page.tsx`, `src/features/organization-profile/hooks/useOrganizationProfile.ts`, `src/features/organization-profile/services/organization-profile.service.ts`, `src/features/organization-profile/repositories/organization-profile.repository.ts`
-- **Riesgos**: No cambiar slug sin actualizar indice unico. No romper upload de logo (requiere bucket `organization-assets`).
+- **Riesgos**: No cambiar slug sin actualizar indice unico. No romper upload de logo (requiere bucket `organization-assets`) ni la marca manual de `channel_ready` al copiar link.
 
 ---
 
@@ -282,14 +282,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Configuracion de la pagina publica de venta/lead: hero, galeria, horario, colores, toggle formulario, preview
 - **Usuario objetivo**: Admin autenticado
-- **Funcionalidades visibles**: Hero title/subtitle, galeria imagenes (max 8), horario por dia, colores, toggle publicacion, preview
+- **Funcionalidades visibles**: Hero title/subtitle, onboarding compacto, galeria imagenes (max 8), horario por dia, colores, toggle publicacion, preview
 - **Componentes principales**: Internos de la pagina
 - **Hooks**: `useOrganizationProfile`, `useLandingGallery`
 - **Datos que consume**: Perfil org + galeria
 - **Tablas Supabase relacionadas**: `organization_profile`, `public_landing_gallery`, Storage bucket `organization-assets`
 - **Acciones principales**: Actualizar landing config, subir/reordenar/eliminar galeria, toggle publicacion
 - **Archivos a tocar para modificar**: `app/(pwa-app)/configuracion/pagina-venta/page.tsx`, `src/features/organization-profile/hooks/useOrganizationProfile.ts`, `src/features/landing-gallery/hooks/useLandingGallery.ts`, `src/features/landing-gallery/services/landing-gallery.service.ts`, `src/features/landing-gallery/repositories/landing-gallery.repository.ts`
-- **Riesgos**: No romper max 8 items de galeria. No cambiar logica de publicacion sin afectar landing publica.
+- **Riesgos**: No romper max 8 items de galeria. No cambiar logica de publicacion sin afectar landing publica ni la derivacion de `public_page_live`.
 
 ---
 

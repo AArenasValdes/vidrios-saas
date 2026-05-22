@@ -4,6 +4,8 @@ import { memo } from "react";
 import Link from "next/link";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
 import styles from "./page.desktop.module.css";
 
@@ -26,6 +28,8 @@ export const DashboardDesktop = memo(function DashboardDesktop({
   isLoading,
   isEmpty,
 }: DashboardDesktopProps) {
+  const onboarding = useOnboardingChecklist();
+
   return (
     <div className={styles.page}>
       <PremiumPageSection className={styles.header}>
@@ -39,6 +43,12 @@ export const DashboardDesktop = memo(function DashboardDesktop({
           Nueva cotizacion
         </Link>
       </PremiumPageSection>
+
+      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
+        <PremiumPageSection>
+          <OnboardingChecklistCard controller={onboarding} />
+        </PremiumPageSection>
+      ) : null}
 
       <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>

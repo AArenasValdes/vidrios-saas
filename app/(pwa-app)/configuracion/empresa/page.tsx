@@ -24,6 +24,8 @@ import {
 } from "react-icons/lu";
 
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildEmpresaProfileInput,
@@ -140,6 +142,7 @@ const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
           : "Revisando dispositivo";
 
 export default function ConfiguracionEmpresaPage() {
+  const onboarding = useOnboardingChecklist();
   const { profile, isReady, isSaving, isUploading, saveProfile, uploadLogo } =
     useOrganizationProfile();
   const {
@@ -419,6 +422,13 @@ export default function ConfiguracionEmpresaPage() {
     try {
       await navigator.clipboard.writeText(publicRequestUrl);
       setPublicLinkCopied(true);
+      await onboarding.markChannelReady({
+        completionSource: "configuracion_empresa_copy_public_link",
+        metadataJson: {
+          route: "/configuracion/empresa",
+          url: publicRequestUrl,
+        },
+      });
     } catch {
       setSectionFeedback({
         section: "empresa",
@@ -426,7 +436,7 @@ export default function ConfiguracionEmpresaPage() {
         message: "No pudimos copiar el link en este dispositivo.",
       });
     }
-  }, [publicRequestUrl]);
+  }, [onboarding, publicRequestUrl]);
 
   const companyComplete = Boolean(
     form.empresaNombre.trim() &&
@@ -473,6 +483,8 @@ export default function ConfiguracionEmpresaPage() {
 
   return (
     <div className={s.root}>
+      <OnboardingChecklistCard controller={onboarding} variant="compact" />
+
       <section className={s.publicCard}>
         <div className={s.publicCardTop}>
           <span className={s.cardEyebrow}>

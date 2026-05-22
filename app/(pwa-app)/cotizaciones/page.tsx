@@ -22,6 +22,8 @@ import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premi
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useCotizacionesResumenPage } from "@/features/cotizaciones/hooks/useCotizacionesResumenPage";
 import { useCotizacionesStore } from "@/hooks/useCotizacionesStore";
+import { OnboardingChecklistCard } from "@/features/onboarding/components/onboarding-checklist-card";
+import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { formatCotizacionDate } from "@/services/cotizaciones-workflow.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
@@ -134,6 +136,7 @@ function buildPageNumbers(currentPage: number, totalPages: number) {
 }
 
 export default function CotizacionesPage() {
+  const onboarding = useOnboardingChecklist();
   const reduceMotion = useReducedMotion();
   const router = useRouter();
   const {
@@ -512,13 +515,21 @@ export default function CotizacionesPage() {
       await markQuoteAsSent(String(record.id)).catch(() => {
         return null;
       });
+      await onboarding.markFirstShare({
+        completionSource: "cotizaciones_list_whatsapp_share",
+        metadataJson: {
+          route: "/cotizaciones",
+          quoteId: String(record.id),
+          quoteCode: record.codigo,
+        },
+      });
       await refreshCotizacionesResumen();
     } catch (error) {
       window.alert(getErrorMessage(error));
     } finally {
       setSendingId(null);
     }
-  }, [cotizaciones, loadCotizacionById, markQuoteAsSent, refreshCotizacionesResumen]);
+  }, [cotizaciones, loadCotizacionById, markQuoteAsSent, onboarding, refreshCotizacionesResumen]);
 
   return (
     <PremiumPageReveal className={s.root}>
@@ -761,6 +772,12 @@ export default function CotizacionesPage() {
           )}
         </div>
       </PremiumPageSection>
+
+      {onboarding.isVisible || onboarding.isLoading || onboarding.error ? (
+        <PremiumPageSection>
+          <OnboardingChecklistCard controller={onboarding} variant="compact" />
+        </PremiumPageSection>
+      ) : null}
 
       {isColdBoot ? (
         <PremiumPageSection className={s.loadingTableState}>

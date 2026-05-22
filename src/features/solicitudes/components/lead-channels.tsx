@@ -104,7 +104,12 @@ function getDisplayUrl(baseUrl: string, slug: string) {
   }
 }
 
-export function LeadChannels() {
+export function LeadChannels(props?: {
+  onChannelDistributed?: (input: {
+    completionSource: string;
+    metadataJson?: Record<string, unknown>;
+  }) => void | Promise<void>;
+}) {
   const { profile, isReady } = useOrganizationProfile();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [details, setDetails] = useState<DetailsState>(null);
@@ -151,19 +156,35 @@ export function LeadChannels() {
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(id);
+      await props?.onChannelDistributed?.({
+        completionSource: `solicitudes_canales_copy_${id}`,
+        metadataJson: {
+          route: "/solicitudes/canales",
+          actionId: id,
+          url,
+        },
+      });
       window.setTimeout(() => {
         setCopiedId((current) => (current === id ? null : current));
       }, 2000);
     } catch {
       return;
     }
-  }, []);
+  }, [props]);
 
   const handleShare = useCallback(
     async (id: string, title: string, text: string, url: string) => {
       try {
         if (typeof navigator !== "undefined" && navigator.share) {
           await navigator.share({ title, text, url });
+          await props?.onChannelDistributed?.({
+            completionSource: `solicitudes_canales_share_${id}`,
+            metadataJson: {
+              route: "/solicitudes/canales",
+              actionId: id,
+              url,
+            },
+          });
           return;
         }
       } catch {
@@ -172,7 +193,7 @@ export function LeadChannels() {
 
       await handleCopy(id, url);
     },
-    [handleCopy]
+    [handleCopy, props]
   );
 
   const handleDownloadQR = useCallback(
@@ -205,6 +226,13 @@ export function LeadChannels() {
           link.download = `ventora-qr-${slug}.png`;
           link.href = canvas.toDataURL("image/png");
           link.click();
+          void props?.onChannelDistributed?.({
+            completionSource: "solicitudes_canales_download_qr",
+            metadataJson: {
+              route: "/solicitudes/canales",
+              url,
+            },
+          });
         }
 
         URL.revokeObjectURL(svgUrl);
@@ -216,7 +244,7 @@ export function LeadChannels() {
 
       image.src = svgUrl;
     },
-    [slug]
+    [props, slug]
   );
 
   const handleWhatsappShare = useCallback((url: string) => {
@@ -228,7 +256,14 @@ export function LeadChannels() {
       `Hola, aquí te dejo mi página para que me envíes tu solicitud: ${url}`
     );
     window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-  }, []);
+    void props?.onChannelDistributed?.({
+      completionSource: "solicitudes_canales_whatsapp_share",
+      metadataJson: {
+        route: "/solicitudes/canales",
+        url,
+      },
+    });
+  }, [props]);
 
   const openExternal = useCallback((href: string) => {
     if (typeof window === "undefined") {

@@ -725,3 +725,26 @@ auth.users (1) ──── (N) users
 13. **Secuencias con nombres inconsistentes:** `quotes_id_seq` para `cotizaciones`, `quote_items_id_seq` para `cotizacion_items`, `quote_item_breakdown_id_seq`. Los nombres de secuencias usan inglés mientras las tablas usan español.
 
 14. **Constraint names en inglés vs español:** Mezcla de `clients_pkey` / `quotes_pkey` / `projects_pkey` con `cotizacion_code_counters_pkey` / `solicitudes_contacto_pkey`.
+---
+
+## Addendum 2026-05-22 - `onboarding_checklists`
+
+**PropÃ³sito:** Persistir el progreso compartido del onboarding comercial por organizaciÃ³n.
+
+| Columna | Tipo | Notable |
+|---|---|---|
+| `id` | uuid DEFAULT gen_random_uuid() | PK |
+| `organization_id` | bigint NOT NULL | FK â†’ organizations |
+| `step_key` | text NOT NULL | CHECK: `company_ready`, `public_page_live`, `channel_ready`, `first_lead`, `first_quote`, `first_share` |
+| `estado` | text NOT NULL | CHECK: `pendiente`, `en_progreso`, `completado`, `omitido` |
+| `completed_at` | timestamptz | |
+| `completed_by_user_id` | bigint | FK â†’ users |
+| `completion_source` | text | |
+| `metadata_json` | jsonb NOT NULL | DEFAULT `{}` |
+| `creado_en` | timestamptz NOT NULL | DEFAULT `now()` |
+| `actualizado_en` | timestamptz NOT NULL | DEFAULT `now()` |
+| `eliminado_en` | timestamptz | Soft delete |
+
+**Unique parcial:** `(organization_id, step_key)` WHERE `eliminado_en IS NULL`
+
+**Uso en producto:** Dashboard, configuraciÃ³n, canales y cotizaciones privadas consumen este estado vÃ­a `src/features/onboarding/`.
