@@ -58,8 +58,10 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
     return {
       browserLabel: "Opera",
       menuLabel: "menu O",
+      menuLocationLabel: "abajo a la derecha",
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
+      menuSymbol: "O",
     };
   }
 
@@ -67,8 +69,10 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
     return {
       browserLabel: "Edge",
       menuLabel: "menu del navegador",
+      menuLocationLabel: "abajo o arriba a la derecha",
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
+      menuSymbol: "⋯",
     };
   }
 
@@ -76,8 +80,10 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
     return {
       browserLabel: "Samsung Internet",
       menuLabel: "menu del navegador",
+      menuLocationLabel: "abajo a la derecha",
       installLabel: "Agregar pagina a",
       fallbackInstallLabel: "Pantalla de inicio",
+      menuSymbol: "≡",
     };
   }
 
@@ -85,16 +91,20 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
     return {
       browserLabel: "tu navegador",
       menuLabel: "menu del navegador",
+      menuLocationLabel: "arriba a la derecha",
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
+      menuSymbol: "⋮",
     };
   }
 
   return {
     browserLabel: "tu navegador",
     menuLabel: "menu del navegador",
+    menuLocationLabel: "arriba o abajo a la derecha",
     installLabel: "Instalar app",
     fallbackInstallLabel: "Agregar a pantalla principal",
+    menuSymbol: "⋮",
   };
 }
 
@@ -265,9 +275,8 @@ export function InstallAppPrompt() {
               </p>
             ) : showAndroidHint && androidHint ? (
               <p className={s.text}>
-                Si {androidHint.browserLabel} no muestra el boton solo, instala
-                Ventora desde el navegador y dejala fija en tu pantalla de
-                inicio.
+                Si {androidHint.browserLabel} no muestra el boton solo, te
+                guiamos para dejar Ventora instalada en menos de un minuto.
               </p>
             ) : (
               <p className={s.text}>
@@ -292,17 +301,65 @@ export function InstallAppPrompt() {
           </div>
         ) : showAndroidHint && androidHint ? (
           <div className={s.manualBlock}>
-            <ol className={s.steps}>
-              <li>Toca el {androidHint.menuLabel}.</li>
-              <li>
-                Elige {androidHint.installLabel} o{" "}
-                {androidHint.fallbackInstallLabel}.
-              </li>
-              <li>Abre Ventora desde el icono nuevo en tu inicio.</li>
-            </ol>
+            <div className={s.browserGuide} aria-hidden>
+              <div className={s.browserMock}>
+                <div className={s.browserTopbar}>
+                  <span className={s.browserDot} />
+                  <span className={s.browserUrl}>ventorap.cl</span>
+                </div>
+                <div className={s.browserBody}>
+                  <div className={s.browserCard}>
+                    <span className={s.browserCardLabel}>Ventora</span>
+                    <strong>Instala la app</strong>
+                    <span>y entra mas rapido</span>
+                  </div>
+                </div>
+                <div className={s.browserFooter}>
+                  <span className={s.browserNavIcon}>◁</span>
+                  <span className={s.browserNavIcon}>○</span>
+                  <span className={s.browserNavIcon}>□</span>
+                  <span className={s.browserMenuHint}>
+                    {androidHint.menuSymbol}
+                  </span>
+                </div>
+                <div className={s.browserPulse} />
+                <div className={s.browserCallout}>
+                  Toca aqui
+                  <span>{androidHint.menuLabel}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={s.stepGrid}>
+              <div className={s.stepRow}>
+                <span className={s.stepBadge}>1</span>
+                <p className={s.stepText}>
+                  Toca el {androidHint.menuLabel} {androidHint.menuLocationLabel}.
+                </p>
+              </div>
+              <div className={s.stepRow}>
+                <span className={s.stepBadge}>2</span>
+                <p className={s.stepText}>
+                  Busca <strong>{androidHint.installLabel}</strong>.
+                </p>
+              </div>
+              <div className={s.stepRow}>
+                <span className={s.stepBadge}>3</span>
+                <p className={s.stepText}>
+                  Si no aparece, toca{" "}
+                  <strong>{androidHint.fallbackInstallLabel}</strong>.
+                </p>
+              </div>
+              <div className={s.stepRow}>
+                <span className={s.stepBadge}>4</span>
+                <p className={s.stepText}>
+                  Despues abre Ventora desde el icono nuevo en tu inicio.
+                </p>
+              </div>
+            </div>
             <div className={s.actions}>
               <button type="button" className={s.ghost} onClick={closePrompt}>
-                Entendido
+                Ya entendi
               </button>
             </div>
           </div>

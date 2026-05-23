@@ -9,8 +9,10 @@ describe("install-app-prompt helpers", () => {
     expect(hint).toEqual({
       browserLabel: "Opera",
       menuLabel: "menu O",
+      menuLocationLabel: "abajo a la derecha",
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
+      menuSymbol: "O",
     });
   });
 

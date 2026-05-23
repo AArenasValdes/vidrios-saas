@@ -114,9 +114,202 @@
   gap: 12px;
 }
 
+.browserGuide {
+  display: grid;
+}
+
+.browserMock {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(130, 151, 183, 0.16);
+  background:
+    linear-gradient(180deg, rgba(12, 24, 40, 0.96), rgba(18, 34, 56, 0.92));
+  min-height: 168px;
+}
+
+.browserTopbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(130, 151, 183, 0.12);
+}
+
+.browserDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #4ade80;
+  flex-shrink: 0;
+}
+
+.browserUrl {
+  min-height: 32px;
+  flex: 1;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #d7e5ff;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.browserBody {
+  display: grid;
+  place-items: center;
+  padding: 18px 16px 64px;
+}
+
+.browserCard {
+  width: 100%;
+  max-width: 210px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(130, 151, 183, 0.12);
+  text-align: center;
+}
+
+.browserCard strong {
+  color: #f8fbff;
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.browserCard span {
+  color: #b9c8dd;
+  font-size: 0.82rem;
+}
+
+.browserCardLabel {
+  color: #8fb7ff !important;
+  font-size: 0.74rem !important;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.browserFooter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(130, 151, 183, 0.12);
+  background: rgba(8, 18, 31, 0.92);
+}
+
+.browserNavIcon,
+.browserMenuHint {
+  min-height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #d7e5ff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.browserMenuHint {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+}
+
+.browserPulse {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 2px solid rgba(125, 211, 252, 0.8);
+  box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.16);
+}
+
+.browserCallout {
+  position: absolute;
+  right: 72px;
+  bottom: 24px;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(4, 10, 20, 0.9);
+  border: 1px solid rgba(130, 151, 183, 0.16);
+  color: #f8fbff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.browserCallout span {
+  color: #a9c9ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.stepGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.stepRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stepBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.18);
+  color: #dbe8fb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.stepText {
+  margin: 0;
+  color: #d7e5ff;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.stepText strong {
+  color: #ffffff;
+}
+
 @media (max-width: 900px) {
   .root {
     display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .browserBody {
+    padding-inline: 12px;
+  }
+
+  .browserCallout {
+    right: 62px;
+    bottom: 18px;
+    max-width: 118px;
   }
 }
 
