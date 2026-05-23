@@ -13,6 +13,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(auth-public)/auth/logout/route.ts`
   - `src/features/auth/hooks/useAuth.ts`
   - `src/features/auth/services/auth.service.ts`
+  - `src/features/auth/services/auth-login-error.service.ts`
+  - `src/features/auth/services/auth-login-diagnostics.service.ts`
   - `src/features/auth/services/auth-server.service.ts`
   - `src/features/auth/repositories/auth.repository.ts`
   - `src/features/auth/repositories/auth-server.repository.ts`
@@ -21,12 +23,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Componentes principales**: LoginView (interno en pagina)
 - **Hooks/servicios/actions**: `useAuth()`, `authService`, `authServerService`
 - **Tablas Supabase**: `auth.users`, `public.users`
-- **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol)
+- **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol) -> diagnostico local + eventos `login_success` / `login_failure`
 - **Estados importantes**: `cargando`, authenticated, unauthenticated
 - **Donde editar UI**: `app/(auth-public)/login/page.tsx`
 - **Donde editar logica**: `src/features/auth/services/auth.service.ts`
 - **Donde editar persistencia**: `src/features/auth/repositories/auth.repository.ts`
-- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI.
+- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil.
+- **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas.
 
 ---

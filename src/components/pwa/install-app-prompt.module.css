@@ -109,6 +109,11 @@
   line-height: 1.55;
 }
 
+.manualBlock {
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-width: 900px) {
   .root {
     display: block;

@@ -60,13 +60,13 @@
 - **Layout usado**: `app/layout.tsx` (root layout)
 - **Proposito**: Autenticacion email/password
 - **Usuario objetivo**: Usuario no autenticado
-- **Funcionalidades visibles**: Formulario login, manejo de errores, redireccion post-login
+- **Funcionalidades visibles**: Formulario login, manejo de errores, ver/ocultar contrasena, reinicio local de app en dispositivo, redireccion post-login
 - **Componentes principales**: `LoginView` (interno de la pagina)
 - **Datos que consume**: `auth.users`, `public.users`
 - **Tablas Supabase relacionadas**: `auth.users`, `public.users`
 - **Acciones principales**: `signIn` via `authService`
 - **Archivos a tocar para modificar**: `app/(auth-public)/login/page.tsx`, `src/features/auth/hooks/useAuth.ts`, `src/features/auth/services/auth.service.ts`, `src/features/auth/repositories/auth.repository.ts`
-- **Riesgos**: No romper flujo PKCE. El proxy redirige usuarios autenticados a `/dashboard`. No cambiar manejo de `?next=` param.
+- **Riesgos**: No romper flujo PKCE. El proxy redirige usuarios autenticados a `/dashboard`. No cambiar manejo de `?next=` param. No volver a colapsar errores distintos bajo "correo o contrasena incorrecta"; el login ahora clasifica timeout, cookie no lista, perfil faltante, red y permisos.
 
 ---
 

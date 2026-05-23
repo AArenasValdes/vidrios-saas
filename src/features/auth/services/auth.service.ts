@@ -2,6 +2,7 @@ import {
   authRepository,
   type AuthRepository,
 } from "@/features/auth/repositories/auth.repository";
+import { GET_ORG_ID_PERMISSION_ERROR_MESSAGE } from "@/features/auth/services/auth-login-error.service";
 import type {
   AuthProfileLookupOptions,
   AuthSignInInput,
@@ -17,8 +18,6 @@ type AuthServiceDeps = {
 
 const DEFAULT_BOOTSTRAP_RETRY_COUNT = 5;
 const DEFAULT_BOOTSTRAP_RETRY_DELAY_MS = 300;
-const GET_ORG_ID_PERMISSION_ERROR_MESSAGE =
-  "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta de nuevo en unos segundos.";
 const AUTH_PROFILE_BOOTSTRAP_LOOKUP_OPTIONS: AuthProfileLookupOptions = {
   preferServerLookup: false,
   retryServerOnUnauthorized: true,

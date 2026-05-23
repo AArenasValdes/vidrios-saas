@@ -4,15 +4,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, RefreshCcw } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
+import { authDeviceRecoveryService } from "@/features/auth/services/auth-device-recovery.service";
+import { authLoginDiagnosticsService } from "@/features/auth/services/auth-login-diagnostics.service";
+import {
+  AUTH_COOKIE_NOT_READY_SENTINEL,
+  AUTH_LOGIN_TIMEOUT_SENTINEL,
+  classifyAuthLoginError,
+  getAuthLoginErrorCopy,
+} from "@/features/auth/services/auth-login-error.service";
+import type { AuthLoginErrorCode } from "@/features/auth/types/auth";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import s from "./login.module.css";
 
 interface LoginViewProps {
   oauthError: boolean;
   nextPath: string | null;
+  appResetDone: boolean;
 }
 
 const copy = {
@@ -31,13 +42,17 @@ const copy = {
   signupAction: "Crear cuenta",
   oauthError:
     "No pudimos completar el acceso con Google. Intenta con tu correo y contrasena.",
-  credentialError: "Correo o contrasena incorrectos",
-  missingProfileError:
-    "Este usuario no quedo vinculado a una empresa. Entra con un usuario valido o termina de vincularlo en base de datos.",
-  brokenDatabasePermissionError:
-    "Tu acceso esta bien, pero hubo un problema interno al abrir tu espacio. Intenta otra vez en unos segundos.",
-  timeoutError:
-    "No pudimos abrir tu sesion en este dispositivo. Cierra la ventana y vuelve a intentar.",
+  authCodeLabel: "Codigo de acceso:",
+  passwordShow: "Mostrar",
+  passwordHide: "Ocultar",
+  appResetDone:
+    "Reiniciamos la app en este dispositivo. Intenta entrar de nuevo desde aqui.",
+  recoveryTitle: "Problemas en esta app instalada?",
+  recoveryText:
+    "Si en navegador entra y en la app no, reinicia el estado local de Ventora en este celular.",
+  recoveryHint: "No borra tus cotizaciones ni los datos de tu empresa.",
+  recoveryAction: "Reiniciar esta app",
+  recovering: "Reiniciando...",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
@@ -57,7 +72,7 @@ type BrowserWindowWithIdleCallback = Window &
 function waitForLoginTimeout() {
   return new Promise<never>((_, reject) => {
     window.setTimeout(() => {
-      reject(new Error("LOGIN_TIMEOUT"));
+      reject(new Error(AUTH_LOGIN_TIMEOUT_SENTINEL));
     }, LOGIN_TIMEOUT_MS);
   });
 }
@@ -100,6 +115,8 @@ async function waitForAuthCookieReady() {
       return;
     }
   }
+
+  throw new Error(AUTH_COOKIE_NOT_READY_SENTINEL);
 }
 
 function scheduleLoginPrefetch(callback: () => void, delayMs = 350) {
@@ -124,7 +141,23 @@ function scheduleLoginPrefetch(callback: () => void, delayMs = 350) {
   return () => window.clearTimeout(timeoutId);
 }
 
-export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
+function getPlatformMode() {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(display-mode: standalone)").matches
+  ) {
+    return "standalone";
+  }
+
+  return "browser";
+}
+
+export default function LoginView({
+  oauthError,
+  nextPath,
+  appResetDone,
+}: LoginViewProps) {
   const { signIn } = useAuth();
   const router = useRouter();
 
@@ -133,6 +166,9 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
   const [mantenerSesion, setMantenerSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<AuthLoginErrorCode | null>(null);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [isRecoveringApp, setIsRecoveringApp] = useState(false);
 
   useEffect(() => {
     return scheduleLoginPrefetch(() => {
@@ -140,10 +176,22 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
     });
   }, [router]);
 
+  const handleRecoverApp = async () => {
+    setIsRecoveringApp(true);
+    googleTagService.trackEvent("login_app_recovery", {
+      event_category: "auth",
+      event_label: "manual_reset",
+      next_path: nextPath ?? "/dashboard",
+      platform_mode: getPlatformMode(),
+    });
+    await authDeviceRecoveryService.resetCurrentDeviceAppState();
+  };
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCargando(true);
     setError(null);
+    setErrorCode(null);
 
     const formData = new FormData(e.currentTarget);
     const submittedCorreo = String(formData.get("correo") ?? correo);
@@ -157,6 +205,14 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
       setPassword(submittedPassword);
     }
 
+    authLoginDiagnosticsService.record({
+      type: "attempt",
+      code: "none",
+      email: submittedCorreo,
+      nextPath,
+      detail: mantenerSesion ? "mantener-sesion" : "sesion-normal",
+    });
+
     try {
       await Promise.race([
         signIn({
@@ -166,19 +222,45 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
         waitForLoginTimeout(),
       ]);
       await waitForAuthCookieReady();
+      authLoginDiagnosticsService.record({
+        type: "success",
+        code: "none",
+        email: submittedCorreo,
+        nextPath,
+      });
+      googleTagService.trackEvent("login_success", {
+        event_category: "auth",
+        event_label: "email_password",
+        next_path: nextPath ?? "/dashboard",
+        remember_session: mantenerSesion,
+        platform_mode: getPlatformMode(),
+      });
     } catch (signInError) {
-      const rawMessage =
-        signInError instanceof Error ? signInError.message.toLowerCase() : "";
-      const message =
-        rawMessage.includes("login_timeout")
-          ? copy.timeoutError
-          : rawMessage.includes("get_org_id")
-          ? copy.brokenDatabasePermissionError
-          : rawMessage.includes("no esta vinculado a una empresa")
-          ? copy.missingProfileError
-          : copy.credentialError;
+      const classifiedError = classifyAuthLoginError(signInError);
+      const detail =
+        signInError instanceof Error ? signInError.message : "error-desconocido";
 
-      setError(message);
+      authLoginDiagnosticsService.record({
+        type:
+          classifiedError.code === "cookie_not_ready"
+            ? "cookie_wait_timeout"
+            : "failure",
+        code: classifiedError.code,
+        email: submittedCorreo,
+        nextPath,
+        detail,
+      });
+      googleTagService.trackEvent("login_failure", {
+        event_category: "auth",
+        event_label: classifiedError.code,
+        next_path: nextPath ?? "/dashboard",
+        remember_session: mantenerSesion,
+        online: typeof navigator !== "undefined" ? navigator.onLine : undefined,
+        platform_mode: getPlatformMode(),
+      });
+
+      setError(getAuthLoginErrorCopy(classifiedError.code));
+      setErrorCode(classifiedError.code);
       setCargando(false);
       return;
     }
@@ -233,6 +315,7 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                     onChange={(e) => {
                       setCorreo(e.target.value);
                       setError(null);
+                      setErrorCode(null);
                     }}
                     autoComplete="email"
                     inputMode="email"
@@ -250,17 +333,28 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={mostrarPassword ? "text" : "password"}
                     className={s.fieldInput}
                     placeholder={copy.passwordPlaceholder}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setError(null);
+                      setErrorCode(null);
                     }}
                     autoComplete="current-password"
                     required
                   />
+                  <button
+                    type="button"
+                    className={s.passwordToggle}
+                    onClick={() => setMostrarPassword((current) => !current)}
+                    aria-label={mostrarPassword ? copy.passwordHide : copy.passwordShow}
+                    aria-pressed={mostrarPassword}
+                  >
+                    {mostrarPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+                    <span>{mostrarPassword ? copy.passwordHide : copy.passwordShow}</span>
+                  </button>
                 </div>
               </div>
 
@@ -289,9 +383,28 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                   <span className={s.errorMark} aria-hidden>
                     !
                   </span>
-                  <span>{error ?? copy.oauthError}</span>
+                  <span>
+                    {error ?? copy.oauthError}
+                    {errorCode ? (
+                      <>
+                        {" "}
+                        <strong>
+                          {copy.authCodeLabel} {errorCode}
+                        </strong>
+                      </>
+                    ) : null}
+                  </span>
                 </div>
               )}
+
+              {appResetDone ? (
+                <div className={s.successBox} role="status" aria-live="polite">
+                  <span className={s.successMark} aria-hidden>
+                    ✓
+                  </span>
+                  <span>{copy.appResetDone}</span>
+                </div>
+              ) : null}
 
               <button
                 type="submit"
@@ -305,6 +418,23 @@ export default function LoginView({ oauthError, nextPath }: LoginViewProps) {
                 <ArrowRight size={18} aria-hidden />
               </button>
             </form>
+
+            <section className={s.recoveryCard} aria-label={copy.recoveryTitle}>
+              <div className={s.recoveryCopy}>
+                <p className={s.recoveryTitle}>{copy.recoveryTitle}</p>
+                <p className={s.recoveryText}>{copy.recoveryText}</p>
+                <p className={s.recoveryHint}>{copy.recoveryHint}</p>
+              </div>
+              <button
+                type="button"
+                className={s.recoveryButton}
+                disabled={isRecoveringApp}
+                onClick={handleRecoverApp}
+              >
+                <RefreshCcw size={16} aria-hidden />
+                {isRecoveringApp ? copy.recovering : copy.recoveryAction}
+              </button>
+            </section>
           </div>
 
           <p className={s.signupText}>

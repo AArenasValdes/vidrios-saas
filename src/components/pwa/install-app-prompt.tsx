@@ -21,6 +21,7 @@ declare global {
 }
 
 const DISMISS_KEY = "ventora:pwa-install-dismissed";
+const MANUAL_INSTALL_FALLBACK_DELAY_MS = 1800;
 
 function isStandaloneMode() {
   if (typeof window === "undefined") {
@@ -45,18 +46,84 @@ function isIosSafari() {
   return isIos && isSafari;
 }
 
+export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
+  const ua = userAgent.toLowerCase();
+  const isAndroid = /android/.test(ua);
+
+  if (!isAndroid) {
+    return null;
+  }
+
+  if (/opera|opr\//.test(ua)) {
+    return {
+      browserLabel: "Opera",
+      menuLabel: "menu O",
+      installLabel: "Instalar app",
+      fallbackInstallLabel: "Agregar a pantalla principal",
+    };
+  }
+
+  if (/edg\//.test(ua)) {
+    return {
+      browserLabel: "Edge",
+      menuLabel: "menu del navegador",
+      installLabel: "Instalar app",
+      fallbackInstallLabel: "Agregar a pantalla principal",
+    };
+  }
+
+  if (/samsungbrowser/.test(ua)) {
+    return {
+      browserLabel: "Samsung Internet",
+      menuLabel: "menu del navegador",
+      installLabel: "Agregar pagina a",
+      fallbackInstallLabel: "Pantalla de inicio",
+    };
+  }
+
+  if (/chrome|crios|brave/.test(ua)) {
+    return {
+      browserLabel: "tu navegador",
+      menuLabel: "menu del navegador",
+      installLabel: "Instalar app",
+      fallbackInstallLabel: "Agregar a pantalla principal",
+    };
+  }
+
+  return {
+    browserLabel: "tu navegador",
+    menuLabel: "menu del navegador",
+    installLabel: "Instalar app",
+    fallbackInstallLabel: "Agregar a pantalla principal",
+  };
+}
+
+function getAndroidManualInstallHint() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return getAndroidManualInstallHintFromUserAgent(window.navigator.userAgent);
+}
+
 export function InstallAppPrompt() {
   const pathname = usePathname();
   const [isHydrated, setIsHydrated] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showIosHint, setShowIosHint] = useState(false);
+  const [showAndroidHint, setShowAndroidHint] = useState(false);
   const [dismissed, setDismissed] = useState(true);
+  const [androidHint, setAndroidHint] = useState<ReturnType<
+    typeof getAndroidManualInstallHint
+  >>(null);
 
   useEffect(() => {
     if (!isCanonicalPwaHost(window.location.hostname)) {
       queueMicrotask(() => {
         setShowIosHint(false);
+        setShowAndroidHint(false);
+        setAndroidHint(null);
         setDismissed(true);
         setIsHydrated(true);
       });
@@ -65,9 +132,12 @@ export function InstallAppPrompt() {
 
     const wasDismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
     const standalone = isStandaloneMode();
+    const manualAndroidHint = getAndroidManualInstallHint();
 
     queueMicrotask(() => {
       setShowIosHint(!wasDismissed && !standalone && isIosSafari());
+      setShowAndroidHint(false);
+      setAndroidHint(manualAndroidHint);
       setDismissed(wasDismissed || standalone);
       setIsHydrated(true);
     });
@@ -87,6 +157,7 @@ export function InstallAppPrompt() {
       setDeferredPrompt(event as BeforeInstallPromptEvent);
       setDismissed(false);
       setShowIosHint(false);
+      setShowAndroidHint(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -99,10 +170,41 @@ export function InstallAppPrompt() {
     };
   }, []);
 
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !isHydrated ||
+      dismissed ||
+      isStandaloneMode() ||
+      deferredPrompt ||
+      showIosHint ||
+      showAndroidHint ||
+      !androidHint
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowAndroidHint(true);
+    }, MANUAL_INSTALL_FALLBACK_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    androidHint,
+    deferredPrompt,
+    dismissed,
+    isHydrated,
+    showAndroidHint,
+    showIosHint,
+  ]);
+
   const closePrompt = () => {
     window.localStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
     setShowIosHint(false);
+    setShowAndroidHint(false);
   };
 
   const handleInstall = async () => {
@@ -127,7 +229,7 @@ export function InstallAppPrompt() {
         !pathname?.startsWith("/print") &&
         !dismissed &&
         !isStandaloneMode() &&
-        (deferredPrompt || showIosHint)
+        (deferredPrompt || showIosHint || showAndroidHint)
     );
 
     setPwaInstallPromptVisible(isVisible);
@@ -135,7 +237,7 @@ export function InstallAppPrompt() {
     return () => {
       setPwaInstallPromptVisible(false);
     };
-  }, [deferredPrompt, dismissed, isHydrated, pathname, showIosHint]);
+  }, [deferredPrompt, dismissed, isHydrated, pathname, showAndroidHint, showIosHint]);
 
   if (
     !isHydrated ||
@@ -146,7 +248,7 @@ export function InstallAppPrompt() {
     return null;
   }
 
-  if (!deferredPrompt && !showIosHint) {
+  if (!deferredPrompt && !showIosHint && !showAndroidHint) {
     return null;
   }
 
@@ -159,6 +261,12 @@ export function InstallAppPrompt() {
             {deferredPrompt ? (
               <p className={s.text}>
                 Abre Ventora como app y entra mas rapido desde la pantalla de
+                inicio.
+              </p>
+            ) : showAndroidHint && androidHint ? (
+              <p className={s.text}>
+                Si {androidHint.browserLabel} no muestra el boton solo, instala
+                Ventora desde el navegador y dejala fija en tu pantalla de
                 inicio.
               </p>
             ) : (
@@ -181,6 +289,22 @@ export function InstallAppPrompt() {
             <button type="button" className={s.ghost} onClick={closePrompt}>
               Ahora no
             </button>
+          </div>
+        ) : showAndroidHint && androidHint ? (
+          <div className={s.manualBlock}>
+            <ol className={s.steps}>
+              <li>Toca el {androidHint.menuLabel}.</li>
+              <li>
+                Elige {androidHint.installLabel} o{" "}
+                {androidHint.fallbackInstallLabel}.
+              </li>
+              <li>Abre Ventora desde el icono nuevo en tu inicio.</li>
+            </ol>
+            <div className={s.actions}>
+              <button type="button" className={s.ghost} onClick={closePrompt}>
+                Entendido
+              </button>
+            </div>
           </div>
         ) : (
           <ol className={s.steps}>

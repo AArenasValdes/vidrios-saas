@@ -10,16 +10,20 @@ const mockUseAuth = jest.fn();
 const mockUseOrganizationProfile = jest.fn();
 const mockUseSolicitudesContacto = jest.fn();
 const mockCanAccessSolicitudes = jest.fn();
+const mockUseOnboardingChecklist = jest.fn();
 
 jest.mock("next/link", () => {
   return function MockLink({
     children,
     href,
+    prefetch: _prefetch,
     ...rest
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     href: string;
     children: React.ReactNode;
+    prefetch?: boolean;
   }) {
+    void _prefetch;
     return (
       <a href={href} {...rest}>
         {children}
@@ -31,6 +35,9 @@ jest.mock("next/link", () => {
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
     push,
+  }),
+  useSearchParams: () => ({
+    get: () => null,
   }),
 }));
 
@@ -50,6 +57,14 @@ jest.mock("@/features/solicitudes/services/solicitudes-contacto-access", () => (
   canAccessSolicitudes: (...args: unknown[]) => mockCanAccessSolicitudes(...args),
 }));
 
+jest.mock("@/features/onboarding/hooks/useOnboardingChecklist", () => ({
+  useOnboardingChecklist: () => mockUseOnboardingChecklist(),
+}));
+
+jest.mock("@/features/onboarding/components/onboarding-guide", () => ({
+  OnboardingGuide: () => null,
+}));
+
 jest.mock("@/features/cotizaciones/new-quote/solicitud-prefill", () => ({
   persistNuevaCotizacionSolicitudPrefill: jest.fn(),
 }));
@@ -61,6 +76,19 @@ jest.mock("../_components/solicitud-card", () => ({
 describe("SolicitudesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: false,
+        media: "(max-width: 900px)",
+        onchange: null,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
     mockUseAuth.mockReturnValue({
       rol: "admin",
       user: { id: "user-1", email: "user@test.cl" },
@@ -73,6 +101,21 @@ describe("SolicitudesPage", () => {
       },
     });
     mockCanAccessSolicitudes.mockReturnValue(true);
+    mockUseOnboardingChecklist.mockReturnValue({
+      checklist: null,
+      organizationId: "org-1",
+      isLoading: false,
+      isVisible: false,
+      isPreviewMode: false,
+      error: null,
+      isDismissed: false,
+      hasCompletedFirstQuote: true,
+      refreshChecklist: jest.fn(),
+      dismissChecklist: jest.fn(),
+      markChannelReady: jest.fn(),
+      markFirstShare: jest.fn(),
+      shouldHighlightStep: jest.fn(() => false),
+    });
   });
 
   it("no muestra el loader de pantalla completa en el cold boot", () => {

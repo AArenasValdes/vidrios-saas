@@ -124,7 +124,7 @@
 .fieldInput {
   width: 100%;
   min-height: 50px;
-  padding: 0 16px 0 46px;
+  padding: 0 116px 0 46px;
   border-radius: 10px;
   border: 1px solid var(--login-border);
   background: var(--login-surface-strong);
@@ -150,6 +150,35 @@
 .fieldInput:focus,
 .fieldInput:focus-visible {
   border-color: #6e98ea;
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.18);
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(164, 182, 214, 0.18);
+  border-radius: 999px;
+  background: rgba(10, 23, 42, 0.92);
+  color: #dbe8fb;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.passwordToggle:hover {
+  border-color: rgba(164, 182, 214, 0.34);
+}
+
+.passwordToggle:focus-visible {
+  outline: none;
   box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.18);
 }
 
@@ -251,6 +280,25 @@
   line-height: 1.1;
 }
 
+.successBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(73, 163, 120, 0.34);
+  background: rgba(73, 163, 120, 0.12);
+  color: #d5ffe8;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.successMark {
+  font-weight: 800;
+  line-height: 1.1;
+}
+
 .primaryButton,
 .googleButton {
   min-height: 50px;
@@ -345,6 +393,78 @@
   font-family: "Inter", sans-serif;
   font-size: 0.84rem;
   line-height: 1.55;
+}
+
+.recoveryCard {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(164, 182, 214, 0.18);
+  background: rgba(11, 26, 51, 0.5);
+}
+
+.recoveryCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.recoveryTitle {
+  margin: 0;
+  color: #eef5ff;
+  font-family: "Inter", sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.recoveryText,
+.recoveryHint {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  line-height: 1.5;
+}
+
+.recoveryText {
+  color: #b9c8dd;
+  font-size: 0.9rem;
+}
+
+.recoveryHint {
+  color: #8ea2bf;
+  font-size: 0.84rem;
+}
+
+.recoveryButton {
+  min-height: 46px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(164, 182, 214, 0.22);
+  background: rgba(14, 27, 49, 0.92);
+  color: #edf4ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recoveryButton:hover:not(:disabled) {
+  border-color: rgba(164, 182, 214, 0.36);
+}
+
+.recoveryButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.18);
+}
+
+.recoveryButton:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .signupText {
@@ -490,9 +610,20 @@
     min-height: 52px;
   }
 
+  .passwordToggle {
+    right: 8px;
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 0.76rem;
+  }
+
   .signupText,
   .checkboxLabel,
   .textLink {
     font-size: 0.9rem;
+  }
+
+  .recoveryButton {
+    width: 100%;
   }
 }

@@ -22,6 +22,16 @@ export interface AuthSignInInput {
   password: string;
 }
 
+export type AuthLoginErrorCode =
+  | "invalid_credentials"
+  | "network_unavailable"
+  | "login_timeout"
+  | "cookie_not_ready"
+  | "profile_missing"
+  | "profile_bootstrap_failed"
+  | "org_permission_error"
+  | "unknown";
+
 export interface AuthProfileLookupOptions {
   accessToken?: string | null;
   preferServerLookup?: boolean;
@@ -43,4 +53,25 @@ export interface AuthSignOutOptions {
 export interface AuthSessionChangePayload {
   event: AuthChangeEvent;
   session: Session | null;
+}
+
+export type AuthLoginDiagnosticEventType =
+  | "attempt"
+  | "success"
+  | "failure"
+  | "cookie_wait_timeout";
+
+export interface AuthLoginDiagnosticEntry {
+  id: string;
+  type: AuthLoginDiagnosticEventType;
+  code: AuthLoginErrorCode | "none";
+  emailMask: string;
+  pathname: string;
+  nextPath: string | null;
+  hostname: string | null;
+  online: boolean | null;
+  standalone: boolean;
+  userAgent: string | null;
+  timestamp: string;
+  detail: string | null;
 }

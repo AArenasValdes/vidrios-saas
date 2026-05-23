@@ -4,6 +4,32 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-22 - Diagnostico fino de login movil y PWA
+
+### Resumen
+
+Se endurecio el login email/password para aislar mejor los fallos que antes podian verse todos como "correo o contrasena incorrecta". Ahora el cliente distingue errores de credencial real, timeout, cookie de sesion no lista, perfil sin empresa, permiso roto de `get_org_id()` y problemas de red/PWA. Tambien se agrega una bitacora local en `localStorage` con intentos, exitos y fallos de login para soporte/debug, junto con eventos `login_success` y `login_failure` enviados a la capa GTM/GA4 ya existente.
+
+Ademas, el prompt de instalacion PWA ahora tiene fallback manual para Android cuando navegadores como Opera no disparan `beforeinstallprompt`. Si el navegador no muestra el CTA nativo, Ventora enseña pasos cortos para instalar desde el `menu O` o desde `Agregar a pantalla principal`, evitando que el usuario quede sin pista de instalacion solo por usar Opera. La pantalla `/login` suma tambien dos ayudas de soporte directo: ver/ocultar contrasena y un boton `Reiniciar esta app` que limpia service workers, caches y storage local del sitio en ese dispositivo antes de recargar.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/(auth-public)/login/login-view.tsx` | Clasifica errores, espera cookie, registra diagnosticos locales y envia eventos de login |
+| `src/features/auth/services/auth-login-error.service.ts` | Nueva clasificacion central de errores de login |
+| `src/features/auth/services/auth-login-diagnostics.service.ts` | Nuevo ring buffer local de diagnosticos de login |
+| `src/features/auth/services/auth-device-recovery.service.ts` | Reset local de PWA/storage/auth para el dispositivo actual |
+| `src/features/auth/services/auth.service.ts` | Reusa el mensaje comun de permiso roto de `get_org_id()` |
+| `src/features/auth/types/auth.ts` | Nuevos tipos para errores y diagnosticos de login |
+| `app/(auth-public)/login/page.tsx` | Lee `app_reset=1` para confirmar que se reinicio el dispositivo |
+| `app/(auth-public)/login/login-view.tsx` | Toggle de contrasena + CTA `Reiniciar esta app` |
+| `src/components/pwa/install-app-prompt.tsx` | Fallback manual de instalacion para Opera/Android |
+| `docs/agent-map/FEATURES_MAP.md` | Se documenta el diagnostico fino de auth |
+| `docs/agent-map/ROUTES_MAP.md` | Se documentan los riesgos y diagnosticos de `/login` |
+
+---
+
 ## 2026-05-22 - Onboarding comercial guiado dentro de rutas privadas
 
 ### Resumen

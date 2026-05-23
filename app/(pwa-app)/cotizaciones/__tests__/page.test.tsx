@@ -8,16 +8,20 @@ import CotizacionesPage from "../page";
 const push = jest.fn();
 const mockUseCotizacionesStore = jest.fn();
 const mockUseCotizacionesResumenPage = jest.fn();
+const mockUseOnboardingChecklist = jest.fn();
 
 jest.mock("next/link", () => {
   return function MockLink({
     children,
     href,
+    prefetch: _prefetch,
     ...rest
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     href: string;
     children: React.ReactNode;
+    prefetch?: boolean;
   }) {
+    void _prefetch;
     return (
       <a href={href} {...rest}>
         {children}
@@ -29,6 +33,9 @@ jest.mock("next/link", () => {
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
     push,
+  }),
+  useSearchParams: () => ({
+    get: () => null,
   }),
 }));
 
@@ -77,6 +84,10 @@ jest.mock("@/hooks/useCotizacionesStore", () => ({
 
 jest.mock("@/features/cotizaciones/hooks/useCotizacionesResumenPage", () => ({
   useCotizacionesResumenPage: (options: unknown) => mockUseCotizacionesResumenPage(options),
+}));
+
+jest.mock("@/features/onboarding/hooks/useOnboardingChecklist", () => ({
+  useOnboardingChecklist: () => mockUseOnboardingChecklist(),
 }));
 
 jest.mock("@/services/cotizaciones-workflow.service", () => ({
@@ -240,6 +251,21 @@ describe("CotizacionesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.sessionStorage.clear();
+    mockUseOnboardingChecklist.mockReturnValue({
+      checklist: null,
+      organizationId: "org-1",
+      isLoading: false,
+      isVisible: false,
+      isPreviewMode: false,
+      error: null,
+      isDismissed: false,
+      hasCompletedFirstQuote: true,
+      refreshChecklist: jest.fn(),
+      dismissChecklist: jest.fn(),
+      markChannelReady: jest.fn(),
+      markFirstShare: jest.fn(),
+      shouldHighlightStep: jest.fn(() => false),
+    });
   });
 
   it("usa el resumen global para los chips y KPIs, no la pagina visible", () => {
