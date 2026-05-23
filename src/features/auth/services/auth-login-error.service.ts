@@ -9,6 +9,8 @@ const AUTH_LOGIN_ERROR_COPY: Record<AuthLoginErrorCode, string> = {
   invalid_credentials: "Revisa tu correo y contrasena. Ese acceso no coincide.",
   network_unavailable:
     "No pudimos conectarnos. Revisa internet en este celular e intenta otra vez.",
+  device_storage_blocked:
+    "Este celular no pudo guardar bien la sesion local. Intenta reiniciar esta app.",
   login_timeout:
     "La sesion demoro demasiado en abrirse en este dispositivo. Intenta otra vez.",
   cookie_not_ready:
@@ -66,6 +68,51 @@ function isOfflineClient() {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
+function isStorageBlockedError(rawText: string) {
+  return (
+    rawText.includes("securityerror") ||
+    rawText.includes("quotaexceedederror") ||
+    rawText.includes("indexeddb") ||
+    rawText.includes("sessionstorage") ||
+    rawText.includes("localstorage") ||
+    rawText.includes("access is denied") ||
+    rawText.includes("the operation is insecure") ||
+    (rawText.includes("storage") &&
+      (rawText.includes("denied") ||
+        rawText.includes("blocked") ||
+        rawText.includes("disabled") ||
+        rawText.includes("disallowed")))
+  );
+}
+
+export function getAuthLoginErrorDiagnosticDetail(error: unknown) {
+  const detail =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : error && typeof error === "object"
+      ? [
+          "code" in error ? String(error.code ?? "") : "",
+          "message" in error ? String(error.message ?? "") : "",
+          "details" in error ? String(error.details ?? "") : "",
+          "hint" in error ? String(error.hint ?? "") : "",
+          "name" in error ? String(error.name ?? "") : "",
+          "status" in error ? String(error.status ?? "") : "",
+        ]
+          .filter(Boolean)
+          .join(" | ")
+      : "";
+
+  const normalized = detail.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, 220);
+}
+
 export function getAuthLoginErrorCopy(code: AuthLoginErrorCode) {
   return AUTH_LOGIN_ERROR_COPY[code];
 }
@@ -107,6 +154,10 @@ export function classifyAuthLoginError(error: unknown) {
     rawText.includes("correo o contrasena incorrectos")
   ) {
     return new AuthLoginError("invalid_credentials");
+  }
+
+  if (isStorageBlockedError(rawText)) {
+    return new AuthLoginError("device_storage_blocked");
   }
 
   if (

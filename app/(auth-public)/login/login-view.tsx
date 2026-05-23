@@ -14,6 +14,7 @@ import {
   AUTH_COOKIE_NOT_READY_SENTINEL,
   AUTH_LOGIN_TIMEOUT_SENTINEL,
   classifyAuthLoginError,
+  getAuthLoginErrorDiagnosticDetail,
   getAuthLoginErrorCopy,
 } from "@/features/auth/services/auth-login-error.service";
 import type { AuthLoginErrorCode } from "@/features/auth/types/auth";
@@ -51,6 +52,9 @@ const copy = {
   recoveryHint: "No borra tus datos.",
   recoveryAction: "Reiniciar esta app",
   recovering: "Reiniciando...",
+  diagnosticLabel: "Detalle tecnico:",
+  diagnosticCopy: "Copiar diagnostico",
+  diagnosticCopied: "Diagnostico copiado",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
@@ -165,6 +169,8 @@ export default function LoginView({
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<AuthLoginErrorCode | null>(null);
+  const [errorDiagnostic, setErrorDiagnostic] = useState<string | null>(null);
+  const [copiedDiagnostic, setCopiedDiagnostic] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [isRecoveringApp, setIsRecoveringApp] = useState(false);
 
@@ -185,11 +191,28 @@ export default function LoginView({
     await authDeviceRecoveryService.resetCurrentDeviceAppState();
   };
 
+  const handleCopyDiagnostic = async () => {
+    const latestEntry = authLoginDiagnosticsService.readLatest();
+    const snapshot = authLoginDiagnosticsService.buildSupportSnapshot(latestEntry);
+
+    if (!snapshot || typeof navigator === "undefined" || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(snapshot);
+    setCopiedDiagnostic(true);
+    window.setTimeout(() => {
+      setCopiedDiagnostic(false);
+    }, 1800);
+  };
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setCargando(true);
     setError(null);
     setErrorCode(null);
+    setErrorDiagnostic(null);
+    setCopiedDiagnostic(false);
 
     const formData = new FormData(e.currentTarget);
     const submittedCorreo = String(formData.get("correo") ?? correo);
@@ -238,7 +261,7 @@ export default function LoginView({
       const detail =
         signInError instanceof Error ? signInError.message : "error-desconocido";
 
-      authLoginDiagnosticsService.record({
+      const diagnosticEntry = authLoginDiagnosticsService.record({
         type:
           classifiedError.code === "cookie_not_ready"
             ? "cookie_wait_timeout"
@@ -259,6 +282,9 @@ export default function LoginView({
 
       setError(getAuthLoginErrorCopy(classifiedError.code));
       setErrorCode(classifiedError.code);
+      setErrorDiagnostic(
+        getAuthLoginErrorDiagnosticDetail(signInError) ?? diagnosticEntry.detail
+      );
       setCargando(false);
       return;
     }
@@ -388,6 +414,25 @@ export default function LoginView({
                         <strong>
                           {copy.authCodeLabel} {errorCode}
                         </strong>
+                      </>
+                    ) : null}
+                    {errorCode === "unknown" || errorCode === "device_storage_blocked" ? (
+                      <>
+                        {" "}
+                        {errorDiagnostic ? (
+                          <span className={s.errorDiagnostic}>
+                            {copy.diagnosticLabel} {errorDiagnostic}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={s.errorDiagnosticButton}
+                          onClick={handleCopyDiagnostic}
+                        >
+                          {copiedDiagnostic
+                            ? copy.diagnosticCopied
+                            : copy.diagnosticCopy}
+                        </button>
                       </>
                     ) : null}
                   </span>

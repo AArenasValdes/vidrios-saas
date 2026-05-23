@@ -2,6 +2,7 @@ import {
   AUTH_COOKIE_NOT_READY_SENTINEL,
   AUTH_LOGIN_TIMEOUT_SENTINEL,
   classifyAuthLoginError,
+  getAuthLoginErrorDiagnosticDetail,
   getAuthLoginErrorCopy,
 } from "../auth-login-error.service";
 
@@ -35,5 +36,22 @@ describe("auth-login-error.service", () => {
     );
 
     expect(error.code).toBe("profile_missing");
+  });
+
+  it("clasifica bloqueo de storage local", () => {
+    const error = classifyAuthLoginError(
+      new Error("SecurityError: Failed to read the 'localStorage' property")
+    );
+
+    expect(error.code).toBe("device_storage_blocked");
+  });
+
+  it("extrae un detalle tecnico corto para diagnostico", () => {
+    const detail = getAuthLoginErrorDiagnosticDetail(
+      new Error("SecurityError: Failed to read the 'localStorage' property from 'Window'")
+    );
+
+    expect(detail).toContain("SecurityError");
+    expect(detail).toContain("localStorage");
   });
 });

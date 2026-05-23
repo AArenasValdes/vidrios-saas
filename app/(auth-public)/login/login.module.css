@@ -279,6 +279,34 @@
   line-height: 1.1;
 }
 
+.errorDiagnostic {
+  display: block;
+  margin-top: 8px;
+  color: #ffdede;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.errorDiagnosticButton {
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ffdede;
+  font-family: "Inter", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.errorDiagnosticButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 212, 212, 0.16);
+  border-radius: 6px;
+}
+
 .successBox {
   display: flex;
   align-items: flex-start;

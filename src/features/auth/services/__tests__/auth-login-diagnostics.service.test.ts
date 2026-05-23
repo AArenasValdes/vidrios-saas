@@ -45,4 +45,19 @@ describe("authLoginDiagnosticsService", () => {
     expect(entries[0].emailMask).toBe("do*@test.cl");
     expect(entries[1].emailMask).toBe("un*@test.cl");
   });
+
+  it("arma un snapshot corto para soporte", () => {
+    const entry = authLoginDiagnosticsService.record({
+      type: "failure",
+      code: "unknown",
+      email: "sanmarcoaluminios@gmail.com",
+      nextPath: "/dashboard",
+      detail: "SecurityError: Failed to read localStorage",
+    });
+
+    const snapshot = authLoginDiagnosticsService.buildSupportSnapshot(entry);
+
+    expect(snapshot).toContain("codigo=unknown");
+    expect(snapshot).toContain("detalle=SecurityError: Failed to read localStorage");
+  });
 });

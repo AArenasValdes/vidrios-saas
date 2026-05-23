@@ -25,6 +25,7 @@ export interface AuthSignInInput {
 export type AuthLoginErrorCode =
   | "invalid_credentials"
   | "network_unavailable"
+  | "device_storage_blocked"
   | "login_timeout"
   | "cookie_not_ready"
   | "profile_missing"

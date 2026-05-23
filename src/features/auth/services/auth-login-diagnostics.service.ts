@@ -110,6 +110,26 @@ export const authLoginDiagnosticsService = {
   readRecent() {
     return readEntries();
   },
+  readLatest() {
+    return readEntries()[0] ?? null;
+  },
+  buildSupportSnapshot(entry: AuthLoginDiagnosticEntry | null) {
+    if (!entry) {
+      return null;
+    }
+
+    const detail = entry.detail?.trim() || "sin-detalle";
+
+    return [
+      `codigo=${entry.code}`,
+      `tipo=${entry.type}`,
+      `online=${entry.online === null ? "?" : String(entry.online)}`,
+      `app=${entry.standalone ? "si" : "no"}`,
+      `host=${entry.hostname ?? "?"}`,
+      `ruta=${entry.pathname || "/"}`,
+      `detalle=${detail}`,
+    ].join(" | ");
+  },
   clear() {
     if (!isBrowser()) {
       return;

@@ -147,4 +147,30 @@ describe("LoginView", () => {
       expect(mockResetCurrentDeviceAppState).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("muestra diagnostico y accion de copia cuando el error queda como unknown", async () => {
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: jest.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    mockSignIn.mockRejectedValueOnce(
+      new Error("SecurityError: Failed to read the 'localStorage' property")
+    );
+
+    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "sanmarcoaluminios@gmail.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "cristianar1" },
+    });
+
+    fireEvent.submit(screen.getByLabelText("Password").closest("form") as HTMLFormElement);
+
+    expect(await screen.findByText(/Codigo de acceso: device_storage_blocked/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Copiar diagnostico/i })).toBeInTheDocument();
+  });
 });
