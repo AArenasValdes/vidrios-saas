@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -41,22 +40,33 @@ function getDismissStorageKey(organizationId: string | number | null) {
 }
 
 export function useOnboardingChecklist(): UseOnboardingChecklistResult {
-  const searchParams = useSearchParams();
   const { user, organizacionId, rol, cargando } = useAuth();
   const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const [checklist, setChecklist] = useState<OnboardingChecklistViewModel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const activeLoadIdRef = useRef(0);
   const dismissStorageKey = getDismissStorageKey(organizacionId);
-  const isPreviewRequested = searchParams.get("onboarding_preview");
-  const isPreviewMode =
-    isPreviewRequested === "1" ||
-    isPreviewRequested === "true" ||
-    isPreviewRequested === "si";
 
   const isEnabled = !cargando && rol === "admin" && Boolean(organizacionId) && isProfileReady;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const previewValue =
+      new URLSearchParams(window.location.search).get("onboarding_preview") ?? "";
+    const normalizedPreviewValue = previewValue.trim().toLowerCase();
+
+    setIsPreviewMode(
+      normalizedPreviewValue === "1" ||
+        normalizedPreviewValue === "true" ||
+        normalizedPreviewValue === "si"
+    );
+  }, []);
 
   useEffect(() => {
     if (!dismissStorageKey || typeof window === "undefined") {
