@@ -537,7 +537,7 @@ export default function LandingPage() {
 
               <SectionReveal>
                 <p className={s.heroDescription}>
-                  Recibe consultas, ordenalas y responde mejor desde un solo lugar.
+                  Recibe consultas, ordenalas y cotiza profesionalmente desde un solo lugar.
                 </p>
               </SectionReveal>
 
