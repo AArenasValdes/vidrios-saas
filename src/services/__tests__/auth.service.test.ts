@@ -176,9 +176,7 @@ describe("authService", () => {
       preferServerLookup: true,
       retryServerOnUnauthorized: true,
     });
-    expect(repository.signOut).toHaveBeenCalledWith({
-      scope: "local",
-    });
+    expect(repository.signOut).not.toHaveBeenCalled();
   });
 
   it("debe lanzar error si el correo viene vacio", async () => {
@@ -244,7 +242,7 @@ describe("authService", () => {
       })
     ).rejects.toThrow("Tu usuario existe, pero no esta vinculado a una empresa en Ventora.");
 
-    expect(repository.signOut).toHaveBeenCalledTimes(2);
+    expect(repository.signOut).toHaveBeenCalledTimes(1);
   });
 
   it("debe caer a lookup directo si el bootstrap server-side del login no devuelve organizacion al primer intento", async () => {

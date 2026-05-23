@@ -10,6 +10,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { authDeviceRecoveryService } from "@/features/auth/services/auth-device-recovery.service";
 import { authLoginDiagnosticsService } from "@/features/auth/services/auth-login-diagnostics.service";
+import { authLoginRateLimitService } from "@/features/auth/services/auth-login-rate-limit.service";
 import {
   AUTH_COOKIE_NOT_READY_SENTINEL,
   AUTH_LOGIN_TIMEOUT_SENTINEL,
@@ -55,6 +56,7 @@ const copy = {
   diagnosticLabel: "Detalle tecnico:",
   diagnosticCopy: "Copiar diagnostico",
   diagnosticCopied: "Diagnostico copiado",
+  rateLimitHelper: "Espera y vuelve a intentar sin repetir toques.",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
 };
 
@@ -155,12 +157,20 @@ function getPlatformMode() {
   return "browser";
 }
 
+function formatRateLimitRemaining(remainingMs: number) {
+  const totalSeconds = Math.max(Math.ceil(remainingMs / 1000), 0);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 export default function LoginView({
   oauthError,
   nextPath,
   appResetDone,
 }: LoginViewProps) {
-  const { signIn } = useAuth();
+  const { signIn } = useAuth({ passive: true });
   const router = useRouter();
 
   const [correo, setCorreo] = useState("");
@@ -173,12 +183,31 @@ export default function LoginView({
   const [copiedDiagnostic, setCopiedDiagnostic] = useState(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [isRecoveringApp, setIsRecoveringApp] = useState(false);
+  const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
+  const [rateLimitRemainingMs, setRateLimitRemainingMs] = useState(0);
 
   useEffect(() => {
     return scheduleLoginPrefetch(() => {
       router.prefetch("/dashboard");
     });
   }, [router]);
+
+  useEffect(() => {
+    const syncRateLimit = () => {
+      const activeUntil = authLoginRateLimitService.readUntil();
+      setRateLimitUntil(activeUntil);
+      setRateLimitRemainingMs(
+        activeUntil ? authLoginRateLimitService.getRemainingMs() : 0
+      );
+    };
+
+    syncRateLimit();
+
+    const intervalId = window.setInterval(syncRateLimit, 1000);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const handleRecoverApp = async () => {
     setIsRecoveringApp(true);
@@ -208,6 +237,18 @@ export default function LoginView({
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const currentRateLimitUntil = authLoginRateLimitService.readUntil();
+
+    if (currentRateLimitUntil) {
+      setRateLimitUntil(currentRateLimitUntil);
+      setRateLimitRemainingMs(authLoginRateLimitService.getRemainingMs());
+      setError(getAuthLoginErrorCopy("rate_limited"));
+      setErrorCode("rate_limited");
+      setErrorDiagnostic(null);
+      return;
+    }
+
     setCargando(true);
     setError(null);
     setErrorCode(null);
@@ -256,6 +297,9 @@ export default function LoginView({
         remember_session: mantenerSesion,
         platform_mode: getPlatformMode(),
       });
+      authLoginRateLimitService.clear();
+      setRateLimitUntil(null);
+      setRateLimitRemainingMs(0);
     } catch (signInError) {
       const classifiedError = classifyAuthLoginError(signInError);
       const detail =
@@ -285,6 +329,17 @@ export default function LoginView({
       setErrorDiagnostic(
         getAuthLoginErrorDiagnosticDetail(signInError) ?? diagnosticEntry.detail
       );
+
+      if (classifiedError.code === "rate_limited") {
+        const activeUntil = authLoginRateLimitService.activate();
+        setRateLimitUntil(activeUntil);
+        setRateLimitRemainingMs(authLoginRateLimitService.getRemainingMs());
+      } else if (rateLimitUntil) {
+        authLoginRateLimitService.clear();
+        setRateLimitUntil(null);
+        setRateLimitRemainingMs(0);
+      }
+
       setCargando(false);
       return;
     }
@@ -451,14 +506,22 @@ export default function LoginView({
               <button
                 type="submit"
                 className={s.primaryButton}
-                disabled={cargando}
+                disabled={cargando || rateLimitRemainingMs > 0}
               >
                 <span className={s.buttonContent}>
                   {cargando ? <span className={s.spinner} aria-hidden /> : null}
-                  {cargando ? copy.submitting : copy.submit}
+                  {cargando
+                    ? copy.submitting
+                    : rateLimitRemainingMs > 0
+                    ? `Espera ${formatRateLimitRemaining(rateLimitRemainingMs)}`
+                    : copy.submit}
                 </span>
                 <ArrowRight size={18} aria-hidden />
               </button>
+
+              {rateLimitRemainingMs > 0 ? (
+                <p className={s.helperText}>{copy.rateLimitHelper}</p>
+              ) : null}
             </form>
 
             <section className={s.recoveryCard} aria-label={copy.recoveryAction}>

@@ -173,4 +173,23 @@ describe("LoginView", () => {
     expect(await screen.findByText(/Codigo de acceso: device_storage_blocked/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Copiar diagnostico/i })).toBeInTheDocument();
   });
+
+  it("bloquea intentos repetidos cuando Supabase devuelve rate limit", async () => {
+    mockSignIn.mockRejectedValueOnce(new Error("Request rate limit reached"));
+
+    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "sanmarcoaluminios@gmail.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "cristianar1" },
+    });
+
+    fireEvent.submit(screen.getByLabelText("Password").closest("form") as HTMLFormElement);
+
+    expect(await screen.findByText(/Hay demasiados intentos desde este celular/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Espera/i })).toBeDisabled();
+    expect(screen.getByText(/Espera y vuelve a intentar sin repetir toques/i)).toBeInTheDocument();
+  });
 });

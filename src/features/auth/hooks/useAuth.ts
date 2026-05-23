@@ -337,7 +337,16 @@ async function resolveAuthState(options: {
   return authStatePromise;
 }
 
-export function useAuth() {
+function isPassiveAuthRoute() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const pathname = window.location.pathname;
+  return pathname === "/login" || pathname.startsWith("/auth/");
+}
+
+export function useAuth(options: { passive?: boolean } = {}) {
   const authUser = useSyncExternalStore(
     subscribeToAuthStore,
     getAuthSnapshot,
@@ -354,6 +363,14 @@ export function useAuth() {
         ...persisted,
         cargando: true,
       });
+    }
+
+    if (options.passive || isPassiveAuthRoute()) {
+      if (!persisted) {
+        setAuthState(unauthenticatedState);
+      }
+
+      return;
     }
 
     const shouldDeferNetworkRefresh =
@@ -376,10 +393,14 @@ export function useAuth() {
 
       currentAuthAbortController?.abort("useEffect-cleanup");
     };
-  }, []);
+  }, [options.passive]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (options.passive || isPassiveAuthRoute()) {
       return;
     }
 
@@ -418,7 +439,7 @@ export function useAuth() {
       window.removeEventListener("pageshow", handlePageShow);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [options.passive]);
 
   const signIn = async (credentials: AuthSignInInput) => {
     invalidateAuthResolution("signIn");

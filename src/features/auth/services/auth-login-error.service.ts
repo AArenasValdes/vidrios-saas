@@ -9,6 +9,8 @@ const AUTH_LOGIN_ERROR_COPY: Record<AuthLoginErrorCode, string> = {
   invalid_credentials: "Revisa tu correo y contrasena. Ese acceso no coincide.",
   network_unavailable:
     "No pudimos conectarnos. Revisa internet en este celular e intenta otra vez.",
+  rate_limited:
+    "Hay demasiados intentos desde este celular. Espera un minuto y vuelve a intentar.",
   device_storage_blocked:
     "Este celular no pudo guardar bien la sesion local. Intenta reiniciar esta app.",
   login_timeout:
@@ -154,6 +156,16 @@ export function classifyAuthLoginError(error: unknown) {
     rawText.includes("correo o contrasena incorrectos")
   ) {
     return new AuthLoginError("invalid_credentials");
+  }
+
+  if (
+    rawText.includes("request rate limit reached") ||
+    rawText.includes("too many requests") ||
+    rawText.includes("over request rate limit") ||
+    rawText.includes("over_rate_limit") ||
+    rawText.includes("429")
+  ) {
+    return new AuthLoginError("rate_limited");
   }
 
   if (isStorageBlockedError(rawText)) {

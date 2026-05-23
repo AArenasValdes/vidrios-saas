@@ -46,6 +46,15 @@ describe("auth-login-error.service", () => {
     expect(error.code).toBe("device_storage_blocked");
   });
 
+  it("clasifica rate limit de Supabase Auth", () => {
+    const error = classifyAuthLoginError(
+      new Error("Request rate limit reached")
+    );
+
+    expect(error.code).toBe("rate_limited");
+    expect(error.message).toBe(getAuthLoginErrorCopy("rate_limited"));
+  });
+
   it("extrae un detalle tecnico corto para diagnostico", () => {
     const detail = getAuthLoginErrorDiagnosticDetail(
       new Error("SecurityError: Failed to read the 'localStorage' property from 'Window'")

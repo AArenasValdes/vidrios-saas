@@ -84,6 +84,11 @@ function ProbeAuth() {
   );
 }
 
+function ProbePassiveAuth() {
+  const { cargando } = useAuth({ passive: true });
+  return <span data-testid="estado-passive">{cargando ? "cargando" : "listo"}</span>;
+}
+
 describe("useAuth", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -389,5 +394,17 @@ describe("useAuth", () => {
     });
 
     jest.useRealTimers();
+  });
+
+  it("no refresca auth en segundo plano en la ruta de login si se usa modo passive", async () => {
+    subscribeToAuthChanges.mockImplementation(() => jest.fn());
+
+    render(<ProbePassiveAuth />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("estado-passive")).toHaveTextContent("listo");
+    });
+
+    expect(getCurrentAuthState).not.toHaveBeenCalled();
   });
 });
