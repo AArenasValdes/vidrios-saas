@@ -151,7 +151,7 @@ await service.updateByOrganizationId("org-1", {
  isPublished: false,
  });
 
- expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", expect.objectContaining({
+  expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", expect.objectContaining({
  empresaNombre: "San Marco",
  empresaLogoUrl: null,
  empresaDireccion: "La Serena",
@@ -184,7 +184,7 @@ await service.updateByOrganizationId("org-1", {
  publicSubtitle: "",
  publicZone: "",
  publicBusinessType: "",
- secondaryColor: "#25d366",
+  secondaryColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
  heroMode: "gradient",
  heroImageUrl: null,
  heroTitle: "",

@@ -42,7 +42,6 @@ import { subscribeToPushNotifications } from "@/utils/web-push";
 import s from "./page.module.css";
 
 const BRAND_PRESETS = ["#4F7DD4", "#243B6B", "#2EA5E6", "#1DB98B", "#F59E0B", "#EF4444", "#8B5CF6"];
-const SECONDARY_PRESETS = ["#25D366", "#2EA5E6", "#1DB98B", "#F59E0B", "#8B5CF6", "#EF4444"];
 
 const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   organizationId: null,
@@ -80,7 +79,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   finalCtaSubtitle: "",
   finalCtaLabel: "",
   businessHoursNote: "",
-  secondaryColor: "",
+  secondaryColor: DEFAULT_ORGANIZATION_BRAND_COLOR,
   heroMode: "gradient",
   heroImageUrl: null,
   heroTitle: "",
@@ -315,7 +314,17 @@ export default function ConfiguracionEmpresaPage() {
       key: K,
       value: UpdateOrganizationProfileInput[K]
     ) => {
-      setForm((current) => ({ ...current, [key]: value }));
+      setForm((current) => {
+        if (key === "brandColor" && typeof value === "string") {
+          return {
+            ...current,
+            brandColor: value,
+            secondaryColor: value,
+          };
+        }
+
+        return { ...current, [key]: value };
+      });
       setSectionFeedback(null);
     },
     []
@@ -458,7 +467,6 @@ export default function ConfiguracionEmpresaPage() {
   );
   const brandComplete = Boolean(
     form.brandColor.trim() &&
-      form.secondaryColor.trim() &&
       (form.empresaLogoUrl || previewUrl)
   );
   const commercialComplete = Boolean(form.formaPago.trim());
@@ -471,7 +479,6 @@ export default function ConfiguracionEmpresaPage() {
   ]);
   const brandSummary = compactJoin([
     form.brandColor.toUpperCase(),
-    form.secondaryColor.toUpperCase(),
     form.empresaLogoUrl || previewUrl ? "Logo subido" : "Sin logo",
   ]);
   const commercialSummary = compactJoin([
@@ -664,28 +671,9 @@ export default function ConfiguracionEmpresaPage() {
                     <input type="color" value={form.brandColor} onChange={(event) => handleFieldChange("brandColor", event.target.value)} aria-label="Elegir color personalizado" />
                   </label>
                 </div>
-                <span className={s.inlineInfo}>Se refleja en presupuesto, página pública y elementos activos.</span>
+                <span className={s.inlineInfo}>Se refleja en presupuesto, página pública, footer y elementos activos.</span>
               </div>
 
-              <div className={s.field}>
-                <span className={s.label}>Color secundario</span>
-                <div className={s.swatchRow}>
-                  {SECONDARY_PRESETS.map((color) => {
-                    const isActive = form.secondaryColor.toLowerCase() === color.toLowerCase();
-                    return (
-                      <button key={color} type="button" className={`${s.colorSwatch} ${isActive ? s.colorSwatchActive : ""}`} style={{ backgroundColor: color }} onClick={() => handleFieldChange("secondaryColor", color)} aria-label={`Usar color secundario ${color}`} aria-pressed={isActive}>
-                        {isActive ? <LuCheck aria-hidden /> : null}
-                      </button>
-                    );
-                  })}
-                  <label className={s.customColor}>
-                    <span className={s.customColorPreview} style={{ backgroundColor: form.secondaryColor }} />
-                    <span className={s.customColorLabel}>Otro</span>
-                    <input type="color" value={form.secondaryColor} onChange={(event) => handleFieldChange("secondaryColor", event.target.value)} aria-label="Elegir color secundario personalizado" />
-                  </label>
-                </div>
-                <span className={s.inlineInfo}>Se usa en WhatsApp, botones y acentos de la página pública.</span>
-              </div>
 
               <div className={s.field}>
                 <span className={s.label}>Logo</span>

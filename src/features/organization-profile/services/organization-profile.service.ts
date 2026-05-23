@@ -47,7 +47,6 @@ export const PUBLIC_SCHEDULE_DAY_ORDER: PublicScheduleDay[] = [
   "6",
   "0",
 ];
-export const DEFAULT_SECONDARY_COLOR = "#25d366";
 export const DEFAULT_HERO_TITLE = "Cotiza vidrios y aluminio en menos de 1 minuto";
 export const DEFAULT_HERO_SUBTITLE =
   "Especialistas en instalaciones a medida con terminaciones premium.";
@@ -260,7 +259,7 @@ export function hexToRgbChannels(hex: string) {
   const green = Number.parseInt(normalized.slice(2, 4), 16);
   const blue = Number.parseInt(normalized.slice(4, 6), 16);
 
-  return `${red} ${green} ${blue}`;
+  return `${red}, ${green}, ${blue}`;
 }
 
 export function isLightHexColor(hex: string) {
@@ -397,16 +396,6 @@ function isDuplicatePublicRequestSlugError(error: unknown) {
 function normalizeHeroMode(value: string | null | undefined): HeroMode {
   if (value === "image") return "image";
   return "gradient";
-}
-
-function sanitizeSecondaryColor(value: string | null | undefined) {
-  const normalized = value?.trim() ?? "";
-
-  if (/^#[0-9a-f]{6}$/i.test(normalized)) {
-    return normalized.toLowerCase();
-  }
-
-  return DEFAULT_SECONDARY_COLOR;
 }
 
 function buildNormalizedProfileInput(
@@ -690,7 +679,7 @@ export function resolveOrganizationProfile(
     finalCtaLabel:
       normalizeText(profile?.finalCtaLabel) || DEFAULT_FINAL_CTA_LABEL,
     businessHoursNote: normalizeText(profile?.businessHoursNote),
-    secondaryColor: sanitizeSecondaryColor(profile?.secondaryColor),
+    secondaryColor: sanitizeBrandColor(profile?.brandColor),
     heroMode: normalizeHeroMode(profile?.heroMode),
     heroImageUrl: profile?.heroImageUrl ?? null,
     heroTitle: normalizeText(profile?.heroTitle) || DEFAULT_HERO_TITLE,
@@ -786,7 +775,7 @@ export function createOrganizationProfileService(
           finalCtaSubtitle: normalizeText(input.finalCtaSubtitle),
           finalCtaLabel: normalizeText(input.finalCtaLabel),
           businessHoursNote: normalizeText(input.businessHoursNote),
-          secondaryColor: sanitizeSecondaryColor(input.secondaryColor),
+          secondaryColor: sanitizeBrandColor(input.brandColor),
           heroMode: normalizeHeroMode(input.heroMode),
           heroImageUrl: input.heroImageUrl,
           heroTitle: normalizeText(input.heroTitle),

@@ -107,6 +107,26 @@ function getInitials(value: string) {
     .slice(0, 2);
 }
 
+function mixHexColor(base: string, target: string, amount: number) {
+  const weight = Math.min(1, Math.max(0, amount));
+  const from = base.replace("#", "");
+  const to = target.replace("#", "");
+
+  if (from.length !== 6 || to.length !== 6) {
+    return base;
+  }
+
+  const channels = [0, 2, 4].map((offset) => {
+    const baseChannel = Number.parseInt(from.slice(offset, offset + 2), 16);
+    const targetChannel = Number.parseInt(to.slice(offset, offset + 2), 16);
+    const mixed = Math.round(baseChannel + (targetChannel - baseChannel) * weight);
+
+    return mixed.toString(16).padStart(2, "0");
+  });
+
+  return `#${channels.join("")}`;
+}
+
 function resolveServiceItems(config: {
   publicServices: string[];
   publicBusinessType: string;
@@ -197,6 +217,10 @@ export default async function SolicitudEmpresaPage({
   const accentColor = isLightHexColor(config.brandColor)
     ? "#335ea9"
     : config.brandColor;
+  const brandStrong = mixHexColor(accentColor, "#0f172a", 0.28);
+  const footerBase = mixHexColor(accentColor, "#020617", 0.62);
+  const footerPanel = mixHexColor(accentColor, "#0f172a", 0.48);
+  const footerHighlight = mixHexColor(accentColor, "#ffffff", 0.18);
 
   const isAvailable = isOrganizationOpenAtDate({
     schedule: config.solicitudPublicaHorarioPorDia,
@@ -274,7 +298,10 @@ export default async function SolicitudEmpresaPage({
       style={{
         ["--brand" as string]: accentColor,
         ["--brand-rgb" as string]: hexToRgbChannels(accentColor),
-        ["--wa" as string]: config.secondaryColor,
+        ["--brand-strong" as string]: brandStrong,
+        ["--footer-base" as string]: footerBase,
+        ["--footer-panel" as string]: footerPanel,
+        ["--footer-highlight-rgb" as string]: hexToRgbChannels(footerHighlight),
       }}
     >
       <section className={s.heroSection}>

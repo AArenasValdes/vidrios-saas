@@ -76,7 +76,7 @@ describe("organization-profile.service", () => {
 
     expect(input.solicitudPublicaSlug).toBe("mi-empresa-serena");
     expect(input.brandColor).toBe("#243b6b");
-    expect(input.secondaryColor).toBe("#25d366");
+    expect(input.secondaryColor).toBe("#243b6b");
   });
 
   it("debe construir el input de Pagina de venta manteniendo defaults del sistema", () => {
@@ -103,7 +103,7 @@ describe("organization-profile.service", () => {
     expect(config.publicBusinessType).toBe("Ventanas de aluminio");
     expect(config.empresaDireccion).toBe("Coquimbo 456");
     expect(config.brandColor).toBe("#1a3a5c");
-    expect(config.secondaryColor).toBe("#25d366");
+    expect(config.secondaryColor).toBe("#1a3a5c");
   });
 
   it("debe fijar CTA final del sistema y no depender del valor guardado", () => {

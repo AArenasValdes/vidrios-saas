@@ -1,11 +1,10 @@
 .root {
   --brand: #335ea9;
-  --brand-rgb: 51 94 169;
+  --brand-rgb: 51, 94, 169;
   --brand-strong: #1d4f9e;
-  --brand-soft: rgba(var(--brand-rgb), 0.08);
-  --brand-line: rgba(var(--brand-rgb), 0.18);
-  --wa: #24c45a;
-  --wa-strong: #16a34a;
+  --footer-base: #0f172a;
+  --footer-panel: #16243f;
+  --footer-highlight-rgb: 117, 151, 213;
   --gold-soft: #f4c970;
   --surface: #ffffff;
   --surface-soft: #f7f9fc;
@@ -231,8 +230,8 @@
   font-size: 15px;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(180deg, var(--wa), var(--wa-strong));
-  box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.2);
+  background: linear-gradient(180deg, var(--brand), var(--brand-strong));
+  box-shadow: 0 16px 30px rgba(var(--brand-rgb), 0.22);
 }
 
 .secondaryHeroCta,
@@ -1205,21 +1204,49 @@
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 20px;
-  padding: 32px 24px;
-  border-radius: 24px;
-  background: #111827;
+  gap: 22px;
+  padding: 32px 24px 24px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(var(--brand-rgb), 0.34), transparent 34%),
+    radial-gradient(circle at 86% 0%, rgba(var(--footer-highlight-rgb), 0.24), transparent 28%),
+    linear-gradient(155deg, var(--footer-base) 0%, var(--footer-panel) 52%, var(--footer-base) 100%);
+  box-shadow:
+    0 24px 48px rgba(15, 23, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: #ffffff;
   text-align: center;
+  isolation: isolate;
+}
+
+.companyFooter::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.03), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .companyFooterAccent {
-  display: none;
+  position: absolute;
+  inset: 20px auto auto 24px;
+  width: 160px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(var(--brand-rgb), 0.28));
+  box-shadow: 0 0 20px rgba(var(--brand-rgb), 0.4);
+  z-index: 1;
 }
 
 .companyFooterMain {
   display: grid;
   gap: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .companyFooterIdentity {
@@ -1238,8 +1265,9 @@
 
 .footerLogo {
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background: #ffffff;
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.18);
 }
 
 .footerLogoFallback {
@@ -1250,30 +1278,33 @@
   font-family: var(--font-landing-display), sans-serif;
   font-size: 20px;
   font-weight: 700;
+  box-shadow: 0 14px 28px rgba(var(--brand-rgb), 0.2);
 }
 
 .companyFooterCopy {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .companyFooterCopy strong {
   color: #ffffff;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 
 .companyFooterCopy span {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.74);
   font-size: 14px;
 }
 
 .footerInfoGrid {
   display: grid;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 18px;
   text-align: left;
 }
 
@@ -1290,7 +1321,7 @@
 .footerInfoItem svg {
   width: 16px;
   height: 16px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(var(--footer-highlight-rgb));
   flex-shrink: 0;
 }
 
@@ -1314,22 +1345,58 @@
   display: grid;
   place-items: center;
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
   color: #ffffff;
-  transition: background 150ms ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: background 150ms ease, transform 150ms ease, border-color 150ms ease;
 }
 
 .socialLink:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(180deg, rgba(var(--brand-rgb), 0.36), rgba(255, 255, 255, 0.12));
+  border-color: rgba(var(--brand-rgb), 0.35);
+  transform: translateY(-1px);
 }
 
 .brandFooterText {
   margin: 0;
-  color: rgba(255, 255, 255, 0.4);
+  position: relative;
+  z-index: 1;
+  padding-top: 4px;
+  color: rgba(255, 255, 255, 0.62);
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+@media (min-width: 860px) {
+  .companyFooter {
+    text-align: left;
+  }
+
+  .companyFooterMain {
+    grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+  }
+
+  .companyFooterIdentity {
+    align-items: flex-start;
+  }
+
+  .footerInfoGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footerActions,
+  .socialRail {
+    justify-content: flex-start;
+  }
+
+  .brandFooterText {
+    text-align: center;
+  }
 }
 
 /* ========== TESTIMONIAL FORM ========== */
