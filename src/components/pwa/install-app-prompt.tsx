@@ -314,6 +314,10 @@ export function InstallAppPrompt() {
           </p>
         </div>
 
+        <button type="button" className={s.barClose} onClick={closePrompt} aria-label="Cerrar">
+          X
+        </button>
+
         <div className={s.barActions}>
           {deferredPrompt ? (
             <button type="button" className={s.primary} onClick={handleInstall}>
@@ -324,9 +328,6 @@ export function InstallAppPrompt() {
               Descargar app
             </button>
           )}
-          <button type="button" className={s.close} onClick={closePrompt}>
-            X
-          </button>
         </div>
       </div>
 

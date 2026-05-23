@@ -124,7 +124,7 @@
 .fieldInput {
   width: 100%;
   min-height: 50px;
-  padding: 0 62px 0 46px;
+  padding: 0 52px 0 46px;
   border-radius: 10px;
   border: 1px solid var(--login-border);
   background: var(--login-surface-strong);
@@ -155,29 +155,30 @@
 
 .passwordToggle {
   position: absolute;
-  right: 10px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 38px;
-  min-height: 38px;
+  width: 24px;
+  min-height: 24px;
   padding: 0;
-  border: 1px solid rgba(164, 182, 214, 0.18);
-  border-radius: 999px;
-  background: rgba(10, 23, 42, 0.92);
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: #dbe8fb;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
   cursor: pointer;
 }
 
 .passwordToggle:hover {
-  border-color: rgba(164, 182, 214, 0.34);
+  color: #f4f7fc;
 }
 
 .passwordToggle:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.18);
+  box-shadow: none;
 }
 
 .utilityRow {
@@ -598,9 +599,9 @@
   }
 
   .passwordToggle {
-    right: 8px;
-    width: 36px;
-    min-height: 36px;
+    right: 14px;
+    width: 24px;
+    min-height: 24px;
   }
 
   .signupText,
