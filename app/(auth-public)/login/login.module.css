@@ -124,7 +124,7 @@
 .fieldInput {
   width: 100%;
   min-height: 50px;
-  padding: 0 116px 0 46px;
+  padding: 0 62px 0 46px;
   border-radius: 10px;
   border: 1px solid var(--login-border);
   background: var(--login-surface-strong);
@@ -158,18 +158,16 @@
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  min-height: 34px;
-  padding: 0 10px;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
   border: 1px solid rgba(164, 182, 214, 0.18);
   border-radius: 999px;
   background: rgba(10, 23, 42, 0.92);
   color: #dbe8fb;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-family: "Inter", sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
+  justify-content: center;
   cursor: pointer;
 }
 
@@ -397,24 +395,14 @@
 
 .recoveryCard {
   display: grid;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(164, 182, 214, 0.18);
-  background: rgba(11, 26, 51, 0.5);
+  gap: 12px;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(164, 182, 214, 0.12);
 }
 
 .recoveryCopy {
   display: grid;
-  gap: 6px;
-}
-
-.recoveryTitle {
-  margin: 0;
-  color: #eef5ff;
-  font-family: "Inter", sans-serif;
-  font-size: 0.96rem;
-  font-weight: 700;
+  gap: 4px;
 }
 
 .recoveryText,
@@ -425,23 +413,22 @@
 }
 
 .recoveryText {
-  color: #b9c8dd;
-  font-size: 0.9rem;
+  color: #d7e5ff;
+  font-size: 0.86rem;
 }
 
 .recoveryHint {
   color: #8ea2bf;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 
 .recoveryButton {
-  min-height: 46px;
-  width: fit-content;
-  max-width: 100%;
+  min-height: 44px;
+  width: 100%;
   padding: 0 16px;
   border-radius: 12px;
   border: 1px solid rgba(164, 182, 214, 0.22);
-  background: rgba(14, 27, 49, 0.92);
+  background: transparent;
   color: #edf4ff;
   display: inline-flex;
   align-items: center;
@@ -612,9 +599,8 @@
 
   .passwordToggle {
     right: 8px;
-    min-height: 32px;
-    padding: 0 8px;
-    font-size: 0.76rem;
+    width: 36px;
+    min-height: 36px;
   }
 
   .signupText,
@@ -623,7 +609,4 @@
     font-size: 0.9rem;
   }
 
-  .recoveryButton {
-    width: 100%;
-  }
 }

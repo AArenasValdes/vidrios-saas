@@ -47,10 +47,8 @@ const copy = {
   passwordHide: "Ocultar",
   appResetDone:
     "Reiniciamos la app en este dispositivo. Intenta entrar de nuevo desde aqui.",
-  recoveryTitle: "Problemas en esta app instalada?",
-  recoveryText:
-    "Si en navegador entra y en la app no, reinicia el estado local de Ventora en este celular.",
-  recoveryHint: "No borra tus cotizaciones ni los datos de tu empresa.",
+  recoveryText: "Si la app falla solo en este celular, puedes reiniciarla.",
+  recoveryHint: "No borra tus datos.",
   recoveryAction: "Reiniciar esta app",
   recovering: "Reiniciando...",
   visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
@@ -353,7 +351,6 @@ export default function LoginView({
                     aria-pressed={mostrarPassword}
                   >
                     {mostrarPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
-                    <span>{mostrarPassword ? copy.passwordHide : copy.passwordShow}</span>
                   </button>
                 </div>
               </div>
@@ -419,9 +416,8 @@ export default function LoginView({
               </button>
             </form>
 
-            <section className={s.recoveryCard} aria-label={copy.recoveryTitle}>
+            <section className={s.recoveryCard} aria-label={copy.recoveryAction}>
               <div className={s.recoveryCopy}>
-                <p className={s.recoveryTitle}>{copy.recoveryTitle}</p>
                 <p className={s.recoveryText}>{copy.recoveryText}</p>
                 <p className={s.recoveryHint}>{copy.recoveryHint}</p>
               </div>

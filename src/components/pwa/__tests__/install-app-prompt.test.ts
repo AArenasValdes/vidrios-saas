@@ -8,11 +8,16 @@ describe("install-app-prompt helpers", () => {
 
     expect(hint).toEqual({
       browserLabel: "Opera",
-      menuLabel: "menu O",
-      menuLocationLabel: "abajo a la derecha",
-      installLabel: "Instalar app",
-      fallbackInstallLabel: "Agregar a pantalla principal",
+      menuLabel: "los tres puntitos",
+      menuLocationLabel: "arriba a la derecha",
+      installLabel: "Anadir a...",
+      fallbackInstallLabel: "Pantalla de inicio",
       menuSymbol: "O",
+      steps: [
+        'Toca los tres puntitos arriba a la derecha.',
+        'Toca "Anadir a...".',
+        'Toca "Pantalla de inicio".',
+      ],
     });
   });
 

@@ -57,11 +57,16 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
   if (/opera|opr\//.test(ua)) {
     return {
       browserLabel: "Opera",
-      menuLabel: "menu O",
-      menuLocationLabel: "abajo a la derecha",
-      installLabel: "Instalar app",
-      fallbackInstallLabel: "Agregar a pantalla principal",
+      menuLabel: "los tres puntitos",
+      menuLocationLabel: "arriba a la derecha",
+      installLabel: "Anadir a...",
+      fallbackInstallLabel: "Pantalla de inicio",
       menuSymbol: "O",
+      steps: [
+        'Toca los tres puntitos arriba a la derecha.',
+        'Toca "Anadir a...".',
+        'Toca "Pantalla de inicio".',
+      ],
     };
   }
 
@@ -73,6 +78,11 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
       menuSymbol: "⋯",
+      steps: [
+        'Toca el menu del navegador.',
+        'Toca "Instalar app".',
+        'Abre Ventora desde el icono nuevo.',
+      ],
     };
   }
 
@@ -84,6 +94,11 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
       installLabel: "Agregar pagina a",
       fallbackInstallLabel: "Pantalla de inicio",
       menuSymbol: "≡",
+      steps: [
+        'Toca el menu del navegador.',
+        'Toca "Agregar pagina a".',
+        'Elige "Pantalla de inicio".',
+      ],
     };
   }
 
@@ -95,6 +110,11 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
       installLabel: "Instalar app",
       fallbackInstallLabel: "Agregar a pantalla principal",
       menuSymbol: "⋮",
+      steps: [
+        'Toca el menu del navegador.',
+        'Toca "Instalar app".',
+        'Abre Ventora desde el icono nuevo.',
+      ],
     };
   }
 
@@ -105,6 +125,11 @@ export function getAndroidManualInstallHintFromUserAgent(userAgent: string) {
     installLabel: "Instalar app",
     fallbackInstallLabel: "Agregar a pantalla principal",
     menuSymbol: "⋮",
+    steps: [
+      'Toca el menu del navegador.',
+      'Busca "Instalar app".',
+      'Si no aparece, usa "Agregar a pantalla principal".',
+    ],
   };
 }
 
@@ -124,6 +149,7 @@ export function InstallAppPrompt() {
   const [showIosHint, setShowIosHint] = useState(false);
   const [showAndroidHint, setShowAndroidHint] = useState(false);
   const [dismissed, setDismissed] = useState(true);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [androidHint, setAndroidHint] = useState<ReturnType<
     typeof getAndroidManualInstallHint
   >>(null);
@@ -133,6 +159,7 @@ export function InstallAppPrompt() {
       queueMicrotask(() => {
         setShowIosHint(false);
         setShowAndroidHint(false);
+        setIsGuideOpen(false);
         setAndroidHint(null);
         setDismissed(true);
         setIsHydrated(true);
@@ -147,6 +174,7 @@ export function InstallAppPrompt() {
     queueMicrotask(() => {
       setShowIosHint(!wasDismissed && !standalone && isIosSafari());
       setShowAndroidHint(false);
+      setIsGuideOpen(false);
       setAndroidHint(manualAndroidHint);
       setDismissed(wasDismissed || standalone);
       setIsHydrated(true);
@@ -168,6 +196,7 @@ export function InstallAppPrompt() {
       setDismissed(false);
       setShowIosHint(false);
       setShowAndroidHint(false);
+      setIsGuideOpen(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -215,6 +244,7 @@ export function InstallAppPrompt() {
     setDismissed(true);
     setShowIosHint(false);
     setShowAndroidHint(false);
+    setIsGuideOpen(false);
   };
 
   const handleInstall = async () => {
@@ -231,6 +261,14 @@ export function InstallAppPrompt() {
     }
 
     setDeferredPrompt(null);
+  };
+
+  const openGuide = () => {
+    setIsGuideOpen(true);
+  };
+
+  const closeGuide = () => {
+    setIsGuideOpen(false);
   };
 
   useEffect(() => {
@@ -264,112 +302,100 @@ export function InstallAppPrompt() {
 
   return (
     <div className={s.root}>
-      <div className={s.card}>
-        <div className={s.header}>
-          <div>
-            <p className={s.title}>Instala Ventora en tu celular</p>
-            {deferredPrompt ? (
-              <p className={s.text}>
-                Abre Ventora como app y entra mas rapido desde la pantalla de
-                inicio.
-              </p>
-            ) : showAndroidHint && androidHint ? (
-              <p className={s.text}>
-                Si {androidHint.browserLabel} no muestra el boton solo, te
-                guiamos para dejar Ventora instalada en menos de un minuto.
-              </p>
-            ) : (
-              <p className={s.text}>
-                En iPhone, usa Safari y agrega Ventora a tu pantalla de inicio.
-              </p>
-            )}
-          </div>
+      <div className={s.bar}>
+        <div className={s.barCopy}>
+          <p className={s.barTitle}>Descargar app</p>
+          <p className={s.barText}>
+            {deferredPrompt
+              ? "Guardala en tu inicio."
+              : showAndroidHint && androidHint
+              ? `Instalala en ${androidHint.browserLabel} en 3 pasos.`
+              : "Guardala en tu celular."}
+          </p>
+        </div>
 
+        <div className={s.barActions}>
+          {deferredPrompt ? (
+            <button type="button" className={s.primary} onClick={handleInstall}>
+              Descargar app
+            </button>
+          ) : (
+            <button type="button" className={s.primary} onClick={openGuide}>
+              Descargar app
+            </button>
+          )}
           <button type="button" className={s.close} onClick={closePrompt}>
             X
           </button>
         </div>
+      </div>
 
-        {deferredPrompt ? (
-          <div className={s.actions}>
-            <button type="button" className={s.primary} onClick={handleInstall}>
-              Instalar app
-            </button>
-            <button type="button" className={s.ghost} onClick={closePrompt}>
-              Ahora no
-            </button>
-          </div>
-        ) : showAndroidHint && androidHint ? (
-          <div className={s.manualBlock}>
-            <div className={s.browserGuide} aria-hidden>
-              <div className={s.browserMock}>
-                <div className={s.browserTopbar}>
-                  <span className={s.browserDot} />
-                  <span className={s.browserUrl}>ventorap.cl</span>
-                </div>
-                <div className={s.browserBody}>
-                  <div className={s.browserCard}>
-                    <span className={s.browserCardLabel}>Ventora</span>
-                    <strong>Instala la app</strong>
-                    <span>y entra mas rapido</span>
-                  </div>
-                </div>
-                <div className={s.browserFooter}>
-                  <span className={s.browserNavIcon}>◁</span>
-                  <span className={s.browserNavIcon}>○</span>
-                  <span className={s.browserNavIcon}>□</span>
-                  <span className={s.browserMenuHint}>
-                    {androidHint.menuSymbol}
-                  </span>
-                </div>
-                <div className={s.browserPulse} />
-                <div className={s.browserCallout}>
-                  Toca aqui
-                  <span>{androidHint.menuLabel}</span>
-                </div>
+      {isGuideOpen ? (
+        <div className={s.sheet}>
+          <div className={s.card}>
+            <div className={s.header}>
+              <div>
+                <p className={s.title}>
+                  {showAndroidHint && androidHint
+                    ? `Instalar en ${androidHint.browserLabel}`
+                    : "Instalar Ventora"}
+                </p>
+                <p className={s.text}>
+                  {showAndroidHint && androidHint
+                    ? "Haz esto una vez."
+                    : "Haz esto una vez."}
+                </p>
               </div>
-            </div>
 
-            <div className={s.stepGrid}>
-              <div className={s.stepRow}>
-                <span className={s.stepBadge}>1</span>
-                <p className={s.stepText}>
-                  Toca el {androidHint.menuLabel} {androidHint.menuLocationLabel}.
-                </p>
-              </div>
-              <div className={s.stepRow}>
-                <span className={s.stepBadge}>2</span>
-                <p className={s.stepText}>
-                  Busca <strong>{androidHint.installLabel}</strong>.
-                </p>
-              </div>
-              <div className={s.stepRow}>
-                <span className={s.stepBadge}>3</span>
-                <p className={s.stepText}>
-                  Si no aparece, toca{" "}
-                  <strong>{androidHint.fallbackInstallLabel}</strong>.
-                </p>
-              </div>
-              <div className={s.stepRow}>
-                <span className={s.stepBadge}>4</span>
-                <p className={s.stepText}>
-                  Despues abre Ventora desde el icono nuevo en tu inicio.
-                </p>
-              </div>
-            </div>
-            <div className={s.actions}>
-              <button type="button" className={s.ghost} onClick={closePrompt}>
-                Ya entendi
+              <button type="button" className={s.close} onClick={closeGuide}>
+                X
               </button>
             </div>
+
+            {showAndroidHint && androidHint ? (
+              <div className={s.manualBlock}>
+                <div className={s.miniGuide} aria-hidden>
+                  <div className={s.miniBrowser}>
+                    <span className={s.miniBrand}>ventorap.cl</span>
+                    <span className={s.miniMenuDots}>{androidHint.menuSymbol}</span>
+                  </div>
+                  <div className={s.miniHint}>
+                    Toca aqui
+                    <strong>{androidHint.menuLabel}</strong>
+                  </div>
+                </div>
+
+                <div className={s.stepGrid}>
+                  {androidHint.steps.map((step, index) => (
+                    <div className={s.stepRow} key={step}>
+                      <span className={s.stepBadge}>{index + 1}</span>
+                      <p className={s.stepText}>{step}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className={s.actions}>
+                  <button type="button" className={s.ghost} onClick={closeGuide}>
+                    Ya entendi
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={s.manualBlock}>
+                <ol className={s.steps}>
+                  <li>Toca Compartir o el menu del navegador.</li>
+                  <li>Busca Instalar app o Agregar a pantalla de inicio.</li>
+                  <li>Abre Ventora desde el icono nuevo.</li>
+                </ol>
+                <div className={s.actions}>
+                  <button type="button" className={s.ghost} onClick={closeGuide}>
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <ol className={s.steps}>
-            <li>Toca Compartir en Safari.</li>
-            <li>Selecciona Agregar a pantalla de inicio.</li>
-          </ol>
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
