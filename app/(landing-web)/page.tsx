@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   type FormEvent,
   type ReactNode,
+  useEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -13,14 +14,17 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpRight,
+  BarChart3,
   CircleCheck,
   ClipboardList,
   Clock3,
   FileText,
   FolderKanban,
+  FolderOpen,
   Menu,
   MessageSquareText,
   ShieldCheck,
+  TrendingUp,
   UserRound,
   X,
 } from "lucide-react";
@@ -35,7 +39,7 @@ const navLinks = [
   { href: "#problema", label: "Problema" },
   { href: "#solucion", label: "Solucion" },
   { href: "#como-funciona", label: "Como funciona" },
-  { href: "#pantallas", label: "Pantallas" },
+  { href: "#resultados", label: "Resultados" },
   { href: "#preguntas", label: "Preguntas" },
   { href: "#contacto", label: "Contacto" },
 ] as const;
@@ -121,30 +125,73 @@ const solutionSteps = [
   },
 ] as const;
 
-const showcaseCards = [
+const resultMetrics = [
   {
-    title: "Landing comercial lista para captar",
-    description:
-      "Una experiencia premium para mostrar autoridad, trabajos y acceso directo a solicitud.",
-    image: "/ventora-landing-page/mini-langin-page.png",
+    icon: Clock3,
+    value: 90,
+    suffix: " min",
+    title: "Tiempo ahorrado",
+    description: "Menos tiempo perdido entre WhatsApp, seguimientos y presupuestos.",
+    detail: "60-90 min al dia",
+    tooltip:
+      "Ventora ordena consultas, respuestas y seguimientos para que avances mas rapido.",
   },
   {
-    title: "Solicitudes con prioridad comercial",
-    description:
-      "Panel claro para ver quien escribio, que pidio y quien necesita seguimiento primero.",
-    image: "/ventora-landing-page/dashboard.jpeg",
+    icon: TrendingUp,
+    value: 30,
+    suffix: "%",
+    title: "Mas cierres",
+    description: "Un embudo mas claro ayuda a cerrar mas trabajos.",
+    detail: "15-30% mas oportunidades",
+    tooltip:
+      "Al responder antes y hacer mejor seguimiento, se enfria menos trabajo.",
   },
   {
-    title: "Clientes y obras en contexto",
-    description:
-      "Todo queda conectado por cliente, contacto y trabajo activo, incluso cuando estas en terreno.",
-    image: "/ventora-landing-page/clientes.png",
+    icon: FolderOpen,
+    value: 1,
+    suffix: " panel",
+    title: "Todo ordenado",
+    description: "Solicitudes, clientes y cotizaciones en un solo lugar.",
+    detail: "mas seriedad al responder",
+    tooltip:
+      "Tu cliente recibe informacion mas clara y tu equipo trabaja con menos desorden.",
   },
   {
-    title: "Cotizacion y PDF sin friccion",
-    description:
-      "Cuando corresponde, pasas de solicitud a cotizacion profesional y PDF listo para compartir.",
-    image: "/ventora-landing-page/pdf-listo.png",
+    icon: BarChart3,
+    value: 4,
+    suffix: " canales",
+    title: "Canales medidos",
+    description: "Descubres por donde te llegan mas clientes para invertir mejor.",
+    detail: "WhatsApp, Instagram, Facebook y QR",
+    tooltip:
+      "Ventora te muestra desde que canal llega cada consulta para que no gastes a ciegas.",
+  },
+] as const;
+
+const channelInsights = [
+  {
+    name: "WhatsApp",
+    value: 46,
+    color: "#1E88FF",
+    note: "Canal mas directo para consultas listas para responder.",
+  },
+  {
+    name: "Instagram",
+    value: 28,
+    color: "#58A6FF",
+    note: "Atrae clientes que llegan por fotos, trabajos y vitrina visual.",
+  },
+  {
+    name: "Facebook",
+    value: 17,
+    color: "#8BC2FF",
+    note: "Sigue empujando consultas en comunas y grupos locales.",
+  },
+  {
+    name: "QR y otros",
+    value: 9,
+    color: "#D9E8FF",
+    note: "Buen apoyo para ferias, tarjetas y visitas a terreno.",
   },
 ] as const;
 
@@ -225,10 +272,77 @@ function SectionHeading({
   );
 }
 
+function CountUpNumber({
+  value,
+  suffix = "",
+}: {
+  value: number;
+  suffix?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const counterRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    const node = counterRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsActive(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.45 },
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    let frameId = 0;
+    const startedAt = performance.now();
+    const durationMs = 1200;
+
+    const tick = (currentTime: number) => {
+      const progress = Math.min((currentTime - startedAt) / durationMs, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplayValue(Math.round(value * eased));
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isActive, value]);
+
+  return (
+    <span ref={counterRef}>
+      {displayValue}
+      {suffix}
+    </span>
+  );
+}
+
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<
+    (typeof channelInsights)[number]["name"]
+  >(channelInsights[0].name);
   const [contactFeedback, setContactFeedback] = useState<{
     kind: "success" | "error";
     message: string;
@@ -264,6 +378,10 @@ export default function LandingPage() {
       source: "landing",
     });
   }
+
+  const activeChannel =
+    channelInsights.find((channel) => channel.name === selectedChannel) ??
+    channelInsights[0];
 
   async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -602,36 +720,100 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pantallas" className={s.showcaseSection}>
+      <section id="resultados" className={s.resultsSection}>
         <div className={s.container}>
           <SectionReveal>
             <SectionHeading
-              title="Pantallas reales para vender con mas claridad."
-              description="Menos ruido, mejor jerarquia y un flujo visible desde la primera consulta hasta el documento final."
+              label="RESULTADOS QUE IMPORTAN"
+              title="Resultados que puedes medir"
+              description="Valores basados en pruebas piloto y uso real para mostrar el impacto de Ventora en el dia a dia."
             />
           </SectionReveal>
 
-          <div className={s.showcaseGrid}>
-            {showcaseCards.map((item) => (
-              <SectionReveal key={item.title}>
-                <article className={s.showcaseCard}>
-                  <div className={s.showcaseImage}>
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={1365}
-                      height={768}
-                      unoptimized
-                      sizes="(max-width: 960px) 100vw, 40vw"
-                    />
-                  </div>
-                  <div className={s.showcaseCopy}>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </div>
-                </article>
-              </SectionReveal>
-            ))}
+          <div className={s.resultsLayout}>
+            <div className={s.metricsGrid}>
+              {resultMetrics.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <SectionReveal key={item.title}>
+                    <article
+                      className={s.metricCard}
+                      tabIndex={0}
+                      aria-label={`${item.title}: ${item.tooltip}`}
+                    >
+                      <div className={s.metricTop}>
+                        <span className={s.metricIcon} title={item.tooltip}>
+                          <Icon size={20} strokeWidth={2.1} aria-hidden />
+                        </span>
+                        <span className={s.metricDetail}>{item.detail}</span>
+                      </div>
+
+                      <strong className={s.metricValue} title={item.tooltip}>
+                        <CountUpNumber value={item.value} suffix={item.suffix} />
+                      </strong>
+
+                      <h3>{item.title}</h3>
+                      <p>{item.description}</p>
+                      <span className={s.metricTooltip}>{item.tooltip}</span>
+                    </article>
+                  </SectionReveal>
+                );
+              })}
+            </div>
+
+            <SectionReveal className={s.channelsCard}>
+              <div className={s.channelsHeader}>
+                <div>
+                  <p className={s.channelsEyebrow}>Visibilidad de canales</p>
+                  <h3>De que red social te cotizan mas</h3>
+                </div>
+                <strong className={s.channelsLeadValue}>{activeChannel.value}%</strong>
+              </div>
+
+              <p className={s.channelsDescription}>
+                Mira de donde vienen mas clientes y enfoca mejor tu esfuerzo.
+              </p>
+
+              <div className={s.channelBars} role="list" aria-label="Clientes por canal">
+                {channelInsights.map((channel) => {
+                  const isActive = channel.name === activeChannel.name;
+
+                  return (
+                    <button
+                      key={channel.name}
+                      type="button"
+                      className={`${s.channelBarButton} ${isActive ? s.channelBarButtonActive : ""}`}
+                      onClick={() => setSelectedChannel(channel.name)}
+                      onMouseEnter={() => setSelectedChannel(channel.name)}
+                      title={channel.note}
+                    >
+                      <span className={s.channelBarLabelRow}>
+                        <span>{channel.name}</span>
+                        <span>{channel.value}%</span>
+                      </span>
+                      <span className={s.channelBarTrack}>
+                        <span
+                          className={s.channelBarFill}
+                          style={{
+                            width: `${channel.value}%`,
+                            background: `linear-gradient(90deg, ${channel.color} 0%, rgba(30, 136, 255, 0.96) 100%)`,
+                          }}
+                        />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className={s.channelsInsight}>
+                <span
+                  className={s.channelsInsightDot}
+                  style={{ backgroundColor: activeChannel.color }}
+                />
+                <p>{activeChannel.note}</p>
+              </div>
+            </SectionReveal>
           </div>
         </div>
       </section>
@@ -821,7 +1003,7 @@ export default function LandingPage() {
             <div className={s.footerLinks}>
               <a href="#top">Inicio</a>
               <a href="#solucion">Solucion</a>
-              <a href="#pantallas">Pantallas</a>
+              <a href="#resultados">Resultados</a>
               <a href="#preguntas">Preguntas</a>
               <a href="#contacto">Contacto</a>
             </div>
