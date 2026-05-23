@@ -79,7 +79,7 @@
 .wordmark {
   display: block;
   width: auto;
-  height: 34px;
+  height: 40px;
 }
 
 .navLinks {
@@ -200,11 +200,22 @@
 }
 
 .heroSection {
+  overflow: hidden;
   padding-top: clamp(24px, 4vw, 44px);
+  background: linear-gradient(180deg, rgba(11, 15, 23, 0.96) 0%, rgba(5, 5, 5, 0.98) 100%);
+}
+
+.heroSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at 20% 18%, rgba(30, 136, 255, 0.2), transparent 28%),
-    radial-gradient(circle at 80% 30%, rgba(102, 119, 138, 0.16), transparent 24%),
-    linear-gradient(180deg, rgba(11, 15, 23, 0.96) 0%, rgba(5, 5, 5, 0.98) 100%);
+    linear-gradient(90deg, rgba(5, 5, 5, 0.96) 0%, rgba(11, 15, 23, 0.9) 42%, rgba(11, 15, 23, 0.72) 62%, rgba(5, 5, 5, 0.78) 100%),
+    url("/brand/landing-cotizar-bg.png");
+  background-position: center right;
+  background-size: cover;
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .heroHalo {
@@ -213,9 +224,9 @@
   background:
     linear-gradient(rgba(230, 232, 235, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(230, 232, 235, 0.04) 1px, transparent 1px),
-    radial-gradient(circle at 18% 16%, rgba(30, 136, 255, 0.14), transparent 34%),
-    radial-gradient(circle at 82% 30%, rgba(30, 136, 255, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(5, 5, 5, 0.3) 100%);
+    radial-gradient(circle at 18% 16%, rgba(30, 136, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 30%, rgba(30, 136, 255, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(5, 5, 5, 0.12) 0%, rgba(5, 5, 5, 0.44) 100%);
   background-size: 32px 32px, 32px 32px, auto, auto, auto;
   pointer-events: none;
   opacity: 0.95;
@@ -232,7 +243,7 @@
 
 .heroContent {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .heroKicker,
@@ -259,9 +270,9 @@
 
 .heroTitle {
   margin: 0;
-  max-width: 11ch;
-  font-size: clamp(40px, 5.1vw, 64px);
-  line-height: 0.95;
+  max-width: 12ch;
+  font-size: clamp(42px, 5.4vw, 70px);
+  line-height: 0.94;
   letter-spacing: -0.055em;
   font-weight: 900;
   color: var(--ink);
@@ -274,10 +285,10 @@
 
 .heroDescription {
   margin: 0;
-  max-width: 39ch;
+  max-width: 43ch;
   color: var(--ink-soft);
-  font-size: clamp(16px, 1.8vw, 19px);
-  line-height: 1.64;
+  font-size: clamp(17px, 1.9vw, 20px);
+  line-height: 1.7;
 }
 
 .heroActions,
@@ -374,7 +385,7 @@
 .quickGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
   margin-top: clamp(10px, 2vw, 22px);
 }
 
@@ -393,7 +404,7 @@
 
 .quickCard {
   position: relative;
-  padding: 20px 20px 18px;
+  padding: 24px 22px 22px;
   border-radius: 26px;
   overflow: hidden;
   border: 1px solid rgba(30, 136, 255, 0.12);
@@ -454,7 +465,7 @@
   position: relative;
   z-index: 1;
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.035em;
   color: var(--ink);
@@ -465,8 +476,8 @@
   z-index: 1;
   margin: 8px 0 0;
   color: var(--ink-soft);
-  font-size: 14px;
-  line-height: 1.62;
+  font-size: 15px;
+  line-height: 1.68;
   max-width: 30ch;
 }
 
@@ -499,14 +510,32 @@
 .problemSection {
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 72%, rgba(30, 136, 255, 0.12), transparent 26%),
-    radial-gradient(circle at 82% 18%, rgba(230, 232, 235, 0.04), transparent 24%),
+    radial-gradient(circle at 18% 72%, rgba(30, 136, 255, 0.14), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(230, 232, 235, 0.05), transparent 24%),
     linear-gradient(180deg, #0e1420 0%, #0a1018 100%);
 }
 
 .solutionSection,
 .contactSection {
   background: linear-gradient(180deg, #0b0f17 0%, #070b12 100%);
+}
+
+.contactSection {
+  overflow: hidden;
+}
+
+.contactSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.88) 0%, rgba(11, 15, 23, 0.74) 48%, rgba(11, 15, 23, 0.86) 100%),
+    linear-gradient(180deg, rgba(11, 15, 23, 0.22) 0%, rgba(5, 5, 5, 0.64) 100%),
+    url("/brand/landing-cotizar-bg.png");
+  background-size: cover;
+  background-position: center center;
+  opacity: 0.78;
+  pointer-events: none;
 }
 
 .processSection,
@@ -622,8 +651,85 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 18px;
+}
+
+.problemSplit {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.problemVisualWrap {
+  height: 100%;
+}
+
+.problemVisualCard {
+  height: 100%;
+  display: grid;
+  gap: 0;
+  border-radius: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(30, 136, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.96) 0%, rgba(10, 15, 25, 0.98) 100%);
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.22),
+    0 6px 18px rgba(30, 136, 255, 0.08);
+}
+
+.problemVisualMedia {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.problemVisualMedia::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 5, 0.08) 0%, rgba(5, 5, 5, 0.16) 48%, rgba(5, 5, 5, 0.72) 100%);
+  pointer-events: none;
+}
+
+.problemVisualMedia img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.problemVisualBody {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.problemVisualEyebrow {
+  color: var(--blue-700);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.problemVisualBody strong {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.problemVisualBody p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.68;
 }
 
 .problemCard,
@@ -1185,8 +1291,8 @@
 
 .showcaseGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
 }
 
 .showcaseCard {
@@ -1203,25 +1309,13 @@
 
 .showcaseImage img {
   width: 100%;
-  height: 240px;
+  height: 280px;
   object-fit: contain;
   object-position: top center;
 }
 
 .showcaseCopy {
-  padding: 0 22px 24px;
-}
-
-.showcaseLarge {
-  grid-column: span 1;
-}
-
-.showcaseMedium {
-  grid-column: span 1;
-}
-
-.showcaseSmall {
-  grid-column: span 1;
+  padding: 0 22px 28px;
 }
 
 .faqList {
@@ -1268,7 +1362,7 @@
 .contactLayout {
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
-  gap: 22px;
+  gap: 28px;
   align-items: start;
 }
 
@@ -1301,8 +1395,11 @@
   padding: 28px;
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(17, 24, 39, 0.96) 0%, rgba(8, 13, 22, 0.98) 100%);
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(8, 13, 22, 0.96) 100%);
   border: 1px solid rgba(30, 136, 255, 0.14);
+  box-shadow:
+    0 26px 56px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .contactForm {
@@ -1417,6 +1514,11 @@
   gap: 10px 18px;
 }
 
+.contactSection .container {
+  position: relative;
+  z-index: 1;
+}
+
 @media (max-width: 1080px) {
   .heroLayout,
   .contactLayout {
@@ -1429,7 +1531,7 @@
     min-height: 420px;
   }
 
-  .problemGrid,
+  .problemSplit,
   .processGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1501,6 +1603,15 @@
     grid-template-columns: 1fr;
   }
 
+  .problemSplit,
+  .showcaseGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .problemVisualMedia {
+    min-height: 340px;
+  }
+
   .solutionFlowGrid::before {
     left: 20px;
     right: auto;
@@ -1525,14 +1636,6 @@
     grid-template-columns: 1fr;
   }
 
-  .problemBackdropTrace,
-  .problemFloat3,
-  .problemFloat6,
-  .problemFloat7,
-  .problemFloat8 {
-    display: none;
-  }
-
   .footerLayout,
   .footerBottom {
     flex-direction: column;
@@ -1541,7 +1644,6 @@
 }
 
 @media (max-width: 640px) {
-  .heroTitle,
   .sectionTitle {
     max-width: none;
   }
@@ -1557,16 +1659,20 @@
   }
 
   .heroTitle {
-    font-size: clamp(30px, 10.5vw, 50px);
+    max-width: 8ch;
+    margin-inline: auto;
+    font-size: clamp(34px, 11vw, 52px);
     line-height: 0.98;
   }
 
   .heroDescription,
   .sectionDescription {
-    font-size: 15px;
+    font-size: 16px;
+    line-height: 1.72;
   }
 
   .heroDescription {
+    max-width: 22ch;
     margin-inline: auto;
   }
 
@@ -1585,15 +1691,13 @@
   }
 
   .heroTrust {
-    flex-wrap: nowrap;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 8px 10px;
     margin-bottom: 6px;
   }
 
   .heroTrustItem {
     gap: 6px;
-    flex-shrink: 0;
-    white-space: nowrap;
     font-size: 11px;
   }
 
@@ -1646,7 +1750,15 @@
   }
 
   .quickCard {
-    padding: 18px;
+    padding: 20px;
+  }
+
+  .quickCard strong {
+    font-size: 18px;
+  }
+
+  .quickCard p {
+    font-size: 15px;
   }
 
   .problemIntro .sectionHeading {
@@ -1700,38 +1812,6 @@
     opacity: 0.22;
   }
 
-  .problemFloat {
-    display: none;
-  }
-
-  .problemFloat1,
-  .problemFloat2 {
-    display: inline-flex;
-    min-height: 30px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.78);
-    border-color: rgba(230, 232, 235, 0.1);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-    color: rgba(174, 182, 195, 0.88);
-    font-size: 11px;
-    line-height: 1.2;
-    opacity: 0.78;
-    backdrop-filter: blur(8px);
-  }
-
-  .problemFloat1 {
-    top: 396px;
-    left: 18px;
-    max-width: 164px;
-  }
-
-  .problemFloat2 {
-    top: 434px;
-    right: 18px;
-    max-width: 96px;
-  }
-
   .problemMeta {
     margin-top: 14px;
     font-size: 11px;
@@ -1751,6 +1831,7 @@
   }
 
   .problemGrid,
+  .problemSplit,
   .processGrid {
     grid-template-columns: 1fr;
   }
@@ -1760,6 +1841,14 @@
   .contactCard {
     padding: 22px;
     border-radius: 26px;
+  }
+
+  .problemVisualMedia {
+    min-height: 280px;
+  }
+
+  .problemVisualBody strong {
+    font-size: 20px;
   }
 
   .faqQuestion {

@@ -31,16 +31,16 @@ interface LoginViewProps {
 const copy = {
   brand: "Ventora",
   title: "Bienvenido",
-  subtitle: "Accede a tu cuenta y gestiona tus cotizaciones",
-  emailLabel: "Email",
+  subtitle: "Ingresa a tu panel comercial y responde con mas orden desde cualquier lugar.",
+  emailLabel: "Correo",
   emailPlaceholder: "tu@empresa.cl",
-  passwordLabel: "Password",
+  passwordLabel: "Contrasena",
   passwordPlaceholder: "Ingresa tu contrasena",
   rememberSession: "Mantener sesion",
   forgotPassword: "Olvide mi contrasena",
   submit: "Iniciar sesion",
   submitting: "Ingresando...",
-  signupPrompt: "No tienes cuenta?",
+  signupPrompt: "Aun no tienes acceso?",
   signupAction: "Crear cuenta",
   oauthError:
     "No pudimos completar el acceso con Google. Intenta con tu correo y contrasena.",
@@ -57,7 +57,10 @@ const copy = {
   diagnosticCopy: "Copiar diagnostico",
   diagnosticCopied: "Diagnostico copiado",
   rateLimitHelper: "Espera y vuelve a intentar sin repetir toques.",
-  visualTitle: "Cotiza rapido, sin errores y desde cualquier lugar.",
+  visualEyebrow: "Arquitectura comercial premium",
+  visualTitle: "Gestiona tus cotizaciones con precision y profesionalismo",
+  visualDescription:
+    "Pensado para empresas de vidrios y aluminio que necesitan una presencia seria, movil y lista para responder mejor.",
 };
 
 const LOGIN_TIMEOUT_MS = 12000;
@@ -356,10 +359,10 @@ export default function LoginView({
         <div className={s.formShell}>
           <Link href="/" className={s.brand} aria-label={copy.brand}>
             <img
-              src="/brand/landingpageblack.svg"
+              src="/brand/ventora-logo-light.svg"
               alt="Ventora"
-              width={170}
-              height={34}
+              width={240}
+              height={54}
               className={s.brandLogo}
             />
           </Link>
@@ -538,18 +541,18 @@ export default function LoginView({
                 {isRecoveringApp ? copy.recovering : copy.recoveryAction}
               </button>
             </section>
-          </div>
 
-          <p className={s.signupText}>
-            <span>{copy.signupPrompt}</span>{" "}
-            <Link href="/planes">{copy.signupAction}</Link>
-          </p>
+            <p className={s.signupText}>
+              <span>{copy.signupPrompt}</span>{" "}
+              <Link href="/planes">{copy.signupAction}</Link>
+            </p>
+          </div>
         </div>
       </section>
 
       <section className={s.visualPanel} aria-hidden>
         <Image
-          src="/brand/loginpng.jpg"
+          src="/brand/login-hero-premium.png"
           alt=""
           fill
           priority
@@ -559,7 +562,9 @@ export default function LoginView({
         <div className={s.visualOverlay} />
 
         <div className={s.visualCopy}>
+          <p className={s.visualEyebrow}>{copy.visualEyebrow}</p>
           <h2 className={s.visualTitle}>{copy.visualTitle}</h2>
+          <p className={s.visualDescription}>{copy.visualDescription}</p>
         </div>
       </section>
     </main>

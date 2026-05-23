@@ -43,137 +43,108 @@ const navLinks = [
 const quickCards = [
   {
     icon: ClipboardList,
-    title: "Recibe solicitudes 24/7",
+    title: "Captura oportunidades 24/7",
     description:
-      "Tu link recibe consultas aunque estes instalando, manejando o descansando.",
+      "Tu vitrina comercial sigue recibiendo consultas mientras estas en obra, instalando o fuera de horario.",
   },
   {
     icon: FolderKanban,
-    title: "Ordena cada consulta",
+    title: "Ordena cada oportunidad",
     description:
-      "Guarda nombre, contacto, tipo de trabajo y estado en un solo panel.",
+      "Cada solicitud entra con contexto, contacto y siguiente paso dentro de un solo panel.",
   },
   {
     icon: FileText,
-    title: "Pasa a cotizacion",
+    title: "Responde y cotiza mejor",
     description:
-      "Convierte una solicitud real en una cotizacion profesional sin perder el contexto.",
+      "Cuando el cliente esta listo, pasas a cotizacion profesional sin rehacer informacion.",
   },
 ] as const;
 
 const heroTrustItems = [
-  "Hecho para el rubro",
-  "Listo en minutos",
-  "Sin tarjeta",
+  "Hecho para maestros y talleres",
+  "Recibe por WhatsApp",
+  "Responde mas rapido",
 ] as const;
 
 const problemCards = [
   {
     icon: MessageSquareText,
-    title: "Mensajes enterrados",
+    title: "Mensajes sin estructura",
     description:
       "Medidas, fotos y datos del cliente quedan repartidos entre chats, llamadas y notas sueltas.",
-    meta: "Audios sin escuchar · fotos sueltas",
+    meta: "Audios, fotos y medidas dispersas",
   },
   {
     icon: UserRound,
-    title: "Clientes sin seguimiento",
+    title: "Seguimiento inconsistente",
     description:
-      "No sabes quien esta pendiente, quien ya recibio respuesta o quien necesita cotizacion.",
-    meta: "Sin estado · sin recordatorio",
+      "No siempre queda claro quien espera respuesta, quien ya esta tibio o quien necesita cotizacion.",
+    meta: "Sin estado claro ni prioridad",
   },
   {
     icon: Clock3,
-    title: "Trabajos que se enfrian",
+    title: "Proyectos que se enfrian",
     description:
-      "Si te demoras en responder, cliente avanza con otra empresa antes de que lo tomes.",
-    meta: "Respuesta tardia · venta perdida",
+      "Cuando respondes tarde, el cliente ya comparo, avanzo o cerro con otra empresa.",
+    meta: "Tiempo lento, cierre perdido",
   },
-] as const;
-
-const problemFloats = [
-  "Hola, cuanto sale una ventana?",
-  "Audio · 0:47",
-  "foto_medida_puerta.jpg",
-  "Me pasas precio de la mampara con vidrio templado?",
-  "1.20 x 0.80 · corredera",
-  "0.90 x 2.00 · puerta",
-  "Hacen instalacion tambien?",
-  "consulta perdida · 11:42",
 ] as const;
 
 const solutionSteps = [
   {
     step: "01",
-    title: "Comparte tu link",
+    title: "Publica tu vitrina comercial",
     description:
-      "Dejalo en WhatsApp Business, Instagram, Facebook, QR o tarjetas.",
+      "Pon tu link en WhatsApp Business, Instagram, QR, catalogos o tarjetas y deja una presencia mas seria.",
     image: "/ventora-landing-page/minilanding1-crop.png",
     alt: "Link comercial publico para pedir presupuesto desde el celular",
-    mediaLabel: "Link comercial",
+    mediaLabel: "Presencia",
   },
   {
     step: "02",
-    title: "El cliente deja su solicitud",
+    title: "El cliente deja el proyecto claro",
     description:
-      "Nombre, contacto, tipo de trabajo, medidas o descripcion.",
+      "Recibes nombre, contacto, tipo de trabajo, medidas y descripcion desde una experiencia simple en celular.",
     image: "/ventora-landing-page/minilanding2-crop.png",
     alt: "Formulario donde cliente deja nombre, WhatsApp y tipo de trabajo",
     mediaLabel: "Solicitud",
   },
   {
     step: "03",
-    title: "Ventora la ordena y tu respondes",
+    title: "Tu equipo responde con contexto",
     description:
-      "La consulta queda guardada con estado y datos claros. Desde ahi contactas por WhatsApp o la conviertes en cotizacion.",
+      "La consulta queda priorizada con estado y datos claros. Desde ahi haces seguimiento por WhatsApp o la conviertes en cotizacion.",
     image: "/ventora-landing-page/hero-mitad_processed-crop.png",
     alt: "Solicitud lista para contactar por WhatsApp y crear cotizacion",
-    mediaLabel: "Panel de solicitudes",
+    mediaLabel: "Seguimiento",
   },
 ] as const;
 
 const showcaseCards = [
   {
-    title: "Link comercial listo para compartir",
+    title: "Landing comercial lista para captar",
     description:
-      "Muestra trabajos, confianza y acceso directo para dejar solicitud sin llamar.",
+      "Una experiencia premium para mostrar autoridad, trabajos y acceso directo a solicitud.",
     image: "/ventora-landing-page/mini-langin-page.png",
-    size: "large",
   },
   {
-    title: "Solicitudes y estado comercial",
+    title: "Solicitudes con prioridad comercial",
     description:
-      "Panel con clientes interesados, avisos y proximos movimientos por hacer.",
+      "Panel claro para ver quien escribio, que pidio y quien necesita seguimiento primero.",
     image: "/ventora-landing-page/dashboard.jpeg",
-    size: "medium",
   },
   {
-    title: "Clientes y seguimiento",
+    title: "Clientes y obras en contexto",
     description:
-      "Todo ordenado por cliente, contacto y trabajos activos desde el celular.",
+      "Todo queda conectado por cliente, contacto y trabajo activo, incluso cuando estas en terreno.",
     image: "/ventora-landing-page/clientes.png",
-    size: "medium",
   },
   {
-    title: "Cotizaciones visibles en contexto",
+    title: "Cotizacion y PDF sin friccion",
     description:
-      "Cuando corresponde, pasas de solicitud a cotizacion sin partir de cero.",
-    image: "/ventora-landing-page/dashboard-cotizaciones.png",
-    size: "medium",
-  },
-  {
-    title: "Detalle listo para enviar",
-    description:
-      "Presupuesto claro, profesional y conectado al estado del cliente.",
-    image: "/ventora-landing-page/cotizaciones-detalle.png",
-    size: "small",
-  },
-  {
-    title: "PDF compartible",
-    description:
-      "Envia por WhatsApp o comparte archivo listo sin rehacer informacion.",
+      "Cuando corresponde, pasas de solicitud a cotizacion profesional y PDF listo para compartir.",
     image: "/ventora-landing-page/pdf-listo.png",
-    size: "small",
   },
 ] as const;
 
@@ -310,13 +281,11 @@ export default function LandingPage() {
       const nombre = String(formData.get("nombre") ?? "").trim();
       const negocio = String(formData.get("empresa") ?? "").trim();
       const whatsapp = String(formData.get("telefono") ?? "").trim();
-      const ayuda = String(formData.get("correo") ?? "").trim();
       const mensaje = [
         "Hola Ventora, quiero mi demo.",
         nombre ? `Nombre: ${nombre}` : "",
         negocio ? `Negocio: ${negocio}` : "",
         whatsapp ? `WhatsApp: ${whatsapp}` : "",
-        ayuda ? `Necesito ordenar: ${ayuda}` : "",
       ]
         .filter(Boolean)
         .join("\n");
@@ -351,8 +320,8 @@ export default function LandingPage() {
               <img
                 src="/brand/landingpageblack.svg"
                 alt="Ventora"
-                width={160}
-                height={36}
+                width={184}
+                height={42}
                 className={s.wordmark}
               />
             </a>
@@ -438,21 +407,19 @@ export default function LandingPage() {
           <div className={s.heroLayout}>
             <div className={s.heroContent}>
               <SectionReveal>
-                <p className={s.heroKicker}>Sistema comercial movil para vidrierias y aluminio</p>
+                <p className={s.heroKicker}>Ventora para vidrio y aluminio</p>
               </SectionReveal>
 
               <SectionReveal>
                 <h1 className={s.heroTitle}>
-                  Recibe solicitudes
-                  <span className={s.heroTitleAccent}>aunque estes ocupado</span>
+                  Captura solicitudes
+                  <span className={s.heroTitleAccent}>sin perder clientes</span>
                 </h1>
               </SectionReveal>
 
               <SectionReveal>
                 <p className={s.heroDescription}>
-                  Ventora ayuda a empresas de vidrios y aluminio a recibir solicitudes
-                  desde un link comercial, ordenarlas en un panel y convertirlas en
-                  cotizaciones profesionales sin depender del desorden de WhatsApp.
+                  Recibe consultas, ordenalas y responde mejor desde un solo lugar.
                 </p>
               </SectionReveal>
 
@@ -467,13 +434,13 @@ export default function LandingPage() {
                     Probar demo
                     <ArrowRight size={18} aria-hidden />
                   </Link>
-                  <Link
-                    href="#contacto"
+                  <a
+                    href={WHATSAPP_LANDING_HREF}
                     className={s.secondaryButton}
-                    onClick={() => trackLandingCta("hero-crear-link", "internal")}
+                    onClick={() => trackLandingCta("hero-whatsapp", "whatsapp")}
                   >
-                    Crear mi link comercial
-                  </Link>
+                    Hablar por WhatsApp
+                  </a>
                 </div>
               </SectionReveal>
 
@@ -527,45 +494,64 @@ export default function LandingPage() {
         </div>
       </section>
 
-        <section id="problema" className={s.problemSection}>
+      <section id="problema" className={s.problemSection}>
           <div className={s.container}>
             <div className={s.problemBackdrop} aria-hidden="true">
               <div className={s.problemBackdropGrid} />
               <div className={s.problemBackdropGlow} />
-              <div className={s.problemBackdropTrace} />
-              {problemFloats.map((item, index) => (
-                <span
-                  key={item}
-                  className={`${s.problemFloat} ${s[`problemFloat${index + 1}`]}`}
-                >
-                  {item}
-                </span>
-              ))}
             </div>
 
             <SectionReveal>
               <div className={s.problemIntro}>
                 <SectionHeading
                   label="EL PROBLEMA NO ES SOLO COTIZAR"
-                  title="Estas perdiendo clientes antes de alcanzar a responder."
-                  description="Cuando las consultas llegan por WhatsApp, llamadas o redes sociales, es facil que se pierdan entre audios, fotos y mensajes. Y si respondes tarde, el cliente ya pidio precio en otro lado."
+                  title="El desorden comercial te hace ver menos serio de lo que realmente eres."
+                  description="Cuando las consultas llegan por WhatsApp, llamadas y redes sociales, todo compite contra tu tiempo. Si no capturas bien al cliente desde el principio, el seguimiento se enfria antes de la cotizacion."
                 />
               </div>
             </SectionReveal>
 
-            <div className={s.problemGrid}>
-              {problemCards.map((item) => (
-                <SectionReveal key={item.title}>
-                  <article className={s.problemCard}>
-                    <div className={s.iconChip}>
-                      <item.icon size={20} strokeWidth={1.9} />
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                    <span className={s.problemMeta}>{item.meta}</span>
-                  </article>
-                </SectionReveal>
-              ))}
+            <div className={s.problemSplit}>
+              <SectionReveal className={s.problemVisualWrap}>
+                <article className={s.problemVisualCard}>
+                  <div className={s.problemVisualMedia}>
+                    <Image
+                      src="/brand/landing-problema-scene.png"
+                      alt="Encargado comercial revisando solicitudes y planos en un entorno premium de vidrio y aluminio"
+                      width={1680}
+                      height={945}
+                      sizes="(max-width: 900px) 100vw, 44vw"
+                    />
+                  </div>
+
+                  <div className={s.problemVisualBody}>
+                    <span className={s.problemVisualEyebrow}>Lo que hoy te frena</span>
+                    <strong>
+                      La oportunidad no se pierde por falta de trabajo. Se pierde por
+                      falta de estructura al momento de captarla.
+                    </strong>
+                    <p>
+                      Ventora entra antes de la cotizacion: ordena la entrada,
+                      clarifica el seguimiento y le da mas peso a tu marca.
+                    </p>
+                  </div>
+                </article>
+              </SectionReveal>
+
+              <div className={s.problemGrid}>
+                {problemCards.map((item) => (
+                  <SectionReveal key={item.title}>
+                    <article className={s.problemCard}>
+                      <div className={s.iconChip}>
+                        <item.icon size={20} strokeWidth={2.1} />
+                      </div>
+                      <h3>{item.title}</h3>
+                      <p>{item.description}</p>
+                      <span className={s.problemMeta}>{item.meta}</span>
+                    </article>
+                  </SectionReveal>
+                ))}
+              </div>
             </div>
           </div>
       </section>
@@ -575,8 +561,8 @@ export default function LandingPage() {
           <SectionReveal className={s.solutionHeadingWrap}>
             <div className={s.solutionHeading}>
               <SectionHeading
-                title="Convierte consultas sueltas en solicitudes listas para responder."
-                description="Comparte tu link, recibe la informacion ordenada y responde desde un solo panel."
+                title="Un flujo comercial claro desde el primer contacto."
+                description="Tu cliente ve una presencia premium, deja el proyecto ordenado y tu equipo responde con contexto desde una sola experiencia."
               />
             </div>
           </SectionReveal>
@@ -620,23 +606,15 @@ export default function LandingPage() {
         <div className={s.container}>
           <SectionReveal>
             <SectionHeading
-              title="Todo el flujo comercial en pantallas reales."
-              description="Desde solicitud inicial hasta cliente, cotizacion y PDF final. Todo conectado y entendible desde celular."
+              title="Pantallas reales para vender con mas claridad."
+              description="Menos ruido, mejor jerarquia y un flujo visible desde la primera consulta hasta el documento final."
             />
           </SectionReveal>
 
           <div className={s.showcaseGrid}>
             {showcaseCards.map((item) => (
               <SectionReveal key={item.title}>
-                <article
-                  className={`${s.showcaseCard} ${
-                    item.size === "large"
-                      ? s.showcaseLarge
-                      : item.size === "medium"
-                        ? s.showcaseMedium
-                        : s.showcaseSmall
-                  }`}
-                >
+                <article className={s.showcaseCard}>
                   <div className={s.showcaseImage}>
                     <Image
                       src={item.image}
@@ -703,8 +681,8 @@ export default function LandingPage() {
           <div className={s.contactLayout}>
             <SectionReveal className={s.contactIntro}>
               <SectionHeading
-                title="Empieza a recibir solicitudes sin perder clientes."
-                description="Usa Ventora para ordenar consultas, responder mejor y cerrar mas trabajos sin vivir atrapado en WhatsApp."
+                title="Empieza a cotizar con una imagen comercial mucho mas fuerte."
+                description="Ventora te ayuda a captar mejor, responder con orden y cerrar mas trabajos sin depender del caos de WhatsApp."
               />
 
               <div className={s.contactActions}>
@@ -717,13 +695,13 @@ export default function LandingPage() {
                   Probar demo
                   <ArrowRight size={18} aria-hidden />
                 </Link>
-                <Link
-                  href="#contacto"
+                <a
+                  href={WHATSAPP_LANDING_HREF}
                   className={s.secondaryButton}
-                  onClick={() => trackLandingCta("contacto-configurar-link", "internal")}
+                  onClick={() => trackLandingCta("contacto-whatsapp-secundario", "whatsapp")}
                 >
-                  Configurar mi link comercial
-                </Link>
+                  Hablar por WhatsApp
+                </a>
               </div>
 
               <div className={s.contactProof}>
@@ -745,7 +723,7 @@ export default function LandingPage() {
             <SectionReveal className={s.contactCard}>
               <div className={s.contactCardHeader}>
                 <h3>Quiero que me contacten</h3>
-                <p>Te mostramos flujo real y como quedaria en tu negocio.</p>
+                <p>Te mostramos el flujo real y como quedaria en tu negocio.</p>
               </div>
 
               <form className={s.contactForm} onSubmit={handleContactSubmit}>
@@ -789,16 +767,6 @@ export default function LandingPage() {
                   </select>
                 </label>
 
-                <label className={s.field}>
-                  <span>Que necesitas ordenar primero?</span>
-                  <input
-                    type="text"
-                    name="correo"
-                    placeholder="Ej: solicitudes por WhatsApp, seguimiento o cotizaciones"
-                    onFocus={trackLandingFormStart}
-                  />
-                </label>
-
                 <button
                   type="submit"
                   className={s.contactSubmit}
@@ -840,12 +808,13 @@ export default function LandingPage() {
               <img
                 src="/brand/landingpageblack.svg"
                 alt="Ventora"
-                width={152}
-                height={34}
+                width={176}
+                height={40}
               />
               <p>
-                Software comercial para empresas de vidrios y aluminio que ayuda a
-                recibir solicitudes, ordenarlas y cerrar mas trabajos.
+                Software comercial premium para empresas de vidrios y aluminio que
+                ayuda a captar mejor, ordenar el seguimiento y cerrar con mas
+                autoridad.
               </p>
             </div>
 
@@ -859,9 +828,9 @@ export default function LandingPage() {
           </div>
 
           <div className={s.footerBottom}>
-            <span>Hecho para terreno · Chile</span>
-            <span>Solicitudes claras · seguimiento simple</span>
-            <span>contacto@ventorap.cl</span>
+            <span>Hecho para terreno - Chile</span>
+            <span>Solicitudes claras - seguimiento simple</span>
+            <span>ventora.cl@gmail.com</span>
           </div>
         </div>
       </footer>
