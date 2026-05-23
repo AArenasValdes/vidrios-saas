@@ -4,6 +4,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import LoginView from "../login-view";
+import { authLoginRateLimitService } from "@/features/auth/services/auth-login-rate-limit.service";
 
 const mockSignIn = jest.fn();
 const mockPrefetch = jest.fn();
@@ -61,8 +62,11 @@ jest.mock("@/features/auth/services/auth-device-recovery.service", () => ({
 }));
 
 describe("LoginView", () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    authLoginRateLimitService.clear();
     mockSignIn.mockResolvedValue(undefined);
     mockPrefetch.mockClear();
     mockResetCurrentDeviceAppState.mockResolvedValue(undefined);
@@ -83,13 +87,19 @@ describe("LoginView", () => {
       configurable: true,
       get: () => "sb-test-auth-token=ok",
     });
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
   });
 
   it("usa los valores reales del formulario cuando autofill no dispara onChange", async () => {
+    mockSignIn.mockImplementation(() => new Promise(() => undefined));
     render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
 
-    const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
-    const passwordInput = screen.getByLabelText("Password") as HTMLInputElement;
+    const emailInput = screen.getByLabelText("Correo") as HTMLInputElement;
+    const passwordInput = screen.getByLabelText("Contrasena") as HTMLInputElement;
 
     emailInput.value = "admin@test.com";
     passwordInput.value = "1234";
@@ -109,14 +119,14 @@ describe("LoginView", () => {
 
     render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.change(screen.getByLabelText("Contrasena"), {
       target: { value: "clave-mala" },
     });
 
-    fireEvent.submit(screen.getByLabelText("Password").closest("form") as HTMLFormElement);
+    fireEvent.submit(screen.getByLabelText("Contrasena").closest("form") as HTMLFormElement);
 
     expect(
       await screen.findByText(/Revisa tu correo y contrasena\./i)
@@ -127,7 +137,7 @@ describe("LoginView", () => {
   it("permite ver y ocultar la contrasena", () => {
     render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
 
-    const passwordInput = screen.getByLabelText("Password") as HTMLInputElement;
+    const passwordInput = screen.getByLabelText("Contrasena") as HTMLInputElement;
     const toggle = screen.getByRole("button", { name: /Mostrar/i });
 
     expect(passwordInput.type).toBe("password");
@@ -161,34 +171,89 @@ describe("LoginView", () => {
 
     render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.change(screen.getByLabelText("Contrasena"), {
       target: { value: "cristianar1" },
     });
 
-    fireEvent.submit(screen.getByLabelText("Password").closest("form") as HTMLFormElement);
+    fireEvent.submit(screen.getByLabelText("Contrasena").closest("form") as HTMLFormElement);
 
     expect(await screen.findByText(/Codigo de acceso: device_storage_blocked/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Copiar diagnostico/i })).toBeInTheDocument();
   });
 
-  it("bloquea intentos repetidos cuando Supabase devuelve rate limit", async () => {
+  it("ignora dobles submits antes de que React alcance a deshabilitar el boton", async () => {
+    mockSignIn.mockImplementation(
+      () => new Promise<void>(() => undefined)
+    );
+
+    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+
+    fireEvent.change(screen.getByLabelText("Correo"), {
+      target: { value: "sanmarcoaluminios@gmail.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Contrasena"), {
+      target: { value: "cristianar1" },
+    });
+
+    const form = screen.getByLabelText("Contrasena").closest("form") as HTMLFormElement;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("no activa countdown local en el primer rate limit", async () => {
     mockSignIn.mockRejectedValueOnce(new Error("Request rate limit reached"));
 
     render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.change(screen.getByLabelText("Contrasena"), {
       target: { value: "cristianar1" },
     });
 
-    fireEvent.submit(screen.getByLabelText("Password").closest("form") as HTMLFormElement);
+    fireEvent.submit(screen.getByLabelText("Contrasena").closest("form") as HTMLFormElement);
 
-    expect(await screen.findByText(/Hay demasiados intentos desde este celular/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Ese intento fue rechazado por limite temporal/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Espera/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Iniciar sesion/i })).toBeEnabled();
+    expect(screen.queryByText(/Espera y vuelve a intentar sin repetir toques/i)).not.toBeInTheDocument();
+  });
+
+  it("activa countdown local en el segundo rate limit dentro de la ventana", async () => {
+    mockSignIn
+      .mockRejectedValueOnce(new Error("Request rate limit reached"))
+      .mockRejectedValueOnce(new Error("Request rate limit reached"));
+
+    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+
+    fireEvent.change(screen.getByLabelText("Correo"), {
+      target: { value: "sanmarcoaluminios@gmail.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Contrasena"), {
+      target: { value: "cristianar1" },
+    });
+
+    const form = screen.getByLabelText("Contrasena").closest("form") as HTMLFormElement;
+
+    fireEvent.submit(form);
+    await screen.findByText(/Ese intento fue rechazado por limite temporal/i);
+
+    fireEvent.submit(form);
+
+    expect(
+      await screen.findByText(/Hay demasiados intentos desde este celular/i)
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Espera/i })).toBeDisabled();
     expect(screen.getByText(/Espera y vuelve a intentar sin repetir toques/i)).toBeInTheDocument();
   });

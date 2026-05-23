@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, RefreshCcw } from "lucide-react";
 
@@ -188,6 +188,7 @@ export default function LoginView({
   const [isRecoveringApp, setIsRecoveringApp] = useState(false);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
   const [rateLimitRemainingMs, setRateLimitRemainingMs] = useState(0);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     return scheduleLoginPrefetch(() => {
@@ -246,17 +247,23 @@ export default function LoginView({
     if (currentRateLimitUntil) {
       setRateLimitUntil(currentRateLimitUntil);
       setRateLimitRemainingMs(authLoginRateLimitService.getRemainingMs());
-      setError(getAuthLoginErrorCopy("rate_limited"));
+      setError(getAuthLoginErrorCopy("rate_limited", { blocked: true }));
       setErrorCode("rate_limited");
       setErrorDiagnostic(null);
       return;
     }
 
+    if (submitLockRef.current) {
+      return;
+    }
+
+    submitLockRef.current = true;
     setCargando(true);
     setError(null);
     setErrorCode(null);
     setErrorDiagnostic(null);
     setCopiedDiagnostic(false);
+    let shouldReleaseSubmitLock = true;
 
     const formData = new FormData(e.currentTarget);
     const submittedCorreo = String(formData.get("correo") ?? correo);
@@ -303,6 +310,7 @@ export default function LoginView({
       authLoginRateLimitService.clear();
       setRateLimitUntil(null);
       setRateLimitRemainingMs(0);
+      shouldReleaseSubmitLock = false;
     } catch (signInError) {
       const classifiedError = classifyAuthLoginError(signInError);
       const detail =
@@ -327,24 +335,41 @@ export default function LoginView({
         platform_mode: getPlatformMode(),
       });
 
-      setError(getAuthLoginErrorCopy(classifiedError.code));
+      let nextBlockedUntil: number | null = null;
+      let nextRemainingMs = 0;
+
+      if (classifiedError.code === "rate_limited") {
+        const nextState = authLoginRateLimitService.registerRateLimitedResponse();
+        nextBlockedUntil = nextState.blockedUntil;
+        nextRemainingMs = nextBlockedUntil
+          ? authLoginRateLimitService.getRemainingMs()
+          : 0;
+      } else if (rateLimitUntil) {
+        authLoginRateLimitService.clear();
+      }
+
+      setError(
+        getAuthLoginErrorCopy(classifiedError.code, {
+          blocked: Boolean(nextBlockedUntil),
+        })
+      );
       setErrorCode(classifiedError.code);
       setErrorDiagnostic(
         getAuthLoginErrorDiagnosticDetail(signInError) ?? diagnosticEntry.detail
       );
 
       if (classifiedError.code === "rate_limited") {
-        const activeUntil = authLoginRateLimitService.activate();
-        setRateLimitUntil(activeUntil);
-        setRateLimitRemainingMs(authLoginRateLimitService.getRemainingMs());
+        setRateLimitUntil(nextBlockedUntil);
+        setRateLimitRemainingMs(nextRemainingMs);
       } else if (rateLimitUntil) {
-        authLoginRateLimitService.clear();
         setRateLimitUntil(null);
         setRateLimitRemainingMs(0);
       }
-
-      setCargando(false);
-      return;
+    } finally {
+      if (shouldReleaseSubmitLock) {
+        submitLockRef.current = false;
+        setCargando(false);
+      }
     }
 
     const redirectTarget =
@@ -397,6 +422,7 @@ export default function LoginView({
                       setCorreo(e.target.value);
                       setError(null);
                       setErrorCode(null);
+                      setErrorDiagnostic(null);
                     }}
                     autoComplete="email"
                     inputMode="email"
@@ -422,6 +448,7 @@ export default function LoginView({
                       setPassword(e.target.value);
                       setError(null);
                       setErrorCode(null);
+                      setErrorDiagnostic(null);
                     }}
                     autoComplete="current-password"
                     required

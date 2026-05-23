@@ -311,17 +311,17 @@ describe("landing-gallery.repository", () => {
       );
     });
 
-    it("debe rechazar archivos mayores a 10 MB", async () => {
+    it("debe rechazar archivos mayores a 20 MB", async () => {
       const client = createMockClient();
       const repository = createLandingGalleryRepository({ clientFactory: client as never });
-      const bigFile = new File(["x".repeat(11 * 1024 * 1024)], "big.jpg", {
+      const bigFile = new File(["x".repeat(21 * 1024 * 1024)], "big.jpg", {
         type: "image/jpeg",
       });
 
-      Object.defineProperty(bigFile, "size", { value: 11 * 1024 * 1024 });
+      Object.defineProperty(bigFile, "size", { value: 21 * 1024 * 1024 });
 
       await expect(repository.uploadGalleryImage(10, bigFile)).rejects.toThrow(
-        "La foto no puede pesar mas de 10 MB"
+        "La foto no puede pesar mas de 20 MB antes de optimizarse."
       );
     });
 

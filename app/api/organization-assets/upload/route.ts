@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findActiveUserProfile } from "@/features/auth/services/active-user-profile.service";
+import {
+  ORGANIZATION_ASSET_LOGO_MAX_BYTES,
+  ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES,
+} from "@/features/organization-assets/constants/upload-constraints";
+import {
+  normalizeOrganizationAssetImage,
+  OrganizationAssetImageProcessingError,
+  type NormalizedOrganizationAsset,
+  type OrganizationAssetUploadKind,
+} from "@/features/organization-assets/services/organization-asset-image-normalizer.service";
 import { sanitizeFileName } from "@/utils/sanitize-file-name";
 
 const BUCKET_NAME = "organization-assets";
 const ALLOWED_KINDS = new Set(["logo", "hero", "gallery"]);
-
-type UploadKind = "logo" | "hero" | "gallery";
 
 function getBearerToken(request: Request) {
   const authorization = request.headers.get("authorization")?.trim() ?? "";
@@ -19,11 +27,11 @@ function getBearerToken(request: Request) {
   return authorization.slice(7).trim() || null;
 }
 
-function getKindConfig(kind: UploadKind) {
+function getKindConfig(kind: OrganizationAssetUploadKind) {
   switch (kind) {
     case "logo":
       return {
-        maxSizeBytes: 5 * 1024 * 1024,
+        maxSizeBytes: ORGANIZATION_ASSET_LOGO_MAX_BYTES,
         errorLabel: "logo",
         article: "El",
         folder: "brand",
@@ -31,7 +39,7 @@ function getKindConfig(kind: UploadKind) {
       };
     case "hero":
       return {
-        maxSizeBytes: 10 * 1024 * 1024,
+        maxSizeBytes: ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES,
         errorLabel: "imagen de portada",
         article: "La",
         folder: "hero",
@@ -39,7 +47,7 @@ function getKindConfig(kind: UploadKind) {
       };
     case "gallery":
       return {
-        maxSizeBytes: 10 * 1024 * 1024,
+        maxSizeBytes: ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES,
         errorLabel: "foto de trabajo",
         article: "La",
         folder: "gallery",
@@ -48,12 +56,20 @@ function getKindConfig(kind: UploadKind) {
   }
 }
 
-function buildStoragePath(organizationId: string | number, kind: UploadKind, file: File) {
+function buildStoragePath(
+  organizationId: string | number,
+  kind: OrganizationAssetUploadKind,
+  file: File,
+  extension?: string
+) {
   const config = getKindConfig(kind);
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const resolvedExtension =
+    extension?.trim().toLowerCase() ||
+    file.name.split(".").pop()?.toLowerCase() ||
+    "jpg";
   const sanitizedName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ""));
 
-  return `${organizationId}/${config.folder}/${config.prefix}-${Date.now()}-${sanitizedName}.${extension}`;
+  return `${organizationId}/${config.folder}/${config.prefix}-${Date.now()}-${sanitizedName}.${resolvedExtension}`;
 }
 
 function normalizeStorageError(error: { message?: string } | null) {
@@ -112,7 +128,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const kind = kindValue as UploadKind;
+  const kind = kindValue as OrganizationAssetUploadKind;
   const file = fileValue;
   const config = getKindConfig(kind);
 
@@ -128,17 +144,39 @@ export async function POST(request: Request) {
       {
         error: `${config.article} ${config.errorLabel} no puede pesar mas de ${Math.floor(
           config.maxSizeBytes / (1024 * 1024)
-        )} MB.`,
+        )} MB antes de optimizarse.`,
       },
       { status: 400 }
     );
   }
 
-  const storagePath = buildStoragePath(organizationId, kind, file);
-  const { error } = await admin.storage.from(BUCKET_NAME).upload(storagePath, file, {
-    upsert: true,
-    contentType: file.type,
-  });
+  let normalizedAsset: NormalizedOrganizationAsset;
+
+  try {
+    normalizedAsset = await normalizeOrganizationAssetImage(kind, file);
+  } catch (error) {
+    if (error instanceof OrganizationAssetImageProcessingError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { error: "No se pudo preparar la imagen para subirla." },
+      { status: 500 }
+    );
+  }
+
+  const storagePath = buildStoragePath(
+    organizationId,
+    kind,
+    file,
+    normalizedAsset.extension
+  );
+  const { error } = await admin.storage
+    .from(BUCKET_NAME)
+    .upload(storagePath, normalizedAsset.body, {
+      upsert: true,
+      contentType: normalizedAsset.contentType,
+    });
 
   if (error) {
     return NextResponse.json(

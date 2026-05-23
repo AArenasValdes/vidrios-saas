@@ -10,7 +10,7 @@ const AUTH_LOGIN_ERROR_COPY: Record<AuthLoginErrorCode, string> = {
   network_unavailable:
     "No pudimos conectarnos. Revisa internet en este celular e intenta otra vez.",
   rate_limited:
-    "Hay demasiados intentos desde este celular. Espera un minuto y vuelve a intentar.",
+    "Ese intento fue rechazado por limite temporal. Espera unos segundos y prueba una sola vez.",
   device_storage_blocked:
     "Este celular no pudo guardar bien la sesion local. Intenta reiniciar esta app.",
   login_timeout:
@@ -115,7 +115,14 @@ export function getAuthLoginErrorDiagnosticDetail(error: unknown) {
   return normalized.slice(0, 220);
 }
 
-export function getAuthLoginErrorCopy(code: AuthLoginErrorCode) {
+export function getAuthLoginErrorCopy(
+  code: AuthLoginErrorCode,
+  options?: { blocked?: boolean }
+) {
+  if (code === "rate_limited" && options?.blocked) {
+    return "Hay demasiados intentos desde este celular. Espera un minuto y vuelve a intentar.";
+  }
+
   return AUTH_LOGIN_ERROR_COPY[code];
 }
 

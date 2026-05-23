@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { IconType } from "react-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -255,6 +262,18 @@ function getAlertMeta(alert: CotizacionAlert) {
   };
 }
 
+function subscribeToHydrationSnapshot() {
+  return () => undefined;
+}
+
+function getHydratedClientSnapshot() {
+  return true;
+}
+
+function getHydratedServerSnapshot() {
+  return false;
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -276,6 +295,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [authBootStuck, setAuthBootStuck] = useState(false);
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydrationSnapshot,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot
+  );
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
   const [solicitudesSeenAt, setSolicitudesSeenAt] = useState(0);
@@ -327,7 +351,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [alerts, alertsSeenAt]
   );
   const alertCount = unreadAlerts.length;
-  const isWorkspaceBooting = cargando || Boolean(user && !organizacionId);
+  const isWorkspaceBooting = hasHydrated && cargando && !user;
+  const isOrganizationBootstrapPending = Boolean(user && !organizacionId);
   const isProfileMenuOpen = profileMenuAnchor !== null;
   const visibleAlerts = useMemo(
     () =>
@@ -461,7 +486,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!cargando) {
+    if (!hasHydrated || !cargando || user) {
       return;
     }
 
@@ -476,7 +501,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [cargando]);
+  }, [cargando, hasHydrated, user]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -556,17 +581,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [alerts, isAlertsOpen, markAlertsAsSeen]);
 
   useEffect(() => {
-    if (isWorkspaceBooting || shouldLoadShellFeeds) {
+    if (cargando || !organizacionId || shouldLoadShellFeeds) {
       return;
     }
 
     return scheduleDeferredShellWork(() => {
       setShouldLoadShellFeeds(true);
     });
-  }, [isWorkspaceBooting, shouldLoadShellFeeds]);
+  }, [cargando, organizacionId, shouldLoadShellFeeds]);
 
   useEffect(() => {
-    if (isWorkspaceBooting || !shouldLoadShellFeeds || shouldSkipRoutePrefetch()) {
+    if (cargando || !organizacionId || !shouldLoadShellFeeds || shouldSkipRoutePrefetch()) {
       return;
     }
 
@@ -606,7 +631,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => {
       timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };
-  }, [isWorkspaceBooting, pathname, router, shouldLoadShellFeeds]);
+  }, [cargando, organizacionId, pathname, router, shouldLoadShellFeeds]);
 
   useEffect(() => {
     if (!isAlertsOpen && !isProfileMenuOpen) {
@@ -705,7 +730,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-    if (authBootStuck && !user && !isSigningOut) {
+  if (authBootStuck && !user && !isSigningOut) {
     return (
       <div className={s.bootRoot}>
         <div className={s.bootCard}>
@@ -896,6 +921,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <p className={s.topbarEyebrow}>Panel operativo</p>
               <h1 className={s.topbarTitle}>{currentItem.label}</h1>
               <p className={s.topbarText}>{currentItem.description}</p>
+              {isOrganizationBootstrapPending ? (
+                <p className={s.topbarText}>
+                  Terminando de conectar tu empresa y permisos...
+                </p>
+              ) : null}
             </div>
 
             <div className={s.topbarActions}>

@@ -743,7 +743,7 @@ export default function PaginaVentaPage() {
                       <strong>
                         {isUploadingHero ? "Subiendo..." : "Subir foto principal"}
                       </strong>
-                      <span>JPG o PNG · 1200x400 recomendado</span>
+                    <span>JPG, PNG o foto del celular · la optimizamos automaticamente</span>
                     </div>
                     <input
                       type="file"
@@ -958,7 +958,7 @@ export default function PaginaVentaPage() {
                     {gallery.length + pendingGalleryUploads.length}/8 fotos ·{" "}
                     {isGalleryUploading
                       ? "Subiendo..."
-                      : "Sube solo tus mejores trabajos"}
+                      : "Sube tus mejores trabajos. Los optimizamos automaticamente."}
                   </span>
                 </>
               ) : null}

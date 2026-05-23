@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES } from "@/features/organization-assets/constants/upload-constraints";
 import { organizationAssetsUploadRepository } from "@/features/organization-assets/repositories/organization-assets-upload.repository";
 import type { EntityId } from "@/types/common";
 import type {
@@ -162,8 +163,8 @@ export function createLandingGalleryRepository(deps: LandingGalleryRepositoryDep
         throw new Error("La foto de galeria debe ser una imagen");
       }
 
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error("La foto no puede pesar mas de 10 MB");
+      if (file.size > ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES) {
+        throw new Error("La foto no puede pesar mas de 20 MB antes de optimizarse.");
       }
 
       return organizationAssetsUploadRepository.uploadAsset("gallery", file);

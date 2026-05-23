@@ -204,4 +204,29 @@ describe("AppShell", () => {
       ).toBe(String(new Date("2026-05-23T12:00:00.000Z").getTime()));
     });
   });
+
+  it("no bloquea toda la UI cuando ya hay usuario pero la organizacion sigue cargando", () => {
+    authSnapshot = {
+      user: {
+        email: "dueno@vidrios.cl",
+      },
+      rol: "admin",
+      organizacionId: null,
+      cargando: true,
+    };
+
+    render(
+      <AppShell>
+        <div>contenido</div>
+      </AppShell>
+    );
+
+    expect(screen.getByText("contenido")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Cargando tu espacio de trabajo")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Terminando de conectar tu empresa y permisos/i)
+    ).toBeInTheDocument();
+  });
 });
