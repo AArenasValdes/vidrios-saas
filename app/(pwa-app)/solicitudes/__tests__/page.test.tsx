@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 import SolicitudesPage from "../page";
 
@@ -76,6 +76,7 @@ jest.mock("../_components/solicitud-card", () => ({
 describe("SolicitudesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: jest.fn().mockImplementation(() => ({
@@ -92,6 +93,7 @@ describe("SolicitudesPage", () => {
     mockUseAuth.mockReturnValue({
       rol: "admin",
       user: { id: "user-1", email: "user@test.cl" },
+      organizacionId: "org-1",
     });
     mockUseOrganizationProfile.mockReturnValue({
       profile: {
@@ -149,5 +151,65 @@ describe("SolicitudesPage", () => {
     expect(
       screen.getByPlaceholderText("Buscar por nombre, contacto o trabajo")
     ).toBeInTheDocument();
+  });
+
+  it("persiste las solicitudes nuevas como vistas al abrir la bandeja", async () => {
+    mockUseSolicitudesContacto.mockReturnValue({
+      solicitudes: [
+        {
+          id: "sol-1",
+          organizationId: "org-1",
+          nombre: "Martin Pizarro",
+          empresa: "Cliente Demo",
+          correo: null,
+          telefono: "+56911112222",
+          contacto: "+56911112222",
+          tipoTrabajo: "Shower door",
+          mensaje: "Necesito una cotizacion",
+          ayuda: "cotizacion",
+          contexto: "landing",
+          estado: "nueva",
+          origen: "landing",
+          ip: null,
+          userAgent: null,
+          creadoEn: "2026-05-23T14:00:00.000Z",
+          actualizadoEn: "2026-05-23T14:00:00.000Z",
+          contactadaAt: null,
+          utmSource: null,
+          utmMedium: null,
+          utmCampaign: null,
+          sourceUrl: null,
+        },
+      ],
+      isReady: true,
+      isRefreshing: false,
+      isLoadingMore: false,
+      error: null,
+      totalCount: 1,
+      hasMore: false,
+      summary: {
+        total: 1,
+        hoy: 1,
+        counts: {
+          nueva: 1,
+          contactada: 0,
+          cerrada: 0,
+          descartada: 0,
+        },
+      },
+      refreshSolicitudes: jest.fn(),
+      loadMoreSolicitudes: jest.fn(),
+      updateSolicitudEstado: jest.fn(),
+    });
+
+    render(<SolicitudesPage />);
+
+    await waitFor(() => {
+      expect(
+        window.localStorage.getItem(
+          "vidrios-saas:solicitudes-seen:org-1:user@test.cl"
+        )
+      ).toBe(String(new Date("2026-05-23T14:00:00.000Z").getTime()));
+    });
   });
 });

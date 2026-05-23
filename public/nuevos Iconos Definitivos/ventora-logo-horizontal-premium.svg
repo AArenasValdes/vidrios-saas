@@ -1,0 +1,83 @@
+<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="18%" stop-color="#C7CDD6"/>
+      <stop offset="42%" stop-color="#F4F7FA"/>
+      <stop offset="66%" stop-color="#8B95A3"/>
+      <stop offset="100%" stop-color="#E8EBEF"/>
+    </linearGradient>
+    <linearGradient id="steelDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C9D1DC"/>
+      <stop offset="48%" stop-color="#566170"/>
+      <stop offset="100%" stop-color="#121722"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#102139" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#07101E" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="#00040A" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="blueGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0B1D3A" stop-opacity="0"/>
+      <stop offset="45%" stop-color="#1E88FF"/>
+      <stop offset="100%" stop-color="#0B1D3A" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="420" fill="transparent"/>
+
+  <!-- Premium external icon -->
+  <g transform="translate(80 54)" filter="url(#softShadow)">
+    <!-- glass cube / hexagonal frame -->
+    <path d="M140 8 L266 78 L266 220 L140 300 L14 220 L14 78 Z" fill="url(#glass)" stroke="url(#metal)" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M140 8 L266 78 L140 146 L14 78 Z" fill="#19283B" fill-opacity="0.52" stroke="#DCE4EF" stroke-width="2"/>
+    <path d="M14 78 L140 146 L140 300 L14 220 Z" fill="#0C1727" fill-opacity="0.62" stroke="#3E5876" stroke-width="2"/>
+    <path d="M266 78 L140 146 L140 300 L266 220 Z" fill="#050B14" fill-opacity="0.68" stroke="#2F4563" stroke-width="2"/>
+    <path d="M140 146 V300 M140 146 L14 78 M140 146 L266 78" stroke="#1E88FF" stroke-width="2.5" stroke-opacity="0.46"/>
+
+    <!-- metallic V -->
+    <path d="M58 68 L110 68 L140 196 L170 68 L222 68 L166 255 L140 281 L114 255 Z" fill="url(#metal)" stroke="#FFFFFF" stroke-opacity="0.75" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M140 196 L140 281" stroke="#727D8D" stroke-width="1.5" stroke-opacity="0.65"/>
+    <path d="M63 68 L114 255" stroke="#FFFFFF" stroke-width="1.2" stroke-opacity="0.25"/>
+    <path d="M217 68 L166 255" stroke="#A6AFBA" stroke-width="1.2" stroke-opacity="0.45"/>
+
+    <!-- blue accent highlights -->
+    <path d="M31 88 L138 28" stroke="#1E88FF" stroke-width="4" stroke-linecap="round" opacity="0.82" filter="url(#glow)"/>
+    <path d="M194 249 L253 216" stroke="#1E88FF" stroke-width="4" stroke-linecap="round" opacity="0.82" filter="url(#glow)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(415 90)">
+    <text x="0" y="118"
+      font-family="Poppins, Montserrat, Inter, Arial, sans-serif"
+      font-size="118"
+      font-weight="800"
+      letter-spacing="17"
+      fill="url(#metal)">VENTORA</text>
+
+    <text x="4" y="185"
+      font-family="Poppins, Montserrat, Inter, Arial, sans-serif"
+      font-size="37"
+      font-weight="400"
+      letter-spacing="4.3"
+      fill="#D7DBE2">Cotizaciones <tspan fill="#1E88FF" font-weight="700">rápidas</tspan> para vidrios y aluminios</text>
+
+    <rect x="4" y="216" width="810" height="2" rx="1" fill="url(#blueGlow)"/>
+    <text x="4" y="278"
+      font-family="Poppins, Montserrat, Inter, Arial, sans-serif"
+      font-size="31"
+      font-weight="400"
+      letter-spacing="3"
+      fill="#AEB6C3">Ahorra tiempo. Ordena tus proyectos. Cierra más trabajos.</text>
+  </g>
+</svg>

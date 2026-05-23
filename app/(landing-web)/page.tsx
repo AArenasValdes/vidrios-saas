@@ -348,13 +348,12 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.navbarInner}>
             <a href="#top" className={s.navLogo} aria-label="Ventora inicio">
-              <Image
-                src="/brand/ventora-logo-navy.svg"
+              <img
+                src="/brand/landingpageblack.svg"
                 alt="Ventora"
                 width={160}
                 height={36}
                 className={s.wordmark}
-                priority
               />
             </a>
 
@@ -838,8 +837,8 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.footerLayout}>
             <div className={s.footerBrand}>
-              <Image
-                src="/brand/ventora-logo-navy.svg"
+              <img
+                src="/brand/landingpageblack.svg"
                 alt="Ventora"
                 width={152}
                 height={34}

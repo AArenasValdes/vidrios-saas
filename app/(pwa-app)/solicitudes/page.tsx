@@ -21,6 +21,11 @@ import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardin
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
 import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
+import {
+  getLatestSolicitudesSeenAt,
+  getSolicitudesSeenStorageKey,
+  persistSolicitudesSeenAt,
+} from "@/features/solicitudes/services/solicitudes-seen-storage.service";
 import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
 import type {
   EstadoSolicitudContacto,
@@ -204,7 +209,7 @@ function getInitials(value: string) {
 
 export default function SolicitudesPage() {
   const router = useRouter();
-  const { rol, user } = useAuth();
+  const { rol, user, organizacionId } = useAuth();
   const onboarding = useOnboardingChecklist();
   const { profile } = useOrganizationProfile();
   const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
@@ -265,6 +270,10 @@ export default function SolicitudesPage() {
     };
   }, [solicitudes.length, summary, totalCount]);
   const isColdBoot = !isReady && solicitudes.length === 0 && resumen.total === 0;
+  const solicitudesSeenStorageKey = useMemo(
+    () => getSolicitudesSeenStorageKey(organizacionId, user?.email),
+    [organizacionId, user?.email]
+  );
 
   const visibleSolicitudes = useMemo(() => {
     return solicitudes.map((solicitud) => {
@@ -357,6 +366,19 @@ export default function SolicitudesPage() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [menuSolicitudId]);
+
+  useEffect(() => {
+    if (!canReviewSolicitudes || !isReady || solicitudes.length === 0) {
+      return;
+    }
+
+    const latestSeenAt = getLatestSolicitudesSeenAt(solicitudes);
+    if (latestSeenAt <= 0) {
+      return;
+    }
+
+    persistSolicitudesSeenAt(solicitudesSeenStorageKey, latestSeenAt);
+  }, [canReviewSolicitudes, isReady, solicitudes, solicitudesSeenStorageKey]);
 
   const handleCopyPublicLink = useCallback(async () => {
     if (!publicRequestUrl || !publicRequestShareText) {

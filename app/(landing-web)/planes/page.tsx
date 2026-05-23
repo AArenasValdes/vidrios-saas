@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { FaArrowRight, FaCheckCircle, FaClock, FaComments, FaPhoneAlt } from "react-icons/fa";
 
@@ -66,7 +65,12 @@ export default function PlanesPage() {
         <div className={s.container}>
           <div className={s.topbar}>
             <Link href="/" className={s.brand} aria-label="Ventora">
-              <Image src="/brand/ventora-logo-navy.svg" alt="Ventora" width={150} height={36} priority />
+              <img
+                src="/brand/landingpageblack.svg"
+                alt="Ventora"
+                width={150}
+                height={36}
+              />
             </Link>
 
             <div className={s.topbarActions}>

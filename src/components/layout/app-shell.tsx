@@ -31,6 +31,12 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import { buildOrganizationInitials } from "@/features/organization-profile/services/organization-profile.service";
 import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
 import { canAccessSolicitudes } from "@/features/solicitudes/services/solicitudes-contacto-access";
+import {
+  getLatestSolicitudesSeenAt,
+  getSolicitudesSeenStorageKey,
+  persistSolicitudesSeenAt,
+  readSolicitudesSeenAt,
+} from "@/features/solicitudes/services/solicitudes-seen-storage.service";
 
 import s from "./app-shell.module.css";
 
@@ -118,7 +124,6 @@ const SPECIAL_SCREENS: ContextItem[] = [
 
 const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
 const ALERTS_CLEARED_STORAGE_PREFIX = "vidrios-saas:alerts-cleared:";
-const SOLICITUDES_SEEN_STORAGE_PREFIX = "vidrios-saas:solicitudes-seen:";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
@@ -153,19 +158,6 @@ function getAlertsClearedStorageKey(
   }
 
   return `${ALERTS_CLEARED_STORAGE_PREFIX}${String(organizationId)}:${email.trim().toLowerCase()}`;
-}
-
-function getSolicitudesSeenStorageKey(
-  organizationId: string | number | null | undefined,
-  email: string | null | undefined
-) {
-  if (!organizationId || !email) {
-    return null;
-  }
-
-  return `${SOLICITUDES_SEEN_STORAGE_PREFIX}${String(organizationId)}:${email
-    .trim()
-    .toLowerCase()}`;
 }
 
 function scheduleDeferredShellWork(callback: () => void, delayMs = 650) {
@@ -435,6 +427,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [alerts, alertsSeenAt, alertsSeenStorageKey]);
 
+  const markSolicitudesAsSeen = useCallback(() => {
+    const latestSolicitudSeenAt = getLatestSolicitudesSeenAt(
+      solicitudesShell,
+      solicitudesSeenAt
+    );
+
+    if (latestSolicitudSeenAt === solicitudesSeenAt) {
+      return;
+    }
+
+    setSolicitudesSeenAt(latestSolicitudSeenAt);
+    persistSolicitudesSeenAt(solicitudesSeenStorageKey, latestSolicitudSeenAt);
+  }, [solicitudesSeenAt, solicitudesSeenStorageKey, solicitudesShell]);
+
   useEffect(() => {
     if (!cargando && !user) {
       if (isSigningOut) {
@@ -529,9 +535,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    const rawSeenAt = window.localStorage.getItem(solicitudesSeenStorageKey);
-    const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
-    setSolicitudesSeenAt(Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0);
+    setSolicitudesSeenAt(readSolicitudesSeenAt(solicitudesSeenStorageKey));
   }, [solicitudesSeenStorageKey]);
 
   useEffect(() => {
@@ -540,28 +544,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
 
     setShouldLoadShellFeeds(true);
+    markSolicitudesAsSeen();
+  }, [markSolicitudesAsSeen, pathname]);
 
-    const latestSolicitudSeenAt = solicitudesShell.reduce((latest, solicitud) => {
-      if (solicitud.estado !== "nueva") {
-        return latest;
-      }
-
-      return Math.max(latest, getAlertTimestamp(solicitud.creadoEn));
-    }, solicitudesSeenAt);
-
-    if (latestSolicitudSeenAt === solicitudesSeenAt) {
+  useEffect(() => {
+    if (!isAlertsOpen || alerts.length === 0) {
       return;
     }
 
-    setSolicitudesSeenAt(latestSolicitudSeenAt);
-
-    if (typeof window !== "undefined" && solicitudesSeenStorageKey) {
-      window.localStorage.setItem(
-        solicitudesSeenStorageKey,
-        String(latestSolicitudSeenAt)
-      );
-    }
-  }, [pathname, solicitudesSeenAt, solicitudesSeenStorageKey, solicitudesShell]);
+    markAlertsAsSeen();
+  }, [alerts, isAlertsOpen, markAlertsAsSeen]);
 
   useEffect(() => {
     if (isWorkspaceBooting || shouldLoadShellFeeds) {

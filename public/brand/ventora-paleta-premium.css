@@ -1,0 +1,13 @@
+:root {
+  --ventora-night: #0B0F17;
+  --ventora-charcoal: #111827;
+  --ventora-midnight: #0D1B2A;
+  --ventora-blue: #1E88FF;
+  --ventora-blue-hover: #247BFF;
+  --ventora-silver: #E6E8EB;
+  --ventora-steel: #8A96A6;
+  --ventora-text: #E6E8EB;
+  --ventora-muted: #AEB6C3;
+  --ventora-border: rgba(230, 232, 235, 0.14);
+  --ventora-shadow: rgba(0, 0, 0, 0.45);
+}

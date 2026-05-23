@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import type { ComponentPropsWithoutRef } from "react";
 import { useEffect, useState } from "react";
 import {
@@ -201,13 +200,12 @@ export function PublicQuoteMobile({
         <article className={s.topCard}>
           <div className={s.topRow}>
             <div className={s.logoWrap}>
-              <Image
-                src="/brand/ventora-logo-navy.svg"
+              <img
+                src="/brand/landingpageblack.svg"
                 alt="Ventora"
                 width={132}
                 height={34}
                 className={s.logo}
-                priority
               />
             </div>
             <span className={`${s.statusBadge} ${statusClass}`}>{getStatusLabel(quote.estado)}</span>

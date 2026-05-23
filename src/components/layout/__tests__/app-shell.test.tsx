@@ -4,6 +4,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import AppShell from "../app-shell";
+import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
 
 type MockAuthState = {
   user: {
@@ -19,6 +20,7 @@ const mockRouterPrefetch = jest.fn();
 const mockRefreshAlerts = jest.fn();
 const authListeners = new Set<() => void>();
 const mockWindowLocationReplace = jest.fn();
+let currentAlerts: CotizacionAlert[] = [];
 
 let authSnapshot: MockAuthState = {
   user: {
@@ -111,7 +113,7 @@ jest.mock("@/features/organization-profile/hooks/useOrganizationProfile", () => 
 
 jest.mock("@/features/cotizaciones/hooks/useCotizacionAlerts", () => ({
   useCotizacionAlerts: () => ({
-    alerts: [],
+    alerts: currentAlerts,
     isLoading: false,
     error: null,
     refresh: mockRefreshAlerts,
@@ -133,6 +135,8 @@ describe("AppShell", () => {
     jest.clearAllMocks();
     authListeners.clear();
     resolveSignOut = null;
+    currentAlerts = [];
+    window.localStorage.clear();
     authSnapshot = {
       user: {
         email: "dueno@vidrios.cl",
@@ -161,5 +165,43 @@ describe("AppShell", () => {
 
     expect(screen.getByText("Saliendo del panel")).toBeInTheDocument();
     expect(resolveSignOut).not.toBeNull();
+  });
+
+  it("marca como vistas las alertas que llegan despues de abrir el panel", async () => {
+    const { rerender } = render(
+      <AppShell>
+        <div>contenido</div>
+      </AppShell>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /alertas/i }));
+    expect(mockRefreshAlerts).toHaveBeenCalledTimes(1);
+
+    currentAlerts = [
+      {
+        id: "aprobada-cot-1",
+        cotizacionId: "cot-1",
+        codigo: "COT-1",
+        href: "/cotizaciones/cot-1",
+        kind: "aprobada",
+        title: "Cotizacion aprobada",
+        message: "Cliente acepto la cotizacion.",
+        occurredAt: "2026-05-23T12:00:00.000Z",
+      },
+    ];
+
+    rerender(
+      <AppShell>
+        <div>contenido</div>
+      </AppShell>
+    );
+
+    await waitFor(() => {
+      expect(
+        window.localStorage.getItem(
+          "vidrios-saas:alerts-seen:17:dueno@vidrios.cl"
+        )
+      ).toBe(String(new Date("2026-05-23T12:00:00.000Z").getTime()));
+    });
   });
 });

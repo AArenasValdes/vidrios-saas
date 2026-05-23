@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
@@ -57,8 +56,8 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
         <div className={s.shell}>
           <Reveal>
             <div className={s.brandBlock}>
-              <Image
-                src="/brand/ventora-logo-light.svg"
+              <img
+                src="/brand/landingpageblack.svg"
                 alt="Ventora"
                 width={197}
                 height={44}
@@ -66,14 +65,14 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
               />
 
               <p className={s.brandText}>
-                Presupuestario comercial para vidrios y aluminio. Hecho para
-                talleres, instaladores y vendedores que necesitan cotizar claro
-                y cerrar mas rapido desde terreno.
+                Sistema comercial premium para vidrios y aluminio. Captura
+                solicitudes, ordena el seguimiento y te ayuda a cerrar mejor
+                desde terreno, WhatsApp y demo comercial.
               </p>
 
               <div className={s.metaRow}>
-                <span className={s.metaPill}>Hecho en Chile</span>
-                <span className={s.metaPill}>PDF + WhatsApp</span>
+                <span className={s.metaPill}>Arquitectura comercial</span>
+                <span className={s.metaPill}>Captura 24/7</span>
                 <span className={s.metaPill}>Listo para terreno</span>
               </div>
             </div>
