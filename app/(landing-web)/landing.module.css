@@ -18,7 +18,7 @@
   --radius-sm: 14px;
   --radius: 22px;
   --radius-lg: 32px;
-  --nav-h: 96px;
+  --nav-h: 72px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -79,12 +79,12 @@
 .wordmark {
   display: block;
   width: auto;
-  height: 60px;
+  height: 40px;
 }
 
 @media (max-width: 720px) {
   .wordmark {
-    height: 50px;
+    height: 36px;
   }
 }
 

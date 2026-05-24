@@ -66,10 +66,10 @@ export default function PlanesPage() {
           <div className={s.topbar}>
             <Link href="/" className={s.brand} aria-label="Ventora">
               <img
-                src="/brand/ventora-logo-full-on-dark.svg"
+                src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
-                width={216}
-                height={62}
+                width={184}
+                height={42}
               />
             </Link>
 

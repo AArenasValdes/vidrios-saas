@@ -436,10 +436,10 @@ export default function LandingPage() {
           <div className={s.navbarInner}>
             <a href="#top" className={s.navLogo} aria-label="Ventora inicio">
               <img
-                src="/brand/ventora-logo-full-on-dark.svg"
+                src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
-                width={232}
-                height={66}
+                width={184}
+                height={42}
                 className={s.wordmark}
               />
             </a>
