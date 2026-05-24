@@ -10,6 +10,7 @@ Objetivo:
 
 ## Archivos
 
+- `brand-guidelines.md`: sistema oficial de marca, logo, paleta y reglas de uso por canal
 - `prospecting-system.md`: sistema de busqueda, contacto, seguimiento y registro
 - `content-system.md`: sistema de contenido organico para Facebook, Instagram y TikTok
 - `kpi-dashboard-spec.md`: definicion de metricas, formulas y estructura de dashboard HTML

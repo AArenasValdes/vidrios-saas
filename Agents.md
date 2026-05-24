@@ -171,6 +171,20 @@ Ultima actualizacion operativa: 2026-05-13
 - **Salidas en espanol**: nunca responder en ingles
 - **Usar `proxy.ts`**: no asumir `middleware.ts`
 
+## Identidad visual
+
+- **Fuente de verdad de branding**: `docs/marketing/brand-guidelines.md`
+- **Regla general de marca**: Ventora debe verse como una marca comercial premium, sobria, moderna y orientada a captar, ordenar y cerrar trabajos; no como ERP, software industrial pesado ni cotizador tecnico.
+- **Paleta de marca para piezas externas**: usar negro premium `#050505`, negro azulado `#0B0F17`, grafito `#111827`, azul electrico `#1E88FF`, plata `#E6E8EB`, acero `#8A96A6` y blanco `#FFFFFF` solo de apoyo.
+- **Canales donde SI aplica esta direccion visual**: landing publica, marketing, redes, videos, portadas, banners, piezas comerciales, branding y logos.
+- **Canales donde NO se debe forzar**: app interna autenticada. No redisenar ni oscurecer los colores internos del sistema solo para alinearlos con branding, salvo pedido explicito y QA dedicado.
+- **Login**: puede mantener estetica oscura premium alineada a marca si no perjudica rendimiento, legibilidad ni conversion.
+- **CTA principal de marca**: azul electrico `#1E88FF`. WhatsApp puede usar verde solo en acciones directas de WhatsApp, no como color principal de marca.
+- **Imagenes**: priorizar vidrio, aluminio, fachadas, arquitectura moderna, planos y trabajos terminados; evitar tecnologia generica, robots, IA, servidores o fondos abstractos sin relacion con el rubro.
+- **Marca principal**: isotipo `V + cubo` junto al wordmark `VENTORA`. El cubo solo no es la marca principal; se reserva como recurso secundario. No usar el cubo dentro de la `O`.
+- **Aplicaciones del logo**: logo horizontal principal `V + cubo + VENTORA`, isotipo `V + cubo` para avatar/redes, icono compacto con `V` dominante para app/PWA. Preferir SVG y versiones nitidas segun contexto.
+- **Restriccion explicita**: no convertir la landing en una web de constructora, no caer en un SaaS blanco/azul generico y no sacrificar claridad mobile-first por efectos visuales.
+
 ## Advertencias
 
 - **No romper rutas publicas**: `/solicitud/[empresa]` (captacion) y `/presupuesto/[token]` (cierre) son criticas

@@ -436,10 +436,10 @@ export default function LandingPage() {
           <div className={s.navbarInner}>
             <a href="#top" className={s.navLogo} aria-label="Ventora inicio">
               <img
-                src="/brand/landingpageblack.svg"
+                src="/brand/ventora-logo-full-on-dark.svg"
                 alt="Ventora"
-                width={184}
-                height={42}
+                width={232}
+                height={66}
                 className={s.wordmark}
               />
             </a>
@@ -988,10 +988,10 @@ export default function LandingPage() {
           <div className={s.footerLayout}>
             <div className={s.footerBrand}>
               <img
-                src="/brand/landingpageblack.svg"
+                src="/brand/ventora-logo-full-on-dark.svg"
                 alt="Ventora"
-                width={176}
-                height={40}
+                width={220}
+                height={62}
               />
               <p>
                 Software comercial premium para empresas de vidrios y aluminio que

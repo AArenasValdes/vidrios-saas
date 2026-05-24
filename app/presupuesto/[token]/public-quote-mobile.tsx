@@ -201,10 +201,10 @@ export function PublicQuoteMobile({
           <div className={s.topRow}>
             <div className={s.logoWrap}>
               <img
-                src="/brand/landingpageblack.svg"
+                src="/brand/ventora-logo-full-on-light.svg"
                 alt="Ventora"
-                width={132}
-                height={34}
+                width={164}
+                height={48}
                 className={s.logo}
               />
             </div>

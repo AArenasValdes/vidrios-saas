@@ -45,19 +45,20 @@
 
 .topRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .logoWrap {
-  min-height: 42px;
+  min-height: 52px;
   display: inline-flex;
   align-items: center;
 }
 
 .logo {
-  width: 114px;
+  width: 160px;
   height: auto;
   object-fit: contain;
 }

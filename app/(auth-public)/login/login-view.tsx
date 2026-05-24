@@ -388,10 +388,10 @@ export default function LoginView({
         <div className={s.formShell}>
           <Link href="/" className={s.brand} aria-label={copy.brand}>
             <img
-              src="/brand/ventora-logo-light.svg"
+              src="/brand/ventora-logo-full-on-dark.svg"
               alt="Ventora"
-              width={240}
-              height={54}
+              width={272}
+              height={78}
               className={s.brandLogo}
             />
           </Link>
