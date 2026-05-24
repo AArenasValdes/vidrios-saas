@@ -264,6 +264,7 @@ export default function LoginView({
     setErrorDiagnostic(null);
     setCopiedDiagnostic(false);
     let shouldReleaseSubmitLock = true;
+    let loginSucceeded = false;
 
     const formData = new FormData(e.currentTarget);
     const submittedCorreo = String(formData.get("correo") ?? correo);
@@ -310,6 +311,7 @@ export default function LoginView({
       authLoginRateLimitService.clear();
       setRateLimitUntil(null);
       setRateLimitRemainingMs(0);
+      loginSucceeded = true;
       shouldReleaseSubmitLock = false;
     } catch (signInError) {
       const classifiedError = classifyAuthLoginError(signInError);
@@ -372,10 +374,12 @@ export default function LoginView({
       }
     }
 
-    const redirectTarget =
-      nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
+    if (loginSucceeded) {
+      const redirectTarget =
+        nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard";
 
-    window.location.replace(redirectTarget);
+      window.location.replace(redirectTarget);
+    }
   };
 
   return (
