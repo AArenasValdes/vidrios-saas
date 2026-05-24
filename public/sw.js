@@ -1,10 +1,12 @@
-const CACHE_NAME = "vidrios-saas-v8";
+const CACHE_NAME = "vidrios-saas-v9";
 const APP_SHELL = [
   "/",
   "/login",
   "/planes",
   "/offline",
   "/manifest.webmanifest",
+  "/icons/favicon-16.png",
+  "/icons/favicon-32.png",
   "/icons/apple-touch-icon.png",
   "/icons/pwa-192.png",
   "/icons/pwa-512.png",
