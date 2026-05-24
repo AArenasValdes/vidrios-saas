@@ -201,43 +201,6 @@ function ExportBadge({ label }: { label: string }) {
   );
 }
 
-function ExportChip({
-  label,
-  dotColor,
-}: {
-  label: string;
-  dotColor?: string;
-}) {
-  const dotSpace = dotColor ? 14 : 0;
-  const width = estimatePillWidth(label, 17 + dotSpace, 3.85);
-  const textX = dotColor ? width / 2 + 5 : width / 2;
-
-  return (
-    <svg
-      aria-hidden
-      className={s.exportChipSvg}
-      viewBox={`0 0 ${width} 18`}
-      width={width}
-      height={18}
-    >
-      <rect x="0.5" y="0.5" width={width - 1} height={17} rx={9} fill="#ffffff" stroke="#d1d5db" />
-      {dotColor ? <circle cx="16" cy="9" r="4" fill={dotColor} stroke="rgba(17,24,39,0.16)" /> : null}
-      <text
-        x={textX}
-        y="9.2"
-        fill="#4b5563"
-        fontFamily="Montserrat, Arial, sans-serif"
-        fontSize="7"
-        fontWeight="500"
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
-        {label}
-      </text>
-    </svg>
-  );
-}
-
 function ExportTitleRow({
   name,
 }: {
@@ -946,34 +909,6 @@ export default function CotizacionPrintPage() {
                         )}
                       </div>
 
-                      <div className={s.itemChips}>
-                        {mode === "export" ? (
-                          <>
-                            <ExportChip label={item.tipo} />
-                            <ExportChip label={material} />
-                            <ExportChip label={colorName} dotColor={colorHex} />
-                            <ExportChip label={`${item.cantidad} ${item.cantidad === 1 ? "unidad" : "unidades"}`} />
-                            <ExportChip label={surface} />
-                          </>
-                        ) : (
-                          <>
-                            <span className={s.itemChip}>{item.tipo}</span>
-                            <span className={s.itemChip}>{material}</span>
-                            <span className={`${s.itemChip} ${s.itemChipColor}`}>
-                              <i
-                                className={s.itemChipDot}
-                                style={{ backgroundColor: colorHex }}
-                                aria-hidden
-                              />
-                              {colorName}
-                            </span>
-                            <span className={s.itemChip}>
-                              {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-                            </span>
-                            <span className={s.itemChip}>{surface}</span>
-                          </>
-                        )}
-                      </div>
                     </div>
 
                     <div className={s.componentBody}>

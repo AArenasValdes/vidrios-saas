@@ -21,3 +21,5 @@
  GET /planes 200 in 571ms (next.js: 329ms, application-code: 242ms)
  GET /login 200 in 311ms (next.js: 62ms, proxy.ts: 69ms, application-code: 180ms)
  GET /planes 200 in 286ms (next.js: 69ms, application-code: 217ms)
+✓ Finished filesystem cache database compaction in 18.7s
+ GET /manifest.webmanifest 200 in 139ms (next.js: 121ms, application-code: 18ms)

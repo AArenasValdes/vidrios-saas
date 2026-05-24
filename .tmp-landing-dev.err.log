@@ -379,3 +379,15 @@ https://react.dev/link/hydration-mismatch
             ...
           ...
  
+
+thread 'tokio-runtime-worker' (26064) panicked at turbopack\crates\turbo-tasks-backend\src\backend\operation\aggregation_update.rs:1864:17:
+inner_of_upper_lost_followers is not able to remove followers TaskId 1391658 (TaskId { id: 1391658 } EcmascriptBuildNodeChunk::own_content) from TaskId 166008 (TaskId { id: 166008 } emit_assets) as they don't exist as upper or follower edges
+
+thread 'tokio-runtime-worker' (6452) panicked at turbopack\crates\turbo-tasks-backend\src\backend\operation\aggregation_update.rs:1864:17:
+inner_of_upper_lost_followers is not able to remove followers TaskId 1414519 (TaskId { id: 1414519 } EcmascriptBuildNodeChunk::own_content) from TaskId 403981 (TaskId { id: 403981 } emit_assets) as they don't exist as upper or follower edges
+
+thread 'tokio-runtime-worker' (41792) panicked at turbopack\crates\turbo-tasks-backend\src\backend\operation\aggregation_update.rs:1864:17:
+inner_of_upper_lost_followers is not able to remove followers TaskId 1419907 (TaskId { id: 1419907 } EcmascriptBuildNodeChunk::own_content) from TaskId 262269 (TaskId { id: 262269 } emit_assets) as they don't exist as upper or follower edges
+
+thread 'tokio-runtime-worker' (22908) panicked at turbopack\crates\turbo-tasks-backend\src\backend\operation\aggregation_update.rs:1864:17:
+inner_of_upper_lost_followers is not able to remove followers TaskId 1391658 (TaskId { id: 1391658 } EcmascriptBuildNodeChunk::own_content) from TaskId 169466 (TaskId { id: 169466 } any_output_changed) as they don't exist as upper or follower edges
