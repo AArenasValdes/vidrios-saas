@@ -51,13 +51,13 @@
 }
 
 .logoWrap {
-  min-height: 42px;
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
 }
 
 .logo {
-  width: 114px;
+  width: 134px;
   height: auto;
   object-fit: contain;
 }

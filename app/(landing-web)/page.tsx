@@ -988,10 +988,11 @@ export default function LandingPage() {
           <div className={s.footerLayout}>
             <div className={s.footerBrand}>
               <img
-                src="/brand/ventora-logo-full-on-dark.svg"
+                src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
-                width={220}
-                height={62}
+                width={344}
+                height={80}
+                className={s.footerBrandLogo}
               />
               <p>
                 Software comercial premium para empresas de vidrios y aluminio que

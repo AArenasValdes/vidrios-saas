@@ -1677,6 +1677,12 @@
   max-width: 420px;
 }
 
+.footerBrandLogo {
+  display: block;
+  width: auto;
+  height: 74px;
+}
+
 .footerLinks {
   display: flex;
   flex-wrap: wrap;
@@ -1825,6 +1831,10 @@
   .footerBottom {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footerBrandLogo {
+    height: 60px;
   }
 }
 

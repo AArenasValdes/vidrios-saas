@@ -247,8 +247,8 @@
 
 .logoWrap {
   min-width: 0;
-  min-height: 72px;
-  padding: 0 14px;
+  min-height: 76px;
+  padding: 0 16px;
   border-radius: 16px;
   border: 1px solid rgba(184, 198, 223, 0.6);
   background: rgba(255, 255, 255, 0.94);
@@ -267,7 +267,7 @@
 }
 
 .ventoraLogo {
-  width: 188px;
+  width: 228px;
   height: auto;
   object-fit: contain;
 }
@@ -872,7 +872,7 @@
   .logoWrap {
     min-width: 0;
     width: auto;
-    min-height: 64px;
+    min-height: 68px;
   }
 
   .heroTrustPill {

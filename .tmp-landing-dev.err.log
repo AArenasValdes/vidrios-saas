@@ -1,0 +1,381 @@
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+            <SegmentViewNode type="page" pagePath="(auth-publ...">
+              <SegmentTrieNode>
+              <LoginPage>
+                <LoginView oauthError={false} nextPath={null} appResetDone={false}>
+                  <main className="login-modu...">
+                    <section className="login-modu...">
+                      <div className="login-modu...">
+                        <LinkComponent>
+                        <div className="login-modu...">
+                          <header>
+                          <form className="login-modu..." onSubmit={function onSubmit} noValidate={true} method="post" ...>
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Mail>
+                                <input
+                                  id="correo"
+                                  name="correo"
+                                  type="email"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="tu@empresa.cl"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="email"
+                                  inputMode="email"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Lock>
+                                <input
+                                  id="password"
+                                  name="password"
+                                  type="password"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="Ingresa tu contrasena"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="current-password"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            <div className="login-modu...">
+                              <label className="login-modu..." htmlFor="mantener-s...">
+                                <input
+                                  id="mantener-sesion"
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={function onChange}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                              ...
+                            ...
+                          ...
+                    ...
+            ...
+          ...
+ 
+
+thread 'tokio-runtime-worker' (20692) panicked at turbopack\crates\turbo-tasks-backend\src\backend\operation\aggregation_update.rs:1864:17:
+inner_of_upper_lost_followers is not able to remove followers TaskId 556731 (TaskId { id: 556731 } emit), TaskId 492672 (TaskId { id: 492672 } <SourceMapAsset as OutputAsset>::path), TaskId 492142 (TaskId { id: 492142 } <SourceMapAsset as OutputAsset>::path), TaskId 492565 (TaskId { id: 492565 } <SourceMapAsset as OutputAsset>::path), TaskId 1076435 (TaskId { id: 1076435 } emit), TaskId 495165 (TaskId { id: 495165 } emit), TaskId 493652 (TaskId { id: 493652 } <EcmascriptBuildNodeChunk as OutputAsset>::path), TaskId 1070741 (TaskId { id: 1070741 } <SourceMapAsset as OutputAsset>::path), TaskId 495115 (TaskId { id: 495115 } emit), TaskId 495191 (TaskId { id: 495191 } emit), TaskId 495468 (TaskId { id: 495468 } emit_rebase), TaskId 492676 (TaskId { id: 492676 } <EcmascriptBuildNodeChunk as OutputAsset>::path), TaskId 492626 (TaskId { id: 492626 } <SourceMapAsset as OutputAsset>::path), TaskId 495157 (TaskId { id: 495157 } emit), TaskId 1081929 (TaskId { id: 1081929 } emit), TaskId 1076467 (TaskId { id: 1076467 } emit), TaskId 495146 (TaskId { id: 495146 } emit), TaskId 495136 (TaskId { id: 495136 } emit), TaskId 495197 (TaskId { id: 495197 } emit), TaskId 493525 (TaskId { id: 493525 } <SourceMapAsset as OutputAsset>::path), TaskId 493284 (TaskId { id: 493284 } <EcmascriptBuildNodeChunk as OutputAsset>::path), TaskId 1070731 (TaskId { id: 1070731 } <SourceMapAsset as OutputAsset>::path), TaskId 1076445 (TaskId { id: 1076445 } emit), TaskId 492681 (TaskId { id: 492681 } <SourceMapAsset as OutputAsset>::path), TaskId 495173 (TaskId { id: 495173 } emit), TaskId 1081379 (TaskId { id: 1081379 } <SourceMapAsset as OutputAsset>::path), TaskId 1076496 (TaskId { id: 1076496 } emit), TaskId 495123 (TaskId { id: 495123 } emit), TaskId 1076421 (TaskId { id: 1076421 } emit), TaskId 556718 (TaskId { id: 556718 } <SourceMapAsset as OutputAsset>::path), TaskId 495110 (TaskId { id: 495110 } emit), TaskId 495201 (TaskId { id: 495201 } emit), TaskId 495176 (TaskId { id: 495176 } emit), TaskId 1068554 (TaskId { id: 1068554 } <SourceMapAsset as OutputAsset>::path), TaskId 495579 (TaskId { id: 495579 } emit_rebase), TaskId 495126 (TaskId { id: 495126 } emit), TaskId 1070736 (TaskId { id: 1070736 } <SourceMapAsset as OutputAsset>::path), TaskId 492132 (TaskId { id: 492132 } <SourceMapAsset as OutputAsset>::path), TaskId 680310 (TaskId { id: 680310 } <SourceMapAsset as OutputAsset>::path), TaskId 680889 (TaskId { id: 680889 } emit), TaskId 493643 (TaskId { id: 493643 } <SourceMapAsset as OutputAsset>::path), TaskId 1076426 (TaskId { id: 1076426 } emit), TaskId 495204 (TaskId { id: 495204 } emit), TaskId 493291 (TaskId { id: 493291 } <SourceMapAsset as OutputAsset>::path), TaskId 495481 (TaskId { id: 495481 } emit_rebase), TaskId 495154 (TaskId { id: 495154 } emit), TaskId 1081940 (TaskId { id: 1081940 } emit), TaskId 495105 (TaskId { id: 495105 } emit), TaskId 1076504 (TaskId { id: 1076504 } emit), TaskId 492614 (TaskId { id: 492614 } <SourceMapAsset as OutputAsset>::path) from TaskId 495079 (TaskId { id: 495079 } emit_assets) as they don't exist as upper or follower edges
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+            <SegmentViewNode type="page" pagePath="(auth-publ...">
+              <SegmentTrieNode>
+              <LoginPage>
+                <LoginView oauthError={false} nextPath={null} appResetDone={false}>
+                  <main className="login-modu...">
+                    <section className="login-modu...">
+                      <div className="login-modu...">
+                        <LinkComponent>
+                        <div className="login-modu...">
+                          <header>
+                          <form className="login-modu..." onSubmit={function onSubmit} noValidate={true} method="post" ...>
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Mail>
+                                <input
+                                  id="correo"
+                                  name="correo"
+                                  type="email"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="tu@empresa.cl"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="email"
+                                  inputMode="email"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Lock>
+                                <input
+                                  id="password"
+                                  name="password"
+                                  type="password"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="Ingresa tu contrasena"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="current-password"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            <div className="login-modu...">
+                              <label className="login-modu..." htmlFor="mantener-s...">
+                                <input
+                                  id="mantener-sesion"
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={function onChange}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                              ...
+                            ...
+                          ...
+                    ...
+            ...
+          ...
+ 
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RedirectBoundary>
+      <RedirectErrorBoundary router={{...}}>
+        <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+          <SegmentViewNode type="page" pagePath="(landing-w...">
+            <SegmentTrieNode>
+            <ClientPageRoot Component={function LandingPage} serverProvidedParams={{...}}>
+              <LandingPage params={Promise} searchParams={Promise}>
+                <main className="landing-mo...">
+                  <nav>
+                  <section>
+                  <section>
+                  <section>
+                  <section>
+                  <section>
+                  <section id="contacto" className="landing-mo...">
+                    <div className="landing-mo...">
+                      <div className="landing-mo...">
+                        <SectionReveal>
+                        <SectionReveal className="landing-mo...">
+                          <div className="landing-mo...">
+                            <div>
+                            <form className="landing-mo..." onSubmit={function handleContactSubmit}>
+                              <input
+                                type="hidden"
+                                name="ayuda"
+                                value="demo-comercial"
+-                               style={{caret-color:"transparent"}}
+                              >
+                              <label className="landing-mo...">
+                                <span>
+                                <input
+                                  type="text"
+                                  name="nombre"
+                                  placeholder="Juan Perez"
+                                  autoComplete="name"
+                                  onFocus={function trackLandingFormStart}
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                              <label className="landing-mo...">
+                                <span>
+                                <input
+                                  type="tel"
+                                  name="telefono"
+                                  placeholder="+56 9 0000 0000"
+                                  autoComplete="tel"
+                                  inputMode="tel"
+                                  onFocus={function trackLandingFormStart}
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                              ...
+                            ...
+                  ...
+          ...
+        ...
+ 
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RedirectBoundary>
+      <RedirectErrorBoundary router={{...}}>
+        <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+          <SegmentViewNode type="page" pagePath="(landing-w...">
+            <SegmentTrieNode>
+            <ClientPageRoot Component={function LandingPage} serverProvidedParams={{...}}>
+              <LandingPage params={Promise} searchParams={Promise}>
+                <main className="landing-mo...">
+                  <nav>
+                  <section>
+                  <section>
+                  <section>
+                  <section>
+                  <section>
+                  <section id="contacto" className="landing-mo...">
+                    <div className="landing-mo...">
+                      <div className="landing-mo...">
+                        <SectionReveal>
+                        <SectionReveal className="landing-mo...">
+                          <div className="landing-mo...">
+                            <div>
+                            <form className="landing-mo..." onSubmit={function handleContactSubmit}>
+                              <input
+                                type="hidden"
+                                name="ayuda"
+                                value="demo-comercial"
+-                               style={{caret-color:"transparent"}}
+                              >
+                              <label className="landing-mo...">
+                                <span>
+                                <input
+                                  type="text"
+                                  name="nombre"
+                                  placeholder="Juan Perez"
+                                  autoComplete="name"
+                                  onFocus={function trackLandingFormStart}
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                              <label className="landing-mo...">
+                                <span>
+                                <input
+                                  type="tel"
+                                  name="telefono"
+                                  placeholder="+56 9 0000 0000"
+                                  autoComplete="tel"
+                                  inputMode="tel"
+                                  onFocus={function trackLandingFormStart}
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                              ...
+                            ...
+                  ...
+          ...
+        ...
+ 
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+            <SegmentViewNode type="page" pagePath="(auth-publ...">
+              <SegmentTrieNode>
+              <LoginPage>
+                <LoginView oauthError={false} nextPath={null} appResetDone={false}>
+                  <main className="login-modu...">
+                    <section className="login-modu...">
+                      <div className="login-modu...">
+                        <LinkComponent>
+                        <div className="login-modu...">
+                          <header>
+                          <form className="login-modu..." onSubmit={function onSubmit} noValidate={true} method="post" ...>
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Mail>
+                                <input
+                                  id="correo"
+                                  name="correo"
+                                  type="email"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="tu@empresa.cl"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="email"
+                                  inputMode="email"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                            <div className="login-modu...">
+                              <label>
+                              <div className="login-modu...">
+                                <Lock>
+                                <input
+                                  id="password"
+                                  name="password"
+                                  type="password"
+                                  className="login-module__LSBj0W__fieldInput"
+                                  placeholder="Ingresa tu contrasena"
+                                  value=""
+                                  onChange={function onChange}
+                                  autoComplete="current-password"
+                                  required={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                            <div className="login-modu...">
+                              <label className="login-modu..." htmlFor="mantener-s...">
+                                <input
+                                  id="mantener-sesion"
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={function onChange}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                                ...
+                              ...
+                            ...
+                          ...
+                    ...
+            ...
+          ...
+ 

@@ -203,8 +203,8 @@ export function PublicQuoteMobile({
               <img
                 src="/brand/ventora-logo-compact-on-light.svg"
                 alt="Ventora"
-                width={132}
-                height={34}
+                width={146}
+                height={36}
                 className={s.logo}
               />
             </div>

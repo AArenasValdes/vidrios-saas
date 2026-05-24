@@ -57,10 +57,10 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
           <Reveal>
             <div className={s.brandBlock}>
               <img
-                src="/brand/ventora-logo-full-on-dark.svg"
+                src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
-                width={240}
-                height={68}
+                width={344}
+                height={80}
                 className={s.brandWordmark}
               />
 

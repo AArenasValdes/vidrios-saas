@@ -68,8 +68,9 @@ export default function PlanesPage() {
               <img
                 src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
-                width={184}
-                height={42}
+                width={212}
+                height={48}
+                className={s.brandLogo}
               />
             </Link>
 

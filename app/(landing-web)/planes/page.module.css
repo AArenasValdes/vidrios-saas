@@ -33,6 +33,12 @@
   align-items: center;
 }
 
+.brandLogo {
+  display: block;
+  width: auto;
+  height: 48px;
+}
+
 .topbarActions,
 .heroActions {
   display: flex;
@@ -253,6 +259,10 @@
     align-items: flex-start;
     flex-direction: column;
     margin-bottom: 32px;
+  }
+
+  .brandLogo {
+    height: 42px;
   }
 
   .topbarActions,

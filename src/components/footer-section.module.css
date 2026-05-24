@@ -49,14 +49,15 @@
 
 .brandBlock {
   display: grid;
-  gap: 18px;
-  max-width: 420px;
+  gap: 20px;
+  max-width: 468px;
   padding-right: 28px;
 }
 
 .brandWordmark {
   width: auto;
-  height: 52px;
+  height: 72px;
+  display: block;
 }
 
 .brandText {
@@ -225,7 +226,7 @@
   }
 
   .brandWordmark {
-    height: 36px;
+    height: 56px;
   }
 
   .legalRow,

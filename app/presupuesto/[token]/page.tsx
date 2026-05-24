@@ -147,10 +147,10 @@ export default async function PresupuestoPublicoPage({
             <div className={s.heroTrustBar}>
               <div className={s.logoWrap}>
                 <img
-                  src="/brand/ventora-logo-full-on-light.svg"
+                  src="/brand/ventora-logo-compact-on-light.svg"
                   alt="Ventora"
-                  width={212}
-                  height={62}
+                  width={228}
+                  height={54}
                   className={s.ventoraLogo}
                 />
               </div>

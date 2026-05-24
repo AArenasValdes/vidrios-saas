@@ -43,9 +43,9 @@
 
 .formShell {
   width: 100%;
-  max-width: 480px;
+  max-width: 500px;
   display: grid;
-  gap: 28px;
+  gap: 30px;
   font-family: "Space Grotesk", sans-serif;
 }
 
@@ -59,7 +59,7 @@
 
 .brandLogo {
   width: auto;
-  height: 56px;
+  height: 78px;
 }
 
 .formCard {
@@ -656,7 +656,7 @@
   }
 
   .brandLogo {
-    height: 44px;
+    height: 58px;
   }
 
   .formHeader {
