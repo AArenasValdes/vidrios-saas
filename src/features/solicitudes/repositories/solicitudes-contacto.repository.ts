@@ -515,28 +515,36 @@ async function selectSolicitudesResumenPage(
   const to = from + pageSize - 1;
   const normalizedSearch = options.search?.trim() ?? "";
 
-  const applyFilters = (query: any) => {
-    let nextQuery = query;
+  type SolicitudesResumenFilterableQuery = {
+    eq(column: string, value: never): SolicitudesResumenFilterableQuery;
+    or?(filters: string): SolicitudesResumenFilterableQuery;
+  };
+
+  const applyFilters = <TQuery extends SolicitudesResumenFilterableQuery>(
+    query: TQuery
+  ): TQuery => {
+    let nextQuery = query as TQuery;
 
     if (organizationId !== undefined) {
-      nextQuery = nextQuery.eq("organization_id", organizationId as never);
+      nextQuery = nextQuery.eq("organization_id", organizationId as never) as TQuery;
     }
 
     if (options.estado) {
-      nextQuery = nextQuery.eq("estado", options.estado as never);
+      nextQuery = nextQuery.eq("estado", options.estado as never) as TQuery;
     }
 
     if (normalizedSearch) {
       const safeSearch = normalizedSearch.replace(/,/g, " ").replace(/\./g, " ");
-      nextQuery = nextQuery.or?.(
-        `nombre.ilike.%${safeSearch}%,empresa.ilike.%${safeSearch}%,contacto.ilike.%${safeSearch}%,tipo_trabajo.ilike.%${safeSearch}%`
-      ) ?? nextQuery;
+      nextQuery =
+        (nextQuery.or?.(
+          `nombre.ilike.%${safeSearch}%,empresa.ilike.%${safeSearch}%,contacto.ilike.%${safeSearch}%,tipo_trabajo.ilike.%${safeSearch}%`
+        ) as TQuery | undefined) ?? nextQuery;
     }
 
     return nextQuery;
   };
 
-  let query = applyFilters(
+  const query = applyFilters(
     supabase
       .from(TABLE_NAME as never)
       .select(SOLICITUD_RESUMEN_SELECT, { count: "exact" })
@@ -900,7 +908,7 @@ export function createSolicitudesContactoRepository(
         basePayload.contactada_at = null;
       }
 
-      let query = supabase
+      const query = supabase
         .from(TABLE_NAME as never)
         .update(basePayload as never)
         .eq("id", input.id as never)
@@ -920,7 +928,7 @@ export function createSolicitudesContactoRepository(
         estado: input.estado,
         actualizado_en: now,
       };
-      let legacyQuery = supabase
+      const legacyQuery = supabase
         .from(TABLE_NAME as never)
         .update(legacyPayload as never)
         .eq("id", input.id as never)

@@ -42,6 +42,13 @@ type AuthPushContext = {
   userAgent?: string | null;
 };
 
+type OrganizationPushDispatchResult = {
+  sent: number;
+  failed: number;
+  deactivated: number;
+  skipped: boolean;
+};
+
 let vapidConfigured = false;
 
 function toWebPushSubscription(subscription: PushSubscriptionJSON) {
@@ -139,10 +146,12 @@ async function sendOrganizationPush(
   organizationId: string | number,
   payload: string,
   options?: RequestOptions
-) {
+): Promise<OrganizationPushDispatchResult> {
   if (!ensureWebPushConfigured()) {
     return {
       sent: 0,
+      failed: 0,
+      deactivated: 0,
       skipped: true,
     };
   }
@@ -152,37 +161,87 @@ async function sendOrganizationPush(
   if (subscriptions.length === 0) {
     return {
       sent: 0,
+      failed: 0,
+      deactivated: 0,
       skipped: false,
     };
   }
 
-  let sent = 0;
+  const dispatchResults = await Promise.allSettled(
+    subscriptions.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(
+          toWebPushSubscription(subscription.subscription),
+          payload,
+          options
+        );
 
-  for (const subscription of subscriptions) {
-    try {
-      await webpush.sendNotification(
-        toWebPushSubscription(subscription.subscription),
-        payload,
-        options
-      );
-      sent += 1;
-    } catch (error) {
-      const statusCode =
-        error && typeof error === "object" && "statusCode" in error
-          ? Number((error as { statusCode?: unknown }).statusCode)
-          : null;
+        return {
+          sent: 1,
+          failed: 0,
+          deactivated: 0,
+        };
+      } catch (error) {
+        const statusCode =
+          error && typeof error === "object" && "statusCode" in error
+            ? Number((error as { statusCode?: unknown }).statusCode)
+            : null;
 
-      if (statusCode === 404 || statusCode === 410) {
-        await repository.deactivateByEndpoint(subscription.endpoint);
-        continue;
+        if (statusCode === 404 || statusCode === 410) {
+          await repository.deactivateByEndpoint(subscription.endpoint);
+          return {
+            sent: 0,
+            failed: 0,
+            deactivated: 1,
+          };
+        }
+
+        console.error(
+          "[Push] No pudimos enviar una notificacion web push para la organizacion.",
+          {
+            organizationId: String(organizationId),
+            endpoint: subscription.endpoint,
+            error,
+          }
+        );
+
+        return {
+          sent: 0,
+          failed: 1,
+          deactivated: 0,
+        };
+      }
+    })
+  );
+
+  const totals = dispatchResults.reduce(
+    (accumulator, result) => {
+      if (result.status === "fulfilled") {
+        accumulator.sent += result.value.sent;
+        accumulator.failed += result.value.failed;
+        accumulator.deactivated += result.value.deactivated;
+        return accumulator;
       }
 
-      throw error;
+      console.error(
+        "[Push] El envio paralelo de una suscripcion termino con error no controlado.",
+        {
+          organizationId: String(organizationId),
+          reason: result.reason,
+        }
+      );
+      accumulator.failed += 1;
+      return accumulator;
+    },
+    {
+      sent: 0,
+      failed: 0,
+      deactivated: 0,
     }
-  }
+  );
 
   return {
-    sent,
+    ...totals,
     skipped: false,
   };
 }

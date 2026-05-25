@@ -204,6 +204,7 @@ function outerFrame(x: number, y: number, w: number, h: number, fW: number, colo
   return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${color}" stroke-width="${fW}" rx="0.5"/>`;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function technicalFrameLines(x: number, y: number, w: number, h: number, fW: number, color: string): string {
   const inset = Math.max(2.2, fW * 0.5);
   const diag = Math.max(8, fW * 2.4);
@@ -258,6 +259,7 @@ function sidePullHandle(cx: number, cy: number, h: number): string {
   ].join("");
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function slidingLeafLabel(
   cx: number,
   y: number,

@@ -142,7 +142,7 @@ CREATE OR REPLACE FUNCTION "public"."get_org_id"() RETURNS bigint
     AS $$
   select organization_id
   from public.users
-  where correo = auth.email()
+  where auth_user_id = auth.uid()
     and eliminado_en is null
   limit 1;
 $$;
@@ -1275,11 +1275,6 @@ ALTER TABLE ONLY "public"."system_configurations"
 
 ALTER TABLE ONLY "public"."system_lines"
     ADD CONSTRAINT "system_lines_pkey" PRIMARY KEY ("id");
-
-
-
-ALTER TABLE ONLY "public"."clients"
-    ADD CONSTRAINT "unique_correo_clients" UNIQUE ("correo");
 
 
 

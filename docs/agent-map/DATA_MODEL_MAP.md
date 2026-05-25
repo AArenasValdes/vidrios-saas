@@ -35,7 +35,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: N:1 organizations, 1:N projects, 1:N cotizaciones (via projects)
 - **Usada por**: Clientes, Cotizaciones, Dashboard
 - **Archivos donde aparece**: `src/features/clientes/repositories/clientes-repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Riesgos**: `unique_correo_clients` es GLOBAL (no por org) - bug conocido INC-3. Impide mismo correo en distintas organizaciones.
+- **Riesgos**: la unicidad efectiva de `correo` debe mantenerse por `organization_id` + `eliminado_en IS NULL`. Si reaparece `unique_correo_clients` global, rompe el piloto multi-empresa.
 
 ---
 
@@ -221,7 +221,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 | Funcion | Tipo | Proposito |
 |---|---|---|
-| `get_org_id()` | SQL STABLE SECURITY DEFINER | Resuelve organization_id desde auth.email() via public.users |
+| `get_org_id()` | SQL STABLE SECURITY DEFINER | Resuelve organization_id desde auth.uid() via public.users.auth_user_id |
 | `reserve_next_cotizacion_code(org_id, date)` | PLPGSQL SECURITY DEFINER | Generacion atomica de codigo COT-DDMMYY-NNN |
 | `admin_purgar_clientes_eliminados(retention_days)` | PLPGSQL SECURITY DEFINER | Purga hard de registros soft-deleted > retention |
 | `rls_auto_enable()` | EVENT TRIGGER | Auto-habilita RLS en nuevas tablas publicas |
@@ -237,7 +237,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |
 | SELECT publico | product_types |
-| **Sin policies** | cotizacion_code_counters, formula_variables, material_types, quote_item_breakdown |
+| **Sin policies** | formula_variables, material_types, quote_item_breakdown |
 
 ### solicitudes_contacto - RLS especial
 
@@ -279,7 +279,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 |---|---|---|
 | INC-1 | FKs duplicados en cotizacion_items, configuration_materials, quote_item_breakdown | Alta |
 | INC-2 | `historial_precios_organizacion_id_fkey` usa tilde en nombre | Media |
-| INC-3 | `unique_correo_clients` sin scope por org | Alta |
+| INC-3 | Reaparicion de `unique_correo_clients` global en `clients.correo` | Alta |
 | INC-4 | web_push_subscriptions sin FKs a organizations/auth.users | Media |
 | INC-5 | cotizacion_code_counters sin FK a organizations | Baja |
 | INC-10 | quote_item_breakdown sin RLS policies | Alta |

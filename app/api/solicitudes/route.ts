@@ -26,6 +26,7 @@ export const dynamic = "force-dynamic";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 const leadRequestRateLimiter = createSlidingWindowRateLimiter({
+  namespace: "api:solicitudes:landing-request",
   windowMs: RATE_LIMIT_WINDOW_MS,
   maxRequests: RATE_LIMIT_MAX_REQUESTS,
 });
@@ -93,6 +94,7 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
+    console.error("[API] /api/solicitudes GET", error);
     return NextResponse.json(
       { error: "No pudimos cargar las solicitudes." },
       { status: 500 }
@@ -143,6 +145,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    console.error("[API] /api/solicitudes PATCH", error);
     return NextResponse.json(
       { error: "No pudimos actualizar la solicitud." },
       { status: 500 }
@@ -153,7 +156,7 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   const ip = resolveRequestIp(request);
 
-  if (leadRequestRateLimiter.isRateLimited(ip)) {
+  if (await leadRequestRateLimiter.isRateLimited(ip)) {
     return NextResponse.json(
       { error: "Recibimos demasiadas solicitudes. Intenta nuevamente en unos minutos." },
       { status: 429 }
@@ -187,6 +190,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    console.error("[API] /api/solicitudes POST", error);
     return NextResponse.json(
       { error: "No pudimos registrar tu solicitud. Intenta nuevamente." },
       { status: 500 }

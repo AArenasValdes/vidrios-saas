@@ -6,6 +6,29 @@ jest.mock("@/features/auth/services/active-user-profile.service", () => ({
   findActiveUserProfile: jest.fn(),
 }));
 
+jest.mock("@/features/subscriptions/services/subscription-route-access.service", () => ({
+  getSubscriptionSnapshotByOrganizationId: jest.fn().mockResolvedValue({
+    subscriptionStatus: "active",
+    trialStartedAt: null,
+    trialEndsAt: null,
+    subscriptionStartedAt: null,
+    subscriptionEndsAt: null,
+    planType: "monthly",
+    billingPeriod: "monthly",
+    paymentMethod: "manual_transfer",
+    lastPaymentAt: null,
+    founderPriceLocked: false,
+  }),
+}));
+
+jest.mock("@/features/subscriptions/services/subscription-status.service", () => ({
+  resolveOrganizationSubscriptionState: jest.fn().mockReturnValue({
+    isWriteBlocked: false,
+  }),
+  assertSubscriptionAllowsWrite: jest.fn(),
+  SubscriptionWriteAccessError: class SubscriptionWriteAccessError extends Error {},
+}));
+
 jest.mock(
   "@/features/organization-assets/services/organization-asset-image-normalizer.service",
   () => ({
@@ -26,11 +49,13 @@ import {
   normalizeOrganizationAssetImage,
   OrganizationAssetImageProcessingError,
 } from "@/features/organization-assets/services/organization-asset-image-normalizer.service";
+import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
 
 describe("/api/organization-assets/upload", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (normalizeOrganizationAssetImage as jest.Mock).mockReset();
+    (assertSubscriptionAllowsWrite as jest.Mock).mockReset();
   });
 
   it("sube una imagen con service role y devuelve su URL publica", async () => {

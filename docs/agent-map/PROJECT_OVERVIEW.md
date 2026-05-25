@@ -24,6 +24,13 @@
 | Testing | Jest 30 + React Testing Library |
 | Deploy | Vercel |
 
+## Variables criticas de produccion
+
+- `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`: rate limiting cross-instance en captacion publica
+- `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`: Web Push VAPID
+- `SUPABASE_SERVICE_ROLE_KEY`: aprobacion publica, uploads admin y operaciones server-side
+- `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`: correo transaccional si se activa envio por email
+
 ## Arquitectura general
 
 ```

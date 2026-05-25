@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
@@ -19,27 +19,27 @@ export function usePublicLandingTestimonials() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!organizacionId) {
-      setTestimonials([]);
-      return;
-    }
-
+  const refreshTestimonials = useCallback(async (organizationId: string | number) => {
     setIsLoading(true);
     setError(null);
 
-    void publicLandingTestimonialService
-      .listByOrganizationId(organizacionId)
-      .then((rows) => {
-        setTestimonials(rows);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "No se pudieron cargar las valoraciones.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [organizacionId]);
+    try {
+      const rows = await publicLandingTestimonialService.listByOrganizationId(organizationId);
+      setTestimonials(rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudieron cargar las valoraciones.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!organizacionId) {
+      return;
+    }
+
+    void refreshTestimonials(organizacionId);
+  }, [organizacionId, refreshTestimonials]);
 
   async function updateStatus(
     id: string | number,
@@ -65,9 +65,9 @@ export function usePublicLandingTestimonials() {
   }
 
   return {
-    testimonials,
-    isLoading,
-    error,
+    testimonials: organizacionId ? testimonials : [],
+    isLoading: organizacionId ? isLoading : false,
+    error: organizacionId ? error : null,
     updateStatus,
     PublicLandingTestimonialValidationError,
   };

@@ -4,6 +4,34 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-25 - Estabilizacion piloto: rate limit externo, push resiliente y baseline limpio
+
+### Resumen
+
+Se cerro la pasada de estabilizacion previa al piloto. La captacion publica queda preparada para Upstash Redis con fallback local explicito si faltan variables de entorno, el envio de push por organizacion deja de abortar el lote completo ante una sola suscripcion defectuosa, y las API routes criticas ahora registran errores reales en servidor sin exponer detalle al cliente.
+
+Tambien se agregaron dos migraciones chicas de base de datos: una elimina la unicidad global de `clients.correo` para dejarla scoped por `organization_id`, y otra habilita RLS minima para `cotizacion_code_counters` en `authenticated`. El baseline del workspace quedo con `npm run lint`, `npm test` y `npm run build` pasando.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/solicitudes/services/solicitudes-public-http.service.ts` | Nuevo adaptador Upstash Redis + fallback local explicito |
+| `src/features/notificaciones/services/web-push-notifications.service.ts` | Envio paralelo resiliente con `sent/failed/deactivated/skipped` |
+| `app/api/solicitud/[empresa]/route.ts` | Rate limit async + logging estructurado |
+| `app/api/solicitud/[empresa]/valoraciones/route.ts` | Rate limit async + logging estructurado |
+| `app/api/solicitudes/route.ts` | Rate limit async + logging en GET/PATCH/POST |
+| `app/api/dashboard/summary/route.ts` | Telemetria de errores en auth/data |
+| `app/api/cotizaciones/resumen/route.ts` | Telemetria de errores en auth/data |
+| `app/api/clientes/resumen/route.ts` | Telemetria de errores en auth/data |
+| `app/api/solicitudes/resumen/route.ts` | Telemetria de errores en auth/data |
+| `supabase/migrations/20260525153000_clients_email_unique_by_organization.sql` | Quita unicidad global de correo en clientes |
+| `supabase/migrations/20260525154000_cotizacion_code_counters_authenticated_rls.sql` | Policies RLS minimas para `cotizacion_code_counters` |
+| `supabase/docs/current_schema.sql` | Snapshot documental corregido para `get_org_id()` y unicidad de `clients.correo` |
+| `supabase/docs/rls_policies.md` | `get_org_id()` documentado por `auth.uid()` |
+
+---
+
 ## 2026-05-25 - Trial gratis de 7 dias y activacion manual
 
 ### Resumen

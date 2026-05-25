@@ -1,9 +1,98 @@
 import "server-only";
 
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
 type SlidingWindowRateLimiterOptions = {
   windowMs: number;
   maxRequests: number;
+  namespace?: string;
 };
+
+type SlidingWindowRateLimiter = {
+  isRateLimited(key: string | null): Promise<boolean>;
+  mode: "upstash" | "memory";
+};
+
+type InMemoryRateLimiterState = Map<string, number[]>;
+
+let rateLimiterSequence = 0;
+let upstashFallbackLogged = false;
+let upstashInitFailedLogged = false;
+let sharedRedisClient: Redis | null | undefined;
+
+const inMemoryRateLimiterStates = new Map<string, InMemoryRateLimiterState>();
+
+function getRateLimitNamespace(options: SlidingWindowRateLimiterOptions) {
+  return (
+    options.namespace?.trim() ||
+    `solicitudes-publicas:${options.windowMs}:${options.maxRequests}:${++rateLimiterSequence}`
+  );
+}
+
+function getUpstashRedisClient() {
+  if (sharedRedisClient !== undefined) {
+    return sharedRedisClient;
+  }
+
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.KV_REST_API_URL?.trim() ||
+    "";
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.KV_REST_API_TOKEN?.trim() ||
+    "";
+
+  if (!url || !token) {
+    sharedRedisClient = null;
+
+    if (!upstashFallbackLogged) {
+      upstashFallbackLogged = true;
+      console.warn(
+        "[RateLimit] Upstash Redis no esta configurado. Se usara un rate limiter local en memoria, sin cobertura entre instancias."
+      );
+    }
+
+    return sharedRedisClient;
+  }
+
+  sharedRedisClient = new Redis({
+    url,
+    token,
+  });
+
+  return sharedRedisClient;
+}
+
+function createInMemoryRateLimiter(
+  namespace: string,
+  options: SlidingWindowRateLimiterOptions
+): SlidingWindowRateLimiter {
+  const state =
+    inMemoryRateLimiterStates.get(namespace) ?? new Map<string, number[]>();
+  inMemoryRateLimiterStates.set(namespace, state);
+
+  return {
+    mode: "memory",
+    async isRateLimited(key: string | null) {
+      const normalizedKey = key?.trim() || "unknown";
+      const now = Date.now();
+      const windowStart = now - options.windowMs;
+      const recentRequests = (state.get(normalizedKey) ?? []).filter(
+        (timestamp) => timestamp > windowStart
+      );
+
+      if (recentRequests.length >= options.maxRequests) {
+        state.set(normalizedKey, recentRequests);
+        return true;
+      }
+
+      state.set(normalizedKey, [...recentRequests, now]);
+      return false;
+    },
+  };
+}
 
 export function resolveRequestIp(request: Request) {
   const cfConnectingIp = request.headers.get("cf-connecting-ip");
@@ -53,36 +142,42 @@ export async function parseJsonObjectBody<T extends Record<string, unknown>>(
 export function createSlidingWindowRateLimiter(
   options: SlidingWindowRateLimiterOptions
 ) {
-  const recentRequestsByKey = new Map<string, number[]>();
+  const namespace = getRateLimitNamespace(options);
+  const redis = getUpstashRedisClient();
 
-  function prune(windowStart: number) {
-    for (const [key, timestamps] of recentRequestsByKey.entries()) {
-      const recentRequests = timestamps.filter((timestamp) => timestamp > windowStart);
-
-      if (recentRequests.length > 0) {
-        recentRequestsByKey.set(key, recentRequests);
-      } else {
-        recentRequestsByKey.delete(key);
-      }
-    }
+  if (!redis) {
+    return createInMemoryRateLimiter(namespace, options);
   }
 
+  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000));
+  const limiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(options.maxRequests, `${windowSeconds} s`),
+    prefix: namespace,
+    analytics: false,
+  });
+
+  const fallback = createInMemoryRateLimiter(namespace, options);
+
   return {
-    isRateLimited(key: string | null) {
+    mode: "upstash" as const,
+    async isRateLimited(key: string | null) {
       const normalizedKey = key?.trim() || "unknown";
-      const now = Date.now();
-      const windowStart = now - options.windowMs;
 
-      prune(windowStart);
+      try {
+        const result = await limiter.limit(normalizedKey);
+        return !result.success;
+      } catch (error) {
+        if (!upstashInitFailedLogged) {
+          upstashInitFailedLogged = true;
+          console.error(
+            "[RateLimit] Fallo la verificacion con Upstash Redis. Se usara fallback local en memoria.",
+            error
+          );
+        }
 
-      const recentRequests = recentRequestsByKey.get(normalizedKey) ?? [];
-
-      if (recentRequests.length >= options.maxRequests) {
-        return true;
+        return fallback.isRateLimited(normalizedKey);
       }
-
-      recentRequestsByKey.set(normalizedKey, [...recentRequests, now]);
-      return false;
     },
   };
 }

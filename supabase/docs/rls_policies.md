@@ -21,7 +21,7 @@ Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_e
 ```sql
 select organization_id
 from public.users
-where correo = auth.email()
+where auth_user_id = auth.uid()
   and eliminado_en is null
 limit 1;
 ```

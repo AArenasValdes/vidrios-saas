@@ -31,6 +31,17 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
+jest.mock("@/features/organization-profile/hooks/useOrganizationProfile", () => ({
+  useOrganizationProfile: () => ({
+    isReady: true,
+    profile: {
+      subscription: {
+        isWriteBlocked: false,
+      },
+    },
+  }),
+}));
+
 jest.mock("@/features/cotizaciones/services/cotizaciones-summary.service", () => ({
   getCotizacionesResumenByOrganizationId: (organizationId: string | number) =>
     getCotizacionesResumenByOrganizationId(organizationId),
@@ -46,6 +57,10 @@ jest.mock("@/features/cotizaciones/services/cotizaciones.service", () => ({
     updateManualResponseStatus: (...args: unknown[]) => updateManualResponseStatus(...args),
     markWorkflowAsSent: (...args: unknown[]) => markWorkflowAsSent(...args),
   },
+}));
+
+jest.mock("@/features/subscriptions/services/subscription-status.service", () => ({
+  assertSubscriptionAllowsWrite: jest.fn(),
 }));
 
 function createCliente(id: string, organizationId: string | number, nombre: string): Cliente {

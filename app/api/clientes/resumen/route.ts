@@ -27,6 +27,7 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
+    console.error("[API] /api/clientes/resumen auth", error);
     return NextResponse.json(
       { error: "No pudimos validar la organizacion activa." },
       { status: 500 }
@@ -64,7 +65,8 @@ export async function GET() {
         },
       }
     );
-  } catch {
+  } catch (error) {
+    console.error("[API] /api/clientes/resumen data", error);
     return NextResponse.json(
       { error: "No pudimos cargar los clientes." },
       { status: 500 }

@@ -7,6 +7,7 @@ import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacio
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 type DashboardSummaryState = {
+  organizationKey: string | null;
   recentRecords: CotizacionWorkflowRecord[];
   alerts: CotizacionAlert[];
   totalCount: number;
@@ -18,7 +19,10 @@ type DashboardSummaryState = {
   isReady: boolean;
 };
 
-type DashboardSummaryCacheEntry = Omit<DashboardSummaryState, "isLoading" | "isReady">;
+type DashboardSummaryCacheEntry = Omit<
+  DashboardSummaryState,
+  "organizationKey" | "isLoading" | "isReady"
+>;
 
 const dashboardSummaryCache = new Map<string, DashboardSummaryCacheEntry>();
 const dashboardSummaryPromiseCache = new Map<string, Promise<DashboardSummaryCacheEntry>>();
@@ -93,8 +97,12 @@ function scheduleIdleRefresh(callback: () => void) {
 function readInitialDashboardSummaryState(
   organizationId: string | number | null | undefined
 ): DashboardSummaryState {
+  const organizationKeyOrNull =
+    organizationId === null || organizationId === undefined ? null : String(organizationId);
+
   if (organizationId === null || organizationId === undefined) {
     return {
+      organizationKey: organizationKeyOrNull,
       recentRecords: [],
       alerts: [],
       totalCount: 0,
@@ -112,6 +120,7 @@ function readInitialDashboardSummaryState(
 
   if (warmCache) {
     return {
+      organizationKey,
       ...warmCache,
       isLoading: false,
       isReady: true,
@@ -124,6 +133,7 @@ function readInitialDashboardSummaryState(
     dashboardSummaryCache.set(organizationKey, persisted);
 
     return {
+      organizationKey,
       ...persisted,
       isLoading: false,
       isReady: true,
@@ -131,6 +141,7 @@ function readInitialDashboardSummaryState(
   }
 
   return {
+    organizationKey,
     recentRecords: [],
     alerts: [],
     totalCount: 0,
@@ -148,14 +159,14 @@ export function useDashboardSummary(organizationId: string | number | null | und
     readInitialDashboardSummaryState(organizationId)
   );
   const isMountedRef = useRef(true);
-  const lastOrganizationIdRef = useRef<string | null>(
-    organizationId ? String(organizationId) : null
-  );
+  const currentOrganizationKey =
+    organizationId === null || organizationId === undefined ? null : String(organizationId);
 
   const refresh = useCallback(async () => {
     if (!organizationId) {
       if (isMountedRef.current) {
         setState({
+          organizationKey: null,
           recentRecords: [],
           alerts: [],
           totalCount: 0,
@@ -206,6 +217,7 @@ export function useDashboardSummary(organizationId: string | number | null | und
 
       persistDashboardSummary(organizationKey, summary);
       setState({
+        organizationKey,
         ...summary,
         isLoading: false,
         isReady: true,
@@ -215,7 +227,16 @@ export function useDashboardSummary(organizationId: string | number | null | und
         return;
       }
 
-      setState((current) => ({ ...current, isLoading: false, isReady: true }));
+      setState((current) =>
+        current.organizationKey === organizationKey
+          ? { ...current, isLoading: false, isReady: true }
+          : {
+              ...readInitialDashboardSummaryState(organizationId),
+              organizationKey,
+              isLoading: false,
+              isReady: true,
+            }
+      );
     }
   }, [organizationId]);
 
@@ -223,20 +244,10 @@ export function useDashboardSummary(organizationId: string | number | null | und
     isMountedRef.current = true;
 
     const organizationKey = organizationId ? String(organizationId) : null;
-    const organizationChanged = lastOrganizationIdRef.current !== organizationKey;
-
-    if (organizationChanged) {
-      lastOrganizationIdRef.current = organizationKey;
-    }
-
     const hasWarmState =
       organizationKey !== null &&
       (dashboardSummaryCache.has(organizationKey) ||
         Boolean(readDashboardSummaryFromStorage(organizationKey)));
-
-    if (organizationChanged && isMountedRef.current) {
-      setState(readInitialDashboardSummaryState(organizationId));
-    }
 
     const cleanup = hasWarmState
       ? scheduleIdleRefresh(() => {
@@ -257,7 +268,9 @@ export function useDashboardSummary(organizationId: string | number | null | und
   }, [organizationId, refresh]);
 
   return {
-    ...state,
+    ...(state.organizationKey === currentOrganizationKey
+      ? state
+      : readInitialDashboardSummaryState(organizationId)),
     refresh,
   };
 }

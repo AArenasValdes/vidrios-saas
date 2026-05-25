@@ -16,6 +16,7 @@ const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 const EMPRESA_SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
 const publicRequestRateLimiter = createSlidingWindowRateLimiter({
+  namespace: "api:solicitud-empresa:public-request",
   windowMs: RATE_LIMIT_WINDOW_MS,
   maxRequests: RATE_LIMIT_MAX_REQUESTS,
 });
@@ -45,7 +46,7 @@ export async function POST(
     );
   }
 
-  if (publicRequestRateLimiter.isRateLimited(ip)) {
+  if (await publicRequestRateLimiter.isRateLimited(ip)) {
     return NextResponse.json(
       {
         error:
@@ -107,6 +108,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    console.error("[API] /api/solicitud/[empresa] POST", error);
     return NextResponse.json(
       { error: "No pudimos registrar la solicitud. Intenta nuevamente." },
       { status: 500 }

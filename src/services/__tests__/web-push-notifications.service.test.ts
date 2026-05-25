@@ -122,6 +122,8 @@ describe("web-push-notifications.service", () => {
 
     expect(result).toEqual({
       sent: 1,
+      failed: 0,
+      deactivated: 0,
       skipped: false,
     });
   });
@@ -142,6 +144,87 @@ describe("web-push-notifications.service", () => {
       77,
       "user-77"
     );
+  });
+
+  it("continua con las demas suscripciones si una falla de forma transitoria", async () => {
+    repository.listActiveByOrganizationId.mockResolvedValue([
+      {
+        endpoint: "https://push.example.com/device-1",
+        subscription,
+      },
+      {
+        endpoint: "https://push.example.com/device-2",
+        subscription: {
+          ...subscription,
+          endpoint: "https://push.example.com/device-2",
+        },
+      },
+    ]);
+    (webpush.sendNotification as jest.Mock)
+      .mockRejectedValueOnce({ statusCode: 500 })
+      .mockResolvedValueOnce(undefined);
+
+    const service = createWebPushNotificationsService({
+      repository,
+      validateMembership: async () => undefined,
+    });
+
+    const result = await service.sendLeadCreatedPush({
+      organizationId: 77,
+      prospectoNombre: "Juan Perez",
+      empresaNombre: "Ventora",
+      tipoTrabajo: "ventanas",
+    });
+
+    expect(webpush.sendNotification).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      sent: 1,
+      failed: 1,
+      deactivated: 0,
+      skipped: false,
+    });
+  });
+
+  it("desactiva suscripciones 404 o 410 sin cortar el lote", async () => {
+    repository.listActiveByOrganizationId.mockResolvedValue([
+      {
+        endpoint: "https://push.example.com/device-404",
+        subscription,
+      },
+      {
+        endpoint: "https://push.example.com/device-ok",
+        subscription: {
+          ...subscription,
+          endpoint: "https://push.example.com/device-ok",
+        },
+      },
+    ]);
+    (webpush.sendNotification as jest.Mock)
+      .mockRejectedValueOnce({ statusCode: 410 })
+      .mockResolvedValueOnce(undefined);
+
+    const service = createWebPushNotificationsService({
+      repository,
+      validateMembership: async () => undefined,
+    });
+
+    const result = await service.sendQuoteDecisionPush({
+      organizationId: 77,
+      cotizacionId: "cot-1",
+      codigo: "COT-1001",
+      clienteNombre: "Juan Perez",
+      decision: "rechazada",
+    });
+
+    expect(repository.deactivateByEndpoint).toHaveBeenCalledWith(
+      "https://push.example.com/device-404"
+    );
+    expect(result).toEqual({
+      sent: 1,
+      failed: 0,
+      deactivated: 1,
+      skipped: false,
+    });
   });
 
 });

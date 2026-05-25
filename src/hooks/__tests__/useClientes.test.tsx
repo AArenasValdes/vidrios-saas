@@ -26,6 +26,17 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => authState,
 }));
 
+jest.mock("@/features/organization-profile/hooks/useOrganizationProfile", () => ({
+  useOrganizationProfile: () => ({
+    isReady: true,
+    profile: {
+      subscription: {
+        isWriteBlocked: false,
+      },
+    },
+  }),
+}));
+
 jest.mock("@/features/clientes/services/clientes.service", () => ({
   clientesService: {
     getDetalleById: (id: string, organizationId: string | number) =>
@@ -40,6 +51,10 @@ jest.mock("@/features/clientes/services/clientes.service", () => ({
 jest.mock("@/features/clientes/services/clientes-summary.service", () => ({
   getClientesResumenByOrganizationId: (organizationId: string | number) =>
     getClientesResumenByOrganizationId(organizationId),
+}));
+
+jest.mock("@/features/subscriptions/services/subscription-status.service", () => ({
+  assertSubscriptionAllowsWrite: jest.fn(),
 }));
 
 function createResumen(id: string, nombre: string): ClienteResumen {

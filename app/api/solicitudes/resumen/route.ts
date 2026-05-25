@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
+    console.error("[API] /api/solicitudes/resumen auth", error);
     return NextResponse.json(
       { error: "No pudimos validar tus permisos." },
       { status: 500 }
@@ -126,7 +127,8 @@ export async function GET(request: Request) {
         },
       }
     );
-  } catch {
+  } catch (error) {
+    console.error("[API] /api/solicitudes/resumen data", error);
     return NextResponse.json(
       { error: "No pudimos cargar las solicitudes." },
       { status: 500 }

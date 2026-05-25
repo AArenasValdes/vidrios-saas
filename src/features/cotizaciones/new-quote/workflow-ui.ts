@@ -351,10 +351,6 @@ export const CLP = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-function isSingleLeafWindowType(tipo: string) {
-  return normalizeSearchValue(tipo) === "ventana 1 hoja";
-}
-
 function resolveLegacyWindowLeafCount(tipo: string, sistema?: string | null) {
   const normalizedType = normalizeSearchValue(tipo);
 

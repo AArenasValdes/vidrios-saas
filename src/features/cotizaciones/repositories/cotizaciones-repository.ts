@@ -355,52 +355,65 @@ function mapCotizacionClientSummary(row: CotizacionRow): CotizacionClienteSummar
   };
 }
 
-function applyCotizacionesDashboardFilters(
-  query: any,
+type DashboardCotizacionesFilterableQuery = {
+  eq(column: string, value: unknown): DashboardCotizacionesFilterableQuery;
+  is(column: string, value: unknown): DashboardCotizacionesFilterableQuery;
+  in(column: string, values: readonly unknown[]): DashboardCotizacionesFilterableQuery;
+  not(column: string, operator: string, value: unknown): DashboardCotizacionesFilterableQuery;
+  gte(column: string, value: string): DashboardCotizacionesFilterableQuery;
+  lt(column: string, value: string): DashboardCotizacionesFilterableQuery;
+  ilike(column: string, pattern: string): DashboardCotizacionesFilterableQuery;
+  or(filters: string): DashboardCotizacionesFilterableQuery;
+  order(column: string, options: { ascending: boolean }): DashboardCotizacionesFilterableQuery;
+  range(from: number, to: number): DashboardCotizacionesFilterableQuery;
+};
+
+function applyCotizacionesDashboardFilters<T extends DashboardCotizacionesFilterableQuery>(
+  query: T,
   organizationId: EntityId,
   filters: CotizacionesDashboardFilter = {}
-) {
+) : T {
   let nextQuery = query
     .eq("organization_id", organizationId)
-    .is("eliminado_en", null);
+    .is("eliminado_en", null) as T;
 
   if (filters.estados && filters.estados.length > 0) {
     if (
       filters.estados.length === 1 &&
       filters.estados[0]?.toLowerCase() === "pendiente"
     ) {
-      nextQuery = nextQuery.in("estado", ["borrador", "creada", "enviada"]);
+      nextQuery = nextQuery.in("estado", ["borrador", "creada", "enviada"]) as T;
     } else {
-      nextQuery = nextQuery.in("estado", filters.estados);
+      nextQuery = nextQuery.in("estado", filters.estados) as T;
     }
   }
 
   if (filters.allowedProjectIds?.length) {
-    nextQuery = nextQuery.in("proyecto_id", filters.allowedProjectIds);
+    nextQuery = nextQuery.in("proyecto_id", filters.allowedProjectIds) as T;
   }
 
   if (filters.viewedOnly) {
-    nextQuery = nextQuery.not("cliente_vio_en", "is", null);
+    nextQuery = nextQuery.not("cliente_vio_en", "is", null) as T;
   }
 
   if (filters.respondedOnly) {
-    nextQuery = nextQuery.not("cliente_respondio_en", "is", null);
+    nextQuery = nextQuery.not("cliente_respondio_en", "is", null) as T;
   }
 
   if (filters.updatedFrom) {
-    nextQuery = nextQuery.gte("actualizado_en", filters.updatedFrom);
+    nextQuery = nextQuery.gte("actualizado_en", filters.updatedFrom) as T;
   }
 
   if (filters.updatedTo) {
-    nextQuery = nextQuery.lt("actualizado_en", filters.updatedTo);
+    nextQuery = nextQuery.lt("actualizado_en", filters.updatedTo) as T;
   }
 
   if (filters.respondedFrom) {
-    nextQuery = nextQuery.gte("cliente_respondio_en", filters.respondedFrom);
+    nextQuery = nextQuery.gte("cliente_respondio_en", filters.respondedFrom) as T;
   }
 
   if (filters.respondedTo) {
-    nextQuery = nextQuery.lt("cliente_respondio_en", filters.respondedTo);
+    nextQuery = nextQuery.lt("cliente_respondio_en", filters.respondedTo) as T;
   }
 
   const normalizedSearch = filters.search?.trim() ?? "";
@@ -411,9 +424,9 @@ function applyCotizacionesDashboardFilters(
     if (filters.searchProjectIds?.length) {
       nextQuery = nextQuery.or(
         `numero.ilike.%${safeSearch}%,proyecto_id.in.(${filters.searchProjectIds.join(",")})`
-      );
+      ) as T;
     } else {
-      nextQuery = nextQuery.ilike("numero", `%${safeSearch}%`);
+      nextQuery = nextQuery.ilike("numero", `%${safeSearch}%`) as T;
     }
   }
 
@@ -1001,7 +1014,9 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     const normalizedOrder = options.order ?? "updated_desc";
     const normalizedPeriod = options.period ?? "all";
 
-    const applyFilters = (query: any) => {
+    const applyFilters = <TQuery extends DashboardCotizacionesFilterableQuery>(
+      query: TQuery
+    ): TQuery => {
       let nextQuery = applyCotizacionesDashboardFilters(query, organizationId, {
         estados: options.estado ? [options.estado] : undefined,
         allowedProjectIds: options.allowedProjectIds,
@@ -1025,30 +1040,30 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
         }
 
         if (fromDate) {
-          nextQuery = nextQuery.gte("actualizado_en", fromDate.toISOString());
+          nextQuery = nextQuery.gte("actualizado_en", fromDate.toISOString()) as TQuery;
         }
 
         if (toDate) {
-          nextQuery = nextQuery.lt("actualizado_en", toDate.toISOString());
+          nextQuery = nextQuery.lt("actualizado_en", toDate.toISOString()) as TQuery;
         }
       }
 
       if (normalizedOrder === "total_desc") {
-        nextQuery = nextQuery.order("total", { ascending: false });
+        nextQuery = nextQuery.order("total", { ascending: false }) as TQuery;
       } else if (normalizedOrder === "codigo_desc") {
-        nextQuery = nextQuery.order("numero", { ascending: false });
+        nextQuery = nextQuery.order("numero", { ascending: false }) as TQuery;
       } else if (normalizedOrder === "estado") {
         nextQuery = nextQuery
           .order("estado", { ascending: true })
-          .order("actualizado_en", { ascending: false });
+          .order("actualizado_en", { ascending: false }) as TQuery;
       } else {
-        nextQuery = nextQuery.order("actualizado_en", { ascending: false });
+        nextQuery = nextQuery.order("actualizado_en", { ascending: false }) as TQuery;
       }
 
-      return nextQuery.range(from, to);
+      return nextQuery.range(from, to) as TQuery;
     };
 
-    let query = applyFilters(
+    const query = applyFilters(
       supabase.from("cotizaciones").select(COTIZACION_LIST_SELECT, { count: "exact" })
     );
     const { data, error, count } = await query;

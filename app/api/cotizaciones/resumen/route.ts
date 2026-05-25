@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
+    console.error("[API] /api/cotizaciones/resumen auth", error);
     return NextResponse.json(
       { error: "No pudimos validar la organizacion activa." },
       { status: 500 }
@@ -112,7 +113,8 @@ export async function GET(request: Request) {
         },
       }
     );
-  } catch {
+  } catch (error) {
+    console.error("[API] /api/cotizaciones/resumen data", error);
     return NextResponse.json(
       { error: "No pudimos cargar las cotizaciones." },
       { status: 500 }

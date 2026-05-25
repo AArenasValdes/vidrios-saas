@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 const EMPRESA_SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
 const testimonialRateLimiter = createSlidingWindowRateLimiter({
+  namespace: "api:solicitud-empresa:valoraciones",
   windowMs: 15 * 60 * 1000,
   maxRequests: 3,
 });
@@ -45,7 +46,7 @@ export async function POST(
     );
   }
 
-  if (testimonialRateLimiter.isRateLimited(ip)) {
+  if (await testimonialRateLimiter.isRateLimited(ip)) {
     return NextResponse.json(
       {
         error:
@@ -96,6 +97,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    console.error("[API] /api/solicitud/[empresa]/valoraciones POST", error);
     return NextResponse.json(
       { error: "No pudimos guardar tu valoracion. Intenta nuevamente." },
       { status: 500 }
