@@ -21,6 +21,12 @@ const mockRefreshAlerts = jest.fn();
 const authListeners = new Set<() => void>();
 const mockWindowLocationReplace = jest.fn();
 let currentAlerts: CotizacionAlert[] = [];
+let currentPathname = "/dashboard";
+let currentSolicitudes: Array<{
+  id: string;
+  estado: string;
+  creadoEn: string | null;
+}> = [];
 
 let authSnapshot: MockAuthState = {
   user: {
@@ -70,7 +76,7 @@ jest.mock("next/link", () => {
 });
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard",
+  usePathname: () => currentPathname,
   useRouter: () => ({
     replace: mockRouterReplace,
     prefetch: mockRouterPrefetch,
@@ -122,7 +128,7 @@ jest.mock("@/features/cotizaciones/hooks/useCotizacionAlerts", () => ({
 
 jest.mock("@/features/solicitudes/hooks/useSolicitudesContacto", () => ({
   useSolicitudesContacto: () => ({
-    solicitudes: [],
+    solicitudes: currentSolicitudes,
   }),
 }));
 
@@ -136,6 +142,8 @@ describe("AppShell", () => {
     authListeners.clear();
     resolveSignOut = null;
     currentAlerts = [];
+    currentSolicitudes = [];
+    currentPathname = "/dashboard";
     window.localStorage.clear();
     authSnapshot = {
       user: {
@@ -228,5 +236,35 @@ describe("AppShell", () => {
     expect(
       screen.getByText(/Terminando de conectar tu empresa y permisos/i)
     ).toBeInTheDocument();
+  });
+
+  it("sincroniza solicitudes vistas al abrir la bandeja para limpiar el badge rojo", async () => {
+    currentPathname = "/solicitudes";
+    currentSolicitudes = [
+      {
+        id: "sol-1",
+        estado: "nueva",
+        creadoEn: "2026-05-25T10:00:00.000Z",
+      },
+      {
+        id: "sol-2",
+        estado: "nueva",
+        creadoEn: "2026-05-25T11:00:00.000Z",
+      },
+    ];
+
+    render(
+      <AppShell>
+        <div>contenido</div>
+      </AppShell>
+    );
+
+    await waitFor(() => {
+      expect(
+        window.localStorage.getItem(
+          "vidrios-saas:solicitudes-seen:17:dueno@vidrios.cl"
+        )
+      ).toBe(String(new Date("2026-05-25T11:00:00.000Z").getTime()));
+    });
   });
 });

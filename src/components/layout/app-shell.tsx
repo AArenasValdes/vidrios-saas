@@ -323,10 +323,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [rol, user?.email]
   );
   const cargando = authCargando;
+  const solicitudesShellCacheKey = String(
+    user?.email?.trim().toLowerCase() ??
+      organizacionId ??
+      profile?.organizationId ??
+      "default"
+  );
   const { solicitudes: solicitudesShell } = useSolicitudesContacto(
     canReviewSolicitudes &&
       !cargando &&
-      (shouldLoadShellFeeds || pathname.startsWith("/solicitudes"))
+      (shouldLoadShellFeeds || pathname.startsWith("/solicitudes")),
+    solicitudesShellCacheKey
   );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
@@ -452,6 +459,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [alerts, alertsSeenAt, alertsSeenStorageKey]);
 
+  const syncAlertsSeenAtFromStorage = useCallback(() => {
+    if (typeof window === "undefined" || !alertsSeenStorageKey) {
+      return;
+    }
+
+    const rawSeenAt = window.localStorage.getItem(alertsSeenStorageKey);
+    const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
+    const nextSeenAt = Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0;
+
+    if (nextSeenAt > alertsSeenAt) {
+      setAlertsSeenAt(nextSeenAt);
+    }
+  }, [alertsSeenAt, alertsSeenStorageKey]);
+
   const markSolicitudesAsSeen = useCallback(() => {
     const latestSolicitudSeenAt = getLatestSolicitudesSeenAt(
       solicitudesShell,
@@ -465,6 +486,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setSolicitudesSeenAt(latestSolicitudSeenAt);
     persistSolicitudesSeenAt(solicitudesSeenStorageKey, latestSolicitudSeenAt);
   }, [solicitudesSeenAt, solicitudesSeenStorageKey, solicitudesShell]);
+
+  const syncSolicitudesSeenAtFromStorage = useCallback(() => {
+    const persistedSeenAt = readSolicitudesSeenAt(solicitudesSeenStorageKey);
+
+    if (persistedSeenAt > solicitudesSeenAt) {
+      setSolicitudesSeenAt(persistedSeenAt);
+    }
+  }, [solicitudesSeenAt, solicitudesSeenStorageKey]);
 
   useEffect(() => {
     if (!cargando && !user) {
@@ -564,13 +593,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [solicitudesSeenStorageKey]);
 
   useEffect(() => {
+    syncAlertsSeenAtFromStorage();
+  }, [alerts.length, syncAlertsSeenAtFromStorage]);
+
+  useEffect(() => {
     if (!pathname.startsWith("/solicitudes")) {
       return;
     }
 
     setShouldLoadShellFeeds(true);
+    syncSolicitudesSeenAtFromStorage();
     markSolicitudesAsSeen();
-  }, [markSolicitudesAsSeen, pathname]);
+  }, [
+    markSolicitudesAsSeen,
+    pathname,
+    solicitudesShell.length,
+    syncSolicitudesSeenAtFromStorage,
+  ]);
 
   useEffect(() => {
     if (!isAlertsOpen || alerts.length === 0) {
