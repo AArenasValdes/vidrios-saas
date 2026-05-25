@@ -7,6 +7,7 @@ import type {
   PasoDosGrupoDraft,
   PasoDosGrupoPaso,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
+import { getVisibleSubtypeLabel } from "./paso-dos-wizard-movil.utils";
 
 import s from "../../page.module.css";
 
@@ -155,7 +156,7 @@ export function PasoDosAgregarGrupoSheet({
                   type="button"
                 >
                   <strong>{group.title}</strong>
-                  <span>{group.items.slice(0, 2).join(", ")}</span>
+                  <span>{group.items.slice(0, 2).map(getVisibleSubtypeLabel).join(", ")}</span>
                 </button>
               ))}
             </div>
@@ -172,7 +173,7 @@ export function PasoDosAgregarGrupoSheet({
                   onClick={() => onSelectSubtipo(subtipo)}
                   type="button"
                 >
-                  <strong>{subtipo}</strong>
+                  <strong>{getVisibleSubtypeLabel(subtipo)}</strong>
                   <span>{draft.categoria}</span>
                 </button>
               ))}

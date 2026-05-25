@@ -1,4 +1,4 @@
-const CACHE_NAME = "vidrios-saas-v9";
+const CACHE_NAME = "vidrios-saas-v10";
 const APP_SHELL = [
   "/",
   "/login",
@@ -11,7 +11,6 @@ const APP_SHELL = [
   "/icons/pwa-192.png",
   "/icons/pwa-512.png",
   "/icons/pwa-maskable-512.png",
-  "/icons/pwa-icon.svg",
   "/icons/pwa-maskable.svg",
 ];
 const PUBLIC_NAVIGATION_ROUTES = new Set(["/", "/login", "/planes", "/offline"]);
@@ -38,7 +37,21 @@ function isStaticAsset(request, requestUrl) {
 
 async function cacheAppShell() {
   const cache = await caches.open(CACHE_NAME);
-  await cache.addAll(APP_SHELL);
+  await Promise.allSettled(
+    APP_SHELL.map(async (assetUrl) => {
+      try {
+        const response = await fetch(assetUrl, { cache: "no-store" });
+
+        if (!response.ok) {
+          return;
+        }
+
+        await cache.put(assetUrl, response.clone());
+      } catch {
+        return;
+      }
+    })
+  );
 }
 
 async function cleanupOldCaches() {

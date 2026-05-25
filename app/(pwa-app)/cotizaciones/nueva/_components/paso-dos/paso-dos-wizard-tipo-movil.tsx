@@ -4,6 +4,7 @@ import { LuChevronRight } from "react-icons/lu";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
+  getVisibleSubtypeLabel,
   getSubtypeBadge,
   repairBrokenText,
 } from "./paso-dos-wizard-movil.utils";
@@ -75,7 +76,7 @@ export function PasoDosWizardTipoMovil({
             </div>
 
             <div className={s.stepTwoMobileOptionCopy}>
-              <strong>{repairBrokenText(subtipo)}</strong>
+              <strong>{getVisibleSubtypeLabel(subtipo)}</strong>
               <small>Agregar como grupo</small>
             </div>
 

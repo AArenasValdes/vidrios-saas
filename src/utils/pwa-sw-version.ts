@@ -1,1 +1,1 @@
-export const PWA_SERVICE_WORKER_VERSION = "v8";
+export const PWA_SERVICE_WORKER_VERSION = "v10";

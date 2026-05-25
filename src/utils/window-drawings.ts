@@ -1273,7 +1273,7 @@ function fitBoxFor(tipoNorm: string): { maxW: number; maxH: number } {
 function buildLabel(tipo: string, sistema: string | null | undefined, variant: string): string {
   if (variant === "pdf") return "";
   const sys = sistema ? ` · ${sistema}` : "";
-  return `${tipo}${sys}`;
+  return `${tipo.trim().toLowerCase() === "ventana 1 hoja" ? "Fijo" : tipo}${sys}`;
 }
 
 // ─── Exportación principal ────────────────────────────────────────────────────

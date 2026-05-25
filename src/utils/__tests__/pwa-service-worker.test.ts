@@ -58,7 +58,7 @@ describe("pwa-service-worker utils", () => {
 
     const resolved = await resolvePushServiceWorkerRegistration();
 
-    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith("/sw.js?version=v8", {
+    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith("/sw.js?version=v10", {
       scope: "/",
       updateViaCache: "none",
     });

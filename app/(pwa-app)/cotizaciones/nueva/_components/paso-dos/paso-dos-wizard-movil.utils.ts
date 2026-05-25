@@ -161,8 +161,18 @@ export function getStageTitle(stage: number) {
   return "Datos del grupo";
 }
 
-export function getSubtypeGroupLabel(cantidad: number, subtipo: string) {
+export function getVisibleSubtypeLabel(subtipo: string) {
   const cleanSubtype = repairBrokenText(subtipo).trim();
+
+  if (cleanSubtype.toLowerCase() === "ventana 1 hoja") {
+    return "Fijo";
+  }
+
+  return cleanSubtype;
+}
+
+export function getSubtypeGroupLabel(cantidad: number, subtipo: string) {
+  const cleanSubtype = getVisibleSubtypeLabel(subtipo);
 
   if (cantidad === 1) {
     return cleanSubtype;
@@ -183,5 +193,5 @@ export function getGroupStatusTitle(cantidad: number, subtipo: string, sistema: 
 }
 
 export function getItemType(item: CotizacionWorkflowItem) {
-  return repairBrokenText(item.tipo || "Componente");
+  return getVisibleSubtypeLabel(item.tipo || "Componente");
 }
