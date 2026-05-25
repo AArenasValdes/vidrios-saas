@@ -218,9 +218,17 @@ function sidePullHandle(cx: number, cy: number, h: number): string {
   ].join("");
 }
 
-function slidingLeafLabel(cx: number, y: number, name: string, color: string): string {
+function slidingLeafLabel(
+  cx: number,
+  y: number,
+  name: string,
+  color: string,
+  variant = "preview"
+): string {
+  const fontSize = variant === "pdf" ? "11.2" : "8.5";
+  const fontWeight = variant === "pdf" ? "600" : "500";
   return [
-    `<text x="${px(cx)}" y="${px(y)}" text-anchor="middle" font-size="8.5" font-family="sans-serif" fill="${color}" font-weight="500">${name}</text>`,
+    `<text x="${px(cx)}" y="${px(y)}" text-anchor="middle" font-size="${fontSize}" font-family="sans-serif" fill="${color}" font-weight="${fontWeight}">${name}</text>`,
   ].join("");
 }
 
@@ -270,32 +278,36 @@ function fixedBadge(cx: number, cy: number, p: Palette): string {
 // ─── Cotas ───────────────────────────────────────────────────────────────────
 
 function dimH(x: number, y: number, w: number, text: string, p: Palette, v: string): string {
-  const tk = v === "pdf" ? 2 : 6;
-  const sw = v === "pdf" ? 0.7 : 1;
-  const fs = v === "pdf" ? 7 : 10;
-  const fw2 = v === "pdf" ? "600" : "400";
+  const tk = v === "pdf" ? 2.4 : 6;
+  const sw = v === "pdf" ? 0.8 : 1;
+  const fs = v === "pdf" ? 9.8 : 10;
+  const fw2 = v === "pdf" ? "700" : "400";
+  const textY = v === "pdf" ? y - 10 : y - 8;
+  const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
   return [
     `<line x1="${px(x)}" y1="${px(y)}" x2="${px(x + w)}" y2="${px(y)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x)}" y1="${px(y - tk)}" x2="${px(x)}" y2="${px(y + tk)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x + w)}" y1="${px(y - tk)}" x2="${px(x + w)}" y2="${px(y + tk)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     v !== "pdf" ? arrowTip(x, y, "left", 1, p.dim) : "",
     v !== "pdf" ? arrowTip(x + w, y, "right", 1, p.dim) : "",
-    `<text x="${px(x + w / 2)}" y="${px(y - 8)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${p.dimTxt}" font-weight="${fw2}">${escapeXml(text)}</text>`,
+    `<text x="${px(x + w / 2)}" y="${px(textY)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}">${escapeXml(text)}</text>`,
   ].join("");
 }
 
 function dimV(x: number, y: number, h: number, text: string, p: Palette, v: string): string {
-  const tk = v === "pdf" ? 2 : 6;
-  const sw = v === "pdf" ? 0.7 : 1;
-  const fs = v === "pdf" ? 7 : 10;
-  const fw2 = v === "pdf" ? "600" : "400";
+  const tk = v === "pdf" ? 2.4 : 6;
+  const sw = v === "pdf" ? 0.8 : 1;
+  const fs = v === "pdf" ? 9.8 : 10;
+  const fw2 = v === "pdf" ? "700" : "400";
+  const textX = v === "pdf" ? x - 13 : x - 11;
+  const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
   return [
     `<line x1="${px(x)}" y1="${px(y)}" x2="${px(x)}" y2="${px(y + h)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x - tk)}" y1="${px(y)}" x2="${px(x + tk)}" y2="${px(y)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x - tk)}" y1="${px(y + h)}" x2="${px(x + tk)}" y2="${px(y + h)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     v !== "pdf" ? arrowTip(x, y, "up", 1, p.dim) : "",
     v !== "pdf" ? arrowTip(x, y + h, "down", 1, p.dim) : "",
-    `<text x="${px(x - 11)}" y="${px(y + h / 2)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${p.dimTxt}" font-weight="${fw2}" transform="rotate(-90 ${px(x - 11)} ${px(y + h / 2)})">${escapeXml(text)}</text>`,
+    `<text x="${px(textX)}" y="${px(y + h / 2)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}" transform="rotate(-90 ${px(textX)} ${px(y + h / 2)})">${escapeXml(text)}</text>`,
   ].join("");
 }
 
@@ -336,8 +348,8 @@ function drawVentanaCorredera(x: number, y: number, w: number, h: number, v: str
     // Indicadores de deslizamiento por hoja
     directionArrow(leftArrowX, arrowY, arrowW, "right", systemStroke, p.detail),
     directionArrow(rightArrowX, arrowY, arrowW, "left", systemStroke, p.detail),
-    slidingLeafLabel(leftCenter, labelY, "A1", p.detail),
-    slidingLeafLabel(rightCenter, labelY, "A2", p.detail),
+    slidingLeafLabel(leftCenter, labelY, "A1", p.detail, v),
+    slidingLeafLabel(rightCenter, labelY, "A2", p.detail, v),
   ].join("");
 }
 
