@@ -240,8 +240,8 @@ export function createInitialPasoDosGrupoDraft({
     pricingMode: normalizePricingMode(seedForm?.pricingMode ?? pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
-    sistema: referenceParts.sistema || systemOptions[0] || "",
-    configuracion: referenceParts.configuracion,
+    sistema: seedForm?.sistema?.trim() || referenceParts.sistema || systemOptions[0] || "",
+    configuracion: seedForm?.configuracion?.trim() || referenceParts.configuracion,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     referencia,
@@ -271,6 +271,8 @@ export function buildPasoDosGrupoComponentForm({
       material: draft.material,
       colorHex: draft.colorHex,
       referencia: composeComponentReference(draft.sistema, draft.configuracion),
+      sistema: draft.sistema,
+      configuracion: draft.configuracion,
       pricingMode: draft.pricingMode,
       vidrio: draft.vidrio,
       ancho: draft.ancho,
@@ -289,6 +291,8 @@ export function buildPasoDosGrupoComponentForm({
     referencia:
       safeTrim(draft.referencia) ||
       composeComponentReference(draft.sistema, draft.configuracion),
+    sistema: draft.sistema,
+    configuracion: draft.configuracion,
     lineTemplateId: draft.lineTemplateId,
     pricingMode: draft.pricingMode,
     vidrio: draft.vidrio,

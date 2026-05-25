@@ -7,6 +7,8 @@ export type CotizacionItemPresentationMeta = {
   colorHex: string;
   material: ComponentMaterial;
   referencia: string;
+  sistema: string;
+  configuracion: string;
   pricingMode: PricingMode;
   lineTemplateId: string;
   precioPorM2: number | null;
@@ -65,6 +67,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   colorHex: string;
   material: ComponentMaterial;
   referencia?: string;
+  sistema?: string;
+  configuracion?: string;
   pricingMode?: PricingMode;
   lineTemplateId?: string;
   precioPorM2?: number | null;
@@ -78,6 +82,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const material = normalizeMaterial(input.material);
   const colorHex = normalizeColor(input.colorHex, material);
   const referencia = (input.referencia ?? "").trim().replace(/\]/g, "");
+  const sistema = (input.sistema ?? "").trim().replace(/\]/g, "");
+  const configuracion = (input.configuracion ?? "").trim().replace(/\]/g, "");
   const pricingMode = normalizePricingMode(input.pricingMode);
   const lineTemplateId = (input.lineTemplateId ?? "").trim().replace(/\]/g, "");
   const precioPorM2 =
@@ -102,6 +108,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const meta =
     `[c:${colorHex}]` +
     `[r:${referencia}]` +
+    `[sys:${sistema}]` +
+    `[cfg:${configuracion}]` +
     `[m:${material}]` +
     `[pm:${pricingMode}]` +
     `[lti:${lineTemplateId}]` +
@@ -121,6 +129,8 @@ export function decodeCotizacionItemPresentationMeta(
   const source = observaciones ?? "";
   const material = normalizeMaterial(source.match(/\[m:([^\]]*)\]/)?.[1]);
   const colorHex = normalizeColor(source.match(/\[c:(#[0-9a-fA-F]{3,8})\]/)?.[1], material);
+  const sistema = source.match(/\[sys:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const configuracion = source.match(/\[cfg:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const pricingMode = normalizePricingMode(source.match(/\[pm:([^\]]*)\]/)?.[1]);
   const lineTemplateId = source.match(/\[lti:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const precioPorM2 = parseOptionalNumber(source.match(/\[pm2:([^\]]*)\]/)?.[1]);
@@ -138,6 +148,8 @@ export function decodeCotizacionItemPresentationMeta(
   const raw = source
     .replace(/\[c:[^\]]*\]/g, "")
     .replace(/\[(?:r|l):[^\]]*\]/g, "")
+    .replace(/\[sys:[^\]]*\]/g, "")
+    .replace(/\[cfg:[^\]]*\]/g, "")
     .replace(/\[m:[^\]]*\]/g, "")
     .replace(/\[pm:[^\]]*\]/g, "")
     .replace(/\[lti:[^\]]*\]/g, "")
@@ -153,6 +165,8 @@ export function decodeCotizacionItemPresentationMeta(
     colorHex,
     material,
     referencia,
+    sistema,
+    configuracion,
     pricingMode,
     lineTemplateId,
     precioPorM2,

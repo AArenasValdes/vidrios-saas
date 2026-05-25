@@ -9,6 +9,8 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
+      sistema: "Oscilobatiente",
+      configuracion: "Premium",
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -22,6 +24,8 @@ describe("cotizacion-item-presentation", () => {
 
     expect(encoded).toContain("[c:#2a2a2a]");
     expect(encoded).toContain("[r:Serie 25]");
+    expect(encoded).toContain("[sys:Oscilobatiente]");
+    expect(encoded).toContain("[cfg:Premium]");
     expect(encoded).toContain("[m:Aluminio]");
     expect(encoded).toContain("[pm:precio_directo]");
     expect(encoded).toContain("[lti:tpl-1]");
@@ -36,6 +40,8 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
+      sistema: "Oscilobatiente",
+      configuracion: "Premium",
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -55,6 +61,8 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#ffffff",
       material: "PVC",
       referencia: "S60",
+      sistema: "",
+      configuracion: "",
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -87,6 +95,8 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#f0eeeb",
       material: "PVC",
       referencia: "",
+      sistema: "",
+      configuracion: "",
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -106,6 +116,8 @@ describe("cotizacion-item-presentation", () => {
       colorHex: "#8b5e3c",
       material: "Aluminio",
       referencia: "",
+      sistema: "",
+      configuracion: "",
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,

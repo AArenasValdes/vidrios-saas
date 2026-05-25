@@ -22,7 +22,10 @@ import {
   normalizePricingMode,
   type PricingMode,
 } from "@/features/cotizaciones/types/pricing-mode";
-import { COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS } from "@/features/cotizaciones/services/component-catalog.service";
+import {
+  COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS,
+  splitComponentReference,
+} from "@/features/cotizaciones/services/component-catalog.service";
 
 export type StepKey = 1 | 2 | 3;
 export type { PreferredProvider };
@@ -32,6 +35,8 @@ export type ComponentFormState = {
   tipo: string;
   material: "Aluminio" | "PVC";
   referencia: string;
+  sistema?: string;
+  configuracion?: string;
   lineTemplateId: string;
   pricingMode: PricingMode;
   vidrio: string;
@@ -834,6 +839,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
   const {
     colorHex,
     referencia,
+    sistema,
+    configuracion,
     material,
     pricingMode,
     raw,
@@ -847,11 +854,18 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
+  const referenceParts = splitComponentReference(
+    referencia || item.lineaComercial || "",
+    item.tipo
+  );
+
   return {
     codigo: item.codigo,
     tipo: item.tipo,
     material,
     referencia: referencia || item.lineaComercial || "",
+    sistema: sistema || referenceParts.sistema,
+    configuracion: configuracion || referenceParts.configuracion,
     lineTemplateId,
     pricingMode,
     vidrio: item.vidrio ?? "",
@@ -918,6 +932,9 @@ export function buildItemFromForm(
     typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
   const hasTemplatePrice =
     typeof syncedForm.precioPorM2 === "string" && syncedForm.precioPorM2.trim().length > 0;
+  const referenceParts = splitComponentReference(syncedForm.referencia, syncedForm.tipo);
+  const sistema = syncedForm.sistema?.trim() || referenceParts.sistema;
+  const configuracion = syncedForm.configuracion?.trim() || referenceParts.configuracion;
   const origenPrecio =
     hasTemplateReference && hasTemplatePrice
       ? syncedForm.precioAjustadoManual
@@ -950,6 +967,8 @@ export function buildItemFromForm(
     observaciones: encodeCotizacionItemPresentationMeta({
       colorHex: syncedForm.colorHex,
       referencia: syncedForm.referencia,
+      sistema,
+      configuracion,
       material: syncedForm.material,
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
@@ -975,6 +994,8 @@ export function applyQuotePricingToItems(
     const {
       colorHex,
       referencia,
+      sistema,
+      configuracion,
       material,
       raw,
       lineTemplateId,
@@ -1010,6 +1031,8 @@ export function applyQuotePricingToItems(
       observaciones: encodeCotizacionItemPresentationMeta({
         colorHex,
         referencia,
+        sistema,
+        configuracion,
         material,
         pricingMode,
         lineTemplateId,

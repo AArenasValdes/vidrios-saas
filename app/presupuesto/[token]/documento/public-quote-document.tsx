@@ -5,6 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuDownload } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import {
+  composeComponentReference,
+  splitComponentReference,
+} from "@/features/cotizaciones/services/component-catalog.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import {
   buildDocumentCompanyName,
@@ -370,11 +374,18 @@ export function PublicQuoteDocument({
     const map = new Map<string, ItemPresentation>();
 
     for (const item of quote.items) {
-      const { colorHex, material, referencia } = decodeCotizacionItemPresentationMeta(
-        item.observaciones
-      );
+      const { colorHex, material, referencia, sistema, configuracion } =
+        decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
+      const referenceParts = splitComponentReference(referencia, item.tipo);
+      const resolvedSystem = sistema || referenceParts.sistema;
+      const resolvedConfiguration = configuracion || referenceParts.configuracion;
+      const systemLabel =
+        composeComponentReference(resolvedSystem, resolvedConfiguration) ||
+        resolvedSystem ||
+        "-";
+      const lineLabel = referencia || "-";
 
       map.set(item.id, {
         colorHex,
@@ -386,12 +397,15 @@ export function PublicQuoteDocument({
           { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
           { key: "Material", value: material },
           { key: "Color", value: colorName },
-          { key: "Referencia", value: referencia || "-" },
+          { key: "Sistema", value: systemLabel },
+          { key: "Línea", value: lineLabel },
           { key: "Vidrio", value: item.vidrio || "-" },
           { key: "Superficie", value: surface },
         ],
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
+          sistema: resolvedSystem,
+          configuracion: resolvedConfiguration,
           referencia,
           ancho: item.ancho,
           alto: item.alto,
