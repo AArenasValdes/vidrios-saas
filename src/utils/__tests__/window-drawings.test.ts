@@ -109,7 +109,7 @@ describe("generateComponentSVG", () => {
     expect(svg).toContain('fill="rgba(220,234,247,0.86)"');
   });
 
-  it("usa una variante pdf sin encabezado decorativo y con cotas compactas", () => {
+  it("usa una variante pdf sin encabezado decorativo y con cotas reforzadas", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",
       ancho: 2869,
@@ -119,7 +119,7 @@ describe("generateComponentSVG", () => {
 
     expect(svg).not.toContain("SISTEMA ESTÁNDAR");
     expect(svg).not.toContain("VISTA INTERIOR REFERENCIAL");
-    expect(svg).toContain('font-size="7"');
+    expect(svg).toContain('font-size="9.8"');
   });
 
   it("resuelve el sistema desde referencia cuando no viene sistema explícito", () => {
@@ -137,8 +137,18 @@ describe("generateComponentSVG", () => {
       alto: 1800,
     });
 
+    const oscilobatiente = generateComponentSVG({
+      tipo: "Ventana",
+      referencia: "Oscilobatiente",
+      ancho: 800,
+      alto: 1800,
+    });
+
     expect(corredera).toContain('stroke-linecap="round"');
     expect(corredera).not.toContain('stroke-dasharray="5,3"');
     expect(abatible).toContain('stroke-dasharray="5,3"');
+    expect(oscilobatiente).not.toEqual(abatible);
+    expect(oscilobatiente).not.toEqual(corredera);
+    expect((oscilobatiente.match(/stroke-dasharray="5,3"/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 });

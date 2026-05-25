@@ -120,6 +120,7 @@ function normalizeType(tipo: string): string {
 
 function normalizeSistema(sistema: string | null | undefined): string {
   const s = (sistema ?? "").trim().toLowerCase();
+  if (s.includes("oscilo")) return "Oscilobatiente";
   if (s.includes("corr")) return "Corredera";
   if (s.includes("abat")) return "Abatible";
   if (s.includes("proye")) return "Proyectante";
@@ -410,6 +411,55 @@ function drawVentanaProyectante(x: number, y: number, w: number, h: number, v: s
     arrowTip(bottomCx, bottomCy, "down", systemStroke, p.detail),
     // Manilla inferior
     lHandle(x + w * 0.5, y + h - FI * 0.9, hH, "right", DT, p.detail),
+  ].join("");
+}
+
+function drawVentanaOscilobatiente(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
+  const F = fw(v), DT = det(v), GW = gsw(v), FI = fi(v);
+  const hW = clamp(F * 0.8, 4, 7);
+  const sideHingeH = clamp(h * 0.09, 9, 13);
+  const bottomHingeW = clamp(w * 0.08, 10, 16);
+  const bottomHingeH = clamp(F * 0.7, 3, 5);
+  const handleH = clamp(h * 0.14, 13, 18);
+  const gX = x + FI;
+  const gY = y + FI;
+  const gW = w - FI * 2;
+  const gH = h - FI * 2;
+  const turnLeafInset = 4;
+  const turnArcRadius = Math.min(gW * 0.64, gH * 0.72);
+  const turnStartX = gX + gW - turnLeafInset;
+  const turnStartY = gY + Math.max(8, gH * 0.10);
+  const turnEndX = gX + Math.max(10, gW * 0.14);
+  const turnEndY = gY + gH * 0.56;
+  const turnStroke = DT * 1.15;
+  const tiltStroke = DT * 1.1;
+  const tiltTopY = gY + Math.max(16, gH * 0.22);
+  const tiltArrowTipY = gY + Math.max(30, gH * 0.36);
+  const tiltTopCx = gX + gW / 2;
+  const tiltBottomLeftX = gX + Math.max(12, gW * 0.22);
+  const tiltBottomRightX = gX + gW - Math.max(12, gW * 0.22);
+  const tiltBottomY = gY + gH - Math.max(12, gH * 0.14);
+
+  return [
+    outerFrame(x, y, w, h, F, p.frame),
+    glassFill(gX, gY, gW, gH, GW),
+    technicalFrameLines(x, y, w, h, F, p.div),
+    // Bisagras laterales para la apertura abatible interior.
+    hinge(x - hW * 0.3, y + h * 0.22, hW, sideHingeH, p.detail),
+    hinge(x - hW * 0.3, y + h * 0.74, hW, sideHingeH, p.detail),
+    // Bisagras inferiores para la posición oscilante superior.
+    `<rect x="${px(gX + gW * 0.22 - bottomHingeW / 2)}" y="${px(gY + gH - bottomHingeH * 0.5)}" width="${px(bottomHingeW)}" height="${px(bottomHingeH)}" rx="1" fill="${p.detail}"/>`,
+    `<rect x="${px(gX + gW * 0.78 - bottomHingeW / 2)}" y="${px(gY + gH - bottomHingeH * 0.5)}" width="${px(bottomHingeW)}" height="${px(bottomHingeH)}" rx="1" fill="${p.detail}"/>`,
+    // Manilla lateral.
+    lHandle(x + w - FI * 0.85, y + h * 0.50, handleH, "left", DT, p.detail),
+    // Apertura abatible interior: hoja y arco de giro.
+    `<line x1="${px(gX + turnLeafInset)}" y1="${px(gY + turnLeafInset)}" x2="${px(gX + gW - turnLeafInset)}" y2="${px(gY + gH - turnLeafInset)}" stroke="${p.detail}" stroke-width="${px(turnStroke)}" stroke-linecap="round"/>`,
+    swingArc(turnStartX, turnStartY, turnArcRadius, turnEndX, turnEndY, turnStroke, p.detail),
+    // Apertura oscilante superior: hoja ventilando arriba con flecha hacia el interior.
+    `<line x1="${px(tiltBottomLeftX)}" y1="${px(tiltBottomY)}" x2="${px(tiltTopCx)}" y2="${px(tiltTopY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(tiltBottomRightX)}" y1="${px(tiltBottomY)}" x2="${px(tiltTopCx)}" y2="${px(tiltTopY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(tiltTopCx)}" y1="${px(gY + 6)}" x2="${px(tiltTopCx)}" y2="${px(tiltArrowTipY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-linecap="round"/>`,
+    arrowTip(tiltTopCx, tiltArrowTipY, "down", tiltStroke, p.detail),
   ].join("");
 }
 
@@ -925,6 +975,7 @@ function routeDrawing(
 ): string {
   switch (tipoNorm) {
     case "Ventana":
+      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p);
       if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p);
       if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p);
       return drawVentanaCorredera(x, y, w, h, v, p); // Corredera por defecto
@@ -1042,7 +1093,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const isMesa  = tipoNorm === "Mesa";
   const dimLeft = isMesa ? 40 : 46;
   const dimBot  = variant === "pdf" ? 24 : 42;
-  const topPad  = variant === "pdf" ? 30 : 12;
+  const topPad  = variant === "pdf" ? 42 : 12;
   const rightPad = 12;
 
   const totalW  = drawW + dimLeft + rightPad;
@@ -1062,7 +1113,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
       palette, variant
     );
   } else {
-    const dimY = variant === "pdf" ? originY - 14 : originY + drawH + 18;
+    const dimY = variant === "pdf" ? originY - 12 : originY + drawH + 18;
     dimensions = [
       dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
       dimV(originX - 20, originY, drawH, formatMm(params.alto), palette, variant),

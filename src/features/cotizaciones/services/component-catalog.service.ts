@@ -23,7 +23,7 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Ventana",
         descripcion: "Ventanas de aluminio o PVC.",
-        sistemas: ["Corredera", "Proyectante", "Abatible"],
+        sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
       },
       {
         tipo: "Puerta",

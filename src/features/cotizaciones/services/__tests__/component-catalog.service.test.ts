@@ -36,6 +36,20 @@ describe("component-catalog service", () => {
     ]);
   });
 
+  it("debe ofrecer oscilobatiente para ventanas y reconocerlo en referencias", () => {
+    expect(getSystemOptionsForComponent("Ventana")).toEqual([
+      "Corredera",
+      "Proyectante",
+      "Abatible",
+      "Oscilobatiente",
+    ]);
+
+    expect(splitComponentReference("Oscilobatiente", "Ventana")).toEqual({
+      sistema: "Oscilobatiente",
+      configuracion: "",
+    });
+  });
+
   it("debe corregir cierre terraza para no usar a medida como sistema", () => {
     expect(getSystemOptionsForComponent("Cierre terraza/logia")).toEqual([
       "Corredera",
@@ -57,7 +71,7 @@ describe("component-catalog service", () => {
 
   it("debe aceptar nombres legados aunque el catalogo visible use ñ", () => {
     expect(resolveComponentCategory("Pano Fijo")).toBe("Aberturas");
-    expect(resolveComponentCategory("PaÃ±o Fijo")).toBe("Aberturas");
+    expect(resolveComponentCategory("PaÃƒÂ±o Fijo")).toBe("Aberturas");
     expect(getSystemOptionsForComponent("Pano Fijo")).toEqual(["Fijo"]);
     expect(getComponentTypeOptionsForCategory("Aberturas")).toContain("Paño fijo");
   });
