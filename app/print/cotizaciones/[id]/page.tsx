@@ -88,6 +88,7 @@ type ItemPresentation = {
   referencia: string;
   sistema: string;
   configuracion: string;
+  hojasBase: 1 | 2 | null;
   colorName: string;
   surface: string;
   specs: Array<{ key: string; value: string }>;
@@ -500,7 +501,7 @@ export default function CotizacionPrintPage() {
     const map = new Map<string, ItemPresentation>();
 
     for (const item of visibleCotizacion?.items ?? []) {
-      const { colorHex, material, referencia, sistema, configuracion } =
+      const { colorHex, material, referencia, sistema, configuracion, hojasBase } =
         decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -518,6 +519,7 @@ export default function CotizacionPrintPage() {
         referencia,
         sistema: resolvedSystem,
         configuracion: resolvedConfiguration,
+        hojasBase,
         colorName,
         surface,
         specs: [
@@ -533,6 +535,7 @@ export default function CotizacionPrintPage() {
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
+          hojasBase,
           referencia,
           ancho: item.ancho,
           alto: item.alto,
@@ -900,6 +903,7 @@ export default function CotizacionPrintPage() {
                   presentation?.drawingSvg ??
                   generateComponentSVG({
                     tipo: item.tipo,
+                    hojasBase: presentation?.hojasBase,
                     referencia: presentation?.referencia,
                     ancho: item.ancho,
                     alto: item.alto,

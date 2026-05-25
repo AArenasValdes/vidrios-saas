@@ -136,6 +136,7 @@ const DEFAULT_SUGGESTIONS: Record<string, Omit<ComponentSuggestion, "referencia"
 const LEGACY_COMPONENT_SUGGESTION_ALIASES: Record<string, keyof typeof DEFAULT_SUGGESTIONS> = {
   ["Pa\u00c3\u00b1o Fijo"]: "Paño fijo",
   ["Cierre (Logia/Balc\u00c3\u00b3n)"]: "Cierre terraza/logia",
+  "Ventana 1 hoja": "Ventana",
   Otro: "Otro trabajo especial",
 };
 

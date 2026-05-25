@@ -25,6 +25,7 @@ import {
 } from "@/features/cotizaciones/types/pricing-mode";
 import {
   composeComponentReference,
+  getBaseLeafCountForComponent,
   getConfigurationOptionsForComponent,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
@@ -38,6 +39,7 @@ export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 export type PasoDosGrupoDraft = {
   categoria: PasoDosGrupoCategoria;
   subtipo: string;
+  hojasBase: 1 | 2 | null;
   cantidad: number;
   usaCantidadPersonalizada: boolean;
   cantidadPersonalizada: string;
@@ -234,6 +236,7 @@ export function createInitialPasoDosGrupoDraft({
   return {
     categoria,
     subtipo: seededSubtype,
+    hojasBase: seedForm?.hojasBase ?? getBaseLeafCountForComponent(seededSubtype),
     cantidad: Math.max(1, Number.parseInt(seedForm?.cantidad || "1", 10) || 1),
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
@@ -268,6 +271,7 @@ export function buildPasoDosGrupoComponentForm({
     pricingMode,
     current: {
       tipo: draft.subtipo,
+      hojasBase: draft.hojasBase,
       material: draft.material,
       colorHex: draft.colorHex,
       referencia: composeComponentReference(draft.sistema, draft.configuracion),
@@ -286,6 +290,7 @@ export function buildPasoDosGrupoComponentForm({
 
   return syncTemplatePricingInComponentForm({
     ...baseForm,
+    hojasBase: draft.hojasBase,
     material: draft.material,
     colorHex: draft.colorHex,
     referencia:
@@ -326,6 +331,7 @@ export function buildPasoDosGrupoSelectionPatch({
 
   return {
     subtipo,
+    hojasBase: getBaseLeafCountForComponent(subtipo),
     pricingMode: normalizePricingMode(current.pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
@@ -335,6 +341,7 @@ export function buildPasoDosGrupoSelectionPatch({
   } satisfies Pick<
     PasoDosGrupoDraft,
     | "subtipo"
+    | "hojasBase"
     | "pricingMode"
     | "material"
     | "colorHex"

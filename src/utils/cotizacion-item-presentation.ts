@@ -9,6 +9,7 @@ export type CotizacionItemPresentationMeta = {
   referencia: string;
   sistema: string;
   configuracion: string;
+  hojasBase: 1 | 2 | null;
   pricingMode: PricingMode;
   lineTemplateId: string;
   precioPorM2: number | null;
@@ -63,12 +64,25 @@ function normalizePriceOrigin(
   return pricingMode === "precio_directo" ? "manual" : "margen";
 }
 
+function normalizeLeafCount(value: number | string | null | undefined): 1 | 2 | null {
+  if (value === 1 || value === "1") {
+    return 1;
+  }
+
+  if (value === 2 || value === "2") {
+    return 2;
+  }
+
+  return null;
+}
+
 export function encodeCotizacionItemPresentationMeta(input: {
   colorHex: string;
   material: ComponentMaterial;
   referencia?: string;
   sistema?: string;
   configuracion?: string;
+  hojasBase?: 1 | 2 | null;
   pricingMode?: PricingMode;
   lineTemplateId?: string;
   precioPorM2?: number | null;
@@ -84,6 +98,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const referencia = (input.referencia ?? "").trim().replace(/\]/g, "");
   const sistema = (input.sistema ?? "").trim().replace(/\]/g, "");
   const configuracion = (input.configuracion ?? "").trim().replace(/\]/g, "");
+  const hojasBase = normalizeLeafCount(input.hojasBase);
   const pricingMode = normalizePricingMode(input.pricingMode);
   const lineTemplateId = (input.lineTemplateId ?? "").trim().replace(/\]/g, "");
   const precioPorM2 =
@@ -110,6 +125,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[r:${referencia}]` +
     `[sys:${sistema}]` +
     `[cfg:${configuracion}]` +
+    `[hb:${hojasBase ?? ""}]` +
     `[m:${material}]` +
     `[pm:${pricingMode}]` +
     `[lti:${lineTemplateId}]` +
@@ -131,6 +147,7 @@ export function decodeCotizacionItemPresentationMeta(
   const colorHex = normalizeColor(source.match(/\[c:(#[0-9a-fA-F]{3,8})\]/)?.[1], material);
   const sistema = source.match(/\[sys:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const configuracion = source.match(/\[cfg:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const hojasBase = normalizeLeafCount(source.match(/\[hb:([^\]]*)\]/)?.[1]);
   const pricingMode = normalizePricingMode(source.match(/\[pm:([^\]]*)\]/)?.[1]);
   const lineTemplateId = source.match(/\[lti:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const precioPorM2 = parseOptionalNumber(source.match(/\[pm2:([^\]]*)\]/)?.[1]);
@@ -150,6 +167,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[(?:r|l):[^\]]*\]/g, "")
     .replace(/\[sys:[^\]]*\]/g, "")
     .replace(/\[cfg:[^\]]*\]/g, "")
+    .replace(/\[hb:[^\]]*\]/g, "")
     .replace(/\[m:[^\]]*\]/g, "")
     .replace(/\[pm:[^\]]*\]/g, "")
     .replace(/\[lti:[^\]]*\]/g, "")
@@ -167,6 +185,7 @@ export function decodeCotizacionItemPresentationMeta(
     referencia,
     sistema,
     configuracion,
+    hojasBase,
     pricingMode,
     lineTemplateId,
     precioPorM2,

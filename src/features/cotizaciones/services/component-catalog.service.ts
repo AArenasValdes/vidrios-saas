@@ -11,6 +11,8 @@ export type ComponentCatalogItem = {
   descripcion: string;
 };
 
+export type ComponentLeafCount = 1 | 2;
+
 export type ComponentCatalogGroup = {
   title: ComponentCategoryTitle;
   items: readonly string[];
@@ -23,6 +25,11 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Ventana",
         descripcion: "Ventanas de aluminio o PVC.",
+        sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
+      },
+      {
+        tipo: "Ventana 1 hoja",
+        descripcion: "Ventanas de aluminio o PVC de una sola hoja.",
         sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
       },
       {
@@ -204,6 +211,20 @@ export function getDefaultSystemForComponent(tipo: string) {
 
 export function getDefaultConfigurationForComponent(tipo: string) {
   return getConfigurationOptionsForComponent(tipo)[0] ?? "";
+}
+
+export function getBaseLeafCountForComponent(tipo: string): ComponentLeafCount | null {
+  const normalizedTipo = normalizeComponentKey(tipo);
+
+  if (normalizedTipo === normalizeComponentKey("Ventana")) {
+    return 2;
+  }
+
+  if (normalizedTipo === normalizeComponentKey("Ventana 1 hoja")) {
+    return 1;
+  }
+
+  return null;
 }
 
 export function composeComponentReference(sistema: string, configuracion: string) {

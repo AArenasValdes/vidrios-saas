@@ -94,6 +94,7 @@ type ItemPresentation = {
   colorHex: string;
   material: string;
   referencia: string;
+  hojasBase: 1 | 2 | null;
   colorName: string;
   surface: string;
   specs: Array<{ key: string; value: string }>;
@@ -277,7 +278,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
     const map = new Map<string, ItemPresentation>();
 
     for (const item of quote.items) {
-      const { colorHex, material, referencia, sistema, configuracion } =
+      const { colorHex, material, referencia, sistema, configuracion, hojasBase } =
         decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -294,6 +295,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         colorHex,
         material,
         referencia,
+        hojasBase,
         colorName,
         surface,
         specs: [
@@ -309,6 +311,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
+          hojasBase,
           referencia,
           ancho: item.ancho,
           alto: item.alto,
@@ -549,6 +552,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           presentation?.drawingSvg ??
                           generateComponentSVG({
                             tipo: item.tipo,
+                            hojasBase: presentation?.hojasBase,
                             referencia: presentation?.referencia,
                             ancho: item.ancho,
                             alto: item.alto,

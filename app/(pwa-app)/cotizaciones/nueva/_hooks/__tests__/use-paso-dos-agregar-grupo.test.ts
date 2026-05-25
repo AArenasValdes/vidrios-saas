@@ -37,6 +37,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
 
     expect(draft.categoria).toBe("Aberturas");
     expect(draft.subtipo).toBe("Puerta");
+    expect(draft.hojasBase).toBeNull();
     expect(draft.cantidad).toBe(3);
     expect(draft.pricingMode).toBe("margen");
     expect(draft.material).toBe("Aluminio");
@@ -58,6 +59,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       draft: {
         categoria: "Aberturas",
         subtipo: "Ventana",
+        hojasBase: 2,
         cantidad: 4,
         usaCantidadPersonalizada: false,
         cantidadPersonalizada: "",
@@ -75,6 +77,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     });
 
     expect(form.tipo).toBe("Ventana");
+    expect(form.hojasBase).toBe(2);
     expect(form.cantidad).toBe("4");
     expect(form.loteCantidad).toBe("1");
     expect(form.referencia).toBe("Corredera");
@@ -138,6 +141,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     });
 
     expect(patch.subtipo).toBe("Shower door");
+    expect(patch.hojasBase).toBeNull();
     expect(patch.sistema).toBe("Corredera");
     expect(patch.configuracion).toBe("Frontal");
     expect(patch.material).toBe("Aluminio");
@@ -148,6 +152,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     const summary = buildPasoDosGrupoSummary({
       categoria: "Aberturas",
       subtipo: "Ventana",
+      hojasBase: 2,
       cantidad: 4,
       usaCantidadPersonalizada: false,
       cantidadPersonalizada: "",
@@ -174,6 +179,13 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       "Corredera",
       "Proyectante",
       "Abatible",
+      "Oscilobatiente",
+    ]);
+    expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual([
+      "Corredera",
+      "Proyectante",
+      "Abatible",
+      "Oscilobatiente",
     ]);
   });
 

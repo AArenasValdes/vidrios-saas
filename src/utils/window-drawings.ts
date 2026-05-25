@@ -12,6 +12,7 @@ export type ComponentSVGParams = {
   tipo: string;
   sistema?: string | null;
   configuracion?: string | null;
+  hojasBase?: 1 | 2 | null;
   referencia?: string | null;
   ancho: number | null;
   alto: number | null;
@@ -146,6 +147,44 @@ function resolveSistema(params: ComponentSVGParams): string {
     .join(" ");
 
   return normalizeSistema(source);
+}
+
+function normalizeLeafCount(value: number | string | null | undefined): 1 | 2 | null {
+  if (value === 1 || value === "1") {
+    return 1;
+  }
+
+  if (value === 2 || value === "2") {
+    return 2;
+  }
+
+  return null;
+}
+
+function resolveWindowLeafCount(params: ComponentSVGParams, sistemaNorm: string): 1 | 2 | null {
+  const explicitLeafCount = normalizeLeafCount(params.hojasBase);
+  if (explicitLeafCount) {
+    return explicitLeafCount;
+  }
+
+  const normalizedType = params.tipo.trim().toLowerCase();
+  if (normalizedType === "ventana 1 hoja") {
+    return 1;
+  }
+
+  if (normalizedType === "ventana") {
+    if (
+      sistemaNorm === "Abatible" ||
+      sistemaNorm === "Proyectante" ||
+      sistemaNorm === "Oscilobatiente"
+    ) {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  return null;
 }
 
 // ─── Átomos de dibujo ────────────────────────────────────────────────────────
@@ -314,153 +353,315 @@ function dimV(x: number, y: number, h: number, text: string, p: Palette, v: stri
 
 // ─── Componentes: Ventanas ────────────────────────────────────────────────────
 
-function drawVentanaCorredera(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
-  const midX = x + w / 2;
-  const mulW = Math.max(3.2, D * 1.55);
-  const hH = clamp(h * 0.15, 15, 20);
-  const trkY = y + h - FI - D * 0.5;
-  const glW = w / 2 - FI - mulW / 2;
-  const leftPaneX = x + FI;
-  const rightPaneX = x + w / 2 + mulW / 2;
-  const arrowW = Math.max(24, glW * 0.42);
-  const arrowY = y + h * 0.50;
-  const labelY = arrowY + 16;
-  const systemStroke = DT * 1.2;
-  const leftCenter = leftPaneX + glW / 2;
-  const rightCenter = rightPaneX + glW / 2;
-  const leftArrowX = leftCenter - arrowW * 0.5;
-  const rightArrowX = rightCenter - arrowW * 0.5;
-  const outerHandleInset = Math.max(4.5, F * 0.9);
+type WindowPane = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  centerX: number;
+  centerY: number;
+};
+
+function buildWindowPanes(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  hojas: 1 | 2,
+  p: Palette
+) {
+  const F = fw(v);
+  const D = dw(v);
+  const GW = gsw(v);
+  const FI = fi(v);
+  const glassY = y + FI;
+  const glassH = h - FI * 2;
+
+  if (hojas === 1) {
+    const pane = {
+      x: x + FI,
+      y: glassY,
+      w: w - FI * 2,
+      h: glassH,
+    };
+
+    return {
+      outer: outerFrame(x, y, w, h, F, p.frame),
+      divider: "",
+      panes: [
+        {
+          ...pane,
+          centerX: pane.x + pane.w / 2,
+          centerY: pane.y + pane.h / 2,
+        },
+      ] satisfies WindowPane[],
+      glass: glassFill(pane.x, pane.y, pane.w, pane.h, GW),
+      railY: y + h - FI - D * 0.5,
+      handleInset: Math.max(5, F * 1.1),
+    };
+  }
+
+  const dividerW = Math.max(3.2, D * 1.55);
+  const paneW = (w - FI * 2 - dividerW) / 2;
+  const leftPane = {
+    x: x + FI,
+    y: glassY,
+    w: paneW,
+    h: glassH,
+  };
+  const rightPane = {
+    x: leftPane.x + paneW + dividerW,
+    y: glassY,
+    w: paneW,
+    h: glassH,
+  };
+
+  return {
+    outer: outerFrame(x, y, w, h, F, p.frame),
+    divider: `<line x1="${px(leftPane.x + paneW + dividerW / 2)}" y1="${px(y + FI * 0.5)}" x2="${px(leftPane.x + paneW + dividerW / 2)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(dividerW)}" stroke-linecap="square"/>`,
+    panes: [
+      {
+        ...leftPane,
+        centerX: leftPane.x + leftPane.w / 2,
+        centerY: leftPane.y + leftPane.h / 2,
+      },
+      {
+        ...rightPane,
+        centerX: rightPane.x + rightPane.w / 2,
+        centerY: rightPane.y + rightPane.h / 2,
+      },
+    ] satisfies WindowPane[],
+    glass:
+      glassFill(leftPane.x, leftPane.y, leftPane.w, leftPane.h, GW) +
+      glassFill(rightPane.x, rightPane.y, rightPane.w, rightPane.h, GW),
+    railY: y + h - FI - D * 0.5,
+    handleInset: Math.max(5, F * 1.1),
+  };
+}
+
+function drawVentanaCorredera(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  hojas: 1 | 2
+): string {
+  const D = dw(v);
+  const DT = det(v);
+  const { outer, divider, panes, glass, railY, handleInset } = buildWindowPanes(
+    x,
+    y,
+    w,
+    h,
+    v,
+    hojas,
+    p
+  );
+  const arrowStroke = DT * 1.15;
+  const rail = `<line x1="${px(panes[0].x)}" y1="${px(railY)}" x2="${px(panes[panes.length - 1].x + panes[panes.length - 1].w)}" y2="${px(railY)}" stroke="${p.div}" stroke-width="${px(D * 1.05)}" stroke-linecap="round"/>`;
+
+  if (hojas === 1) {
+    const pane = panes[0];
+    const arrowW = Math.max(30, pane.w * 0.42);
+
+    return [
+      outer,
+      glass,
+      rail,
+      sidePullHandle(pane.x + pane.w - handleInset, pane.centerY, clamp(h * 0.15, 15, 20)),
+      directionArrow(
+        pane.centerX - arrowW / 2,
+        pane.centerY,
+        arrowW,
+        "left",
+        arrowStroke,
+        p.detail
+      ),
+    ].join("");
+  }
+
+  const leftPane = panes[0];
+  const rightPane = panes[1];
+  const arrowW = Math.max(26, leftPane.w * 0.42);
+
   return [
-    outerFrame(x, y, w, h, F, p.frame),
-    technicalFrameLines(x, y, w, h, F, p.div),
-    // Panel izquierdo de vidrio
-    glassFill(leftPaneX, y + FI, glW, h - FI * 2, GW),
-    // Panel derecho de vidrio
-    glassFill(rightPaneX, y + FI, glW, h - FI * 2, GW),
-    // Parteluz central vertical
-    `<line x1="${px(midX)}" y1="${px(y + FI * 0.5)}" x2="${px(midX)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(mulW)}" stroke-linecap="square"/>`,
-    // Riel inferior
-    `<line x1="${px(x + FI)}" y1="${px(trkY)}" x2="${px(x + w - FI)}" y2="${px(trkY)}" stroke="${p.div}" stroke-width="${px(D * 1.05)}" stroke-linecap="round"/>`,
-    // Manillas en jambas exteriores para evitar choques con flechas y labels
-    sidePullHandle(x + outerHandleInset, y + h * 0.50, hH),
-    sidePullHandle(x + w - outerHandleInset, y + h * 0.50, hH),
-    // Indicadores de deslizamiento por hoja
-    directionArrow(leftArrowX, arrowY, arrowW, "right", systemStroke, p.detail),
-    directionArrow(rightArrowX, arrowY, arrowW, "left", systemStroke, p.detail),
-    slidingLeafLabel(leftCenter, labelY, "A1", p.detail, v),
-    slidingLeafLabel(rightCenter, labelY, "A2", p.detail, v),
+    outer,
+    glass,
+    divider,
+    rail,
+    sidePullHandle(leftPane.x + leftPane.w - handleInset, leftPane.centerY, clamp(h * 0.15, 15, 20)),
+    sidePullHandle(rightPane.x + handleInset, rightPane.centerY, clamp(h * 0.15, 15, 20)),
+    directionArrow(leftPane.centerX - arrowW / 2, leftPane.centerY, arrowW, "right", arrowStroke, p.detail),
+    directionArrow(rightPane.centerX - arrowW / 2, rightPane.centerY, arrowW, "left", arrowStroke, p.detail),
   ].join("");
 }
 
-function drawVentanaAbatible(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), DT = det(v), GW = gsw(v), FI = fi(v);
-  const hW = clamp(F * 0.8, 4, 7);
-  const hHinge = clamp(h * 0.10, 9, 13);
-  const hH = clamp(h * 0.14, 13, 18);
-  const gX = x + FI, gY = y + FI;
-  const gW = w - FI * 2, gH = h - FI * 2;
-  const leafInset = 4;
-  const leafEndX = gX + gW - leafInset;
-  const leafEndY = gY + gH - leafInset;
-  const arcStartX = gX + gW - leafInset;
-  const arcStartY = gY + leafInset;
-  const arcEndX = gX + leafInset;
-  const arcEndY = gY + Math.min(gW, gH) * 0.72;
-  const arcR = Math.min(gW * 0.9, gH * 0.9);
-  const systemStroke = DT * 1.2;
-  return [
-    outerFrame(x, y, w, h, F, p.frame),
-    glassFill(gX, gY, gW, gH, GW),
-    // Bisagras (borde izquierdo)
-    hinge(x - hW * 0.3, y + h * 0.20, hW, hHinge, p.detail),
-    hinge(x - hW * 0.3, y + h * 0.72, hW, hHinge, p.detail),
-    // Manilla (borde derecho)
-    lHandle(x + w - FI * 0.85, y + h * 0.50, hH, "left", DT, p.detail),
-    // Hoja abierta
-    `<line x1="${px(gX + leafInset)}" y1="${px(gY + leafInset)}" x2="${px(leafEndX)}" y2="${px(leafEndY)}" stroke="${p.detail}" stroke-width="${px(systemStroke)}" stroke-linecap="round"/>`,
-    // Arco de apertura uniforme
-    swingArc(arcStartX, arcStartY, arcR, arcEndX, arcEndY, systemStroke, p.detail),
-  ].join("");
-}
-
-function drawVentanaProyectante(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
-  const gX = x + FI, gY = y + FI;
-  const gW = w - FI * 2, gH = h - FI * 2;
-  const hH = clamp(h * 0.12, 12, 17);
-  const hingeW = Math.max(8, gW * 0.14);
-  const hingeH = Math.max(3.4, D * 1.2);
-  const bottomCx = gX + gW / 2;
-  const bottomCy = gY + gH - Math.max(10, gH * 0.18);
-  const supportTopY = gY + Math.max(8, gH * 0.14);
-  const leftTopX = gX + Math.max(10, gW * 0.18);
-  const rightTopX = gX + gW - Math.max(10, gW * 0.18);
-  const systemStroke = DT * 1.15;
-  return [
-    outerFrame(x, y, w, h, F, p.frame),
-    glassFill(gX, gY, gW, gH, GW),
-    // Bisagras superiores
-    `<rect x="${px(gX + gW * 0.22 - hingeW / 2)}" y="${px(gY - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
-    `<rect x="${px(gX + gW * 0.78 - hingeW / 2)}" y="${px(gY - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
-    // Guias de apertura hacia afuera
-    `<line x1="${px(leftTopX)}" y1="${px(supportTopY)}" x2="${px(bottomCx)}" y2="${px(bottomCy)}" stroke="${p.detail}" stroke-width="${px(systemStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(rightTopX)}" y1="${px(supportTopY)}" x2="${px(bottomCx)}" y2="${px(bottomCy)}" stroke="${p.detail}" stroke-width="${px(systemStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(bottomCx)}" y1="${px(bottomCy - 18)}" x2="${px(bottomCx)}" y2="${px(bottomCy)}" stroke="${p.detail}" stroke-width="${px(systemStroke)}" stroke-linecap="round"/>`,
-    arrowTip(bottomCx, bottomCy, "down", systemStroke, p.detail),
-    // Manilla inferior
-    lHandle(x + w * 0.5, y + h - FI * 0.9, hH, "right", DT, p.detail),
-  ].join("");
-}
-
-function drawVentanaOscilobatiente(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), DT = det(v), GW = gsw(v), FI = fi(v);
-  const hW = clamp(F * 0.8, 4, 7);
-  const sideHingeH = clamp(h * 0.09, 9, 13);
-  const bottomHingeW = clamp(w * 0.08, 10, 16);
-  const bottomHingeH = clamp(F * 0.7, 3, 5);
+function drawVentanaAbatible(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  hojas: 1 | 2
+): string {
+  const F = fw(v);
+  const DT = det(v);
+  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const hingeW = clamp(F * 0.8, 4, 7);
+  const hingeH = clamp(h * 0.1, 9, 13);
   const handleH = clamp(h * 0.14, 13, 18);
-  const gX = x + FI;
-  const gY = y + FI;
-  const gW = w - FI * 2;
-  const gH = h - FI * 2;
-  const turnLeafInset = 4;
-  const turnArcRadius = Math.min(gW * 0.64, gH * 0.72);
-  const turnStartX = gX + gW - turnLeafInset;
-  const turnStartY = gY + Math.max(8, gH * 0.10);
-  const turnEndX = gX + Math.max(10, gW * 0.14);
-  const turnEndY = gY + gH * 0.56;
-  const turnStroke = DT * 1.15;
-  const tiltStroke = DT * 1.1;
-  const tiltTopY = gY + Math.max(16, gH * 0.22);
-  const tiltArrowTipY = gY + Math.max(30, gH * 0.36);
-  const tiltTopCx = gX + gW / 2;
-  const tiltBottomLeftX = gX + Math.max(12, gW * 0.22);
-  const tiltBottomRightX = gX + gW - Math.max(12, gW * 0.22);
-  const tiltBottomY = gY + gH - Math.max(12, gH * 0.14);
+  const leafInset = 5;
+  const stroke = DT * 1.2;
+
+  if (hojas === 1) {
+    const pane = panes[0];
+    const arcRadius = Math.min(pane.w * 0.9, pane.h * 0.9);
+
+    return [
+      outer,
+      glass,
+      hinge(x - hingeW * 0.3, y + h * 0.22, hingeW, hingeH, p.detail),
+      hinge(x - hingeW * 0.3, y + h * 0.74, hingeW, hingeH, p.detail),
+      lHandle(x + w - fi(v) * 0.85, y + h * 0.5, handleH, "left", DT, p.detail),
+      `<line x1="${px(pane.x + leafInset)}" y1="${px(pane.y + leafInset)}" x2="${px(pane.x + pane.w - leafInset)}" y2="${px(pane.y + pane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
+      swingArc(
+        pane.x + pane.w - leafInset,
+        pane.y + leafInset,
+        arcRadius,
+        pane.x + leafInset,
+        pane.y + pane.h * 0.56,
+        stroke,
+        p.detail
+      ),
+    ].join("");
+  }
+
+  const leftPane = panes[0];
+  const rightPane = panes[1];
+  const arcRadius = Math.min(leftPane.w * 0.85, leftPane.h * 0.82);
 
   return [
-    outerFrame(x, y, w, h, F, p.frame),
-    glassFill(gX, gY, gW, gH, GW),
-    technicalFrameLines(x, y, w, h, F, p.div),
-    // Bisagras laterales para la apertura abatible interior.
-    hinge(x - hW * 0.3, y + h * 0.22, hW, sideHingeH, p.detail),
-    hinge(x - hW * 0.3, y + h * 0.74, hW, sideHingeH, p.detail),
-    // Bisagras inferiores para la posición oscilante superior.
-    `<rect x="${px(gX + gW * 0.22 - bottomHingeW / 2)}" y="${px(gY + gH - bottomHingeH * 0.5)}" width="${px(bottomHingeW)}" height="${px(bottomHingeH)}" rx="1" fill="${p.detail}"/>`,
-    `<rect x="${px(gX + gW * 0.78 - bottomHingeW / 2)}" y="${px(gY + gH - bottomHingeH * 0.5)}" width="${px(bottomHingeW)}" height="${px(bottomHingeH)}" rx="1" fill="${p.detail}"/>`,
-    // Manilla lateral.
-    lHandle(x + w - FI * 0.85, y + h * 0.50, handleH, "left", DT, p.detail),
-    // Apertura abatible interior: hoja y arco de giro.
-    `<line x1="${px(gX + turnLeafInset)}" y1="${px(gY + turnLeafInset)}" x2="${px(gX + gW - turnLeafInset)}" y2="${px(gY + gH - turnLeafInset)}" stroke="${p.detail}" stroke-width="${px(turnStroke)}" stroke-linecap="round"/>`,
-    swingArc(turnStartX, turnStartY, turnArcRadius, turnEndX, turnEndY, turnStroke, p.detail),
-    // Apertura oscilante superior: hoja ventilando arriba con flecha hacia el interior.
-    `<line x1="${px(tiltBottomLeftX)}" y1="${px(tiltBottomY)}" x2="${px(tiltTopCx)}" y2="${px(tiltTopY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(tiltBottomRightX)}" y1="${px(tiltBottomY)}" x2="${px(tiltTopCx)}" y2="${px(tiltTopY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(tiltTopCx)}" y1="${px(gY + 6)}" x2="${px(tiltTopCx)}" y2="${px(tiltArrowTipY)}" stroke="${p.detail}" stroke-width="${px(tiltStroke)}" stroke-linecap="round"/>`,
-    arrowTip(tiltTopCx, tiltArrowTipY, "down", tiltStroke, p.detail),
+    outer,
+    glass,
+    divider,
+    hinge(x - hingeW * 0.3, y + h * 0.22, hingeW, hingeH, p.detail),
+    hinge(x - hingeW * 0.3, y + h * 0.74, hingeW, hingeH, p.detail),
+    hinge(x + w - hingeW * 0.7, y + h * 0.22, hingeW, hingeH, p.detail),
+    hinge(x + w - hingeW * 0.7, y + h * 0.74, hingeW, hingeH, p.detail),
+    lHandle(leftPane.x + leftPane.w - Math.max(4.5, F * 0.8), leftPane.centerY, handleH, "left", DT, p.detail),
+    lHandle(rightPane.x + Math.max(4.5, F * 0.8), rightPane.centerY, handleH, "right", DT, p.detail),
+    `<line x1="${px(leftPane.x + leafInset)}" y1="${px(leftPane.y + leafInset)}" x2="${px(leftPane.x + leftPane.w - leafInset)}" y2="${px(leftPane.y + leftPane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
+    `<line x1="${px(rightPane.x + rightPane.w - leafInset)}" y1="${px(rightPane.y + leafInset)}" x2="${px(rightPane.x + leafInset)}" y2="${px(rightPane.y + rightPane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
+    swingArc(
+      leftPane.x + leftPane.w - leafInset,
+      leftPane.y + leafInset,
+      arcRadius,
+      leftPane.x + leafInset,
+      leftPane.y + leftPane.h * 0.54,
+      stroke,
+      p.detail
+    ),
+    swingArc(
+      rightPane.x + leafInset,
+      rightPane.y + leafInset,
+      arcRadius,
+      rightPane.x + rightPane.w - leafInset,
+      rightPane.y + rightPane.h * 0.54,
+      stroke,
+      p.detail
+    ),
   ].join("");
+}
+
+function drawProyectanteGuides(pane: WindowPane, stroke: number, p: Palette) {
+  const topY = pane.y + Math.max(8, pane.h * 0.14);
+  const bottomY = pane.y + pane.h - Math.max(10, pane.h * 0.18);
+  const topLeftX = pane.x + Math.max(9, pane.w * 0.2);
+  const topRightX = pane.x + pane.w - Math.max(9, pane.w * 0.2);
+
+  return [
+    `<line x1="${px(topLeftX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(topRightX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(pane.centerX)}" y1="${px(bottomY - 16)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
+    arrowTip(pane.centerX, bottomY, "down", stroke, p.detail),
+  ].join("");
+}
+
+function drawVentanaProyectante(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  hojas: 1 | 2
+): string {
+  const D = dw(v);
+  const DT = det(v);
+  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const handleH = clamp(h * 0.12, 12, 17);
+  const stroke = DT * 1.1;
+  const hinges = panes
+    .map((pane) => {
+      const hingeW = Math.max(8, pane.w * 0.18);
+      const hingeH = Math.max(3.4, D * 1.2);
+
+      return [
+        `<rect x="${px(pane.x + pane.w * 0.26 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
+        `<rect x="${px(pane.x + pane.w * 0.74 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
+      ].join("");
+    })
+    .join("");
+  const guides = panes.map((pane) => drawProyectanteGuides(pane, stroke, p)).join("");
+  const handles =
+    hojas === 1
+      ? lHandle(x + w * 0.5, y + h - fi(v) * 0.9, handleH, "right", DT, p.detail)
+      : panes
+          .map((pane) =>
+            lHandle(pane.centerX, y + h - fi(v) * 0.9, handleH, "right", DT, p.detail)
+          )
+          .join("");
+
+  return [outer, glass, divider, hinges, guides, handles].join("");
+}
+
+function drawTiltMarker(pane: WindowPane, stroke: number, p: Palette) {
+  const topY = pane.y + Math.max(14, pane.h * 0.2);
+  const arrowY = pane.y + Math.max(28, pane.h * 0.34);
+  const leftX = pane.x + Math.max(10, pane.w * 0.22);
+  const rightX = pane.x + pane.w - Math.max(10, pane.w * 0.22);
+
+  return [
+    `<line x1="${px(leftX)}" y1="${px(pane.y + pane.h - Math.max(12, pane.h * 0.14))}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(rightX)}" y1="${px(pane.y + pane.h - Math.max(12, pane.h * 0.14))}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
+    `<line x1="${px(pane.centerX)}" y1="${px(pane.y + 6)}" x2="${px(pane.centerX)}" y2="${px(arrowY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
+    arrowTip(pane.centerX, arrowY, "down", stroke, p.detail),
+  ].join("");
+}
+
+function drawVentanaOscilobatiente(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  hojas: 1 | 2
+): string {
+  const DT = det(v);
+  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const stroke = DT * 1.1;
+  const abatibleLayer = drawVentanaAbatible(x, y, w, h, v, p, hojas)
+    .replace(outer, "")
+    .replace(glass, "")
+    .replace(divider, "");
+  const tiltMarkers = panes.map((pane) => drawTiltMarker(pane, stroke, p)).join("");
+
+  return [outer, glass, divider, abatibleLayer, tiltMarkers].join("");
 }
 
 // ─── Componentes: Puertas ─────────────────────────────────────────────────────
@@ -969,16 +1170,17 @@ function drawOtro(x: number, y: number, w: number, h: number, v: string, p: Pale
 function routeDrawing(
   tipoNorm: string,
   sistemaNorm: string,
+  hojasBase: 1 | 2 | null,
   x: number, y: number, w: number, h: number,
   v: string,
   p: Palette
 ): string {
   switch (tipoNorm) {
     case "Ventana":
-      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p);
-      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p);
-      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p);
-      return drawVentanaCorredera(x, y, w, h, v, p); // Corredera por defecto
+      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, hojasBase ?? 2);
+      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, hojasBase ?? 2);
+      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, hojasBase ?? 2);
+      return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2); // Corredera por defecto
 
     case "Puerta":
       if (sistemaNorm === "Corredera") return drawPuertaCorredera(x, y, w, h, v, p);
@@ -1078,6 +1280,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const variant   = params.variant ?? "default";
   const tipoNorm  = normalizeType(params.tipo);
   const sisNorm   = resolveSistema(params);
+  const hojasBase = resolveWindowLeafCount(params, sisNorm);
   const palette   = resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
@@ -1101,7 +1304,17 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const originX = dimLeft;
   const originY = topPad;
 
-  const drawing = routeDrawing(tipoNorm, sisNorm, originX, originY, drawW, drawH, variant, palette);
+  const drawing = routeDrawing(
+    tipoNorm,
+    sisNorm,
+    hojasBase,
+    originX,
+    originY,
+    drawW,
+    drawH,
+    variant,
+    palette
+  );
 
   let dimensions: string;
   if (isMesa) {

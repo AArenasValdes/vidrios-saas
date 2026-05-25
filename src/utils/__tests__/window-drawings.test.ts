@@ -151,4 +151,41 @@ describe("generateComponentSVG", () => {
     expect(oscilobatiente).not.toEqual(corredera);
     expect((oscilobatiente.match(/stroke-dasharray="5,3"/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
+  it("diferencia ventana de 2 hojas y ventana de 1 hoja para el mismo sistema", () => {
+    const dosHojas = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Oscilobatiente",
+      hojasBase: 2,
+      ancho: 1980,
+      alto: 1900,
+    });
+
+    const unaHoja = generateComponentSVG({
+      tipo: "Ventana 1 hoja",
+      sistema: "Oscilobatiente",
+      hojasBase: 1,
+      ancho: 800,
+      alto: 1800,
+    });
+
+    expect(dosHojas).not.toEqual(unaHoja);
+    expect((dosHojas.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(2);
+    expect((unaHoja.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(1);
+  });
+
+  it("usa la semantica del tipo para mostrar la tarjeta base correcta en paso 2", () => {
+    const ventanaDosHojas = generateComponentSVG({
+      tipo: "Ventana",
+      ancho: 1200,
+      alto: 1500,
+    });
+    const ventanaUnaHoja = generateComponentSVG({
+      tipo: "Ventana 1 hoja",
+      ancho: 800,
+      alto: 1500,
+    });
+
+    expect((ventanaDosHojas.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(2);
+    expect((ventanaUnaHoja.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(1);
+  });
 });

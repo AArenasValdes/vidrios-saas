@@ -24,6 +24,7 @@ import {
 } from "@/features/cotizaciones/types/pricing-mode";
 import {
   COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS,
+  getBaseLeafCountForComponent,
   splitComponentReference,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
@@ -33,6 +34,7 @@ export type { PreferredProvider };
 export type ComponentFormState = {
   codigo: string;
   tipo: string;
+  hojasBase?: 1 | 2 | null;
   material: "Aluminio" | "PVC";
   referencia: string;
   sistema?: string;
@@ -349,6 +351,29 @@ export const CLP = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
+function isSingleLeafWindowType(tipo: string) {
+  return normalizeSearchValue(tipo) === "ventana 1 hoja";
+}
+
+function resolveLegacyWindowLeafCount(tipo: string, sistema?: string | null) {
+  const normalizedType = normalizeSearchValue(tipo);
+
+  if (normalizedType !== "ventana") {
+    return getBaseLeafCountForComponent(tipo);
+  }
+
+  const normalizedSystem = normalizeSearchValue(sistema ?? "");
+  if (
+    normalizedSystem === "abatible" ||
+    normalizedSystem === "proyectante" ||
+    normalizedSystem === "oscilobatiente"
+  ) {
+    return 1;
+  }
+
+  return 2;
+}
+
 function getComponentPrefix(tipo: string) {
   const n = tipo.trim().toLowerCase();
   if (n.startsWith("vent")) return "V";
@@ -396,6 +421,10 @@ export function getComponentTypeLabelForBatch(tipo: string, quantity: number) {
   const normalized = tipo.trim().toLowerCase() || "componentes";
   if (quantity === 1) {
     return normalized;
+  }
+
+  if (normalized === "ventana 1 hoja") {
+    return "ventanas 1 hoja";
   }
 
   if (normalized.endsWith("z")) {
@@ -770,6 +799,7 @@ export function buildSuggestedComponentForm(
   return {
     codigo: pickSuggestedString(current.codigo, buildNextComponentCode(items, tipo)),
     tipo,
+    hojasBase: current.hojasBase ?? getBaseLeafCountForComponent(tipo),
     material:
       current.material === "PVC" || current.material === "Aluminio"
         ? current.material
@@ -841,6 +871,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     referencia,
     sistema,
     configuracion,
+    hojasBase,
     material,
     pricingMode,
     raw,
@@ -858,13 +889,15 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     referencia || item.lineaComercial || "",
     item.tipo
   );
+  const resolvedSystem = sistema || referenceParts.sistema;
 
   return {
     codigo: item.codigo,
     tipo: item.tipo,
+    hojasBase: hojasBase ?? resolveLegacyWindowLeafCount(item.tipo, resolvedSystem),
     material,
     referencia: referencia || item.lineaComercial || "",
-    sistema: sistema || referenceParts.sistema,
+    sistema: resolvedSystem,
     configuracion: configuracion || referenceParts.configuracion,
     lineTemplateId,
     pricingMode,
@@ -935,6 +968,10 @@ export function buildItemFromForm(
   const referenceParts = splitComponentReference(syncedForm.referencia, syncedForm.tipo);
   const sistema = syncedForm.sistema?.trim() || referenceParts.sistema;
   const configuracion = syncedForm.configuracion?.trim() || referenceParts.configuracion;
+  const hojasBase =
+    syncedForm.hojasBase ??
+    getBaseLeafCountForComponent(syncedForm.tipo) ??
+    resolveLegacyWindowLeafCount(syncedForm.tipo, sistema);
   const origenPrecio =
     hasTemplateReference && hasTemplatePrice
       ? syncedForm.precioAjustadoManual
@@ -969,6 +1006,7 @@ export function buildItemFromForm(
       referencia: syncedForm.referencia,
       sistema,
       configuracion,
+      hojasBase,
       material: syncedForm.material,
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
@@ -996,6 +1034,7 @@ export function applyQuotePricingToItems(
       referencia,
       sistema,
       configuracion,
+      hojasBase,
       material,
       raw,
       lineTemplateId,
@@ -1033,6 +1072,7 @@ export function applyQuotePricingToItems(
         referencia,
         sistema,
         configuracion,
+        hojasBase,
         material,
         pricingMode,
         lineTemplateId,

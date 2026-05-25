@@ -1,4 +1,5 @@
 import {
+  getBaseLeafCountForComponent,
   getConfigurationOptionsForComponent,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
@@ -8,6 +9,13 @@ import {
 
 describe("component-catalog service", () => {
   it("debe exponer categorias profesionales para el flujo movil", () => {
+    expect(getComponentTypeOptionsForCategory("Aberturas")).toEqual([
+      "Ventana",
+      "Ventana 1 hoja",
+      "Puerta",
+      "Paño fijo",
+      "Shower door",
+    ]);
     expect(getComponentTypeOptionsForCategory("Interiores y decoracion")).toEqual([
       "Espejo",
       "Tapa de mesa",
@@ -43,11 +51,19 @@ describe("component-catalog service", () => {
       "Abatible",
       "Oscilobatiente",
     ]);
+    expect(getSystemOptionsForComponent("Ventana 1 hoja")).toEqual([
+      "Corredera",
+      "Proyectante",
+      "Abatible",
+      "Oscilobatiente",
+    ]);
 
     expect(splitComponentReference("Oscilobatiente", "Ventana")).toEqual({
       sistema: "Oscilobatiente",
       configuracion: "",
     });
+    expect(getBaseLeafCountForComponent("Ventana")).toBe(2);
+    expect(getBaseLeafCountForComponent("Ventana 1 hoja")).toBe(1);
   });
 
   it("debe corregir cierre terraza para no usar a medida como sistema", () => {

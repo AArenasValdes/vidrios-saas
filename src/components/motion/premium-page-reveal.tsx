@@ -1,6 +1,6 @@
 "use client";
 
-import type { HTMLAttributes, ReactNode } from "react";
+import { useEffect, useState, type HTMLAttributes, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 type PremiumRevealProps = {
@@ -20,14 +20,25 @@ function joinClassNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
+function useHydratedMotionReady() {
+  const reduceMotion = useReducedMotion();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  return isHydrated && !reduceMotion;
+}
+
 export function PremiumPageReveal({
   children,
   className,
   ...props
 }: PremiumRevealProps) {
-  const reduceMotion = useReducedMotion();
+  const motionReady = useHydratedMotionReady();
 
-  if (reduceMotion) {
+  if (!motionReady) {
     return (
       <div className={className} {...props}>
         {children}
@@ -62,9 +73,9 @@ export function PremiumPageSection({
   className,
   ...props
 }: PremiumRevealProps) {
-  const reduceMotion = useReducedMotion();
+  const motionReady = useHydratedMotionReady();
 
-  if (reduceMotion) {
+  if (!motionReady) {
     return (
       <div className={className} {...props}>
         {children}

@@ -11,6 +11,7 @@ describe("cotizacion-item-presentation", () => {
       referencia: "Serie 25",
       sistema: "Oscilobatiente",
       configuracion: "Premium",
+      hojasBase: 1,
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -26,6 +27,7 @@ describe("cotizacion-item-presentation", () => {
     expect(encoded).toContain("[r:Serie 25]");
     expect(encoded).toContain("[sys:Oscilobatiente]");
     expect(encoded).toContain("[cfg:Premium]");
+    expect(encoded).toContain("[hb:1]");
     expect(encoded).toContain("[m:Aluminio]");
     expect(encoded).toContain("[pm:precio_directo]");
     expect(encoded).toContain("[lti:tpl-1]");
@@ -42,6 +44,7 @@ describe("cotizacion-item-presentation", () => {
       referencia: "Serie 25",
       sistema: "Oscilobatiente",
       configuracion: "Premium",
+      hojasBase: 1,
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -63,6 +66,7 @@ describe("cotizacion-item-presentation", () => {
       referencia: "S60",
       sistema: "",
       configuracion: "",
+      hojasBase: null,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -87,6 +91,7 @@ describe("cotizacion-item-presentation", () => {
     expect(decodeCotizacionItemPresentationMeta(encoded).referencia).toBe(
       "Fijo - Premium"
     );
+    expect(decodeCotizacionItemPresentationMeta(encoded).hojasBase).toBeNull();
     expect(decodeCotizacionItemPresentationMeta(encoded).origenPrecio).toBe("margen");
   });
 
@@ -97,6 +102,7 @@ describe("cotizacion-item-presentation", () => {
       referencia: "",
       sistema: "",
       configuracion: "",
+      hojasBase: null,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -118,6 +124,7 @@ describe("cotizacion-item-presentation", () => {
       referencia: "",
       sistema: "",
       configuracion: "",
+      hojasBase: null,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
