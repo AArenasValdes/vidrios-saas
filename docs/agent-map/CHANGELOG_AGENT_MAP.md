@@ -4,6 +4,31 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-25 - Trial gratis de 7 dias y activacion manual
+
+### Resumen
+
+Se agrego el control simple de prueba gratuita y suscripcion manual por organizacion. Cada nueva organizacion ahora arranca con 7 dias de trial en `organization_profile`, el estado efectivo se calcula desde un helper central de suscripciones, y las rutas privadas pasan a operar en modo lectura cuando la cuenta vence. El usuario puede seguir iniciando sesion, pero crear/editar/eliminar en cotizaciones, clientes, solicitudes internas y configuracion queda bloqueado y se redirige a `/cuenta-vencida`, donde Ventora muestra CTA de WhatsApp con activacion manual mensual o anual.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql` | Nuevas columnas de trial/suscripcion en `organization_profile` + trigger de defaults al crear organizacion |
+| `src/features/subscriptions/` | Nueva feature de estado efectivo, guards de rutas y CTA de activacion |
+| `src/features/organization-profile/` | El perfil ahora expone snapshot calculado de suscripcion |
+| `src/components/layout/app-shell.tsx` | Banners de trial, redirect a cuenta vencida y links privados guardados |
+| `app/(pwa-app)/cuenta-vencida/` | Nueva pantalla de activacion manual |
+| `app/api/solicitudes/route.ts` | Bloquea escrituras privadas cuando la cuenta esta vencida |
+| `app/api/organization-assets/upload/route.ts` | Bloquea uploads privados cuando la cuenta esta vencida |
+| `app/api/public-landing/revalidate/route.ts` | Bloquea revalidacion privada cuando la cuenta esta vencida |
+| `proxy.ts` | Protege tambien `/cuenta-vencida` |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Se documentan campos de trial y activacion manual |
+| `docs/agent-map/FEATURES_MAP.md` | Nueva feature `Trial y Suscripcion Manual` |
+| `docs/agent-map/ROUTES_MAP.md` | Nueva ruta `/cuenta-vencida` y riesgos de bloqueo en rutas privadas |
+
+---
+
 ## 2026-05-22 - Diagnostico fino de login movil y PWA
 
 ### Resumen

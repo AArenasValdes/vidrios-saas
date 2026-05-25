@@ -7,6 +7,8 @@ import {
   type SolicitudesResumenPage,
   type SolicitudesResumenGlobal,
 } from "@/features/solicitudes/services/solicitudes-summary.service";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
 import type {
   EstadoSolicitudContacto,
   SolicitudContacto,
@@ -149,9 +151,18 @@ export function useSolicitudesContacto(
   cacheKey = "default",
   options: UseSolicitudesContactoOptions = {}
 ) {
+  const { profile, isReady: isProfileReady } = useOrganizationProfile();
+  const pageSizeOption = options.pageSize ?? 25;
+  const estadoOption = options.estado;
+  const searchOption = options.search;
   const queryKey = useMemo(
-    () => buildQueryKey(cacheKey, options),
-    [cacheKey, options.estado, options.pageSize, options.search]
+    () =>
+      buildQueryKey(cacheKey, {
+        pageSize: pageSizeOption,
+        estado: estadoOption,
+        search: searchOption,
+      }),
+    [cacheKey, estadoOption, pageSizeOption, searchOption]
   );
   const cachedPage = useMemo(() => readSolicitudesCache(queryKey), [queryKey]);
   const [solicitudes, setSolicitudes] = useState<SolicitudContacto[]>(
@@ -162,7 +173,7 @@ export function useSolicitudesContacto(
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(() => cachedPage?.page ?? 1);
-  const [pageSize] = useState(options.pageSize ?? 25);
+  const [pageSize] = useState(pageSizeOption);
   const [totalCount, setTotalCount] = useState(() => cachedPage?.totalCount ?? 0);
   const [hasMore, setHasMore] = useState(() => cachedPage?.hasMore ?? false);
   const [summary, setSummary] = useState<SolicitudesResumenGlobal>(() =>
@@ -208,8 +219,8 @@ export function useSolicitudesContacto(
           getSolicitudesResumen({
             page: targetPage,
             pageSize,
-            estado: options.estado,
-            search: options.search,
+            estado: estadoOption,
+            search: searchOption,
           }).finally(() => {
             solicitudesPromiseByKey.delete(requestKey);
           });
@@ -256,11 +267,16 @@ export function useSolicitudesContacto(
         setIsReady(true);
       }
     },
-    [options.estado, options.search, pageSize, queryKey]
+    [estadoOption, pageSize, queryKey, searchOption]
   );
 
   const updateSolicitudEstado = useCallback(
     async (id: string, estado: EstadoSolicitudContacto) => {
+      if (!isProfileReady || !profile) {
+        throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+      }
+
+      assertSubscriptionAllowsWrite(profile.subscription);
       const previous = solicitudesRef.current;
 
       try {
@@ -338,7 +354,7 @@ export function useSolicitudesContacto(
         throw nextError;
       }
     },
-    [hasMore, page, pageSize, queryKey, totalCount]
+    [hasMore, isProfileReady, page, pageSize, profile, queryKey, totalCount]
   );
 
   useEffect(() => {

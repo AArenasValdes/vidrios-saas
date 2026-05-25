@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { clientesService } from "@/features/clientes/services/clientes.service";
 import { getClientesResumenByOrganizationId } from "@/features/clientes/services/clientes-summary.service";
+import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
 import type {
   ActualizarClienteInput,
   ClienteDetalle,
@@ -103,6 +105,7 @@ function readInitialClientesState(organizationId: string | number | null) {
 
 export function useClientes() {
   const { organizacionId, cargando } = useAuth();
+  const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const initialStateRef = useRef(readInitialClientesState(organizacionId));
   const [clientes, setClientes] = useState<ClienteResumen[]>(initialStateRef.current.clientes);
   const [detalleById, setDetalleById] = useState<Record<string, ClienteDetalle>>({});
@@ -266,6 +269,11 @@ export function useClientes() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {
@@ -308,6 +316,11 @@ export function useClientes() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {
@@ -334,6 +347,11 @@ export function useClientes() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {
@@ -381,6 +399,11 @@ export function useClientes() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {

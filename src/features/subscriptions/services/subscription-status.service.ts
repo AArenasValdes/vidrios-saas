@@ -1,0 +1,283 @@
+import { VENTORA_CONTACT } from "@/constants/ventora-brand";
+import type {
+  BillingPeriod,
+  EffectiveSubscriptionState,
+  OrganizationSubscriptionSnapshot,
+  PaymentMethod,
+  PlanType,
+  SubscriptionStatus,
+} from "@/features/subscriptions/types/subscription";
+
+export const TRIAL_DURATION_DAYS = 7;
+export const TRIAL_EXPIRING_SOON_DAYS = 2;
+export const VENTORA_MONTHLY_PRICE = 10_000;
+export const VENTORA_YEARLY_PRICE = 80_000;
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const WRITE_RESTRICTED_SOLICITUDES_PREFIX = "/solicitudes/canales";
+
+const VALID_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
+  "trial_active",
+  "trial_expiring",
+  "trial_expired",
+  "active",
+  "past_due",
+  "cancelled",
+]);
+const VALID_PLAN_TYPES = new Set<PlanType>([
+  "trial",
+  "monthly",
+  "yearly",
+  "founder",
+]);
+const VALID_BILLING_PERIODS = new Set<BillingPeriod>([
+  "monthly",
+  "yearly",
+  "none",
+]);
+const VALID_PAYMENT_METHODS = new Set<PaymentMethod>([
+  "manual_transfer",
+  "manual_other",
+  "none",
+]);
+
+function normalizeDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function normalizeSubscriptionStatus(
+  value: string | null | undefined
+): SubscriptionStatus | null {
+  if (value && VALID_SUBSCRIPTION_STATUSES.has(value as SubscriptionStatus)) {
+    return value as SubscriptionStatus;
+  }
+
+  return null;
+}
+
+function normalizePlanType(value: string | null | undefined): PlanType | null {
+  if (value && VALID_PLAN_TYPES.has(value as PlanType)) {
+    return value as PlanType;
+  }
+
+  return null;
+}
+
+function normalizeBillingPeriod(
+  value: string | null | undefined
+): BillingPeriod | null {
+  if (value && VALID_BILLING_PERIODS.has(value as BillingPeriod)) {
+    return value as BillingPeriod;
+  }
+
+  return null;
+}
+
+function normalizePaymentMethod(
+  value: string | null | undefined
+): PaymentMethod | null {
+  if (value && VALID_PAYMENT_METHODS.has(value as PaymentMethod)) {
+    return value as PaymentMethod;
+  }
+
+  return null;
+}
+
+function resolveDaysRemaining(targetDate: Date | null, now: Date) {
+  if (!targetDate) {
+    return null;
+  }
+
+  const remainingMs = targetDate.getTime() - now.getTime();
+
+  if (remainingMs <= 0) {
+    return 0;
+  }
+
+  return Math.ceil(remainingMs / DAY_IN_MS);
+}
+
+export function normalizeOrganizationSubscriptionSnapshot(
+  input?: Partial<OrganizationSubscriptionSnapshot> | null
+): OrganizationSubscriptionSnapshot {
+  return {
+    subscriptionStatus: normalizeSubscriptionStatus(input?.subscriptionStatus),
+    trialStartedAt: input?.trialStartedAt ?? null,
+    trialEndsAt: input?.trialEndsAt ?? null,
+    subscriptionStartedAt: input?.subscriptionStartedAt ?? null,
+    subscriptionEndsAt: input?.subscriptionEndsAt ?? null,
+    planType: normalizePlanType(input?.planType),
+    billingPeriod: normalizeBillingPeriod(input?.billingPeriod) ?? "none",
+    paymentMethod: normalizePaymentMethod(input?.paymentMethod) ?? "none",
+    lastPaymentAt: input?.lastPaymentAt ?? null,
+    founderPriceLocked: input?.founderPriceLocked ?? false,
+  };
+}
+
+export function resolveOrganizationSubscriptionState(
+  input?: Partial<OrganizationSubscriptionSnapshot> | null,
+  now = new Date()
+): EffectiveSubscriptionState {
+  const snapshot = normalizeOrganizationSubscriptionSnapshot(input);
+  const trialEndsAt = normalizeDate(snapshot.trialEndsAt);
+  const subscriptionEndsAt = normalizeDate(snapshot.subscriptionEndsAt);
+  const configured = Boolean(
+    snapshot.subscriptionStatus ||
+      snapshot.trialStartedAt ||
+      snapshot.trialEndsAt ||
+      snapshot.subscriptionStartedAt ||
+      snapshot.subscriptionEndsAt ||
+      snapshot.planType
+  );
+  const normalizedStatus = snapshot.subscriptionStatus;
+  const isFounderActive =
+    snapshot.planType === "founder" &&
+    normalizedStatus === "active" &&
+    subscriptionEndsAt === null;
+  const hasActiveSubscription =
+    normalizedStatus === "active" &&
+    (isFounderActive ||
+      (subscriptionEndsAt !== null && subscriptionEndsAt.getTime() > now.getTime()));
+  const daysRemaining = resolveDaysRemaining(
+    hasActiveSubscription ? subscriptionEndsAt : trialEndsAt,
+    now
+  );
+
+  let effectiveStatus: SubscriptionStatus = normalizedStatus ?? "trial_active";
+
+  if (hasActiveSubscription) {
+    effectiveStatus = "active";
+  } else if (normalizedStatus === "past_due") {
+    effectiveStatus = "past_due";
+  } else if (normalizedStatus === "cancelled") {
+    effectiveStatus = "cancelled";
+  } else if (trialEndsAt && now.getTime() > trialEndsAt.getTime()) {
+    effectiveStatus = "trial_expired";
+  } else if (
+    trialEndsAt &&
+    now.getTime() < trialEndsAt.getTime() &&
+    (daysRemaining ?? Infinity) <= TRIAL_EXPIRING_SOON_DAYS
+  ) {
+    effectiveStatus = "trial_expiring";
+  } else if (trialEndsAt && now.getTime() < trialEndsAt.getTime()) {
+    effectiveStatus = "trial_active";
+  }
+
+  const isExpired =
+    effectiveStatus === "trial_expired" ||
+    effectiveStatus === "past_due" ||
+    effectiveStatus === "cancelled";
+  const isTrial =
+    effectiveStatus === "trial_active" ||
+    effectiveStatus === "trial_expiring" ||
+    effectiveStatus === "trial_expired";
+  const isExpiringSoon = effectiveStatus === "trial_expiring";
+  const isLastTrialDay = isExpiringSoon && (daysRemaining ?? 0) <= 1;
+
+  return {
+    ...snapshot,
+    effectiveStatus,
+    isConfigured: configured,
+    isActive: hasActiveSubscription || !isExpired,
+    isTrial,
+    isExpiringSoon,
+    isExpired,
+    isWriteBlocked: isExpired,
+    daysRemaining,
+    isLastTrialDay,
+    shouldShowTrialBanner: configured && isExpiringSoon,
+    shouldShowExpiredBanner: configured && isExpired,
+  };
+}
+
+export function isWriteRestrictedPrivatePath(pathname: string) {
+  if (!pathname) {
+    return false;
+  }
+
+  if (pathname === "/cotizaciones/nueva") {
+    return true;
+  }
+
+  if (pathname === "/clientes/nuevo") {
+    return true;
+  }
+
+  if (
+    pathname.startsWith("/clientes/") &&
+    (pathname.endsWith("/editar") || pathname.includes("/editar?"))
+  ) {
+    return true;
+  }
+
+  if (
+    pathname === "/configuracion" ||
+    pathname.startsWith("/configuracion/")
+  ) {
+    return true;
+  }
+
+  if (
+    pathname === WRITE_RESTRICTED_SOLICITUDES_PREFIX ||
+    pathname.startsWith(`${WRITE_RESTRICTED_SOLICITUDES_PREFIX}/`)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function canAccessPrivatePathWithSubscription(
+  pathname: string,
+  subscription: EffectiveSubscriptionState
+) {
+  if (pathname === "/cuenta-vencida") {
+    return true;
+  }
+
+  if (!subscription.isWriteBlocked) {
+    return true;
+  }
+
+  return !isWriteRestrictedPrivatePath(pathname);
+}
+
+export class SubscriptionWriteAccessError extends Error {
+  code = "subscription_write_blocked" as const;
+}
+
+export function assertSubscriptionAllowsWrite(
+  subscription: EffectiveSubscriptionState
+) {
+  if (subscription.isWriteBlocked) {
+    throw new SubscriptionWriteAccessError(
+      "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar."
+    );
+  }
+}
+
+function normalizeWhatsappDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+export function buildSubscriptionActivationWhatsappHref(input: {
+  companyName: string;
+  plan: "mensual" | "anual";
+}) {
+  const phone = normalizeWhatsappDigits(VENTORA_CONTACT.phoneHref);
+  const message = encodeURIComponent(
+    `Hola, quiero activar mi cuenta Ventora. Mi empresa es ${input.companyName}. Quiero el plan ${input.plan}.`
+  );
+
+  return `https://wa.me/${phone}?text=${message}`;
+}

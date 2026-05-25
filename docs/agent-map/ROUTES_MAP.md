@@ -84,7 +84,7 @@
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
 - **Acciones principales**: Navegacion a nueva cotizacion, ver cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/dashboard/page.tsx`, `app/(pwa-app)/dashboard/_components/*`, `app/(pwa-app)/dashboard/_hooks/*`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/dashboard/summary/route.ts`
-- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding.
+- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding. Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
 
 ---
 
@@ -121,7 +121,7 @@
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Listar, filtrar, copiar link, descargar PDF, enviar WhatsApp, editar, eliminar (soft delete)
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/page.tsx`, `app/(pwa-app)/cotizaciones/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF.
+- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF. Con cuenta vencida el listado puede seguir leyendose, pero acciones de crear/editar/eliminar deben quedar bloqueadas o redirigidas a `/cuenta-vencida`.
 
 ---
 
@@ -139,7 +139,7 @@
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing, Joyride contextual ni auto-creacion de cliente/proyecto.
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing, Joyride contextual ni auto-creacion de cliente/proyecto. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
 
 ---
 
@@ -176,7 +176,7 @@
 - **Tablas Supabase relacionadas**: `clients`
 - **Acciones principales**: Listar, filtrar, crear, editar, eliminar (soft delete)
 - **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/page.tsx`, `src/features/clientes/hooks/useClientes.ts`, `src/features/clientes/services/clientes.service.ts`, `src/features/clientes/repositories/clientes-repository.ts`, `app/api/clientes/resumen/route.ts`
-- **Riesgos**: No romper logica de estado (activo/seguimiento/prospecto/inactivo).
+- **Riesgos**: No romper logica de estado (activo/seguimiento/prospecto/inactivo). La lectura sigue disponible si la cuenta vence, pero crear/editar/eliminar deben bloquearse.
 
 ---
 
@@ -188,6 +188,7 @@
 - **Proposito**: Formulario de nuevo cliente
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/nuevo/page.tsx`, `src/features/clientes/`
+- **Riesgos**: Debe redirigir a `/cuenta-vencida` si la organizacion no tiene trial o suscripcion activa para escritura.
 
 ---
 
@@ -217,6 +218,7 @@
 - **Proposito**: Formulario de edicion de cliente
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/[id]/editar/page.tsx`
+- **Riesgos**: Debe quedar bloqueada en trial vencido o suscripcion expirada.
 
 ---
 
@@ -235,7 +237,7 @@
 - **Tablas Supabase relacionadas**: `solicitudes_contacto`
 - **Acciones principales**: Listar, filtrar, contactar WhatsApp, crear cotizacion desde solicitud, actualizar estado
 - **Archivos a tocar para modificar**: `app/(pwa-app)/solicitudes/page.tsx`, `app/(pwa-app)/solicitudes/_components/solicitud-card.tsx`, `src/features/solicitudes/hooks/useSolicitudesContacto.ts`, `src/features/solicitudes/services/solicitudes-contacto.service.ts`, `app/api/solicitudes/resumen/route.ts`
-- **Riesgos**: No romper badge de origen ni prefill a cotizacion.
+- **Riesgos**: No romper badge de origen ni prefill a cotizacion. La captura publica no se bloquea, pero los cambios de estado internos si deben bloquearse cuando la cuenta vence.
 
 ---
 
@@ -253,7 +255,25 @@
 - **Tablas Supabase relacionadas**: `organization_profile`
 - **Acciones principales**: Copiar link, descargar QR, ver URLs por canal
 - **Archivos a tocar para modificar**: `app/(pwa-app)/solicitudes/canales/page.tsx`, `src/features/solicitudes/components/lead-channels.tsx`, `src/features/solicitudes/components/lead-channels.module.css`, `src/features/solicitudes/hooks/useLeadChannels.ts`
-- **Riesgos**: No romper generacion de QR, URLs con UTM ni la marca de `channel_ready`.
+- **Riesgos**: No romper generacion de QR, URLs con UTM ni la marca de `channel_ready`. Esta pantalla debe redirigir a `/cuenta-vencida` cuando la cuenta ya no puede operar.
+
+---
+
+## Ruta: /cuenta-vencida
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/cuenta-vencida/page.tsx`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (modo minimo)
+- **CSS**: `app/(pwa-app)/cuenta-vencida/page.module.css`
+- **Proposito**: Pantalla de activacion manual cuando el trial o la suscripcion de la organizacion vencio. Permite seguir logueado, ver precios y contactar por WhatsApp.
+- **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
+- **Funcionalidades visibles**: Estado de cuenta vencida, precios `$10.000 mensual` y `$80.000 anual`, CTA a WhatsApp con mensaje prellenado, link para seguir en modo lectura
+- **Componentes principales**: Internos de la pagina
+- **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
+- **Tablas Supabase relacionadas**: `organization_profile`
+- **Acciones principales**: Abrir WhatsApp para activacion mensual o anual, volver a lectura basica
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cuenta-vencida/page.tsx`, `app/(pwa-app)/cuenta-vencida/page.module.css`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
+- **Riesgos**: No convertirla en logout forzado. Debe convivir con lectura basica del panel y no tocar rutas publicas `/solicitud/[empresa]` ni `/presupuesto/[token]`.
 
 ---
 

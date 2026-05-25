@@ -7,7 +7,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 ## Feature: Autenticacion
 
 - **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol. Revalida sesion al volver a foco/rehidratar pestaña o PWA para evitar estado viejo.
-- **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`
+- **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`, `/cuenta-vencida`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
   - `app/(auth-public)/auth/logout/route.ts`
@@ -32,6 +32,43 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no. El prompt de instalacion PWA tiene fallback visual para Opera/Android con mockup simple del navegador y highlight orientativo del `menu O`.
 - **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas.
+
+---
+
+## Feature: Trial y Suscripcion Manual
+
+- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion y la activacion manual por transferencia. Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de WhatsApp hacia activacion mensual o anual.
+- **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
+- **Archivos principales**:
+  - `src/features/subscriptions/types/subscription.ts`
+  - `src/features/subscriptions/services/subscription-status.service.ts`
+  - `src/features/subscriptions/services/subscription-route-access.service.ts`
+  - `src/features/organization-profile/repositories/organization-profile.repository.ts`
+  - `src/features/organization-profile/services/organization-profile.service.ts`
+  - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
+  - `src/components/layout/app-shell.tsx`
+  - `src/components/layout/app-shell.module.css`
+  - `app/(pwa-app)/cuenta-vencida/page.tsx`
+  - `app/(pwa-app)/cuenta-vencida/page.module.css`
+  - `app/api/solicitudes/route.ts`
+  - `app/api/organization-assets/upload/route.ts`
+  - `app/api/public-landing/revalidate/route.ts`
+  - `proxy.ts`
+  - `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
+- **Componentes principales**: `AppShell`, pantalla `Cuenta vencida`
+- **Hooks/servicios/actions**: `useOrganizationProfile()`, `resolveOrganizationSubscriptionState()`, `canAccessPrivatePathWithSubscription()`, `assertSubscriptionAllowsWrite()`
+- **Tablas Supabase**: `organization_profile`, `organizations`
+- **Flujo de datos**:
+  - Login y rutas privadas -> `useOrganizationProfile()` -> `organizationProfileService` -> repository -> `organization_profile`
+  - Snapshot crudo -> `resolveOrganizationSubscriptionState()` -> estado efectivo (`trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`)
+  - Shell privado -> banner / redirect a `/cuenta-vencida` / guard de acciones
+  - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
+- **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`
+- **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`
+- **Donde editar logica**: `src/features/subscriptions/services/`
+- **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
+- **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 2 dias o menos aparece banner de trial. Si vence, Ventora debe seguir mostrando datos basicos pero bloquear crear/editar/eliminar y llevar a CTA por WhatsApp con planes manuales `$10.000 mensual` y `$80.000 anual`.
+- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No mezclar pago automatico todavia. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion.
 
 ---
 
@@ -213,8 +250,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido y calculadora secundaria.
-- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido y calculadora secundaria. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
+- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---
 
@@ -307,8 +344,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/clientes/`
 - **Donde editar logica**: `src/features/clientes/services/clientes.service.ts`
 - **Donde editar persistencia**: `src/features/clientes/repositories/clientes-repository.ts`
-- **Consideraciones UX**: Estado calculado segun actividad reciente cruzando cotizaciones y proyectos
-- **Riesgos al modificar**: No romper soft delete ni calculo de estado. `unique_correo_clients` es global (no por org) - bug conocido.
+- **Consideraciones UX**: Estado calculado segun actividad reciente cruzando cotizaciones y proyectos. Con trial vencido la vista sigue en lectura, pero alta/edicion/delete quedan bloqueados.
+- **Riesgos al modificar**: No romper soft delete ni calculo de estado. `unique_correo_clients` es global (no por org) - bug conocido. No abrir escrituras sin pasar por el guard de suscripcion en `useClientes`.
 
 ---
 
@@ -344,7 +381,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar logica**: `src/features/solicitudes/services/solicitudes-contacto.service.ts`
 - **Donde editar persistencia**: `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`
 - **Consideraciones UX**: Formulario publico con paso a paso. Rate limiting por IP. Badge de origen. Tiempo relativo. Prefill a cotizacion.
-- **Riesgos al modificar**: RUTA CRITICA de captacion. No romper rate limiting, validaciones de telefono chileno, ni UTM tracking. Push notification al crear lead.
+- **Riesgos al modificar**: RUTA CRITICA de captacion. No romper rate limiting, validaciones de telefono chileno, ni UTM tracking. Push notification al crear lead. La captura publica `/solicitud/[empresa]` no depende del trial; solo la gestion privada y los cambios de estado internos deben bloquearse cuando la cuenta vence.
 
 ---
 

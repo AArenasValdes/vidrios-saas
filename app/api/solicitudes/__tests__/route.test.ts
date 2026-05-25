@@ -1,5 +1,9 @@
+jest.mock("@/features/subscriptions/services/subscription-route-access.service", () => ({
+  resolveAuthenticatedSubscriptionRouteContext: jest.fn(),
+  assertAuthenticatedRouteAllowsWrite: jest.fn(),
+}));
+
 jest.mock("@/features/auth/services/auth-route-access.service", () => ({
-  resolveAuthenticatedRouteContext: jest.fn(),
   AuthRouteAccessError: class AuthRouteAccessError extends Error {
     status: number;
 
@@ -26,7 +30,11 @@ jest.mock("@/features/solicitudes/services/solicitudes-contacto.service", () => 
 }));
 
 import { GET, PATCH, POST } from "../route";
-import { resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
+import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
+import {
+  assertAuthenticatedRouteAllowsWrite,
+  resolveAuthenticatedSubscriptionRouteContext,
+} from "@/features/subscriptions/services/subscription-route-access.service";
 import {
   canAccessAllSolicitudes,
   canAccessSolicitudes,
@@ -39,9 +47,10 @@ describe("/api/solicitudes", () => {
   });
 
   it("usa el listado global cuando el admin puede revisar todas las organizaciones", async () => {
-    (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
+    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
       user: { email: "alessandroreal2.0@gmail.com" },
       profile: { rol: "admin", organizationId: null },
+      subscription: { isWriteBlocked: false },
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
     (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
@@ -80,9 +89,10 @@ describe("/api/solicitudes", () => {
   });
 
   it("mantiene el scope por organizacion al actualizar solicitudes aunque el email este allowlist", async () => {
-    (resolveAuthenticatedRouteContext as jest.Mock).mockResolvedValue({
+    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
       user: { email: "admin@ventora.cl" },
       profile: { rol: "admin", organizationId: "org-7" },
+      subscription: { isWriteBlocked: false },
     });
     (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
     (canAccessAllSolicitudes as jest.Mock).mockReturnValue(true);
@@ -118,6 +128,41 @@ describe("/api/solicitudes", () => {
         organizationId: "org-7",
         estado: "contactada",
       },
+    });
+  });
+
+  it("bloquea escritura cuando la cuenta esta vencida", async () => {
+    (resolveAuthenticatedSubscriptionRouteContext as jest.Mock).mockResolvedValue({
+      user: { email: "admin@ventora.cl" },
+      profile: { rol: "admin", organizationId: "org-7" },
+      subscription: { isWriteBlocked: true },
+    });
+    (canAccessSolicitudes as jest.Mock).mockReturnValue(true);
+    (assertAuthenticatedRouteAllowsWrite as jest.Mock).mockImplementation(() => {
+      throw new AuthRouteAccessError(
+        403,
+        "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar."
+      );
+    });
+
+    const request = new Request("http://localhost/api/solicitudes", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        id: "lead-1",
+        estado: "contactada",
+      }),
+    });
+
+    const response = await PATCH(request);
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(solicitudesContactoService.updateSolicitudStatus).not.toHaveBeenCalled();
+    expect(payload).toEqual({
+      error: "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar.",
     });
   });
 });

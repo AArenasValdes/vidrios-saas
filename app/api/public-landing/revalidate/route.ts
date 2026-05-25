@@ -3,6 +3,14 @@ import { NextResponse } from "next/server";
 import { findActiveUserProfile } from "@/features/auth/services/active-user-profile.service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePublicLandingCaches } from "@/features/solicitudes/services/solicitudes-public-cache-revalidation.server";
+import {
+  getSubscriptionSnapshotByOrganizationId,
+} from "@/features/subscriptions/services/subscription-route-access.service";
+import {
+  assertSubscriptionAllowsWrite,
+  resolveOrganizationSubscriptionState,
+  SubscriptionWriteAccessError,
+} from "@/features/subscriptions/services/subscription-status.service";
 
 function getBearerToken(request: Request) {
   const authorization = request.headers.get("authorization")?.trim() ?? "";
@@ -43,6 +51,17 @@ export async function POST(request: Request) {
       { error: "No pudimos identificar la organizacion activa." },
       { status: 403 }
     );
+  }
+
+  try {
+    const snapshot = await getSubscriptionSnapshotByOrganizationId(admin, organizationId);
+    assertSubscriptionAllowsWrite(resolveOrganizationSubscriptionState(snapshot));
+  } catch (error) {
+    if (error instanceof SubscriptionWriteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+
+    throw error;
   }
 
   const { data, error } = await admin

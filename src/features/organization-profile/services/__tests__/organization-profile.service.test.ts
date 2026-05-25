@@ -8,6 +8,7 @@ import {
   DEFAULT_FORM_TITLE,
   DEFAULT_HERO_TITLE,
   resolvePublicLandingConfig,
+  resolveOrganizationProfile,
 } from "../organization-profile.service";
 import type { OrganizationProfile } from "../../types/organization-profile";
 
@@ -61,6 +62,17 @@ function createProfile(overrides: Partial<OrganizationProfile> = {}): Organizati
     formTitle: "",
     formSubtitle: "",
     isPublished: false,
+    subscriptionStatus: "trial_active",
+    trialStartedAt: "2026-05-20T12:00:00.000Z",
+    trialEndsAt: "2026-05-27T12:00:00.000Z",
+    subscriptionStartedAt: null,
+    subscriptionEndsAt: null,
+    planType: "trial",
+    billingPeriod: "none",
+    paymentMethod: "none",
+    lastPaymentAt: null,
+    founderPriceLocked: false,
+    subscription: resolveOrganizationProfile(14, null).subscription,
     ...overrides,
   };
 }

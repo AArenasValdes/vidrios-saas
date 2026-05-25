@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  AuthRouteAccessError,
-  resolveAuthenticatedRouteContext,
+  AuthRouteAccessError
 } from "@/features/auth/services/auth-route-access.service";
 import {
   canAccessAllSolicitudes,
@@ -17,6 +16,10 @@ import {
   parseJsonObjectBody,
   resolveRequestIp,
 } from "@/features/solicitudes/services/solicitudes-public-http.service";
+import {
+  assertAuthenticatedRouteAllowsWrite,
+  resolveAuthenticatedSubscriptionRouteContext,
+} from "@/features/subscriptions/services/subscription-route-access.service";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +31,8 @@ const leadRequestRateLimiter = createSlidingWindowRateLimiter({
 });
 
 async function resolveSolicitudesAccess() {
-  const context = await resolveAuthenticatedRouteContext({
+  const context = await resolveAuthenticatedSubscriptionRouteContext({
     requireOrganization: false,
-    messages: {
-      profileError: "No pudimos validar tus permisos.",
-    },
   });
 
   if (!canAccessSolicitudes({ email: context.user.email, rol: context.profile.rol })) {
@@ -45,6 +45,7 @@ async function resolveSolicitudesAccess() {
   return {
     userEmail: context.user.email,
     organizationId: context.profile.organizationId,
+    subscription: context.subscription,
     canReviewAll:
       canAccessAllSolicitudes(context.user.email) &&
       (context.profile.organizationId === null ||
@@ -118,6 +119,9 @@ export async function PATCH(request: Request) {
       );
     }
 
+    assertAuthenticatedRouteAllowsWrite({
+      subscription: access.subscription,
+    });
     const solicitud = await solicitudesContactoService.updateSolicitudStatus({
       id: body.id ?? "",
       estado: body.estado ?? "nueva",

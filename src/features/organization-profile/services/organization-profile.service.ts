@@ -14,6 +14,7 @@ import type {
   SolicitudPublicaHorarioDia,
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
+import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 
 type OrganizationProfileServiceDeps = {
   organizationProfileRepository?: OrganizationProfileRepository;
@@ -399,7 +400,7 @@ function normalizeHeroMode(value: string | null | undefined): HeroMode {
 }
 
 function buildNormalizedProfileInput(
-  profile?: OrganizationProfile | null
+  profile?: Partial<OrganizationProfile> | null
 ): UpdateOrganizationProfileInput {
   const resolved = resolveOrganizationProfile(profile?.organizationId ?? null, profile ?? null);
 
@@ -452,11 +453,11 @@ function buildNormalizedProfileInput(
   };
 }
 
-export function buildEmpresaProfileInput(profile?: OrganizationProfile | null) {
+export function buildEmpresaProfileInput(profile?: Partial<OrganizationProfile> | null) {
   return buildNormalizedProfileInput(profile);
 }
 
-export function buildPaginaVentaProfileInput(profile?: OrganizationProfile | null) {
+export function buildPaginaVentaProfileInput(profile?: Partial<OrganizationProfile> | null) {
   return buildNormalizedProfileInput(profile);
 }
 
@@ -615,7 +616,7 @@ export function resolvePublicLandingConfig(source: {
 
 export function resolveOrganizationProfile(
   organizationId: EntityId | null,
-  profile: OrganizationProfile | null
+  profile: Partial<OrganizationProfile> | null
 ): OrganizationProfile {
   const empresaNombre = normalizeText(profile?.empresaNombre) || "Mi empresa";
   const solicitudPublicaSlug =
@@ -692,6 +693,17 @@ export function resolveOrganizationProfile(
     formTitle: normalizeText(profile?.formTitle) || DEFAULT_FORM_TITLE,
     formSubtitle: normalizeText(profile?.formSubtitle) || DEFAULT_FORM_SUBTITLE,
     isPublished: profile?.isPublished ?? false,
+    subscriptionStatus: profile?.subscriptionStatus ?? null,
+    trialStartedAt: profile?.trialStartedAt ?? null,
+    trialEndsAt: profile?.trialEndsAt ?? null,
+    subscriptionStartedAt: profile?.subscriptionStartedAt ?? null,
+    subscriptionEndsAt: profile?.subscriptionEndsAt ?? null,
+    planType: profile?.planType ?? null,
+    billingPeriod: profile?.billingPeriod ?? null,
+    paymentMethod: profile?.paymentMethod ?? null,
+    lastPaymentAt: profile?.lastPaymentAt ?? null,
+    founderPriceLocked: profile?.founderPriceLocked ?? false,
+    subscription: resolveOrganizationSubscriptionState(profile),
   };
 }
 

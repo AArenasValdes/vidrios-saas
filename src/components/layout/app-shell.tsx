@@ -21,7 +21,7 @@ import {
   LuClock3,
   LuFilePlus2,
   LuFileText,
-LuGlobe,
+  LuGlobe,
   LuInbox,
   LuLayoutDashboard,
   LuLogOut,
@@ -44,6 +44,14 @@ import {
   persistSolicitudesSeenAt,
   readSolicitudesSeenAt,
 } from "@/features/solicitudes/services/solicitudes-seen-storage.service";
+import {
+  buildSubscriptionActivationWhatsappHref,
+  canAccessPrivatePathWithSubscription,
+  isWriteRestrictedPrivatePath,
+  resolveOrganizationSubscriptionState,
+  VENTORA_MONTHLY_PRICE,
+  VENTORA_YEARLY_PRICE,
+} from "@/features/subscriptions/services/subscription-status.service";
 
 import s from "./app-shell.module.css";
 
@@ -337,8 +345,31 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
+  const subscription = profile?.subscription ?? resolveOrganizationSubscriptionState(null);
   const companyInitials = useMemo(
     () => buildOrganizationInitials(companyName),
+    [companyName]
+  );
+  const isCuentaVencidaRoute = pathname === "/cuenta-vencida";
+  const usesMinimalShell = isCuentaVencidaRoute;
+  const shouldRedirectForSubscription =
+    profile !== null &&
+    subscription.isWriteBlocked &&
+    !canAccessPrivatePathWithSubscription(pathname, subscription);
+  const monthlyActivationHref = useMemo(
+    () =>
+      buildSubscriptionActivationWhatsappHref({
+        companyName,
+        plan: "mensual",
+      }),
+    [companyName]
+  );
+  const yearlyActivationHref = useMemo(
+    () =>
+      buildSubscriptionActivationWhatsappHref({
+        companyName,
+        plan: "anual",
+      }),
     [companyName]
   );
   const alertsSeenStorageKey = useMemo(
@@ -397,6 +428,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setProfileMenuAnchor((current) => (current === anchor ? null : anchor));
   };
 
+  const resolveGuardedHref = useCallback(
+    (href: string) => {
+      if (
+        subscription.isWriteBlocked &&
+        isWriteRestrictedPrivatePath(href)
+      ) {
+        return "/cuenta-vencida";
+      }
+
+      return href;
+    },
+    [subscription.isWriteBlocked]
+  );
+
   const renderAccountMenu = (variant: "sidebar" | "mobile" | "topbar") => (
     <div
       className={`${s.accountMenu} ${
@@ -415,7 +460,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </div>
       <div className={s.accountMenuList}>
         <Link
-          href="/configuracion/empresa"
+          href={resolveGuardedHref("/configuracion/empresa")}
           className={s.accountMenuLink}
           prefetch={false}
           onClick={() => setProfileMenuAnchor(null)}
@@ -424,7 +469,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           Configuracion de empresa
         </Link>
         <Link
-          href="/configuracion/pagina-venta"
+          href={resolveGuardedHref("/configuracion/pagina-venta")}
           className={s.accountMenuLink}
           prefetch={false}
           onClick={() => setProfileMenuAnchor(null)}
@@ -507,6 +552,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [cargando, isSigningOut, pathname, router, user]);
 
   useEffect(() => {
+    if (!shouldRedirectForSubscription) {
+      return;
+    }
+
+    router.replace("/cuenta-vencida");
+  }, [router, shouldRedirectForSubscription]);
+
+  useEffect(() => {
     isMountedRef.current = true;
 
     return () => {
@@ -554,14 +607,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!alertsSeenStorageKey) {
-      setAlertsSeenAt(0);
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (!alertsSeenStorageKey) {
+        setAlertsSeenAt(0);
+        return;
+      }
 
-    const rawSeenAt = window.localStorage.getItem(alertsSeenStorageKey);
-    const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
-    setAlertsSeenAt(Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0);
+      const rawSeenAt = window.localStorage.getItem(alertsSeenStorageKey);
+      const parsedSeenAt = rawSeenAt ? Number(rawSeenAt) : 0;
+      setAlertsSeenAt(Number.isFinite(parsedSeenAt) ? parsedSeenAt : 0);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [alertsSeenStorageKey]);
 
   useEffect(() => {
@@ -569,14 +628,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!alertsClearedStorageKey) {
-      setAlertsClearedAt(0);
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (!alertsClearedStorageKey) {
+        setAlertsClearedAt(0);
+        return;
+      }
 
-    const rawClearedAt = window.localStorage.getItem(alertsClearedStorageKey);
-    const parsedClearedAt = rawClearedAt ? Number(rawClearedAt) : 0;
-    setAlertsClearedAt(Number.isFinite(parsedClearedAt) ? parsedClearedAt : 0);
+      const rawClearedAt = window.localStorage.getItem(alertsClearedStorageKey);
+      const parsedClearedAt = rawClearedAt ? Number(rawClearedAt) : 0;
+      setAlertsClearedAt(Number.isFinite(parsedClearedAt) ? parsedClearedAt : 0);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [alertsClearedStorageKey]);
 
   useEffect(() => {
@@ -584,16 +649,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!solicitudesSeenStorageKey) {
-      setSolicitudesSeenAt(0);
-      return;
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (!solicitudesSeenStorageKey) {
+        setSolicitudesSeenAt(0);
+        return;
+      }
 
-    setSolicitudesSeenAt(readSolicitudesSeenAt(solicitudesSeenStorageKey));
+      setSolicitudesSeenAt(readSolicitudesSeenAt(solicitudesSeenStorageKey));
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [solicitudesSeenStorageKey]);
 
   useEffect(() => {
-    syncAlertsSeenAtFromStorage();
+    const cleanup = scheduleDeferredShellWork(() => {
+      syncAlertsSeenAtFromStorage();
+    }, 0);
+
+    return cleanup;
   }, [alerts.length, syncAlertsSeenAtFromStorage]);
 
   useEffect(() => {
@@ -601,9 +676,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    setShouldLoadShellFeeds(true);
-    syncSolicitudesSeenAtFromStorage();
-    markSolicitudesAsSeen();
+    return scheduleDeferredShellWork(() => {
+      setShouldLoadShellFeeds(true);
+      syncSolicitudesSeenAtFromStorage();
+      markSolicitudesAsSeen();
+    }, 0);
   }, [
     markSolicitudesAsSeen,
     pathname,
@@ -616,7 +693,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    markAlertsAsSeen();
+    return scheduleDeferredShellWork(() => {
+      markAlertsAsSeen();
+    }, 0);
   }, [alerts, isAlertsOpen, markAlertsAsSeen]);
 
   useEffect(() => {
@@ -721,8 +800,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [isAlertsOpen, isProfileMenuOpen]);
 
   useEffect(() => {
-    setIsAlertsOpen(false);
-    setProfileMenuAnchor(null);
+    return scheduleDeferredShellWork(() => {
+      setIsAlertsOpen(false);
+      setProfileMenuAnchor(null);
+    }, 0);
   }, [pathname]);
 
   const handleToggleAlerts = () => {
@@ -809,7 +890,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={s.root}>
+    <div className={`${s.root}${usesMinimalShell ? ` ${s.rootMinimal}` : ""}`}>
+      {!usesMinimalShell ? (
       <aside className={s.sidebar}>
         <div className={s.sidebarTop}>
           <div className={s.sidebarBrand}>
@@ -830,7 +912,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className={s.sidebarCta}>
           <div className={s.navLabel}>Crear</div>
           <Link
-            href="/cotizaciones/nueva"
+            href={resolveGuardedHref("/cotizaciones/nueva")}
             prefetch={false}
             className={`${s.sidebarCtaButton}${isNuevaCotizacionRoute ? ` ${s.sidebarCtaButtonActive}` : ""}`}
           >
@@ -853,7 +935,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={resolveGuardedHref(item.href)}
                 prefetch={false}
                 className={`${s.navItem}${active ? ` ${s.navItemActive}` : ""}`}
               >
@@ -912,8 +994,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </div>
       </aside>
+      ) : null}
 
-      {!isNuevaCotizacionRoute ? (
+      {!usesMinimalShell && !isNuevaCotizacionRoute ? (
         <header className={s.mobileHeader}>
           <div>
             <span className={s.mobileHeaderEyebrow}>Area operativa</span>
@@ -953,8 +1036,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </header>
       ) : null}
 
-      <main className={`${s.main}${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}>
-        {!isNuevaCotizacionRoute ? (
+      <main
+        className={`${s.main}${usesMinimalShell ? ` ${s.mainMinimal}` : ""}${
+          isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""
+        }`}
+      >
+        {!usesMinimalShell && !isNuevaCotizacionRoute ? (
           <div className={s.topbar}>
             <div>
               <p className={s.topbarEyebrow}>Panel operativo</p>
@@ -1005,12 +1092,63 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
 
-        <div className={`${s.pageContent}${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}`}>
+        <div
+          className={`${s.pageContent}${usesMinimalShell ? ` ${s.pageContentMinimal}` : ""}${
+            isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""
+          }`}
+        >
+          {!usesMinimalShell && subscription.shouldShowTrialBanner ? (
+            <section className={s.subscriptionBanner} role="status" aria-live="polite">
+              <div>
+                <span className={s.subscriptionBannerEyebrow}>
+                  {subscription.isLastTrialDay ? "Ultimo dia de prueba" : "Tu prueba termina pronto"}
+                </span>
+                <strong className={s.subscriptionBannerTitle}>
+                  {subscription.isLastTrialDay
+                    ? "Activa tu cuenta hoy para no cortar tu operacion."
+                    : `Te quedan ${subscription.daysRemaining ?? 0} dias de prueba en Ventora.`}
+                </strong>
+                <p className={s.subscriptionBannerText}>
+                  Puedes activar por transferencia manual: mensual ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} o anual ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}.
+                </p>
+              </div>
+              <div className={s.subscriptionBannerActions}>
+                <a className={s.subscriptionPrimaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
+                  Activar mensual
+                </a>
+                <a className={s.subscriptionSecondaryAction} href={yearlyActivationHref} target="_blank" rel="noreferrer">
+                  Activar anual
+                </a>
+              </div>
+            </section>
+          ) : null}
+
+          {!usesMinimalShell && subscription.shouldShowExpiredBanner ? (
+            <section className={`${s.subscriptionBanner} ${s.subscriptionBannerExpired}`} role="alert">
+              <div>
+                <span className={s.subscriptionBannerEyebrow}>Cuenta vencida</span>
+                <strong className={s.subscriptionBannerTitle}>
+                  Tu prueba ya termino. Puedes revisar datos, pero no crear ni modificar.
+                </strong>
+                <p className={s.subscriptionBannerText}>
+                  Para volver a operar, activa tu cuenta por transferencia manual: mensual ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} o anual ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}.
+                </p>
+              </div>
+              <div className={s.subscriptionBannerActions}>
+                <a className={s.subscriptionPrimaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
+                  Contactar por WhatsApp
+                </a>
+                <Link className={s.subscriptionSecondaryAction} href="/cuenta-vencida">
+                  Ver activacion
+                </Link>
+              </div>
+            </section>
+          ) : null}
           {children}
         </div>
       </main>
 
-      {isAlertsOpen ? (
+      {!usesMinimalShell && isAlertsOpen ? (
         <aside className={s.alertsPanel} data-alerts-panel="true">
           <div className={s.alertsHeader}>
             <div>
@@ -1105,6 +1243,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </aside>
       ) : null}
 
+      {!usesMinimalShell ? (
       <nav className={`${s.tabBar}${isNuevaCotizacionRoute ? ` ${s.tabBarHidden}` : ""}`}>
         <div
           className={`${s.tabBarInner}${
@@ -1128,7 +1267,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             Cotizaciones
           </Link>
           <Link
-            href="/cotizaciones/nueva"
+            href={resolveGuardedHref("/cotizaciones/nueva")}
             prefetch={false}
             className={`${s.tabItem} ${s.tabItemCreate}${isNuevaCotizacionRoute ? ` ${s.tabItemCreateActive}` : ""}`}
             aria-label="Crear nueva cotizacion"
@@ -1163,6 +1302,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
       </nav>
+      ) : null}
     </div>
   );
 }

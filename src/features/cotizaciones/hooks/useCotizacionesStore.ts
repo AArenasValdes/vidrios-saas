@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getCotizacionesResumenByOrganizationId } from "@/features/cotizaciones/services/cotizaciones-summary.service";
 import { cotizacionesAppService } from "@/features/cotizaciones/services/cotizaciones.service";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
 import type { Cliente } from "@/features/clientes/types/cliente";
 import type {
   CotizacionWorkflowDraft,
@@ -215,6 +217,7 @@ type UseCotizacionesStoreOptions = {
 
 export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) {
   const { organizacionId, cargando } = useAuth();
+  const { profile, isReady: isProfileReady } = useOrganizationProfile();
   const autoLoadSummary = options.autoLoadSummary ?? true;
   const initialStateRef = useRef(readInitialCotizacionesState(organizacionId));
   const [cotizaciones, setCotizaciones] = useState<CotizacionWorkflowRecord[]>(
@@ -518,6 +521,11 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
     setSaveError(null);
 
@@ -590,6 +598,11 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
     setSaveError(null);
 
@@ -624,6 +637,11 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {
@@ -661,6 +679,11 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isProfileReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
     setSaveError(null);
 

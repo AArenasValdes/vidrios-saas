@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { organizationProfileService } from "@/features/organization-profile/services/organization-profile.service";
 import { publicLandingCacheRepository } from "@/features/solicitudes/repositories/public-landing-cache.repository";
+import { assertSubscriptionAllowsWrite } from "@/features/subscriptions/services/subscription-status.service";
 import type {
   OrganizationProfile,
   UpdateOrganizationProfileInput,
@@ -293,6 +294,11 @@ export function useOrganizationProfile() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsSaving(true);
 
     try {
@@ -320,6 +326,11 @@ export function useOrganizationProfile() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsUploading(true);
 
     try {
@@ -334,6 +345,11 @@ export function useOrganizationProfile() {
       throw new Error("No hay organizacion activa");
     }
 
+    if (!isReady || !profile) {
+      throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+    }
+
+    assertSubscriptionAllowsWrite(profile.subscription);
     setIsUploadingHero(true);
 
     try {

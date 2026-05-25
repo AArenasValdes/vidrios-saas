@@ -8,6 +8,12 @@ import type {
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type {
+  BillingPeriod,
+  PaymentMethod,
+  PlanType,
+  SubscriptionStatus,
+} from "@/features/subscriptions/types/subscription";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -62,6 +68,16 @@ type OrganizationProfileRow = {
   form_title: string | null;
   form_subtitle: string | null;
   is_published: boolean | null;
+  subscription_status?: SubscriptionStatus | null;
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
+  subscription_started_at?: string | null;
+  subscription_ends_at?: string | null;
+  plan_type?: PlanType | null;
+  billing_period?: BillingPeriod | null;
+  payment_method?: PaymentMethod | null;
+  last_payment_at?: string | null;
+  founder_price_locked?: boolean | null;
 };
 
 const TABLE_NAME = "organization_profile";
@@ -168,6 +184,17 @@ function mapOrganizationProfile(
     formTitle: row.form_title ?? "",
     formSubtitle: row.form_subtitle ?? "",
     isPublished: row.is_published ?? false,
+    subscriptionStatus: row.subscription_status ?? null,
+    trialStartedAt: row.trial_started_at ?? null,
+    trialEndsAt: row.trial_ends_at ?? null,
+    subscriptionStartedAt: row.subscription_started_at ?? null,
+    subscriptionEndsAt: row.subscription_ends_at ?? null,
+    planType: row.plan_type ?? null,
+    billingPeriod: row.billing_period ?? null,
+    paymentMethod: row.payment_method ?? null,
+    lastPaymentAt: row.last_payment_at ?? null,
+    founderPriceLocked: row.founder_price_locked ?? false,
+    subscription: undefined as never,
   };
 }
 

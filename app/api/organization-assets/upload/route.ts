@@ -12,6 +12,14 @@ import {
   type NormalizedOrganizationAsset,
   type OrganizationAssetUploadKind,
 } from "@/features/organization-assets/services/organization-asset-image-normalizer.service";
+import {
+  getSubscriptionSnapshotByOrganizationId,
+} from "@/features/subscriptions/services/subscription-route-access.service";
+import {
+  assertSubscriptionAllowsWrite,
+  resolveOrganizationSubscriptionState,
+  SubscriptionWriteAccessError,
+} from "@/features/subscriptions/services/subscription-status.service";
 import { sanitizeFileName } from "@/utils/sanitize-file-name";
 
 const BUCKET_NAME = "organization-assets";
@@ -111,6 +119,17 @@ export async function POST(request: Request) {
       { error: "No pudimos identificar la organizacion activa." },
       { status: 403 }
     );
+  }
+
+  try {
+    const snapshot = await getSubscriptionSnapshotByOrganizationId(admin, organizationId);
+    assertSubscriptionAllowsWrite(resolveOrganizationSubscriptionState(snapshot));
+  } catch (error) {
+    if (error instanceof SubscriptionWriteAccessError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+
+    throw error;
   }
 
   const formData = await request.formData().catch(() => null);

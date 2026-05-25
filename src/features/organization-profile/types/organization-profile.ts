@@ -1,5 +1,12 @@
 import type { PreferredProvider } from "@/features/cotizaciones/services/component-suggestions.service";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type {
+  BillingPeriod,
+  EffectiveSubscriptionState,
+  PaymentMethod,
+  PlanType,
+  SubscriptionStatus,
+} from "@/features/subscriptions/types/subscription";
 import type { EntityId } from "@/types/common";
 
 export type HeroMode = "image" | "gradient";
@@ -72,6 +79,17 @@ export type OrganizationProfile = {
   formTitle: string;
   formSubtitle: string;
   isPublished: boolean;
+  subscriptionStatus: SubscriptionStatus | null;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  subscriptionStartedAt: string | null;
+  subscriptionEndsAt: string | null;
+  planType: PlanType | null;
+  billingPeriod: BillingPeriod | null;
+  paymentMethod: PaymentMethod | null;
+  lastPaymentAt: string | null;
+  founderPriceLocked: boolean;
+  subscription: EffectiveSubscriptionState;
 };
 
 export type UpdateOrganizationProfileInput = {
