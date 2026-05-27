@@ -1,4 +1,5 @@
 import {
+  buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
 } from "@/utils/cotizacion-item-presentation";
@@ -130,6 +131,26 @@ describe("cotizacion-item-presentation", () => {
         isCustomScheme: true,
       })
     );
+  });
+
+  it("debe construir una etiqueta comercial de esquema para PDF y detalle", () => {
+    expect(
+      buildCotizacionItemSheetSchemeLabel({
+        sheetScheme: "4 hojas",
+        sheetVariant: "Laterales fijas + centrales moviles",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+      })
+    ).toBe("4 hojas · Laterales fijas + centrales moviles");
+
+    expect(
+      buildCotizacionItemSheetSchemeLabel({
+        sheetScheme: "Personalizado",
+        sheetVariant: "",
+        customSchemeDescription: "3 hojas con pano fijo superior",
+        isCustomScheme: true,
+      })
+    ).toBe("Personalizado: 3 hojas con pano fijo superior");
   });
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {

@@ -188,4 +188,34 @@ describe("generateComponentSVG", () => {
     expect((ventanaDosHojas.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(2);
     expect((ventanaUnaHoja.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(1);
   });
+
+  it("renderiza correderas de 4 hojas desde metadata comercial del esquema", () => {
+    const cuatroHojas = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "4 hojas",
+      sheetVariant: "Laterales fijas + centrales moviles",
+      ancho: 2400,
+      alto: 1200,
+      variant: "pdf",
+    });
+
+    expect((cuatroHojas.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(4);
+    expect((cuatroHojas.match(/opacity="0.58"/g) ?? []).length).toBe(4);
+  });
+
+  it("usa la descripcion personalizada para inferir cantidad de hojas cuando corresponde", () => {
+    const personalizada = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Corredera",
+      sheetScheme: "Personalizado",
+      customSchemeDescription: "3 hojas, la del medio fija",
+      isCustomScheme: true,
+      ancho: 2100,
+      alto: 1200,
+      variant: "pdf",
+    });
+
+    expect((personalizada.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(3);
+  });
 });

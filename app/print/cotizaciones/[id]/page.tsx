@@ -7,10 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
-import {
-  composeComponentReference,
-  splitComponentReference,
-} from "@/features/cotizaciones/services/component-catalog.service";
+import { splitComponentReference } from "@/features/cotizaciones/services/component-catalog.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -26,7 +23,10 @@ import {
   resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
 import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
-import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  buildCotizacionItemSheetSchemeLabel,
+  decodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -89,6 +89,10 @@ type ItemPresentation = {
   sistema: string;
   configuracion: string;
   hojasBase: 1 | 2 | null;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
   colorName: string;
   surface: string;
   specs: Array<{ key: string; value: string }>;
@@ -501,18 +505,41 @@ export default function CotizacionPrintPage() {
     const map = new Map<string, ItemPresentation>();
 
     for (const item of visibleCotizacion?.items ?? []) {
-      const { colorHex, material, referencia, sistema, configuracion, hojasBase } =
-        decodeCotizacionItemPresentationMeta(item.observaciones);
+      const {
+        colorHex,
+        material,
+        referencia,
+        sistema,
+        configuracion,
+        hojasBase,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
+      } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
       const referenceParts = splitComponentReference(referencia, item.tipo);
       const resolvedSystem = sistema || referenceParts.sistema;
       const resolvedConfiguration = configuracion || referenceParts.configuracion;
-      const systemLabel =
-        composeComponentReference(resolvedSystem, resolvedConfiguration) ||
-        resolvedSystem ||
-        "-";
+      const systemLabel = resolvedSystem || "-";
       const lineLabel = item.lineaComercial?.trim() || referencia || "-";
+      const sheetSchemeLabel = buildCotizacionItemSheetSchemeLabel({
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
+      });
+      const specs = [
+        { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
+        ...(sheetSchemeLabel ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
+        { key: "Sistema", value: systemLabel },
+        { key: "Material", value: material },
+        { key: "Línea", value: lineLabel },
+        { key: "Color", value: colorName },
+        { key: "Vidrio", value: item.vidrio || "-" },
+        { key: "Superficie", value: surface },
+      ];
       map.set(item.id, {
         colorHex,
         material,
@@ -520,28 +547,28 @@ export default function CotizacionPrintPage() {
         sistema: resolvedSystem,
         configuracion: resolvedConfiguration,
         hojasBase,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
         colorName,
         surface,
-        specs: [
-          { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-          { key: "Material", value: material },
-          { key: "Color", value: colorName },
-          { key: "Sistema", value: systemLabel },
-          { key: "Línea", value: lineLabel },
-          { key: "Vidrio", value: item.vidrio || "-" },
-          { key: "Superficie", value: surface },
-        ],
+        specs,
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
           hojasBase,
+          sheetScheme,
+          sheetVariant,
+          customSchemeDescription,
+          isCustomScheme,
           referencia,
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 156,
-          maxH: 138,
+          maxW: 272,
+          maxH: 142,
           variant: "pdf",
         }),
       });
@@ -904,12 +931,16 @@ export default function CotizacionPrintPage() {
                   generateComponentSVG({
                     tipo: item.tipo,
                     hojasBase: presentation?.hojasBase,
+                    sheetScheme: presentation?.sheetScheme,
+                    sheetVariant: presentation?.sheetVariant,
+                    customSchemeDescription: presentation?.customSchemeDescription,
+                    isCustomScheme: presentation?.isCustomScheme,
                     referencia: presentation?.referencia,
                     ancho: item.ancho,
                     alto: item.alto,
                     colorHex,
-                            maxW: 156,
-                            maxH: 138,
+                    maxW: 272,
+                    maxH: 142,
                     variant: "pdf",
                   });
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
@@ -944,16 +975,6 @@ export default function CotizacionPrintPage() {
                         <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
                       </div>
 
-                      <div className={s.specsColumn}>
-                        {specs.map((spec) => (
-                          <div key={spec.key} className={s.specRow}>
-                            <span className={s.specBullet} aria-hidden />
-                            <span className={s.specKey}>{spec.key}</span>
-                            <span className={s.specValue}>{spec.value}</span>
-                          </div>
-                        ))}
-                      </div>
-
                       <aside className={s.pricesColumn}>
                         <div className={s.pricesHeading}>VALOR COMERCIAL</div>
                         <div className={s.pricesSubheading}>MONTOS EN CLP</div>
@@ -972,6 +993,16 @@ export default function CotizacionPrintPage() {
                           <strong>{CLP(item.precioTotal)}</strong>
                         </div>
                       </aside>
+                    </div>
+
+                    <div className={s.specsColumn}>
+                      {specs.map((spec) => (
+                        <div key={spec.key} className={s.specRow}>
+                          <span className={s.specBullet} aria-hidden />
+                          <span className={s.specKey}>{spec.key}</span>
+                          <span className={s.specValue}>{spec.value}</span>
+                        </div>
+                      ))}
                     </div>
                   </article>
                 );

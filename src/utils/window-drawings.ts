@@ -12,7 +12,11 @@ export type ComponentSVGParams = {
   tipo: string;
   sistema?: string | null;
   configuracion?: string | null;
-  hojasBase?: 1 | 2 | null;
+  hojasBase?: 1 | 2 | 3 | 4 | null;
+  sheetScheme?: string | null;
+  sheetVariant?: string | null;
+  customSchemeDescription?: string | null;
+  isCustomScheme?: boolean | null;
   referencia?: string | null;
   ancho: number | null;
   alto: number | null;
@@ -30,6 +34,8 @@ type Palette = {
   dimTxt: string; // texto de cota
   label: string;  // etiquetas
 };
+
+type WindowLeafCount = 1 | 2 | 3 | 4;
 
 // ─── Vidrio: 100% uniforme en todos los componentes ─────────────────────────
 
@@ -149,19 +155,33 @@ function resolveSistema(params: ComponentSVGParams): string {
   return normalizeSistema(source);
 }
 
-function normalizeLeafCount(value: number | string | null | undefined): 1 | 2 | null {
-  if (value === 1 || value === "1") {
-    return 1;
-  }
+function normalizeLeafCount(value: number | string | null | undefined): WindowLeafCount | null {
+  const parsed =
+    typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
 
-  if (value === 2 || value === "2") {
-    return 2;
+  if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4) {
+    return parsed;
   }
 
   return null;
 }
 
-function resolveWindowLeafCount(params: ComponentSVGParams, sistemaNorm: string): 1 | 2 | null {
+function extractLeafCountFromText(value: string | null | undefined): WindowLeafCount | null {
+  const match = (value ?? "").match(/\b([1-4])\s*hojas?\b/i);
+
+  return normalizeLeafCount(match?.[1]);
+}
+
+function resolveWindowLeafCount(params: ComponentSVGParams, sistemaNorm: string): WindowLeafCount | null {
+  const schemeLeafCount =
+    extractLeafCountFromText(params.sheetScheme) ??
+    extractLeafCountFromText(params.customSchemeDescription) ??
+    extractLeafCountFromText(params.sheetVariant);
+
+  if (schemeLeafCount) {
+    return schemeLeafCount;
+  }
+
   const explicitLeafCount = normalizeLeafCount(params.hojasBase);
   if (explicitLeafCount) {
     return explicitLeafCount;
@@ -185,6 +205,54 @@ function resolveWindowLeafCount(params: ComponentSVGParams, sistemaNorm: string)
   }
 
   return null;
+}
+
+function normalizeSearchText(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function resolveFixedSlidingPaneIndexes(
+  params: ComponentSVGParams,
+  hojas: WindowLeafCount | null
+): Set<number> {
+  if (!hojas || hojas < 2) {
+    return new Set<number>();
+  }
+
+  const source = normalizeSearchText(
+    [params.sheetVariant, params.customSchemeDescription].filter(Boolean).join(" ")
+  );
+
+  if (!source) {
+    return new Set<number>();
+  }
+
+  if (source.includes("todas moviles") || source.includes(`${hojas} moviles`)) {
+    return new Set<number>();
+  }
+
+  if (hojas === 2 && source.includes("fija")) {
+    return new Set<number>([0]);
+  }
+
+  if (hojas === 3) {
+    if (source.includes("central") || source.includes("medio")) {
+      return new Set<number>([1]);
+    }
+
+    if (source.includes("lateral")) {
+      return new Set<number>([0]);
+    }
+  }
+
+  if (hojas === 4 && (source.includes("laterales") || source.includes("2 fijas"))) {
+    return new Set<number>([0, 3]);
+  }
+
+  return new Set<number>();
 }
 
 // ─── Átomos de dibujo ────────────────────────────────────────────────────────
@@ -370,7 +438,7 @@ function buildWindowPanes(
   w: number,
   h: number,
   v: string,
-  hojas: 1 | 2,
+  hojas: WindowLeafCount,
   p: Palette
 ) {
   const F = fw(v);
@@ -405,38 +473,35 @@ function buildWindowPanes(
   }
 
   const dividerW = Math.max(3.2, D * 1.55);
-  const paneW = (w - FI * 2 - dividerW) / 2;
-  const leftPane = {
-    x: x + FI,
-    y: glassY,
-    w: paneW,
-    h: glassH,
-  };
-  const rightPane = {
-    x: leftPane.x + paneW + dividerW,
-    y: glassY,
-    w: paneW,
-    h: glassH,
-  };
+  const paneW = (w - FI * 2 - dividerW * (hojas - 1)) / hojas;
+  const panes = Array.from({ length: hojas }, (_, index) => {
+    const pane = {
+      x: x + FI + index * (paneW + dividerW),
+      y: glassY,
+      w: paneW,
+      h: glassH,
+    };
+
+    return {
+      ...pane,
+      centerX: pane.x + pane.w / 2,
+      centerY: pane.y + pane.h / 2,
+    } satisfies WindowPane;
+  });
+  const divider = panes
+    .slice(0, -1)
+    .map((pane) => {
+      const dividerX = pane.x + pane.w + dividerW / 2;
+
+      return `<line x1="${px(dividerX)}" y1="${px(y + FI * 0.5)}" x2="${px(dividerX)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(dividerW)}" stroke-linecap="square"/>`;
+    })
+    .join("");
 
   return {
     outer: outerFrame(x, y, w, h, F, p.frame),
-    divider: `<line x1="${px(leftPane.x + paneW + dividerW / 2)}" y1="${px(y + FI * 0.5)}" x2="${px(leftPane.x + paneW + dividerW / 2)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(dividerW)}" stroke-linecap="square"/>`,
-    panes: [
-      {
-        ...leftPane,
-        centerX: leftPane.x + leftPane.w / 2,
-        centerY: leftPane.y + leftPane.h / 2,
-      },
-      {
-        ...rightPane,
-        centerX: rightPane.x + rightPane.w / 2,
-        centerY: rightPane.y + rightPane.h / 2,
-      },
-    ] satisfies WindowPane[],
-    glass:
-      glassFill(leftPane.x, leftPane.y, leftPane.w, leftPane.h, GW) +
-      glassFill(rightPane.x, rightPane.y, rightPane.w, rightPane.h, GW),
+    divider,
+    panes,
+    glass: panes.map((pane) => glassFill(pane.x, pane.y, pane.w, pane.h, GW)).join(""),
     railY: y + h - FI - D * 0.5,
     handleInset: Math.max(5, F * 1.1),
   };
@@ -449,7 +514,8 @@ function drawVentanaCorredera(
   h: number,
   v: string,
   p: Palette,
-  hojas: 1 | 2
+  hojas: WindowLeafCount,
+  fixedPaneIndexes: Set<number>
 ): string {
   const D = dw(v);
   const DT = det(v);
@@ -485,19 +551,42 @@ function drawVentanaCorredera(
     ].join("");
   }
 
-  const leftPane = panes[0];
-  const rightPane = panes[1];
-  const arrowW = Math.max(26, leftPane.w * 0.42);
+  const arrowW = clamp(panes[0].w * 0.46, 16, 38);
+  const mobileDetails = panes
+    .map((pane, index) => {
+      if (fixedPaneIndexes.has(index)) {
+        const markerInset = Math.max(6, Math.min(10, pane.w * 0.15));
+
+        return [
+          `<line x1="${px(pane.x + markerInset)}" y1="${px(pane.y + markerInset)}" x2="${px(pane.x + pane.w - markerInset)}" y2="${px(pane.y + pane.h - markerInset)}" stroke="${p.div}" stroke-width="${px(DT * 0.8)}" stroke-linecap="round" opacity="0.58"/>`,
+          `<line x1="${px(pane.x + pane.w - markerInset)}" y1="${px(pane.y + markerInset)}" x2="${px(pane.x + markerInset)}" y2="${px(pane.y + pane.h - markerInset)}" stroke="${p.div}" stroke-width="${px(DT * 0.8)}" stroke-linecap="round" opacity="0.58"/>`,
+        ].join("");
+      }
+
+      const handleX =
+        index % 2 === 0 ? pane.x + pane.w - handleInset : pane.x + handleInset;
+      const direction = index % 2 === 0 ? "right" : "left";
+
+      return [
+        sidePullHandle(handleX, pane.centerY, clamp(h * 0.15, 13, 20)),
+        directionArrow(
+          pane.centerX - arrowW / 2,
+          pane.centerY,
+          arrowW,
+          direction,
+          arrowStroke,
+          p.detail
+        ),
+      ].join("");
+    })
+    .join("");
 
   return [
     outer,
     glass,
     divider,
     rail,
-    sidePullHandle(leftPane.x + leftPane.w - handleInset, leftPane.centerY, clamp(h * 0.15, 15, 20)),
-    sidePullHandle(rightPane.x + handleInset, rightPane.centerY, clamp(h * 0.15, 15, 20)),
-    directionArrow(leftPane.centerX - arrowW / 2, leftPane.centerY, arrowW, "right", arrowStroke, p.detail),
-    directionArrow(rightPane.centerX - arrowW / 2, rightPane.centerY, arrowW, "left", arrowStroke, p.detail),
+    mobileDetails,
   ].join("");
 }
 
@@ -1172,17 +1261,20 @@ function drawOtro(x: number, y: number, w: number, h: number, v: string, p: Pale
 function routeDrawing(
   tipoNorm: string,
   sistemaNorm: string,
-  hojasBase: 1 | 2 | null,
+  hojasBase: WindowLeafCount | null,
+  fixedSlidingPaneIndexes: Set<number>,
   x: number, y: number, w: number, h: number,
   v: string,
   p: Palette
 ): string {
+  const binaryLeafCount: 1 | 2 = hojasBase === 1 ? 1 : 2;
+
   switch (tipoNorm) {
     case "Ventana":
-      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, hojasBase ?? 2);
-      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, hojasBase ?? 2);
-      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, hojasBase ?? 2);
-      return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2); // Corredera por defecto
+      if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, binaryLeafCount);
+      if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, binaryLeafCount);
+      if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, binaryLeafCount);
+      return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2, fixedSlidingPaneIndexes); // Corredera por defecto
 
     case "Puerta":
       if (sistemaNorm === "Corredera") return drawPuertaCorredera(x, y, w, h, v, p);
@@ -1283,6 +1375,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const tipoNorm  = normalizeType(params.tipo);
   const sisNorm   = resolveSistema(params);
   const hojasBase = resolveWindowLeafCount(params, sisNorm);
+  const fixedSlidingPaneIndexes = resolveFixedSlidingPaneIndexes(params, hojasBase);
   const palette   = resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
@@ -1310,6 +1403,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     tipoNorm,
     sisNorm,
     hojasBase,
+    fixedSlidingPaneIndexes,
     originX,
     originY,
     drawW,

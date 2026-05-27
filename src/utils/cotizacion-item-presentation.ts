@@ -25,6 +25,11 @@ export type CotizacionItemPresentationMeta = {
   raw: string;
 };
 
+type SheetSchemeInput = Pick<
+  CotizacionItemPresentationMeta,
+  "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
+>;
+
 const DEFAULT_COLOR_BY_MATERIAL: Record<ComponentMaterial, string> = {
   Aluminio: "#a8a8a8",
   PVC: "#f0eeeb",
@@ -226,4 +231,28 @@ export function decodeCotizacionItemPresentationMeta(
     origenPrecio,
     raw,
   };
+}
+
+export function buildCotizacionItemSheetSchemeLabel(input: SheetSchemeInput): string {
+  const sheetScheme = input.sheetScheme.trim();
+  const sheetVariant = input.sheetVariant.trim();
+  const customSchemeDescription = input.customSchemeDescription.trim();
+  const isCustom =
+    input.isCustomScheme ||
+    sheetScheme.toLowerCase() === "personalizado" ||
+    sheetVariant.toLowerCase() === "otro";
+
+  if (isCustom) {
+    if (sheetScheme && customSchemeDescription) {
+      return `${sheetScheme}: ${customSchemeDescription}`;
+    }
+
+    return customSchemeDescription || sheetScheme;
+  }
+
+  if (sheetScheme && sheetVariant) {
+    return `${sheetScheme} · ${sheetVariant}`;
+  }
+
+  return sheetScheme || sheetVariant || customSchemeDescription;
 }

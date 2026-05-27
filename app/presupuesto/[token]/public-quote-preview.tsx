@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LuFileText, LuLayers3, LuShieldCheck } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
-import {
-  composeComponentReference,
-  splitComponentReference,
-} from "@/features/cotizaciones/services/component-catalog.service";
+import { splitComponentReference } from "@/features/cotizaciones/services/component-catalog.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import {
   buildDocumentCompanyName,
@@ -17,7 +14,10 @@ import {
   resolveDocumentConditionsText,
   resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
-import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  buildCotizacionItemSheetSchemeLabel,
+  decodeCotizacionItemPresentationMeta,
+} from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import printStyles from "../../print/cotizaciones/[id]/page.module.css";
@@ -95,6 +95,10 @@ type ItemPresentation = {
   material: string;
   referencia: string;
   hojasBase: 1 | 2 | null;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
   colorName: string;
   surface: string;
   specs: Array<{ key: string; value: string }>;
@@ -278,46 +282,69 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
     const map = new Map<string, ItemPresentation>();
 
     for (const item of quote.items) {
-      const { colorHex, material, referencia, sistema, configuracion, hojasBase } =
-        decodeCotizacionItemPresentationMeta(item.observaciones);
+      const {
+        colorHex,
+        material,
+        referencia,
+        sistema,
+        configuracion,
+        hojasBase,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
+      } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
       const referenceParts = splitComponentReference(referencia, item.tipo);
       const resolvedSystem = sistema || referenceParts.sistema;
       const resolvedConfiguration = configuracion || referenceParts.configuracion;
-      const systemLabel =
-        composeComponentReference(resolvedSystem, resolvedConfiguration) ||
-        resolvedSystem ||
-        "-";
+      const systemLabel = resolvedSystem || "-";
       const lineLabel = referencia || "-";
+      const sheetSchemeLabel = buildCotizacionItemSheetSchemeLabel({
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
+      });
+      const specs = [
+        { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
+        ...(sheetSchemeLabel ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
+        { key: "Sistema", value: systemLabel },
+        { key: "Material", value: material },
+        { key: "Línea", value: lineLabel },
+        { key: "Color", value: colorName },
+        { key: "Vidrio", value: item.vidrio || "-" },
+        { key: "Superficie", value: surface },
+      ];
 
       map.set(item.id, {
         colorHex,
         material,
         referencia,
         hojasBase,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
         colorName,
         surface,
-        specs: [
-          { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-          { key: "Material", value: material },
-          { key: "Color", value: colorName },
-          { key: "Sistema", value: systemLabel },
-          { key: "Línea", value: lineLabel },
-          { key: "Vidrio", value: item.vidrio || "-" },
-          { key: "Superficie", value: surface },
-        ],
+        specs,
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
           hojasBase,
+          sheetScheme,
+          sheetVariant,
+          customSchemeDescription,
+          isCustomScheme,
           referencia,
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 156,
-          maxH: 138,
+          maxW: 272,
+          maxH: 142,
           variant: "pdf",
         }),
       });
@@ -534,7 +561,6 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                       {pagePlan.items.map((item, itemIndex) => {
                         const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                         const presentation = itemPresentationMap.get(item.id);
-                        const componentCode = item.codigo || `I${absoluteIndex}`;
                         const colorHex = presentation?.colorHex ?? "#a8a8a8";
                         const material = presentation?.material ?? "Material a definir";
                         const colorName = presentation?.colorName ?? "Color a definir";
@@ -553,12 +579,16 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           generateComponentSVG({
                             tipo: item.tipo,
                             hojasBase: presentation?.hojasBase,
+                            sheetScheme: presentation?.sheetScheme,
+                            sheetVariant: presentation?.sheetVariant,
+                            customSchemeDescription: presentation?.customSchemeDescription,
+                            isCustomScheme: presentation?.isCustomScheme,
                             referencia: presentation?.referencia,
                             ancho: item.ancho,
                             alto: item.alto,
                             colorHex,
-                            maxW: 156,
-                            maxH: 138,
+                            maxW: 272,
+                            maxH: 142,
                             variant: "pdf",
                           });
 
@@ -570,25 +600,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
 
                             <div className={printStyles.componentHeader}>
                               <div className={printStyles.componentTitleRow}>
-                                <span className={printStyles.itemCode}>{componentCode}</span>
                                 <h2 className={printStyles.itemName}>{item.nombre}</h2>
-                              </div>
-
-                              <div className={printStyles.itemChips}>
-                                <span className={printStyles.itemChip}>{item.tipo}</span>
-                                <span className={printStyles.itemChip}>{material}</span>
-                                <span className={printStyles.itemChip}>
-                                  <i
-                                    className={printStyles.itemChipDot}
-                                    style={{ backgroundColor: colorHex }}
-                                    aria-hidden
-                                  />
-                                  {colorName}
-                                </span>
-                                <span className={printStyles.itemChip}>
-                                  {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
-                                </span>
-                                <span className={printStyles.itemChip}>{surface}</span>
                               </div>
                             </div>
 
@@ -603,16 +615,6 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                                 <span className={printStyles.drawingCaption}>
                                   VISTA INTERIOR REFERENCIAL
                                 </span>
-                              </div>
-
-                              <div className={printStyles.specsColumn}>
-                                {specs.map((spec) => (
-                                  <div key={spec.key} className={printStyles.specRow}>
-                                    <span className={printStyles.specBullet} aria-hidden />
-                                    <span className={printStyles.specKey}>{spec.key}</span>
-                                    <span className={printStyles.specValue}>{spec.value}</span>
-                                  </div>
-                                ))}
                               </div>
 
                               <aside className={printStyles.pricesColumn}>
@@ -633,6 +635,16 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                                   <strong>{CLP(item.precioTotal)}</strong>
                                 </div>
                               </aside>
+                            </div>
+
+                            <div className={printStyles.specsColumn}>
+                              {specs.map((spec) => (
+                                <div key={spec.key} className={printStyles.specRow}>
+                                  <span className={printStyles.specBullet} aria-hidden />
+                                  <span className={printStyles.specKey}>{spec.key}</span>
+                                  <span className={printStyles.specValue}>{spec.value}</span>
+                                </div>
+                              ))}
                             </div>
                           </article>
                         );

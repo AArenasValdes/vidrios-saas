@@ -1000,7 +1000,7 @@
 }
 
 .spaciousCoverPage .componentCard {
-  min-height: 76mm;
+  min-height: 70mm;
   padding: 15px 14px 13px;
 }
 
@@ -1009,22 +1009,21 @@
 }
 
 .spaciousCoverPage .componentBody {
-  grid-template-columns: 184px minmax(0, 1fr) 188px;
-  gap: 18px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 188px;
+  gap: 16px;
+  align-items: stretch;
 }
 
 .spaciousCoverPage .drawingFrame {
-  width: 184px;
   min-height: 146px;
 }
 
 .spaciousCoverPage .drawingSvg {
-  min-height: 128px;
+  height: 128px;
 }
 
 .spaciousCoverPage .specsColumn {
-  gap: 7px;
+  gap: 7px 9px;
 }
 
 .spaciousCoverPage .pricesColumn {
@@ -1157,8 +1156,8 @@
 
 .componentBody {
   display: grid;
-  grid-template-columns: 182px minmax(0, 1fr) 172px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 176px;
+  gap: 13px;
   align-items: stretch;
 }
 
@@ -1170,13 +1169,14 @@
 }
 
 .drawingFrame {
-  width: 182px;
-  min-height: 148px;
-  background: #f3f4f6;
+  width: 100%;
+  min-height: 142px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 8px 10px;
   box-sizing: border-box;
 }
 
@@ -1185,7 +1185,16 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 132px;
+  height: 126px;
+  overflow: hidden;
+}
+
+.drawingSvg svg {
+  display: block;
+  max-width: 100%;
+  max-height: 126px;
+  width: auto;
+  height: auto;
 }
 
 .drawingCaption {
@@ -1199,14 +1208,15 @@
 .specsColumn {
   display: grid;
   align-content: start;
-  gap: 6px;
-  padding-top: 2px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px 9px;
+  padding-top: 10px;
 }
 
 .specRow {
   display: grid;
-  grid-template-columns: 9px 96px 1fr;
-  gap: 7px;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 3px 6px;
   align-items: start;
 }
 
@@ -1229,21 +1239,23 @@
 }
 
 .specKey {
-  font-size: 8.1px;
+  font-size: 7.7px;
   font-weight: 800;
   text-transform: uppercase;
   color: #111827;
+  line-height: 1.2;
 }
 
 .specValue {
-  font-size: 9.4px;
+  grid-column: 2;
+  font-size: 9px;
   color: #4b5563;
-  line-height: 1.46;
+  line-height: 1.34;
 }
 
 .pricesColumn {
   background: #f9fafb;
-  border-left: 1px solid #e5e7eb;
+  border: 1px solid #e5e7eb;
   padding: 10px 12px 9px;
   display: grid;
   align-content: start;
