@@ -986,13 +986,14 @@
 .componentCard {
   position: relative;
   min-height: 0;
-  border: 1px solid #e5e7eb;
-  border-left: 5px solid var(--brand);
+  border: 1px solid #d5e0ec;
+  border-radius: 4px;
   background: #fff;
-  padding: 10px 11px 9px;
+  padding: 0;
   box-sizing: border-box;
   break-inside: avoid;
   page-break-inside: avoid;
+  overflow: hidden;
 }
 
 .spaciousCoverPage .componentList {
@@ -1000,54 +1001,52 @@
 }
 
 .spaciousCoverPage .componentCard {
-  min-height: 70mm;
-  padding: 15px 14px 13px;
+  min-height: 68mm;
 }
 
 .spaciousCoverPage .componentHeader {
-  margin-bottom: 14px;
+  min-height: 30px;
 }
 
 .spaciousCoverPage .componentBody {
-  grid-template-columns: minmax(0, 1fr) 188px;
-  gap: 16px;
+  grid-template-columns: minmax(230px, 48%) minmax(0, 1fr);
+  gap: 0;
   align-items: stretch;
 }
 
 .spaciousCoverPage .drawingFrame {
-  min-height: 146px;
+  min-height: 158px;
 }
 
 .spaciousCoverPage .drawingSvg {
-  height: 128px;
+  height: 144px;
 }
 
 .spaciousCoverPage .specsColumn {
-  gap: 7px 9px;
+  gap: 7px 14px;
 }
 
 .spaciousCoverPage .pricesColumn {
-  min-height: 146px;
-  padding: 13px 13px 11px;
+  padding: 12px 13px 10px;
 }
 
 .itemBadge {
   position: absolute;
-  top: 8px;
-  left: 14px;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: 6px;
-  background: var(--brand);
-  color: #fff;
+  top: 6px;
+  left: 10px;
+  height: 16px;
+  padding: 0 7px;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--brand);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 8.2px;
+  font-size: 7.2px;
   font-weight: 800;
   letter-spacing: 0.05em;
-  line-height: 22px;
+  line-height: 16px;
   z-index: 2;
 }
 
@@ -1055,6 +1054,8 @@
   background: transparent;
   padding: 0;
   width: auto;
+  top: 3px;
+  height: 22px;
 }
 
 .exportBadgeSvg,
@@ -1066,11 +1067,15 @@
 
 .componentHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-left: 74px;
-  margin-bottom: 11px;
+  min-height: 28px;
+  margin-left: 0;
+  margin-bottom: 0;
+  padding: 5px 10px 5px 72px;
+  background: var(--brand);
+  box-sizing: border-box;
 }
 
 .componentTitleRow {
@@ -1094,11 +1099,11 @@
   margin: 0;
   display: block;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 14.8px;
+  font-size: 12.8px;
   font-weight: 700;
-  color: #111;
-  line-height: 1.22;
-  padding-top: 1px;
+  color: #fff;
+  line-height: 1.15;
+  padding-top: 0;
   max-width: 100%;
 }
 
@@ -1156,8 +1161,8 @@
 
 .componentBody {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 176px;
-  gap: 13px;
+  grid-template-columns: minmax(220px, 48%) minmax(0, 1fr);
+  gap: 0;
   align-items: stretch;
 }
 
@@ -1165,18 +1170,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 7px;
+  min-height: 178px;
+  padding: 11px 10px 8px;
+  background: #f8fafc;
+  border-right: 1px solid #e5eaf0;
+  box-sizing: border-box;
 }
 
 .drawingFrame {
   width: 100%;
-  min-height: 142px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  min-height: 150px;
+  background: transparent;
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -1185,32 +1196,41 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 126px;
+  height: 138px;
   overflow: hidden;
 }
 
 .drawingSvg svg {
   display: block;
   max-width: 100%;
-  max-height: 126px;
+  max-height: 138px;
   width: auto;
   height: auto;
 }
 
 .drawingCaption {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.7px;
+  font-size: 7.1px;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #9ca3af;
+  letter-spacing: 0.11em;
+  color: #8da0b8;
+}
+
+.componentInfoColumn {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
 }
 
 .specsColumn {
   display: grid;
   align-content: start;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px 9px;
-  padding-top: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 16px;
+  padding: 9px 12px 10px;
+  border-top: 1px solid #e5eaf0;
+  background: #fff;
+  box-sizing: border-box;
 }
 
 .specRow {
@@ -1221,9 +1241,9 @@
 }
 
 .specBullet {
-  width: 9px;
-  height: 9px;
-  margin-top: 4px;
+  width: 5px;
+  height: 5px;
+  margin-top: 3px;
 }
 
 .specKey,
@@ -1239,41 +1259,44 @@
 }
 
 .specKey {
-  font-size: 7.7px;
+  font-size: 6.7px;
   font-weight: 800;
   text-transform: uppercase;
-  color: #111827;
+  color: #55708f;
   line-height: 1.2;
+  letter-spacing: 0.04em;
 }
 
 .specValue {
   grid-column: 2;
-  font-size: 9px;
-  color: #4b5563;
-  line-height: 1.34;
+  font-size: 8.3px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.28;
 }
 
 .pricesColumn {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: #fff;
+  border: 0;
   padding: 10px 12px 9px;
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 5px;
 }
 
 .pricesHeading {
-  font-size: 9.2px;
+  font-size: 8.1px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.045em;
   color: var(--brand);
 }
 
 .pricesSubheading {
-  font-size: 7.8px;
+  font-size: 6.8px;
   text-transform: uppercase;
-  color: #9ca3af;
+  letter-spacing: 0.035em;
+  color: #7e93ad;
 }
 
 .priceRow,
@@ -1286,8 +1309,8 @@
 }
 
 .priceRow {
-  font-size: 9.2px;
-  color: #4b5563;
+  font-size: 8.8px;
+  color: #526174;
 }
 
 .priceRow strong {
@@ -1296,8 +1319,8 @@
 }
 
 .priceTotal {
-  margin-top: 4px;
-  padding-top: 8px;
+  margin-top: 3px;
+  padding-top: 7px;
   border-top: 1px solid var(--brand);
   display: flex;
   align-items: baseline;
@@ -1309,7 +1332,7 @@
 
 .priceTotal span,
 .priceTotal strong {
-  font-size: 11.8px;
+  font-size: 11.2px;
   font-weight: 800;
   color: var(--brand);
 }

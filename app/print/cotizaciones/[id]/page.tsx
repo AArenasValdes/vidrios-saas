@@ -194,11 +194,11 @@ function ExportBadge({ label }: { label: string }) {
       width={width}
       height={22}
     >
-      <rect width={width} height={22} rx={6} fill="var(--brand)" />
+      <rect width={width} height={22} rx={4} fill="#ffffff" />
       <text
         x={width / 2}
         y="11"
-        fill="#ffffff"
+        fill="var(--brand)"
         fontFamily="Montserrat, Arial, sans-serif"
         fontSize="8.2"
         fontWeight="700"
@@ -231,7 +231,7 @@ function ExportTitleRow({
       <text
         x="0"
         y="11.4"
-        fill="#111111"
+        fill="#ffffff"
         fontFamily="Georgia, Times New Roman, serif"
         fontSize="12"
         fontWeight="700"
@@ -567,8 +567,8 @@ export default function CotizacionPrintPage() {
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 272,
-          maxH: 142,
+          maxW: 310,
+          maxH: 158,
           variant: "pdf",
         }),
       });
@@ -939,8 +939,8 @@ export default function CotizacionPrintPage() {
                     ancho: item.ancho,
                     alto: item.alto,
                     colorHex,
-                    maxW: 272,
-                    maxH: 142,
+                    maxW: 310,
+                    maxH: 158,
                     variant: "pdf",
                   });
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
@@ -975,34 +975,36 @@ export default function CotizacionPrintPage() {
                         <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
                       </div>
 
-                      <aside className={s.pricesColumn}>
-                        <div className={s.pricesHeading}>VALOR COMERCIAL</div>
-                        <div className={s.pricesSubheading}>MONTOS EN CLP</div>
+                      <div className={s.componentInfoColumn}>
+                        <aside className={s.pricesColumn}>
+                          <div className={s.pricesHeading}>VALOR COMERCIAL</div>
+                          <div className={s.pricesSubheading}>MONTOS EN CLP</div>
 
-                        <div className={s.priceRow}>
-                          <span>Precio unitario</span>
-                          <strong>{CLP(item.precioUnitario)}</strong>
-                        </div>
-                        <div className={s.priceRow}>
-                          <span>Cantidad</span>
-                          <strong>{item.cantidad}</strong>
-                        </div>
+                          <div className={s.priceRow}>
+                            <span>Precio unitario</span>
+                            <strong>{CLP(item.precioUnitario)}</strong>
+                          </div>
+                          <div className={s.priceRow}>
+                            <span>Cantidad</span>
+                            <strong>{item.cantidad}</strong>
+                          </div>
 
-                        <div className={s.priceTotal}>
-                          <span>Valor</span>
-                          <strong>{CLP(item.precioTotal)}</strong>
-                        </div>
-                      </aside>
-                    </div>
+                          <div className={s.priceTotal}>
+                            <span>Total ítem</span>
+                            <strong>{CLP(item.precioTotal)}</strong>
+                          </div>
+                        </aside>
 
-                    <div className={s.specsColumn}>
-                      {specs.map((spec) => (
-                        <div key={spec.key} className={s.specRow}>
-                          <span className={s.specBullet} aria-hidden />
-                          <span className={s.specKey}>{spec.key}</span>
-                          <span className={s.specValue}>{spec.value}</span>
+                        <div className={s.specsColumn}>
+                          {specs.map((spec) => (
+                            <div key={spec.key} className={s.specRow}>
+                              <span className={s.specBullet} aria-hidden />
+                              <span className={s.specKey}>{spec.key}</span>
+                              <span className={s.specValue}>{spec.value}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </article>
                 );

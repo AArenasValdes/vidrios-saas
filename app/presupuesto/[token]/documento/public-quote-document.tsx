@@ -440,8 +440,8 @@ export function PublicQuoteDocument({
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 272,
-          maxH: 142,
+          maxW: 310,
+          maxH: 158,
           variant: "pdf",
         }),
       });
@@ -634,8 +634,8 @@ export function PublicQuoteDocument({
                           ancho: item.ancho,
                           alto: item.alto,
                           colorHex,
-                          maxW: 272,
-                          maxH: 142,
+                          maxW: 310,
+                          maxH: 158,
                           variant: "pdf",
                         });
 
@@ -665,34 +665,36 @@ export function PublicQuoteDocument({
                               </span>
                             </div>
 
-                            <aside className={printStyles.pricesColumn}>
-                              <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
-                              <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
+                            <div className={printStyles.componentInfoColumn}>
+                              <aside className={printStyles.pricesColumn}>
+                                <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
+                                <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
 
-                              <div className={printStyles.priceRow}>
-                                <span>Precio unitario</span>
-                                <strong>{CLP(item.precioUnitario)}</strong>
-                              </div>
-                              <div className={printStyles.priceRow}>
-                                <span>Cantidad</span>
-                                <strong>{item.cantidad}</strong>
-                              </div>
+                                <div className={printStyles.priceRow}>
+                                  <span>Precio unitario</span>
+                                  <strong>{CLP(item.precioUnitario)}</strong>
+                                </div>
+                                <div className={printStyles.priceRow}>
+                                  <span>Cantidad</span>
+                                  <strong>{item.cantidad}</strong>
+                                </div>
 
-                              <div className={printStyles.priceTotal}>
-                                <span>Valor</span>
-                                <strong>{CLP(item.precioTotal)}</strong>
-                              </div>
-                            </aside>
-                          </div>
+                                <div className={printStyles.priceTotal}>
+                                  <span>Total ítem</span>
+                                  <strong>{CLP(item.precioTotal)}</strong>
+                                </div>
+                              </aside>
 
-                          <div className={printStyles.specsColumn}>
-                            {specs.map((spec) => (
-                              <div key={spec.key} className={printStyles.specRow}>
-                                <span className={printStyles.specBullet} aria-hidden />
-                                <span className={printStyles.specKey}>{spec.key}</span>
-                                <span className={printStyles.specValue}>{spec.value}</span>
+                              <div className={printStyles.specsColumn}>
+                                {specs.map((spec) => (
+                                  <div key={spec.key} className={printStyles.specRow}>
+                                    <span className={printStyles.specBullet} aria-hidden />
+                                    <span className={printStyles.specKey}>{spec.key}</span>
+                                    <span className={printStyles.specValue}>{spec.value}</span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
                           </div>
                         </article>
                       );
