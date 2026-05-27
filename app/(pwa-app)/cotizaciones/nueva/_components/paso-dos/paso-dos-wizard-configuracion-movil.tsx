@@ -10,6 +10,10 @@ import type {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   normalizeCurrencyInput,
+  getSheetVariantOptions,
+  requiresCustomSheetDescription,
+  SHEET_SCHEME_OPTIONS,
+  shouldShowSheetSchemeForComponent,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 
@@ -69,6 +73,9 @@ type Props = {
   onSelectLineTemplate: (templateId: string) => void;
   onColorChange: (colorHex: string) => void;
   onConfiguracionChange: (value: string) => void;
+  onSheetSchemeChange: (value: string) => void;
+  onSheetVariantChange: (value: string) => void;
+  onCustomSchemeDescriptionChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
@@ -109,6 +116,9 @@ export function PasoDosWizardConfiguracionMovil({
   onSelectLineTemplate,
   onColorChange,
   onConfiguracionChange,
+  onSheetSchemeChange,
+  onSheetVariantChange,
+  onCustomSchemeDescriptionChange,
   onPrecioChange,
   onPricingModeChange,
   onSistemaChange,
@@ -139,6 +149,15 @@ export function PasoDosWizardConfiguracionMovil({
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
+  const showSheetScheme = shouldShowSheetSchemeForComponent({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme);
+  const showCustomSchemeDescription = requiresCustomSheetDescription({
+    sheetScheme: draft.sheetScheme,
+    sheetVariant: draft.sheetVariant,
+  });
 
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
@@ -237,7 +256,7 @@ export function PasoDosWizardConfiguracionMovil({
   return (
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileConfigStatus}>
-        <strong>{getGroupStatusTitle(draft.cantidad, draft.subtipo, draft.sistema)}</strong>
+        <strong>{getGroupStatusTitle(draft.cantidad, draft.subtipo, draft.sistema, draft)}</strong>
         <span>Mismas medidas, mismo sistema y mismo valor inicial.</span>
       </div>
 
@@ -291,6 +310,57 @@ export function PasoDosWizardConfiguracionMovil({
             >
               {showAllConfigurations ? "Mostrar menos" : "Ver más opciones"}
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showSheetScheme ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockLabel}>Esquema de hojas</div>
+          <div className={s.stepTwoMobileChoiceChips}>
+            {SHEET_SCHEME_OPTIONS.map((option) => (
+              <button
+                key={option}
+                className={`${s.stepTwoMobileChoiceChip} ${
+                  draft.sheetScheme === option ? s.stepTwoMobileChoiceChipActive : ""
+                }`}
+                onClick={() => onSheetSchemeChange(option)}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+
+          {sheetVariantOptions.length > 0 ? (
+            <div className={s.stepTwoMobileChoiceChips}>
+              {sheetVariantOptions.map((option) => (
+                <button
+                  key={option}
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    draft.sheetVariant === option ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onSheetVariantChange(option)}
+                  type="button"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {showCustomSchemeDescription ? (
+            <label className={s.field}>
+              <span className={s.stepTwoMobileQuickLineLabel}>Describe el esquema</span>
+              <input
+                className={s.stepTwoMobileQuickLineInput}
+                maxLength={120}
+                placeholder="Ej: 3 hojas, la del medio fija"
+                type="text"
+                value={draft.customSchemeDescription}
+                onChange={(event) => onCustomSchemeDescriptionChange(event.target.value)}
+              />
+            </label>
           ) : null}
         </div>
       ) : null}

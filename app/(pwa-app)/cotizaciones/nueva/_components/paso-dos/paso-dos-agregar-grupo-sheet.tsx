@@ -2,7 +2,14 @@
 
 import { LuChevronLeft, LuPlus, LuX } from "react-icons/lu";
 
-import { COMPONENT_TYPE_GROUPS, MATERIAL_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  COMPONENT_TYPE_GROUPS,
+  getSheetVariantOptions,
+  MATERIAL_OPTIONS,
+  requiresCustomSheetDescription,
+  SHEET_SCHEME_OPTIONS,
+  shouldShowSheetSchemeForComponent,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import type {
   PasoDosGrupoDraft,
   PasoDosGrupoPaso,
@@ -30,6 +37,9 @@ type Props = {
   onCustomQuantityChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
   onSistemaChange: (value: string) => void;
+  onSheetSchemeChange: (value: string) => void;
+  onSheetVariantChange: (value: string) => void;
+  onCustomSchemeDescriptionChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
@@ -90,6 +100,9 @@ export function PasoDosAgregarGrupoSheet({
   onCustomQuantityChange,
   onMaterialChange,
   onSistemaChange,
+  onSheetSchemeChange,
+  onSheetVariantChange,
+  onCustomSchemeDescriptionChange,
   onVidrioChange,
   canContinueFromQuantity,
   canContinueFromConfig,
@@ -101,6 +114,15 @@ export function PasoDosAgregarGrupoSheet({
   const stepCopy = STEP_COPY[paso];
   const disableContinue =
     (paso === 3 && !canContinueFromQuantity) || (paso === 4 && !canContinueFromConfig);
+  const showSheetScheme = shouldShowSheetSchemeForComponent({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme);
+  const showCustomSchemeDescription = requiresCustomSheetDescription({
+    sheetScheme: draft.sheetScheme,
+    sheetVariant: draft.sheetVariant,
+  });
 
   return (
     <div className={s.groupSheetOverlay} role="presentation" onClick={onClose}>
@@ -281,6 +303,60 @@ export function PasoDosAgregarGrupoSheet({
                 </div>
               </div>
 
+              {showSheetScheme ? (
+                <section className={s.formSection}>
+                  <div className={s.formSectionHead}>
+                    <span className={s.formSectionEyebrow}>Esquema de hojas</span>
+                    <strong>Describe la composicion</strong>
+                  </div>
+
+                  <div className={s.batchCountRow} role="group" aria-label="Esquema de hojas">
+                    {SHEET_SCHEME_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        className={`${s.batchCountButton} ${
+                          draft.sheetScheme === option ? s.batchCountButtonActive : ""
+                        }`}
+                        onClick={() => onSheetSchemeChange(option)}
+                        type="button"
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+
+                  {sheetVariantOptions.length > 0 ? (
+                    <div className={s.typeGroupGrid} role="group" aria-label="Variante del esquema">
+                      {sheetVariantOptions.map((option) => (
+                        <button
+                          key={option}
+                          className={`${s.typeChip} ${
+                            draft.sheetVariant === option ? s.typeChipActive : ""
+                          }`}
+                          onClick={() => onSheetVariantChange(option)}
+                          type="button"
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {showCustomSchemeDescription ? (
+                    <label className={s.field}>
+                      <span className={s.label}>Describe el esquema</span>
+                      <input
+                        className={s.input}
+                        maxLength={120}
+                        placeholder="Ej: 3 hojas, la del medio fija"
+                        value={draft.customSchemeDescription}
+                        onChange={(event) => onCustomSchemeDescriptionChange(event.target.value)}
+                      />
+                    </label>
+                  ) : null}
+                </section>
+              ) : null}
+
               <div className={s.groupSheetInlineField}>
                 <label className={s.label} htmlFor="grupo-vidrio">
                   Tipo de vidrio
@@ -331,6 +407,16 @@ export function PasoDosAgregarGrupoSheet({
                   <dt>Sistema</dt>
                   <dd>{draft.sistema}</dd>
                 </div>
+                {draft.sheetScheme ? (
+                  <div className={s.groupSheetSummaryRow}>
+                    <dt>Esquema</dt>
+                    <dd>
+                      {[draft.sheetScheme, draft.sheetVariant]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className={s.groupSheetSummaryRow}>
                   <dt>Vidrio</dt>
                   <dd>{draft.vidrio}</dd>

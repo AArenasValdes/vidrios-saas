@@ -15,6 +15,7 @@ const baseProps = {
   draft: {
     categoria: "Aberturas" as const,
     subtipo: "Ventana",
+    hojasBase: 2 as const,
     cantidad: 2,
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
@@ -23,6 +24,10 @@ const baseProps = {
     colorHex: "#a8a8a8",
     sistema: "Corredera",
     configuracion: "2 hojas",
+    sheetScheme: "",
+    sheetVariant: "",
+    customSchemeDescription: "",
+    isCustomScheme: false,
     vidrio: "Incoloro monolitico 5mm",
     lineTemplateId: "",
     referencia: "",
@@ -62,6 +67,9 @@ const baseProps = {
   onSelectLineTemplate: jest.fn(),
   onColorChange: jest.fn(),
   onConfiguracionChange: jest.fn(),
+  onSheetSchemeChange: jest.fn(),
+  onSheetVariantChange: jest.fn(),
+  onCustomSchemeDescriptionChange: jest.fn(),
   onPrecioChange: jest.fn(),
   onPricingModeChange: jest.fn(),
   onSistemaChange: jest.fn(),
@@ -175,5 +183,52 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     });
 
     expect(screen.getByPlaceholderText("Buscar líneas...")).toBeInTheDocument();
+  });
+
+  it("debe mostrar esquema de hojas para ventana corredera y permitir descripcion libre", () => {
+    const onSheetSchemeChange = jest.fn();
+    const onSheetVariantChange = jest.fn();
+    const onCustomSchemeDescriptionChange = jest.fn();
+    const { rerender } = render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        onSheetSchemeChange={onSheetSchemeChange}
+        onSheetVariantChange={onSheetVariantChange}
+        onCustomSchemeDescriptionChange={onCustomSchemeDescriptionChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "3 hojas" }));
+    expect(onSheetSchemeChange).toHaveBeenCalledWith("3 hojas");
+
+    rerender(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        draft={{ ...baseProps.draft, sheetScheme: "3 hojas" }}
+        onSheetSchemeChange={onSheetSchemeChange}
+        onSheetVariantChange={onSheetVariantChange}
+        onCustomSchemeDescriptionChange={onCustomSchemeDescriptionChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
+    expect(onSheetVariantChange).toHaveBeenCalledWith("Otro");
+
+    rerender(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        draft={{ ...baseProps.draft, sheetScheme: "3 hojas", sheetVariant: "Otro" }}
+        onSheetSchemeChange={onSheetSchemeChange}
+        onSheetVariantChange={onSheetVariantChange}
+        onCustomSchemeDescriptionChange={onCustomSchemeDescriptionChange}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Ej: 3 hojas, la del medio fija"), {
+      target: { value: "3 hojas, la del medio fija" },
+    });
+    expect(onCustomSchemeDescriptionChange).toHaveBeenCalledWith(
+      "3 hojas, la del medio fija"
+    );
   });
 });

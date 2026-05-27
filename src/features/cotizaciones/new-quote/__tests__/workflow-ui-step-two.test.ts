@@ -1,6 +1,7 @@
 import {
   applyLineTemplateToComponentForm,
   applyQuickEditDraftStatesToItems,
+  buildItemFromForm,
   buildQuickEditDraft,
   isWorkflowItemEffectivelyComplete,
 } from "../workflow-ui";
@@ -159,6 +160,12 @@ describe("workflow-ui paso 2", () => {
         origenPrecio: "manual",
         observaciones: "",
         colorHex: "#a8a8a8",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
         loteCantidad: "1",
       },
       {
@@ -179,5 +186,54 @@ describe("workflow-ui paso 2", () => {
     expect(actualizado.precioAjustadoManual).toBe(true);
     expect(actualizado.origenPrecio).toBe("manual");
     expect(actualizado.precioPlantillaSugerido).toBe("180000");
+  });
+
+  it("debe generar nombre comercial con esquema de hojas sin cambiar precio", () => {
+    const item = buildItemFromForm(
+      {
+        codigo: "V1",
+        tipo: "Ventana",
+        hojasBase: 2,
+        material: "Aluminio",
+        referencia: "L25",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "3 hojas",
+        sheetVariant: "Fija central",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        lineTemplateId: "tpl-25",
+        pricingMode: "precio_directo",
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "",
+        descripcion: "",
+        ancho: "2400",
+        alto: "1200",
+        cantidad: "1",
+        costoProveedorUnitario: "432000",
+        margenPct: "0",
+        precioPorM2: "150000",
+        minimoCobrable: "0",
+        redondeoPrecio: "1000",
+        precioPlantillaSugerido: "432000",
+        precioAjustadoManual: false,
+        origenPrecio: "plantilla",
+        observaciones: "",
+        colorHex: "#a8a8a8",
+        loteCantidad: "1",
+      },
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Ventana corredera 3 hojas, fija central");
+    expect(item.precioUnitario).toBe(432000);
+    expect(decodeCotizacionItemPresentationMeta(item.observaciones)).toEqual(
+      expect.objectContaining({
+        sheetScheme: "3 hojas",
+        sheetVariant: "Fija central",
+        isCustomScheme: false,
+      })
+    );
   });
 });

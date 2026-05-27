@@ -5,6 +5,7 @@ import {
 } from "@/utils/repair-broken-text";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
+import { buildCommercialComponentDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 const VIDRIO_SEARCH_ALIASES: Record<string, string> = {
   inc: "incoloro",
@@ -165,7 +166,7 @@ export function getVisibleSubtypeLabel(subtipo: string) {
   const cleanSubtype = repairBrokenText(subtipo).trim();
 
   if (cleanSubtype.toLowerCase() === "ventana 1 hoja") {
-    return "Fijo";
+    return "Ventana fija";
   }
 
   return cleanSubtype;
@@ -185,9 +186,28 @@ export function getSubtypeGroupLabel(cantidad: number, subtipo: string) {
   return `${cleanSubtype}s`;
 }
 
-export function getGroupStatusTitle(cantidad: number, subtipo: string, sistema: string) {
+export function getGroupStatusTitle(
+  cantidad: number,
+  subtipo: string,
+  sistema: string,
+  draft?: Pick<
+    PasoDosGrupoDraft,
+    "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
+  >
+) {
   const typeLabel = getSubtypeGroupLabel(cantidad, subtipo);
   const systemLabel = repairBrokenText(sistema).trim();
+
+  if (draft?.sheetScheme) {
+    return `${cantidad} ${buildCommercialComponentDisplayName({
+      tipo: subtipo,
+      sistema,
+      sheetScheme: draft.sheetScheme,
+      sheetVariant: draft.sheetVariant,
+      customSchemeDescription: draft.customSchemeDescription,
+      isCustomScheme: draft.isCustomScheme,
+    })}`;
+  }
 
   return systemLabel ? `${cantidad} ${typeLabel} - ${systemLabel}` : `${cantidad} ${typeLabel}`;
 }

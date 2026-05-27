@@ -39,6 +39,10 @@ export type ComponentFormState = {
   referencia: string;
   sistema?: string;
   configuracion?: string;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
   lineTemplateId: string;
   pricingMode: PricingMode;
   vidrio: string;
@@ -126,6 +130,14 @@ export const COMPONENT_TYPE_GROUPS = CATALOG_COMPONENT_TYPE_GROUPS;
 export const VALIDEZ_OPTIONS = ["7 dias", "15 dias", "30 dias"];
 export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
 export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
+
+export const SHEET_SCHEME_OPTIONS = ["2 hojas", "3 hojas", "4 hojas", "Personalizado"] as const;
+
+export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
+  "2 hojas": ["1 fija + 1 móvil", "2 móviles", "Otro"],
+  "3 hojas": ["Fija central", "Fijo lateral + 2 móviles", "3 móviles", "Otro"],
+  "4 hojas": ["Todas móviles", "Laterales fijas + centrales móviles", "2 fijas + 2 móviles", "Otro"],
+};
 
 export const ALUMINUM_COLOR_OPTIONS = [
   { label: "Aluminio mate", hex: "#a8a8a8" },
@@ -443,6 +455,82 @@ export function buildAutoComponentName(form: Pick<ComponentFormState, "codigo" |
   const tipo = form.tipo.trim() || "Componente";
 
   return codigo ? `${tipo} ${codigo}` : tipo;
+}
+
+function lowerFirst(value: string) {
+  const clean = value.trim();
+
+  if (!clean) {
+    return "";
+  }
+
+  return `${clean.charAt(0).toLowerCase()}${clean.slice(1)}`;
+}
+
+export function shouldShowSheetSchemeForComponent(input: {
+  tipo: string;
+  sistema?: string | null;
+}) {
+  return (
+    normalizeSearchValue(input.tipo) === "ventana" &&
+    normalizeSearchValue(input.sistema ?? "") === "corredera"
+  );
+}
+
+export function getSheetVariantOptions(sheetScheme: string) {
+  return SHEET_VARIANT_OPTIONS[sheetScheme] ?? [];
+}
+
+export function requiresCustomSheetDescription(input: {
+  sheetScheme: string;
+  sheetVariant: string;
+}) {
+  return input.sheetScheme === "Personalizado" || input.sheetVariant === "Otro";
+}
+
+export function buildSheetSchemeLabel(input: {
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
+}) {
+  const scheme = input.sheetScheme.trim();
+  const variant = input.sheetVariant.trim();
+  const customDescription = input.customSchemeDescription.trim();
+  const isCustomScheme = input.isCustomScheme || scheme === "Personalizado";
+
+  if (isCustomScheme) {
+    return customDescription ? `personalizada: ${customDescription}` : "personalizada";
+  }
+
+  if (!scheme) {
+    return "";
+  }
+
+  if (variant === "Otro") {
+    return customDescription ? `${scheme}, ${lowerFirst(customDescription)}` : `${scheme}, otro`;
+  }
+
+  return variant ? `${scheme}, ${lowerFirst(variant)}` : scheme;
+}
+
+export function buildCommercialComponentDisplayName(
+  form: Pick<
+    ComponentFormState,
+    "tipo" | "sistema" | "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
+  >
+) {
+  const tipo = form.tipo.trim() || "Componente";
+  const sistema = form.sistema?.trim() ?? "";
+  const base = sistema ? `${tipo} ${sistema.toLowerCase()}` : tipo;
+
+  if (!shouldShowSheetSchemeForComponent({ tipo, sistema })) {
+    return base;
+  }
+
+  const schemeLabel = buildSheetSchemeLabel(form);
+
+  return schemeLabel ? `${base} ${schemeLabel}` : base;
 }
 
 function normalizeComparableComponentText(value: string) {
@@ -801,6 +889,14 @@ export function buildSuggestedComponentForm(
         ? current.material
         : suggestion.material,
     referencia: pickSuggestedString(current.referencia, suggestion.referencia),
+    sistema: current.sistema ?? splitComponentReference(current.referencia ?? suggestion.referencia, tipo).sistema,
+    configuracion:
+      current.configuracion ??
+      splitComponentReference(current.referencia ?? suggestion.referencia, tipo).configuracion,
+    sheetScheme: current.sheetScheme ?? "",
+    sheetVariant: current.sheetVariant ?? "",
+    customSchemeDescription: current.customSchemeDescription ?? "",
+    isCustomScheme: current.isCustomScheme ?? false,
     lineTemplateId: current.lineTemplateId ?? "",
     pricingMode,
     vidrio: pickSuggestedString(current.vidrio, suggestion.vidrio),
@@ -868,6 +964,10 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     sistema,
     configuracion,
     hojasBase,
+    sheetScheme,
+    sheetVariant,
+    customSchemeDescription,
+    isCustomScheme,
     material,
     pricingMode,
     raw,
@@ -895,6 +995,10 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     referencia: referencia || item.lineaComercial || "",
     sistema: resolvedSystem,
     configuracion: configuracion || referenceParts.configuracion,
+    sheetScheme,
+    sheetVariant,
+    customSchemeDescription,
+    isCustomScheme,
     lineTemplateId,
     pricingMode,
     vidrio: item.vidrio ?? "",
@@ -942,15 +1046,6 @@ export function buildItemFromForm(
   items: CotizacionWorkflowItem[],
   editingItemId: string | null
 ) {
-  const autoName = form.nombre.trim() || buildAutoComponentName(form);
-  const rawDescription = form.descripcion.trim();
-  const normalizedAutoName = normalizeComparableComponentText(autoName);
-  const descripcion =
-    rawDescription &&
-    normalizeComparableComponentText(rawDescription) !== normalizedAutoName &&
-    !isLegacyAutoComponentLabel(form.tipo, rawDescription)
-      ? rawDescription
-      : "";
   const pricingMode = normalizePricingMode(form.pricingMode);
   const syncedForm = syncTemplatePricingInComponentForm(form);
   const costoProveedorUnitario = Number(syncedForm.costoProveedorUnitario || 0);
@@ -968,6 +1063,41 @@ export function buildItemFromForm(
     syncedForm.hojasBase ??
     getBaseLeafCountForComponent(syncedForm.tipo) ??
     resolveLegacyWindowLeafCount(syncedForm.tipo, sistema);
+  const sheetSchemeEnabled = shouldShowSheetSchemeForComponent({
+    tipo: syncedForm.tipo,
+    sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(syncedForm.sheetScheme);
+  const sheetScheme = sheetSchemeEnabled ? syncedForm.sheetScheme.trim() : "";
+  const sheetVariant =
+    sheetSchemeEnabled && sheetVariantOptions.includes(syncedForm.sheetVariant)
+      ? syncedForm.sheetVariant.trim()
+      : "";
+  const customSchemeDescription = sheetSchemeEnabled
+    ? syncedForm.customSchemeDescription.trim()
+    : "";
+  const isCustomScheme =
+    sheetSchemeEnabled &&
+    (syncedForm.isCustomScheme ||
+      sheetScheme === "Personalizado" ||
+      sheetVariant === "Otro");
+  const generatedDisplayName = buildCommercialComponentDisplayName({
+    tipo: syncedForm.tipo,
+    sistema,
+    sheetScheme,
+    sheetVariant,
+    customSchemeDescription,
+    isCustomScheme,
+  });
+  const autoName = form.nombre.trim() || generatedDisplayName || buildAutoComponentName(form);
+  const rawDescription = form.descripcion.trim();
+  const normalizedAutoName = normalizeComparableComponentText(autoName);
+  const descripcion =
+    rawDescription &&
+    normalizeComparableComponentText(rawDescription) !== normalizedAutoName &&
+    !isLegacyAutoComponentLabel(form.tipo, rawDescription)
+      ? rawDescription
+      : "";
   const origenPrecio =
     hasTemplateReference && hasTemplatePrice
       ? syncedForm.precioAjustadoManual
@@ -1003,6 +1133,10 @@ export function buildItemFromForm(
       sistema,
       configuracion,
       hojasBase,
+      sheetScheme,
+      sheetVariant,
+      customSchemeDescription,
+      isCustomScheme,
       material: syncedForm.material,
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
@@ -1031,6 +1165,10 @@ export function applyQuotePricingToItems(
       sistema,
       configuracion,
       hojasBase,
+      sheetScheme,
+      sheetVariant,
+      customSchemeDescription,
+      isCustomScheme,
       material,
       raw,
       lineTemplateId,
@@ -1069,6 +1207,10 @@ export function applyQuotePricingToItems(
         sistema,
         configuracion,
         hojasBase,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+        isCustomScheme,
         material,
         pricingMode,
         lineTemplateId,

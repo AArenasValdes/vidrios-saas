@@ -4,6 +4,7 @@ import {
   base64UrlToUint8Array,
   subscribeToPushNotifications,
 } from "../web-push";
+import { PWA_SERVICE_WORKER_VERSION } from "../pwa-sw-version";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 
 jest.mock("@/utils/pwa-service-worker", () => ({
@@ -93,10 +94,13 @@ describe("web push utils", () => {
 
     expect(resolved).toBe(retriedSubscription);
     expect(staleRegistration.unregister).toHaveBeenCalled();
-    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith("/sw.js?version=v8", {
-      scope: "/",
-      updateViaCache: "none",
-    });
+    expect(global.navigator.serviceWorker.register).toHaveBeenCalledWith(
+      `/sw.js?version=${PWA_SERVICE_WORKER_VERSION}`,
+      {
+        scope: "/",
+        updateViaCache: "none",
+      }
+    );
     expect(freshRegistration.pushManager.subscribe).toHaveBeenCalled();
   });
 });

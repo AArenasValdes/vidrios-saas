@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
+  shouldShowSheetSchemeForComponent,
   type ComponentFormState,
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -235,11 +236,45 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateSistema = (sistema: string) => {
-    setDraft((current) => ({ ...current, sistema }));
+    setDraft((current) => ({
+      ...current,
+      sistema,
+      ...(shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema })
+        ? {}
+        : {
+            sheetScheme: "",
+            sheetVariant: "",
+            customSchemeDescription: "",
+            isCustomScheme: false,
+          }),
+    }));
   };
 
   const updateConfiguracion = (configuracion: string) => {
     setDraft((current) => ({ ...current, configuracion }));
+  };
+
+  const updateSheetScheme = (sheetScheme: string) => {
+    setDraft((current) => ({
+      ...current,
+      sheetScheme,
+      sheetVariant: "",
+      customSchemeDescription: sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
+      isCustomScheme: sheetScheme === "Personalizado",
+    }));
+  };
+
+  const updateSheetVariant = (sheetVariant: string) => {
+    setDraft((current) => ({
+      ...current,
+      sheetVariant,
+      customSchemeDescription: sheetVariant === "Otro" ? current.customSchemeDescription : "",
+      isCustomScheme: current.sheetScheme === "Personalizado" || sheetVariant === "Otro",
+    }));
+  };
+
+  const updateCustomSchemeDescription = (customSchemeDescription: string) => {
+    setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
   const updateVidrio = (vidrio: string) => {
@@ -316,6 +351,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateColorHex,
     updateSistema,
     updateConfiguracion,
+    updateSheetScheme,
+    updateSheetVariant,
+    updateCustomSchemeDescription,
     updateVidrio,
     updateAncho,
     updateAlto,

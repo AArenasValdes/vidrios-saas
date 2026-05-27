@@ -12,6 +12,10 @@ describe("cotizacion-item-presentation", () => {
       sistema: "Oscilobatiente",
       configuracion: "Premium",
       hojasBase: 1,
+      sheetScheme: "3 hojas",
+      sheetVariant: "Fija central",
+      customSchemeDescription: "",
+      isCustomScheme: false,
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -28,6 +32,9 @@ describe("cotizacion-item-presentation", () => {
     expect(encoded).toContain("[sys:Oscilobatiente]");
     expect(encoded).toContain("[cfg:Premium]");
     expect(encoded).toContain("[hb:1]");
+    expect(encoded).toContain("[ss:3 hojas]");
+    expect(encoded).toContain("[sv:Fija central]");
+    expect(encoded).toContain("[isc:0]");
     expect(encoded).toContain("[m:Aluminio]");
     expect(encoded).toContain("[pm:precio_directo]");
     expect(encoded).toContain("[lti:tpl-1]");
@@ -45,6 +52,10 @@ describe("cotizacion-item-presentation", () => {
       sistema: "Oscilobatiente",
       configuracion: "Premium",
       hojasBase: 1,
+      sheetScheme: "3 hojas",
+      sheetVariant: "Fija central",
+      customSchemeDescription: "",
+      isCustomScheme: false,
       pricingMode: "precio_directo",
       lineTemplateId: "tpl-1",
       precioPorM2: 145000,
@@ -67,6 +78,10 @@ describe("cotizacion-item-presentation", () => {
       sistema: "",
       configuracion: "",
       hojasBase: null,
+      sheetScheme: "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -92,7 +107,29 @@ describe("cotizacion-item-presentation", () => {
       "Fijo - Premium"
     );
     expect(decodeCotizacionItemPresentationMeta(encoded).hojasBase).toBeNull();
+    expect(decodeCotizacionItemPresentationMeta(encoded).sheetScheme).toBe("");
     expect(decodeCotizacionItemPresentationMeta(encoded).origenPrecio).toBe("margen");
+  });
+
+  it("debe conservar un esquema de hojas personalizado", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      sistema: "Corredera",
+      sheetScheme: "Personalizado",
+      sheetVariant: "",
+      customSchemeDescription: "3 hojas con pano fijo superior",
+      isCustomScheme: true,
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        sheetScheme: "Personalizado",
+        sheetVariant: "",
+        customSchemeDescription: "3 hojas con pano fijo superior",
+        isCustomScheme: true,
+      })
+    );
   });
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {
@@ -103,6 +140,10 @@ describe("cotizacion-item-presentation", () => {
       sistema: "",
       configuracion: "",
       hojasBase: null,
+      sheetScheme: "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,
@@ -125,6 +166,10 @@ describe("cotizacion-item-presentation", () => {
       sistema: "",
       configuracion: "",
       hojasBase: null,
+      sheetScheme: "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
       pricingMode: "margen",
       lineTemplateId: "",
       precioPorM2: null,

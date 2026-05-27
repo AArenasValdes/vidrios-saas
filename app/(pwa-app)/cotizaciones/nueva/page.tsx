@@ -50,6 +50,7 @@ import {
   normalizeCurrencyInput,
   scrollPageToTop,
   scrollToSection,
+  shouldShowSheetSchemeForComponent,
   STATUS_COPY,
   Step1FieldKey,
   StepKey,
@@ -492,6 +493,10 @@ function NuevaCotizacionPageContent() {
             observaciones: cur.observaciones,
             colorHex: cur.colorHex,
             pricingMode: cur.pricingMode,
+            sheetScheme: "",
+            sheetVariant: "",
+            customSchemeDescription: "",
+            isCustomScheme: false,
           },
         });
 
@@ -501,6 +506,26 @@ function NuevaCotizacionPageContent() {
       const next = { ...cur, [key]: value };
       if (key === "tipo") {
         next.codigo = buildNextComponentCode(draft.items, value as string, editingItemId);
+      }
+      if (key === "tipo" || key === "sistema") {
+        const nextTipo = key === "tipo" ? String(value) : next.tipo;
+        const nextSistema = key === "sistema" ? String(value) : next.sistema;
+        if (!shouldShowSheetSchemeForComponent({ tipo: nextTipo, sistema: nextSistema })) {
+          next.sheetScheme = "";
+          next.sheetVariant = "";
+          next.customSchemeDescription = "";
+          next.isCustomScheme = false;
+        }
+      }
+      if (key === "sheetScheme") {
+        next.sheetVariant = "";
+        next.customSchemeDescription =
+          value === "Personalizado" ? cur.customSchemeDescription : "";
+        next.isCustomScheme = value === "Personalizado";
+      }
+      if (key === "sheetVariant") {
+        next.customSchemeDescription = value === "Otro" ? cur.customSchemeDescription : "";
+        next.isCustomScheme = next.sheetScheme === "Personalizado" || value === "Otro";
       }
       if (key === "material") {
         const material = value as ComponentFormState["material"];
@@ -1379,6 +1404,9 @@ function NuevaCotizacionPageContent() {
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
               onSistemaChange: pasoDosAgregarGrupoMovil.updateSistema,
               onConfiguracionChange: pasoDosAgregarGrupoMovil.updateConfiguracion,
+              onSheetSchemeChange: pasoDosAgregarGrupoMovil.updateSheetScheme,
+              onSheetVariantChange: pasoDosAgregarGrupoMovil.updateSheetVariant,
+              onCustomSchemeDescriptionChange: pasoDosAgregarGrupoMovil.updateCustomSchemeDescription,
               onVidrioChange: pasoDosAgregarGrupoMovil.updateVidrio,
               onAnchoChange: pasoDosAgregarGrupoMovil.updateAncho,
               onAltoChange: pasoDosAgregarGrupoMovil.updateAlto,
@@ -1428,6 +1456,9 @@ function NuevaCotizacionPageContent() {
             onCustomQuantityChange: pasoDosAgregarGrupo.updateCustomQuantity,
             onMaterialChange: pasoDosAgregarGrupo.updateMaterial,
             onSistemaChange: pasoDosAgregarGrupo.updateSistema,
+            onSheetSchemeChange: pasoDosAgregarGrupo.updateSheetScheme,
+            onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,
+            onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,

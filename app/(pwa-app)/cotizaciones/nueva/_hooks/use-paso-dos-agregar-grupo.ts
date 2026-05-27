@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ALUMINUM_COLOR_OPTIONS,
   buildGlassValue,
+  buildCommercialComponentDisplayName,
+  buildSheetSchemeLabel,
   buildSuggestedComponentForm,
   GLASS_OPTIONS,
   getComponentTypeLabelForBatch,
@@ -12,6 +14,7 @@ import {
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
   normalizeSearchValue,
+  shouldShowSheetSchemeForComponent,
   syncTemplatePricingInComponentForm,
   type ComponentFormState,
   type PreferredProvider,
@@ -48,6 +51,10 @@ export type PasoDosGrupoDraft = {
   colorHex: string;
   sistema: string;
   configuracion: string;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
   vidrio: string;
   lineTemplateId: string;
   referencia: string;
@@ -207,6 +214,22 @@ export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
   const cantidad = Math.max(1, draft.cantidad);
   const subtipo = getComponentTypeLabelForBatch(draft.subtipo, cantidad);
   const systemLabel = composeComponentReference(draft.sistema, draft.configuracion);
+  const sheetLabel = buildSheetSchemeLabel(draft);
+  const baseName = buildCommercialComponentDisplayName({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+    sheetScheme: draft.sheetScheme,
+    sheetVariant: draft.sheetVariant,
+    customSchemeDescription: draft.customSchemeDescription,
+    isCustomScheme: draft.isCustomScheme,
+  });
+
+  if (
+    shouldShowSheetSchemeForComponent({ tipo: draft.subtipo, sistema: draft.sistema }) &&
+    sheetLabel
+  ) {
+    return `${cantidad} ${baseName} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
+  }
 
   return `${cantidad} ${subtipo} ${systemLabel.toLowerCase()} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
 }
@@ -245,6 +268,10 @@ export function createInitialPasoDosGrupoDraft({
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
     sistema: seedForm?.sistema?.trim() || referenceParts.sistema || systemOptions[0] || "",
     configuracion: seedForm?.configuracion?.trim() || referenceParts.configuracion,
+    sheetScheme: seedForm?.sheetScheme ?? "",
+    sheetVariant: seedForm?.sheetVariant ?? "",
+    customSchemeDescription: seedForm?.customSchemeDescription ?? "",
+    isCustomScheme: seedForm?.isCustomScheme ?? false,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     referencia,
@@ -277,6 +304,10 @@ export function buildPasoDosGrupoComponentForm({
       referencia: composeComponentReference(draft.sistema, draft.configuracion),
       sistema: draft.sistema,
       configuracion: draft.configuracion,
+      sheetScheme: draft.sheetScheme,
+      sheetVariant: draft.sheetVariant,
+      customSchemeDescription: draft.customSchemeDescription,
+      isCustomScheme: draft.isCustomScheme,
       pricingMode: draft.pricingMode,
       vidrio: draft.vidrio,
       ancho: draft.ancho,
@@ -298,6 +329,10 @@ export function buildPasoDosGrupoComponentForm({
       composeComponentReference(draft.sistema, draft.configuracion),
     sistema: draft.sistema,
     configuracion: draft.configuracion,
+    sheetScheme: draft.sheetScheme,
+    sheetVariant: draft.sheetVariant,
+    customSchemeDescription: draft.customSchemeDescription,
+    isCustomScheme: draft.isCustomScheme,
     lineTemplateId: draft.lineTemplateId,
     pricingMode: draft.pricingMode,
     vidrio: draft.vidrio,
@@ -337,6 +372,10 @@ export function buildPasoDosGrupoSelectionPatch({
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
     sistema: systemOptions[0] || "",
     configuracion: configurationOptions[0] || "",
+    sheetScheme: "",
+    sheetVariant: "",
+    customSchemeDescription: "",
+    isCustomScheme: false,
     vidrio: suggestedForm.vidrio,
   } satisfies Pick<
     PasoDosGrupoDraft,
@@ -347,6 +386,10 @@ export function buildPasoDosGrupoSelectionPatch({
     | "colorHex"
     | "sistema"
     | "configuracion"
+    | "sheetScheme"
+    | "sheetVariant"
+    | "customSchemeDescription"
+    | "isCustomScheme"
     | "vidrio"
   >;
 }
@@ -508,11 +551,45 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateSistema = (sistema: string) => {
-    setDraft((current) => ({ ...current, sistema }));
+    setDraft((current) => ({
+      ...current,
+      sistema,
+      ...(shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema })
+        ? {}
+        : {
+            sheetScheme: "",
+            sheetVariant: "",
+            customSchemeDescription: "",
+            isCustomScheme: false,
+          }),
+    }));
   };
 
   const updateConfiguracion = (configuracion: string) => {
     setDraft((current) => ({ ...current, configuracion }));
+  };
+
+  const updateSheetScheme = (sheetScheme: string) => {
+    setDraft((current) => ({
+      ...current,
+      sheetScheme,
+      sheetVariant: "",
+      customSchemeDescription: sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
+      isCustomScheme: sheetScheme === "Personalizado",
+    }));
+  };
+
+  const updateSheetVariant = (sheetVariant: string) => {
+    setDraft((current) => ({
+      ...current,
+      sheetVariant,
+      customSchemeDescription: sheetVariant === "Otro" ? current.customSchemeDescription : "",
+      isCustomScheme: current.sheetScheme === "Personalizado" || sheetVariant === "Otro",
+    }));
+  };
+
+  const updateCustomSchemeDescription = (customSchemeDescription: string) => {
+    setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
   const updateVidrio = (vidrio: string) => {
@@ -568,6 +645,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateColorHex,
     updateSistema,
     updateConfiguracion,
+    updateSheetScheme,
+    updateSheetVariant,
+    updateCustomSchemeDescription,
     updateVidrio,
     updateAncho,
     updateAlto,

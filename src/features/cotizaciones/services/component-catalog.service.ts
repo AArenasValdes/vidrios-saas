@@ -149,6 +149,7 @@ function normalizeCatalogText(value: string) {
 
 const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   [normalizeCatalogText("Pa\u00c3\u00b1o Fijo")]: normalizeCatalogText("Paño fijo"),
+  [normalizeCatalogText("Fijo")]: normalizeCatalogText("Ventana 1 hoja"),
   "cierre logia balcon": "cierre terraza logia",
   "cierre terraza logia balcon": "cierre terraza logia",
   otro: "otro trabajo especial",

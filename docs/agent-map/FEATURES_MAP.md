@@ -250,7 +250,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido y calculadora secundaria. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido, calculadora secundaria y esquema comercial de hojas para Ventana + Corredera sin afectar precio. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
 - **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---

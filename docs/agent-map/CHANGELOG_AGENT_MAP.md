@@ -4,6 +4,23 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-27 - Esquema comercial de hojas en cotizaciones
+
+### Resumen
+
+Se agrego descriptor comercial de hojas para `Ventana + Corredera` en Paso 2 / Agregar de `/cotizaciones/nueva`. El esquema modifica nombre visible y metadata de presentacion del item, pero no cambia calculo de precio por linea, m2, minimo, redondeo ni override manual.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/cotizaciones/new-quote/workflow-ui.ts` | Helpers de esquema y nombre comercial |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/` | Chips mobile-first para esquema de hojas |
+| `src/utils/cotizacion-item-presentation.ts` | Metadata comercial extendida en `observaciones` |
+| `docs/agent-map/FEATURES_MAP.md` | Consideracion UX actualizada |
+
+---
+
 ## 2026-05-25 - Estabilizacion piloto: rate limit externo, push resiliente y baseline limpio
 
 ### Resumen
