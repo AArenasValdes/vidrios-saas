@@ -224,7 +224,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Ej: 3 hojas, la del medio fija"), {
+    fireEvent.change(screen.getByPlaceholderText("Ej: fijo superior + lateral"), {
       target: { value: "3 hojas, la del medio fija" },
     });
     expect(onCustomSchemeDescriptionChange).toHaveBeenCalledWith(

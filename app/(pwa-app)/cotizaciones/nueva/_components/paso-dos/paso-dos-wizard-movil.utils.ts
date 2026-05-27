@@ -5,7 +5,10 @@ import {
 } from "@/utils/repair-broken-text";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
-import { buildCommercialComponentDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  buildCommercialComponentDisplayName,
+  shouldShowSystemSelectionForComponent,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 
 const VIDRIO_SEARCH_ALIASES: Record<string, string> = {
   inc: "incoloro",
@@ -166,7 +169,7 @@ export function getVisibleSubtypeLabel(subtipo: string) {
   const cleanSubtype = repairBrokenText(subtipo).trim();
 
   if (cleanSubtype.toLowerCase() === "ventana 1 hoja") {
-    return "Ventana fija";
+    return "Paño fijo";
   }
 
   return cleanSubtype;
@@ -209,7 +212,9 @@ export function getGroupStatusTitle(
     })}`;
   }
 
-  return systemLabel ? `${cantidad} ${typeLabel} - ${systemLabel}` : `${cantidad} ${typeLabel}`;
+  return systemLabel && shouldShowSystemSelectionForComponent(subtipo)
+    ? `${cantidad} ${typeLabel} - ${systemLabel}`
+    : `${cantidad} ${typeLabel}`;
 }
 
 export function getItemType(item: CotizacionWorkflowItem) {

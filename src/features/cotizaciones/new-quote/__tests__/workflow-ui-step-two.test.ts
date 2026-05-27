@@ -2,7 +2,10 @@ import {
   applyLineTemplateToComponentForm,
   applyQuickEditDraftStatesToItems,
   buildItemFromForm,
+  getSheetSchemeOptions,
+  getSheetVariantOptions,
   buildQuickEditDraft,
+  shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
 } from "../workflow-ui";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
@@ -235,5 +238,129 @@ describe("workflow-ui paso 2", () => {
         isCustomScheme: false,
       })
     );
+  });
+
+  it("debe exponer composiciones comerciales segun sistema sin abrir variantes tecnicas", () => {
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Corredera" })).toEqual([
+      "2 hojas",
+      "3 hojas",
+      "4 hojas",
+      "Personalizado",
+    ]);
+    expect(getSheetVariantOptions("4 hojas", { tipo: "Ventana", sistema: "Corredera" })).toEqual([
+      "2 fijas + 2 móviles",
+      "Todas móviles",
+      "Laterales fijas + centrales móviles",
+      "Otro",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Abatible" })).toEqual([
+      "1 hoja",
+      "2 hojas",
+      "1 abatible + 1 fija",
+      "Personalizado",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Oscilobatiente" })).toEqual([
+      "1 hoja",
+      "2 hojas",
+      "Oscilobatiente + fijo",
+      "Personalizado",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Proyectante" })).toEqual([
+      "1 hoja",
+      "Proyectante + fijo",
+      "2 proyectantes",
+      "Personalizado",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Paño fijo", sistema: "Fijo" })).toEqual([
+      "1 paño",
+      "2 paños",
+      "3 paños",
+      "Personalizado",
+    ]);
+    expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
+  });
+
+  it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {
+    const item = buildItemFromForm(
+      {
+        codigo: "V2",
+        tipo: "Ventana",
+        hojasBase: 2,
+        material: "Aluminio",
+        referencia: "L25",
+        sistema: "Proyectante",
+        configuracion: "",
+        sheetScheme: "Proyectante + fijo",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        lineTemplateId: "tpl-25",
+        pricingMode: "precio_directo",
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "",
+        descripcion: "",
+        ancho: "1200",
+        alto: "1000",
+        cantidad: "1",
+        costoProveedorUnitario: "180000",
+        margenPct: "0",
+        precioPorM2: "150000",
+        minimoCobrable: "0",
+        redondeoPrecio: "1000",
+        precioPlantillaSugerido: "180000",
+        precioAjustadoManual: false,
+        origenPrecio: "plantilla",
+        observaciones: "",
+        colorHex: "#a8a8a8",
+        loteCantidad: "1",
+      },
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Ventana proyectante + fijo");
+    expect(item.precioUnitario).toBe(180000);
+  });
+
+  it("debe generar nombre comercial para paño fijo sin sistema de apertura visible", () => {
+    const item = buildItemFromForm(
+      {
+        codigo: "PF1",
+        tipo: "Paño fijo",
+        hojasBase: 1,
+        material: "Aluminio",
+        referencia: "L25",
+        sistema: "Fijo",
+        configuracion: "",
+        sheetScheme: "2 paños",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        lineTemplateId: "tpl-25",
+        pricingMode: "precio_directo",
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "",
+        descripcion: "",
+        ancho: "1200",
+        alto: "1000",
+        cantidad: "1",
+        costoProveedorUnitario: "180000",
+        margenPct: "0",
+        precioPorM2: "150000",
+        minimoCobrable: "0",
+        redondeoPrecio: "1000",
+        precioPlantillaSugerido: "180000",
+        precioAjustadoManual: false,
+        origenPrecio: "plantilla",
+        observaciones: "",
+        colorHex: "#a8a8a8",
+        loteCantidad: "1",
+      },
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Paño fijo 2 paños");
+    expect(item.precioUnitario).toBe(180000);
   });
 });

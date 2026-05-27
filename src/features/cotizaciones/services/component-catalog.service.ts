@@ -28,11 +28,6 @@ export const COMPONENT_CATALOG = [
         sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
       },
       {
-        tipo: "Ventana 1 hoja",
-        descripcion: "Ventanas de aluminio o PVC de una sola hoja.",
-        sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
-      },
-      {
         tipo: "Puerta",
         descripcion: "Puertas vidriadas de uso comun.",
         sistemas: ["Corredera", "Abatible", "Pivotante"],
@@ -149,7 +144,9 @@ function normalizeCatalogText(value: string) {
 
 const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   [normalizeCatalogText("Pa\u00c3\u00b1o Fijo")]: normalizeCatalogText("Paño fijo"),
-  [normalizeCatalogText("Fijo")]: normalizeCatalogText("Ventana 1 hoja"),
+  [normalizeCatalogText("Fijo")]: normalizeCatalogText("Paño fijo"),
+  [normalizeCatalogText("Ventana 1 hoja")]: normalizeCatalogText("Paño fijo"),
+  [normalizeCatalogText("Ventana fija")]: normalizeCatalogText("Paño fijo"),
   "cierre logia balcon": "cierre terraza logia",
   "cierre terraza logia balcon": "cierre terraza logia",
   otro: "otro trabajo especial",
@@ -175,6 +172,10 @@ function findCatalogItem(tipo: string): ComponentCatalogItem | null {
   }
 
   return null;
+}
+
+export function resolveCanonicalComponentType(tipo: string) {
+  return findCatalogItem(tipo)?.tipo ?? tipo;
 }
 
 export function getComponentItemsForCategory(categoria: ComponentCategoryTitle) {
@@ -216,12 +217,17 @@ export function getDefaultConfigurationForComponent(tipo: string) {
 
 export function getBaseLeafCountForComponent(tipo: string): ComponentLeafCount | null {
   const normalizedTipo = normalizeComponentKey(tipo);
+  const rawNormalizedTipo = normalizeCatalogText(tipo);
 
   if (normalizedTipo === normalizeComponentKey("Ventana")) {
     return 2;
   }
 
-  if (normalizedTipo === normalizeComponentKey("Ventana 1 hoja")) {
+  if (
+    normalizedTipo === normalizeComponentKey("Paño fijo") ||
+    rawNormalizedTipo === normalizeCatalogText("Ventana 1 hoja") ||
+    rawNormalizedTipo === normalizeCatalogText("Ventana fija")
+  ) {
     return 1;
   }
 

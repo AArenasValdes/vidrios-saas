@@ -9,12 +9,14 @@ import {
   buildSheetSchemeLabel,
   buildSuggestedComponentForm,
   GLASS_OPTIONS,
+  getSheetSchemeOptions,
   getComponentTypeLabelForBatch,
   normalizeCurrencyInput,
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
   normalizeSearchValue,
   shouldShowSheetSchemeForComponent,
+  shouldShowSystemSelectionForComponent,
   syncTemplatePricingInComponentForm,
   type ComponentFormState,
   type PreferredProvider,
@@ -32,6 +34,7 @@ import {
   getConfigurationOptionsForComponent,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
+  resolveCanonicalComponentType,
   resolveComponentCategory,
   splitComponentReference,
   type ComponentCategoryTitle,
@@ -231,7 +234,11 @@ export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
     return `${cantidad} ${baseName} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
   }
 
-  return `${cantidad} ${subtipo} ${systemLabel.toLowerCase()} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
+  const systemSegment = shouldShowSystemSelectionForComponent(draft.subtipo)
+    ? ` ${systemLabel.toLowerCase()}`
+    : "";
+
+  return `${cantidad} ${subtipo}${systemSegment} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
 }
 
 export function createInitialPasoDosGrupoDraft({
@@ -240,7 +247,9 @@ export function createInitialPasoDosGrupoDraft({
   provider,
   seedForm,
 }: CreateInitialDraftParams): PasoDosGrupoDraft {
-  const seededSubtype = seedForm?.tipo?.trim() || getSubtypeOptionsForCategory("Aberturas")[0];
+  const seededSubtype = resolveCanonicalComponentType(
+    seedForm?.tipo?.trim() || getSubtypeOptionsForCategory("Aberturas")[0]
+  );
   const categoria = resolveDefaultCategory(seededSubtype);
   const suggestedForm = buildSuggestedComponentForm({
     items,
@@ -551,18 +560,25 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateSistema = (sistema: string) => {
-    setDraft((current) => ({
-      ...current,
-      sistema,
-      ...(shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema })
-        ? {}
-        : {
-            sheetScheme: "",
-            sheetVariant: "",
-            customSchemeDescription: "",
-            isCustomScheme: false,
-          }),
-    }));
+    setDraft((current) => {
+      const sheetSchemeOptions = getSheetSchemeOptions({ tipo: current.subtipo, sistema });
+      const shouldKeepComposition =
+        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
+        sheetSchemeOptions.includes(current.sheetScheme);
+
+      return {
+        ...current,
+        sistema,
+        ...(shouldKeepComposition
+          ? {}
+          : {
+              sheetScheme: "",
+              sheetVariant: "",
+              customSchemeDescription: "",
+              isCustomScheme: false,
+            }),
+      };
+    });
   };
 
   const updateConfiguracion = (configuracion: string) => {

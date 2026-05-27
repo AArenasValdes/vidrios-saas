@@ -25,6 +25,7 @@ import {
 import {
   COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS,
   getBaseLeafCountForComponent,
+  resolveCanonicalComponentType,
   splitComponentReference,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
@@ -136,8 +137,16 @@ export const SHEET_SCHEME_OPTIONS = ["2 hojas", "3 hojas", "4 hojas", "Personali
 export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
   "2 hojas": ["1 fija + 1 móvil", "2 móviles", "Otro"],
   "3 hojas": ["Fija central", "Fijo lateral + 2 móviles", "3 móviles", "Otro"],
-  "4 hojas": ["Todas móviles", "Laterales fijas + centrales móviles", "2 fijas + 2 móviles", "Otro"],
+  "4 hojas": ["2 fijas + 2 móviles", "Todas móviles", "Laterales fijas + centrales móviles", "Otro"],
 };
+
+const COMPOSITION_OPTIONS_BY_SYSTEM: Record<string, readonly string[]> = {
+  abatible: ["1 hoja", "2 hojas", "1 abatible + 1 fija", "Personalizado"],
+  oscilobatiente: ["1 hoja", "2 hojas", "Oscilobatiente + fijo", "Personalizado"],
+  proyectante: ["1 hoja", "Proyectante + fijo", "2 proyectantes", "Personalizado"],
+};
+
+const FIXED_PANE_COMPOSITION_OPTIONS = ["1 paño", "2 paños", "3 paños", "Personalizado"] as const;
 
 export const ALUMINUM_COLOR_OPTIONS = [
   { label: "Aluminio mate", hex: "#a8a8a8" },
@@ -471,13 +480,68 @@ export function shouldShowSheetSchemeForComponent(input: {
   tipo: string;
   sistema?: string | null;
 }) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+
+  if (tipo === "pano fijo" || tipo === "paño fijo") {
+    return true;
+  }
+
   return (
-    normalizeSearchValue(input.tipo) === "ventana" &&
-    normalizeSearchValue(input.sistema ?? "") === "corredera"
+    tipo === "ventana" &&
+    ["corredera", "abatible", "oscilobatiente", "proyectante"].includes(sistema)
   );
 }
 
-export function getSheetVariantOptions(sheetScheme: string) {
+export function shouldShowSystemSelectionForComponent(tipo: string) {
+  const normalizedTipo = normalizeSearchValue(tipo);
+
+  return normalizedTipo !== "pano fijo" && normalizedTipo !== "paño fijo";
+}
+
+export function getSheetSchemeOptions(input: { tipo: string; sistema?: string | null }) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+
+  if (tipo === "pano fijo" || tipo === "paño fijo") {
+    return FIXED_PANE_COMPOSITION_OPTIONS;
+  }
+
+  if (tipo === "ventana" && sistema === "corredera") {
+    return SHEET_SCHEME_OPTIONS;
+  }
+
+  if (tipo === "ventana") {
+    return COMPOSITION_OPTIONS_BY_SYSTEM[sistema] ?? [];
+  }
+
+  return [];
+}
+
+export function getCompositionSectionLabel(input: { tipo: string; sistema?: string | null }) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+
+  if (tipo === "pano fijo" || tipo === "paño fijo") {
+    return "Composición de paños";
+  }
+
+  return sistema === "corredera" ? "Esquema de hojas" : "Composición";
+}
+
+export function getSheetVariantOptions(
+  sheetScheme: string,
+  input?: { tipo?: string; sistema?: string | null }
+) {
+  if (input) {
+    const tipo = normalizeSearchValue(input.tipo ?? "");
+    const sistema = normalizeSearchValue(input.sistema ?? "");
+
+    if (!(tipo === "ventana" && sistema === "corredera")) {
+      return [];
+    }
+  }
+
   return SHEET_VARIANT_OPTIONS[sheetScheme] ?? [];
 }
 
@@ -522,15 +586,32 @@ export function buildCommercialComponentDisplayName(
 ) {
   const tipo = form.tipo.trim() || "Componente";
   const sistema = form.sistema?.trim() ?? "";
-  const base = sistema ? `${tipo} ${sistema.toLowerCase()}` : tipo;
+  const normalizedTipo = normalizeSearchValue(tipo);
+  const normalizedSistema = normalizeSearchValue(sistema);
+  const scheme = form.sheetScheme.trim();
+  const normalizedScheme = normalizeSearchValue(scheme);
+  const shouldAvoidDuplicatedSystem =
+    normalizedTipo === "ventana" &&
+    Boolean(normalizedSistema) &&
+    normalizedScheme.startsWith(normalizedSistema);
+  const base =
+    sistema && !shouldAvoidDuplicatedSystem && shouldShowSystemSelectionForComponent(tipo)
+      ? `${tipo} ${sistema.toLowerCase()}`
+      : tipo;
 
   if (!shouldShowSheetSchemeForComponent({ tipo, sistema })) {
     return base;
   }
 
-  const schemeLabel = buildSheetSchemeLabel(form);
+  let schemeLabel = buildSheetSchemeLabel(form);
 
-  return schemeLabel ? `${base} ${schemeLabel}` : base;
+  if (normalizeSearchValue(tipo) === "pano fijo" && schemeLabel.startsWith("personalizada")) {
+    schemeLabel = schemeLabel.replace(/^personalizada/, "personalizado");
+  }
+
+  const displaySchemeLabel = shouldAvoidDuplicatedSystem ? lowerFirst(schemeLabel) : schemeLabel;
+
+  return displaySchemeLabel ? `${base} ${displaySchemeLabel}` : base;
 }
 
 function normalizeComparableComponentText(value: string) {
@@ -958,6 +1039,7 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
 }
 
 export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
+  const canonicalTipo = resolveCanonicalComponentType(item.tipo);
   const {
     colorHex,
     referencia,
@@ -983,13 +1065,13 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
 
   const referenceParts = splitComponentReference(
     referencia || item.lineaComercial || "",
-    item.tipo
+    canonicalTipo
   );
   const resolvedSystem = sistema || referenceParts.sistema;
 
   return {
     codigo: item.codigo,
-    tipo: item.tipo,
+    tipo: canonicalTipo,
     hojasBase: hojasBase ?? resolveLegacyWindowLeafCount(item.tipo, resolvedSystem),
     material,
     referencia: referencia || item.lineaComercial || "",
@@ -1067,8 +1149,15 @@ export function buildItemFromForm(
     tipo: syncedForm.tipo,
     sistema,
   });
-  const sheetVariantOptions = getSheetVariantOptions(syncedForm.sheetScheme);
-  const sheetScheme = sheetSchemeEnabled ? syncedForm.sheetScheme.trim() : "";
+  const sheetSchemeOptions = getSheetSchemeOptions({ tipo: syncedForm.tipo, sistema });
+  const sheetVariantOptions = getSheetVariantOptions(syncedForm.sheetScheme, {
+    tipo: syncedForm.tipo,
+    sistema,
+  });
+  const sheetScheme =
+    sheetSchemeEnabled && sheetSchemeOptions.includes(syncedForm.sheetScheme)
+      ? syncedForm.sheetScheme.trim()
+      : "";
   const sheetVariant =
     sheetSchemeEnabled && sheetVariantOptions.includes(syncedForm.sheetVariant)
       ? syncedForm.sheetVariant.trim()

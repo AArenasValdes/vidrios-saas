@@ -5,12 +5,13 @@ import { LuPencil, LuPlus } from "react-icons/lu";
 import {
   CLP,
   COMPONENT_TYPE_GROUPS,
+  getCompositionSectionLabel,
+  getSheetSchemeOptions,
   getSheetVariantOptions,
   MARGIN_SELECT_OPTIONS,
   MATERIAL_OPTIONS,
   MAX_COMPONENTS_PER_QUOTE,
   requiresCustomSheetDescription,
-  SHEET_SCHEME_OPTIONS,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
@@ -66,7 +67,18 @@ export function PasoDosFormularioBloqueConfiguracion({
     tipo: componentForm.tipo,
     sistema: componentForm.sistema,
   });
-  const sheetVariantOptions = getSheetVariantOptions(componentForm.sheetScheme);
+  const sheetSchemeOptions = getSheetSchemeOptions({
+    tipo: componentForm.tipo,
+    sistema: componentForm.sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(componentForm.sheetScheme, {
+    tipo: componentForm.tipo,
+    sistema: componentForm.sistema,
+  });
+  const compositionSectionLabel = getCompositionSectionLabel({
+    tipo: componentForm.tipo,
+    sistema: componentForm.sistema,
+  });
   const showCustomSchemeDescription = requiresCustomSheetDescription({
     sheetScheme: componentForm.sheetScheme,
     sheetVariant: componentForm.sheetVariant,
@@ -393,9 +405,9 @@ export function PasoDosFormularioBloqueConfiguracion({
 
         {showSheetScheme ? (
           <div className={`${s.field} ${s.fieldFull}`}>
-            <span className={s.label}>Esquema de hojas</span>
-            <div className={s.batchCountRow} role="group" aria-label="Esquema de hojas">
-              {SHEET_SCHEME_OPTIONS.map((option) => (
+            <span className={s.label}>{compositionSectionLabel}</span>
+            <div className={s.batchCountRow} role="group" aria-label={compositionSectionLabel}>
+              {sheetSchemeOptions.map((option) => (
                 <button
                   key={option}
                   className={`${s.batchCountButton} ${
@@ -428,11 +440,11 @@ export function PasoDosFormularioBloqueConfiguracion({
 
             {showCustomSchemeDescription ? (
               <label className={s.field}>
-                <span className={s.label}>Describe el esquema</span>
+                <span className={s.label}>Describe la composición</span>
                 <input
                   className={s.input}
                   maxLength={120}
-                  placeholder="Ej: 3 hojas, la del medio fija"
+                  placeholder="Ej: fijo superior + lateral"
                   value={componentForm.customSchemeDescription}
                   onChange={(event) =>
                     onComponentChange("customSchemeDescription", event.target.value)

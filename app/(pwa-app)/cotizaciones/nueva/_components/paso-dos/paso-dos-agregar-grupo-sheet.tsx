@@ -4,10 +4,12 @@ import { LuChevronLeft, LuPlus, LuX } from "react-icons/lu";
 
 import {
   COMPONENT_TYPE_GROUPS,
+  getCompositionSectionLabel,
+  getSheetSchemeOptions,
   getSheetVariantOptions,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
-  SHEET_SCHEME_OPTIONS,
+  shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type {
@@ -118,7 +120,19 @@ export function PasoDosAgregarGrupoSheet({
     tipo: draft.subtipo,
     sistema: draft.sistema,
   });
-  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme);
+  const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const sheetSchemeOptions = getSheetSchemeOptions({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme, {
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const compositionSectionLabel = getCompositionSectionLabel({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
   const showCustomSchemeDescription = requiresCustomSheetDescription({
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
@@ -283,6 +297,7 @@ export function PasoDosAgregarGrupoSheet({
                 </div>
               </section>
 
+              {showSystemSelection ? (
               <div className={s.groupSheetInlineField}>
                 <label className={s.label} htmlFor="grupo-sistema">
                   Tipo de sistema
@@ -302,16 +317,17 @@ export function PasoDosAgregarGrupoSheet({
                   </select>
                 </div>
               </div>
+              ) : null}
 
               {showSheetScheme ? (
                 <section className={s.formSection}>
                   <div className={s.formSectionHead}>
-                    <span className={s.formSectionEyebrow}>Esquema de hojas</span>
-                    <strong>Describe la composicion</strong>
+                    <span className={s.formSectionEyebrow}>{compositionSectionLabel}</span>
+                    <strong>Describe la composición</strong>
                   </div>
 
-                  <div className={s.batchCountRow} role="group" aria-label="Esquema de hojas">
-                    {SHEET_SCHEME_OPTIONS.map((option) => (
+                  <div className={s.batchCountRow} role="group" aria-label={compositionSectionLabel}>
+                    {sheetSchemeOptions.map((option) => (
                       <button
                         key={option}
                         className={`${s.batchCountButton} ${
@@ -344,11 +360,11 @@ export function PasoDosAgregarGrupoSheet({
 
                   {showCustomSchemeDescription ? (
                     <label className={s.field}>
-                      <span className={s.label}>Describe el esquema</span>
+                      <span className={s.label}>Describe la composición</span>
                       <input
                         className={s.input}
                         maxLength={120}
-                        placeholder="Ej: 3 hojas, la del medio fija"
+                        placeholder="Ej: fijo superior + lateral"
                         value={draft.customSchemeDescription}
                         onChange={(event) => onCustomSchemeDescriptionChange(event.target.value)}
                       />
@@ -403,13 +419,15 @@ export function PasoDosAgregarGrupoSheet({
                   <dt>Material</dt>
                   <dd>{draft.material}</dd>
                 </div>
+                {showSystemSelection ? (
                 <div className={s.groupSheetSummaryRow}>
                   <dt>Sistema</dt>
                   <dd>{draft.sistema}</dd>
                 </div>
+                ) : null}
                 {draft.sheetScheme ? (
                   <div className={s.groupSheetSummaryRow}>
-                    <dt>Esquema</dt>
+                    <dt>Composición</dt>
                     <dd>
                       {[draft.sheetScheme, draft.sheetVariant]
                         .filter(Boolean)

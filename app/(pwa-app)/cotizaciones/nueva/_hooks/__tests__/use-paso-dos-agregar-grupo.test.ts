@@ -4,6 +4,7 @@ import {
   buildPasoDosGrupoSummary,
   createInitialPasoDosGrupoDraft,
   getConfigurationOptionsForSubtype,
+  getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
 } from "../use-paso-dos-agregar-grupo";
 import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -216,18 +217,19 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
   });
 
   it("debe ofrecer sistemas concretos por subtipo", () => {
+    expect(getSubtypeOptionsForCategory("Aberturas")).toEqual([
+      "Ventana",
+      "Puerta",
+      "Paño fijo",
+      "Shower door",
+    ]);
     expect(getSystemOptionsForSubtype("Ventana")).toEqual([
       "Corredera",
       "Proyectante",
       "Abatible",
       "Oscilobatiente",
     ]);
-    expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual([
-      "Corredera",
-      "Proyectante",
-      "Abatible",
-      "Oscilobatiente",
-    ]);
+    expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual(["Fijo"]);
   });
 
   it("debe separar sistema y configuracion para componentes con variantes", () => {

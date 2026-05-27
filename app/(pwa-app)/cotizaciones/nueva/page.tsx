@@ -46,6 +46,7 @@ import {
   formatCurrencyInput,
   formatDraftPhoneValue,
   getRemainingComponentSlots,
+  getSheetSchemeOptions,
   mapItemToForm,
   normalizeCurrencyInput,
   scrollPageToTop,
@@ -510,7 +511,14 @@ function NuevaCotizacionPageContent() {
       if (key === "tipo" || key === "sistema") {
         const nextTipo = key === "tipo" ? String(value) : next.tipo;
         const nextSistema = key === "sistema" ? String(value) : next.sistema;
-        if (!shouldShowSheetSchemeForComponent({ tipo: nextTipo, sistema: nextSistema })) {
+        const sheetSchemeOptions = getSheetSchemeOptions({
+          tipo: nextTipo,
+          sistema: nextSistema,
+        });
+        if (
+          !shouldShowSheetSchemeForComponent({ tipo: nextTipo, sistema: nextSistema }) ||
+          !sheetSchemeOptions.includes(next.sheetScheme)
+        ) {
           next.sheetScheme = "";
           next.sheetVariant = "";
           next.customSchemeDescription = "";

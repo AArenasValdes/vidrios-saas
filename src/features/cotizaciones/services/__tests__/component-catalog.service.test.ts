@@ -11,7 +11,6 @@ describe("component-catalog service", () => {
   it("debe exponer categorias profesionales para el flujo movil", () => {
     expect(getComponentTypeOptionsForCategory("Aberturas")).toEqual([
       "Ventana",
-      "Ventana 1 hoja",
       "Puerta",
       "Paño fijo",
       "Shower door",
@@ -51,12 +50,7 @@ describe("component-catalog service", () => {
       "Abatible",
       "Oscilobatiente",
     ]);
-    expect(getSystemOptionsForComponent("Ventana 1 hoja")).toEqual([
-      "Corredera",
-      "Proyectante",
-      "Abatible",
-      "Oscilobatiente",
-    ]);
+    expect(getSystemOptionsForComponent("Ventana 1 hoja")).toEqual(["Fijo"]);
 
     expect(splitComponentReference("Oscilobatiente", "Ventana")).toEqual({
       sistema: "Oscilobatiente",
@@ -64,6 +58,7 @@ describe("component-catalog service", () => {
     });
     expect(getBaseLeafCountForComponent("Ventana")).toBe(2);
     expect(getBaseLeafCountForComponent("Ventana 1 hoja")).toBe(1);
+    expect(getBaseLeafCountForComponent("Paño fijo")).toBe(1);
   });
 
   it("debe corregir cierre terraza para no usar a medida como sistema", () => {
@@ -89,6 +84,9 @@ describe("component-catalog service", () => {
     expect(resolveComponentCategory("Pano Fijo")).toBe("Aberturas");
     expect(resolveComponentCategory("PaÃƒÂ±o Fijo")).toBe("Aberturas");
     expect(getSystemOptionsForComponent("Pano Fijo")).toEqual(["Fijo"]);
+    expect(resolveComponentCategory("Ventana fija")).toBe("Aberturas");
+    expect(getSystemOptionsForComponent("Ventana fija")).toEqual(["Fijo"]);
     expect(getComponentTypeOptionsForCategory("Aberturas")).toContain("Paño fijo");
+    expect(getComponentTypeOptionsForCategory("Aberturas")).not.toContain("Ventana 1 hoja");
   });
 });

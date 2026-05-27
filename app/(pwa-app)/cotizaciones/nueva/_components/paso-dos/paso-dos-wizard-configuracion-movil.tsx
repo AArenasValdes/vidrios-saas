@@ -9,10 +9,12 @@ import type {
   CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  getCompositionSectionLabel,
+  getSheetSchemeOptions,
   normalizeCurrencyInput,
   getSheetVariantOptions,
   requiresCustomSheetDescription,
-  SHEET_SCHEME_OPTIONS,
+  shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -153,7 +155,19 @@ export function PasoDosWizardConfiguracionMovil({
     tipo: draft.subtipo,
     sistema: draft.sistema,
   });
-  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme);
+  const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const sheetSchemeOptions = getSheetSchemeOptions({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme, {
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
+  const compositionSectionLabel = getCompositionSectionLabel({
+    tipo: draft.subtipo,
+    sistema: draft.sistema,
+  });
   const showCustomSchemeDescription = requiresCustomSheetDescription({
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
@@ -260,6 +274,7 @@ export function PasoDosWizardConfiguracionMovil({
         <span>Mismas medidas, mismo sistema y mismo valor inicial.</span>
       </div>
 
+      {showSystemSelection ? (
       <div className={s.stepTwoMobileBlockHero}>
         <div className={s.stepTwoMobileBlockLabel}>Sistema</div>
         <div className={s.stepTwoMobileChoiceChips}>
@@ -285,6 +300,7 @@ export function PasoDosWizardConfiguracionMovil({
           </button>
         ) : null}
       </div>
+      ) : null}
 
       {displayConfigurationOptions.length > 0 ? (
         <div className={s.stepTwoMobileBlockSecundario}>
@@ -316,9 +332,9 @@ export function PasoDosWizardConfiguracionMovil({
 
       {showSheetScheme ? (
         <div className={s.stepTwoMobileBlockSecundario}>
-          <div className={s.stepTwoMobileBlockLabel}>Esquema de hojas</div>
+          <div className={s.stepTwoMobileBlockLabel}>{compositionSectionLabel}</div>
           <div className={s.stepTwoMobileChoiceChips}>
-            {SHEET_SCHEME_OPTIONS.map((option) => (
+            {sheetSchemeOptions.map((option) => (
               <button
                 key={option}
                 className={`${s.stepTwoMobileChoiceChip} ${
@@ -351,11 +367,11 @@ export function PasoDosWizardConfiguracionMovil({
 
           {showCustomSchemeDescription ? (
             <label className={s.field}>
-              <span className={s.stepTwoMobileQuickLineLabel}>Describe el esquema</span>
+              <span className={s.stepTwoMobileQuickLineLabel}>Describe la composición</span>
               <input
                 className={s.stepTwoMobileQuickLineInput}
                 maxLength={120}
-                placeholder="Ej: 3 hojas, la del medio fija"
+                placeholder="Ej: fijo superior + lateral"
                 type="text"
                 value={draft.customSchemeDescription}
                 onChange={(event) => onCustomSchemeDescriptionChange(event.target.value)}

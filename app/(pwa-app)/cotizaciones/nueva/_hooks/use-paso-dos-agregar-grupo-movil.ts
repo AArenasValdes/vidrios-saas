@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
+  getSheetSchemeOptions,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
   type PreferredProvider,
@@ -236,18 +237,25 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateSistema = (sistema: string) => {
-    setDraft((current) => ({
-      ...current,
-      sistema,
-      ...(shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema })
-        ? {}
-        : {
-            sheetScheme: "",
-            sheetVariant: "",
-            customSchemeDescription: "",
-            isCustomScheme: false,
-          }),
-    }));
+    setDraft((current) => {
+      const sheetSchemeOptions = getSheetSchemeOptions({ tipo: current.subtipo, sistema });
+      const shouldKeepComposition =
+        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
+        sheetSchemeOptions.includes(current.sheetScheme);
+
+      return {
+        ...current,
+        sistema,
+        ...(shouldKeepComposition
+          ? {}
+          : {
+              sheetScheme: "",
+              sheetVariant: "",
+              customSchemeDescription: "",
+              isCustomScheme: false,
+            }),
+      };
+    });
   };
 
   const updateConfiguracion = (configuracion: string) => {
