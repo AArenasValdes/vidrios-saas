@@ -567,8 +567,8 @@ export default function CotizacionPrintPage() {
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 310,
-          maxH: 158,
+          maxW: 470,
+          maxH: 210,
           variant: "pdf",
         }),
       });
@@ -939,8 +939,8 @@ export default function CotizacionPrintPage() {
                     ancho: item.ancho,
                     alto: item.alto,
                     colorHex,
-                    maxW: 310,
-                    maxH: 158,
+                    maxW: 470,
+                    maxH: 210,
                     variant: "pdf",
                   });
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;

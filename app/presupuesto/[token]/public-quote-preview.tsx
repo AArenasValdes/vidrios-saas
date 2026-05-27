@@ -343,8 +343,8 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
-          maxW: 310,
-          maxH: 158,
+          maxW: 470,
+          maxH: 210,
           variant: "pdf",
         }),
       });
@@ -587,8 +587,8 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             ancho: item.ancho,
                             alto: item.alto,
                             colorHex,
-                            maxW: 310,
-                            maxH: 158,
+                            maxW: 470,
+                            maxH: 210,
                             variant: "pdf",
                           });
 

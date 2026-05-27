@@ -1389,10 +1389,10 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const drawH = Math.max(52, Math.round(rH * scale));
 
   const isMesa  = tipoNorm === "Mesa";
-  const dimLeft = isMesa ? 40 : 46;
-  const dimBot  = variant === "pdf" ? 24 : 42;
-  const topPad  = variant === "pdf" ? 42 : 12;
-  const rightPad = 12;
+  const dimLeft = isMesa ? 40 : variant === "pdf" ? 34 : 46;
+  const dimBot  = variant === "pdf" ? 8 : 42;
+  const topPad  = variant === "pdf" ? 24 : 12;
+  const rightPad = variant === "pdf" ? 6 : 12;
 
   const totalW  = drawW + dimLeft + rightPad;
   const totalH  = drawH + topPad + dimBot;
@@ -1422,10 +1422,17 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
       palette, variant
     );
   } else {
-    const dimY = variant === "pdf" ? originY - 12 : originY + drawH + 18;
+    const dimY = variant === "pdf" ? originY - 8 : originY + drawH + 18;
     dimensions = [
       dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
-      dimV(originX - 20, originY, drawH, formatMm(params.alto), palette, variant),
+      dimV(
+        originX - (variant === "pdf" ? 16 : 20),
+        originY,
+        drawH,
+        formatMm(params.alto),
+        palette,
+        variant
+      ),
     ].join("");
   }
 
