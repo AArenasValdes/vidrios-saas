@@ -119,7 +119,7 @@ describe("generateComponentSVG", () => {
 
     expect(svg).not.toContain("SISTEMA ESTÁNDAR");
     expect(svg).not.toContain("VISTA INTERIOR REFERENCIAL");
-    expect(svg).toContain('font-size="9.8"');
+    expect(svg).toContain('font-size="12"');
   });
 
   it("resuelve el sistema desde referencia cuando no viene sistema explícito", () => {

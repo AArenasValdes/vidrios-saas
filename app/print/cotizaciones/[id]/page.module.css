@@ -1222,7 +1222,7 @@
 
 .componentInfoColumn {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: 1fr auto;
   min-width: 0;
 }
 
@@ -1230,18 +1230,31 @@
   display: grid;
   align-content: start;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px 16px;
-  padding: 9px 12px 10px;
-  border-top: 1px solid #e5eaf0;
+  gap: 8px 16px;
+  padding: 10px 12px 9px;
   background: #fff;
   box-sizing: border-box;
+}
+
+.infoSectionHeading {
+  grid-column: 1 / -1;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 7.8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--brand);
+  line-height: 1.15;
 }
 
 .specRow {
   display: grid;
   grid-template-columns: 8px minmax(0, 1fr);
-  gap: 3px 6px;
+  gap: 3px 7px;
   align-items: start;
+}
+
+.specDimensionRow {
+  grid-column: 1 / -1;
 }
 
 .specBullet {
@@ -1273,16 +1286,22 @@
 
 .specValue {
   grid-column: 2;
-  font-size: 8.3px;
+  font-size: 9.4px;
   font-weight: 700;
   color: #111827;
-  line-height: 1.28;
+  line-height: 1.3;
+}
+
+.specDimensionRow .specValue {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .pricesColumn {
   background: #fff;
-  border: 0;
-  padding: 10px 12px 9px;
+  border-top: 1px solid #e5eaf0;
+  padding: 10px 12px 10px;
   display: grid;
   align-content: start;
   gap: 5px;

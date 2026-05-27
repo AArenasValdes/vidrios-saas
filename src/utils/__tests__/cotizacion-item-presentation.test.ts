@@ -2,6 +2,7 @@ import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
+  shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 
 describe("cotizacion-item-presentation", () => {
@@ -151,6 +152,28 @@ describe("cotizacion-item-presentation", () => {
         isCustomScheme: true,
       })
     ).toBe("Personalizado: 3 hojas con pano fijo superior");
+  });
+
+  it("debe ocultar el esquema en la ficha cuando ya viene en el nombre del item", () => {
+    expect(
+      shouldShowCotizacionItemSheetSchemeSpec({
+        itemName: "Ventana corredera 4 hojas, laterales fijas + centrales moviles",
+        sheetSchemeLabel: "4 hojas · Laterales fijas + centrales moviles",
+        sheetScheme: "4 hojas",
+        sheetVariant: "Laterales fijas + centrales moviles",
+        customSchemeDescription: "",
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowCotizacionItemSheetSchemeSpec({
+        itemName: "Ventana corredera",
+        sheetSchemeLabel: "4 hojas · Laterales fijas + centrales moviles",
+        sheetScheme: "4 hojas",
+        sheetVariant: "Laterales fijas + centrales moviles",
+        customSchemeDescription: "",
+      })
+    ).toBe(true);
   });
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {

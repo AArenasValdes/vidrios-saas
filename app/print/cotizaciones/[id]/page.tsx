@@ -26,6 +26,7 @@ import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
 import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
+  shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
@@ -530,12 +531,19 @@ export default function CotizacionPrintPage() {
         customSchemeDescription,
         isCustomScheme,
       });
+      const shouldShowSheetSchemeSpec = shouldShowCotizacionItemSheetSchemeSpec({
+        itemName: item.nombre,
+        sheetSchemeLabel,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+      });
       const specs = [
         { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-        ...(sheetSchemeLabel ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
+        ...(shouldShowSheetSchemeSpec ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
         { key: "Sistema", value: systemLabel },
-        { key: "Material", value: material },
         { key: "Línea", value: lineLabel },
+        { key: "Material", value: material },
         { key: "Color", value: colorName },
         { key: "Vidrio", value: item.vidrio || "-" },
         { key: "Superficie", value: surface },
@@ -976,6 +984,25 @@ export default function CotizacionPrintPage() {
                       </div>
 
                       <div className={s.componentInfoColumn}>
+                        <div className={s.specsColumn}>
+                          <div className={s.infoSectionHeading}>CARACTERÍSTICAS</div>
+                          {specs.map((spec) => (
+                            <div
+                              key={spec.key}
+                              className={[
+                                s.specRow,
+                                spec.key === "Dimensiones" ? s.specDimensionRow : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            >
+                              <span className={s.specBullet} aria-hidden />
+                              <span className={s.specKey}>{spec.key}</span>
+                              <span className={s.specValue}>{spec.value}</span>
+                            </div>
+                          ))}
+                        </div>
+
                         <aside className={s.pricesColumn}>
                           <div className={s.pricesHeading}>VALOR COMERCIAL</div>
                           <div className={s.pricesSubheading}>MONTOS EN CLP</div>
@@ -994,16 +1021,6 @@ export default function CotizacionPrintPage() {
                             <strong>{CLP(item.precioTotal)}</strong>
                           </div>
                         </aside>
-
-                        <div className={s.specsColumn}>
-                          {specs.map((spec) => (
-                            <div key={spec.key} className={s.specRow}>
-                              <span className={s.specBullet} aria-hidden />
-                              <span className={s.specKey}>{spec.key}</span>
-                              <span className={s.specValue}>{spec.value}</span>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </article>

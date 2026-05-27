@@ -390,7 +390,7 @@ function fixedBadge(cx: number, cy: number, p: Palette): string {
 function dimH(x: number, y: number, w: number, text: string, p: Palette, v: string): string {
   const tk = v === "pdf" ? 2.4 : 6;
   const sw = v === "pdf" ? 0.8 : 1;
-  const fs = v === "pdf" ? 9.8 : 10;
+  const fs = v === "pdf" ? 12 : 10;
   const fw2 = v === "pdf" ? "700" : "400";
   const textY = v === "pdf" ? y - 10 : y - 8;
   const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
@@ -407,9 +407,9 @@ function dimH(x: number, y: number, w: number, text: string, p: Palette, v: stri
 function dimV(x: number, y: number, h: number, text: string, p: Palette, v: string): string {
   const tk = v === "pdf" ? 2.4 : 6;
   const sw = v === "pdf" ? 0.8 : 1;
-  const fs = v === "pdf" ? 9.8 : 10;
+  const fs = v === "pdf" ? 12 : 10;
   const fw2 = v === "pdf" ? "700" : "400";
-  const textX = v === "pdf" ? x - 13 : x - 11;
+  const textX = v === "pdf" ? x - 15 : x - 11;
   const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
   return [
     `<line x1="${px(x)}" y1="${px(y)}" x2="${px(x)}" y2="${px(y + h)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
@@ -1389,9 +1389,9 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const drawH = Math.max(52, Math.round(rH * scale));
 
   const isMesa  = tipoNorm === "Mesa";
-  const dimLeft = isMesa ? 40 : variant === "pdf" ? 34 : 46;
+  const dimLeft = isMesa ? 40 : variant === "pdf" ? 52 : 46;
   const dimBot  = variant === "pdf" ? 8 : 42;
-  const topPad  = variant === "pdf" ? 24 : 12;
+  const topPad  = variant === "pdf" ? 34 : 12;
   const rightPad = variant === "pdf" ? 6 : 12;
 
   const totalW  = drawW + dimLeft + rightPad;
@@ -1426,7 +1426,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     dimensions = [
       dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
       dimV(
-        originX - (variant === "pdf" ? 16 : 20),
+        originX - (variant === "pdf" ? 22 : 20),
         originY,
         drawH,
         formatMm(params.alto),

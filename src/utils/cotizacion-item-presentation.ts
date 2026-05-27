@@ -256,3 +256,38 @@ export function buildCotizacionItemSheetSchemeLabel(input: SheetSchemeInput): st
 
   return sheetScheme || sheetVariant || customSchemeDescription;
 }
+
+function normalizePresentationText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function shouldShowCotizacionItemSheetSchemeSpec(input: {
+  itemName: string;
+  sheetSchemeLabel: string;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+}): boolean {
+  const sheetSchemeLabel = input.sheetSchemeLabel.trim();
+
+  if (!sheetSchemeLabel) {
+    return false;
+  }
+
+  const normalizedName = normalizePresentationText(input.itemName);
+  const parts = [
+    input.sheetScheme,
+    input.sheetVariant,
+    input.customSchemeDescription,
+    sheetSchemeLabel,
+  ]
+    .map((part) => normalizePresentationText(part))
+    .filter(Boolean);
+
+  return !parts.some((part) => normalizedName.includes(part));
+}

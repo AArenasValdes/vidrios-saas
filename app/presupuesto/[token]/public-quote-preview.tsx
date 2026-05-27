@@ -17,6 +17,7 @@ import {
 import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
+  shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
@@ -307,12 +308,19 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         customSchemeDescription,
         isCustomScheme,
       });
+      const shouldShowSheetSchemeSpec = shouldShowCotizacionItemSheetSchemeSpec({
+        itemName: item.nombre,
+        sheetSchemeLabel,
+        sheetScheme,
+        sheetVariant,
+        customSchemeDescription,
+      });
       const specs = [
         { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-        ...(sheetSchemeLabel ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
+        ...(shouldShowSheetSchemeSpec ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
         { key: "Sistema", value: systemLabel },
-        { key: "Material", value: material },
         { key: "Línea", value: lineLabel },
+        { key: "Material", value: material },
         { key: "Color", value: colorName },
         { key: "Vidrio", value: item.vidrio || "-" },
         { key: "Superficie", value: surface },
@@ -618,6 +626,29 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                               </div>
 
                               <div className={printStyles.componentInfoColumn}>
+                                <div className={printStyles.specsColumn}>
+                                  <div className={printStyles.infoSectionHeading}>
+                                    CARACTERÍSTICAS
+                                  </div>
+                                  {specs.map((spec) => (
+                                    <div
+                                      key={spec.key}
+                                      className={[
+                                        printStyles.specRow,
+                                        spec.key === "Dimensiones"
+                                          ? printStyles.specDimensionRow
+                                          : "",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    >
+                                      <span className={printStyles.specBullet} aria-hidden />
+                                      <span className={printStyles.specKey}>{spec.key}</span>
+                                      <span className={printStyles.specValue}>{spec.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
                                 <aside className={printStyles.pricesColumn}>
                                   <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
                                   <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
@@ -636,16 +667,6 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                                     <strong>{CLP(item.precioTotal)}</strong>
                                   </div>
                                 </aside>
-
-                                <div className={printStyles.specsColumn}>
-                                  {specs.map((spec) => (
-                                    <div key={spec.key} className={printStyles.specRow}>
-                                      <span className={printStyles.specBullet} aria-hidden />
-                                      <span className={printStyles.specKey}>{spec.key}</span>
-                                      <span className={printStyles.specValue}>{spec.value}</span>
-                                    </div>
-                                  ))}
-                                </div>
                               </div>
                             </div>
                           </article>
