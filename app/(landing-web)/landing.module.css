@@ -200,6 +200,7 @@
 .processSection,
 .showcaseSection,
 .resultsSection,
+.pricingSection,
 .faqSection,
 .contactSection {
   position: relative;
@@ -553,6 +554,12 @@
 .showcaseSection,
 .resultsSection {
   background: linear-gradient(180deg, #101826 0%, #0b1019 100%);
+}
+
+.pricingSection {
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #0b1019 0%, #081019 58%, #07101a 100%);
 }
 
 .sectionHeading {
@@ -1507,6 +1514,238 @@
   margin-top: 5px;
 }
 
+.pricingHeader {
+  display: grid;
+  gap: 10px;
+}
+
+.pricingHeader .sectionHeading {
+  margin-bottom: 12px;
+}
+
+.pricingValueLine {
+  margin: 0 0 28px;
+  max-width: 900px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  color: var(--ink);
+  font-size: clamp(17px, 2vw, 22px);
+  line-height: 1.45;
+  letter-spacing: -0.03em;
+  font-weight: 750;
+  background:
+    linear-gradient(135deg, rgba(30, 136, 255, 0.18) 0%, rgba(17, 24, 39, 0.86) 54%, rgba(8, 13, 22, 0.94) 100%);
+  border: 1px solid rgba(30, 136, 255, 0.24);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.16fr) minmax(0, 0.92fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.pricingReveal {
+  display: flex;
+  min-width: 0;
+}
+
+.pricingCard {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px;
+  border-radius: 30px;
+  border: 1px solid rgba(230, 232, 235, 0.13);
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(8, 13, 22, 0.96) 100%);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.pricingCardFeatured {
+  padding: 30px;
+  border-color: rgba(30, 136, 255, 0.58);
+  background:
+    linear-gradient(180deg, rgba(25, 45, 76, 0.98) 0%, rgba(9, 16, 28, 0.98) 66%, rgba(7, 12, 22, 1) 100%);
+  box-shadow:
+    0 28px 72px rgba(30, 136, 255, 0.16),
+    0 20px 60px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-10px);
+}
+
+.pricingCardFeatured::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 78% 0%, rgba(30, 136, 255, 0.2), transparent 42%);
+}
+
+.pricingCardSecondary {
+  border-color: rgba(230, 232, 235, 0.12);
+}
+
+.pricingCardAnchor {
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.78) 0%, rgba(8, 13, 22, 0.92) 100%);
+}
+
+.pricingCardTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pricingCard h3 {
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: clamp(20px, 2.1vw, 26px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 850;
+}
+
+.pricingAmount {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.pricingAmount strong {
+  color: #ffffff;
+  font-size: clamp(32px, 3.2vw, 44px);
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  font-weight: 900;
+}
+
+.pricingAmount span {
+  color: var(--ink-soft);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.pricingBadge {
+  flex-shrink: 0;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #3ea4ff 0%, #1e88ff 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 28px rgba(30, 136, 255, 0.24);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pricingDescription,
+.pricingSavings {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.pricingSavings {
+  color: #d9e8ff;
+  font-weight: 780;
+}
+
+.pricingCta {
+  position: relative;
+  z-index: 1;
+  min-height: 50px;
+  margin-top: 2px;
+  padding: 0 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.pricingCta:hover {
+  transform: translateY(-2px);
+}
+
+.pricingCtaPrimary {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #46aaff 0%, #1e88ff 50%, #1162d1 100%);
+  box-shadow:
+    0 18px 40px rgba(30, 136, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.pricingCtaSecondary {
+  color: var(--ink);
+  border: 1px solid rgba(230, 232, 235, 0.16);
+  background: rgba(17, 24, 39, 0.72);
+}
+
+.pricingCtaSecondary:hover {
+  border-color: rgba(30, 136, 255, 0.42);
+  color: #d9e8ff;
+}
+
+.pricingBenefits {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid rgba(230, 232, 235, 0.12);
+  list-style: none;
+}
+
+.pricingBenefits li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.pricingBenefits svg {
+  color: var(--blue);
+  margin-top: 2px;
+}
+
+.pricingFootnote {
+  margin: 20px auto 0;
+  max-width: 720px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+
 .faqList {
   display: grid;
   gap: 14px;
@@ -1803,6 +2042,28 @@
     grid-template-columns: 1fr;
   }
 
+  .pricingGrid {
+    grid-template-columns: 1fr;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  .pricingReveal:nth-child(1) {
+    order: 2;
+  }
+
+  .pricingReveal:nth-child(2) {
+    order: 1;
+  }
+
+  .pricingReveal:nth-child(3) {
+    order: 3;
+  }
+
+  .pricingCardFeatured {
+    transform: none;
+  }
+
   .problemVisualMedia {
     min-height: 340px;
   }
@@ -2057,9 +2318,24 @@
 
   .problemCard,
   .processCard,
-  .contactCard {
+  .contactCard,
+  .pricingCard,
+  .pricingCardFeatured {
     padding: 22px;
     border-radius: 26px;
+  }
+
+  .pricingValueLine {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .pricingCardTop {
+    align-items: flex-start;
+  }
+
+  .pricingBenefits {
+    gap: 9px;
   }
 
   .problemVisualMedia {

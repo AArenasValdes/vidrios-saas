@@ -40,6 +40,7 @@ const navLinks = [
   { href: "#solucion", label: "Solucion" },
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#resultados", label: "Resultados" },
+  { href: "#precios", label: "Precios" },
   { href: "#preguntas", label: "Preguntas" },
   { href: "#contacto", label: "Contacto" },
 ] as const;
@@ -192,6 +193,82 @@ const channelInsights = [
     value: 9,
     color: "#D9E8FF",
     note: "Buen apoyo para ferias, tarjetas y visitas a terreno.",
+  },
+] as const;
+
+const PRICING_IMPLEMENTATION_HREF = `https://wa.me/56977338906?text=${encodeURIComponent(
+  "Hola Ventora, quiero solicitar implementación acompañada para mi empresa.",
+)}`;
+
+const founderPlanBenefits = [
+  "Página pública propia para recibir solicitudes",
+  "Link y QR para compartir en WhatsApp, Facebook e Instagram",
+  "Bandeja de solicitudes centralizada",
+  "Acceso rápido a WhatsApp",
+  "Cotizaciones profesionales desde el celular",
+  "PDF con imagen comercial",
+  "Link público para revisión del presupuesto",
+  "Aprobación o rechazo del cliente",
+  "Configuración inicial incluida",
+  "Soporte de arranque por WhatsApp",
+] as const;
+
+type PricingPlanTone = "secondary" | "featured" | "anchor";
+type PricingPlanCtaKind = "internal" | "whatsapp";
+
+type PricingPlan = {
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  ctaLabel: string;
+  href: string;
+  ctaKind: PricingPlanCtaKind;
+  tone: PricingPlanTone;
+  trackingLocation: string;
+  badge?: string;
+  helper?: string;
+  savings?: string;
+  benefits?: readonly string[];
+};
+
+const pricingPlans: readonly PricingPlan[] = [
+  {
+    name: "Plan Mensual",
+    price: "$10.000",
+    period: "/ mes",
+    description: "Para probar Ventora mes a mes, sin compromiso anual.",
+    ctaLabel: "Probar 7 días gratis",
+    href: "/planes",
+    ctaKind: "internal",
+    tone: "secondary",
+    trackingLocation: "precios-mensual",
+  },
+  {
+    name: "Plan Fundador Anual",
+    price: "$80.000",
+    period: "/ año",
+    description: "Equivale a $6.667 al mes",
+    ctaLabel: "Empezar 7 días gratis",
+    href: "/planes",
+    ctaKind: "internal",
+    tone: "featured",
+    trackingLocation: "precios-fundador",
+    badge: "Recomendado",
+    savings: "Ahorras $40.000 frente al pago mensual",
+    benefits: founderPlanBenefits,
+  },
+  {
+    name: "Plan Empresa Acompañado",
+    price: "Desde $250.000",
+    period: "/ año",
+    description:
+      "Para empresas que quieren dejar Ventora configurado con acompañamiento comercial, capacitación y soporte prioritario.",
+    ctaLabel: "Solicitar implementación",
+    href: PRICING_IMPLEMENTATION_HREF,
+    ctaKind: "whatsapp",
+    tone: "anchor",
+    trackingLocation: "precios-implementacion",
   },
 ] as const;
 
@@ -815,6 +892,96 @@ export default function LandingPage() {
               </div>
             </SectionReveal>
           </div>
+        </div>
+      </section>
+
+      <section id="precios" className={s.pricingSection}>
+        <div className={s.container}>
+          <SectionReveal>
+            <div className={s.pricingHeader}>
+              <SectionHeading
+                title="Planes simples para ordenar tus cotizaciones y no perder clientes"
+                description="Prueba Ventora 7 días gratis. Después elige si sigues mensual, anual o con implementación acompañada."
+              />
+              <p className={s.pricingValueLine}>
+                Si pierdes una sola cotización por responder tarde, probablemente ya perdiste más
+                que el valor anual de Ventora.
+              </p>
+            </div>
+          </SectionReveal>
+
+          <div className={s.pricingGrid}>
+            {pricingPlans.map((plan) => {
+              const isFeatured = plan.tone === "featured";
+              const cardToneClass =
+                plan.tone === "featured"
+                  ? s.pricingCardFeatured
+                  : plan.tone === "anchor"
+                    ? s.pricingCardAnchor
+                    : s.pricingCardSecondary;
+
+              return (
+                <SectionReveal key={plan.name} className={s.pricingReveal}>
+                  <article className={`${s.pricingCard} ${cardToneClass}`}>
+                    <div className={s.pricingCardTop}>
+                      <div>
+                        <h3>{plan.name}</h3>
+                        <div className={s.pricingAmount}>
+                          <strong>{plan.price}</strong>
+                          <span>{plan.period}</span>
+                        </div>
+                      </div>
+                      {plan.badge ? <span className={s.pricingBadge}>{plan.badge}</span> : null}
+                    </div>
+
+                    <p className={s.pricingDescription}>{plan.description}</p>
+                    {plan.savings ? <p className={s.pricingSavings}>{plan.savings}</p> : null}
+
+                    {plan.ctaKind === "whatsapp" ? (
+                      <a
+                        href={plan.href}
+                        className={`${s.pricingCta} ${s.pricingCtaSecondary}`}
+                        onClick={() => trackLandingCta(plan.trackingLocation, "whatsapp")}
+                      >
+                        {plan.ctaLabel}
+                        <ArrowUpRight size={17} aria-hidden />
+                      </a>
+                    ) : (
+                      <Link
+                        href={plan.href}
+                        className={`${s.pricingCta} ${
+                          isFeatured ? s.pricingCtaPrimary : s.pricingCtaSecondary
+                        }`}
+                        prefetch={false}
+                        onClick={() => trackLandingCta(plan.trackingLocation, "internal")}
+                      >
+                        {plan.ctaLabel}
+                        <ArrowRight size={17} aria-hidden />
+                      </Link>
+                    )}
+
+                    {plan.benefits ? (
+                      <ul className={s.pricingBenefits}>
+                        {plan.benefits.map((benefit) => (
+                          <li key={benefit}>
+                            <CircleCheck size={15} aria-hidden />
+                            <span>{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </article>
+                </SectionReveal>
+              );
+            })}
+          </div>
+
+          <SectionReveal>
+            <p className={s.pricingFootnote}>
+              Precio fundador disponible para los primeros clientes. Se mantiene mientras la
+              suscripción siga activa.
+            </p>
+          </SectionReveal>
         </div>
       </section>
 
