@@ -1602,6 +1602,24 @@
     linear-gradient(180deg, rgba(17, 24, 39, 0.78) 0%, rgba(8, 13, 22, 0.92) 100%);
 }
 
+.pricingCardAnchor .pricingAmount {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.pricingCardAnchor .pricingAmount strong {
+  max-width: none;
+  font-size: clamp(28px, 2.25vw, 32px);
+  line-height: 0.98;
+  white-space: nowrap;
+}
+
+.pricingCardAnchor .pricingAmount span {
+  margin-top: 0;
+}
+
 .pricingCardTop {
   position: relative;
   z-index: 1;
@@ -1656,6 +1674,7 @@
 }
 
 .pricingDescription,
+.pricingHelper,
 .pricingSavings {
   position: relative;
   z-index: 1;
@@ -1663,6 +1682,12 @@
   color: var(--ink-soft);
   font-size: 15px;
   line-height: 1.62;
+}
+
+.pricingHelper {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 760;
 }
 
 .pricingSavings {

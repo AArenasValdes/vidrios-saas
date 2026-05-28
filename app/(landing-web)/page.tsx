@@ -213,6 +213,21 @@ const founderPlanBenefits = [
   "Soporte de arranque por WhatsApp",
 ] as const;
 
+const monthlyPlanBenefits = [
+  "Incluye lo mismo que el Plan Fundador",
+  "Pago mensual flexible",
+  "7 días gratis",
+  "Puedes pasar al anual cuando quieras",
+] as const;
+
+const accompaniedPlanBenefits = [
+  "Todo lo del Plan Fundador",
+  "Configuración asistida completa",
+  "Revisión de tu página pública",
+  "Capacitación inicial",
+  "Soporte prioritario de arranque",
+] as const;
+
 type PricingPlanTone = "secondary" | "featured" | "anchor";
 type PricingPlanCtaKind = "internal" | "whatsapp";
 
@@ -243,6 +258,7 @@ const pricingPlans: readonly PricingPlan[] = [
     ctaKind: "internal",
     tone: "secondary",
     trackingLocation: "precios-mensual",
+    benefits: monthlyPlanBenefits,
   },
   {
     name: "Plan Fundador Anual",
@@ -255,7 +271,8 @@ const pricingPlans: readonly PricingPlan[] = [
     tone: "featured",
     trackingLocation: "precios-fundador",
     badge: "Recomendado",
-    savings: "Ahorras $40.000 frente al pago mensual",
+    helper: "La opción más conveniente para empezar en serio.",
+    savings: "Ahorras $40.000 al año frente al pago mensual",
     benefits: founderPlanBenefits,
   },
   {
@@ -269,6 +286,7 @@ const pricingPlans: readonly PricingPlan[] = [
     ctaKind: "whatsapp",
     tone: "anchor",
     trackingLocation: "precios-implementacion",
+    benefits: accompaniedPlanBenefits,
   },
 ] as const;
 
@@ -901,7 +919,7 @@ export default function LandingPage() {
             <div className={s.pricingHeader}>
               <SectionHeading
                 title="Planes simples para ordenar tus cotizaciones y no perder clientes"
-                description="Prueba Ventora 7 días gratis. Después elige si sigues mensual, anual o con implementación acompañada."
+                description="Prueba Ventora 7 días gratis. Si te sirve, puedes seguir mensual o ahorrar con el plan anual."
               />
               <p className={s.pricingValueLine}>
                 Si pierdes una sola cotización por responder tarde, probablemente ya perdiste más
@@ -935,6 +953,7 @@ export default function LandingPage() {
                     </div>
 
                     <p className={s.pricingDescription}>{plan.description}</p>
+                    {plan.helper ? <p className={s.pricingHelper}>{plan.helper}</p> : null}
                     {plan.savings ? <p className={s.pricingSavings}>{plan.savings}</p> : null}
 
                     {plan.ctaKind === "whatsapp" ? (
