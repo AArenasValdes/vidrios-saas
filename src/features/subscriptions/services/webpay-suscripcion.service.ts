@@ -165,8 +165,9 @@ export function createWebpaySuscripcionService() {
           period_ends_at: periodEndsAt,
         });
 
-        const db = createAdminClient().from("organization_profile") as { update: (vals: Record<string, unknown>) => { eq: (col: string, val: unknown) => Promise<{ error: unknown }> } };
-        const { error: orgError } = await db
+        const admin = createAdminClient();
+        const { error: orgError } = await admin
+          .from("organization_profile")
           .update({
             subscription_status: "active",
             plan_code: existing.plan_code,
@@ -175,7 +176,7 @@ export function createWebpaySuscripcionService() {
             subscription_started_at: now.toISOString(),
             subscription_ends_at: periodEndsAt,
             last_payment_at: paidAt,
-          })
+          } as never)
           .eq("organization_id", existing.organization_id);
 
         if (orgError) {
