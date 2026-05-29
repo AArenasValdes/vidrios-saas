@@ -694,6 +694,7 @@ export function resolveOrganizationProfile(
     formSubtitle: normalizeText(profile?.formSubtitle) || DEFAULT_FORM_SUBTITLE,
     isPublished: profile?.isPublished ?? false,
     subscriptionStatus: profile?.subscriptionStatus ?? null,
+    planCode: (profile?.planCode as OrganizationProfile["planCode"]) ?? null,
     trialStartedAt: profile?.trialStartedAt ?? null,
     trialEndsAt: profile?.trialEndsAt ?? null,
     subscriptionStartedAt: profile?.subscriptionStartedAt ?? null,

@@ -7,8 +7,9 @@ export type SubscriptionStatus =
   | "cancelled";
 
 export type PlanType = "trial" | "monthly" | "yearly" | "founder";
+export type PlanCode = "trial" | "founder_full" | "quote_only";
 export type BillingPeriod = "monthly" | "yearly" | "none";
-export type PaymentMethod = "manual_transfer" | "manual_other" | "none";
+export type PaymentMethod = "manual_transfer" | "manual_other" | "none" | "webpay_plus";
 
 export type OrganizationSubscriptionSnapshot = {
   subscriptionStatus: SubscriptionStatus | null;
@@ -17,6 +18,7 @@ export type OrganizationSubscriptionSnapshot = {
   subscriptionStartedAt: string | null;
   subscriptionEndsAt: string | null;
   planType: PlanType | null;
+  planCode: PlanCode | null;
   billingPeriod: BillingPeriod | null;
   paymentMethod: PaymentMethod | null;
   lastPaymentAt: string | null;

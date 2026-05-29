@@ -11,6 +11,7 @@ import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode
 import type {
   BillingPeriod,
   PaymentMethod,
+  PlanCode,
   PlanType,
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
@@ -74,6 +75,7 @@ type OrganizationProfileRow = {
   subscription_started_at?: string | null;
   subscription_ends_at?: string | null;
   plan_type?: PlanType | null;
+  plan_code?: PlanCode | null;
   billing_period?: BillingPeriod | null;
   payment_method?: PaymentMethod | null;
   last_payment_at?: string | null;
@@ -190,6 +192,7 @@ function mapOrganizationProfile(
     subscriptionStartedAt: row.subscription_started_at ?? null,
     subscriptionEndsAt: row.subscription_ends_at ?? null,
     planType: row.plan_type ?? null,
+    planCode: (row.plan_code as OrganizationProfile["planCode"]) ?? null,
     billingPeriod: row.billing_period ?? null,
     paymentMethod: row.payment_method ?? null,
     lastPaymentAt: row.last_payment_at ?? null,

@@ -19,6 +19,7 @@ const ORGANIZATION_SUBSCRIPTION_SELECT = `
   subscription_started_at,
   subscription_ends_at,
   plan_type,
+  plan_code,
   billing_period,
   payment_method,
   last_payment_at,
@@ -32,6 +33,7 @@ type OrganizationSubscriptionRow = {
   subscription_started_at?: string | null;
   subscription_ends_at?: string | null;
   plan_type?: string | null;
+  plan_code?: string | null;
   billing_period?: string | null;
   payment_method?: string | null;
   last_payment_at?: string | null;
@@ -52,6 +54,7 @@ function mapOrganizationSubscriptionRow(
     subscriptionStartedAt: row.subscription_started_at ?? null,
     subscriptionEndsAt: row.subscription_ends_at ?? null,
     planType: (row.plan_type ?? null) as OrganizationSubscriptionSnapshot["planType"],
+    planCode: (row.plan_code ?? null) as OrganizationSubscriptionSnapshot["planCode"],
     billingPeriod: (row.billing_period ?? null) as OrganizationSubscriptionSnapshot["billingPeriod"],
     paymentMethod: (row.payment_method ?? null) as OrganizationSubscriptionSnapshot["paymentMethod"],
     lastPaymentAt: row.last_payment_at ?? null,

@@ -4,14 +4,16 @@ import type {
   EffectiveSubscriptionState,
   OrganizationSubscriptionSnapshot,
   PaymentMethod,
+  PlanCode,
   PlanType,
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
 
 export const TRIAL_DURATION_DAYS = 7;
 export const TRIAL_EXPIRING_SOON_DAYS = 2;
-export const VENTORA_MONTHLY_PRICE = 10_000;
-export const VENTORA_YEARLY_PRICE = 80_000;
+export const VENTORA_MONTHLY_PRICE = 8_990;
+export const VENTORA_YEARLY_PRICE = 79_990;
+export const VENTORA_QUOTE_ONLY_YEARLY_PRICE = 59_990;
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const WRITE_RESTRICTED_SOLICITUDES_PREFIX = "/solicitudes/canales";
@@ -39,6 +41,7 @@ const VALID_PAYMENT_METHODS = new Set<PaymentMethod>([
   "manual_transfer",
   "manual_other",
   "none",
+  "webpay_plus",
 ]);
 
 function normalizeDate(value: string | null | undefined) {
@@ -93,6 +96,17 @@ function normalizePaymentMethod(
   return null;
 }
 
+function normalizePlanCode(value: string | null | undefined): PlanCode | null {
+  if (
+    value &&
+    (value === "trial" || value === "founder_full" || value === "quote_only")
+  ) {
+    return value as PlanCode;
+  }
+
+  return null;
+}
+
 function resolveDaysRemaining(targetDate: Date | null, now: Date) {
   if (!targetDate) {
     return null;
@@ -117,6 +131,7 @@ export function normalizeOrganizationSubscriptionSnapshot(
     subscriptionStartedAt: input?.subscriptionStartedAt ?? null,
     subscriptionEndsAt: input?.subscriptionEndsAt ?? null,
     planType: normalizePlanType(input?.planType),
+    planCode: normalizePlanCode(input?.planCode),
     billingPeriod: normalizeBillingPeriod(input?.billingPeriod) ?? "none",
     paymentMethod: normalizePaymentMethod(input?.paymentMethod) ?? "none",
     lastPaymentAt: input?.lastPaymentAt ?? null,

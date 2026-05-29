@@ -4,6 +4,7 @@ import type {
   BillingPeriod,
   EffectiveSubscriptionState,
   PaymentMethod,
+  PlanCode,
   PlanType,
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
@@ -85,6 +86,7 @@ export type OrganizationProfile = {
   subscriptionStartedAt: string | null;
   subscriptionEndsAt: string | null;
   planType: PlanType | null;
+  planCode: PlanCode | null;
   billingPeriod: BillingPeriod | null;
   paymentMethod: PaymentMethod | null;
   lastPaymentAt: string | null;
