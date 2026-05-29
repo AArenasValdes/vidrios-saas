@@ -50,6 +50,7 @@ import {
   isWriteRestrictedPrivatePath,
   resolveOrganizationSubscriptionState,
   VENTORA_MONTHLY_PRICE,
+  VENTORA_QUOTE_ONLY_YEARLY_PRICE,
   VENTORA_YEARLY_PRICE,
 } from "@/features/subscriptions/services/subscription-status.service";
 
@@ -1131,15 +1132,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   Tu prueba ya termino. Puedes revisar datos, pero no crear ni modificar.
                 </strong>
                 <p className={s.subscriptionBannerText}>
-                  Para volver a operar, activa tu cuenta por transferencia manual: mensual ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} o anual ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}.
+                  Para volver a operar, activa tu cuenta: anual desde ${VENTORA_QUOTE_ONLY_YEARLY_PRICE.toLocaleString("es-CL")} con pago automatico, o manual por WhatsApp desde ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} mensual.
                 </p>
               </div>
               <div className={s.subscriptionBannerActions}>
-                <a className={s.subscriptionPrimaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
+                <Link className={s.subscriptionPrimaryAction} href="/cuenta-vencida">
+                  Pagar con Webpay
+                </Link>
+                <a className={s.subscriptionSecondaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
                   Contactar por WhatsApp
                 </a>
                 <Link className={s.subscriptionSecondaryAction} href="/cuenta-vencida">
-                  Ver activacion
+                  Ver planes
                 </Link>
               </div>
             </section>

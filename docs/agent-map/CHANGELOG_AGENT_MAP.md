@@ -4,7 +4,44 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
-## 2026-05-27 - Esquema comercial de hojas en cotizaciones
+## 2026-05-29 - Webpay Plus (pago automatico con Transbank)
+
+### Resumen
+
+Se integro Webpay Plus de Transbank como metodo de pago automatico para planes anuales. La organizacion puede pagar Founder Full ($79.990) o Quote-Only ($59.990) con tarjeta de credito/debito via Webpay, con activacion automatica de la cuenta al confirmar el pago.
+
+### Archivos creados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/subscriptions/types/pago-suscripcion.ts` | Tipos PaymentStatus, PagoSuscripcionRow, CreatePagoInput, UpdatePagoInput |
+| `src/features/subscriptions/repositories/pago-suscripcion.repository.ts` | CRUD via createAdminClient() (service_role) para tabla pagos_suscripcion |
+| `src/features/subscriptions/services/webpay-suscripcion.service.ts` | Servicio server-side: createTransaccion() y confirmarPago() con Transbank API |
+| `src/features/subscriptions/hooks/useWebpayPago.ts` | Hook cliente: llama POST /api/subscriptions/webpay/crear y redirige a Webpay |
+| `app/api/subscriptions/webpay/crear/route.ts` | API route POST: auth guard, valida plan_code + billing_period, retorna { token, url } |
+| `app/api/subscriptions/webpay/confirmar/route.ts` | API route GET: callback Transbank, idempotencia, commit, redirect |
+| `supabase/migrations/20260529100000_webpay_plan_code_payment_method.sql` | Step 1: columna plan_code + CHECK + webpay_plus en payment_method + trigger actualizado |
+| `supabase/migrations/20260529200000_pagos_suscripcion.sql` | Step 3: tabla pagos_suscripcion con RLS (SELECT authenticated), UNIQUE provider_token/buy_order |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/subscriptions/types/subscription.ts` | + PlanCode, + webpay_plus en PaymentMethod, + planCode en snapshot |
+| `src/features/subscriptions/services/subscription-status.service.ts` | Precios actualizados (8.990/79.990/59.990), + normalizePlanCode(), + webpay_plus en valid set, + planCode en snapshot |
+| `src/features/organization-profile/types/organization-profile.ts` | + PlanCode import, + planCode field |
+| `src/features/organization-profile/services/organization-profile.service.ts` | + mapeo planCode en resolveOrganizationProfile() |
+| `src/features/organization-profile/repositories/organization-profile.repository.ts` | + plan_code en row type + mapper |
+| `src/features/subscriptions/services/subscription-route-access.service.ts` | + plan_code en SELECT + row type + mapper |
+| `app/(pwa-app)/cuenta-vencida/page.tsx` | Grid de 3 planes con botones Webpay (Founder Full, Quote-Only) + WhatsApp (Mensual) |
+| `app/(pwa-app)/cuenta-vencida/page.module.css` | Estilos para webpayButton, webpayButtonOutline, whatsappButton, errorBanner, grid 3 cols |
+| `src/components/layout/app-shell.tsx` | Banner expirado: boton "Pagar con Webpay" redirige a /cuenta-vencida + VENTORA_QUOTE_ONLY_YEARLY_PRICE |
+| `docs/agent-map/FEATURES_MAP.md` | Nuevo feature "Webpay Plus" |
+| `docs/agent-map/ROUTES_MAP.md` | Nuevas API routes webpay + actualizada descripcion /cuenta-vencida |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Tabla pagos_suscripcion + plan_code en organization_profile + INC-15 |
+| `docs/agent-map/CHANGELOG_AGENT_MAP.md` | Esta entrada |
+
+---## 2026-05-27 - Esquema comercial de hojas en cotizaciones
 
 ### Resumen
 

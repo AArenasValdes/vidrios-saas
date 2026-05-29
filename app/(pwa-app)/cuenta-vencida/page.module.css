@@ -43,10 +43,21 @@
   line-height: 1.7;
 }
 
+.errorBanner {
+  margin-top: 18px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(204, 79, 79, 0.25);
+  background: rgba(204, 79, 79, 0.07);
+  color: #a83b3b;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
 .priceGrid {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -55,6 +66,14 @@
   border: 1px solid rgba(217, 224, 234, 0.96);
   background: rgba(255, 255, 255, 0.86);
   padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.priceCardHighlight {
+  border-color: rgba(79, 125, 212, 0.28);
+  background: linear-gradient(180deg, rgba(79, 125, 212, 0.06), rgba(255, 255, 255, 0.94));
+  box-shadow: 0 12px 32px rgba(36, 59, 107, 0.08);
 }
 
 .priceLabel {
@@ -81,6 +100,54 @@
   color: #667085;
   font-size: 0.96rem;
   line-height: 1.5;
+  flex: 1;
+}
+
+.webpayButton,
+.webpayButtonOutline,
+.whatsappButton {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.94rem;
+  cursor: pointer;
+  margin-top: 14px;
+  width: 100%;
+  font-family: inherit;
+}
+
+.webpayButton {
+  background: linear-gradient(180deg, #4f7dd4, #335ea9);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(51, 94, 169, 0.22);
+}
+
+.webpayButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.webpayButtonOutline {
+  border: 1px solid rgba(79, 125, 212, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  color: #335ea9;
+}
+
+.webpayButtonOutline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.whatsappButton {
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(37, 211, 102, 0.18);
 }
 
 .actions {
