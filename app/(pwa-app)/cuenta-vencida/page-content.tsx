@@ -8,6 +8,7 @@ import { LuArrowLeft } from "react-icons/lu";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   buildSubscriptionActivationWhatsappHref,
+  resolveOrganizationSubscriptionState,
   VENTORA_MONTHLY_PRICE,
   VENTORA_YEARLY_PRICE,
   VENTORA_QUOTE_ONLY_YEARLY_PRICE,
@@ -23,6 +24,24 @@ export function CuentaVencidaPageContent() {
   const pagoFallido = searchParams.get("pago_fallido") === "1";
   const { pagar, cargando: cargandoWebpay, error: errorWebpay } = useWebpayPago();
   const companyName = profile?.empresaNombre ?? "Mi empresa";
+  const subscriptionState = resolveOrganizationSubscriptionState({
+    subscriptionStatus: profile?.subscriptionStatus ?? null,
+    trialStartedAt: profile?.trialStartedAt ?? null,
+    trialEndsAt: profile?.trialEndsAt ?? null,
+    subscriptionStartedAt: profile?.subscriptionStartedAt ?? null,
+    subscriptionEndsAt: profile?.subscriptionEndsAt ?? null,
+    planType: profile?.planType ?? null,
+    planCode: profile?.planCode ?? null,
+    billingPeriod: profile?.billingPeriod ?? null,
+    paymentMethod: profile?.paymentMethod ?? null,
+    lastPaymentAt: profile?.lastPaymentAt ?? null,
+    founderPriceLocked: profile?.founderPriceLocked ?? false,
+  });
+  const hasActivePaidSubscription =
+    subscriptionState.effectiveStatus === "active" &&
+    !subscriptionState.isTrial &&
+    Boolean(subscriptionState.subscriptionEndsAt);
+  const webpayDisabled = cargandoWebpay || hasActivePaidSubscription;
   const monthlyHref = buildSubscriptionActivationWhatsappHref({
     companyName,
     plan: "mensual",
@@ -67,6 +86,12 @@ export function CuentaVencidaPageContent() {
           </div>
         ) : null}
 
+        {hasActivePaidSubscription ? (
+          <div className={s.activeBanner} role="status">
+            Tu cuenta ya tiene una suscripción activa.
+          </div>
+        ) : null}
+
         <div className={s.priceGrid}>
           <article className={`${s.priceCard} ${s.priceCardHighlight}`}>
             <div className={s.planTopline}>
@@ -78,13 +103,12 @@ export function CuentaVencidaPageContent() {
               <span>/ a&ntilde;o</span>
             </strong>
             <p className={s.priceHint}>
-              Incluye cotizaciones, solicitudes, p&aacute;gina p&uacute;blica, WhatsApp y
-              aprobaci&oacute;n de presupuestos.
+              Cotizaciones, solicitudes, página pública, WhatsApp y aprobación de presupuestos.
             </p>
             <button
               className={s.webpayButton}
               onClick={pagarFounderFull}
-              disabled={cargandoWebpay}
+              disabled={webpayDisabled}
               type="button"
             >
               {cargandoWebpay ? "Redirigiendo a Webpay..." : "Pagar con Webpay"}
@@ -99,27 +123,29 @@ export function CuentaVencidaPageContent() {
               <span>/ a&ntilde;o</span>
             </strong>
             <p className={s.priceHint}>
-              Cotiza r&aacute;pido desde el celular, genera PDF profesional y comparte por
-              WhatsApp.
+              Cotiza rápido desde el celular, genera PDF profesional y comparte por WhatsApp.
             </p>
             <button
               className={s.webpayButtonOutline}
               onClick={pagarQuoteOnly}
-              disabled={cargandoWebpay}
+              disabled={webpayDisabled}
               type="button"
             >
               {cargandoWebpay ? "Redirigiendo a Webpay..." : "Pagar con Webpay"}
             </button>
           </article>
-          <article className={s.priceCard}>
+          <article className={`${s.priceCard} ${s.priceCardManual}`}>
             <div className={s.planTopline}>
-              <span className={s.priceLabel}>Mensual</span>
+              <span className={s.priceLabel}>Mensual manual</span>
+              <span className={s.manualBadge}>WhatsApp</span>
             </div>
             <strong className={s.priceValue}>
               ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")}
               <span>/ mes</span>
             </strong>
-            <p className={s.priceHint}>Pago manual por WhatsApp.</p>
+            <p className={s.priceHint}>
+              Pago mensual manual por WhatsApp. Ideal si quieres comenzar sin compromiso anual.
+            </p>
             <a className={s.whatsappButton} href={monthlyHref} target="_blank" rel="noreferrer">
               Contactar por WhatsApp
             </a>
@@ -128,11 +154,11 @@ export function CuentaVencidaPageContent() {
 
         <aside className={s.enterpriseBox}>
           <div>
-            <span className={s.enterpriseEyebrow}>Necesitas algo m&aacute;s avanzado?</span>
-            <strong>Plan Empresa Acompa&ntilde;ado desde $250.000</strong>
+            <span className={s.enterpriseEyebrow}>¿Necesitas algo más avanzado?</span>
+            <strong>Plan Empresa Acompañado desde $250.000</strong>
             <p>
-              Configuraci&oacute;n asistida, capacitaci&oacute;n y adaptaci&oacute;n inicial del
-              flujo comercial. Motor de precios personalizado disponible previa evaluaci&oacute;n.
+              Configuración asistida, capacitación y adaptación inicial del flujo comercial. Motor
+              de precios personalizado disponible previa evaluación.
             </p>
           </div>
           <a
