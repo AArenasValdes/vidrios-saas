@@ -148,18 +148,16 @@ export function useCotizacionesResumenPage(
     ]
   );
   const queryKey = useMemo(() => buildQueryKey(normalizedOptions), [normalizedOptions]);
-  const cachedPage = useMemo(() => readCotizacionesCache(queryKey), [queryKey]);
   const [cotizaciones, setCotizaciones] = useState<CotizacionWorkflowRecord[]>(
-    () => cachedPage?.cotizaciones ?? []
+    []
   );
-  const [isReady, setIsReady] = useState(() => Boolean(cachedPage));
+  const [isReady, setIsReady] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(() => cachedPage?.totalCount ?? 0);
-  const [hasMore, setHasMore] = useState(() => cachedPage?.hasMore ?? false);
-  const [summary, setSummary] = useState<CotizacionesResumenGlobal>(() =>
-    cachedPage?.summary ?? {
-      totalCount: cachedPage?.totalCount ?? 0,
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [summary, setSummary] = useState<CotizacionesResumenGlobal>(() => ({
+      totalCount: 0,
       totalAmount: 0,
       approvedAmount: 0,
       counts: {
@@ -170,8 +168,7 @@ export function useCotizacionesResumenPage(
         rechazada: 0,
         terminada: 0,
       },
-    }
-  );
+    }));
   const requestVersionRef = useRef(0);
 
   const refresh = useCallback(async () => {

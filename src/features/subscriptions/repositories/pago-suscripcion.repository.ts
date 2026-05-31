@@ -77,6 +77,7 @@ export function createPagoSuscripcionRepository() {
       const { data, error } = await db()
         .select(COLS)
         .eq("provider_token", token)
+        .is("eliminado_en", null)
         .maybeSingle();
 
       if (error) {
@@ -86,6 +87,42 @@ export function createPagoSuscripcionRepository() {
       }
 
       return data ? mapRow(data as Record<string, unknown>) : null;
+    },
+
+    async getByBuyOrder(
+      buyOrder: string
+    ): Promise<PagoSuscripcionRow | null> {
+      const { data, error } = await db()
+        .select(COLS)
+        .eq("buy_order", buyOrder)
+        .is("eliminado_en", null)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          `Error al buscar pago por orden: ${error.message}`
+        );
+      }
+
+      return data ? mapRow(data as Record<string, unknown>) : null;
+    },
+
+    async listByOrganizationId(
+      organizationId: number
+    ): Promise<PagoSuscripcionRow[]> {
+      const { data, error } = await db()
+        .select(COLS)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .order("creado_en", { ascending: false });
+
+      if (error) {
+        throw new Error(
+          `Error al listar pagos: ${error.message}`
+        );
+      }
+
+      return (data as Record<string, unknown>[]).map(mapRow);
     },
 
     async update(
@@ -112,7 +149,8 @@ export function createPagoSuscripcionRepository() {
 
       const { error } = await db()
         .update(payload)
-        .eq("id", id);
+        .eq("id", id)
+        .is("eliminado_en", null);
 
       if (error) {
         throw new Error(

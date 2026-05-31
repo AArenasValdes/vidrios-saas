@@ -4,6 +4,70 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-31 - Auditoria Supabase pre-produccion
+
+### Resumen
+
+Se reviso el estado versionado de Supabase contra migraciones y documentacion. Se detecto drift en `current_schema.sql` y `database.types.ts`, se documentaron tablas recientes faltantes y se agrego una migracion defensiva para asegurar que `public_landing_testimonials.organization_id` use `bigint`, consistente con `organizations.id`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260515121000_public_landing_personalization_and_testimonials.sql` | Corrige `organization_id` a `bigint` para reproducibilidad |
+| `supabase/migrations/20260531050353_harden_public_landing_testimonials_org_id.sql` | Endurece/corrige el tipo y FK de `public_landing_testimonials.organization_id` |
+| `supabase/docs/*` | Addendums de drift, RLS y tablas recientes |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Documenta `public_landing_testimonials` |
+| `docs/agent-map/FEATURES_MAP.md` | Actualiza Pagina Venta y Mini Landing con valoraciones |
+
+---
+
+## 2026-05-31 - Hardening productivo Webpay suscripciones
+
+### Resumen
+
+Se endurecio el flujo Webpay Plus de suscripciones para produccion: retorno GET/POST, manejo de abortos/timeouts, validacion de credenciales, HTTPS, `buy_order` compatible con Transbank, validacion de monto/orden antes de activar y RLS mas restrictivo para `pagos_suscripcion`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/api/subscriptions/webpay/crear/route.ts` | Validacion tipada de plan/periodo y errores genericos al cliente |
+| `app/api/subscriptions/webpay/confirmar/route.ts` | Retorno GET/POST, abortos/timeouts y redirects seguros |
+| `src/features/subscriptions/services/webpay-suscripcion.service.ts` | Hardening de Webpay, idempotencia y activacion segura |
+| `src/features/subscriptions/repositories/pago-suscripcion.repository.ts` | Busqueda por `buy_order` y filtros de soft delete |
+| `supabase/migrations/20260531044351_harden_webpay_subscription_payments.sql` | Revoca inserts cliente y deja pagos solo server-side |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Riesgo RLS de pagos actualizado |
+| `docs/agent-map/FEATURES_MAP.md` | Rutas Webpay y env vars actualizadas |
+
+---
+
+## 2026-05-30 - Webpay Plus integration and pagos_suscripcion table
+
+### Resumen
+
+Se integro Webpay Plus (Transbank) como metodo de pago automatico para suscripciones anuales. Se creo la tabla `pagos_suscripcion` para tracking de transacciones, el hook `useWebpayPago` para el flujo cliente, y se actualizo la pagina `/cuenta-vencida` para mostrar botones de pago Webpay junto a los planes existentes.
+
+### Archivos creados
+
+| Archivo | Proposito |
+|---|---|
+| `src/features/subscriptions/hooks/useWebpayPago.ts` | Hook cliente para iniciar pago Webpay |
+| `supabase/migrations/20260530100000_pagos_suscripcion.sql` | Migracion de tabla `pagos_suscripcion` con RLS |
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `app/(pwa-app)/cuenta-vencida/page.tsx` | Ahora usa `page-content.tsx` con botones de Webpay |
+| `app/(pwa-app)/cuenta-vencida/page-content.tsx` | Componente con 3 planes (2 Webpay + 1 WhatsApp) |
+| `supabase/docs/database_map.md` | Nueva tabla documentada |
+| `supabase/docs/rls_policies.md` | Nuevas policies de `pagos_suscripcion` |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Nueva tabla activa documentada |
+| `docs/agent-map/FEATURES_MAP.md` | Feature de suscripcion actualizada con Webpay |
+
+---
+
 ## 2026-05-27 - Esquema comercial de hojas en cotizaciones
 
 ### Resumen
@@ -620,3 +684,23 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
   - `src/features/landing-gallery/hooks/useLandingGallery.ts`
   - `src/features/public-landing-testimonials/hooks/usePublicLandingTestimonials.ts`
+
+### 2026-05-31 - Supabase MCP conectado y hardening pre-produccion
+
+- Se conecto MCP Supabase al proyecto `yrtrwgkaopfumpidjthk`.
+- Se ejecutaron advisors remotos de seguridad y performance.
+- Se confirmo RLS habilitado en las 26 tablas `public`.
+- Se cerro escritura cliente sobre `pagos_suscripcion`: usuarios autenticados solo leen historial propio por RLS; Webpay escribe desde server con `service_role`.
+- Se revoco acceso publico/authenticated al trigger function interno `ensure_organization_profile_trial_defaults()`.
+- Se optimizaron policies RLS de `web_push_subscriptions` con `(select auth.uid())` y `(select get_org_id())`.
+- Migraciones remotas nuevas:
+  - `20260531212114_harden_subscription_security_advisors`
+  - `20260531212250_optimize_web_push_rls_initplan`
+- Pendientes pre-produccion: leaked password protection en Auth, drift historico de migraciones remotas y performance advisor de FKs/indices.
+
+### 2026-05-31 - Indices FK Supabase
+
+- Se resolvieron los avisos `unindexed_foreign_keys` del Performance Advisor.
+- Se agrego migracion `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
+- Se elimino el indice duplicado exacto de `solicitudes_contacto` conservando `solicitudes_contacto_org_created_idx`.
+- Se deja `unused_index` como observacion de bajo riesgo hasta tener trafico real.

@@ -550,16 +550,12 @@ export default function CotizacionesPage() {
             <LuDownload aria-hidden />
             {isExporting ? "Preparando..." : "Exportar CSV"}
           </button>
-          <motion.div
-            whileHover={reduceMotion ? undefined : { y: -1 }}
-            whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-            transition={{ duration: 0.16, ease: "easeOut" }}
-          >
+          <div>
             <Link className={s.btnPrimary} href="/cotizaciones/nueva">
               <LuPlus aria-hidden />
               Nueva cotizacion
             </Link>
-          </motion.div>
+          </div>
         </div>
       </PremiumPageSection>
 

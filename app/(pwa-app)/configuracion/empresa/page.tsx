@@ -10,6 +10,7 @@ import {
   LuCheck,
   LuChevronDown,
   LuCopy,
+  LuCreditCard,
   LuEye,
   LuGlobe,
   LuImagePlus,
@@ -35,6 +36,10 @@ import {
   normalizePublicRequestSlug,
 } from "@/features/organization-profile/services/organization-profile.service";
 import type { UpdateOrganizationProfileInput } from "@/features/organization-profile/types/organization-profile";
+import { SubscriptionDetail } from "@/features/subscriptions/components/subscription-detail";
+import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
+import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
+import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
@@ -94,7 +99,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   isPublished: false,
 });
 
-type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones";
+type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones" | "suscripcion";
 type DeviceAlertsState = {
   kind: "checking" | "enabled" | "available" | "unsupported" | "error";
   message: string;
@@ -161,11 +166,18 @@ export default function ConfiguracionEmpresaPage() {
     message: "Revisando este dispositivo.",
   });
   const [isActivatingAlerts, setIsActivatingAlerts] = useState(false);
+  const [subscriptionSummary, setSubscriptionSummary] =
+    useState<SubscriptionSummary | null>(null);
 
   useEffect(() => {
     if (!profile) return;
     setForm(buildEmpresaProfileInput(profile));
   }, [profile]);
+
+  useEffect(() => {
+    if (!profile?.subscription?.isConfigured) return;
+    fetchSubscriptionSummary().then(setSubscriptionSummary);
+  }, [profile?.subscription?.isConfigured]);
 
   useEffect(
     () => () => {
@@ -848,6 +860,41 @@ export default function ConfiguracionEmpresaPage() {
                   {isActivatingAlerts ? "Activando..." : notificationsEnabled ? "Revisar estado" : "Activar alertas"}
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.accordion} ${openSection === "suscripcion" ? s.accordionOpen : ""}`}>
+          <button
+            type="button"
+            className={s.accordionTrigger}
+            onClick={() =>
+              setOpenSection((current) =>
+                current === "suscripcion" ? null : "suscripcion"
+              )
+            }
+            aria-expanded={openSection === "suscripcion"}
+          >
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}>
+                <LuCreditCard aria-hidden />
+              </div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>Suscripcion</span>
+                <strong>Suscripcion</strong>
+                <p>{profile?.planCode ? getPlanLabel(profile.planCode) : "Sin plan"}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={profile?.subscription?.isActive === true}>
+                {profile?.subscription?.isActive ? "Activo" : "Inactivo"}
+              </span>
+            </div>
+          </button>
+
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <SubscriptionDetail summary={subscriptionSummary} />
             </div>
           </div>
         </section>

@@ -1,4 +1,11 @@
 
+-- NOTE 2026-05-31:
+-- Este dump esta desactualizado respecto de las migraciones recientes.
+-- Faltan, al menos, `cotizacion_line_templates`, `pagos_suscripcion` y
+-- `public_landing_testimonials`. Regenerar con:
+--   pnpm exec supabase db dump --linked --schema public
+-- cuando `SUPABASE_DB_PASSWORD` este configurado.
+
 
 
 SET statement_timeout = 0;

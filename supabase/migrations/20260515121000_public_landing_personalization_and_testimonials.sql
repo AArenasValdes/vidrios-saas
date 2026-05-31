@@ -17,7 +17,7 @@ alter table public.public_landing_gallery
 
 create table if not exists public.public_landing_testimonials (
   id uuid primary key default gen_random_uuid(),
-  organization_id uuid not null references public.organizations(id) on delete cascade,
+  organization_id bigint not null references public.organizations(id) on delete cascade,
   nombre_corto text,
   comentario text not null,
   estrellas integer not null,

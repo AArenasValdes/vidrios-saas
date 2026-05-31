@@ -1,7 +1,7 @@
 # Database Map - Ventora
 
 Fuente de verdad: `current_schema.sql`. Referencia complementaria: `database.types.ts`.
-Fecha de generación: 2026-05-06.
+Fecha de generación: 2026-05-30.
 
 ---
 
@@ -9,7 +9,7 @@ Fecha de generación: 2026-05-06.
 
 La base de datos soporta un SaaS multi-tenant para captación y cierre de leads en empresas de vidrios y aluminio. El modelo se organiza alrededor de `organizations` como raíz de aislamiento. Cada tabla operativa filtra por `organization_id`. Existe una capa de catálogos técnicos (legado del cotizador) y una capa comercial activa (solicitudes, cotizaciones, clientes). El soft delete está estandarizado con `eliminado_en`. La seguridad se basa en RLS + `get_org_id()`.
 
-**Total de tablas:** 19
+**Total de tablas:** 26 versionadas por migraciones recientes. Este mapa tiene secciones completas para el core y addendums para tablas agregadas después del último dump completo.
 **Total de vistas:** 1
 **Total de funciones:** 4
 **Esquema:** `public` exclusivamente
@@ -37,7 +37,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 **PK:** `id`
 **FK salientes:** Ninguna
-**FK entrantes:** `users`, `clients`, `projects`, `cotizaciones`, `cotizacion_items`, `materials`, `historial_precios`, `organization_profile`, `solicitudes_contacto`, `labor_costs`, `web_push_subscriptions`, `cotizacion_code_counters`
+**FK entrantes:** `users`, `clients`, `projects`, `cotizaciones`, `cotizacion_items`, `materials`, `historial_precios`, `organization_profile`, `solicitudes_contacto`, `labor_costs`, `web_push_subscriptions`, `cotizacion_code_counters`, `cotizacion_line_templates`, `onboarding_checklists`, `public_landing_testimonials`, `pagos_suscripcion`
 
 ---
 
@@ -511,7 +511,39 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ---
 
-### 19. `labor_costs`
+### 19. `pagos_suscripcion`
+
+**Propósito:** Registro de pagos de suscripción procesados por Webpay Plus (Transbank). Cada fila representa un intento de pago.
+
+| Columna | Tipo | Notable |
+|---|---|---|
+| `id` | bigint IDENTITY | PK |
+| `organization_id` | bigint NOT NULL | FK → organizations ON DELETE CASCADE |
+| `plan_code` | text NOT NULL | `founder_full`, `quote_only` |
+| `billing_period` | text NOT NULL | `yearly` |
+| `amount_clp` | numeric NOT NULL | Monto en CLP |
+| `currency` | text NOT NULL | Default: `CLP` |
+| `payment_provider` | text NOT NULL | Default: `webpay_plus` |
+| `provider_token` | text | Token de Transbank |
+| `provider_status` | text | Estado devuelto por Transbank |
+| `provider_response` | jsonb | Respuesta completa de Transbank |
+| `buy_order` | text | Orden de compra (idempotency key) |
+| `status` | text NOT NULL | `pendiente`, `aprobado`, `fallido`, `reembolsado` |
+| `paid_at` | timestamptz | |
+| `period_starts_at` | timestamptz | Inicio del período facturado |
+| `period_ends_at` | timestamptz | Fin del período facturado |
+| `creado_en` | timestamptz | |
+| `actualizado_en` | timestamptz | |
+| `eliminado_en` | timestamptz | Soft delete |
+
+**PK:** `id`
+**FK salientes:** `organization_id` → `organizations.id` ON DELETE CASCADE
+**Índices notables:** Unique `buy_order` WHERE eliminado_en IS NULL (idempotency), Unique parcial `provider_token` WHERE NOT NULL AND eliminado_en IS NULL
+**Acceso:** `authenticated` solo puede leer pagos de su organización por RLS. Creación, confirmación y actualización quedan restringidas a rutas server con `service_role`.
+
+---
+
+### 20. `labor_costs`
 
 **Propósito:** Costos de mano de obra por organización.
 
@@ -531,7 +563,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ---
 
-### 20. `cotizacion_code_counters`
+### 21. `cotizacion_code_counters`
 
 **Propósito:** Contador diario por org para códigos de cotización legibles (COT-DDMMYY-NNN).
 
@@ -548,7 +580,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ---
 
-### 21. `web_push_subscriptions`
+### 22. `web_push_subscriptions`
 
 **Propósito:** Suscripciones Web Push para notificaciones PWA.
 
@@ -573,7 +605,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ---
 
-### 22. `public_landing_gallery`
+### 23. `public_landing_gallery`
 
 **Propósito:** Fotos de galería para la landing pública de cada organización. Relación 1:N con `organization_profile`.
 
@@ -633,6 +665,7 @@ organizations (1) ──── (N) historial_precios
 organizations (1) ──── (N) labor_costs
 organizations (1) ──── (N) solicitudes_contacto [ON DELETE CASCADE]
 organizations (1) ──── (N) public_landing_gallery [ON DELETE CASCADE]
+organizations (1) ──── (N) pagos_suscripcion [ON DELETE CASCADE]
 organization_profile (1) ──── (N) public_landing_gallery [ON DELETE CASCADE]
 
 clients (1) ──── (N) projects
@@ -675,17 +708,18 @@ auth.users (1) ──── (N) users
 1. organizations existe
 2. users se vincula a organization + auth.users
 3. organization_profile se crea para branding y captación
-4. Lead entra → solicitudes_contacto (con UTM y contexto)
-5. Vendedor responde → cambia estado de solicitud
-6. Se crea client (si no existe)
-7. Se crea project para el cliente
-8. Se crea cotizacion para el project
-9. Se agregan cotizacion_items (con breakdown técnico)
-10. Se genera PDF / se comparte por WhatsApp / link público
-11. Cliente aprueba/rechaza via approval_token
-12. cotizacion_code_counters genera códigos legibles
-13. web_push_subscriptions notifica al vendedor
-14. admin_purgar_clientes_eliminados limpia soft deletes antiguos
+4. organizations activa plan de suscripción → pagos_suscripcion registra pagos Webpay
+5. Lead entra → solicitudes_contacto (con UTM y contexto)
+6. Vendedor responde → cambia estado de solicitud
+7. Se crea client (si no existe)
+8. Se crea project para el cliente
+9. Se crea cotizacion para el project
+10. Se agregan cotizacion_items (con breakdown técnico)
+11. Se genera PDF / se comparte por WhatsApp / link público
+12. Cliente aprueba/rechaza via approval_token
+13. cotizacion_code_counters genera códigos legibles
+14. web_push_subscriptions notifica al vendedor
+15. admin_purgar_clientes_eliminados limpia soft deletes antiguos
 ```
 
 ---
@@ -748,3 +782,78 @@ auth.users (1) ──── (N) users
 **Unique parcial:** `(organization_id, step_key)` WHERE `eliminado_en IS NULL`
 
 **Uso en producto:** Dashboard, configuraciÃ³n, canales y cotizaciones privadas consumen este estado vÃ­a `src/features/onboarding/`.
+
+---
+
+## Addendum 2026-05-31 - tablas recientes pendientes de dump completo
+
+### `cotizacion_line_templates`
+
+**Propósito:** Precios rápidos por línea comercial para cotizaciones asistidas.
+
+| Columna | Tipo | Notable |
+|---|---|---|
+| `id` | bigint IDENTITY | PK |
+| `organization_id` | bigint NOT NULL | Tenant key |
+| `nombre` | text NOT NULL | Nombre de línea |
+| `precio_m2_sugerido` | numeric(12,2) | Default 0 |
+| `minimo_cobrable` | numeric(12,2) | Default 0 |
+| `redondeo_precio` | numeric(12,2) | Default 1000 |
+| `material` | text NOT NULL | CHECK: `Aluminio`, `PVC` |
+| `vidrio_principal_recomendado` | text | Sugerencia visual/comercial |
+| `is_active` | boolean | Default true |
+| `sort_order` | integer | Default 0 |
+| `eliminado_en` | timestamptz | Soft delete |
+
+**Índices:** `(organization_id, sort_order, nombre)` WHERE `eliminado_en IS NULL`.
+**RLS:** SELECT/INSERT/UPDATE por `organization_id = get_org_id()`.
+**Nota:** No tiene FK formal a `organizations`; relación inferida por tenant key.
+
+### `public_landing_testimonials`
+
+**Propósito:** Valoraciones públicas enviadas desde la landing y moderadas desde configuración.
+
+| Columna | Tipo | Notable |
+|---|---|---|
+| `id` | uuid | PK, `gen_random_uuid()` |
+| `organization_id` | bigint NOT NULL | FK → organizations ON DELETE CASCADE |
+| `nombre_corto` | text | Nombre visible |
+| `comentario` | text NOT NULL | Testimonio |
+| `estrellas` | integer NOT NULL | CHECK 1..5 |
+| `estado` | text NOT NULL | `pendiente`, `aprobada`, `oculta` |
+| `creado_en` | timestamptz | |
+| `actualizado_en` | timestamptz | |
+| `aprobado_en` | timestamptz | |
+| `ocultado_en` | timestamptz | |
+
+**Índices:** `(organization_id, estado, creado_en DESC)`.
+**RLS:** SELECT/INSERT/UPDATE/DELETE por `organization_id = get_org_id()`.
+**Corrección:** La migración local original usaba `organization_id uuid`; debe ser `bigint` para coincidir con `organizations.id`. La migración `20260531050353_harden_public_landing_testimonials_org_id.sql` lo endurece.
+
+### Drift generado
+
+- `current_schema.sql` está atrasado y debe regenerarse con CLI cuando exista `SUPABASE_DB_PASSWORD`.
+- `database.types.ts` está atrasado y debe regenerarse con `supabase gen types`.
+
+---
+
+## Addendum 2026-05-31 - estado remoto verificado por MCP
+
+- Proyecto remoto: `yrtrwgkaopfumpidjthk`.
+- Tablas `public`: 26, todas con RLS habilitado.
+- `public_landing_testimonials.organization_id` ya esta en `bigint` con FK a `organizations(id)`.
+- Buckets Storage: `organization-assets` publico y `quote-pdfs` privado.
+- Edge Functions: ninguna desplegada.
+- `pagos_suscripcion`: 16 filas; estados observados `aprobado=2`, `pendiente=3`, `fallido=11`.
+- `pagos_suscripcion` ahora solo expone `SELECT` a `authenticated`; escritura queda reservada para rutas server con `service_role`.
+- Performance Advisor aun reporta FKs sin indice y un indice duplicado en `solicitudes_contacto`; revisar despues de estabilizar pagos/produccion.
+
+---
+
+## Addendum 2026-05-31 - FK indexes verificados
+
+- Se aplico en remoto `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
+- Se agregaron covering indexes para todas las FKs que reportaba Performance Advisor.
+- Consulta directa a `pg_constraint`/`pg_index` devuelve 0 foreign keys sin indice covering.
+- Se elimino el indice duplicado exacto `solicitudes_contacto_organization_id_creado_en_idx`; se conserva `solicitudes_contacto_org_created_idx`.
+- Performance Advisor queda solo con avisos `unused_index`; no se eliminan por ahora porque varios indices son nuevos o de rutas con poco trafico.

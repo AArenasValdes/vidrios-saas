@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     const securityHeaders = [
       {
         key: "Content-Security-Policy",
-        value: "base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'",
+        value: "base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://webpay3gint.transbank.cl https://webpay3g.transbank.cl; object-src 'none'",
       },
       {
         key: "Referrer-Policy",

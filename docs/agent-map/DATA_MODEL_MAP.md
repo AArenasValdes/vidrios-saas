@@ -10,7 +10,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 - **Proposito**: Raiz del multi-tenant. Cada empresa cliente SaaS es una organizacion.
 - **Campos importantes**: `id` (bigint PK), `nombre`, `correo`, `telefono`, `direccion`, `logo_url`, `plan`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery
+- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
 - **Usada por**: Auth (resolver org), todas las features (filtro tenant)
 - **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
 - **Riesgos**: No eliminar organizaciones con datos asociados (CASCADE en algunos FK)
@@ -149,6 +149,28 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ---
 
+### Tabla: pagos_suscripcion
+
+- **Proposito**: Registro de pagos de suscripción procesados por Webpay Plus (Transbank). Cada fila representa un intento de pago.
+- **Campos importantes**: `id` (bigint PK), `organization_id` (FK ON DELETE CASCADE), `plan_code` (founder_full, quote_only), `billing_period` (yearly), `amount_clp` (NOT NULL), `currency` (CLP), `payment_provider` (webpay_plus), `provider_token`, `provider_status`, `provider_response` (jsonb), `buy_order` (idempotency key), `status` (pendiente/aprobado/fallido/reembolsado), `paid_at`, `period_starts_at`, `period_ends_at`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Relaciones**: N:1 organizations (ON DELETE CASCADE)
+- **Usada por**: Suscripciones (Webpay flow), cuenta vencida
+- **Archivos donde aparece**: `src/features/subscriptions/hooks/useWebpayPago.ts`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`
+- **Riesgos**: Unique `buy_order` WHERE eliminado_en IS NULL protege idempotencia. RLS permite solo SELECT por `organization_id` para `authenticated`; inserts/updates quedan en rutas server con `service_role`. No exponer `provider_response` completo en logs de servidor.
+
+---
+
+### Tabla: public_landing_testimonials
+
+- **Proposito**: Valoraciones publicas de clientes desde la mini landing, moderadas por la empresa.
+- **Campos importantes**: `id` (uuid PK), `organization_id` (bigint FK ON DELETE CASCADE), `nombre_corto`, `comentario`, `estrellas` (1-5), `estado` (pendiente/aprobada/oculta), `creado_en`, `actualizado_en`, `aprobado_en`, `ocultado_en`
+- **Relaciones**: N:1 organizations
+- **Usada por**: Landing publica `/solicitud/[empresa]`, formulario de valoraciones y configuracion pagina venta
+- **Archivos donde aparece**: `src/features/public-landing-testimonials/`, `app/api/solicitud/[empresa]/valoraciones/route.ts`, `supabase/migrations/20260515121000_public_landing_personalization_and_testimonials.sql`
+- **Riesgos**: `organization_id` debe ser bigint. La migracion `20260531050353_harden_public_landing_testimonials_org_id.sql` corrige/endurece el tipo si existe drift.
+
+---
+
 ## Tablas legacy/dormidas (NO tocar sin instruccion explicita)
 
 ### Tabla: materials
@@ -232,7 +254,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 | Mecanismo | Tablas |
 |---|---|
-| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, cotizacion_line_templates, onboarding_checklists, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto |
+| `get_org_id()` directo | clients, cotizaciones, cotizacion_items, cotizacion_line_templates, onboarding_checklists, projects, users, materials, historial_precios, organizations, labor_costs, solicitudes_contacto, pagos_suscripcion |
 | `get_org_id()` + nullable | system_configurations, system_lines |
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |

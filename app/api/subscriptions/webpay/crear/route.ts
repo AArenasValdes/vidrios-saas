@@ -4,7 +4,11 @@ import {
   AuthRouteAccessError,
   resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
-import { webpaySuscripcionService } from "@/features/subscriptions/services/webpay-suscripcion.service";
+import {
+  isWebpayBillingPeriod,
+  isWebpayPlanCode,
+  webpaySuscripcionService,
+} from "@/features/subscriptions/services/webpay-suscripcion.service";
 
 export const dynamic = "force-dynamic";
 
@@ -39,17 +43,14 @@ export async function POST(request: Request) {
 
     const { plan_code, billing_period } = body;
 
-    if (
-      !plan_code ||
-      !["founder_full", "quote_only"].includes(plan_code)
-    ) {
+    if (!plan_code || !isWebpayPlanCode(plan_code)) {
       return NextResponse.json(
         { error: "Plan no valido. Usa founder_full o quote_only." },
         { status: 400 }
       );
     }
 
-    if (!billing_period || billing_period !== "yearly") {
+    if (!billing_period || !isWebpayBillingPeriod(billing_period)) {
       return NextResponse.json(
         {
           error:
@@ -74,11 +75,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Error interno al crear transaccion Webpay.";
+    if (
+      error instanceof Error &&
+      error.message === "La cuenta ya tiene una suscripcion activa."
+    ) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 409 }
+      );
+    }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[webpay:crear]", error);
+
+    return NextResponse.json(
+      { error: "No pudimos iniciar el pago en Webpay." },
+      { status: 500 }
+    );
   }
 }

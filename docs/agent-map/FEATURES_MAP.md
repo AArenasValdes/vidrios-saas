@@ -37,38 +37,46 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Trial y Suscripcion Manual
 
-- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion y la activacion manual por transferencia. Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de WhatsApp hacia activacion mensual o anual.
+- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion, la activacion manual por transferencia y el pago automatico via Webpay Plus (Transbank). Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de pago Webpay o WhatsApp hacia activacion mensual o anual.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
 - **Archivos principales**:
   - `src/features/subscriptions/types/subscription.ts`
   - `src/features/subscriptions/services/subscription-status.service.ts`
   - `src/features/subscriptions/services/subscription-route-access.service.ts`
+  - `src/features/subscriptions/hooks/useWebpayPago.ts`
+  - `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`
+  - `src/features/subscriptions/services/webpay.service.ts`
   - `src/features/organization-profile/repositories/organization-profile.repository.ts`
   - `src/features/organization-profile/services/organization-profile.service.ts`
   - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
   - `src/components/layout/app-shell.tsx`
   - `src/components/layout/app-shell.module.css`
   - `app/(pwa-app)/cuenta-vencida/page.tsx`
+  - `app/(pwa-app)/cuenta-vencida/page-content.tsx`
   - `app/(pwa-app)/cuenta-vencida/page.module.css`
+  - `app/api/subscriptions/webpay/crear/route.ts`
+  - `app/api/subscriptions/webpay/confirmar/route.ts`
   - `app/api/solicitudes/route.ts`
   - `app/api/organization-assets/upload/route.ts`
   - `app/api/public-landing/revalidate/route.ts`
   - `proxy.ts`
   - `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
+  - `supabase/migrations/20260530100000_pagos_suscripcion.sql`
 - **Componentes principales**: `AppShell`, pantalla `Cuenta vencida`
 - **Hooks/servicios/actions**: `useOrganizationProfile()`, `resolveOrganizationSubscriptionState()`, `canAccessPrivatePathWithSubscription()`, `assertSubscriptionAllowsWrite()`
-- **Tablas Supabase**: `organization_profile`, `organizations`
+- **Tablas Supabase**: `organization_profile`, `organizations`, `pagos_suscripcion`
 - **Flujo de datos**:
   - Login y rutas privadas -> `useOrganizationProfile()` -> `organizationProfileService` -> repository -> `organization_profile`
   - Snapshot crudo -> `resolveOrganizationSubscriptionState()` -> estado efectivo (`trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`)
   - Shell privado -> banner / redirect a `/cuenta-vencida` / guard de acciones
   - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
+  - Webpay: `/cuenta-vencida` -> `useWebpayPago()` -> POST `/api/subscriptions/webpay/crear` -> `webpaySuscripcionService.createTransaccion()` -> redirect a Transbank -> GET/POST `/api/subscriptions/webpay/confirmar` -> `webpaySuscripcionService.confirmarPago()` -> `pagoSuscripcionRepository` -> `organization_profile` actualizado
 - **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`
 - **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`
 - **Donde editar logica**: `src/features/subscriptions/services/`
-- **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
+- **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `src/features/subscriptions/services/webpay.service.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`
 - **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 2 dias o menos aparece banner de trial. Si vence, Ventora debe seguir mostrando datos basicos pero bloquear crear/editar/eliminar y llevar a CTA por WhatsApp con planes manuales `$10.000 mensual` y `$80.000 anual`.
-- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No mezclar pago automatico todavia. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion.
+- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Webpay depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL` en env. No exponer `provider_response` completo en logs.
 
 ---
 
@@ -433,12 +441,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/landing-gallery/repositories/landing-gallery.repository.ts`
   - `src/features/landing-gallery/repositories/landing-gallery-server.repository.ts`
   - `src/features/landing-gallery/types/landing-gallery.ts`
+  - `src/features/public-landing-testimonials/`
 - **Componentes principales**: Internos de paginas
-- **Hooks/servicios/actions**: `useOrganizationProfile`, `useLandingGallery`, `organizationProfileService`
-- **Tablas Supabase**: `organization_profile`, `public_landing_gallery`, Storage bucket `organization-assets`
+- **Hooks/servicios/actions**: `useOrganizationProfile`, `useLandingGallery`, `usePublicLandingTestimonials`, `organizationProfileService`
+- **Tablas Supabase**: `organization_profile`, `public_landing_gallery`, `public_landing_testimonials`, Storage bucket `organization-assets`
 - **Flujo de datos**:
   - Empresa: Page -> `useOrganizationProfile` -> `organizationProfileService` -> repository
-  - Pagina venta: Page -> `useOrganizationProfile` + `useLandingGallery` -> services -> repositories
+  - Pagina venta: Page -> `useOrganizationProfile` + `useLandingGallery` + `usePublicLandingTestimonials` -> services -> repositories
 - **Estados importantes**: isLoading, error, isUploading (galeria)
 - **Donde editar UI**: `app/(pwa-app)/configuracion/`
 - **Donde editar logica**: `src/features/organization-profile/services/`, `src/features/landing-gallery/services/`
@@ -456,10 +465,11 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(landing-web)/solicitud/[empresa]/page.tsx` (441 lineas, server component)
   - `src/features/organization-profile/services/organization-profile.service.ts` (resolveOrganizationProfile)
   - `src/features/landing-gallery/repositories/landing-gallery-server.repository.ts`
+  - `src/features/public-landing-testimonials/repositories/public-landing-testimonial-server.repository.ts`
   - `src/features/solicitudes/services/solicitudes-contacto.service.ts` (getEmpresaPublicaConfig)
 - **Componentes principales**: Formulario solicitud, galeria, horario (internos de la pagina)
-- **Tablas Supabase**: `organization_profile`, `public_landing_gallery`
-- **Flujo de datos**: Slug en URL -> server component lee perfil + galeria -> renderiza landing personalizada
+- **Tablas Supabase**: `organization_profile`, `public_landing_gallery`, `public_landing_testimonials`
+- **Flujo de datos**: Slug en URL -> server component lee perfil + galeria + valoraciones aprobadas -> renderiza landing personalizada
 - **Donde editar UI**: `app/(landing-web)/solicitud/[empresa]/page.tsx`
 - **Donde editar logica**: `src/features/solicitudes/services/solicitudes-contacto.service.ts` (getEmpresaPublicaConfig)
 - **Donde editar persistencia**: `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`

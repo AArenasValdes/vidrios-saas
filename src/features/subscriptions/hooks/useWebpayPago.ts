@@ -29,7 +29,19 @@ export function useWebpayPago() {
           );
         }
 
-        window.location.href = data.url;
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = data.url;
+        form.style.display = "none";
+
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "token_ws";
+        input.value = data.token;
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Error inesperado."

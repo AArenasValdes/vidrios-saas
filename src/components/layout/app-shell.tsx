@@ -12,6 +12,8 @@ import {
 import type { IconType } from "react-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   LuBell,
   LuBadgeCheck,
@@ -19,6 +21,7 @@ import {
   LuChevronRight,
   LuCircleSlash2,
   LuClock3,
+  LuCreditCard,
   LuFilePlus2,
   LuFileText,
   LuGlobe,
@@ -27,6 +30,7 @@ import {
   LuLogOut,
   LuRefreshCw,
   LuSettings,
+  LuSparkles,
   LuUsers,
 } from "react-icons/lu";
 
@@ -45,13 +49,28 @@ import {
   readSolicitudesSeenAt,
 } from "@/features/solicitudes/services/solicitudes-seen-storage.service";
 import {
-  buildSubscriptionActivationWhatsappHref,
   canAccessPrivatePathWithSubscription,
   isWriteRestrictedPrivatePath,
   resolveOrganizationSubscriptionState,
-  VENTORA_MONTHLY_PRICE,
-  VENTORA_YEARLY_PRICE,
 } from "@/features/subscriptions/services/subscription-status.service";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Toaster } from "@/components/ui/sonner";
 
 import s from "./app-shell.module.css";
 
@@ -139,6 +158,11 @@ const SPECIAL_SCREENS: ContextItem[] = [
 
 const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
 const ALERTS_CLEARED_STORAGE_PREFIX = "vidrios-saas:alerts-cleared:";
+const TRIAL_NOTICE_DAILY_STORAGE_PREFIX = "ventora:trial-notice-day:";
+const TRIAL_NOTICE_SESSION_STORAGE_PREFIX = "ventora:trial-notice-session:";
+const TRIAL_REMINDER_DAILY_STORAGE_PREFIX = "ventora:trial-reminder-day:";
+const TRIAL_URGENT_DAYS = 3;
+const DESKTOP_VIEWPORT_QUERY = "(min-width: 861px)";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
@@ -173,6 +197,22 @@ function getAlertsClearedStorageKey(
   }
 
   return `${ALERTS_CLEARED_STORAGE_PREFIX}${String(organizationId)}:${email.trim().toLowerCase()}`;
+}
+
+function getTrialNoticeStorageKey(
+  prefix: string,
+  organizationId: string | number | null | undefined,
+  email: string | null | undefined
+) {
+  if (!organizationId || !email) {
+    return null;
+  }
+
+  return `${prefix}${String(organizationId)}:${email.trim().toLowerCase()}`;
+}
+
+function getTodayStorageValue() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function scheduleDeferredShellWork(callback: () => void, delayMs = 650) {
@@ -282,6 +322,29 @@ function getHydratedServerSnapshot() {
   return false;
 }
 
+function subscribeToDesktopViewport(callback: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => undefined;
+  }
+
+  const mediaQueryList = window.matchMedia(DESKTOP_VIEWPORT_QUERY);
+  mediaQueryList.addEventListener("change", callback);
+
+  return () => {
+    mediaQueryList.removeEventListener("change", callback);
+  };
+}
+
+function getDesktopViewportSnapshot() {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia(DESKTOP_VIEWPORT_QUERY).matches
+    : false;
+}
+
+function getDesktopViewportServerSnapshot() {
+  return false;
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -303,10 +366,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
   >(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [authBootStuck, setAuthBootStuck] = useState(false);
+  const [showTrialWelcomeNotice, setShowTrialWelcomeNotice] = useState(false);
+  const [isTrialReminderDismissed, setIsTrialReminderDismissed] = useState(false);
+  const [trialStorageScope, setTrialStorageScope] = useState<string | null>(null);
   const hasHydrated = useSyncExternalStore(
     subscribeToHydrationSnapshot,
     getHydratedClientSnapshot,
     getHydratedServerSnapshot
+  );
+  const isDesktopViewport = useSyncExternalStore(
+    subscribeToDesktopViewport,
+    getDesktopViewportSnapshot,
+    getDesktopViewportServerSnapshot
   );
   const [alertsSeenAt, setAlertsSeenAt] = useState(0);
   const [alertsClearedAt, setAlertsClearedAt] = useState(0);
@@ -356,22 +427,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
     profile !== null &&
     subscription.isWriteBlocked &&
     !canAccessPrivatePathWithSubscription(pathname, subscription);
-  const monthlyActivationHref = useMemo(
-    () =>
-      buildSubscriptionActivationWhatsappHref({
-        companyName,
-        plan: "mensual",
-      }),
-    [companyName]
-  );
-  const yearlyActivationHref = useMemo(
-    () =>
-      buildSubscriptionActivationWhatsappHref({
-        companyName,
-        plan: "anual",
-      }),
-    [companyName]
-  );
+  const isDashboardRoute = pathname === "/dashboard";
+  const trialDaysRemaining = subscription.daysRemaining ?? 0;
+  const isTrialInProgress =
+    subscription.isTrial &&
+    !subscription.isExpired &&
+    subscription.daysRemaining !== null &&
+    subscription.daysRemaining > 0;
+  const shouldShowSoftTrialNotice =
+    profile !== null && isTrialInProgress && trialDaysRemaining > TRIAL_URGENT_DAYS;
   const alertsSeenStorageKey = useMemo(
     () => getAlertsSeenStorageKey(organizacionId, user?.email),
     [organizacionId, user?.email]
@@ -384,6 +448,63 @@ export default function AppShell({ children }: { children: ReactNode }) {
     () => getSolicitudesSeenStorageKey(organizacionId, user?.email),
     [organizacionId, user?.email]
   );
+  const trialNoticeDailyStorageKey = useMemo(
+    () =>
+      getTrialNoticeStorageKey(
+        TRIAL_NOTICE_DAILY_STORAGE_PREFIX,
+        organizacionId,
+        user?.email
+      ),
+    [organizacionId, user?.email]
+  );
+  const trialNoticeSessionStorageKey = useMemo(
+    () =>
+      getTrialNoticeStorageKey(
+        TRIAL_NOTICE_SESSION_STORAGE_PREFIX,
+        organizacionId,
+        user?.email
+      ),
+    [organizacionId, user?.email]
+  );
+  const trialReminderDailyStorageKey = useMemo(
+    () =>
+      getTrialNoticeStorageKey(
+        TRIAL_REMINDER_DAILY_STORAGE_PREFIX,
+        organizacionId,
+        user?.email
+      ),
+    [organizacionId, user?.email]
+  );
+  const trialStorageScopeKey = useMemo(() => {
+    if (
+      !trialNoticeDailyStorageKey ||
+      !trialNoticeSessionStorageKey ||
+      !trialReminderDailyStorageKey
+    ) {
+      return null;
+    }
+
+    return `${trialNoticeDailyStorageKey}|${trialNoticeSessionStorageKey}|${trialReminderDailyStorageKey}`;
+  }, [
+    trialNoticeDailyStorageKey,
+    trialNoticeSessionStorageKey,
+    trialReminderDailyStorageKey,
+  ]);
+  const isTrialStorageReady =
+    trialStorageScopeKey !== null && trialStorageScope === trialStorageScopeKey;
+  const shouldShowDashboardTrialBanner =
+    isTrialStorageReady &&
+    !usesMinimalShell &&
+    isDashboardRoute &&
+    isTrialInProgress &&
+    trialDaysRemaining <= TRIAL_URGENT_DAYS &&
+    !isTrialReminderDismissed;
+  const shouldShowDashboardTrialPill =
+    isTrialStorageReady &&
+    !usesMinimalShell &&
+    isDashboardRoute &&
+    isTrialInProgress &&
+    trialDaysRemaining > TRIAL_URGENT_DAYS;
   const unreadAlerts = useMemo(
     () => alerts.filter((alert) => getAlertTimestamp(alert.occurredAt) > alertsSeenAt),
     [alerts, alertsSeenAt]
@@ -427,6 +548,52 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setIsAlertsOpen(false);
     setProfileMenuAnchor((current) => (current === anchor ? null : anchor));
   };
+
+  const dismissTrialWelcomeNotice = useCallback(() => {
+    setShowTrialWelcomeNotice(false);
+
+    if (!trialNoticeDailyStorageKey || !trialNoticeSessionStorageKey) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(trialNoticeDailyStorageKey, getTodayStorageValue());
+      window.sessionStorage.setItem(trialNoticeSessionStorageKey, "1");
+    } catch {
+      // Storage can be unavailable in private modes; UI dismissal still works in memory.
+    }
+  }, [trialNoticeDailyStorageKey, trialNoticeSessionStorageKey]);
+
+  const handleTrialNoticeOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        dismissTrialWelcomeNotice();
+      }
+    },
+    [dismissTrialWelcomeNotice]
+  );
+
+  const handleViewPlansFromTrialNotice = useCallback(() => {
+    dismissTrialWelcomeNotice();
+    router.push("/cuenta-vencida");
+  }, [dismissTrialWelcomeNotice, router]);
+
+  const dismissTrialReminder = useCallback(() => {
+    setIsTrialReminderDismissed(true);
+
+    if (!trialReminderDailyStorageKey) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(trialReminderDailyStorageKey, getTodayStorageValue());
+      toast("Te recordaremos despu\u00e9s", {
+        description: "El aviso vuelve a aparecer ma\u00f1ana si tu prueba sigue activa.",
+      });
+    } catch {
+      // Storage can be unavailable in private modes; UI dismissal still works in memory.
+    }
+  }, [trialReminderDailyStorageKey]);
 
   const resolveGuardedHref = useCallback(
     (href: string) => {
@@ -476,6 +643,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           <LuGlobe aria-hidden />
           Pagina de venta
+        </Link>
+        <Link
+          href={resolveGuardedHref("/cuenta/suscripcion")}
+          className={s.accountMenuLink}
+          prefetch={false}
+          onClick={() => setProfileMenuAnchor(null)}
+        >
+          <LuCreditCard aria-hidden />
+          Plan y suscripcion
         </Link>
         <button
           className={s.accountMenuAction}
@@ -558,6 +734,48 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
     router.replace("/cuenta-vencida");
   }, [router, shouldRedirectForSubscription]);
+
+  useEffect(() => {
+    return scheduleDeferredShellWork(() => {
+      if (
+        !trialNoticeDailyStorageKey ||
+        !trialNoticeSessionStorageKey ||
+        !trialReminderDailyStorageKey ||
+        !trialStorageScopeKey
+      ) {
+        setShowTrialWelcomeNotice(false);
+        setIsTrialReminderDismissed(false);
+        setTrialStorageScope(null);
+        return;
+      }
+
+      try {
+        const today = getTodayStorageValue();
+        const dismissedToday =
+          window.localStorage.getItem(trialNoticeDailyStorageKey) === today;
+        const dismissedThisSession =
+          window.sessionStorage.getItem(trialNoticeSessionStorageKey) === "1";
+        const reminderDismissed =
+          window.localStorage.getItem(trialReminderDailyStorageKey) === today;
+
+        setShowTrialWelcomeNotice(
+          shouldShowSoftTrialNotice && !dismissedToday && !dismissedThisSession
+        );
+        setIsTrialReminderDismissed(reminderDismissed);
+        setTrialStorageScope(trialStorageScopeKey);
+      } catch {
+        setIsTrialReminderDismissed(false);
+        setShowTrialWelcomeNotice(false);
+        setTrialStorageScope(trialStorageScopeKey);
+      }
+    }, 0);
+  }, [
+    shouldShowSoftTrialNotice,
+    trialNoticeDailyStorageKey,
+    trialNoticeSessionStorageKey,
+    trialReminderDailyStorageKey,
+    trialStorageScopeKey,
+  ]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -832,6 +1050,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const trialNoticeActions = (
+    <>
+      <Button
+        className={s.trialNoticePrimaryButton}
+        type="button"
+        onClick={handleViewPlansFromTrialNotice}
+      >
+        Ver planes
+      </Button>
+      <Button
+        className={s.trialNoticeSecondaryButton}
+        type="button"
+        variant="outline"
+        onClick={dismissTrialWelcomeNotice}
+      >
+        {"Despu\u00e9s"}
+      </Button>
+    </>
+  );
+
   if (isWorkspaceBooting) {
     return (
       <div className={s.bootRoot}>
@@ -1097,56 +1335,130 @@ export default function AppShell({ children }: { children: ReactNode }) {
             isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""
           }`}
         >
-          {!usesMinimalShell && subscription.shouldShowTrialBanner ? (
-            <section className={s.subscriptionBanner} role="status" aria-live="polite">
-              <div>
-                <span className={s.subscriptionBannerEyebrow}>
-                  {subscription.isLastTrialDay ? "Ultimo dia de prueba" : "Tu prueba termina pronto"}
-                </span>
-                <strong className={s.subscriptionBannerTitle}>
-                  {subscription.isLastTrialDay
-                    ? "Activa tu cuenta hoy para no cortar tu operacion."
-                    : `Te quedan ${subscription.daysRemaining ?? 0} dias de prueba en Ventora.`}
-                </strong>
-                <p className={s.subscriptionBannerText}>
-                  Puedes activar por transferencia manual: mensual ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} o anual ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}.
-                </p>
-              </div>
-              <div className={s.subscriptionBannerActions}>
-                <a className={s.subscriptionPrimaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
-                  Activar mensual
-                </a>
-                <a className={s.subscriptionSecondaryAction} href={yearlyActivationHref} target="_blank" rel="noreferrer">
-                  Activar anual
-                </a>
-              </div>
+          {shouldShowDashboardTrialPill ? (
+            <section className={s.trialCompactNotice} role="status" aria-live="polite">
+              <span>
+                Prueba activa &middot; quedan {trialDaysRemaining} {"d\u00edas"}
+              </span>
+              <Link href="/cuenta-vencida" prefetch={false}>
+                Ver planes
+              </Link>
             </section>
           ) : null}
 
-          {!usesMinimalShell && subscription.shouldShowExpiredBanner ? (
-            <section className={`${s.subscriptionBanner} ${s.subscriptionBannerExpired}`} role="alert">
+          {shouldShowDashboardTrialBanner ? (
+            <section className={s.trialUrgentBanner} role="status" aria-live="polite">
               <div>
-                <span className={s.subscriptionBannerEyebrow}>Cuenta vencida</span>
-                <strong className={s.subscriptionBannerTitle}>
-                  Tu prueba ya termino. Puedes revisar datos, pero no crear ni modificar.
+                <span className={s.trialUrgentEyebrow}>
+                  {subscription.isLastTrialDay ? "Ultimo dia de prueba" : "Tu prueba termina pronto"}
+                </span>
+                <strong>
+                  {subscription.isLastTrialDay
+                    ? "Tu prueba termina hoy."
+                    : `Te quedan ${trialDaysRemaining} d\u00edas de prueba en Ventora.`}
                 </strong>
-                <p className={s.subscriptionBannerText}>
-                  Para volver a operar, activa tu cuenta por transferencia manual: mensual ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")} o anual ${VENTORA_YEARLY_PRICE.toLocaleString("es-CL")}.
-                </p>
               </div>
-              <div className={s.subscriptionBannerActions}>
-                <a className={s.subscriptionPrimaryAction} href={monthlyActivationHref} target="_blank" rel="noreferrer">
-                  Contactar por WhatsApp
-                </a>
-                <Link className={s.subscriptionSecondaryAction} href="/cuenta-vencida">
-                  Ver activacion
+              <div className={s.trialUrgentActions}>
+                <Link
+                  className={s.subscriptionPrimaryAction}
+                  href="/cuenta-vencida"
+                  prefetch={false}
+                >
+                  Ver planes
                 </Link>
+                <button
+                  className={s.subscriptionSecondaryAction}
+                  type="button"
+                  onClick={dismissTrialReminder}
+                >
+                  {"Despu\u00e9s"}
+                </button>
               </div>
             </section>
           ) : null}
           {children}
         </div>
       </main>
+
+      {!usesMinimalShell ? (
+        <>
+          <Toaster position="top-center" richColors />
+          <Dialog
+            open={showTrialWelcomeNotice && isDesktopViewport}
+            onOpenChange={handleTrialNoticeOpenChange}
+          >
+            <DialogContent
+              className={s.trialDialogContent}
+              showCloseButton
+            >
+              <motion.div
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className={s.trialNoticeMotion}
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+              >
+                <DialogHeader className={s.trialNoticeHeader}>
+                  <motion.span
+                    animate={{ rotate: 0, scale: 1 }}
+                    className={s.trialNoticeIcon}
+                    initial={{ rotate: -8, scale: 0.92 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  >
+                    <LuSparkles aria-hidden />
+                  </motion.span>
+                  <span className={s.trialNoticeEyebrow}>Prueba activa</span>
+                  <DialogTitle className={s.trialNoticeTitle}>
+                    Tu prueba termina pronto
+                  </DialogTitle>
+                  <DialogDescription className={s.trialNoticeText}>
+                    Te quedan {trialDaysRemaining} {"d\u00edas"} para seguir usando
+                    Ventora sin interrupciones.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className={s.trialNoticeActions}>
+                  {trialNoticeActions}
+                </DialogFooter>
+              </motion.div>
+            </DialogContent>
+          </Dialog>
+
+          <Drawer
+            open={showTrialWelcomeNotice && !isDesktopViewport}
+            onOpenChange={handleTrialNoticeOpenChange}
+          >
+            <DrawerContent className={s.trialDrawerContent}>
+              <motion.div
+                animate={{ opacity: 1, y: 0 }}
+                className={s.trialDrawerInner}
+                initial={{ opacity: 0, y: 12 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+              >
+                <DrawerHeader className={s.trialNoticeHeader}>
+                  <motion.span
+                    animate={{ rotate: 0, scale: 1 }}
+                    className={s.trialNoticeIcon}
+                    initial={{ rotate: -8, scale: 0.92 }}
+                    transition={{ duration: 0.24, ease: "easeOut" }}
+                  >
+                    <LuSparkles aria-hidden />
+                  </motion.span>
+                  <span className={s.trialNoticeEyebrow}>Prueba activa</span>
+                  <DrawerTitle className={s.trialNoticeTitle}>
+                    Tu prueba termina pronto
+                  </DrawerTitle>
+                  <DrawerDescription className={s.trialNoticeText}>
+                    Te quedan {trialDaysRemaining} {"d\u00edas"} para seguir usando
+                    Ventora sin interrupciones.
+                  </DrawerDescription>
+                </DrawerHeader>
+                <DrawerFooter className={s.trialNoticeActions}>
+                  {trialNoticeActions}
+                </DrawerFooter>
+              </motion.div>
+            </DrawerContent>
+          </Drawer>
+        </>
+      ) : null}
 
       {!usesMinimalShell && isAlertsOpen ? (
         <aside className={s.alertsPanel} data-alerts-panel="true">

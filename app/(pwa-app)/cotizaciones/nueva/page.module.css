@@ -8048,8 +8048,16 @@
  
 .stepTwoMobileChoiceChipRec.stepTwoMobileChoiceChipActive {
   border-color: #2FA36B !important;
-  background: rgba(47, 163, 107, 0.18) !important;
-  color: #ffffff !important;
+  background: linear-gradient(180deg, #ecfdf5 0%, #dff8eb 100%) !important;
+  color: #0f6b47 !important;
+  box-shadow:
+    0 10px 20px rgba(47, 163, 107, 0.16),
+    inset 0 0 0 1px rgba(47, 163, 107, 0.12) !important;
+}
+
+.stepTwoMobileChoiceChipRec.stepTwoMobileChoiceChipActive:active {
+  background: linear-gradient(180deg, #e4f9ee 0%, #d7f4e5 100%) !important;
+  color: #0f6b47 !important;
 }
  
 /* Mensaje sin resultados */
@@ -8104,6 +8112,12 @@
 .stepTwoMobileChoiceChipActive .stepTwoMobileChoiceChipBadge {
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
+}
+
+.stepTwoMobileChoiceChipRec.stepTwoMobileChoiceChipActive .stepTwoMobileChoiceChipBadge {
+  background: #2FA36B;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(47, 163, 107, 0.18);
 }
 
 .stepTwoMobileGlassCatalog {

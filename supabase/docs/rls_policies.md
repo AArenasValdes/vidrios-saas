@@ -1,7 +1,7 @@
 # RLS Policies - Ventora
 
 Fuente de verdad: `current_schema.sql`.
-Fecha de generación: 2026-05-06.
+Fecha de generación: 2026-05-30.
 
 ---
 
@@ -9,9 +9,9 @@ Fecha de generación: 2026-05-06.
 
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
-**Total tablas con RLS habilitado:** 22
-**Total tablas con policies definidas:** 18
-**Total tablas con RLS habilitado pero sin policies:** 4  
+**Total tablas con RLS habilitado:** 26 versionadas por migraciones recientes.
+**Total tablas con policies definidas:** 24+ segun migraciones locales; confirmar con `supabase db advisors --linked` cuando exista `SUPABASE_DB_PASSWORD`.
+**Total tablas con RLS habilitado pero sin acceso cliente efectivo:** `formula_variables` y `material_types` tienen policies deny-all; confirmar estado real en remoto con SQL/advisors.
 **Función de aislamiento principal:** `get_org_id()`
 
 ---
@@ -168,7 +168,15 @@ Lectura pública: Se usa admin client (`createAdminClient`) en el server reposit
 - `anon` puede insertar leads públicos.
 - `authenticated` puede ver y actualizar leads de su org.
 
-### 18. `web_push_subscriptions`
+### 18. `pagos_suscripcion`
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `pagos_suscripcion_select_own` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
+
+**Nota operativa:** los inserts y updates de pagos se hacen solo desde rutas server con `service_role` durante el flujo Webpay. `authenticated` conserva únicamente lectura por organización.
+
+### 19. `web_push_subscriptions`
 
 | Policy | Operación | USING | WITH CHECK | Rol |
 |---|---|---|---|---|
@@ -182,16 +190,16 @@ Nota:
 
 ---
 
-## Tablas con RLS habilitado pero sin policies
+## Tablas con acceso cliente restringido o especial
 
-Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
+Estas tablas requieren tratamiento explícito porque no siguen el patrón CRUD normal de la app.
 
-| Tabla | Riesgo principal |
-|---|---|
-| `cotizacion_code_counters` | Correcto por diseño; solo lo usa función `SECURITY DEFINER` |
-| `formula_variables` | No accesible desde cliente |
-| `material_types` | No accesible desde cliente |
-| `quote_item_breakdown` | No accesible desde cliente |
+| Tabla | Estado esperado por migraciones | Riesgo principal |
+|---|---|---|
+| `cotizacion_code_counters` | SELECT/INSERT/UPDATE por org para authenticated desde `20260525154000` | Debe usarse principalmente vía `reserve_next_cotizacion_code()` |
+| `formula_variables` | Policy deny-all para `anon`/`authenticated`; acceso server/service_role | Catálogo técnico legacy no usado por UI actual |
+| `material_types` | Policy deny-all para `anon`/`authenticated`; acceso server/service_role | Catálogo técnico legacy no usado por UI actual |
+| `quote_item_breakdown` | SELECT/INSERT/UPDATE por org desde `20260517123000` | Verificar que toda query filtre `organization_id` |
 
 ---
 
@@ -199,12 +207,13 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 
 | Mecanismo | Tablas |
 |---|---|
-| `get_org_id()` directo | `clients`, `cotizaciones`, `cotizacion_items`, `projects`, `users`, `materials`, `historial_precios`, `organizations`, `labor_costs`, `solicitudes_contacto`, `web_push_subscriptions` |
+| `get_org_id()` directo | `clients`, `cotizaciones`, `cotizacion_items`, `projects`, `users`, `materials`, `historial_precios`, `organizations`, `labor_costs`, `solicitudes_contacto`, `web_push_subscriptions`, `pagos_suscripcion` |
 | `get_org_id()` + nullable | `system_configurations`, `system_lines` |
 | Subquery directa a `users` | `organization_profile`, `public_landing_gallery` |
 | Subquery cruzada | `configuration_materials`, `line_glass_compatibility` |
 | Público total | `product_types` |
-| Sin policies | `cotizacion_code_counters`, `formula_variables`, `material_types`, `quote_item_breakdown` |
+| Deny-all cliente | `formula_variables`, `material_types` |
+| Acceso especial por org | `cotizacion_code_counters`, `quote_item_breakdown`, `cotizacion_line_templates`, `onboarding_checklists`, `public_landing_testimonials`, `pagos_suscripcion` |
 
 ---
 
@@ -212,12 +221,12 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 
 ### Críticos
 
-1. **`quote_item_breakdown` sin policies:** Breakdown no visible desde app si se necesita en UI.
+1. **No se pudo ejecutar `supabase db advisors --linked`:** falta `SUPABASE_DB_PASSWORD`, por lo que esta auditoría no reemplaza el Security Advisor real antes de producción.
 
 ### Altos
 
-2. **`material_types` sin policies:** Si la UI depende de catálogo de tipos, falla.
-3. **`formula_variables` sin policies:** Si alguna UI requiere lectura directa, falla.
+2. **`material_types` y `formula_variables` cerradas para cliente:** correcto si siguen siendo catálogo técnico legacy; si la UI las necesita, debe exponerse lectura controlada.
+3. **`public_landing_testimonials.organization_id`:** la migración local original usaba `uuid`; debe ser `bigint`. Corregido por `20260531050353_harden_public_landing_testimonials_org_id.sql`.
 4. **Sin diferenciación por rol en tablas operativas:** `admin`, `tecnico` y `viewer` comparten mismo nivel de acceso por org.
 
 ### Moderados
@@ -243,3 +252,59 @@ Estas tablas siguen inaccesibles desde cliente salvo `service_role`.
 Notas:
 - No se expone a `anon`.
 - Los pasos manuales (`channel_ready`, `first_share`) se marcan desde acciones reales del usuario dentro de la app.
+
+---
+
+## Addendum 2026-05-31 - policies recientes pendientes de dump completo
+
+### `cotizacion_line_templates`
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `cotizacion_line_templates_select_own_org` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
+| `cotizacion_line_templates_insert_own_org` | INSERT | — | `organization_id = get_org_id()` | `authenticated` |
+| `cotizacion_line_templates_update_own_org` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
+
+### `public_landing_testimonials`
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `public_landing_testimonials_select_authenticated` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
+| `public_landing_testimonials_insert_authenticated` | INSERT | — | `organization_id = get_org_id()` | `authenticated` |
+| `public_landing_testimonials_update_authenticated` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
+| `public_landing_testimonials_delete_authenticated` | DELETE | `organization_id = get_org_id()` | — | `authenticated` |
+
+### `quote_item_breakdown`
+
+| Policy | Operación | USING | WITH CHECK | Rol |
+|---|---|---|---|---|
+| `quote_item_breakdown_select` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
+| `quote_item_breakdown_insert` | INSERT | — | `organization_id = get_org_id()` | `authenticated` |
+| `quote_item_breakdown_update` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
+
+### Estado de verificación
+
+- API con `service_role` confirmó existencia remota de `cotizacion_line_templates`, `public_landing_testimonials`, `onboarding_checklists`, `pagos_suscripcion` y `web_push_subscriptions` el 2026-05-31.
+- No se pudo confirmar catálogo exacto de policies/grants remoto porque `supabase db query/advisors/lint --linked` requiere `SUPABASE_DB_PASSWORD`.
+
+---
+
+## Addendum 2026-05-31 - verificacion MCP Supabase
+
+- MCP Supabase quedo autenticado contra `yrtrwgkaopfumpidjthk`.
+- `get_advisors(security)` y `get_advisors(performance)` se ejecutaron en remoto.
+- Todas las 26 tablas de `public` tienen RLS habilitado.
+- `pagos_suscripcion` quedo cerrado para cliente: `authenticated` solo tiene `SELECT`, `anon` no tiene grants y solo queda policy `pagos_suscripcion_select_own`.
+- Se aplico `20260531212114_harden_subscription_security_advisors` en remoto para eliminar insert cliente en pagos y revocar RPC publico de `ensure_organization_profile_trial_defaults()`.
+- Se aplico `20260531212250_optimize_web_push_rls_initplan` en remoto para usar `(select auth.uid())` y `(select get_org_id())` en RLS de `web_push_subscriptions`.
+- Security Advisor pendiente: `get_org_id()` y `reserve_next_cotizacion_code()` siguen como `SECURITY DEFINER` ejecutables por `authenticated`; estado esperado porque RLS/app dependen de ellos.
+- Security Advisor pendiente fuera de SQL: activar leaked password protection en Supabase Auth.
+- Performance Advisor pendiente: FKs sin indice, un indice duplicado en `solicitudes_contacto` y varios indices sin uso reciente. No se eliminaron indices por prudencia pre-produccion.
+
+---
+
+## Addendum 2026-05-31 - Performance Advisor FK
+
+- Se aplico `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
+- Advisor ya no reporta `unindexed_foreign_keys` ni `duplicate_index` para `solicitudes_contacto`.
+- Pendiente no bloqueante: `unused_index`. No borrar antes de tener trafico real suficiente y revisar `pg_stat_user_indexes` despues de pilotos.

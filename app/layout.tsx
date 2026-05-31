@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
 import { GoogleTagProvider } from "@/features/analytics/components/google-tag-provider";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
@@ -66,20 +65,9 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", geist.variable)}>
       <body className="antialiased">
         {gtmContainerId ? (
-          <>
-            <Script id="ventora-google-tag-manager" strategy="beforeInteractive">
-              {`
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','${gtmContainerId}');
-              `}
-            </Script>
-            <Suspense fallback={null}>
-              <GoogleTagProvider />
-            </Suspense>
-          </>
+          <Suspense fallback={null}>
+            <GoogleTagProvider />
+          </Suspense>
         ) : null}
         {gtmContainerId ? (
           <noscript>

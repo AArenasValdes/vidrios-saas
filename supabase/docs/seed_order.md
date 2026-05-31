@@ -161,3 +161,18 @@ formula_variables (independiente)
   7. `cotizaciones`
   8. `cotizacion_items`
   9. `solicitudes_contacto`
+
+---
+
+## Addendum 2026-05-31 - tablas recientes
+
+Agregar al orden de seed cuando se regenere el documento completo:
+
+| Orden sugerido | Tabla | PK | Depende de | Nota |
+|---|---|---|---|---|
+| 7 | `public_landing_testimonials` | uuid | organizations | Valoraciones públicas por empresa. `organization_id` debe ser bigint. |
+| 9 | `cotizacion_line_templates` | bigint IDENTITY | organizations (inferida) | Plantillas/precios rápidos por línea comercial. |
+| 14 | `onboarding_checklists` | uuid | organizations, users nullable | Estado compartido de onboarding. |
+| 24 | `pagos_suscripcion` | bigint IDENTITY | organizations | Intentos de pago Webpay; no requiere seed manual. |
+
+Nota: `current_schema.sql` está atrasado; validar orden final con dump remoto antes de crear seeds de producción.

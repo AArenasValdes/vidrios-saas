@@ -1,7 +1,7 @@
 # Agent Database Notes - Ventora
 
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
-Fuente de verdad: `current_schema.sql`.
+Fuente de verdad: `current_schema.sql` cuando este regenerado. Nota 2026-05-31: `current_schema.sql` y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar addendums en `database_map.md` y `rls_policies.md`.
 
 ---
 
@@ -167,3 +167,36 @@ Ver detalle en `rls_policies.md`. Las más urgentes:
 5. ¿Se verificó que no se reintroduce lógica de cotizador técnico como centro del producto?
 
 Si la respuesta a 1-4 no es sí: detenerse y reportar.
+
+---
+
+## Addendum 2026-05-31 - auditoría pre-producción
+
+- `web_push_subscriptions` ya tiene policies por `organization_id + auth_user_id`; el riesgo vigente es la falta de FK formal a `organizations` y `auth.users`.
+- `quote_item_breakdown` ya tiene policies por `organization_id`; verificar que toda query siga filtrando tenant.
+- `cotizacion_code_counters` tiene acceso por org para `authenticated`, pero debe usarse preferentemente vía `reserve_next_cotizacion_code()`.
+- `material_types` y `formula_variables` quedan cerradas para cliente con policies deny-all; exponer solo si la UI vuelve a necesitarlas.
+- `public_landing_testimonials.organization_id` debe ser `bigint`; se agregó `20260531050353_harden_public_landing_testimonials_org_id.sql` para endurecerlo.
+- Antes de producción falta correr `supabase db advisors --linked`, `supabase db lint --linked` y regenerar `current_schema.sql`/`database.types.ts` con `SUPABASE_DB_PASSWORD` configurado.
+
+---
+
+## Addendum 2026-05-31 - MCP Supabase conectado
+
+- MCP Supabase autenticado contra proyecto `yrtrwgkaopfumpidjthk`.
+- Advisors remotos ejecutados: security y performance.
+- Se confirmo en remoto: 26 tablas `public`, todas con RLS habilitado.
+- Se aplico `20260531212114_harden_subscription_security_advisors`: `pagos_suscripcion` queda solo lectura para `authenticated`; inserts/updates/deletes quedan server-side con `service_role`.
+- Se aplico `20260531212250_optimize_web_push_rls_initplan`: policies de `web_push_subscriptions` optimizadas para no recalcular `auth.uid()` por fila.
+- Migraciones remotas registradas actualmente: `20260317154500`, `20260427103000`, `20260517053830`, `20260517054151`, `20260518040656`, `20260531212114`, `20260531212250`.
+- Hay drift historico: la base remota contiene tablas recientes que no aparecen como migraciones remotas antiguas; conservar esta nota hasta normalizar historial con Supabase CLI.
+- `database.types.ts` local sigue marcado como atrasado porque MCP genero tipos pero CLI local aun no puede escribirlos sin `SUPABASE_DB_PASSWORD`; regenerar cuando se normalice acceso CLI.
+
+---
+
+## Addendum 2026-05-31 - indices FK produccion
+
+- Se aplico migracion remota/local `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
+- Todas las FKs tienen covering index confirmado por SQL.
+- Avisos `unused_index` quedan documentados como no accionables hasta tener uso real.
+- `auth_leaked_password_protection` queda aceptado como limitacion de Supabase Free; re-evaluar al pasar a Pro.
