@@ -1,4 +1,6 @@
 export const PLAN_LABELS: Record<string, string> = {
+  founder_full_annual: "Founder Full Anual",
+  quote_only_annual: "Solo Cotizaci\u00f3n Anual",
   founder_full: "Founder Full Anual",
   quote_only: "Solo Cotizaci\u00f3n Anual",
   trial: "Prueba gratis",

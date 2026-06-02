@@ -265,15 +265,15 @@
 - **Archivo principal**: `app/(pwa-app)/cuenta-vencida/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (modo minimo)
 - **CSS**: `app/(pwa-app)/cuenta-vencida/page.module.css`
-- **Proposito**: Pantalla de activacion manual cuando el trial o la suscripcion de la organizacion vencio. Permite seguir logueado, ver precios y contactar por WhatsApp.
+- **Proposito**: Pantalla de activacion/renovacion cuando el trial o la suscripcion de la organizacion vencio. Debe empujar planes anuales con Webpay Plus y dejar el mensual manual como opcion secundaria.
 - **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
-- **Funcionalidades visibles**: Estado de cuenta vencida, precios `$10.000 mensual` y `$80.000 anual`, CTA a WhatsApp con mensaje prellenado, link para seguir en modo lectura
+- **Funcionalidades visibles**: Flecha volver, hero de activacion, plan recomendado `Founder Full Anual`, opcion `Solo Cotizacion Anual`, opcion `Mensual` por WhatsApp, bloque consultivo `Plan Empresa Acompañado`, accion discreta `Seguir en modo lectura`
 - **Componentes principales**: Internos de la pagina
 - **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
 - **Tablas Supabase relacionadas**: `organization_profile`
-- **Acciones principales**: Abrir WhatsApp para activacion mensual o anual, volver a lectura basica
+- **Acciones principales**: Iniciar Webpay anual, abrir WhatsApp para plan mensual manual, volver a lectura basica
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cuenta-vencida/page.tsx`, `app/(pwa-app)/cuenta-vencida/page.module.css`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
-- **Riesgos**: No convertirla en logout forzado. Debe convivir con lectura basica del panel y no tocar rutas publicas `/solicitud/[empresa]` ni `/presupuesto/[token]`.
+- **Riesgos**: No convertirla en logout forzado. Debe convivir con lectura basica del panel y no tocar rutas publicas `/solicitud/[empresa]` ni `/presupuesto/[token]`. Si la cuenta ya esta activa con vencimiento futuro, la UI debe deshabilitar Webpay y mostrar mensaje controlado para evitar doble pago accidental.
 
 ---
 
@@ -380,6 +380,10 @@
 | `/api/clientes/resumen` | GET | Resumen clientes por org (auth) | `app/api/clientes/resumen/route.ts` |
 | `/api/dashboard/summary` | GET | Dashboard KPIs por org (auth) | `app/api/dashboard/summary/route.ts` |
 | `/api/pwa/push-subscriptions` | POST/DELETE | Registrar/eliminar suscripcion push | `app/api/pwa/push-subscriptions/route.ts` |
+| `/api/billing/checkout` | POST | Crear checkout provider-agnostic; v1 usa Flow | `app/api/billing/checkout/route.ts` |
+| `/api/billing/flow/confirmar` | GET/POST | Retorno/webhook Flow, verifica estado y activa suscripcion | `app/api/billing/flow/confirmar/route.ts` |
+| `/api/subscriptions/webpay/crear` | POST | Checkout Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/crear/route.ts` |
+| `/api/subscriptions/webpay/confirmar` | GET/POST | Retorno Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/confirmar/route.ts` |
 
 ---
 

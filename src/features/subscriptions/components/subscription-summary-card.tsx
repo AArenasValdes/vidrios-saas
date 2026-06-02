@@ -46,6 +46,7 @@ function getStatusClass(status: string | null): string {
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
+  flow: "Flow",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia",
   manual_other: "Otro",

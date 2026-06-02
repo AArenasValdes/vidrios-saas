@@ -36,6 +36,7 @@ const STATUS_CLASSES: Record<string, string> = {
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
+  flow: "Flow",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia manual",
   manual_other: "Otro",

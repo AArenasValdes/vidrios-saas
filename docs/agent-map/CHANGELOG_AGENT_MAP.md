@@ -4,6 +4,24 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-05-31 - Estrategia hibrida de pagos y handoff IA actualizado
+
+### Resumen
+
+Se alineo la documentacion con la estrategia comercial/tecnica vigente de suscripciones: trial de 7 dias, planes anuales como foco principal con Webpay Plus, mensual manual por WhatsApp como opcion secundaria y sin recurrencia automatica en esta etapa. Tambien se actualizo el handoff IA para compartir contexto actual a otra instancia de ChatGPT sin releer todo el repo.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/FEATURES_MAP.md` | Feature de suscripciones cambia de manual a hibrida y documenta guard contra doble pago |
+| `docs/agent-map/ROUTES_MAP.md` | `/cuenta-vencida` refleja Webpay anual, mensual secundario y UI actual |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Nota comercial de activacion hibrida en `organization_profile` |
+| `docs/ia-handoff.md` | Handoff actualizado con estado real de producto, Supabase, pagos y siguiente paso |
+| `docs/contexto-rapido-web.md` | Resumen corto actualizado para otra IA o nuevo contexto |
+
+---
+
 ## 2026-05-31 - Auditoria Supabase pre-produccion
 
 ### Resumen
@@ -704,3 +722,17 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Se agrego migracion `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
 - Se elimino el indice duplicado exacto de `solicitudes_contacto` conservando `solicitudes_contacto_org_created_idx`.
 - Se deja `unused_index` como observacion de bajo riesgo hasta tener trafico real.
+
+### 2026-06-02 - Billing Flow temporal
+
+- Se agrego capa `src/features/billing/` con `PaymentProvider`, catalogo tipado de planes y providers `flow`, `manual_transfer`, `webpay_plus`.
+- Flow queda provider principal temporal para `/api/billing/checkout` y `/api/billing/flow/confirmar`.
+- `pagos_suscripcion` se extendio como ledger provider-agnostic con `provider_order_id`, `checkout_url`, `flow/manual_transfer/webpay_plus` y estado `cancelado`.
+- `/cuenta-vencida` usa `useBillingCheckout()` y mantiene mensual por WhatsApp.
+- Webpay Plus directo queda como endpoints legacy/compatibilidad en `/api/subscriptions/webpay/*`.
+
+### 2026-06-02 - Cuentas internas gratis permanentes
+
+- Se agrego migracion `20260602065826_founder_free_internal_accounts`.
+- Organizaciones `3` y `4` quedan como `active/founder/founder_full` sin fecha de vencimiento.
+- Se documenta que hard delete de organizations con datos asociados no es el flujo correcto; usar soft delete por `eliminado_en`.

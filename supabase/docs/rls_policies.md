@@ -308,3 +308,19 @@ Notas:
 - Se aplico `20260531232020_add_missing_fk_indexes_and_drop_duplicate`.
 - Advisor ya no reporta `unindexed_foreign_keys` ni `duplicate_index` para `solicitudes_contacto`.
 - Pendiente no bloqueante: `unused_index`. No borrar antes de tener trafico real suficiente y revisar `pg_stat_user_indexes` despues de pilotos.
+
+---
+
+## Addendum 2026-06-02 - Flow billing
+
+- `20260602062145_billing_flow_provider.sql` no abre nuevas escrituras cliente.
+- `pagos_suscripcion` conserva solo policy `pagos_suscripcion_select_own` para `authenticated`; inserts/updates/deletes siguen reservados a rutas server con `service_role`.
+- `payment_provider` ahora acepta `flow`, `manual_transfer`, `webpay_plus`.
+- `organization_profile.payment_method` ahora acepta `flow`.
+- `provider_response` contiene respuesta raw del provider y no debe devolverse en endpoints cliente.
+
+## Addendum 2026-06-02 - cuentas internas gratis
+
+- `20260602065826_founder_free_internal_accounts.sql` solo actualiza `organization_profile` para organizaciones `3` y `4` si existen los usuarios esperados.
+- No agrega policies ni grants nuevos.
+- Mantiene RLS existente; el cambio es data/estado de suscripcion para evitar bloqueo por no pago.

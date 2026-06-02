@@ -13,7 +13,7 @@ import {
   VENTORA_YEARLY_PRICE,
   VENTORA_QUOTE_ONLY_YEARLY_PRICE,
 } from "@/features/subscriptions/services/subscription-status.service";
-import { useWebpayPago } from "@/features/subscriptions/hooks/useWebpayPago";
+import { useBillingCheckout } from "@/features/billing/hooks/useBillingCheckout";
 
 import s from "./page.module.css";
 
@@ -22,7 +22,8 @@ export function CuentaVencidaPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pagoFallido = searchParams.get("pago_fallido") === "1";
-  const { pagar, cargando: cargandoWebpay, error: errorWebpay } = useWebpayPago();
+  const pagoPendiente = searchParams.get("pago_pendiente") === "1";
+  const { pagar, cargando: cargandoCheckout, error: errorCheckout } = useBillingCheckout();
   const companyName = profile?.empresaNombre ?? "Mi empresa";
   const subscriptionState = resolveOrganizationSubscriptionState({
     subscriptionStatus: profile?.subscriptionStatus ?? null,
@@ -41,17 +42,17 @@ export function CuentaVencidaPageContent() {
     subscriptionState.effectiveStatus === "active" &&
     !subscriptionState.isTrial &&
     Boolean(subscriptionState.subscriptionEndsAt);
-  const webpayDisabled = cargandoWebpay || hasActivePaidSubscription;
+  const checkoutDisabled = cargandoCheckout || hasActivePaidSubscription;
   const monthlyHref = buildSubscriptionActivationWhatsappHref({
     companyName,
     plan: "mensual",
   });
   const pagarFounderFull = useCallback(() => {
-    pagar("founder_full", "yearly");
+    pagar("founder_full_annual", "flow");
   }, [pagar]);
 
   const pagarQuoteOnly = useCallback(() => {
-    pagar("quote_only", "yearly");
+    pagar("quote_only_annual", "flow");
   }, [pagar]);
 
   const volver = useCallback(() => {
@@ -62,6 +63,28 @@ export function CuentaVencidaPageContent() {
 
     router.push("/dashboard");
   }, [router]);
+
+  const statusText = (() => {
+    if (pagoPendiente) {
+      return "Pago pendiente de confirmacion.";
+    }
+
+    if (hasActivePaidSubscription && subscriptionState.subscriptionEndsAt) {
+      return `Plan activo hasta ${new Date(
+        subscriptionState.subscriptionEndsAt
+      ).toLocaleDateString("es-CL")}.`;
+    }
+
+    if (
+      subscriptionState.isTrial &&
+      !subscriptionState.isExpired &&
+      typeof subscriptionState.daysRemaining === "number"
+    ) {
+      return `Trial activo: quedan ${subscriptionState.daysRemaining} dias.`;
+    }
+
+    return "Plan vencido.";
+  })();
 
   return (
     <section className={s.wrap}>
@@ -80,9 +103,13 @@ export function CuentaVencidaPageContent() {
           </p>
         </div>
 
-        {(pagoFallido || errorWebpay) ? (
+        <div className={s.activeBanner} role="status">
+          {statusText}
+        </div>
+
+        {(pagoFallido || errorCheckout) ? (
           <div className={s.errorBanner} role="alert">
-            {errorWebpay ?? "El pago no pudo procesarse. Intenta de nuevo o contactanos por WhatsApp."}
+            {errorCheckout ?? "El pago no pudo procesarse. Intenta de nuevo o contactanos por WhatsApp."}
           </div>
         ) : null}
 
@@ -108,10 +135,10 @@ export function CuentaVencidaPageContent() {
             <button
               className={s.webpayButton}
               onClick={pagarFounderFull}
-              disabled={webpayDisabled}
+              disabled={checkoutDisabled}
               type="button"
             >
-              {cargandoWebpay ? "Redirigiendo a Webpay..." : "Pagar con Webpay"}
+              {cargandoCheckout ? "Redirigiendo a Flow..." : "Activar Founder Full Anual"}
             </button>
           </article>
           <article className={s.priceCard}>
@@ -128,10 +155,10 @@ export function CuentaVencidaPageContent() {
             <button
               className={s.webpayButtonOutline}
               onClick={pagarQuoteOnly}
-              disabled={webpayDisabled}
+              disabled={checkoutDisabled}
               type="button"
             >
-              {cargandoWebpay ? "Redirigiendo a Webpay..." : "Pagar con Webpay"}
+              {cargandoCheckout ? "Redirigiendo a Flow..." : "Activar Solo Cotizacion"}
             </button>
           </article>
           <article className={`${s.priceCard} ${s.priceCardManual}`}>

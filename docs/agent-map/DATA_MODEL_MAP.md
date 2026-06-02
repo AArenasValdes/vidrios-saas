@@ -13,7 +13,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
 - **Usada por**: Auth (resolver org), todas las features (filtro tenant)
 - **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
-- **Riesgos**: No eliminar organizaciones con datos asociados (CASCADE en algunos FK)
+- **Riesgos**: No hacer hard delete de organizaciones con datos asociados. `clients`, `projects`, `cotizaciones` y otras tablas pueden bloquear por FK; el flujo correcto es soft delete con `eliminado_en`.
 
 ---
 
@@ -113,6 +113,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Usada por**: Empresa config, Pagina venta, Solicitud publica, PDF (branding), Aprobacion publica, trial gratis y activacion manual
 - **Archivos donde aparece**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/organization-profile/services/organization-profile.service.ts`, `src/features/subscriptions/services/subscription-status.service.ts`, `src/features/subscriptions/services/subscription-route-access.service.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`, `app/(landing-web)/solicitud/[empresa]/page.tsx`
 - **Riesgos**: Slug UNIQUE parcial. Cambios afectan landing publica, PDF y aprobacion simultaneamente. 30+ campos en mapping complejo. El trial de 7 dias y el estado de suscripcion efectiva salen desde aqui; no duplicar reglas de negocio en UI o APIs.
+- **Cuentas internas gratis permanentes**: organizaciones `3` y `4` deben quedar `active/founder/founder_full`, `subscription_ends_at = NULL`, `founder_price_locked = true` por `20260602065826_founder_free_internal_accounts.sql`.
 
 ---
 
@@ -157,6 +158,18 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Usada por**: Suscripciones (Webpay flow), cuenta vencida
 - **Archivos donde aparece**: `src/features/subscriptions/hooks/useWebpayPago.ts`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`
 - **Riesgos**: Unique `buy_order` WHERE eliminado_en IS NULL protege idempotencia. RLS permite solo SELECT por `organization_id` para `authenticated`; inserts/updates quedan en rutas server con `service_role`. No exponer `provider_response` completo en logs de servidor.
+
+---
+
+### Addendum pagos_suscripcion - Flow billing
+
+- `pagos_suscripcion` ahora funciona como ledger provider-agnostic: `flow`, `manual_transfer`, `webpay_plus`.
+- Flow es el provider principal temporal para `/api/billing/*`; Webpay Plus queda como compatibilidad/futuro.
+- Campos agregados por `20260602062145_billing_flow_provider.sql`: `provider_order_id` (Flow `flowOrder`) y `checkout_url`.
+- `status` ahora contempla `pendiente`, `aprobado`, `fallido`, `cancelado`, `reembolsado`.
+- Idempotencia: `buy_order` interno y unique parcial `(payment_provider, provider_order_id)` para orden externa.
+- RLS/grants se mantienen: clientes autenticados solo leen pagos de su `organization_id`; writes solo server con `service_role`.
+- No exponer `provider_response` en respuestas cliente.
 
 ---
 
@@ -266,11 +279,15 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - `anon`/`authenticated` pueden INSERT con `estado='nueva'` y `contexto` valido
 - `authenticated` pueden SELECT/UPDATE leads de su propia org
 
-### organization_profile - trial y activacion manual
+### organization_profile - trial y activacion hibrida
 
 - Cada organizacion nueva debe arrancar con fila de `organization_profile` y trial de 7 dias
 - La migracion `20260525121500_trial_subscriptions_manual_activation.sql` agrega columnas y trigger de defaults
 - El estado efectivo debe salir de `src/features/subscriptions/services/subscription-status.service.ts`, no de comparaciones sueltas en componentes
+- Comercialmente hoy se usa modelo hibrido:
+  - anuales automatizados por Webpay Plus
+  - mensual manual por WhatsApp
+  - sin Oneclick, PatPass ni recurrencia automatica en esta etapa
 
 ---
 

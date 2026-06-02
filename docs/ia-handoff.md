@@ -1,167 +1,168 @@
 # Handoff IA - Ventora
 
-Actualizado: 2026-05-05.
+Actualizado: 2026-05-31.
 
-Resumen corto para retomar trabajo sin releer todo el repo.
+Contexto corto para otra IA o para retomar sin releer todo el repo.
 
 ---
 
-## Estado actual
+## Que es Ventora hoy
 
-El producto ya no debe leerse como presupuestario primero.
+Ventora es **software comercial para empresas de vidrios y aluminio que captura, centraliza y ayuda a cerrar leads**.
 
-Hoy debe entenderse como:
-
-**software para captar, centralizar y cerrar leads comerciales de vidrios y aluminio.**
-
-La cotizacion sigue siendo importante, pero es una capa de cierre.
+La cotizacion existe como herramienta de cierre, no como identidad principal del producto.
 
 No es:
 - ERP
-- logistica
 - software de produccion
 - cotizador tecnico de perfileria
+- sistema de logistica
+
+Frase clave:
+
+**"Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."**
 
 ---
 
-## Que ya esta funcionando
+## Estado real del producto
 
-- landing y login
-- solicitudes publicas por empresa
-- tracking UTM / origen
-- generador de links por canal
-- QR descargable
-- dashboard de solicitudes
-- boton de contacto por WhatsApp
-- push para leads nuevos
-- email async para leads nuevos
-- multi-tenant por `organization_id`
+Ya funciona:
+- login con Supabase Auth
+- solicitudes publicas por empresa en `/solicitud/[empresa]`
+- tracking UTM y `source_url`
+- generador de links por canal + QR
+- dashboard privado
 - clientes
 - cotizaciones
-- PDF
-- aprobacion publica
-- branding basico de empresa
-- build de produccion pasando
+- PDF y WhatsApp
+- aprobacion publica en `/presupuesto/[token]`
+- branding de empresa y mini landing publica
+- trial gratis de 7 dias
+- cuenta en modo lectura cuando vence
+- activacion anual con Webpay Plus
+
+Fragil o pendiente:
+- QA punta a punta con pago real de produccion
+- observabilidad operativa de pagos
+- validacion real de push/email en cuentas piloto
+- algunos textos y archivos aun tienen riesgo de encoding heredado
+- drift historico entre migraciones locales y registro remoto de Supabase
 
 ---
 
-## Que sigue fragil o incompleto
+## Estrategia comercial y tecnica de pagos
 
-- pipeline comercial aun no consolidado
-- observabilidad de produccion incompleta
-- validacion real de push y email pendiente
-- smoke test manual punta a punta pendiente
-- PWA y offline sin validacion real en dispositivo
-- landing y CTA aun deben validarse con criterio comercial
-- algunos textos siguen con problemas de encoding
+Modelo vigente:
+- `Founder Full Anual` `$79.990`: principal, Webpay Plus
+- `Solo Cotizacion Anual` `$59.990`: opcion simple, Webpay Plus
+- `Mensual` `$8.990`: manual por WhatsApp, secundario
+- `Plan Empresa Acompañado` desde `$250.000`: consultivo, fuera del flujo SaaS estandar
 
----
+Decisiones importantes:
+- no implementar recurrencia automatica todavia
+- no implementar Oneclick todavia
+- no implementar PatPass todavia
+- no guardar datos de tarjeta
+- no crear tablas nuevas de tokenizacion o cobro recurrente por ahora
 
-## Decisiones de producto que no deben romperse
-
-- leads primero, cotizacion despues
-- no reabrir el cotizador tecnico
-- mantener tracking de origen como parte del core
-- mantener push/email/WhatsApp como respuestas operativas clave
-- mantener PDF y aprobacion publica para cierre
-- no abrir Fase 3+ antes de consolidar Fase 2
-
-Modelo de cotizacion vigente:
-
-```text
-precio_final = costo_proveedor * (1 + margen_pct / 100)
-```
+Regla de negocio actual:
+- si la cuenta ya esta activa y `subscription_ends_at > now()`, no debe poder generar otro pago Webpay accidental
+- upgrade/downgrade quedan fuera de alcance por ahora
 
 ---
 
-## Arquitectura a respetar
+## Estado de Supabase
+
+Base actual:
+- RLS activo en 26/26 tablas `public`
+- `pagos_suscripcion` ya quedo endurecida: cliente autenticado solo lee; escritura queda server-side con `service_role`
+- `web_push_subscriptions` quedo con policies mas eficientes
+- advisors criticos de FK sin indice y duplicate index ya fueron resueltos
+
+Riesgos aceptados:
+- `Leaked Password Protection` no activo porque el proyecto esta en plan Free
+- quedan warnings de `unused_index`, pero no son bloqueantes antes de trafico real
+- existe drift historico: remoto registra menos migraciones que las que existen localmente, aunque el schema ya contiene muchos de esos objetos
+
+Migraciones recientes importantes:
+- `20260531212114_harden_subscription_security_advisors`
+- `20260531212250_optimize_web_push_rls_initplan`
+- `20260531232020_add_missing_fk_indexes_and_drop_duplicate`
+
+---
+
+## Arquitectura que no se debe romper
 
 ```text
 page / component -> hook -> service -> repository -> Supabase
 ```
 
 Reglas:
-
 - filtrar siempre por `organization_id`
 - usar soft delete
-- calculos solo en services
-- no meter logica de negocio en repositories
+- calculos en services
+- no meter negocio en repositories
+- no tocar rutas publicas criticas sin QA: `/solicitud/[empresa]` y `/presupuesto/[token]`
 
 ---
 
-## Archivos y zonas clave
+## Rutas y zonas clave
 
-- `Agents.md`
+- `docs/agent-map/README.md`
 - `docs/contexto-rapido-web.md`
-- `docs/salida-beta-checklist.md`
-- `src/features/solicitudes/...`
-- `src/features/notificaciones/...`
-- `app/(landing-web)/solicitud/[empresa]/...`
-- `app/(pwa-app)/solicitudes/...`
-- `app/(pwa-app)/configuracion/empresa/page.tsx`
-- `src/features/cotizaciones/...`
-- `app/print/cotizaciones/[id]/page.tsx`
+- `docs/agent-map/FEATURES_MAP.md`
+- `src/features/subscriptions/`
+- `app/(pwa-app)/cuenta-vencida/`
+- `app/api/subscriptions/webpay/`
+- `src/features/organization-profile/`
+- `src/features/solicitudes/`
+- `src/features/cotizaciones/`
 
 ---
 
-## Prioridad real de las proximas 48 horas
+## Siguiente paso recomendado
 
-### P0 - Bloqueantes de salida
+Cerrar el flujo **Webpay anual en produccion punta a punta** sin abrir mas superficie tecnica.
 
-1. Validar captacion real:
-   - link publico por empresa
-   - UTM guardadas
-   - QR utilizable
-   - dashboard de solicitudes
-   - push y email
+Checklist sugerido:
+1. Validar env vars finales de Transbank y URL canonica en produccion.
+2. Ejecutar 1 pago real controlado por cada plan anual.
+3. Confirmar update correcto en `pagos_suscripcion` y `organization_profile`.
+4. Confirmar que una cuenta activa no pueda iniciar un segundo Webpay accidental.
+5. Documentar runbook operativo de incidentes:
+   - pago aprobado sin activacion
+   - usuario vuelve desde Transbank sin confirmacion visible
+   - doble click / doble intento
+   - conciliacion manual por `buy_order`
 
-2. Consolidar seguimiento:
-   - estados claros
-   - criterio de avance
-   - contacto rapido por WhatsApp
-
-3. Validar cierre comercial:
-   - cliente
-   - cotizacion
-   - PDF
-   - WhatsApp
-   - `/presupuesto/[token]`
-
-4. Corregir errores visibles:
-   - encoding roto
-   - estados vacios
-   - links rotos
-   - errores de UX en movil
-
-### P1 - Robustez minima antes de abrir
-
-1. Error handling real en solicitudes y cotizaciones.
-2. Logging basico para rutas sensibles.
-3. Monitoreo minimo de errores frontend y backend.
-4. Smoke test manual documentado.
-5. Revalidar branding y notificaciones con cuenta real.
+No seguir ahora con:
+- Oneclick
+- PatPass
+- mensual automatico
+- upgrades/downgrades
+- nuevas tablas de billing
 
 ---
 
-## Que no deberia entrar ahora
+## Prompt corto para pedir segunda opinion
 
-- multi-sucursal
-- round-robin
-- analytics por vendedor
-- Zapier/Make
-- WhatsApp Business API
-- CRM profundo
-- UI separada de proyectos
-- nuevas capas tecnicas de materiales o compatibilidades
+Quiero una segunda opinion sobre la estrategia actual de activacion y pagos de Ventora.
 
----
+Contexto:
+- SaaS B2B para empresas de vidrios y aluminio
+- trial gratis de 7 dias
+- planes anuales con Webpay Plus ya implementados y probados
+- Founder Full Anual $79.990
+- Solo Cotizacion Anual $59.990
+- mensual $8.990 solo manual por WhatsApp
+- no queremos recurrencia automatica todavia
+- no queremos Oneclick ni PatPass por ahora
+- la app debe empujar anual y reducir friccion operativa
+- la cuenta vencida queda en modo lectura y usa `/cuenta-vencida` como pantalla de activacion
+- Supabase ya tiene RLS endurecido y `pagos_suscripcion` solo se escribe desde server
 
-## Norte de trabajo
-
-Si entras al repo ahora:
-
-- no inventes otra identidad de producto
-- no vuelvas a vender esto como cotizador tecnico
-- cierra captacion, seguimiento y cierre
-- piensa en duenio/vendedor que pierde leads
-- cualquier cambio debe ayudar a responder mas rapido o cerrar mejor
+Dame observaciones sobre:
+- riesgos de UX/comerciales
+- riesgos operativos de pagos
+- si el modelo hibrido anual + mensual manual tiene sentido
+- que validaria antes de salir a produccion

@@ -1,5 +1,10 @@
-export type PaymentStatus = "pendiente" | "aprobado" | "fallido" | "reembolsado";
-export type PaymentProvider = "webpay_plus";
+export type PaymentStatus =
+  | "pendiente"
+  | "aprobado"
+  | "fallido"
+  | "cancelado"
+  | "reembolsado";
+export type PaymentProvider = "flow" | "manual_transfer" | "webpay_plus";
 
 export type PagoSuscripcionRow = {
   id: number;
@@ -10,8 +15,10 @@ export type PagoSuscripcionRow = {
   currency: string;
   payment_provider: PaymentProvider;
   provider_token: string | null;
+  provider_order_id: string | null;
   provider_status: string | null;
   provider_response: unknown;
+  checkout_url: string | null;
   buy_order: string | null;
   status: PaymentStatus;
   paid_at: string | null;
@@ -28,13 +35,19 @@ export type CreatePagoInput = {
   billing_period: string;
   amount_clp: number;
   buy_order: string;
-  provider_token: string;
+  payment_provider?: PaymentProvider;
+  provider_token?: string | null;
+  provider_order_id?: string | null;
+  checkout_url?: string | null;
 };
 
 export type UpdatePagoInput = {
   status?: PaymentStatus;
+  provider_token?: string | null;
+  provider_order_id?: string | null;
   provider_status?: string;
   provider_response?: unknown;
+  checkout_url?: string | null;
   paid_at?: string;
   period_starts_at?: string;
   period_ends_at?: string;

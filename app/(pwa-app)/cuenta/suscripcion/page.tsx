@@ -39,6 +39,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pendiente: "Pendiente",
   aprobado: "Aprobado",
   fallido: "Fallido",
+  cancelado: "Cancelado",
   reembolsado: "Reembolsado",
 };
 
@@ -46,6 +47,7 @@ const PAYMENT_STATUS_CLASSES: Record<string, string> = {
   pendiente: s.statusPending,
   aprobado: s.statusApproved,
   fallido: s.statusFailed,
+  cancelado: s.statusFailed,
   reembolsado: s.statusNeutral,
 };
 
@@ -68,6 +70,7 @@ const SUBSCRIPTION_STATUS_CLASSES: Record<string, string> = {
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
+  flow: "Flow",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia manual",
   manual_other: "Otro",

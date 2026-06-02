@@ -12,8 +12,8 @@ import type {
 const TABLE = "pagos_suscripcion";
 const COLS = `
   id, organization_id, plan_code, billing_period, amount_clp,
-  currency, payment_provider, provider_token, provider_status,
-  provider_response, buy_order, status, paid_at,
+  currency, payment_provider, provider_token, provider_order_id, provider_status,
+  provider_response, checkout_url, buy_order, status, paid_at,
   period_starts_at, period_ends_at, creado_en, actualizado_en,
   eliminado_en
 `;
@@ -31,8 +31,10 @@ function mapRow(row: Record<string, unknown>): PagoSuscripcionRow {
     currency: row.currency as string,
     payment_provider: row.payment_provider as PaymentProvider,
     provider_token: (row.provider_token as string) ?? null,
+    provider_order_id: (row.provider_order_id as string) ?? null,
     provider_status: (row.provider_status as string) ?? null,
     provider_response: row.provider_response,
+    checkout_url: (row.checkout_url as string) ?? null,
     buy_order: (row.buy_order as string) ?? null,
     status: row.status as PaymentStatus,
     paid_at: (row.paid_at as string) ?? null,
@@ -54,9 +56,11 @@ export function createPagoSuscripcionRepository() {
           billing_period: input.billing_period,
           amount_clp: input.amount_clp,
           currency: "CLP",
-          payment_provider: "webpay_plus",
+          payment_provider: input.payment_provider ?? "webpay_plus",
           buy_order: input.buy_order,
-          provider_token: input.provider_token,
+          provider_token: input.provider_token ?? null,
+          provider_order_id: input.provider_order_id ?? null,
+          checkout_url: input.checkout_url ?? null,
           status: "pendiente",
         })
         .select(COLS)
@@ -83,6 +87,26 @@ export function createPagoSuscripcionRepository() {
       if (error) {
         throw new Error(
           `Error al buscar pago por token: ${error.message}`
+        );
+      }
+
+      return data ? mapRow(data as Record<string, unknown>) : null;
+    },
+
+    async getByProviderOrderId(input: {
+      paymentProvider: PaymentProvider;
+      providerOrderId: string;
+    }): Promise<PagoSuscripcionRow | null> {
+      const { data, error } = await db()
+        .select(COLS)
+        .eq("payment_provider", input.paymentProvider)
+        .eq("provider_order_id", input.providerOrderId)
+        .is("eliminado_en", null)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          `Error al buscar pago por orden del proveedor: ${error.message}`
         );
       }
 
@@ -132,11 +156,20 @@ export function createPagoSuscripcionRepository() {
       const payload: Record<string, unknown> = {};
 
       if (input.status !== undefined) payload.status = input.status;
+      if (input.provider_token !== undefined) {
+        payload.provider_token = input.provider_token;
+      }
+      if (input.provider_order_id !== undefined) {
+        payload.provider_order_id = input.provider_order_id;
+      }
       if (input.provider_status !== undefined) {
         payload.provider_status = input.provider_status;
       }
       if (input.provider_response !== undefined) {
         payload.provider_response = input.provider_response;
+      }
+      if (input.checkout_url !== undefined) {
+        payload.checkout_url = input.checkout_url;
       }
       if (input.paid_at !== undefined) payload.paid_at = input.paid_at;
       if (input.period_starts_at !== undefined) {

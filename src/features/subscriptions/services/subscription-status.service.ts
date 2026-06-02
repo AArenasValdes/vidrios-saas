@@ -41,6 +41,7 @@ const VALID_PAYMENT_METHODS = new Set<PaymentMethod>([
   "manual_transfer",
   "manual_other",
   "none",
+  "flow",
   "webpay_plus",
 ]);
 

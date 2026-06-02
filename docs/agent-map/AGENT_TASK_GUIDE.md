@@ -133,6 +133,21 @@ Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la se
 
 ---
 
+## Si la tarea es sobre billing/pagos/suscripcion, revisar primero:
+
+1. `docs/agent-map/FEATURES_MAP.md` - Seccion "Trial, Suscripcion y Billing"
+2. `src/features/billing/types/plans.ts`
+3. `src/features/billing/types/payment-provider.ts`
+4. `src/features/billing/providers/flow.provider.ts`
+5. `src/features/billing/services/billing-checkout.service.ts`
+6. `src/features/billing/services/billing-subscription.service.ts`
+7. `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`
+8. `app/api/billing/checkout/route.ts`
+9. `app/api/billing/flow/confirmar/route.ts`
+10. `supabase/migrations/20260602062145_billing_flow_provider.sql`
+
+---
+
 ## Si la tarea es sobre auth/login, revisar primero:
 
 1. `src/features/auth/hooks/useAuth.ts`

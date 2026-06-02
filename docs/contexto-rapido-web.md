@@ -23,6 +23,9 @@ Frase clave:
 - Perfil comercial de empresa
 - Base PWA
 - Produccion activa en `ventorap.cl`
+- Trial gratis de 7 dias por organizacion
+- Activacion anual con Webpay Plus en `/cuenta-vencida`
+- Plan mensual manual por WhatsApp como opcion secundaria
 
 ## Flujo principal correcto
 
@@ -54,6 +57,15 @@ Frase clave:
 - consolidar pipeline comercial de solicitudes
 - mantener cotizacion como herramienta de cierre
 - validar copy y promesa comercial del producto
+- cerrar activacion anual en produccion sin meter recurrencia automatica
+
+## Estrategia de pagos actual
+
+- `Founder Full Anual` `$79.990`: Webpay Plus, foco principal
+- `Solo Cotizacion Anual` `$59.990`: Webpay Plus, opcion simple
+- `Mensual` `$8.990`: manual por WhatsApp, secundario
+- `Plan Empresa Acompañado` desde `$250.000`: bloque consultivo, no SaaS estandar
+- Fuera de alcance por ahora: Oneclick, PatPass, cobro recurrente automatico, tokenizacion de tarjeta
 
 ## No centrar ahora
 

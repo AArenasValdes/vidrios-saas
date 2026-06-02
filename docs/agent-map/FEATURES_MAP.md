@@ -35,17 +35,24 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
-## Feature: Trial y Suscripcion Manual
+## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion, la activacion manual por transferencia y el pago automatico via Webpay Plus (Transbank). Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de pago Webpay o WhatsApp hacia activacion mensual o anual.
+- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion, la activacion anual automatizada via Flow como provider principal temporal, deja Webpay Plus directo como compatibilidad/futuro y mantiene la opcion mensual manual por WhatsApp. Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de activacion.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
 - **Archivos principales**:
   - `src/features/subscriptions/types/subscription.ts`
   - `src/features/subscriptions/services/subscription-status.service.ts`
   - `src/features/subscriptions/services/subscription-route-access.service.ts`
-  - `src/features/subscriptions/hooks/useWebpayPago.ts`
   - `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`
-  - `src/features/subscriptions/services/webpay.service.ts`
+  - `src/features/billing/types/plans.ts`
+  - `src/features/billing/types/payment-provider.ts`
+  - `src/features/billing/hooks/useBillingCheckout.ts`
+  - `src/features/billing/providers/flow.provider.ts`
+  - `src/features/billing/providers/manual-transfer.provider.ts`
+  - `src/features/billing/providers/webpay-plus.provider.ts`
+  - `src/features/billing/services/billing-checkout.service.ts`
+  - `src/features/billing/services/billing-subscription.service.ts`
+  - `src/features/billing/services/payment-provider-registry.ts`
   - `src/features/organization-profile/repositories/organization-profile.repository.ts`
   - `src/features/organization-profile/services/organization-profile.service.ts`
   - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
@@ -54,6 +61,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(pwa-app)/cuenta-vencida/page.tsx`
   - `app/(pwa-app)/cuenta-vencida/page-content.tsx`
   - `app/(pwa-app)/cuenta-vencida/page.module.css`
+  - `app/api/billing/checkout/route.ts`
+  - `app/api/billing/flow/confirmar/route.ts`
   - `app/api/subscriptions/webpay/crear/route.ts`
   - `app/api/subscriptions/webpay/confirmar/route.ts`
   - `app/api/solicitudes/route.ts`
@@ -62,6 +71,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `proxy.ts`
   - `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
   - `supabase/migrations/20260530100000_pagos_suscripcion.sql`
+  - `supabase/migrations/20260602062145_billing_flow_provider.sql`
 - **Componentes principales**: `AppShell`, pantalla `Cuenta vencida`
 - **Hooks/servicios/actions**: `useOrganizationProfile()`, `resolveOrganizationSubscriptionState()`, `canAccessPrivatePathWithSubscription()`, `assertSubscriptionAllowsWrite()`
 - **Tablas Supabase**: `organization_profile`, `organizations`, `pagos_suscripcion`
@@ -70,13 +80,21 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - Snapshot crudo -> `resolveOrganizationSubscriptionState()` -> estado efectivo (`trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`)
   - Shell privado -> banner / redirect a `/cuenta-vencida` / guard de acciones
   - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
-  - Webpay: `/cuenta-vencida` -> `useWebpayPago()` -> POST `/api/subscriptions/webpay/crear` -> `webpaySuscripcionService.createTransaccion()` -> redirect a Transbank -> GET/POST `/api/subscriptions/webpay/confirmar` -> `webpaySuscripcionService.confirmarPago()` -> `pagoSuscripcionRepository` -> `organization_profile` actualizado
+  - Flow: `/cuenta-vencida` -> `useBillingCheckout()` -> POST `/api/billing/checkout` -> provider `flow` -> redirect a Flow -> GET/POST `/api/billing/flow/confirmar` -> `payment/getStatus` -> `pagos_suscripcion` -> `organization_profile` actualizado solo si Flow confirma `status=2`
+  - Webpay legacy: endpoints `/api/subscriptions/webpay/*` se mantienen como compatibilidad, pero la UI nueva usa `/api/billing/*`
 - **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`
 - **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`
-- **Donde editar logica**: `src/features/subscriptions/services/`
-- **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `src/features/subscriptions/services/webpay.service.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`
-- **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 2 dias o menos aparece banner de trial. Si vence, Ventora debe seguir mostrando datos basicos pero bloquear crear/editar/eliminar y llevar a CTA por WhatsApp con planes manuales `$10.000 mensual` y `$80.000 anual`.
-- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Webpay depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL` en env. No exponer `provider_response` completo en logs.
+- **Donde editar logica**: `src/features/subscriptions/services/`, `src/features/billing/`
+- **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`, `supabase/migrations/20260602062145_billing_flow_provider.sql`
+- **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 3 dias o menos, el shell debe usar avisos progresivos y compactos; no una card grande permanente. `/cuenta-vencida` vende principalmente anuales: `Founder Full Anual` `$79.990` como recomendado y `Solo Cotizacion Anual` `$59.990` como opcion simple. El mensual `$8.990` queda como opcion manual secundaria por WhatsApp. Si la cuenta ya esta activa con `subscription_ends_at > now()`, la UI no debe permitir crear otro pago accidental y debe mostrar `Tu cuenta ya tiene una suscripcion activa.`.
+- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Flow depende de `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_ENVIRONMENT`, `FLOW_PAYMENT_METHOD` opcional y `NEXT_PUBLIC_APP_URL`; Webpay legacy depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL`. No exponer `provider_response` completo en logs/respuestas. No introducir Oneclick, PatPass ni recurrencia automatica sin rediseñar negocio, schema y operaciones.
+
+### Addendum cuentas internas gratis permanentes
+
+- Organizaciones `3` (`admin@test.com`) y `4` (`sanmarcoaluminios@gmail.com`) son cuentas internas de Ventora/fundadores.
+- Migracion: `supabase/migrations/20260602065826_founder_free_internal_accounts.sql`.
+- Estado esperado: `subscription_status='active'`, `plan_type='founder'`, `plan_code='founder_full'`, `subscription_ends_at=NULL`, `founder_price_locked=true`.
+- Estas cuentas no deben caer a modo lectura ni pedir pago.
 
 ---
 

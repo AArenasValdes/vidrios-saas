@@ -9,7 +9,12 @@ export type SubscriptionStatus =
 export type PlanType = "trial" | "monthly" | "yearly" | "founder";
 export type PlanCode = "trial" | "founder_full" | "quote_only";
 export type BillingPeriod = "monthly" | "yearly" | "none";
-export type PaymentMethod = "manual_transfer" | "manual_other" | "none" | "webpay_plus";
+export type PaymentMethod =
+  | "manual_transfer"
+  | "manual_other"
+  | "none"
+  | "flow"
+  | "webpay_plus";
 
 export type OrganizationSubscriptionSnapshot = {
   subscriptionStatus: SubscriptionStatus | null;

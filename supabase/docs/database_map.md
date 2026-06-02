@@ -541,6 +541,10 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 **Índices notables:** Unique `buy_order` WHERE eliminado_en IS NULL (idempotency), Unique parcial `provider_token` WHERE NOT NULL AND eliminado_en IS NULL
 **Acceso:** `authenticated` solo puede leer pagos de su organización por RLS. Creación, confirmación y actualización quedan restringidas a rutas server con `service_role`.
 
+**Addendum 2026-06-02 - Flow billing:** `pagos_suscripcion` queda como ledger provider-agnostic. `payment_provider` acepta `flow`, `manual_transfer`, `webpay_plus`; `status` acepta tambien `cancelado`; `billing_period` acepta `yearly` y `monthly`. Se agregan `provider_order_id` (Flow `flowOrder`) y `checkout_url`, mas unique parcial `(payment_provider, provider_order_id)` para idempotencia externa. `provider_response` sigue siendo backend-only y no debe exponerse a cliente.
+
+**Addendum 2026-06-02 - cuentas internas gratis:** `20260602065826_founder_free_internal_accounts.sql` fija las organizaciones internas `3` y `4` como `active/founder/founder_full`, sin `subscription_ends_at`, con `founder_price_locked=true`. No deben quedar bloqueadas por trial ni pagos.
+
 ---
 
 ### 20. `labor_costs`
