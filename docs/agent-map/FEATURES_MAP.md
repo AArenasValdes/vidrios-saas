@@ -254,6 +254,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/types/cotizacion.ts`
   - `src/features/cotizaciones/types/cotizacion-item.ts`
   - `src/features/cotizaciones/types/cotizacion-workflow.ts`
+  - `src/features/cotizaciones/types/quote-pricing-mode.ts`
   - `src/features/cotizaciones/types/pricing-mode.ts`
   - `src/features/cotizaciones/new-quote/workflow-ui.ts` (883 lineas)
   - `src/features/cotizaciones/new-quote/solicitud-prefill.ts`
@@ -276,8 +277,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 ahora mezcla cotizacion rapida por linea + medidas, override manual protegido, calculadora secundaria y esquema comercial de hojas para Ventana + Corredera sin afectar precio. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
-- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos: `por_item` mantiene cotizacion por linea/medidas/precio por componente; `total_global` permite cargar componentes como detalle comercial y definir costo/margen/total final en Paso 3. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
+- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. En `total_global`, costo/margen/utilidad son internos y no deben salir en PDF, vista publica ni documento publico. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---
 

@@ -10,10 +10,13 @@ import { PasoDosFormularioBloqueVidrio } from "./paso-dos/paso-dos-formulario-bl
 import s from "../page.module.css";
 
 export function PasoDosFormularioComponente(props: PasoDosFormularioComponenteProps) {
-  const { itemsCount, editingItemId } = props;
+  const { itemsCount, editingItemId, quotePricingMode, onQuotePricingModeChange } = props;
 
   return (
-    <section className={`${s.card} ${s.stepTwoFormCard} ${s.stepTwoFormCardMobile}`} id="component-form">
+    <section
+      className={`${s.card} ${s.stepTwoFormCard} ${s.stepTwoFormCardMobile}`}
+      id="component-form"
+    >
       <div className={s.cardHeaderRow}>
         <div>
           <div className={s.cardLabel}>Paso 2 / Componentes</div>
@@ -25,6 +28,39 @@ export function PasoDosFormularioComponente(props: PasoDosFormularioComponentePr
           </span>
         ) : null}
       </div>
+
+      <section className={`${s.formSection} ${s.providerOnboardingCard} ${s.stepTwoSectionStrong}`}>
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>Forma de cálculo</span>
+          <strong>¿Cómo quieres calcular esta cotización?</strong>
+        </div>
+        <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de calculo de cotizacion">
+          <label className={`${s.segmentedChoice} ${quotePricingMode === "por_item" ? s.segmentedChoiceActive : ""}`}>
+            <input
+              className={s.segmentedChoiceInput}
+              type="radio"
+              name="quote-pricing-mode"
+              value="por_item"
+              checked={quotePricingMode === "por_item"}
+              onChange={() => onQuotePricingModeChange("por_item")}
+            />
+            <span className={s.segmentedChoiceTitle}>Calcular por cada componente</span>
+            <span className={s.segmentedChoiceHint}>Usa líneas, medidas y precios por ítem.</span>
+          </label>
+          <label className={`${s.segmentedChoice} ${quotePricingMode === "total_global" ? s.segmentedChoiceActive : ""}`}>
+            <input
+              className={s.segmentedChoiceInput}
+              type="radio"
+              name="quote-pricing-mode"
+              value="total_global"
+              checked={quotePricingMode === "total_global"}
+              onChange={() => onQuotePricingModeChange("total_global")}
+            />
+            <span className={s.segmentedChoiceTitle}>Calcular por total del trabajo</span>
+            <span className={s.segmentedChoiceHint}>Agrega el detalle de la obra y define el costo/margen al final.</span>
+          </label>
+        </div>
+      </section>
 
       <div className={s.formFields}>
         <PasoDosFormularioBloqueConfiguracion {...props} />

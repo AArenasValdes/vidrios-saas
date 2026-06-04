@@ -1,5 +1,6 @@
 import type { EntityId } from "@/types/common";
 import type { CotizacionItem, CrearCotizacionItemInput } from "./cotizacion-item";
+import type { QuotePricingMode } from "./quote-pricing-mode";
 
 export type EstadoCotizacion =
   | "borrador"
@@ -24,6 +25,7 @@ export type Cotizacion = {
   costoTotal: number | null;
   margenPct: number | null;
   utilidadTotal: number | null;
+  pricingMode: QuotePricingMode;
   estadoComercial: string | null;
   approvalToken: string | null;
   approvalTokenExpiresAt: string | null;
@@ -51,6 +53,7 @@ export type CrearCotizacionInput = {
   costoTotal?: number | null;
   margenPct?: number | null;
   utilidadTotal?: number | null;
+  pricingMode?: QuotePricingMode;
   estadoComercial?: string | null;
   approvalToken?: string | null;
   approvalTokenExpiresAt?: string | null;

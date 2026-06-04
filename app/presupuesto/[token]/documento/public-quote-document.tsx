@@ -68,6 +68,7 @@ type PublicPreviewQuote = {
   iva: number;
   flete: number;
   total: number;
+  pricingMode?: "por_item" | "total_global";
   createdAt: string | null;
   updatedAt: string | null;
   items: PublicPreviewItem[];
@@ -359,6 +360,7 @@ export function PublicQuoteDocument({
     [quote.descuentoPct, quote.subtotal]
   );
   const neto = Math.max(0, quote.subtotal - discountValue);
+  const showItemPrices = quote.pricingMode !== "total_global";
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
     const nextPrintPages = buildPrintPlan(quote.items);
@@ -697,6 +699,7 @@ export function PublicQuoteDocument({
                                 ))}
                               </div>
 
+                              {showItemPrices ? (
                               <aside className={printStyles.pricesColumn}>
                                 <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
                                 <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
@@ -715,6 +718,7 @@ export function PublicQuoteDocument({
                                   <strong>{CLP(item.precioTotal)}</strong>
                                 </div>
                               </aside>
+                              ) : null}
                             </div>
                           </div>
                         </article>
@@ -743,6 +747,8 @@ export function PublicQuoteDocument({
 
                         <aside className={printStyles.totalsColumn}>
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
+                          {showItemPrices ? (
+                            <>
                           <div className={printStyles.totalRow}>
                             <span>Subtotal</span>
                             <strong>{CLP(quote.subtotal)}</strong>
@@ -759,7 +765,9 @@ export function PublicQuoteDocument({
                             <span>IVA 19%</span>
                             <strong>{CLP(quote.iva)}</strong>
                           </div>
-                          {quote.flete > 0 ? (
+                            </>
+                          ) : null}
+                          {showItemPrices && quote.flete > 0 ? (
                             <div className={printStyles.totalRow}>
                               <span>Flete</span>
                               <strong>{CLP(quote.flete)}</strong>

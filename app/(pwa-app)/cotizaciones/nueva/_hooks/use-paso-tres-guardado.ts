@@ -10,11 +10,13 @@ import {
   type ComponentFormState,
   type FieldErrors,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { calculateGlobalQuoteWorkflowTotals } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 type SaveStatus = "borrador" | "creada";
 
@@ -103,6 +105,22 @@ export function preparePasoTresGuardado({
     finalErrors.items = "Agrega al menos un componente";
   }
 
+  if (estado === "creada" && normalizeQuotePricingMode(draftToSave.quotePricingMode) === "total_global") {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      costoTotalFabricacion: draftToSave.costoTotalFabricacion,
+      margenGlobalPct: draftToSave.margenGlobalPct,
+      totalClienteManual: draftToSave.totalClienteManual,
+    });
+
+    if (totals.costoTotalFabricacion <= 0) {
+      finalErrors.costoTotalFabricacion = "Ingresa el costo total de fabricacion.";
+    }
+
+    if (totals.total <= 0) {
+      finalErrors.totalClienteManual = "Ingresa un total final para el cliente.";
+    }
+  }
+
   return {
     draftToSave,
     step1Errors,
@@ -156,6 +174,12 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         setGlobalError("Completa los campos obligatorios antes de guardar.");
         if (step1Errors.step1) {
           setStep(1);
+        } else if (
+          finalErrors.costoTotalFabricacion ||
+          finalErrors.margenGlobalPct ||
+          finalErrors.totalClienteManual
+        ) {
+          setStep(3);
         } else if (estado === "creada") {
           setStep(2);
         }

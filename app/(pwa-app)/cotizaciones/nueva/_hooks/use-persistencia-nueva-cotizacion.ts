@@ -148,7 +148,7 @@ export function usePersistenciaNuevaCotizacion(
   const persistedSnapshotJson = useMemo(
     () =>
       JSON.stringify({
-        version: 3,
+        version: 4,
         step,
         draft,
         componentForm,
@@ -223,7 +223,7 @@ export function usePersistenciaNuevaCotizacion(
       }
 
       const snapshot: PersistedWorkflowState = {
-        version: 3,
+        version: 4,
         step: input.step,
         draft: input.draft,
         componentForm: input.componentForm,

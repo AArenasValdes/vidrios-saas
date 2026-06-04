@@ -112,7 +112,9 @@ export function CotizacionDetalleMobileView({
 
         <section className={s.hero}>
           <h1 className={s.heroAmount}>{model.total}</h1>
-          <p className={s.heroLabel}>TOTAL Â· IVA INCLUIDO</p>
+          <p className={s.heroLabel}>
+            {model.isTotalGlobal ? "TOTAL CLIENTE" : "TOTAL Â· IVA INCLUIDO"}
+          </p>
           <p className={s.heroSubtext}>{model.heroSubtext}</p>
         </section>
 
@@ -220,7 +222,9 @@ export function CotizacionDetalleMobileView({
                       <strong className={s.componentName}>{item.name}</strong>
                       <span className={s.componentMeta}>{item.meta}</span>
                     </div>
-                    <strong className={s.componentPrice}>{item.price}</strong>
+                    {model.isTotalGlobal ? null : (
+                      <strong className={s.componentPrice}>{item.price}</strong>
+                    )}
                   </article>
                 ))
               )}
@@ -229,18 +233,37 @@ export function CotizacionDetalleMobileView({
         </section>
 
         <section className={s.totalsCard}>
-          <div className={s.totalRow}>
-            <span>Subtotal</span>
-            <strong>{model.subtotal}</strong>
-          </div>
-          <div className={s.totalRow}>
-            <span>Descuento</span>
-            <strong>- {model.discount}</strong>
-          </div>
-          <div className={s.totalRow}>
-            <span>IVA (19%)</span>
-            <strong>{model.iva}</strong>
-          </div>
+          {model.isTotalGlobal ? (
+            <>
+              <div className={s.totalRow}>
+                <span>Costo fabricación</span>
+                <strong>{model.globalCost}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>Margen global</span>
+                <strong>{model.globalMargin}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>Utilidad</span>
+                <strong>{model.globalUtility}</strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={s.totalRow}>
+                <span>Subtotal</span>
+                <strong>{model.subtotal}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>Descuento</span>
+                <strong>- {model.discount}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>IVA (19%)</span>
+                <strong>{model.iva}</strong>
+              </div>
+            </>
+          )}
 
           <div className={s.totalStrongRow}>
             <span>TOTAL</span>

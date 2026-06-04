@@ -23,6 +23,10 @@ import {
   type PricingMode,
 } from "@/features/cotizaciones/types/pricing-mode";
 import {
+  normalizeQuotePricingMode,
+  type QuotePricingMode,
+} from "@/features/cotizaciones/types/quote-pricing-mode";
+import {
   COMPONENT_TYPE_GROUPS as CATALOG_COMPONENT_TYPE_GROUPS,
   getBaseLeafCountForComponent,
   resolveCanonicalComponentType,
@@ -67,13 +71,21 @@ export type ComponentFormState = {
 
 export type FieldErrors = Partial<
   Record<
-    keyof ComponentFormState | "clienteNombre" | "obra" | "items" | "step1" | "step2",
+    | keyof ComponentFormState
+    | "clienteNombre"
+    | "obra"
+    | "items"
+    | "step1"
+    | "step2"
+    | "costoTotalFabricacion"
+    | "margenGlobalPct"
+    | "totalClienteManual",
     string
   >
 >;
 
 export type PersistedWorkflowState = {
-  version: 3;
+  version: 4;
   step: StepKey;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
@@ -308,7 +320,12 @@ export function loadPersistedWorkflowState(
       showStep1MoreData?: boolean;
     };
 
-    if (parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3) {
+    if (
+      parsed.version !== 1 &&
+      parsed.version !== 2 &&
+      parsed.version !== 3 &&
+      parsed.version !== 4
+    ) {
       return null;
     }
 
@@ -325,10 +342,26 @@ export function loadPersistedWorkflowState(
       draft: {
         ...emptyDraft,
         ...persistedDraft,
+        quotePricingMode: normalizeQuotePricingMode(persistedDraft.quotePricingMode),
         descuentoPct: Number.isFinite(persistedDraft.descuentoPct)
           ? persistedDraft.descuentoPct
           : emptyDraft.descuentoPct,
         flete: Number.isFinite(persistedDraft.flete) ? persistedDraft.flete : emptyDraft.flete,
+        costoTotalFabricacion: Number.isFinite(persistedDraft.costoTotalFabricacion)
+          ? Number(persistedDraft.costoTotalFabricacion)
+          : emptyDraft.costoTotalFabricacion,
+        margenGlobalPct: Number.isFinite(persistedDraft.margenGlobalPct)
+          ? Number(persistedDraft.margenGlobalPct)
+          : emptyDraft.margenGlobalPct,
+        utilidadTotal: Number.isFinite(persistedDraft.utilidadTotal)
+          ? Number(persistedDraft.utilidadTotal)
+          : emptyDraft.utilidadTotal,
+        totalClienteManual:
+          persistedDraft.totalClienteManual !== null &&
+          persistedDraft.totalClienteManual !== undefined &&
+          Number.isFinite(persistedDraft.totalClienteManual)
+            ? Number(persistedDraft.totalClienteManual)
+            : null,
         items: persistedDraft.items ?? emptyDraft.items,
       },
       componentForm: {
@@ -677,32 +710,42 @@ export function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraf
   };
 }
 
-export function isQuickEditDraftComplete(draft: QuickEditDraftState) {
+export function isQuickEditDraftComplete(
+  draft: QuickEditDraftState,
+  quotePricingMode: QuotePricingMode = "por_item"
+) {
   const ancho = Number(draft.ancho);
   const alto = Number(draft.alto);
   const costo = Number(draft.costoProveedorUnitario);
 
-  return ancho > 0 && alto > 0 && costo > 0;
+  return ancho > 0 && alto > 0 && (quotePricingMode === "total_global" || costo > 0);
 }
 
-export function isWorkflowItemComplete(item: CotizacionWorkflowItem) {
+export function isWorkflowItemComplete(
+  item: CotizacionWorkflowItem,
+  quotePricingMode: QuotePricingMode = "por_item"
+) {
   return (
     (item.ancho ?? 0) > 0 &&
     (item.alto ?? 0) > 0 &&
-    Number(item.costoProveedorUnitario ?? 0) > 0
+    (quotePricingMode === "total_global" || Number(item.costoProveedorUnitario ?? 0) > 0)
   );
 }
 
 export function isWorkflowItemEffectivelyComplete(
   item: CotizacionWorkflowItem,
-  draftState?: QuickEditDraftState
+  draftState?: QuickEditDraftState,
+  quotePricingMode: QuotePricingMode = "por_item"
 ) {
-  return draftState ? isQuickEditDraftComplete(draftState) : isWorkflowItemComplete(item);
+  return draftState
+    ? isQuickEditDraftComplete(draftState, quotePricingMode)
+    : isWorkflowItemComplete(item, quotePricingMode);
 }
 
 export function applyQuickEditDraftStatesToItems(
   items: CotizacionWorkflowItem[],
-  quickEditDrafts: Record<string, QuickEditDraftState>
+  quickEditDrafts: Record<string, QuickEditDraftState>,
+  quotePricingMode: QuotePricingMode = "por_item"
 ) {
   return items.map((item) => {
     const draftState = quickEditDrafts[item.id];
@@ -726,7 +769,7 @@ export function applyQuickEditDraftStatesToItems(
           currentForm.precioAjustadoManual || isManualTemplateOverride,
       } as ComponentFormState;
 
-      return buildItemFromForm(nextForm, items, item.id);
+      return buildItemFromForm(nextForm, items, item.id, { quotePricingMode });
     } catch {
       return item;
     }
@@ -1035,6 +1078,11 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     flete: record.flete,
     observaciones: record.observaciones,
     items: record.items,
+    quotePricingMode: normalizeQuotePricingMode(record.quotePricingMode),
+    costoTotalFabricacion: record.costoTotalFabricacion ?? 0,
+    margenGlobalPct: record.margenGlobalPct ?? 100,
+    utilidadTotal: record.utilidadTotal ?? 0,
+    totalClienteManual: record.totalClienteManual ?? null,
   };
 }
 
@@ -1126,13 +1174,20 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
 export function buildItemFromForm(
   form: ComponentFormState,
   items: CotizacionWorkflowItem[],
-  editingItemId: string | null
+  editingItemId: string | null,
+  options?: { quotePricingMode?: QuotePricingMode }
 ) {
   const pricingMode = normalizePricingMode(form.pricingMode);
+  const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
   const syncedForm = syncTemplatePricingInComponentForm(form);
-  const costoProveedorUnitario = Number(syncedForm.costoProveedorUnitario || 0);
+  const costoProveedorUnitario =
+    quotePricingMode === "total_global" ? 0 : Number(syncedForm.costoProveedorUnitario || 0);
   const margenPct =
-    pricingMode === "precio_directo" ? 0 : Number(syncedForm.margenPct || 0);
+    quotePricingMode === "total_global"
+      ? 0
+      : pricingMode === "precio_directo"
+        ? 0
+        : Number(syncedForm.margenPct || 0);
   const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
   const hasTemplateReference =
     typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
@@ -1232,9 +1287,11 @@ export function buildItemFromForm(
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
       minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
       redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
-      precioPlantillaSugerido: linePricingSummary.precioUnitarioSugerido,
-      precioAjustadoManual: syncedForm.precioAjustadoManual,
-      origenPrecio,
+      precioPlantillaSugerido:
+        quotePricingMode === "total_global" ? null : linePricingSummary.precioUnitarioSugerido,
+      precioAjustadoManual:
+        quotePricingMode === "total_global" ? false : syncedForm.precioAjustadoManual,
+      origenPrecio: quotePricingMode === "total_global" ? "manual" : origenPrecio,
       raw: syncedForm.observaciones,
     }),
   });
@@ -1321,9 +1378,11 @@ export function applyQuotePricingToItems(
 export function validateComponentForm(
   form: ComponentFormState,
   items: CotizacionWorkflowItem[],
-  editingItemId: string | null
+  editingItemId: string | null,
+  options?: { quotePricingMode?: QuotePricingMode }
 ): FieldErrors {
   const errors: FieldErrors = {};
+  const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
   if (!form.codigo.trim()) errors.codigo = "El codigo es obligatorio";
   else if (
     items.some(
@@ -1338,13 +1397,13 @@ export function validateComponentForm(
   if (!form.cantidad || Number.isNaN(qty) || qty < 1) errors.cantidad = "Minimo 1";
   const hasCostValue = form.costoProveedorUnitario.trim() !== "";
   const costo = Number(form.costoProveedorUnitario);
-  if (hasCostValue && (Number.isNaN(costo) || costo < 0)) {
+  if (quotePricingMode !== "total_global" && hasCostValue && (Number.isNaN(costo) || costo < 0)) {
     errors.costoProveedorUnitario =
       form.pricingMode === "precio_directo"
         ? "Ingresa el precio final"
         : "Ingresa el precio base";
   }
-  if (form.pricingMode === "margen") {
+  if (quotePricingMode !== "total_global" && form.pricingMode === "margen") {
     const margen = Number(form.margenPct);
     if (form.margenPct === "" || Number.isNaN(margen) || margen < 0) {
       errors.margenPct = "El margen de ganancia no puede ser negativo";

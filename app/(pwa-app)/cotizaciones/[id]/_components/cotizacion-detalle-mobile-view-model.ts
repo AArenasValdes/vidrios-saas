@@ -37,6 +37,10 @@ export type CotizacionDetalleMobileViewModel = {
   responseChannelLabel: string;
   responseUpdatedLabel: string;
   total: string;
+  isTotalGlobal: boolean;
+  globalCost: string;
+  globalMargin: string;
+  globalUtility: string;
   heroSubtext: string;
   clientName: string;
   clientPhone: string;
@@ -129,12 +133,13 @@ export function buildCotizacionDetalleMobileViewModel(
 ): CotizacionDetalleMobileViewModel {
   const status = STATUS_META[record.estado] ?? STATUS_META.borrador;
   const response = resolveManualResponseMeta(record.estado);
+  const isTotalGlobal = record.quotePricingMode === "total_global";
   const items = record.items.map((item, index) => ({
     id: item.id,
     code: item.codigo || `I${index + 1}`,
     name: safeText(item.nombre || item.tipo, `Componente ${index + 1}`),
     meta: buildItemMeta(item),
-    price: clp(item.precioTotal),
+    price: isTotalGlobal ? "" : clp(item.precioTotal),
   }));
   const summary =
     options.isHydratingItems && items.length === 0
@@ -162,6 +167,10 @@ export function buildCotizacionDetalleMobileViewModel(
     responseChannelLabel: resolveResponseChannelLabel(record.clienteRespuestaCanal),
     responseUpdatedLabel: formatTrackingDate(record.clienteRespondioEn),
     total: clp(record.total),
+    isTotalGlobal,
+    globalCost: clp(record.costoTotalFabricacion ?? 0),
+    globalMargin: `${record.margenGlobalPct ?? 0}%`,
+    globalUtility: clp(record.utilidadTotal ?? 0),
     heroSubtext: [
       safeText(record.clienteNombre, "Sin cliente"),
       safeText(record.obra, "Sin obra"),

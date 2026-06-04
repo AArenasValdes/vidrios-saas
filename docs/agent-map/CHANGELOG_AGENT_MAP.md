@@ -4,6 +4,23 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-04 - Modo total global en cotizaciones
+
+### Resumen
+
+Se documento el nuevo modo `total_global` para `/cotizaciones/nueva`: los componentes quedan como detalle comercial y el total cliente se calcula desde costo de fabricacion + margen global o total manual. Se agrego `cotizaciones.pricing_mode` con default `por_item`.
+
+### Archivos actualizados
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/FEATURES_MAP.md` | Cotizaciones ahora distingue `por_item` y `total_global` |
+| `docs/agent-map/ROUTES_MAP.md` | `/cotizaciones/nueva` documenta selector de modo y riesgos publicos/PDF |
+| `docs/agent-map/DATA_MODEL_MAP.md` | `cotizaciones.pricing_mode` y regla interna de costo/margen |
+| `supabase/docs/database_map.md` | Columna `pricing_mode` en `cotizaciones` |
+
+---
+
 ## 2026-05-31 - Estrategia hibrida de pagos y handoff IA actualizado
 
 ### Resumen

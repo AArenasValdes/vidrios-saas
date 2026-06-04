@@ -7,6 +7,7 @@ import {
   buildQuickEditDraft,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
+  validateComponentForm,
 } from "../workflow-ui";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -87,6 +88,49 @@ describe("workflow-ui paso 2", () => {
         costoProveedorUnitario: "120000",
       })
     ).toBe(true);
+  });
+
+  it("debe permitir componentes sin precio por item en modo total global", () => {
+    const errors = validateComponentForm(
+      {
+        codigo: "V1",
+        tipo: "Ventana",
+        hojasBase: 2,
+        material: "Aluminio",
+        referencia: "L25",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        lineTemplateId: "",
+        pricingMode: "precio_directo",
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "",
+        descripcion: "",
+        ancho: "1500",
+        alto: "2000",
+        cantidad: "1",
+        costoProveedorUnitario: "",
+        margenPct: "0",
+        precioPorM2: "",
+        minimoCobrable: "",
+        redondeoPrecio: "",
+        precioPlantillaSugerido: "",
+        precioAjustadoManual: false,
+        origenPrecio: "manual",
+        observaciones: "",
+        colorHex: "#a8a8a8",
+        loteCantidad: "1",
+      },
+      [],
+      null,
+      { quotePricingMode: "total_global" }
+    );
+
+    expect(errors).toEqual({});
+    expect(errors.costoProveedorUnitario).toBeUndefined();
   });
 
   it("debe marcar ajuste manual cuando una linea con precio automatico cambia el valor final", () => {

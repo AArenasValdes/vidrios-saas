@@ -1,3 +1,5 @@
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+
 export type EstadoCotizacionWorkflow =
   | "borrador"
   | "creada"
@@ -60,6 +62,11 @@ export type CotizacionWorkflowRecord = {
   iva: number;
   flete: number;
   total: number;
+  quotePricingMode?: QuotePricingMode;
+  costoTotalFabricacion?: number;
+  margenGlobalPct?: number;
+  utilidadTotal?: number;
+  totalClienteManual?: number | null;
 };
 
 export type CotizacionWorkflowDraft = {
@@ -72,4 +79,9 @@ export type CotizacionWorkflowDraft = {
   flete: number;
   observaciones: string;
   items: CotizacionWorkflowItem[];
+  quotePricingMode?: QuotePricingMode;
+  costoTotalFabricacion?: number;
+  margenGlobalPct?: number;
+  utilidadTotal?: number;
+  totalClienteManual?: number | null;
 };

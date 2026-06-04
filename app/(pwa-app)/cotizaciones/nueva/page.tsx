@@ -21,7 +21,7 @@ import { OnboardingGuide } from "@/features/onboarding/components/onboarding-gui
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
-  calculateCotizacionWorkflowTotals,
+  calculateWorkflowTotalsForPricingMode,
   createCotizacionWorkflowDraft,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import type {
@@ -34,6 +34,10 @@ import {
   normalizePricingMode,
   type PricingMode,
 } from "@/features/cotizaciones/types/pricing-mode";
+import {
+  normalizeQuotePricingMode,
+  type QuotePricingMode,
+} from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
   buildItemFromForm,
   buildNextComponentCode,
@@ -153,8 +157,10 @@ function NuevaCotizacionPageContent() {
   const preferredPricingMode = normalizePricingMode(
     organizationProfile?.modoPrecioPreferido
   );
+  const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
   const pasoDosEdicionRapida = usePasoDosEdicionRapida({
     items: draft.items,
+    quotePricingMode,
     setDraft,
     setGlobalError,
   });
@@ -239,12 +245,17 @@ function NuevaCotizacionPageContent() {
   const syncedQuickEditDrafts = pasoDosEdicionRapida.borradoresRapidosSincronizados;
   const effectiveWorkflowItems = pasoDosEdicionRapida.itemsEfectivos;
   const totals = useMemo(
-    () => calculateCotizacionWorkflowTotals(effectiveWorkflowItems, draft.descuentoPct, draft.flete),
-    [draft.descuentoPct, draft.flete, effectiveWorkflowItems]
+    () =>
+      calculateWorkflowTotalsForPricingMode({
+        ...draft,
+        items: effectiveWorkflowItems,
+      }),
+    [draft, effectiveWorkflowItems]
   );
   const componentListCards = usePasoDosTarjetasComponentes({
     items: effectiveWorkflowItems,
     borradoresRapidos: syncedQuickEditDrafts,
+    quotePricingMode,
   });
   const completedItemsCount = pasoDosEdicionRapida.cantidadCompletos;
   const pendingItemsCount = pasoDosEdicionRapida.cantidadPendientes;
@@ -316,6 +327,54 @@ function NuevaCotizacionPageContent() {
     const normalizedValue = normalizeCurrencyInput(value);
 
     handleDraftChange("flete", normalizedValue ? Number(normalizedValue) : 0);
+  };
+
+  const handleQuotePricingModeChange = (mode: QuotePricingMode) => {
+    setDraft((current) => ({
+      ...current,
+      quotePricingMode: mode,
+      totalClienteManual:
+        mode === "total_global"
+          ? current.totalClienteManual ?? null
+          : null,
+    }));
+    setFieldErrors((current) => ({
+      ...current,
+      costoTotalFabricacion: undefined,
+      margenGlobalPct: undefined,
+      totalClienteManual: undefined,
+      costoProveedorUnitario: undefined,
+      margenPct: undefined,
+    }));
+    setGlobalError(null);
+  };
+
+  const handleGlobalCostoFabricacionChange = (value: string) => {
+    const normalizedValue = normalizeCurrencyInput(value);
+
+    setDraft((current) => ({
+      ...current,
+      costoTotalFabricacion: normalizedValue ? Number(normalizedValue) : 0,
+    }));
+  };
+
+  const handleGlobalMargenChange = (value: string) => {
+    const normalizedValue = value.replace(/[^\d.]/g, "");
+
+    setDraft((current) => ({
+      ...current,
+      margenGlobalPct: normalizedValue ? Number(normalizedValue) : 0,
+      totalClienteManual: null,
+    }));
+  };
+
+  const handleGlobalTotalClienteChange = (value: string) => {
+    const normalizedValue = normalizeCurrencyInput(value);
+
+    setDraft((current) => ({
+      ...current,
+      totalClienteManual: normalizedValue ? Number(normalizedValue) : null,
+    }));
   };
 
   function registerStep1InputRef(
@@ -744,14 +803,18 @@ function NuevaCotizacionPageContent() {
     setDraft((current) => ({
       ...current,
       items: current.items.map((item) =>
-        item.id === itemId ? buildItemFromForm(recalculatedForm, current.items, itemId) : item
+        item.id === itemId
+          ? buildItemFromForm(recalculatedForm, current.items, itemId, { quotePricingMode })
+          : item
       ),
     }));
     setGlobalError(null);
   };
 
   const handleAddOrUpdateItem = () => {
-    const errors = validateComponentForm(componentForm, draft.items, editingItemId);
+    const errors = validateComponentForm(componentForm, draft.items, editingItemId, {
+      quotePricingMode,
+    });
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -761,7 +824,9 @@ function NuevaCotizacionPageContent() {
       let nextQuickEditItemId: string | null = editingItemId;
 
       if (editingItemId) {
-        const item = buildItemFromForm(componentForm, draft.items, editingItemId);
+        const item = buildItemFromForm(componentForm, draft.items, editingItemId, {
+          quotePricingMode,
+        });
         const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
         nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
       } else {
@@ -783,7 +848,7 @@ function NuevaCotizacionPageContent() {
                   nombre: "",
                 };
 
-          nextItems.push(buildItemFromForm(nextForm, nextItems, null));
+          nextItems.push(buildItemFromForm(nextForm, nextItems, null, { quotePricingMode }));
         }
 
         nextQuickEditItemId =
@@ -838,7 +903,7 @@ function NuevaCotizacionPageContent() {
         draft: groupDraft,
       });
       const nextItems = [...draft.items];
-      const nextItem = buildItemFromForm(nextForm, nextItems, null);
+      const nextItem = buildItemFromForm(nextForm, nextItems, null, { quotePricingMode });
       nextItems.push(nextItem);
 
       setDraft((current) => ({ ...current, items: nextItems }));
@@ -1232,6 +1297,11 @@ function NuevaCotizacionPageContent() {
     onRegisterStep1InputRef: registerStep1InputRef,
     editingItemId,
     componentForm,
+    quotePricingMode,
+    costoTotalFabricacion: CLP(totals.costoTotalFabricacion),
+    utilidadTotal: CLP(totals.utilidadTotal),
+    margenGlobalPct: String(totals.margenGlobalPct),
+    totalClienteManual: totals.totalClienteManual,
     activeLineTemplates,
     globalError,
     isSavingQuickPriceTemplate,
@@ -1286,6 +1356,7 @@ function NuevaCotizacionPageContent() {
     onToggleMoreData: () => setShowStep1MoreData((current) => !current),
     onResetStep1: handleResetStep1,
     onContinueStep1: goNextFromStep1,
+    onQuotePricingModeChange: handleQuotePricingModeChange,
     onPricingModeSelection: handlePricingModeSelection,
     onComponentChange: handleComponentChange,
     onSelectLineTemplate: handleSelectLineTemplate,
@@ -1325,6 +1396,9 @@ function NuevaCotizacionPageContent() {
     onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
     onDraftFleteChange: handleDraftFleteChange,
+    onGlobalCostoFabricacionChange: handleGlobalCostoFabricacionChange,
+    onGlobalMargenChange: handleGlobalMargenChange,
+    onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     formatCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
     stepTwoSummaryRef: pasoDosLista.resumenRef,

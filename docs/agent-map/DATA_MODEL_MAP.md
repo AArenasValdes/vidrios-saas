@@ -53,11 +53,11 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: cotizaciones
 
 - **Proposito**: Presupuestos comerciales. Herramienta de cierre, no cotizador tecnico.
-- **Campos importantes**: `id` (bigint PK), `proyecto_id` (FK), `organization_id` (FK), `numero` (COT-DDMMYY-NNN, unique por org), `estado` (sin CHECK), `estado_comercial`, `total` (NOT NULL), `subtotal_neto`, `costo_total`, `margen_pct`, `utilidad_total`, `descuento_pct`, `flete`, `iva`, `notas`, `valido_hasta`, `approval_token` (UNIQUE partial WHERE NOT NULL), `approval_token_expires_at`, `cliente_vio_en`, `cliente_respondio_en`, `cliente_respuesta_canal`, `eliminado_en`
+- **Campos importantes**: `id` (bigint PK), `proyecto_id` (FK), `organization_id` (FK), `numero` (COT-DDMMYY-NNN, unique por org), `estado` (sin CHECK), `estado_comercial`, `pricing_mode` (CHECK `por_item|total_global`, default `por_item`), `total` (NOT NULL), `subtotal_neto`, `costo_total`, `margen_pct`, `utilidad_total`, `descuento_pct`, `flete`, `iva`, `notas`, `valido_hasta`, `approval_token` (UNIQUE partial WHERE NOT NULL), `approval_token_expires_at`, `cliente_vio_en`, `cliente_respondio_en`, `cliente_respuesta_canal`, `eliminado_en`
 - **Relaciones**: N:1 organizations, N:1 projects, 1:N cotizacion_items
 - **Usada por**: Cotizaciones, Dashboard, Aprobacion publica, PDF, WhatsApp
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK.
+- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK. En `pricing_mode='total_global'`, `costo_total`, `margen_pct` y `utilidad_total` son datos internos y no deben exponerse en PDF ni vista publica.
 
 ---
 
@@ -68,7 +68,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
 - **Usada por**: Cotizaciones, PDF
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion.
+- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion. En cotizaciones `total_global`, `precio_unitario` y `subtotal` se guardan en 0 por NOT NULL y no representan precio comercial por componente.
 
 ---
 

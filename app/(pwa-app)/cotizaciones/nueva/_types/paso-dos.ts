@@ -12,6 +12,7 @@ import type {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 export type VisibleComponentListState = {
   cards: ComponentListCardViewModel[];
@@ -23,6 +24,7 @@ export type PasoDosFormularioComponenteProps = {
   itemsCount: number;
   editingItemId: string | null;
   componentForm: ComponentFormState;
+  quotePricingMode: QuotePricingMode;
   fieldErrors: FieldErrors;
   globalError: string | null;
   isMobileViewport: boolean;
@@ -46,6 +48,7 @@ export type PasoDosFormularioComponenteProps = {
     items: string[];
   }>;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
+  onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
   onToggleGlassPanel: () => void;
@@ -60,6 +63,7 @@ export type PasoDosFormularioComponenteProps = {
 
 export type PasoDosPanelComponentesProps = {
   items: CotizacionWorkflowItem[];
+  quotePricingMode: QuotePricingMode;
   pendingItemsCount: number;
   completedItemsCount: number;
   effectiveShowOnlyPendingItems: boolean;

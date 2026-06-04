@@ -5,6 +5,7 @@ import type { SaveIntent } from "../_hooks/use-paso-tres-guardado";
 import { PasoTresDetalleFinal } from "./paso-tres-detalle-final";
 import { PasoTresPanelAcciones } from "./paso-tres-panel-acciones";
 import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import s from "../page.module.css";
 
@@ -14,6 +15,11 @@ type PasoTresResumenProps = {
   iva: string;
   flete: string;
   total: string;
+  quotePricingMode: QuotePricingMode;
+  costoTotalFabricacion: string;
+  utilidadTotal: string;
+  margenGlobalPct: string;
+  totalClienteManual: number | null;
   globalError: string | null;
   savedRecord: CotizacionWorkflowRecord | null;
   lastSaveMode: keyof typeof STATUS_COPY | null;
@@ -21,6 +27,9 @@ type PasoTresResumenProps = {
   isSaving: boolean;
   saveIntent: SaveIntent | null;
   onDraftFleteChange: (value: string) => void;
+  onGlobalCostoFabricacionChange: (value: string) => void;
+  onGlobalMargenChange: (value: string) => void;
+  onGlobalTotalClienteChange: (value: string) => void;
   onValidezChange: (value: string) => void;
   onGoToStepTwo: () => void;
   onSaveQuote: () => void;
@@ -34,6 +43,11 @@ export function PasoTresResumen({
   iva,
   flete,
   total,
+  quotePricingMode,
+  costoTotalFabricacion,
+  utilidadTotal,
+  margenGlobalPct,
+  totalClienteManual,
   globalError,
   savedRecord,
   lastSaveMode,
@@ -41,6 +55,9 @@ export function PasoTresResumen({
   isSaving,
   saveIntent,
   onDraftFleteChange,
+  onGlobalCostoFabricacionChange,
+  onGlobalMargenChange,
+  onGlobalTotalClienteChange,
   onValidezChange,
   onGoToStepTwo,
   onSaveQuote,
@@ -67,9 +84,17 @@ export function PasoTresResumen({
           iva={iva}
           flete={flete}
           total={total}
+          quotePricingMode={quotePricingMode}
+          costoTotalFabricacion={costoTotalFabricacion}
+          utilidadTotal={utilidadTotal}
+          margenGlobalPct={margenGlobalPct}
+          totalClienteManual={totalClienteManual}
           savedRecord={savedRecord}
           isMobileViewport={isMobileViewport}
           onDraftFleteChange={onDraftFleteChange}
+          onGlobalCostoFabricacionChange={onGlobalCostoFabricacionChange}
+          onGlobalMargenChange={onGlobalMargenChange}
+          onGlobalTotalClienteChange={onGlobalTotalClienteChange}
           onValidezChange={onValidezChange}
           validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}

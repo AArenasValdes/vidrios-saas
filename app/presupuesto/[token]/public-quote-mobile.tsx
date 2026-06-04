@@ -61,6 +61,7 @@ type PublicQuoteMobileView = {
   obra: string;
   validez: string;
   total: number;
+  pricingMode?: "por_item" | "total_global";
   subtotal: number;
   descuentoPct: number;
   iva: number;
@@ -164,6 +165,7 @@ export function PublicQuoteMobile({
 
     return accumulator + (item.ancho * item.alto * item.cantidad) / 1_000_000;
   }, 0);
+  const showItemPrices = quote.pricingMode !== "total_global";
   const downloadUrl = `/presupuesto/${quote.approvalToken}/documento?download=1&embed=1`;
   const issueDate = formatShortDate(quote.createdAt ?? quote.updatedAt);
   const isFinalState = Boolean(decisionMessage);
@@ -262,7 +264,9 @@ export function PublicQuoteMobile({
                 </p>
                 <div className={s.itemFoot}>
                   <span className={s.itemChip}>{item.vidrio || "Vidrio por definir"}</span>
-                  <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
+                  {showItemPrices ? (
+                    <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
+                  ) : null}
                 </div>
               </div>
             ))}

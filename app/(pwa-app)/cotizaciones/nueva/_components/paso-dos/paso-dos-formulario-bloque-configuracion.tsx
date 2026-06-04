@@ -23,6 +23,7 @@ type Props = Pick<
   | "itemsCount"
   | "editingItemId"
   | "componentForm"
+  | "quotePricingMode"
   | "fieldErrors"
   | "isMobileViewport"
   | "currentComponentPreviewSvg"
@@ -44,6 +45,7 @@ export function PasoDosFormularioBloqueConfiguracion({
   itemsCount,
   editingItemId,
   componentForm,
+  quotePricingMode,
   fieldErrors,
   isMobileViewport,
   currentComponentPreviewSvg,
@@ -285,58 +287,72 @@ export function PasoDosFormularioBloqueConfiguracion({
       <section className={`${s.formSection} ${s.providerOnboardingCard} ${s.stepTwoSectionStrong}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Precio</span>
-          <strong>{isMobileViewport ? "Linea y precio" : "Linea y forma de precio"}</strong>
-          {!isMobileViewport ? <p>Elige una linea comercial si quieres calcular por m² sin salir a la calculadora.</p> : null}
+          <strong>
+            {quotePricingMode === "total_global"
+              ? "Linea para el detalle"
+              : isMobileViewport
+                ? "Linea y precio"
+                : "Linea y forma de precio"}
+          </strong>
+          {!isMobileViewport ? (
+            <p>
+              {quotePricingMode === "total_global"
+                ? "Elige linea, medidas y vidrio para que el detalle comercial quede claro."
+                : "Elige una linea comercial si quieres calcular por m² sin salir a la calculadora."}
+            </p>
+          ) : null}
         </div>
 
         {linePricingBlock}
 
-        <div className={s.field}>
-          <span className={s.label}>Forma de cobro</span>
-          <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de precio">
-            <label className={`${s.segmentedChoice} ${componentForm.pricingMode === "margen" ? s.segmentedChoiceActive : ""}`}>
-              <input
-                className={s.segmentedChoiceInput}
-                type="radio"
-                name="pricing-mode"
-                value="margen"
-                checked={componentForm.pricingMode === "margen"}
-                onChange={() => onPricingModeSelection("margen")}
-              />
-              <span className={s.segmentedChoiceTitle}>Con margen</span>
-              {!isMobileViewport ? (
-                <span className={s.segmentedChoiceHint}>Calcula la venta desde precio base y margen.</span>
-              ) : null}
-            </label>
-            <label
-              className={`${s.segmentedChoice} ${
-                componentForm.pricingMode === "precio_directo" ? s.segmentedChoiceActive : ""
-              }`}
-            >
-              <input
-                className={s.segmentedChoiceInput}
-                type="radio"
-                name="pricing-mode"
-                value="precio_directo"
-                checked={componentForm.pricingMode === "precio_directo"}
-                onChange={() => onPricingModeSelection("precio_directo")}
-              />
-              <span className={s.segmentedChoiceTitle}>Precio final manual</span>
-              {!isMobileViewport ? (
-                <span className={s.segmentedChoiceHint}>Tu defines el precio final sin margen automatico.</span>
-              ) : null}
-            </label>
+        {quotePricingMode === "por_item" ? (
+          <div className={s.field}>
+            <span className={s.label}>Forma de cobro</span>
+            <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de precio">
+              <label className={`${s.segmentedChoice} ${componentForm.pricingMode === "margen" ? s.segmentedChoiceActive : ""}`}>
+                <input
+                  className={s.segmentedChoiceInput}
+                  type="radio"
+                  name="pricing-mode"
+                  value="margen"
+                  checked={componentForm.pricingMode === "margen"}
+                  onChange={() => onPricingModeSelection("margen")}
+                />
+                <span className={s.segmentedChoiceTitle}>Con margen</span>
+                {!isMobileViewport ? (
+                  <span className={s.segmentedChoiceHint}>Calcula la venta desde precio base y margen.</span>
+                ) : null}
+              </label>
+              <label
+                className={`${s.segmentedChoice} ${
+                  componentForm.pricingMode === "precio_directo" ? s.segmentedChoiceActive : ""
+                }`}
+              >
+                <input
+                  className={s.segmentedChoiceInput}
+                  type="radio"
+                  name="pricing-mode"
+                  value="precio_directo"
+                  checked={componentForm.pricingMode === "precio_directo"}
+                  onChange={() => onPricingModeSelection("precio_directo")}
+                />
+                <span className={s.segmentedChoiceTitle}>Precio final manual</span>
+                {!isMobileViewport ? (
+                  <span className={s.segmentedChoiceHint}>Tu defines el precio final sin margen automatico.</span>
+                ) : null}
+              </label>
+            </div>
+            {!isMobileViewport ? (
+              <span className={s.helpText}>
+                {componentForm.pricingMode === "precio_directo"
+                  ? "Tu escribes el valor final por componente."
+                  : "El sistema calcula la venta con el margen."}
+              </span>
+            ) : null}
           </div>
-          {!isMobileViewport ? (
-            <span className={s.helpText}>
-              {componentForm.pricingMode === "precio_directo"
-                ? "Tu escribes el valor final por componente."
-                : "El sistema calcula la venta con el margen."}
-            </span>
-          ) : null}
-        </div>
+        ) : null}
 
-        {componentForm.pricingMode === "margen" ? (
+        {quotePricingMode === "por_item" && componentForm.pricingMode === "margen" ? (
           <div className={s.field}>
             <span className={s.label}>
               Margen <span className={s.required}>*</span>

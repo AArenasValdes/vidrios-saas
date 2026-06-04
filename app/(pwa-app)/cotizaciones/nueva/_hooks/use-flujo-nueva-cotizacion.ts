@@ -15,6 +15,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowDraft, CotizacionWorkflowItem, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { VisibleComponentListState } from "../_types/paso-dos";
 import { usePasoDosPresentacion } from "./use-paso-dos-presentacion";
 
@@ -40,6 +41,11 @@ type UseFlujoNuevaCotizacionParams = {
   ) => void;
   editingItemId: string | null;
   componentForm: ComponentFormState;
+  quotePricingMode: QuotePricingMode;
+  costoTotalFabricacion: string;
+  utilidadTotal: string;
+  margenGlobalPct: string;
+  totalClienteManual: number | null;
   activeLineTemplates: CotizacionLineTemplate[];
   globalError: string | null;
   isSavingQuickPriceTemplate: boolean;
@@ -85,6 +91,7 @@ type UseFlujoNuevaCotizacionParams = {
   onToggleMoreData: () => void;
   onResetStep1: () => void;
   onContinueStep1: () => void;
+  onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
@@ -111,6 +118,9 @@ type UseFlujoNuevaCotizacionParams = {
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
   onDraftFleteChange: (value: string) => void;
+  onGlobalCostoFabricacionChange: (value: string) => void;
+  onGlobalMargenChange: (value: string) => void;
+  onGlobalTotalClienteChange: (value: string) => void;
   formatCurrencyInput: (value: string) => string;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: React.RefObject<HTMLDivElement | null>;
@@ -144,6 +154,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     items: params.items,
     editingItemId: params.editingItemId,
     componentForm: params.componentForm,
+    quotePricingMode: params.quotePricingMode,
     activeLineTemplates: params.activeLineTemplates,
     fieldErrors: params.fieldErrors,
     globalError: params.globalError,
@@ -170,6 +181,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     iva: params.iva,
     total: params.total,
     onGoToSummary: () => params.onGoToStep(3),
+    onQuotePricingModeChange: params.onQuotePricingModeChange,
     onPricingModeSelection: params.onPricingModeSelection,
     onComponentChange: params.onComponentChange,
     onSelectLineTemplate: params.onSelectLineTemplate,
@@ -239,12 +251,20 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     iva: params.iva,
     flete: params.flete,
     total: params.total,
+    quotePricingMode: params.quotePricingMode,
+    costoTotalFabricacion: params.costoTotalFabricacion,
+    utilidadTotal: params.utilidadTotal,
+    margenGlobalPct: params.margenGlobalPct,
+    totalClienteManual: params.totalClienteManual,
     globalError: params.globalError,
     savedRecord: params.savedRecord,
     lastSaveMode: params.lastSaveMode,
     isMobileViewport: params.isMobileViewport,
     isSaving: params.isSaving,
     onDraftFleteChange: params.onDraftFleteChange,
+    onGlobalCostoFabricacionChange: params.onGlobalCostoFabricacionChange,
+    onGlobalMargenChange: params.onGlobalMargenChange,
+    onGlobalTotalClienteChange: params.onGlobalTotalClienteChange,
     onValidezChange: params.onValidezChange,
     onGoToStepTwo: () => params.onGoToStep(2),
     onSaveQuote: params.onSaveQuote,

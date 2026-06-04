@@ -287,6 +287,7 @@ CREATE TABLE IF NOT EXISTS "public"."cotizaciones" (
     "costo_total" numeric,
     "margen_pct" numeric,
     "utilidad_total" numeric,
+    "pricing_mode" "text" DEFAULT 'por_item'::"text" NOT NULL,
     "estado_comercial" "text",
     "approval_token" "text",
     "approval_token_expires_at" timestamp with time zone,
@@ -294,6 +295,8 @@ CREATE TABLE IF NOT EXISTS "public"."cotizaciones" (
     "cliente_respondio_en" timestamp with time zone,
     "cliente_respuesta_canal" "text"
 );
+
+ALTER TABLE "public"."cotizaciones" ADD CONSTRAINT "cotizaciones_pricing_mode_check" CHECK (("pricing_mode" = ANY (ARRAY['por_item'::"text", 'total_global'::"text"]))) NOT VALID;
 
 
 ALTER TABLE "public"."cotizaciones" OWNER TO "postgres";

@@ -240,6 +240,7 @@ export function PasoDosWizardMovil({
     draft: wizard.draft,
     pricingMode,
   });
+  const quotePricingMode = formulario.quotePricingMode;
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
   const visibleLineTemplates = wizard.visibleLineTemplates;
 
@@ -385,6 +386,41 @@ export function PasoDosWizardMovil({
               }`}
             >
               {visualStage === 1 ? (
+                <section className={`${s.formSection} ${s.providerOnboardingCard}`}>
+                  <div className={s.formSectionHead}>
+                    <span className={s.formSectionEyebrow}>Forma de cálculo</span>
+                    <strong>¿Cómo quieres calcular?</strong>
+                  </div>
+                  <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de calculo de cotizacion">
+                    <label className={`${s.segmentedChoice} ${quotePricingMode === "por_item" ? s.segmentedChoiceActive : ""}`}>
+                      <input
+                        className={s.segmentedChoiceInput}
+                        type="radio"
+                        name="quote-pricing-mode-mobile"
+                        value="por_item"
+                        checked={quotePricingMode === "por_item"}
+                        onChange={() => formulario.onQuotePricingModeChange("por_item")}
+                      />
+                      <span className={s.segmentedChoiceTitle}>Calcular por cada componente</span>
+                      <span className={s.segmentedChoiceHint}>Usa líneas, medidas y precios por ítem.</span>
+                    </label>
+                    <label className={`${s.segmentedChoice} ${quotePricingMode === "total_global" ? s.segmentedChoiceActive : ""}`}>
+                      <input
+                        className={s.segmentedChoiceInput}
+                        type="radio"
+                        name="quote-pricing-mode-mobile"
+                        value="total_global"
+                        checked={quotePricingMode === "total_global"}
+                        onChange={() => formulario.onQuotePricingModeChange("total_global")}
+                      />
+                      <span className={s.segmentedChoiceTitle}>Calcular por total del trabajo</span>
+                      <span className={s.segmentedChoiceHint}>Define costo/margen al final.</span>
+                    </label>
+                  </div>
+                </section>
+              ) : null}
+
+              {visualStage === 1 ? (
                 <PasoDosWizardTipoMovil
                   categoryOptions={normalizedCategoryOptions}
                   draft={wizard.draft}
@@ -436,6 +472,7 @@ export function PasoDosWizardMovil({
                   onPricingModeChange={wizard.onPricingModeChange}
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
+                  quotePricingMode={quotePricingMode}
                   priceHelp={priceHelp}
                   priceLabel={priceLabel}
                   recommendedReason={glassRecommendation.reason}

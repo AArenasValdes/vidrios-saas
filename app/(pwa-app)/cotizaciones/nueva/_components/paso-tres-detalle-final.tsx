@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LuChevronDown, LuTruck } from "react-icons/lu";
 
 import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import s from "../page.module.css";
 
@@ -13,9 +14,17 @@ type PasoTresDetalleFinalProps = {
   iva: string;
   flete: string;
   total: string;
+  quotePricingMode: QuotePricingMode;
+  costoTotalFabricacion: string;
+  utilidadTotal: string;
+  margenGlobalPct: string;
+  totalClienteManual: number | null;
   savedRecord: CotizacionWorkflowRecord | null;
   isMobileViewport: boolean;
   onDraftFleteChange: (value: string) => void;
+  onGlobalCostoFabricacionChange: (value: string) => void;
+  onGlobalMargenChange: (value: string) => void;
+  onGlobalTotalClienteChange: (value: string) => void;
   onValidezChange: (value: string) => void;
   validezOptions: string[];
   formatCurrencyInput: (value: string) => string;
@@ -27,9 +36,15 @@ export function PasoTresDetalleFinal({
   iva,
   flete,
   total,
+  quotePricingMode,
+  utilidadTotal,
+  totalClienteManual,
   savedRecord,
   isMobileViewport,
   onDraftFleteChange,
+  onGlobalCostoFabricacionChange,
+  onGlobalMargenChange,
+  onGlobalTotalClienteChange,
   onValidezChange,
   validezOptions,
   formatCurrencyInput,
@@ -59,6 +74,66 @@ export function PasoTresDetalleFinal({
 
   const visibleItems = showAllItems ? draft.items : draft.items.slice(0, 3);
   const hasHiddenItems = draft.items.length > 3;
+  const globalTotalInputValue =
+    totalClienteManual !== null && totalClienteManual !== undefined
+      ? formatCurrencyInput(String(totalClienteManual))
+      : formatCurrencyInput(total.replace(/[^\d]/g, ""));
+  const globalPricingEditor = (
+    <section className={s.summaryAdjustmentCard}>
+      <div className={s.summaryAdjustmentHeader}>
+        <div>
+          <span className={s.summaryAdjustmentEyebrow}>Cálculo interno</span>
+          <strong>Total del trabajo</strong>
+        </div>
+        <span className={s.summaryAdjustmentValue}>{total}</span>
+      </div>
+      <div className={s.formGrid2}>
+        <label className={s.field}>
+          <span className={s.label}>Costo fabricación</span>
+          <div className={s.moneyInputWrap}>
+            <span className={s.moneyPrefix}>CLP</span>
+            <input
+              className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+              inputMode="numeric"
+              value={formatCurrencyInput(String(draft.costoTotalFabricacion ?? 0))}
+              onChange={(event) => onGlobalCostoFabricacionChange(event.target.value)}
+              placeholder="300.000"
+            />
+          </div>
+        </label>
+        <label className={s.field}>
+          <span className={s.label}>Margen global (%)</span>
+          <input
+            className={`${s.input} ${s.inputMono}`}
+            inputMode="decimal"
+            value={String(draft.margenGlobalPct ?? 0)}
+            onChange={(event) => onGlobalMargenChange(event.target.value)}
+            placeholder="100"
+          />
+        </label>
+      </div>
+      <div className={s.formGrid2}>
+        <div className={s.summaryBlock}>
+          <span>Utilidad</span>
+          <strong>{utilidadTotal}</strong>
+        </div>
+        <label className={s.field}>
+          <span className={s.label}>Total cliente</span>
+          <div className={s.moneyInputWrap}>
+            <span className={s.moneyPrefix}>CLP</span>
+            <input
+              className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+              inputMode="numeric"
+              value={globalTotalInputValue}
+              onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
+              placeholder="600.000"
+            />
+          </div>
+          <span className={s.helpText}>Puedes redondear este total. No aparece costo ni margen en el PDF.</span>
+        </label>
+      </div>
+    </section>
+  );
 
   if (isMobileViewport) {
     return (
@@ -95,7 +170,7 @@ export function PasoTresDetalleFinal({
         <section className={s.stepThreeItemsCard}>
           <div className={s.stepThreeCardHeader}>
             <span className={s.stepThreeCardEyebrow}>COMPONENTES ({draft.items.length})</span>
-            <strong>{subtotal}</strong>
+            <strong>{quotePricingMode === "total_global" ? total : subtotal}</strong>
           </div>
           <div className={s.stepThreeItemList}>
             {visibleItems.map((item, index) => (
@@ -105,7 +180,9 @@ export function PasoTresDetalleFinal({
                   <strong>{item.nombre || item.tipo || item.codigo}</strong>
                   <span>{buildItemMeta(item)}</span>
                 </div>
-                <strong className={s.stepThreeItemPrice}>{formatMoney(item.precioTotal)}</strong>
+                {quotePricingMode === "por_item" ? (
+                  <strong className={s.stepThreeItemPrice}>{formatMoney(item.precioTotal)}</strong>
+                ) : null}
               </article>
             ))}
           </div>
@@ -120,6 +197,7 @@ export function PasoTresDetalleFinal({
           ) : null}
         </section>
 
+        {quotePricingMode === "total_global" ? globalPricingEditor : (
         <section className={s.stepThreeFreightCard}>
           <div className={s.stepThreeFreightRow}>
             <div className={s.stepThreeFreightMain}>
@@ -156,20 +234,25 @@ export function PasoTresDetalleFinal({
             </label>
           ) : null}
         </section>
+        )}
 
         <div className={s.totalPanel}>
-          <div className={s.totalRow}>
-            <span>Subtotal</span>
-            <strong>{subtotal}</strong>
-          </div>
-          <div className={s.totalRow}>
-            <span>IVA 19%</span>
-            <strong>{iva}</strong>
-          </div>
-          <div className={s.totalRow}>
-            <span>Flete</span>
-            <strong>{draft.flete > 0 ? flete : "$0"}</strong>
-          </div>
+          {quotePricingMode === "por_item" ? (
+            <>
+              <div className={s.totalRow}>
+                <span>Subtotal</span>
+                <strong>{subtotal}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>IVA 19%</span>
+                <strong>{iva}</strong>
+              </div>
+              <div className={s.totalRow}>
+                <span>Flete</span>
+                <strong>{draft.flete > 0 ? flete : "$0"}</strong>
+              </div>
+            </>
+          ) : null}
           <div className={s.totalGrand}>
             <span>TOTAL</span>
             <strong>{total}</strong>
@@ -213,6 +296,7 @@ export function PasoTresDetalleFinal({
       </div>
 
       <div className={s.summaryAdjustments}>
+        {quotePricingMode === "total_global" ? globalPricingEditor : (
         <div className={s.summaryAdjustmentCard}>
           <div className={s.summaryAdjustmentHeader}>
             <div>
@@ -236,22 +320,27 @@ export function PasoTresDetalleFinal({
             <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
           </label>
         </div>
+        )}
       </div>
 
       <div className={s.totalPanel}>
-        <div className={s.totalRow}>
-          <span>Subtotal</span>
-          <strong>{subtotal}</strong>
-        </div>
-        <div className={s.totalRow}>
-          <span>IVA 19%</span>
-          <strong>{iva}</strong>
-        </div>
-        {draft.flete > 0 ? (
-          <div className={s.totalRow}>
-            <span>Flete</span>
-            <strong>{flete}</strong>
-          </div>
+        {quotePricingMode === "por_item" ? (
+          <>
+            <div className={s.totalRow}>
+              <span>Subtotal</span>
+              <strong>{subtotal}</strong>
+            </div>
+            <div className={s.totalRow}>
+              <span>IVA 19%</span>
+              <strong>{iva}</strong>
+            </div>
+            {draft.flete > 0 ? (
+              <div className={s.totalRow}>
+                <span>Flete</span>
+                <strong>{flete}</strong>
+              </div>
+            ) : null}
+          </>
         ) : null}
         <div className={s.totalGrand}>
           <span>Total</span>

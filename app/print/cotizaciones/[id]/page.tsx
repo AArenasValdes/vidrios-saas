@@ -481,6 +481,7 @@ export default function CotizacionPrintPage() {
   const paymentTermsDisplay = resolveDocumentPaymentTerms(
     organizationProfile.formaPago
   );
+  const showItemPrices = visibleCotizacion?.quotePricingMode !== "total_global";
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
     const items = visibleCotizacion?.items ?? [];
@@ -1003,7 +1004,8 @@ export default function CotizacionPrintPage() {
                           ))}
                         </div>
 
-                        <aside className={s.pricesColumn}>
+                                {showItemPrices ? (
+                                <aside className={s.pricesColumn}>
                           <div className={s.pricesHeading}>VALOR COMERCIAL</div>
                           <div className={s.pricesSubheading}>MONTOS EN CLP</div>
 
@@ -1020,7 +1022,8 @@ export default function CotizacionPrintPage() {
                             <span>Total ítem</span>
                             <strong>{CLP(item.precioTotal)}</strong>
                           </div>
-                        </aside>
+                                </aside>
+                                ) : null}
                       </div>
                     </div>
                   </article>
@@ -1045,11 +1048,13 @@ export default function CotizacionPrintPage() {
                     </p>
                   </section>
 
-                  <aside className={s.totalsColumn}>
-                    <span className={s.summaryLabel}>RESUMEN FINAL</span>
-                    <div className={s.totalRow}>
-                      <span>Subtotal</span>
-                      <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                    <aside className={s.totalsColumn}>
+                      <span className={s.summaryLabel}>RESUMEN FINAL</span>
+                      {showItemPrices ? (
+                        <>
+                      <div className={s.totalRow}>
+                        <span>Subtotal</span>
+                        <strong>{CLP(visibleCotizacion.subtotal)}</strong>
                     </div>
                     <div className={s.totalRow}>
                       <span>Descuento</span>
@@ -1059,11 +1064,13 @@ export default function CotizacionPrintPage() {
                       <span>Neto</span>
                       <strong>{CLP(visibleCotizacion.neto)}</strong>
                     </div>
-                    <div className={s.totalRow}>
-                      <span>IVA 19%</span>
-                      <strong>{CLP(visibleCotizacion.iva)}</strong>
-                    </div>
-                    {visibleCotizacion.flete > 0 ? (
+                      <div className={s.totalRow}>
+                        <span>IVA 19%</span>
+                        <strong>{CLP(visibleCotizacion.iva)}</strong>
+                      </div>
+                        </>
+                      ) : null}
+                      {showItemPrices && visibleCotizacion.flete > 0 ? (
                       <div className={s.totalRow}>
                         <span>Flete</span>
                         <strong>{CLP(visibleCotizacion.flete)}</strong>
@@ -1118,6 +1125,7 @@ export default function CotizacionPrintPage() {
       failedLogoUrl,
       paymentTermsDisplay,
       printPages,
+      showItemPrices,
       shouldShowCompanyLogo,
       totalSurfaceM2,
       visibleCotizacion,

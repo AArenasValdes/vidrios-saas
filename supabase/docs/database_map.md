@@ -123,6 +123,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `numero` | text | Código legible (ej: COT-060526-001) |
 | `estado` | text NOT NULL | Sin CHECK definido |
 | `estado_comercial` | text | Sin CHECK definido |
+| `pricing_mode` | text NOT NULL DEFAULT 'por_item' | CHECK `por_item` / `total_global` |
 | `total` | numeric NOT NULL | |
 | `subtotal_neto` | numeric | |
 | `costo_total` | numeric | |

@@ -14,7 +14,7 @@ import {
   buildCotizacionCode,
   buildLegacyCotizacionCode,
   calculateComponentItem,
-  calculateCotizacionWorkflowTotals,
+  calculateWorkflowTotalsForPricingMode,
   resolveWorkflowObraTitle,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { impuestos } from "@/constants/impuestos";
@@ -30,6 +30,10 @@ import type {
   EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  normalizeQuotePricingMode,
+  type QuotePricingMode,
+} from "@/features/cotizaciones/types/quote-pricing-mode";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -199,12 +203,16 @@ function mapCotizacionToWorkflowRecord(input: {
   projectTitle: string;
 }): CotizacionWorkflowRecord {
   const items = input.cotizacion.items.map(mapDatabaseItemToWorkflowItem);
-  const subtotal = round(
-    items.reduce((accumulator, item) => accumulator + item.precioTotal, 0),
-    2
-  );
+  const quotePricingMode = normalizeQuotePricingMode(input.cotizacion.pricingMode);
+  const subtotal =
+    quotePricingMode === "total_global"
+      ? Number(input.cotizacion.subtotalNeto ?? input.cotizacion.total ?? 0)
+      : round(items.reduce((accumulator, item) => accumulator + item.precioTotal, 0), 2);
   const neto = input.cotizacion.subtotalNeto ?? subtotal;
   const descuentoValor = round(subtotal - neto, 2);
+  const costoTotalFabricacion = input.cotizacion.costoTotal ?? 0;
+  const utilidadTotal = input.cotizacion.utilidadTotal ?? 0;
+  const margenGlobalPct = input.cotizacion.margenPct ?? 0;
 
   return {
     id: String(input.cotizacion.id),
@@ -241,6 +249,11 @@ function mapCotizacionToWorkflowRecord(input: {
     iva: input.cotizacion.iva ?? round(neto * impuestos.iva, 2),
     flete: input.cotizacion.flete ?? 0,
     total: input.cotizacion.total,
+    quotePricingMode,
+    costoTotalFabricacion,
+    margenGlobalPct,
+    utilidadTotal,
+    totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
   };
 }
 
@@ -289,17 +302,19 @@ function normalizeWorkflowItem(
 function mapWorkflowItemToRepositoryItem(
   item: CotizacionWorkflowItem,
   organizationId: EntityId,
-  index: number
+  index: number,
+  quotePricingMode: QuotePricingMode = "por_item"
 ): CrearCotizacionItemInput {
-  const utilidad = round(item.precioTotal - item.costoProveedorTotal, 2);
+  const isGlobalPricing = quotePricingMode === "total_global";
+  const utilidad = isGlobalPricing ? 0 : round(item.precioTotal - item.costoProveedorTotal, 2);
 
   return {
     codigo: item.codigo,
     tipoComponente: item.tipo,
     orden: index,
     cantidad: item.cantidad,
-    precioUnitario: item.precioUnitario,
-    subtotal: item.precioTotal,
+    precioUnitario: isGlobalPricing ? 0 : item.precioUnitario,
+    subtotal: isGlobalPricing ? 0 : item.precioTotal,
     organizationId,
     ancho: item.ancho,
     alto: item.alto,
@@ -315,9 +330,9 @@ function mapWorkflowItemToRepositoryItem(
     productTypeId: null,
     systemLineId: null,
     configurationId: null,
-    costoUnitario: item.costoProveedorUnitario,
-    costoTotal: item.costoProveedorTotal,
-    margenPct: item.margenPct,
+    costoUnitario: isGlobalPricing ? 0 : item.costoProveedorUnitario,
+    costoTotal: isGlobalPricing ? 0 : item.costoProveedorTotal,
+    margenPct: isGlobalPricing ? 0 : item.margenPct,
     utilidad,
     breakdown: [],
   };
@@ -793,21 +808,30 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       }
       const project = projectResult.record;
 
-      const totals = calculateCotizacionWorkflowTotals(
-        normalizedItems,
-        input.draft.descuentoPct,
-        input.draft.flete
-      );
-      const costoTotal = round(
-        normalizedItems.reduce(
-          (accumulator, item) => accumulator + item.costoProveedorTotal,
-          0
-        ),
-        2
-      );
-      const utilidadTotal = round(totals.neto - costoTotal, 2);
+      const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
+      const totals = calculateWorkflowTotalsForPricingMode({
+        ...input.draft,
+        quotePricingMode,
+        items: normalizedItems,
+      });
+      const costoTotal =
+        quotePricingMode === "total_global"
+          ? totals.costoTotalFabricacion
+          : round(
+              normalizedItems.reduce(
+                (accumulator, item) => accumulator + item.costoProveedorTotal,
+                0
+              ),
+              2
+            );
+      const utilidadTotal =
+        quotePricingMode === "total_global" ? totals.utilidadTotal : round(totals.neto - costoTotal, 2);
       const margenPct =
-        costoTotal === 0 ? 0 : round((utilidadTotal / costoTotal) * 100, 2);
+        quotePricingMode === "total_global"
+          ? totals.margenGlobalPct
+          : costoTotal === 0
+            ? 0
+            : round((utilidadTotal / costoTotal) * 100, 2);
       const codigo =
         input.existingCode ??
         (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
@@ -818,7 +842,8 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         proyectoId: project.id,
         numero: codigo,
         estado: input.estado,
-        descuentoPct: input.draft.descuentoPct,
+        pricingMode: quotePricingMode,
+        descuentoPct: quotePricingMode === "total_global" ? 0 : input.draft.descuentoPct,
         notas: input.draft.observaciones,
         validoHasta: resolveValidoHasta(input.draft.validez),
         subtotalNeto: totals.neto,
@@ -831,10 +856,10 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         clienteRespondioEn: existingCotizacion?.clienteRespondioEn ?? null,
         clienteRespuestaCanal: existingCotizacion?.clienteRespuestaCanal ?? null,
         iva: totals.iva,
-        flete: totals.flete,
+        flete: quotePricingMode === "total_global" ? 0 : totals.flete,
         total: totals.total,
         items: normalizedItems.map((item, index) =>
-          mapWorkflowItemToRepositoryItem(item, input.organizationId, index)
+          mapWorkflowItemToRepositoryItem(item, input.organizationId, index, quotePricingMode)
         ),
       };
 

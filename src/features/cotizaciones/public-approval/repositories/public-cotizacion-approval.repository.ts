@@ -13,6 +13,7 @@ type CotizacionApprovalRow = {
   valido_hasta: string | null;
   subtotal_neto: number | string | null;
   descuento_pct: number | string | null;
+  pricing_mode?: string | null;
   flete: number | string | null;
   iva: number | string | null;
   total: number | string;
@@ -103,6 +104,7 @@ const COTIZACION_APPROVAL_SELECT = `
   valido_hasta,
   subtotal_neto,
   descuento_pct,
+  pricing_mode,
   flete,
   iva,
   total,

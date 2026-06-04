@@ -39,7 +39,7 @@ export function buildNuevaCotizacionSolicitudPrefillState(
     : "";
 
   return {
-    version: 3,
+    version: 4,
     step: 2,
     draft: {
       ...draft,

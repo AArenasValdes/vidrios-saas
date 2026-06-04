@@ -377,6 +377,89 @@ describe("cotizaciones.service", () => {
     expect(record.items[0].vidrio).toBe("Incoloro monolitico 5mm");
   });
 
+  it("debe guardar una cotizacion con total global sin precios por item", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    await service.saveWorkflow({
+      organizationId: 77,
+      estado: "creada",
+      draft: {
+        quotePricingMode: "total_global",
+        costoTotalFabricacion: 300000,
+        margenGlobalPct: 100,
+        totalClienteManual: null,
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "Casa Coquimbo",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 25000,
+        observaciones: "",
+        items: [
+          {
+            id: "item-1",
+            codigo: "V1",
+            tipo: "Ventana",
+            nombre: "Ventana living",
+            descripcion: "Ventana corredera color negro",
+            ancho: 1500,
+            alto: 2000,
+            cantidad: 3,
+            unidad: "unidad",
+            areaM2: 3,
+            costoProveedorUnitario: 0,
+            costoProveedorTotal: 0,
+            margenPct: 0,
+            precioUnitario: 0,
+            precioTotal: 0,
+            vidrio: "Incoloro monolitico 5mm",
+            lineaComercial: "Linea 5000",
+            precioPorM2: null,
+            minimoCobrable: null,
+            redondeoPrecio: null,
+            precioPlantillaSugerido: null,
+            precioAjustadoManual: false,
+            origenPrecio: "manual",
+            observaciones: "Detalle comercial",
+          },
+        ],
+      },
+    });
+
+    expect(cotizacionesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pricingMode: "total_global",
+        subtotalNeto: 600000,
+        iva: 0,
+        flete: 0,
+        costoTotal: 300000,
+        margenPct: 100,
+        utilidadTotal: 300000,
+        total: 600000,
+        items: [
+          expect.objectContaining({
+            precioUnitario: 0,
+            subtotal: 0,
+            costoUnitario: 0,
+            costoTotal: 0,
+            margenPct: 0,
+            utilidad: 0,
+            linea: "Linea 5000",
+            vidrio: "Incoloro monolitico 5mm",
+          }),
+        ],
+      })
+    );
+  });
+
   it("debe autocompletar la obra con el nombre del cliente cuando viene vacia", async () => {
     const clientesRepository = createClientesRepositoryMock();
     const projectsRepository = createProjectsRepositoryMock();

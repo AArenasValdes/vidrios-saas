@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
@@ -82,6 +83,7 @@ type Props = {
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  quotePricingMode: QuotePricingMode;
   priceHelp: string;
   priceLabel: string;
   recommendedReason: string;
@@ -125,6 +127,7 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
+  quotePricingMode,
   priceHelp,
   priceLabel,
   recommendedReason,
@@ -781,16 +784,18 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       </div>
 
-      <PasoDosWizardPrecioMovil
-        activePricingMode={activePricingMode}
-        formattedPriceValue={formattedPriceValue}
-        marginValue={draft.margenPct}
-        onMargenChange={onMargenChange}
-        onPrecioChange={onPrecioChange}
-        onPricingModeChange={onPricingModeChange}
-        priceHelp={priceHelp}
-        priceLabel={priceLabel}
-      />
+      {quotePricingMode === "por_item" ? (
+        <PasoDosWizardPrecioMovil
+          activePricingMode={activePricingMode}
+          formattedPriceValue={formattedPriceValue}
+          marginValue={draft.margenPct}
+          onMargenChange={onMargenChange}
+          onPrecioChange={onPrecioChange}
+          onPricingModeChange={onPricingModeChange}
+          priceHelp={priceHelp}
+          priceLabel={priceLabel}
+        />
+      ) : null}
 
       <PasoDosWizardVidrioMovil
         currentGlass={draft.vidrio}

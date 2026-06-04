@@ -7,6 +7,7 @@ import type {
   CrearCotizacionItemInput,
 } from "@/features/cotizaciones/types/cotizacion-item";
 import type { EntityId } from "@/types/common";
+import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 type CotizacionesRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -29,6 +30,7 @@ type CotizacionRow = {
   costo_total: number | string | null;
   margen_pct: number | string | null;
   utilidad_total: number | string | null;
+  pricing_mode?: string | null;
   estado_comercial: string | null;
   approval_token: string | null;
   approval_token_expires_at: string | null;
@@ -89,11 +91,11 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, pricing_mode, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
 const COTIZACION_LIST_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, creado_en, actualizado_en, total";
 const COTIZACION_ITEM_SELECT =
@@ -331,6 +333,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     costoTotal: toNumber(row.costo_total ?? null),
     margenPct: toNumber(row.margen_pct ?? null),
     utilidadTotal: toNumber(row.utilidad_total ?? null),
+    pricingMode: normalizeQuotePricingMode(row.pricing_mode),
     estadoComercial: row.estado_comercial ?? null,
     approvalToken: row.approval_token ?? null,
     approvalTokenExpiresAt: row.approval_token_expires_at ?? null,
@@ -533,6 +536,7 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     costo_total: input.costoTotal ?? null,
     margen_pct: input.margenPct ?? null,
     utilidad_total: input.utilidadTotal ?? null,
+    pricing_mode: input.pricingMode ?? "por_item",
     estado_comercial: input.estadoComercial ?? null,
     approval_token: input.approvalToken ?? null,
     approval_token_expires_at: input.approvalTokenExpiresAt ?? null,
@@ -653,6 +657,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       costoTotal: snapshot.costoTotal,
       margenPct: snapshot.margenPct,
       utilidadTotal: snapshot.utilidadTotal,
+      pricingMode: snapshot.pricingMode,
       estadoComercial: snapshot.estadoComercial,
       approvalToken: snapshot.approvalToken,
       approvalTokenExpiresAt: snapshot.approvalTokenExpiresAt,

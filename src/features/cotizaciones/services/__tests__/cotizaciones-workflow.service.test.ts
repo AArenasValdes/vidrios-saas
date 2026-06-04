@@ -1,5 +1,6 @@
 import {
   calculateCotizacionWorkflowTotals,
+  calculateGlobalQuoteWorkflowTotals,
 } from "../cotizaciones-workflow.service";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 
@@ -53,5 +54,34 @@ describe("cotizaciones-workflow.service", () => {
 
     expect(totals.iva).toBe(19000);
     expect(totals.total).toBe(119000);
+  });
+
+  it("calcula el total global desde costo de fabricacion y margen", () => {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      costoTotalFabricacion: 300000,
+      margenGlobalPct: 100,
+      totalClienteManual: null,
+    });
+
+    expect(totals.costoTotalFabricacion).toBe(300000);
+    expect(totals.margenGlobalPct).toBe(100);
+    expect(totals.utilidadTotal).toBe(300000);
+    expect(totals.subtotal).toBe(600000);
+    expect(totals.neto).toBe(600000);
+    expect(totals.iva).toBe(0);
+    expect(totals.flete).toBe(0);
+    expect(totals.total).toBe(600000);
+  });
+
+  it("recalcula utilidad y margen cuando el total global se edita manualmente", () => {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      costoTotalFabricacion: 300000,
+      margenGlobalPct: 100,
+      totalClienteManual: 650000,
+    });
+
+    expect(totals.total).toBe(650000);
+    expect(totals.utilidadTotal).toBe(350000);
+    expect(totals.margenGlobalPct).toBeCloseTo(116.67, 2);
   });
 });

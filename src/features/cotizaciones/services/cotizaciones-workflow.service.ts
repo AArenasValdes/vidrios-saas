@@ -5,6 +5,10 @@ import type {
   CotizacionWorkflowRecord,
   EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import {
+  normalizeQuotePricingMode,
+  type QuotePricingMode,
+} from "@/features/cotizaciones/types/quote-pricing-mode";
 
 const DEFAULT_FLETE = 0;
 const DEFAULT_COTIZACION_COMMERCIAL_ROUNDING = 1000;
@@ -60,6 +64,14 @@ function roundUpToIncrement(value: number, increment: number) {
 function normalizePositiveNumber(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value) || value <= 0) {
     return null;
+  }
+
+  return Number(value);
+}
+
+function normalizeNonNegativeNumber(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value) || value < 0) {
+    return 0;
   }
 
   return Number(value);
@@ -277,6 +289,76 @@ export function calculateCotizacionWorkflowTotals(
   };
 }
 
+export function calculateGlobalQuoteWorkflowTotals(input: {
+  costoTotalFabricacion?: number | null;
+  margenGlobalPct?: number | null;
+  totalClienteManual?: number | null;
+}) {
+  const costoTotalFabricacion = round(
+    normalizeNonNegativeNumber(input.costoTotalFabricacion),
+    2
+  );
+  const requestedMargin = normalizeNonNegativeNumber(input.margenGlobalPct);
+  const calculatedUtility = round(costoTotalFabricacion * (requestedMargin / 100), 2);
+  const calculatedTotal = round(costoTotalFabricacion + calculatedUtility, 2);
+  const hasManualTotal =
+    input.totalClienteManual !== null &&
+    input.totalClienteManual !== undefined &&
+    Number.isFinite(input.totalClienteManual) &&
+    input.totalClienteManual >= 0;
+  const total = hasManualTotal ? round(Number(input.totalClienteManual), 2) : calculatedTotal;
+  const utilidadTotal = round(total - costoTotalFabricacion, 2);
+  const margenGlobalPct =
+    costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
+
+  return {
+    subtotal: total,
+    descuentoValor: 0,
+    neto: total,
+    iva: 0,
+    flete: 0,
+    total,
+    costoTotalFabricacion,
+    margenGlobalPct,
+    utilidadTotal,
+    totalClienteManual: hasManualTotal ? total : null,
+  };
+}
+
+export function calculateWorkflowTotalsForPricingMode(
+  draft: Pick<
+    CotizacionWorkflowDraft,
+    | "items"
+    | "descuentoPct"
+    | "flete"
+    | "quotePricingMode"
+    | "costoTotalFabricacion"
+    | "margenGlobalPct"
+    | "totalClienteManual"
+  >
+) {
+  const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
+
+  if (quotePricingMode === "total_global") {
+    return calculateGlobalQuoteWorkflowTotals({
+      costoTotalFabricacion: draft.costoTotalFabricacion,
+      margenGlobalPct: draft.margenGlobalPct,
+      totalClienteManual: draft.totalClienteManual,
+    });
+  }
+
+  return {
+    ...calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete),
+    costoTotalFabricacion: round(
+      draft.items.reduce((accumulator, item) => accumulator + item.costoProveedorTotal, 0),
+      2
+    ),
+    margenGlobalPct: 0,
+    utilidadTotal: 0,
+    totalClienteManual: null,
+  };
+}
+
 export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
   return {
     clienteNombre: "",
@@ -288,6 +370,11 @@ export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
     flete: DEFAULT_FLETE,
     observaciones: "",
     items: [],
+    quotePricingMode: "por_item",
+    costoTotalFabricacion: 0,
+    margenGlobalPct: 100,
+    utilidadTotal: 0,
+    totalClienteManual: null,
   };
 }
 
@@ -313,11 +400,10 @@ export function createCotizacionRecord(
 ): CotizacionWorkflowRecord {
   const now = input.now ?? new Date();
   const timestamp = now.toISOString();
-  const totals = calculateCotizacionWorkflowTotals(
-    input.draft.items,
-    input.draft.descuentoPct,
-    input.draft.flete
+  const quotePricingMode: QuotePricingMode = normalizeQuotePricingMode(
+    input.draft.quotePricingMode
   );
+  const totals = calculateWorkflowTotalsForPricingMode(input.draft);
 
   return {
     id: input.existingId ?? buildCotizacionId(now),
@@ -341,6 +427,7 @@ export function createCotizacionRecord(
     createdAt: input.createdAt ?? timestamp,
     updatedAt: timestamp,
     items: input.draft.items,
+    quotePricingMode,
     ...totals,
   };
 }
@@ -360,6 +447,11 @@ export function cloneCotizacionAsDraft(record: CotizacionWorkflowRecord, now = n
         ...item,
         id: `copy-item-${now.getTime()}-${index + 1}`,
       })),
+      quotePricingMode: record.quotePricingMode,
+      costoTotalFabricacion: record.costoTotalFabricacion,
+      margenGlobalPct: record.margenGlobalPct,
+      utilidadTotal: record.utilidadTotal,
+      totalClienteManual: record.totalClienteManual,
     },
     estado: "borrador",
     now,

@@ -30,6 +30,7 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "../page.module.css";
@@ -45,6 +46,7 @@ type EditorRapidoMovilProps = {
   batchTargets: QuickEditBatchTarget[];
   selectedBatchTargetIds: string[];
   isBatchSelectionOpen: boolean;
+  quotePricingMode: QuotePricingMode;
   pricingLabel: string;
   onDraftChange: (itemId: string, key: QuickEditFieldKey, value: string) => void;
   onCommit: (itemId: string, draft: QuickEditDraftState) => void;
@@ -74,6 +76,7 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
   batchTargets,
   selectedBatchTargetIds,
   isBatchSelectionOpen,
+  quotePricingMode,
   pricingLabel,
   onDraftChange,
   onCommit,
@@ -241,13 +244,17 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
       }
 
       if (field === "alto") {
+        if (quotePricingMode === "total_global") {
+          handleBlur();
+          return;
+        }
         inputRefs.current.costoProveedorUnitario?.focus({ preventScroll: true });
         if (!isMobileViewport && !isAndroidDevice) {
           inputRefs.current.costoProveedorUnitario?.select();
         }
       }
     },
-    [isAndroidDevice, isMobileViewport]
+    [handleBlur, isAndroidDevice, isMobileViewport, quotePricingMode]
   );
 
   const handleKeyDown = useCallback(
@@ -276,10 +283,17 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
       handleBlur();
       onScrollToSummary();
     },
-    [focusNextField, handleBlur, handleNavigate, itemIndex, onScrollToSummary, totalItems]
+    [
+      focusNextField,
+      handleBlur,
+      handleNavigate,
+      itemIndex,
+      onScrollToSummary,
+      totalItems,
+    ]
   );
 
-  const currentItemReady = isQuickEditDraftComplete(draft);
+  const currentItemReady = isQuickEditDraftComplete(draft, quotePricingMode);
   const editorModeClass = isMobileViewport
     ? s.mobileQuickEditorModeMobile
     : s.mobileQuickEditorModeDesktop;
@@ -545,21 +559,23 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
             placeholder="-"
           />
         </label>
-        <label className={`${s.quickEditField} ${s.quickEditFieldWide}`}>
-          <span>{pricingLabel}</span>
-          <input
-            ref={(node) => {
-              inputRefs.current.costoProveedorUnitario = node;
-            }}
-            className={s.quickEditInput}
-            inputMode="numeric"
-            value={formatCurrencyInput(draft.costoProveedorUnitario)}
-            onChange={(event) => handleFieldChange("costoProveedorUnitario", event.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={(event) => handleKeyDown("costoProveedorUnitario", event)}
-            placeholder="0"
-          />
-        </label>
+        {quotePricingMode === "por_item" ? (
+          <label className={`${s.quickEditField} ${s.quickEditFieldWide}`}>
+            <span>{pricingLabel}</span>
+            <input
+              ref={(node) => {
+                inputRefs.current.costoProveedorUnitario = node;
+              }}
+              className={s.quickEditInput}
+              inputMode="numeric"
+              value={formatCurrencyInput(draft.costoProveedorUnitario)}
+              onChange={(event) => handleFieldChange("costoProveedorUnitario", event.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={(event) => handleKeyDown("costoProveedorUnitario", event)}
+              placeholder="0"
+            />
+          </label>
+        ) : null}
       </div>
 
       <div className={s.quickTemplateActions}>
@@ -691,14 +707,16 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
             >
               Usar en alto
             </button>
-            <button
-              type="button"
-              className={s.mobileQuickEditorRepeatButton}
-              onClick={() => handleApplyCalculatorResult("costoProveedorUnitario")}
-              disabled={!calculatorResult}
-            >
-              Usar en precio
-            </button>
+            {quotePricingMode === "por_item" ? (
+              <button
+                type="button"
+                className={s.mobileQuickEditorRepeatButton}
+                onClick={() => handleApplyCalculatorResult("costoProveedorUnitario")}
+                disabled={!calculatorResult}
+              >
+                Usar en precio
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -16,6 +16,7 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
 
@@ -31,6 +32,7 @@ type UsePasoDosPresentacionParams = {
   items: CotizacionWorkflowItem[];
   editingItemId: string | null;
   componentForm: ComponentFormState;
+  quotePricingMode: QuotePricingMode;
   activeLineTemplates: CotizacionLineTemplate[];
   fieldErrors: FieldErrors;
   globalError: string | null;
@@ -57,6 +59,7 @@ type UsePasoDosPresentacionParams = {
   iva: string;
   total: string;
   onGoToSummary: () => void;
+  onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
   onSelectLineTemplate: (templateId: string) => void;
@@ -173,6 +176,7 @@ export function usePasoDosPresentacion(
       itemsCount: params.items.length,
       editingItemId: params.editingItemId,
       componentForm: params.componentForm,
+      quotePricingMode: params.quotePricingMode,
       fieldErrors: params.fieldErrors,
       globalError: params.globalError,
       isMobileViewport: params.isMobileViewport,
@@ -191,6 +195,7 @@ export function usePasoDosPresentacion(
       recommendedGlassReason: glassRecommendation.reason,
       lineTemplateRecommendedGlass: glassRecommendation.lineTemplateRecommendedOption,
       filteredGlassGroups,
+      onQuotePricingModeChange: params.onQuotePricingModeChange,
       onPricingModeSelection: params.onPricingModeSelection,
       onComponentChange: params.onComponentChange,
       onSelectLineTemplate: params.onSelectLineTemplate,
@@ -222,6 +227,7 @@ export function usePasoDosPresentacion(
   const propsPasoDosPanel = useMemo(
     () => ({
       items: params.items,
+      quotePricingMode: params.quotePricingMode,
       pendingItemsCount: params.pendingItemsCount,
       completedItemsCount: params.completedItemsCount,
       effectiveShowOnlyPendingItems: params.effectiveShowOnlyPendingItems,

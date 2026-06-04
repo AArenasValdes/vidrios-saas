@@ -9,12 +9,14 @@ import {
   isWorkflowItemEffectivelyComplete,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 type UsePasoDosTarjetasComponentesParams = {
   items: CotizacionWorkflowItem[];
   borradoresRapidos: Record<string, QuickEditDraftState>;
+  quotePricingMode: QuotePricingMode;
 };
 
 export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponentesParams) {
@@ -62,7 +64,11 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
                   .filter(Boolean)
                   .join(" · "),
           quickEditPriceLabel: pricingMode === "precio_directo" ? "Valor" : "Costo",
-          isComplete: isWorkflowItemEffectivelyComplete(item, effectiveDraft),
+          isComplete: isWorkflowItemEffectivelyComplete(
+            item,
+            effectiveDraft,
+            params.quotePricingMode
+          ),
           svgMarkup: generateComponentSVG({
             tipo: effectiveItem.tipo,
             referencia,
@@ -74,6 +80,6 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           }),
         };
       }),
-    [params.borradoresRapidos, params.items]
+    [params.borradoresRapidos, params.items, params.quotePricingMode]
   );
 }

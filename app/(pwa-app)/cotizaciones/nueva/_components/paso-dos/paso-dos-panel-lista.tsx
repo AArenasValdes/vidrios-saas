@@ -10,6 +10,7 @@ import s from "../../page.module.css";
 type Props = Pick<
   PasoDosPanelComponentesProps,
   | "items"
+  | "quotePricingMode"
   | "isMobileViewport"
   | "selectedQuickEditItem"
   | "selectedQuickEditViewItem"
@@ -46,6 +47,7 @@ type Props = Pick<
 
 export function PasoDosPanelLista({
   items,
+  quotePricingMode,
   isMobileViewport,
   selectedQuickEditItem,
   selectedQuickEditViewItem,
@@ -102,6 +104,7 @@ export function PasoDosPanelLista({
           batchTargets={selectedQuickEditBatchTargets}
           selectedBatchTargetIds={effectiveQuickEditBatchSelectionIds}
           isBatchSelectionOpen={isQuickEditBatchSelectionOpen}
+          quotePricingMode={quotePricingMode}
           pricingLabel={selectedQuickEditPricingLabel}
           onDraftChange={onQuickDraftChange}
           onCommit={onQuickCommit}
@@ -194,9 +197,11 @@ export function PasoDosPanelLista({
                           ) : null}
                         </div>
                       </div>
-                      <span className={s.stepTwoListPrice}>
-                        {item.priceLabel} {item.price}
-                      </span>
+                      {quotePricingMode === "por_item" ? (
+                        <span className={s.stepTwoListPrice}>
+                          {item.priceLabel} {item.price}
+                        </span>
+                      ) : null}
                     </div>
 
                     {isMobileViewport ? (

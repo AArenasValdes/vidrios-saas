@@ -7,6 +7,10 @@ import {
   type PublicCotizacionApprovalRepository,
 } from "@/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
+import {
+  normalizeQuotePricingMode,
+  type QuotePricingMode,
+} from "@/features/cotizaciones/types/quote-pricing-mode";
 
 type PublicCotizacionApprovalServiceDeps = {
   repository?: PublicCotizacionApprovalRepository;
@@ -31,6 +35,7 @@ export type PublicApprovalQuoteView = {
   iva: number;
   flete: number;
   total: number;
+  pricingMode: QuotePricingMode;
   approvalToken: string;
   approvalTokenExpiresAt: string | null;
   clienteVioEn: string | null;
@@ -153,8 +158,11 @@ async function buildPublicApprovalQuoteView(
     precioUnitario: Number(item.precio_unitario),
     precioTotal: Number(item.subtotal),
   }));
+  const pricingMode = normalizeQuotePricingMode(payload.cotizacion.pricing_mode);
   const subtotal =
-    items.length > 0
+    pricingMode === "total_global"
+      ? Number(payload.cotizacion.subtotal_neto ?? payload.cotizacion.total ?? 0)
+      : items.length > 0
       ? round(items.reduce((accumulator, item) => accumulator + item.precioTotal, 0), 2)
       : Number(payload.cotizacion.subtotal_neto ?? payload.cotizacion.total ?? 0);
 
@@ -180,6 +188,7 @@ async function buildPublicApprovalQuoteView(
     iva: Number(payload.cotizacion.iva ?? 0),
     flete: Number(payload.cotizacion.flete ?? 0),
     total: Number(payload.cotizacion.total ?? 0),
+    pricingMode,
     approvalToken: payload.cotizacion.approval_token ?? normalized,
     approvalTokenExpiresAt: expiresAt,
     clienteVioEn: payload.cotizacion.cliente_vio_en,
