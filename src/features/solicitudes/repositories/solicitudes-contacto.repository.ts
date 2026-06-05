@@ -103,6 +103,7 @@ type SolicitudEmpresaPublicaConfigRow = {
   form_title: string | null;
   form_subtitle: string | null;
   is_published: boolean | null;
+  plan_code: string | null;
 };
 
 const TABLE_NAME = "solicitudes_contacto";
@@ -116,7 +117,7 @@ const SOLICITUD_RESUMEN_SELECT =
 const SOLICITUD_RESUMEN_SELECT_LEGACY =
   "id, organization_id, nombre, empresa, correo, telefono, contacto, tipo_trabajo, mensaje, ayuda, contexto, estado, origen, creado_en, actualizado_en";
 const ORGANIZATION_PROFILE_PUBLIC_SELECT =
-  "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion, solicitud_publica_horario_por_dia, public_name, public_subtitle, public_zone, public_business_type, instagram_url, facebook_url, tiktok_url, website_url, public_services, final_cta_title, final_cta_subtitle, final_cta_label, business_hours_note, secondary_color, hero_mode, hero_image_url, hero_title, hero_subtitle, show_gallery, show_schedule, show_rating, rating_label, jobs_count_label, form_title, form_subtitle, is_published";
+  "organization_id, empresa_nombre, empresa_logo_url, empresa_direccion, empresa_telefono, empresa_email, brand_color, solicitud_publica_slug, solicitud_publica_descripcion_corta, solicitud_publica_valor, solicitud_publica_mensaje_confianza, solicitud_publica_privacidad, solicitud_publica_horario_desde, solicitud_publica_horario_hasta, solicitud_publica_dias_atencion, solicitud_publica_horario_por_dia, public_name, public_subtitle, public_zone, public_business_type, instagram_url, facebook_url, tiktok_url, website_url, public_services, final_cta_title, final_cta_subtitle, final_cta_label, business_hours_note, secondary_color, hero_mode, hero_image_url, hero_title, hero_subtitle, show_gallery, show_schedule, show_rating, rating_label, jobs_count_label, form_title, form_subtitle, is_published, plan_code";
 
 const DEFAULT_PUBLIC_SCHEDULE_DAYS = ["1", "2", "3", "4", "5", "6"] as const;
 const PUBLIC_SCHEDULE_DAY_ORDER = ["1", "2", "3", "4", "5", "6", "0"] as const;
@@ -350,6 +351,7 @@ function mapSolicitudEmpresaPublicaConfig(
     formTitle: row.form_title?.trim() || "",
     formSubtitle: row.form_subtitle?.trim() || "",
     isPublished: row.is_published ?? false,
+    planCode: (row.plan_code as SolicitudEmpresaPublicaConfig["planCode"]) ?? null,
   };
 }
 

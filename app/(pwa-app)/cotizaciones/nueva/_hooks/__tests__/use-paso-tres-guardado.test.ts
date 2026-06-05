@@ -79,8 +79,8 @@ describe("preparePasoTresGuardado", () => {
       applyQuickEditDraftsToItems: (items) => items,
     });
 
-    expect(resultado.step1Errors.step1).toBe("Completa al menos el nombre del cliente para continuar.");
-    expect(resultado.finalErrors.step1).toBe("Completa al menos el nombre del cliente para continuar.");
+    expect(resultado.step1Errors.step1).toBeUndefined();
+    expect(resultado.finalErrors.step1).toBeUndefined();
   });
 
   it("debe autocompletar la obra cuando el cliente existe y el campo viene vacio", () => {

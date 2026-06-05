@@ -504,6 +504,7 @@ export function resolvePublicLandingConfig(source: {
   formTitle: string;
   formSubtitle: string;
   isPublished: boolean;
+  planCode?: string | null;
 }): ResolvedPublicLandingConfig {
   const resolved = resolveOrganizationProfile(source.organizationId, {
     organizationId: source.organizationId,
@@ -611,6 +612,7 @@ export function resolvePublicLandingConfig(source: {
         ? resolved.formSubtitle
         : DEFAULT_FORM_SUBTITLE,
     isPublished: resolved.isPublished,
+    planCode: source.planCode ?? null,
   };
 }
 

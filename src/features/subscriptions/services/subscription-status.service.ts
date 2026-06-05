@@ -18,6 +18,19 @@ export const VENTORA_QUOTE_ONLY_YEARLY_PRICE = 59_990;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const WRITE_RESTRICTED_SOLICITUDES_PREFIX = "/solicitudes/canales";
 
+export const QUOTE_ONLY_RESTRICTED_PATHS = [
+  "/solicitudes",
+  "/solicitudes/canales",
+  "/configuracion/pagina-venta",
+] as const;
+
+export function isQuoteOnlyRestrictedPath(pathname: string): boolean {
+  if (!pathname) return false;
+  return QUOTE_ONLY_RESTRICTED_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
 const VALID_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "trial_active",
   "trial_expiring",
@@ -270,6 +283,10 @@ export function canAccessPrivatePathWithSubscription(
 
 export class SubscriptionWriteAccessError extends Error {
   code = "subscription_write_blocked" as const;
+}
+
+export function isQuoteOnly(planCode: PlanCode | null | undefined): boolean {
+  return planCode === "quote_only";
 }
 
 export function assertSubscriptionAllowsWrite(

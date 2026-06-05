@@ -50,6 +50,7 @@ import {
 } from "@/features/solicitudes/services/solicitudes-seen-storage.service";
 import {
   canAccessPrivatePathWithSubscription,
+  isQuoteOnlyRestrictedPath,
   isWriteRestrictedPrivatePath,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
@@ -350,6 +351,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, rol, signOut, organizacionId, cargando: authCargando } = useAuth();
   const { profile } = useOrganizationProfile();
+  const subscription = profile?.subscription ?? resolveOrganizationSubscriptionState(null);
+  const isQuoteOnlyPlan =
+    profile?.planCode === "quote_only" || subscription.planCode === "quote_only";
   const reduceMotion = useReducedMotion();
   const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(() =>
     pathname.startsWith("/solicitudes")
@@ -396,11 +400,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const initial = useMemo(() => user?.email?.[0]?.toUpperCase() ?? "U", [user?.email]);
   const canReviewSolicitudes = useMemo(
     () =>
+      !isQuoteOnlyPlan &&
       canAccessSolicitudes({
         email: user?.email,
         rol,
       }),
-    [rol, user?.email]
+    [isQuoteOnlyPlan, rol, user?.email]
   );
   const cargando = authCargando;
   const solicitudesShellCacheKey = String(
@@ -417,7 +422,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
-  const subscription = profile?.subscription ?? resolveOrganizationSubscriptionState(null);
   const companyInitials = useMemo(
     () => buildOrganizationInitials(companyName),
     [companyName]
@@ -428,6 +432,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     profile !== null &&
     subscription.isWriteBlocked &&
     !canAccessPrivatePathWithSubscription(pathname, subscription);
+  const shouldRedirectQuoteOnlyRoute =
+    isQuoteOnlyPlan && !subscription.isWriteBlocked && isQuoteOnlyRestrictedPath(pathname);
   const isDashboardRoute = pathname === "/dashboard";
   const trialDaysRemaining = subscription.daysRemaining ?? 0;
   const isTrialInProgress =
@@ -636,15 +642,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <LuSettings aria-hidden />
           Configuracion de empresa
         </Link>
-        <Link
-          href={resolveGuardedHref("/configuracion/pagina-venta")}
-          className={s.accountMenuLink}
-          prefetch={false}
-          onClick={() => setProfileMenuAnchor(null)}
-        >
-          <LuGlobe aria-hidden />
-          Pagina de venta
-        </Link>
+        {!isQuoteOnlyPlan ? (
+          <Link
+            href={resolveGuardedHref("/configuracion/pagina-venta")}
+            className={s.accountMenuLink}
+            prefetch={false}
+            onClick={() => setProfileMenuAnchor(null)}
+          >
+            <LuGlobe aria-hidden />
+            Pagina de venta
+          </Link>
+        ) : null}
         <Link
           href={resolveGuardedHref("/cuenta/suscripcion")}
           className={s.accountMenuLink}
@@ -735,6 +743,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
     router.replace("/cuenta-vencida");
   }, [router, shouldRedirectForSubscription]);
+
+  useEffect(() => {
+    if (!shouldRedirectQuoteOnlyRoute) {
+      return;
+    }
+
+    router.replace("/dashboard");
+  }, [router, shouldRedirectQuoteOnlyRoute]);
 
   useEffect(() => {
     return scheduleDeferredShellWork(() => {
@@ -1170,6 +1186,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               return null;
             }
 
+            if (isQuoteOnlyPlan && (item.href === "/solicitudes" || item.href === "/configuracion/pagina-venta")) {
+              return null;
+            }
+
             const active = isActivePath(pathname, item.href);
             const Icon = item.icon;
 
@@ -1592,7 +1612,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </span>
             <span>Nueva cotizacion</span>
           </Link>
-          {canReviewSolicitudes ? (
+          {canReviewSolicitudes && !isQuoteOnlyPlan ? (
             <Link
               href="/solicitudes"
               prefetch={false}

@@ -192,7 +192,7 @@ export function createSolicitudesContactoService(
     async getPublicRequestConfig(slug: string) {
       const config = await repository.getPublicConfigBySlug(slug);
 
-      if (!config || !config.isPublished) {
+      if (!config || !config.isPublished || config.planCode === "quote_only") {
         return null;
       }
 

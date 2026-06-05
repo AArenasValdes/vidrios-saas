@@ -95,6 +95,7 @@ export type SolicitudEmpresaPublicaConfig = {
   formTitle: string;
   formSubtitle: string;
   isPublished: boolean;
+  planCode: string | null;
 };
 
 export type CrearSolicitudEmpresaInput = {

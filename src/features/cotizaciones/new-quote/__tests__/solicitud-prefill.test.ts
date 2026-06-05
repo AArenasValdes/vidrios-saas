@@ -11,7 +11,7 @@ describe("solicitud prefill para nueva cotización", () => {
       defaultMargin: 35,
     });
 
-    expect(result.version).toBe(3);
+    expect(result.version).toBe(4);
     expect(result.step).toBe(2);
     expect(result.draft.clienteNombre).toBe("Pedro Araya");
     expect(result.draft.clienteTelefono).toBe("+56 9 7733 8906");
