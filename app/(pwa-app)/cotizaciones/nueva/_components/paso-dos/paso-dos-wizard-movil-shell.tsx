@@ -222,9 +222,7 @@ export function PasoDosWizardMovil({
 
   const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
     formulario.onQuotePricingModeChange(mode);
-    if (mode === "por_item") {
-      handleOpenWizard();
-    }
+    handleOpenWizard();
   };
 
   const handleCloseWizard = () => {
@@ -384,7 +382,7 @@ export function PasoDosWizardMovil({
 
   return (
     <section className={s.stepTwoMobileExperience}>
-      {!wizard.isOpen && items.length === 0 && quotePricingMode !== "total_global" ? (
+      {!wizard.isOpen && items.length === 0 ? (
         <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
       ) : (
         <PasoDosListaMovil

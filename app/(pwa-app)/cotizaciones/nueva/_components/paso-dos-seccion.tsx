@@ -31,17 +31,14 @@ export function PasoDosSeccion({
   const showModeChoice =
     panel.items.length === 0 &&
     !formulario.editingItemId &&
-    !itemLibreForm.isOpen &&
-    panel.quotePricingMode !== "total_global";
+    !itemLibreForm.isOpen;
 
   if (showModeChoice) {
     return (
       <PasoDosModoCotizacion
         onSelectMode={(mode) => {
           onSelectMode(mode);
-          if (mode === "por_item") {
-            onOpenCreator();
-          }
+          onOpenCreator();
         }}
       />
     );
