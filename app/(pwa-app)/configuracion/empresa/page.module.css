@@ -228,10 +228,10 @@
 }
 
 .quoteLogoFrame {
-  width: 88px;
-  min-width: 88px;
+  width: 116px;
+  min-width: 116px;
   border-radius: 24px;
-  padding: 12px;
+  padding: 10px;
   background: linear-gradient(180deg, #ffffff, #f6f9fe);
   border: 1px solid rgba(79, 125, 212, 0.14);
   box-shadow: 0 12px 22px rgba(36, 59, 107, 0.06);
@@ -240,9 +240,9 @@
 }
 
 .quoteLogoFrame .publicLogo {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
 }
 
 .quoteIdentityCopy {

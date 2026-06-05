@@ -469,10 +469,12 @@ export default function ConfiguracionEmpresaPage() {
       }
     }, [onboarding, publicRequestShareText, publicRequestUrl]);
 
+  const isQuoteOnlyPlan =
+    profile?.planCode === "quote_only" || profile?.subscription?.planCode === "quote_only";
   const companyComplete = Boolean(
     form.empresaNombre.trim() &&
       form.publicBusinessType.trim() &&
-      form.solicitudPublicaSlug.trim() &&
+      (isQuoteOnlyPlan || form.solicitudPublicaSlug.trim()) &&
       form.empresaTelefono.trim() &&
       form.empresaEmail.trim() &&
       form.empresaDireccion.trim()
@@ -487,7 +489,7 @@ export default function ConfiguracionEmpresaPage() {
   const companySummary = compactJoin([
     form.empresaNombre.trim() || "Empresa sin nombre",
     form.publicBusinessType.trim() || "Sin rubro",
-    `/${form.solicitudPublicaSlug.trim() || "mi-empresa"}`,
+    !isQuoteOnlyPlan ? `/${form.solicitudPublicaSlug.trim() || "mi-empresa"}` : "",
   ]);
   const brandSummary = compactJoin([
     form.brandColor.toUpperCase(),
@@ -512,7 +514,7 @@ export default function ConfiguracionEmpresaPage() {
 
   return (
     <div className={s.root} data-onboarding-target="empresa-config">
-      <OnboardingGuide controller={onboarding} routeKey="empresa" />
+      {!isQuoteOnlyPlan ? <OnboardingGuide controller={onboarding} routeKey="empresa" /> : null}
 
       <section className={s.publicCard}>
         <div className={s.publicCardTop}>
@@ -541,8 +543,8 @@ export default function ConfiguracionEmpresaPage() {
                   <Image
                     src={previewIdentity}
                     alt={form.empresaNombre || "Logo de la empresa"}
-                    width={56}
-                    height={56}
+                    width={96}
+                    height={96}
                     className={s.publicLogoImage}
                     unoptimized
                   />
@@ -613,22 +615,24 @@ export default function ConfiguracionEmpresaPage() {
                 <label className={s.field}>
                   <span className={s.label}>Rubro o especialidad</span>
                   <input className={s.input} value={form.publicBusinessType} onChange={(event) => handleFieldChange("publicBusinessType", event.target.value)} placeholder="Ej: Vidrios y aluminio" />
-                  <span className={s.inlineInfo}>Se muestra como presentación comercial en tu página pública.</span>
+                  <span className={s.inlineInfo}>Se usa como presentacion comercial en tus cotizaciones.</span>
                 </label>
-                <label className={s.field}>
-                  <span className={s.label}>Nombre del enlace</span>
-                  <input className={s.input} value={form.solicitudPublicaSlug} onChange={(event) => handleSolicitudSlugChange(event.target.value)} placeholder="ej: mi-vidrieria" />
-                  <span className={s.inlineInfo}>Tu página pública de venta quedará como {publicRequestUrl}.</span>
-                </label>
+                {!isQuoteOnlyPlan ? (
+                  <label className={s.field}>
+                    <span className={s.label}>Nombre del enlace</span>
+                    <input className={s.input} value={form.solicitudPublicaSlug} onChange={(event) => handleSolicitudSlugChange(event.target.value)} placeholder="ej: mi-vidrieria" />
+                    <span className={s.inlineInfo}>Tu página pública de venta quedará como {publicRequestUrl}.</span>
+                  </label>
+                ) : null}
                 <label className={s.field}>
                   <span className={s.label}>Telefono</span>
                   <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder="+56 9 1234 5678" />
-                  <span className={s.inlineInfo}>Esto se usa en PDF, WhatsApp y página pública.</span>
+                  <span className={s.inlineInfo}>Esto se usa en PDF, presupuesto y WhatsApp.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Direccion</span>
                   <input className={s.input} value={form.empresaDireccion} onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)} placeholder="Ej: Apoquindo 4501, Las Condes" />
-                  <span className={s.inlineInfo}>También se muestra automáticamente en tu página pública.</span>
+                  <span className={s.inlineInfo}>Se muestra en presupuestos y documentos para tus clientes.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Email</span>
@@ -683,7 +687,7 @@ export default function ConfiguracionEmpresaPage() {
                     <input type="color" value={form.brandColor} onChange={(event) => handleFieldChange("brandColor", event.target.value)} aria-label="Elegir color personalizado" />
                   </label>
                 </div>
-                <span className={s.inlineInfo}>Se refleja en presupuesto, página pública, footer y elementos activos.</span>
+                <span className={s.inlineInfo}>Se refleja en presupuestos, documentos y elementos activos.</span>
               </div>
 
 
@@ -900,23 +904,25 @@ export default function ConfiguracionEmpresaPage() {
         </section>
       </div>
 
-      <section className={s.utilityCard}>
-        <span className={s.cardEyebrow}>Herramientas publicas</span>
-        <div className={s.utilityActions}>
-          <Link href="/configuracion/pagina-venta" className={s.secondaryLink}>
-            <LuGlobe aria-hidden />
-            Pagina publica
-          </Link>
-          <Link href="/solicitudes/canales" className={s.secondaryLink} prefetch={false}>
-            <LuQrCode aria-hidden />
-            Canales y QR
-          </Link>
-            <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
-              {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-              {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
-            </button>
-        </div>
-      </section>
+      {!isQuoteOnlyPlan ? (
+        <section className={s.utilityCard}>
+          <span className={s.cardEyebrow}>Herramientas publicas</span>
+          <div className={s.utilityActions}>
+            <Link href="/configuracion/pagina-venta" className={s.secondaryLink}>
+              <LuGlobe aria-hidden />
+              Pagina publica
+            </Link>
+            <Link href="/solicitudes/canales" className={s.secondaryLink} prefetch={false}>
+              <LuQrCode aria-hidden />
+              Canales y QR
+            </Link>
+              <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
+                {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
+              </button>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
