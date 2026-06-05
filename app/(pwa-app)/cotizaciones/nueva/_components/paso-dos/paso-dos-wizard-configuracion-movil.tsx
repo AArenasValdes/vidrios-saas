@@ -284,12 +284,12 @@ export function PasoDosWizardConfiguracionMovil({
     return (
       <div className={s.stepTwoMobileCreatorStack}>
         <div className={s.stepTwoMobileConfigStatus}>
-          <strong>{draft.subtipo}</strong>
-          <span>Redacta el trabajo y define el valor que vera el cliente.</span>
+          <strong>Datos del item</strong>
+          <span>Redacta el trabajo y define el valor.</span>
         </div>
 
         <div className={s.stepTwoMobileBlockHero}>
-          <div className={s.stepTwoMobileBlockLabel}>Nombre del item</div>
+          <div className={s.stepTwoMobileBlockLabel}>NOMBRE DEL ITEM</div>
           <label className={s.stepTwoMobileInlineField}>
             <input
               className={s.input}
@@ -303,12 +303,12 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
 
         <div className={s.stepTwoMobileBlockHero}>
-          <div className={s.stepTwoMobileBlockLabel}>Descripcion para cliente</div>
+          <div className={s.stepTwoMobileBlockLabel}>DESCRIPCION PARA CLIENTE</div>
           <label className={s.stepTwoMobileInlineField}>
             <textarea
               className={s.textarea}
               maxLength={360}
-              placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de corredera y limpieza de rieles."
+              placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de corredera, revision de pestillos y limpieza de rieles."
               rows={4}
               value={draft.descripcion}
               onChange={(event) => onDescripcionChange(event.target.value)}
@@ -316,17 +316,23 @@ export function PasoDosWizardConfiguracionMovil({
           </label>
         </div>
 
-        <PasoDosWizardPrecioMovil
-          activePricingMode={activePricingMode}
-          formattedPriceValue={formatCurrencyInput(draft.precio)}
-          marginValue={draft.margenPct}
-          hideMargenOption
-          onMargenChange={onMargenChange}
-          onPrecioChange={onPrecioChange}
-          onPricingModeChange={onPricingModeChange}
-          priceHelp="El valor que ingreses sera el total visible para el cliente."
-          priceLabel="Valor a cobrar"
-        />
+        <div className={s.stepTwoMobileBlockHero}>
+          <div className={s.stepTwoMobileBlockLabel}>VALOR A COBRAR</div>
+          <label className={s.stepTwoMobileInlineField}>
+            <input
+              className={s.stepTwoMobilePrecioInput}
+              id="grupo-precio"
+              inputMode="numeric"
+              placeholder="Ej: 120.000"
+              type="text"
+              value={formatCurrencyInput(draft.precio)}
+              onChange={(event) => onPrecioChange(event.target.value)}
+            />
+          </label>
+          <span className={s.stepTwoMobileBlockHelp}>
+            El valor ingresado sera el monto que vera el cliente.
+          </span>
+        </div>
 
         <div className={s.stepTwoMobileBlockHero}>
           <div className={s.stepTwoMobileBlockLabel}>IVA</div>
@@ -350,6 +356,11 @@ export function PasoDosWizardConfiguracionMovil({
               <span className={s.ivaCompactLabel}>Agregar IVA</span>
             </button>
           </div>
+          <span className={s.stepTwoMobileBlockHelp}>
+            {draft.ivaMode === "total_incluye_iva"
+              ? "El valor ingresado sera el total visible para el cliente."
+              : "Ventora sumara el 19% al valor ingresado."}
+          </span>
         </div>
       </div>
     );

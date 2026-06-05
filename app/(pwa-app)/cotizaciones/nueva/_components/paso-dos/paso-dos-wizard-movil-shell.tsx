@@ -325,6 +325,8 @@ export function PasoDosWizardMovil({
       canContinueFromQuantity={canContinueFromQuantity}
       canSubmitGroup={canSubmitGroup}
       isCompactDataStep={isCompactDataStep}
+      isFreeValueItem={isFreeValueComponentType(wizard.draft.subtipo)}
+      precioFormateado={formatCurrencyInput(wizard.draft.precio)}
       onBack={wizard.onBack}
       onClose={handleCloseWizard}
       onConfirm={wizard.onConfirm}

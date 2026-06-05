@@ -8,6 +8,8 @@ type Props = {
   canContinueFromQuantity: boolean;
   canSubmitGroup: boolean;
   isCompactDataStep: boolean;
+  isFreeValueItem?: boolean;
+  precioFormateado?: string;
   onBack: () => void;
   onClose: () => void;
   onConfirm: () => void;
@@ -20,6 +22,8 @@ export function PasoDosWizardFooterMovil({
   canContinueFromQuantity,
   canSubmitGroup,
   isCompactDataStep,
+  isFreeValueItem = false,
+  precioFormateado = "",
   onBack,
   onClose,
   onConfirm,
@@ -27,6 +31,11 @@ export function PasoDosWizardFooterMovil({
   visualStage,
   wizardStep,
 }: Props) {
+  const agregarLabel = isFreeValueItem
+    ? precioFormateado
+      ? `Agregar item por $${precioFormateado}`
+      : "Agregar item"
+    : "Agregar componente";
   return (
     <footer
       className={`${s.stepTwoMobileCreatorFooter} ${
@@ -63,7 +72,7 @@ export function PasoDosWizardFooterMovil({
           type="button"
         >
           <LuPlus aria-hidden />
-          Agregar componente
+          {agregarLabel}
         </button>
       ) : null}
     </footer>
