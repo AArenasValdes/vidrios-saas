@@ -9,6 +9,11 @@ import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
+import {
+  decodeCotizacionItemPresentationMeta,
+  encodeCotizacionItemPresentationMeta,
+  type CotizacionItemFreeValueIvaMode,
+} from "@/utils/cotizacion-item-presentation";
 
 const DEFAULT_FLETE = 0;
 const DEFAULT_COTIZACION_COMMERCIAL_ROUNDING = 1000;
@@ -17,6 +22,7 @@ const cotizacionCodeCounters = new Map<string, number>();
 
 type CalculateComponentItemInput = {
   id?: string;
+  tipoItem?: CotizacionWorkflowItem["tipoItem"];
   codigo: string;
   tipo: string;
   lineaComercial?: string;
@@ -35,6 +41,16 @@ type CalculateComponentItemInput = {
   precioPlantillaSugerido?: number | null;
   precioAjustadoManual?: boolean;
   origenPrecio?: "margen" | "plantilla" | "manual";
+  observaciones?: string;
+};
+
+type CalculateFreeValueItemInput = {
+  id?: string;
+  codigo?: string;
+  nombre: string;
+  descripcion?: string;
+  valor: number;
+  ivaMode?: CotizacionItemFreeValueIvaMode;
   observaciones?: string;
 };
 
@@ -233,6 +249,7 @@ export function calculateComponentItem(
 
   return {
     id: input.id ?? `item-${codigo.toLowerCase()}-${Date.now()}`,
+    tipoItem: input.tipoItem ?? "componente",
     codigo,
     tipo,
     lineaComercial,
@@ -261,13 +278,86 @@ export function calculateComponentItem(
   };
 }
 
+export function calculateFreeValueItem(input: CalculateFreeValueItemInput): CotizacionWorkflowItem {
+  const nombre = input.nombre.trim();
+  const descripcion = (input.descripcion ?? input.nombre).trim();
+  const valor = round(normalizeNonNegativeNumber(input.valor), 2);
+  const ivaMode = input.ivaMode ?? "total_incluye_iva";
+  const netoCalculado =
+    ivaMode === "total_incluye_iva" ? round(valor / (1 + impuestos.iva), 2) : valor;
+  const ivaCalculado =
+    ivaMode === "total_incluye_iva"
+      ? round(valor - netoCalculado, 2)
+      : round(valor * impuestos.iva, 2);
+  const codigo = input.codigo?.trim() || `L${Date.now()}`;
+
+  if (!nombre) {
+    throw new Error("El nombre del item libre es obligatorio");
+  }
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    throw new Error("Ingresa un valor mayor a cero");
+  }
+
+  return {
+    id: input.id ?? `item-libre-${Date.now()}`,
+    tipoItem: "item_libre_con_valor",
+    codigo,
+    tipo: "Item libre",
+    lineaComercial: "",
+    vidrio: "",
+    nombre,
+    descripcion,
+    ancho: null,
+    alto: null,
+    cantidad: 1,
+    unidad: "unidad",
+    areaM2: null,
+    costoProveedorUnitario: 0,
+    costoProveedorTotal: 0,
+    margenPct: 0,
+    precioUnitario: valor,
+    precioTotal: valor,
+    precioPorM2: null,
+    minimoCobrable: null,
+    redondeoPrecio: null,
+    precioPlantillaSugerido: null,
+    precioAjustadoManual: false,
+    origenPrecio: "manual",
+    observaciones: encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      pricingMode: "precio_directo",
+      ivaMode,
+      totalClienteVisible: ivaMode === "total_incluye_iva" ? valor : round(valor + ivaCalculado, 2),
+      netoCalculado,
+      ivaCalculado,
+      displayMode: "item_libre",
+      raw: input.observaciones ?? "",
+    }),
+  };
+}
+
 export function calculateCotizacionWorkflowTotals(
   items: CotizacionWorkflowItem[],
   descuentoPct = 0,
   flete = DEFAULT_FLETE
 ) {
+  const netSubtotalByItems = items.reduce((accumulator, item) => {
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    if (
+      item.tipoItem === "item_libre_con_valor" &&
+      meta.displayMode === "item_libre" &&
+      meta.ivaMode === "total_incluye_iva"
+    ) {
+      return accumulator + (meta.netoCalculado ?? item.precioTotal / (1 + impuestos.iva));
+    }
+
+    return accumulator + item.precioTotal;
+  }, 0);
   const subtotal = round(
-    items.reduce((accumulator, item) => accumulator + item.precioTotal, 0),
+    netSubtotalByItems,
     2
   );
 

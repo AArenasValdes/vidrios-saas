@@ -82,14 +82,16 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
   );
 
   const itemExpandidoResueltoId = useMemo(() => {
-    if (params.items.length === 0) {
+    const editableItems = params.items.filter((item) => item.tipoItem !== "item_libre_con_valor");
+
+    if (editableItems.length === 0) {
       return null;
     }
 
     const baseSeleccionadoId =
-      itemExpandidoId && params.items.some((item) => item.id === itemExpandidoId)
+      itemExpandidoId && editableItems.some((item) => item.id === itemExpandidoId)
         ? itemExpandidoId
-        : params.items[0]?.id ?? null;
+        : editableItems[0]?.id ?? null;
 
     if (!mostrarSoloPendientesEfectivo || !baseSeleccionadoId) {
       return baseSeleccionadoId;
@@ -110,7 +112,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     }
 
     return (
-      params.items.find(
+      editableItems.find(
         (item) =>
           !isWorkflowItemEffectivelyComplete(
             item,
@@ -145,6 +147,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     return params.items
       .filter(
         (item) =>
+          item.tipoItem !== "item_libre_con_valor" &&
           item.id !== itemSeleccionado.id &&
           item.tipo === itemSeleccionado.tipo &&
           !isWorkflowItemEffectivelyComplete(

@@ -14,6 +14,7 @@ import {
   buildCotizacionCode,
   buildLegacyCotizacionCode,
   calculateComponentItem,
+  calculateFreeValueItem,
   calculateWorkflowTotalsForPricingMode,
   resolveWorkflowObraTitle,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
@@ -162,7 +163,21 @@ function mapDatabaseItemToWorkflowItem(
   index: number
 ): CotizacionWorkflowItem {
   const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const tipoItem = item.tipoItem === "item_libre_con_valor" ? "item_libre_con_valor" : "componente";
   const codigo = item.codigo?.trim() || `I${index + 1}`;
+
+  if (tipoItem === "item_libre_con_valor") {
+    return calculateFreeValueItem({
+      id: String(item.id),
+      codigo,
+      nombre: item.nombre?.trim() || `Item libre ${index + 1}`,
+      descripcion: item.descripcion?.trim() || item.nombre?.trim() || `Item libre ${index + 1}`,
+      valor: item.subtotal ?? item.precioUnitario ?? presentation.totalClienteVisible ?? 0,
+      ivaMode: presentation.ivaMode ?? "total_incluye_iva",
+      observaciones: presentation.raw,
+    });
+  }
+
   const tipo =
     item.tipoComponente?.trim() || item.color?.trim() || item.tipoItem || "Componente";
   const nombre = item.nombre?.trim() || `Componente ${index + 1}`;
@@ -191,6 +206,7 @@ function mapDatabaseItemToWorkflowItem(
     precioAjustadoManual: presentation.precioAjustadoManual,
     origenPrecio: presentation.origenPrecio,
     observaciones: item.observaciones ?? "",
+    tipoItem,
   });
 }
 
@@ -204,12 +220,19 @@ function mapCotizacionToWorkflowRecord(input: {
 }): CotizacionWorkflowRecord {
   const items = input.cotizacion.items.map(mapDatabaseItemToWorkflowItem);
   const quotePricingMode = normalizeQuotePricingMode(input.cotizacion.pricingMode);
-  const subtotal =
-    quotePricingMode === "total_global"
-      ? Number(input.cotizacion.subtotalNeto ?? input.cotizacion.total ?? 0)
-      : round(items.reduce((accumulator, item) => accumulator + item.precioTotal, 0), 2);
-  const neto = input.cotizacion.subtotalNeto ?? subtotal;
-  const descuentoValor = round(subtotal - neto, 2);
+  const workflowTotals = calculateWorkflowTotalsForPricingMode({
+    items,
+    descuentoPct: input.cotizacion.descuentoPct ?? 0,
+    flete: input.cotizacion.flete ?? 0,
+    quotePricingMode,
+    costoTotalFabricacion: input.cotizacion.costoTotal ?? 0,
+    margenGlobalPct: input.cotizacion.margenPct ?? 0,
+    totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
+    mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
+  });
+  const subtotal = input.cotizacion.subtotalNeto ?? workflowTotals.subtotal;
+  const neto = input.cotizacion.subtotalNeto ?? workflowTotals.neto;
+  const descuentoValor = workflowTotals.descuentoValor;
   const costoTotalFabricacion = input.cotizacion.costoTotal ?? 0;
   const utilidadTotal = input.cotizacion.utilidadTotal ?? 0;
   const margenGlobalPct = input.cotizacion.margenPct ?? 0;
@@ -246,7 +269,7 @@ function mapCotizacionToWorkflowRecord(input: {
     subtotal,
     descuentoValor,
     neto,
-    iva: input.cotizacion.iva ?? round(neto * impuestos.iva, 2),
+    iva: input.cotizacion.iva ?? workflowTotals.iva,
     flete: input.cotizacion.flete ?? 0,
     total: input.cotizacion.total,
     quotePricingMode,
@@ -276,6 +299,20 @@ function normalizeWorkflowItem(
   item: CotizacionWorkflowItem,
   index: number
 ): CotizacionWorkflowItem {
+  if (item.tipoItem === "item_libre_con_valor") {
+    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    return calculateFreeValueItem({
+      id: item.id,
+      codigo: item.codigo || `L${index + 1}`,
+      nombre: item.nombre || item.descripcion || `Item libre ${index + 1}`,
+      descripcion: item.descripcion || item.nombre || `Item libre ${index + 1}`,
+      valor: item.precioTotal,
+      ivaMode: presentation.ivaMode ?? "total_incluye_iva",
+      observaciones: presentation.raw,
+    });
+  }
+
   return calculateComponentItem({
     id: item.id,
     codigo: item.codigo || `I${index + 1}`,
@@ -307,6 +344,7 @@ function mapWorkflowItemToRepositoryItem(
   quotePricingMode: QuotePricingMode = "por_item"
 ): CrearCotizacionItemInput {
   const isGlobalPricing = quotePricingMode === "total_global";
+  const isFreeValueItem = item.tipoItem === "item_libre_con_valor";
   const utilidad = isGlobalPricing ? 0 : round(item.precioTotal - item.costoProveedorTotal, 2);
 
   return {
@@ -314,8 +352,8 @@ function mapWorkflowItemToRepositoryItem(
     tipoComponente: item.tipo,
     orden: index,
     cantidad: item.cantidad,
-    precioUnitario: isGlobalPricing ? 0 : item.precioUnitario,
-    subtotal: isGlobalPricing ? 0 : item.precioTotal,
+    precioUnitario: isGlobalPricing && !isFreeValueItem ? 0 : item.precioUnitario,
+    subtotal: isGlobalPricing && !isFreeValueItem ? 0 : item.precioTotal,
     organizationId,
     ancho: item.ancho,
     alto: item.alto,
@@ -327,14 +365,14 @@ function mapWorkflowItemToRepositoryItem(
     descripcion: item.descripcion,
     unidad: item.unidad,
     observaciones: item.observaciones || null,
-    tipoItem: "componente",
+    tipoItem: isFreeValueItem ? "item_libre_con_valor" : "componente",
     productTypeId: null,
     systemLineId: null,
     configurationId: null,
-    costoUnitario: isGlobalPricing ? 0 : item.costoProveedorUnitario,
-    costoTotal: isGlobalPricing ? 0 : item.costoProveedorTotal,
-    margenPct: isGlobalPricing ? 0 : item.margenPct,
-    utilidad,
+    costoUnitario: isGlobalPricing || isFreeValueItem ? 0 : item.costoProveedorUnitario,
+    costoTotal: isGlobalPricing || isFreeValueItem ? 0 : item.costoProveedorTotal,
+    margenPct: isGlobalPricing || isFreeValueItem ? 0 : item.margenPct,
+    utilidad: isFreeValueItem ? 0 : utilidad,
     breakdown: [],
   };
 }

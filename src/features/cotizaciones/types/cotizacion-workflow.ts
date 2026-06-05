@@ -10,6 +10,7 @@ export type EstadoCotizacionWorkflow =
 
 export type CotizacionWorkflowItem = {
   id: string;
+  tipoItem?: "componente" | "item_libre_con_valor";
   codigo: string;
   tipo: string;
   lineaComercial: string;

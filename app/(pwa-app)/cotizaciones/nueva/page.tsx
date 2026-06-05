@@ -64,9 +64,14 @@ import {
   applyQuotePricingToItems,
   applyLineTemplateToComponentForm,
   buildComponentFormLinePricingSummary,
+  buildFreeValueItemFromForm,
   type PreferredProvider,
+  createEmptyFreeValueItemForm,
   syncTemplatePricingInComponentForm,
+  mapFreeValueItemToForm,
+  validateFreeValueItemForm,
   withResolvedWorkflowObra,
+  type FreeValueItemFormState,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   clearNuevaCotizacionSolicitudSourceId,
@@ -121,6 +126,11 @@ function NuevaCotizacionPageContent() {
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
     createEmptyComponentForm([], "", "margen", organizationProfile?.margenDefecto)
   );
+  const [freeValueItemForm, setFreeValueItemForm] = useState<FreeValueItemFormState>(
+    createEmptyFreeValueItemForm
+  );
+  const [isFreeValueItemFormOpen, setIsFreeValueItemFormOpen] = useState(false);
+  const [editingFreeValueItemId, setEditingFreeValueItemId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientQuery, setClientQuery] = useState("");
@@ -358,6 +368,9 @@ function NuevaCotizacionPageContent() {
       margenPct: undefined,
     }));
     setGlobalError(null);
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
+    setFreeValueItemForm(createEmptyFreeValueItemForm());
   };
 
   const handleGlobalTotalClienteChange = (value: string) => {
@@ -413,6 +426,9 @@ function NuevaCotizacionPageContent() {
 
     setDraft(nextDraft);
     setComponentForm(nextComponentForm);
+    setFreeValueItemForm(createEmptyFreeValueItemForm());
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
     setEditingItemId(null);
     setSelectedClientId("");
     setClientQuery("");
@@ -464,6 +480,20 @@ function NuevaCotizacionPageContent() {
     item: CotizacionWorkflowItem,
     nextItemsOverride?: CotizacionWorkflowItem[]
   ) => {
+    if (item.tipoItem === "item_libre_con_valor") {
+      setFreeValueItemForm(mapFreeValueItemToForm(item));
+      setEditingFreeValueItemId(item.id);
+      setIsFreeValueItemFormOpen(true);
+      setEditingItemId(null);
+      setFieldErrors({});
+      setGlobalError(null);
+      setStep(2);
+      window.requestAnimationFrame(() => {
+        scrollToSection("component-form");
+      });
+      return;
+    }
+
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     const parsed = mapItemToForm(item);
     const nextEditingItemId = item.id;
@@ -895,7 +925,73 @@ function NuevaCotizacionPageContent() {
     }
   };
 
+  const handleFreeValueItemChange = <K extends keyof FreeValueItemFormState>(
+    key: K,
+    value: FreeValueItemFormState[K]
+  ) => {
+    setFreeValueItemForm((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({
+      ...current,
+      nombre: key === "nombre" ? undefined : current.nombre,
+      costoProveedorUnitario: key === "valor" ? undefined : current.costoProveedorUnitario,
+    }));
+  };
+
+  const handleOpenFreeValueItemForm = () => {
+    setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
+    setFreeValueItemForm(createEmptyFreeValueItemForm());
+    setEditingFreeValueItemId(null);
+    setEditingItemId(null);
+    setIsFreeValueItemFormOpen(true);
+    setFieldErrors({});
+    setGlobalError(null);
+  };
+
+  const handleCloseFreeValueItemForm = () => {
+    setFreeValueItemForm(createEmptyFreeValueItemForm());
+    setEditingFreeValueItemId(null);
+    setIsFreeValueItemFormOpen(false);
+    setFieldErrors({});
+    setGlobalError(null);
+  };
+
+  const handleSubmitFreeValueItem = () => {
+    const errors = validateFreeValueItemForm(freeValueItemForm);
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    try {
+      const item = buildFreeValueItemFromForm(
+        freeValueItemForm,
+        draft.items,
+        editingFreeValueItemId
+      );
+      const nextItems = editingFreeValueItemId
+        ? draft.items.map((current) => (current.id === editingFreeValueItemId ? item : current))
+        : [...draft.items, item];
+
+      setDraft((current) => ({
+        ...current,
+        quotePricingMode: "por_item",
+        items: nextItems,
+      }));
+      setFreeValueItemForm(createEmptyFreeValueItemForm());
+      setEditingFreeValueItemId(null);
+      setIsFreeValueItemFormOpen(false);
+      setFieldErrors({});
+      setGlobalError(null);
+      pasoDosEdicionRapida.seleccionarItemEdicionRapida(item.id, null);
+    } catch (err) {
+      setGlobalError(err instanceof Error ? err.message : "No se pudo guardar el item libre");
+    }
+  };
+
   const handleOpenAddGroupSheet = () => {
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
     if (isMobileViewport) {
       pasoDosAgregarGrupoMovil.openSheet(componentForm);
       return;
@@ -977,6 +1073,7 @@ function NuevaCotizacionPageContent() {
   const handleRemoveItem = (itemId: string) => {
     const nextItems = draft.items.filter((i) => i.id !== itemId);
     const nextEditingItemId = editingItemId === itemId ? null : editingItemId;
+    const isRemovingEditedFreeItem = editingFreeValueItemId === itemId;
     const nextComponentForm =
       editingItemId === itemId
         ? createEmptyComponentForm(
@@ -991,6 +1088,11 @@ function NuevaCotizacionPageContent() {
       nextItems
     );
     setDraft((cur) => ({ ...cur, items: nextItems }));
+    if (isRemovingEditedFreeItem) {
+      setFreeValueItemForm(createEmptyFreeValueItemForm());
+      setEditingFreeValueItemId(null);
+      setIsFreeValueItemFormOpen(false);
+    }
     if (editingItemId === itemId) {
       setEditingItemId(null);
       setComponentForm(nextComponentForm);
@@ -1027,6 +1129,9 @@ function NuevaCotizacionPageContent() {
     );
     setIsGlassPanelOpen(false);
     setGlassQuery("");
+    setFreeValueItemForm(createEmptyFreeValueItemForm());
+    setEditingFreeValueItemId(null);
+    setIsFreeValueItemFormOpen(false);
     setFieldErrors({});
     setGlobalError(null);
     pasoDosAgregarGrupo.restart();
@@ -1097,6 +1202,12 @@ function NuevaCotizacionPageContent() {
   });
 
   function handleSelectQuickEditItem(itemId: string) {
+    const item = draft.items.find((current) => current.id === itemId);
+
+    if (item?.tipoItem === "item_libre_con_valor") {
+      return;
+    }
+
     pasoDosEdicionRapida.seleccionarItemEdicionRapida(itemId, "ancho");
 
     if (isMobileViewport) {
@@ -1390,6 +1501,8 @@ function NuevaCotizacionPageContent() {
     onResetStep2Form: handleResetStep2Form,
     onAddOrUpdateItem: handleAddOrUpdateItem,
     onRecalculateCurrentTemplatePrice: handleRecalculateCurrentTemplatePrice,
+    onOpenComponentCreator: handleOpenAddGroupSheet,
+    onOpenFreeValueItemForm: handleOpenFreeValueItemForm,
     onToggleShowOnlyPendingItems: pasoDosEdicionRapida.toggleMostrarSoloPendientes,
     onQuickDraftChange: handleQuickItemFieldChange,
     onQuickCommit: commitQuickEditDraft,
@@ -1456,6 +1569,16 @@ function NuevaCotizacionPageContent() {
           stepOneProps={flujo.propsPasoUno}
           stepTwoWizardProps={{
             formulario: flujo.propsPasoDosFormulario,
+            itemLibreForm: {
+              isOpen: isFreeValueItemFormOpen,
+              editingItemId: editingFreeValueItemId,
+              form: freeValueItemForm,
+              fieldErrors,
+              isSaving,
+              onChange: handleFreeValueItemChange,
+              onSubmit: handleSubmitFreeValueItem,
+              onCancel: handleCloseFreeValueItemForm,
+            },
             items: draft.items,
             subtotal: CLP(totals.subtotal),
             total: CLP(totals.total),
@@ -1468,6 +1591,7 @@ function NuevaCotizacionPageContent() {
             onCloseVariationQuickEdit: pasoDosVariaciones.handleCloseVariationQuickEdit,
             onEditItem: handleEditItem,
             onRemoveItem: handleRemoveItem,
+            onOpenFreeValueItemForm: handleOpenFreeValueItemForm,
             wizard: {
               isOpen: pasoDosAgregarGrupoMovil.isOpen,
               paso: pasoDosAgregarGrupoMovil.paso,
@@ -1528,6 +1652,16 @@ function NuevaCotizacionPageContent() {
           stepTwoSectionProps={{
             formulario: flujo.propsPasoDosFormulario,
             panel: flujo.propsPasoDosPanel,
+            itemLibreForm: {
+              isOpen: isFreeValueItemFormOpen,
+              editingItemId: editingFreeValueItemId,
+              form: freeValueItemForm,
+              fieldErrors,
+              isSaving,
+              onChange: handleFreeValueItemChange,
+              onSubmit: handleSubmitFreeValueItem,
+              onCancel: handleCloseFreeValueItemForm,
+            },
             onOpenCreator: handleOpenAddGroupSheet,
             onSelectMode: handleQuotePricingModeChange,
           }}

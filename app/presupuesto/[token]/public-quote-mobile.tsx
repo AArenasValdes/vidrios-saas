@@ -13,6 +13,7 @@ import {
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "./public-quote-mobile.module.css";
 
@@ -38,6 +39,7 @@ const CLP = (value: number) =>
 
 type PublicQuoteMobileItem = {
   id: string;
+  tipoItem?: string | null;
   codigo: string;
   tipo: string;
   nombre: string;
@@ -253,23 +255,34 @@ export function PublicQuoteMobile({
         <details className={s.detailsCard}>
           <summary className={s.detailsSummary}>Ver que incluye este presupuesto</summary>
           <div className={s.detailsBody}>
-            {quote.items.slice(0, 3).map((item) => (
-              <div key={item.id} className={s.itemRow}>
-                <div className={s.itemHead}>
-                  <span className={s.itemCode}>{item.codigo}</span>
-                  <strong className={s.itemName}>{item.nombre}</strong>
-                </div>
-                <p className={s.itemMeta}>
-                  {item.cantidad} {item.unidad} · {formatSurface(item)}
-                </p>
-                <div className={s.itemFoot}>
-                  <span className={s.itemChip}>{item.vidrio || "Vidrio por definir"}</span>
-                  {showItemPrices ? (
-                    <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
-                  ) : null}
-                </div>
-              </div>
-            ))}
+            {quote.items.slice(0, 3).map((item) => {
+                const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                const isFreeValueItem =
+                  item.tipoItem === "item_libre_con_valor" ||
+                  itemMeta.displayMode === "item_libre";
+
+                return (
+                  <div key={item.id} className={s.itemRow}>
+                    <div className={s.itemHead}>
+                      <span className={s.itemCode}>{item.codigo}</span>
+                      <strong className={s.itemName}>{item.nombre}</strong>
+                    </div>
+                    <p className={s.itemMeta}>
+                      {isFreeValueItem
+                        ? item.descripcion || "Item libre"
+                        : `${item.cantidad} ${item.unidad} · ${formatSurface(item)}`}
+                    </p>
+                    <div className={s.itemFoot}>
+                      <span className={s.itemChip}>
+                        {isFreeValueItem ? "Item libre" : item.vidrio || "Vidrio por definir"}
+                      </span>
+                      {showItemPrices ? (
+                        <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+            })}
             {quote.items.length > 3 ? (
               <p className={s.moreItems}>+ {quote.items.length - 3} componentes mas</p>
             ) : null}

@@ -99,6 +99,8 @@ type UseFlujoNuevaCotizacionParams = {
   onResetStep2Form: () => void;
   onAddOrUpdateItem: () => void;
   onRecalculateCurrentTemplatePrice: () => void;
+  onOpenComponentCreator: () => void;
+  onOpenFreeValueItemForm: () => void;
   onToggleShowOnlyPendingItems: () => void;
   onQuickDraftChange: (itemId: string, key: QuickEditFieldKey, value: string) => void;
   onQuickCommit: (itemId: string, draft: QuickEditDraftState) => void;
@@ -189,6 +191,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onSaveDraft: params.onSaveDraft,
     onAddOrUpdateItem: params.onAddOrUpdateItem,
     onRecalculateCurrentTemplatePrice: params.onRecalculateCurrentTemplatePrice,
+    onOpenComponentCreator: params.onOpenComponentCreator,
+    onOpenFreeValueItemForm: params.onOpenFreeValueItemForm,
     stepTwoListRef: params.stepTwoListRef,
     stepTwoSummaryRef: params.stepTwoSummaryRef,
     onToggleShowOnlyPendingItems: params.onToggleShowOnlyPendingItems,

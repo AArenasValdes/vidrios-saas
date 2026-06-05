@@ -70,6 +70,8 @@ type UsePasoDosPresentacionParams = {
   onSaveDraft: () => void;
   onAddOrUpdateItem: () => void;
   onRecalculateCurrentTemplatePrice: () => void;
+  onOpenComponentCreator: () => void;
+  onOpenFreeValueItemForm: () => void;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: React.RefObject<HTMLDivElement | null>;
   onToggleShowOnlyPendingItems: () => void;
@@ -253,6 +255,8 @@ export function usePasoDosPresentacion(
       fieldErrorItems: params.fieldErrors.items,
       stepTwoListRef: params.stepTwoListRef,
       stepTwoSummaryRef: params.stepTwoSummaryRef,
+      onOpenComponentCreator: params.onOpenComponentCreator,
+      onOpenFreeValueItemForm: params.onOpenFreeValueItemForm,
       onToggleShowOnlyPendingItems: params.onToggleShowOnlyPendingItems,
       onQuickDraftChange: params.onQuickDraftChange,
       onQuickCommit: params.onQuickCommit,

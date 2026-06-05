@@ -1,13 +1,16 @@
 import {
   applyLineTemplateToComponentForm,
   applyQuickEditDraftStatesToItems,
+  buildFreeValueItemFromForm,
   buildItemFromForm,
+  createEmptyFreeValueItemForm,
   getSheetSchemeOptions,
   getSheetVariantOptions,
   buildQuickEditDraft,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
   validateComponentForm,
+  validateFreeValueItemForm,
 } from "../workflow-ui";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -47,6 +50,47 @@ describe("workflow-ui paso 2", () => {
     expect(actualizado.precioUnitario).toBe(375000);
     expect(actualizado.precioTotal).toBe(375000);
     expect(actualizado.areaM2).toBe(1.95);
+  });
+
+  it("debe crear item libre con valor directo y omitir edicion rapida", () => {
+    const item = buildFreeValueItemFromForm(
+      {
+        ...createEmptyFreeValueItemForm(),
+        nombre: "Mantencion de ventanas",
+        descripcion: "Ajuste de corredera y limpieza de rieles.",
+        valor: "119000",
+        ivaMode: "total_incluye_iva",
+      },
+      [],
+      null
+    );
+
+    expect(item.tipoItem).toBe("item_libre_con_valor");
+    expect(item.cantidad).toBe(1);
+    expect(item.ancho).toBeNull();
+    expect(item.alto).toBeNull();
+    expect(item.precioUnitario).toBe(119000);
+    expect(item.precioTotal).toBe(119000);
+    expect(isWorkflowItemEffectivelyComplete(item)).toBe(true);
+    expect(applyQuickEditDraftStatesToItems([item], { [item.id]: {
+      ancho: "1000",
+      alto: "1000",
+      costoProveedorUnitario: "1",
+    } })).toEqual([item]);
+  });
+
+  it("debe validar nombre y valor del item libre", () => {
+    expect(
+      validateFreeValueItemForm({
+        ...createEmptyFreeValueItemForm(),
+        valor: "",
+      })
+    ).toEqual(
+      expect.objectContaining({
+        nombre: "Ingresa el nombre del item",
+        costoProveedorUnitario: "Ingresa un valor mayor a cero",
+      })
+    );
   });
 
   it("debe conservar el item original si el borrador rapido es invalido", () => {

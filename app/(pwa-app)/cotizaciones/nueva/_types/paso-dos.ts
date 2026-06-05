@@ -6,6 +6,7 @@ import type {
   ComponentFormState,
   ComponentListCardViewModel,
   FieldErrors,
+  FreeValueItemFormState,
   QuickEditBatchTarget,
   QuickEditDraftState,
   QuickEditFieldKey,
@@ -89,6 +90,8 @@ export type PasoDosPanelComponentesProps = {
   fieldErrorItems?: string;
   stepTwoListRef: RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: RefObject<HTMLDivElement | null>;
+  onOpenComponentCreator: () => void;
+  onOpenFreeValueItemForm: () => void;
   onToggleShowOnlyPendingItems: () => void;
   onQuickDraftChange: (itemId: string, key: QuickEditFieldKey, value: string) => void;
   onQuickCommit: (itemId: string, draft: QuickEditDraftState) => void;
@@ -110,4 +113,18 @@ export type PasoDosPanelComponentesProps = {
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   isSavingQuickPriceTemplate: boolean;
   onGoToSummary: () => void;
+};
+
+export type PasoDosItemLibreFormProps = {
+  isOpen: boolean;
+  editingItemId: string | null;
+  form: FreeValueItemFormState;
+  fieldErrors: FieldErrors;
+  isSaving: boolean;
+  onChange: <K extends keyof FreeValueItemFormState>(
+    key: K,
+    value: FreeValueItemFormState[K]
+  ) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
 };

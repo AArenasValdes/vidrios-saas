@@ -1,6 +1,10 @@
 import type { EntityId } from "@/types/common";
 
-export type TipoCotizacionItem = "configurado" | "manual" | "componente";
+export type TipoCotizacionItem =
+  | "configurado"
+  | "manual"
+  | "componente"
+  | "item_libre_con_valor";
 
 export type CotizacionItemBreakdown = {
   id: EntityId;

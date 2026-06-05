@@ -23,6 +23,7 @@ type Props = {
   isWizardOpen: boolean;
   adjustedItems: Record<string, string>;
   onOpenWizard: () => void;
+  onOpenFreeValueItemForm: () => void;
   onGoToSummary: () => void;
   onSaveAndExit: () => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
@@ -37,6 +38,7 @@ export function PasoDosListaMovil({
   isWizardOpen,
   adjustedItems,
   onOpenWizard,
+  onOpenFreeValueItemForm,
   onGoToSummary,
   onSaveAndExit,
   onEditItem,
@@ -104,8 +106,10 @@ export function PasoDosListaMovil({
         ) : (
           <div className={s.stepTwoMobileItemStack}>
             {items.map((item) => {
-              const incomplete = isGlobalPricing ? false : isItemIncomplete(item);
               const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+              const isFreeValueItem =
+                item.tipoItem === "item_libre_con_valor" || itemMeta.displayMode === "item_libre";
+              const incomplete = isGlobalPricing || isFreeValueItem ? false : isItemIncomplete(item);
               const itemType = getItemType(item);
               const displayCode = item.codigo || "--";
               const adjustedFromBaseCode = adjustedItems[item.id] ?? null;
@@ -145,7 +149,7 @@ export function PasoDosListaMovil({
                         </span>
                       </div>
                       <span className={s.stepTwoMobileItemName}>{itemType}</span>
-                      {isGlobalPricing && item.descripcion ? (
+                      {(isGlobalPricing || isFreeValueItem) && item.descripcion ? (
                         <span className={s.stepTwoMobileItemAdjustedHint}>
                           {repairBrokenText(item.descripcion)}
                         </span>
@@ -180,8 +184,8 @@ export function PasoDosListaMovil({
                     <span>
                       {item.ancho && item.alto
                         ? `${item.ancho} x ${item.alto} mm`
-                        : isGlobalPricing
-                          ? "Medidas opcionales"
+                        : isGlobalPricing || isFreeValueItem
+                          ? "Sin medidas"
                           : "Medidas pendientes"}
                     </span>
                     <span className={s.stepTwoMobileItemUnits}>
@@ -207,10 +211,10 @@ export function PasoDosListaMovil({
                   ) : (
                     <>
                       <div className={s.stepTwoMobileItemMeta}>
-                        {itemMeta.material ? (
+                        {!isFreeValueItem && itemMeta.material ? (
                           <span>{repairBrokenText(itemMeta.material)}</span>
                         ) : null}
-                        {itemMeta.colorHex ? (
+                        {!isFreeValueItem && itemMeta.colorHex ? (
                           <span className={s.stepTwoMobileItemColorChip}>
                             <i
                               className={s.stepTwoMobileItemColorSwatch}
@@ -220,10 +224,10 @@ export function PasoDosListaMovil({
                             {repairBrokenText(colorLabel)}
                           </span>
                         ) : null}
-                        {item.vidrio ? (
+                        {!isFreeValueItem && item.vidrio ? (
                           <span>{repairBrokenText(item.vidrio)}</span>
                         ) : null}
-                        {itemMeta.referencia ? (
+                        {!isFreeValueItem && itemMeta.referencia ? (
                           <span>{repairBrokenText(itemMeta.referencia)}</span>
                         ) : null}
                       </div>
@@ -259,8 +263,14 @@ export function PasoDosListaMovil({
           <div className={s.stepTwoMobileFooterActions}>
             <button className={s.btnPrimary} onClick={onOpenWizard} type="button">
               <LuPlus aria-hidden />
-              Agregar
+              {quotePricingMode === "por_item" ? "Componente" : "Agregar"}
             </button>
+            {quotePricingMode === "por_item" ? (
+              <button className={s.btnGhost} onClick={onOpenFreeValueItemForm} type="button">
+                <LuPlus aria-hidden />
+                Item libre
+              </button>
+            ) : null}
             <button
               className={s.btnGhost}
               onClick={items.length > 0 ? onGoToSummary : onSaveAndExit}

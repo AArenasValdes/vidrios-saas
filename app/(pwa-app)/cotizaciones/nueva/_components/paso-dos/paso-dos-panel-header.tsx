@@ -1,6 +1,6 @@
 "use client";
 
-import { LuFilterX } from "react-icons/lu";
+import { LuFilePlus2, LuFilterX, LuPlus } from "react-icons/lu";
 
 import type { PasoDosPanelComponentesProps } from "../../_types/paso-dos";
 
@@ -11,8 +11,11 @@ type Props = Pick<
   | "items"
   | "pendingItemsCount"
   | "completedItemsCount"
+  | "quotePricingMode"
   | "effectiveShowOnlyPendingItems"
   | "showFilterToggle"
+  | "onOpenComponentCreator"
+  | "onOpenFreeValueItemForm"
   | "onToggleShowOnlyPendingItems"
 >;
 
@@ -20,8 +23,11 @@ export function PasoDosPanelHeader({
   items,
   pendingItemsCount,
   completedItemsCount,
+  quotePricingMode,
   effectiveShowOnlyPendingItems,
   showFilterToggle,
+  onOpenComponentCreator,
+  onOpenFreeValueItemForm,
   onToggleShowOnlyPendingItems,
 }: Props) {
   return (
@@ -35,6 +41,18 @@ export function PasoDosPanelHeader({
         </div>
       </div>
       <div className={s.stepTwoPanelHeaderActions}>
+        {items.length > 0 && quotePricingMode === "por_item" ? (
+          <>
+            <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
+              <LuPlus aria-hidden />
+              Agregar componente con precio
+            </button>
+            <button className={s.stepTwoFilterButton} type="button" onClick={onOpenFreeValueItemForm}>
+              <LuFilePlus2 aria-hidden />
+              Agregar item libre
+            </button>
+          </>
+        ) : null}
         {showFilterToggle ? (
           <button
             className={`${s.stepTwoFilterButton} ${effectiveShowOnlyPendingItems ? s.stepTwoFilterButtonActive : ""}`}

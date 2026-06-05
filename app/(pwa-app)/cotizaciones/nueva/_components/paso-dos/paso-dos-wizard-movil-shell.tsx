@@ -23,7 +23,10 @@ import {
 } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
-import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
+import type {
+  PasoDosFormularioComponenteProps,
+  PasoDosItemLibreFormProps,
+} from "../../_types/paso-dos";
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import type { PasoDosGrupoPasoMovil } from "../../_hooks/use-paso-dos-agregar-grupo-movil";
 import { getSubtypeOptionsForCategory } from "../../_hooks/use-paso-dos-agregar-grupo";
@@ -43,6 +46,7 @@ import { PasoDosWizardFooterMovil } from "./paso-dos-wizard-footer-movil";
 import { PasoDosWizardTipoMovil } from "./paso-dos-wizard-tipo-movil";
 import { PasoDosModoCotizacion } from "./paso-dos-modo-cotizacion";
 import { PasoDosFormularioComponente } from "../paso-dos-formulario-componente";
+import { PasoDosItemLibreForm } from "./paso-dos-item-libre-form";
 import s from "../../page.module.css";
 
 export type WizardActions = {
@@ -90,6 +94,7 @@ export type WizardActions = {
 
 type Props = {
   formulario: PasoDosFormularioComponenteProps;
+  itemLibreForm: PasoDosItemLibreFormProps;
   items: CotizacionWorkflowItem[];
   subtotal: string;
   total: string;
@@ -120,6 +125,7 @@ type Props = {
   onCloseVariationQuickEdit: () => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onOpenFreeValueItemForm: () => void;
   wizard: WizardActions;
 };
 
@@ -160,6 +166,7 @@ const VISUAL_STAGES = [
 
 export function PasoDosWizardMovil({
   formulario,
+  itemLibreForm,
   items,
   subtotal,
   total,
@@ -172,6 +179,7 @@ export function PasoDosWizardMovil({
   onCloseVariationQuickEdit,
   onEditItem,
   onRemoveItem,
+  onOpenFreeValueItemForm,
   wizard,
 }: Props) {
   const [showAllSystems, setShowAllSystems] = useState(false);
@@ -352,6 +360,14 @@ export function PasoDosWizardMovil({
     );
   }
 
+  if (itemLibreForm.isOpen) {
+    return (
+      <section className={s.stepTwoMobileExperience}>
+        <PasoDosItemLibreForm {...itemLibreForm} />
+      </section>
+    );
+  }
+
   return (
     <section className={s.stepTwoMobileExperience}>
       {!wizard.isOpen && items.length === 0 ? (
@@ -367,6 +383,7 @@ export function PasoDosWizardMovil({
           onEditItem={onEditItem}
           onGoToSummary={onGoToSummary}
           onOpenWizard={handleOpenWizard}
+          onOpenFreeValueItemForm={onOpenFreeValueItemForm}
           onRemoveItem={onRemoveItem}
           onSaveAndExit={formulario.onSaveAndExit}
         />

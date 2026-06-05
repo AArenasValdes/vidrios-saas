@@ -12,13 +12,13 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
   return (
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
-        <h2>¿Cómo quieres armar esta cotización?</h2>
+        <h2>Como quieres empezar?</h2>
       </div>
       <div className={s.stepTwoModeChoiceGrid}>
         <article className={s.stepTwoModeChoiceCard}>
           <div>
             <strong>Cotizar por componentes</strong>
-            <p>Agrega ventanas, puertas o shower con medidas, línea y precio por grupo.</p>
+            <p>Agrega ventanas, puertas, shower o panos con medidas, linea y precio por grupo.</p>
           </div>
           <button
             type="button"
@@ -31,15 +31,15 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
 
         <article className={s.stepTwoModeChoiceCard}>
           <div>
-            <strong>Cotizar por total del trabajo</strong>
-            <p>Describe la obra completa y escribe un único total final en el resumen.</p>
+            <strong>Cotizacion rapida por total</strong>
+            <p>Redacta la obra completa, escribe el valor final y genera el PDF rapido.</p>
           </div>
           <button
             type="button"
             className={s.btnPrimary}
             onClick={() => onSelectMode("total_global")}
           >
-            Agregar trabajo por total
+            Crear cotizacion rapida
           </button>
         </article>
       </div>

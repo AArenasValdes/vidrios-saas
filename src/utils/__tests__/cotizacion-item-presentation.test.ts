@@ -26,6 +26,11 @@ describe("cotizacion-item-presentation", () => {
       precioPlantillaSugerido: 261000,
       precioAjustadoManual: true,
       origenPrecio: "manual",
+      ivaMode: null,
+      totalClienteVisible: null,
+      netoCalculado: null,
+      ivaCalculado: null,
+      displayMode: "componente",
       raw: "Ventana living con vidrio claro",
     });
 
@@ -66,6 +71,11 @@ describe("cotizacion-item-presentation", () => {
       precioPlantillaSugerido: 261000,
       precioAjustadoManual: true,
       origenPrecio: "manual",
+      ivaMode: null,
+      totalClienteVisible: null,
+      netoCalculado: null,
+      ivaCalculado: null,
+      displayMode: "componente",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -92,6 +102,11 @@ describe("cotizacion-item-presentation", () => {
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
+      ivaMode: null,
+      totalClienteVisible: null,
+      netoCalculado: null,
+      ivaCalculado: null,
+      displayMode: "componente",
       raw: "Cierre de terraza",
     });
   });
@@ -196,6 +211,11 @@ describe("cotizacion-item-presentation", () => {
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
+      ivaMode: null,
+      totalClienteVisible: null,
+      netoCalculado: null,
+      ivaCalculado: null,
+      displayMode: "componente",
       raw: "",
     });
   });
@@ -222,7 +242,37 @@ describe("cotizacion-item-presentation", () => {
       precioPlantillaSugerido: null,
       precioAjustadoManual: false,
       origenPrecio: "margen",
+      ivaMode: null,
+      totalClienteVisible: null,
+      netoCalculado: null,
+      ivaCalculado: null,
+      displayMode: "componente",
       raw: "Ventana corredera",
     });
+  });
+
+  it("debe guardar metadata de item libre con IVA desglosado", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      pricingMode: "precio_directo",
+      ivaMode: "total_incluye_iva",
+      totalClienteVisible: 119000,
+      netoCalculado: 100000,
+      ivaCalculado: 19000,
+      displayMode: "item_libre",
+      raw: "Mantencion de ventanas",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        ivaMode: "total_incluye_iva",
+        totalClienteVisible: 119000,
+        netoCalculado: 100000,
+        ivaCalculado: 19000,
+        displayMode: "item_libre",
+        raw: "Mantencion de ventanas",
+      })
+    );
   });
 });

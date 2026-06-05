@@ -1,4 +1,5 @@
 import {
+  calculateFreeValueItem,
   calculateCotizacionWorkflowTotals,
   calculateGlobalQuoteWorkflowTotals,
 } from "../cotizaciones-workflow.service";
@@ -93,5 +94,37 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(0);
     expect(totals.iva).toBe(0);
     expect(totals.subtotal).toBe(0);
+  });
+
+  it("desglosa item libre con total incluido sin sumar IVA dos veces", () => {
+    const itemLibre = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Mantencion de ventanas",
+      valor: 119000,
+      ivaMode: "total_incluye_iva",
+    });
+    const totals = calculateCotizacionWorkflowTotals([itemLibre]);
+
+    expect(itemLibre.tipoItem).toBe("item_libre_con_valor");
+    expect(itemLibre.precioUnitario).toBe(119000);
+    expect(itemLibre.precioTotal).toBe(119000);
+    expect(totals.subtotal).toBe(100000);
+    expect(totals.iva).toBe(19000);
+    expect(totals.total).toBe(119000);
+  });
+
+  it("trata item libre neto mas IVA como neto normal", () => {
+    const itemLibre = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Mantencion de ventanas",
+      valor: 100000,
+      ivaMode: "neto_mas_iva",
+    });
+    const totals = calculateCotizacionWorkflowTotals([itemLibre]);
+
+    expect(itemLibre.precioTotal).toBe(100000);
+    expect(totals.subtotal).toBe(100000);
+    expect(totals.iva).toBe(19000);
+    expect(totals.total).toBe(119000);
   });
 });

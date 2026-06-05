@@ -2,6 +2,8 @@ import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
 
 export type ComponentMaterial = "Aluminio" | "PVC";
 export type CotizacionItemPriceOrigin = "margen" | "plantilla" | "manual";
+export type CotizacionItemFreeValueIvaMode = "total_incluye_iva" | "neto_mas_iva";
+export type CotizacionItemDisplayMode = "componente" | "item_libre";
 
 export type CotizacionItemPresentationMeta = {
   colorHex: string;
@@ -22,6 +24,11 @@ export type CotizacionItemPresentationMeta = {
   precioPlantillaSugerido: number | null;
   precioAjustadoManual: boolean;
   origenPrecio: CotizacionItemPriceOrigin;
+  ivaMode: CotizacionItemFreeValueIvaMode | null;
+  totalClienteVisible: number | null;
+  netoCalculado: number | null;
+  ivaCalculado: number | null;
+  displayMode: CotizacionItemDisplayMode;
   raw: string;
 };
 
@@ -57,6 +64,10 @@ function normalizeColor(colorHex: string | null | undefined, material: Component
 }
 
 function parseOptionalNumber(value: string | null | undefined) {
+  if (value === null || value === undefined || value.trim() === "") {
+    return null;
+  }
+
   const parsed = Number(value);
 
   return Number.isFinite(parsed) ? parsed : null;
@@ -85,6 +96,20 @@ function normalizeLeafCount(value: number | string | null | undefined): 1 | 2 | 
   return null;
 }
 
+function normalizeFreeValueIvaMode(
+  value: string | null | undefined
+): CotizacionItemFreeValueIvaMode | null {
+  if (value === "total_incluye_iva" || value === "neto_mas_iva") {
+    return value;
+  }
+
+  return null;
+}
+
+function normalizeDisplayMode(value: string | null | undefined): CotizacionItemDisplayMode {
+  return value === "item_libre" ? "item_libre" : "componente";
+}
+
 export function encodeCotizacionItemPresentationMeta(input: {
   colorHex: string;
   material: ComponentMaterial;
@@ -104,6 +129,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
   precioPlantillaSugerido?: number | null;
   precioAjustadoManual?: boolean;
   origenPrecio?: CotizacionItemPriceOrigin;
+  ivaMode?: CotizacionItemFreeValueIvaMode | null;
+  totalClienteVisible?: number | null;
+  netoCalculado?: number | null;
+  ivaCalculado?: number | null;
+  displayMode?: CotizacionItemDisplayMode;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -138,6 +168,20 @@ export function encodeCotizacionItemPresentationMeta(input: {
       : "";
   const precioAjustadoManual = input.precioAjustadoManual ? "1" : "0";
   const origenPrecio = input.origenPrecio ?? (pricingMode === "precio_directo" ? "manual" : "margen");
+  const ivaMode = input.ivaMode ?? "";
+  const totalClienteVisible =
+    input.totalClienteVisible !== null && input.totalClienteVisible !== undefined
+      ? String(Math.round(input.totalClienteVisible))
+      : "";
+  const netoCalculado =
+    input.netoCalculado !== null && input.netoCalculado !== undefined
+      ? String(Math.round(input.netoCalculado))
+      : "";
+  const ivaCalculado =
+    input.ivaCalculado !== null && input.ivaCalculado !== undefined
+      ? String(Math.round(input.ivaCalculado))
+      : "";
+  const displayMode = input.displayMode ?? "componente";
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +
@@ -157,7 +201,12 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[rnd:${redondeoPrecio}]` +
     `[psu:${precioPlantillaSugerido}]` +
     `[man:${precioAjustadoManual}]` +
-    `[po:${origenPrecio}]`;
+    `[po:${origenPrecio}]` +
+    `[ivm:${ivaMode}]` +
+    `[tcv:${totalClienteVisible}]` +
+    `[net:${netoCalculado}]` +
+    `[iva:${ivaCalculado}]` +
+    `[dm:${displayMode}]`;
 
   return raw ? `${meta} ${raw}` : meta;
 }
@@ -185,6 +234,11 @@ export function decodeCotizacionItemPresentationMeta(
   );
   const precioAjustadoManual = source.match(/\[man:(1|0)\]/)?.[1] === "1";
   const origenPrecio = normalizePriceOrigin(source.match(/\[po:([^\]]*)\]/)?.[1], pricingMode);
+  const ivaMode = normalizeFreeValueIvaMode(source.match(/\[ivm:([^\]]*)\]/)?.[1]);
+  const totalClienteVisible = parseOptionalNumber(source.match(/\[tcv:([^\]]*)\]/)?.[1]);
+  const netoCalculado = parseOptionalNumber(source.match(/\[net:([^\]]*)\]/)?.[1]);
+  const ivaCalculado = parseOptionalNumber(source.match(/\[iva:([^\]]*)\]/)?.[1]);
+  const displayMode = normalizeDisplayMode(source.match(/\[dm:([^\]]*)\]/)?.[1]);
   const referencia =
     source.match(/\[r:([^\]]*)\]/)?.[1]?.trim() ??
     source.match(/\[l:([^\]]*)\]/)?.[1]?.trim() ??
@@ -208,6 +262,11 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[psu:[^\]]*\]/g, "")
     .replace(/\[man:[^\]]*\]/g, "")
     .replace(/\[po:[^\]]*\]/g, "")
+    .replace(/\[ivm:[^\]]*\]/g, "")
+    .replace(/\[tcv:[^\]]*\]/g, "")
+    .replace(/\[net:[^\]]*\]/g, "")
+    .replace(/\[iva:[^\]]*\]/g, "")
+    .replace(/\[dm:[^\]]*\]/g, "")
     .trim();
 
   return {
@@ -229,6 +288,11 @@ export function decodeCotizacionItemPresentationMeta(
     precioPlantillaSugerido,
     precioAjustadoManual,
     origenPrecio,
+    ivaMode,
+    totalClienteVisible,
+    netoCalculado,
+    ivaCalculado,
+    displayMode,
     raw,
   };
 }

@@ -3,6 +3,7 @@ import {
   type PreferredProvider,
 } from "@/features/cotizaciones/services/component-suggestions.service";
 import {
+  calculateFreeValueItem,
   calculateComponentItem,
   createCotizacionWorkflowDraft,
   resolveWorkflowObraTitle,
@@ -17,6 +18,7 @@ import type {
 import {
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
+  type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import {
   normalizePricingMode,
@@ -102,6 +104,13 @@ export type QuickEditDraftState = {
 };
 
 export type QuickEditFieldKey = keyof QuickEditDraftState;
+
+export type FreeValueItemFormState = {
+  nombre: string;
+  descripcion: string;
+  valor: string;
+  ivaMode: CotizacionItemFreeValueIvaMode;
+};
 
 export type QuickEditBatchTarget = {
   id: string;
@@ -702,6 +711,14 @@ export function formatCurrencyInput(value: string) {
 }
 
 export function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraftState {
+  if (item.tipoItem === "item_libre_con_valor") {
+    return {
+      ancho: "",
+      alto: "",
+      costoProveedorUnitario: String(Math.round(item.precioTotal)),
+    };
+  }
+
   return {
     ancho: item.ancho ? String(item.ancho) : "",
     alto: item.alto ? String(item.alto) : "",
@@ -725,6 +742,10 @@ export function isWorkflowItemComplete(
   item: CotizacionWorkflowItem,
   quotePricingMode: QuotePricingMode = "por_item"
 ) {
+  if (item.tipoItem === "item_libre_con_valor") {
+    return item.nombre.trim().length > 0 && item.precioTotal > 0;
+  }
+
   return (
     (item.ancho ?? 0) > 0 &&
     (item.alto ?? 0) > 0 &&
@@ -748,6 +769,10 @@ export function applyQuickEditDraftStatesToItems(
   quotePricingMode: QuotePricingMode = "por_item"
 ) {
   return items.map((item) => {
+    if (item.tipoItem === "item_libre_con_valor") {
+      return item;
+    }
+
     const draftState = quickEditDrafts[item.id];
 
     if (!draftState) {
@@ -774,6 +799,65 @@ export function applyQuickEditDraftStatesToItems(
       return item;
     }
   });
+}
+
+export function createEmptyFreeValueItemForm(): FreeValueItemFormState {
+  return {
+    nombre: "",
+    descripcion: "",
+    valor: "",
+    ivaMode: "total_incluye_iva",
+  };
+}
+
+export function mapFreeValueItemToForm(item: CotizacionWorkflowItem): FreeValueItemFormState {
+  const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+  return {
+    nombre: item.nombre,
+    descripcion: item.descripcion,
+    valor: String(Math.round(item.precioTotal)),
+    ivaMode: meta.ivaMode ?? "total_incluye_iva",
+  };
+}
+
+export function buildFreeValueItemFromForm(
+  form: FreeValueItemFormState,
+  items: CotizacionWorkflowItem[],
+  editingItemId: string | null
+) {
+  const normalizedValue = normalizeCurrencyInput(form.valor);
+  const existingIndex = editingItemId
+    ? items.findIndex((item) => item.id === editingItemId)
+    : -1;
+  const nextIndex = existingIndex >= 0 ? existingIndex + 1 : items.length + 1;
+
+  return calculateFreeValueItem({
+    id: editingItemId ?? undefined,
+    codigo:
+      editingItemId && existingIndex >= 0
+        ? items[existingIndex].codigo
+        : `L${nextIndex}`,
+    nombre: form.nombre,
+    descripcion: form.descripcion,
+    valor: normalizedValue ? Number(normalizedValue) : 0,
+    ivaMode: form.ivaMode,
+  });
+}
+
+export function validateFreeValueItemForm(form: FreeValueItemFormState): FieldErrors {
+  const errors: FieldErrors = {};
+  const valor = Number(normalizeCurrencyInput(form.valor));
+
+  if (!form.nombre.trim()) {
+    errors.nombre = "Ingresa el nombre del item";
+  }
+
+  if (!Number.isFinite(valor) || valor <= 0) {
+    errors.costoProveedorUnitario = "Ingresa un valor mayor a cero";
+  }
+
+  return errors;
 }
 
 export function normalizeSearchValue(value: string) {
@@ -1087,6 +1171,21 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
 }
 
 export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState {
+  if (item.tipoItem === "item_libre_con_valor") {
+    return {
+      ...createEmptyComponentForm(),
+      codigo: item.codigo,
+      tipo: "Trabajo personalizado",
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      cantidad: "1",
+      costoProveedorUnitario: String(Math.round(item.precioTotal)),
+      margenPct: "0",
+      pricingMode: "precio_directo",
+      observaciones: decodeCotizacionItemPresentationMeta(item.observaciones).raw,
+    };
+  }
+
   const canonicalTipo = resolveCanonicalComponentType(item.tipo);
   const {
     colorHex,
@@ -1294,6 +1393,7 @@ export function buildItemFromForm(
       origenPrecio: quotePricingMode === "total_global" ? "manual" : origenPrecio,
       raw: syncedForm.observaciones,
     }),
+    tipoItem: "componente",
   });
 }
 
@@ -1305,6 +1405,10 @@ export function applyQuotePricingToItems(
   const normalizedMargin = pricingMode === "precio_directo" ? 0 : Number(marginValue || 0);
 
   return items.map((item) => {
+    if (item.tipoItem === "item_libre_con_valor") {
+      return item;
+    }
+
     const {
       colorHex,
       referencia,

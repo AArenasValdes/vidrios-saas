@@ -36,6 +36,7 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 
 type PublicPreviewItem = {
   id: string;
+  tipoItem?: string | null;
   codigo: string;
   tipo: string;
   nombre: string;
@@ -571,19 +572,24 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                       {pagePlan.items.map((item, itemIndex) => {
                         const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                         const presentation = itemPresentationMap.get(item.id);
+                        const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                        const isFreeValueItem =
+                          item.tipoItem === "item_libre_con_valor" ||
+                          itemMeta.displayMode === "item_libre";
                         const colorHex = presentation?.colorHex ?? "#a8a8a8";
                         const material = presentation?.material ?? "Material a definir";
                         const colorName = presentation?.colorName ?? "Color a definir";
                         const surface = presentation?.surface ?? "-";
-                        const specs =
-                          presentation?.specs ?? [
+                        const specs = isFreeValueItem
+                          ? [{ key: "Descripcion", value: item.descripcion?.trim() || item.nombre }]
+                          : presentation?.specs ?? [
                             { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
                             { key: "Material", value: material },
                             { key: "Color", value: colorName },
                             { key: "Referencia", value: "-" },
                             { key: "Vidrio", value: item.vidrio || "-" },
                             { key: "Superficie", value: surface },
-                          ];
+                            ];
                         const drawingSvg =
                           presentation?.drawingSvg ??
                           generateComponentSVG({
@@ -615,6 +621,15 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             </div>
 
                             <div className={printStyles.componentBody}>
+                              {isFreeValueItem ? (
+                                <div className={printStyles.descriptionColumn}>
+                                  <div className={printStyles.descriptionInner}>
+                                    <p className={printStyles.descriptionText}>
+                                      {item.descripcion?.trim() || item.nombre}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
                               <div className={printStyles.drawingColumn}>
                                 <div className={printStyles.drawingFrame}>
                                   <div
@@ -626,6 +641,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                                   VISTA INTERIOR REFERENCIAL
                                 </span>
                               </div>
+                              )}
 
                               <div className={printStyles.componentInfoColumn}>
                                 <div className={printStyles.specsColumn}>

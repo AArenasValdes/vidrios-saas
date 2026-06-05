@@ -23,10 +23,30 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
   return useMemo<ComponentListCardViewModel[]>(
     () =>
       params.items.map((item) => {
-        const { colorHex, referencia, material, pricingMode } =
+        const { colorHex, referencia, material, pricingMode, displayMode } =
           decodeCotizacionItemPresentationMeta(item.observaciones);
         const effectiveDraft = params.borradoresRapidos[item.id];
         const effectiveItem = item;
+        const isFreeValueItem =
+          item.tipoItem === "item_libre_con_valor" || displayMode === "item_libre";
+
+        if (isFreeValueItem) {
+          return {
+            id: item.id,
+            source: item,
+            colorHex,
+            title: `${item.codigo} · ${item.nombre}`,
+            price: CLP(effectiveItem.precioTotal),
+            priceLabel: "Valor",
+            compactMeta: item.descripcion || "Item libre",
+            metaPrimary: "Item libre con valor directo",
+            metaSecondary: item.descripcion || "Sin descripcion adicional",
+            metaTertiary: "",
+            quickEditPriceLabel: "Valor",
+            isComplete: true,
+            svgMarkup: "",
+          };
+        }
 
         return {
           id: item.id,
