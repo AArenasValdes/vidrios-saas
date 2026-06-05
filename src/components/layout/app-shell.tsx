@@ -1071,15 +1071,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </>
   );
 
-  if (isWorkspaceBooting) {
+  if (isWorkspaceBooting || (!cargando && !user && !isSigningOut)) {
     return (
       <div className={s.bootRoot}>
         <div className={s.bootCard}>
-          <div className={s.bootBadge}>Panel operativo</div>
-          <h1 className={s.bootTitle}>Cargando tu espacio de trabajo</h1>
-          <p className={s.bootText}>
-            Estamos conectando sesion, empresa y datos comerciales para que el
-            panel abra completo desde el primer intento.
+          <img
+            alt="Ventora"
+            className={s.bootBrandLogo}
+            src="/brand/ventora-logo-boot.svg"
+          />
+          <p className={s.bootLoadingText}>
+            Preparando tu espacio de trabajo
           </p>
           <div className={s.bootProgress} aria-hidden>
             <span className={s.bootProgressBar} />
@@ -1111,7 +1113,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isSigningOut || (!cargando && !user)) {
+  if (isSigningOut) {
     return (
       <div className={s.bootRoot}>
         <div className={s.bootCard}>

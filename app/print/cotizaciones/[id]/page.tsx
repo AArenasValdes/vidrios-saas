@@ -973,12 +973,14 @@ export default function CotizacionPrintPage() {
 
                     </div>
 
-                    {item.descripcion?.trim() ? (
-                      <p className={s.itemDescription}>{item.descripcion.trim()}</p>
-                    ) : null}
-
-                    <div className={`${s.componentBody} ${item.tipo === "Trabajo personalizado" ? s.componentBodyFull : ""}`}>
-                      {item.tipo === "Trabajo personalizado" ? null : (
+                    <div className={s.componentBody}>
+                      {item.tipo === "Trabajo personalizado" ? (
+                      <div className={s.descriptionColumn}>
+                        <div className={s.descriptionInner}>
+                          <p className={s.descriptionText}>{item.descripcion?.trim() || item.nombre}</p>
+                        </div>
+                      </div>
+                      ) : (
                       <div className={s.drawingColumn}>
                         <div className={s.drawingFrame}>
                           <div

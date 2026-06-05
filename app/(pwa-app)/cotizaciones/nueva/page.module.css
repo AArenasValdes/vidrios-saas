@@ -5112,8 +5112,9 @@
 }
 
 .ivaTogglePillLight {
-  display: inline-flex;
-  border-radius: 999px;
+  display: flex;
+  width: 100%;
+  border-radius: 10px;
   background: #eef4fb;
   overflow: hidden;
   border: 1px solid #d7e3f1;
@@ -5122,14 +5123,26 @@
 .ivaPillOptionLight {
   all: unset;
   cursor: pointer;
-  min-height: 34px;
-  padding: 0 0.8rem;
-  border-radius: 999px;
+  flex: 1;
+  min-height: 36px;
+  padding: 0 0.5rem;
+  border-radius: 8px;
   color: #64748b;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
-  white-space: nowrap;
+  text-align: center;
+  margin: 2px;
+}
+
+.ivaPillOptionLight:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ivaPillOptionLight:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .ivaPillOptionLight:hover {
@@ -5139,7 +5152,7 @@
 .ivaPillActiveLight {
   background: #ffffff;
   color: #1f63c4;
-  box-shadow: 0 4px 10px rgba(27, 47, 86, 0.1);
+  box-shadow: 0 2px 8px rgba(27, 47, 86, 0.1);
 }
 .ivaRow {
   display: flex;

@@ -114,7 +114,7 @@ export function PasoUnoDatosCliente({
   const [clienteCorreoDraft, setClienteCorreoDraft] = useState("");
   const [isEditingDraftClientName, setIsEditingDraftClientName] = useState(false);
 
-  const canContinue = draft.clienteNombre.trim() !== "";
+  const canContinue = true;
   const clientList = (isMobileViewport ? mobileRecentClients : recentClients).slice(0, 3);
   const trimmedQuery = clientQuery.trim();
   const hasQuery = trimmedQuery.length > 0;
@@ -565,11 +565,9 @@ export function PasoUnoDatosCliente({
               </button>
             </div>
             <div className={s.stepOneBottomBarMeta}>
-              {canContinue
-                ? draft.obra.trim() !== ""
-                  ? "Listo para agregar componentes"
-                  : "Puedes seguir y completar la obra automaticamente."
-                : "Completa al menos el cliente para continuar"}
+              {draft.obra.trim() !== ""
+                ? "Listo para agregar componentes"
+                : "Puedes seguir y completar la obra automaticamente."}
             </div>
           </div>
         </div>

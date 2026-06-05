@@ -79,10 +79,7 @@ export function PasoTresDetalleFinal({
   const globalPricingEditor = (
     <section className={s.summaryAdjustmentCard}>
       <div className={s.summaryAdjustmentHeader}>
-        <div>
-          <span className={s.summaryAdjustmentEyebrow}>Total del trabajo</span>
-          <strong>Total a cobrar al cliente</strong>
-        </div>
+        <span className={s.summaryAdjustmentEyebrow}>Total del trabajo</span>
       </div>
       <div className={s.formGrid2}>
         <label className={s.field}>
@@ -107,7 +104,7 @@ export function PasoTresDetalleFinal({
               className={`${s.ivaPillOptionLight} ${mostrarIva ? s.ivaPillActiveLight : ""}`}
               onClick={mostrarIva ? undefined : onMostrarIvaChange}
             >
-              Con IVA incluido
+              Con IVA
             </button>
             <button
               type="button"
