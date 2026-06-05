@@ -41,6 +41,7 @@ import { PasoDosWizardEncabezadoMovil } from "./paso-dos-wizard-encabezado-movil
 import { PasoDosWizardConfiguracionMovil } from "./paso-dos-wizard-configuracion-movil";
 import { PasoDosWizardFooterMovil } from "./paso-dos-wizard-footer-movil";
 import { PasoDosWizardTipoMovil } from "./paso-dos-wizard-tipo-movil";
+import { PasoDosModoCotizacion } from "./paso-dos-modo-cotizacion";
 import { PasoDosFormularioComponente } from "../paso-dos-formulario-componente";
 import s from "../../page.module.css";
 
@@ -66,6 +67,8 @@ export type WizardActions = {
   onSelectCantidad: (cantidad: number) => void;
   onCantidadChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
+  onNombreChange: (value: string) => void;
+  onDescripcionChange: (value: string) => void;
   onSelectLineTemplate: (templateId: string) => void;
   onApplyCreatedLineTemplate: (template: CotizacionLineTemplate) => void;
   onCreateLineTemplate: (
@@ -197,6 +200,11 @@ export function PasoDosWizardMovil({
     wizard.onOpen();
   };
 
+  const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
+    formulario.onQuotePricingModeChange(mode);
+    handleOpenWizard();
+  };
+
   const handleCloseWizard = () => {
     resetLocalWizardState();
     wizard.onClose();
@@ -229,6 +237,7 @@ export function PasoDosWizardMovil({
     ]
   );
 
+  const quotePricingMode = formulario.quotePricingMode;
   const {
     activePricingMode,
     cantidadDisplayValue,
@@ -239,8 +248,8 @@ export function PasoDosWizardMovil({
   } = buildPasoDosWizardMovilState({
     draft: wizard.draft,
     pricingMode,
+    quotePricingMode,
   });
-  const quotePricingMode = formulario.quotePricingMode;
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
   const visibleLineTemplates = wizard.visibleLineTemplates;
 
@@ -345,18 +354,23 @@ export function PasoDosWizardMovil({
 
   return (
     <section className={s.stepTwoMobileExperience}>
-      <PasoDosListaMovil
-        isWizardOpen={wizard.isOpen}
-        items={items}
-        subtotal={subtotal}
-        total={total}
-        adjustedItems={adjustedItems}
-        onEditItem={onEditItem}
-        onGoToSummary={onGoToSummary}
-        onOpenWizard={handleOpenWizard}
-        onRemoveItem={onRemoveItem}
-        onSaveAndExit={formulario.onSaveAndExit}
-      />
+      {!wizard.isOpen && items.length === 0 ? (
+        <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
+      ) : (
+        <PasoDosListaMovil
+          isWizardOpen={wizard.isOpen}
+          items={items}
+          subtotal={subtotal}
+          total={total}
+          quotePricingMode={quotePricingMode}
+          adjustedItems={adjustedItems}
+          onEditItem={onEditItem}
+          onGoToSummary={onGoToSummary}
+          onOpenWizard={handleOpenWizard}
+          onRemoveItem={onRemoveItem}
+          onSaveAndExit={formulario.onSaveAndExit}
+        />
+      )}
 
       {wizard.isOpen ? (
         <div className={s.stepTwoMobileCreatorOverlay}>
@@ -374,7 +388,9 @@ export function PasoDosWizardMovil({
                   ? "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
-                    : "Completa sistema, medidas y valor antes de agregar."
+                    : quotePricingMode === "total_global"
+                      ? "Completa los datos comerciales antes de agregar."
+                      : "Completa sistema, medidas y valor antes de agregar."
               }
               onClose={handleCloseWizard}
               onGoToStep={wizard.onGoToStep}
@@ -385,41 +401,6 @@ export function PasoDosWizardMovil({
                 isCompactDataStep ? s.stepTwoMobileCreatorBodyCompact : ""
               }`}
             >
-              {visualStage === 1 ? (
-                <section className={`${s.formSection} ${s.providerOnboardingCard}`}>
-                  <div className={s.formSectionHead}>
-                    <span className={s.formSectionEyebrow}>Forma de cálculo</span>
-                    <strong>¿Cómo quieres calcular?</strong>
-                  </div>
-                  <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Modo de calculo de cotizacion">
-                    <label className={`${s.segmentedChoice} ${quotePricingMode === "por_item" ? s.segmentedChoiceActive : ""}`}>
-                      <input
-                        className={s.segmentedChoiceInput}
-                        type="radio"
-                        name="quote-pricing-mode-mobile"
-                        value="por_item"
-                        checked={quotePricingMode === "por_item"}
-                        onChange={() => formulario.onQuotePricingModeChange("por_item")}
-                      />
-                      <span className={s.segmentedChoiceTitle}>Calcular por cada componente</span>
-                      <span className={s.segmentedChoiceHint}>Usa líneas, medidas y precios por ítem.</span>
-                    </label>
-                    <label className={`${s.segmentedChoice} ${quotePricingMode === "total_global" ? s.segmentedChoiceActive : ""}`}>
-                      <input
-                        className={s.segmentedChoiceInput}
-                        type="radio"
-                        name="quote-pricing-mode-mobile"
-                        value="total_global"
-                        checked={quotePricingMode === "total_global"}
-                        onChange={() => formulario.onQuotePricingModeChange("total_global")}
-                      />
-                      <span className={s.segmentedChoiceTitle}>Calcular por total del trabajo</span>
-                      <span className={s.segmentedChoiceHint}>Define costo/margen al final.</span>
-                    </label>
-                  </div>
-                </section>
-              ) : null}
-
               {visualStage === 1 ? (
                 <PasoDosWizardTipoMovil
                   categoryOptions={normalizedCategoryOptions}
@@ -462,6 +443,8 @@ export function PasoDosWizardMovil({
                   onCreateLineTemplate={wizard.onCreateLineTemplate}
                   onMargenChange={wizard.onMargenChange}
                   onMaterialChange={wizard.onMaterialChange}
+                  onNombreChange={wizard.onNombreChange}
+                  onDescripcionChange={wizard.onDescripcionChange}
                   onSelectLineTemplate={wizard.onSelectLineTemplate}
                   onColorChange={wizard.onColorChange}
                   onConfiguracionChange={wizard.onConfiguracionChange}

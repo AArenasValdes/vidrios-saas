@@ -16,10 +16,8 @@ type PasoTresResumenProps = {
   flete: string;
   total: string;
   quotePricingMode: QuotePricingMode;
-  costoTotalFabricacion: string;
-  utilidadTotal: string;
-  margenGlobalPct: string;
   totalClienteManual: number | null;
+  mostrarIva: boolean;
   globalError: string | null;
   savedRecord: CotizacionWorkflowRecord | null;
   lastSaveMode: keyof typeof STATUS_COPY | null;
@@ -27,9 +25,8 @@ type PasoTresResumenProps = {
   isSaving: boolean;
   saveIntent: SaveIntent | null;
   onDraftFleteChange: (value: string) => void;
-  onGlobalCostoFabricacionChange: (value: string) => void;
-  onGlobalMargenChange: (value: string) => void;
   onGlobalTotalClienteChange: (value: string) => void;
+  onMostrarIvaChange: () => void;
   onValidezChange: (value: string) => void;
   onGoToStepTwo: () => void;
   onSaveQuote: () => void;
@@ -44,10 +41,8 @@ export function PasoTresResumen({
   flete,
   total,
   quotePricingMode,
-  costoTotalFabricacion,
-  utilidadTotal,
-  margenGlobalPct,
   totalClienteManual,
+  mostrarIva,
   globalError,
   savedRecord,
   lastSaveMode,
@@ -55,9 +50,8 @@ export function PasoTresResumen({
   isSaving,
   saveIntent,
   onDraftFleteChange,
-  onGlobalCostoFabricacionChange,
-  onGlobalMargenChange,
   onGlobalTotalClienteChange,
+  onMostrarIvaChange,
   onValidezChange,
   onGoToStepTwo,
   onSaveQuote,
@@ -85,16 +79,13 @@ export function PasoTresResumen({
           flete={flete}
           total={total}
           quotePricingMode={quotePricingMode}
-          costoTotalFabricacion={costoTotalFabricacion}
-          utilidadTotal={utilidadTotal}
-          margenGlobalPct={margenGlobalPct}
           totalClienteManual={totalClienteManual}
+          mostrarIva={mostrarIva}
           savedRecord={savedRecord}
           isMobileViewport={isMobileViewport}
           onDraftFleteChange={onDraftFleteChange}
-          onGlobalCostoFabricacionChange={onGlobalCostoFabricacionChange}
-          onGlobalMargenChange={onGlobalMargenChange}
           onGlobalTotalClienteChange={onGlobalTotalClienteChange}
+          onMostrarIvaChange={onMostrarIvaChange}
           onValidezChange={onValidezChange}
           validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}

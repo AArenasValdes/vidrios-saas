@@ -67,6 +67,7 @@ export type CotizacionWorkflowRecord = {
   margenGlobalPct?: number;
   utilidadTotal?: number;
   totalClienteManual?: number | null;
+  mostrarIva?: boolean;
 };
 
 export type CotizacionWorkflowDraft = {
@@ -84,4 +85,5 @@ export type CotizacionWorkflowDraft = {
   margenGlobalPct?: number;
   utilidadTotal?: number;
   totalClienteManual?: number | null;
+  mostrarIva?: boolean;
 };

@@ -19,9 +19,12 @@ describe("component-catalog service", () => {
       "Espejo",
       "Tapa de mesa",
     ]);
-    expect(getComponentTypeOptionsForCategory("Especiales")).toContain(
-      "Proyecto a medida"
-    );
+    const especiales = getComponentTypeOptionsForCategory("Especiales");
+
+    expect(especiales).toContain("Trabajo personalizado");
+    expect(especiales).not.toContain("Componente manual");
+    expect(especiales).not.toContain("Proyecto a medida");
+    expect(especiales).not.toContain("Otro trabajo especial");
   });
 
   it("debe separar sistema y configuracion en paño fijo y shower door", () => {

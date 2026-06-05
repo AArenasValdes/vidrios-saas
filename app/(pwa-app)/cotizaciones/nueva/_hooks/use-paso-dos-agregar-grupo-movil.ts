@@ -285,6 +285,14 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
+  const updateNombre = (nombre: string) => {
+    setDraft((current) => ({ ...current, nombre }));
+  };
+
+  const updateDescripcion = (descripcion: string) => {
+    setDraft((current) => ({ ...current, descripcion }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -362,6 +370,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,
+    updateNombre,
+    updateDescripcion,
     updateVidrio,
     updateAncho,
     updateAlto,

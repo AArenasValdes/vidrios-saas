@@ -132,14 +132,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Formulario guiado de nueva cotizacion. Workflow con pasos, items por componente, calculo por item o total global del trabajo.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), Joyride contextual de onboarding, selector de componentes, modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con costo fabricacion + margen global + total cliente, guardado borrador/presupuesto
+- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), Joyride contextual de onboarding, decision inicial en Paso 2 entre "Por componentes" y "Total del trabajo", modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con items descriptivos y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto
 - **Componentes principales**: Internos de la pagina (1198 lineas)
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad fuera de vistas internas. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
 
 ---
 

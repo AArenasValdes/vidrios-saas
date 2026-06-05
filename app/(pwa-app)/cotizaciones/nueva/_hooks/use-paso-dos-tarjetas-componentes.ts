@@ -69,15 +69,18 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
             effectiveDraft,
             params.quotePricingMode
           ),
-          svgMarkup: generateComponentSVG({
-            tipo: effectiveItem.tipo,
-            referencia,
-            ancho: effectiveItem.ancho,
-            alto: effectiveItem.alto,
-            colorHex,
-            maxW: 46,
-            maxH: 46,
-          }),
+          svgMarkup:
+            effectiveItem.tipo === "Trabajo personalizado"
+              ? ""
+              : generateComponentSVG({
+                  tipo: effectiveItem.tipo,
+                  referencia,
+                  ancho: effectiveItem.ancho,
+                  alto: effectiveItem.alto,
+                  colorHex,
+                  maxW: 46,
+                  maxH: 46,
+                }),
         };
       }),
     [params.borradoresRapidos, params.items, params.quotePricingMode]

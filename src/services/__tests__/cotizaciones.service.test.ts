@@ -392,9 +392,8 @@ describe("cotizaciones.service", () => {
       estado: "creada",
       draft: {
         quotePricingMode: "total_global",
-        costoTotalFabricacion: 300000,
-        margenGlobalPct: 100,
-        totalClienteManual: null,
+        totalClienteManual: 600000,
+        mostrarIva: true,
         clienteNombre: "Roberto Fuentes",
         clienteTelefono: "+56 9 8234 5678",
         obra: "Casa Coquimbo",
@@ -437,12 +436,12 @@ describe("cotizaciones.service", () => {
     expect(cotizacionesRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         pricingMode: "total_global",
-        subtotalNeto: 600000,
-        iva: 0,
+        subtotalNeto: 504201.68,
+        iva: 95798.32,
         flete: 0,
-        costoTotal: 300000,
-        margenPct: 100,
-        utilidadTotal: 300000,
+        costoTotal: 0,
+        margenPct: 0,
+        utilidadTotal: 0,
         total: 600000,
         items: [
           expect.objectContaining({

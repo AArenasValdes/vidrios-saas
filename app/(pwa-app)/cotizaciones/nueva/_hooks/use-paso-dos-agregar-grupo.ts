@@ -49,6 +49,8 @@ export type PasoDosGrupoDraft = {
   cantidad: number;
   usaCantidadPersonalizada: boolean;
   cantidadPersonalizada: string;
+  nombre: string;
+  descripcion: string;
   pricingMode: PricingMode;
   material: (typeof MATERIAL_OPTIONS)[number];
   colorHex: string;
@@ -215,6 +217,14 @@ export function getGlassOptionsForSubtype(subtipo: string) {
 
 export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
   const cantidad = Math.max(1, draft.cantidad);
+  if (draft.subtipo === "Trabajo personalizado") {
+    const customText =
+      (draft.descripcion ?? "").trim() ||
+      (draft.nombre ?? "").trim() ||
+      "Trabajo personalizado";
+    return `${cantidad} ${customText}`;
+  }
+
   const subtipo = getComponentTypeLabelForBatch(draft.subtipo, cantidad);
   const systemLabel = composeComponentReference(draft.sistema, draft.configuracion);
   const sheetLabel = buildSheetSchemeLabel(draft);
@@ -272,6 +282,11 @@ export function createInitialPasoDosGrupoDraft({
     cantidad: Math.max(1, Number.parseInt(seedForm?.cantidad || "1", 10) || 1),
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
+    nombre: seedForm?.nombre ?? "",
+    descripcion:
+      seededSubtype === "Trabajo personalizado"
+        ? seedForm?.descripcion ?? ""
+        : seedForm?.descripcion ?? suggestedForm.descripcion,
     pricingMode: normalizePricingMode(seedForm?.pricingMode ?? pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
@@ -317,6 +332,8 @@ export function buildPasoDosGrupoComponentForm({
       sheetVariant: draft.sheetVariant,
       customSchemeDescription: draft.customSchemeDescription,
       isCustomScheme: draft.isCustomScheme,
+      nombre: draft.nombre ?? "",
+      descripcion: draft.descripcion ?? "",
       pricingMode: draft.pricingMode,
       vidrio: draft.vidrio,
       ancho: draft.ancho,
@@ -342,6 +359,8 @@ export function buildPasoDosGrupoComponentForm({
     sheetVariant: draft.sheetVariant,
     customSchemeDescription: draft.customSchemeDescription,
     isCustomScheme: draft.isCustomScheme,
+    nombre: draft.nombre ?? "",
+    descripcion: draft.descripcion ?? "",
     lineTemplateId: draft.lineTemplateId,
     pricingMode: draft.pricingMode,
     vidrio: draft.vidrio,
@@ -385,6 +404,8 @@ export function buildPasoDosGrupoSelectionPatch({
     sheetVariant: "",
     customSchemeDescription: "",
     isCustomScheme: false,
+    nombre: "",
+    descripcion: subtipo === "Trabajo personalizado" ? "" : suggestedForm.descripcion,
     vidrio: suggestedForm.vidrio,
   } satisfies Pick<
     PasoDosGrupoDraft,
@@ -399,6 +420,8 @@ export function buildPasoDosGrupoSelectionPatch({
     | "sheetVariant"
     | "customSchemeDescription"
     | "isCustomScheme"
+    | "nombre"
+    | "descripcion"
     | "vidrio"
   >;
 }
@@ -608,6 +631,14 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
+  const updateNombre = (nombre: string) => {
+    setDraft((current) => ({ ...current, nombre }));
+  };
+
+  const updateDescripcion = (descripcion: string) => {
+    setDraft((current) => ({ ...current, descripcion }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -638,7 +669,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const canContinueFromQuantity =
     !draft.usaCantidadPersonalizada ||
     (draft.cantidadPersonalizada.trim() !== "" && Number(draft.cantidadPersonalizada) > 0);
-  const canContinueFromConfig = draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
+  const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
+  const canContinueFromConfig = isTrabajoPersonalizado
+    ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
+    : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
 
   return {
     isOpen,
@@ -664,6 +698,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,
+    updateNombre,
+    updateDescripcion,
     updateVidrio,
     updateAncho,
     updateAlto,

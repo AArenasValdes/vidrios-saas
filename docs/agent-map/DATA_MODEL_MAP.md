@@ -57,7 +57,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: N:1 organizations, N:1 projects, 1:N cotizacion_items
 - **Usada por**: Cotizaciones, Dashboard, Aprobacion publica, PDF, WhatsApp
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK. En `pricing_mode='total_global'`, `costo_total`, `margen_pct` y `utilidad_total` son datos internos y no deben exponerse en PDF ni vista publica.
+- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK. En `pricing_mode='total_global'`, el `total` es total final cliente; `iva` solo desglosa IVA incluido cuando aplica y `costo_total`, `margen_pct`, `utilidad_total` deben quedar en cero/null por compatibilidad y no exponerse.
 
 ---
 
@@ -68,7 +68,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
 - **Usada por**: Cotizaciones, PDF
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion. En cotizaciones `total_global`, `precio_unitario` y `subtotal` se guardan en 0 por NOT NULL y no representan precio comercial por componente.
+- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion. En cotizaciones `total_global`, `precio_unitario` y `subtotal` se guardan en 0 por NOT NULL y no representan precio comercial por componente; nunca mostrar esos `$0` al cliente.
 
 ---
 

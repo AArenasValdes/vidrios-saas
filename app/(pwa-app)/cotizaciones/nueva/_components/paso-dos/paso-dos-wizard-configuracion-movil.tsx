@@ -73,6 +73,8 @@ type Props = {
   ) => Promise<CotizacionLineTemplate>;
   onMargenChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
+  onNombreChange: (value: string) => void;
+  onDescripcionChange: (value: string) => void;
   onSelectLineTemplate: (templateId: string) => void;
   onColorChange: (colorHex: string) => void;
   onConfiguracionChange: (value: string) => void;
@@ -117,6 +119,8 @@ export function PasoDosWizardConfiguracionMovil({
   onCreateLineTemplate,
   onMargenChange,
   onMaterialChange,
+  onNombreChange,
+  onDescripcionChange,
   onSelectLineTemplate,
   onColorChange,
   onConfiguracionChange,
@@ -127,7 +131,7 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
-  quotePricingMode,
+  quotePricingMode = "por_item",
   priceHelp,
   priceLabel,
   recommendedReason,
@@ -159,6 +163,7 @@ export function PasoDosWizardConfiguracionMovil({
     sistema: draft.sistema,
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -274,8 +279,40 @@ export function PasoDosWizardConfiguracionMovil({
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileConfigStatus}>
         <strong>{getGroupStatusTitle(draft.cantidad, draft.subtipo, draft.sistema, draft)}</strong>
-        <span>Mismas medidas, mismo sistema y mismo valor inicial.</span>
+        <span>
+          {isTrabajoPersonalizado
+            ? "Describe el alcance como lo vera el cliente."
+            : "Mismas medidas, mismo sistema y mismo valor inicial."}
+        </span>
       </div>
+
+      {isTrabajoPersonalizado ? (
+        <div className={s.stepTwoMobileBlockHero}>
+          <div className={s.stepTwoMobileBlockLabel}>Descripcion del trabajo</div>
+          <label className={s.stepTwoMobileInlineField}>
+            <span className={s.label}>Nombre del trabajo</span>
+            <input
+              className={s.input}
+              maxLength={120}
+              placeholder="Ej: Cierre terraza a medida"
+              type="text"
+              value={draft.nombre}
+              onChange={(event) => onNombreChange(event.target.value)}
+            />
+          </label>
+          <label className={s.stepTwoMobileInlineField}>
+            <span className={s.label}>Descripcion para cliente</span>
+            <textarea
+              className={s.textarea}
+              maxLength={360}
+              placeholder="Ej: Cierre de terraza con 4 hojas, sistema especial, fabricacion a medida e instalacion incluida."
+              rows={5}
+              value={draft.descripcion}
+              onChange={(event) => onDescripcionChange(event.target.value)}
+            />
+          </label>
+        </div>
+      ) : null}
 
       {showSystemSelection ? (
       <div className={s.stepTwoMobileBlockHero}>

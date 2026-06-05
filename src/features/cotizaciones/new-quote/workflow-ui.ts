@@ -1419,13 +1419,9 @@ export function validateComponentForm(
   return errors;
 }
 
-export function validateStep1(draft: CotizacionWorkflowDraft): FieldErrors {
-  const errors: FieldErrors = {};
-  if (!draft.clienteNombre.trim()) errors.clienteNombre = "El nombre del cliente es obligatorio";
-  if (Object.keys(errors).length > 0) {
-    errors.step1 = "Completa al menos el nombre del cliente para continuar.";
-  }
-  return errors;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function validateStep1(_draft: CotizacionWorkflowDraft): FieldErrors {
+  return {};
 }
 
 export function withResolvedWorkflowObra(

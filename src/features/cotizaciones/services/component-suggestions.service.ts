@@ -31,7 +31,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     Baranda: "Baranda estandar",
     Espejo: "Sin linea",
     "Tapa de mesa": "Sin linea",
-    "Otro trabajo especial": "Linea estandar",
+    "Trabajo personalizado": "Linea estandar",
   },
   Alumco: {
     Ventana: "Linea 20",
@@ -42,7 +42,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     Baranda: "Baranda estandar",
     Espejo: "Sin linea",
     "Tapa de mesa": "Sin linea",
-    "Otro trabajo especial": "Linea estandar",
+    "Trabajo personalizado": "Linea estandar",
   },
   TecnoPerfiles: {
     Ventana: "TP 4000",
@@ -53,7 +53,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     Baranda: "TP Baranda",
     Espejo: "Sin linea",
     "Tapa de mesa": "Sin linea",
-    "Otro trabajo especial": "Linea estandar",
+    "Trabajo personalizado": "Linea estandar",
   },
   Otro: {},
 };
@@ -123,12 +123,12 @@ const DEFAULT_SUGGESTIONS: Record<string, Omit<ComponentSuggestion, "referencia"
     descripcion: "Tapa de mesa de vidrio templado.",
     colorHex: "#f0eeeb",
   },
-  "Otro trabajo especial": {
-    tipo: "Otro trabajo especial",
+  "Trabajo personalizado": {
+    tipo: "Trabajo personalizado",
     material: "Aluminio",
     vidrio: "Incoloro monolítico 5mm",
     margenPct: 70,
-    descripcion: "Componente comercial listo para cotizar.",
+    descripcion: "Trabajo personalizado para describir al cliente.",
     colorHex: "#a8a8a8",
   },
 };
@@ -138,7 +138,10 @@ const LEGACY_COMPONENT_SUGGESTION_ALIASES: Record<string, keyof typeof DEFAULT_S
   ["Cierre (Logia/Balc\u00c3\u00b3n)"]: "Cierre terraza/logia",
   "Ventana 1 hoja": "Paño fijo",
   "Ventana fija": "Paño fijo",
-  Otro: "Otro trabajo especial",
+  "Componente manual": "Trabajo personalizado",
+  "Proyecto a medida": "Trabajo personalizado",
+  "Otro trabajo especial": "Trabajo personalizado",
+  Otro: "Trabajo personalizado",
 };
 
 export function normalizePreferredProvider(
@@ -173,7 +176,7 @@ export function getComponentSuggestion(input: {
   const tipo = input.tipo.trim() || "Ventana";
   const resolvedTipo = resolveSuggestionType(tipo);
   const provider = normalizePreferredProvider(input.provider);
-  const base = DEFAULT_SUGGESTIONS[resolvedTipo] ?? DEFAULT_SUGGESTIONS["Otro trabajo especial"];
+  const base = DEFAULT_SUGGESTIONS[resolvedTipo] ?? DEFAULT_SUGGESTIONS["Trabajo personalizado"];
 
   return {
     ...base,

@@ -293,35 +293,37 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   costoTotalFabricacion?: number | null;
   margenGlobalPct?: number | null;
   totalClienteManual?: number | null;
+  mostrarIva?: boolean;
 }) {
   const costoTotalFabricacion = round(
     normalizeNonNegativeNumber(input.costoTotalFabricacion),
     2
   );
-  const requestedMargin = normalizeNonNegativeNumber(input.margenGlobalPct);
-  const calculatedUtility = round(costoTotalFabricacion * (requestedMargin / 100), 2);
-  const calculatedTotal = round(costoTotalFabricacion + calculatedUtility, 2);
   const hasManualTotal =
     input.totalClienteManual !== null &&
     input.totalClienteManual !== undefined &&
     Number.isFinite(input.totalClienteManual) &&
     input.totalClienteManual >= 0;
-  const total = hasManualTotal ? round(Number(input.totalClienteManual), 2) : calculatedTotal;
-  const utilidadTotal = round(total - costoTotalFabricacion, 2);
+  const totalBase = hasManualTotal ? round(Number(input.totalClienteManual), 2) : 0;
+  const utilidadTotal = round(totalBase - costoTotalFabricacion, 2);
   const margenGlobalPct =
     costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
+  const mostrarIva = input.mostrarIva ?? true;
+  const ivaBase = mostrarIva ? round(totalBase * (impuestos.iva / (1 + impuestos.iva)), 2) : 0;
+  const iva = ivaBase > 0 ? ivaBase : 0;
+  const subtotalNeto = round(totalBase - iva, 2);
 
   return {
-    subtotal: total,
+    subtotal: subtotalNeto,
     descuentoValor: 0,
-    neto: total,
-    iva: 0,
+    neto: subtotalNeto,
+    iva,
     flete: 0,
-    total,
+    total: totalBase,
     costoTotalFabricacion,
     margenGlobalPct,
     utilidadTotal,
-    totalClienteManual: hasManualTotal ? total : null,
+    totalClienteManual: hasManualTotal ? totalBase : null,
   };
 }
 
@@ -335,6 +337,7 @@ export function calculateWorkflowTotalsForPricingMode(
     | "costoTotalFabricacion"
     | "margenGlobalPct"
     | "totalClienteManual"
+    | "mostrarIva"
   >
 ) {
   const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
@@ -344,6 +347,7 @@ export function calculateWorkflowTotalsForPricingMode(
       costoTotalFabricacion: draft.costoTotalFabricacion,
       margenGlobalPct: draft.margenGlobalPct,
       totalClienteManual: draft.totalClienteManual,
+      mostrarIva: draft.mostrarIva,
     });
   }
 
@@ -375,6 +379,7 @@ export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
     margenGlobalPct: 100,
     utilidadTotal: 0,
     totalClienteManual: null,
+    mostrarIva: true,
   };
 }
 
@@ -428,6 +433,7 @@ export function createCotizacionRecord(
     updatedAt: timestamp,
     items: input.draft.items,
     quotePricingMode,
+    mostrarIva: input.draft.mostrarIva ?? true,
     ...totals,
   };
 }
@@ -452,6 +458,7 @@ export function cloneCotizacionAsDraft(record: CotizacionWorkflowRecord, now = n
       margenGlobalPct: record.margenGlobalPct,
       utilidadTotal: record.utilidadTotal,
       totalClienteManual: record.totalClienteManual,
+      mostrarIva: record.mostrarIva ?? true,
     },
     estado: "borrador",
     now,

@@ -107,14 +107,9 @@ export function preparePasoTresGuardado({
 
   if (estado === "creada" && normalizeQuotePricingMode(draftToSave.quotePricingMode) === "total_global") {
     const totals = calculateGlobalQuoteWorkflowTotals({
-      costoTotalFabricacion: draftToSave.costoTotalFabricacion,
-      margenGlobalPct: draftToSave.margenGlobalPct,
       totalClienteManual: draftToSave.totalClienteManual,
+      mostrarIva: draftToSave.mostrarIva,
     });
-
-    if (totals.costoTotalFabricacion <= 0) {
-      finalErrors.costoTotalFabricacion = "Ingresa el costo total de fabricacion.";
-    }
 
     if (totals.total <= 0) {
       finalErrors.totalClienteManual = "Ingresa un total final para el cliente.";
@@ -174,11 +169,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         setGlobalError("Completa los campos obligatorios antes de guardar.");
         if (step1Errors.step1) {
           setStep(1);
-        } else if (
-          finalErrors.costoTotalFabricacion ||
-          finalErrors.margenGlobalPct ||
-          finalErrors.totalClienteManual
-        ) {
+        } else if (finalErrors.totalClienteManual) {
           setStep(3);
         } else if (estado === "creada") {
           setStep(2);

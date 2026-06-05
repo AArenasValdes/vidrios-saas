@@ -82,16 +82,10 @@ export const COMPONENT_CATALOG = [
     title: "Especiales",
     items: [
       {
-        tipo: "Componente manual",
-        descripcion: "Trabajo libre para piezas no catalogadas o cobro manual.",
-        sistemas: ["Manual"],
-        configuraciones: ["Libre"],
-      },
-      {
-        tipo: "Proyecto a medida",
-        descripcion: "Trabajo especial con definicion propia.",
-        sistemas: ["A medida"],
-        configuraciones: ["Por definir"],
+        tipo: "Trabajo personalizado",
+        descripcion: "Trabajo libre para alcances especiales o fabricacion a medida.",
+        sistemas: ["A medida", "Manual", "Por definir"],
+        configuraciones: ["Libre", "Por definir"],
       },
       {
         tipo: "Fachada vidriada",
@@ -116,12 +110,6 @@ export const COMPONENT_CATALOG = [
         descripcion: "Cubiertas, lucarnas y techos vidriados.",
         sistemas: ["Fijo", "Proyectante"],
         configuraciones: ["Con perfileria", "Especial"],
-      },
-      {
-        tipo: "Otro trabajo especial",
-        descripcion: "Uso libre para trabajos no habituales.",
-        sistemas: ["A medida"],
-        configuraciones: ["Por definir"],
       },
     ],
   },
@@ -149,7 +137,10 @@ const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   [normalizeCatalogText("Ventana fija")]: normalizeCatalogText("Paño fijo"),
   "cierre logia balcon": "cierre terraza logia",
   "cierre terraza logia balcon": "cierre terraza logia",
-  otro: "otro trabajo especial",
+  "componente manual": "trabajo personalizado",
+  "proyecto a medida": "trabajo personalizado",
+  "otro trabajo especial": "trabajo personalizado",
+  otro: "trabajo personalizado",
 };
 
 function normalizeComponentKey(value: string) {

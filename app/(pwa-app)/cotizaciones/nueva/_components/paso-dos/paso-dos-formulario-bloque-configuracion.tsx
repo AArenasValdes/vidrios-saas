@@ -91,6 +91,11 @@ export function PasoDosFormularioBloqueConfiguracion({
       (isMobileViewport ? [1, 2, 4, 8] : [1, 2, 3, 4]).filter((preset) => preset <= availableSlots)
     )
   );
+  const isTrabajoPersonalizado = componentForm.tipo === "Trabajo personalizado";
+  const trabajoPersonalizadoTexto =
+    componentForm.descripcion.trim() ||
+    componentForm.nombre.trim() ||
+    "Describe el trabajo para que aparezca como alcance comercial.";
 
   const linePricingBlock = (
     <>
@@ -385,11 +390,24 @@ export function PasoDosFormularioBloqueConfiguracion({
 
         <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
           <div className={s.quickPreviewThumb}>
-            <div className={s.quickPreviewThumbSvg} dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }} />
+            {isTrabajoPersonalizado ? (
+              <div className={s.customWorkPreview}>
+                <strong>Descripcion del trabajo</strong>
+                <span>{trabajoPersonalizadoTexto}</span>
+              </div>
+            ) : (
+              <div className={s.quickPreviewThumbSvg} dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }} />
+            )}
           </div>
           <div className={s.quickPreviewBody}>
             <strong>{componentForm.tipo}</strong>
-            {!isMobileViewport ? <span>Vista rapida. Las medidas y valores finales se ajustan abajo.</span> : null}
+            {!isMobileViewport ? (
+              <span>
+                {isTrabajoPersonalizado
+                  ? "Detalle libre para trabajos especiales o fabricacion a medida."
+                  : "Vista rapida. Las medidas y valores finales se ajustan abajo."}
+              </span>
+            ) : null}
           </div>
         </div>
 

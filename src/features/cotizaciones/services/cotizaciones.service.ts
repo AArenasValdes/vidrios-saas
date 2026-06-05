@@ -254,6 +254,7 @@ function mapCotizacionToWorkflowRecord(input: {
     margenGlobalPct,
     utilidadTotal,
     totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
+    mostrarIva: input.cotizacion.iva ? (input.cotizacion.iva > 0) : true,
   };
 }
 
@@ -724,10 +725,10 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
     return mapCotizacionToWorkflowRecord({
       cotizacion,
       clientId: project?.clienteId ?? null,
-      clientName: client?.nombre ?? "Cliente sin nombre",
+      clientName: client?.nombre ?? (cotizacion.proyectoId ? "Cliente sin nombre" : "Cliente"),
       clientPhone: client?.telefono ?? "",
       clientAddress: client?.direccion ?? "",
-      projectTitle: project?.titulo ?? "Proyecto sin nombre",
+      projectTitle: project?.titulo ?? (cotizacion.proyectoId ? "Proyecto sin nombre" : "Cotización"),
     });
   }
 
@@ -764,15 +765,25 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       throw new Error("La cotizacion debe tener al menos un componente");
     }
 
-    const clientResult = await ensureClient({
-      organizationId: input.organizationId,
-      existingClientId: input.existingClientId,
-      nombre: input.draft.clienteNombre,
-      telefono: input.draft.clienteTelefono,
-      direccion: input.draft.direccion,
-    });
-    const rollbackStack: Array<(() => Promise<void>) | undefined> = [clientResult.rollback];
-    const client = clientResult.record;
+    const isAnonymousClient =
+      input.draft.clienteNombre.trim() === "Cliente" && !input.existingClientId;
+
+    let clientResult: EnsuredEntity<Cliente> | null = null;
+    let projectResult:
+      | EnsuredEntity<Awaited<ReturnType<ProjectsRepository["create"]>>>
+      | null = null;
+    const rollbackStack: Array<(() => Promise<void>) | undefined> = [];
+
+    if (!isAnonymousClient) {
+      clientResult = await ensureClient({
+        organizationId: input.organizationId,
+        existingClientId: input.existingClientId,
+        nombre: input.draft.clienteNombre,
+        telefono: input.draft.clienteTelefono,
+        direccion: input.draft.direccion,
+      });
+      rollbackStack.push(clientResult.rollback);
+    }
 
     try {
       const withTimeout = <T>(promise: Promise<T>, label: string): Promise<T> => {
@@ -792,21 +803,23 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         });
       };
 
-      const projectResult = await withTimeout(
-        ensureProject({
-          organizationId: input.organizationId,
-          existingProjectId: input.existingProjectId,
-          clientId: client.id,
-          clientName: client.nombre,
-          titulo: input.draft.obra,
-        }),
-        "crear o actualizar proyecto"
-      );
+      if (!isAnonymousClient && clientResult) {
+        projectResult = await withTimeout(
+          ensureProject({
+            organizationId: input.organizationId,
+            existingProjectId: input.existingProjectId,
+            clientId: clientResult.record.id,
+            clientName: clientResult.record.nombre,
+            titulo: input.draft.obra,
+          }),
+          "crear o actualizar proyecto"
+        );
 
-      if (projectResult.rollback) {
-        rollbackStack.push(projectResult.rollback);
+        if (projectResult.rollback) {
+          rollbackStack.push(projectResult.rollback);
+        }
       }
-      const project = projectResult.record;
+      const proyectoId = projectResult?.record?.id ?? null;
 
       const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
       const totals = calculateWorkflowTotalsForPricingMode({
@@ -816,7 +829,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       });
       const costoTotal =
         quotePricingMode === "total_global"
-          ? totals.costoTotalFabricacion
+          ? 0
           : round(
               normalizedItems.reduce(
                 (accumulator, item) => accumulator + item.costoProveedorTotal,
@@ -825,10 +838,10 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
               2
             );
       const utilidadTotal =
-        quotePricingMode === "total_global" ? totals.utilidadTotal : round(totals.neto - costoTotal, 2);
+        quotePricingMode === "total_global" ? 0 : round(totals.neto - costoTotal, 2);
       const margenPct =
         quotePricingMode === "total_global"
-          ? totals.margenGlobalPct
+          ? 0
           : costoTotal === 0
             ? 0
             : round((utilidadTotal / costoTotal) * 100, 2);
@@ -839,7 +852,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
 
       const cotizacionInput: CrearCotizacionInput = {
         organizationId: input.organizationId,
-        proyectoId: project.id,
+        proyectoId,
         numero: codigo,
         estado: input.estado,
         pricingMode: quotePricingMode,

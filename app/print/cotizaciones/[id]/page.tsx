@@ -973,7 +973,12 @@ export default function CotizacionPrintPage() {
 
                     </div>
 
-                    <div className={s.componentBody}>
+                    {item.descripcion?.trim() ? (
+                      <p className={s.itemDescription}>{item.descripcion.trim()}</p>
+                    ) : null}
+
+                    <div className={`${s.componentBody} ${item.tipo === "Trabajo personalizado" ? s.componentBodyFull : ""}`}>
+                      {item.tipo === "Trabajo personalizado" ? null : (
                       <div className={s.drawingColumn}>
                         <div className={s.drawingFrame}>
                           <div
@@ -983,6 +988,7 @@ export default function CotizacionPrintPage() {
                         </div>
                         <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
                       </div>
+                      )}
 
                       <div className={s.componentInfoColumn}>
                         <div className={s.specsColumn}>

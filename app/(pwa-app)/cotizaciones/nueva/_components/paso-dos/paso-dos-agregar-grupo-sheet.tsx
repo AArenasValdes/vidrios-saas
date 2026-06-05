@@ -38,6 +38,8 @@ type Props = {
   onEnableCustomQuantity: () => void;
   onCustomQuantityChange: (value: string) => void;
   onMaterialChange: (material: PasoDosGrupoDraft["material"]) => void;
+  onNombreChange: (value: string) => void;
+  onDescripcionChange: (value: string) => void;
   onSistemaChange: (value: string) => void;
   onSheetSchemeChange: (value: string) => void;
   onSheetVariantChange: (value: string) => void;
@@ -101,6 +103,8 @@ export function PasoDosAgregarGrupoSheet({
   onEnableCustomQuantity,
   onCustomQuantityChange,
   onMaterialChange,
+  onNombreChange,
+  onDescripcionChange,
   onSistemaChange,
   onSheetSchemeChange,
   onSheetVariantChange,
@@ -121,6 +125,7 @@ export function PasoDosAgregarGrupoSheet({
     sistema: draft.sistema,
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -269,6 +274,38 @@ export function PasoDosAgregarGrupoSheet({
 
           {paso === 4 ? (
             <div className={s.groupSheetConfigStack}>
+              {isTrabajoPersonalizado ? (
+                <section className={s.formSection}>
+                  <div className={s.formSectionHead}>
+                    <span className={s.formSectionEyebrow}>Descripcion del trabajo</span>
+                    <strong>Redacta el alcance para el cliente</strong>
+                  </div>
+                  <div className={s.formGrid2}>
+                    <label className={s.field}>
+                      <span className={s.label}>Nombre del trabajo</span>
+                      <input
+                        className={s.input}
+                        maxLength={120}
+                        placeholder="Ej: Cierre terraza a medida"
+                        value={draft.nombre}
+                        onChange={(event) => onNombreChange(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <label className={s.field}>
+                    <span className={s.label}>Descripcion para cliente</span>
+                    <textarea
+                      className={s.textarea}
+                      maxLength={360}
+                      placeholder="Ej: Cierre de terraza con 4 hojas, sistema especial, fabricacion a medida e instalacion incluida."
+                      rows={4}
+                      value={draft.descripcion}
+                      onChange={(event) => onDescripcionChange(event.target.value)}
+                    />
+                  </label>
+                </section>
+              ) : null}
+
               <section className={s.formSection}>
                 <div className={s.formSectionHead}>
                   <span className={s.formSectionEyebrow}>Material</span>

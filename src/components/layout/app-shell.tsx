@@ -12,7 +12,7 @@ import {
 import type { IconType } from "react-icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
   LuBell,
@@ -350,6 +350,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, rol, signOut, organizacionId, cargando: authCargando } = useAuth();
   const { profile } = useOrganizationProfile();
+  const reduceMotion = useReducedMotion();
   const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(() =>
     pathname.startsWith("/solicitudes")
   );
@@ -1392,17 +1393,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
               showCloseButton
             >
               <motion.div
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
                 className={s.trialNoticeMotion}
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
+                initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.98 }}
+                transition={reduceMotion ? undefined : { duration: 0.22, ease: "easeOut" }}
               >
                 <DialogHeader className={s.trialNoticeHeader}>
                   <motion.span
-                    animate={{ rotate: 0, scale: 1 }}
+                    animate={reduceMotion ? undefined : { rotate: 0, scale: 1 }}
                     className={s.trialNoticeIcon}
-                    initial={{ rotate: -8, scale: 0.92 }}
-                    transition={{ duration: 0.24, ease: "easeOut" }}
+                    initial={reduceMotion ? false : { rotate: -8, scale: 0.92 }}
+                    transition={reduceMotion ? undefined : { duration: 0.24, ease: "easeOut" }}
                   >
                     <LuSparkles aria-hidden />
                   </motion.span>
@@ -1428,17 +1429,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
           >
             <DrawerContent className={s.trialDrawerContent}>
               <motion.div
-                animate={{ opacity: 1, y: 0 }}
+                animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                 className={s.trialDrawerInner}
-                initial={{ opacity: 0, y: 12 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                transition={reduceMotion ? undefined : { duration: 0.22, ease: "easeOut" }}
               >
                 <DrawerHeader className={s.trialNoticeHeader}>
                   <motion.span
-                    animate={{ rotate: 0, scale: 1 }}
+                    animate={reduceMotion ? undefined : { rotate: 0, scale: 1 }}
                     className={s.trialNoticeIcon}
-                    initial={{ rotate: -8, scale: 0.92 }}
-                    transition={{ duration: 0.24, ease: "easeOut" }}
+                    initial={reduceMotion ? false : { rotate: -8, scale: 0.92 }}
+                    transition={reduceMotion ? undefined : { duration: 0.24, ease: "easeOut" }}
                   >
                     <LuSparkles aria-hidden />
                   </motion.span>

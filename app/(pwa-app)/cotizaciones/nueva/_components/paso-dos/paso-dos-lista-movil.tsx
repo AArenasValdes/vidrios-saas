@@ -4,6 +4,7 @@ import { LuFileText, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
 
 import { COLOR_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import {
@@ -18,6 +19,7 @@ type Props = {
   items: CotizacionWorkflowItem[];
   subtotal: string;
   total: string;
+  quotePricingMode: QuotePricingMode;
   isWizardOpen: boolean;
   adjustedItems: Record<string, string>;
   onOpenWizard: () => void;
@@ -31,6 +33,7 @@ export function PasoDosListaMovil({
   items,
   subtotal,
   total,
+  quotePricingMode,
   isWizardOpen,
   adjustedItems,
   onOpenWizard,
@@ -39,7 +42,10 @@ export function PasoDosListaMovil({
   onEditItem,
   onRemoveItem,
 }: Props) {
-  const pendingCount = items.filter(isItemIncomplete).length;
+  const isGlobalPricing = quotePricingMode === "total_global";
+  const pendingCount = isGlobalPricing ? 0 : items.filter(isItemIncomplete).length;
+  const itemNoun = isGlobalPricing ? "trabajo" : "componente";
+  const itemNounPlural = isGlobalPricing ? "trabajos" : "componentes";
 
   return (
     <>
@@ -47,10 +53,10 @@ export function PasoDosListaMovil({
         <div className={s.stepTwoMobileLoadedHeader}>
           <div className={s.stepTwoMobileLoadedHeaderCopy}>
             <span className={s.cardLabel}>Paso 2 / Componentes</span>
-            <strong>Componentes cargados</strong>
+            <strong>{isGlobalPricing ? "Trabajos cargados" : "Componentes cargados"}</strong>
             <div className={s.stepTwoMobileLoadedStats}>
               <span className={s.stepTwoMobileLoadedStat}>
-                {items.length} componente{items.length !== 1 ? "s" : ""}
+                {items.length} {items.length === 1 ? itemNoun : itemNounPlural}
               </span>
               <span
                 className={`${s.stepTwoMobileLoadedStat} ${
@@ -66,7 +72,9 @@ export function PasoDosListaMovil({
             </div>
             {items.length > 0 ? (
               <p className={s.stepTwoMobileLoadedSubtle}>
-                {pendingCount > 0
+                {isGlobalPricing
+                  ? "Total se define en el resumen."
+                  : pendingCount > 0
                   ? "Completa los pendientes o sigue agregando piezas."
                   : "Todo listo para pasar al resumen."}
               </p>
@@ -86,13 +94,17 @@ export function PasoDosListaMovil({
 
         {items.length === 0 ? (
           <div className={s.stepTwoMobileEmptyState}>
-            <strong>Agrega tu primer componente</strong>
-            <span>Empieza por el tipo y luego completa medidas, vidrio y valor.</span>
+            <strong>Agrega tu primer {itemNoun}</strong>
+            <span>
+              {isGlobalPricing
+                ? "Empieza por el tipo y luego completa la descripcion del alcance."
+                : "Empieza por el tipo y luego completa medidas, vidrio y valor."}
+            </span>
           </div>
         ) : (
           <div className={s.stepTwoMobileItemStack}>
             {items.map((item) => {
-              const incomplete = isItemIncomplete(item);
+              const incomplete = isGlobalPricing ? false : isItemIncomplete(item);
               const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
               const itemType = getItemType(item);
               const displayCode = item.codigo || "--";
@@ -133,6 +145,11 @@ export function PasoDosListaMovil({
                         </span>
                       </div>
                       <span className={s.stepTwoMobileItemName}>{itemType}</span>
+                      {isGlobalPricing && item.descripcion ? (
+                        <span className={s.stepTwoMobileItemAdjustedHint}>
+                          {repairBrokenText(item.descripcion)}
+                        </span>
+                      ) : null}
                       {adjustedFromBaseCode ? (
                         <span className={s.stepTwoMobileItemAdjustedHint}>
                           Sale de {adjustedFromBaseCode}
@@ -163,7 +180,9 @@ export function PasoDosListaMovil({
                     <span>
                       {item.ancho && item.alto
                         ? `${item.ancho} x ${item.alto} mm`
-                        : "Medidas pendientes"}
+                        : isGlobalPricing
+                          ? "Medidas opcionales"
+                          : "Medidas pendientes"}
                     </span>
                     <span className={s.stepTwoMobileItemUnits}>
                       {item.cantidad} {item.cantidad === 1 ? "unidad" : "unidades"}
@@ -209,9 +228,11 @@ export function PasoDosListaMovil({
                         ) : null}
                       </div>
                       <div className={s.stepTwoMobileItemFooter}>
-                        <span className={s.stepTwoMobileItemFooterLabel}>Venta</span>
+                        <span className={s.stepTwoMobileItemFooterLabel}>
+                          {isGlobalPricing ? "Total" : "Venta"}
+                        </span>
                         <div className={s.stepTwoMobileItemPrice}>
-                          {formatMoney(item.precioTotal)}
+                          {isGlobalPricing ? "Se define en resumen" : formatMoney(item.precioTotal)}
                         </div>
                       </div>
                     </>
@@ -227,9 +248,13 @@ export function PasoDosListaMovil({
         <footer className={s.stepTwoMobileFooterBar}>
           <div className={s.stepTwoMobileFooterTotals}>
             <span>
-              {items.length} componente{items.length !== 1 ? "s" : ""} - Subtotal {subtotal}
+              {quotePricingMode === "total_global"
+                ? `${items.length} trabajo${items.length !== 1 ? "s" : ""} agregado${items.length !== 1 ? "s" : ""}`
+                : `${items.length} componente${items.length !== 1 ? "s" : ""} - Subtotal ${subtotal}`}
             </span>
-            <strong>Total {total}</strong>
+            <strong>
+              {quotePricingMode === "total_global" ? "Total se define en el resumen" : `Total ${total}`}
+            </strong>
           </div>
           <div className={s.stepTwoMobileFooterActions}>
             <button className={s.btnPrimary} onClick={onOpenWizard} type="button">

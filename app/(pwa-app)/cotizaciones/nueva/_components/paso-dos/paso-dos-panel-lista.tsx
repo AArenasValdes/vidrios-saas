@@ -165,12 +165,16 @@ export function PasoDosPanelLista({
                   } ${cardModeClass}`}
                 >
                   <div className={s.stepTwoListThumb}>
-                    <div
-                      className={s.stepTwoListThumbSvg}
-                      dangerouslySetInnerHTML={{
-                        __html: item.svgMarkup,
-                      }}
-                    />
+                    {item.svgMarkup ? (
+                      <div
+                        className={s.stepTwoListThumbSvg}
+                        dangerouslySetInnerHTML={{
+                          __html: item.svgMarkup,
+                        }}
+                      />
+                    ) : (
+                      <div className={s.customWorkThumb}>Descripcion</div>
+                    )}
                   </div>
 
                   <div className={s.stepTwoListBody}>

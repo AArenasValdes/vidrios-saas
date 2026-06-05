@@ -1551,6 +1551,90 @@
   overflow-anchor: none;
 }
 
+.stepTwoModeChoice {
+  display: grid;
+  gap: 1rem;
+}
+
+.stepTwoModeChoiceHead {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stepTwoModeChoiceHead h2 {
+  margin: 0;
+  color: #14213d;
+  font-size: clamp(1.35rem, 4.5vw, 2rem);
+  line-height: 1.15;
+}
+
+.stepTwoModeChoiceHead p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.stepTwoModeChoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stepTwoModeChoiceCard {
+  min-width: 0;
+  padding: 1.2rem;
+  border-radius: 18px;
+  border: 1px solid #d8e2ef;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  box-shadow: 0 12px 28px rgba(27, 47, 86, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.stepTwoModeChoiceCard h3 {
+  margin: 0;
+  color: #15294d;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.stepTwoModeChoiceCard p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.stepTwoModeChoiceCard .btnPrimary {
+  margin-top: auto;
+  width: 100%;
+  justify-content: center;
+}
+
+.stepTwoModeChip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #d8e2ef;
+  background: #f8fbff;
+  color: #244167;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.stepTwoModeChip button {
+  all: unset;
+  cursor: pointer;
+  color: #1f63c4;
+  font-weight: 800;
+}
+
 .stepTwoFormCard {
   min-width: 0;
   max-height: calc(100vh - 8rem);
@@ -1707,6 +1791,32 @@
 .stepTwoFormCard .svgPanel {
   border-radius: 20px;
   padding: 1.1rem 1.05rem;
+}
+
+.customWorkPreview {
+  width: 100%;
+  min-height: 90px;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid #d8e2ef;
+  background: #ffffff;
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.customWorkPreview strong {
+  color: #15294d;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.customWorkPreview span {
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .stepTwoFormCard .cardFooter {
@@ -1875,6 +1985,27 @@
   padding: 1.05rem 1.1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.025);
+}
+
+.stepTwoGlobalSummary {
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 0.3rem;
+  color: #ffffff;
+}
+
+.stepTwoGlobalSummary span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.stepTwoGlobalSummary strong {
+  font-size: 1.05rem;
+  line-height: 1.25;
 }
 
 .stepTwoTotalCell {
@@ -2074,6 +2205,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.customWorkThumb {
+  width: 100%;
+  min-height: 54px;
+  padding: 0.35rem;
+  border-radius: 10px;
+  border: 1px solid rgba(151, 171, 205, 0.24);
+  background: rgba(255, 255, 255, 0.82);
+  color: #244167;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.15;
 }
 
 .stepTwoListBody {
@@ -4938,6 +5085,70 @@
   font-weight: 800;
 }
 
+.ivaTogglePill {
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.ivaPillOption {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.22rem 0.55rem;
+  white-space: nowrap;
+  color: rgba(255,255,255,0.5);
+  transition: color 0.15s, background 0.15s;
+  border-radius: 999px;
+}
+.ivaPillOption:hover { color: rgba(255,255,255,0.8); }
+.ivaPillActive {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+.ivaTogglePillLight {
+  display: inline-flex;
+  border-radius: 999px;
+  background: #eef4fb;
+  overflow: hidden;
+  border: 1px solid #d7e3f1;
+}
+
+.ivaPillOptionLight {
+  all: unset;
+  cursor: pointer;
+  min-height: 34px;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ivaPillOptionLight:hover {
+  color: #244167;
+}
+
+.ivaPillActiveLight {
+  background: #ffffff;
+  color: #1f63c4;
+  box-shadow: 0 4px 10px rgba(27, 47, 86, 0.1);
+}
+.ivaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.ivaRow > :first-child { flex-shrink: 0; }
+
 .finalStageGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -5447,6 +5658,7 @@
   .summaryAdjustmentHeader { flex-direction: column; }
   .summaryAdjustmentValue { white-space: normal; }
   .finalStageGrid { grid-template-columns: 1fr; }
+  .stepTwoModeChoiceGrid { grid-template-columns: 1fr; }
   .stepTwoLayout { grid-template-columns: 1fr; }
   .stepTwoPanel {
     position: static;

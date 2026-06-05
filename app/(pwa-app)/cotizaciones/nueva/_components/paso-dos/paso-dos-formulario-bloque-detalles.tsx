@@ -17,10 +17,23 @@ export function PasoDosFormularioBloqueDetalles({
   isMobileViewport,
   onComponentChange,
 }: Props) {
+  const isTrabajoPersonalizado = componentForm.tipo === "Trabajo personalizado";
+
   return (
-    <details className={`${s.formSection} ${s.advancedSection} ${s.stepTwoSectionSoft}`}>
+    <details
+      className={`${s.formSection} ${s.advancedSection} ${
+        isTrabajoPersonalizado ? s.stepTwoSectionStrong : s.stepTwoSectionSoft
+      }`}
+      open={isTrabajoPersonalizado ? true : undefined}
+    >
       <summary className={`${s.mobileMoreButton} ${s.advancedSummaryButton}`}>
-        {isMobileViewport ? (editingItemId ? "Codigo y nombre" : "Nombre del espacio") : "Codigo, cantidad y detalles"}
+        {isTrabajoPersonalizado
+          ? "Descripcion del trabajo"
+          : isMobileViewport
+            ? editingItemId
+              ? "Codigo y nombre"
+              : "Nombre del espacio"
+            : "Codigo, cantidad y detalles"}
       </summary>
 
       <div className={s.formGrid2}>
@@ -59,31 +72,51 @@ export function PasoDosFormularioBloqueDetalles({
 
       <div className={s.formGrid2}>
         <label className={s.field}>
-          <span className={s.label}>{isMobileViewport ? "Espacio o ubicacion (opcional)" : "Nombre visible"}</span>
+          <span className={s.label}>
+            {isTrabajoPersonalizado
+              ? "Nombre del trabajo"
+              : isMobileViewport
+                ? "Espacio o ubicacion (opcional)"
+                : "Nombre visible"}
+          </span>
           <input
             className={`${s.input} ${fieldErrors.nombre ? s.inputError : ""}`}
             value={componentForm.nombre}
             onChange={(event) => onComponentChange("nombre", event.target.value)}
-            placeholder={isMobileViewport ? "Ej: Living, cocina, baño" : "Ej: Ventana living"}
+            placeholder={
+              isTrabajoPersonalizado
+                ? "Ej: Cierre terraza a medida"
+                : isMobileViewport
+                  ? "Ej: Living, cocina, bano"
+                  : "Ej: Ventana living"
+            }
           />
           <span className={s.helpText}>
-            {isMobileViewport
-              ? `Si lo dejas vacio, se vera como ${buildAutoComponentName(componentForm)}.`
-              : `Opcional. Si lo dejas vacio, usamos ${buildAutoComponentName(componentForm)}.`}
+            {isTrabajoPersonalizado
+              ? "Este nombre aparece como detalle del alcance."
+              : isMobileViewport
+                ? `Si lo dejas vacio, se vera como ${buildAutoComponentName(componentForm)}.`
+                : `Opcional. Si lo dejas vacio, usamos ${buildAutoComponentName(componentForm)}.`}
           </span>
         </label>
       </div>
 
-      {!isMobileViewport || editingItemId ? (
+      {!isMobileViewport || editingItemId || isTrabajoPersonalizado ? (
         <div className={s.formGrid2}>
           <label className={s.field}>
-            <span className={s.label}>Descripcion comercial</span>
+            <span className={s.label}>
+              {isTrabajoPersonalizado ? "Descripcion para cliente" : "Descripcion comercial"}
+            </span>
             <textarea
               className={s.textarea}
-              rows={2}
+              rows={isTrabajoPersonalizado ? 4 : 2}
               value={componentForm.descripcion}
               onChange={(event) => onComponentChange("descripcion", event.target.value)}
-              placeholder="Ej: Ventana corredera 2 hojas color negro linea S60, vidrio 5mm."
+              placeholder={
+                isTrabajoPersonalizado
+                  ? "Ej: Cierre de terraza con 4 hojas, sistema especial, fabricacion a medida e instalacion incluida."
+                  : "Ej: Ventana corredera 2 hojas color negro linea S60, vidrio 5mm."
+              }
             />
           </label>
         </div>

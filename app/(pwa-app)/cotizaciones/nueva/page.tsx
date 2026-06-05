@@ -330,13 +330,24 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleQuotePricingModeChange = (mode: QuotePricingMode) => {
+    if (mode === quotePricingMode) {
+      return;
+    }
+
+    if (
+      draft.items.length > 0 &&
+      !window.confirm("Cambiar el modo conserva los componentes cargados y ajusta las reglas de precio. ¿Quieres cambiarlo?")
+    ) {
+      return;
+    }
+
     setDraft((current) => ({
       ...current,
       quotePricingMode: mode,
-      totalClienteManual:
-        mode === "total_global"
-          ? current.totalClienteManual ?? null
-          : null,
+      totalClienteManual: null,
+      costoTotalFabricacion: 0,
+      margenGlobalPct: 0,
+      utilidadTotal: 0,
     }));
     setFieldErrors((current) => ({
       ...current,
@@ -349,31 +360,19 @@ function NuevaCotizacionPageContent() {
     setGlobalError(null);
   };
 
-  const handleGlobalCostoFabricacionChange = (value: string) => {
-    const normalizedValue = normalizeCurrencyInput(value);
-
-    setDraft((current) => ({
-      ...current,
-      costoTotalFabricacion: normalizedValue ? Number(normalizedValue) : 0,
-    }));
-  };
-
-  const handleGlobalMargenChange = (value: string) => {
-    const normalizedValue = value.replace(/[^\d.]/g, "");
-
-    setDraft((current) => ({
-      ...current,
-      margenGlobalPct: normalizedValue ? Number(normalizedValue) : 0,
-      totalClienteManual: null,
-    }));
-  };
-
   const handleGlobalTotalClienteChange = (value: string) => {
     const normalizedValue = normalizeCurrencyInput(value);
 
     setDraft((current) => ({
       ...current,
       totalClienteManual: normalizedValue ? Number(normalizedValue) : null,
+    }));
+  };
+
+  const handleMostrarIvaChange = () => {
+    setDraft((current) => ({
+      ...current,
+      mostrarIva: !(current.mostrarIva ?? true),
     }));
   };
 
@@ -385,7 +384,16 @@ function NuevaCotizacionPageContent() {
   }
 
   function resolveStep1Draft(currentDraft: CotizacionWorkflowDraft) {
-    const nextDraft = withResolvedWorkflowObra(currentDraft);
+    let nextDraft = { ...currentDraft };
+
+    if (!nextDraft.clienteNombre.trim()) {
+      nextDraft.clienteNombre = "Cliente";
+      if (!nextDraft.obra.trim()) {
+        nextDraft.obra = "Cotización";
+      }
+    }
+
+    nextDraft = withResolvedWorkflowObra(nextDraft);
 
     if (nextDraft !== currentDraft) {
       setDraft(nextDraft);
@@ -559,6 +567,11 @@ function NuevaCotizacionPageContent() {
             isCustomScheme: false,
           },
         });
+
+        if (value === "Trabajo personalizado") {
+          next.descripcion = "";
+          next.nombre = "";
+        }
 
         return next;
       }
@@ -1298,10 +1311,8 @@ function NuevaCotizacionPageContent() {
     editingItemId,
     componentForm,
     quotePricingMode,
-    costoTotalFabricacion: CLP(totals.costoTotalFabricacion),
-    utilidadTotal: CLP(totals.utilidadTotal),
-    margenGlobalPct: String(totals.margenGlobalPct),
     totalClienteManual: totals.totalClienteManual,
+    mostrarIva: draft.mostrarIva ?? true,
     activeLineTemplates,
     globalError,
     isSavingQuickPriceTemplate,
@@ -1396,9 +1407,8 @@ function NuevaCotizacionPageContent() {
     onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
     onDraftFleteChange: handleDraftFleteChange,
-    onGlobalCostoFabricacionChange: handleGlobalCostoFabricacionChange,
-    onGlobalMargenChange: handleGlobalMargenChange,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
+    onMostrarIvaChange: handleMostrarIvaChange,
     formatCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
     stepTwoSummaryRef: pasoDosLista.resumenRef,
@@ -1480,6 +1490,8 @@ function NuevaCotizacionPageContent() {
               onSelectCantidad: pasoDosAgregarGrupoMovil.selectCantidad,
               onCantidadChange: pasoDosAgregarGrupoMovil.updateCantidad,
               onMaterialChange: pasoDosAgregarGrupoMovil.updateMaterial,
+              onNombreChange: pasoDosAgregarGrupoMovil.updateNombre,
+              onDescripcionChange: pasoDosAgregarGrupoMovil.updateDescripcion,
               onSelectLineTemplate: pasoDosAgregarGrupoMovil.selectLineTemplate,
               onApplyCreatedLineTemplate: pasoDosAgregarGrupoMovil.applyCreatedLineTemplate,
               onCreateLineTemplate: handleCreateMobileLineTemplate,
@@ -1516,6 +1528,8 @@ function NuevaCotizacionPageContent() {
           stepTwoSectionProps={{
             formulario: flujo.propsPasoDosFormulario,
             panel: flujo.propsPasoDosPanel,
+            onOpenCreator: handleOpenAddGroupSheet,
+            onSelectMode: handleQuotePricingModeChange,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}
@@ -1537,6 +1551,8 @@ function NuevaCotizacionPageContent() {
             onEnableCustomQuantity: pasoDosAgregarGrupo.enableCustomQuantity,
             onCustomQuantityChange: pasoDosAgregarGrupo.updateCustomQuantity,
             onMaterialChange: pasoDosAgregarGrupo.updateMaterial,
+            onNombreChange: pasoDosAgregarGrupo.updateNombre,
+            onDescripcionChange: pasoDosAgregarGrupo.updateDescripcion,
             onSistemaChange: pasoDosAgregarGrupo.updateSistema,
             onSheetSchemeChange: pasoDosAgregarGrupo.updateSheetScheme,
             onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,

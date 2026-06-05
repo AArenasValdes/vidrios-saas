@@ -277,8 +277,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos: `por_item` mantiene cotizacion por linea/medidas/precio por componente; `total_global` permite cargar componentes como detalle comercial y definir costo/margen/total final en Paso 3. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
-- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. En `total_global`, costo/margen/utilidad son internos y no deben salir en PDF, vista publica ni documento publico. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos: `por_item` mantiene cotizacion por linea/medidas/precio por componente; `total_global` se muestra como "Total del trabajo", permite cargar componentes como detalle comercial y define en Paso 3 solo el total final cliente + selector de IVA incluido/sin IVA. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
+- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---
 

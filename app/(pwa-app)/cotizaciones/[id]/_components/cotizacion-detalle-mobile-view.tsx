@@ -233,22 +233,7 @@ export function CotizacionDetalleMobileView({
         </section>
 
         <section className={s.totalsCard}>
-          {model.isTotalGlobal ? (
-            <>
-              <div className={s.totalRow}>
-                <span>Costo fabricación</span>
-                <strong>{model.globalCost}</strong>
-              </div>
-              <div className={s.totalRow}>
-                <span>Margen global</span>
-                <strong>{model.globalMargin}</strong>
-              </div>
-              <div className={s.totalRow}>
-                <span>Utilidad</span>
-                <strong>{model.globalUtility}</strong>
-              </div>
-            </>
-          ) : (
+          {model.isTotalGlobal ? null : (
             <>
               <div className={s.totalRow}>
                 <span>Subtotal</span>

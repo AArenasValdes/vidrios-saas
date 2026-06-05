@@ -56,32 +56,42 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(119000);
   });
 
-  it("calcula el total global desde costo de fabricacion y margen", () => {
+  it("mantiene el total final global y separa IVA incluido", () => {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      totalClienteManual: 600000,
+      mostrarIva: true,
+    });
+
+    expect(totals.total).toBe(600000);
+    expect(totals.iva).toBeCloseTo(95798.32, 2);
+    expect(totals.subtotal).toBeCloseTo(504201.68, 2);
+    expect(totals.neto).toBeCloseTo(504201.68, 2);
+    expect(totals.flete).toBe(0);
+    expect(totals.totalClienteManual).toBe(600000);
+  });
+
+  it("mantiene el total final global sin IVA", () => {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      totalClienteManual: 600000,
+      mostrarIva: false,
+    });
+
+    expect(totals.total).toBe(600000);
+    expect(totals.iva).toBe(0);
+    expect(totals.subtotal).toBe(600000);
+    expect(totals.neto).toBe(600000);
+  });
+
+  it("deja total global en cero si no hay total manual", () => {
     const totals = calculateGlobalQuoteWorkflowTotals({
       costoTotalFabricacion: 300000,
       margenGlobalPct: 100,
       totalClienteManual: null,
+      mostrarIva: true,
     });
 
-    expect(totals.costoTotalFabricacion).toBe(300000);
-    expect(totals.margenGlobalPct).toBe(100);
-    expect(totals.utilidadTotal).toBe(300000);
-    expect(totals.subtotal).toBe(600000);
-    expect(totals.neto).toBe(600000);
+    expect(totals.total).toBe(0);
     expect(totals.iva).toBe(0);
-    expect(totals.flete).toBe(0);
-    expect(totals.total).toBe(600000);
-  });
-
-  it("recalcula utilidad y margen cuando el total global se edita manualmente", () => {
-    const totals = calculateGlobalQuoteWorkflowTotals({
-      costoTotalFabricacion: 300000,
-      margenGlobalPct: 100,
-      totalClienteManual: 650000,
-    });
-
-    expect(totals.total).toBe(650000);
-    expect(totals.utilidadTotal).toBe(350000);
-    expect(totals.margenGlobalPct).toBeCloseTo(116.67, 2);
+    expect(totals.subtotal).toBe(0);
   });
 });

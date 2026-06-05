@@ -42,10 +42,8 @@ type UseFlujoNuevaCotizacionParams = {
   editingItemId: string | null;
   componentForm: ComponentFormState;
   quotePricingMode: QuotePricingMode;
-  costoTotalFabricacion: string;
-  utilidadTotal: string;
-  margenGlobalPct: string;
   totalClienteManual: number | null;
+  mostrarIva: boolean;
   activeLineTemplates: CotizacionLineTemplate[];
   globalError: string | null;
   isSavingQuickPriceTemplate: boolean;
@@ -118,9 +116,8 @@ type UseFlujoNuevaCotizacionParams = {
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
   onDraftFleteChange: (value: string) => void;
-  onGlobalCostoFabricacionChange: (value: string) => void;
-  onGlobalMargenChange: (value: string) => void;
   onGlobalTotalClienteChange: (value: string) => void;
+  onMostrarIvaChange: () => void;
   formatCurrencyInput: (value: string) => string;
   stepTwoListRef: React.RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: React.RefObject<HTMLDivElement | null>;
@@ -252,19 +249,16 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     flete: params.flete,
     total: params.total,
     quotePricingMode: params.quotePricingMode,
-    costoTotalFabricacion: params.costoTotalFabricacion,
-    utilidadTotal: params.utilidadTotal,
-    margenGlobalPct: params.margenGlobalPct,
     totalClienteManual: params.totalClienteManual,
+    mostrarIva: params.mostrarIva,
     globalError: params.globalError,
     savedRecord: params.savedRecord,
     lastSaveMode: params.lastSaveMode,
     isMobileViewport: params.isMobileViewport,
     isSaving: params.isSaving,
     onDraftFleteChange: params.onDraftFleteChange,
-    onGlobalCostoFabricacionChange: params.onGlobalCostoFabricacionChange,
-    onGlobalMargenChange: params.onGlobalMargenChange,
     onGlobalTotalClienteChange: params.onGlobalTotalClienteChange,
+    onMostrarIvaChange: params.onMostrarIvaChange,
     onValidezChange: params.onValidezChange,
     onGoToStepTwo: () => params.onGoToStep(2),
     onSaveQuote: params.onSaveQuote,

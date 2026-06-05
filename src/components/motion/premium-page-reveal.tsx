@@ -101,13 +101,14 @@ export function PremiumPageSection({
 
   return (
     <motion.div
-      className={joinClassNames(className)}
+      className={joinClassNames(className, "will-change-gpu")}
+      style={{ willChange: "transform, opacity, filter" }}
       variants={{
         hidden: {
           opacity: 0,
-          y: 18,
-          scale: 0.992,
-          filter: "blur(10px)",
+          y: 10,
+          scale: 0.995,
+          filter: "blur(4px)",
         },
         show: {
           opacity: 1,
@@ -115,7 +116,7 @@ export function PremiumPageSection({
           scale: 1,
           filter: "blur(0px)",
           transition: {
-            duration: 0.52,
+            duration: 0.32,
             ease: [0.22, 1, 0.36, 1],
           },
         },
