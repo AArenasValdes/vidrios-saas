@@ -1,5 +1,6 @@
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import { isPositiveNumber } from "./paso-dos-wizard-movil.utils";
@@ -24,7 +25,8 @@ export function buildPasoDosWizardMovilState({
   pricingMode,
   quotePricingMode = "por_item",
 }: Params): PasoDosWizardMovilState {
-  const activePricingMode = draft.pricingMode ?? pricingMode;
+  const isFreeValue = isFreeValueComponentType(draft.subtipo);
+  const activePricingMode = isFreeValue ? "precio_directo" : (draft.pricingMode ?? pricingMode);
   const cantidadDisplayValue = draft.usaCantidadPersonalizada
     ? draft.cantidadPersonalizada
     : String(draft.cantidad);
@@ -36,21 +38,28 @@ export function buildPasoDosWizardMovilState({
   const hasCustomDescription =
     (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
   const hasCommercialDetail =
-    isTrabajoPersonalizado
+    isFreeValue
       ? hasCustomDescription
-      : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "" && isPositiveNumber(draft.ancho) && isPositiveNumber(draft.alto);
+      : isTrabajoPersonalizado
+        ? hasCustomDescription
+        : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "" && isPositiveNumber(draft.ancho) && isPositiveNumber(draft.alto);
   const hasRequiredPrice =
     quotePricingMode === "total_global"
       ? true
-      : isPositiveNumber(draft.precio) &&
-        (activePricingMode === "precio_directo" || draft.margenPct !== "");
+      : isFreeValue
+        ? isPositiveNumber(draft.precio)
+        : isPositiveNumber(draft.precio) &&
+          (activePricingMode === "precio_directo" || draft.margenPct !== "");
   const canSubmitGroup = hasCommercialDetail && hasRequiredPrice;
   const priceLabel =
-    activePricingMode === "precio_directo" ? "Precio unitario" : "Costo base";
+    isFreeValue ? "Valor a cobrar"
+      : activePricingMode === "precio_directo" ? "Precio unitario" : "Costo base";
   const priceHelp =
-    activePricingMode === "precio_directo"
-      ? "Valor por unidad que cobras al cliente."
-      : "Base para calcular la venta con margen.";
+    isFreeValue
+      ? "El valor que ingreses sera el total visible para el cliente."
+      : activePricingMode === "precio_directo"
+        ? "Valor por unidad que cobras al cliente."
+        : "Base para calcular la venta con margen.";
 
   return {
     activePricingMode,

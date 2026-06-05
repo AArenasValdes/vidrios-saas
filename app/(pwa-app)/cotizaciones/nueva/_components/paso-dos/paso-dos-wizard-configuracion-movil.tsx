@@ -320,6 +320,7 @@ export function PasoDosWizardConfiguracionMovil({
           activePricingMode={activePricingMode}
           formattedPriceValue={formatCurrencyInput(draft.precio)}
           marginValue={draft.margenPct}
+          hideMargenOption
           onMargenChange={onMargenChange}
           onPrecioChange={onPrecioChange}
           onPricingModeChange={onPricingModeChange}

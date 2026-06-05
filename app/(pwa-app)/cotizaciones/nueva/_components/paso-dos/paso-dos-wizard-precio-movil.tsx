@@ -8,6 +8,7 @@ type Props = {
   activePricingMode: PricingMode;
   formattedPriceValue: string;
   marginValue: string;
+  hideMargenOption?: boolean;
   onMargenChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
@@ -19,12 +20,19 @@ export function PasoDosWizardPrecioMovil({
   activePricingMode,
   formattedPriceValue,
   marginValue,
+  hideMargenOption = false,
   onMargenChange,
   onPrecioChange,
   onPricingModeChange,
   priceHelp,
   priceLabel,
 }: Props) {
+  const pricingOptions = hideMargenOption
+    ? [{ value: "precio_directo" as const, label: "Valor directo" }]
+    : [
+        { value: "precio_directo" as const, label: "Valor directo" },
+        { value: "margen" as const, label: "Con margen" },
+      ];
   return (
     <div className={s.stepTwoMobileBlockPrecio}>
       <div className={s.stepTwoMobileBlockLabel}>Modo de precio</div>
@@ -33,12 +41,7 @@ export function PasoDosWizardPrecioMovil({
         role="radiogroup"
         aria-label="Modo de precio"
       >
-        {(
-          [
-            { value: "precio_directo", label: "Valor directo" },
-            { value: "margen", label: "Con margen" },
-          ] as const
-        ).map((option) => (
+        {pricingOptions.map((option) => (
           <button
             key={option.value}
             className={`${s.stepTwoMobilePricingRadio} ${
