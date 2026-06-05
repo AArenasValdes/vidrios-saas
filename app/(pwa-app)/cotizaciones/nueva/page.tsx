@@ -1718,7 +1718,6 @@ function NuevaCotizacionPageContent() {
             },
             onOpenCreator: handleOpenAddGroupSheet,
             onSelectMode: handleQuotePricingModeChange,
-            onOpenFreeValueItemForm: handleOpenFreeValueItemForm,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}
@@ -1749,7 +1748,6 @@ function NuevaCotizacionPageContent() {
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,
-            onOpenFreeValueItem: handleOpenFreeValueItemForm,
           }}
         />
       )}

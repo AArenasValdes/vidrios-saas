@@ -19,7 +19,6 @@ type PasoDosSeccionProps = {
   itemLibreForm: PasoDosItemLibreFormProps;
   onOpenCreator: () => void;
   onSelectMode: (mode: QuotePricingMode) => void;
-  onOpenFreeValueItemForm: () => void;
 };
 
 export function PasoDosSeccion({
@@ -28,7 +27,6 @@ export function PasoDosSeccion({
   itemLibreForm,
   onOpenCreator,
   onSelectMode,
-  onOpenFreeValueItemForm,
 }: PasoDosSeccionProps) {
   const showModeChoice =
     panel.items.length === 0 &&
@@ -45,7 +43,6 @@ export function PasoDosSeccion({
             onOpenCreator();
           }
         }}
-        onOpenFreeValueItemForm={onOpenFreeValueItemForm}
       />
     );
   }

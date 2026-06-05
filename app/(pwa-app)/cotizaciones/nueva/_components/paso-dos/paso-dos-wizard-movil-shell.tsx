@@ -378,10 +378,7 @@ export function PasoDosWizardMovil({
   return (
     <section className={s.stepTwoMobileExperience}>
       {!wizard.isOpen && items.length === 0 ? (
-        <PasoDosModoCotizacion
-          onSelectMode={handleSelectModeAndOpen}
-          onOpenFreeValueItemForm={onOpenFreeValueItemForm}
-        />
+        <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
       ) : (
         <PasoDosListaMovil
           isWizardOpen={wizard.isOpen}
@@ -436,10 +433,6 @@ export function PasoDosWizardMovil({
                   subtypePreviewMarkup={subtypePreviewMarkup}
                   onSelectCategoria={wizard.onSelectCategoria}
                   onSelectSubtipo={wizard.onSelectSubtipo}
-                  onOpenFreeValueItem={() => {
-                    handleCloseWizard();
-                    onOpenFreeValueItemForm();
-                  }}
                 />
               ) : null}
 

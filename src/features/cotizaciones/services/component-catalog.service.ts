@@ -120,6 +120,13 @@ export const COMPONENT_CATALOG = [
     title: "Reparacion y mantencion",
     items: [
       {
+        tipo: "Item libre con valor",
+        descripcion: "Redacta un trabajo, reparacion o cobro adicional.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
         tipo: "Cambio de vidrio",
         descripcion: "Cambio de vidrio existente.",
         sistemas: ["Unidad"],

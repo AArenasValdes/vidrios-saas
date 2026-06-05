@@ -1,6 +1,6 @@
 "use client";
 
-import { LuChevronRight, LuWrench } from "react-icons/lu";
+import { LuChevronRight } from "react-icons/lu";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
@@ -21,7 +21,6 @@ type Props = {
   subtypePreviewMarkup: Record<string, string>;
   onSelectCategoria: (categoria: PasoDosGrupoDraft["categoria"]) => void;
   onSelectSubtipo: (subtipo: string) => void;
-  onOpenFreeValueItem: () => void;
 };
 
 export function PasoDosWizardTipoMovil({
@@ -31,7 +30,6 @@ export function PasoDosWizardTipoMovil({
   subtypePreviewMarkup,
   onSelectCategoria,
   onSelectSubtipo,
-  onOpenFreeValueItem,
 }: Props) {
   return (
     <div className={s.stepTwoMobileCreatorStack}>
@@ -55,23 +53,6 @@ export function PasoDosWizardTipoMovil({
       </div>
 
       <div className={s.stepTwoMobileCreatorOptionList}>
-        <button
-          className={`${s.stepTwoMobileCreatorOptionCard} ${s.stepTwoMobileFreeValueCard}`}
-          onClick={onOpenFreeValueItem}
-          type="button"
-        >
-          <span className={s.stepTwoMobileSubtypeBadge} aria-hidden>
-            <LuWrench size={20} />
-          </span>
-          <div className={s.stepTwoMobileOptionCopy}>
-            <strong>Item libre con valor</strong>
-            <small>Redacta un trabajo, reparacion o cobro adicional.</small>
-          </div>
-          <span className={s.stepTwoMobileCreatorOptionArrow}>
-            <LuChevronRight aria-hidden size={18} />
-          </span>
-        </button>
-
         {subtypeOptions.map((subtipo) => (
           <button
             key={subtipo}
@@ -96,7 +77,11 @@ export function PasoDosWizardTipoMovil({
 
             <div className={s.stepTwoMobileOptionCopy}>
               <strong>{getVisibleSubtypeLabel(subtipo)}</strong>
-              <small>Agregar como grupo</small>
+              <small>
+                {subtipo === "Item libre con valor"
+                  ? "Rapido"
+                  : "Agregar como grupo"}
+              </small>
             </div>
 
             <span className={s.stepTwoMobileCreatorOptionArrow}>

@@ -542,6 +542,12 @@
 }
 .cardLabel { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-tertiary); }
 .cardTitle { font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0; }
+.cardSubtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
 .cardSubtle {
   margin: 0.3rem 0 0;
   font-size: 0.8rem;
@@ -1577,7 +1583,7 @@
 
 .stepTwoModeChoiceGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -2704,6 +2710,110 @@
   height: 1px;
   background: #e2e8f0;
   margin: 0.15rem 0;
+}
+
+/* --- IVA compact selector --- */
+
+.ivaCompactRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ivaCompactOption {
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ivaCompactOptionActive {
+  border-color: #1E88FF;
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.06), rgba(30, 136, 255, 0.02));
+  box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.1);
+}
+
+.ivaCompactLabel {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #243b6b;
+}
+
+.ivaCompactOptionActive .ivaCompactLabel {
+  color: #1E88FF;
+}
+
+/* --- Free value preview card --- */
+
+.freeValuePreviewCard {
+  margin-top: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.freeValuePreviewHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.freeValuePreviewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.freeValuePreviewBody strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+.freeValuePreviewBody p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.freeValuePreviewTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.55rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.freeValuePreviewTotal span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.freeValuePreviewTotal strong {
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+
+.freeValuePreviewBreakdown {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
 .groupSheetStepBlock,
