@@ -14,6 +14,7 @@ import {
   requiresCustomSheetDescription,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -92,6 +93,7 @@ export function PasoDosFormularioBloqueConfiguracion({
     )
   );
   const isTrabajoPersonalizado = componentForm.tipo === "Trabajo personalizado";
+  const isFreeValue = isTrabajoPersonalizado || isFreeValueComponentType(componentForm.tipo);
   const trabajoPersonalizadoTexto =
     componentForm.descripcion.trim() ||
     componentForm.nombre.trim() ||
@@ -252,6 +254,7 @@ export function PasoDosFormularioBloqueConfiguracion({
 
   return (
     <>
+      {!isFreeValue ? (
       <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Material</span>
@@ -288,7 +291,9 @@ export function PasoDosFormularioBloqueConfiguracion({
         </div>
         {fieldErrors.material ? <span className={s.fieldError}>{fieldErrors.material}</span> : null}
       </section>
+      ) : null}
 
+      {!isFreeValue ? (
       <section className={`${s.formSection} ${s.providerOnboardingCard} ${s.stepTwoSectionStrong}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Precio</span>
@@ -380,6 +385,7 @@ export function PasoDosFormularioBloqueConfiguracion({
           </div>
         ) : null}
       </section>
+      ) : null}
 
       <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
         <div className={s.formSectionHead}>

@@ -1577,7 +1577,7 @@
 
 .stepTwoModeChoiceGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -1606,6 +1606,18 @@
   color: #64748b;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+.stepTwoModeChoiceCardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1E88FF, #0B0F17);
+  color: #ffffff;
+  flex-shrink: 0;
 }
 
 .stepTwoModeChoiceCard .btnPrimary {
@@ -2636,6 +2648,62 @@
   border-color: rgba(79, 125, 212, 0.6);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(234, 241, 255, 0.96));
   box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.12);
+}
+
+.groupSheetOptionGridFull {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.groupSheetFreeValueCard {
+  min-height: 4.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border: 2px dashed #1E88FF;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.04), rgba(30, 136, 255, 0.01));
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.groupSheetFreeValueCard:hover {
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.08), rgba(30, 136, 255, 0.03));
+  border-color: #1565C0;
+}
+
+.groupSheetFreeValueCard strong {
+  color: #1E88FF;
+  font-size: 0.94rem;
+}
+
+.groupSheetFreeValueCard span {
+  color: #667085;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.groupSheetFreeValueIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1E88FF, #0B0F17);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.groupSheetDivider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0.15rem 0;
 }
 
 .groupSheetStepBlock,
@@ -4055,6 +4123,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.stepTwoMobileFreeValueCard {
+  border: 2px dashed #1E88FF;
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.04), rgba(30, 136, 255, 0.01));
+}
+
+.stepTwoMobileFreeValueCard:hover {
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.08), rgba(30, 136, 255, 0.03));
+  border-color: #1565C0;
 }
 
 .stepTwoMobileQuantityPanel {

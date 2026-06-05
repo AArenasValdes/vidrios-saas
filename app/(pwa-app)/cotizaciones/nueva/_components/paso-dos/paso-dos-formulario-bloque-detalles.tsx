@@ -1,6 +1,7 @@
 "use client";
 
 import { buildAutoComponentName } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -17,7 +18,8 @@ export function PasoDosFormularioBloqueDetalles({
   isMobileViewport,
   onComponentChange,
 }: Props) {
-  const isTrabajoPersonalizado = componentForm.tipo === "Trabajo personalizado";
+  const isTrabajoPersonalizado =
+    componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo);
 
   return (
     <details

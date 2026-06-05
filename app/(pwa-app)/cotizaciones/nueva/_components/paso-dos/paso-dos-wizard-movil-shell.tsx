@@ -154,6 +154,11 @@ const CATEGORY_OPTIONS: Array<{
     subtitle: "Proyectos fuera de catalogo",
     countLabel: `${getSubtypeOptionsForCategory("Especiales").length} tipos`,
   },
+  {
+    title: "Reparacion y mantencion",
+    subtitle: "Cambios de vidrio, mantencion, sellados",
+    countLabel: `${getSubtypeOptionsForCategory("Reparacion y mantencion").length} tipos`,
+  },
 ];
 
 const QUICK_QUANTITIES = [1, 2, 4, 6] as const;
@@ -210,7 +215,9 @@ export function PasoDosWizardMovil({
 
   const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
     formulario.onQuotePricingModeChange(mode);
-    handleOpenWizard();
+    if (mode === "por_item") {
+      handleOpenWizard();
+    }
   };
 
   const handleCloseWizard = () => {
@@ -371,7 +378,10 @@ export function PasoDosWizardMovil({
   return (
     <section className={s.stepTwoMobileExperience}>
       {!wizard.isOpen && items.length === 0 ? (
-        <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
+        <PasoDosModoCotizacion
+          onSelectMode={handleSelectModeAndOpen}
+          onOpenFreeValueItemForm={onOpenFreeValueItemForm}
+        />
       ) : (
         <PasoDosListaMovil
           isWizardOpen={wizard.isOpen}
@@ -426,6 +436,10 @@ export function PasoDosWizardMovil({
                   subtypePreviewMarkup={subtypePreviewMarkup}
                   onSelectCategoria={wizard.onSelectCategoria}
                   onSelectSubtipo={wizard.onSelectSubtipo}
+                  onOpenFreeValueItem={() => {
+                    handleCloseWizard();
+                    onOpenFreeValueItemForm();
+                  }}
                 />
               ) : null}
 

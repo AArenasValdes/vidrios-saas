@@ -53,6 +53,18 @@ export function PasoDosPanelHeader({
             </button>
           </>
         ) : null}
+        {items.length > 0 && quotePricingMode === "total_global" ? (
+          <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
+            <LuPlus aria-hidden />
+            Agregar trabajo
+          </button>
+        ) : null}
+        {items.length === 0 && quotePricingMode === "total_global" ? (
+          <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
+            <LuPlus aria-hidden />
+            Agregar primer trabajo
+          </button>
+        ) : null}
         {showFilterToggle ? (
           <button
             className={`${s.stepTwoFilterButton} ${effectiveShowOnlyPendingItems ? s.stepTwoFilterButtonActive : ""}`}

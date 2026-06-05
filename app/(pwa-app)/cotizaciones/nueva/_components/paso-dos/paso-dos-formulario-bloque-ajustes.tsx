@@ -1,6 +1,7 @@
 "use client";
 
 import { COLOR_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -15,6 +16,10 @@ export function PasoDosFormularioBloqueAjustes({
   isMobileViewport,
   onComponentChange,
 }: Props) {
+  if (componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo)) {
+    return null;
+  }
+
   return (
     <details className={`${s.formSection} ${s.advancedSection} ${s.stepTwoSectionSoft}`}>
       <summary className={`${s.mobileMoreButton} ${s.advancedSummaryButton}`}>

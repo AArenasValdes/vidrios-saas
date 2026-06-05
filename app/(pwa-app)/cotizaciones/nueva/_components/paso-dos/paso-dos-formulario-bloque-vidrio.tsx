@@ -3,6 +3,7 @@
 import { LuSearch } from "react-icons/lu";
 
 import { buildGlassValue } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -35,6 +36,10 @@ export function PasoDosFormularioBloqueVidrio({
   onGlassQueryChange,
   onGlassSelect,
 }: Props) {
+  if (componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo)) {
+    return null;
+  }
+
   return (
     <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
       <div className={s.formSectionHead}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { LuChevronLeft, LuPlus, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuPlus, LuWrench, LuX } from "react-icons/lu";
 
 import {
   COMPONENT_TYPE_GROUPS,
@@ -45,6 +45,7 @@ type Props = {
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onOpenFreeValueItem: () => void;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
 };
@@ -110,6 +111,7 @@ export function PasoDosAgregarGrupoSheet({
   onSheetVariantChange,
   onCustomSchemeDescriptionChange,
   onVidrioChange,
+  onOpenFreeValueItem,
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
@@ -186,7 +188,26 @@ export function PasoDosAgregarGrupoSheet({
 
         <div className={s.groupSheetBody}>
           {paso === 1 ? (
-            <div className={s.groupSheetOptionGrid}>
+            <div className={s.groupSheetOptionGridFull}>
+              <button
+                className={`${s.groupSheetOptionButton} ${s.groupSheetFreeValueCard}`}
+                onClick={() => {
+                  onClose();
+                  onOpenFreeValueItem();
+                }}
+                type="button"
+              >
+                <span className={s.groupSheetFreeValueIcon} aria-hidden>
+                  <LuWrench size={22} />
+                </span>
+                <div>
+                  <strong>Item libre con valor</strong>
+                  <span>Redacta un trabajo, reparacion, mantencion o cobro adicional sin usar calculo tecnico.</span>
+                </div>
+              </button>
+
+              <div className={s.groupSheetDivider} />
+
               {COMPONENT_TYPE_GROUPS.map((group) => (
                 <button
                   key={group.title}

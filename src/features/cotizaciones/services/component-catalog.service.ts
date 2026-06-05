@@ -2,13 +2,15 @@ export type ComponentCategoryTitle =
   | "Aberturas"
   | "Cierres y exteriores"
   | "Interiores y decoracion"
-  | "Especiales";
+  | "Especiales"
+  | "Reparacion y mantencion";
 
 export type ComponentCatalogItem = {
   tipo: string;
   sistemas: readonly string[];
   configuraciones?: readonly string[];
   descripcion: string;
+  esItemLibre?: boolean;
 };
 
 export type ComponentLeafCount = 1 | 2;
@@ -86,6 +88,7 @@ export const COMPONENT_CATALOG = [
         descripcion: "Trabajo libre para alcances especiales o fabricacion a medida.",
         sistemas: ["A medida", "Manual", "Por definir"],
         configuraciones: ["Libre", "Por definir"],
+        esItemLibre: true,
       },
       {
         tipo: "Fachada vidriada",
@@ -110,6 +113,60 @@ export const COMPONENT_CATALOG = [
         descripcion: "Cubiertas, lucarnas y techos vidriados.",
         sistemas: ["Fijo", "Proyectante"],
         configuraciones: ["Con perfileria", "Especial"],
+      },
+    ],
+  },
+  {
+    title: "Reparacion y mantencion",
+    items: [
+      {
+        tipo: "Cambio de vidrio",
+        descripcion: "Cambio de vidrio existente.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Mantencion de ventanas",
+        descripcion: "Mantencion y ajuste de ventanas existentes.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Cambio de rodamientos / carros",
+        descripcion: "Cambio de rodamientos o carros de corredera.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Cambio de pestillos / cierres",
+        descripcion: "Cambio de pestillos, cierres o herrajes.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Sellado o filtracion",
+        descripcion: "Sellado de filtraciones o impermeabilizacion.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Reparacion de shower / mampara",
+        descripcion: "Reparacion de shower door o mampara existente.",
+        sistemas: ["Unidad"],
+        configuraciones: [],
+        esItemLibre: true,
+      },
+      {
+        tipo: "Trabajo personalizado",
+        descripcion: "Trabajo de mantencion, reparacion o cobro adicional.",
+        sistemas: ["A medida", "Manual", "Por definir"],
+        configuraciones: [],
+        esItemLibre: true,
       },
     ],
   },
@@ -272,4 +329,12 @@ export function splitComponentReference(referencia: string | null | undefined, t
     sistema: matchedSystem,
     configuracion: matchedConfiguration,
   };
+}
+
+export function isFreeValueComponentType(tipo: string): boolean {
+  return findCatalogItem(tipo)?.esItemLibre === true;
+}
+
+export function getComponentDescripcion(tipo: string): string {
+  return findCatalogItem(tipo)?.descripcion ?? "";
 }
