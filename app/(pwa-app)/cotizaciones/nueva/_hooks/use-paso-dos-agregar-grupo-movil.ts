@@ -13,6 +13,7 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
 import {
@@ -167,7 +168,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         subtipo,
       }),
     }));
-    setPaso(2);
+    setPaso(isFreeValueComponentType(subtipo) ? 3 : 2);
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -293,6 +294,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({ ...current, descripcion }));
   };
 
+  const updateIvaMode = (ivaMode: PasoDosGrupoDraft["ivaMode"]) => {
+    setDraft((current) => ({ ...current, ivaMode }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -334,6 +339,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
 
   const goBack = () => {
     setPaso((current) => {
+      const isFreeValue = isFreeValueComponentType(draft.subtipo);
+
+      if (current === 3 && isFreeValue) return 1;
       if (current === 3) return 2;
       if (current === 2) return 1;
       return current;
@@ -372,6 +380,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateCustomSchemeDescription,
     updateNombre,
     updateDescripcion,
+    updateIvaMode,
     updateVidrio,
     updateAncho,
     updateAlto,

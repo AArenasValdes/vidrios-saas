@@ -15,7 +15,7 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
         <h2>Como quieres empezar?</h2>
-        <p>Escoge si quieres armar la cotizacion por items o redactarla como presupuesto rapido.</p>
+        <p>La unica diferencia es como defines el precio: por cada item o con un total al final.</p>
       </div>
       <div className={s.stepTwoModeChoiceGrid}>
         <article className={s.stepTwoModeChoiceCard}>
@@ -23,8 +23,8 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             <LuComponent size={28} />
           </div>
           <div>
-            <strong>Cotizar por componentes</strong>
-            <p>Agrega ventanas, puertas, reparaciones o cobros adicionales con precio por item.</p>
+            <strong>Cotizar por items</strong>
+            <p>Agrega ventanas, puertas, reparaciones o cobros adicionales. Cada item lleva su propio precio y el total se calcula automatico.</p>
           </div>
           <button
             type="button"
@@ -40,15 +40,15 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             <LuFileText size={28} />
           </div>
           <div>
-            <strong>Redactar cotizacion rapida</strong>
-            <p>Escribe el trabajo completo, define el total final y genera el PDF.</p>
+            <strong>Presupuesto por total</strong>
+            <p>Describe el trabajo completo como una sola partida, sin desglosar precios por componente. Tu defines el valor final al terminar.</p>
           </div>
           <button
             type="button"
             className={s.btnPrimary}
             onClick={() => onSelectMode("total_global")}
           >
-            Crear cotizacion rapida
+            Crear presupuesto
           </button>
         </article>
       </div>

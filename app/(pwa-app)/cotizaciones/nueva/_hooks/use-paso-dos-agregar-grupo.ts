@@ -34,6 +34,7 @@ import {
   getConfigurationOptionsForComponent,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
+  isFreeValueComponentType,
   resolveCanonicalComponentType,
   resolveComponentCategory,
   splitComponentReference,
@@ -51,6 +52,7 @@ export type PasoDosGrupoDraft = {
   cantidadPersonalizada: string;
   nombre: string;
   descripcion: string;
+  ivaMode: "total_incluye_iva" | "neto_mas_iva";
   pricingMode: PricingMode;
   material: (typeof MATERIAL_OPTIONS)[number];
   colorHex: string;
@@ -306,6 +308,7 @@ export function createInitialPasoDosGrupoDraft({
     minimoCobrable: sanitizeDigits(seedForm?.minimoCobrable ?? ""),
     redondeoPrecio: sanitizeDigits(seedForm?.redondeoPrecio ?? "1000"),
     margenPct: sanitizeDigits(seedForm?.margenPct ?? suggestedForm.margenPct ?? "0"),
+    ivaMode: "total_incluye_iva",
   };
 }
 
@@ -538,7 +541,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         subtipo,
       }),
     }));
-    setPaso(3);
+    setPaso(isFreeValueComponentType(subtipo) ? 4 : 3);
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -639,6 +642,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, descripcion }));
   };
 
+  const updateIvaMode = (ivaMode: PasoDosGrupoDraft["ivaMode"]) => {
+    setDraft((current) => ({ ...current, ivaMode }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -659,20 +666,47 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const goBack = () => {
-    setPaso((current) => (current > 1 ? ((current - 1) as PasoDosGrupoPaso) : current));
+    setPaso((current) => {
+      if (current <= 1) {
+        return current;
+      }
+
+      const isFreeValue = isFreeValueComponentType(draft.subtipo);
+
+      if (current === 4 && isFreeValue) {
+        return 2 as PasoDosGrupoPaso;
+      }
+
+      return (current - 1) as PasoDosGrupoPaso;
+    });
   };
 
   const goNext = () => {
-    setPaso((current) => (current < 5 ? ((current + 1) as PasoDosGrupoPaso) : current));
+    setPaso((current) => {
+      if (current >= 5) {
+        return current;
+      }
+
+      const isFreeValue = isFreeValueComponentType(draft.subtipo);
+
+      if (current === 2 && isFreeValue) {
+        return 4 as PasoDosGrupoPaso;
+      }
+
+      return (current + 1) as PasoDosGrupoPaso;
+    });
   };
 
   const canContinueFromQuantity =
     !draft.usaCantidadPersonalizada ||
     (draft.cantidadPersonalizada.trim() !== "" && Number(draft.cantidadPersonalizada) > 0);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
-  const canContinueFromConfig = isTrabajoPersonalizado
-    ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
-    : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
+  const isFreeValueItem = isFreeValueComponentType(draft.subtipo);
+  const canContinueFromConfig = isFreeValueItem
+    ? (draft.nombre ?? "").trim() !== "" && (draft.precio ?? "").trim() !== ""
+    : isTrabajoPersonalizado
+      ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
+      : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
 
   return {
     isOpen,
@@ -700,6 +734,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateCustomSchemeDescription,
     updateNombre,
     updateDescripcion,
+    updateIvaMode,
     updateVidrio,
     updateAncho,
     updateAlto,

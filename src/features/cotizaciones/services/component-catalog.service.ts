@@ -3,7 +3,7 @@ export type ComponentCategoryTitle =
   | "Cierres y exteriores"
   | "Interiores y decoracion"
   | "Especiales"
-  | "Reparacion y mantencion";
+  | "Proyecto libre y Mantencion";
 
 export type ComponentCatalogItem = {
   tipo: string;
@@ -117,7 +117,7 @@ export const COMPONENT_CATALOG = [
     ],
   },
   {
-    title: "Reparacion y mantencion",
+    title: "Proyecto libre y Mantencion",
     items: [
       {
         tipo: "Item libre con valor",

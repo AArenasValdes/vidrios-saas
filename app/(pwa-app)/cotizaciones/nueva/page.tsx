@@ -79,7 +79,6 @@ import {
 } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 import {
   isFreeValueComponentType,
-  getComponentDescripcion,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
 import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-desktop";
@@ -1004,69 +1003,37 @@ function NuevaCotizacionPageContent() {
     pasoDosAgregarGrupo.openSheet(componentForm);
   };
 
-  const handleSelectSubtipoAsItemLibreDesktop = (subtipo: string) => {
-    pasoDosAgregarGrupo.closeSheet();
-    setFreeValueItemForm({
-      nombre: subtipo,
-      descripcion: getComponentDescripcion(subtipo),
-      valor: "",
-      ivaMode: "total_incluye_iva",
-    });
-    setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
-    setEditingFreeValueItemId(null);
-    setEditingItemId(null);
-    setIsFreeValueItemFormOpen(true);
-    setFieldErrors({});
-    setGlobalError(null);
-  };
-
-  const handleSelectSubtipoAsItemLibreMovil = (subtipo: string) => {
-    pasoDosAgregarGrupoMovil.closeSheet();
-    setFreeValueItemForm({
-      nombre: subtipo,
-      descripcion: getComponentDescripcion(subtipo),
-      valor: "",
-      ivaMode: "total_incluye_iva",
-    });
-    setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
-    setEditingFreeValueItemId(null);
-    setEditingItemId(null);
-    setIsFreeValueItemFormOpen(true);
-    setFieldErrors({});
-    setGlobalError(null);
-  };
-
-  const handleSelectSubtipoDesktop = (subtipo: string) => {
-    if (isFreeValueComponentType(subtipo)) {
-      handleSelectSubtipoAsItemLibreDesktop(subtipo);
-      return;
-    }
-
-    pasoDosAgregarGrupo.selectSubtipo(subtipo);
-  };
-
-  const handleSelectSubtipoMovil = (subtipo: string) => {
-    if (isFreeValueComponentType(subtipo)) {
-      handleSelectSubtipoAsItemLibreMovil(subtipo);
-      return;
-    }
-
-    pasoDosAgregarGrupoMovil.selectSubtipo(subtipo);
-  };
-
   const confirmAddGroup = (
     groupDraft: Parameters<typeof buildPasoDosGrupoComponentForm>[0]["draft"],
     onCloseWizard: () => void
   ) => {
     try {
-      const nextForm = buildPasoDosGrupoComponentForm({
-        items: draft.items,
-        pricingMode: componentForm.pricingMode,
-        provider: suggestionProvider,
-        draft: groupDraft,
-      });
+      const isFreeValue = isFreeValueComponentType(groupDraft.subtipo);
       const nextItems = [...draft.items];
-      const nextItem = buildItemFromForm(nextForm, nextItems, null, { quotePricingMode });
+      let nextItem: CotizacionWorkflowItem;
+
+      if (isFreeValue) {
+        const normalizedValue = normalizeCurrencyInput(groupDraft.precio || "0");
+        nextItem = buildFreeValueItemFromForm(
+          {
+            nombre: groupDraft.nombre.trim() || groupDraft.subtipo,
+            descripcion: groupDraft.descripcion,
+            valor: normalizedValue,
+            ivaMode: groupDraft.ivaMode ?? "total_incluye_iva",
+          },
+          nextItems,
+          null
+        );
+      } else {
+        const nextForm = buildPasoDosGrupoComponentForm({
+          items: draft.items,
+          pricingMode: componentForm.pricingMode,
+          provider: suggestionProvider,
+          draft: groupDraft,
+        });
+        nextItem = buildItemFromForm(nextForm, nextItems, null, { quotePricingMode });
+      }
+
       nextItems.push(nextItem);
 
       setDraft((current) => ({ ...current, items: nextItems }));
@@ -1664,7 +1631,7 @@ function NuevaCotizacionPageContent() {
               onNext: pasoDosAgregarGrupoMovil.goNext,
               onConfirm: handleConfirmAddGroupMovil,
               onSelectCategoria: pasoDosAgregarGrupoMovil.selectCategoria,
-              onSelectSubtipo: handleSelectSubtipoMovil,
+              onSelectSubtipo: pasoDosAgregarGrupoMovil.selectSubtipo,
               onSelectCantidad: pasoDosAgregarGrupoMovil.selectCantidad,
               onCantidadChange: pasoDosAgregarGrupoMovil.updateCantidad,
               onMaterialChange: pasoDosAgregarGrupoMovil.updateMaterial,
@@ -1685,6 +1652,7 @@ function NuevaCotizacionPageContent() {
               onPrecioChange: pasoDosAgregarGrupoMovil.updatePrecio,
               onPricingModeChange: pasoDosAgregarGrupoMovil.updatePricingMode,
               onMargenChange: pasoDosAgregarGrupoMovil.updateMargenPct,
+              onIvaModeChange: pasoDosAgregarGrupoMovil.updateIvaMode,
             },
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
@@ -1734,7 +1702,7 @@ function NuevaCotizacionPageContent() {
             onNext: pasoDosAgregarGrupo.goNext,
             onConfirm: handleConfirmAddGroupDesktop,
             onSelectCategoria: pasoDosAgregarGrupo.selectCategoria,
-            onSelectSubtipo: handleSelectSubtipoDesktop,
+            onSelectSubtipo: pasoDosAgregarGrupo.selectSubtipo,
             onSelectCantidad: pasoDosAgregarGrupo.selectCantidad,
             onEnableCustomQuantity: pasoDosAgregarGrupo.enableCustomQuantity,
             onCustomQuantityChange: pasoDosAgregarGrupo.updateCustomQuantity,
@@ -1746,6 +1714,8 @@ function NuevaCotizacionPageContent() {
             onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,
             onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
+            onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
+            onIvaModeChange: pasoDosAgregarGrupo.updateIvaMode,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,
           }}

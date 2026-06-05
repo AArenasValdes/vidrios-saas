@@ -12,6 +12,7 @@ import {
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type {
   PasoDosGrupoDraft,
   PasoDosGrupoPaso,
@@ -45,6 +46,8 @@ type Props = {
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onPrecioChange: (value: string) => void;
+  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
 };
@@ -110,6 +113,8 @@ export function PasoDosAgregarGrupoSheet({
   onSheetVariantChange,
   onCustomSchemeDescriptionChange,
   onVidrioChange,
+  onPrecioChange,
+  onIvaModeChange,
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
@@ -126,6 +131,7 @@ export function PasoDosAgregarGrupoSheet({
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
+  const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -274,6 +280,71 @@ export function PasoDosAgregarGrupoSheet({
 
           {paso === 4 ? (
             <div className={s.groupSheetConfigStack}>
+              {isFreeValue ? (
+                <>
+                  <section className={s.formSection}>
+                    <div className={s.formSectionHead}>
+                      <span className={s.formSectionEyebrow}>Item libre con valor</span>
+                      <strong>Redacta el trabajo y define el valor</strong>
+                    </div>
+                    <label className={s.field}>
+                      <span className={s.label}>Nombre del item</span>
+                      <input
+                        className={s.input}
+                        maxLength={120}
+                        placeholder="Ej: Mantencion de ventanas"
+                        value={draft.nombre}
+                        onChange={(event) => onNombreChange(event.target.value)}
+                      />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Descripcion para cliente</span>
+                      <textarea
+                        className={s.textarea}
+                        maxLength={360}
+                        placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de corredera y limpieza de rieles."
+                        rows={3}
+                        value={draft.descripcion}
+                        onChange={(event) => onDescripcionChange(event.target.value)}
+                      />
+                    </label>
+                    <label className={s.field}>
+                      <span className={s.label}>Valor a cobrar</span>
+                      <input
+                        className={s.input}
+                        inputMode="numeric"
+                        placeholder="Ej: 120.000"
+                        value={draft.precio}
+                        onChange={(event) => onPrecioChange(event.target.value)}
+                      />
+                    </label>
+                    <div className={s.field}>
+                      <span className={s.label}>IVA</span>
+                      <div className={s.ivaCompactRow}>
+                        <button
+                          type="button"
+                          className={`${s.ivaCompactOption} ${
+                            draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
+                          }`}
+                          onClick={() => onIvaModeChange("total_incluye_iva")}
+                        >
+                          <span className={s.ivaCompactLabel}>Incluido</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`${s.ivaCompactOption} ${
+                            draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
+                          }`}
+                          onClick={() => onIvaModeChange("neto_mas_iva")}
+                        >
+                          <span className={s.ivaCompactLabel}>Agregar IVA</span>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              ) : (
+                <>
               {isTrabajoPersonalizado ? (
                 <section className={s.formSection}>
                   <div className={s.formSectionHead}>
@@ -429,6 +500,8 @@ export function PasoDosAgregarGrupoSheet({
                   </select>
                 </div>
               </div>
+              </>
+              )}
             </div>
           ) : null}
 

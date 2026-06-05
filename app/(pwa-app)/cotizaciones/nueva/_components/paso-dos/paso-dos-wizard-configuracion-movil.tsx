@@ -13,12 +13,14 @@ import {
   getCompositionSectionLabel,
   getSheetSchemeOptions,
   normalizeCurrencyInput,
+  formatCurrencyInput,
   getSheetVariantOptions,
   requiresCustomSheetDescription,
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import { getGroupStatusTitle, repairBrokenText } from "./paso-dos-wizard-movil.utils";
@@ -85,6 +87,7 @@ type Props = {
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   quotePricingMode: QuotePricingMode;
   priceHelp: string;
   priceLabel: string;
@@ -131,6 +134,7 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
+  onIvaModeChange,
   quotePricingMode = "por_item",
   priceHelp,
   priceLabel,
@@ -164,6 +168,7 @@ export function PasoDosWizardConfiguracionMovil({
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
+  const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -274,6 +279,80 @@ export function PasoDosWizardConfiguracionMovil({
       );
     }
   };
+
+  if (isFreeValue) {
+    return (
+      <div className={s.stepTwoMobileCreatorStack}>
+        <div className={s.stepTwoMobileConfigStatus}>
+          <strong>{draft.subtipo}</strong>
+          <span>Redacta el trabajo y define el valor que vera el cliente.</span>
+        </div>
+
+        <div className={s.stepTwoMobileBlockHero}>
+          <div className={s.stepTwoMobileBlockLabel}>Nombre del item</div>
+          <label className={s.stepTwoMobileInlineField}>
+            <input
+              className={s.input}
+              maxLength={120}
+              placeholder="Ej: Mantencion de ventanas"
+              type="text"
+              value={draft.nombre}
+              onChange={(event) => onNombreChange(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className={s.stepTwoMobileBlockHero}>
+          <div className={s.stepTwoMobileBlockLabel}>Descripcion para cliente</div>
+          <label className={s.stepTwoMobileInlineField}>
+            <textarea
+              className={s.textarea}
+              maxLength={360}
+              placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de corredera y limpieza de rieles."
+              rows={4}
+              value={draft.descripcion}
+              onChange={(event) => onDescripcionChange(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <PasoDosWizardPrecioMovil
+          activePricingMode={activePricingMode}
+          formattedPriceValue={formatCurrencyInput(draft.precio)}
+          marginValue={draft.margenPct}
+          onMargenChange={onMargenChange}
+          onPrecioChange={onPrecioChange}
+          onPricingModeChange={onPricingModeChange}
+          priceHelp="El valor que ingreses sera el total visible para el cliente."
+          priceLabel="Valor a cobrar"
+        />
+
+        <div className={s.stepTwoMobileBlockHero}>
+          <div className={s.stepTwoMobileBlockLabel}>IVA</div>
+          <div className={s.ivaCompactRow}>
+            <button
+              type="button"
+              className={`${s.ivaCompactOption} ${
+                draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
+              }`}
+              onClick={() => onIvaModeChange("total_incluye_iva")}
+            >
+              <span className={s.ivaCompactLabel}>Incluido</span>
+            </button>
+            <button
+              type="button"
+              className={`${s.ivaCompactOption} ${
+                draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
+              }`}
+              onClick={() => onIvaModeChange("neto_mas_iva")}
+            >
+              <span className={s.ivaCompactLabel}>Agregar IVA</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={s.stepTwoMobileCreatorStack}>

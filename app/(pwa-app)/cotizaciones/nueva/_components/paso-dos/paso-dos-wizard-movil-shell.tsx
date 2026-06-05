@@ -21,6 +21,7 @@ import {
   getGlassRecommendations,
   isRecommendedGlass,
 } from "@/features/cotizaciones/services/glass-recommendations.service";
+import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import type {
@@ -90,6 +91,7 @@ export type WizardActions = {
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
   onMargenChange: (value: string) => void;
+  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
 };
 
 type Props = {
@@ -155,9 +157,9 @@ const CATEGORY_OPTIONS: Array<{
     countLabel: `${getSubtypeOptionsForCategory("Especiales").length} tipos`,
   },
   {
-    title: "Reparacion y mantencion",
-    subtitle: "Cambios de vidrio, mantencion, sellados",
-    countLabel: `${getSubtypeOptionsForCategory("Reparacion y mantencion").length} tipos`,
+    title: "Proyecto libre y Mantencion",
+    subtitle: "Cambios de vidrio, mantencion, sellados y trabajos personalizados",
+    countLabel: `${getSubtypeOptionsForCategory("Proyecto libre y Mantencion").length} tipos`,
   },
 ];
 
@@ -166,6 +168,11 @@ const QUICK_QUANTITIES = [1, 2, 4, 6] as const;
 const VISUAL_STAGES = [
   { id: 1, label: "Tipo" },
   { id: 2, label: "Cantidad" },
+  { id: 3, label: "Datos" },
+] as const;
+
+const VISUAL_STAGES_FREE_VALUE = [
+  { id: 1, label: "Tipo" },
   { id: 3, label: "Datos" },
 ] as const;
 
@@ -377,7 +384,7 @@ export function PasoDosWizardMovil({
 
   return (
     <section className={s.stepTwoMobileExperience}>
-      {!wizard.isOpen && items.length === 0 ? (
+      {!wizard.isOpen && items.length === 0 && quotePricingMode !== "total_global" ? (
         <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
       ) : (
         <PasoDosListaMovil
@@ -404,7 +411,11 @@ export function PasoDosWizardMovil({
             }`}
           >
             <PasoDosWizardEncabezadoMovil
-              stages={VISUAL_STAGES}
+              stages={
+                isFreeValueComponentType(wizard.draft.subtipo)
+                  ? VISUAL_STAGES_FREE_VALUE
+                  : VISUAL_STAGES
+              }
               visualStage={visualStage}
               title={getStageTitle(visualStage)}
               subtitle={
@@ -412,9 +423,11 @@ export function PasoDosWizardMovil({
                   ? "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
-                    : quotePricingMode === "total_global"
-                      ? "Completa los datos comerciales antes de agregar."
-                      : "Completa sistema, medidas y valor antes de agregar."
+                    : isFreeValueComponentType(wizard.draft.subtipo)
+                      ? "Redacta el trabajo y define el valor."
+                      : quotePricingMode === "total_global"
+                        ? "Completa los datos comerciales antes de agregar."
+                        : "Completa sistema, medidas y valor antes de agregar."
               }
               onClose={handleCloseWizard}
               onGoToStep={wizard.onGoToStep}
@@ -479,6 +492,7 @@ export function PasoDosWizardMovil({
                   onPricingModeChange={wizard.onPricingModeChange}
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
+                  onIvaModeChange={wizard.onIvaModeChange}
                   quotePricingMode={quotePricingMode}
                   priceHelp={priceHelp}
                   priceLabel={priceLabel}
