@@ -196,9 +196,7 @@ export function PasoDosWizardConfiguracionMovil({
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
-  const [activeAlcanceDetalleId, setActiveAlcanceDetalleId] = useState<string | null>(
-    draft.alcanceDetalles[0]?.id ?? null
-  );
+  const [activeAlcanceDetalleId, setActiveAlcanceDetalleId] = useState<string | null>(null);
   const alcanceCountRef = useRef(draft.alcanceDetalles.length);
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
@@ -243,8 +241,6 @@ export function PasoDosWizardConfiguracionMovil({
       activeAlcanceDetalleId &&
       !draft.alcanceDetalles.some((detalle) => detalle.id === activeAlcanceDetalleId)
     ) {
-      setActiveAlcanceDetalleId(draft.alcanceDetalles[0]?.id ?? null);
-    } else if (!activeAlcanceDetalleId && draft.alcanceDetalles.length > 0) {
       setActiveAlcanceDetalleId(draft.alcanceDetalles[0]?.id ?? null);
     }
 
@@ -359,6 +355,296 @@ export function PasoDosWizardConfiguracionMovil({
 
     return detalle.nombre.trim() || detalle.descripcion.trim() || "Detalle sin nombre";
   };
+
+  if (isFreeValue && quotePricingMode === "total_global") {
+    return (
+      <div className={`${s.stepTwoMobileCreatorStack} ${s.stepTwoNotebookStack}`}>
+        <label className={s.stepTwoNotebookField}>
+          <span className={s.stepTwoNotebookFieldLabel}>NOMBRE DEL TRABAJO</span>
+          <input
+            className={s.stepTwoNotebookInput}
+            maxLength={120}
+            placeholder="Ej: Mantencion"
+            type="text"
+            value={draft.nombre}
+            onChange={(event) => onNombreChange(event.target.value)}
+          />
+        </label>
+
+        <label className={s.stepTwoNotebookTextareaCard}>
+          <span className={s.stepTwoNotebookTextareaHeader}>DESCRIPCION DEL TRABAJO</span>
+          <textarea
+            className={s.stepTwoNotebookTextarea}
+            maxLength={360}
+            placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de correderas y cambio de felpas..."
+            rows={5}
+            value={draft.descripcion}
+            onChange={(event) => onDescripcionChange(event.target.value)}
+          />
+        </label>
+
+        <div className={s.suggestionChips}>
+          <span className={s.suggestionChipsLabel}>Sugerencias:</span>
+          {["Cambio de vidrio", "Mantencion", "Sellado", "Reparacion shower", "Instalacion", "Otro"].map(
+            (chip) => (
+              <button
+                key={chip}
+                type="button"
+                className={`${s.suggestionChip} ${
+                  draft.nombre === chip ? s.suggestionChipActive : ""
+                }`}
+                onClick={() => onNombreChange(chip)}
+              >
+                {chip}
+              </button>
+            )
+          )}
+        </div>
+
+        <section className={s.stepTwoNotebookSection} aria-labelledby="detalles-incluidos-title">
+          <div className={s.stepTwoNotebookSectionHeader}>
+            <h3 id="detalles-incluidos-title" className={s.stepTwoNotebookSectionTitle}>
+              DETALLES INCLUIDOS
+            </h3>
+            <button
+              type="button"
+              className={s.stepTwoNotebookSectionAction}
+              onClick={onAddAlcanceDetalle}
+            >
+              <LuCirclePlus aria-hidden size={18} />
+              <span>Agregar detalle</span>
+            </button>
+          </div>
+
+          <div className={s.stepTwoNotebookDetailList}>
+            {draft.alcanceDetalles.length > 0 ? (
+              draft.alcanceDetalles.map((detalle) => (
+                <button
+                  key={detalle.id}
+                  type="button"
+                  className={`${s.stepTwoNotebookDetailRow} ${
+                    activeAlcanceDetalleId === detalle.id ? s.stepTwoNotebookDetailRowActive : ""
+                  }`}
+                  onClick={() =>
+                    setActiveAlcanceDetalleId(
+                      activeAlcanceDetalleId === detalle.id ? null : detalle.id
+                    )
+                  }
+                >
+                  <LuGripVertical aria-hidden className={s.stepTwoNotebookDetailHandle} size={20} />
+                  <span className={s.stepTwoNotebookDetailText}>{getDetalleResumen(detalle)}</span>
+                </button>
+              ))
+            ) : (
+              <div className={s.stepTwoNotebookDetailEmpty}>Sin detalles incluidos.</div>
+            )}
+          </div>
+        </section>
+
+        {activeAlcanceDetalle ? (
+          <div className={s.stepTwoNotebookDetailEditor}>
+            <div className={s.stepTwoNotebookDetailEditorHeader}>
+              <strong className={s.stepTwoNotebookDetailEditorTitle}>
+                Editar detalle incluido
+              </strong>
+              <button
+                type="button"
+                className={s.stepTwoNotebookDangerLink}
+                onClick={() => onRemoveAlcanceDetalle(activeAlcanceDetalle.id)}
+              >
+                <LuTrash2 aria-hidden size={15} />
+                Eliminar
+              </button>
+            </div>
+
+            <div className={s.stepTwoMobileChoiceChips}>
+              <button
+                type="button"
+                className={`${s.stepTwoMobileChoiceChip} ${
+                  activeAlcanceDetalle.tipo === "manual" ? s.stepTwoMobileChoiceChipActive : ""
+                }`}
+                onClick={() => onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "tipo", "manual")}
+              >
+                Manual
+              </button>
+              <button
+                type="button"
+                className={`${s.stepTwoMobileChoiceChip} ${
+                  activeAlcanceDetalle.tipo === "estructurado"
+                    ? s.stepTwoMobileChoiceChipActive
+                    : ""
+                }`}
+                onClick={() =>
+                  onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "tipo", "estructurado")
+                }
+              >
+                Estructurado
+              </button>
+            </div>
+
+            {activeAlcanceDetalle.tipo === "estructurado" ? (
+              <>
+                <label className={s.stepTwoMobileInlineField}>
+                  <span className={s.label}>Componente</span>
+                  <div className={s.selectWrap}>
+                    <select
+                      className={s.input}
+                      value={
+                        activeAlcanceDetalle.subtipo || ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS[0]
+                      }
+                      onChange={(event) =>
+                        onUpdateAlcanceDetalle(
+                          activeAlcanceDetalle.id,
+                          "subtipo",
+                          event.target.value
+                        )
+                      }
+                    >
+                      {ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </label>
+                <div className={s.alcanceDetalleGrid}>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Cantidad</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="1"
+                      value={activeAlcanceDetalle.cantidad}
+                      onChange={(event) =>
+                        onUpdateAlcanceDetalle(
+                          activeAlcanceDetalle.id,
+                          "cantidad",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Ancho (mm)</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="1500"
+                      value={activeAlcanceDetalle.ancho}
+                      onChange={(event) =>
+                        onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "ancho", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Alto (mm)</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="2000"
+                      value={activeAlcanceDetalle.alto}
+                      onChange={(event) =>
+                        onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "alto", event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+                <label className={s.stepTwoMobileInlineField}>
+                  <span className={s.label}>Etiqueta visible</span>
+                  <input
+                    className={s.input}
+                    placeholder="Ej: 3 ventanas correderas 1500 x 2000"
+                    type="text"
+                    value={activeAlcanceDetalle.nombre}
+                    onChange={(event) =>
+                      onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "nombre", event.target.value)
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <label className={s.stepTwoMobileInlineField}>
+                <span className={s.label}>Detalle</span>
+                <input
+                  className={s.input}
+                  placeholder="Ej: Sellado perimetral"
+                  type="text"
+                  value={activeAlcanceDetalle.nombre}
+                  onChange={(event) =>
+                    onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "nombre", event.target.value)
+                  }
+                />
+              </label>
+            )}
+          </div>
+        ) : null}
+
+        <div className={s.stepTwoNotebookPriceCard}>
+          <div className={s.stepTwoNotebookPriceTitle}>PRECIO FINAL</div>
+          <label className={s.stepTwoNotebookPriceField}>
+            <input
+              className={`${s.stepTwoMobilePrecioInput} ${s.stepTwoMobileFinalPriceInput} ${s.stepTwoNotebookPriceInput}`}
+              inputMode="numeric"
+              placeholder="Ej: 600.000"
+              type="text"
+              value={globalTotalInputValue}
+              onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
+            />
+          </label>
+          <div className={s.ivaCompactRow}>
+            <button
+              type="button"
+              className={`${s.ivaCompactOption} ${mostrarIva ? s.ivaCompactOptionActive : ""}`}
+              onClick={mostrarIva ? undefined : onMostrarIvaChange}
+            >
+              <span className={s.ivaCompactLabel}>Incluye IVA</span>
+            </button>
+            <button
+              type="button"
+              className={`${s.ivaCompactOption} ${!mostrarIva ? s.ivaCompactOptionActive : ""}`}
+              onClick={mostrarIva ? onMostrarIvaChange : undefined}
+            >
+              <span className={s.ivaCompactLabel}>Sin IVA</span>
+            </button>
+          </div>
+        </div>
+
+        <div className={s.stepTwoNotebookInternalBox}>
+          {!isInternalObservationOpen ? (
+            <button
+              type="button"
+              className={s.stepTwoNotebookInlineLink}
+              onClick={() => setIsInternalObservationOpen(true)}
+            >
+              + Agregar observacion interna
+            </button>
+          ) : (
+            <>
+              <div className={s.stepTwoNotebookInternalHeader}>
+                <strong className={s.stepTwoNotebookPriceTitle}>OBSERVACION INTERNA</strong>
+                <button
+                  type="button"
+                  className={s.stepTwoNotebookInlineLink}
+                  onClick={() => setIsInternalObservationOpen(false)}
+                >
+                  Ocultar
+                </button>
+              </div>
+              <textarea
+                className={s.stepTwoNotebookInternalTextarea}
+                maxLength={280}
+                placeholder="Nota solo para uso interno."
+                rows={3}
+                value={internalObservation}
+                onChange={(event) => onInternalObservationChange(event.target.value)}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (isFreeValue) {
     return (

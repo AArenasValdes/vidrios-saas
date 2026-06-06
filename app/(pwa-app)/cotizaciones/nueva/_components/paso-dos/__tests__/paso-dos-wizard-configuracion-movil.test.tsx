@@ -165,10 +165,10 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Nueva línea" }));
-    fireEvent.click(screen.getAllByRole("button", { name: "Nueva línea" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: /Nueva l(i|í)nea/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /Nueva l(i|í)nea/i })[1]);
 
-    fireEvent.change(screen.getByPlaceholderText("Ej: Línea 5000"), {
+    fireEvent.change(screen.getByPlaceholderText(/Ej: L(i|í)nea 5000/i), {
       target: { value: "Línea 5000" },
     });
     fireEvent.change(screen.getByPlaceholderText("Ej: 185000"), {
@@ -201,7 +201,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       );
     });
 
-    expect(screen.getByPlaceholderText("Buscar líneas...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Buscar l(i|í)neas/i)).toBeInTheDocument();
   });
 
   it("debe mostrar esquema de hojas para ventana corredera y permitir descripcion libre", () => {
@@ -285,11 +285,20 @@ describe("PasoDosWizardConfiguracionMovil", () => {
       />
     );
 
+    expect(screen.queryByText("Datos del item")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cobrar este item por separado")).not.toBeInTheDocument();
+    expect(screen.getByText("NOMBRE DEL TRABAJO")).toBeInTheDocument();
+    expect(screen.getByText("DESCRIPCION DEL TRABAJO")).toBeInTheDocument();
+    expect(screen.getByText("DETALLES INCLUIDOS")).toBeInTheDocument();
+    expect(screen.getByText("3 ventanas correderas 1500 x 2000")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Agregar detalle/i })).toBeInTheDocument();
     expect(screen.getByText("PRECIO FINAL")).toBeInTheDocument();
     expect(screen.getByDisplayValue("600.000")).toBeInTheDocument();
     expect(screen.getByText("Incluye IVA")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("3 ventanas correderas 1500 x 2000"));
     expect(screen.getByText("Manual")).toBeInTheDocument();
     expect(screen.getByText("Estructurado")).toBeInTheDocument();
-    expect(screen.getByText("+ Agregar observación interna")).toBeInTheDocument();
+    expect(screen.getByText("+ Agregar observacion interna")).toBeInTheDocument();
   });
 });
