@@ -96,6 +96,9 @@ export type WizardActions = {
   onMargenChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
+  onAddAlcanceDetalle: () => void;
+  onUpdateAlcanceDetalle: (detalleId: string, field: string, value: string) => void;
+  onRemoveAlcanceDetalle: (detalleId: string) => void;
 };
 
 type Props = {

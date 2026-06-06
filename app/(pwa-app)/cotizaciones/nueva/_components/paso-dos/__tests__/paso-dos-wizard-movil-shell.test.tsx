@@ -17,6 +17,11 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
       cantidad: 2,
       usaCantidadPersonalizada: false,
       cantidadPersonalizada: "",
+      nombre: "",
+      descripcion: "",
+      ivaMode: "total_incluye_iva" as const,
+      cobraPrecioSeparado: false,
+      alcanceDetalles: [],
       pricingMode: "margen",
       material: "Aluminio",
       colorHex: "#a8a8a8",
@@ -83,6 +88,11 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     onPrecioChange: jest.fn(),
     onPricingModeChange: jest.fn(),
     onMargenChange: jest.fn(),
+    onIvaModeChange: jest.fn(),
+    onCobraPrecioSeparadoChange: jest.fn(),
+    onAddAlcanceDetalle: jest.fn(),
+    onUpdateAlcanceDetalle: jest.fn(),
+    onRemoveAlcanceDetalle: jest.fn(),
     ...overrides,
   };
 }
