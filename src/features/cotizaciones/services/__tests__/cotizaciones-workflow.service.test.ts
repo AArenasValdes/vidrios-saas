@@ -2,6 +2,7 @@ import {
   calculateFreeValueItem,
   calculateCotizacionWorkflowTotals,
   calculateGlobalQuoteWorkflowTotals,
+  calculateWorkflowTotalsForPricingMode,
 } from "../cotizaciones-workflow.service";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 
@@ -126,5 +127,29 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.subtotal).toBe(100000);
     expect(totals.iva).toBe(19000);
     expect(totals.total).toBe(119000);
+  });
+
+  it("suma cobros separados al presupuesto por total", () => {
+    const itemLibre = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Mantencion de ventanas",
+      valor: 119000,
+      ivaMode: "total_incluye_iva",
+    });
+
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [itemLibre],
+      descuentoPct: 0,
+      flete: 0,
+      quotePricingMode: "total_global",
+      costoTotalFabricacion: 0,
+      margenGlobalPct: 0,
+      totalClienteManual: 500000,
+      mostrarIva: true,
+    });
+
+    expect(totals.total).toBe(619000);
+    expect(totals.iva).toBeCloseTo(98831.93, 2);
+    expect(totals.subtotal).toBeCloseTo(520168.07, 2);
   });
 });

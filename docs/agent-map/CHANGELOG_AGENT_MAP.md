@@ -4,6 +4,50 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-05 - Flujo de item libre con valor y separacion de modos de cotizacion
+
+### Resumen
+
+Se implemento la separacion clara de tres flujos en Paso 2: componente calculado, item libre con valor y cotizacion rapida por total. Se agrego la categoria "Proyecto libre y Mantencion" al catalogo de componentes. El formulario de item libre se internalizo dentro del wizard/sheet. El selector de modo inicial (`PasoDosModoCotizacion`) quedo con 2 tarjetas. El boton del footer mobile ahora es dinamico ("Agregar item" / "Agregar componente"). Se elimino el selector de modo de precio (margen/valor directo) para items libres en mobile.
+
+### Archivos nuevos o fuertemente modificados
+
+| Archivo | Cambio |
+|---|---|
+| `component-catalog.service.ts` | Nueva categoria `"Proyecto libre y Mantencion"` con 8 items. Flag `esItemLibre` en `ComponentCatalogItem`. Helper `isFreeValueComponentType()`. Helper `getComponentDescripcion()`. |
+| `paso-dos-modo-cotizacion.tsx` | Pantalla inicial con 2 tarjetas: "Cotizar por items" y "Presupuesto por total". Iconos por tarjeta. Ambos abren el wizard. |
+| `paso-dos-item-libre-form.tsx` | Formulario standalone redisenado: copia mejorada, preview PDF, boton dinamico con precio, selector IVA compacto `[Incluido] [Agregar IVA]`. |
+| `paso-dos-agregar-grupo-sheet.tsx` | Paso 4 reemplazado por formulario de item libre (nombre, descripcion, valor, IVA) cuando `isFreeValueComponentType`. Props `onPrecioChange`, `onIvaModeChange`. |
+| `paso-dos-wizard-configuracion-movil.tsx` | Early return para items libres: formulario simplificado sin `PasoDosWizardPrecioMovil`, solo input de precio. Labels estandarizados. |
+| `paso-dos-wizard-footer-movil.tsx` | Props `isFreeValueItem` y `precioFormateado`. Boton dinamico: "Agregar item" / "Agregar item por $X". |
+| `paso-dos-wizard-precio-movil.tsx` | Prop `hideMargenOption` para ocultar opcion "Con margen". |
+| `paso-dos-wizard-movil.state.ts` | `isFreeValueComponentType` integrado en validacion `canSubmitGroup`. `activePricingMode` forzado a `"precio_directo"` para items libres. Labels adaptados. |
+| `paso-dos-wizard-movil-shell.tsx` | Stages visuales dinamicos (`VISUAL_STAGES_FREE_VALUE`). Subtitulos adaptados para items libres. `isFreeValueItem` + `precioFormateado` pasados al footer. Categoria "Proyecto libre y Mantencion" en tabs. Ambos modos (`por_item` y `total_global`) abren el mismo wizard. |
+| `paso-dos-seccion.tsx` | Modo `total_global` tambien abre `onOpenCreator()`. Condicion `showModeChoice` simplificada. |
+| `paso-dos-panel-header.tsx` | Boton "Agregar trabajo" en modo `total_global`. |
+| `use-paso-dos-agregar-grupo.ts` | `PasoDosGrupoDraft` incluye `ivaMode`. `isFreeValueComponentType` integrado en `selectSubtipo` (salta a paso 4), `goBack`/`goNext` (omiten paso 3), `canContinueFromConfig` (valida nombre + precio). |
+| `use-paso-dos-agregar-grupo-movil.ts` | `isFreeValueComponentType` integrado en `selectSubtipo` (salta a stage 3), `goBack` (stage 3 → stage 1). `updateIvaMode` exportado. |
+| `page.tsx` | `confirmAddGroup` maneja items libres via `buildFreeValueItemFromForm`. Wiring de `onIvaModeChange`, `onPrecioChange`. |
+| `cotizacion-item-presentation.ts` | Metadata incluye `ivaMode`, `displayMode`, `netoCalculado`, `ivaCalculado`, `totalClienteVisible`. |
+| `cotizaciones-workflow.service.ts` | `calculateFreeValueItem` con soporte de `total_incluye_iva` / `neto_mas_iva`. `calculateCotizacionWorkflowTotals` extrae neto de items `total_incluye_iva` antes de aplicar IVA global (sin doble IVA). |
+| `page.module.css` | Grid 2 columnas para modo choice. Iconos de tarjeta. IVA compacto. Preview card de item libre. Free value card mobile. |
+
+### Reglas de IVA
+
+- **`total_incluye_iva`**: El valor ingresado es el total visible al cliente. El sistema extrae el neto (`valor / 1.19`) y calcula el IVA (`valor - neto`). En el total global, este neto se suma al subtotal y se aplica IVA una sola vez.
+- **`neto_mas_iva`**: El valor ingresado es el neto. El sistema agrega IVA (`valor * 0.19`). El total visible para el cliente es `valor + IVA`.
+- **Sin doble IVA**: `calculateCotizacionWorkflowTotals` detecta `tipoItem === "item_libre_con_valor"` + `displayMode === "item_libre"` + `ivaMode === "total_incluye_iva"` y usa `meta.netoCalculado` en vez de `precioTotal`.
+
+### Reglas de persistencia
+
+- `cotizacion_items.tipo_item = "item_libre_con_valor"` se guarda y rehidrata correctamente.
+- `costo_unitario`, `costo_total`, `margen_pct`, `utilidad` = 0 para items libres.
+- Metadata en `observaciones` via `encodeCotizacionItemPresentationMeta`.
+- Clone/duplicar preserva `tipoItem` via spread.
+- Soft delete funciona normalmente.
+
+---
+
 ## 2026-06-04 - Modo total global en cotizaciones
 
 ### Resumen

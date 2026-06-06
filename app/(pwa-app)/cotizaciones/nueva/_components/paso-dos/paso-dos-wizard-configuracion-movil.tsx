@@ -20,7 +20,10 @@ import {
   shouldShowSheetSchemeForComponent,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
-import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
+import {
+  getComponentDescripcion,
+  isFreeValueComponentType,
+} from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import { getGroupStatusTitle, repairBrokenText } from "./paso-dos-wizard-movil.utils";
@@ -88,6 +91,7 @@ type Props = {
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
+  onCobraPrecioSeparadoChange: (value: boolean) => void;
   quotePricingMode: QuotePricingMode;
   priceHelp: string;
   priceLabel: string;
@@ -135,6 +139,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSistemaChange,
   onVidrioChange,
   onIvaModeChange,
+  onCobraPrecioSeparadoChange,
   quotePricingMode = "por_item",
   priceHelp,
   priceLabel,
@@ -169,6 +174,9 @@ export function PasoDosWizardConfiguracionMovil({
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
+  const freeValueGuidance = getComponentDescripcion(draft.subtipo);
+  const shouldShowFreeValuePrice =
+    quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -285,7 +293,11 @@ export function PasoDosWizardConfiguracionMovil({
       <div className={s.stepTwoMobileCreatorStack}>
         <div className={s.stepTwoMobileConfigStatus}>
           <strong>Datos del item</strong>
-          <span>Redacta el trabajo y define el valor.</span>
+          <span>
+            {quotePricingMode === "total_global"
+              ? "Redacta el trabajo. El valor se define en el resumen final."
+              : "Redacta el trabajo y define el valor."}
+          </span>
         </div>
 
         <div className={s.stepTwoMobileBlockHero}>
@@ -304,6 +316,12 @@ export function PasoDosWizardConfiguracionMovil({
 
         <div className={s.stepTwoMobileBlockHero}>
           <div className={s.stepTwoMobileBlockLabel}>DESCRIPCION PARA CLIENTE</div>
+          {freeValueGuidance ? (
+            <div className={s.stepTwoMobileGuidanceBox}>
+              <strong>{draft.nombre || draft.subtipo}</strong>
+              <span>{freeValueGuidance}</span>
+            </div>
+          ) : null}
           <label className={s.stepTwoMobileInlineField}>
             <textarea
               className={s.textarea}
@@ -316,52 +334,78 @@ export function PasoDosWizardConfiguracionMovil({
           </label>
         </div>
 
-        <div className={s.stepTwoMobileBlockHero}>
-          <div className={s.stepTwoMobileBlockLabel}>VALOR A COBRAR</div>
-          <label className={s.stepTwoMobileInlineField}>
-            <input
-              className={s.stepTwoMobilePrecioInput}
-              id="grupo-precio"
-              inputMode="numeric"
-              placeholder="Ej: 120.000"
-              type="text"
-              value={formatCurrencyInput(draft.precio)}
-              onChange={(event) => onPrecioChange(event.target.value)}
-            />
-          </label>
-          <span className={s.stepTwoMobileBlockHelp}>
-            El valor ingresado sera el monto que vera el cliente.
-          </span>
-        </div>
-
-        <div className={s.stepTwoMobileBlockHero}>
-          <div className={s.stepTwoMobileBlockLabel}>IVA</div>
-          <div className={s.ivaCompactRow}>
+        {quotePricingMode === "total_global" ? (
+          <div className={s.stepTwoMobileBlockHero}>
+            <div className={s.stepTwoMobileBlockLabel}>PRECIO</div>
             <button
               type="button"
-              className={`${s.ivaCompactOption} ${
-                draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
-              }`}
-              onClick={() => onIvaModeChange("total_incluye_iva")}
+              className={draft.cobraPrecioSeparado ? s.btnGhost : s.btnPrimary}
+              onClick={() => onCobraPrecioSeparadoChange(!draft.cobraPrecioSeparado)}
             >
-              <span className={s.ivaCompactLabel}>Incluido</span>
+              {draft.cobraPrecioSeparado
+                ? "Quitar cobro separado"
+                : "Cobrar este item por separado"}
             </button>
-            <button
-              type="button"
-              className={`${s.ivaCompactOption} ${
-                draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
-              }`}
-              onClick={() => onIvaModeChange("neto_mas_iva")}
-            >
-              <span className={s.ivaCompactLabel}>Agregar IVA</span>
-            </button>
+            <span className={s.stepTwoMobileBlockHelp}>
+              {draft.cobraPrecioSeparado
+                ? "Este valor se sumara al total final de la cotizacion."
+                : "Por defecto este trabajo queda incluido en el presupuesto total que defines al final."}
+            </span>
           </div>
-          <span className={s.stepTwoMobileBlockHelp}>
-            {draft.ivaMode === "total_incluye_iva"
-              ? "El valor ingresado sera el total visible para el cliente."
-              : "Ventora sumara el 19% al valor ingresado."}
-          </span>
-        </div>
+        ) : null}
+
+        {shouldShowFreeValuePrice ? (
+          <>
+            <div className={s.stepTwoMobileBlockHero}>
+              <div className={s.stepTwoMobileBlockLabel}>VALOR A COBRAR</div>
+              <label className={s.stepTwoMobileInlineField}>
+                <input
+                  className={s.stepTwoMobilePrecioInput}
+                  id="grupo-precio"
+                  inputMode="numeric"
+                  placeholder="Ej: 120.000"
+                  type="text"
+                  value={formatCurrencyInput(draft.precio)}
+                  onChange={(event) => onPrecioChange(event.target.value)}
+                />
+              </label>
+              <span className={s.stepTwoMobileBlockHelp}>
+                {quotePricingMode === "total_global"
+                  ? "Este monto se suma aparte del total de la obra."
+                  : "El valor ingresado sera el monto que vera el cliente."}
+              </span>
+            </div>
+
+            <div className={s.stepTwoMobileBlockHero}>
+              <div className={s.stepTwoMobileBlockLabel}>IVA</div>
+              <div className={s.ivaCompactRow}>
+                <button
+                  type="button"
+                  className={`${s.ivaCompactOption} ${
+                    draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
+                  }`}
+                  onClick={() => onIvaModeChange("total_incluye_iva")}
+                >
+                  <span className={s.ivaCompactLabel}>Incluido</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${s.ivaCompactOption} ${
+                    draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
+                  }`}
+                  onClick={() => onIvaModeChange("neto_mas_iva")}
+                >
+                  <span className={s.ivaCompactLabel}>Agregar IVA</span>
+                </button>
+              </div>
+              <span className={s.stepTwoMobileBlockHelp}>
+                {draft.ivaMode === "total_incluye_iva"
+                  ? "El valor ingresado sera el total visible para el cliente."
+                  : "Ventora sumara el 19% al valor ingresado."}
+              </span>
+            </div>
+          </>
+        ) : null}
       </div>
     );
   }

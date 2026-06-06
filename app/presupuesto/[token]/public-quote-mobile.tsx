@@ -276,7 +276,7 @@ export function PublicQuoteMobile({
                       <span className={s.itemChip}>
                         {isFreeValueItem ? "Item libre" : item.vidrio || "Vidrio por definir"}
                       </span>
-                      {showItemPrices ? (
+                      {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
                         <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
                       ) : null}
                     </div>

@@ -28,6 +28,7 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     minimoCobrable: "",
     redondeoPrecio: "1000",
     margenPct: "0",
+    cobraPrecioSeparado: false,
     nombre: "",
     descripcion: "",
     ...overrides,
@@ -86,6 +87,46 @@ describe("paso-dos-wizard-movil state", () => {
     });
 
     expect(state.canSubmitGroup).toBe(true);
+  });
+
+  it("oculta el precio por defecto en trabajo libre dentro de presupuesto por total", () => {
+    const state = buildPasoDosWizardMovilState({
+      draft: createDraft({
+        subtipo: "Mantencion de ventanas",
+        descripcion: "Mantencion de 5 ventanas existentes.",
+        sistema: "",
+        vidrio: "",
+        ancho: "",
+        alto: "",
+        precio: "",
+        cobraPrecioSeparado: false,
+      }),
+      pricingMode: "precio_directo",
+      quotePricingMode: "total_global",
+    });
+
+    expect(state.shouldShowPriceField).toBe(false);
+    expect(state.canSubmitGroup).toBe(true);
+  });
+
+  it("exige precio cuando el trabajo libre se cobra separado", () => {
+    const state = buildPasoDosWizardMovilState({
+      draft: createDraft({
+        subtipo: "Mantencion de ventanas",
+        descripcion: "Mantencion de 5 ventanas existentes.",
+        sistema: "",
+        vidrio: "",
+        ancho: "",
+        alto: "",
+        precio: "",
+        cobraPrecioSeparado: true,
+      }),
+      pricingMode: "precio_directo",
+      quotePricingMode: "total_global",
+    });
+
+    expect(state.shouldShowPriceField).toBe(true);
+    expect(state.canSubmitGroup).toBe(false);
   });
 
   it("exige descripcion para trabajo personalizado", () => {

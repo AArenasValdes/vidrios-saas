@@ -667,7 +667,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                                   ))}
                                 </div>
 
-                                {showItemPrices ? (
+                                {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
                                 <aside className={printStyles.pricesColumn}>
                                   <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
                                   <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>

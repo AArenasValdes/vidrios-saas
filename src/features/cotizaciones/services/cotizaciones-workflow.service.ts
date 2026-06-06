@@ -52,6 +52,7 @@ type CalculateFreeValueItemInput = {
   valor: number;
   ivaMode?: CotizacionItemFreeValueIvaMode;
   observaciones?: string;
+  allowZeroValue?: boolean;
 };
 
 type CreateCotizacionRecordInput = {
@@ -295,7 +296,7 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
     throw new Error("El nombre del item libre es obligatorio");
   }
 
-  if (!Number.isFinite(valor) || valor <= 0) {
+  if (!Number.isFinite(valor) || (!input.allowZeroValue && valor <= 0)) {
     throw new Error("Ingresa un valor mayor a cero");
   }
 
@@ -384,6 +385,7 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   margenGlobalPct?: number | null;
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
+  items?: CotizacionWorkflowItem[];
 }) {
   const costoTotalFabricacion = round(
     normalizeNonNegativeNumber(input.costoTotalFabricacion),
@@ -402,14 +404,21 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   const ivaBase = mostrarIva ? round(totalBase * (impuestos.iva / (1 + impuestos.iva)), 2) : 0;
   const iva = ivaBase > 0 ? ivaBase : 0;
   const subtotalNeto = round(totalBase - iva, 2);
+  const extraTotals = calculateCotizacionWorkflowTotals(
+    (input.items ?? []).filter(
+      (item) => item.tipoItem === "item_libre_con_valor" && item.precioTotal > 0
+    ),
+    0,
+    0
+  );
 
   return {
-    subtotal: subtotalNeto,
+    subtotal: round(subtotalNeto + extraTotals.subtotal, 2),
     descuentoValor: 0,
-    neto: subtotalNeto,
-    iva,
+    neto: round(subtotalNeto + extraTotals.neto, 2),
+    iva: round(iva + extraTotals.iva, 2),
     flete: 0,
-    total: totalBase,
+    total: round(totalBase + extraTotals.total, 2),
     costoTotalFabricacion,
     margenGlobalPct,
     utilidadTotal,
@@ -438,6 +447,7 @@ export function calculateWorkflowTotalsForPricingMode(
       margenGlobalPct: draft.margenGlobalPct,
       totalClienteManual: draft.totalClienteManual,
       mostrarIva: draft.mostrarIva,
+      items: draft.items,
     });
   }
 

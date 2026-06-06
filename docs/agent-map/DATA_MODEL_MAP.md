@@ -63,12 +63,19 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ### Tabla: cotizacion_items
 
-- **Proposito**: Items/componentes de una cotizacion
-- **Campos importantes**: `id` (bigint PK), `cotizacion_id` (FK), `organization_id` (FK), `nombre`, `descripcion`, `tipo_item`, `tipo_componente`, `codigo` (V1, P1), `cantidad` (NOT NULL), `unidad`, `ancho`, `alto`, `area_m2`, `linea`, `color`, `vidrio`, `precio_unitario` (NOT NULL), `subtotal` (NOT NULL), `costo_unitario`, `costo_total`, `margen_pct`, `utilidad`, `product_type_id` (FK legacy), `system_line_id` (FK legacy), `configuration_id` (FK legacy), `observaciones`, `orden`, `eliminado_en`
+- **Proposito**: Items/componentes de una cotizacion. Soporta tres tipos: componente calculado (con medidas y precio), item libre con valor (redactable, sin datos tecnicos) y descriptivo (para `total_global` sin precio por item).
+- **Campos importantes**: `id` (bigint PK), `cotizacion_id` (FK), `organization_id` (FK), `nombre`, `descripcion`, `tipo_item`, `tipo_componente`, `codigo` (V1, P1, L1), `cantidad` (NOT NULL), `unidad`, `ancho`, `alto`, `area_m2`, `linea`, `color`, `vidrio`, `precio_unitario` (NOT NULL), `subtotal` (NOT NULL), `costo_unitario`, `costo_total`, `margen_pct`, `utilidad`, `product_type_id` (FK legacy), `system_line_id` (FK legacy), `configuration_id` (FK legacy), `observaciones`, `orden`, `eliminado_en`
+- **`tipo_item` valores**: `"componente"` (default, item calculado), `"item_libre_con_valor"` (item redactable con IVA), `"configurado"` y `"manual"` (legacy). El workflow solo usa los primeros dos; los valores legacy se mapean a `"componente"` en rehidratacion.
+- **`item_libre_con_valor` reglas**:
+  - `costo_unitario`, `costo_total`, `margen_pct`, `utilidad` = 0 (no tienen costo interno).
+  - `precio_unitario` y `subtotal` conservan el valor comercial.
+  - `ancho`, `alto`, `area_m2` = null (no tienen dimensiones fisicas).
+  - `linea`, `color`, `vidrio` = "" (no tienen datos tecnicos).
+  - Metadata en `observaciones` via `encodeCotizacionItemPresentationMeta`: incluye `ivaMode` (`total_incluye_iva` / `neto_mas_iva`), `displayMode: "item_libre"`, `netoCalculado`, `ivaCalculado`, `totalClienteVisible`.
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
-- **Usada por**: Cotizaciones, PDF
-- **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion. En cotizaciones `total_global`, `precio_unitario` y `subtotal` se guardan en 0 por NOT NULL y no representan precio comercial por componente; nunca mostrar esos `$0` al cliente.
+- **Usada por**: Cotizaciones, PDF, presupuesto publico
+- **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`
+- **Riesgos**: FKs duplicados (INC-1). FKs legacy a tablas dormidas. No romper campo `orden` (orden visual). `linea` se usa como snapshot comercial de la linea elegida en cotizacion. En cotizaciones `total_global`, `precio_unitario` y `subtotal` se guardan en 0 por NOT NULL y no representan precio comercial por componente; nunca mostrar esos `$0` al cliente. `isFreeValueComponentType` depende del catalogo (`esItemLibre`); si se renombra un subtipo, actualizar el catalogo.
 
 ---
 

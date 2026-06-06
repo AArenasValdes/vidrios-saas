@@ -175,6 +175,7 @@ function mapDatabaseItemToWorkflowItem(
       valor: item.subtotal ?? item.precioUnitario ?? presentation.totalClienteVisible ?? 0,
       ivaMode: presentation.ivaMode ?? "total_incluye_iva",
       observaciones: presentation.raw,
+      allowZeroValue: presentation.displayMode === "item_libre",
     });
   }
 
@@ -310,6 +311,7 @@ function normalizeWorkflowItem(
       valor: item.precioTotal,
       ivaMode: presentation.ivaMode ?? "total_incluye_iva",
       observaciones: presentation.raw,
+      allowZeroValue: presentation.displayMode === "item_libre" && item.precioTotal <= 0,
     });
   }
 

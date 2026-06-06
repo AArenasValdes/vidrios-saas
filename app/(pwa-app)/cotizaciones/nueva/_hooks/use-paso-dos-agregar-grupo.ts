@@ -24,6 +24,7 @@ import {
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
   normalizePricingMode,
   type PricingMode,
@@ -53,6 +54,7 @@ export type PasoDosGrupoDraft = {
   nombre: string;
   descripcion: string;
   ivaMode: "total_incluye_iva" | "neto_mas_iva";
+  cobraPrecioSeparado: boolean;
   pricingMode: PricingMode;
   material: (typeof MATERIAL_OPTIONS)[number];
   colorHex: string;
@@ -79,6 +81,7 @@ export type PasoDosGrupoPaso = 1 | 2 | 3 | 4 | 5;
 type CreateInitialDraftParams = {
   items: CotizacionWorkflowItem[];
   pricingMode: PricingMode;
+  quotePricingMode?: QuotePricingMode;
   provider: PreferredProvider;
   seedForm?: ComponentFormState | null;
 };
@@ -98,6 +101,28 @@ function sanitizeDigits(value: string) {
 
 function safeTrim(value: string | null | undefined) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isProyectoLibreMantencion(categoria: PasoDosGrupoCategoria) {
+  return categoria === "Proyecto libre y Mantencion";
+}
+
+export function shouldSkipCantidadForGrupoDraft(
+  draft: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
+) {
+  return isProyectoLibreMantencion(draft.categoria) && isFreeValueComponentType(draft.subtipo);
+}
+
+function buildDefaultFreeValueName(subtipo: string) {
+  if (!isFreeValueComponentType(subtipo)) {
+    return "";
+  }
+
+  if (subtipo === "Item libre con valor") {
+    return "Trabajo adicional";
+  }
+
+  return subtipo;
 }
 
 export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
@@ -289,6 +314,7 @@ export function createInitialPasoDosGrupoDraft({
       seededSubtype === "Trabajo personalizado"
         ? seedForm?.descripcion ?? ""
         : seedForm?.descripcion ?? suggestedForm.descripcion,
+    cobraPrecioSeparado: false,
     pricingMode: normalizePricingMode(seedForm?.pricingMode ?? pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
@@ -398,6 +424,9 @@ export function buildPasoDosGrupoSelectionPatch({
   return {
     subtipo,
     hojasBase: getBaseLeafCountForComponent(subtipo),
+    cantidad: isProyectoLibreMantencion(current.categoria) ? 1 : current.cantidad,
+    usaCantidadPersonalizada: false,
+    cantidadPersonalizada: "",
     pricingMode: normalizePricingMode(current.pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
@@ -407,13 +436,21 @@ export function buildPasoDosGrupoSelectionPatch({
     sheetVariant: "",
     customSchemeDescription: "",
     isCustomScheme: false,
-    nombre: "",
-    descripcion: subtipo === "Trabajo personalizado" ? "" : suggestedForm.descripcion,
+    nombre: buildDefaultFreeValueName(subtipo),
+    descripcion: isFreeValueComponentType(subtipo)
+      ? ""
+      : subtipo === "Trabajo personalizado"
+        ? ""
+        : suggestedForm.descripcion,
+    cobraPrecioSeparado: false,
     vidrio: suggestedForm.vidrio,
   } satisfies Pick<
     PasoDosGrupoDraft,
     | "subtipo"
     | "hojasBase"
+    | "cantidad"
+    | "usaCantidadPersonalizada"
+    | "cantidadPersonalizada"
     | "pricingMode"
     | "material"
     | "colorHex"
@@ -425,6 +462,7 @@ export function buildPasoDosGrupoSelectionPatch({
     | "isCustomScheme"
     | "nombre"
     | "descripcion"
+    | "cobraPrecioSeparado"
     | "vidrio"
   >;
 }
@@ -531,6 +569,11 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const selectSubtipo = (subtipo: string) => {
+    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
+      categoria: draft.categoria,
+      subtipo,
+    });
+
     setDraft((current) => ({
       ...current,
       ...buildPasoDosGrupoSelectionPatch({
@@ -541,7 +584,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         subtipo,
       }),
     }));
-    setPaso(isFreeValueComponentType(subtipo) ? 4 : 3);
+    setPaso(shouldSkipCantidad ? 4 : 3);
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -646,6 +689,14 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, ivaMode }));
   };
 
+  const updateCobraPrecioSeparado = (cobraPrecioSeparado: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      cobraPrecioSeparado,
+      precio: cobraPrecioSeparado ? current.precio : "",
+    }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -672,8 +723,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       }
 
       const isFreeValue = isFreeValueComponentType(draft.subtipo);
+      const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft(draft);
 
-      if (current === 4 && isFreeValue) {
+      if (current === 4 && isFreeValue && shouldSkipCantidad) {
         return 2 as PasoDosGrupoPaso;
       }
 
@@ -688,8 +740,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       }
 
       const isFreeValue = isFreeValueComponentType(draft.subtipo);
+      const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft(draft);
 
-      if (current === 2 && isFreeValue) {
+      if (current === 2 && isFreeValue && shouldSkipCantidad) {
         return 4 as PasoDosGrupoPaso;
       }
 
@@ -703,7 +756,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValueItem = isFreeValueComponentType(draft.subtipo);
   const canContinueFromConfig = isFreeValueItem
-    ? (draft.nombre ?? "").trim() !== "" && (draft.precio ?? "").trim() !== ""
+    ? (draft.nombre ?? "").trim() !== "" &&
+      (params.quotePricingMode === "total_global" && !draft.cobraPrecioSeparado
+        ? true
+        : (draft.precio ?? "").trim() !== "")
     : isTrabajoPersonalizado
       ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
       : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
@@ -735,6 +791,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateNombre,
     updateDescripcion,
     updateIvaMode,
+    updateCobraPrecioSeparado,
     updateVidrio,
     updateAncho,
     updateAlto,

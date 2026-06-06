@@ -224,26 +224,31 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Cotizaciones
 
-- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp, estados
+- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp, estados. Soporta tres modos de item: componente calculado (con medidas, linea, vidrio y precio), item libre con valor (redactable, sin datos tecnicos) y cotizacion rapida por total (presupuesto global sin desglose por item).
 - **Rutas involucradas**: `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
 - **Archivos principales**:
   - `app/(pwa-app)/cotizaciones/page.tsx` (listado, 1055 lineas)
-  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1198+ lineas)
+  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1710+ lineas)
   - `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle)
   - `app/(pwa-app)/configuracion/empresa/page.tsx` (bloque compacto `Lineas y precios base`)
-  - `app/(pwa-app)/cotizaciones/_components/cotizacion-mobile-card.tsx`
-  - `app/(pwa-app)/cotizaciones/_components/cotizaciones-mobile-summary.tsx`
-  - `app/(pwa-app)/cotizaciones/_components/cotizaciones-filter-fields.tsx`
-  - `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-mobile-view.tsx`
-  - `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-mobile-view-model.ts`
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx` (selector de modo inicial: 2 tarjetas)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx` (formulario standalone de item libre con preview)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (wizard desktop 5 pasos, paso 4 adaptado para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` (configuracion mobile con early return para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-footer-movil.tsx` (footer dinamico: "Agregar item" / "Agregar componente")
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil-shell.tsx` (orquestador mobile, stages dinamicos)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil.state.ts` (validacion de estado para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-precio-movil.tsx` (selector de precio con `hideMargenOption`)
+  - `app/(pwa-app)/cotizaciones/nueva/_hooks/use-paso-dos-agregar-grupo.ts` (hook desktop con `ivaMode`, salto de pasos para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_hooks/use-paso-dos-agregar-grupo-movil.ts` (hook mobile, idem)
   - `src/features/cotizaciones/hooks/useCotizacionesStore.ts` (746 lineas)
   - `src/features/cotizaciones/hooks/useCotizacionAlerts.ts`
-  - `src/features/cotizaciones/services/cotizaciones.service.ts` (710 lineas)
-  - `src/features/cotizaciones/services/cotizaciones-workflow.service.ts` (318 lineas)
+  - `src/features/cotizaciones/services/cotizaciones.service.ts` (710 lineas, rehidratacion de `item_libre_con_valor` desde DB)
+  - `src/features/cotizaciones/services/cotizaciones-workflow.service.ts` (~550 lineas, `calculateFreeValueItem`, `calculateCotizacionWorkflowTotals` con soporte IVA, `cloneCotizacionAsDraft`)
   - `src/features/cotizaciones/services/cotizaciones-summary.service.ts`
   - `src/features/cotizaciones/services/cotizacion-alerts.service.ts`
   - `src/features/cotizaciones/services/cotizacion-line-pricing.service.ts`
-  - `src/features/cotizaciones/services/component-catalog.service.ts`
+  - `src/features/cotizaciones/services/component-catalog.service.ts` (catalogo con categoria `"Proyecto libre y Mantencion"`, flag `esItemLibre`, helper `isFreeValueComponentType()`)
   - `src/features/cotizaciones/services/component-suggestions.service.ts`
   - `src/features/cotizaciones/services/glass-recommendations.service.ts`
   - `src/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates.ts`
@@ -252,33 +257,34 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
   - `src/features/cotizaciones/repositories/cotizaciones-repository.ts` (1486 lineas)
   - `src/features/cotizaciones/types/cotizacion.ts`
-  - `src/features/cotizaciones/types/cotizacion-item.ts`
-  - `src/features/cotizaciones/types/cotizacion-workflow.ts`
+  - `src/features/cotizaciones/types/cotizacion-item.ts` (tipo `item_libre_con_valor`)
+  - `src/features/cotizaciones/types/cotizacion-workflow.ts` (`tipoItem` field)
   - `src/features/cotizaciones/types/quote-pricing-mode.ts`
   - `src/features/cotizaciones/types/pricing-mode.ts`
-  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (883 lineas)
+  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (~1567 lineas, `buildFreeValueItemFromForm`, `buildQuickEditDraft`, `isWorkflowItemComplete`, `applyQuickEditDraftStatesToItems`)
   - `src/features/cotizaciones/new-quote/solicitud-prefill.ts`
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
   - `src/utils/cotizacion-approval.ts`
-  - `src/utils/cotizacion-item-presentation.ts`
-  - `src/utils/whatsapp.ts`
+  - `src/utils/cotizacion-item-presentation.ts` (metadata IVA, displayMode, netoCalculado)
+  - `src/utils/whatsapp.ts` (mensaje usa total global, independiente de tipo de item)
   - `src/utils/window-drawings.ts` (1074 lineas)
   - `src/constants/impuestos.ts` (IVA 19%)
   - `src/constants/component-colors.ts`
   - `app/api/cotizaciones/resumen/route.ts`
-- **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleMobileView`, `QuoteComponentSketch`
-- **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`
+- **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleMobileView`, `PasoDosModoCotizacion`, `PasoDosItemLibreForm`, `PasoDosWizardFooterMovil`, `PasoDosWizardPrecioMovil`
+- **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`, `isFreeValueComponentType`
 - **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `cotizacion_line_templates`, `clients`, `projects`, `cotizacion_code_counters`
 - **Flujo de datos**:
   - Listado: Page -> `useCotizacionesStore` -> API `/api/cotizaciones/resumen` -> server service -> repositories
   - Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
+  - Item libre: wizard/sheet -> categoria "Proyecto libre y Mantencion" -> subtipo -> formulario simplificado (nombre, descripcion, valor, IVA) -> `buildFreeValueItemFromForm` -> `calculateFreeValueItem` -> `item_libre_con_valor`
   - Detalle: Page -> `useCotizacionesStore.getById()` -> repository
 - **Estados importantes**: `borrador`, `creada`, `enviada`, `aprobada`, `rechazada`, `terminada`
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos: `por_item` mantiene cotizacion por linea/medidas/precio por componente; `total_global` se muestra como "Total del trabajo", permite cargar componentes como detalle comercial y define en Paso 3 solo el total final cliente + selector de IVA incluido/sin IVA. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
-- **Riesgos al modificar**: No romper calculos de pricing, auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` ahora guarda snapshot comercial de la linea elegida. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
+- **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---
 

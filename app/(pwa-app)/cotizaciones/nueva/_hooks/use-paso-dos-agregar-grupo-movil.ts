@@ -25,6 +25,7 @@ import {
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
   resolveMaterialColorHex,
+  shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
   type PasoDosGrupoCategoria,
 } from "./use-paso-dos-agregar-grupo";
@@ -158,6 +159,11 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const selectSubtipo = (subtipo: string) => {
+    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
+      categoria: draft.categoria,
+      subtipo,
+    });
+
     setDraft((current) => ({
       ...current,
       ...buildPasoDosGrupoSelectionPatch({
@@ -168,7 +174,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         subtipo,
       }),
     }));
-    setPaso(isFreeValueComponentType(subtipo) ? 3 : 2);
+    setPaso(shouldSkipCantidad ? 3 : 2);
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -298,6 +304,14 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({ ...current, ivaMode }));
   };
 
+  const updateCobraPrecioSeparado = (cobraPrecioSeparado: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      cobraPrecioSeparado,
+      precio: cobraPrecioSeparado ? current.precio : "",
+    }));
+  };
+
   const updateVidrio = (vidrio: string) => {
     setDraft((current) => ({ ...current, vidrio }));
   };
@@ -340,8 +354,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const goBack = () => {
     setPaso((current) => {
       const isFreeValue = isFreeValueComponentType(draft.subtipo);
+      const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft(draft);
 
-      if (current === 3 && isFreeValue) return 1;
+      if (current === 3 && isFreeValue && shouldSkipCantidad) return 1;
       if (current === 3) return 2;
       if (current === 2) return 1;
       return current;
@@ -381,6 +396,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateNombre,
     updateDescripcion,
     updateIvaMode,
+    updateCobraPrecioSeparado,
     updateVidrio,
     updateAncho,
     updateAlto,

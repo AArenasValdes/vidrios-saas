@@ -1017,7 +1017,7 @@ export default function CotizacionPrintPage() {
                           ))}
                         </div>
 
-                                {showItemPrices ? (
+                                {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
                                 <aside className={s.pricesColumn}>
                           <div className={s.pricesHeading}>VALOR COMERCIAL</div>
                           <div className={s.pricesSubheading}>MONTOS EN CLP</div>

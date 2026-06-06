@@ -6,6 +6,7 @@ import {
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
+  shouldSkipCantidadForGrupoDraft,
 } from "../use-paso-dos-agregar-grupo";
 import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -179,6 +180,52 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(patch.configuracion).toBe("Frontal");
     expect(patch.material).toBe("Aluminio");
     expect(patch.vidrio).toContain("Templado");
+  });
+
+  it("debe precargar titulo y fijar cantidad 1 en proyecto libre y mantencion", () => {
+    const current = {
+      ...createInitialPasoDosGrupoDraft({
+        items: [],
+        pricingMode: "margen",
+        provider: "",
+      }),
+      categoria: "Proyecto libre y Mantencion" as const,
+      cantidad: 4,
+    };
+    const patch = buildPasoDosGrupoSelectionPatch({
+      current,
+      items: [],
+      pricingMode: "margen",
+      provider: "",
+      subtipo: "Mantencion de ventanas",
+    });
+
+    expect(patch.nombre).toBe("Mantencion de ventanas");
+    expect(patch.cantidad).toBe(1);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
+  });
+
+  it("debe permitir cantidad en trabajo personalizado de especiales", () => {
+    const current = {
+      ...createInitialPasoDosGrupoDraft({
+        items: [],
+        pricingMode: "margen",
+        provider: "",
+      }),
+      categoria: "Especiales" as const,
+      cantidad: 3,
+    };
+    const patch = buildPasoDosGrupoSelectionPatch({
+      current,
+      items: [],
+      pricingMode: "margen",
+      provider: "",
+      subtipo: "Trabajo personalizado",
+    });
+
+    expect(patch.nombre).toBe("Trabajo personalizado");
+    expect(patch.cantidad).toBe(3);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(false);
   });
 
   it("debe resumir el grupo de forma directa para la confirmacion", () => {

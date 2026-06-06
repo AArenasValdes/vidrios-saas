@@ -824,7 +824,8 @@ export function mapFreeValueItemToForm(item: CotizacionWorkflowItem): FreeValueI
 export function buildFreeValueItemFromForm(
   form: FreeValueItemFormState,
   items: CotizacionWorkflowItem[],
-  editingItemId: string | null
+  editingItemId: string | null,
+  options?: { allowZeroValue?: boolean }
 ) {
   const normalizedValue = normalizeCurrencyInput(form.valor);
   const existingIndex = editingItemId
@@ -842,6 +843,7 @@ export function buildFreeValueItemFromForm(
     descripcion: form.descripcion,
     valor: normalizedValue ? Number(normalizedValue) : 0,
     ivaMode: form.ivaMode,
+    allowZeroValue: options?.allowZeroValue,
   });
 }
 

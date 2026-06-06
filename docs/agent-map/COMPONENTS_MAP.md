@@ -170,6 +170,34 @@
 - **Usado en**: Pagina detalle cotizacion
 - **Props importantes**: `model`, `isHydratingItems`, `isPreparingPdf`, `isSaving`, `whatsappDisabled`, `updatedLabel`, `editHref`, `editComponentsHref`, `onDelete`
 
+### Componente: PasoDosModoCotizacion
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx`
+- **Proposito**: Pantalla inicial de Paso 2 con 2 tarjetas: "Cotizar por items" y "Presupuesto por total". Ambas abren el wizard con el pricing mode correspondiente.
+- **Usado en**: `PasoDosSeccion` (desktop), `PasoDosWizardMovil` (mobile)
+- **Props importantes**: `onSelectMode: (mode: QuotePricingMode) => void`
+
+### Componente: PasoDosItemLibreForm
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx`
+- **Proposito**: Formulario standalone de item libre con valor. Muestra nombre, descripcion, valor CLP, selector IVA compacto `[Incluido] [Agregar IVA]`, boton dinamico con precio, y preview PDF.
+- **Usado en**: `PasoDosSeccion` (desktop), `PasoDosWizardMovil` (mobile). Tambien accesible desde el panel header via "+ Agregar item libre".
+- **Props importantes**: `isOpen`, `editingItemId`, `form: FreeValueItemFormState`, `fieldErrors`, `isSaving`, `onChange`, `onSubmit`, `onCancel`
+
+### Componente: PasoDosWizardFooterMovil
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-footer-movil.tsx`
+- **Proposito**: Footer del wizard mobile con navegacion y boton de confirmacion. Texto dinamico: "Agregar item por $X" para items libres, "Agregar componente" para el resto.
+- **Usado en**: `PasoDosWizardMovil`
+- **Props importantes**: `canSubmitGroup`, `isFreeValueItem?`, `precioFormateado?`, `onBack`, `onConfirm`, `onNext`, `visualStage`, `wizardStep`
+
+### Componente: PasoDosWizardPrecioMovil
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-precio-movil.tsx`
+- **Proposito**: Bloque de precio en el wizard mobile. Soporta `hideMargenOption` para ocultar el modo "Con margen" y mostrar solo "Valor directo" (usado para items libres).
+- **Usado en**: `PasoDosWizardConfiguracionMovil` (config step del wizard mobile)
+- **Props importantes**: `activePricingMode`, `formattedPriceValue`, `marginValue`, `hideMargenOption?`, `onPrecioChange`, `onPricingModeChange`, `priceLabel`, `priceHelp`
+
 ---
 
 ## Solicitudes (subcomponentes de pagina)

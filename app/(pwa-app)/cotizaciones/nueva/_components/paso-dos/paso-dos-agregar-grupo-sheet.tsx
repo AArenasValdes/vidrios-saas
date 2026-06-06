@@ -12,7 +12,11 @@ import {
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
-import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
+import {
+  getComponentDescripcion,
+  isFreeValueComponentType,
+} from "@/features/cotizaciones/services/component-catalog.service";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type {
   PasoDosGrupoDraft,
   PasoDosGrupoPaso,
@@ -48,6 +52,8 @@ type Props = {
   onVidrioChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
+  onCobraPrecioSeparadoChange: (value: boolean) => void;
+  quotePricingMode: QuotePricingMode;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
 };
@@ -115,6 +121,8 @@ export function PasoDosAgregarGrupoSheet({
   onVidrioChange,
   onPrecioChange,
   onIvaModeChange,
+  onCobraPrecioSeparadoChange,
+  quotePricingMode,
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
@@ -132,6 +140,9 @@ export function PasoDosAgregarGrupoSheet({
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
+  const freeValueGuidance = getComponentDescripcion(draft.subtipo);
+  const shouldShowFreeValuePrice =
+    quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -285,7 +296,11 @@ export function PasoDosAgregarGrupoSheet({
                   <section className={s.formSection}>
                     <div className={s.formSectionHead}>
                       <span className={s.formSectionEyebrow}>Item libre con valor</span>
-                      <strong>Redacta el trabajo y define el valor</strong>
+                      <strong>
+                        {quotePricingMode === "total_global"
+                          ? "Redacta el trabajo para el cliente"
+                          : "Redacta el trabajo y define el valor"}
+                      </strong>
                     </div>
                     <label className={s.field}>
                       <span className={s.label}>Nombre del item</span>
@@ -299,6 +314,12 @@ export function PasoDosAgregarGrupoSheet({
                     </label>
                     <label className={s.field}>
                       <span className={s.label}>Descripcion para cliente</span>
+                      {freeValueGuidance ? (
+                        <div className={s.stepTwoMobileGuidanceBox}>
+                          <strong>{draft.nombre || draft.subtipo}</strong>
+                          <span>{freeValueGuidance}</span>
+                        </div>
+                      ) : null}
                       <textarea
                         className={s.textarea}
                         maxLength={360}
@@ -308,39 +329,63 @@ export function PasoDosAgregarGrupoSheet({
                         onChange={(event) => onDescripcionChange(event.target.value)}
                       />
                     </label>
-                    <label className={s.field}>
-                      <span className={s.label}>Valor a cobrar</span>
-                      <input
-                        className={s.input}
-                        inputMode="numeric"
-                        placeholder="Ej: 120.000"
-                        value={draft.precio}
-                        onChange={(event) => onPrecioChange(event.target.value)}
-                      />
-                    </label>
-                    <div className={s.field}>
-                      <span className={s.label}>IVA</span>
-                      <div className={s.ivaCompactRow}>
+                    {quotePricingMode === "total_global" ? (
+                      <div className={s.field}>
+                        <span className={s.label}>Precio</span>
                         <button
                           type="button"
-                          className={`${s.ivaCompactOption} ${
-                            draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
-                          }`}
-                          onClick={() => onIvaModeChange("total_incluye_iva")}
+                          className={draft.cobraPrecioSeparado ? s.btnGhost : s.btnPrimary}
+                          onClick={() => onCobraPrecioSeparadoChange(!draft.cobraPrecioSeparado)}
                         >
-                          <span className={s.ivaCompactLabel}>Incluido</span>
+                          {draft.cobraPrecioSeparado
+                            ? "Quitar cobro separado"
+                            : "Cobrar este item por separado"}
                         </button>
-                        <button
-                          type="button"
-                          className={`${s.ivaCompactOption} ${
-                            draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
-                          }`}
-                          onClick={() => onIvaModeChange("neto_mas_iva")}
-                        >
-                          <span className={s.ivaCompactLabel}>Agregar IVA</span>
-                        </button>
+                        <small className={s.helpText}>
+                          {draft.cobraPrecioSeparado
+                            ? "Este valor se sumara al total final."
+                            : "Queda incluido en el presupuesto total que defines al final."}
+                        </small>
                       </div>
-                    </div>
+                    ) : null}
+
+                    {shouldShowFreeValuePrice ? (
+                      <>
+                        <label className={s.field}>
+                          <span className={s.label}>Valor a cobrar</span>
+                          <input
+                            className={s.input}
+                            inputMode="numeric"
+                            placeholder="Ej: 120.000"
+                            value={draft.precio}
+                            onChange={(event) => onPrecioChange(event.target.value)}
+                          />
+                        </label>
+                        <div className={s.field}>
+                          <span className={s.label}>IVA</span>
+                          <div className={s.ivaCompactRow}>
+                            <button
+                              type="button"
+                              className={`${s.ivaCompactOption} ${
+                                draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
+                              }`}
+                              onClick={() => onIvaModeChange("total_incluye_iva")}
+                            >
+                              <span className={s.ivaCompactLabel}>Incluido</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`${s.ivaCompactOption} ${
+                                draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
+                              }`}
+                              onClick={() => onIvaModeChange("neto_mas_iva")}
+                            >
+                              <span className={s.ivaCompactLabel}>Agregar IVA</span>
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
                   </section>
                 </>
               ) : (

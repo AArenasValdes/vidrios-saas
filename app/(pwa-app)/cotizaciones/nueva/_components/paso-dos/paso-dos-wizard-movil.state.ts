@@ -18,6 +18,7 @@ export type PasoDosWizardMovilState = {
   canSubmitGroup: boolean;
   priceLabel: string;
   priceHelp: string;
+  shouldShowPriceField: boolean;
 };
 
 export function buildPasoDosWizardMovilState({
@@ -35,6 +36,7 @@ export function buildPasoDosWizardMovilState({
     (draft.cantidadPersonalizada.trim() !== "" &&
       Number(draft.cantidadPersonalizada) > 0);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
+  const shouldShowPriceField = quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
   const hasCustomDescription =
     (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
   const hasCommercialDetail =
@@ -44,7 +46,7 @@ export function buildPasoDosWizardMovilState({
         ? hasCustomDescription
         : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "" && isPositiveNumber(draft.ancho) && isPositiveNumber(draft.alto);
   const hasRequiredPrice =
-    quotePricingMode === "total_global"
+    quotePricingMode === "total_global" && !draft.cobraPrecioSeparado
       ? true
       : isFreeValue
         ? isPositiveNumber(draft.precio)
@@ -68,5 +70,6 @@ export function buildPasoDosWizardMovilState({
     canSubmitGroup,
     priceLabel,
     priceHelp,
+    shouldShowPriceField,
   };
 }

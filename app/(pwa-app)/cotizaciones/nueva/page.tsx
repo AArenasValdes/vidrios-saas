@@ -300,6 +300,7 @@ function NuevaCotizacionPageContent() {
   const pasoDosAgregarGrupo = usePasoDosAgregarGrupo({
     items: draft.items,
     pricingMode: componentForm.pricingMode,
+    quotePricingMode,
     provider: suggestionProvider,
     seedForm: componentForm,
   });
@@ -1013,16 +1014,19 @@ function NuevaCotizacionPageContent() {
       let nextItem: CotizacionWorkflowItem;
 
       if (isFreeValue) {
+        const shouldChargeSeparately =
+          quotePricingMode !== "total_global" || groupDraft.cobraPrecioSeparado;
         const normalizedValue = normalizeCurrencyInput(groupDraft.precio || "0");
         nextItem = buildFreeValueItemFromForm(
           {
             nombre: groupDraft.nombre.trim() || groupDraft.subtipo,
             descripcion: groupDraft.descripcion,
-            valor: normalizedValue,
+            valor: shouldChargeSeparately ? normalizedValue : "0",
             ivaMode: groupDraft.ivaMode ?? "total_incluye_iva",
           },
           nextItems,
-          null
+          null,
+          { allowZeroValue: !shouldChargeSeparately }
         );
       } else {
         const nextForm = buildPasoDosGrupoComponentForm({
@@ -1653,6 +1657,7 @@ function NuevaCotizacionPageContent() {
               onPricingModeChange: pasoDosAgregarGrupoMovil.updatePricingMode,
               onMargenChange: pasoDosAgregarGrupoMovil.updateMargenPct,
               onIvaModeChange: pasoDosAgregarGrupoMovil.updateIvaMode,
+              onCobraPrecioSeparadoChange: pasoDosAgregarGrupoMovil.updateCobraPrecioSeparado,
             },
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
@@ -1716,6 +1721,8 @@ function NuevaCotizacionPageContent() {
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onIvaModeChange: pasoDosAgregarGrupo.updateIvaMode,
+            onCobraPrecioSeparadoChange: pasoDosAgregarGrupo.updateCobraPrecioSeparado,
+            quotePricingMode,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,
           }}

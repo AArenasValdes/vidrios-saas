@@ -30,7 +30,10 @@ import type {
 } from "../../_types/paso-dos";
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import type { PasoDosGrupoPasoMovil } from "../../_hooks/use-paso-dos-agregar-grupo-movil";
-import { getSubtypeOptionsForCategory } from "../../_hooks/use-paso-dos-agregar-grupo";
+import {
+  getSubtypeOptionsForCategory,
+  shouldSkipCantidadForGrupoDraft,
+} from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
   filterVidrios,
   getColorByMaterial,
@@ -92,6 +95,7 @@ export type WizardActions = {
   onPricingModeChange: (mode: PricingMode) => void;
   onMargenChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
+  onCobraPrecioSeparadoChange: (value: boolean) => void;
 };
 
 type Props = {
@@ -258,6 +262,7 @@ export function PasoDosWizardMovil({
   );
 
   const quotePricingMode = formulario.quotePricingMode;
+  const shouldSkipCantidadStep = shouldSkipCantidadForGrupoDraft(wizard.draft);
   const {
     activePricingMode,
     cantidadDisplayValue,
@@ -412,7 +417,7 @@ export function PasoDosWizardMovil({
           >
             <PasoDosWizardEncabezadoMovil
               stages={
-                isFreeValueComponentType(wizard.draft.subtipo)
+                shouldSkipCantidadStep
                   ? VISUAL_STAGES_FREE_VALUE
                   : VISUAL_STAGES
               }
@@ -423,8 +428,10 @@ export function PasoDosWizardMovil({
                   ? "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
-                    : isFreeValueComponentType(wizard.draft.subtipo)
-                      ? "Redacta el trabajo y define el valor."
+                    : shouldSkipCantidadStep
+                      ? quotePricingMode === "total_global"
+                        ? "Redacta el trabajo. El valor final va en el resumen."
+                        : "Redacta el trabajo y define el valor."
                       : quotePricingMode === "total_global"
                         ? "Completa los datos comerciales antes de agregar."
                         : "Completa sistema, medidas y valor antes de agregar."
@@ -490,6 +497,7 @@ export function PasoDosWizardMovil({
                   onCustomSchemeDescriptionChange={wizard.onCustomSchemeDescriptionChange}
                   onPrecioChange={wizard.onPrecioChange}
                   onPricingModeChange={wizard.onPricingModeChange}
+                  onCobraPrecioSeparadoChange={wizard.onCobraPrecioSeparadoChange}
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
                   onIvaModeChange={wizard.onIvaModeChange}
