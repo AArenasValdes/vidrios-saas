@@ -1056,7 +1056,7 @@ function NuevaCotizacionPageContent() {
           const detalleItem = buildFreeValueItemFromForm(
             {
               nombre: detalleNombre,
-              descripcion: detalleDescripcion || undefined,
+              descripcion: detalleDescripcion,
               valor: "0",
               ivaMode: "total_incluye_iva",
             },
