@@ -1,6 +1,6 @@
 "use client";
 
-import { LuChevronLeft, LuPlus, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight, LuNotebookPen, LuPlus, LuSparkles, LuX } from "react-icons/lu";
 
 import {
   COMPONENT_TYPE_GROUPS,
@@ -131,6 +131,14 @@ export function PasoDosAgregarGrupoSheet({
   }
 
   const stepCopy = STEP_COPY[paso];
+  const effectiveStepCopy =
+    quotePricingMode === "total_global" && paso === 1
+      ? {
+          ...stepCopy,
+          title: "Proyecto libre",
+          description: "Usalo como cuaderno para redactar el trabajo sin catalogo tecnico.",
+        }
+      : stepCopy;
   const disableContinue =
     (paso === 3 && !canContinueFromQuantity) || (paso === 4 && !canContinueFromConfig);
   const showSheetScheme = shouldShowSheetSchemeForComponent({
@@ -173,11 +181,11 @@ export function PasoDosAgregarGrupoSheet({
 
         <header className={s.groupSheetHeader}>
           <div className={s.groupSheetHeaderCopy}>
-            <span className={s.cardLabel}>{stepCopy.eyebrow}</span>
+            <span className={s.cardLabel}>{effectiveStepCopy.eyebrow}</span>
             <h2 className={s.groupSheetTitle} id="paso-dos-grupo-title">
-              {stepCopy.title}
+              {effectiveStepCopy.title}
             </h2>
-            <p className={s.groupSheetDescription}>{stepCopy.description}</p>
+            <p className={s.groupSheetDescription}>{effectiveStepCopy.description}</p>
           </div>
 
           <button
@@ -203,21 +211,47 @@ export function PasoDosAgregarGrupoSheet({
 
         <div className={s.groupSheetBody}>
           {paso === 1 ? (
-            <div className={s.groupSheetOptionGrid}>
-              {COMPONENT_TYPE_GROUPS.map((group) => (
-                <button
-                  key={group.title}
-                  className={`${s.groupSheetOptionButton} ${
-                    draft.categoria === group.title ? s.groupSheetOptionButtonActive : ""
-                  }`}
-                  onClick={() => onSelectCategoria(group.title)}
-                  type="button"
-                >
-                  <strong>{group.title}</strong>
-                  <span>{group.items.slice(0, 2).map(getVisibleSubtypeLabel).join(", ")}</span>
-                </button>
-              ))}
-            </div>
+            quotePricingMode === "total_global" ? (
+              <button
+                className={s.stepTwoMobileNotebookCard}
+                onClick={() => onSelectSubtipo("Trabajo personalizado")}
+                type="button"
+              >
+                <span className={s.stepTwoMobileNotebookIcon}>
+                  <LuNotebookPen aria-hidden size={28} />
+                </span>
+                <span className={s.stepTwoMobileNotebookCopy}>
+                  <span className={s.stepTwoMobileNotebookKicker}>
+                    <LuSparkles aria-hidden size={14} />
+                    Presupuesto por total
+                  </span>
+                  <strong>Proyecto libre o mantencion</strong>
+                  <small>
+                    Usalo como cuaderno: redacta el trabajo completo y define
+                    el total final al terminar.
+                  </small>
+                </span>
+                <span className={s.stepTwoMobileCreatorOptionArrow}>
+                  <LuChevronRight aria-hidden size={18} />
+                </span>
+              </button>
+            ) : (
+              <div className={s.groupSheetOptionGrid}>
+                {COMPONENT_TYPE_GROUPS.map((group) => (
+                  <button
+                    key={group.title}
+                    className={`${s.groupSheetOptionButton} ${
+                      draft.categoria === group.title ? s.groupSheetOptionButtonActive : ""
+                    }`}
+                    onClick={() => onSelectCategoria(group.title)}
+                    type="button"
+                  >
+                    <strong>{group.title}</strong>
+                    <span>{group.items.slice(0, 2).map(getVisibleSubtypeLabel).join(", ")}</span>
+                  </button>
+                ))}
+              </div>
+            )
           ) : null}
 
           {paso === 2 ? (

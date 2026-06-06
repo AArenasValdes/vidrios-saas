@@ -425,7 +425,9 @@ export function PasoDosWizardMovil({
               title={getStageTitle(visualStage)}
               subtitle={
                 visualStage === 1
-                  ? "Elige el tipo base del componente."
+                  ? quotePricingMode === "total_global"
+                    ? "Parte desde un cuaderno libre para describir el trabajo."
+                    : "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
                     : shouldSkipCantidadStep
@@ -449,6 +451,7 @@ export function PasoDosWizardMovil({
                 <PasoDosWizardTipoMovil
                   categoryOptions={normalizedCategoryOptions}
                   draft={wizard.draft}
+                  quotePricingMode={quotePricingMode}
                   subtypeOptions={wizard.subtypeOptions}
                   subtypePreviewMarkup={subtypePreviewMarkup}
                   onSelectCategoria={wizard.onSelectCategoria}

@@ -129,6 +129,28 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(119000);
   });
 
+  it("permite item libre descriptivo en cero solo cuando se habilita explicitamente", () => {
+    expect(() =>
+      calculateFreeValueItem({
+        codigo: "L1",
+        nombre: "Mantencion de ventanas",
+        valor: 0,
+        ivaMode: "total_incluye_iva",
+      })
+    ).toThrow("Ingresa un valor mayor a cero");
+
+    const itemLibre = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Mantencion de ventanas",
+      valor: 0,
+      ivaMode: "total_incluye_iva",
+      allowZeroValue: true,
+    });
+
+    expect(itemLibre.precioTotal).toBe(0);
+    expect(itemLibre.cantidad).toBe(1);
+  });
+
   it("suma cobros separados al presupuesto por total", () => {
     const itemLibre = calculateFreeValueItem({
       codigo: "L1",

@@ -1,6 +1,7 @@
 "use client";
 
-import { LuChevronRight } from "react-icons/lu";
+import { LuChevronRight, LuNotebookPen, LuSparkles } from "react-icons/lu";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
@@ -19,6 +20,7 @@ type Props = {
   draft: PasoDosGrupoDraft;
   subtypeOptions: readonly string[];
   subtypePreviewMarkup: Record<string, string>;
+  quotePricingMode: QuotePricingMode;
   onSelectCategoria: (categoria: PasoDosGrupoDraft["categoria"]) => void;
   onSelectSubtipo: (subtipo: string) => void;
 };
@@ -28,9 +30,40 @@ export function PasoDosWizardTipoMovil({
   draft,
   subtypeOptions,
   subtypePreviewMarkup,
+  quotePricingMode,
   onSelectCategoria,
   onSelectSubtipo,
 }: Props) {
+  if (quotePricingMode === "total_global") {
+    return (
+      <div className={s.stepTwoMobileCreatorStack}>
+        <button
+          className={s.stepTwoMobileNotebookCard}
+          onClick={() => onSelectSubtipo("Trabajo personalizado")}
+          type="button"
+        >
+          <span className={s.stepTwoMobileNotebookIcon}>
+            <LuNotebookPen aria-hidden size={28} />
+          </span>
+          <span className={s.stepTwoMobileNotebookCopy}>
+            <span className={s.stepTwoMobileNotebookKicker}>
+              <LuSparkles aria-hidden size={14} />
+              Presupuesto por total
+            </span>
+            <strong>Proyecto libre o mantencion</strong>
+            <small>
+              Usalo como cuaderno: escribe el trabajo completo, agrega notas
+              para el cliente y define el total final al terminar.
+            </small>
+          </span>
+          <span className={s.stepTwoMobileCreatorOptionArrow}>
+            <LuChevronRight aria-hidden size={18} />
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileCategoryTabs}>

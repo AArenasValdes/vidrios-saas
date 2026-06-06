@@ -46,6 +46,7 @@ export type PublicApprovalQuoteView = {
   items: Array<{
     id: string;
     codigo: string;
+    tipoItem: string | null;
     tipo: string;
     nombre: string;
     descripcion: string;
@@ -146,6 +147,7 @@ async function buildPublicApprovalQuoteView(
   const items = payload.items.map((item, index) => ({
     id: String(item.id),
     codigo: item.codigo?.trim() || `I${index + 1}`,
+    tipoItem: item.tipo_item ?? null,
     tipo: item.tipo_componente?.trim() || "Componente",
     nombre: item.nombre?.trim() || `Componente ${index + 1}`,
     descripcion: item.descripcion?.trim() || item.nombre?.trim() || `Componente ${index + 1}`,

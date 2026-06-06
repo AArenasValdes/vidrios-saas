@@ -56,6 +56,7 @@ type PublicItemRow = {
   id: EntityId;
   cotizacion_id: EntityId | null;
   codigo: string | null;
+  tipo_item: string | null;
   tipo_componente: string | null;
   cantidad: number;
   precio_unitario: number | string;
@@ -249,7 +250,7 @@ export function createPublicCotizacionApprovalRepository() {
       const itemsPromise = supabase
         .from("cotizacion_items")
         .select(
-          "id, cotizacion_id, codigo, tipo_componente, cantidad, precio_unitario, subtotal, ancho, alto, vidrio, nombre, descripcion, unidad, observaciones, orden, eliminado_en"
+          "id, cotizacion_id, codigo, tipo_item, tipo_componente, cantidad, precio_unitario, subtotal, ancho, alto, vidrio, nombre, descripcion, unidad, observaciones, orden, eliminado_en"
         )
         .eq("cotizacion_id", cotizacion.id)
         .eq("organization_id", cotizacion.organization_id)

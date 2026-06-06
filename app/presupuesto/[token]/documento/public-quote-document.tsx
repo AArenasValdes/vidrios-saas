@@ -44,6 +44,7 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 type PublicPreviewItem = {
   id: string;
   codigo: string;
+  tipoItem?: string | null;
   tipo: string;
   nombre: string;
   descripcion: string;
@@ -618,6 +619,12 @@ export function PublicQuoteDocument({
                     {pagePlan.items.map((item, itemIndex) => {
                       const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                       const presentation = itemPresentationMap.get(item.id);
+                      const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                      const isFreeValueItem =
+                        item.tipoItem === "item_libre_con_valor" ||
+                        itemMeta.displayMode === "item_libre";
+                      const shouldShowItemPrice =
+                        showItemPrices || (isFreeValueItem && item.precioTotal > 0);
                       const colorHex = presentation?.colorHex ?? "#a8a8a8";
                       const material = presentation?.material ?? "Material a definir";
                       const colorName = presentation?.colorName ?? "Color a definir";
@@ -663,17 +670,31 @@ export function PublicQuoteDocument({
                           </div>
 
                           <div className={printStyles.componentBody}>
-                            <div className={printStyles.drawingColumn}>
-                              <div className={printStyles.drawingFrame}>
-                                <div
-                                  className={printStyles.drawingSvg}
-                                  dangerouslySetInnerHTML={{ __html: drawingSvg }}
-                                />
+                            {isFreeValueItem ? (
+                              <div className={printStyles.drawingColumn}>
+                                <div className={printStyles.drawingFrame}>
+                                  <div className={printStyles.itemTextOnlyBox}>
+                                    <strong>{item.nombre}</strong>
+                                    <span>{item.descripcion || "Trabajo incluido en el presupuesto."}</span>
+                                  </div>
+                                </div>
+                                <span className={printStyles.drawingCaption}>
+                                  DESCRIPCION COMERCIAL
+                                </span>
                               </div>
-                              <span className={printStyles.drawingCaption}>
-                                VISTA INTERIOR REFERENCIAL
-                              </span>
-                            </div>
+                            ) : (
+                              <div className={printStyles.drawingColumn}>
+                                <div className={printStyles.drawingFrame}>
+                                  <div
+                                    className={printStyles.drawingSvg}
+                                    dangerouslySetInnerHTML={{ __html: drawingSvg }}
+                                  />
+                                </div>
+                                <span className={printStyles.drawingCaption}>
+                                  VISTA INTERIOR REFERENCIAL
+                                </span>
+                              </div>
+                            )}
 
                             <div className={printStyles.componentInfoColumn}>
                               <div className={printStyles.specsColumn}>
@@ -699,7 +720,7 @@ export function PublicQuoteDocument({
                                 ))}
                               </div>
 
-                              {showItemPrices ? (
+                              {shouldShowItemPrice ? (
                               <aside className={printStyles.pricesColumn}>
                                 <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
                                 <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>

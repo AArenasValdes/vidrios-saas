@@ -307,6 +307,7 @@ function NuevaCotizacionPageContent() {
   const pasoDosAgregarGrupoMovil = usePasoDosAgregarGrupoMovil({
     items: draft.items,
     pricingMode: componentForm.pricingMode,
+    quotePricingMode,
     provider: suggestionProvider,
     activeLineTemplates,
     seedForm: componentForm,

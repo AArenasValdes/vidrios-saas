@@ -569,15 +569,22 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const selectSubtipo = (subtipo: string) => {
-    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
-      categoria: draft.categoria,
-      subtipo,
-    });
+    const forcedGlobalNotebook =
+      params.quotePricingMode === "total_global" && subtipo === "Trabajo personalizado";
+    const shouldSkipCantidad =
+      forcedGlobalNotebook ||
+      shouldSkipCantidadForGrupoDraft({
+        categoria: draft.categoria,
+        subtipo,
+      });
 
     setDraft((current) => ({
       ...current,
+      ...(forcedGlobalNotebook ? { categoria: "Proyecto libre y Mantencion" as const } : {}),
       ...buildPasoDosGrupoSelectionPatch({
-        current,
+        current: forcedGlobalNotebook
+          ? { ...current, categoria: "Proyecto libre y Mantencion" as const }
+          : current,
         items: params.items,
         pricingMode: params.pricingMode,
         provider: params.provider,

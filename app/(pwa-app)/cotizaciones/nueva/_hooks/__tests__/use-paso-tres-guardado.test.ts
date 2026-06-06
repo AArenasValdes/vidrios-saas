@@ -1,5 +1,8 @@
 import { preparePasoTresGuardado } from "../use-paso-tres-guardado";
-import { calculateComponentItem } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import {
+  calculateComponentItem,
+  calculateFreeValueItem,
+} from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 
 describe("preparePasoTresGuardado", () => {
   it("debe validar usando los items ya mezclados con borradores rapidos", () => {
@@ -60,6 +63,42 @@ describe("preparePasoTresGuardado", () => {
     });
 
     expect(resultado.finalErrors.items).toBe("Agrega al menos un componente");
+  });
+
+  it("debe permitir presupuesto por total con item libre descriptivo sin precio por item", () => {
+    const itemDescriptivo = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Mantencion de ventanas",
+      descripcion: "",
+      valor: 0,
+      ivaMode: "total_incluye_iva",
+      allowZeroValue: true,
+    });
+
+    const resultado = preparePasoTresGuardado({
+      estado: "creada",
+      draft: {
+        clienteNombre: "Pedro Gonzales",
+        clienteTelefono: "",
+        obra: "Trabajo de Pedro Gonzales",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        items: [itemDescriptivo],
+        quotePricingMode: "total_global",
+        totalClienteManual: 250000,
+        mostrarIva: true,
+        costoTotalFabricacion: 0,
+        margenGlobalPct: 0,
+        utilidadTotal: 0,
+      },
+      applyQuickEditDraftsToItems: (items) => items,
+    });
+
+    expect(resultado.finalErrors).toEqual({});
+    expect(resultado.draftToSave.items[0]?.precioTotal).toBe(0);
   });
 
   it("debe conservar la validacion del paso 1 al guardar un borrador", () => {

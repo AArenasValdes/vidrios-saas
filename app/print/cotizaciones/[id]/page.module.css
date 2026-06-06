@@ -1240,6 +1240,34 @@
   height: auto;
 }
 
+.itemTextOnlyBox {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 168px;
+  padding: 18px;
+  border: 1px solid #dbe6f5;
+  border-radius: 14px;
+  background: #ffffff;
+  box-sizing: border-box;
+  color: #183564;
+}
+
+.itemTextOnlyBox strong {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.itemTextOnlyBox span {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #52677f;
+}
+
 .drawingCaption {
   font-family: var(--font-sans), Arial, sans-serif;
   font-size: 7.1px;

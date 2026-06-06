@@ -79,6 +79,25 @@ describe("workflow-ui paso 2", () => {
     } })).toEqual([item]);
   });
 
+  it("debe considerar completo un item libre descriptivo sin precio en total global", () => {
+    const item = buildFreeValueItemFromForm(
+      {
+        ...createEmptyFreeValueItemForm(),
+        nombre: "Mantencion de ventanas",
+        descripcion: "",
+        valor: "0",
+        ivaMode: "total_incluye_iva",
+      },
+      [],
+      null,
+      { allowZeroValue: true }
+    );
+
+    expect(item.precioTotal).toBe(0);
+    expect(isWorkflowItemEffectivelyComplete(item, undefined, "total_global")).toBe(true);
+    expect(isWorkflowItemEffectivelyComplete(item, undefined, "por_item")).toBe(false);
+  });
+
   it("debe validar nombre y valor del item libre", () => {
     expect(
       validateFreeValueItemForm({

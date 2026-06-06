@@ -743,7 +743,13 @@ export function isWorkflowItemComplete(
   quotePricingMode: QuotePricingMode = "por_item"
 ) {
   if (item.tipoItem === "item_libre_con_valor") {
-    return item.nombre.trim().length > 0 && item.precioTotal > 0;
+    const hasName = item.nombre.trim().length > 0;
+
+    if (normalizeQuotePricingMode(quotePricingMode) === "total_global") {
+      return hasName;
+    }
+
+    return hasName && item.precioTotal > 0;
   }
 
   return (
