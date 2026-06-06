@@ -920,6 +920,67 @@
   gap: 8px 12px;
 }
 
+.globalWorkSummary {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(181, 196, 220, 0.52);
+  background: linear-gradient(180deg, #fbfcff 0%, #f4f8ff 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.globalWorkSummaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.globalWorkSummaryHeader strong {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.globalWorkSummaryTitle {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--carbon);
+  line-height: 1.2;
+}
+
+.globalWorkSummaryDescription {
+  margin: 0;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #526176;
+}
+
+.globalWorkSummaryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.globalWorkSummaryMeta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(30, 136, 255, 0.08);
+  color: #335ea9;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .clientField {
   display: flex;
   align-items: flex-start;

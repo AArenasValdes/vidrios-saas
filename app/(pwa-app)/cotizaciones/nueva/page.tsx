@@ -85,6 +85,7 @@ import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-d
 import { NuevaCotizacionMobile } from "./_components/mobile/nueva-cotizacion-mobile";
 import { useFlujoNuevaCotizacion } from "./_hooks/use-flujo-nueva-cotizacion";
 import {
+  buildStructuredAlcanceDetalleItem,
   buildPasoDosGrupoComponentForm,
   resolveMaterialColorHex,
   usePasoDosAgregarGrupo,
@@ -390,6 +391,10 @@ function NuevaCotizacionPageContent() {
       ...current,
       mostrarIva: !(current.mostrarIva ?? true),
     }));
+  };
+
+  const handleInternalObservationChange = (value: string) => {
+    handleDraftChange("observaciones", value);
   };
 
   function registerStep1InputRef(
@@ -1041,29 +1046,40 @@ function NuevaCotizacionPageContent() {
 
       if (isFreeValue && quotePricingMode === "total_global" && groupDraft.alcanceDetalles.length > 0) {
         for (const detalle of groupDraft.alcanceDetalles) {
-          if (!detalle.nombre.trim() && !detalle.descripcion.trim()) {
+          if (
+            detalle.tipo === "manual" &&
+            !detalle.nombre.trim() &&
+            !detalle.descripcion.trim()
+          ) {
             continue;
           }
-          const detalleNombre = detalle.nombre.trim() || "Detalle";
-          const detalleDescripcion = [
-            detalle.descripcion.trim(),
-            detalle.cantidad && detalle.cantidad !== "1" ? `Cantidad: ${detalle.cantidad}` : "",
-            detalle.ancho ? `Ancho: ${detalle.ancho} mm` : "",
-            detalle.alto ? `Alto: ${detalle.alto} mm` : "",
-          ]
-            .filter(Boolean)
-            .join(". ");
-          const detalleItem = buildFreeValueItemFromForm(
-            {
-              nombre: detalleNombre,
-              descripcion: detalleDescripcion,
-              valor: "0",
-              ivaMode: "total_incluye_iva",
-            },
-            nextItems,
-            null,
-            { allowZeroValue: true }
-          );
+          const detalleItem =
+            detalle.tipo === "estructurado"
+              ? buildStructuredAlcanceDetalleItem({
+                  detalle,
+                  items: nextItems,
+                  provider: suggestionProvider,
+                })
+              : buildFreeValueItemFromForm(
+                  {
+                    nombre: detalle.nombre.trim() || "Detalle incluido",
+                    descripcion: [
+                      detalle.descripcion.trim(),
+                      detalle.cantidad && detalle.cantidad !== "1"
+                        ? `Cantidad: ${detalle.cantidad}`
+                        : "",
+                      detalle.ancho ? `Ancho: ${detalle.ancho} mm` : "",
+                      detalle.alto ? `Alto: ${detalle.alto} mm` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(". "),
+                    valor: "0",
+                    ivaMode: "total_incluye_iva",
+                  },
+                  nextItems,
+                  null,
+                  { allowZeroValue: true }
+                );
           nextItems.push(detalleItem);
         }
       }
@@ -1638,7 +1654,13 @@ function NuevaCotizacionPageContent() {
             pricingMode: componentForm.pricingMode,
             adjustedItems: pasoDosVariaciones.adjustedItems,
             variationQuickEdit: pasoDosVariaciones.variationQuickEdit,
+            totalClienteManual: totals.totalClienteManual,
+            mostrarIva: draft.mostrarIva ?? true,
+            internalObservation: draft.observaciones,
             onGoToSummary: () => goToStep(3),
+            onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
+            onMostrarIvaChange: handleMostrarIvaChange,
+            onInternalObservationChange: handleInternalObservationChange,
             onVariationQuickEditChange: pasoDosVariaciones.handleVariationQuickEditChange,
             onEditVariationFull: pasoDosVariaciones.handleEditVariationFull,
             onCloseVariationQuickEdit: pasoDosVariaciones.handleCloseVariationQuickEdit,
@@ -1757,6 +1779,12 @@ function NuevaCotizacionPageContent() {
             onUpdateAlcanceDetalle: pasoDosAgregarGrupo.updateAlcanceDetalle,
             onRemoveAlcanceDetalle: pasoDosAgregarGrupo.removeAlcanceDetalle,
             quotePricingMode,
+            totalClienteManual: totals.totalClienteManual,
+            mostrarIva: draft.mostrarIva ?? true,
+            internalObservation: draft.observaciones,
+            onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
+            onMostrarIvaChange: handleMostrarIvaChange,
+            onInternalObservationChange: handleInternalObservationChange,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,
           }}

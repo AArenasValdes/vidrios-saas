@@ -482,9 +482,36 @@ export default function CotizacionPrintPage() {
     organizationProfile.formaPago
   );
   const showItemPrices = visibleCotizacion?.quotePricingMode !== "total_global";
+  const totalGlobalLeadItem = useMemo(() => {
+    if (!visibleCotizacion || visibleCotizacion.quotePricingMode !== "total_global") {
+      return null;
+    }
+
+    return (
+      visibleCotizacion.items.find((item) => {
+        const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+        return item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+      }) ?? null
+    );
+  }, [visibleCotizacion]);
+  const printableItems = useMemo(() => {
+    if (!visibleCotizacion) {
+      return [];
+    }
+
+    if (visibleCotizacion.quotePricingMode !== "total_global" || !totalGlobalLeadItem) {
+      return visibleCotizacion.items;
+    }
+
+    return visibleCotizacion.items.filter((item) => item.id !== totalGlobalLeadItem.id);
+  }, [totalGlobalLeadItem, visibleCotizacion]);
+  const globalIvaLabel = (visibleCotizacion?.mostrarIva ?? true) ? "IVA incluido" : "Sin IVA";
+  const detailHeadingLabel = showItemPrices
+    ? "COMPONENTES COTIZADOS · OFERTA CLIENTE"
+    : "DETALLES INCLUIDOS · OFERTA CLIENTE";
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
-    const items = visibleCotizacion?.items ?? [];
+    const items = printableItems;
     const nextPrintPages = buildPrintPlan(items);
     const nextTotalSurfaceM2 = items.reduce((accumulator, item) => {
       if (item.areaM2 !== null) {
@@ -502,7 +529,7 @@ export default function CotizacionPrintPage() {
       printPages: nextPrintPages,
       totalSurfaceM2: nextTotalSurfaceM2,
     };
-  }, [visibleCotizacion?.items]);
+  }, [printableItems]);
   const itemPresentationMap = useMemo(() => {
     const map = new Map<string, ItemPresentation>();
 
@@ -908,15 +935,33 @@ export default function CotizacionPrintPage() {
               </section>
             ) : null}
 
+            {pagePlan.kind === "cover" && totalGlobalLeadItem ? (
+              <section className={s.globalWorkSummary}>
+                <div className={s.globalWorkSummaryHeader}>
+                  <span className={s.sectionLabel}>TRABAJO GENERAL</span>
+                  <strong>{CLP(visibleCotizacion.total)}</strong>
+                </div>
+                <strong className={s.globalWorkSummaryTitle}>{totalGlobalLeadItem.nombre}</strong>
+                <p className={s.globalWorkSummaryDescription}>
+                  {totalGlobalLeadItem.descripcion?.trim() || totalGlobalLeadItem.nombre}
+                </p>
+                <div className={s.globalWorkSummaryMeta}>
+                  <span>{globalIvaLabel}</span>
+                  <span>Precio final visible para cliente</span>
+                </div>
+              </section>
+            ) : null}
+
             <section className={s.detailHeading}>
-              <span className={s.detailLabel}>COMPONENTES COTIZADOS · OFERTA CLIENTE</span>
+              <span className={s.detailLabel}>{detailHeadingLabel}</span>
             </section>
 
             <div className={s.componentList}>
               {pagePlan.items.length === 0 ? (
                 <p className={s.emptyText}>
-                  Esta cotizacion aun no tiene items cargados. Puedes volver al detalle y
-                  completarla antes de compartir el PDF definitivo.
+                  {totalGlobalLeadItem
+                    ? "Sin detalles incluidos adicionales en este presupuesto."
+                    : "Esta cotizacion aun no tiene items cargados. Puedes volver al detalle y completarla antes de compartir el PDF definitivo."}
                 </p>
               ) : null}
               {pagePlan.items.map((item, itemIndex) => {
@@ -1054,36 +1099,51 @@ export default function CotizacionPrintPage() {
                 ) : null}
 
                 <section className={s.summarySection}>
-                  <section className={s.conditionsColumn}>
-                    <span className={s.summaryLabel}>CONDICIONES</span>
-                    <p className={s.conditionsText}>
-                      {resolveDocumentConditionsText(visibleCotizacion.observaciones)}
-                    </p>
-                  </section>
+                  {showItemPrices ? (
+                    <section className={s.conditionsColumn}>
+                      <span className={s.summaryLabel}>CONDICIONES</span>
+                      <p className={s.conditionsText}>
+                        {resolveDocumentConditionsText(visibleCotizacion.observaciones)}
+                      </p>
+                    </section>
+                  ) : null}
 
-                    <aside className={s.totalsColumn}>
-                      <span className={s.summaryLabel}>RESUMEN FINAL</span>
-                      {showItemPrices ? (
-                        <>
-                      <div className={s.totalRow}>
-                        <span>Subtotal</span>
-                        <strong>{CLP(visibleCotizacion.subtotal)}</strong>
-                    </div>
-                    <div className={s.totalRow}>
-                      <span>Descuento</span>
-                      <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
-                    </div>
-                    <div className={`${s.totalRow} ${s.totalRowStrong}`}>
-                      <span>Neto</span>
-                      <strong>{CLP(visibleCotizacion.neto)}</strong>
-                    </div>
-                      <div className={s.totalRow}>
-                        <span>IVA 19%</span>
-                        <strong>{CLP(visibleCotizacion.iva)}</strong>
-                      </div>
-                        </>
-                      ) : null}
-                      {showItemPrices && visibleCotizacion.flete > 0 ? (
+                  <aside className={s.totalsColumn}>
+                    <span className={s.summaryLabel}>RESUMEN FINAL</span>
+                    {showItemPrices ? (
+                      <>
+                        <div className={s.totalRow}>
+                          <span>Subtotal</span>
+                          <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                        </div>
+                        <div className={s.totalRow}>
+                          <span>Descuento</span>
+                          <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                        </div>
+                        <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                          <span>Neto</span>
+                          <strong>{CLP(visibleCotizacion.neto)}</strong>
+                        </div>
+                        <div className={s.totalRow}>
+                          <span>IVA 19%</span>
+                          <strong>{CLP(visibleCotizacion.iva)}</strong>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={s.totalRow}>
+                          <span>Precio final</span>
+                          <strong>{CLP(visibleCotizacion.total)}</strong>
+                        </div>
+                        <div className={s.totalRow}>
+                          <span>{globalIvaLabel}</span>
+                          <strong>
+                            {visibleCotizacion.mostrarIva ? CLP(visibleCotizacion.iva) : "No aplica"}
+                          </strong>
+                        </div>
+                      </>
+                    )}
+                    {showItemPrices && visibleCotizacion.flete > 0 ? (
                       <div className={s.totalRow}>
                         <span>Flete</span>
                         <strong>{CLP(visibleCotizacion.flete)}</strong>
@@ -1097,7 +1157,7 @@ export default function CotizacionPrintPage() {
                 </section>
 
                 <section className={s.grandTotal}>
-                  <span>Total presupuesto</span>
+                  <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
                   <strong>{CLP(visibleCotizacion.total)}</strong>
                 </section>
               </>

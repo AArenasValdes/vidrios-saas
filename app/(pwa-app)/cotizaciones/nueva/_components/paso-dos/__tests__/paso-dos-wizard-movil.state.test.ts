@@ -9,6 +9,11 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     cantidad: 2,
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
+    nombre: "",
+    descripcion: "",
+    ivaMode: "total_incluye_iva",
+    cobraPrecioSeparado: false,
+    alcanceDetalles: [],
     pricingMode: "precio_directo",
     material: "Aluminio",
     colorHex: "#a8a8a8",
@@ -28,9 +33,6 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     minimoCobrable: "",
     redondeoPrecio: "1000",
     margenPct: "0",
-    cobraPrecioSeparado: false,
-    nombre: "",
-    descripcion: "",
     ...overrides,
   };
 }

@@ -362,10 +362,33 @@ export function PublicQuoteDocument({
   );
   const neto = Math.max(0, quote.subtotal - discountValue);
   const showItemPrices = quote.pricingMode !== "total_global";
+  const totalGlobalLeadItem = useMemo(() => {
+    if (quote.pricingMode !== "total_global") {
+      return null;
+    }
+
+    return (
+      quote.items.find((item) => {
+        const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+        return item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+      }) ?? null
+    );
+  }, [quote.items, quote.pricingMode]);
+  const printableItems = useMemo(() => {
+    if (quote.pricingMode !== "total_global" || !totalGlobalLeadItem) {
+      return quote.items;
+    }
+
+    return quote.items.filter((item) => item.id !== totalGlobalLeadItem.id);
+  }, [quote.items, quote.pricingMode, totalGlobalLeadItem]);
+  const globalIvaLabel = quote.pricingMode === "total_global" && quote.iva > 0 ? "IVA incluido" : "Sin IVA";
+  const detailHeadingLabel = showItemPrices
+    ? "COMPONENTES COTIZADOS - OFERTA CLIENTE"
+    : "DETALLES INCLUIDOS - OFERTA CLIENTE";
 
   const { printPages, totalSurfaceM2 } = useMemo(() => {
-    const nextPrintPages = buildPrintPlan(quote.items);
-    const nextTotalSurfaceM2 = quote.items.reduce((accumulator, item) => {
+    const nextPrintPages = buildPrintPlan(printableItems);
+    const nextTotalSurfaceM2 = printableItems.reduce((accumulator, item) => {
       if (item.ancho && item.alto) {
         return accumulator + (item.ancho * item.alto * item.cantidad) / 1_000_000;
       }
@@ -377,7 +400,7 @@ export function PublicQuoteDocument({
       printPages: nextPrintPages,
       totalSurfaceM2: nextTotalSurfaceM2,
     };
-  }, [quote.items]);
+  }, [printableItems]);
 
   const itemPresentationMap = useMemo(() => {
     const map = new Map<string, ItemPresentation>();
@@ -603,17 +626,35 @@ export function PublicQuoteDocument({
                     </section>
                   ) : null}
 
+                  {pagePlan.kind === "cover" && totalGlobalLeadItem ? (
+                    <section className={printStyles.globalWorkSummary}>
+                      <div className={printStyles.globalWorkSummaryHeader}>
+                        <span className={printStyles.sectionLabel}>TRABAJO GENERAL</span>
+                        <strong>{CLP(quote.total)}</strong>
+                      </div>
+                      <strong className={printStyles.globalWorkSummaryTitle}>
+                        {totalGlobalLeadItem.nombre}
+                      </strong>
+                      <p className={printStyles.globalWorkSummaryDescription}>
+                        {totalGlobalLeadItem.descripcion?.trim() || totalGlobalLeadItem.nombre}
+                      </p>
+                      <div className={printStyles.globalWorkSummaryMeta}>
+                        <span>{globalIvaLabel}</span>
+                        <span>Precio final visible para cliente</span>
+                      </div>
+                    </section>
+                  ) : null}
+
                   <section className={printStyles.detailHeading}>
-                    <span className={printStyles.detailLabel}>
-                      COMPONENTES COTIZADOS - OFERTA CLIENTE
-                    </span>
+                    <span className={printStyles.detailLabel}>{detailHeadingLabel}</span>
                   </section>
 
                   <div className={printStyles.componentList}>
                     {pagePlan.items.length === 0 ? (
                       <p className={printStyles.conditionsText}>
-                        Esta cotizacion aun no tiene items cargados. Vuelve al detalle si
-                        necesitas completarla antes de compartir el PDF definitivo.
+                        {totalGlobalLeadItem
+                          ? "Sin detalles incluidos adicionales en este presupuesto."
+                          : "Esta cotizacion aun no tiene items cargados. Vuelve al detalle si necesitas completarla antes de compartir el PDF definitivo."}
                       </p>
                     ) : null}
                     {pagePlan.items.map((item, itemIndex) => {
@@ -759,12 +800,14 @@ export function PublicQuoteDocument({
                         ) : null}
 
                       <section className={printStyles.summarySection}>
+                        {showItemPrices ? (
                           <section className={printStyles.conditionsColumn}>
                             <span className={printStyles.summaryLabel}>CONDICIONES</span>
                             <p className={printStyles.conditionsText}>
                               {resolveDocumentConditionsText(quote.observaciones)}
                             </p>
                           </section>
+                        ) : null}
 
                         <aside className={printStyles.totalsColumn}>
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
@@ -787,7 +830,18 @@ export function PublicQuoteDocument({
                             <strong>{CLP(quote.iva)}</strong>
                           </div>
                             </>
-                          ) : null}
+                          ) : (
+                            <>
+                              <div className={printStyles.totalRow}>
+                                <span>Precio final</span>
+                                <strong>{CLP(quote.total)}</strong>
+                              </div>
+                              <div className={printStyles.totalRow}>
+                                <span>{globalIvaLabel}</span>
+                                <strong>{quote.iva > 0 ? CLP(quote.iva) : "No aplica"}</strong>
+                              </div>
+                            </>
+                          )}
                           {showItemPrices && quote.flete > 0 ? (
                             <div className={printStyles.totalRow}>
                               <span>Flete</span>
@@ -802,7 +856,7 @@ export function PublicQuoteDocument({
                       </section>
 
                       <section className={printStyles.grandTotal}>
-                        <span>Total presupuesto</span>
+                        <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
                         <strong>{CLP(quote.total)}</strong>
                       </section>
                     </>

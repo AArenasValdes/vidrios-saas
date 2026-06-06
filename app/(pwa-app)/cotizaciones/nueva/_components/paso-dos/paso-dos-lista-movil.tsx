@@ -20,6 +20,8 @@ type Props = {
   subtotal: string;
   total: string;
   quotePricingMode: QuotePricingMode;
+  totalClienteManual: number | null;
+  mostrarIva: boolean;
   isWizardOpen: boolean;
   adjustedItems: Record<string, string>;
   onOpenWizard: () => void;
@@ -35,6 +37,8 @@ export function PasoDosListaMovil({
   subtotal,
   total,
   quotePricingMode,
+  totalClienteManual,
+  mostrarIva,
   isWizardOpen,
   adjustedItems,
   onOpenWizard,
@@ -48,6 +52,10 @@ export function PasoDosListaMovil({
   const pendingCount = isGlobalPricing ? 0 : items.filter(isItemIncomplete).length;
   const itemNoun = isGlobalPricing ? "trabajo" : "componente";
   const itemNounPlural = isGlobalPricing ? "trabajos" : "componentes";
+  const totalGlobalLabel =
+    totalClienteManual && totalClienteManual > 0
+      ? `Total ${total} · ${mostrarIva ? "IVA incluido" : "Sin IVA"}`
+      : "Precio final pendiente";
 
   return (
     <>
@@ -75,7 +83,9 @@ export function PasoDosListaMovil({
             {items.length > 0 ? (
               <p className={s.stepTwoMobileLoadedSubtle}>
                 {isGlobalPricing
-                  ? "Total se define en el resumen."
+                  ? totalClienteManual && totalClienteManual > 0
+                    ? "Precio final cargado. Puedes revisar detalles o seguir al resumen."
+                    : "Carga el precio final en esta pantalla antes de revisar el resumen."
                   : pendingCount > 0
                   ? "Completa los pendientes o sigue agregando piezas."
                   : "Todo listo para pasar al resumen."}
@@ -257,7 +267,7 @@ export function PasoDosListaMovil({
                 : `${items.length} componente${items.length !== 1 ? "s" : ""} - Subtotal ${subtotal}`}
             </span>
             <strong>
-              {quotePricingMode === "total_global" ? "Total se define en el resumen" : `Total ${total}`}
+              {quotePricingMode === "total_global" ? totalGlobalLabel : `Total ${total}`}
             </strong>
           </div>
           <div className={s.stepTwoMobileFooterActions}>
@@ -276,7 +286,7 @@ export function PasoDosListaMovil({
               onClick={items.length > 0 ? onGoToSummary : onSaveAndExit}
               type="button"
             >
-              {items.length > 0 ? "Ir al resumen" : "Guardar borrador"}
+              {items.length > 0 ? "Continuar al resumen" : "Guardar borrador"}
             </button>
           </div>
         </footer>

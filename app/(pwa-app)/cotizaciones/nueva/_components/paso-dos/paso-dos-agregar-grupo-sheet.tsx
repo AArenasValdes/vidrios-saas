@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { LuChevronLeft, LuChevronRight, LuNotebookPen, LuPlus, LuSparkles, LuX } from "react-icons/lu";
 
 import {
   COMPONENT_TYPE_GROUPS,
+  FIELD_LIMITS,
+  formatCurrencyInput,
   getCompositionSectionLabel,
   getSheetSchemeOptions,
   getSheetVariantOptions,
@@ -17,6 +20,9 @@ import {
   isFreeValueComponentType,
 } from "@/features/cotizaciones/services/component-catalog.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import {
+  ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS,
+} from "../../_hooks/use-paso-dos-agregar-grupo";
 import type {
   PasoDosGrupoDraft,
   PasoDosGrupoPaso,
@@ -54,9 +60,19 @@ type Props = {
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: () => void;
-  onUpdateAlcanceDetalle: (detalleId: string, field: "nombre" | "cantidad" | "ancho" | "alto" | "descripcion", value: string) => void;
+  onUpdateAlcanceDetalle: (
+    detalleId: string,
+    field: "tipo" | "subtipo" | "nombre" | "cantidad" | "ancho" | "alto" | "descripcion",
+    value: string
+  ) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
   quotePricingMode: QuotePricingMode;
+  totalClienteManual: number | null;
+  mostrarIva: boolean;
+  internalObservation: string;
+  onGlobalTotalClienteChange: (value: string) => void;
+  onMostrarIvaChange: () => void;
+  onInternalObservationChange: (value: string) => void;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
 };
@@ -129,6 +145,12 @@ export function PasoDosAgregarGrupoSheet({
   onUpdateAlcanceDetalle,
   onRemoveAlcanceDetalle,
   quotePricingMode,
+  totalClienteManual,
+  mostrarIva,
+  internalObservation,
+  onGlobalTotalClienteChange,
+  onMostrarIvaChange,
+  onInternalObservationChange,
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
@@ -165,6 +187,13 @@ export function PasoDosAgregarGrupoSheet({
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
   });
+  const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
+    Boolean(internalObservation.trim())
+  );
+  const globalTotalInputValue =
+    totalClienteManual !== null && totalClienteManual !== undefined
+      ? formatCurrencyInput(String(totalClienteManual))
+      : "";
 
   return (
     <div className={s.groupSheetOverlay} role="presentation" onClick={onClose}>
@@ -345,7 +374,7 @@ export function PasoDosAgregarGrupoSheet({
                       <span className={s.formSectionEyebrow}>Item libre con valor</span>
                       <strong>
                         {quotePricingMode === "total_global"
-                          ? "Redacta el trabajo para el cliente"
+                          ? "Redacta trabajo principal, detalles incluidos y precio final"
                           : "Redacta el trabajo y define el valor"}
                       </strong>
                     </div>
@@ -408,7 +437,7 @@ export function PasoDosAgregarGrupoSheet({
                         <small className={s.helpText}>
                           {draft.cobraPrecioSeparado
                             ? "Este valor se sumara al total final."
-                            : "Queda incluido en el presupuesto total que defines al final."}
+                            : "Queda incluido dentro del precio final del presupuesto."}
                         </small>
                       </div>
                     ) : null}
@@ -454,8 +483,8 @@ export function PasoDosAgregarGrupoSheet({
                     {quotePricingMode === "total_global" ? (
                       <section className={s.formSection}>
                         <div className={s.formSectionHead}>
-                          <span className={s.formSectionEyebrow}>Detalle incluido</span>
-                          <strong>Agrega detalles del alcance (sin precio)</strong>
+                          <span className={s.formSectionEyebrow}>Detalles incluidos</span>
+                          <strong>Manual para texto libre. Estructurado para croquis en PDF.</strong>
                         </div>
 
                         {draft.alcanceDetalles.map((detalle) => (
@@ -473,66 +502,159 @@ export function PasoDosAgregarGrupoSheet({
                                 <LuX aria-hidden size={14} />
                               </button>
                             </div>
-                            <div className={s.alcanceDetalleGrid}>
-                              <label className={s.field}>
-                                <span className={s.label}>Nombre</span>
-                                <input
-                                  className={s.input}
-                                  placeholder="Ej: Cambio de vidrio"
-                                  value={detalle.nombre}
-                                  onChange={(e) =>
-                                    onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
-                                  }
-                                />
-                              </label>
-                              <label className={s.field}>
-                                <span className={s.label}>Cantidad</span>
-                                <input
-                                  className={s.input}
-                                  inputMode="numeric"
-                                  placeholder="1"
-                                  value={detalle.cantidad}
-                                  onChange={(e) =>
-                                    onUpdateAlcanceDetalle(detalle.id, "cantidad", e.target.value)
-                                  }
-                                />
-                              </label>
-                              <label className={s.field}>
-                                <span className={s.label}>Ancho (mm)</span>
-                                <input
-                                  className={s.input}
-                                  inputMode="numeric"
-                                  placeholder="1500"
-                                  value={detalle.ancho}
-                                  onChange={(e) =>
-                                    onUpdateAlcanceDetalle(detalle.id, "ancho", e.target.value)
-                                  }
-                                />
-                              </label>
-                              <label className={s.field}>
-                                <span className={s.label}>Alto (mm)</span>
-                                <input
-                                  className={s.input}
-                                  inputMode="numeric"
-                                  placeholder="2000"
-                                  value={detalle.alto}
-                                  onChange={(e) =>
-                                    onUpdateAlcanceDetalle(detalle.id, "alto", e.target.value)
-                                  }
-                                />
-                              </label>
-                            </div>
-                            <label className={s.field}>
-                              <span className={s.label}>Descripcion</span>
-                              <input
-                                className={s.input}
-                                placeholder="Ej: Vidrio templado 8mm"
-                                value={detalle.descripcion}
-                                onChange={(e) =>
-                                  onUpdateAlcanceDetalle(detalle.id, "descripcion", e.target.value)
+                            <div className={s.stepTwoMobileChoiceChips}>
+                              <button
+                                type="button"
+                                className={`${s.stepTwoMobileChoiceChip} ${
+                                  detalle.tipo === "manual" ? s.stepTwoMobileChoiceChipActive : ""
+                                }`}
+                                onClick={() => onUpdateAlcanceDetalle(detalle.id, "tipo", "manual")}
+                              >
+                                Manual
+                              </button>
+                              <button
+                                type="button"
+                                className={`${s.stepTwoMobileChoiceChip} ${
+                                  detalle.tipo === "estructurado" ? s.stepTwoMobileChoiceChipActive : ""
+                                }`}
+                                onClick={() =>
+                                  onUpdateAlcanceDetalle(detalle.id, "tipo", "estructurado")
                                 }
-                              />
-                            </label>
+                              >
+                                Estructurado
+                              </button>
+                            </div>
+                            {detalle.tipo === "estructurado" ? (
+                              <>
+                                <label className={s.field}>
+                                  <span className={s.label}>Componente</span>
+                                  <div className={s.selectWrap}>
+                                    <select
+                                      className={s.input}
+                                      value={detalle.subtipo || ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS[0]}
+                                      onChange={(event) =>
+                                        onUpdateAlcanceDetalle(
+                                          detalle.id,
+                                          "subtipo",
+                                          event.target.value
+                                        )
+                                      }
+                                    >
+                                      {ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS.map((option) => (
+                                        <option key={option} value={option}>
+                                          {option}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </label>
+                                <div className={s.alcanceDetalleGrid}>
+                                  <label className={s.field}>
+                                    <span className={s.label}>Cantidad</span>
+                                    <input
+                                      className={s.input}
+                                      inputMode="numeric"
+                                      placeholder="1"
+                                      value={detalle.cantidad}
+                                      onChange={(e) =>
+                                        onUpdateAlcanceDetalle(
+                                          detalle.id,
+                                          "cantidad",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                  <label className={s.field}>
+                                    <span className={s.label}>Ancho (mm)</span>
+                                    <input
+                                      className={s.input}
+                                      inputMode="numeric"
+                                      placeholder="1500"
+                                      value={detalle.ancho}
+                                      onChange={(e) =>
+                                        onUpdateAlcanceDetalle(
+                                          detalle.id,
+                                          "ancho",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                  <label className={s.field}>
+                                    <span className={s.label}>Alto (mm)</span>
+                                    <input
+                                      className={s.input}
+                                      inputMode="numeric"
+                                      placeholder="2000"
+                                      value={detalle.alto}
+                                      onChange={(e) =>
+                                        onUpdateAlcanceDetalle(
+                                          detalle.id,
+                                          "alto",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+                                </div>
+                                <label className={s.field}>
+                                  <span className={s.label}>Etiqueta visible</span>
+                                  <input
+                                    className={s.input}
+                                    placeholder="Ej: 3 ventanas correderas 1500 x 2000"
+                                    value={detalle.nombre}
+                                    onChange={(e) =>
+                                      onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
+                                    }
+                                  />
+                                </label>
+                                <label className={s.field}>
+                                  <span className={s.label}>Nota opcional</span>
+                                  <input
+                                    className={s.input}
+                                    placeholder="Ej: Con retiro de marco existente"
+                                    value={detalle.descripcion}
+                                    onChange={(e) =>
+                                      onUpdateAlcanceDetalle(
+                                        detalle.id,
+                                        "descripcion",
+                                        e.target.value
+                                      )
+                                    }
+                                  />
+                                </label>
+                              </>
+                            ) : (
+                              <>
+                                <label className={s.field}>
+                                  <span className={s.label}>Nombre</span>
+                                  <input
+                                    className={s.input}
+                                    placeholder="Ej: Sellado perimetral"
+                                    value={detalle.nombre}
+                                    onChange={(e) =>
+                                      onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
+                                    }
+                                  />
+                                </label>
+                                <label className={s.field}>
+                                  <span className={s.label}>Descripcion</span>
+                                  <input
+                                    className={s.input}
+                                    placeholder="Ej: Sellado interior y exterior"
+                                    value={detalle.descripcion}
+                                    onChange={(e) =>
+                                      onUpdateAlcanceDetalle(
+                                        detalle.id,
+                                        "descripcion",
+                                        e.target.value
+                                      )
+                                    }
+                                  />
+                                </label>
+                              </>
+                            )}
                           </div>
                         ))}
 
@@ -543,6 +665,85 @@ export function PasoDosAgregarGrupoSheet({
                         >
                           + Agregar detalle
                         </button>
+                      </section>
+                    ) : null}
+
+                    {quotePricingMode === "total_global" ? (
+                      <section className={s.formSection}>
+                        <div className={s.formSectionHead}>
+                          <span className={s.formSectionEyebrow}>Precio final</span>
+                          <strong>Define valor final en esta misma pantalla</strong>
+                        </div>
+                        <label className={s.field}>
+                          <span className={s.label}>Precio final</span>
+                          <input
+                            className={`${s.input} ${s.stepTwoMobileFinalPriceInput}`}
+                            inputMode="numeric"
+                            placeholder="Ej: 600.000"
+                            value={globalTotalInputValue}
+                            onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
+                          />
+                        </label>
+                        <div className={s.field}>
+                          <span className={s.label}>IVA</span>
+                          <div className={s.ivaCompactRow}>
+                            <button
+                              type="button"
+                              className={`${s.ivaCompactOption} ${
+                                mostrarIva ? s.ivaCompactOptionActive : ""
+                              }`}
+                              onClick={mostrarIva ? undefined : onMostrarIvaChange}
+                            >
+                              <span className={s.ivaCompactLabel}>Incluye IVA</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`${s.ivaCompactOption} ${
+                                !mostrarIva ? s.ivaCompactOptionActive : ""
+                              }`}
+                              onClick={mostrarIva ? onMostrarIvaChange : undefined}
+                            >
+                              <span className={s.ivaCompactLabel}>Sin IVA</span>
+                            </button>
+                          </div>
+                        </div>
+                      </section>
+                    ) : null}
+
+                    {quotePricingMode === "total_global" ? (
+                      <section className={s.formSection}>
+                        {!isInternalObservationOpen ? (
+                          <button
+                            type="button"
+                            className={s.stepTwoMobileSecondaryLink}
+                            onClick={() => setIsInternalObservationOpen(true)}
+                          >
+                            + Agregar observación interna
+                          </button>
+                        ) : (
+                          <label className={s.field}>
+                            <div className={s.stepTwoMobileBlockHeaderInline}>
+                              <span className={s.label}>Observación interna</span>
+                              <button
+                                type="button"
+                                className={s.stepTwoMobileSecondaryLink}
+                                onClick={() => setIsInternalObservationOpen(false)}
+                              >
+                                Ocultar
+                              </button>
+                            </div>
+                            <textarea
+                              className={s.textarea}
+                              maxLength={FIELD_LIMITS.observaciones}
+                              placeholder="Uso interno. No sale en el PDF."
+                              rows={3}
+                              value={internalObservation}
+                              onChange={(event) =>
+                                onInternalObservationChange(event.target.value)
+                              }
+                            />
+                          </label>
+                        )}
                       </section>
                     ) : null}
                   </section>

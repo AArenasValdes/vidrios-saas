@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ALUMINUM_COLOR_OPTIONS,
+  buildItemFromForm,
   buildGlassValue,
   buildCommercialComponentDisplayName,
   buildSheetSchemeLabel,
@@ -44,14 +45,27 @@ import {
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
+export type AlcanceDetalleTipo = "manual" | "estructurado";
+
 export type AlcanceDetalle = {
   id: string;
+  tipo: AlcanceDetalleTipo;
   nombre: string;
   cantidad: string;
   ancho: string;
   alto: string;
   descripcion: string;
+  subtipo: string;
 };
+
+export const ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS = [
+  "Ventana",
+  "Puerta",
+  "Paño fijo",
+  "Shower door",
+  "Baranda",
+  "Espejo",
+] as const;
 
 export type PasoDosGrupoDraft = {
   categoria: PasoDosGrupoCategoria;
@@ -117,6 +131,86 @@ export function shouldSkipCantidadForGrupoDraft(
   draft: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
 ) {
   return isFreeValueComponentType(draft.subtipo);
+}
+
+export function createEmptyAlcanceDetalle(
+  tipo: AlcanceDetalleTipo = "manual"
+): AlcanceDetalle {
+  return {
+    id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    tipo,
+    nombre: "",
+    cantidad: "1",
+    ancho: "",
+    alto: "",
+    descripcion: "",
+    subtipo: ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS[0],
+  };
+}
+
+export function buildStructuredAlcanceDetalleForm(input: {
+  detalle: AlcanceDetalle;
+  items: CotizacionWorkflowItem[];
+  provider: PreferredProvider;
+}) {
+  const subtipo = resolveCanonicalComponentType(
+    safeTrim(input.detalle.subtipo) || ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS[0]
+  );
+  const cantidad = sanitizeDigits(input.detalle.cantidad) || "1";
+  const ancho = sanitizeDigits(input.detalle.ancho);
+  const alto = sanitizeDigits(input.detalle.alto);
+  const manualName = safeTrim(input.detalle.nombre);
+  const description = safeTrim(input.detalle.descripcion);
+
+  return buildSuggestedComponentForm({
+    items: input.items,
+    tipo: subtipo,
+    provider: input.provider,
+    pricingMode: "precio_directo",
+    current: {
+      tipo: subtipo,
+      material: "Aluminio",
+      referencia: "",
+      sistema: "",
+      configuracion: "",
+      sheetScheme: "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
+      lineTemplateId: "",
+      pricingMode: "precio_directo",
+      vidrio: "",
+      nombre: manualName,
+      descripcion: description,
+      ancho,
+      alto,
+      cantidad,
+      costoProveedorUnitario: "0",
+      margenPct: "0",
+      precioPorM2: "",
+      minimoCobrable: "",
+      redondeoPrecio: "1000",
+      precioPlantillaSugerido: "",
+      precioAjustadoManual: false,
+      origenPrecio: "manual",
+      observaciones: description,
+      colorHex: "#a8a8a8",
+      loteCantidad: "1",
+    },
+  });
+}
+
+export function buildStructuredAlcanceDetalleItem(input: {
+  detalle: AlcanceDetalle;
+  items: CotizacionWorkflowItem[];
+  provider: PreferredProvider;
+}) {
+  return buildItemFromForm(
+    buildStructuredAlcanceDetalleForm(input),
+    input.items,
+    null,
+    { quotePricingMode: "total_global" }
+  );
 }
 
 function buildDefaultFreeValueName(subtipo: string) {
@@ -446,6 +540,7 @@ export function buildPasoDosGrupoSelectionPatch({
         ? ""
         : suggestedForm.descripcion,
     cobraPrecioSeparado: false,
+    alcanceDetalles: [],
     vidrio: suggestedForm.vidrio,
   } satisfies Pick<
     PasoDosGrupoDraft,
@@ -466,6 +561,7 @@ export function buildPasoDosGrupoSelectionPatch({
     | "nombre"
     | "descripcion"
     | "cobraPrecioSeparado"
+    | "alcanceDetalles"
     | "vidrio"
   >;
 }
@@ -722,17 +818,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const addAlcanceDetalle = () => {
     setDraft((current) => ({
       ...current,
-      alcanceDetalles: [
-        ...current.alcanceDetalles,
-        {
-          id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          nombre: "",
-          cantidad: "1",
-          ancho: "",
-          alto: "",
-          descripcion: "",
-        },
-      ],
+      alcanceDetalles: [...current.alcanceDetalles, createEmptyAlcanceDetalle()],
     }));
   };
 

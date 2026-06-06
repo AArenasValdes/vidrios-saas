@@ -2,6 +2,7 @@ import {
   buildPasoDosGrupoSelectionPatch,
   buildPasoDosGrupoComponentForm,
   buildPasoDosGrupoSummary,
+  buildStructuredAlcanceDetalleItem,
   createInitialPasoDosGrupoDraft,
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
@@ -10,6 +11,42 @@ import {
 } from "../use-paso-dos-agregar-grupo";
 import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+
+function createDraft(overrides: Record<string, unknown> = {}) {
+  return {
+    categoria: "Aberturas" as const,
+    subtipo: "Ventana",
+    hojasBase: 2 as const,
+    cantidad: 1,
+    usaCantidadPersonalizada: false,
+    cantidadPersonalizada: "",
+    nombre: "",
+    descripcion: "",
+    ivaMode: "total_incluye_iva" as const,
+    cobraPrecioSeparado: false,
+    alcanceDetalles: [],
+    pricingMode: "precio_directo" as const,
+    material: "Aluminio" as const,
+    colorHex: "#a8a8a8",
+    sistema: "Corredera",
+    configuracion: "",
+    sheetScheme: "",
+    sheetVariant: "",
+    customSchemeDescription: "",
+    isCustomScheme: false,
+    vidrio: "Incoloro monolitico 5mm",
+    lineTemplateId: "",
+    referencia: "",
+    ancho: "1200",
+    alto: "1500",
+    precio: "120000",
+    precioPorM2: "",
+    minimoCobrable: "",
+    redondeoPrecio: "1000",
+    margenPct: "0",
+    ...overrides,
+  };
+}
 
 describe("use-paso-dos-agregar-grupo helpers", () => {
   it("debe sembrar el flujo desde el formulario actual cuando ya existe contexto", () => {
@@ -71,33 +108,9 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       items: [],
       pricingMode: "margen",
       provider: "",
-      draft: {
-        categoria: "Aberturas",
-        subtipo: "Ventana",
-        hojasBase: 2,
+      draft: createDraft({
         cantidad: 4,
-        usaCantidadPersonalizada: false,
-        cantidadPersonalizada: "",
-        pricingMode: "precio_directo",
-        material: "Aluminio",
-        colorHex: "#a8a8a8",
-        sistema: "Corredera",
-        configuracion: "",
-        sheetScheme: "",
-        sheetVariant: "",
-        customSchemeDescription: "",
-        isCustomScheme: false,
-        vidrio: "Incoloro monolitico 5mm",
-        lineTemplateId: "",
-        referencia: "",
-        ancho: "1200",
-        alto: "1500",
-        precio: "120000",
-        precioPorM2: "",
-        minimoCobrable: "",
-        redondeoPrecio: "1000",
-        margenPct: "0",
-      },
+      }),
     });
 
     expect(form.tipo).toBe("Ventana");
@@ -120,33 +133,19 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       items: [],
       pricingMode: "margen",
       provider: "",
-      draft: {
-        categoria: "Aberturas",
+      draft: createDraft({
         subtipo: "Paño fijo",
         hojasBase: null,
         cantidad: 2,
-        usaCantidadPersonalizada: false,
-        cantidadPersonalizada: "",
         pricingMode: "margen",
-        material: "Aluminio",
-        colorHex: "#a8a8a8",
         sistema: "Fijo",
         configuracion: "Premium",
-        sheetScheme: "",
-        sheetVariant: "",
-        customSchemeDescription: "",
-        isCustomScheme: false,
         vidrio: "DVH 4+12+4",
-        lineTemplateId: "",
-        referencia: "",
         ancho: "1000",
         alto: "1200",
         precio: "90000",
-        precioPorM2: "",
-        minimoCobrable: "",
-        redondeoPrecio: "1000",
         margenPct: "50",
-      },
+      }),
     });
     const item = buildItemFromForm(form, [], null);
     const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -180,6 +179,32 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(patch.configuracion).toBe("Frontal");
     expect(patch.material).toBe("Aluminio");
     expect(patch.vidrio).toContain("Templado");
+  });
+
+  it("debe convertir detalle estructurado en item reutilizable para PDF", () => {
+    const item = buildStructuredAlcanceDetalleItem({
+      detalle: {
+        id: "detalle-1",
+        tipo: "estructurado",
+        subtipo: "Ventana",
+        nombre: "3 ventanas correderas 1500 x 2000",
+        cantidad: "3",
+        ancho: "1500",
+        alto: "2000",
+        descripcion: "Con retiro de marco existente",
+      },
+      items: [],
+      provider: "",
+    });
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(item.tipo).toBe("Ventana");
+    expect(item.nombre).toBe("3 ventanas correderas 1500 x 2000");
+    expect(item.cantidad).toBe(3);
+    expect(item.ancho).toBe(1500);
+    expect(item.alto).toBe(2000);
+    expect(item.precioUnitario).toBe(0);
+    expect(meta.displayMode).toBe("componente");
   });
 
   it("debe precargar titulo y fijar cantidad 1 en items libres", () => {
@@ -229,33 +254,13 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
   });
 
   it("debe resumir el grupo de forma directa para la confirmacion", () => {
-    const summary = buildPasoDosGrupoSummary({
-      categoria: "Aberturas",
-      subtipo: "Ventana",
-      hojasBase: 2,
-      cantidad: 4,
-      usaCantidadPersonalizada: false,
-      cantidadPersonalizada: "",
-      pricingMode: "margen",
-      material: "Aluminio",
-      colorHex: "#a8a8a8",
-      sistema: "Corredera",
-      configuracion: "",
-      sheetScheme: "",
-      sheetVariant: "",
-      customSchemeDescription: "",
-      isCustomScheme: false,
-      vidrio: "Incoloro monolitico 5mm",
-      lineTemplateId: "",
-      referencia: "",
-      ancho: "1200",
-      alto: "1500",
-      precio: "120000",
-      precioPorM2: "",
-      minimoCobrable: "",
-      redondeoPrecio: "1000",
-      margenPct: "60",
-    });
+    const summary = buildPasoDosGrupoSummary(
+      createDraft({
+        cantidad: 4,
+        pricingMode: "margen",
+        margenPct: "60",
+      })
+    );
 
     expect(summary).toContain("4 ventanas");
     expect(summary).toContain("corredera");

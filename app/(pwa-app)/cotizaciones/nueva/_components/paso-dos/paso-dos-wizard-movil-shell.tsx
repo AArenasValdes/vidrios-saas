@@ -109,6 +109,9 @@ type Props = {
   total: string;
   pricingMode: PricingMode;
   adjustedItems: Record<string, string>;
+  totalClienteManual: number | null;
+  mostrarIva: boolean;
+  internalObservation: string;
   variationQuickEdit: {
     baseCode: string;
     tipo: string;
@@ -136,6 +139,9 @@ type Props = {
   onRemoveItem: (itemId: string) => void;
   onOpenFreeValueItemForm: () => void;
   wizard: WizardActions;
+  onGlobalTotalClienteChange: (value: string) => void;
+  onMostrarIvaChange: () => void;
+  onInternalObservationChange: (value: string) => void;
 };
 
 const CATEGORY_OPTIONS: Array<{
@@ -191,6 +197,9 @@ export function PasoDosWizardMovil({
   total,
   pricingMode,
   adjustedItems,
+  totalClienteManual,
+  mostrarIva,
+  internalObservation,
   variationQuickEdit,
   onGoToSummary,
   onVariationQuickEditChange,
@@ -200,6 +209,9 @@ export function PasoDosWizardMovil({
   onRemoveItem,
   onOpenFreeValueItemForm,
   wizard,
+  onGlobalTotalClienteChange,
+  onMostrarIvaChange,
+  onInternalObservationChange,
 }: Props) {
   const [showAllSystems, setShowAllSystems] = useState(false);
   const [showAllConfigurations, setShowAllConfigurations] = useState(false);
@@ -401,6 +413,8 @@ export function PasoDosWizardMovil({
           subtotal={subtotal}
           total={total}
           quotePricingMode={quotePricingMode}
+          totalClienteManual={totalClienteManual}
+          mostrarIva={mostrarIva}
           adjustedItems={adjustedItems}
           onEditItem={onEditItem}
           onGoToSummary={onGoToSummary}
@@ -435,10 +449,10 @@ export function PasoDosWizardMovil({
                     ? "Indica cuantas unidades iguales van en este grupo."
                     : shouldSkipCantidadStep
                       ? quotePricingMode === "total_global"
-                        ? "Redacta el trabajo. El valor final va en el resumen."
+                        ? "Redacta trabajo, detalles incluidos y precio final."
                         : "Redacta el trabajo y define el valor."
                       : quotePricingMode === "total_global"
-                        ? "Completa los datos comerciales antes de agregar."
+                        ? "Completa datos comerciales y precio final antes de agregar."
                         : "Completa sistema, medidas y valor antes de agregar."
               }
               onClose={handleCloseWizard}
@@ -511,6 +525,12 @@ export function PasoDosWizardMovil({
                   onUpdateAlcanceDetalle={wizard.onUpdateAlcanceDetalle}
                   onRemoveAlcanceDetalle={wizard.onRemoveAlcanceDetalle}
                   quotePricingMode={quotePricingMode}
+                  totalClienteManual={totalClienteManual}
+                  mostrarIva={mostrarIva}
+                  internalObservation={internalObservation}
+                  onGlobalTotalClienteChange={onGlobalTotalClienteChange}
+                  onMostrarIvaChange={onMostrarIvaChange}
+                  onInternalObservationChange={onInternalObservationChange}
                   priceHelp={priceHelp}
                   priceLabel={priceLabel}
                   recommendedReason={glassRecommendation.reason}

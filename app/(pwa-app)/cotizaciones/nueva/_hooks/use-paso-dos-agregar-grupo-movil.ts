@@ -19,6 +19,7 @@ import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
 import type { AlcanceDetalle } from "./use-paso-dos-agregar-grupo";
 import {
   applyLineTemplateToGrupoDraft,
+  createEmptyAlcanceDetalle,
   createInitialPasoDosGrupoDraft,
   buildPasoDosGrupoSelectionPatch,
   getConfigurationOptionsForSubtype,
@@ -355,17 +356,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const addAlcanceDetalle = () => {
     setDraft((current) => ({
       ...current,
-      alcanceDetalles: [
-        ...current.alcanceDetalles,
-        {
-          id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          nombre: "",
-          cantidad: "1",
-          ancho: "",
-          alto: "",
-          descripcion: "",
-        },
-      ],
+      alcanceDetalles: [...current.alcanceDetalles, createEmptyAlcanceDetalle()],
     }));
   };
 

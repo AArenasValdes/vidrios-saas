@@ -19,6 +19,11 @@ const baseProps = {
     cantidad: 2,
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
+    nombre: "",
+    descripcion: "",
+    ivaMode: "total_incluye_iva" as const,
+    cobraPrecioSeparado: false,
+    alcanceDetalles: [],
     pricingMode: "margen" as const,
     material: "Aluminio" as const,
     colorHex: "#a8a8a8",
@@ -64,6 +69,8 @@ const baseProps = {
   onCreateLineTemplate: jest.fn(),
   onMargenChange: jest.fn(),
   onMaterialChange: jest.fn(),
+  onNombreChange: jest.fn(),
+  onDescripcionChange: jest.fn(),
   onSelectLineTemplate: jest.fn(),
   onColorChange: jest.fn(),
   onConfiguracionChange: jest.fn(),
@@ -74,6 +81,18 @@ const baseProps = {
   onPricingModeChange: jest.fn(),
   onSistemaChange: jest.fn(),
   onVidrioChange: jest.fn(),
+  onIvaModeChange: jest.fn(),
+  onCobraPrecioSeparadoChange: jest.fn(),
+  onAddAlcanceDetalle: jest.fn(),
+  onUpdateAlcanceDetalle: jest.fn(),
+  onRemoveAlcanceDetalle: jest.fn(),
+  quotePricingMode: "por_item" as const,
+  totalClienteManual: null,
+  mostrarIva: true,
+  internalObservation: "",
+  onGlobalTotalClienteChange: jest.fn(),
+  onMostrarIvaChange: jest.fn(),
+  onInternalObservationChange: jest.fn(),
   priceHelp: "Base para calcular la venta con margen.",
   priceLabel: "Costo base",
   recommendedReason: "Opciones frecuentes.",
@@ -230,5 +249,47 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(onCustomSchemeDescriptionChange).toHaveBeenCalledWith(
       "3 hojas, la del medio fija"
     );
+  });
+
+  it("debe mostrar precio final y observacion colapsada en presupuesto por total", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        quotePricingMode="total_global"
+        totalClienteManual={600000}
+        mostrarIva
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Trabajo libre / Mantencion",
+          nombre: "Mantencion",
+          descripcion: "Mantencion de 5 ventanas existentes.",
+          sistema: "",
+          configuracion: "",
+          vidrio: "",
+          ancho: "",
+          alto: "",
+          precio: "",
+          alcanceDetalles: [
+            {
+              id: "detalle-1",
+              tipo: "estructurado",
+              subtipo: "Ventana",
+              nombre: "3 ventanas correderas 1500 x 2000",
+              cantidad: "3",
+              ancho: "1500",
+              alto: "2000",
+              descripcion: "Con retiro de marco existente",
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByText("PRECIO FINAL")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("600.000")).toBeInTheDocument();
+    expect(screen.getByText("Incluye IVA")).toBeInTheDocument();
+    expect(screen.getByText("Manual")).toBeInTheDocument();
+    expect(screen.getByText("Estructurado")).toBeInTheDocument();
+    expect(screen.getByText("+ Agregar observación interna")).toBeInTheDocument();
   });
 });

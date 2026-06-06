@@ -3026,7 +3026,7 @@
 .stepTwoMobileTitle {
   margin: 0;
   color: #243b6b;
-  font-size: 1.35rem;
+  font-size: 1.28rem;
   line-height: 1.15;
   font-weight: 800;
 }
@@ -3799,9 +3799,9 @@
 .stepTwoMobileFooterBar {
   display: flex;
   flex-direction: column;
-  gap: 0.68rem;
+  gap: 0.6rem;
   margin: 0;
-  padding: 0.86rem 0.92rem calc(0.86rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.8rem 0.92rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
   border-radius: 24px 24px 0 0;
   border: 1px solid rgba(208, 218, 233, 0.98);
   background: rgba(255, 255, 255, 0.92);
@@ -3832,6 +3832,7 @@
   color: #667085;
   font-size: 0.82rem;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .stepTwoMobileFooterTotals strong {
@@ -3850,7 +3851,9 @@
   min-height: 3.15rem;
   padding-inline: 0.76rem;
   justify-content: center;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
   border-radius: 16px;
 }
 
@@ -4115,12 +4118,12 @@
   max-height: 100dvh;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  gap: 0.82rem;
+  gap: 0.58rem;
   overflow: hidden;
   padding:
-    calc(0.78rem + env(safe-area-inset-top, 0px))
+    calc(0.62rem + env(safe-area-inset-top, 0px))
     0.82rem
-    calc(0.82rem + env(safe-area-inset-bottom, 0px));
+    calc(0.74rem + env(safe-area-inset-bottom, 0px));
 }
 
 .stepTwoMobileCreatorShellCompact {
@@ -4131,31 +4134,31 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .stepTwoMobileCreatorCopy {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 0.24rem;
+  gap: 0.14rem;
 }
 
 .stepTwoMobileCreatorStageRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .stepTwoMobileCreatorStagePill {
   width: 100%;
-  min-height: 3.3rem;
+  min-height: 3rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.28rem;
-  padding: 0.5rem 0.38rem;
+  gap: 0.2rem;
+  padding: 0.42rem 0.34rem;
   border-radius: 18px;
   border: 1px solid rgba(208, 218, 233, 0.96);
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -4213,7 +4216,7 @@
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  padding: 0.1rem 0 0.4rem;
+  padding: 0.04rem 0 0.34rem;
 }
 
 .stepTwoMobileCreatorBodyCompact {
@@ -8115,6 +8118,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+}
+
+.stepTwoMobileFinalPriceInput {
+  min-height: 3.6rem;
+  padding-inline: 1rem;
+  font-size: 1.26rem;
+  font-weight: 800;
 }
 
 .stepTwoMobileMaterialGrid {

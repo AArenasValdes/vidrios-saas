@@ -23,6 +23,22 @@ const quote: PublicPreviewQuote = {
   updatedAt: "2026-06-04T10:00:00.000Z",
   items: [
     {
+      id: "item-0",
+      codigo: "LIBRE-1",
+      tipoItem: "item_libre_con_valor",
+      tipo: "Trabajo libre / Mantencion",
+      nombre: "Mantencion general",
+      descripcion: "Ajuste, limpieza y sellado perimetral",
+      cantidad: 1,
+      unidad: "servicio",
+      vidrio: "",
+      ancho: null,
+      alto: null,
+      precioUnitario: 0,
+      precioTotal: 0,
+      observaciones: "",
+    },
+    {
       id: "item-1",
       codigo: "V1",
       tipo: "Ventana",
@@ -70,6 +86,8 @@ describe("public quote total global", () => {
     );
 
     expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
+    expect(screen.getAllByText("Precio final").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sin IVA").length).toBeGreaterThan(0);
     expect(screen.queryByText("Precio unitario")).not.toBeInTheDocument();
     expect(screen.queryByText(/margen/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/utilidad/i)).not.toBeInTheDocument();
