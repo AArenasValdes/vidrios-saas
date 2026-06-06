@@ -94,7 +94,6 @@ export type WizardActions = {
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
   onMargenChange: (value: string) => void;
-  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (detalleId: string, field: keyof AlcanceDetalle, value: string) => void;
@@ -529,7 +528,6 @@ export function PasoDosWizardMovil({
                   onCobraPrecioSeparadoChange={wizard.onCobraPrecioSeparadoChange}
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
-                  onIvaModeChange={wizard.onIvaModeChange}
                   onAddAlcanceDetalle={wizard.onAddAlcanceDetalle}
                   onUpdateAlcanceDetalle={wizard.onUpdateAlcanceDetalle}
                   onRemoveAlcanceDetalle={wizard.onRemoveAlcanceDetalle}

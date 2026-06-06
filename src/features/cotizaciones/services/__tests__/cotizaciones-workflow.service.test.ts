@@ -37,25 +37,26 @@ function createItem(overrides: Partial<CotizacionWorkflowItem> = {}): Cotizacion
 }
 
 describe("cotizaciones-workflow.service", () => {
-  it("redondea el IVA comercial hacia arriba para evitar montos aleatorios", () => {
+  it("suma IVA exacto al final cuando la cotizacion lo requiere", () => {
     const totals = calculateCotizacionWorkflowTotals([createItem()]);
 
     expect(totals.subtotal).toBe(288000);
     expect(totals.neto).toBe(288000);
-    expect(totals.iva).toBe(55000);
-    expect(totals.total).toBe(343000);
+    expect(totals.iva).toBe(54720);
+    expect(totals.total).toBe(342720);
   });
 
-  it("respeta el IVA exacto cuando ya cae en una luca cerrada", () => {
+  it("deja precios finales sin sumar IVA al final", () => {
     const totals = calculateCotizacionWorkflowTotals([
       createItem({
         precioUnitario: 100000,
         precioTotal: 100000,
       }),
-    ]);
+    ], 0, 0, { mostrarIva: false });
 
-    expect(totals.iva).toBe(19000);
-    expect(totals.total).toBe(119000);
+    expect(totals.subtotal).toBe(100000);
+    expect(totals.iva).toBe(0);
+    expect(totals.total).toBe(100000);
   });
 
   it("mantiene el total final global y separa IVA incluido", () => {
@@ -97,24 +98,24 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.subtotal).toBe(0);
   });
 
-  it("desglosa item libre con total incluido sin sumar IVA dos veces", () => {
+  it("trata item libre como valor visible y usa IVA de la cotizacion", () => {
     const itemLibre = calculateFreeValueItem({
       codigo: "L1",
       nombre: "Mantencion de ventanas",
       valor: 119000,
       ivaMode: "total_incluye_iva",
     });
-    const totals = calculateCotizacionWorkflowTotals([itemLibre]);
+    const totals = calculateCotizacionWorkflowTotals([itemLibre], 0, 0, { mostrarIva: false });
 
     expect(itemLibre.tipoItem).toBe("item_libre_con_valor");
     expect(itemLibre.precioUnitario).toBe(119000);
     expect(itemLibre.precioTotal).toBe(119000);
-    expect(totals.subtotal).toBe(100000);
-    expect(totals.iva).toBe(19000);
+    expect(totals.subtotal).toBe(119000);
+    expect(totals.iva).toBe(0);
     expect(totals.total).toBe(119000);
   });
 
-  it("trata item libre neto mas IVA como neto normal", () => {
+  it("ignora ivaMode legacy del item libre y suma IVA solo por cotizacion", () => {
     const itemLibre = calculateFreeValueItem({
       codigo: "L1",
       nombre: "Mantencion de ventanas",
@@ -127,6 +128,46 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.subtotal).toBe(100000);
     expect(totals.iva).toBe(19000);
     expect(totals.total).toBe(119000);
+  });
+
+  it("calcula el caso observado sin mezclar neto e IVA por item", () => {
+    const totalsPreciosFinales = calculateCotizacionWorkflowTotals(
+      [
+        createItem({ id: "ventana", precioUnitario: 173000, precioTotal: 173000 }),
+        calculateFreeValueItem({
+          codigo: "L1",
+          nombre: "Mantencion",
+          valor: 120000,
+          ivaMode: "total_incluye_iva",
+        }),
+        createItem({ id: "puerta", precioUnitario: 154000, precioTotal: 154000 }),
+      ],
+      0,
+      0,
+      { mostrarIva: false }
+    );
+    const totalsSumarIva = calculateCotizacionWorkflowTotals(
+      [
+        createItem({ id: "ventana", precioUnitario: 173000, precioTotal: 173000 }),
+        calculateFreeValueItem({
+          codigo: "L1",
+          nombre: "Mantencion",
+          valor: 120000,
+          ivaMode: "total_incluye_iva",
+        }),
+        createItem({ id: "puerta", precioUnitario: 154000, precioTotal: 154000 }),
+      ],
+      0,
+      0,
+      { mostrarIva: true }
+    );
+
+    expect(totalsPreciosFinales.subtotal).toBe(447000);
+    expect(totalsPreciosFinales.iva).toBe(0);
+    expect(totalsPreciosFinales.total).toBe(447000);
+    expect(totalsSumarIva.subtotal).toBe(447000);
+    expect(totalsSumarIva.iva).toBe(84930);
+    expect(totalsSumarIva.total).toBe(531930);
   });
 
   it("permite item libre descriptivo en cero solo cuando se habilita explicitamente", () => {

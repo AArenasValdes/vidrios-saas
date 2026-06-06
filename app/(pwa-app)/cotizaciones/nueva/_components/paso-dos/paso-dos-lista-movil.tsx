@@ -49,13 +49,16 @@ export function PasoDosListaMovil({
   onRemoveItem,
 }: Props) {
   const isGlobalPricing = quotePricingMode === "total_global";
-  const pendingCount = isGlobalPricing ? 0 : items.filter(isItemIncomplete).length;
+  const pendingCount = isGlobalPricing
+    ? 0
+    : items.filter((item) => item.tipoItem !== "item_libre_con_valor" && isItemIncomplete(item)).length;
   const itemNoun = isGlobalPricing ? "trabajo" : "componente";
   const itemNounPlural = isGlobalPricing ? "trabajos" : "componentes";
   const totalGlobalLabel =
     totalClienteManual && totalClienteManual > 0
       ? `Total ${total} · ${mostrarIva ? "IVA incluido" : "Sin IVA"}`
       : "Precio final pendiente";
+  const itemPricingLabel = mostrarIva ? "Sumar IVA al final" : "Precios finales";
 
   return (
     <>
@@ -264,7 +267,7 @@ export function PasoDosListaMovil({
             <span>
               {quotePricingMode === "total_global"
                 ? `${items.length} trabajo${items.length !== 1 ? "s" : ""} agregado${items.length !== 1 ? "s" : ""}`
-                : `${items.length} componente${items.length !== 1 ? "s" : ""} - Subtotal ${subtotal}`}
+                : `${items.length} componente${items.length !== 1 ? "s" : ""} - ${itemPricingLabel} ${subtotal}`}
             </span>
             <strong>
               {quotePricingMode === "total_global" ? totalGlobalLabel : `Total ${total}`}

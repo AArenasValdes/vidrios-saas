@@ -97,7 +97,6 @@ type Props = {
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
-  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (
@@ -158,7 +157,6 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
-  onIvaModeChange,
   onCobraPrecioSeparadoChange,
   onAddAlcanceDetalle,
   onUpdateAlcanceDetalle,
@@ -813,36 +811,7 @@ export function PasoDosWizardConfiguracionMovil({
               <span className={s.stepTwoMobileBlockHelp}>
                 {quotePricingMode === "total_global"
                   ? "Este monto se suma aparte del total de la obra."
-                  : "El valor ingresado sera el monto que vera el cliente."}
-              </span>
-            </div>
-
-            <div className={s.stepTwoMobileBlockHero}>
-              <div className={s.stepTwoMobileBlockLabel}>IVA</div>
-              <div className={s.ivaCompactRow}>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={() => onIvaModeChange("total_incluye_iva")}
-                >
-                  <span className={s.ivaCompactLabel}>Incluido</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={() => onIvaModeChange("neto_mas_iva")}
-                >
-                  <span className={s.ivaCompactLabel}>Agregar IVA</span>
-                </button>
-              </div>
-              <span className={s.stepTwoMobileBlockHelp}>
-                {draft.ivaMode === "total_incluye_iva"
-                  ? "El valor ingresado sera el total visible para el cliente."
-                  : "Ventora sumara el 19% al valor ingresado."}
+                  : "Este valor seguira la configuracion de IVA de la cotizacion."}
               </span>
             </div>
           </>

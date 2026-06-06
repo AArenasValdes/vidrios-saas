@@ -10,13 +10,11 @@ import {
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
-  decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 
 const DEFAULT_FLETE = 0;
-const DEFAULT_COTIZACION_COMMERCIAL_ROUNDING = 1000;
 const COTIZACION_CODE_STORAGE_PREFIX = "vidrios-saas:cotizacion-code:";
 const cotizacionCodeCounters = new Map<string, number>();
 
@@ -68,14 +66,6 @@ function round(value: number, digits = 2) {
   const multiplier = 10 ** digits;
 
   return Math.round(value * multiplier) / multiplier;
-}
-
-function roundUpToIncrement(value: number, increment: number) {
-  if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(increment) || increment <= 0) {
-    return round(Math.max(value, 0), 2);
-  }
-
-  return Math.ceil(value / increment) * increment;
 }
 
 function normalizePositiveNumber(value: number | null | undefined) {
@@ -283,13 +273,6 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
   const nombre = input.nombre.trim();
   const descripcion = (input.descripcion ?? input.nombre).trim();
   const valor = round(normalizeNonNegativeNumber(input.valor), 2);
-  const ivaMode = input.ivaMode ?? "total_incluye_iva";
-  const netoCalculado =
-    ivaMode === "total_incluye_iva" ? round(valor / (1 + impuestos.iva), 2) : valor;
-  const ivaCalculado =
-    ivaMode === "total_incluye_iva"
-      ? round(valor - netoCalculado, 2)
-      : round(valor * impuestos.iva, 2);
   const codigo = input.codigo?.trim() || `L${Date.now()}`;
 
   if (!nombre) {
@@ -329,10 +312,10 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
       colorHex: "#a8a8a8",
       material: "Aluminio",
       pricingMode: "precio_directo",
-      ivaMode,
-      totalClienteVisible: ivaMode === "total_incluye_iva" ? valor : round(valor + ivaCalculado, 2),
-      netoCalculado,
-      ivaCalculado,
+      ivaMode: "total_incluye_iva",
+      totalClienteVisible: valor,
+      netoCalculado: valor,
+      ivaCalculado: 0,
       displayMode: "item_libre",
       raw: input.observaciones ?? "",
     }),
@@ -342,32 +325,17 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
 export function calculateCotizacionWorkflowTotals(
   items: CotizacionWorkflowItem[],
   descuentoPct = 0,
-  flete = DEFAULT_FLETE
+  flete = DEFAULT_FLETE,
+  options: { mostrarIva?: boolean } = {}
 ) {
-  const netSubtotalByItems = items.reduce((accumulator, item) => {
-    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
-
-    if (
-      item.tipoItem === "item_libre_con_valor" &&
-      meta.displayMode === "item_libre" &&
-      meta.ivaMode === "total_incluye_iva"
-    ) {
-      return accumulator + (meta.netoCalculado ?? item.precioTotal / (1 + impuestos.iva));
-    }
-
-    return accumulator + item.precioTotal;
-  }, 0);
+  const mostrarIva = options.mostrarIva ?? true;
   const subtotal = round(
-    netSubtotalByItems,
+    items.reduce((accumulator, item) => accumulator + item.precioTotal, 0),
     2
   );
-
   const descuentoValor = round(subtotal * (descuentoPct / 100), 2);
   const neto = round(subtotal - descuentoValor, 2);
-  // La cotizacion usa redondeo comercial para evitar montos "raros" en IVA/total.
-  // No es documento tributario; priorizamos valores redondos y faciles de comunicar.
-  const ivaBase = round(neto * impuestos.iva, 2);
-  const iva = roundUpToIncrement(ivaBase, DEFAULT_COTIZACION_COMMERCIAL_ROUNDING);
+  const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
   const total = round(neto + iva + flete, 2);
 
   return {
@@ -397,28 +365,28 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
     Number.isFinite(input.totalClienteManual) &&
     input.totalClienteManual >= 0;
   const totalBase = hasManualTotal ? round(Number(input.totalClienteManual), 2) : 0;
-  const utilidadTotal = round(totalBase - costoTotalFabricacion, 2);
+  const extraTotal = round(
+    (input.items ?? [])
+      .filter((item) => item.tipoItem === "item_libre_con_valor" && item.precioTotal > 0)
+      .reduce((accumulator, item) => accumulator + item.precioTotal, 0),
+    2
+  );
+  const totalCliente = round(totalBase + extraTotal, 2);
+  const utilidadTotal = round(totalCliente - costoTotalFabricacion, 2);
   const margenGlobalPct =
     costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
   const mostrarIva = input.mostrarIva ?? true;
-  const ivaBase = mostrarIva ? round(totalBase * (impuestos.iva / (1 + impuestos.iva)), 2) : 0;
+  const ivaBase = mostrarIva ? round(totalCliente * (impuestos.iva / (1 + impuestos.iva)), 2) : 0;
   const iva = ivaBase > 0 ? ivaBase : 0;
-  const subtotalNeto = round(totalBase - iva, 2);
-  const extraTotals = calculateCotizacionWorkflowTotals(
-    (input.items ?? []).filter(
-      (item) => item.tipoItem === "item_libre_con_valor" && item.precioTotal > 0
-    ),
-    0,
-    0
-  );
+  const subtotalNeto = round(totalCliente - iva, 2);
 
   return {
-    subtotal: round(subtotalNeto + extraTotals.subtotal, 2),
+    subtotal: subtotalNeto,
     descuentoValor: 0,
-    neto: round(subtotalNeto + extraTotals.neto, 2),
-    iva: round(iva + extraTotals.iva, 2),
+    neto: subtotalNeto,
+    iva,
     flete: 0,
-    total: round(totalBase + extraTotals.total, 2),
+    total: totalCliente,
     costoTotalFabricacion,
     margenGlobalPct,
     utilidadTotal,
@@ -452,7 +420,9 @@ export function calculateWorkflowTotalsForPricingMode(
   }
 
   return {
-    ...calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete),
+    ...calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete, {
+      mostrarIva: draft.mostrarIva ?? true,
+    }),
     costoTotalFabricacion: round(
       draft.items.reduce((accumulator, item) => accumulator + item.costoProveedorTotal, 0),
       2

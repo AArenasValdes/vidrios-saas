@@ -87,6 +87,7 @@ export type PasoDosPanelComponentesProps = {
   subtotal: string;
   iva: string;
   total: string;
+  mostrarIva: boolean;
   fieldErrorItems?: string;
   stepTwoListRef: RefObject<HTMLDivElement | null>;
   stepTwoSummaryRef: RefObject<HTMLDivElement | null>;

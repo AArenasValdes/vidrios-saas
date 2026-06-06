@@ -1,4 +1,5 @@
-const CACHE_NAME = "vidrios-saas-v10";
+const VERSION = new URL(self.location.href).searchParams.get("version") || "dev";
+const CACHE_NAME = `vidrios-saas-${VERSION}`;
 const APP_SHELL = [
   "/",
   "/login",
@@ -35,6 +36,14 @@ function isStaticAsset(request, requestUrl) {
   );
 }
 
+function isVersionedStaticAsset(requestUrl) {
+  return requestUrl.pathname.startsWith("/_next/static/");
+}
+
+function isApiRequest(requestUrl) {
+  return requestUrl.pathname.startsWith("/api/");
+}
+
 async function cacheAppShell() {
   const cache = await caches.open(CACHE_NAME);
   await Promise.allSettled(
@@ -57,8 +66,29 @@ async function cacheAppShell() {
 async function cleanupOldCaches() {
   const keys = await caches.keys();
   await Promise.all(
-    keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+    keys
+      .filter((key) => key.startsWith("vidrios-saas-") && key !== CACHE_NAME)
+      .map((key) => caches.delete(key))
   );
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return new Response("", { status: 502, statusText: "Sin conexion." });
+  }
 }
 
 async function networkFirstNavigation(request) {
@@ -134,10 +164,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (isApiRequest(requestUrl)) {
+    return;
+  }
+
   if (event.request.mode === "navigate") {
     if (isPublicNavigation(requestUrl.pathname)) {
       event.respondWith(networkFirstNavigation(event.request));
     }
+    return;
+  }
+
+  if (isVersionedStaticAsset(requestUrl)) {
+    event.respondWith(cacheFirst(event.request));
     return;
   }
 

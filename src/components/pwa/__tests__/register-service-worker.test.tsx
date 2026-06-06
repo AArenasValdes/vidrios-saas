@@ -57,7 +57,7 @@ describe("RegisterServiceWorker", () => {
     render(<RegisterServiceWorker />);
 
     await waitFor(() =>
-      expect(register).toHaveBeenCalledWith("/sw.js?version=v10", {
+      expect(register).toHaveBeenCalledWith("/sw.js?version=dev", {
         scope: "/",
         updateViaCache: "none",
       })

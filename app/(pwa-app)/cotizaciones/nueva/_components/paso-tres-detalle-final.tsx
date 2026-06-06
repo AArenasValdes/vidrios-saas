@@ -122,6 +122,38 @@ export function PasoTresDetalleFinal({
     </section>
   );
 
+  const quoteIvaEditor = (
+    <section className={s.summaryAdjustmentCard}>
+      <div className={s.summaryAdjustmentHeader}>
+        <div>
+          <span className={s.summaryAdjustmentEyebrow}>IVA de la cotizacion</span>
+          <strong>Define como cobrara Ventora</strong>
+        </div>
+      </div>
+      <div className={s.ivaTogglePillLight}>
+        <button
+          type="button"
+          className={`${s.ivaPillOptionLight} ${!mostrarIva ? s.ivaPillActiveLight : ""}`}
+          onClick={mostrarIva ? onMostrarIvaChange : undefined}
+        >
+          Precios finales
+        </button>
+        <button
+          type="button"
+          className={`${s.ivaPillOptionLight} ${mostrarIva ? s.ivaPillActiveLight : ""}`}
+          onClick={mostrarIva ? undefined : onMostrarIvaChange}
+        >
+          Sumar IVA al final
+        </button>
+      </div>
+      <span className={s.helpText}>
+        {mostrarIva
+          ? "Ventora sumara el 19% sobre el subtotal."
+          : "El cliente vera estos valores tal como estan. No se suma IVA al final."}
+      </span>
+    </section>
+  );
+
   const freightEditor = (
     <section className={s.stepThreeFreightCard}>
       <div className={s.stepThreeFreightRow}>
@@ -166,13 +198,15 @@ export function PasoTresDetalleFinal({
       {!isGlobal ? (
         <>
           <div className={s.totalRow}>
-            <span>Subtotal</span>
+            <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
             <strong>{subtotal}</strong>
           </div>
-          <div className={s.totalRow}>
-            <span>IVA 19%</span>
-            <strong>{iva}</strong>
-          </div>
+          {mostrarIva ? (
+            <div className={s.totalRow}>
+              <span>IVA 19%</span>
+              <strong>{iva}</strong>
+            </div>
+          ) : null}
           {draft.flete > 0 ? (
             <div className={s.totalRow}>
               <span>Flete</span>
@@ -187,7 +221,7 @@ export function PasoTresDetalleFinal({
         </div>
       )}
       <div className={s.totalGrand}>
-        <span>Total</span>
+        <span>Total final</span>
         <strong>{total}</strong>
       </div>
     </div>
@@ -260,7 +294,8 @@ export function PasoTresDetalleFinal({
         </section>
 
         {itemsCard}
-        {isGlobal ? globalPricingEditor : freightEditor}
+        {isGlobal ? globalPricingEditor : quoteIvaEditor}
+        {!isGlobal ? freightEditor : null}
         {totalsPanel}
       </div>
     );
@@ -301,29 +336,32 @@ export function PasoTresDetalleFinal({
 
       <div className={s.summaryAdjustments}>
         {isGlobal ? globalPricingEditor : (
-          <div className={s.summaryAdjustmentCard}>
-            <div className={s.summaryAdjustmentHeader}>
-              <div>
-                <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
-                <strong>Flete</strong>
+          <>
+            {quoteIvaEditor}
+            <div className={s.summaryAdjustmentCard}>
+              <div className={s.summaryAdjustmentHeader}>
+                <div>
+                  <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
+                  <strong>Flete</strong>
+                </div>
+                <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
               </div>
-              <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
+              <label className={s.field}>
+                <span className={s.label}>Valor del flete</span>
+                <div className={s.moneyInputWrap}>
+                  <span className={s.moneyPrefix}>CLP</span>
+                  <input
+                    className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                    inputMode="numeric"
+                    value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
+                    onChange={(event) => onDraftFleteChange(event.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
+              </label>
             </div>
-            <label className={s.field}>
-              <span className={s.label}>Valor del flete</span>
-              <div className={s.moneyInputWrap}>
-                <span className={s.moneyPrefix}>CLP</span>
-                <input
-                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-                  inputMode="numeric"
-                  value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
-                  onChange={(event) => onDraftFleteChange(event.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
-            </label>
-          </div>
+          </>
         )}
       </div>
 

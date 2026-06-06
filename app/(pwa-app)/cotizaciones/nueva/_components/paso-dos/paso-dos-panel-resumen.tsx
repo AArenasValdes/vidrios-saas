@@ -9,6 +9,7 @@ import s from "../../page.module.css";
 type Props = Pick<
   PasoDosPanelComponentesProps,
   "items" | "quotePricingMode" | "isMobileViewport" | "subtotal" | "iva" | "total" | "stepTwoSummaryRef" | "onGoToSummary"
+  | "mostrarIva"
 >;
 
 export function PasoDosPanelResumen({
@@ -18,6 +19,7 @@ export function PasoDosPanelResumen({
   subtotal,
   iva,
   total,
+  mostrarIva,
   stepTwoSummaryRef,
   onGoToSummary,
 }: Props) {
@@ -34,15 +36,17 @@ export function PasoDosPanelResumen({
         ) : (
           <div className={s.stepTwoTotalsGrid}>
             <div className={s.stepTwoTotalCell}>
-              <span>Subtotal</span>
+              <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
               <strong>{subtotal}</strong>
             </div>
-            <div className={s.stepTwoTotalCell}>
-              <span>IVA</span>
-              <strong>{iva}</strong>
-            </div>
+            {mostrarIva ? (
+              <div className={s.stepTwoTotalCell}>
+                <span>IVA 19%</span>
+                <strong>{iva}</strong>
+              </div>
+            ) : null}
             <div className={`${s.stepTwoTotalCell} ${s.stepTwoTotalCellWide}`}>
-              <span>Total</span>
+              <span>Total final</span>
               <strong>{total}</strong>
             </div>
           </div>

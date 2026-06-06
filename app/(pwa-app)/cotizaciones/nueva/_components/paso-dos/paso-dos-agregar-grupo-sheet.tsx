@@ -57,7 +57,6 @@ type Props = {
   onCustomSchemeDescriptionChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
-  onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (
@@ -139,7 +138,6 @@ export function PasoDosAgregarGrupoSheet({
   onCustomSchemeDescriptionChange,
   onVidrioChange,
   onPrecioChange,
-  onIvaModeChange,
   onCobraPrecioSeparadoChange,
   onAddAlcanceDetalle,
   onUpdateAlcanceDetalle,
@@ -453,30 +451,10 @@ export function PasoDosAgregarGrupoSheet({
                             value={draft.precio}
                             onChange={(event) => onPrecioChange(event.target.value)}
                           />
+                          <small className={s.helpText}>
+                            Este valor seguira la configuracion de IVA de la cotizacion.
+                          </small>
                         </label>
-                        <div className={s.field}>
-                          <span className={s.label}>IVA</span>
-                          <div className={s.ivaCompactRow}>
-                            <button
-                              type="button"
-                              className={`${s.ivaCompactOption} ${
-                                draft.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
-                              }`}
-                              onClick={() => onIvaModeChange("total_incluye_iva")}
-                            >
-                              <span className={s.ivaCompactLabel}>Incluido</span>
-                            </button>
-                            <button
-                              type="button"
-                              className={`${s.ivaCompactOption} ${
-                                draft.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
-                              }`}
-                              onClick={() => onIvaModeChange("neto_mas_iva")}
-                            >
-                              <span className={s.ivaCompactLabel}>Agregar IVA</span>
-                            </button>
-                          </div>
-                        </div>
                       </>
                     ) : null}
 

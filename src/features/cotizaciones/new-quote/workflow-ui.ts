@@ -744,12 +744,13 @@ export function isWorkflowItemComplete(
 ) {
   if (item.tipoItem === "item_libre_con_valor") {
     const hasName = item.nombre.trim().length > 0;
+    const hasQuantity = item.cantidad > 0;
 
     if (normalizeQuotePricingMode(quotePricingMode) === "total_global") {
-      return hasName;
+      return hasName && hasQuantity;
     }
 
-    return hasName && item.precioTotal > 0;
+    return hasName && hasQuantity && item.precioTotal > 0;
   }
 
   return (
@@ -764,6 +765,10 @@ export function isWorkflowItemEffectivelyComplete(
   draftState?: QuickEditDraftState,
   quotePricingMode: QuotePricingMode = "por_item"
 ) {
+  if (item.tipoItem === "item_libre_con_valor") {
+    return isWorkflowItemComplete(item, quotePricingMode);
+  }
+
   return draftState
     ? isQuickEditDraftComplete(draftState, quotePricingMode)
     : isWorkflowItemComplete(item, quotePricingMode);
@@ -848,7 +853,7 @@ export function buildFreeValueItemFromForm(
     nombre: form.nombre,
     descripcion: form.descripcion,
     valor: normalizedValue ? Number(normalizedValue) : 0,
-    ivaMode: form.ivaMode,
+    ivaMode: "total_incluye_iva",
     allowZeroValue: options?.allowZeroValue,
   });
 }

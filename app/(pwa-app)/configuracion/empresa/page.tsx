@@ -22,6 +22,8 @@ import {
   LuQrCode,
   LuSave,
   LuSettings2,
+  LuSmartphone,
+  LuRefreshCcw,
 } from "react-icons/lu";
 
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
@@ -40,9 +42,11 @@ import { SubscriptionDetail } from "@/features/subscriptions/components/subscrip
 import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
+import { APP_VERSION } from "@/utils/app-version";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
+import { forceAppUpdate } from "@/components/pwa/update-checker";
 
 import s from "./page.module.css";
 
@@ -99,7 +103,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   isPublished: false,
 });
 
-type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones" | "suscripcion";
+type SectionId = "empresa" | "marca" | "catalogo" | "comercial" | "notificaciones" | "soporte" | "suscripcion";
 type DeviceAlertsState = {
   kind: "checking" | "enabled" | "available" | "unsupported" | "error";
   message: string;
@@ -320,6 +324,34 @@ export default function ConfiguracionEmpresaPage() {
       void handleEnableDeviceAlerts();
     }
   }, [canToggleNotifications, handleEnableDeviceAlerts, notificationsEnabled, syncDeviceAlertsState]);
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isReiniciando, setIsReiniciando] = useState(false);
+
+  const handleForceUpdate = useCallback(async () => {
+    try {
+      setIsUpdating(true);
+      await forceAppUpdate();
+    } catch {
+      return;
+    }
+  }, []);
+
+  const handleReiniciarApp = useCallback(() => {
+    try {
+      setIsReiniciando(true);
+      if ("caches" in window) {
+        window.caches.keys().then((keys) => {
+          keys
+            .filter((key) => key.startsWith("vidrios-saas-"))
+            .forEach((key) => window.caches.delete(key));
+        });
+      }
+      window.location.reload();
+    } catch {
+      window.location.reload();
+    }
+  }, []);
 
   const handleFieldChange = useCallback(
     <K extends keyof UpdateOrganizationProfileInput>(
@@ -864,6 +896,52 @@ export default function ConfiguracionEmpresaPage() {
                   {isActivatingAlerts ? "Activando..." : notificationsEnabled ? "Revisar estado" : "Activar alertas"}
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.accordion} ${openSection === "soporte" ? s.accordionOpen : ""}`}>
+          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "soporte" ? null : "soporte"))} aria-expanded={openSection === "soporte"}>
+            <div className={s.triggerMain}>
+              <div className={s.triggerIcon}><LuSmartphone aria-hidden /></div>
+              <div className={s.triggerCopy}>
+                <span className={s.cardEyebrow}>App y soporte</span>
+                <strong>App y soporte</strong>
+                <p>Version {APP_VERSION}</p>
+              </div>
+            </div>
+            <div className={s.triggerMeta}>
+              <span className={s.statePill} data-complete={true}>{APP_VERSION}</span>
+              <LuChevronDown className={s.chevron} aria-hidden />
+            </div>
+          </button>
+
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.fieldGrid}>
+                <article className={s.commercialInfoCard}>
+                  <span className={s.label}>Version de la app</span>
+                  <strong>{APP_VERSION}</strong>
+                  <p>Esta es la version instalada en tu dispositivo.</p>
+                </article>
+                <article className={s.commercialInfoCard}>
+                  <span className={s.label}>Actualizar app</span>
+                  <strong>Busca y aplica cambios</strong>
+                  <p>Si hay una version nueva, la app se actualiza sin reinstalar.</p>
+                </article>
+              </div>
+
+              <div className={s.sectionActions}>
+                <button type="button" className={s.secondaryLink} onClick={() => void handleForceUpdate()} disabled={isUpdating}>
+                  <LuRefreshCcw aria-hidden />
+                  {isUpdating ? "Actualizando..." : "Actualizar / limpiar cache"}
+                </button>
+                <button type="button" className={s.secondaryLink} onClick={handleReiniciarApp} disabled={isReiniciando}>
+                  <LuRefreshCcw aria-hidden />
+                  {isReiniciando ? "Reiniciando..." : "Reiniciar app en este dispositivo"}
+                </button>
+              </div>
+              <p className={s.inlineInfo} style={{ marginTop: 10 }}>&ldquo;Reiniciar&rdquo; borra los datos locales y recarga la app. No borra tu cuenta ni tus cotizaciones.</p>
             </div>
           </div>
         </section>

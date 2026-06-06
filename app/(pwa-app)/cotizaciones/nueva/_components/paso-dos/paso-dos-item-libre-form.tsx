@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { LuEye, LuX } from "react-icons/lu";
 
 import {
@@ -10,8 +9,6 @@ import {
 import type { PasoDosItemLibreFormProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
-
-const IVA = 0.19;
 
 function formatearCLP(valor: number): string {
   return new Intl.NumberFormat("es-CL", {
@@ -30,28 +27,7 @@ export function PasoDosItemLibreForm({
   onCancel,
 }: PasoDosItemLibreFormProps) {
   const valorNumerico = Number(normalizeCurrencyInput(form.valor)) || 0;
-  const totalCliente =
-    form.ivaMode === "total_incluye_iva"
-      ? valorNumerico
-      : Math.round(valorNumerico * (1 + IVA));
   const tieneValor = valorNumerico > 0;
-
-  const previewFormateado = useMemo(() => {
-    if (!tieneValor) {
-      return null;
-    }
-
-    const neto =
-      form.ivaMode === "total_incluye_iva"
-        ? Math.round(valorNumerico / (1 + IVA))
-        : valorNumerico;
-    const iva =
-      form.ivaMode === "total_incluye_iva"
-        ? valorNumerico - neto
-        : Math.round(valorNumerico * IVA);
-
-    return { neto: formatearCLP(neto), iva: formatearCLP(iva), total: formatearCLP(totalCliente) };
-  }, [form.ivaMode, tieneValor, totalCliente, valorNumerico]);
 
   if (!isOpen) {
     return null;
@@ -134,36 +110,10 @@ export function PasoDosItemLibreForm({
               {fieldErrors.costoProveedorUnitario}
             </small>
           ) : null}
-        </label>
-
-        <div className={s.field}>
-          <span className={s.label}>IVA</span>
-          <div className={s.ivaCompactRow}>
-            <button
-              type="button"
-              className={`${s.ivaCompactOption} ${
-                form.ivaMode === "total_incluye_iva" ? s.ivaCompactOptionActive : ""
-              }`}
-              onClick={() => onChange("ivaMode", "total_incluye_iva")}
-            >
-              <span className={s.ivaCompactLabel}>Incluido</span>
-            </button>
-            <button
-              type="button"
-              className={`${s.ivaCompactOption} ${
-                form.ivaMode === "neto_mas_iva" ? s.ivaCompactOptionActive : ""
-              }`}
-              onClick={() => onChange("ivaMode", "neto_mas_iva")}
-            >
-              <span className={s.ivaCompactLabel}>Agregar IVA</span>
-            </button>
-          </div>
           <span className={s.helpText}>
-            {form.ivaMode === "total_incluye_iva"
-              ? "El valor ingresado sera el total visible para el cliente."
-              : "Ventora sumara el 19% al valor ingresado."}
+            Este valor seguira la configuracion de IVA de la cotizacion.
           </span>
-        </div>
+        </label>
 
         {tieneValor ? (
           <div className={s.freeValuePreviewCard}>
@@ -178,21 +128,11 @@ export function PasoDosItemLibreForm({
               ) : null}
               <div className={s.freeValuePreviewTotal}>
                 <span>Total</span>
-                <strong>${formatearCLP(totalCliente)}</strong>
+                <strong>${formatearCLP(valorNumerico)}</strong>
               </div>
-              {previewFormateado ? (
-                <div className={s.freeValuePreviewBreakdown}>
-                  {form.ivaMode === "neto_mas_iva" ? (
-                    <>
-                      <span>Neto ${previewFormateado.neto} + IVA ${previewFormateado.iva}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>IVA incluido (${previewFormateado.iva})</span>
-                    </>
-                  )}
-                </div>
-              ) : null}
+              <div className={s.freeValuePreviewBreakdown}>
+                <span>El IVA se definira en el resumen de la cotizacion.</span>
+              </div>
             </div>
           </div>
         ) : null}
@@ -212,7 +152,7 @@ export function PasoDosItemLibreForm({
             {editingItemId
               ? "Guardar item"
               : tieneValor
-                ? `Agregar item por $${formatearCLP(totalCliente)}`
+                ? `Agregar item por $${formatearCLP(valorNumerico)}`
                 : "Agregar item"}
           </button>
         </div>

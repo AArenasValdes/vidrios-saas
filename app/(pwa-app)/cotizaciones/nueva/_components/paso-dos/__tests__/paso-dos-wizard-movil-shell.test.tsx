@@ -90,7 +90,6 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     onPrecioChange: jest.fn(),
     onPricingModeChange: jest.fn(),
     onMargenChange: jest.fn(),
-    onIvaModeChange: jest.fn(),
     onCobraPrecioSeparadoChange: jest.fn(),
     onAddAlcanceDetalle: jest.fn(),
     onUpdateAlcanceDetalle: jest.fn(),

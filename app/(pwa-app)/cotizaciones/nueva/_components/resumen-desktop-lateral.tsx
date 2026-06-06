@@ -12,6 +12,7 @@ type ResumenDesktopLateralProps = {
   subtotal: string;
   iva: string;
   total: string;
+  mostrarIva: boolean;
   selectedClientMode: "Existente" | "Nuevo";
   isSaving: boolean;
   onSaveDraft: () => void;
@@ -24,6 +25,7 @@ export function ResumenDesktopLateral({
   subtotal,
   iva,
   total,
+  mostrarIva,
   selectedClientMode,
   isSaving,
   onSaveDraft,
@@ -51,15 +53,17 @@ export function ResumenDesktopLateral({
           <strong>{totalItems}</strong>
         </div>
         <div className={s.sideRow}>
-          <span>Subtotal</span>
+          <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
           <strong>{subtotal}</strong>
         </div>
-        <div className={s.sideRow}>
-          <span>IVA</span>
-          <strong>{iva}</strong>
-        </div>
+        {mostrarIva ? (
+          <div className={s.sideRow}>
+            <span>IVA 19%</span>
+            <strong>{iva}</strong>
+          </div>
+        ) : null}
         <div className={s.sideTotal}>
-          <span>Total</span>
+          <span>Total final</span>
           <strong>{total}</strong>
         </div>
       </section>

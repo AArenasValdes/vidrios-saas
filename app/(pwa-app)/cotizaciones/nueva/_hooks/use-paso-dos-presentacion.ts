@@ -58,6 +58,7 @@ type UsePasoDosPresentacionParams = {
   subtotal: string;
   iva: string;
   total: string;
+  mostrarIva: boolean;
   onGoToSummary: () => void;
   onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
@@ -252,6 +253,7 @@ export function usePasoDosPresentacion(
       subtotal: params.subtotal,
       iva: params.iva,
       total: params.total,
+      mostrarIva: params.mostrarIva,
       fieldErrorItems: params.fieldErrors.items,
       stepTwoListRef: params.stepTwoListRef,
       stepTwoSummaryRef: params.stepTwoSummaryRef,

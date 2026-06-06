@@ -81,7 +81,6 @@ const baseProps = {
   onPricingModeChange: jest.fn(),
   onSistemaChange: jest.fn(),
   onVidrioChange: jest.fn(),
-  onIvaModeChange: jest.fn(),
   onCobraPrecioSeparadoChange: jest.fn(),
   onAddAlcanceDetalle: jest.fn(),
   onUpdateAlcanceDetalle: jest.fn(),
