@@ -1039,6 +1039,35 @@ function NuevaCotizacionPageContent() {
 
       nextItems.push(nextItem);
 
+      if (isFreeValue && quotePricingMode === "total_global" && groupDraft.alcanceDetalles.length > 0) {
+        for (const detalle of groupDraft.alcanceDetalles) {
+          if (!detalle.nombre.trim() && !detalle.descripcion.trim()) {
+            continue;
+          }
+          const detalleNombre = detalle.nombre.trim() || "Detalle";
+          const detalleDescripcion = [
+            detalle.descripcion.trim(),
+            detalle.cantidad && detalle.cantidad !== "1" ? `Cantidad: ${detalle.cantidad}` : "",
+            detalle.ancho ? `Ancho: ${detalle.ancho} mm` : "",
+            detalle.alto ? `Alto: ${detalle.alto} mm` : "",
+          ]
+            .filter(Boolean)
+            .join(". ");
+          const detalleItem = buildFreeValueItemFromForm(
+            {
+              nombre: detalleNombre,
+              descripcion: detalleDescripcion || undefined,
+              valor: "0",
+              ivaMode: "total_incluye_iva",
+            },
+            nextItems,
+            null,
+            { allowZeroValue: true }
+          );
+          nextItems.push(detalleItem);
+        }
+      }
+
       setDraft((current) => ({ ...current, items: nextItems }));
       if (isMobileViewport) {
         pasoDosEdicionRapida.seleccionarItemEdicionRapida(
@@ -1657,6 +1686,9 @@ function NuevaCotizacionPageContent() {
               onMargenChange: pasoDosAgregarGrupoMovil.updateMargenPct,
               onIvaModeChange: pasoDosAgregarGrupoMovil.updateIvaMode,
               onCobraPrecioSeparadoChange: pasoDosAgregarGrupoMovil.updateCobraPrecioSeparado,
+              onAddAlcanceDetalle: pasoDosAgregarGrupoMovil.addAlcanceDetalle,
+              onUpdateAlcanceDetalle: pasoDosAgregarGrupoMovil.updateAlcanceDetalle,
+              onRemoveAlcanceDetalle: pasoDosAgregarGrupoMovil.removeAlcanceDetalle,
             },
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
@@ -1721,6 +1753,9 @@ function NuevaCotizacionPageContent() {
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onIvaModeChange: pasoDosAgregarGrupo.updateIvaMode,
             onCobraPrecioSeparadoChange: pasoDosAgregarGrupo.updateCobraPrecioSeparado,
+            onAddAlcanceDetalle: pasoDosAgregarGrupo.addAlcanceDetalle,
+            onUpdateAlcanceDetalle: pasoDosAgregarGrupo.updateAlcanceDetalle,
+            onRemoveAlcanceDetalle: pasoDosAgregarGrupo.removeAlcanceDetalle,
             quotePricingMode,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,

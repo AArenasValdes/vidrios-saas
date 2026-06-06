@@ -5,6 +5,7 @@ import { LuChevronRight, LuNotebookPen, LuSparkles } from "react-icons/lu";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
+import { getSubtypeOptionsForCategory } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
   getVisibleSubtypeLabel,
   getSubtypeBadge,
@@ -79,10 +80,14 @@ export function PasoDosWizardTipoMovil({
         {categoryOptions.map((option) => {
           const isLibre = option.title === "Proyecto libre y Mantencion";
           const isSingle = singleSubtypeCategories.has(option.title);
+          const isActive = !isSingle && draft.categoria === option.title;
           const handleClick = () => {
             onSelectCategoria(option.title);
-            if (isSingle && subtypeOptions.length > 0) {
-              onSelectSubtipo(subtypeOptions[0]);
+            if (isSingle) {
+              const targetFirst = getSubtypeOptionsForCategory(option.title)[0];
+              if (targetFirst) {
+                onSelectSubtipo(targetFirst);
+              }
             }
           };
 
@@ -90,7 +95,7 @@ export function PasoDosWizardTipoMovil({
             <button
               key={option.title}
               className={`${s.stepTwoMobileCategoryTab} ${
-                draft.categoria === option.title ? s.stepTwoMobileCategoryTabActive : ""
+                isActive ? s.stepTwoMobileCategoryTabActive : ""
               } ${isLibre ? s.stepTwoMobileCategoryTabLibre : ""}`}
               onClick={handleClick}
               type="button"

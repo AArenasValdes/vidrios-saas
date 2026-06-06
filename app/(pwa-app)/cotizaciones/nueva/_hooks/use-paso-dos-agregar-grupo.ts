@@ -44,6 +44,15 @@ import {
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
+export type AlcanceDetalle = {
+  id: string;
+  nombre: string;
+  cantidad: string;
+  ancho: string;
+  alto: string;
+  descripcion: string;
+};
+
 export type PasoDosGrupoDraft = {
   categoria: PasoDosGrupoCategoria;
   subtipo: string;
@@ -55,6 +64,7 @@ export type PasoDosGrupoDraft = {
   descripcion: string;
   ivaMode: "total_incluye_iva" | "neto_mas_iva";
   cobraPrecioSeparado: boolean;
+  alcanceDetalles: AlcanceDetalle[];
   pricingMode: PricingMode;
   material: (typeof MATERIAL_OPTIONS)[number];
   colorHex: string;
@@ -307,6 +317,7 @@ export function createInitialPasoDosGrupoDraft({
         ? seedForm?.descripcion ?? ""
         : seedForm?.descripcion ?? suggestedForm.descripcion,
     cobraPrecioSeparado: false,
+    alcanceDetalles: [],
     pricingMode: normalizePricingMode(seedForm?.pricingMode ?? pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
@@ -708,6 +719,43 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     }));
   };
 
+  const addAlcanceDetalle = () => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: [
+        ...current.alcanceDetalles,
+        {
+          id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          nombre: "",
+          cantidad: "1",
+          ancho: "",
+          alto: "",
+          descripcion: "",
+        },
+      ],
+    }));
+  };
+
+  const updateAlcanceDetalle = (
+    detalleId: string,
+    field: keyof AlcanceDetalle,
+    value: string
+  ) => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: current.alcanceDetalles.map((d) =>
+        d.id === detalleId ? { ...d, [field]: value } : d
+      ),
+    }));
+  };
+
+  const removeAlcanceDetalle = (detalleId: string) => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: current.alcanceDetalles.filter((d) => d.id !== detalleId),
+    }));
+  };
+
   const goBack = () => {
     setPaso((current) => {
       if (current <= 1) {
@@ -788,6 +836,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateAncho,
     updateAlto,
     updatePrecio,
+    addAlcanceDetalle,
+    updateAlcanceDetalle,
+    removeAlcanceDetalle,
     goBack,
     goNext,
     canContinueFromQuantity,

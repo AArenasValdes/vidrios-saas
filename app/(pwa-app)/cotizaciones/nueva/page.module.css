@@ -2793,6 +2793,36 @@
   font-weight: 600;
 }
 
+/* --- Alcance detalle cards --- */
+
+.alcanceDetalleCard {
+  padding: 0.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(210, 220, 236, 0.8);
+  background: #f8fafd;
+  margin-bottom: 0.5rem;
+}
+
+.alcanceDetalleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.alcanceDetalleIndex {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.alcanceDetalleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
 /* --- Group sheet libre badge --- */
 
 .groupSheetOptionButtonLibre {

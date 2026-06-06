@@ -504,6 +504,9 @@ export function PasoDosWizardMovil({
                   onSistemaChange={wizard.onSistemaChange}
                   onVidrioChange={wizard.onVidrioChange}
                   onIvaModeChange={wizard.onIvaModeChange}
+                  onAddAlcanceDetalle={wizard.onAddAlcanceDetalle}
+                  onUpdateAlcanceDetalle={wizard.onUpdateAlcanceDetalle}
+                  onRemoveAlcanceDetalle={wizard.onRemoveAlcanceDetalle}
                   quotePricingMode={quotePricingMode}
                   priceHelp={priceHelp}
                   priceLabel={priceLabel}

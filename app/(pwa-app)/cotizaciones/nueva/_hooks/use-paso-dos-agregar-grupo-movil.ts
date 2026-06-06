@@ -16,6 +16,7 @@ import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
+import type { AlcanceDetalle } from "./use-paso-dos-agregar-grupo";
 import {
   applyLineTemplateToGrupoDraft,
   createInitialPasoDosGrupoDraft,
@@ -351,6 +352,43 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     }));
   };
 
+  const addAlcanceDetalle = () => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: [
+        ...current.alcanceDetalles,
+        {
+          id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          nombre: "",
+          cantidad: "1",
+          ancho: "",
+          alto: "",
+          descripcion: "",
+        },
+      ],
+    }));
+  };
+
+  const updateAlcanceDetalle = (
+    detalleId: string,
+    field: keyof AlcanceDetalle,
+    value: string
+  ) => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: current.alcanceDetalles.map((d) =>
+        d.id === detalleId ? { ...d, [field]: value } : d
+      ),
+    }));
+  };
+
+  const removeAlcanceDetalle = (detalleId: string) => {
+    setDraft((current) => ({
+      ...current,
+      alcanceDetalles: current.alcanceDetalles.filter((d) => d.id !== detalleId),
+    }));
+  };
+
   const goBack = () => {
     setPaso((current) => {
       const isFreeValue = isFreeValueComponentType(draft.subtipo);
@@ -403,6 +441,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updatePrecio,
     updatePricingMode,
     updateMargenPct,
+    addAlcanceDetalle,
+    updateAlcanceDetalle,
+    removeAlcanceDetalle,
     goBack,
     goNext,
   };

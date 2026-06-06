@@ -53,6 +53,9 @@ type Props = {
   onPrecioChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
+  onAddAlcanceDetalle: () => void;
+  onUpdateAlcanceDetalle: (detalleId: string, field: "nombre" | "cantidad" | "ancho" | "alto" | "descripcion", value: string) => void;
+  onRemoveAlcanceDetalle: (detalleId: string) => void;
   quotePricingMode: QuotePricingMode;
   canContinueFromQuantity: boolean;
   canContinueFromConfig: boolean;
@@ -122,6 +125,9 @@ export function PasoDosAgregarGrupoSheet({
   onPrecioChange,
   onIvaModeChange,
   onCobraPrecioSeparadoChange,
+  onAddAlcanceDetalle,
+  onUpdateAlcanceDetalle,
+  onRemoveAlcanceDetalle,
   quotePricingMode,
   canContinueFromQuantity,
   canContinueFromConfig,
@@ -231,9 +237,11 @@ export function PasoDosAgregarGrupoSheet({
               <div className={s.groupSheetOptionGrid}>
                 {COMPONENT_TYPE_GROUPS.map((group) => {
                   const isLibre = group.title === "Proyecto libre y Mantencion";
+                  const isSingle = group.items.length === 1;
+                  const isActive = !isSingle && draft.categoria === group.title;
                   const handleClick = () => {
                     onSelectCategoria(group.title);
-                    if (group.items.length === 1) {
+                    if (isSingle) {
                       onSelectSubtipo(group.items[0]);
                     }
                   };
@@ -242,7 +250,7 @@ export function PasoDosAgregarGrupoSheet({
                   <button
                     key={group.title}
                     className={`${s.groupSheetOptionButton} ${
-                      draft.categoria === group.title ? s.groupSheetOptionButtonActive : ""
+                      isActive ? s.groupSheetOptionButtonActive : ""
                     } ${isLibre ? s.groupSheetOptionButtonLibre : ""}`}
                     onClick={handleClick}
                     type="button"
@@ -441,6 +449,101 @@ export function PasoDosAgregarGrupoSheet({
                           </div>
                         </div>
                       </>
+                    ) : null}
+
+                    {quotePricingMode === "total_global" ? (
+                      <section className={s.formSection}>
+                        <div className={s.formSectionHead}>
+                          <span className={s.formSectionEyebrow}>Detalle incluido</span>
+                          <strong>Agrega detalles del alcance (sin precio)</strong>
+                        </div>
+
+                        {draft.alcanceDetalles.map((detalle) => (
+                          <div key={detalle.id} className={s.alcanceDetalleCard}>
+                            <div className={s.alcanceDetalleHeader}>
+                              <span className={s.alcanceDetalleIndex}>
+                                {detalle.nombre.trim() || "Detalle"}
+                              </span>
+                              <button
+                                type="button"
+                                className={s.iconButton}
+                                onClick={() => onRemoveAlcanceDetalle(detalle.id)}
+                                aria-label="Eliminar detalle"
+                              >
+                                <LuX aria-hidden size={14} />
+                              </button>
+                            </div>
+                            <div className={s.alcanceDetalleGrid}>
+                              <label className={s.field}>
+                                <span className={s.label}>Nombre</span>
+                                <input
+                                  className={s.input}
+                                  placeholder="Ej: Cambio de vidrio"
+                                  value={detalle.nombre}
+                                  onChange={(e) =>
+                                    onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
+                                  }
+                                />
+                              </label>
+                              <label className={s.field}>
+                                <span className={s.label}>Cantidad</span>
+                                <input
+                                  className={s.input}
+                                  inputMode="numeric"
+                                  placeholder="1"
+                                  value={detalle.cantidad}
+                                  onChange={(e) =>
+                                    onUpdateAlcanceDetalle(detalle.id, "cantidad", e.target.value)
+                                  }
+                                />
+                              </label>
+                              <label className={s.field}>
+                                <span className={s.label}>Ancho (mm)</span>
+                                <input
+                                  className={s.input}
+                                  inputMode="numeric"
+                                  placeholder="1500"
+                                  value={detalle.ancho}
+                                  onChange={(e) =>
+                                    onUpdateAlcanceDetalle(detalle.id, "ancho", e.target.value)
+                                  }
+                                />
+                              </label>
+                              <label className={s.field}>
+                                <span className={s.label}>Alto (mm)</span>
+                                <input
+                                  className={s.input}
+                                  inputMode="numeric"
+                                  placeholder="2000"
+                                  value={detalle.alto}
+                                  onChange={(e) =>
+                                    onUpdateAlcanceDetalle(detalle.id, "alto", e.target.value)
+                                  }
+                                />
+                              </label>
+                            </div>
+                            <label className={s.field}>
+                              <span className={s.label}>Descripcion</span>
+                              <input
+                                className={s.input}
+                                placeholder="Ej: Vidrio templado 8mm"
+                                value={detalle.descripcion}
+                                onChange={(e) =>
+                                  onUpdateAlcanceDetalle(detalle.id, "descripcion", e.target.value)
+                                }
+                              />
+                            </label>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className={s.btnGhost}
+                          onClick={onAddAlcanceDetalle}
+                        >
+                          + Agregar detalle
+                        </button>
+                      </section>
                     ) : null}
                   </section>
                 </>

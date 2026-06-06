@@ -92,6 +92,9 @@ type Props = {
   onVidrioChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
+  onAddAlcanceDetalle: () => void;
+  onUpdateAlcanceDetalle: (detalleId: string, field: "nombre" | "cantidad" | "ancho" | "alto" | "descripcion", value: string) => void;
+  onRemoveAlcanceDetalle: (detalleId: string) => void;
   quotePricingMode: QuotePricingMode;
   priceHelp: string;
   priceLabel: string;
@@ -140,6 +143,9 @@ export function PasoDosWizardConfiguracionMovil({
   onVidrioChange,
   onIvaModeChange,
   onCobraPrecioSeparadoChange,
+  onAddAlcanceDetalle,
+  onUpdateAlcanceDetalle,
+  onRemoveAlcanceDetalle,
   quotePricingMode = "por_item",
   priceHelp,
   priceLabel,
@@ -861,8 +867,107 @@ export function PasoDosWizardConfiguracionMovil({
 
                   {quickLineError ? (
                     <div className={s.stepTwoMobileQuickLineError}>{quickLineError}</div>
-                  ) : null}
+        ) : null}
+
+        {quotePricingMode === "total_global" ? (
+          <>
+            <div className={s.stepTwoMobileBlockSecundario}>
+              <div className={s.stepTwoMobileBlockLabel}>DETALLE INCLUIDO</div>
+              <span className={s.stepTwoMobileBlockHelp}>
+                Detalles del alcance sin precio individual.
+              </span>
+            </div>
+
+            {draft.alcanceDetalles.map((detalle, idx) => (
+              <div key={detalle.id} className={s.alcanceDetalleCard}>
+                <div className={s.alcanceDetalleHeader}>
+                  <span className={s.alcanceDetalleIndex}>
+                    {detalle.nombre.trim() || `Detalle ${idx + 1}`}
+                  </span>
+                  <button
+                    type="button"
+                    className={s.iconButton}
+                    onClick={() => onRemoveAlcanceDetalle(detalle.id)}
+                    aria-label="Eliminar detalle"
+                  >
+                    <LuX aria-hidden size={14} />
+                  </button>
                 </div>
+                <label className={s.stepTwoMobileInlineField}>
+                  <span className={s.label}>Nombre</span>
+                  <input
+                    className={s.input}
+                    placeholder="Ej: Cambio de vidrio"
+                    type="text"
+                    value={detalle.nombre}
+                    onChange={(e) =>
+                      onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
+                    }
+                  />
+                </label>
+                <div className={s.alcanceDetalleGrid}>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Cantidad</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="1"
+                      value={detalle.cantidad}
+                      onChange={(e) =>
+                        onUpdateAlcanceDetalle(detalle.id, "cantidad", e.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Ancho (mm)</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="1500"
+                      value={detalle.ancho}
+                      onChange={(e) =>
+                        onUpdateAlcanceDetalle(detalle.id, "ancho", e.target.value)
+                      }
+                    />
+                  </label>
+                  <label className={s.stepTwoMobileInlineField}>
+                    <span className={s.label}>Alto (mm)</span>
+                    <input
+                      className={s.input}
+                      inputMode="numeric"
+                      placeholder="2000"
+                      value={detalle.alto}
+                      onChange={(e) =>
+                        onUpdateAlcanceDetalle(detalle.id, "alto", e.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+                <label className={s.stepTwoMobileInlineField}>
+                  <span className={s.label}>Descripcion</span>
+                  <input
+                    className={s.input}
+                    placeholder="Ej: Vidrio templado 8mm"
+                    type="text"
+                    value={detalle.descripcion}
+                    onChange={(e) =>
+                      onUpdateAlcanceDetalle(detalle.id, "descripcion", e.target.value)
+                    }
+                  />
+                </label>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              className={s.btnGhost}
+              onClick={onAddAlcanceDetalle}
+            >
+              + Agregar detalle
+            </button>
+          </>
+        ) : null}
+      </div>
               )}
             </div>
 
