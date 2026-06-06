@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LuChevronLeft, LuCirclePlus, LuGripVertical, LuSearch, LuTrash2, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -196,6 +196,10 @@ export function PasoDosWizardConfiguracionMovil({
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
+  const [activeAlcanceDetalleId, setActiveAlcanceDetalleId] = useState<string | null>(
+    draft.alcanceDetalles[0]?.id ?? null
+  );
+  const alcanceCountRef = useRef(draft.alcanceDetalles.length);
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
@@ -229,6 +233,23 @@ export function PasoDosWizardConfiguracionMovil({
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
       : "";
+  const activeAlcanceDetalle =
+    draft.alcanceDetalles.find((detalle) => detalle.id === activeAlcanceDetalleId) ?? null;
+
+  useEffect(() => {
+    if (draft.alcanceDetalles.length > alcanceCountRef.current) {
+      setActiveAlcanceDetalleId(draft.alcanceDetalles[draft.alcanceDetalles.length - 1]?.id ?? null);
+    } else if (
+      activeAlcanceDetalleId &&
+      !draft.alcanceDetalles.some((detalle) => detalle.id === activeAlcanceDetalleId)
+    ) {
+      setActiveAlcanceDetalleId(draft.alcanceDetalles[0]?.id ?? null);
+    } else if (!activeAlcanceDetalleId && draft.alcanceDetalles.length > 0) {
+      setActiveAlcanceDetalleId(draft.alcanceDetalles[0]?.id ?? null);
+    }
+
+    alcanceCountRef.current = draft.alcanceDetalles.length;
+  }, [activeAlcanceDetalleId, draft.alcanceDetalles]);
 
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
@@ -322,6 +343,21 @@ export function PasoDosWizardConfiguracionMovil({
         error instanceof Error ? error.message : "No pudimos guardar la línea en este momento."
       );
     }
+  };
+
+  const getDetalleResumen = (detalle: PasoDosGrupoDraft["alcanceDetalles"][number]) => {
+    if (detalle.tipo === "estructurado") {
+      const medida =
+        detalle.ancho.trim() && detalle.alto.trim()
+          ? ` ${detalle.ancho.trim()} x ${detalle.alto.trim()}`
+          : "";
+      const cantidad = detalle.cantidad.trim() || "1";
+      const subtipo = detalle.subtipo?.trim() || "Componente";
+
+      return detalle.nombre.trim() || `${cantidad} ${subtipo.toLowerCase()}${medida}`;
+    }
+
+    return detalle.nombre.trim() || detalle.descripcion.trim() || "Detalle sin nombre";
   };
 
   if (isFreeValue) {

@@ -439,17 +439,21 @@ export function PasoDosWizardMovil({
                   : VISUAL_STAGES
               }
               visualStage={visualStage}
-              title={getStageTitle(visualStage)}
+              title={
+                shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
+                  ? "Datos del trabajo"
+                  : getStageTitle(visualStage)
+              }
               subtitle={
                 visualStage === 1
                   ? quotePricingMode === "total_global"
-                    ? "Parte desde un cuaderno libre para describir el trabajo."
+                    ? "Parte desde un cuaderno comercial para describir el trabajo."
                     : "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
                     : shouldSkipCantidadStep
                       ? quotePricingMode === "total_global"
-                        ? "Redacta trabajo, detalles incluidos y precio final."
+                        ? "Describe el trabajo. Agrega detalles y precio final."
                         : "Redacta el trabajo y define el valor."
                       : quotePricingMode === "total_global"
                         ? "Completa datos comerciales y precio final antes de agregar."

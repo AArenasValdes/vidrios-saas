@@ -7928,6 +7928,270 @@
   margin-bottom: 0.52rem;
   display: block;
 }
+
+.stepTwoNotebookField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.stepTwoNotebookFieldLabel {
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #163b79;
+}
+
+.stepTwoNotebookInput {
+  width: 100%;
+  min-height: 3.45rem;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 0 0.95rem;
+  font-size: 0.98rem;
+  color: #243b6b;
+}
+
+.stepTwoNotebookTextareaCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid #d6deea;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.stepTwoNotebookTextareaHeader {
+  display: block;
+  padding: 0.9rem 1rem 0.8rem;
+  background: #e3e8f4;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5f6b7d;
+}
+
+.stepTwoNotebookTextarea {
+  width: 100%;
+  min-height: 10.8rem;
+  border: 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #ffffff 0,
+      #ffffff 2.3rem,
+      #dde3ec 2.3rem,
+      #dde3ec 2.38rem
+    );
+  padding: 1rem 1rem 0.8rem;
+  font-size: 0.98rem;
+  line-height: 2.38rem;
+  color: #243b6b;
+  resize: vertical;
+}
+
+.stepTwoNotebookTextarea::placeholder {
+  color: #b7c0cf;
+}
+
+.stepTwoNotebookInlineAction {
+  display: flex;
+  align-items: center;
+  min-height: 1.4rem;
+}
+
+.stepTwoNotebookInlineLink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #5b6577;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stepTwoNotebookSection {
+  border: 1.5px solid #d9e0ea;
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.stepTwoNotebookSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.88rem 1rem;
+  background: #f1f3f6;
+  border-bottom: 1px solid #e5e9f0;
+}
+
+.stepTwoNotebookSectionTitle {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #163b79;
+}
+
+.stepTwoNotebookSectionAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #163b79;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stepTwoNotebookDetailList {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepTwoNotebookDetailRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 0;
+  border-top: 1px solid #eef1f5;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stepTwoNotebookDetailRow:first-child {
+  border-top: 0;
+}
+
+.stepTwoNotebookDetailRowActive {
+  background: rgba(30, 136, 255, 0.06);
+}
+
+.stepTwoNotebookDetailHandle {
+  color: #8e99aa;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepTwoNotebookDetailText {
+  min-width: 0;
+  font-size: 0.96rem;
+  color: #1f2937;
+  line-height: 1.35;
+}
+
+.stepTwoNotebookDetailEmpty {
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: #8a96a6;
+}
+
+.stepTwoNotebookDetailEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.95rem 1rem;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.stepTwoNotebookDetailEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.stepTwoNotebookDetailEditorTitle {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #163b79;
+}
+
+.stepTwoNotebookDangerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #b42318;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stepTwoNotebookPriceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 0.95rem 1rem 1rem;
+}
+
+.stepTwoNotebookPriceTitle {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #163b79;
+}
+
+.stepTwoNotebookPriceField {
+  display: flex;
+}
+
+.stepTwoNotebookPriceInput {
+  width: 100%;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #243b6b;
+}
+
+.stepTwoNotebookInternalBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 0.9rem 1rem;
+}
+
+.stepTwoNotebookInternalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.stepTwoNotebookInternalTextarea {
+  width: 100%;
+  min-height: 5.2rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.8rem 0.9rem;
+  color: #243b6b;
+  resize: vertical;
+}
  
 .stepTwoMobileMedidasRow {
   display: grid;
