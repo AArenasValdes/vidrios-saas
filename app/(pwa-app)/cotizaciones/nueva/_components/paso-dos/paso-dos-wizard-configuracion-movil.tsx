@@ -1678,7 +1678,7 @@ export function PasoDosWizardConfiguracionMovil({
             <button
               type="button"
               className={s.btnGhost}
-              onClick={onAddAlcanceDetalle}
+              onClick={() => onAddAlcanceDetalle()}
             >
               + Agregar detalle
             </button>
