@@ -102,6 +102,24 @@ export function PasoDosItemLibreForm({
           />
         </label>
 
+        <div className={s.suggestionChips}>
+          <span className={s.suggestionChipsLabel}>Sugerencias:</span>
+          {["Cambio de vidrio", "Mantencion", "Sellado", "Reparacion shower", "Otro"].map(
+            (chip) => (
+              <button
+                key={chip}
+                type="button"
+                className={`${s.suggestionChip} ${
+                  form.nombre === chip ? s.suggestionChipActive : ""
+                }`}
+                onClick={() => onChange("nombre", chip)}
+              >
+                {chip}
+              </button>
+            )
+          )}
+        </div>
+
         <label className={s.field}>
           <span className={s.label}>Valor a cobrar</span>
           <input

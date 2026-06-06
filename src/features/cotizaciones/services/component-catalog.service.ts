@@ -120,58 +120,9 @@ export const COMPONENT_CATALOG = [
     title: "Proyecto libre y Mantencion",
     items: [
       {
-        tipo: "Item libre con valor",
-        descripcion: "Redacta un trabajo, reparacion o cobro adicional.",
+        tipo: "Trabajo libre / Mantencion",
+        descripcion: "Usalo para reparaciones, cambios de vidrio, mantenciones, sellados o trabajos personalizados.",
         sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Cambio de vidrio",
-        descripcion: "Cambio de vidrio existente.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Mantencion de ventanas",
-        descripcion: "Mantencion y ajuste de ventanas existentes.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Cambio de rodamientos / carros",
-        descripcion: "Cambio de rodamientos o carros de corredera.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Cambio de pestillos / cierres",
-        descripcion: "Cambio de pestillos, cierres o herrajes.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Sellado o filtracion",
-        descripcion: "Sellado de filtraciones o impermeabilizacion.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Reparacion de shower / mampara",
-        descripcion: "Reparacion de shower door o mampara existente.",
-        sistemas: ["Unidad"],
-        configuraciones: [],
-        esItemLibre: true,
-      },
-      {
-        tipo: "Trabajo personalizado",
-        descripcion: "Trabajo de mantencion, reparacion o cobro adicional.",
-        sistemas: ["A medida", "Manual", "Por definir"],
         configuraciones: [],
         esItemLibre: true,
       },
@@ -205,6 +156,14 @@ const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   "proyecto a medida": "trabajo personalizado",
   "otro trabajo especial": "trabajo personalizado",
   otro: "trabajo personalizado",
+  // Legacy: old "Proyecto libre y Mantencion" subtypes → canonical single type
+  [normalizeCatalogText("Item libre con valor")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Cambio de vidrio")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Mantencion de ventanas")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Cambio de rodamientos / carros")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Cambio de pestillos / cierres")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Sellado o filtracion")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Reparacion de shower / mampara")]: normalizeCatalogText("Trabajo libre / Mantencion"),
 };
 
 function normalizeComponentKey(value: string) {

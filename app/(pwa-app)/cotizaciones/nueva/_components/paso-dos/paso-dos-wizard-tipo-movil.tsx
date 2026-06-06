@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { LuChevronRight, LuNotebookPen, LuSparkles } from "react-icons/lu";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
@@ -34,12 +35,20 @@ export function PasoDosWizardTipoMovil({
   onSelectCategoria,
   onSelectSubtipo,
 }: Props) {
+  const singleSubtypeCategories = useMemo(
+    () => new Set(categoryOptions.filter((c) => {
+      const count = parseInt(c.countLabel, 10);
+      return !isNaN(count) && count === 1;
+    }).map((c) => c.title)),
+    [categoryOptions]
+  );
+
   if (quotePricingMode === "total_global") {
     return (
       <div className={s.stepTwoMobileCreatorStack}>
         <button
           className={s.stepTwoMobileNotebookCard}
-          onClick={() => onSelectSubtipo("Trabajo personalizado")}
+          onClick={() => onSelectSubtipo("Trabajo libre / Mantencion")}
           type="button"
         >
           <span className={s.stepTwoMobileNotebookIcon}>
@@ -50,10 +59,10 @@ export function PasoDosWizardTipoMovil({
               <LuSparkles aria-hidden size={14} />
               Presupuesto por total
             </span>
-            <strong>Proyecto libre o mantencion</strong>
+            <strong>Trabajo libre / Mantencion</strong>
             <small>
-              Usalo como cuaderno: escribe el trabajo completo, agrega notas
-              para el cliente y define el total final al terminar.
+              Usalo para reparaciones, cambios de vidrio, mantenciones,
+              sellados o trabajos personalizados.
             </small>
           </span>
           <span className={s.stepTwoMobileCreatorOptionArrow}>
@@ -67,22 +76,37 @@ export function PasoDosWizardTipoMovil({
   return (
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileCategoryTabs}>
-        {categoryOptions.map((option) => (
-          <button
-            key={option.title}
-            className={`${s.stepTwoMobileCategoryTab} ${
-              draft.categoria === option.title ? s.stepTwoMobileCategoryTabActive : ""
-            }`}
-            onClick={() => onSelectCategoria(option.title)}
-            type="button"
-          >
-            <div className={s.stepTwoMobileCategoryTabMain}>
-              <strong>{option.title}</strong>
-              <span>{repairBrokenText(option.subtitle)}</span>
-            </div>
-            <small className={s.stepTwoMobileCategoryTabCount}>{option.countLabel}</small>
-          </button>
-        ))}
+        {categoryOptions.map((option) => {
+          const isLibre = option.title === "Proyecto libre y Mantencion";
+          const isSingle = singleSubtypeCategories.has(option.title);
+          const handleClick = () => {
+            onSelectCategoria(option.title);
+            if (isSingle && subtypeOptions.length > 0) {
+              onSelectSubtipo(subtypeOptions[0]);
+            }
+          };
+
+          return (
+            <button
+              key={option.title}
+              className={`${s.stepTwoMobileCategoryTab} ${
+                draft.categoria === option.title ? s.stepTwoMobileCategoryTabActive : ""
+              } ${isLibre ? s.stepTwoMobileCategoryTabLibre : ""}`}
+              onClick={handleClick}
+              type="button"
+            >
+              <div className={s.stepTwoMobileCategoryTabMain}>
+                <strong>{option.title}</strong>
+                <span>{repairBrokenText(option.subtitle)}</span>
+              </div>
+              {isLibre ? (
+                <span className={s.stepTwoMobileLibreBadge}>Libre</span>
+              ) : (
+                <small className={s.stepTwoMobileCategoryTabCount}>{option.countLabel}</small>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className={s.stepTwoMobileCreatorOptionList}>
@@ -110,11 +134,7 @@ export function PasoDosWizardTipoMovil({
 
             <div className={s.stepTwoMobileOptionCopy}>
               <strong>{getVisibleSubtypeLabel(subtipo)}</strong>
-              <small>
-                {subtipo === "Item libre con valor"
-                  ? "Rapido"
-                  : "Agregar como grupo"}
-              </small>
+              <small>Libre</small>
             </div>
 
             <span className={s.stepTwoMobileCreatorOptionArrow}>

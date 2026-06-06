@@ -182,7 +182,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(patch.vidrio).toContain("Templado");
   });
 
-  it("debe precargar titulo y fijar cantidad 1 en proyecto libre y mantencion", () => {
+  it("debe precargar titulo y fijar cantidad 1 en items libres", () => {
     const current = {
       ...createInitialPasoDosGrupoDraft({
         items: [],
@@ -197,15 +197,15 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       items: [],
       pricingMode: "margen",
       provider: "",
-      subtipo: "Mantencion de ventanas",
+      subtipo: "Trabajo libre / Mantencion",
     });
 
-    expect(patch.nombre).toBe("Mantencion de ventanas");
+    expect(patch.nombre).toBe("");
     expect(patch.cantidad).toBe(1);
     expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
   });
 
-  it("debe permitir cantidad en trabajo personalizado de especiales", () => {
+  it("debe omitir cantidad en trabajo personalizado de especiales (flujo libre)", () => {
     const current = {
       ...createInitialPasoDosGrupoDraft({
         items: [],
@@ -223,9 +223,9 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       subtipo: "Trabajo personalizado",
     });
 
-    expect(patch.nombre).toBe("Trabajo personalizado");
-    expect(patch.cantidad).toBe(3);
-    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(false);
+    expect(patch.nombre).toBe("");
+    expect(patch.cantidad).toBe(1);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
   });
 
   it("debe resumir el grupo de forma directa para la confirmacion", () => {

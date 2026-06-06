@@ -92,7 +92,7 @@ describe("paso-dos-wizard-movil state", () => {
   it("oculta el precio por defecto en trabajo libre dentro de presupuesto por total", () => {
     const state = buildPasoDosWizardMovilState({
       draft: createDraft({
-        subtipo: "Mantencion de ventanas",
+        subtipo: "Trabajo libre / Mantencion",
         descripcion: "Mantencion de 5 ventanas existentes.",
         sistema: "",
         vidrio: "",
@@ -112,7 +112,7 @@ describe("paso-dos-wizard-movil state", () => {
   it("exige precio cuando el trabajo libre se cobra separado", () => {
     const state = buildPasoDosWizardMovilState({
       draft: createDraft({
-        subtipo: "Mantencion de ventanas",
+        subtipo: "Trabajo libre / Mantencion",
         descripcion: "Mantencion de 5 ventanas existentes.",
         sistema: "",
         vidrio: "",

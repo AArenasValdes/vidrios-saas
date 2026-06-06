@@ -27,6 +27,12 @@ describe("component-catalog service", () => {
     expect(especiales).not.toContain("Otro trabajo especial");
   });
 
+  it("debe exponer 'Proyecto libre y Mantencion' con un solo item consolidado", () => {
+    const libres = getComponentTypeOptionsForCategory("Proyecto libre y Mantencion");
+    expect(libres).toHaveLength(1);
+    expect(libres).toEqual(["Trabajo libre / Mantencion"]);
+  });
+
   it("debe separar sistema y configuracion en paño fijo y shower door", () => {
     expect(getSystemOptionsForComponent("Paño fijo")).toEqual(["Fijo"]);
     expect(getConfigurationOptionsForComponent("Paño fijo")).toEqual([

@@ -12,7 +12,6 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
-import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
@@ -36,7 +35,6 @@ export type PasoDosGrupoPasoMovil = 1 | 2 | 3;
 type Params = {
   items: CotizacionWorkflowItem[];
   pricingMode: PricingMode;
-  quotePricingMode?: QuotePricingMode;
   provider: PreferredProvider;
   activeLineTemplates: CotizacionLineTemplate[];
   seedForm?: ComponentFormState | null;
@@ -161,21 +159,15 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const selectSubtipo = (subtipo: string) => {
-    const forcedGlobalNotebook = params.quotePricingMode === "total_global" && subtipo === "Trabajo personalizado";
-    const shouldSkipCantidad =
-      forcedGlobalNotebook ||
-      shouldSkipCantidadForGrupoDraft({
-        categoria: draft.categoria,
-        subtipo,
-      });
+    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
+      categoria: draft.categoria,
+      subtipo,
+    });
 
     setDraft((current) => ({
       ...current,
-      ...(forcedGlobalNotebook ? { categoria: "Proyecto libre y Mantencion" as const } : {}),
       ...buildPasoDosGrupoSelectionPatch({
-        current: forcedGlobalNotebook
-          ? { ...current, categoria: "Proyecto libre y Mantencion" as const }
-          : current,
+        current,
         items: params.items,
         pricingMode: params.pricingMode,
         provider: params.provider,

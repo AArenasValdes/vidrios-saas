@@ -131,14 +131,6 @@ export function PasoDosAgregarGrupoSheet({
   }
 
   const stepCopy = STEP_COPY[paso];
-  const effectiveStepCopy =
-    quotePricingMode === "total_global" && paso === 1
-      ? {
-          ...stepCopy,
-          title: "Proyecto libre",
-          description: "Usalo como cuaderno para redactar el trabajo sin catalogo tecnico.",
-        }
-      : stepCopy;
   const disableContinue =
     (paso === 3 && !canContinueFromQuantity) || (paso === 4 && !canContinueFromConfig);
   const showSheetScheme = shouldShowSheetSchemeForComponent({
@@ -181,11 +173,11 @@ export function PasoDosAgregarGrupoSheet({
 
         <header className={s.groupSheetHeader}>
           <div className={s.groupSheetHeaderCopy}>
-            <span className={s.cardLabel}>{effectiveStepCopy.eyebrow}</span>
+            <span className={s.cardLabel}>{stepCopy.eyebrow}</span>
             <h2 className={s.groupSheetTitle} id="paso-dos-grupo-title">
-              {effectiveStepCopy.title}
+              {stepCopy.title}
             </h2>
-            <p className={s.groupSheetDescription}>{effectiveStepCopy.description}</p>
+            <p className={s.groupSheetDescription}>{stepCopy.description}</p>
           </div>
 
           <button
@@ -214,7 +206,7 @@ export function PasoDosAgregarGrupoSheet({
             quotePricingMode === "total_global" ? (
               <button
                 className={s.stepTwoMobileNotebookCard}
-                onClick={() => onSelectSubtipo("Trabajo personalizado")}
+                onClick={() => onSelectSubtipo("Trabajo libre / Mantencion")}
                 type="button"
               >
                 <span className={s.stepTwoMobileNotebookIcon}>
@@ -225,10 +217,10 @@ export function PasoDosAgregarGrupoSheet({
                     <LuSparkles aria-hidden size={14} />
                     Presupuesto por total
                   </span>
-                  <strong>Proyecto libre o mantencion</strong>
+                  <strong>Trabajo libre / Mantencion</strong>
                   <small>
-                    Usalo como cuaderno: redacta el trabajo completo y define
-                    el total final al terminar.
+                    Usalo para reparaciones, cambios de vidrio, mantenciones,
+                    sellados o trabajos personalizados.
                   </small>
                 </span>
                 <span className={s.stepTwoMobileCreatorOptionArrow}>
@@ -237,19 +229,32 @@ export function PasoDosAgregarGrupoSheet({
               </button>
             ) : (
               <div className={s.groupSheetOptionGrid}>
-                {COMPONENT_TYPE_GROUPS.map((group) => (
+                {COMPONENT_TYPE_GROUPS.map((group) => {
+                  const isLibre = group.title === "Proyecto libre y Mantencion";
+                  const handleClick = () => {
+                    onSelectCategoria(group.title);
+                    if (group.items.length === 1) {
+                      onSelectSubtipo(group.items[0]);
+                    }
+                  };
+
+                  return (
                   <button
                     key={group.title}
                     className={`${s.groupSheetOptionButton} ${
                       draft.categoria === group.title ? s.groupSheetOptionButtonActive : ""
-                    }`}
-                    onClick={() => onSelectCategoria(group.title)}
+                    } ${isLibre ? s.groupSheetOptionButtonLibre : ""}`}
+                    onClick={handleClick}
                     type="button"
                   >
                     <strong>{group.title}</strong>
                     <span>{group.items.slice(0, 2).map(getVisibleSubtypeLabel).join(", ")}</span>
+                    {isLibre ? (
+                      <span className={s.groupSheetLibreBadge}>Libre</span>
+                    ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : null}
@@ -266,7 +271,7 @@ export function PasoDosAgregarGrupoSheet({
                   type="button"
                 >
                   <strong>{getVisibleSubtypeLabel(subtipo)}</strong>
-                  <span>{subtipo === "Item libre con valor" ? "Rapido" : draft.categoria}</span>
+                  <span>{isFreeValueComponentType(subtipo) ? "Libre" : draft.categoria}</span>
                 </button>
               ))}
             </div>
@@ -363,6 +368,23 @@ export function PasoDosAgregarGrupoSheet({
                         onChange={(event) => onDescripcionChange(event.target.value)}
                       />
                     </label>
+                    <div className={s.suggestionChips}>
+                      <span className={s.suggestionChipsLabel}>Sugerencias:</span>
+                      {["Cambio de vidrio", "Mantencion", "Sellado", "Reparacion shower", "Otro"].map(
+                        (chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            className={`${s.suggestionChip} ${
+                              draft.nombre === chip ? s.suggestionChipActive : ""
+                            }`}
+                            onClick={() => onNombreChange(chip)}
+                          >
+                            {chip}
+                          </button>
+                        )
+                      )}
+                    </div>
                     {quotePricingMode === "total_global" ? (
                       <div className={s.field}>
                         <span className={s.label}>Precio</span>

@@ -103,14 +103,10 @@ function safeTrim(value: string | null | undefined) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function isProyectoLibreMantencion(categoria: PasoDosGrupoCategoria) {
-  return categoria === "Proyecto libre y Mantencion";
-}
-
 export function shouldSkipCantidadForGrupoDraft(
   draft: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
 ) {
-  return isProyectoLibreMantencion(draft.categoria) && isFreeValueComponentType(draft.subtipo);
+  return isFreeValueComponentType(draft.subtipo);
 }
 
 function buildDefaultFreeValueName(subtipo: string) {
@@ -118,11 +114,7 @@ function buildDefaultFreeValueName(subtipo: string) {
     return "";
   }
 
-  if (subtipo === "Item libre con valor") {
-    return "Trabajo adicional";
-  }
-
-  return subtipo;
+  return "";
 }
 
 export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
@@ -424,7 +416,7 @@ export function buildPasoDosGrupoSelectionPatch({
   return {
     subtipo,
     hojasBase: getBaseLeafCountForComponent(subtipo),
-    cantidad: isProyectoLibreMantencion(current.categoria) ? 1 : current.cantidad,
+    cantidad: isFreeValueComponentType(subtipo) ? 1 : current.cantidad,
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
     pricingMode: normalizePricingMode(current.pricingMode),
@@ -569,22 +561,15 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const selectSubtipo = (subtipo: string) => {
-    const forcedGlobalNotebook =
-      params.quotePricingMode === "total_global" && subtipo === "Trabajo personalizado";
-    const shouldSkipCantidad =
-      forcedGlobalNotebook ||
-      shouldSkipCantidadForGrupoDraft({
-        categoria: draft.categoria,
-        subtipo,
-      });
+    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
+      categoria: draft.categoria,
+      subtipo,
+    });
 
     setDraft((current) => ({
       ...current,
-      ...(forcedGlobalNotebook ? { categoria: "Proyecto libre y Mantencion" as const } : {}),
       ...buildPasoDosGrupoSelectionPatch({
-        current: forcedGlobalNotebook
-          ? { ...current, categoria: "Proyecto libre y Mantencion" as const }
-          : current,
+        current,
         items: params.items,
         pricingMode: params.pricingMode,
         provider: params.provider,

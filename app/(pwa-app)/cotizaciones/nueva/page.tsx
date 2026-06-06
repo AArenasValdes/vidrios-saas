@@ -300,14 +300,12 @@ function NuevaCotizacionPageContent() {
   const pasoDosAgregarGrupo = usePasoDosAgregarGrupo({
     items: draft.items,
     pricingMode: componentForm.pricingMode,
-    quotePricingMode,
     provider: suggestionProvider,
     seedForm: componentForm,
   });
   const pasoDosAgregarGrupoMovil = usePasoDosAgregarGrupoMovil({
     items: draft.items,
     pricingMode: componentForm.pricingMode,
-    quotePricingMode,
     provider: suggestionProvider,
     activeLineTemplates,
     seedForm: componentForm,

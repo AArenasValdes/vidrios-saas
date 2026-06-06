@@ -2749,6 +2749,75 @@
   color: #1E88FF;
 }
 
+/* --- Suggestion chips --- */
+
+.suggestionChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.suggestionChipsLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #667085;
+  margin-right: 0.15rem;
+}
+
+.suggestionChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(210, 220, 236, 0.94);
+  background: #f8fafd;
+  color: #4b5563;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.suggestionChip:hover {
+  border-color: rgba(30, 136, 255, 0.3);
+  background: rgba(30, 136, 255, 0.06);
+  color: #1E88FF;
+}
+
+.suggestionChipActive {
+  border-color: rgba(30, 136, 255, 0.4);
+  background: rgba(30, 136, 255, 0.1);
+  color: #1565C0;
+  font-weight: 600;
+}
+
+/* --- Group sheet libre badge --- */
+
+.groupSheetOptionButtonLibre {
+  border-color: rgba(30, 136, 255, 0.25);
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.04), rgba(30, 136, 255, 0.01));
+}
+
+.groupSheetOptionButtonLibre.groupSheetOptionButtonActive {
+  border-color: rgba(30, 136, 255, 0.4);
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.1), rgba(30, 136, 255, 0.04));
+}
+
+.groupSheetLibreBadge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(30, 136, 255, 0.12);
+  color: #1565C0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 /* --- Free value preview card --- */
 
 .freeValuePreviewCard {
@@ -4200,6 +4269,32 @@
 .stepTwoMobileCategoryTabActive .stepTwoMobileCategoryTabCount {
   background: rgba(79, 125, 212, 0.16);
   color: #243b6b;
+}
+
+.stepTwoMobileCategoryTabLibre {
+  border-color: rgba(30, 136, 255, 0.3);
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.04), rgba(30, 136, 255, 0.01));
+}
+
+.stepTwoMobileCategoryTabLibre.stepTwoMobileCategoryTabActive {
+  border-color: rgba(30, 136, 255, 0.4);
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.1), rgba(30, 136, 255, 0.04));
+}
+
+.stepTwoMobileLibreBadge {
+  display: inline-flex;
+  min-height: 1.8rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(30, 136, 255, 0.12);
+  color: #1565C0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .stepTwoMobileCreatorOptionList {

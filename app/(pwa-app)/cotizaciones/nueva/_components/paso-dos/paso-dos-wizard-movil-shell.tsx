@@ -162,8 +162,8 @@ const CATEGORY_OPTIONS: Array<{
   },
   {
     title: "Proyecto libre y Mantencion",
-    subtitle: "Cambios de vidrio, mantencion, sellados y trabajos personalizados",
-    countLabel: `${getSubtypeOptionsForCategory("Proyecto libre y Mantencion").length} tipos`,
+    subtitle: "Reparaciones, cambios de vidrio, mantenciones, sellados y trabajos personalizados",
+    countLabel: `${getSubtypeOptionsForCategory("Proyecto libre y Mantencion").length} tipo`,
   },
 ];
 

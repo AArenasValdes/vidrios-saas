@@ -334,6 +334,24 @@ export function PasoDosWizardConfiguracionMovil({
           </label>
         </div>
 
+        <div className={s.suggestionChips}>
+          <span className={s.suggestionChipsLabel}>Sugerencias:</span>
+          {["Cambio de vidrio", "Mantencion", "Sellado", "Reparacion shower", "Otro"].map(
+            (chip) => (
+              <button
+                key={chip}
+                type="button"
+                className={`${s.suggestionChip} ${
+                  draft.nombre === chip ? s.suggestionChipActive : ""
+                }`}
+                onClick={() => onNombreChange(chip)}
+              >
+                {chip}
+              </button>
+            )
+          )}
+        </div>
+
         {quotePricingMode === "total_global" ? (
           <div className={s.stepTwoMobileBlockHero}>
             <div className={s.stepTwoMobileBlockLabel}>PRECIO</div>
