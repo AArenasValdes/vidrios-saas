@@ -59,7 +59,7 @@ type Props = {
   onPrecioChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
-  onAddAlcanceDetalle: () => void;
+  onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (
     detalleId: string,
     field: "tipo" | "subtipo" | "nombre" | "cantidad" | "ancho" | "alto" | "descripcion",

@@ -95,6 +95,7 @@ describe("paso-dos-wizard-movil state", () => {
     const state = buildPasoDosWizardMovilState({
       draft: createDraft({
         subtipo: "Trabajo libre / Mantencion",
+        nombre: "Mantencion",
         descripcion: "Mantencion de 5 ventanas existentes.",
         sistema: "",
         vidrio: "",
@@ -147,6 +148,7 @@ describe("paso-dos-wizard-movil state", () => {
     const ready = buildPasoDosWizardMovilState({
       draft: createDraft({
         subtipo: "Trabajo personalizado",
+        nombre: "Cierre terraza",
         descripcion: "Cierre de terraza con instalacion incluida.",
         sistema: "",
         vidrio: "",

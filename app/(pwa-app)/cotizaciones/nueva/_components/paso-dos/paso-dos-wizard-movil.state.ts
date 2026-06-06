@@ -38,7 +38,9 @@ export function buildPasoDosWizardMovilState({
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const shouldShowPriceField = quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
   const hasCustomDescription =
-    (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
+    quotePricingMode === "total_global" && isFreeValue
+      ? (draft.nombre ?? "").trim() !== "" && (draft.descripcion ?? "").trim() !== ""
+      : (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
   const hasCommercialDetail =
     isFreeValue
       ? hasCustomDescription

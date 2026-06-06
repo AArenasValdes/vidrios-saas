@@ -7959,6 +7959,139 @@
   color: #243b6b;
 }
 
+.stepTwoNotebookPlantillasLink {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #335ea9;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: -0.3rem;
+}
+
+.stepTwoNotebookPlantillasHide {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8a96a6;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.stepTwoNotebookSectionHelp {
+  display: block;
+  font-size: 0.74rem;
+  color: #8a96a6;
+  line-height: 1.4;
+  margin-bottom: 0.65rem;
+}
+
+.stepTwoNotebookQuickInputRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.stepTwoNotebookQuickInput {
+  flex: 1;
+  min-height: 2.8rem;
+  border: 1.5px solid #d9e0ea;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0 0.8rem;
+  font-size: 0.88rem;
+  color: #243b6b;
+}
+
+.stepTwoNotebookQuickInput::placeholder {
+  color: #b0bcc8;
+  font-size: 0.84rem;
+}
+
+.stepTwoNotebookQuickAdd {
+  flex-shrink: 0;
+  width: 2.8rem;
+  min-height: 2.8rem;
+  border: 1.5px solid rgba(30, 136, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(30, 136, 255, 0.06);
+  color: #1E88FF;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.stepTwoNotebookQuickAdd:hover:not(:disabled) {
+  background: rgba(30, 136, 255, 0.14);
+  border-color: #1E88FF;
+}
+
+.stepTwoNotebookQuickAdd:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepTwoNotebookDetailItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid #eef1f5;
+  background: #ffffff;
+}
+
+.stepTwoNotebookDetailItem:first-child {
+  border-top: 0;
+}
+
+.stepTwoNotebookDetailItemText {
+  min-width: 0;
+  font-size: 0.86rem;
+  color: #1f2937;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepTwoNotebookDetailItemActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.stepTwoNotebookDetailItemAction {
+  padding: 0.22rem 0.48rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #4b5563;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  transition: all 0.12s ease;
+}
+
+.stepTwoNotebookDetailItemAction:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .stepTwoNotebookTextareaCard {
   display: flex;
   flex-direction: column;

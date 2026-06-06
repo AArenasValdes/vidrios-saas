@@ -353,10 +353,13 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     }));
   };
 
-  const addAlcanceDetalle = () => {
+  const addAlcanceDetalle = (initialNombre = "") => {
     setDraft((current) => ({
       ...current,
-      alcanceDetalles: [...current.alcanceDetalles, createEmptyAlcanceDetalle()],
+      alcanceDetalles: [
+        ...current.alcanceDetalles,
+        createEmptyAlcanceDetalle("manual", initialNombre),
+      ],
     }));
   };
 

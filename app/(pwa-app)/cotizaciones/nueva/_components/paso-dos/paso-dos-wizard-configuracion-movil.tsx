@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LuChevronLeft, LuCirclePlus, LuGripVertical, LuSearch, LuTrash2, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuSearch, LuTrash2, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -197,6 +197,8 @@ export function PasoDosWizardConfiguracionMovil({
     Boolean(internalObservation.trim())
   );
   const [activeAlcanceDetalleId, setActiveAlcanceDetalleId] = useState<string | null>(null);
+  const [showPlantillas, setShowPlantillas] = useState(false);
+  const [quickDetalleInput, setQuickDetalleInput] = useState("");
   const alcanceCountRef = useRef(draft.alcanceDetalles.length);
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
@@ -357,6 +359,13 @@ export function PasoDosWizardConfiguracionMovil({
   };
 
   if (isFreeValue && quotePricingMode === "total_global") {
+    const handleQuickAddDetalle = () => {
+      const trimmed = quickDetalleInput.trim();
+      if (!trimmed) return;
+      onAddAlcanceDetalle(trimmed);
+      setQuickDetalleInput("");
+    };
+
     return (
       <div className={`${s.stepTwoMobileCreatorStack} ${s.stepTwoNotebookStack}`}>
         <label className={s.stepTwoNotebookField}>
@@ -364,81 +373,129 @@ export function PasoDosWizardConfiguracionMovil({
           <input
             className={s.stepTwoNotebookInput}
             maxLength={120}
-            placeholder="Ej: Mantencion"
+            placeholder="Ej: Mantencion de ventanas"
             type="text"
             value={draft.nombre}
             onChange={(event) => onNombreChange(event.target.value)}
           />
         </label>
 
+        {!showPlantillas ? (
+          <button
+            type="button"
+            className={s.stepTwoNotebookPlantillasLink}
+            onClick={() => setShowPlantillas(true)}
+          >
+            + Plantillas rapidas
+          </button>
+        ) : (
+          <div className={s.suggestionChips}>
+            <span className={s.suggestionChipsLabel}>Plantillas:</span>
+            {["Mantencion", "Cambio de vidrio", "Sellado", "Instalacion", "Reparacion shower", "Otro"].map(
+              (chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  className={`${s.suggestionChip} ${
+                    draft.nombre === chip ? s.suggestionChipActive : ""
+                  }`}
+                  onClick={() => {
+                    if (!draft.nombre.trim()) onNombreChange(chip);
+                  }}
+                >
+                  {chip}
+                </button>
+              )
+            )}
+            <button
+              type="button"
+              className={s.stepTwoNotebookPlantillasHide}
+              onClick={() => setShowPlantillas(false)}
+            >
+              Ocultar
+            </button>
+          </div>
+        )}
+
         <label className={s.stepTwoNotebookTextareaCard}>
-          <span className={s.stepTwoNotebookTextareaHeader}>DESCRIPCION DEL TRABAJO</span>
+          <span className={s.stepTwoNotebookTextareaHeader}>DESCRIPCION PARA CLIENTE</span>
           <textarea
             className={s.stepTwoNotebookTextarea}
             maxLength={360}
-            placeholder="Ej: Mantencion de 5 ventanas existentes, ajuste de correderas y cambio de felpas..."
+            placeholder="Ej: Se considera mantencion general de ventanas existentes, ajuste de correderas, revision de pestillos y limpieza de rieles."
             rows={5}
             value={draft.descripcion}
             onChange={(event) => onDescripcionChange(event.target.value)}
           />
         </label>
 
-        <div className={s.suggestionChips}>
-          <span className={s.suggestionChipsLabel}>Sugerencias:</span>
-          {["Cambio de vidrio", "Mantencion", "Sellado", "Reparacion shower", "Instalacion", "Otro"].map(
-            (chip) => (
-              <button
-                key={chip}
-                type="button"
-                className={`${s.suggestionChip} ${
-                  draft.nombre === chip ? s.suggestionChipActive : ""
-                }`}
-                onClick={() => onNombreChange(chip)}
-              >
-                {chip}
-              </button>
-            )
-          )}
-        </div>
-
         <section className={s.stepTwoNotebookSection} aria-labelledby="detalles-incluidos-title">
-          <div className={s.stepTwoNotebookSectionHeader}>
-            <h3 id="detalles-incluidos-title" className={s.stepTwoNotebookSectionTitle}>
-              DETALLES INCLUIDOS
-            </h3>
+          <h3 id="detalles-incluidos-title" className={s.stepTwoNotebookSectionTitle}>
+            DETALLES INCLUIDOS
+          </h3>
+          <span className={s.stepTwoNotebookSectionHelp}>
+            Agrega partidas que apareceran en el PDF sin precio individual.
+          </span>
+
+          <div className={s.stepTwoNotebookQuickInputRow}>
+            <input
+              className={s.stepTwoNotebookQuickInput}
+              maxLength={120}
+              placeholder="Escribe un detalle incluido..."
+              type="text"
+              value={quickDetalleInput}
+              onChange={(event) => setQuickDetalleInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleQuickAddDetalle();
+                }
+              }}
+            />
             <button
               type="button"
-              className={s.stepTwoNotebookSectionAction}
-              onClick={onAddAlcanceDetalle}
+              className={s.stepTwoNotebookQuickAdd}
+              onClick={handleQuickAddDetalle}
+              disabled={!quickDetalleInput.trim()}
+              aria-label="Agregar detalle"
             >
-              <LuCirclePlus aria-hidden size={18} />
-              <span>Agregar detalle</span>
+              +
             </button>
           </div>
 
-          <div className={s.stepTwoNotebookDetailList}>
-            {draft.alcanceDetalles.length > 0 ? (
-              draft.alcanceDetalles.map((detalle) => (
-                <button
-                  key={detalle.id}
-                  type="button"
-                  className={`${s.stepTwoNotebookDetailRow} ${
-                    activeAlcanceDetalleId === detalle.id ? s.stepTwoNotebookDetailRowActive : ""
-                  }`}
-                  onClick={() =>
-                    setActiveAlcanceDetalleId(
-                      activeAlcanceDetalleId === detalle.id ? null : detalle.id
-                    )
-                  }
-                >
-                  <LuGripVertical aria-hidden className={s.stepTwoNotebookDetailHandle} size={20} />
-                  <span className={s.stepTwoNotebookDetailText}>{getDetalleResumen(detalle)}</span>
-                </button>
-              ))
-            ) : (
-              <div className={s.stepTwoNotebookDetailEmpty}>Sin detalles incluidos.</div>
-            )}
-          </div>
+          {draft.alcanceDetalles.length > 0 ? (
+            <div className={s.stepTwoNotebookDetailList}>
+              {draft.alcanceDetalles.map((detalle) => (
+                <div key={detalle.id} className={s.stepTwoNotebookDetailItem}>
+                  <span className={s.stepTwoNotebookDetailItemText}>
+                    {getDetalleResumen(detalle)}
+                  </span>
+                  <div className={s.stepTwoNotebookDetailItemActions}>
+                    <button
+                      type="button"
+                      className={s.stepTwoNotebookDetailItemAction}
+                      onClick={() => {
+                        setActiveAlcanceDetalleId(
+                          activeAlcanceDetalleId === detalle.id ? null : detalle.id
+                        );
+                      }}
+                      aria-label="Editar detalle"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className={s.stepTwoNotebookDetailItemAction}
+                      onClick={() => onRemoveAlcanceDetalle(detalle.id)}
+                      aria-label="Eliminar detalle"
+                    >
+                      <LuX aria-hidden size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         {activeAlcanceDetalle ? (
@@ -450,7 +507,10 @@ export function PasoDosWizardConfiguracionMovil({
               <button
                 type="button"
                 className={s.stepTwoNotebookDangerLink}
-                onClick={() => onRemoveAlcanceDetalle(activeAlcanceDetalle.id)}
+                onClick={() => {
+                  onRemoveAlcanceDetalle(activeAlcanceDetalle.id);
+                  setActiveAlcanceDetalleId(null);
+                }}
               >
                 <LuTrash2 aria-hidden size={15} />
                 Eliminar
@@ -608,6 +668,11 @@ export function PasoDosWizardConfiguracionMovil({
               <span className={s.ivaCompactLabel}>Sin IVA</span>
             </button>
           </div>
+          <span className={s.stepTwoMobileBlockHelp}>
+            {mostrarIva
+              ? "El total ingresado sera el valor final para el cliente."
+              : "El valor se mostrara sin IVA."}
+          </span>
         </div>
 
         <div className={s.stepTwoNotebookInternalBox}>

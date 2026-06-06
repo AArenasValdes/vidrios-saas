@@ -9,6 +9,7 @@ type Props = {
   canSubmitGroup: boolean;
   isCompactDataStep: boolean;
   isFreeValueItem?: boolean;
+  isTotalGlobal?: boolean;
   precioFormateado?: string;
   onBack: () => void;
   onClose: () => void;
@@ -23,6 +24,7 @@ export function PasoDosWizardFooterMovil({
   canSubmitGroup,
   isCompactDataStep,
   isFreeValueItem = false,
+  isTotalGlobal = false,
   precioFormateado = "",
   onBack,
   onClose,
@@ -31,11 +33,14 @@ export function PasoDosWizardFooterMovil({
   visualStage,
   wizardStep,
 }: Props) {
-  const agregarLabel = isFreeValueItem
-    ? precioFormateado
-      ? `Agregar item por $${precioFormateado}`
-      : "Agregar item"
-    : "Agregar componente";
+  const agregarLabel = isTotalGlobal
+    ? "Continuar al resumen"
+    : isFreeValueItem
+      ? precioFormateado
+        ? `Agregar item por $${precioFormateado}`
+        : "Agregar item"
+      : "Agregar componente";
+
   return (
     <footer
       className={`${s.stepTwoMobileCreatorFooter} ${
@@ -66,12 +71,12 @@ export function PasoDosWizardFooterMovil({
 
       {wizardStep === 3 ? (
         <button
-          className={`${s.btnPrimary} ${s.stepTwoMobileCtaAgregar}`}
+          className={`${s.btnPrimary} ${isTotalGlobal ? "" : s.stepTwoMobileCtaAgregar}`}
           disabled={!canSubmitGroup}
           onClick={onConfirm}
           type="button"
         >
-          <LuPlus aria-hidden />
+          {isTotalGlobal ? null : <LuPlus aria-hidden />}
           {agregarLabel}
         </button>
       ) : null}

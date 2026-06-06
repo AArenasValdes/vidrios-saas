@@ -96,7 +96,7 @@ export type WizardActions = {
   onMargenChange: (value: string) => void;
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
-  onAddAlcanceDetalle: () => void;
+  onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (detalleId: string, field: keyof AlcanceDetalle, value: string) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
 };
@@ -290,6 +290,10 @@ export function PasoDosWizardMovil({
     pricingMode,
     quotePricingMode,
   });
+  const effectiveCanSubmitGroup =
+    quotePricingMode === "total_global"
+      ? canSubmitGroup && (totalClienteManual ?? 0) > 0
+      : canSubmitGroup;
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
   const visibleLineTemplates = wizard.visibleLineTemplates;
 
@@ -343,9 +347,10 @@ export function PasoDosWizardMovil({
   const footerMarkup = (
     <PasoDosWizardFooterMovil
       canContinueFromQuantity={canContinueFromQuantity}
-      canSubmitGroup={canSubmitGroup}
+      canSubmitGroup={effectiveCanSubmitGroup}
       isCompactDataStep={isCompactDataStep}
       isFreeValueItem={isFreeValueComponentType(wizard.draft.subtipo)}
+      isTotalGlobal={quotePricingMode === "total_global"}
       precioFormateado={formatCurrencyInput(wizard.draft.precio)}
       onBack={wizard.onBack}
       onClose={handleCloseWizard}
@@ -451,10 +456,10 @@ export function PasoDosWizardMovil({
                     : "Elige el tipo base del componente."
                   : visualStage === 2
                     ? "Indica cuantas unidades iguales van en este grupo."
-                    : shouldSkipCantidadStep
-                      ? quotePricingMode === "total_global"
-                        ? "Describe el trabajo. Agrega detalles y precio final."
-                        : "Redacta el trabajo y define el valor."
+                  : shouldSkipCantidadStep
+                    ? quotePricingMode === "total_global"
+                      ? "Describe el trabajo, agrega detalles y define el precio final."
+                      : "Redacta el trabajo y define el valor."
                       : quotePricingMode === "total_global"
                         ? "Completa datos comerciales y precio final antes de agregar."
                         : "Completa sistema, medidas y valor antes de agregar."

@@ -134,12 +134,13 @@ export function shouldSkipCantidadForGrupoDraft(
 }
 
 export function createEmptyAlcanceDetalle(
-  tipo: AlcanceDetalleTipo = "manual"
+  tipo: AlcanceDetalleTipo = "manual",
+  initialNombre = ""
 ): AlcanceDetalle {
   return {
     id: `det-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     tipo,
-    nombre: "",
+    nombre: initialNombre,
     cantidad: "1",
     ancho: "",
     alto: "",
@@ -815,10 +816,13 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     }));
   };
 
-  const addAlcanceDetalle = () => {
+  const addAlcanceDetalle = (initialNombre = "") => {
     setDraft((current) => ({
       ...current,
-      alcanceDetalles: [...current.alcanceDetalles, createEmptyAlcanceDetalle()],
+      alcanceDetalles: [
+        ...current.alcanceDetalles,
+        createEmptyAlcanceDetalle("manual", initialNombre),
+      ],
     }));
   };
 
