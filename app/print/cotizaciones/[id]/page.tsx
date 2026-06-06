@@ -9,6 +9,7 @@ import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icon
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { splitComponentReference } from "@/features/cotizaciones/services/component-catalog.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
@@ -100,6 +101,22 @@ type ItemPresentation = {
   drawingSvg: string;
 };
 
+type TotalGlobalPrintPagePlan =
+  | {
+      kind: "global-cover";
+      description: string;
+    }
+  | {
+      kind: "global-description";
+      description: string;
+      chunkIndex: number;
+    }
+  | {
+      kind: "global-details";
+      startIndex: number;
+      items: CotizacionWorkflowItem[];
+    };
+
 function getColorName(colorHex: string) {
   return resolveComponentColorName(colorHex);
 }
@@ -119,6 +136,157 @@ function formatSurface(ancho: number | null, alto: number | null, cantidad: numb
 
   const totalM2 = (ancho * alto * cantidad) / 1_000_000;
   return `${totalM2.toFixed(2)} m2 aprox.`;
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildReferenceSvg(title: string, body: string) {
+  return `
+    <svg role="img" aria-label="${escapeSvgText(title)}" viewBox="0 0 110 72" xmlns="http://www.w3.org/2000/svg">
+      <title>${escapeSvgText(title)}</title>
+      <rect x="1.5" y="1.5" width="107" height="69" rx="7" fill="#fff" stroke="#dbe3ee" stroke-width="2"/>
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+        ${body}
+      </g>
+    </svg>
+  `;
+}
+
+function resolveTotalGlobalReferenceSvg(name: string, description?: string | null) {
+  const text = normalizeSearchText(`${name} ${description ?? ""}`);
+
+  if (text.includes("ventana corredera") || text.includes("corredera")) {
+    return buildReferenceSvg(
+      "Ventana corredera referencial",
+      '<rect x="20" y="16" width="70" height="40" rx="2"/><path d="M55 16v40M22 60h66M36 36h16M74 36H58"/><path d="M39 30l-7 6 7 6M71 30l7 6-7 6"/>'
+    );
+  }
+
+  if (text.includes("ventana abatible") || text.includes("abatible")) {
+    return buildReferenceSvg(
+      "Ventana abatible referencial",
+      '<rect x="27" y="14" width="56" height="44" rx="2"/><path d="M27 58l42-44M69 14v44M43 34h5"/>'
+    );
+  }
+
+  if (text.includes("pano fijo") || text.includes("paño fijo") || text.includes("fijo")) {
+    return buildReferenceSvg(
+      "Paño fijo referencial",
+      '<rect x="25" y="13" width="60" height="46" rx="2"/><path d="M32 20h46v32H32zM25 62h60"/>'
+    );
+  }
+
+  if (text.includes("puerta")) {
+    return buildReferenceSvg(
+      "Puerta referencial",
+      '<rect x="37" y="10" width="38" height="52" rx="2"/><path d="M45 18h22v36H45z"/><circle cx="65" cy="37" r="1.8" fill="currentColor" stroke="none"/>'
+    );
+  }
+
+  if (text.includes("shower") || text.includes("ducha")) {
+    return buildReferenceSvg(
+      "Shower referencial",
+      '<path d="M28 18h50v40H28zM53 18v40M34 58h38"/><path d="M77 22c6 6 6 13 0 19M84 18c8 10 8 21 0 31"/>'
+    );
+  }
+
+  if (text.includes("baranda")) {
+    return buildReferenceSvg(
+      "Baranda referencial",
+      '<path d="M18 26h74M22 50h66M28 26v30M45 26v30M62 26v30M79 26v30"/>'
+    );
+  }
+
+  if (text.includes("cierre de terraza") || text.includes("terraza")) {
+    return buildReferenceSvg(
+      "Cierre de terraza referencial",
+      '<rect x="16" y="17" width="78" height="38" rx="2"/><path d="M35 17v38M55 17v38M75 17v38M16 59h78"/>'
+    );
+  }
+
+  if (text.includes("mantencion") || text.includes("mantención") || text.includes("pestillo")) {
+    return buildReferenceSvg(
+      "Mantencion referencial",
+      '<path d="M37 48l-9 9M69 19a16 16 0 0 0-19 20L31 58l9 9 19-19a16 16 0 0 0 20-19l-11 11-10-10 11-11z"/>'
+    );
+  }
+
+  return buildReferenceSvg(
+    "Alcance incluido",
+    '<circle cx="55" cy="36" r="21"/><path d="M44 36l8 8 15-17"/>'
+  );
+}
+
+function splitTextIntoChunks(text: string, firstChunkSize = 1050, nextChunkSize = 1650) {
+  const normalized = text.trim();
+
+  if (!normalized) {
+    return [""];
+  }
+
+  const chunks: string[] = [];
+  let remaining = normalized;
+  let targetSize = firstChunkSize;
+
+  while (remaining.length > targetSize) {
+    const searchWindow = remaining.slice(0, targetSize);
+    const splitAt = Math.max(
+      searchWindow.lastIndexOf("\n\n"),
+      searchWindow.lastIndexOf(". "),
+      searchWindow.lastIndexOf("; "),
+      searchWindow.lastIndexOf(", "),
+      searchWindow.lastIndexOf(" ")
+    );
+    const safeSplitAt = splitAt > targetSize * 0.55 ? splitAt + 1 : targetSize;
+
+    chunks.push(remaining.slice(0, safeSplitAt).trim());
+    remaining = remaining.slice(safeSplitAt).trim();
+    targetSize = nextChunkSize;
+  }
+
+  if (remaining) {
+    chunks.push(remaining);
+  }
+
+  return chunks;
+}
+
+function splitDescriptionChecklistItems(text: string) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^\d+[\).-]?\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function buildTotalGlobalDetailPages(
+  items: CotizacionWorkflowItem[],
+  perPage = 5
+) {
+  const pages: Array<{ startIndex: number; items: CotizacionWorkflowItem[] }> = [];
+
+  for (let startIndex = 0; startIndex < items.length; startIndex += perPage) {
+    pages.push({
+      startIndex,
+      items: items.slice(startIndex, startIndex + perPage),
+    });
+  }
+
+  return pages;
 }
 
 function formatPageNumber(current: number, total: number) {
@@ -481,7 +649,9 @@ export default function CotizacionPrintPage() {
   const paymentTermsDisplay = resolveDocumentPaymentTerms(
     organizationProfile.formaPago
   );
-  const showItemPrices = visibleCotizacion?.quotePricingMode !== "total_global";
+  const isTotalGlobalQuote = visibleCotizacion?.quotePricingMode === "total_global";
+  const showItemPrices = !isTotalGlobalQuote;
+  const quoteModeBadgeLabel = isTotalGlobalQuote ? "Total global" : "Detalle por ítems";
   const totalGlobalLeadItem = useMemo(() => {
     if (!visibleCotizacion || visibleCotizacion.quotePricingMode !== "total_global") {
       return null;
@@ -510,6 +680,17 @@ export default function CotizacionPrintPage() {
     ? "COMPONENTES COTIZADOS · OFERTA CLIENTE"
     : "DETALLES INCLUIDOS · OFERTA CLIENTE";
 
+  const totalGlobalWorkName =
+    totalGlobalLeadItem?.nombre?.trim() || visibleCotizacion?.obra?.trim() || "Trabajo general";
+  const totalGlobalWorkDescription =
+    totalGlobalLeadItem?.descripcion?.trim() ||
+    normalizeDocumentOptionalText(visibleCotizacion?.observaciones) ||
+    totalGlobalWorkName;
+  const totalGlobalDescriptionChunks = useMemo(
+    () => splitTextIntoChunks(totalGlobalWorkDescription),
+    [totalGlobalWorkDescription]
+  );
+
   const { printPages, totalSurfaceM2 } = useMemo(() => {
     const items = printableItems;
     const nextPrintPages = buildPrintPlan(items);
@@ -530,6 +711,35 @@ export default function CotizacionPrintPage() {
       totalSurfaceM2: nextTotalSurfaceM2,
     };
   }, [printableItems]);
+  const totalGlobalPages = useMemo<TotalGlobalPrintPagePlan[]>(() => {
+    if (!isTotalGlobalQuote) {
+      return [];
+    }
+
+    const descriptionPages: TotalGlobalPrintPagePlan[] = totalGlobalDescriptionChunks.map(
+      (description, index) =>
+        index === 0
+          ? {
+              kind: "global-cover",
+              description,
+            }
+          : {
+              kind: "global-description",
+              description,
+              chunkIndex: index,
+            }
+    );
+    const detailPages = buildTotalGlobalDetailPages(printableItems).map<TotalGlobalPrintPagePlan>(
+      (page) => ({
+        kind: "global-details",
+        startIndex: page.startIndex,
+        items: page.items,
+      })
+    );
+
+    return [...descriptionPages, ...detailPages];
+  }, [isTotalGlobalQuote, printableItems, totalGlobalDescriptionChunks]);
+  const renderedPageCount = isTotalGlobalQuote ? totalGlobalPages.length : printPages.length;
   const itemPresentationMap = useMemo(() => {
     const map = new Map<string, ItemPresentation>();
 
@@ -645,7 +855,7 @@ export default function CotizacionPrintPage() {
         if (
           isHydratingRecord ||
           !isProfileReady ||
-          printPages.length === 0
+          renderedPageCount === 0
         ) {
           throw new Error("El presupuesto todavia se esta preparando. Intenta de nuevo en unos segundos.");
         }
@@ -679,7 +889,7 @@ export default function CotizacionPrintPage() {
     isHydratingRecord,
     isProfileReady,
     pdfCacheKey,
-    printPages.length,
+    renderedPageCount,
   ]);
 
   useEffect(() => {
@@ -690,7 +900,7 @@ export default function CotizacionPrintPage() {
       isHydratingRecord ||
       !isProfileReady ||
       !exportSheetRef.current ||
-      printPages.length === 0
+      renderedPageCount === 0
     ) {
       return;
     }
@@ -730,7 +940,7 @@ export default function CotizacionPrintPage() {
     isHydratingRecord,
     isProfileReady,
     pdfCacheKey,
-    printPages.length,
+    renderedPageCount,
     shouldWarmPdf,
     wasJustCreated,
   ]);
@@ -843,6 +1053,261 @@ export default function CotizacionPrintPage() {
         return null;
       }
 
+      if (isTotalGlobalQuote) {
+        return totalGlobalPages.map((pagePlan, pageIndex) => {
+          const totalPages = totalGlobalPages.length;
+          const pageNumber = pageIndex + 1;
+          const isLastPage = pageIndex === totalPages - 1;
+          const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
+          const showEmptyDetails =
+            pagePlan.kind === "global-cover" && printableItems.length === 0;
+
+          return (
+            <article
+              key={`${mode}-${pagePlan.kind}-${pageNumber}`}
+              className={[
+                s.pdfPage,
+                s.totalGlobalPdfPage,
+                mode === "export" ? s.exportPdfPage : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <div className={s.softwareSignature}>
+                <span className={s.softwareSignaturePrefix}>Powered by</span>
+                <strong className={s.softwareSignatureName}>{APP_NAME}</strong>
+                <span className={s.softwareSignatureVersion}>v2.0</span>
+              </div>
+
+              <header className={s.pageHeader}>
+                <div className={s.companyBlock}>
+                  <div className={s.companyLogoWrap}>
+                    {shouldShowCompanyLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt={companyName}
+                        className={s.companyLogo}
+                        loading="eager"
+                        onError={() => setFailedLogoUrl(companyLogoUrl)}
+                        src={companyLogoUrl ?? undefined}
+                      />
+                    ) : (
+                      <div className={s.companyLogoFallback}>{companyLogoFallbackLabel}</div>
+                    )}
+                  </div>
+
+                  <div className={s.companyMeta}>
+                    <strong className={s.companyName}>{companyName}</strong>
+                    <div className={s.companyAddress}>
+                      {hasNormalizedCompanyAddress ? (
+                        <>
+                          {companyAddressPrimaryDisplay ? (
+                            <span className={s.companyAddressPrimary}>
+                              {companyAddressPrimaryDisplay}
+                            </span>
+                          ) : null}
+                          {companyAddressSecondaryClean ? (
+                            <span className={s.companyAddressSecondary}>
+                              {companyAddressSecondaryClean}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className={s.companyAddressSecondary}>
+                          Perfil comercial aun no configurado
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={s.quoteMeta}>
+                  <span className={s.quoteTypeBadge}>{quoteModeBadgeLabel}</span>
+                  <strong className={s.quoteTitle}>Cotización</strong>
+                  <span className={s.quoteMetaCode}>N° {visibleCotizacion.codigo}</span>
+                  <span className={s.quoteMetaDate}>
+                    Fecha: {formatCotizacionDate(visibleCotizacion.updatedAt)}
+                  </span>
+                  <span className={s.quoteMetaDue}>Vigencia: hasta {dueDate}</span>
+                </div>
+              </header>
+
+              {pagePlan.kind === "global-cover" ? (
+                <>
+                  <section className={s.clientPanel}>
+                    <div className={s.clientPanelHeader}>
+                      <span className={s.sectionLabel}>DATOS DEL CLIENTE</span>
+                    </div>
+
+                    <div className={s.clientGrid}>
+                      <ClientField label="Cliente" value={visibleCotizacion.clienteNombre} />
+                      <ClientField label="Obra" value={visibleCotizacion.obra} />
+                      <ClientField label="Cotizacion" value={visibleCotizacion.codigo} />
+                      <ClientField label="Fecha" value={formatCotizacionDate(visibleCotizacion.updatedAt)} />
+                    </div>
+                  </section>
+
+                  <section className={s.globalWorkSummary}>
+                    <div className={s.globalWorkSummaryHeader}>
+                      <span className={s.sectionLabel}>TRABAJO GENERAL</span>
+                      <strong>{CLP(visibleCotizacion.total)}</strong>
+                    </div>
+                    <strong className={s.globalWorkSummaryTitle}>{totalGlobalWorkName}</strong>
+                    <div className={s.globalWorkSummaryMeta}>
+                      <span>{globalIvaLabel}</span>
+                      <span>Precio total del trabajo</span>
+                    </div>
+                  </section>
+                </>
+              ) : null}
+
+              {pagePlan.kind === "global-cover" || pagePlan.kind === "global-description" ? (
+                <section className={s.globalDescriptionSection}>
+                  <div className={s.globalDescriptionHeader}>
+                    <span className={s.sectionLabel}>
+                      {pagePlan.kind === "global-description"
+                        ? "DESCRIPCION DEL TRABAJO (CONT.)"
+                        : "DESCRIPCION DEL TRABAJO"}
+                    </span>
+                    {pagePlan.kind === "global-description" ? (
+                      <span className={s.globalDescriptionCount}>
+                        Parte {pagePlan.chunkIndex + 1}
+                      </span>
+                    ) : null}
+                  </div>
+                  {splitDescriptionChecklistItems(pagePlan.description).length > 1 ? (
+                    <div className={s.globalDescriptionChecklist}>
+                      {splitDescriptionChecklistItems(pagePlan.description).map((item, index) => (
+                        <div key={`${pageNumber}-${index}-${item}`} className={s.globalDescriptionChecklistItem}>
+                          <span className={s.globalDescriptionChecklistMark} aria-hidden>
+                            {index + 1}
+                          </span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={s.globalDescriptionText}>{pagePlan.description}</p>
+                  )}
+                </section>
+              ) : null}
+
+              {showEmptyDetails ? (
+                <section className={s.totalGlobalDetailsSection}>
+                  <div className={s.totalGlobalSectionHeader}>
+                    <span className={s.sectionLabel}>DETALLES INCLUIDOS</span>
+                  </div>
+                  <p className={s.totalGlobalEmptyText}>
+                    Sin detalles incluidos adicionales en esta cotización.
+                  </p>
+                </section>
+              ) : null}
+
+              {pagePlan.kind === "global-details" ? (
+                <section className={s.totalGlobalDetailsSection}>
+                  <div className={s.totalGlobalSectionHeader}>
+                    <span className={s.sectionLabel}>DETALLES INCLUIDOS</span>
+                    <span>{pagePlan.items.length} en esta pagina</span>
+                  </div>
+
+                  <div className={s.totalGlobalDetailList}>
+                    {pagePlan.items.map((item, itemIndex) => {
+                      const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
+                      const dimensions = item.ancho && item.alto ? formatDimensions(item.ancho, item.alto) : null;
+                      const description = item.descripcion?.trim();
+                      const referenceSvg = resolveTotalGlobalReferenceSvg(item.nombre, description);
+
+                      return (
+                        <article key={item.id} className={s.totalGlobalDetailRow}>
+                          <div
+                            className={s.totalGlobalMiniDrawing}
+                            dangerouslySetInnerHTML={{ __html: referenceSvg }}
+                          />
+                          <div className={s.totalGlobalDetailBody}>
+                            <div className={s.totalGlobalDetailMeta}>
+                              <span>Detalle {String(absoluteIndex).padStart(2, "0")}</span>
+                              {dimensions ? <span>{dimensions}</span> : null}
+                              {item.cantidad > 1 ? <span>Cantidad {item.cantidad}</span> : null}
+                            </div>
+                            <h2 className={s.totalGlobalDetailName}>{item.nombre}</h2>
+                            {description ? (
+                              <p className={s.totalGlobalDetailDescription}>{description}</p>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+
+              {isLastPage ? (
+                <>
+                  {paymentTermsDisplay ? (
+                    <section className={s.paymentBand}>
+                      <span className={s.paymentLabel}>Forma de pago:</span>
+                      <span className={s.paymentValue}>{paymentTermsDisplay}</span>
+                    </section>
+                  ) : null}
+
+                  <section className={`${s.summarySection} ${s.totalGlobalSummarySection}`}>
+                    <aside className={s.totalsColumn}>
+                      <span className={s.summaryLabel}>RESUMEN FINAL</span>
+                      <div className={s.totalRow}>
+                        <span>Precio final</span>
+                        <strong>{CLP(visibleCotizacion.total)}</strong>
+                      </div>
+                      <div className={s.totalRow}>
+                        <span>{globalIvaLabel}</span>
+                        <strong>
+                          {visibleCotizacion.mostrarIva ? CLP(visibleCotizacion.iva) : "No aplica"}
+                        </strong>
+                      </div>
+                      <div className={s.totalRow}>
+                        <span>Detalles incluidos</span>
+                        <strong>{printableItems.length}</strong>
+                      </div>
+                      {totalSurfaceM2 > 0 ? (
+                        <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                          <span>Superficie referencial</span>
+                          <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                        </div>
+                      ) : null}
+                    </aside>
+                  </section>
+
+                  <section className={s.grandTotal}>
+                    <span>Precio final</span>
+                    <strong>{CLP(visibleCotizacion.total)}</strong>
+                  </section>
+                </>
+              ) : null}
+
+              <footer className={s.pageFooter}>
+                <span className={s.footerBranding}>
+                  Sistema generado por <strong>{APP_NAME}</strong>
+                </span>
+                <div className={s.footerMeta}>
+                  <div className={s.footerPager} aria-label={`Pagina ${formatPageNumber(pageNumber, totalPages)}`}>
+                    {mode === "export" ? (
+                      <ExportPager
+                        current={String(pageNumber).padStart(2, "0")}
+                        total={String(totalPages).padStart(2, "0")}
+                      />
+                    ) : (
+                      <div className={s.footerPagerValue}>
+                        <span className={s.footerPagerCurrent}>{String(pageNumber).padStart(2, "0")}</span>
+                        <span className={s.footerPagerTotal}>/{String(totalPages).padStart(2, "0")}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </footer>
+            </article>
+          );
+        });
+      }
+
       return printPages.map((pagePlan, pageIndex) => {
         const totalPages = printPages.length;
         const pageNumber = pageIndex + 1;
@@ -911,8 +1376,9 @@ export default function CotizacionPrintPage() {
               </div>
 
               <div className={s.quoteMeta}>
-                <span className={s.quoteMetaEyebrow}>Cotización N°</span>
-                <strong>{visibleCotizacion.codigo}</strong>
+                <span className={s.quoteTypeBadge}>{quoteModeBadgeLabel}</span>
+                <strong className={s.quoteTitle}>Cotización</strong>
+                <span className={s.quoteMetaCode}>N° {visibleCotizacion.codigo}</span>
                 <span className={s.quoteMetaDate}>
                   Fecha: {formatCotizacionDate(visibleCotizacion.updatedAt)}
                 </span>
@@ -1193,13 +1659,20 @@ export default function CotizacionPrintPage() {
       companyName,
       companyLogoFallbackLabel,
       companyLogoUrl,
+      detailHeadingLabel,
       hasNormalizedCompanyAddress,
       itemPresentationMap,
-      failedLogoUrl,
+      globalIvaLabel,
+      isTotalGlobalQuote,
       paymentTermsDisplay,
       printPages,
+      printableItems,
+      quoteModeBadgeLabel,
       showItemPrices,
       shouldShowCompanyLogo,
+      totalGlobalLeadItem,
+      totalGlobalPages,
+      totalGlobalWorkName,
       totalSurfaceM2,
       visibleCotizacion,
     ]

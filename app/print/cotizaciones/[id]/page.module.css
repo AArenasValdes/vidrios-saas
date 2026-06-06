@@ -1,9 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 .page {
   --brand: #800020;
   --carbon: #111827;
-  --font-sans: "Montserrat";
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI";
   min-height: 100vh;
   min-height: 100dvh;
   background: #eef2f7;
@@ -785,7 +785,7 @@
   border-radius: 14px;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 55%),
-    linear-gradient(135deg, color-mix(in srgb, var(--brand) 72%, #1d4ed8 28%), var(--brand));
+    linear-gradient(135deg, var(--brand), var(--brand));
   color: #fff;
   display: grid;
   place-items: center;
@@ -848,7 +848,8 @@
   border-left: 1px solid rgba(181, 196, 220, 0.46);
 }
 
-.quoteMetaEyebrow {
+.quoteMetaEyebrow,
+.quoteTypeBadge {
   display: block;
   width: 100%;
   font-size: 7.8px;
@@ -856,6 +857,10 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #7f91ad;
+}
+
+.quoteTypeBadge {
+  color: var(--brand);
 }
 
 .quoteMetaDate,
@@ -866,11 +871,22 @@
   white-space: nowrap;
 }
 
-.quoteMeta strong {
-  font-size: 17.2px;
+.quoteTitle {
+  display: block;
+  width: 100%;
+  font-size: 21px;
   font-weight: 800;
   color: #243b6b;
-  line-height: 1.06;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.quoteMetaCode {
+  display: block;
+  width: 100%;
+  font-size: 9.2px;
+  font-weight: 800;
+  color: #60718b;
   white-space: nowrap;
 }
 
@@ -979,6 +995,222 @@
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.totalGlobalPdfPage {
+  gap: 10px;
+  padding-right: 12mm;
+}
+
+.totalGlobalPdfPage .pageHeader {
+  padding-bottom: 9px;
+}
+
+.totalGlobalPdfPage .companyLogoWrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+}
+
+.totalGlobalPdfPage .globalWorkSummary {
+  border: 1px solid #dfe7f1;
+  border-left: 3px solid var(--brand);
+  background: #fbfcff;
+  padding: 11px 13px;
+}
+
+.totalGlobalPdfPage .globalWorkSummaryTitle {
+  font-size: 16px;
+}
+
+.totalGlobalPdfPage .globalWorkSummaryDescription {
+  font-size: 10.8px;
+  line-height: 1.45;
+}
+
+.globalDescriptionSection {
+  display: grid;
+  gap: 9px;
+  padding: 14px 15px;
+  border: 1px solid #dfe7f1;
+  background: #ffffff;
+  position: relative;
+  z-index: 1;
+}
+
+.globalDescriptionHeader,
+.totalGlobalSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.globalDescriptionCount,
+.totalGlobalSectionHeader span:last-child {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7f91ad;
+}
+
+.globalDescriptionText {
+  margin: 0;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 11.3px;
+  line-height: 1.52;
+  color: #253244;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.globalDescriptionChecklist {
+  display: grid;
+  gap: 7px;
+}
+
+.globalDescriptionChecklistItem {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-height: 24px;
+  padding: 5px 8px 5px 6px;
+  border-left: 2px solid var(--brand);
+  background: linear-gradient(90deg, rgba(35, 185, 139, 0.08), #ffffff);
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.8px;
+  line-height: 1.42;
+  color: #253244;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.globalDescriptionChecklistMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 3px rgba(35, 185, 139, 0.12);
+}
+
+.totalGlobalDetailsSection {
+  display: grid;
+  gap: 9px;
+  position: relative;
+  z-index: 1;
+}
+
+.totalGlobalDetailList {
+  display: grid;
+  gap: 7px;
+}
+
+.totalGlobalDetailRow {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+  min-height: 74px;
+  padding: 8px 10px;
+  border: 1px solid #e0e7f0;
+  border-radius: 4px;
+  background: #ffffff;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.totalGlobalMiniDrawing {
+  width: 110px;
+  height: 72px;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.totalGlobalMiniDrawing svg {
+  display: block;
+  width: 110px;
+  max-width: 110px;
+  height: auto;
+  max-height: 72px;
+}
+
+.totalGlobalDetailBody {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.totalGlobalDetailMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.totalGlobalDetailMeta span {
+  min-height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  color: #60718b;
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 7.4px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.totalGlobalDetailName {
+  margin: 0;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 12.2px;
+  line-height: 1.22;
+  font-weight: 800;
+  color: #111827;
+}
+
+.totalGlobalDetailDescription {
+  margin: 0;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.5px;
+  line-height: 1.42;
+  color: #4b5563;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.totalGlobalEmptyText {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e0e7f0;
+  background: #f9fafb;
+  color: #60718b;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.totalGlobalSummarySection {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.totalGlobalSummarySection .totalsColumn {
+  width: 280px;
+  flex: 0 0 280px;
 }
 
 .clientField {
@@ -1543,6 +1775,27 @@
   gap: 18px;
   position: relative;
   z-index: 1;
+}
+
+.summarySection.totalGlobalSummarySection {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.summarySection.totalGlobalSummarySection .totalsColumn {
+  width: 318px;
+  flex: 0 0 318px;
+}
+
+.summarySection.totalGlobalSummarySection .summaryLabel {
+  padding: 10px 14px 7px;
+  font-size: 9.6px;
+}
+
+.summarySection.totalGlobalSummarySection .totalRow {
+  padding: 7px 14px;
+  font-size: 10.4px;
 }
 
 .conditionsColumn {

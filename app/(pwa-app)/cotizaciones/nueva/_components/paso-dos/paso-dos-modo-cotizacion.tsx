@@ -23,7 +23,7 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             <LuComponent size={28} />
           </div>
           <div>
-            <strong>Cotizar por items</strong>
+            <strong>Cotizar por ítems</strong>
             <p>Agrega ventanas, puertas, reparaciones o cobros adicionales. Cada item lleva su propio precio y el total se calcula automatico.</p>
           </div>
           <button
@@ -31,7 +31,7 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             className={s.btnPrimary}
             onClick={() => onSelectMode("por_item")}
           >
-            Armar por items
+            Armar por ítems
           </button>
         </article>
 
@@ -40,7 +40,7 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             <LuFileText size={28} />
           </div>
           <div>
-            <strong>Presupuesto por total</strong>
+            <strong>Cotizar por total</strong>
             <p>Describe el trabajo completo como una sola partida, sin desglosar precios por componente. Tu defines el valor final al terminar.</p>
           </div>
           <button
@@ -48,7 +48,7 @@ export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionPro
             className={s.btnPrimary}
             onClick={() => onSelectMode("total_global")}
           >
-            Crear presupuesto
+            Crear cotización
           </button>
         </article>
       </div>
