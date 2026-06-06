@@ -28,7 +28,7 @@ import type {
   PasoDosFormularioComponenteProps,
   PasoDosItemLibreFormProps,
 } from "../../_types/paso-dos";
-import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
+import type { PasoDosGrupoDraft, AlcanceDetalle } from "../../_hooks/use-paso-dos-agregar-grupo";
 import type { PasoDosGrupoPasoMovil } from "../../_hooks/use-paso-dos-agregar-grupo-movil";
 import {
   getSubtypeOptionsForCategory,
@@ -97,7 +97,7 @@ export type WizardActions = {
   onIvaModeChange: (ivaMode: "total_incluye_iva" | "neto_mas_iva") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: () => void;
-  onUpdateAlcanceDetalle: (detalleId: string, field: string, value: string) => void;
+  onUpdateAlcanceDetalle: (detalleId: string, field: keyof AlcanceDetalle, value: string) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
 };
 
