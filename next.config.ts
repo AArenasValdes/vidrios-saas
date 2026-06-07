@@ -1,10 +1,19 @@
 import type { NextConfig } from "next";
 
+const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
+const appVersion =
+  commitSha && commitSha.length > 0
+    ? commitSha.slice(0, 12)
+    : process.env.NEXT_PUBLIC_APP_VERSION || "dev";
+
 const nextConfig: NextConfig = {
   // Permite probar el dev server desde el celular en la red local.
   allowedDevOrigins: ["192.168.0.12"],
   turbopack: {
     root: process.cwd(),
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
   },
   async headers() {
     const securityHeaders = [
