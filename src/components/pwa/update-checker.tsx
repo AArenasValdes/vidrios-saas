@@ -42,6 +42,19 @@ export async function forceAppUpdate() {
   }
 }
 
+async function applyUpdateWithFeedback() {
+  const loadingToastId = toast.loading("Actualizando Ventora...", {
+    description: "La app se reiniciara en breve.",
+  });
+
+  try {
+    await forceAppUpdate();
+  } catch {
+    toast.dismiss(loadingToastId);
+    return;
+  }
+}
+
 export function UpdateChecker() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,14 +78,19 @@ export function UpdateChecker() {
         }
 
         if (storedVersion !== remoteVersion && storedVersion !== APP_VERSION) {
-          const toastId = toast("Hay una nueva version de Ventora disponible.", {
+          toast("Hay una nueva version de Ventora disponible.", {
             description: "Actualiza para ver los ultimos cambios sin reinstalar la app.",
             duration: Infinity,
             action: {
               label: "Actualizar ahora",
               onClick: () => {
-                toast.dismiss(toastId);
-                void forceAppUpdate();
+                void applyUpdateWithFeedback();
+              },
+            },
+            cancel: {
+              label: "Despues",
+              onClick: () => {
+                return;
               },
             },
           });

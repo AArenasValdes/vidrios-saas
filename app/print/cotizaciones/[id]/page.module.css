@@ -1980,6 +1980,132 @@
   color: #6b7280;
 }
 
+.freeItemsSection {
+  display: grid;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.freeItemsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0 5px;
+  border-bottom: 2px solid var(--brand);
+}
+
+.freeItemsCount {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 7.6px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7f91ad;
+}
+
+.freeItemList {
+  display: grid;
+  gap: 0;
+}
+
+.freeItemRow {
+  padding: 6px 0;
+  border-bottom: 1px solid #edf0f5;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.freeItemRow:last-child {
+  border-bottom: none;
+}
+
+.freeItemBody {
+  display: grid;
+  gap: 3px;
+  min-height: 38px;
+}
+
+.freeItemTopLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.freeItemName {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.8px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.freeItemPrice {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 10.8px;
+  font-weight: 700;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.freeItemDescription {
+  margin: 0;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1.45;
+  color: #4b5563;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.freeItemChecklist {
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: disc;
+  display: grid;
+  gap: 2px;
+}
+
+.freeItemChecklistItem {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1.45;
+  color: #4b5563;
+}
+
+.freeItemMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.freeItemBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 15px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(30, 136, 255, 0.08);
+  color: #335ea9;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 6.8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.freeItemMeta > span:not(.freeItemBadge) {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 7.8px;
+  color: #7f91ad;
+}
+
 @keyframes print-loading-spin {
   to {
     transform: rotate(360deg);

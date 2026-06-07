@@ -905,27 +905,24 @@ export default function ConfiguracionEmpresaPage() {
             <div className={s.triggerMain}>
               <div className={s.triggerIcon}><LuSmartphone aria-hidden /></div>
               <div className={s.triggerCopy}>
-                <span className={s.cardEyebrow}>App y soporte</span>
-                <strong>App y soporte</strong>
-                <p>Version {APP_VERSION}</p>
+                <span className={s.cardEyebrow}>Diagnostico</span>
+                <strong>Diagnostico de la app</strong>
+                <p>Herramientas de soporte para este dispositivo</p>
               </div>
             </div>
-            <div className={s.triggerMeta}>
-              <span className={s.statePill} data-complete={true}>{APP_VERSION}</span>
-              <LuChevronDown className={s.chevron} aria-hidden />
-            </div>
+            <LuChevronDown className={s.chevron} aria-hidden />
           </button>
 
           <div className={s.accordionPanel}>
             <div className={s.accordionInner}>
               <div className={s.fieldGrid}>
                 <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Version de la app</span>
+                  <span className={s.label}>Version instalada</span>
                   <strong>{APP_VERSION}</strong>
-                  <p>Esta es la version instalada en tu dispositivo.</p>
+                  <p>Version de Ventora en este dispositivo.</p>
                 </article>
                 <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Actualizar app</span>
+                  <span className={s.label}>Actualizacion</span>
                   <strong>Busca y aplica cambios</strong>
                   <p>Si hay una version nueva, la app se actualiza sin reinstalar.</p>
                 </article>
@@ -934,14 +931,14 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.sectionActions}>
                 <button type="button" className={s.secondaryLink} onClick={() => void handleForceUpdate()} disabled={isUpdating}>
                   <LuRefreshCcw aria-hidden />
-                  {isUpdating ? "Actualizando..." : "Actualizar / limpiar cache"}
+                  {isUpdating ? "Buscando..." : "Buscar actualizacion"}
                 </button>
                 <button type="button" className={s.secondaryLink} onClick={handleReiniciarApp} disabled={isReiniciando}>
                   <LuRefreshCcw aria-hidden />
-                  {isReiniciando ? "Reiniciando..." : "Reiniciar app en este dispositivo"}
+                  {isReiniciando ? "Reparando..." : "Reparar app en este dispositivo"}
                 </button>
               </div>
-              <p className={s.inlineInfo} style={{ marginTop: 10 }}>&ldquo;Reiniciar&rdquo; borra los datos locales y recarga la app. No borra tu cuenta ni tus cotizaciones.</p>
+              <p className={s.inlineInfo} style={{ marginTop: 10 }}>Usa estas opciones solo si la app no carga bien o soporte te lo solicita.</p>
             </div>
           </div>
         </section>

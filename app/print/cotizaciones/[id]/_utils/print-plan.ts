@@ -1,4 +1,5 @@
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 const NORMAL_PAGE_COMPONENTS = 3;
 const SUMMARY_PAGE_COMPONENTS = 2;
@@ -14,6 +15,20 @@ export type PrintPagePlan =
       startIndex: number;
       items: CotizacionWorkflowItem[];
     };
+
+export type PrintPlanResult = {
+  pages: PrintPagePlan[];
+  freeItems: CotizacionWorkflowItem[];
+};
+
+export function isFreePrintItem(item: CotizacionWorkflowItem): boolean {
+  if (item.tipoItem === "item_libre_con_valor") {
+    return true;
+  }
+
+  const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  return meta.displayMode === "item_libre";
+}
 
 function distributeBeforeSummaryPage(totalItems: number) {
   for (
@@ -69,22 +84,36 @@ function buildPageGroups<T>(items: T[]) {
   });
 }
 
-export function buildPrintPlan(items: CotizacionWorkflowItem[]): PrintPagePlan[] {
-  if (items.length === 0) {
-    return [
-      {
-        kind: "cover",
-        startIndex: 0,
-        items: [],
-      },
-    ];
+export function buildPrintPlan(items: CotizacionWorkflowItem[]): PrintPlanResult {
+  const technicalItems: CotizacionWorkflowItem[] = [];
+  const freeItems: CotizacionWorkflowItem[] = [];
+
+  for (const item of items) {
+    if (isFreePrintItem(item)) {
+      freeItems.push(item);
+    } else {
+      technicalItems.push(item);
+    }
   }
 
-  const componentGroups = buildPageGroups(items);
+  if (technicalItems.length === 0) {
+    return {
+      pages: [
+        {
+          kind: "cover",
+          startIndex: 0,
+          items: [],
+        },
+      ],
+      freeItems,
+    };
+  }
+
+  const componentGroups = buildPageGroups(technicalItems);
 
   let startIndex = 0;
 
-  return componentGroups.map((group, index) => {
+  const pages: PrintPagePlan[] = componentGroups.map((group, index) => {
     const pagePlan: PrintPagePlan = {
       kind: index === 0 ? "cover" : "components",
       startIndex,
@@ -95,4 +124,6 @@ export function buildPrintPlan(items: CotizacionWorkflowItem[]): PrintPagePlan[]
 
     return pagePlan;
   });
+
+  return { pages, freeItems };
 }

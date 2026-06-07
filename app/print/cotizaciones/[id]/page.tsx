@@ -33,7 +33,7 @@ import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/ut
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
-import { buildPrintPlan } from "./_utils/print-plan";
+import { buildPrintPlan, isFreePrintItem } from "./_utils/print-plan";
 import s from "./page.module.css";
 
 const APP_NAME = "Ventora";
@@ -677,8 +677,8 @@ export default function CotizacionPrintPage() {
   }, [totalGlobalLeadItem, visibleCotizacion]);
   const globalIvaLabel = (visibleCotizacion?.mostrarIva ?? true) ? "IVA incluido" : "Sin IVA";
   const detailHeadingLabel = showItemPrices
-    ? "COMPONENTES COTIZADOS · OFERTA CLIENTE"
-    : "DETALLES INCLUIDOS · OFERTA CLIENTE";
+    ? "COMPONENTES COTIZADOS"
+    : "DETALLES INCLUIDOS";
 
   const totalGlobalWorkName =
     totalGlobalLeadItem?.nombre?.trim() || visibleCotizacion?.obra?.trim() || "Trabajo general";
@@ -691,10 +691,16 @@ export default function CotizacionPrintPage() {
     [totalGlobalWorkDescription]
   );
 
-  const { printPages, totalSurfaceM2 } = useMemo(() => {
+  const { printPages, totalSurfaceM2, freePrintItems } = useMemo(() => {
     const items = printableItems;
-    const nextPrintPages = buildPrintPlan(items);
+    const plan = buildPrintPlan(items);
+    const nextPrintPages = plan.pages;
+    const nextFreeItems = plan.freeItems;
     const nextTotalSurfaceM2 = items.reduce((accumulator, item) => {
+      if (isFreePrintItem(item)) {
+        return accumulator;
+      }
+
       if (item.areaM2 !== null) {
         return accumulator + item.areaM2 * item.cantidad;
       }
@@ -709,6 +715,7 @@ export default function CotizacionPrintPage() {
     return {
       printPages: nextPrintPages,
       totalSurfaceM2: nextTotalSurfaceM2,
+      freePrintItems: nextFreeItems,
     };
   }, [printableItems]);
   const totalGlobalPages = useMemo<TotalGlobalPrintPagePlan[]>(() => {
@@ -800,7 +807,9 @@ export default function CotizacionPrintPage() {
         colorName,
         surface,
         specs,
-        drawingSvg: generateComponentSVG({
+        drawingSvg: isFreePrintItem(item)
+          ? ""
+          : generateComponentSVG({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
@@ -1059,8 +1068,6 @@ export default function CotizacionPrintPage() {
           const pageNumber = pageIndex + 1;
           const isLastPage = pageIndex === totalPages - 1;
           const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
-          const showEmptyDetails =
-            pagePlan.kind === "global-cover" && printableItems.length === 0;
 
           return (
             <article
@@ -1189,17 +1196,6 @@ export default function CotizacionPrintPage() {
                   ) : (
                     <p className={s.globalDescriptionText}>{pagePlan.description}</p>
                   )}
-                </section>
-              ) : null}
-
-              {showEmptyDetails ? (
-                <section className={s.totalGlobalDetailsSection}>
-                  <div className={s.totalGlobalSectionHeader}>
-                    <span className={s.sectionLabel}>DETALLES INCLUIDOS</span>
-                  </div>
-                  <p className={s.totalGlobalEmptyText}>
-                    Sin detalles incluidos adicionales en esta cotización.
-                  </p>
                 </section>
               ) : null}
 
@@ -1418,12 +1414,14 @@ export default function CotizacionPrintPage() {
               </section>
             ) : null}
 
-            <section className={s.detailHeading}>
-              <span className={s.detailLabel}>{detailHeadingLabel}</span>
-            </section>
+            {pagePlan.items.length > 0 ? (
+              <section className={s.detailHeading}>
+                <span className={s.detailLabel}>{detailHeadingLabel}</span>
+              </section>
+            ) : null}
 
             <div className={s.componentList}>
-              {pagePlan.items.length === 0 ? (
+              {pagePlan.items.length === 0 && freePrintItems.length === 0 ? (
                 <p className={s.emptyText}>
                   {totalGlobalLeadItem
                     ? "Sin detalles incluidos adicionales en este presupuesto."
@@ -1433,17 +1431,11 @@ export default function CotizacionPrintPage() {
               {pagePlan.items.map((item, itemIndex) => {
                 const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
                 const presentation = itemPresentationMap.get(item.id);
-                const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
-                const isFreeValueItem =
-                  item.tipoItem === "item_libre_con_valor" ||
-                  itemMeta.displayMode === "item_libre";
                 const colorHex = presentation?.colorHex ?? "#a8a8a8";
                 const material = presentation?.material ?? "Material a definir";
                 const colorName = presentation?.colorName ?? "Color a definir";
                 const surface = presentation?.surface ?? "-";
-                const specs = isFreeValueItem
-                  ? [{ key: "Descripcion", value: item.descripcion?.trim() || item.nombre }]
-                  : presentation?.specs ?? [
+                const specs = presentation?.specs ?? [
                     { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
                     { key: "Material", value: material },
                     { key: "Color", value: colorName },
@@ -1490,13 +1482,6 @@ export default function CotizacionPrintPage() {
                     </div>
 
                     <div className={s.componentBody}>
-                      {item.tipo === "Trabajo personalizado" || isFreeValueItem ? (
-                      <div className={s.descriptionColumn}>
-                        <div className={s.descriptionInner}>
-                          <p className={s.descriptionText}>{item.descripcion?.trim() || item.nombre}</p>
-                        </div>
-                      </div>
-                      ) : (
                       <div className={s.drawingColumn}>
                         <div className={s.drawingFrame}>
                           <div
@@ -1506,7 +1491,6 @@ export default function CotizacionPrintPage() {
                         </div>
                         <span className={s.drawingCaption}>VISTA INTERIOR REFERENCIAL</span>
                       </div>
-                      )}
 
                       <div className={s.componentInfoColumn}>
                         <div className={s.specsColumn}>
@@ -1528,7 +1512,7 @@ export default function CotizacionPrintPage() {
                           ))}
                         </div>
 
-                                {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
+                                {showItemPrices ? (
                                 <aside className={s.pricesColumn}>
                           <div className={s.pricesHeading}>VALOR COMERCIAL</div>
                           <div className={s.pricesSubheading}>MONTOS EN CLP</div>
@@ -1554,6 +1538,49 @@ export default function CotizacionPrintPage() {
                 );
               })}
             </div>
+
+            {isLastPage && freePrintItems.length > 0 ? (
+              <section className={s.freeItemsSection}>
+                <div className={s.freeItemsHeader}>
+                  <span className={s.sectionLabel}>TRABAJOS ADICIONALES</span>
+                  <span className={s.freeItemsCount}>{freePrintItems.length} {freePrintItems.length === 1 ? "trabajo" : "trabajos"}</span>
+                </div>
+
+                <div className={s.freeItemList}>
+                  {freePrintItems.map((item) => {
+                    const description = item.descripcion?.trim();
+                    const descriptionLines = description ? splitDescriptionChecklistItems(description) : [];
+
+                    return (
+                      <article key={item.id} className={s.freeItemRow}>
+                        <div className={s.freeItemBody}>
+                          <div className={s.freeItemTopLine}>
+                            <strong className={s.freeItemName}>{item.nombre}</strong>
+                            <strong className={s.freeItemPrice}>{CLP(item.precioTotal)}</strong>
+                          </div>
+                          {description ? (
+                            descriptionLines.length > 1 ? (
+                              <ul className={s.freeItemChecklist}>
+                                {descriptionLines.map((line, idx) => (
+                                  <li key={idx} className={s.freeItemChecklistItem}>{line}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className={s.freeItemDescription}>{description}</p>
+                            )
+                          ) : null}
+                          <div className={s.freeItemMeta}>
+                            <span className={s.freeItemBadge}>{item.tipoItem === "item_libre_con_valor" ? "Servicio" : "Item libre"}</span>
+                            {item.cantidad > 1 ? <span>Cantidad: {item.cantidad}</span> : null}
+                            {item.precioUnitario !== item.precioTotal ? <span>Unitario: {CLP(item.precioUnitario)}</span> : null}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
 
             {isLastPage ? (
               <>
@@ -1660,6 +1687,7 @@ export default function CotizacionPrintPage() {
       companyLogoFallbackLabel,
       companyLogoUrl,
       detailHeadingLabel,
+      freePrintItems,
       hasNormalizedCompanyAddress,
       itemPresentationMap,
       globalIvaLabel,
