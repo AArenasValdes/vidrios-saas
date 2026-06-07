@@ -135,9 +135,9 @@ function safeTrim(value: string | null | undefined) {
 }
 
 export function shouldSkipCantidadForGrupoDraft(
-  draft: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
+  _draft?: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
 ) {
-  return isFreeValueComponentType(draft.subtipo);
+  return false;
 }
 
 export function createEmptyAlcanceDetalle(
@@ -546,7 +546,7 @@ export function buildPasoDosGrupoSelectionPatch({
   return {
     subtipo,
     hojasBase: getBaseLeafCountForComponent(subtipo),
-    cantidad: isFreeValueComponentType(subtipo) ? 1 : current.cantidad,
+    cantidad: current.cantidad > 0 ? current.cantidad : 1,
     usaCantidadPersonalizada: false,
     cantidadPersonalizada: "",
     pricingMode: normalizePricingMode(current.pricingMode),

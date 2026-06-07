@@ -230,11 +230,11 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     });
 
     expect(patch.nombre).toBe("");
-    expect(patch.cantidad).toBe(1);
-    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
+    expect(patch.cantidad).toBe(4);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(false);
   });
 
-  it("debe omitir cantidad en trabajo personalizado de especiales (flujo libre)", () => {
+  it("debe conservar cantidad en trabajo personalizado de especiales (flujo libre)", () => {
     const current = {
       ...createInitialPasoDosGrupoDraft({
         items: [],
@@ -253,8 +253,8 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     });
 
     expect(patch.nombre).toBe("");
-    expect(patch.cantidad).toBe(1);
-    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
+    expect(patch.cantidad).toBe(3);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(false);
   });
 
   it("debe resumir el grupo de forma directa para la confirmacion", () => {

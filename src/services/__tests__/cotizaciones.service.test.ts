@@ -365,7 +365,7 @@ describe("cotizaciones.service", () => {
           expect.objectContaining({
             linea: "Serie 25",
             vidrio: "Incoloro monolitico 5mm",
-            observaciones: "Cierre comercial",
+            observaciones: expect.stringContaining("Cierre comercial"),
           }),
         ],
       })

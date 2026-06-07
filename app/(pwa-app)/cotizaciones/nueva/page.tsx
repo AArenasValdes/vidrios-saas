@@ -674,7 +674,9 @@ function NuevaCotizacionPageContent() {
         const nextMarginValue = String(value || "0");
         setDraft((current) => ({
           ...current,
-          items: applyQuotePricingToItems(current.items, "margen", nextMarginValue),
+          items: applyQuotePricingToItems(current.items, "margen", nextMarginValue, {
+            quotePricingMode,
+          }),
         }));
       }
       if (
@@ -1027,6 +1029,7 @@ function NuevaCotizacionPageContent() {
             nombre: groupDraft.nombre.trim() || groupDraft.subtipo,
             descripcion: groupDraft.descripcion,
             valor: shouldChargeSeparately ? normalizedValue : "0",
+            cantidad: String(groupDraft.cantidad > 0 ? groupDraft.cantidad : 1),
             ivaMode: "total_incluye_iva",
           },
           nextItems,
@@ -1075,6 +1078,7 @@ function NuevaCotizacionPageContent() {
                       .filter(Boolean)
                       .join(". "),
                     valor: "0",
+                    cantidad: detalle.cantidad && detalle.cantidad !== "1" ? detalle.cantidad : "1",
                     ivaMode: "total_incluye_iva",
                   },
                   nextItems,
@@ -1355,7 +1359,9 @@ function NuevaCotizacionPageContent() {
     });
     setDraft((current) => ({
       ...current,
-      items: applyQuotePricingToItems(current.items, pricingMode, resolvedMarginValue),
+      items: applyQuotePricingToItems(current.items, pricingMode, resolvedMarginValue, {
+        quotePricingMode,
+      }),
     }));
     setFieldErrors((current) => ({
       ...current,

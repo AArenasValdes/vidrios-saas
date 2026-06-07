@@ -27,6 +27,8 @@ export function PasoDosItemLibreForm({
   onCancel,
 }: PasoDosItemLibreFormProps) {
   const valorNumerico = Number(normalizeCurrencyInput(form.valor)) || 0;
+  const cantidadNumerica = Number(form.cantidad) > 0 ? Number(form.cantidad) : 1;
+  const subtotalNumerico = valorNumerico * cantidadNumerica;
   const tieneValor = valorNumerico > 0;
 
   if (!isOpen) {
@@ -96,24 +98,42 @@ export function PasoDosItemLibreForm({
           )}
         </div>
 
-        <label className={s.field}>
-          <span className={s.label}>Valor a cobrar</span>
-          <input
-            className={s.input}
-            inputMode="numeric"
-            value={formatCurrencyInput(normalizeCurrencyInput(form.valor))}
-            onChange={(event) => onChange("valor", normalizeCurrencyInput(event.target.value))}
-            placeholder="Ej: 120.000"
-          />
-          {fieldErrors.costoProveedorUnitario ? (
-            <small className={s.inlineError}>
-              {fieldErrors.costoProveedorUnitario}
-            </small>
-          ) : null}
-          <span className={s.helpText}>
-            Este valor seguira la configuracion de IVA de la cotizacion.
-          </span>
-        </label>
+        <div className={s.formGrid2}>
+          <label className={s.field}>
+            <span className={s.label}>Precio unitario</span>
+            <input
+              className={s.input}
+              inputMode="numeric"
+              value={formatCurrencyInput(normalizeCurrencyInput(form.valor))}
+              onChange={(event) => onChange("valor", normalizeCurrencyInput(event.target.value))}
+              placeholder="Ej: 120.000"
+            />
+            {fieldErrors.costoProveedorUnitario ? (
+              <small className={s.inlineError}>
+                {fieldErrors.costoProveedorUnitario}
+              </small>
+            ) : null}
+          </label>
+
+          <label className={s.field}>
+            <span className={s.label}>Cantidad</span>
+            <input
+              className={s.input}
+              inputMode="numeric"
+              value={form.cantidad}
+              onChange={(event) =>
+                onChange("cantidad", event.target.value.replace(/[^\d]/g, "") || "1")
+              }
+              placeholder="1"
+            />
+            {fieldErrors.cantidad ? (
+              <small className={s.inlineError}>{fieldErrors.cantidad}</small>
+            ) : null}
+          </label>
+        </div>
+        <span className={s.helpText}>
+          El subtotal del item sera precio unitario por cantidad. El IVA se define en el resumen.
+        </span>
 
         {tieneValor ? (
           <div className={s.freeValuePreviewCard}>
@@ -127,9 +147,16 @@ export function PasoDosItemLibreForm({
                 <p>{form.descripcion}</p>
               ) : null}
               <div className={s.freeValuePreviewTotal}>
-                <span>Total</span>
-                <strong>${formatearCLP(valorNumerico)}</strong>
+                <span>Subtotal</span>
+                <strong>${formatearCLP(subtotalNumerico)}</strong>
               </div>
+              {cantidadNumerica > 1 ? (
+                <div className={s.freeValuePreviewBreakdown}>
+                  <span>
+                    ${formatearCLP(valorNumerico)} x {cantidadNumerica}
+                  </span>
+                </div>
+              ) : null}
               <div className={s.freeValuePreviewBreakdown}>
                 <span>El IVA se definira en el resumen de la cotizacion.</span>
               </div>
@@ -152,7 +179,7 @@ export function PasoDosItemLibreForm({
             {editingItemId
               ? "Guardar item"
               : tieneValor
-                ? `Agregar item por $${formatearCLP(valorNumerico)}`
+                ? `Agregar item por $${formatearCLP(subtotalNumerico)}`
                 : "Agregar item"}
           </button>
         </div>

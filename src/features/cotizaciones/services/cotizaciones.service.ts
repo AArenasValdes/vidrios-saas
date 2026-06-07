@@ -10,6 +10,7 @@ import {
   projectsRepository,
   type ProjectsRepository,
 } from "@/features/projects/repositories/projects.repository";
+import { reconcileWorkflowItemsPricing } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   buildCotizacionCode,
   buildLegacyCotizacionCode,
@@ -166,12 +167,21 @@ function mapDatabaseItemToWorkflowItem(
   const codigo = item.codigo?.trim() || `I${index + 1}`;
 
   if (tipoItem === "item_libre_con_valor") {
+    const cantidad = Number(item.cantidad) > 0 ? Number(item.cantidad) : 1;
+    const valorUnitario =
+      item.precioUnitario ??
+      (item.subtotal && cantidad > 0 ? round(item.subtotal / cantidad, 2) : null) ??
+      presentation.totalClienteVisible ??
+      item.subtotal ??
+      0;
+
     return calculateFreeValueItem({
       id: String(item.id),
       codigo,
       nombre: item.nombre?.trim() || `Item libre ${index + 1}`,
       descripcion: item.descripcion?.trim() || item.nombre?.trim() || `Item libre ${index + 1}`,
-      valor: item.subtotal ?? item.precioUnitario ?? presentation.totalClienteVisible ?? 0,
+      valor: valorUnitario,
+      cantidad,
       ivaMode: presentation.ivaMode ?? "total_incluye_iva",
       observaciones: presentation.raw,
       allowZeroValue: presentation.displayMode === "item_libre",
@@ -218,8 +228,11 @@ function mapCotizacionToWorkflowRecord(input: {
   clientAddress: string;
   projectTitle: string;
 }): CotizacionWorkflowRecord {
-  const items = input.cotizacion.items.map(mapDatabaseItemToWorkflowItem);
   const quotePricingMode = normalizeQuotePricingMode(input.cotizacion.pricingMode);
+  const items = reconcileWorkflowItemsPricing(
+    input.cotizacion.items.map(mapDatabaseItemToWorkflowItem),
+    quotePricingMode
+  );
   const workflowTotals = calculateWorkflowTotalsForPricingMode({
     items,
     descuentoPct: input.cotizacion.descuentoPct ?? 0,
@@ -295,48 +308,6 @@ function mapCotizacionToWorkflowRecordFromSeed(
   });
 }
 
-function normalizeWorkflowItem(
-  item: CotizacionWorkflowItem,
-  index: number
-): CotizacionWorkflowItem {
-  if (item.tipoItem === "item_libre_con_valor") {
-    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
-
-    return calculateFreeValueItem({
-      id: item.id,
-      codigo: item.codigo || `L${index + 1}`,
-      nombre: item.nombre || item.descripcion || `Item libre ${index + 1}`,
-      descripcion: item.descripcion || item.nombre || `Item libre ${index + 1}`,
-      valor: item.precioTotal,
-      ivaMode: presentation.ivaMode ?? "total_incluye_iva",
-      observaciones: presentation.raw,
-      allowZeroValue: presentation.displayMode === "item_libre" && item.precioTotal <= 0,
-    });
-  }
-
-  return calculateComponentItem({
-    id: item.id,
-    codigo: item.codigo || `I${index + 1}`,
-    tipo: item.tipo || "Componente",
-    lineaComercial: item.lineaComercial,
-    vidrio: item.vidrio,
-    nombre: item.nombre || item.descripcion || `Componente ${index + 1}`,
-    descripcion: item.descripcion || item.nombre || `Componente ${index + 1}`,
-    ancho: item.ancho,
-    alto: item.alto,
-    cantidad: item.cantidad,
-    unidad: item.unidad,
-    costoProveedorUnitario: item.costoProveedorUnitario,
-    margenPct: item.margenPct,
-    precioPorM2: item.precioPorM2,
-    minimoCobrable: item.minimoCobrable,
-    redondeoPrecio: item.redondeoPrecio,
-    precioPlantillaSugerido: item.precioPlantillaSugerido,
-    precioAjustadoManual: item.precioAjustadoManual,
-    origenPrecio: item.origenPrecio,
-    observaciones: item.observaciones,
-  });
-}
 
 function mapWorkflowItemToRepositoryItem(
   item: CotizacionWorkflowItem,
@@ -798,7 +769,10 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     const existingCotizacion = input.existingId
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
-    const normalizedItems = input.draft.items.map(normalizeWorkflowItem);
+    const normalizedItems = reconcileWorkflowItemsPricing(
+      input.draft.items,
+      normalizeQuotePricingMode(input.draft.quotePricingMode)
+    );
 
     if (input.estado !== "borrador" && normalizedItems.length === 0) {
       throw new Error("La cotizacion debe tener al menos un componente");

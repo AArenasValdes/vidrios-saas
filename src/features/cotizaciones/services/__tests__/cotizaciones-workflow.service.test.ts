@@ -192,6 +192,20 @@ describe("cotizaciones-workflow.service", () => {
     expect(itemLibre.cantidad).toBe(1);
   });
 
+  it("multiplica precio unitario por cantidad en item libre", () => {
+    const itemLibre = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Cambio de vidrio",
+      valor: 120000,
+      cantidad: 2,
+      ivaMode: "total_incluye_iva",
+    });
+
+    expect(itemLibre.precioUnitario).toBe(120000);
+    expect(itemLibre.cantidad).toBe(2);
+    expect(itemLibre.precioTotal).toBe(240000);
+  });
+
   it("suma cobros separados al presupuesto por total", () => {
     const itemLibre = calculateFreeValueItem({
       codigo: "L1",

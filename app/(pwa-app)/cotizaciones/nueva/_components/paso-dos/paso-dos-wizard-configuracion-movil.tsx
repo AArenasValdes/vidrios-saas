@@ -245,16 +245,32 @@ export function PasoDosWizardConfiguracionMovil({
     draft.alcanceDetalles.find((detalle) => detalle.id === activeAlcanceDetalleId) ?? null;
 
   useEffect(() => {
+    let shouldUpdateActiveAlcanceDetalle = false;
+    let nextActiveAlcanceDetalleId: string | null = null;
+
     if (draft.alcanceDetalles.length > alcanceCountRef.current) {
-      setActiveAlcanceDetalleId(draft.alcanceDetalles[draft.alcanceDetalles.length - 1]?.id ?? null);
+      shouldUpdateActiveAlcanceDetalle = true;
+      nextActiveAlcanceDetalleId =
+        draft.alcanceDetalles[draft.alcanceDetalles.length - 1]?.id ?? null;
     } else if (
       activeAlcanceDetalleId &&
       !draft.alcanceDetalles.some((detalle) => detalle.id === activeAlcanceDetalleId)
     ) {
-      setActiveAlcanceDetalleId(draft.alcanceDetalles[0]?.id ?? null);
+      shouldUpdateActiveAlcanceDetalle = true;
+      nextActiveAlcanceDetalleId = draft.alcanceDetalles[0]?.id ?? null;
     }
 
     alcanceCountRef.current = draft.alcanceDetalles.length;
+
+    if (!shouldUpdateActiveAlcanceDetalle) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveAlcanceDetalleId(nextActiveAlcanceDetalleId);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [activeAlcanceDetalleId, draft.alcanceDetalles]);
 
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);

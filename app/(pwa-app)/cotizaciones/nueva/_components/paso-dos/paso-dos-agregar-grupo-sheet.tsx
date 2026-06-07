@@ -152,6 +152,10 @@ export function PasoDosAgregarGrupoSheet({
   canContinueFromQuantity,
   canContinueFromConfig,
 }: Props) {
+  const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
+    Boolean(internalObservation.trim())
+  );
+
   if (!isOpen) {
     return null;
   }
@@ -185,9 +189,6 @@ export function PasoDosAgregarGrupoSheet({
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
   });
-  const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
-    Boolean(internalObservation.trim())
-  );
   const globalTotalInputValue =
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))

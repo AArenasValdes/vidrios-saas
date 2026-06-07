@@ -53,6 +53,7 @@ type CalculateFreeValueItemInput = {
   nombre: string;
   descripcion?: string;
   valor: number;
+  cantidad?: number;
   ivaMode?: CotizacionItemFreeValueIvaMode;
   observaciones?: string;
   allowZeroValue?: boolean;
@@ -287,14 +288,16 @@ export function calculateComponentItem(
 export function calculateFreeValueItem(input: CalculateFreeValueItemInput): CotizacionWorkflowItem {
   const nombre = input.nombre.trim();
   const descripcion = (input.descripcion ?? input.nombre).trim();
-  const valor = round(normalizeNonNegativeNumber(input.valor), 2);
+  const valorUnitario = round(normalizeNonNegativeNumber(input.valor), 2);
+  const cantidad = Number(input.cantidad) > 0 ? Math.round(Number(input.cantidad)) : 1;
+  const precioTotal = round(valorUnitario * cantidad, 2);
   const codigo = input.codigo?.trim() || `L${Date.now()}`;
 
   if (!nombre) {
     throw new Error("El nombre del item libre es obligatorio");
   }
 
-  if (!Number.isFinite(valor) || (!input.allowZeroValue && valor <= 0)) {
+  if (!Number.isFinite(valorUnitario) || (!input.allowZeroValue && valorUnitario <= 0)) {
     throw new Error("Ingresa un valor mayor a cero");
   }
 
@@ -309,14 +312,14 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
     descripcion,
     ancho: null,
     alto: null,
-    cantidad: 1,
+    cantidad,
     unidad: "unidad",
     areaM2: null,
     costoProveedorUnitario: 0,
     costoProveedorTotal: 0,
     margenPct: 0,
-    precioUnitario: valor,
-    precioTotal: valor,
+    precioUnitario: valorUnitario,
+    precioTotal,
     precioPorM2: null,
     minimoCobrable: null,
     redondeoPrecio: null,
@@ -328,8 +331,8 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
       material: "Aluminio",
       pricingMode: "precio_directo",
       ivaMode: "total_incluye_iva",
-      totalClienteVisible: valor,
-      netoCalculado: valor,
+      totalClienteVisible: precioTotal,
+      netoCalculado: precioTotal,
       ivaCalculado: 0,
       displayMode: "item_libre",
       raw: input.observaciones ?? "",

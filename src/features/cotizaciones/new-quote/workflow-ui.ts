@@ -22,7 +22,6 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import {
   normalizePricingMode,
-  normalizeCostInputScope,
   DEFAULT_MARGIN_PCT,
   type PricingMode,
   type CostInputScope,
@@ -93,7 +92,7 @@ export type FieldErrors = Partial<
 >;
 
 export type PersistedWorkflowState = {
-  version: 4;
+  version: 5;
   step: StepKey;
   draft: CotizacionWorkflowDraft;
   componentForm: ComponentFormState;
@@ -115,6 +114,7 @@ export type FreeValueItemFormState = {
   nombre: string;
   descripcion: string;
   valor: string;
+  cantidad: string;
   ivaMode: CotizacionItemFreeValueIvaMode;
 };
 
@@ -335,12 +335,7 @@ export function loadPersistedWorkflowState(
       showStep1MoreData?: boolean;
     };
 
-    if (
-      parsed.version !== 1 &&
-      parsed.version !== 2 &&
-      parsed.version !== 3 &&
-      parsed.version !== 4
-    ) {
+    if (parsed.version !== 5) {
       return null;
     }
 
@@ -377,7 +372,10 @@ export function loadPersistedWorkflowState(
           Number.isFinite(persistedDraft.totalClienteManual)
             ? Number(persistedDraft.totalClienteManual)
             : null,
-        items: persistedDraft.items ?? emptyDraft.items,
+        items: reconcileWorkflowItemsPricing(
+          persistedDraft.items ?? emptyDraft.items,
+          normalizeQuotePricingMode(persistedDraft.quotePricingMode)
+        ),
       },
       componentForm: {
         ...createEmptyComponentForm(
@@ -845,6 +843,7 @@ export function createEmptyFreeValueItemForm(): FreeValueItemFormState {
     nombre: "",
     descripcion: "",
     valor: "",
+    cantidad: "1",
     ivaMode: "total_incluye_iva",
   };
 }
@@ -855,7 +854,8 @@ export function mapFreeValueItemToForm(item: CotizacionWorkflowItem): FreeValueI
   return {
     nombre: item.nombre,
     descripcion: item.descripcion,
-    valor: String(Math.round(item.precioTotal)),
+    valor: String(Math.round(item.precioUnitario)),
+    cantidad: String(item.cantidad > 0 ? item.cantidad : 1),
     ivaMode: meta.ivaMode ?? "total_incluye_iva",
   };
 }
@@ -872,6 +872,8 @@ export function buildFreeValueItemFromForm(
     : -1;
   const nextIndex = existingIndex >= 0 ? existingIndex + 1 : items.length + 1;
 
+  const cantidad = Number(form.cantidad);
+
   return calculateFreeValueItem({
     id: editingItemId ?? undefined,
     codigo:
@@ -881,6 +883,7 @@ export function buildFreeValueItemFromForm(
     nombre: form.nombre,
     descripcion: form.descripcion,
     valor: normalizedValue ? Number(normalizedValue) : 0,
+    cantidad: Number.isFinite(cantidad) && cantidad > 0 ? Math.round(cantidad) : 1,
     ivaMode: "total_incluye_iva",
     allowZeroValue: options?.allowZeroValue,
   });
@@ -889,6 +892,7 @@ export function buildFreeValueItemFromForm(
 export function validateFreeValueItemForm(form: FreeValueItemFormState): FieldErrors {
   const errors: FieldErrors = {};
   const valor = Number(normalizeCurrencyInput(form.valor));
+  const cantidad = Number(form.cantidad);
 
   if (!form.nombre.trim()) {
     errors.nombre = "Ingresa el nombre del item";
@@ -896,6 +900,10 @@ export function validateFreeValueItemForm(form: FreeValueItemFormState): FieldEr
 
   if (!Number.isFinite(valor) || valor <= 0) {
     errors.costoProveedorUnitario = "Ingresa un valor mayor a cero";
+  }
+
+  if (!form.cantidad || Number.isNaN(cantidad) || cantidad < 1) {
+    errors.cantidad = "Minimo 1";
   }
 
   return errors;
@@ -1200,7 +1208,52 @@ export function createEmptyComponentForm(
   });
 }
 
+export function reconcileWorkflowItemPricing(
+  item: CotizacionWorkflowItem,
+  items: CotizacionWorkflowItem[],
+  quotePricingMode: QuotePricingMode = "por_item"
+): CotizacionWorkflowItem {
+  if (item.tipoItem === "item_libre_con_valor") {
+    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    return calculateFreeValueItem({
+      id: item.id,
+      codigo: item.codigo,
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      valor: item.precioUnitario,
+      cantidad: item.cantidad,
+      ivaMode: presentation.ivaMode ?? "total_incluye_iva",
+      observaciones: presentation.raw,
+      allowZeroValue:
+        presentation.displayMode === "item_libre" && item.precioUnitario <= 0,
+    });
+  }
+
+  try {
+    const form = mapItemToForm(item);
+    return buildItemFromForm(form, items, item.id, { quotePricingMode });
+  } catch {
+    return item;
+  }
+}
+
+export function reconcileWorkflowItemsPricing(
+  items: CotizacionWorkflowItem[],
+  quotePricingMode: QuotePricingMode = "por_item"
+): CotizacionWorkflowItem[] {
+  const reconciled: CotizacionWorkflowItem[] = [];
+
+  for (const item of items) {
+    reconciled.push(reconcileWorkflowItemPricing(item, reconciled, quotePricingMode));
+  }
+
+  return reconciled;
+}
+
 export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWorkflowDraft {
+  const quotePricingMode = normalizeQuotePricingMode(record.quotePricingMode);
+
   return {
     clienteNombre: record.clienteNombre,
     clienteTelefono: record.clienteTelefono,
@@ -1210,8 +1263,8 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     descuentoPct: record.descuentoPct,
     flete: record.flete,
     observaciones: record.observaciones,
-    items: record.items,
-    quotePricingMode: normalizeQuotePricingMode(record.quotePricingMode),
+    items: reconcileWorkflowItemsPricing(record.items, quotePricingMode),
+    quotePricingMode,
     costoTotalFabricacion: record.costoTotalFabricacion ?? 0,
     margenGlobalPct: record.margenGlobalPct ?? 100,
     utilidadTotal: record.utilidadTotal ?? 0,
@@ -1343,19 +1396,30 @@ export function buildItemFromForm(
   const pricingMode = normalizePricingMode(form.pricingMode);
   const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
   const syncedForm = syncTemplatePricingInComponentForm(form);
+  const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
+  const hasTemplateReference =
+    typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
+  const hasTemplatePrice =
+    typeof syncedForm.precioPorM2 === "string" && syncedForm.precioPorM2.trim().length > 0;
+  const shouldUseLinePricingUnitPrice =
+    quotePricingMode !== "total_global" &&
+    pricingMode === "precio_directo" &&
+    hasTemplateReference &&
+    hasTemplatePrice &&
+    !syncedForm.precioAjustadoManual &&
+    linePricingSummary.precioUnitarioSugerido !== null;
   const costoProveedorUnitario =
-    quotePricingMode === "total_global" ? 0 : Number(syncedForm.costoProveedorUnitario || 0);
+    quotePricingMode === "total_global"
+      ? 0
+      : shouldUseLinePricingUnitPrice
+        ? linePricingSummary.precioUnitarioSugerido ?? 0
+        : Number(syncedForm.costoProveedorUnitario || 0);
   const margenPct =
     quotePricingMode === "total_global"
       ? 0
       : pricingMode === "precio_directo"
         ? 0
         : Number(syncedForm.margenPct || 0);
-  const linePricingSummary = buildComponentFormLinePricingSummary(syncedForm);
-  const hasTemplateReference =
-    typeof syncedForm.referencia === "string" && syncedForm.referencia.trim().length > 0;
-  const hasTemplatePrice =
-    typeof syncedForm.precioPorM2 === "string" && syncedForm.precioPorM2.trim().length > 0;
   const referenceParts = splitComponentReference(syncedForm.referencia, syncedForm.tipo);
   const sistema = syncedForm.sistema?.trim() || referenceParts.sistema;
   const configuracion = syncedForm.configuracion?.trim() || referenceParts.configuracion;
@@ -1472,11 +1536,13 @@ export function buildItemFromForm(
 export function applyQuotePricingToItems(
   items: CotizacionWorkflowItem[],
   pricingMode: PricingMode,
-  marginValue: string
+  marginValue: string,
+  options?: { quotePricingMode?: QuotePricingMode }
 ) {
   const normalizedMargin = pricingMode === "precio_directo" ? 0 : Number(marginValue || 0);
+  const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
 
-  return items.map((item) => {
+  const updated = items.map((item) => {
     if (item.tipoItem === "item_libre_con_valor") {
       return item;
     }
@@ -1549,6 +1615,12 @@ export function applyQuotePricingToItems(
       }),
     });
   });
+
+  if (pricingMode === "precio_directo") {
+    return reconcileWorkflowItemsPricing(updated, quotePricingMode);
+  }
+
+  return updated;
 }
 
 export function validateComponentForm(
