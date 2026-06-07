@@ -8,6 +8,7 @@ import {
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
   shouldSkipCantidadForGrupoDraft,
+  syncDraftTemplatePricing,
 } from "../use-paso-dos-agregar-grupo";
 import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -43,6 +44,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
     precioPorM2: "",
     minimoCobrable: "",
     redondeoPrecio: "1000",
+    precioAjustadoManual: false,
     margenPct: "0",
     palilloEnabled: false,
     palilloType: "",
@@ -129,6 +131,101 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(form.ancho).toBe("1200");
     expect(form.alto).toBe("1500");
     expect(form.costoProveedorUnitario).toBe("120000");
+  });
+
+  it("debe mostrar valor total sugerido por línea y guardar unitario correcto", () => {
+    const draft = createDraft({
+      cantidad: 3,
+      ancho: "1500",
+      alto: "2000",
+      referencia: "L25",
+      precioPorM2: "75000",
+      minimoCobrable: "45000",
+      redondeoPrecio: "1000",
+      precio: "75000",
+    });
+    const syncedVisibleDraft = syncDraftTemplatePricing(draft);
+
+    expect(syncedVisibleDraft.precio).toBe("675000");
+
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: syncedVisibleDraft,
+    });
+    const item = buildItemFromForm(form, [], null);
+
+    expect(form.costoProveedorUnitario).toBe("225000");
+    expect(item.precioUnitario).toBe(225000);
+    expect(item.precioTotal).toBe(675000);
+  });
+
+  it("debe respetar precio manual sin línea como total del grupo", () => {
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: createDraft({
+        cantidad: 3,
+        referencia: "",
+        precioPorM2: "",
+        precio: "450000",
+        precioAjustadoManual: true,
+        origenPrecio: "manual",
+        costInputScope: "group_total",
+      }),
+    });
+    const item = buildItemFromForm(form, [], null);
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(form.pricingMode).toBe("precio_directo");
+    expect(form.costoProveedorUnitario).toBe("450000");
+    expect(item.cantidad).toBe(3);
+    expect(item.costoProveedorUnitario).toBe(150000);
+    expect(item.precioUnitario).toBe(150000);
+    expect(item.precioTotal).toBe(450000);
+    expect(item.precioAjustadoManual).toBe(true);
+    expect(meta.encodedCostInputScope).toBe("group_total");
+    expect(meta.origenPrecio).toBe("manual");
+  });
+
+  it("debe permitir usar una línea solo como referencia y calcular con margen propio", () => {
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "margen",
+      provider: "",
+      draft: createDraft({
+        cantidad: 2,
+        referencia: "L25",
+        lineTemplateId: "tpl-l25",
+        precioPorM2: "75000",
+        minimoCobrable: "45000",
+        redondeoPrecio: "1000",
+        pricingMode: "margen",
+        precio: "100000",
+        margenPct: "80",
+        precioAjustadoManual: false,
+        costInputScope: "unit",
+      }),
+    });
+    const item = buildItemFromForm(form, [], null);
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(form.referencia).toBe("L25");
+    expect(form.pricingMode).toBe("margen");
+    expect(form.costoProveedorUnitario).toBe("100000");
+    expect(form.margenPct).toBe("80");
+    expect(item.lineaComercial).toBe("L25");
+    expect(item.precioPlantillaSugerido).toBe(135000);
+    expect(item.costoProveedorUnitario).toBe(100000);
+    expect(item.margenPct).toBe(80);
+    expect(item.precioUnitario).toBe(180000);
+    expect(item.precioTotal).toBe(360000);
+    expect(meta.lineTemplateId).toBe("tpl-l25");
+    expect(meta.pricingMode).toBe("margen");
+    expect(meta.encodedMargenPct).toBe(80);
+    expect(meta.origenPrecio).toBe("margen");
   });
 
   it("debe persistir sistema y configuracion como metadata compatible con Supabase", () => {

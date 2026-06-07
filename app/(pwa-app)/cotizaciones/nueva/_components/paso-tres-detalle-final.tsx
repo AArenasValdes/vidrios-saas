@@ -13,6 +13,8 @@ type PasoTresDetalleFinalProps = {
   subtotal: string;
   iva: string;
   flete: string;
+  redondeoComercial: string;
+  hasRedondeoComercial: boolean;
   total: string;
   quotePricingMode: QuotePricingMode;
   totalClienteManual: number | null;
@@ -32,6 +34,8 @@ export function PasoTresDetalleFinal({
   subtotal,
   iva,
   flete,
+  redondeoComercial,
+  hasRedondeoComercial,
   total,
   quotePricingMode,
   totalClienteManual,
@@ -211,6 +215,12 @@ export function PasoTresDetalleFinal({
             <div className={s.totalRow}>
               <span>Flete</span>
               <strong>{flete}</strong>
+            </div>
+          ) : null}
+          {hasRedondeoComercial ? (
+            <div className={s.totalRow}>
+              <span>Redondeo comercial</span>
+              <strong>{redondeoComercial}</strong>
             </div>
           ) : null}
         </>

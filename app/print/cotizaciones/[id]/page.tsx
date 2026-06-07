@@ -46,6 +46,18 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 const CLP = (value: number) => clpFormatter.format(value);
 type CotizacionPdfModule = typeof import("@/utils/cotizacion-pdf");
 
+function resolveCommercialRoundingAmount(input: {
+  neto: number;
+  iva: number;
+  flete: number;
+  total: number;
+}) {
+  const expectedTotal = input.neto + input.iva + input.flete;
+  const adjustment = input.total - expectedTotal;
+
+  return adjustment > 0 ? Math.round(adjustment) : 0;
+}
+
 function resolvePrintRuntimeMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
@@ -652,6 +664,14 @@ export default function CotizacionPrintPage() {
   const isTotalGlobalQuote = visibleCotizacion?.quotePricingMode === "total_global";
   const showItemPrices = !isTotalGlobalQuote;
   const quoteModeBadgeLabel = isTotalGlobalQuote ? "Total global" : "Detalle por ítems";
+  const commercialRoundingAmount = visibleCotizacion
+    ? resolveCommercialRoundingAmount({
+        neto: visibleCotizacion.neto,
+        iva: visibleCotizacion.iva,
+        flete: visibleCotizacion.flete,
+        total: visibleCotizacion.total,
+      })
+    : 0;
   const totalGlobalLeadItem = useMemo(() => {
     if (!visibleCotizacion || visibleCotizacion.quotePricingMode !== "total_global") {
       return null;
@@ -1655,6 +1675,12 @@ export default function CotizacionPrintPage() {
                         <strong>{CLP(visibleCotizacion.flete)}</strong>
                       </div>
                     ) : null}
+                    {showItemPrices && commercialRoundingAmount > 0 ? (
+                      <div className={s.totalRow}>
+                        <span>Redondeo comercial</span>
+                        <strong>{CLP(commercialRoundingAmount)}</strong>
+                      </div>
+                    ) : null}
                     <div className={`${s.totalRow} ${s.totalRowStrong}`}>
                       <span>Carpintería total</span>
                       <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
@@ -1699,6 +1725,7 @@ export default function CotizacionPrintPage() {
       companyName,
       companyLogoFallbackLabel,
       companyLogoUrl,
+      commercialRoundingAmount,
       detailHeadingLabel,
       freePrintItems,
       hasNormalizedCompanyAddress,

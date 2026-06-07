@@ -74,6 +74,14 @@ function round(value: number, digits = 2) {
   return Math.round(value * multiplier) / multiplier;
 }
 
+function roundCommercialTotal(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+
+  return Math.ceil(value / 1000) * 1000;
+}
+
 function normalizePositiveNumber(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value) || value <= 0) {
     return null;
@@ -354,7 +362,9 @@ export function calculateCotizacionWorkflowTotals(
   const descuentoValor = round(subtotal * (descuentoPct / 100), 2);
   const neto = round(subtotal - descuentoValor, 2);
   const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
-  const total = round(neto + iva + flete, 2);
+  const totalSinRedondeo = round(neto + iva + flete, 2);
+  const total = roundCommercialTotal(totalSinRedondeo);
+  const redondeoComercial = round(total - totalSinRedondeo, 2);
 
   return {
     subtotal,
@@ -362,6 +372,7 @@ export function calculateCotizacionWorkflowTotals(
     neto,
     iva,
     flete,
+    redondeoComercial,
     total,
   };
 }
@@ -389,7 +400,9 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
       .reduce((accumulator, item) => accumulator + item.precioTotal, 0),
     2
   );
-  const totalCliente = round(totalBase + extraTotal, 2);
+  const totalSinRedondeo = round(totalBase + extraTotal, 2);
+  const totalCliente = roundCommercialTotal(totalSinRedondeo);
+  const redondeoComercial = round(totalCliente - totalSinRedondeo, 2);
   const utilidadTotal = round(totalCliente - costoTotalFabricacion, 2);
   const margenGlobalPct =
     costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
@@ -404,6 +417,7 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
     neto: subtotalNeto,
     iva,
     flete: 0,
+    redondeoComercial,
     total: totalCliente,
     costoTotalFabricacion,
     margenGlobalPct,

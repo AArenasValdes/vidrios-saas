@@ -69,6 +69,8 @@ type UseFlujoNuevaCotizacionParams = {
   subtotal: string;
   iva: string;
   flete: string;
+  redondeoComercial: string;
+  hasRedondeoComercial: boolean;
   total: string;
   savedRecord: CotizacionWorkflowRecord | null;
   lastSaveMode: "borrador" | "creada" | "actualizada" | null;
@@ -252,6 +254,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     subtotal: params.subtotal,
     iva: params.iva,
     flete: params.flete,
+    redondeoComercial: params.redondeoComercial,
+    hasRedondeoComercial: params.hasRedondeoComercial,
     total: params.total,
     quotePricingMode: params.quotePricingMode,
     totalClienteManual: params.totalClienteManual,
@@ -276,6 +280,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     totalItems: params.items.length,
     subtotal: params.subtotal,
     iva: params.iva,
+    redondeoComercial: params.redondeoComercial,
+    hasRedondeoComercial: params.hasRedondeoComercial,
     total: params.total,
     mostrarIva: params.mostrarIva,
     selectedClientMode: params.clienteSeleccionado ? "Existente" as const : "Nuevo" as const,

@@ -43,7 +43,8 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.subtotal).toBe(288000);
     expect(totals.neto).toBe(288000);
     expect(totals.iva).toBe(54720);
-    expect(totals.total).toBe(342720);
+    expect(totals.redondeoComercial).toBe(280);
+    expect(totals.total).toBe(343000);
   });
 
   it("deja precios finales sin sumar IVA al final", () => {
@@ -56,6 +57,7 @@ describe("cotizaciones-workflow.service", () => {
 
     expect(totals.subtotal).toBe(100000);
     expect(totals.iva).toBe(0);
+    expect(totals.redondeoComercial).toBe(0);
     expect(totals.total).toBe(100000);
   });
 
@@ -167,7 +169,28 @@ describe("cotizaciones-workflow.service", () => {
     expect(totalsPreciosFinales.total).toBe(447000);
     expect(totalsSumarIva.subtotal).toBe(447000);
     expect(totalsSumarIva.iva).toBe(84930);
-    expect(totalsSumarIva.total).toBe(531930);
+    expect(totalsSumarIva.redondeoComercial).toBe(70);
+    expect(totalsSumarIva.total).toBe(532000);
+  });
+
+  it("redondea siempre el total final hacia arriba al millar comercial", () => {
+    const totals = calculateCotizacionWorkflowTotals(
+      [
+        createItem({
+          id: "ventana-l25",
+          precioUnitario: 225000,
+          precioTotal: 675000,
+        }),
+      ],
+      0,
+      0,
+      { mostrarIva: true }
+    );
+
+    expect(totals.subtotal).toBe(675000);
+    expect(totals.iva).toBe(128250);
+    expect(totals.redondeoComercial).toBe(750);
+    expect(totals.total).toBe(804000);
   });
 
   it("permite item libre descriptivo en cero solo cuando se habilita explicitamente", () => {

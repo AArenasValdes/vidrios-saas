@@ -28,7 +28,6 @@ import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/c
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
   normalizePricingMode,
-  normalizeCostInputScope,
   type PricingMode,
   type CostInputScope,
 } from "@/features/cotizaciones/types/pricing-mode";
@@ -101,6 +100,7 @@ export type PasoDosGrupoDraft = {
   precioPorM2: string;
   minimoCobrable: string;
   redondeoPrecio: string;
+  precioAjustadoManual: boolean;
   margenPct: string;
   palilloEnabled: boolean;
   palilloType: string;
@@ -135,8 +135,9 @@ function safeTrim(value: string | null | undefined) {
 }
 
 export function shouldSkipCantidadForGrupoDraft(
-  _draft?: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
+  draft?: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
 ) {
+  void draft;
   return false;
 }
 
@@ -247,13 +248,13 @@ export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupo
     redondeoPrecio: draft.redondeoPrecio ? Number(draft.redondeoPrecio) : 1000,
   });
 
-  if (pricing.precioUnitarioSugerido === null) {
+  if (draft.precioAjustadoManual || pricing.totalSugerido === null) {
     return draft;
   }
 
   return {
     ...draft,
-    precio: String(Math.round(pricing.precioUnitarioSugerido)),
+    precio: String(Math.round(pricing.totalSugerido)),
   };
 }
 
@@ -280,6 +281,7 @@ export function applyLineTemplateToGrupoDraft(
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
     minimoCobrable: String(Math.round(template.minimoCobrable)),
     redondeoPrecio: String(Math.round(template.redondeoPrecio || 1000)),
+    precioAjustadoManual: false,
     margenPct: "0",
   });
 }
@@ -448,6 +450,7 @@ export function createInitialPasoDosGrupoDraft({
     precioPorM2: sanitizeDigits(seedForm?.precioPorM2 ?? ""),
     minimoCobrable: sanitizeDigits(seedForm?.minimoCobrable ?? ""),
     redondeoPrecio: sanitizeDigits(seedForm?.redondeoPrecio ?? "1000"),
+    precioAjustadoManual: seedForm?.precioAjustadoManual ?? false,
     margenPct: sanitizeDigits(seedForm?.margenPct ?? suggestedForm.margenPct ?? "0"),
     ivaMode: "total_incluye_iva",
     palilloEnabled: seedForm?.palilloEnabled ?? false,
@@ -488,6 +491,7 @@ export function buildPasoDosGrupoComponentForm({
       cantidad: String(Math.max(1, draft.cantidad)),
       costoProveedorUnitario: draft.precio,
       margenPct: draft.pricingMode === "precio_directo" ? "0" : draft.margenPct || "0",
+      precioAjustadoManual: draft.precioAjustadoManual,
       loteCantidad: "1",
     },
   });
@@ -519,6 +523,7 @@ export function buildPasoDosGrupoComponentForm({
     precioPorM2: draft.precioPorM2,
     minimoCobrable: draft.minimoCobrable,
     redondeoPrecio: draft.redondeoPrecio || "1000",
+    precioAjustadoManual: draft.precioAjustadoManual,
     loteCantidad: "1",
     palilloEnabled: draft.palilloEnabled,
     palilloType: draft.palilloType,
@@ -862,6 +867,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({
       ...current,
       precio: normalizeCurrencyInput(value),
+      precioAjustadoManual: true,
     }));
   };
 

@@ -249,6 +249,10 @@ function mapCotizacionToWorkflowRecord(input: {
   const costoTotalFabricacion = input.cotizacion.costoTotal ?? 0;
   const utilidadTotal = input.cotizacion.utilidadTotal ?? 0;
   const margenGlobalPct = input.cotizacion.margenPct ?? 0;
+  const iva = input.cotizacion.iva ?? workflowTotals.iva;
+  const flete = input.cotizacion.flete ?? 0;
+  const total = input.cotizacion.total;
+  const redondeoComercial = Math.max(0, round(total - (neto + iva + flete), 2));
 
   return {
     id: String(input.cotizacion.id),
@@ -282,9 +286,10 @@ function mapCotizacionToWorkflowRecord(input: {
     subtotal,
     descuentoValor,
     neto,
-    iva: input.cotizacion.iva ?? workflowTotals.iva,
-    flete: input.cotizacion.flete ?? 0,
-    total: input.cotizacion.total,
+    iva,
+    flete,
+    redondeoComercial,
+    total,
     quotePricingMode,
     costoTotalFabricacion,
     margenGlobalPct,

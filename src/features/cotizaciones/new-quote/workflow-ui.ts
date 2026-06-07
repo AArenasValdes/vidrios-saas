@@ -1414,6 +1414,9 @@ export function buildItemFromForm(
       : shouldUseLinePricingUnitPrice
         ? linePricingSummary.precioUnitarioSugerido ?? 0
         : Number(syncedForm.costoProveedorUnitario || 0);
+  const costInputScope: CostInputScope = shouldUseLinePricingUnitPrice
+    ? "unit"
+    : (syncedForm.costInputScope ?? "unit");
   const margenPct =
     quotePricingMode === "total_global"
       ? 0
@@ -1473,13 +1476,13 @@ export function buildItemFromForm(
       ? rawDescription
       : "";
   const origenPrecio =
-    hasTemplateReference && hasTemplatePrice
+    pricingMode === "margen"
+      ? "margen"
+      : hasTemplateReference && hasTemplatePrice
       ? syncedForm.precioAjustadoManual
         ? "manual"
         : "plantilla"
-      : pricingMode === "precio_directo"
-        ? "manual"
-        : "margen";
+      : "manual";
 
   return calculateComponentItem({
     id: editingItemId ?? undefined,
@@ -1495,7 +1498,7 @@ export function buildItemFromForm(
     unidad: "unidad",
     costoProveedorUnitario,
     margenPct,
-    costInputScope: syncedForm.costInputScope,
+    costInputScope,
     precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
     minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
     redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
@@ -1526,7 +1529,7 @@ export function buildItemFromForm(
       palilloEnabled: syncedForm.palilloEnabled,
       palilloType: syncedForm.palilloType,
       margenPct: Number.isFinite(margenPct) ? margenPct : null,
-      costInputScope: syncedForm.costInputScope,
+      costInputScope,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",

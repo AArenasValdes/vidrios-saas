@@ -32,6 +32,7 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     precioPorM2: "",
     minimoCobrable: "",
     redondeoPrecio: "1000",
+    precioAjustadoManual: false,
     margenPct: "0",
     palilloEnabled: false,
     palilloType: "",
@@ -51,7 +52,8 @@ describe("paso-dos-wizard-movil state", () => {
     expect(state.cantidadDisplayValue).toBe("2");
     expect(state.canContinueFromQuantity).toBe(true);
     expect(state.canSubmitGroup).toBe(true);
-    expect(state.priceLabel).toBe("Precio unitario");
+    expect(state.priceLabel).toBe("Valor total");
+    expect(state.priceHelp).toBe("Total que cobras por todas las unidades de este grupo.");
   });
 
   it("debe bloquear continuar si la cantidad personalizada sigue vacia", () => {

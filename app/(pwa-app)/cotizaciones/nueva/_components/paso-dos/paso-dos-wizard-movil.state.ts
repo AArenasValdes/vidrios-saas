@@ -65,12 +65,12 @@ export function buildPasoDosWizardMovilState({
   const canSubmitGroup = hasCommercialDetail && hasRequiredPrice;
   const priceLabel =
     isFreeValue ? "Valor a cobrar"
-      : activePricingMode === "precio_directo" ? "Precio unitario" : "Costo base";
+      : activePricingMode === "precio_directo" ? "Valor total" : "Costo base";
   const priceHelp =
     isFreeValue
       ? "El valor que ingreses sera el total visible para el cliente."
       : activePricingMode === "precio_directo"
-        ? "Valor por unidad que cobras al cliente."
+        ? "Total que cobras por todas las unidades de este grupo."
         : "Base para calcular la venta con margen.";
 
   return {

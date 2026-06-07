@@ -62,6 +62,7 @@ export type CotizacionWorkflowRecord = {
   neto: number;
   iva: number;
   flete: number;
+  redondeoComercial?: number;
   total: number;
   quotePricingMode?: QuotePricingMode;
   costoTotalFabricacion?: number;

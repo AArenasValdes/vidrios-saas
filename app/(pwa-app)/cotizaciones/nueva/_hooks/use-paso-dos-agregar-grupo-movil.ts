@@ -351,6 +351,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({
       ...current,
       precio: normalizeCurrencyInput(value),
+      precioAjustadoManual: true,
     }));
   };
 
@@ -359,15 +360,27 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       const hasTemplate = Boolean(
         (current.referencia ?? "").trim() && (current.precioPorM2 ?? "").trim()
       );
+      const shouldClearTemplateAutoPrice =
+        pricingMode === "margen" && hasTemplate && !current.precioAjustadoManual;
 
-      return {
+      const nextDraft = {
         ...current,
         pricingMode,
         margenPct: pricingMode === "precio_directo" ? "0" : String(DEFAULT_MARGIN_PCT),
-        ...(pricingMode === "margen" && hasTemplate
+        ...(shouldClearTemplateAutoPrice
           ? { precio: "" }
           : {}),
       };
+      const directModeDraft =
+        pricingMode === "precio_directo" && hasTemplate && !nextDraft.precio.trim()
+          ? { ...nextDraft, precioAjustadoManual: false }
+          : nextDraft;
+      const resolvedDraft =
+        pricingMode === "precio_directo" && hasTemplate
+          ? syncDraftTemplatePricing(directModeDraft)
+          : directModeDraft;
+
+      return resolvedDraft;
     });
   };
 

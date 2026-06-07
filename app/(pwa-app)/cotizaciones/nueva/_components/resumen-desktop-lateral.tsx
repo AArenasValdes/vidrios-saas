@@ -11,6 +11,8 @@ type ResumenDesktopLateralProps = {
   totalItems: number;
   subtotal: string;
   iva: string;
+  redondeoComercial: string;
+  hasRedondeoComercial: boolean;
   total: string;
   mostrarIva: boolean;
   selectedClientMode: "Existente" | "Nuevo";
@@ -24,6 +26,8 @@ export function ResumenDesktopLateral({
   totalItems,
   subtotal,
   iva,
+  redondeoComercial,
+  hasRedondeoComercial,
   total,
   mostrarIva,
   selectedClientMode,
@@ -60,6 +64,12 @@ export function ResumenDesktopLateral({
           <div className={s.sideRow}>
             <span>IVA 19%</span>
             <strong>{iva}</strong>
+          </div>
+        ) : null}
+        {hasRedondeoComercial ? (
+          <div className={s.sideRow}>
+            <span>Redondeo comercial</span>
+            <strong>{redondeoComercial}</strong>
           </div>
         ) : null}
         <div className={s.sideTotal}>

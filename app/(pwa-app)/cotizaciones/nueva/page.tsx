@@ -1532,6 +1532,8 @@ function NuevaCotizacionPageContent() {
     subtotal: CLP(totals.subtotal),
     iva: CLP(totals.iva),
     flete: CLP(totals.flete),
+    redondeoComercial: CLP(totals.redondeoComercial ?? 0),
+    hasRedondeoComercial: (totals.redondeoComercial ?? 0) > 0,
     total: CLP(totals.total),
     savedRecord,
     lastSaveMode,

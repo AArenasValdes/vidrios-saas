@@ -14,6 +14,8 @@ type PasoTresResumenProps = {
   subtotal: string;
   iva: string;
   flete: string;
+  redondeoComercial: string;
+  hasRedondeoComercial: boolean;
   total: string;
   quotePricingMode: QuotePricingMode;
   totalClienteManual: number | null;
@@ -39,6 +41,8 @@ export function PasoTresResumen({
   subtotal,
   iva,
   flete,
+  redondeoComercial,
+  hasRedondeoComercial,
   total,
   quotePricingMode,
   totalClienteManual,
@@ -77,6 +81,8 @@ export function PasoTresResumen({
           subtotal={subtotal}
           iva={iva}
           flete={flete}
+          redondeoComercial={redondeoComercial}
+          hasRedondeoComercial={hasRedondeoComercial}
           total={total}
           quotePricingMode={quotePricingMode}
           totalClienteManual={totalClienteManual}
