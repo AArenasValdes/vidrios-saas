@@ -8458,6 +8458,62 @@
   margin-top: 0.3rem;
 }
 
+.costScopeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.55rem;
+  padding: 0.55rem 0 0;
+  border-top: 1px solid #ecf0f5;
+}
+
+.costScopeLabel {
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #5b6e8c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.costScopeChips {
+  display: flex;
+  gap: 6px;
+}
+
+.costScopeChip {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #d5dce6;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #60718b;
+  font-family: var(--font-sans), Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.costScopeChipActive {
+  border-color: #335ea9;
+  background: rgba(51, 94, 169, 0.09);
+  color: #243b6b;
+}
+
+.stepTwoMobileInlineHelp {
+  display: block;
+  font-size: 0.65rem;
+  color: #9AAAC0;
+  margin-top: 0;
+}
+
 .stepTwoMobileGuidanceBox {
   display: flex;
   flex-direction: column;

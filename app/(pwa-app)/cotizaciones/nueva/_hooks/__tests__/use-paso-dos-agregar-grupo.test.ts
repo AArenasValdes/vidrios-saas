@@ -44,6 +44,9 @@ function createDraft(overrides: Record<string, unknown> = {}) {
     minimoCobrable: "",
     redondeoPrecio: "1000",
     margenPct: "0",
+    palilloEnabled: false,
+    palilloType: "",
+    costInputScope: "group_total" as const,
     ...overrides,
   };
 }
@@ -145,6 +148,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
         alto: "1200",
         precio: "90000",
         margenPct: "50",
+        costInputScope: "unit",
       }),
     });
     const item = buildItemFromForm(form, [], null);

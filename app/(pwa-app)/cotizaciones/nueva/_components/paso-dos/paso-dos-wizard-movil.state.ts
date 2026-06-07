@@ -1,6 +1,9 @@
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
-import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
+import {
+  isFreeValueComponentType,
+  hasPerSystemConfigurations,
+} from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
 import { isPositiveNumber } from "./paso-dos-wizard-movil.utils";
@@ -41,12 +44,17 @@ export function buildPasoDosWizardMovilState({
     quotePricingMode === "total_global" && isFreeValue
       ? (draft.nombre ?? "").trim() !== "" && (draft.descripcion ?? "").trim() !== ""
       : (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
+  const hasPerSystem = hasPerSystemConfigurations(draft.subtipo);
   const hasCommercialDetail =
     isFreeValue
       ? hasCustomDescription
       : isTrabajoPersonalizado
         ? hasCustomDescription
-        : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "" && isPositiveNumber(draft.ancho) && isPositiveNumber(draft.alto);
+        : draft.sistema.trim() !== "" &&
+          (!hasPerSystem || draft.configuracion.trim() !== "") &&
+          draft.vidrio.trim() !== "" &&
+          isPositiveNumber(draft.ancho) &&
+          isPositiveNumber(draft.alto);
   const hasRequiredPrice =
     quotePricingMode === "total_global" && !draft.cobraPrecioSeparado
       ? true

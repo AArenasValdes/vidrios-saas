@@ -9,6 +9,7 @@ export type ComponentCatalogItem = {
   tipo: string;
   sistemas: readonly string[];
   configuraciones?: readonly string[];
+  configuracionesPorSistema?: Record<string, readonly string[]>;
   descripcion: string;
   esItemLibre?: boolean;
 };
@@ -31,8 +32,84 @@ export const COMPONENT_CATALOG = [
       },
       {
         tipo: "Puerta",
-        descripcion: "Puertas vidriadas de uso comun.",
-        sistemas: ["Corredera", "Abatible", "Pivotante"],
+        descripcion: "Puertas de aluminio o PVC con multiples sistemas y configuraciones.",
+        sistemas: [
+          "Corredera",
+          "Abatible",
+          "Pivotante",
+          "Plegable",
+          "Vaiven",
+          "Vidrio templado",
+          "Colgante",
+          "Automatica",
+          "Otro",
+        ],
+        configuracionesPorSistema: {
+          Corredera: [
+            "1 hoja movil",
+            "2 hojas: 1 fija + 1 movil",
+            "2 hojas moviles / encuentro central",
+            "3 hojas",
+            "4 hojas: 2 fijas + 2 moviles",
+            "Doble riel",
+            "Triple riel",
+            "Elevadora corredera / HS",
+            "Personalizado",
+          ],
+          Abatible: [
+            "1 hoja",
+            "2 hojas / puerta doble",
+            "1 hoja + fijo lateral",
+            "2 hojas + fijo lateral",
+            "Con fijo superior",
+            "Con fijo lateral + fijo superior",
+            "Apertura interior",
+            "Apertura exterior",
+            "Personalizado",
+          ],
+          Pivotante: [
+            "1 hoja pivotante",
+            "Pivotante + fijo lateral",
+            "Pivotante doble",
+            "Personalizado",
+          ],
+          Plegable: [
+            "2 hojas plegables",
+            "3 hojas plegables",
+            "4 hojas plegables",
+            "Acordeon",
+            "Personalizado",
+          ],
+          Vaiven: [
+            "1 hoja vaiven",
+            "2 hojas vaiven",
+            "Vidrio templado vaiven",
+            "Personalizado",
+          ],
+          "Vidrio templado": [
+            "Abatir vidrio templado",
+            "Doble hoja vidrio templado",
+            "Vaiven vidrio templado",
+            "Corredera vidrio templado",
+            "Con quicio / pivote",
+            "Personalizado",
+          ],
+          Colgante: [
+            "1 hoja colgante",
+            "2 hojas colgantes",
+            "Colgante + fijo lateral",
+            "Personalizado",
+          ],
+          Automatica: [
+            "1 hoja automatica",
+            "2 hojas automaticas",
+            "Automatica + fijo lateral",
+            "Personalizado",
+          ],
+          Otro: [
+            "Personalizado",
+          ],
+        },
       },
       {
         tipo: "Paño fijo",
@@ -225,7 +302,13 @@ export function getDefaultSystemForComponent(tipo: string) {
   return getSystemOptionsForComponent(tipo)[0] ?? "";
 }
 
-export function getDefaultConfigurationForComponent(tipo: string) {
+export function getDefaultConfigurationForComponent(tipo: string, sistema?: string) {
+  const resolvedSistema = sistema?.trim() || getDefaultSystemForComponent(tipo);
+
+  if (hasPerSystemConfigurations(tipo)) {
+    return getConfigurationOptionsForComponentSistema(tipo, resolvedSistema)[0] ?? "";
+  }
+
   return getConfigurationOptionsForComponent(tipo)[0] ?? "";
 }
 
@@ -263,15 +346,18 @@ export function composeComponentReference(sistema: string, configuracion: string
   return `${cleanSystem} - ${cleanConfiguration}`;
 }
 
-export function splitComponentReference(referencia: string | null | undefined, tipo: string) {
+export function splitComponentReference(referencia: string | null | undefined, tipo: string, sistema?: string) {
   const cleanReference = referencia?.trim() ?? "";
   const systems = getSystemOptionsForComponent(tipo);
-  const configurations = getConfigurationOptionsForComponent(tipo);
+  const resolvedSistema = sistema?.trim() || getDefaultSystemForComponent(tipo);
+  const configurations = hasPerSystemConfigurations(tipo)
+    ? getConfigurationOptionsForComponentSistema(tipo, resolvedSistema)
+    : getConfigurationOptionsForComponent(tipo);
 
   if (!cleanReference) {
     return {
-      sistema: getDefaultSystemForComponent(tipo),
-      configuracion: getDefaultConfigurationForComponent(tipo),
+      sistema: resolvedSistema,
+      configuracion: getConfigurationOptionsForComponentSistema(tipo, resolvedSistema)[0] ?? "",
     };
   }
 
@@ -304,3 +390,81 @@ export function isFreeValueComponentType(tipo: string): boolean {
 export function getComponentDescripcion(tipo: string): string {
   return findCatalogItem(tipo)?.descripcion ?? "";
 }
+
+export function getConfigurationOptionsForComponentSistema(tipo: string, sistema: string): readonly string[] {
+  const item = findCatalogItem(tipo);
+
+  if (!item) {
+    return [];
+  }
+
+  if (item.configuracionesPorSistema) {
+    const sistemaConfigs = item.configuracionesPorSistema[sistema];
+    if (sistemaConfigs && sistemaConfigs.length > 0) {
+      return sistemaConfigs;
+    }
+  }
+
+  return item.configuraciones ?? [];
+}
+
+export function getPrimarySystemOptionsForComponent(tipo: string): readonly string[] {
+  const allSystems = getSystemOptionsForComponent(tipo);
+
+  if (allSystems.length <= 3) {
+    return allSystems;
+  }
+
+  return allSystems.slice(0, 3);
+}
+
+export function getExtendedSystemOptionsForComponent(tipo: string): readonly string[] {
+  const allSystems = getSystemOptionsForComponent(tipo);
+
+  if (allSystems.length <= 3) {
+    return [];
+  }
+
+  return allSystems.slice(3);
+}
+
+export function getSystemDisplayLabel(sistema: string): string {
+  const labels: Record<string, string> = {
+    Abatible: "Abatir",
+    Vaiven: "Vaivén",
+    Automatica: "Automática",
+  };
+
+  return labels[sistema] ?? sistema;
+}
+
+export function getPalilloTypeDisplayLabel(palilloType: string): string {
+  const labels: Record<string, string> = {
+    "Cuadricula / colonial": "Cuadrícula / colonial",
+  };
+
+  return labels[palilloType] ?? palilloType;
+}
+
+export function hasPerSystemConfigurations(tipo: string): boolean {
+  const item = findCatalogItem(tipo);
+
+  if (!item) {
+    return false;
+  }
+
+  return Boolean(
+    item.configuracionesPorSistema &&
+    Object.keys(item.configuracionesPorSistema).length > 0
+  );
+}
+
+export const PALILLO_OPTIONS = ["Sin palillo", "Con palillo"] as const;
+
+export const PALILLO_TYPE_OPTIONS = [
+  "1 vertical",
+  "1 horizontal",
+  "Cruzado",
+  "Cuadricula / colonial",
+  "Personalizado",
+] as const;

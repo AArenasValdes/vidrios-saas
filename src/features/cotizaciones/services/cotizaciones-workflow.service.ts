@@ -13,6 +13,10 @@ import {
   encodeCotizacionItemPresentationMeta,
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
+import {
+  normalizeCostInputScope,
+  type CostInputScope,
+} from "@/features/cotizaciones/types/pricing-mode";
 
 const DEFAULT_FLETE = 0;
 const COTIZACION_CODE_STORAGE_PREFIX = "vidrios-saas:cotizacion-code:";
@@ -40,6 +44,7 @@ type CalculateComponentItemInput = {
   precioAjustadoManual?: boolean;
   origenPrecio?: "margen" | "plantilla" | "manual";
   observaciones?: string;
+  costInputScope?: CostInputScope;
 };
 
 type CalculateFreeValueItemInput = {
@@ -232,9 +237,19 @@ export function calculateComponentItem(
     throw new Error("El margen no puede ser negativo");
   }
 
-  const costoProveedorTotal = round(costoProveedorUnitario * cantidad, 2);
-  const precioUnitario = round(costoProveedorUnitario * (1 + margenPct / 100), 2);
+  const costInputScope = normalizeCostInputScope(input.costInputScope);
+  const costoIngresado = round(costoProveedorUnitario, 2);
+  const costoUnitario =
+    costInputScope === "group_total" && cantidad > 1
+      ? round(costoIngresado / cantidad, 2)
+      : costoIngresado;
+  const costoTotal =
+    costInputScope === "group_total"
+      ? costoIngresado
+      : round(costoUnitario * cantidad, 2);
+  const precioUnitario = round(costoUnitario * (1 + margenPct / 100), 2);
   const precioTotal = round(precioUnitario * cantidad, 2);
+  const utilidad = round(precioTotal - costoTotal, 2);
   const areaM2 =
     ancho !== null && alto !== null ? round((ancho / 1000) * (alto / 1000), 2) : null;
 
@@ -252,8 +267,8 @@ export function calculateComponentItem(
     cantidad,
     unidad: input.unidad?.trim() || "unidad",
     areaM2,
-    costoProveedorUnitario: round(costoProveedorUnitario, 2),
-    costoProveedorTotal,
+    costoProveedorUnitario: costoUnitario,
+    costoProveedorTotal: costoTotal,
     margenPct: round(margenPct, 2),
     precioUnitario,
     precioTotal,

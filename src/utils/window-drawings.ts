@@ -24,6 +24,8 @@ export type ComponentSVGParams = {
   maxW?: number;
   maxH?: number;
   variant?: "default" | "pdf";
+  palilloEnabled?: boolean;
+  palilloType?: string;
 };
 
 type Palette = {
@@ -1265,7 +1267,10 @@ function routeDrawing(
   fixedSlidingPaneIndexes: Set<number>,
   x: number, y: number, w: number, h: number,
   v: string,
-  p: Palette
+  p: Palette,
+  doorConfig?: string | null,
+  palilloEnabled?: boolean,
+  palilloType?: string
 ): string {
   const binaryLeafCount: 1 | 2 = hojasBase === 1 ? 1 : 2;
 
@@ -1277,9 +1282,7 @@ function routeDrawing(
       return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2, fixedSlidingPaneIndexes); // Corredera por defecto
 
     case "Puerta":
-      if (sistemaNorm === "Corredera") return drawPuertaCorredera(x, y, w, h, v, p);
-      if (sistemaNorm === "Pivotante") return drawPuertaPivotante(x, y, w, h, v, p);
-      return drawPuertaAbatible(x, y, w, h, v, p); // Abatible por defecto
+      return drawPuertaComposite(x, y, w, h, v, p, sistemaNorm, doorConfig, palilloEnabled, palilloType);
 
     case "PanoFijo":
       return drawPanoFijo(x, y, w, h, v, p);
@@ -1409,7 +1412,10 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     drawW,
     drawH,
     variant,
-    palette
+    palette,
+    params.configuracion,
+    params.palilloEnabled,
+    params.palilloType
   );
 
   let dimensions: string;
@@ -1450,4 +1456,653 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     "</g>",
     "</svg>",
   ].join("");
+}
+// ─── Nuevo sistema de dibujo de puertas (v2) ─────────────────────────────────
+// Este bloque se anexa al final de window-drawings.ts
+
+const PD = {
+  m: 10,
+  sw: 2.5,
+  fw: 4,
+};
+
+function pdFrame(x: number, y: number, w: number, h: number, sw: number, color: string): string {
+  return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="2" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+}
+
+function pdGlass(x: number, y: number, w: number, h: number, _frameColor?: string): string {
+  return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="0.5"/>`;
+}
+
+function pdGlassFixed(x: number, y: number, w: number, h: number, color: string): string {
+  return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="rgba(200,215,228,0.55)" stroke="${color}" stroke-width="0.5"/>`;
+}
+
+function pdDiv(x1: number, y1: number, x2: number, y2: number, color: string, sw = 1.5): string {
+  return `<line x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${color}" stroke-width="${sw}"/>`;
+}
+
+function pdHandleH(cx: number, cy: number, side: "L" | "R", color: string): string {
+  const hw = 16, hh = 3, pad = 4;
+  const x = side === "L" ? cx + pad : cx - pad - hw;
+  return [
+    `<rect x="${px(x)}" y="${px(cy - hh / 2)}" width="${px(hw)}" height="${px(hh)}" rx="1.5" fill="${color}" stroke="none"/>`,
+    `<line x1="${px(side === "L" ? x : x + hw)}" y1="${px(cy)}" x2="${px(side === "L" ? x : x + hw)}" y2="${px(cy + 8)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
+  ].join("");
+}
+
+function pdHandleBar(cx: number, cy: number, color: string): string {
+  const bh = 28;
+  return `<rect x="${px(cx - 2)}" y="${px(cy - bh / 2)}" width="4" height="${px(bh)}" rx="2" fill="${color}" stroke="none"/>`;
+}
+
+function pdHandleRound(cx: number, cy: number, color: string): string {
+  return `<circle cx="${px(cx)}" cy="${px(cy)}" r="4" fill="${color}" stroke="none"/>`;
+}
+
+function pdSwingArc(ox: number, oy: number, r: number, startDeg: number, endDeg: number, color: string): string {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const sx = ox + r * Math.cos(toRad(startDeg));
+  const sy = oy + r * Math.sin(toRad(startDeg));
+  const ex = ox + r * Math.cos(toRad(endDeg));
+  const ey = oy + r * Math.sin(toRad(endDeg));
+  const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+  const sweep = endDeg > startDeg ? 1 : 0;
+  return `<path d="M${px(sx)},${px(sy)} A${px(r)},${px(r)} 0 ${largeArc} ${sweep} ${px(ex)},${px(ey)}" fill="none" stroke="${color}" stroke-width="0.8" stroke-dasharray="3 2" opacity="0.6"/>`;
+}
+
+function pdPalillo(x: number, y: number, w: number, h: number, palilloType: string | undefined, frameColor: string): string {
+  if (!palilloType || palilloType === "Personalizado") return "";
+  const lines: string[] = [];
+  switch (palilloType) {
+    case "1 vertical":
+      lines.push(pdDiv(x + w / 2, y, x + w / 2, y + h, frameColor, 0.8));
+      break;
+    case "1 horizontal":
+      lines.push(pdDiv(x, y + h / 2, x + w, y + h / 2, frameColor, 0.8));
+      break;
+    case "Cruzado":
+      lines.push(pdDiv(x + w / 2, y, x + w / 2, y + h, frameColor, 0.8));
+      lines.push(pdDiv(x, y + h / 2, x + w, y + h / 2, frameColor, 0.8));
+      break;
+    case "Cuadricula / colonial": {
+      const cols = 2, rows = 3;
+      for (let c = 1; c < cols + 1; c++) {
+        const px2 = x + (w / (cols + 1)) * c;
+        lines.push(pdDiv(px2, y, px2, y + h, frameColor, 0.7));
+      }
+      for (let r = 1; r < rows + 1; r++) {
+        const py = y + (h / (rows + 1)) * r;
+        lines.push(pdDiv(x, py, x + w, py, frameColor, 0.7));
+      }
+      break;
+    }
+  }
+  return lines.join("\n");
+}
+
+function pdPivotDot(x: number, y: number, color: string): string {
+  return [
+    `<circle cx="${px(x)}" cy="${px(y)}" r="3.5" fill="none" stroke="${color}" stroke-width="1.5"/>`,
+    `<circle cx="${px(x)}" cy="${px(y)}" r="1.5" fill="${color}"/>`,
+  ].join("");
+}
+
+function pdWheel(cx: number, frameColor: string): string {
+  return [
+    `<circle cx="${px(cx)}" cy="${px(PD.m + 3)}" r="4" fill="none" stroke="${frameColor}" stroke-width="1.2"/>`,
+    `<circle cx="${px(cx)}" cy="${px(PD.m + 3)}" r="1.5" fill="${frameColor}"/>`,
+  ].join("");
+}
+
+function pdQuicioMark(x: number, y: number, color: string): string {
+  return `<rect x="${px(x - 5)}" y="${px(y - 4)}" width="10" height="8" rx="2" fill="${color}" opacity="0.6"/>`;
+}
+
+function pdFoldLine(cx: number, cw: number, dh: number, frameColor: string): string {
+  return `<line x1="${px(cx + cw * 0.5)}" y1="${px(PD.m)}" x2="${px(cx)}" y2="${px(PD.m + dh)}" stroke="${frameColor}" stroke-width="0.6" stroke-dasharray="3 2" opacity="0.5"/>`;
+}
+
+function pdSensor(cx: number, frameColor: string): string {
+  return `<polygon points="${px(cx - 6)},${px(PD.m)} ${px(cx + 6)},${px(PD.m)} ${px(cx)},${px(PD.m + 10)}" fill="${frameColor}" opacity="0.5"/>`;
+}
+
+const CONFIG_MAP: Record<string, string> = {
+  "1 hoja": "1_hoja",
+  "1 hoja movil": "1_hoja_movil",
+  "2 hojas: 1 fija + 1 movil": "2_hojas_1_fija_1_movil",
+  "2 hojas moviles / encuentro central": "2_hojas_moviles_encuentro_central",
+  "3 hojas": "3_hojas",
+  "4 hojas: 2 fijas + 2 moviles": "4_hojas_2_fijas_2_moviles",
+  "Doble riel": "doble_riel",
+  "Triple riel": "triple_riel",
+  "Elevadora corredera / HS": "elevadora_corredera_hs",
+  "2 hojas / puerta doble": "2_hojas_puerta_doble",
+  "1 hoja + fijo lateral": "1_hoja_fijo_lateral",
+  "2 hojas + fijo lateral": "2_hojas_fijo_lateral",
+  "Con fijo superior": "con_fijo_superior",
+  "Con fijo lateral + fijo superior": "con_fijo_lateral_fijo_superior",
+  "Apertura interior": "1_hoja",
+  "Apertura exterior": "1_hoja",
+  "Personalizado": "1_hoja",
+  "1 hoja pivotante": "1_hoja_pivotante",
+  "Pivotante + fijo lateral": "pivotante_fijo_lateral",
+  "Pivotante doble": "pivotante_doble",
+  "2 hojas plegables": "2_hojas_plegables",
+  "3 hojas plegables": "3_hojas_plegables",
+  "4 hojas plegables": "4_hojas_plegables",
+  "Acordeon": "acordeon",
+  "1 hoja vaiven": "1_hoja_vaiven",
+  "2 hojas vaiven": "2_hojas_vaiven",
+  "Vidrio templado vaiven": "vidrio_templado_vaiven",
+  "Abatir vidrio templado": "1_hoja_vidrio_templado",
+  "Doble hoja vidrio templado": "doble_hoja_vidrio_templado",
+  "Vaiven vidrio templado": "vaiven_vidrio_templado",
+  "Corredera vidrio templado": "corredera_vidrio_templado",
+  "Con quicio / pivote": "con_quicio_pivote",
+  "Con tirador": "con_tirador",
+  "1 hoja colgante": "1_hoja_colgante",
+  "2 hojas colgantes": "2_hojas_colgantes",
+  "Vidrio templado colgante": "vidrio_templado_colgante",
+  "1 hoja automatica": "1_hoja_automatica",
+  "2 hojas automaticas": "2_hojas_automaticas",
+  "Corredera automatica": "corredera_automatica",
+};
+
+function mapDoorConfig(catalogConfig: string | null | undefined): string {
+  const key = (catalogConfig ?? "").trim();
+  return CONFIG_MAP[key] ?? key.toLowerCase().replace(/\s+/g, "_");
+}
+
+
+function drawPuertaComposite(
+  x: number, y: number, w: number, h: number,
+  v: string, p: Palette,
+  sistemaNorm: string,
+  doorConfig: string | null | undefined,
+  palilloEnabled: boolean | undefined,
+  palilloType: string | undefined
+): string {
+  const config = mapDoorConfig(doorConfig);
+  const frameColor = p.frame;
+  const m = PD.m, sw = PD.sw, fw = PD.fw;
+  const dh = h - m * 2;
+  const gh = dh - fw * 2;
+
+  const usePalillo = palilloEnabled && palilloType;
+  const palType = usePalillo ? palilloType : undefined;
+
+  const corrRails = (): string => {
+    const railY1 = y + m + 3, railY2 = y + h - m - 3;
+    return [
+      `<line x1="${px(x + m)}" y1="${px(railY1)}" x2="${px(x + w - m)}" y2="${px(railY1)}" stroke="${frameColor}" stroke-width="1.5" opacity="0.4"/>`,
+      `<line x1="${px(x + m)}" y1="${px(railY2)}" x2="${px(x + w - m)}" y2="${px(railY2)}" stroke="${frameColor}" stroke-width="1.5" opacity="0.4"/>`,
+    ].join("\n");
+  };
+
+  switch (config) {
+    // ABATIR
+    case "1_hoja": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, dw, dh, sw, frameColor),
+        pdHandleH(x + m + dw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdSwingArc(x + m, y + m + dh, dw * 0.75, -90, 0, frameColor),
+      ].join("\n");
+    }
+    case "2_hojas_puerta_doble": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdSwingArc(x + m, y + m + dh, hw * 0.65, -90, 0, frameColor),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.65, -90, 180, frameColor),
+      ].join("\n");
+    }
+    case "1_hoja_fijo_lateral": {
+      const fixedW = Math.floor((w - m * 2) * 0.35);
+      const doorW = w - m * 2 - fixedW;
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, fixedW - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, fixedW, dh, sw - 0.5, frameColor),
+        pdGlass(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + fixedW, y + m, doorW, dh, sw, frameColor),
+        pdHandleH(x + m + fixedW + fw + 4, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + fixedW + doorW, y + m + dh, doorW * 0.7, -90, 180, frameColor),
+      ].join("\n");
+    }
+    case "2_hojas_fijo_lateral": {
+      const fixedW = Math.floor((w - m * 2) * 0.25);
+      const doorsW = w - m * 2 - fixedW;
+      const hw = Math.floor(doorsW / 2);
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, fixedW - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, fixedW, dh, sw - 0.5, frameColor),
+        pdGlass(x + m + fixedW + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fixedW + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + fixedW, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + fixedW + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdSwingArc(x + m + fixedW, y + m + dh, hw * 0.65, -90, 0, frameColor),
+        pdGlass(x + m + fixedW + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fixedW + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + fixedW + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + fixedW + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + fixedW + hw * 2, y + m + dh, hw * 0.65, -90, 180, frameColor),
+      ].join("\n");
+    }
+    case "con_fijo_superior": {
+      const topH = Math.floor((h - m * 2) * 0.28);
+      const botH = h - m * 2 - topH;
+      const dw = w - m * 2;
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, dw - fw * 2, topH - fw * 2, frameColor),
+        pdFrame(x + m, y + m, dw, topH, sw - 0.5, frameColor),
+        pdGlass(x + m + fw, y + m + topH + fw, dw - fw * 2, botH - fw * 2, frameColor),
+        pdPalillo(x + m + fw, y + m + topH + fw, dw - fw * 2, botH - fw * 2, palType, frameColor),
+        pdFrame(x + m, y + m + topH, dw, botH, sw, frameColor),
+        pdHandleH(x + m + dw, y + m + topH + botH / 2, "L", HANDLE_STROKE),
+        pdSwingArc(x + m, y + m + topH + botH, dw * 0.7, -90, 0, frameColor),
+      ].join("\n");
+    }
+    case "con_fijo_lateral_fijo_superior": {
+      const topH = Math.floor((h - m * 2) * 0.25);
+      const fixedW = Math.floor((w - m * 2) * 0.3);
+      const doorW = w - m * 2 - fixedW;
+      const botH = h - m * 2 - topH;
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, w - m * 2 - fw * 2, topH - fw * 2, frameColor),
+        pdFrame(x + m, y + m, w - m * 2, topH, sw - 0.5, frameColor),
+        pdGlassFixed(x + m + fw, y + m + topH + fw, fixedW - fw * 2, botH - fw * 2, frameColor),
+        pdFrame(x + m, y + m + topH, fixedW, botH, sw - 0.5, frameColor),
+        pdGlass(x + m + fixedW + fw, y + m + topH + fw, doorW - fw * 2, botH - fw * 2, frameColor),
+        pdPalillo(x + m + fixedW + fw, y + m + topH + fw, doorW - fw * 2, botH - fw * 2, palType, frameColor),
+        pdFrame(x + m + fixedW, y + m + topH, doorW, botH, sw, frameColor),
+        pdHandleH(x + m + fixedW + fw + 4, y + m + topH + botH / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + fixedW + doorW, y + m + topH + botH, doorW * 0.7, -90, 180, frameColor),
+      ].join("\n");
+    }
+
+    // CORREDERA
+    case "1_hoja_movil": {
+      const dw = w - m * 2;
+      return [
+        corrRails(),
+        pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, dw, dh, sw, frameColor),
+        pdHandleBar(x + m + dw - 14, y + m + dh / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "2_hojas_1_fija_1_movil": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        corrRails(),
+        pdGlassFixed(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw - 0.5, frameColor),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw + fw + 6, y + m + dh / 2, HANDLE_STROKE),
+        `<path d="M${px(x + m + hw + hw * 0.6)},${px(y + m + dh * 0.5)} L${px(x + m + hw * 0.4)},${px(y + m + dh * 0.5)}" fill="none" stroke="${HANDLE_STROKE}" stroke-width="1" stroke-dasharray="4 2" opacity="0.5"/>`,
+      ].join("\n");
+    }
+    case "2_hojas_moviles_encuentro_central": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        corrRails(),
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw - 10, y + m + dh / 2, HANDLE_STROKE),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw + 10, y + m + dh / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "4_hojas_2_fijas_2_moviles": {
+      const qw = Math.floor((w - m * 2) / 4);
+      const cells: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const cx = x + m + qw * i;
+        const isFixed = i === 0 || i === 3;
+        const fill = isFixed
+          ? pdGlassFixed(cx + fw, y + m + fw, qw - fw * 2, gh, frameColor)
+          : pdGlass(cx + fw, y + m + fw, qw - fw * 2, gh);
+        cells.push(fill);
+        if (!isFixed) cells.push(pdPalillo(cx + fw, y + m + fw, qw - fw * 2, gh, palType, frameColor));
+        cells.push(pdFrame(cx, y + m, qw, dh, isFixed ? sw - 0.5 : sw, frameColor));
+        if (!isFixed) cells.push(pdHandleBar(i === 1 ? cx + qw - 10 : cx + 10, y + m + dh / 2, HANDLE_STROKE));
+      }
+      return [corrRails(), ...cells].join("\n");
+    }
+    case "3_hojas": {
+      const tw = Math.floor((w - m * 2) / 3);
+      const cells: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const cx = x + m + tw * i;
+        cells.push(pdGlass(cx + fw, y + m + fw, tw - fw * 2, gh, frameColor));
+        cells.push(pdPalillo(cx + fw, y + m + fw, tw - fw * 2, gh, palType, frameColor));
+        cells.push(pdFrame(cx, y + m, tw, dh, sw, frameColor));
+        cells.push(pdHandleBar(cx + tw / 2, y + m + dh / 2, HANDLE_STROKE));
+      }
+      return [corrRails(), ...cells].join("\n");
+    }
+    case "doble_riel": {
+      const hw = Math.floor((w - m * 2) / 2);
+      const midRail = `<line x1="${px(x + m)}" y1="${px(y + m + dh / 2)}" x2="${px(x + w - m)}" y2="${px(y + m + dh / 2)}" stroke="${frameColor}" stroke-width="1" opacity="0.35"/>`;
+      return [
+        corrRails(), midRail,
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw - 10, y + m + dh / 2, HANDLE_STROKE),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw + 10, y + m + dh / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "triple_riel": {
+      const tw = Math.floor((w - m * 2) / 3);
+      const cells: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const cx = x + m + tw * i;
+        cells.push(pdGlass(cx + fw, y + m + fw, tw - fw * 2, gh, frameColor));
+        cells.push(pdFrame(cx, y + m, tw, dh, sw, frameColor));
+        cells.push(pdHandleBar(cx + tw / 2, y + m + dh / 2, HANDLE_STROKE));
+      }
+      const extraRail = `<line x1="${px(x + m)}" y1="${px(y + m + dh / 3)}" x2="${px(x + w - m)}" y2="${px(y + m + dh / 3)}" stroke="${frameColor}" stroke-width="0.8" opacity="0.3"/>`;
+      return [corrRails(), extraRail, ...cells].join("\n");
+    }
+    case "elevadora_corredera_hs": {
+      const hw = Math.floor((w - m * 2) / 2);
+      const arrows = [
+        `<path d="M${px(x + m + hw * 0.7)},${px(y + m + dh * 0.7)} L${px(x + m + hw * 0.7)},${px(y + m + dh * 0.35)}" fill="none" stroke="${HANDLE_STROKE}" stroke-width="1" stroke-dasharray="3 2" opacity="0.5"/>`,
+        `<path d="M${px(x + m + hw * 0.7)},${px(y + m + dh * 0.35)} L${px(x + m + hw * 0.2)},${px(y + m + dh * 0.35)}" fill="none" stroke="${HANDLE_STROKE}" stroke-width="1" stroke-dasharray="3 2" opacity="0.5"/>`,
+      ].join("\n");
+      return [
+        corrRails(),
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdHandleBar(x + m + hw - 12, y + m + dh / 2, HANDLE_STROKE),
+        pdGlassFixed(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw - 0.5, frameColor),
+        arrows,
+      ].join("\n");
+    }
+
+    // PIVOTANTE
+    case "1_hoja_pivotante": {
+      const dw = w - m * 2;
+      const pxPivot = x + m + dw * 0.35;
+      return [
+        pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, dw, dh, sw, frameColor),
+        pdPivotDot(pxPivot, y + m + dh / 2, frameColor),
+        pdDiv(pxPivot, y + m, pxPivot, y + m + dh, frameColor, 0.7),
+        pdHandleH(x + m + dw * 0.75, y + m + dh / 2, "L", HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "pivotante_fijo_lateral": {
+      const fixedW = Math.floor((w - m * 2) * 0.3);
+      const doorW = w - m * 2 - fixedW;
+      const pxPivot = x + m + fixedW + doorW * 0.35;
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, fixedW - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, fixedW, dh, sw - 0.5, frameColor),
+        pdGlass(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + fixedW, y + m, doorW, dh, sw, frameColor),
+        pdPivotDot(pxPivot, y + m + dh / 2, frameColor),
+        pdDiv(pxPivot, y + m, pxPivot, y + m + dh, frameColor, 0.7),
+        pdHandleH(x + m + fixedW + doorW * 0.75, y + m + dh / 2, "L", HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "pivotante_doble": {
+      const hw = Math.floor((w - m * 2) / 2);
+      const px1 = x + m + hw * 0.35;
+      const px2 = x + m + hw + hw * 0.65;
+      return [
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdPivotDot(px1, y + m + dh / 2, frameColor),
+        pdDiv(px1, y + m, px1, y + m + dh, frameColor, 0.7),
+        pdHandleH(x + m + hw * 0.8, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdPivotDot(px2, y + m + dh / 2, frameColor),
+        pdDiv(px2, y + m, px2, y + m + dh, frameColor, 0.7),
+        pdHandleH(x + m + hw + hw * 0.2, y + m + dh / 2, "R", HANDLE_STROKE),
+      ].join("\n");
+    }
+
+    // PLEGABLE
+    case "2_hojas_plegables":
+    case "3_hojas_plegables":
+    case "4_hojas_plegables":
+    case "acordeon": {
+      const leafCount = config === "2_hojas_plegables" ? 2 : config === "3_hojas_plegables" ? 3 : 4;
+      const lw = Math.floor((w - m * 2) / leafCount);
+      const parts: string[] = [];
+      for (let i = 0; i < leafCount; i++) {
+        const cx = x + m + lw * i;
+        parts.push(pdGlass(cx + fw, y + m + fw, lw - fw * 2, gh, frameColor));
+        parts.push(pdPalillo(cx + fw, y + m + fw, lw - fw * 2, gh, palType, frameColor));
+        parts.push(pdFrame(cx, y + m, lw, dh, 2, frameColor));
+        parts.push(pdFoldLine(cx, lw, dh, frameColor));
+      }
+      parts.push(pdHandleBar(x + m + lw * leafCount - 12, y + m + dh / 2, HANDLE_STROKE));
+      return parts.join("\n");
+    }
+
+    // VAIVÉN
+    case "1_hoja_vaiven": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
+        pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
+        pdFrame(x + m, y + m, dw, dh, sw, frameColor),
+        pdHandleH(x + m + dw / 2, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.4, -70, 0, frameColor),
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.4, -110, 180, frameColor),
+      ].join("\n");
+    }
+    case "2_hojas_vaiven": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdSwingArc(x + m, y + m + dh, hw * 0.6, -70, 0, frameColor),
+        pdSwingArc(x + m, y + m + dh, hw * 0.6, -110, 180, frameColor),
+        pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
+        pdHandleH(x + m + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.6, -70, 0, frameColor),
+        pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.6, -110, 180, frameColor),
+      ].join("\n");
+    }
+    case "vidrio_templado_vaiven": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
+        pdFrame(x + m, y + m, dw, dh, sw, frameColor),
+        pdHandleRound(x + m + dw / 2, y + m + gh * 0.55, HANDLE_STROKE),
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.35, -70, 0, frameColor),
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.35, -110, 180, frameColor),
+      ].join("\n");
+    }
+
+    // VIDRIO TEMPLADO
+    case "1_hoja_vidrio_templado": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m, y + m, dw, dh, frameColor),
+        pdDiv(x + m + dw / 2, y + m, x + m + dw / 2, y + m + dh, frameColor, 1),
+        pdFrame(x + m, y + m, dw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + dw - 17)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        pdQuicioMark(x + m + dw * 0.1, y + m, frameColor),
+        pdQuicioMark(x + m + dw * 0.1, y + m + dh, frameColor),
+      ].join("\n");
+    }
+    case "doble_hoja_vidrio_templado": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        pdGlass(x + m, y + m, hw - 1, dh, frameColor),
+        pdGlass(x + m + hw + 1, y + m, hw - 1, dh, frameColor),
+        pdDiv(x + m + hw, y + m, x + m + hw, y + m + dh, frameColor, 1.5),
+        pdFrame(x + m, y + m, hw, dh, 1.5, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + hw - 17)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        `<rect x="${px(x + m + hw + 11)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        pdQuicioMark(x + m + hw * 0.15, y + m, frameColor),
+        pdQuicioMark(x + m + hw * 0.15, y + m + dh, frameColor),
+        pdQuicioMark(x + m + hw + hw * 0.85, y + m, frameColor),
+        pdQuicioMark(x + m + hw + hw * 0.85, y + m + dh, frameColor),
+      ].join("\n");
+    }
+    case "vaiven_vidrio_templado": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m, y + m, dw, dh, frameColor),
+        pdFrame(x + m, y + m, dw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + dw / 2 - 3)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.35, -70, 0, frameColor),
+        pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.35, -110, 180, frameColor),
+        pdQuicioMark(x + m + dw / 2, y + m, frameColor),
+        pdQuicioMark(x + m + dw / 2, y + m + dh, frameColor),
+      ].join("\n");
+    }
+    case "corredera_vidrio_templado": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        pdGlassFixed(x + m, y + m, hw - 1, dh, frameColor),
+        pdGlass(x + m + hw + 1, y + m, hw - 1, dh, frameColor),
+        pdFrame(x + m, y + m, hw, dh, 1, frameColor),
+        pdFrame(x + m + hw, y + m, hw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + hw + 10)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        `<line x1="${px(x + m)}" y1="${px(y + m + 2)}" x2="${px(x + w - m)}" y2="${px(y + m + 2)}" stroke="${frameColor}" stroke-width="1" opacity="0.4"/>`,
+        `<line x1="${px(x + m)}" y1="${px(y + m + dh - 2)}" x2="${px(x + w - m)}" y2="${px(y + m + dh - 2)}" stroke="${frameColor}" stroke-width="1" opacity="0.4"/>`,
+      ].join("\n");
+    }
+    case "con_quicio_pivote": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m, y + m, dw, dh, frameColor),
+        pdFrame(x + m, y + m, dw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + dw * 0.62)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+        pdQuicioMark(x + m + dw * 0.12, y + m, frameColor),
+        pdQuicioMark(x + m + dw * 0.12, y + m + dh, frameColor),
+        pdSwingArc(x + m + dw * 0.12, y + m + dh, dw * 0.6, -90, 0, frameColor),
+      ].join("\n");
+    }
+    case "con_tirador": {
+      const dw = w - m * 2;
+      return [
+        pdGlass(x + m, y + m, dw, dh, frameColor),
+        pdFrame(x + m, y + m, dw, dh, 1.5, frameColor),
+        `<rect x="${px(x + m + dw / 2 - 3)}" y="${px(y + m + dh / 2 - 20)}" width="6" height="40" rx="3" fill="${HANDLE_STROKE}" opacity="0.85"/>`,
+      ].join("\n");
+    }
+
+    // COLGANTE
+    case "1_hoja_colgante": {
+      const dw = w - m * 2;
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="6" rx="2" fill="${frameColor}" opacity="0.5"/>`,
+        pdWheel(x + m + dw * 0.35, frameColor), pdWheel(x + m + dw * 0.65, frameColor),
+        pdGlass(x + m + fw, y + m + 6, dw - fw * 2, dh - 6, frameColor),
+        pdFrame(x + m, y + m + 6, dw, dh - 6, sw, frameColor),
+        pdHandleBar(x + m + dw - 14, y + m + 6 + (dh - 6) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "2_hojas_colgantes": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="6" rx="2" fill="${frameColor}" opacity="0.5"/>`,
+        pdWheel(x + m + hw * 0.35, frameColor), pdWheel(x + m + hw * 0.65, frameColor),
+        pdWheel(x + m + hw + hw * 0.35, frameColor), pdWheel(x + m + hw + hw * 0.65, frameColor),
+        pdGlass(x + m + fw, y + m + 6, hw - fw * 2, dh - 6, frameColor),
+        pdFrame(x + m, y + m + 6, hw, dh - 6, sw, frameColor),
+        pdHandleBar(x + m + hw - 12, y + m + 6 + (dh - 6) / 2, HANDLE_STROKE),
+        pdGlass(x + m + hw + fw, y + m + 6, hw - fw * 2, dh - 6, frameColor),
+        pdFrame(x + m + hw, y + m + 6, hw, dh - 6, sw, frameColor),
+        pdHandleBar(x + m + hw + 12, y + m + 6 + (dh - 6) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "vidrio_templado_colgante": {
+      const dw = w - m * 2;
+      const hw1 = Math.floor(dw * 0.45);
+      const hw2 = dw - hw1;
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="6" rx="2" fill="${frameColor}" opacity="0.5"/>`,
+        pdWheel(x + m + hw1 * 0.3, frameColor), pdWheel(x + m + hw1 * 0.7, frameColor),
+        pdWheel(x + m + hw1 + hw2 * 0.3, frameColor), pdWheel(x + m + hw1 + hw2 * 0.7, frameColor),
+        pdGlass(x + m, y + m + 6, hw1 - 1, dh - 6, frameColor),
+        pdGlassFixed(x + m + hw1 + 1, y + m + 6, hw2, dh - 6, frameColor),
+        pdFrame(x + m, y + m + 6, hw1, dh - 6, 2, frameColor),
+        pdFrame(x + m + hw1, y + m + 6, hw2, dh - 6, 2, frameColor),
+        pdHandleBar(x + m + hw1 - 12, y + m + 6 + (dh - 6) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+
+    // AUTOMÁTICA
+    case "1_hoja_automatica": {
+      const dw = w - m * 2;
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="5" rx="1" fill="${frameColor}" opacity="0.6"/>`,
+        pdSensor(x + m + dw / 2, frameColor),
+        pdGlass(x + m + fw, y + m + 5, dw - fw * 2, dh - 5, frameColor),
+        pdFrame(x + m, y + m + 5, dw, dh - 5, 2, frameColor),
+        pdHandleBar(x + m + dw - 14, y + m + 5 + (dh - 5) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "2_hojas_automaticas": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="5" rx="1" fill="${frameColor}" opacity="0.6"/>`,
+        pdSensor(x + m + hw / 2, frameColor), pdSensor(x + m + hw + hw / 2, frameColor),
+        pdGlass(x + m + fw, y + m + 5, hw - fw * 2, dh - 5, frameColor),
+        pdFrame(x + m, y + m + 5, hw, dh - 5, 2, frameColor),
+        pdHandleBar(x + m + hw - 12, y + m + 5 + (dh - 5) / 2, HANDLE_STROKE),
+        pdGlass(x + m + hw + fw, y + m + 5, hw - fw * 2, dh - 5, frameColor),
+        pdFrame(x + m + hw, y + m + 5, hw, dh - 5, 2, frameColor),
+        pdHandleBar(x + m + hw + 12, y + m + 5 + (dh - 5) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+    case "corredera_automatica": {
+      const hw = Math.floor((w - m * 2) / 2);
+      return [
+        `<rect x="${px(x + m)}" y="${px(y + m)}" width="${px(w - m * 2)}" height="5" rx="1" fill="${frameColor}" opacity="0.6"/>`,
+        pdSensor(x + m + (w - m * 2) / 2, frameColor),
+        pdGlassFixed(x + m + fw, y + m + 5, hw - fw * 2, dh - 5, frameColor),
+        pdFrame(x + m, y + m + 5, hw, dh - 5, 1.5, frameColor),
+        pdGlass(x + m + hw + fw, y + m + 5, hw - fw * 2, dh - 5, frameColor),
+        pdFrame(x + m + hw, y + m + 5, hw, dh - 5, 2, frameColor),
+        pdHandleBar(x + m + hw + 12, y + m + 5 + (dh - 5) / 2, HANDLE_STROKE),
+      ].join("\n");
+    }
+
+    // GENÉRICO / FALLBACK
+    default: {
+      const dw = w - m * 2;
+      const dh2 = h - m * 2;
+      return [
+        pdGlass(x + m + 5, y + m + 5, dw - 10, dh2 - 10, frameColor),
+        pdFrame(x + m, y + m, dw, dh2, 3, frameColor),
+        pdHandleH(x + m + dw, y + m + dh2 / 2, "L", HANDLE_STROKE),
+      ].join("\n");
+    }
+  }
 }

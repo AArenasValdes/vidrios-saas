@@ -31,6 +31,7 @@ import type {
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  DEFAULT_MARGIN_PCT,
   normalizePricingMode,
   type PricingMode,
 } from "@/features/cotizaciones/types/pricing-mode";
@@ -1316,10 +1317,14 @@ function NuevaCotizacionPageContent() {
       const nextMarginValue =
         pricingMode === "precio_directo"
           ? "0"
-          : current.pricingMode === "precio_directo"
-            ? "0"
-            : current.margenPct || "0";
+          : pricingMode === "margen"
+            ? String(DEFAULT_MARGIN_PCT)
+            : "0";
       resolvedMarginValue = nextMarginValue;
+
+      const hasTemplate = Boolean(
+        current.referencia.trim() && current.precioPorM2.trim()
+      );
 
       const next = buildSuggestedComponentForm({
         items: draft.items,
@@ -1331,6 +1336,9 @@ function NuevaCotizacionPageContent() {
           ...current,
           pricingMode,
           margenPct: nextMarginValue,
+          ...(pricingMode === "margen" && hasTemplate && !current.precioAjustadoManual
+            ? { costoProveedorUnitario: "" }
+            : {}),
         },
       });
 
@@ -1648,7 +1656,7 @@ function NuevaCotizacionPageContent() {
               onSubmit: handleSubmitFreeValueItem,
               onCancel: handleCloseFreeValueItemForm,
             },
-            items: draft.items,
+            items: effectiveWorkflowItems,
             subtotal: CLP(totals.subtotal),
             total: CLP(totals.total),
             pricingMode: componentForm.pricingMode,
@@ -1697,6 +1705,9 @@ function NuevaCotizacionPageContent() {
               onColorChange: pasoDosAgregarGrupoMovil.updateColorHex,
               onSistemaChange: pasoDosAgregarGrupoMovil.updateSistema,
               onConfiguracionChange: pasoDosAgregarGrupoMovil.updateConfiguracion,
+              onPalilloEnabledChange: pasoDosAgregarGrupoMovil.updatePalilloEnabled,
+              onPalilloTypeChange: pasoDosAgregarGrupoMovil.updatePalilloType,
+              onCostInputScopeChange: pasoDosAgregarGrupoMovil.updateCostInputScope,
               onSheetSchemeChange: pasoDosAgregarGrupoMovil.updateSheetScheme,
               onSheetVariantChange: pasoDosAgregarGrupoMovil.updateSheetVariant,
               onCustomSchemeDescriptionChange: pasoDosAgregarGrupoMovil.updateCustomSchemeDescription,

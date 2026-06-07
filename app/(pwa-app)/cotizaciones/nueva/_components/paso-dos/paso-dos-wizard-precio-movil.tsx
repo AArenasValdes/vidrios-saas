@@ -1,14 +1,17 @@
 "use client";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
 
 import s from "../../page.module.css";
 
 type Props = {
   activePricingMode: PricingMode;
+  costInputScope: CostInputScope;
   formattedPriceValue: string;
   marginValue: string;
   hideMargenOption?: boolean;
+  onCostInputScopeChange: (scope: CostInputScope) => void;
   onMargenChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
@@ -18,9 +21,11 @@ type Props = {
 
 export function PasoDosWizardPrecioMovil({
   activePricingMode,
+  costInputScope,
   formattedPriceValue,
   marginValue,
   hideMargenOption = false,
+  onCostInputScopeChange,
   onMargenChange,
   onPrecioChange,
   onPricingModeChange,
@@ -71,7 +76,7 @@ export function PasoDosWizardPrecioMovil({
               className={s.stepTwoMobileMarginInput}
               id="grupo-margen"
               inputMode="numeric"
-              placeholder="60"
+              placeholder="100"
               type="text"
               value={marginValue}
               onChange={(event) => onMargenChange(event.target.value)}
@@ -93,6 +98,34 @@ export function PasoDosWizardPrecioMovil({
         value={formattedPriceValue}
         onChange={(event) => onPrecioChange(event.target.value)}
       />
+
+      {activePricingMode === "margen" ? (
+        <div className={s.costScopeRow}>
+          <span className={s.costScopeLabel}>Este costo corresponde a</span>
+          <div className={s.costScopeChips}>
+            <button
+              className={`${s.costScopeChip} ${costInputScope === "group_total" ? s.costScopeChipActive : ""}`}
+              onClick={() => onCostInputScopeChange("group_total")}
+              type="button"
+            >
+              Total del grupo
+            </button>
+            <button
+              className={`${s.costScopeChip} ${costInputScope === "unit" ? s.costScopeChipActive : ""}`}
+              onClick={() => onCostInputScopeChange("unit")}
+              type="button"
+            >
+              Por unidad
+            </button>
+          </div>
+          <span className={s.stepTwoMobileInlineHelp}>
+            {costInputScope === "group_total"
+              ? "Aplica a todas las unidades del grupo."
+              : "Se multiplicará por la cantidad."}
+          </span>
+        </div>
+      ) : null}
+
       <span className={s.stepTwoMobileBlockHelp}>{priceHelp}</span>
     </div>
   );

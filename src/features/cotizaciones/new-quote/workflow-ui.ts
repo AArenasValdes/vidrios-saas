@@ -22,7 +22,10 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import {
   normalizePricingMode,
+  normalizeCostInputScope,
+  DEFAULT_MARGIN_PCT,
   type PricingMode,
+  type CostInputScope,
 } from "@/features/cotizaciones/types/pricing-mode";
 import {
   normalizeQuotePricingMode,
@@ -69,6 +72,9 @@ export type ComponentFormState = {
   observaciones: string;
   colorHex: string;
   loteCantidad: string;
+  palilloEnabled?: boolean;
+  palilloType?: string;
+  costInputScope?: CostInputScope;
 };
 
 export type FieldErrors = Partial<
@@ -624,10 +630,11 @@ export function buildCommercialComponentDisplayName(
   form: Pick<
     ComponentFormState,
     "tipo" | "sistema" | "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
-  >
+  > & { configuracion?: string; palilloEnabled?: boolean; palilloType?: string }
 ) {
   const tipo = form.tipo.trim() || "Componente";
   const sistema = form.sistema?.trim() ?? "";
+  const configuracion = (form as { configuracion?: string }).configuracion?.trim() ?? "";
   const normalizedTipo = normalizeSearchValue(tipo);
   const normalizedSistema = normalizeSearchValue(sistema);
   const scheme = form.sheetScheme.trim();
@@ -636,12 +643,22 @@ export function buildCommercialComponentDisplayName(
     normalizedTipo === "ventana" &&
     Boolean(normalizedSistema) &&
     normalizedScheme.startsWith(normalizedSistema);
-  const base =
+  const baseSistema =
     sistema && !shouldAvoidDuplicatedSystem && shouldShowSystemSelectionForComponent(tipo)
       ? `${tipo} ${sistema.toLowerCase()}`
       : tipo;
+  const base = configuracion ? `${baseSistema} ${configuracion.toLowerCase()}` : baseSistema;
 
   if (!shouldShowSheetSchemeForComponent({ tipo, sistema })) {
+    const palilloEnabled = (form as { palilloEnabled?: boolean }).palilloEnabled;
+    const palilloType = (form as { palilloType?: string }).palilloType?.trim();
+    if (palilloEnabled && palilloType) {
+      return `${base} con palillo ${palilloType.toLowerCase()}`;
+    }
+    if (palilloEnabled) {
+      return `${base} con palillo`;
+    }
+
     return base;
   }
 
@@ -962,7 +979,7 @@ function resolveSuggestedMarginValue(
     return "0";
   }
 
-  const baseValue = defaultMargin ?? suggestionMarginPct;
+  const baseValue = defaultMargin ?? DEFAULT_MARGIN_PCT;
 
   return pickSuggestedString(currentValue, String(baseValue));
 }
@@ -1004,6 +1021,14 @@ export function syncTemplatePricingInComponentForm(
     pricingSummary.precioUnitarioSugerido !== null
       ? String(Math.round(pricingSummary.precioUnitarioSugerido))
       : "";
+
+  if (form.pricingMode === "margen") {
+    return {
+      ...form,
+      precioPlantillaSugerido: suggestedPrice,
+      origenPrecio: "margen" as ComponentFormState["origenPrecio"],
+    };
+  }
 
   const nextForm: ComponentFormState = {
     ...form,
@@ -1220,6 +1245,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     precioPlantillaSugerido,
     precioAjustadoManual,
     origenPrecio,
+    encodedMargenPct,
+    encodedCostInputScope,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -1249,8 +1276,20 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     ancho: item.ancho ? String(item.ancho) : "",
     alto: item.alto ? String(item.alto) : "",
     cantidad: String(item.cantidad),
-    costoProveedorUnitario: String(item.costoProveedorUnitario),
-    margenPct: String(item.margenPct),
+    costoProveedorUnitario: String(
+      encodedCostInputScope === "group_total" && item.cantidad > 0
+        ? Math.round(item.costoProveedorUnitario * item.cantidad)
+        : item.costoProveedorUnitario
+    ),
+    margenPct: String(
+      item.margenPct > 0
+        ? item.margenPct
+        : encodedMargenPct !== null && encodedMargenPct > 0
+          ? encodedMargenPct
+          : pricingMode === "margen"
+            ? DEFAULT_MARGIN_PCT
+            : 0
+    ),
     precioPorM2:
       precioPorM2 !== null
         ? String(Math.round(precioPorM2))
@@ -1280,6 +1319,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     observaciones: raw,
     colorHex: normalizeLegacyAluminumColorHex(colorHex),
     loteCantidad: "1",
+    costInputScope: (encodedCostInputScope || "unit") as CostInputScope,
   };
 }
 
@@ -1344,6 +1384,9 @@ export function buildItemFromForm(
     sheetVariant,
     customSchemeDescription,
     isCustomScheme,
+    configuracion,
+    palilloEnabled: syncedForm.palilloEnabled,
+    palilloType: syncedForm.palilloType,
   });
   const autoName = form.nombre.trim() || generatedDisplayName || buildAutoComponentName(form);
   const rawDescription = form.descripcion.trim();
@@ -1377,6 +1420,7 @@ export function buildItemFromForm(
     unidad: "unidad",
     costoProveedorUnitario,
     margenPct,
+    costInputScope: syncedForm.costInputScope,
     precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
     minimoCobrable: syncedForm.minimoCobrable ? Number(syncedForm.minimoCobrable) : null,
     redondeoPrecio: syncedForm.redondeoPrecio ? Number(syncedForm.redondeoPrecio) : null,
@@ -1404,6 +1448,10 @@ export function buildItemFromForm(
       precioAjustadoManual:
         quotePricingMode === "total_global" ? false : syncedForm.precioAjustadoManual,
       origenPrecio: quotePricingMode === "total_global" ? "manual" : origenPrecio,
+      palilloEnabled: syncedForm.palilloEnabled,
+      palilloType: syncedForm.palilloType,
+      margenPct: Number.isFinite(margenPct) ? margenPct : null,
+      costInputScope: syncedForm.costInputScope,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",

@@ -33,6 +33,9 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     minimoCobrable: "",
     redondeoPrecio: "1000",
     margenPct: "0",
+    palilloEnabled: false,
+    palilloType: "",
+    costInputScope: "group_total" as const,
     ...overrides,
   };
 }

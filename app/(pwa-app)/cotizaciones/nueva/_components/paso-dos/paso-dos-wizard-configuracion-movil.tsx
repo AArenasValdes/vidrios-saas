@@ -23,7 +23,11 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
   getComponentDescripcion,
+  getSystemDisplayLabel,
+  getPalilloTypeDisplayLabel,
   isFreeValueComponentType,
+  PALILLO_OPTIONS,
+  PALILLO_TYPE_OPTIONS,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
 import {
@@ -97,6 +101,9 @@ type Props = {
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onPalilloEnabledChange: (enabled: boolean) => void;
+  onPalilloTypeChange: (palilloType: string) => void;
+  onCostInputScopeChange: (scope: "group_total" | "unit") => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: (initialNombre?: string) => void;
   onUpdateAlcanceDetalle: (
@@ -157,6 +164,9 @@ export function PasoDosWizardConfiguracionMovil({
   onPricingModeChange,
   onSistemaChange,
   onVidrioChange,
+  onPalilloEnabledChange,
+  onPalilloTypeChange,
+  onCostInputScopeChange,
   onCobraPrecioSeparadoChange,
   onAddAlcanceDetalle,
   onUpdateAlcanceDetalle,
@@ -1101,7 +1111,7 @@ export function PasoDosWizardConfiguracionMovil({
               onClick={() => onSistemaChange(option)}
               type="button"
             >
-              {repairBrokenText(option)}
+              {repairBrokenText(getSystemDisplayLabel(option))}
             </button>
           ))}
         </div>
@@ -1120,7 +1130,9 @@ export function PasoDosWizardConfiguracionMovil({
 
       {displayConfigurationOptions.length > 0 ? (
         <div className={s.stepTwoMobileBlockSecundario}>
-          <div className={s.stepTwoMobileBlockLabel}>Configuración</div>
+          <div className={s.stepTwoMobileBlockLabel}>
+            {draft.subtipo === "Puerta" ? "Configuración de puerta" : "Configuración"}
+          </div>
           <div className={s.stepTwoMobileChoiceChips}>
             {displayConfigurationOptions.map((option) => (
               <button
@@ -1142,6 +1154,45 @@ export function PasoDosWizardConfiguracionMovil({
             >
               {showAllConfigurations ? "Mostrar menos" : "Ver más opciones"}
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!isTrabajoPersonalizado && !isFreeValue && draft.subtipo === "Puerta" ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockLabel}>Palillo</div>
+          <div className={s.stepTwoMobileChoiceChips}>
+            {PALILLO_OPTIONS.map((option) => (
+              <button
+                key={option}
+                className={`${s.stepTwoMobileChoiceChip} ${
+                  (option === "Con palillo" && draft.palilloEnabled) ||
+                  (option === "Sin palillo" && !draft.palilloEnabled)
+                    ? s.stepTwoMobileChoiceChipActive
+                    : ""
+                }`}
+                onClick={() => onPalilloEnabledChange(option === "Con palillo")}
+                type="button"
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          {draft.palilloEnabled ? (
+            <div className={s.stepTwoMobileChoiceChips} style={{ marginTop: 6 }}>
+              {PALILLO_TYPE_OPTIONS.map((typeOption) => (
+                <button
+                  key={typeOption}
+                  className={`${s.stepTwoMobileChoiceChip} ${s.stepTwoMobileChoiceChipSmall} ${
+                    draft.palilloType === typeOption ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onPalilloTypeChange(typeOption)}
+                  type="button"
+                >
+                  {getPalilloTypeDisplayLabel(typeOption)}
+                </button>
+              ))}
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -1835,8 +1886,10 @@ export function PasoDosWizardConfiguracionMovil({
       {quotePricingMode === "por_item" ? (
         <PasoDosWizardPrecioMovil
           activePricingMode={activePricingMode}
+          costInputScope={draft.costInputScope}
           formattedPriceValue={formattedPriceValue}
           marginValue={draft.margenPct}
+          onCostInputScopeChange={onCostInputScopeChange}
           onMargenChange={onMargenChange}
           onPrecioChange={onPrecioChange}
           onPricingModeChange={onPricingModeChange}

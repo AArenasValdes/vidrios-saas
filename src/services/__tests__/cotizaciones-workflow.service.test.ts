@@ -39,6 +39,7 @@ describe("cotizaciones-workflow.service", () => {
       cantidad: 2,
       costoProveedorUnitario: 300000,
       margenPct: 100,
+      costInputScope: "unit",
     });
 
     expect(item.areaM2).toBe(3.96);

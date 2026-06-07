@@ -21,6 +21,13 @@ function createItems(count: number): CotizacionWorkflowItem[] {
     precioUnitario: 100000,
     precioTotal: 100000,
     observaciones: "",
+    lineaComercial: "",
+    precioPorM2: null,
+    minimoCobrable: null,
+    redondeoPrecio: null,
+    precioPlantillaSugerido: null,
+    precioAjustadoManual: false,
+    origenPrecio: "margen" as const,
   }));
 }
 
@@ -44,6 +51,13 @@ function createFreeItem(id: string, nombre: string): CotizacionWorkflowItem {
     precioUnitario: 120000,
     precioTotal: 120000,
     observaciones: "[dm:item_libre]",
+    lineaComercial: "",
+    precioPorM2: null,
+    minimoCobrable: null,
+    redondeoPrecio: null,
+    precioPlantillaSugerido: null,
+    precioAjustadoManual: false,
+    origenPrecio: "manual" as const,
   };
 }
 

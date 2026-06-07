@@ -85,6 +85,9 @@ export type WizardActions = {
   onColorChange: (colorHex: string) => void;
   onSistemaChange: (value: string) => void;
   onConfiguracionChange: (value: string) => void;
+  onPalilloEnabledChange: (enabled: boolean) => void;
+  onPalilloTypeChange: (palilloType: string) => void;
+  onCostInputScopeChange: (scope: "group_total" | "unit") => void;
   onSheetSchemeChange: (value: string) => void;
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
@@ -336,7 +339,10 @@ export function PasoDosWizardMovil({
   const displaySystemOptions = showAllSystems
     ? wizard.systemOptions
     : visibleSystemOptions;
-  const visibleConfigurationOptions = wizard.configurationOptions.slice(0, 3);
+  const visibleConfigurationOptions = wizard.configurationOptions.slice(
+    0,
+    wizard.draft.subtipo === "Puerta" ? 6 : 3
+  );
   const displayConfigurationOptions = showAllConfigurations
     ? wizard.configurationOptions
     : visibleConfigurationOptions;
@@ -520,6 +526,9 @@ export function PasoDosWizardMovil({
                   onSelectLineTemplate={wizard.onSelectLineTemplate}
                   onColorChange={wizard.onColorChange}
                   onConfiguracionChange={wizard.onConfiguracionChange}
+                  onPalilloEnabledChange={wizard.onPalilloEnabledChange}
+                  onPalilloTypeChange={wizard.onPalilloTypeChange}
+                  onCostInputScopeChange={wizard.onCostInputScopeChange}
                   onSheetSchemeChange={wizard.onSheetSchemeChange}
                   onSheetVariantChange={wizard.onSheetVariantChange}
                   onCustomSchemeDescriptionChange={wizard.onCustomSchemeDescriptionChange}

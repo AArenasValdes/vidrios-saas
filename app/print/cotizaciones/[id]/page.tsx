@@ -762,6 +762,8 @@ export default function CotizacionPrintPage() {
         sheetVariant,
         customSchemeDescription,
         isCustomScheme,
+        palilloEnabled,
+        palilloType,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -785,12 +787,14 @@ export default function CotizacionPrintPage() {
       });
       const specs = [
         { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
+        ...(configuracion ? [{ key: "Configuración", value: configuracion }] : []),
         ...(shouldShowSheetSchemeSpec ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
         { key: "Sistema", value: systemLabel },
         { key: "Línea", value: lineLabel },
         { key: "Material", value: material },
         { key: "Color", value: colorName },
         { key: "Vidrio", value: item.vidrio || "-" },
+        ...(palilloEnabled ? [{ key: "Palillo", value: palilloType || "Con palillo" }] : []),
         { key: "Superficie", value: surface },
       ];
       map.set(item.id, {
@@ -825,6 +829,8 @@ export default function CotizacionPrintPage() {
           maxW: 470,
           maxH: 210,
           variant: "pdf",
+          palilloEnabled,
+          palilloType: palilloType || undefined,
         }),
       });
     }
@@ -1445,8 +1451,12 @@ export default function CotizacionPrintPage() {
                     ];
                 const drawingSvg =
                   presentation?.drawingSvg ??
-                  generateComponentSVG({
+                  (() => {
+                    const fallbackMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                    return generateComponentSVG({
                     tipo: item.tipo,
+                    sistema: fallbackMeta.sistema || presentation?.sistema,
+                    configuracion: fallbackMeta.configuracion || presentation?.configuracion,
                     hojasBase: presentation?.hojasBase,
                     sheetScheme: presentation?.sheetScheme,
                     sheetVariant: presentation?.sheetVariant,
@@ -1459,7 +1469,10 @@ export default function CotizacionPrintPage() {
                     maxW: 470,
                     maxH: 210,
                     variant: "pdf",
+                    palilloEnabled: fallbackMeta.palilloEnabled,
+                    palilloType: fallbackMeta.palilloType || undefined,
                   });
+                  })();
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
 
                 return (

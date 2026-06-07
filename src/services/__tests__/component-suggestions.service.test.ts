@@ -16,7 +16,7 @@ describe("component-suggestions.service", () => {
       tipo: "Ventana",
       material: "Aluminio",
       vidrio: "Incoloro monolítico 5mm",
-      margenPct: 80,
+      margenPct: 100,
       referencia: "",
     });
   });
@@ -37,7 +37,7 @@ describe("component-suggestions.service", () => {
     expect(suggestion).toMatchObject({
       tipo: "Mampara especial",
       material: "Aluminio",
-      margenPct: 70,
+      margenPct: 100,
       referencia: "",
     });
   });

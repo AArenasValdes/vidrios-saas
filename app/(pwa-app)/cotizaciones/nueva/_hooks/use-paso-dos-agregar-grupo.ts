@@ -28,14 +28,18 @@ import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/c
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
   normalizePricingMode,
+  normalizeCostInputScope,
   type PricingMode,
+  type CostInputScope,
 } from "@/features/cotizaciones/types/pricing-mode";
 import {
   composeComponentReference,
   getBaseLeafCountForComponent,
   getConfigurationOptionsForComponent,
+  getConfigurationOptionsForComponentSistema,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
+  hasPerSystemConfigurations,
   isFreeValueComponentType,
   resolveCanonicalComponentType,
   resolveComponentCategory,
@@ -98,6 +102,9 @@ export type PasoDosGrupoDraft = {
   minimoCobrable: string;
   redondeoPrecio: string;
   margenPct: string;
+  palilloEnabled: boolean;
+  palilloType: string;
+  costInputScope: CostInputScope;
 };
 
 export type PasoDosGrupoPaso = 1 | 2 | 3 | 4 | 5;
@@ -227,6 +234,10 @@ export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupo
     return draft;
   }
 
+  if (draft.pricingMode === "margen") {
+    return draft;
+  }
+
   const pricing = calculateLineTemplatePricing({
     ancho: draft.ancho ? Number(draft.ancho) : null,
     alto: draft.alto ? Number(draft.alto) : null,
@@ -319,7 +330,11 @@ export function getSystemOptionsForSubtype(subtipo: string) {
   return getSystemOptionsForComponent(subtipo);
 }
 
-export function getConfigurationOptionsForSubtype(subtipo: string) {
+export function getConfigurationOptionsForSubtype(subtipo: string, sistema?: string) {
+  if (sistema && hasPerSystemConfigurations(subtipo)) {
+    return getConfigurationOptionsForComponentSistema(subtipo, sistema);
+  }
+
   return getConfigurationOptionsForComponent(subtipo);
 }
 
@@ -393,9 +408,11 @@ export function createInitialPasoDosGrupoDraft({
     current: seedForm ?? undefined,
   });
   const systemOptions = getSystemOptionsForSubtype(seededSubtype);
+  const resolvedSistema = seedForm?.sistema?.trim() || systemOptions[0] || "";
   const referenceParts = splitComponentReference(
     seedForm?.referencia || suggestedForm.referencia,
-    seededSubtype
+    seededSubtype,
+    resolvedSistema
   );
   const referencia = seedForm?.referencia ?? suggestedForm.referencia ?? "";
 
@@ -433,6 +450,9 @@ export function createInitialPasoDosGrupoDraft({
     redondeoPrecio: sanitizeDigits(seedForm?.redondeoPrecio ?? "1000"),
     margenPct: sanitizeDigits(seedForm?.margenPct ?? suggestedForm.margenPct ?? "0"),
     ivaMode: "total_incluye_iva",
+    palilloEnabled: seedForm?.palilloEnabled ?? false,
+    palilloType: seedForm?.palilloType ?? "",
+    costInputScope: seedForm?.costInputScope ?? "group_total" as CostInputScope,
   };
 }
 
@@ -500,6 +520,9 @@ export function buildPasoDosGrupoComponentForm({
     minimoCobrable: draft.minimoCobrable,
     redondeoPrecio: draft.redondeoPrecio || "1000",
     loteCantidad: "1",
+    palilloEnabled: draft.palilloEnabled,
+    palilloType: draft.palilloType,
+    costInputScope: draft.costInputScope,
   });
 }
 
@@ -517,7 +540,8 @@ export function buildPasoDosGrupoSelectionPatch({
     pricingMode,
   });
   const systemOptions = getSystemOptionsForSubtype(subtipo);
-  const configurationOptions = getConfigurationOptionsForSubtype(subtipo);
+  const defaultSistema = systemOptions[0] || "";
+  const configurationOptions = getConfigurationOptionsForSubtype(subtipo, defaultSistema);
 
   return {
     subtipo,
@@ -528,7 +552,7 @@ export function buildPasoDosGrupoSelectionPatch({
     pricingMode: normalizePricingMode(current.pricingMode),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
-    sistema: systemOptions[0] || "",
+    sistema: defaultSistema,
     configuracion: configurationOptions[0] || "",
     sheetScheme: "",
     sheetVariant: "",
@@ -543,6 +567,9 @@ export function buildPasoDosGrupoSelectionPatch({
     cobraPrecioSeparado: false,
     alcanceDetalles: [],
     vidrio: suggestedForm.vidrio,
+    palilloEnabled: false,
+    palilloType: "",
+    costInputScope: "group_total" as CostInputScope,
   } satisfies Pick<
     PasoDosGrupoDraft,
     | "subtipo"
@@ -564,6 +591,9 @@ export function buildPasoDosGrupoSelectionPatch({
     | "cobraPrecioSeparado"
     | "alcanceDetalles"
     | "vidrio"
+    | "palilloEnabled"
+    | "palilloType"
+    | "costInputScope"
   >;
 }
 
@@ -613,8 +643,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     [draft.subtipo]
   );
   const configurationOptions = useMemo(
-    () => getConfigurationOptionsForSubtype(draft.subtipo),
-    [draft.subtipo]
+    () => getConfigurationOptionsForSubtype(draft.subtipo, draft.sistema),
+    [draft.subtipo, draft.sistema]
   );
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo),
@@ -734,10 +764,13 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       const shouldKeepComposition =
         shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
         sheetSchemeOptions.includes(current.sheetScheme);
+      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
+      const nextConfig = nextConfigOptions[0] || "";
 
       return {
         ...current,
         sistema,
+        configuracion: nextConfig,
         ...(shouldKeepComposition
           ? {}
           : {
@@ -752,6 +785,22 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
 
   const updateConfiguracion = (configuracion: string) => {
     setDraft((current) => ({ ...current, configuracion }));
+  };
+
+  const updatePalilloEnabled = (enabled: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      palilloEnabled: enabled,
+      palilloType: enabled ? current.palilloType : "",
+    }));
+  };
+
+  const updatePalilloType = (palilloType: string) => {
+    setDraft((current) => ({ ...current, palilloType }));
+  };
+
+  const updateCostInputScope = (scope: CostInputScope) => {
+    setDraft((current) => ({ ...current, costInputScope: scope }));
   };
 
   const updateSheetScheme = (sheetScheme: string) => {
@@ -892,7 +941,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         : (draft.precio ?? "").trim() !== "")
     : isTrabajoPersonalizado
       ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
-      : draft.sistema.trim() !== "" && draft.vidrio.trim() !== "";
+      : draft.sistema.trim() !== "" &&
+        (!hasPerSystemConfigurations(draft.subtipo) || draft.configuracion.trim() !== "") &&
+        draft.vidrio.trim() !== "";
 
   return {
     isOpen,
@@ -915,6 +966,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateColorHex,
     updateSistema,
     updateConfiguracion,
+    updatePalilloEnabled,
+    updatePalilloType,
+    updateCostInputScope,
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,

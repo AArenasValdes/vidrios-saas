@@ -13,6 +13,8 @@ import {
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import { DEFAULT_MARGIN_PCT } from "@/features/cotizaciones/types/pricing-mode";
+import type { CostInputScope } from "@/features/cotizaciones/types/pricing-mode";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
@@ -95,8 +97,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     [draft.subtipo]
   );
   const configurationOptions = useMemo(
-    () => getConfigurationOptionsForSubtype(draft.subtipo),
-    [draft.subtipo]
+    () => getConfigurationOptionsForSubtype(draft.subtipo, draft.sistema),
+    [draft.subtipo, draft.sistema]
   );
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo),
@@ -251,10 +253,13 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
       const shouldKeepComposition =
         shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
         sheetSchemeOptions.includes(current.sheetScheme);
+      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
+      const nextConfig = nextConfigOptions[0] || "";
 
       return {
         ...current,
         sistema,
+        configuracion: nextConfig,
         ...(shouldKeepComposition
           ? {}
           : {
@@ -269,6 +274,22 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
 
   const updateConfiguracion = (configuracion: string) => {
     setDraft((current) => ({ ...current, configuracion }));
+  };
+
+  const updatePalilloEnabled = (enabled: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      palilloEnabled: enabled,
+      palilloType: enabled ? current.palilloType : "",
+    }));
+  };
+
+  const updatePalilloType = (palilloType: string) => {
+    setDraft((current) => ({ ...current, palilloType }));
+  };
+
+  const updateCostInputScope = (scope: CostInputScope) => {
+    setDraft((current) => ({ ...current, costInputScope: scope }));
   };
 
   const updateSheetScheme = (sheetScheme: string) => {
@@ -334,16 +355,20 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updatePricingMode = (pricingMode: PricingMode) => {
-    setDraft((current) => ({
-      ...current,
-      pricingMode,
-      margenPct:
-        pricingMode === "precio_directo"
-          ? "0"
-          : current.margenPct && Number(current.margenPct) >= 0
-            ? current.margenPct
-            : "0",
-    }));
+    setDraft((current) => {
+      const hasTemplate = Boolean(
+        (current.referencia ?? "").trim() && (current.precioPorM2 ?? "").trim()
+      );
+
+      return {
+        ...current,
+        pricingMode,
+        margenPct: pricingMode === "precio_directo" ? "0" : String(DEFAULT_MARGIN_PCT),
+        ...(pricingMode === "margen" && hasTemplate
+          ? { precio: "" }
+          : {}),
+      };
+    });
   };
 
   const updateMargenPct = (value: string) => {
@@ -422,6 +447,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateColorHex,
     updateSistema,
     updateConfiguracion,
+    updatePalilloEnabled,
+    updatePalilloType,
+    updateCostInputScope,
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,

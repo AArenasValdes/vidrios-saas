@@ -76,6 +76,10 @@ describe("cotizacion-item-presentation", () => {
       netoCalculado: null,
       ivaCalculado: null,
       displayMode: "componente",
+      palilloEnabled: false,
+      palilloType: "",
+      encodedMargenPct: null,
+      encodedCostInputScope: "",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -107,6 +111,10 @@ describe("cotizacion-item-presentation", () => {
       netoCalculado: null,
       ivaCalculado: null,
       displayMode: "componente",
+      palilloEnabled: false,
+      palilloType: "",
+      encodedMargenPct: null,
+      encodedCostInputScope: "",
       raw: "Cierre de terraza",
     });
   });
@@ -216,6 +224,10 @@ describe("cotizacion-item-presentation", () => {
       netoCalculado: null,
       ivaCalculado: null,
       displayMode: "componente",
+      palilloEnabled: false,
+      palilloType: "",
+      encodedMargenPct: null,
+      encodedCostInputScope: "",
       raw: "",
     });
   });
@@ -247,6 +259,10 @@ describe("cotizacion-item-presentation", () => {
       netoCalculado: null,
       ivaCalculado: null,
       displayMode: "componente",
+      palilloEnabled: false,
+      palilloType: "",
+      encodedMargenPct: null,
+      encodedCostInputScope: "",
       raw: "Ventana corredera",
     });
   });

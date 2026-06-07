@@ -29,6 +29,10 @@ export type CotizacionItemPresentationMeta = {
   netoCalculado: number | null;
   ivaCalculado: number | null;
   displayMode: CotizacionItemDisplayMode;
+  palilloEnabled: boolean;
+  palilloType: string;
+  encodedMargenPct: number | null;
+  encodedCostInputScope: string;
   raw: string;
 };
 
@@ -134,6 +138,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
   netoCalculado?: number | null;
   ivaCalculado?: number | null;
   displayMode?: CotizacionItemDisplayMode;
+  palilloEnabled?: boolean;
+  palilloType?: string;
+  margenPct?: number | null;
+  costInputScope?: string;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -182,6 +190,13 @@ export function encodeCotizacionItemPresentationMeta(input: {
       ? String(Math.round(input.ivaCalculado))
       : "";
   const displayMode = input.displayMode ?? "componente";
+  const palilloEnabled = input.palilloEnabled ? "1" : "0";
+  const palilloType = (input.palilloType ?? "").trim().replace(/\]/g, "");
+  const margenPct =
+    input.margenPct !== null && input.margenPct !== undefined
+      ? String(Math.round(input.margenPct))
+      : "";
+  const costInputScope = (input.costInputScope ?? "").trim().replace(/\]/g, "");
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +
@@ -206,7 +221,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[tcv:${totalClienteVisible}]` +
     `[net:${netoCalculado}]` +
     `[iva:${ivaCalculado}]` +
-    `[dm:${displayMode}]`;
+    `[dm:${displayMode}]` +
+    `[pe:${palilloEnabled}]` +
+    `[pt:${palilloType}]` +
+    `[mp:${margenPct}]` +
+    `[csi:${costInputScope}]`;
 
   return raw ? `${meta} ${raw}` : meta;
 }
@@ -239,6 +258,10 @@ export function decodeCotizacionItemPresentationMeta(
   const netoCalculado = parseOptionalNumber(source.match(/\[net:([^\]]*)\]/)?.[1]);
   const ivaCalculado = parseOptionalNumber(source.match(/\[iva:([^\]]*)\]/)?.[1]);
   const displayMode = normalizeDisplayMode(source.match(/\[dm:([^\]]*)\]/)?.[1]);
+  const palilloEnabled = source.match(/\[pe:(1|0)\]/)?.[1] === "1";
+  const palilloType = source.match(/\[pt:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const encodedMargenPct = parseOptionalNumber(source.match(/\[mp:([^\]]*)\]/)?.[1]);
+  const encodedCostInputScope = source.match(/\[csi:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const referencia =
     source.match(/\[r:([^\]]*)\]/)?.[1]?.trim() ??
     source.match(/\[l:([^\]]*)\]/)?.[1]?.trim() ??
@@ -267,6 +290,10 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[net:[^\]]*\]/g, "")
     .replace(/\[iva:[^\]]*\]/g, "")
     .replace(/\[dm:[^\]]*\]/g, "")
+    .replace(/\[pe:[^\]]*\]/g, "")
+    .replace(/\[pt:[^\]]*\]/g, "")
+    .replace(/\[mp:[^\]]*\]/g, "")
+    .replace(/\[csi:[^\]]*\]/g, "")
     .trim();
 
   return {
@@ -293,6 +320,10 @@ export function decodeCotizacionItemPresentationMeta(
     netoCalculado,
     ivaCalculado,
     displayMode,
+    palilloEnabled,
+    palilloType,
+    encodedMargenPct,
+    encodedCostInputScope,
     raw,
   };
 }
