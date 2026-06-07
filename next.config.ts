@@ -1,13 +1,39 @@
 import type { NextConfig } from "next";
+import { execSync } from "child_process";
 
-const commitSha = process.env.VERCEL_GIT_COMMIT_SHA;
-const appVersion =
-  commitSha && commitSha.length > 0
-    ? commitSha.slice(0, 12)
-    : process.env.NEXT_PUBLIC_APP_VERSION || "dev";
+function resolveBuildVersion(): string {
+  if (process.env.NEXT_PUBLIC_APP_VERSION) {
+    return process.env.NEXT_PUBLIC_APP_VERSION;
+  }
+
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (!sha || sha.length === 0) return "dev";
+
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join(".");
+
+  try {
+    const count = execSync("git rev-list --count HEAD", {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+    if (count && /^\d+$/.test(count)) {
+      return `v${date}-${count}`;
+    }
+  } catch {
+    // git no disponible en este build, usar SHA corto como secuencia
+  }
+
+  return `v${date}-${sha.slice(0, 8)}`;
+}
+
+const appVersion = resolveBuildVersion();
 
 const nextConfig: NextConfig = {
-  // Permite probar el dev server desde el celular en la red local.
   allowedDevOrigins: ["192.168.0.12"],
   turbopack: {
     root: process.cwd(),
