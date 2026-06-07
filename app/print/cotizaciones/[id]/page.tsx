@@ -9,7 +9,6 @@ import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icon
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { splitComponentReference } from "@/features/cotizaciones/services/component-catalog.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
-import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
@@ -34,6 +33,10 @@ import { generateComponentSVG } from "@/utils/window-drawings";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
 import { buildPrintPlan, isFreePrintItem } from "./_utils/print-plan";
+import {
+  buildTotalGlobalPrintPlan,
+  type TotalGlobalPrintPagePlan,
+} from "./_utils/total-global-print-plan";
 import s from "./page.module.css";
 
 const APP_NAME = "Ventora";
@@ -112,22 +115,6 @@ type ItemPresentation = {
   specs: Array<{ key: string; value: string }>;
   drawingSvg: string;
 };
-
-type TotalGlobalPrintPagePlan =
-  | {
-      kind: "global-cover";
-      description: string;
-    }
-  | {
-      kind: "global-description";
-      description: string;
-      chunkIndex: number;
-    }
-  | {
-      kind: "global-details";
-      startIndex: number;
-      items: CotizacionWorkflowItem[];
-    };
 
 function getColorName(colorHex: string) {
   return resolveComponentColorName(colorHex);
@@ -283,22 +270,6 @@ function splitDescriptionChecklistItems(text: string) {
     .filter(Boolean)
     .map((line) => line.replace(/^\d+[\).-]?\s*/, "").trim())
     .filter(Boolean);
-}
-
-function buildTotalGlobalDetailPages(
-  items: CotizacionWorkflowItem[],
-  perPage = 5
-) {
-  const pages: Array<{ startIndex: number; items: CotizacionWorkflowItem[] }> = [];
-
-  for (let startIndex = 0; startIndex < items.length; startIndex += perPage) {
-    pages.push({
-      startIndex,
-      items: items.slice(startIndex, startIndex + perPage),
-    });
-  }
-
-  return pages;
 }
 
 function formatPageNumber(current: number, total: number) {
@@ -743,28 +714,10 @@ export default function CotizacionPrintPage() {
       return [];
     }
 
-    const descriptionPages: TotalGlobalPrintPagePlan[] = totalGlobalDescriptionChunks.map(
-      (description, index) =>
-        index === 0
-          ? {
-              kind: "global-cover",
-              description,
-            }
-          : {
-              kind: "global-description",
-              description,
-              chunkIndex: index,
-            }
-    );
-    const detailPages = buildTotalGlobalDetailPages(printableItems).map<TotalGlobalPrintPagePlan>(
-      (page) => ({
-        kind: "global-details",
-        startIndex: page.startIndex,
-        items: page.items,
-      })
-    );
-
-    return [...descriptionPages, ...detailPages];
+    return buildTotalGlobalPrintPlan({
+      descriptionChunks: totalGlobalDescriptionChunks,
+      items: printableItems,
+    });
   }, [isTotalGlobalQuote, printableItems, totalGlobalDescriptionChunks]);
   const renderedPageCount = isTotalGlobalQuote ? totalGlobalPages.length : printPages.length;
   const itemPresentationMap = useMemo(() => {
@@ -1094,6 +1047,14 @@ export default function CotizacionPrintPage() {
           const pageNumber = pageIndex + 1;
           const isLastPage = pageIndex === totalPages - 1;
           const dueDate = formatDueDate(visibleCotizacion.updatedAt, visibleCotizacion.validez);
+          const detailItems =
+            pagePlan.kind === "global-cover" || pagePlan.kind === "global-details"
+              ? pagePlan.items
+              : [];
+          const detailStartIndex =
+            pagePlan.kind === "global-cover" || pagePlan.kind === "global-details"
+              ? pagePlan.startIndex
+              : 0;
 
           return (
             <article
@@ -1225,16 +1186,23 @@ export default function CotizacionPrintPage() {
                 </section>
               ) : null}
 
-              {pagePlan.kind === "global-details" ? (
-                <section className={s.totalGlobalDetailsSection}>
+              {detailItems.length > 0 ? (
+                <section
+                  className={[
+                    s.totalGlobalDetailsSection,
+                    pagePlan.kind === "global-cover" ? s.totalGlobalDetailsOnCover : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
                   <div className={s.totalGlobalSectionHeader}>
                     <span className={s.sectionLabel}>DETALLES INCLUIDOS</span>
-                    <span>{pagePlan.items.length} en esta pagina</span>
+                    <span>{detailItems.length} en esta pagina</span>
                   </div>
 
                   <div className={s.totalGlobalDetailList}>
-                    {pagePlan.items.map((item, itemIndex) => {
-                      const absoluteIndex = pagePlan.startIndex + itemIndex + 1;
+                    {detailItems.map((item, itemIndex) => {
+                      const absoluteIndex = detailStartIndex + itemIndex + 1;
                       const dimensions = item.ancho && item.alto ? formatDimensions(item.ancho, item.alto) : null;
                       const description = item.descripcion?.trim();
                       const referenceSvg = resolveTotalGlobalReferenceSvg(item.nombre, description);

@@ -1110,6 +1110,10 @@
   z-index: 1;
 }
 
+.totalGlobalDetailsOnCover {
+  gap: 7px;
+}
+
 .totalGlobalDetailList {
   display: grid;
   gap: 7px;
@@ -1127,6 +1131,20 @@
   background: #ffffff;
   break-inside: avoid;
   page-break-inside: avoid;
+}
+
+.totalGlobalDetailsOnCover .totalGlobalDetailList {
+  gap: 6px;
+}
+
+.totalGlobalDetailsOnCover .totalGlobalDetailRow {
+  grid-template-columns: 98px minmax(0, 1fr);
+  min-height: 66px;
+  padding: 7px 9px;
+}
+
+.totalGlobalDetailsOnCover .totalGlobalMiniDrawing {
+  min-height: 58px;
 }
 
 .totalGlobalMiniDrawing {
