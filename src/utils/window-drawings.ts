@@ -1462,12 +1462,16 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
 
 const PD = {
   m: 10,
-  sw: 2.5,
-  fw: 4,
+  sw: 3.2,
+  fw: 2.4,
 };
 
 function pdFrame(x: number, y: number, w: number, h: number, sw: number, color: string): string {
-  return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="2" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
+  const innerOffset = sw * 0.55;
+  return [
+    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="2" fill="none" stroke="${color}" stroke-width="${sw}"/>`,
+    `<rect x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="1.5" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.55"/>`,
+  ].join("\n");
 }
 
 function pdGlass(x: number, y: number, w: number, h: number, _frameColor?: string): string {
@@ -1482,12 +1486,12 @@ function pdDiv(x1: number, y1: number, x2: number, y2: number, color: string, sw
   return `<line x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${color}" stroke-width="${sw}"/>`;
 }
 
-function pdHandleH(cx: number, cy: number, side: "L" | "R", color: string): string {
-  const hw = 16, hh = 3, pad = 4;
-  const x = side === "L" ? cx + pad : cx - pad - hw;
+function pdHandleH(x: number, y: number, side: "L" | "R", color: string): string {
+  const hw = 14, hh = 3.2, offset = 3;
+  const handleX = side === "R" ? x : x - hw;
   return [
-    `<rect x="${px(x)}" y="${px(cy - hh / 2)}" width="${px(hw)}" height="${px(hh)}" rx="1.5" fill="${color}" stroke="none"/>`,
-    `<line x1="${px(side === "L" ? x : x + hw)}" y1="${px(cy)}" x2="${px(side === "L" ? x : x + hw)}" y2="${px(cy + 8)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
+    `<rect x="${px(handleX)}" y="${px(y - hh / 2)}" width="${px(hw)}" height="${px(hh)}" rx="1.5" fill="${color}" stroke="none"/>`,
+    `<line x1="${px(side === "L" ? handleX : handleX + hw)}" y1="${px(y)}" x2="${px(side === "L" ? handleX - offset : handleX + hw + offset)}" y2="${px(y + 7)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`,
   ].join("");
 }
 
@@ -1574,12 +1578,18 @@ const CONFIG_MAP: Record<string, string> = {
   "2 hojas moviles / encuentro central": "2_hojas_moviles_encuentro_central",
   "3 hojas": "3_hojas",
   "4 hojas: 2 fijas + 2 moviles": "4_hojas_2_fijas_2_moviles",
+  "4 hojas / 2 fijas + 2 moviles": "4_hojas_2_fijas_2_moviles",
+  "4 hojas moviles": "4_hojas_moviles_corredera",
+  "2 moviles": "2_hojas_moviles_encuentro_central",
+  "1 fija + 1 movil": "2_hojas_1_fija_1_movil",
   "Doble riel": "doble_riel",
   "Triple riel": "triple_riel",
   "Elevadora corredera / HS": "elevadora_corredera_hs",
   "2 hojas / puerta doble": "2_hojas_puerta_doble",
   "1 hoja + fijo lateral": "1_hoja_fijo_lateral",
   "2 hojas + fijo lateral": "2_hojas_fijo_lateral",
+  "2 hojas + 2 fijos laterales": "2_hojas_fijo_lateral",
+  "4 hojas abatibles": "4_hojas_abatibles",
   "Con fijo superior": "con_fijo_superior",
   "Con fijo lateral + fijo superior": "con_fijo_lateral_fijo_superior",
   "Apertura interior": "1_hoja",
@@ -1591,12 +1601,15 @@ const CONFIG_MAP: Record<string, string> = {
   "2 hojas plegables": "2_hojas_plegables",
   "3 hojas plegables": "3_hojas_plegables",
   "4 hojas plegables": "4_hojas_plegables",
+  "4 hojas / 2 + 2": "4_hojas_plegables",
   "Acordeon": "acordeon",
   "1 hoja vaiven": "1_hoja_vaiven",
   "2 hojas vaiven": "2_hojas_vaiven",
   "Vidrio templado vaiven": "vidrio_templado_vaiven",
   "Abatir vidrio templado": "1_hoja_vidrio_templado",
+  "1 hoja vidrio templado": "1_hoja_vidrio_templado",
   "Doble hoja vidrio templado": "doble_hoja_vidrio_templado",
+  "4 hojas vidrio templado": "doble_hoja_vidrio_templado",
   "Vaiven vidrio templado": "vaiven_vidrio_templado",
   "Corredera vidrio templado": "corredera_vidrio_templado",
   "Con quicio / pivote": "con_quicio_pivote",
@@ -1644,39 +1657,58 @@ function drawPuertaComposite(
     // ABATIR
     case "1_hoja": {
       const dw = w - m * 2;
+      const handleX = x + m + dw - fw - 2;
       return [
         pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
         pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m, y + m, dw, dh, sw, frameColor),
-        pdHandleH(x + m + dw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdHandleH(handleX, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m, y + m + dh, dw * 0.75, -90, 0, frameColor),
       ].join("\n");
     }
     case "2_hojas_puerta_doble": {
       const hw = Math.floor((w - m * 2) / 2);
+      const handleL = x + m + hw - fw - 1;
+      const handleR = x + m + hw + fw + 1;
       return [
         pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdPalillo(x + m + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdHandleH(handleL, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m, y + m + dh, hw * 0.65, -90, 0, frameColor),
         pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdPalillo(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdHandleH(handleR, y + m + dh * 0.45, "L", HANDLE_STROKE),
         pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.65, -90, 180, frameColor),
       ].join("\n");
+    }
+    case "4_hojas_abatibles": {
+      const lw = Math.floor((w - m * 2) / 4);
+      const leafs: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const cx = x + m + lw * i;
+        leafs.push(pdGlass(cx + fw, y + m + fw, lw - fw * 2, gh, frameColor));
+        leafs.push(pdPalillo(cx + fw, y + m + fw, lw - fw * 2, gh, palType, frameColor));
+        leafs.push(pdFrame(cx, y + m, lw, dh, sw, frameColor));
+        if (i === 1) leafs.push(pdHandleH(cx + lw - fw - 1, y + m + dh * 0.45, "R", HANDLE_STROKE));
+        if (i === 2) leafs.push(pdHandleH(cx + fw + 1, y + m + dh * 0.45, "L", HANDLE_STROKE));
+        if (i === 0) leafs.push(pdSwingArc(cx, y + m + dh, lw * 0.55, -90, 0, frameColor));
+        if (i === 3) leafs.push(pdSwingArc(cx + lw, y + m + dh, lw * 0.55, -90, 180, frameColor));
+      }
+      return leafs.join("\n");
     }
     case "1_hoja_fijo_lateral": {
       const fixedW = Math.floor((w - m * 2) * 0.35);
       const doorW = w - m * 2 - fixedW;
+      const handleX = x + m + fixedW + doorW - fw - 2;
       return [
         pdGlassFixed(x + m + fw, y + m + fw, fixedW - fw * 2, gh, frameColor),
         pdFrame(x + m, y + m, fixedW, dh, sw - 0.5, frameColor),
         pdGlass(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, frameColor),
         pdPalillo(x + m + fixedW + fw, y + m + fw, doorW - fw * 2, gh, palType, frameColor),
         pdFrame(x + m + fixedW, y + m, doorW, dh, sw, frameColor),
-        pdHandleH(x + m + fixedW + fw + 4, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdHandleH(handleX, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m + fixedW + doorW, y + m + dh, doorW * 0.7, -90, 180, frameColor),
       ].join("\n");
     }
@@ -1684,18 +1716,20 @@ function drawPuertaComposite(
       const fixedW = Math.floor((w - m * 2) * 0.25);
       const doorsW = w - m * 2 - fixedW;
       const hw = Math.floor(doorsW / 2);
+      const handleL = x + m + fixedW + hw - fw - 1;
+      const handleR = x + m + fixedW + hw + fw + 1;
       return [
         pdGlassFixed(x + m + fw, y + m + fw, fixedW - fw * 2, gh, frameColor),
         pdFrame(x + m, y + m, fixedW, dh, sw - 0.5, frameColor),
         pdGlass(x + m + fixedW + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdPalillo(x + m + fixedW + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m + fixedW, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + fixedW + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdHandleH(handleL, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m + fixedW, y + m + dh, hw * 0.65, -90, 0, frameColor),
         pdGlass(x + m + fixedW + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdPalillo(x + m + fixedW + hw + fw, y + m + fw, hw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m + fixedW + hw, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + fixedW + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdHandleH(handleR, y + m + dh * 0.45, "L", HANDLE_STROKE),
         pdSwingArc(x + m + fixedW + hw * 2, y + m + dh, hw * 0.65, -90, 180, frameColor),
       ].join("\n");
     }
@@ -1709,7 +1743,7 @@ function drawPuertaComposite(
         pdGlass(x + m + fw, y + m + topH + fw, dw - fw * 2, botH - fw * 2, frameColor),
         pdPalillo(x + m + fw, y + m + topH + fw, dw - fw * 2, botH - fw * 2, palType, frameColor),
         pdFrame(x + m, y + m + topH, dw, botH, sw, frameColor),
-        pdHandleH(x + m + dw, y + m + topH + botH / 2, "L", HANDLE_STROKE),
+        pdHandleH(x + m + dw - fw - 2, y + m + topH + botH * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m, y + m + topH + botH, dw * 0.7, -90, 0, frameColor),
       ].join("\n");
     }
@@ -1726,7 +1760,7 @@ function drawPuertaComposite(
         pdGlass(x + m + fixedW + fw, y + m + topH + fw, doorW - fw * 2, botH - fw * 2, frameColor),
         pdPalillo(x + m + fixedW + fw, y + m + topH + fw, doorW - fw * 2, botH - fw * 2, palType, frameColor),
         pdFrame(x + m + fixedW, y + m + topH, doorW, botH, sw, frameColor),
-        pdHandleH(x + m + fixedW + fw + 4, y + m + topH + botH / 2, "R", HANDLE_STROKE),
+        pdHandleH(x + m + fixedW + doorW - fw - 2, y + m + topH + botH * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m + fixedW + doorW, y + m + topH + botH, doorW * 0.7, -90, 180, frameColor),
       ].join("\n");
     }
@@ -1784,6 +1818,18 @@ function drawPuertaComposite(
         if (!isFixed) cells.push(pdHandleBar(i === 1 ? cx + qw - 10 : cx + 10, y + m + dh / 2, HANDLE_STROKE));
       }
       return [corrRails(), ...cells].join("\n");
+    }
+    case "4_hojas_moviles_corredera": {
+      const lw = Math.floor((w - m * 2) / 4);
+      const leafs: string[] = [];
+      for (let i = 0; i < 4; i++) {
+        const cx = x + m + lw * i;
+        leafs.push(pdGlass(cx + fw, y + m + fw, lw - fw * 2, gh, frameColor));
+        leafs.push(pdPalillo(cx + fw, y + m + fw, lw - fw * 2, gh, palType, frameColor));
+        leafs.push(pdFrame(cx, y + m, lw, dh, sw, frameColor));
+        leafs.push(pdHandleBar(cx + lw / 2, y + m + dh / 2, HANDLE_STROKE));
+      }
+      return [corrRails(), ...leafs].join("\n");
     }
     case "3_hojas": {
       const tw = Math.floor((w - m * 2) / 3);
@@ -1899,7 +1945,7 @@ function drawPuertaComposite(
         const cx = x + m + lw * i;
         parts.push(pdGlass(cx + fw, y + m + fw, lw - fw * 2, gh, frameColor));
         parts.push(pdPalillo(cx + fw, y + m + fw, lw - fw * 2, gh, palType, frameColor));
-        parts.push(pdFrame(cx, y + m, lw, dh, 2, frameColor));
+        parts.push(pdFrame(cx, y + m, lw, dh, sw, frameColor));
         parts.push(pdFoldLine(cx, lw, dh, frameColor));
       }
       parts.push(pdHandleBar(x + m + lw * leafCount - 12, y + m + dh / 2, HANDLE_STROKE));
@@ -1913,7 +1959,7 @@ function drawPuertaComposite(
         pdGlass(x + m + fw, y + m + fw, dw - fw * 2, gh, frameColor),
         pdPalillo(x + m + fw, y + m + fw, dw - fw * 2, gh, palType, frameColor),
         pdFrame(x + m, y + m, dw, dh, sw, frameColor),
-        pdHandleH(x + m + dw / 2, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdHandleH(x + m + dw / 2 + 2, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.4, -70, 0, frameColor),
         pdSwingArc(x + m + dw / 2, y + m + dh, dw * 0.4, -110, 180, frameColor),
       ].join("\n");
@@ -1923,12 +1969,12 @@ function drawPuertaComposite(
       return [
         pdGlass(x + m + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdFrame(x + m, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + hw, y + m + dh / 2, "L", HANDLE_STROKE),
+        pdHandleH(x + m + hw - fw - 1, y + m + dh * 0.45, "R", HANDLE_STROKE),
         pdSwingArc(x + m, y + m + dh, hw * 0.6, -70, 0, frameColor),
         pdSwingArc(x + m, y + m + dh, hw * 0.6, -110, 180, frameColor),
         pdGlass(x + m + hw + fw, y + m + fw, hw - fw * 2, gh, frameColor),
         pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
-        pdHandleH(x + m + hw, y + m + dh / 2, "R", HANDLE_STROKE),
+        pdHandleH(x + m + hw + fw + 1, y + m + dh * 0.45, "L", HANDLE_STROKE),
         pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.6, -70, 0, frameColor),
         pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.6, -110, 180, frameColor),
       ].join("\n");
@@ -2101,7 +2147,7 @@ function drawPuertaComposite(
       return [
         pdGlass(x + m + 5, y + m + 5, dw - 10, dh2 - 10, frameColor),
         pdFrame(x + m, y + m, dw, dh2, 3, frameColor),
-        pdHandleH(x + m + dw, y + m + dh2 / 2, "L", HANDLE_STROKE),
+        pdHandleH(x + m + dw - 4, y + m + dh2 * 0.45, "R", HANDLE_STROKE),
       ].join("\n");
     }
   }

@@ -736,11 +736,22 @@ export function buildQuickEditDraft(item: CotizacionWorkflowItem): QuickEditDraf
     };
   }
 
+  const { encodedCostInputScope } =
+    decodeCotizacionItemPresentationMeta(item.observaciones);
+
   return {
     ancho: item.ancho ? String(item.ancho) : "",
     alto: item.alto ? String(item.alto) : "",
     costoProveedorUnitario:
-      item.costoProveedorUnitario > 0 ? String(Math.round(item.costoProveedorUnitario)) : "",
+      item.costoProveedorUnitario > 0
+        ? String(
+            Math.round(
+              encodedCostInputScope === "group_total" && item.cantidad > 0
+                ? item.costoProveedorUnitario * item.cantidad
+                : item.costoProveedorUnitario
+            )
+          )
+        : "",
   };
 }
 
