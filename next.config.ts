@@ -2,10 +2,6 @@ import type { NextConfig } from "next";
 import { execSync } from "child_process";
 
 function resolveBuildVersion(): string {
-  if (process.env.NEXT_PUBLIC_APP_VERSION) {
-    return process.env.NEXT_PUBLIC_APP_VERSION;
-  }
-
   const sha = process.env.VERCEL_GIT_COMMIT_SHA;
   if (!sha || sha.length === 0) return "dev";
 

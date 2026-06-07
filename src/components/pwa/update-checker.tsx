@@ -7,45 +7,99 @@ import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
-export async function forceAppUpdate() {
+export async function forceAppUpdate(): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
 
   try {
     const registration = await navigator.serviceWorker.getRegistration("/");
-    if (!registration?.waiting) {
-      await registration?.update();
+    if (!registration) return;
+
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      return;
     }
 
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    if (registration.installing) {
+      await new Promise<void>((resolve) => {
+        const installing = registration.installing;
+        if (!installing) {
+          resolve();
+          return;
+        }
+        installing.addEventListener("statechange", () => {
+          if (installing.state === "installed") {
+            installing.postMessage({ type: "SKIP_WAITING" });
+            resolve();
+          }
+        });
+        if (installing.state === "installed") {
+          installing.postMessage({ type: "SKIP_WAITING" });
+          resolve();
+        }
+      });
+      return;
     }
+
+    const updateComplete = new Promise<void>((resolve) => {
+      registration.addEventListener(
+        "updatefound",
+        () => {
+          const installing = registration.installing;
+          if (!installing) {
+            resolve();
+            return;
+          }
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "installed") {
+              installing.postMessage({ type: "SKIP_WAITING" });
+              resolve();
+            }
+          });
+          if (installing.state === "installed") {
+            installing.postMessage({ type: "SKIP_WAITING" });
+            resolve();
+          }
+        },
+        { once: true }
+      );
+    });
+
+    await registration.update();
+
+    await Promise.race([
+      updateComplete,
+      new Promise<void>((r) => setTimeout(r, 10000)),
+    ]);
   } catch {
     return;
   }
 }
 
 async function applyUpdateWithFeedback() {
-  const loadingToastId = toast.loading("Actualizando Ventora...", {
+  toast.loading("Actualizando Ventora...", {
     description: "La app se reiniciara en breve.",
   });
 
   try {
     await forceAppUpdate();
   } catch {
-    toast.dismiss(loadingToastId);
+    return;
   }
 }
 
 export function UpdateChecker() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const shownRef = useRef(false);
+  const checkingRef = useRef(false);
 
   useEffect(() => {
     if (!isCanonicalPwaHost(window.location.hostname)) return;
 
-    let hasShownUpdateToast = false;
-
     const checkVersion = async () => {
-      if (hasShownUpdateToast) return;
+      if (shownRef.current) return;
+      if (checkingRef.current) return;
+
+      checkingRef.current = true;
 
       try {
         const response = await fetch("/api/app-version", { cache: "no-store" });
@@ -56,7 +110,7 @@ export function UpdateChecker() {
         if (!remoteVersion) return;
 
         if (remoteVersion !== CURRENT_APP_VERSION) {
-          hasShownUpdateToast = true;
+          shownRef.current = true;
 
           toast("Hay una nueva version de Ventora disponible.", {
             description: "Actualiza para ver los ultimos cambios sin reinstalar la app.",
@@ -77,6 +131,8 @@ export function UpdateChecker() {
         }
       } catch {
         return;
+      } finally {
+        checkingRef.current = false;
       }
     };
 
