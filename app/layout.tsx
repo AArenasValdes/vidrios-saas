@@ -7,7 +7,6 @@ import { GoogleTagProvider } from "@/features/analytics/components/google-tag-pr
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
 import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
-import { UpdateChecker } from "@/components/pwa/update-checker";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { Geist } from "next/font/google";
@@ -82,7 +81,6 @@ export default function RootLayout({
           </noscript>
         ) : null}
         <RegisterServiceWorker />
-        <UpdateChecker />
         <InstallAppPrompt />
         <Toaster position="top-center" richColors />
         {children}

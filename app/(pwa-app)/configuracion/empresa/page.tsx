@@ -26,6 +26,7 @@ import {
   LuRefreshCcw,
 } from "react-icons/lu";
 
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
@@ -42,7 +43,7 @@ import { SubscriptionDetail } from "@/features/subscriptions/components/subscrip
 import { fetchSubscriptionSummary } from "@/features/subscriptions/services/subscription-summary-client.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
-import { APP_VERSION } from "@/utils/app-version";
+import { CURRENT_APP_VERSION } from "@/utils/app-version";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
@@ -151,6 +152,7 @@ const notificationsSummary = (kind: DeviceAlertsState["kind"]) =>
           : "Revisando dispositivo";
 
 export default function ConfiguracionEmpresaPage() {
+  const { rol } = useAuth();
   const onboarding = useOnboardingChecklist();
   const { profile, isReady, isSaving, isUploading, saveProfile, uploadLogo } =
     useOrganizationProfile();
@@ -900,48 +902,58 @@ export default function ConfiguracionEmpresaPage() {
           </div>
         </section>
 
-        <section className={`${s.accordion} ${openSection === "soporte" ? s.accordionOpen : ""}`}>
-          <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "soporte" ? null : "soporte"))} aria-expanded={openSection === "soporte"}>
-            <div className={s.triggerMain}>
-              <div className={s.triggerIcon}><LuSmartphone aria-hidden /></div>
-              <div className={s.triggerCopy}>
-                <span className={s.cardEyebrow}>Diagnostico</span>
-                <strong>Diagnostico de la app</strong>
-                <p>Herramientas de soporte para este dispositivo</p>
-              </div>
-            </div>
-            <LuChevronDown className={s.chevron} aria-hidden />
-          </button>
+        {(() => {
+          const isDev = process.env.NODE_ENV !== "production";
+          const isAdminOrFounder = rol === "admin" || rol === "founder";
+          const showDiagnostico = isDev || isAdminOrFounder;
 
-          <div className={s.accordionPanel}>
-            <div className={s.accordionInner}>
-              <div className={s.fieldGrid}>
-                <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Version instalada</span>
-                  <strong>{APP_VERSION}</strong>
-                  <p>Version de Ventora en este dispositivo.</p>
-                </article>
-                <article className={s.commercialInfoCard}>
-                  <span className={s.label}>Actualizacion</span>
-                  <strong>Busca y aplica cambios</strong>
-                  <p>Si hay una version nueva, la app se actualiza sin reinstalar.</p>
-                </article>
-              </div>
+          if (!showDiagnostico) return null;
 
-              <div className={s.sectionActions}>
-                <button type="button" className={s.secondaryLink} onClick={() => void handleForceUpdate()} disabled={isUpdating}>
-                  <LuRefreshCcw aria-hidden />
-                  {isUpdating ? "Buscando..." : "Buscar actualizacion"}
-                </button>
-                <button type="button" className={s.secondaryLink} onClick={handleReiniciarApp} disabled={isReiniciando}>
-                  <LuRefreshCcw aria-hidden />
-                  {isReiniciando ? "Reparando..." : "Reparar app en este dispositivo"}
-                </button>
+          return (
+            <section className={`${s.accordion} ${openSection === "soporte" ? s.accordionOpen : ""}`}>
+              <button type="button" className={s.accordionTrigger} onClick={() => setOpenSection((current) => (current === "soporte" ? null : "soporte"))} aria-expanded={openSection === "soporte"}>
+                <div className={s.triggerMain}>
+                  <div className={s.triggerIcon}><LuSmartphone aria-hidden /></div>
+                  <div className={s.triggerCopy}>
+                    <span className={s.cardEyebrow}>Diagnostico</span>
+                    <strong>Diagnostico de la app</strong>
+                    <p>Herramientas de soporte para este dispositivo</p>
+                  </div>
+                </div>
+                <LuChevronDown className={s.chevron} aria-hidden />
+              </button>
+
+              <div className={s.accordionPanel}>
+                <div className={s.accordionInner}>
+                  <div className={s.fieldGrid}>
+                    <article className={s.commercialInfoCard}>
+                      <span className={s.label}>Version instalada</span>
+                      <strong>{CURRENT_APP_VERSION}</strong>
+                      <p>Version de Ventora en este dispositivo.</p>
+                    </article>
+                    <article className={s.commercialInfoCard}>
+                      <span className={s.label}>Actualizacion</span>
+                      <strong>Busca y aplica cambios</strong>
+                      <p>Si hay una version nueva, la app se actualiza sin reinstalar.</p>
+                    </article>
+                  </div>
+
+                  <div className={s.sectionActions}>
+                    <button type="button" className={s.secondaryLink} onClick={() => void handleForceUpdate()} disabled={isUpdating}>
+                      <LuRefreshCcw aria-hidden />
+                      {isUpdating ? "Buscando..." : "Buscar actualizacion"}
+                    </button>
+                    <button type="button" className={s.secondaryLink} onClick={handleReiniciarApp} disabled={isReiniciando}>
+                      <LuRefreshCcw aria-hidden />
+                      {isReiniciando ? "Reparando..." : "Reparar app en este dispositivo"}
+                    </button>
+                  </div>
+                  <p className={s.inlineInfo} style={{ marginTop: 10 }}>Usa estas opciones solo si la app no carga bien o soporte te lo solicita.</p>
+                </div>
               </div>
-              <p className={s.inlineInfo} style={{ marginTop: 10 }}>Usa estas opciones solo si la app no carga bien o soporte te lo solicita.</p>
-            </div>
-          </div>
-        </section>
+            </section>
+          );
+        })()}
 
         <section className={`${s.accordion} ${openSection === "suscripcion" ? s.accordionOpen : ""}`}>
           <button

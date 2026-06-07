@@ -2,28 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { APP_VERSION } from "@/utils/app-version";
+import { CURRENT_APP_VERSION } from "@/utils/app-version";
 import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000;
-const LOCAL_VERSION_KEY = "ventora:app-version";
-
-function getStoredVersion() {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(LOCAL_VERSION_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function setStoredVersion(version: string) {
-  try {
-    window.localStorage.setItem(LOCAL_VERSION_KEY, version);
-  } catch {
-    return;
-  }
-}
+const POLL_INTERVAL_MS = 30 * 60 * 1000;
 
 export async function forceAppUpdate() {
   if (!("serviceWorker" in navigator)) return;
@@ -51,7 +33,6 @@ async function applyUpdateWithFeedback() {
     await forceAppUpdate();
   } catch {
     toast.dismiss(loadingToastId);
-    return;
   }
 }
 
@@ -61,7 +42,11 @@ export function UpdateChecker() {
   useEffect(() => {
     if (!isCanonicalPwaHost(window.location.hostname)) return;
 
+    let hasShownUpdateToast = false;
+
     const checkVersion = async () => {
+      if (hasShownUpdateToast) return;
+
       try {
         const response = await fetch("/api/app-version", { cache: "no-store" });
         if (!response.ok) return;
@@ -70,14 +55,9 @@ export function UpdateChecker() {
         const remoteVersion = data?.version;
         if (!remoteVersion) return;
 
-        const storedVersion = getStoredVersion();
+        if (remoteVersion !== CURRENT_APP_VERSION) {
+          hasShownUpdateToast = true;
 
-        if (!storedVersion) {
-          setStoredVersion(remoteVersion);
-          return;
-        }
-
-        if (storedVersion !== remoteVersion && storedVersion !== APP_VERSION) {
           toast("Hay una nueva version de Ventora disponible.", {
             description: "Actualiza para ver los ultimos cambios sin reinstalar la app.",
             duration: Infinity,
@@ -95,8 +75,6 @@ export function UpdateChecker() {
             },
           });
         }
-
-        setStoredVersion(remoteVersion);
       } catch {
         return;
       }
@@ -114,7 +92,12 @@ export function UpdateChecker() {
       }
     };
 
+    const handleFocus = () => {
+      void checkVersion();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       if (intervalRef.current) {
@@ -122,6 +105,7 @@ export function UpdateChecker() {
         intervalRef.current = null;
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

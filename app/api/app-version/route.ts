@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { APP_VERSION } from "@/utils/app-version";
+import { CURRENT_APP_VERSION } from "@/utils/app-version";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   return NextResponse.json(
-    { version: APP_VERSION },
+    { version: CURRENT_APP_VERSION },
     {
       status: 200,
       headers: {

@@ -72,6 +72,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Toaster } from "@/components/ui/sonner";
+import { UpdateChecker } from "@/components/pwa/update-checker";
 
 import s from "./app-shell.module.css";
 
@@ -1406,6 +1407,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {!usesMinimalShell ? (
         <>
           <Toaster position="top-center" richColors />
+          <UpdateChecker />
           <Dialog
             open={showTrialWelcomeNotice && isDesktopViewport}
             onOpenChange={handleTrialNoticeOpenChange}
