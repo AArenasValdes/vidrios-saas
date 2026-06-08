@@ -1,9 +1,27 @@
 /** @jest-environment jsdom */
 
 import {
+  applyUpdateWithFeedback,
   fetchRemoteAppVersion,
   forceAppUpdate,
 } from "../update-checker";
+import { toast } from "sonner";
+
+jest.mock("sonner", () => {
+  const toastMock = jest.fn();
+
+  toastMock.loading = jest.fn();
+  toastMock.error = jest.fn();
+
+  return {
+    toast: toastMock,
+  };
+});
+
+const mockedToast = toast as unknown as jest.Mock & {
+  loading: jest.Mock;
+  error: jest.Mock;
+};
 
 describe("update-checker", () => {
   const originalNavigator = global.navigator;
@@ -107,5 +125,95 @@ describe("update-checker", () => {
 
     await expect(promise).resolves.toBe("no-update");
     expect(registration.update).toHaveBeenCalled();
+  });
+
+  it("debe programar recarga fallback cuando la actualizacion se activa", async () => {
+    jest.useFakeTimers();
+
+    const update = jest.fn().mockResolvedValue("update-activated");
+    const reload = jest.fn();
+
+    await applyUpdateWithFeedback({
+      update,
+      reload,
+      reloadDelayMs: 500,
+    });
+
+    expect(mockedToast.loading).toHaveBeenNthCalledWith(
+      1,
+      "Actualizando Ventora...",
+      expect.objectContaining({
+        id: "ventora-app-update",
+        duration: Infinity,
+      })
+    );
+    expect(mockedToast.loading).toHaveBeenNthCalledWith(
+      2,
+      "Aplicando actualizacion...",
+      expect.objectContaining({
+        id: "ventora-app-update",
+        duration: Infinity,
+      })
+    );
+
+    await jest.advanceTimersByTimeAsync(499);
+    expect(reload).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("debe reemplazar el loading si no hay actualizacion pendiente", async () => {
+    jest.useFakeTimers();
+
+    const update = jest.fn().mockResolvedValue("no-update");
+    const reload = jest.fn();
+
+    await applyUpdateWithFeedback({
+      update,
+      reload,
+      reloadDelayMs: 500,
+    });
+
+    expect(mockedToast.loading).toHaveBeenCalledWith(
+      "Actualizando Ventora...",
+      expect.objectContaining({
+        id: "ventora-app-update",
+      })
+    );
+    expect(mockedToast).toHaveBeenCalledWith(
+      "No se encontro una actualizacion pendiente.",
+      expect.objectContaining({
+        id: "ventora-app-update",
+        duration: 6000,
+      })
+    );
+
+    await jest.advanceTimersByTimeAsync(500);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("debe convertir errores en feedback visible sin recarga infinita", async () => {
+    jest.useFakeTimers();
+
+    const update = jest.fn().mockRejectedValue(new Error("update failed"));
+    const reload = jest.fn();
+
+    await applyUpdateWithFeedback({
+      update,
+      reload,
+      reloadDelayMs: 500,
+    });
+
+    expect(mockedToast.error).toHaveBeenCalledWith(
+      "No pudimos actualizar automaticamente.",
+      expect.objectContaining({
+        id: "ventora-app-update",
+        duration: 7000,
+      })
+    );
+
+    await jest.advanceTimersByTimeAsync(500);
+    expect(reload).not.toHaveBeenCalled();
   });
 });

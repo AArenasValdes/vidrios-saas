@@ -7,12 +7,20 @@ import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const UPDATE_APPLY_TIMEOUT_MS = 10000;
+const UPDATE_RELOAD_FALLBACK_MS = 1200;
+const APP_UPDATE_TOAST_ID = "ventora-app-update";
 
 export type ForceAppUpdateResult =
   | "unsupported"
   | "no-registration"
   | "update-activated"
   | "no-update";
+
+type ApplyUpdateWithFeedbackOptions = {
+  update?: () => Promise<ForceAppUpdateResult>;
+  reload?: () => void;
+  reloadDelayMs?: number;
+};
 
 export async function fetchRemoteAppVersion(): Promise<string | null> {
   const response = await fetch("/api/app-version", { cache: "no-store" });
@@ -97,19 +105,50 @@ export async function forceAppUpdate(): Promise<ForceAppUpdateResult> {
   }
 }
 
-async function applyUpdateWithFeedback() {
+function scheduleReloadAfterUpdate(
+  reload: () => void,
+  delayMs = UPDATE_RELOAD_FALLBACK_MS
+) {
+  window.setTimeout(() => {
+    reload();
+  }, delayMs);
+}
+
+export async function applyUpdateWithFeedback({
+  update = forceAppUpdate,
+  reload = () => window.location.reload(),
+  reloadDelayMs = UPDATE_RELOAD_FALLBACK_MS,
+}: ApplyUpdateWithFeedbackOptions = {}) {
   toast.loading("Actualizando Ventora...", {
     description: "La app se reiniciara en breve.",
+    id: APP_UPDATE_TOAST_ID,
+    duration: Infinity,
   });
 
   try {
-    const result = await forceAppUpdate();
+    const result = await update();
 
-    if (result !== "update-activated") {
-      window.location.reload();
+    if (result === "no-update") {
+      toast("No se encontro una actualizacion pendiente.", {
+        description: "Recarga o usa Reparar app si sigues viendo una version antigua.",
+        id: APP_UPDATE_TOAST_ID,
+        duration: 6000,
+      });
+      return;
     }
+
+    toast.loading("Aplicando actualizacion...", {
+      description: "Si el dispositivo no se reinicia solo, lo haremos automaticamente.",
+      id: APP_UPDATE_TOAST_ID,
+      duration: Infinity,
+    });
+    scheduleReloadAfterUpdate(reload, reloadDelayMs);
   } catch {
-    return;
+    toast.error("No pudimos actualizar automaticamente.", {
+      description: "Usa Reparar app en este dispositivo o recarga la pagina.",
+      id: APP_UPDATE_TOAST_ID,
+      duration: 7000,
+    });
   }
 }
 
