@@ -6,59 +6,79 @@ import { CURRENT_APP_VERSION } from "@/utils/app-version";
 import { isCanonicalPwaHost } from "@/utils/pwa-host";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
+const UPDATE_APPLY_TIMEOUT_MS = 10000;
 
-export async function forceAppUpdate(): Promise<void> {
-  if (!("serviceWorker" in navigator)) return;
+export type ForceAppUpdateResult =
+  | "unsupported"
+  | "no-registration"
+  | "update-activated"
+  | "no-update";
+
+export async function fetchRemoteAppVersion(): Promise<string | null> {
+  const response = await fetch("/api/app-version", { cache: "no-store" });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as { version?: string };
+  return data?.version ?? null;
+}
+
+function waitForInstalledServiceWorker(worker: ServiceWorker): Promise<ForceAppUpdateResult> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result: ForceAppUpdateResult) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      worker.removeEventListener("statechange", handleStateChange);
+      window.clearTimeout(timeout);
+      resolve(result);
+    };
+    const handleStateChange = () => {
+      if (worker.state === "installed") {
+        worker.postMessage({ type: "SKIP_WAITING" });
+        finish("update-activated");
+      }
+    };
+    const timeout = window.setTimeout(() => {
+      finish("no-update");
+    }, UPDATE_APPLY_TIMEOUT_MS);
+
+    worker.addEventListener("statechange", handleStateChange);
+    handleStateChange();
+  });
+}
+
+export async function forceAppUpdate(): Promise<ForceAppUpdateResult> {
+  if (!("serviceWorker" in navigator)) return "unsupported";
 
   try {
     const registration = await navigator.serviceWorker.getRegistration("/");
-    if (!registration) return;
+    if (!registration) return "no-registration";
 
     if (registration.waiting) {
       registration.waiting.postMessage({ type: "SKIP_WAITING" });
-      return;
+      return "update-activated";
     }
 
     if (registration.installing) {
-      await new Promise<void>((resolve) => {
-        const installing = registration.installing;
-        if (!installing) {
-          resolve();
-          return;
-        }
-        installing.addEventListener("statechange", () => {
-          if (installing.state === "installed") {
-            installing.postMessage({ type: "SKIP_WAITING" });
-            resolve();
-          }
-        });
-        if (installing.state === "installed") {
-          installing.postMessage({ type: "SKIP_WAITING" });
-          resolve();
-        }
-      });
-      return;
+      return await waitForInstalledServiceWorker(registration.installing);
     }
 
-    const updateComplete = new Promise<void>((resolve) => {
+    const updateComplete = new Promise<ForceAppUpdateResult>((resolve) => {
       registration.addEventListener(
         "updatefound",
         () => {
           const installing = registration.installing;
           if (!installing) {
-            resolve();
+            resolve("no-update");
             return;
           }
-          installing.addEventListener("statechange", () => {
-            if (installing.state === "installed") {
-              installing.postMessage({ type: "SKIP_WAITING" });
-              resolve();
-            }
-          });
-          if (installing.state === "installed") {
-            installing.postMessage({ type: "SKIP_WAITING" });
-            resolve();
-          }
+          void waitForInstalledServiceWorker(installing).then(resolve);
         },
         { once: true }
       );
@@ -66,12 +86,14 @@ export async function forceAppUpdate(): Promise<void> {
 
     await registration.update();
 
-    await Promise.race([
+    return await Promise.race([
       updateComplete,
-      new Promise<void>((r) => setTimeout(r, 10000)),
+      new Promise<ForceAppUpdateResult>((resolve) =>
+        setTimeout(() => resolve("no-update"), UPDATE_APPLY_TIMEOUT_MS)
+      ),
     ]);
   } catch {
-    return;
+    return "no-update";
   }
 }
 
@@ -81,7 +103,11 @@ async function applyUpdateWithFeedback() {
   });
 
   try {
-    await forceAppUpdate();
+    const result = await forceAppUpdate();
+
+    if (result !== "update-activated") {
+      window.location.reload();
+    }
   } catch {
     return;
   }
@@ -102,11 +128,7 @@ export function UpdateChecker() {
       checkingRef.current = true;
 
       try {
-        const response = await fetch("/api/app-version", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const data = (await response.json()) as { version?: string };
-        const remoteVersion = data?.version;
+        const remoteVersion = await fetchRemoteAppVersion();
         if (!remoteVersion) return;
 
         if (remoteVersion !== CURRENT_APP_VERSION) {

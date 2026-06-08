@@ -47,7 +47,7 @@ import { CURRENT_APP_VERSION } from "@/utils/app-version";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
-import { forceAppUpdate } from "@/components/pwa/update-checker";
+import { fetchRemoteAppVersion, forceAppUpdate } from "@/components/pwa/update-checker";
 
 import s from "./page.module.css";
 
@@ -329,26 +329,57 @@ export default function ConfiguracionEmpresaPage() {
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [isReiniciando, setIsReiniciando] = useState(false);
+  const [appUpdateFeedback, setAppUpdateFeedback] = useState<string | null>(null);
 
   const handleForceUpdate = useCallback(async () => {
     try {
       setIsUpdating(true);
-      await forceAppUpdate();
+      setAppUpdateFeedback("Buscando version nueva...");
+
+      const remoteVersion = await fetchRemoteAppVersion();
+
+      if (!remoteVersion) {
+        setAppUpdateFeedback("No pudimos consultar la version publicada. Revisa conexion e intenta nuevamente.");
+        return;
+      }
+
+      if (remoteVersion === CURRENT_APP_VERSION) {
+        setAppUpdateFeedback(`Ya estas en la ultima version: ${CURRENT_APP_VERSION}.`);
+        return;
+      }
+
+      setAppUpdateFeedback(`Version nueva encontrada: ${remoteVersion}. Actualizando...`);
+      const result = await forceAppUpdate();
+
+      if (result !== "update-activated") {
+        window.location.reload();
+      }
     } catch {
-      return;
+      setAppUpdateFeedback("No pudimos actualizar automaticamente. Usa Reparar app en este dispositivo.");
+    } finally {
+      setIsUpdating(false);
     }
   }, []);
 
-  const handleReiniciarApp = useCallback(() => {
+  const handleReiniciarApp = useCallback(async () => {
     try {
       setIsReiniciando(true);
+      setAppUpdateFeedback("Reparando app local y limpiando cache...");
+
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
+
       if ("caches" in window) {
-        window.caches.keys().then((keys) => {
+        const keys = await window.caches.keys();
+        await Promise.all(
           keys
             .filter((key) => key.startsWith("vidrios-saas-"))
-            .forEach((key) => window.caches.delete(key));
-        });
+            .map((key) => window.caches.delete(key))
+        );
       }
+
       window.location.reload();
     } catch {
       window.location.reload();
@@ -948,6 +979,11 @@ export default function ConfiguracionEmpresaPage() {
                       {isReiniciando ? "Reparando..." : "Reparar app en este dispositivo"}
                     </button>
                   </div>
+                  {appUpdateFeedback ? (
+                    <p className={s.inlineInfo} style={{ marginTop: 10 }}>
+                      {appUpdateFeedback}
+                    </p>
+                  ) : null}
                   <p className={s.inlineInfo} style={{ marginTop: 10 }}>Usa estas opciones solo si la app no carga bien o soporte te lo solicita.</p>
                 </div>
               </div>

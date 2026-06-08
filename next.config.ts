@@ -1,30 +1,53 @@
 import type { NextConfig } from "next";
 import { execSync } from "child_process";
 
-function resolveBuildVersion(): string {
-  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
-  if (!sha || sha.length === 0) return "dev";
+type ResolveBuildVersionOptions = {
+  env?: NodeJS.ProcessEnv;
+  now?: Date;
+  exec?: typeof execSync;
+};
 
-  const now = new Date();
-  const date = [
+function formatBuildDate(now: Date) {
+  return [
     now.getFullYear(),
     String(now.getMonth() + 1).padStart(2, "0"),
     String(now.getDate()).padStart(2, "0"),
   ].join(".");
+}
+
+function normalizeShortSha(value: string | undefined) {
+  const normalized = value?.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, 7);
+}
+
+export function resolveBuildVersion({
+  env = process.env,
+  now = new Date(),
+  exec = execSync,
+}: ResolveBuildVersionOptions = {}): string {
+  const date = formatBuildDate(now);
+  const vercelSha = normalizeShortSha(env.VERCEL_GIT_COMMIT_SHA);
+
+  if (vercelSha) {
+    return `v${date}-${vercelSha}`;
+  }
 
   try {
-    const count = execSync("git rev-list --count HEAD", {
+    const localSha = exec("git rev-parse --short HEAD", {
       encoding: "utf-8",
       timeout: 5000,
     }).trim();
-    if (count && /^\d+$/.test(count)) {
-      return `v${date}-${count}`;
-    }
-  } catch {
-    // git no disponible en este build, usar SHA corto como secuencia
-  }
+    const normalizedLocalSha = normalizeShortSha(localSha);
 
-  return `v${date}-${sha.slice(0, 8)}`;
+    return normalizedLocalSha ? `v${date}-${normalizedLocalSha}` : "dev";
+  } catch {
+    return "dev";
+  }
 }
 
 const appVersion = resolveBuildVersion();
