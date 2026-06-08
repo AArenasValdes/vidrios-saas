@@ -8,6 +8,7 @@ import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
+import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
 import styles from "./page.mobile.module.css";
 
 function pillClassName(stateColor: DashboardMobileProps["quoteCards"][number]["stateColor"]) {
@@ -38,8 +39,11 @@ export const DashboardMobile = memo(function DashboardMobile({
         className={styles.header}
         data-onboarding-target="dashboard-header"
       >
-        <h1 className={styles.title}>Buen dia, {greetingName}</h1>
-        <p className={styles.date}>{mobileDateLabel}</p>
+        <div className={styles.headerCopy}>
+          <h1 className={styles.title}>Buen dia, {greetingName}</h1>
+          <p className={styles.date}>{mobileDateLabel}</p>
+        </div>
+        <DashboardAppRefreshButton className={styles.appRefreshButton} label="Actualizar" />
       </PremiumPageSection>
 
       <PremiumPageSection>

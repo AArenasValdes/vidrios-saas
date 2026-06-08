@@ -7,6 +7,7 @@ import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
+import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
 import styles from "./page.desktop.module.css";
 
 function pillClassName(stateColor: DashboardDesktopProps["quoteCards"][number]["stateColor"]) {
@@ -41,14 +42,17 @@ export const DashboardDesktop = memo(function DashboardDesktop({
           <p className={styles.subtitle}>{subtitle}</p>
         </div>
 
-        <Link
-          href={newQuoteHref}
-          className={styles.newButton}
-          data-onboarding-target="dashboard-new-quote"
-        >
-          <span className={styles.newButtonIcon}>+</span>
-          Nueva cotizacion
-        </Link>
+        <div className={styles.headerActions}>
+          <DashboardAppRefreshButton className={styles.appRefreshButton} label="Actualizar" />
+          <Link
+            href={newQuoteHref}
+            className={styles.newButton}
+            data-onboarding-target="dashboard-new-quote"
+          >
+            <span className={styles.newButtonIcon}>+</span>
+            Nueva cotizacion
+          </Link>
+        </div>
       </PremiumPageSection>
 
       <OnboardingGuide controller={onboarding} routeKey="dashboard" />

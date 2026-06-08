@@ -9,6 +9,7 @@ const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const UPDATE_APPLY_TIMEOUT_MS = 10000;
 const UPDATE_RELOAD_FALLBACK_MS = 1200;
 const APP_UPDATE_TOAST_ID = "ventora-app-update";
+const APP_CACHE_PREFIX = "vidrios-saas";
 
 export type ForceAppUpdateResult =
   | "unsupported"
@@ -105,6 +106,26 @@ export async function forceAppUpdate(): Promise<ForceAppUpdateResult> {
   }
 }
 
+export async function repairAppOnThisDevice() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+  }
+
+  if ("caches" in window) {
+    const keys = await window.caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith(APP_CACHE_PREFIX))
+        .map((key) => window.caches.delete(key))
+    );
+  }
+}
+
 function scheduleReloadAfterUpdate(
   reload: () => void,
   delayMs = UPDATE_RELOAD_FALLBACK_MS
@@ -173,22 +194,11 @@ export function UpdateChecker() {
         if (remoteVersion !== CURRENT_APP_VERSION) {
           shownRef.current = true;
 
-          toast("Hay una nueva version de Ventora disponible.", {
-            description: "Actualiza para ver los ultimos cambios sin reinstalar la app.",
-            duration: Infinity,
-            action: {
-              label: "Actualizar ahora",
-              onClick: () => {
-                void applyUpdateWithFeedback();
-              },
-            },
-            cancel: {
-              label: "Despues",
-              onClick: () => {
-                return;
-              },
-            },
-          });
+          window.dispatchEvent(
+            new CustomEvent("ventora:app-update-available", {
+              detail: { remoteVersion },
+            })
+          );
         }
       } catch {
         return;

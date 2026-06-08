@@ -47,7 +47,11 @@ import { CURRENT_APP_VERSION } from "@/utils/app-version";
 import { resolvePushServiceWorkerRegistration } from "@/utils/pwa-service-worker";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 import { subscribeToPushNotifications } from "@/utils/web-push";
-import { fetchRemoteAppVersion, forceAppUpdate } from "@/components/pwa/update-checker";
+import {
+  fetchRemoteAppVersion,
+  forceAppUpdate,
+  repairAppOnThisDevice,
+} from "@/components/pwa/update-checker";
 
 import s from "./page.module.css";
 
@@ -365,21 +369,7 @@ export default function ConfiguracionEmpresaPage() {
     try {
       setIsReiniciando(true);
       setAppUpdateFeedback("Reparando app local y limpiando cache...");
-
-      if ("serviceWorker" in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((registration) => registration.unregister()));
-      }
-
-      if ("caches" in window) {
-        const keys = await window.caches.keys();
-        await Promise.all(
-          keys
-            .filter((key) => key.startsWith("vidrios-saas-"))
-            .map((key) => window.caches.delete(key))
-        );
-      }
-
+      await repairAppOnThisDevice();
       window.location.reload();
     } catch {
       window.location.reload();
