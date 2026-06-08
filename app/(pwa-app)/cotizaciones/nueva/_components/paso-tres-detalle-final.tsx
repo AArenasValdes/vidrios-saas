@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LuChevronDown, LuTruck } from "react-icons/lu";
 
 import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import s from "../page.module.css";
@@ -250,7 +251,13 @@ export function PasoTresDetalleFinal({
           <article key={item.id} className={s.stepThreeItemRow}>
             <span className={s.stepThreeItemBadge}>{buildItemBadge(item.codigo, index)}</span>
             <div className={s.stepThreeItemBody}>
-              <strong>{item.nombre || item.tipo || item.codigo}</strong>
+              <strong>
+                {resolveWorkflowItemDisplayName({
+                  tipo: item.tipo,
+                  nombre: item.nombre,
+                  codigo: item.codigo,
+                })}
+              </strong>
               <span>{buildItemMeta(item)}</span>
             </div>
             {!isGlobal ? (

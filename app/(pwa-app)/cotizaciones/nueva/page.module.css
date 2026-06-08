@@ -3007,6 +3007,103 @@
   padding-bottom: 0;
 }
 
+.stepTwoMobilePointEditShell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 0;
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+.stepTwoMobilePointEditScroll {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 0.5rem;
+}
+
+.stepTwoFormCardMobilePointEdit {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.stepTwoMobilePointEditFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.stepTwoMobilePointEditFields .formSection {
+  margin: 0;
+  padding: 0.85rem;
+  border-radius: 18px;
+}
+
+.stepTwoMobilePointEditSection .formSectionHead {
+  margin-bottom: 0.55rem;
+}
+
+.stepTwoMobilePointEditPreview {
+  margin-bottom: 0.55rem;
+  padding: 0.65rem;
+}
+
+.stepTwoMobilePointEditPreview .quickPreviewThumb {
+  width: 100%;
+  max-width: 9.5rem;
+  margin: 0 auto;
+}
+
+.stepTwoMobileTypeDetails {
+  border: 1px dashed rgba(93, 122, 194, 0.28);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.55rem 0.7rem;
+}
+
+.stepTwoMobileTypeDetails > summary {
+  cursor: pointer;
+  color: #3559a8;
+  font-size: 0.84rem;
+  font-weight: 700;
+  list-style: none;
+}
+
+.stepTwoMobileTypeDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.stepTwoMobileTypeDetails[open] > summary {
+  margin-bottom: 0.65rem;
+}
+
+.stepTwoMobilePointEditFooter {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 14;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+  gap: 0.55rem;
+  padding: 0.75rem 1rem 0.35rem;
+  margin-top: 0;
+  background: linear-gradient(180deg, rgba(243, 245, 249, 0) 0%, #f3f5f9 24%, #f3f5f9 100%);
+}
+
+.stepTwoMobilePointEditFooter .btnGhost,
+.stepTwoMobilePointEditFooter .btnPrimary {
+  min-height: 2.85rem;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .stepTwoMobileHero,
 .stepTwoMobileEditingHeader {
   display: flex;
@@ -8391,6 +8488,17 @@
   padding-bottom: 0.9rem;
   text-align: center;
   user-select: none;
+}
+
+.lineTemplateInlineHint {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(79, 125, 212, 0.08);
+  color: #3559a8;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
  
  

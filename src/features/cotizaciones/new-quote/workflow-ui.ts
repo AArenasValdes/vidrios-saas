@@ -716,6 +716,85 @@ function isLegacyAutoComponentLabel(tipo: string, descripcion: string) {
   return descriptionParts.slice(0, -1).join(" ") === normalizedTipo;
 }
 
+function shouldUseExplicitComponentName(
+  nombre: string,
+  form: Pick<ComponentFormState, "tipo" | "codigo">,
+  generatedDisplayName: string
+) {
+  const trimmed = nombre.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  const normalizedNombre = normalizeComparableComponentText(trimmed);
+  const normalizedGenerated = normalizeComparableComponentText(generatedDisplayName);
+  const normalizedAuto = normalizeComparableComponentText(buildAutoComponentName(form));
+
+  if (
+    normalizedNombre === normalizedGenerated ||
+    normalizedNombre === normalizedAuto ||
+    isLegacyAutoComponentLabel(form.tipo, trimmed)
+  ) {
+    return false;
+  }
+
+  const tipoHead = normalizeComparableComponentText(form.tipo).split(" ")[0] ?? "";
+
+  return Boolean(tipoHead && normalizedNombre.startsWith(tipoHead));
+}
+
+function isStaleComponentNameForTipo(
+  nombre: string,
+  form: Pick<ComponentFormState, "tipo" | "codigo">,
+  generatedDisplayName: string
+) {
+  const trimmed = nombre.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  if (shouldUseExplicitComponentName(trimmed, form, generatedDisplayName)) {
+    return false;
+  }
+
+  const normalizedNombre = normalizeComparableComponentText(trimmed);
+  const tipoHead = normalizeComparableComponentText(form.tipo).split(" ")[0] ?? "";
+
+  if (tipoHead && normalizedNombre.includes(tipoHead)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function resolveWorkflowItemDisplayName(input: {
+  tipo: string;
+  nombre: string;
+  codigo?: string;
+}) {
+  const nombre = input.nombre?.trim() ?? "";
+  const tipo = input.tipo?.trim() || "Componente";
+
+  if (!nombre) {
+    return tipo;
+  }
+
+  if (isLegacyAutoComponentLabel(tipo, nombre)) {
+    return nombre;
+  }
+
+  const tipoHead = normalizeComparableComponentText(tipo).split(" ")[0] ?? "";
+  const normalizedNombre = normalizeComparableComponentText(nombre);
+
+  if (tipoHead && normalizedNombre.includes(tipoHead)) {
+    return nombre;
+  }
+
+  return tipo;
+}
+
 export function normalizeCurrencyInput(value: string) {
   const digits = value.replace(/\D/g, "");
 
@@ -1165,10 +1244,14 @@ export function buildSuggestedComponentForm(
         ? current.material
         : suggestion.material,
     referencia: pickSuggestedString(current.referencia, suggestion.referencia),
-    sistema: current.sistema ?? splitComponentReference(current.referencia ?? suggestion.referencia, tipo).sistema,
-    configuracion:
-      current.configuracion ??
-      splitComponentReference(current.referencia ?? suggestion.referencia, tipo).configuracion,
+    sistema: pickSuggestedString(
+      current.sistema,
+      splitComponentReference(current.referencia ?? suggestion.referencia, tipo).sistema
+    ),
+    configuracion: pickSuggestedString(
+      current.configuracion,
+      splitComponentReference(current.referencia ?? suggestion.referencia, tipo).configuracion
+    ),
     sheetScheme: current.sheetScheme ?? "",
     sheetVariant: current.sheetVariant ?? "",
     customSchemeDescription: current.customSchemeDescription ?? "",
@@ -1477,7 +1560,13 @@ export function buildItemFromForm(
     palilloEnabled: syncedForm.palilloEnabled,
     palilloType: syncedForm.palilloType,
   });
-  const autoName = form.nombre.trim() || generatedDisplayName || buildAutoComponentName(form);
+  const autoName = isStaleComponentNameForTipo(
+    syncedForm.nombre,
+    syncedForm,
+    generatedDisplayName
+  )
+    ? generatedDisplayName || buildAutoComponentName(syncedForm)
+    : syncedForm.nombre.trim() || generatedDisplayName || buildAutoComponentName(syncedForm);
   const rawDescription = form.descripcion.trim();
   const normalizedAutoName = normalizeComparableComponentText(autoName);
   const descripcion =

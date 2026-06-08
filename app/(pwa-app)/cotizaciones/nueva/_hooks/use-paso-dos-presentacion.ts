@@ -137,13 +137,19 @@ export function usePasoDosPresentacion(
       generateComponentSVG({
         tipo: params.componentForm.tipo,
         referencia: params.componentForm.referencia,
-        ancho: null,
-        alto: null,
+        ancho: params.componentForm.ancho ? Number(params.componentForm.ancho) : null,
+        alto: params.componentForm.alto ? Number(params.componentForm.alto) : null,
         colorHex: params.componentForm.colorHex,
         maxW: 92,
         maxH: 72,
       }),
-    [params.componentForm.colorHex, params.componentForm.referencia, params.componentForm.tipo]
+    [
+      params.componentForm.alto,
+      params.componentForm.ancho,
+      params.componentForm.colorHex,
+      params.componentForm.referencia,
+      params.componentForm.tipo,
+    ]
   );
 
   const batchPreviewCodes = useMemo(() => {

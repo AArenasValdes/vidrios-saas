@@ -624,15 +624,21 @@ export default function ConfiguracionEmpresaPage() {
               <div className={s.quoteMetaList}>
                 <span>
                   <LuMapPin aria-hidden />
-                  {form.empresaDireccion || "Direccion comercial"}
+                  <span className={s.quoteMetaValue}>
+                    {form.empresaDireccion || "Direccion comercial"}
+                  </span>
                 </span>
                 <span>
                   <LuPhone aria-hidden />
-                  {form.empresaTelefono || "Telefono de contacto"}
+                  <span className={s.quoteMetaValue}>
+                    {form.empresaTelefono || "Telefono de contacto"}
+                  </span>
                 </span>
                 <span>
                   <LuMail aria-hidden />
-                  {form.empresaEmail || "Email comercial"}
+                  <span className={s.quoteMetaValue}>
+                    {form.empresaEmail || "Email comercial"}
+                  </span>
                 </span>
               </div>
             </div>

@@ -60,6 +60,7 @@ export type PasoDosFormularioComponenteProps = {
   onAddOrUpdateItem: () => void;
   onRecalculateCurrentTemplatePrice: () => void;
   onSaveQuickPriceTemplate: () => void;
+  variant?: "default" | "mobilePointEdit";
 };
 
 export type PasoDosPanelComponentesProps = {

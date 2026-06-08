@@ -222,11 +222,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         }
 
         setSaveIntent(null);
-
-        if (isNewWorkflow) {
-          resetWorkflowToBlank();
-        }
-
+        setDraft(draftToSave);
         setSavedRecord(record);
         setLastSaveMode(wasUpdatingRecord ? "actualizada" : estado);
         setStep(3);

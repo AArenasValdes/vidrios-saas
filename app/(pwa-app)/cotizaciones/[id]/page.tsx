@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LuArrowLeft } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
@@ -51,6 +51,15 @@ export default function CotizacionDetallePage() {
     clienteRespondioEn: string | null;
     clienteRespuestaCanal: string | null;
   } | null>(null);
+  const loadedItemsForIdRef = useRef<string | null>(
+    cotizacion?.items.length ? params.id : null
+  );
+
+  useEffect(() => {
+    loadedItemsForIdRef.current = null;
+    setHasResolvedInitialLoad(false);
+    setIsLoadingItems(Boolean(params.id));
+  }, [params.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,8 +71,17 @@ export default function CotizacionDetallePage() {
       return;
     }
 
-    if (cotizacion && cotizacion.items.length > 0) {
+    if (cotizacion?.items.length) {
+      loadedItemsForIdRef.current = params.id;
       setLoadError(null);
+      setIsLoadingItems(false);
+      setHasResolvedInitialLoad(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (loadedItemsForIdRef.current === params.id) {
       setIsLoadingItems(false);
       setHasResolvedInitialLoad(true);
       return () => {
@@ -86,6 +104,7 @@ export default function CotizacionDetallePage() {
       })
       .finally(() => {
         if (!cancelled) {
+          loadedItemsForIdRef.current = params.id;
           setIsLoadingItems(false);
           setHasResolvedInitialLoad(true);
         }
@@ -94,7 +113,7 @@ export default function CotizacionDetallePage() {
     return () => {
       cancelled = true;
     };
-  }, [cotizacion, loadCotizacionById, params.id]);
+  }, [cotizacion?.items.length, loadCotizacionById, params.id]);
 
   useEffect(() => {
     router.prefetch(printUrl);

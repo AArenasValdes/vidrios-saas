@@ -80,6 +80,9 @@ import {
 } from "@/features/cotizaciones/new-quote/solicitud-prefill";
 import {
   isFreeValueComponentType,
+  getConfigurationOptionsForComponent,
+  getConfigurationOptionsForComponentSistema,
+  hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
 import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-desktop";
@@ -573,51 +576,130 @@ function NuevaCotizacionPageContent() {
         } as ComponentFormState;
       }
 
-      if (key === "tipo" && !editingItemId) {
-        const next = buildSuggestedComponentForm({
-          items: draft.items,
-          tipo: value as string,
-          provider: suggestionProvider,
-          pricingMode: cur.pricingMode,
-          defaultMargin: organizationProfile?.margenDefecto,
-          current: {
-            tipo: value as string,
-            codigo: "",
-            referencia: "",
-            lineTemplateId: "",
-            nombre: "",
-            descripcion: "",
-            vidrio: "",
-            material: cur.material,
-            loteCantidad: cur.loteCantidad,
-            cantidad: cur.cantidad,
-            precioPorM2: cur.precioPorM2,
-            minimoCobrable: cur.minimoCobrable,
-            redondeoPrecio: cur.redondeoPrecio,
-            precioPlantillaSugerido: cur.precioPlantillaSugerido,
-            precioAjustadoManual: cur.precioAjustadoManual,
-            origenPrecio: cur.origenPrecio,
-            observaciones: cur.observaciones,
-            colorHex: cur.colorHex,
-            pricingMode: cur.pricingMode,
-            sheetScheme: "",
-            sheetVariant: "",
-            customSchemeDescription: "",
-            isCustomScheme: false,
-          },
+      if (key === "ancho" || key === "alto") {
+        const digitsOnly = String(value).replace(/[^\d]/g, "");
+        const next = syncTemplatePricingInComponentForm({
+          ...cur,
+          [key]: digitsOnly,
         });
+        const pricingSummary = buildComponentFormLinePricingSummary(next);
 
-        if (value === "Trabajo personalizado") {
-          next.descripcion = "";
-          next.nombre = "";
-        }
+        // #region agent log
+        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
+          body: JSON.stringify({
+            sessionId: "bfa10d",
+            runId: "pre-fix",
+            hypothesisId: "F",
+            location: "page.tsx:handleComponentChange:medidas",
+            message: "Medidas changed with line pricing sync",
+            data: {
+              field: key,
+              ancho: next.ancho,
+              alto: next.alto,
+              referencia: next.referencia,
+              precioPorM2: next.precioPorM2,
+              precioSugerido: pricingSummary.precioUnitarioSugerido,
+              areaM2: pricingSummary.areaM2,
+              costoProveedorUnitario: next.costoProveedorUnitario,
+              precioAjustadoManual: next.precioAjustadoManual,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
 
         return next;
       }
 
-      const next = { ...cur, [key]: value };
       if (key === "tipo") {
-        next.codigo = buildNextComponentCode(draft.items, value as string, editingItemId);
+        const nextTipo = String(value);
+        const next = buildSuggestedComponentForm({
+          items: draft.items,
+          tipo: nextTipo,
+          provider: suggestionProvider,
+          pricingMode: cur.pricingMode,
+          defaultMargin: organizationProfile?.margenDefecto,
+          current: editingItemId
+            ? {
+                ...cur,
+                tipo: nextTipo,
+                sistema: "",
+                configuracion: "",
+                sheetScheme: "",
+                sheetVariant: "",
+                customSchemeDescription: "",
+                isCustomScheme: false,
+                nombre: "",
+                descripcion: "",
+              }
+            : {
+                ...cur,
+                tipo: nextTipo,
+                codigo: "",
+                referencia: "",
+                lineTemplateId: "",
+                nombre: "",
+                descripcion: "",
+                vidrio: "",
+                sistema: "",
+                configuracion: "",
+                sheetScheme: "",
+                sheetVariant: "",
+                customSchemeDescription: "",
+                isCustomScheme: false,
+              },
+        });
+
+        if (editingItemId) {
+          next.codigo = cur.codigo;
+        }
+
+        if (nextTipo === "Trabajo personalizado") {
+          next.descripcion = "";
+          next.nombre = "";
+        }
+
+        // #region agent log
+        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
+          body: JSON.stringify({
+            sessionId: "bfa10d",
+            runId: "pre-fix",
+            hypothesisId: "B",
+            location: "page.tsx:handleComponentChange:tipo",
+            message: "Tipo changed in point edit",
+            data: {
+              editingItemId: editingItemId ?? null,
+              nextTipo,
+              prevTipo: cur.tipo,
+              prevSistema: cur.sistema,
+              nextSistema: next.sistema,
+              nextConfiguracion: next.configuracion,
+              nextNombre: next.nombre,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
+
+        return syncTemplatePricingInComponentForm(next);
+      }
+
+      const next = { ...cur, [key]: value };
+      if (key === "sistema") {
+        const configs = hasPerSystemConfigurations(next.tipo)
+          ? getConfigurationOptionsForComponentSistema(next.tipo, String(value))
+          : getConfigurationOptionsForComponent(next.tipo);
+
+        if (
+          configs.length > 0 &&
+          !(next.configuracion && configs.includes(next.configuracion))
+        ) {
+          next.configuracion = configs[0] ?? "";
+        }
       }
       if (key === "tipo" || key === "sistema") {
         const nextTipo = key === "tipo" ? String(value) : next.tipo;
@@ -881,6 +963,27 @@ function NuevaCotizacionPageContent() {
         const item = buildItemFromForm(componentForm, draft.items, editingItemId, {
           quotePricingMode,
         });
+        // #region agent log
+        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
+          body: JSON.stringify({
+            sessionId: "bfa10d",
+            runId: "pre-fix",
+            hypothesisId: "E",
+            location: "page.tsx:handleAddOrUpdateItem:edit",
+            message: "Saved edited component item",
+            data: {
+              itemId: item.id,
+              tipo: item.tipo,
+              nombre: item.nombre,
+              linea: item.linea,
+              observaciones: item.observaciones?.slice(0, 120) ?? "",
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
         nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
       } else {

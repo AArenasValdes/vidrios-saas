@@ -3,6 +3,7 @@ import {
   applyQuickEditDraftStatesToItems,
   buildFreeValueItemFromForm,
   buildItemFromForm,
+  buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
   mapRecordToDraft,
   reconcileWorkflowItemsPricing,
@@ -10,12 +11,15 @@ import {
   getSheetVariantOptions,
   GLASS_OPTIONS,
   buildQuickEditDraft,
+  resolveWorkflowItemDisplayName,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
+  syncTemplatePricingInComponentForm,
   validateComponentForm,
   validateFreeValueItemForm,
   type ComponentFormState,
 } from "../workflow-ui";
+import { getSystemOptionsForComponent } from "../../services/component-catalog.service";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -104,6 +108,48 @@ describe("workflow-ui paso 2", () => {
     expect(item.precioTotal).toBe(78000);
     expect(item.precioAjustadoManual).toBe(false);
     expect(item.origenPrecio).toBe("plantilla");
+  });
+
+  it("debe regenerar el nombre comercial cuando cambia el tipo y queda un nombre viejo", () => {
+    const item = buildItemFromForm(
+      createLinePricingForm({
+        codigo: "P1",
+        tipo: "Puerta",
+        sistema: "Abrir",
+        configuracion: "",
+        nombre: "Ventana corredera",
+        referencia: "",
+        vidrio: "",
+        ancho: "1500",
+        alto: "1946",
+        costoProveedorUnitario: "234000",
+        precioAjustadoManual: true,
+      }),
+      [],
+      "item-v1"
+    );
+
+    expect(item.tipo).toBe("Puerta");
+    expect(item.nombre).toContain("Puerta abrir");
+    expect(
+      resolveWorkflowItemDisplayName({
+        tipo: item.tipo,
+        nombre: "Ventana corredera",
+        codigo: item.codigo,
+      })
+    ).toBe("Puerta");
+  });
+
+  it("debe mantener un nombre comercial personalizado cuando coincide con el tipo", () => {
+    const item = buildItemFromForm(
+      createLinePricingForm({
+        nombre: "Ventana living premium",
+      }),
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Ventana living premium");
   });
 
   it("debe mantener unitario por línea y duplicar subtotal cuando cantidad es 2", () => {
@@ -782,5 +828,73 @@ describe("workflow-ui paso 2", () => {
 
     expect(item.nombre).toBe("Paño fijo 2 paños");
     expect(item.precioUnitario).toBe(180000);
+  });
+
+  it("debe asignar sistema y configuracion validos al cambiar tipo en edicion", () => {
+    const ventanaForm = createLinePricingForm({
+      tipo: "Ventana",
+      codigo: "V1",
+      sistema: "Corredera",
+      configuracion: "",
+      ancho: "1200",
+      alto: "1000",
+    });
+
+    const puertaForm = buildSuggestedComponentForm({
+      items: [],
+      tipo: "Puerta",
+      current: {
+        ...ventanaForm,
+        tipo: "Puerta",
+        sistema: "",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        nombre: "",
+        descripcion: "",
+      },
+    });
+
+    expect(puertaForm.codigo).toBe("V1");
+    expect(puertaForm.tipo).toBe("Puerta");
+    expect(getSystemOptionsForComponent("Puerta")).toContain(puertaForm.sistema);
+    expect(puertaForm.sistema.trim()).not.toBe("");
+    expect(shouldShowSystemSelectionForComponent("Puerta")).toBe(true);
+
+    const savedItem = buildItemFromForm(puertaForm, [], "item-puerta-1");
+    expect(savedItem.tipo).toBe("Puerta");
+    expect(savedItem.nombre.toLowerCase()).toContain("puerta");
+  });
+
+  it("debe recalcular precio por linea al cambiar medidas en edicion", () => {
+    const baseForm = createLinePricingForm({
+      tipo: "Ventana",
+      codigo: "V1",
+      referencia: "L25",
+      precioPorM2: "75000",
+      minimoCobrable: "45000",
+      redondeoPrecio: "1000",
+      pricingMode: "precio_directo",
+      ancho: "1200",
+      alto: "1000",
+      costoProveedorUnitario: "99000",
+      precioAjustadoManual: false,
+      origenPrecio: "plantilla",
+    });
+
+    const updatedForm = syncTemplatePricingInComponentForm({
+      ...baseForm,
+      ancho: "2000",
+      alto: "1500",
+    });
+
+    expect(updatedForm.costoProveedorUnitario).toBe("225000");
+
+    const savedItem = buildItemFromForm(updatedForm, [], "item-v1");
+    expect(savedItem.ancho).toBe(2000);
+    expect(savedItem.alto).toBe(1500);
+    expect(savedItem.precioUnitario).toBe(225000);
   });
 });

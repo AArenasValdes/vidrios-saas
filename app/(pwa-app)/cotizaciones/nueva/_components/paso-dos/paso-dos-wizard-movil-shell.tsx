@@ -50,6 +50,7 @@ import { PasoDosWizardFooterMovil } from "./paso-dos-wizard-footer-movil";
 import { PasoDosWizardTipoMovil } from "./paso-dos-wizard-tipo-movil";
 import { PasoDosModoCotizacion } from "./paso-dos-modo-cotizacion";
 import { PasoDosFormularioComponente } from "../paso-dos-formulario-componente";
+import { PasoDosFormularioAcciones } from "./paso-dos-formulario-acciones";
 import { PasoDosItemLibreForm } from "./paso-dos-item-libre-form";
 import s from "../../page.module.css";
 
@@ -384,22 +385,30 @@ export function PasoDosWizardMovil({
 
   if (formulario.editingItemId) {
     return (
-      <section className={s.stepTwoMobileExperience}>
+      <section className={`${s.stepTwoMobileExperience} ${s.stepTwoMobilePointEditShell}`}>
         <div className={s.stepTwoMobileEditingHeader}>
           <div>
             <span className={s.cardLabel}>Paso 2 / Edicion puntual</span>
             <h2 className={s.stepTwoMobileTitle}>Editar componente</h2>
-            <p className={s.stepTwoMobileSubtle}>Ajusta este componente y vuelves a la lista.</p>
+            <p className={s.stepTwoMobileSubtle}>
+              {formulario.componentForm.codigo.trim()
+                ? `${formulario.componentForm.codigo} · ${formulario.componentForm.tipo}`
+                : formulario.componentForm.tipo}
+            </p>
           </div>
           <button
             className={s.stepTwoMobileHeaderAction}
             onClick={formulario.onResetStep2Form}
             type="button"
+            aria-label="Volver a la lista"
           >
             <LuX aria-hidden />
           </button>
         </div>
-        <PasoDosFormularioComponente {...formulario} />
+        <div className={s.stepTwoMobilePointEditScroll}>
+          <PasoDosFormularioComponente {...formulario} variant="mobilePointEdit" />
+        </div>
+        <PasoDosFormularioAcciones {...formulario} variant="mobilePointEdit" />
       </section>
     );
   }

@@ -1,7 +1,15 @@
 ﻿"use client";
 
+import { useEffect } from "react";
 import { LuPencil, LuPlus } from "react-icons/lu";
 
+import {
+  isFreeValueComponentType,
+  getConfigurationOptionsForComponent,
+  getConfigurationOptionsForComponentSistema,
+  getSystemOptionsForComponent,
+  hasPerSystemConfigurations,
+} from "@/features/cotizaciones/services/component-catalog.service";
 import {
   CLP,
   COMPONENT_TYPE_GROUPS,
@@ -13,8 +21,8 @@ import {
   MAX_COMPONENTS_PER_QUOTE,
   requiresCustomSheetDescription,
   shouldShowSheetSchemeForComponent,
+  shouldShowSystemSelectionForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
-import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -40,6 +48,7 @@ type Props = Pick<
   | "onSelectLineTemplate"
   | "onRecalculateCurrentTemplatePrice"
   | "onSaveQuickPriceTemplate"
+  | "variant"
 >;
 
 export function PasoDosFormularioBloqueConfiguracion({
@@ -62,7 +71,9 @@ export function PasoDosFormularioBloqueConfiguracion({
   onSelectLineTemplate,
   onRecalculateCurrentTemplatePrice,
   onSaveQuickPriceTemplate,
+  variant = "default",
 }: Props) {
+  const isMobilePointEdit = variant === "mobilePointEdit";
   const visibleLineTemplates = activeLineTemplates.filter(
     (template) => template.material === componentForm.material
   );
@@ -94,10 +105,53 @@ export function PasoDosFormularioBloqueConfiguracion({
   );
   const isTrabajoPersonalizado = componentForm.tipo === "Trabajo personalizado";
   const isFreeValue = isTrabajoPersonalizado || isFreeValueComponentType(componentForm.tipo);
+  const showSystemSelection = shouldShowSystemSelectionForComponent(componentForm.tipo);
+  const systemOptions = getSystemOptionsForComponent(componentForm.tipo);
+  const configurationOptions = hasPerSystemConfigurations(componentForm.tipo)
+    ? getConfigurationOptionsForComponentSistema(
+        componentForm.tipo,
+        componentForm.sistema?.trim() || systemOptions[0] || ""
+      )
+    : getConfigurationOptionsForComponent(componentForm.tipo);
   const trabajoPersonalizadoTexto =
     componentForm.descripcion.trim() ||
     componentForm.nombre.trim() ||
     "Describe el trabajo para que aparezca como alcance comercial.";
+
+  // #region agent log
+  useEffect(() => {
+    if (!isMobilePointEdit || !editingItemId) return;
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
+      body: JSON.stringify({
+        sessionId: "bfa10d",
+        runId: "pre-fix",
+        hypothesisId: "A",
+        location: "paso-dos-formulario-bloque-configuracion.tsx:system-ui",
+        message: "Point edit system selector state",
+        data: {
+          tipo: componentForm.tipo,
+          sistema: componentForm.sistema,
+          configuracion: componentForm.configuracion,
+          showSystemSelection,
+          systemOptionsCount: systemOptions.length,
+          configurationOptionsCount: configurationOptions.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }, [
+    isMobilePointEdit,
+    editingItemId,
+    componentForm.tipo,
+    componentForm.sistema,
+    componentForm.configuracion,
+    showSystemSelection,
+    systemOptions.length,
+    configurationOptions.length,
+  ]);
+  // #endregion
 
   const linePricingBlock = (
     <>
@@ -238,18 +292,48 @@ export function PasoDosFormularioBloqueConfiguracion({
                 Recalcular con línea
               </button>
             ) : null}
-            <button
-              type="button"
-              className={s.btnGhost}
-              onClick={onSaveQuickPriceTemplate}
-              disabled={isSavingQuickPriceTemplate}
-            >
-              {isSavingQuickPriceTemplate ? "Guardando..." : "Guardar como precio rapido"}
-            </button>
+            {!isMobilePointEdit ? (
+              <button
+                type="button"
+                className={s.btnGhost}
+                onClick={onSaveQuickPriceTemplate}
+                disabled={isSavingQuickPriceTemplate}
+              >
+                {isSavingQuickPriceTemplate ? "Guardando..." : "Guardar como precio rapido"}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
     </>
+  );
+
+  const componentTypeSelector = (
+    <div className={`${s.field} ${s.fieldFull}`}>
+      <span className={s.label}>
+        Tipo de componente <span className={s.required}>*</span>
+      </span>
+      <div className={`${s.typeSelector} ${fieldErrors.tipo ? s.typeSelectorError : ""}`}>
+        {COMPONENT_TYPE_GROUPS.map((group) => (
+          <section key={group.title} className={s.typeGroup}>
+            <div className={s.typeGroupTitle}>{group.title}</div>
+            <div className={s.typeGroupGrid}>
+              {group.items.map((typeOption) => (
+                <button
+                  key={typeOption}
+                  type="button"
+                  className={`${s.typeChip} ${componentForm.tipo === typeOption ? s.typeChipActive : ""}`}
+                  onClick={() => onComponentChange("tipo", typeOption)}
+                >
+                  {typeOption}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+      {fieldErrors.tipo ? <span className={s.fieldError}>{fieldErrors.tipo}</span> : null}
+    </div>
   );
 
   return (
@@ -387,61 +471,184 @@ export function PasoDosFormularioBloqueConfiguracion({
       </section>
       ) : null}
 
-      <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
-        <div className={s.formSectionHead}>
-          <span className={s.formSectionEyebrow}>Carga rapida</span>
-          <strong>{isMobileViewport ? "Elige el componente" : "Elige el componente base"}</strong>
-          {!isMobileViewport ? <p>Te sugerimos una base para que ajustes solo lo necesario.</p> : null}
-        </div>
-
-        <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
-          <div className={s.quickPreviewThumb}>
-            {isTrabajoPersonalizado ? (
-              <div className={s.customWorkPreview}>
-                <strong>Descripcion del trabajo</strong>
-                <span>{trabajoPersonalizadoTexto}</span>
-              </div>
-            ) : (
-              <div className={s.quickPreviewThumbSvg} dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }} />
-            )}
-          </div>
-          <div className={s.quickPreviewBody}>
-            <strong>{componentForm.tipo}</strong>
+      {editingItemId && !isFreeValue ? (
+        <section
+          className={`${s.formSection} ${s.stepTwoSectionStrong} ${
+            isMobilePointEdit ? s.stepTwoMobilePointEditSection : ""
+          }`}
+        >
+          <div className={s.formSectionHead}>
+            <span className={s.formSectionEyebrow}>Medidas</span>
+            <strong>{isMobileViewport ? "Ancho y alto" : "Dimensiones del componente"}</strong>
             {!isMobileViewport ? (
-              <span>
-                {isTrabajoPersonalizado
-                  ? "Detalle libre para trabajos especiales o fabricacion a medida."
-                  : "Vista rapida. Las medidas y valores finales se ajustan abajo."}
-              </span>
+              <p>Si elegiste una linea comercial, el precio sugerido se recalcula al cambiar las medidas.</p>
             ) : null}
           </div>
+
+          <div className={s.stepTwoMobileMedidasRow}>
+            <div className={s.stepTwoMobileMedidaField}>
+              <label className={s.stepTwoMobileMedidaLabel} htmlFor="componente-ancho">
+                Ancho (mm)
+              </label>
+              <input
+                className={s.stepTwoMobileMedidaInput}
+                id="componente-ancho"
+                inputMode="numeric"
+                placeholder="1200"
+                type="text"
+                value={componentForm.ancho}
+                onChange={(event) => onComponentChange("ancho", event.target.value)}
+              />
+            </div>
+
+            <div className={s.stepTwoMobileBlockX}>x</div>
+
+            <div className={s.stepTwoMobileMedidaField}>
+              <label className={s.stepTwoMobileMedidaLabel} htmlFor="componente-alto">
+                Alto (mm)
+              </label>
+              <input
+                className={s.stepTwoMobileMedidaInput}
+                id="componente-alto"
+                inputMode="numeric"
+                placeholder="1500"
+                type="text"
+                value={componentForm.alto}
+                onChange={(event) => onComponentChange("alto", event.target.value)}
+              />
+            </div>
+          </div>
+
+          {componentForm.referencia.trim() && componentForm.precioPorM2.trim() ? (
+            <div className={s.lineTemplateInlineHint}>
+              {linePricingSummary.areaM2 !== null ? (
+                <span>
+                  Area {linePricingSummary.areaM2} m²
+                  {linePricingSummary.precioUnitarioSugerido !== null
+                    ? ` · Precio sugerido ${CLP(linePricingSummary.precioUnitarioSugerido)}`
+                    : ""}
+                </span>
+              ) : (
+                <span>{linePricingSummary.motivoNoCalculado ?? "Completa ancho y alto para calcular."}</span>
+              )}
+            </div>
+          ) : (
+            <span className={s.helpText}>
+              Las medidas se usan para el dibujo, el detalle comercial y el calculo por linea.
+            </span>
+          )}
+        </section>
+      ) : null}
+
+      <section
+        className={`${s.formSection} ${s.stepTwoSectionStrong} ${
+          isMobilePointEdit ? s.stepTwoMobilePointEditSection : ""
+        }`}
+      >
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>
+            {isMobilePointEdit ? "Componente" : "Carga rapida"}
+          </span>
+          <strong>{isMobilePointEdit ? componentForm.tipo : isMobileViewport ? "Elige el componente" : "Elige el componente base"}</strong>
+          {!isMobileViewport && !isMobilePointEdit ? (
+            <p>Te sugerimos una base para que ajustes solo lo necesario.</p>
+          ) : null}
         </div>
 
-        <div className={`${s.field} ${s.fieldFull}`}>
-          <span className={s.label}>
-            Tipo de componente <span className={s.required}>*</span>
-          </span>
-          <div className={`${s.typeSelector} ${fieldErrors.tipo ? s.typeSelectorError : ""}`}>
-            {COMPONENT_TYPE_GROUPS.map((group) => (
-              <section key={group.title} className={s.typeGroup}>
-                <div className={s.typeGroupTitle}>{group.title}</div>
-                <div className={s.typeGroupGrid}>
-                  {group.items.map((typeOption) => (
-                    <button
-                      key={typeOption}
-                      type="button"
-                      className={`${s.typeChip} ${componentForm.tipo === typeOption ? s.typeChipActive : ""}`}
-                      onClick={() => onComponentChange("tipo", typeOption)}
-                    >
-                      {typeOption}
-                    </button>
-                  ))}
+        {!isMobilePointEdit ? (
+          <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
+            <div className={s.quickPreviewThumb}>
+              {isTrabajoPersonalizado ? (
+                <div className={s.customWorkPreview}>
+                  <strong>Descripcion del trabajo</strong>
+                  <span>{trabajoPersonalizadoTexto}</span>
                 </div>
-              </section>
-            ))}
+              ) : (
+                <div
+                  className={s.quickPreviewThumbSvg}
+                  dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }}
+                />
+              )}
+            </div>
+            <div className={s.quickPreviewBody}>
+              <strong>{componentForm.tipo}</strong>
+              {!isMobileViewport ? (
+                <span>
+                  {isTrabajoPersonalizado
+                    ? "Detalle libre para trabajos especiales o fabricacion a medida."
+                    : "Vista rapida. Las medidas y valores finales se ajustan abajo."}
+                </span>
+              ) : null}
+            </div>
           </div>
-          {fieldErrors.tipo ? <span className={s.fieldError}>{fieldErrors.tipo}</span> : null}
-        </div>
+        ) : (
+          <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard} ${s.stepTwoMobilePointEditPreview}`}>
+            <div className={s.quickPreviewThumb}>
+              {isTrabajoPersonalizado ? (
+                <div className={s.customWorkPreview}>
+                  <strong>Descripcion del trabajo</strong>
+                  <span>{trabajoPersonalizadoTexto}</span>
+                </div>
+              ) : (
+                <div
+                  className={s.quickPreviewThumbSvg}
+                  dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {isMobilePointEdit ? (
+          <details className={s.stepTwoMobileTypeDetails}>
+            <summary>Cambiar tipo de componente</summary>
+            {componentTypeSelector}
+          </details>
+        ) : (
+          componentTypeSelector
+        )}
+
+        {showSystemSelection ? (
+          <div className={`${s.field} ${s.fieldFull}`}>
+            <span className={s.label}>Sistema</span>
+            <div className={s.typeGroupGrid} role="group" aria-label="Sistema del componente">
+              {systemOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`${s.typeChip} ${
+                    componentForm.sistema === option ? s.typeChipActive : ""
+                  }`}
+                  onClick={() => onComponentChange("sistema", option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {configurationOptions.length > 0 ? (
+          <div className={`${s.field} ${s.fieldFull}`}>
+            <span className={s.label}>
+              {componentForm.tipo === "Puerta" ? "Configuracion de puerta" : "Configuracion"}
+            </span>
+            <div className={s.typeGroupGrid} role="group" aria-label="Configuracion del componente">
+              {configurationOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`${s.typeChip} ${
+                    componentForm.configuracion === option ? s.typeChipActive : ""
+                  }`}
+                  onClick={() => onComponentChange("configuracion", option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {showSheetScheme ? (
           <div className={`${s.field} ${s.fieldFull}`}>

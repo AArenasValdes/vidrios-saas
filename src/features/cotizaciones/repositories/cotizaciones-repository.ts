@@ -1511,6 +1511,8 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
           }
         }
 
+        await softDeleteActiveItems(id, input.organizationId);
+
         for (const item of input.items) {
           const createdItem = await createCotizacionItem(item, id);
           createdItemIds.push(createdItem.id);
@@ -1520,8 +1522,6 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
             item.organizationId
           );
         }
-
-        await softDeleteActiveItems(id, input.organizationId);
 
         return hydrateCotizacion(mapCotizacion(data as CotizacionRow));
       } catch (error) {
