@@ -578,39 +578,10 @@ function NuevaCotizacionPageContent() {
 
       if (key === "ancho" || key === "alto") {
         const digitsOnly = String(value).replace(/[^\d]/g, "");
-        const next = syncTemplatePricingInComponentForm({
+        return syncTemplatePricingInComponentForm({
           ...cur,
           [key]: digitsOnly,
         });
-        const pricingSummary = buildComponentFormLinePricingSummary(next);
-
-        // #region agent log
-        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
-          body: JSON.stringify({
-            sessionId: "bfa10d",
-            runId: "pre-fix",
-            hypothesisId: "F",
-            location: "page.tsx:handleComponentChange:medidas",
-            message: "Medidas changed with line pricing sync",
-            data: {
-              field: key,
-              ancho: next.ancho,
-              alto: next.alto,
-              referencia: next.referencia,
-              precioPorM2: next.precioPorM2,
-              precioSugerido: pricingSummary.precioUnitarioSugerido,
-              areaM2: pricingSummary.areaM2,
-              costoProveedorUnitario: next.costoProveedorUnitario,
-              precioAjustadoManual: next.precioAjustadoManual,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
-
-        return next;
       }
 
       if (key === "tipo") {
@@ -660,30 +631,6 @@ function NuevaCotizacionPageContent() {
           next.descripcion = "";
           next.nombre = "";
         }
-
-        // #region agent log
-        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
-          body: JSON.stringify({
-            sessionId: "bfa10d",
-            runId: "pre-fix",
-            hypothesisId: "B",
-            location: "page.tsx:handleComponentChange:tipo",
-            message: "Tipo changed in point edit",
-            data: {
-              editingItemId: editingItemId ?? null,
-              nextTipo,
-              prevTipo: cur.tipo,
-              prevSistema: cur.sistema,
-              nextSistema: next.sistema,
-              nextConfiguracion: next.configuracion,
-              nextNombre: next.nombre,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
 
         return syncTemplatePricingInComponentForm(next);
       }
@@ -963,27 +910,6 @@ function NuevaCotizacionPageContent() {
         const item = buildItemFromForm(componentForm, draft.items, editingItemId, {
           quotePricingMode,
         });
-        // #region agent log
-        fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
-          body: JSON.stringify({
-            sessionId: "bfa10d",
-            runId: "pre-fix",
-            hypothesisId: "E",
-            location: "page.tsx:handleAddOrUpdateItem:edit",
-            message: "Saved edited component item",
-            data: {
-              itemId: item.id,
-              tipo: item.tipo,
-              nombre: item.nombre,
-              linea: item.linea,
-              observaciones: item.observaciones?.slice(0, 120) ?? "",
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
         nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
       } else {

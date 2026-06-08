@@ -19,6 +19,68 @@ export class ManualPaymentActivationError extends Error {
   }
 }
 
+type OrganizationStatusRow = {
+  id: number | string;
+  eliminado_en: string | null;
+};
+
+type OrganizationTrialProfileRow = {
+  organization_id: number | string;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
+  plan_code: string | null;
+  subscription_ends_at: string | null;
+};
+
+type PagoSuscripcionInsert = {
+  organization_id: number;
+  plan_code: string;
+  billing_period: string;
+  amount_clp: number;
+  currency: "CLP";
+  payment_provider: "manual_transfer";
+  provider_status: "manual_approved";
+  provider_response: {
+    source: "manual_transfer";
+    reference: string | null;
+    activated_at: string;
+  };
+  buy_order: string;
+  status: "aprobado";
+  paid_at: string;
+  period_starts_at: string;
+  period_ends_at: string;
+};
+
+type InsertPagoSuscripcionTable = {
+  insert(values: PagoSuscripcionInsert): {
+    select(columns: string): {
+      single(): Promise<{
+        data: PagoSuscripcionRow | null;
+        error: { message: string } | null;
+      }>;
+    };
+  };
+};
+
+type OrganizationTrialProfileUpdate = {
+  subscription_status: "trial_active";
+  plan_code: "trial";
+  plan_type: "trial";
+  billing_period: "none";
+  payment_method: "none";
+  trial_ends_at: string;
+  actualizado_en: string;
+};
+
+type UpdateOrganizationProfileTable = {
+  update(values: OrganizationTrialProfileUpdate): {
+    eq(column: "organization_id", value: number): Promise<{
+      error: { message: string } | null;
+    }>;
+  };
+};
+
 function buildManualBuyOrder(organizationId: number, planCode: BillingPlanCode) {
   const stamp = Date.now();
   return `manual-${organizationId}-${planCode}-${stamp}`;
@@ -55,7 +117,9 @@ export async function activateManualOrganizationPayment(input: {
     );
   }
 
-  if (!organization || organization.eliminado_en) {
+  const organizationRow = organization as OrganizationStatusRow | null;
+
+  if (!organizationRow || organizationRow.eliminado_en) {
     throw new ManualPaymentActivationError("La organizacion no existe.");
   }
 
@@ -64,10 +128,13 @@ export async function activateManualOrganizationPayment(input: {
     source: "manual_transfer",
     reference: input.reference?.trim() || null,
     activated_at: paidAt.toISOString(),
-  };
+  } satisfies PagoSuscripcionInsert["provider_response"];
 
-  const { data: payment, error: paymentError } = await admin
-    .from("pagos_suscripcion")
+  const pagosSuscripcionTable = admin.from(
+    "pagos_suscripcion"
+  ) as unknown as InsertPagoSuscripcionTable;
+
+  const { data: payment, error: paymentError } = await pagosSuscripcionTable
     .insert({
       organization_id: input.organizationId,
       plan_code: plan.subscriptionPlanCode,
@@ -93,7 +160,7 @@ export async function activateManualOrganizationPayment(input: {
   }
 
   await activateOrganizationSubscriptionFromPayment(
-    payment as PagoSuscripcionRow
+    payment
   );
 
   return {
@@ -141,26 +208,31 @@ export async function extendOrganizationTrial(input: {
     throw new ManualPaymentActivationError("La organizacion no tiene perfil.");
   }
 
+  const profileRow = profile as OrganizationTrialProfileRow;
+
   if (
-    profile.subscription_status === "active" &&
-    profile.subscription_ends_at &&
-    new Date(profile.subscription_ends_at).getTime() > Date.now()
+    profileRow.subscription_status === "active" &&
+    profileRow.subscription_ends_at &&
+    new Date(profileRow.subscription_ends_at).getTime() > Date.now()
   ) {
     throw new ManualPaymentActivationError(
       "La cuenta ya tiene una suscripcion activa pagada."
     );
   }
 
-  const currentTrialEnd = profile.trial_ends_at
-    ? new Date(profile.trial_ends_at)
+  const currentTrialEnd = profileRow.trial_ends_at
+    ? new Date(profileRow.trial_ends_at)
     : new Date();
   const base =
     currentTrialEnd.getTime() > Date.now() ? currentTrialEnd : new Date();
   const nextTrialEnd = new Date(base);
   nextTrialEnd.setUTCDate(nextTrialEnd.getUTCDate() + extraDays);
 
-  const { error: updateError } = await admin
-    .from("organization_profile")
+  const organizationProfileTable = admin.from(
+    "organization_profile"
+  ) as unknown as UpdateOrganizationProfileTable;
+
+  const { error: updateError } = await organizationProfileTable
     .update({
       subscription_status: "trial_active",
       plan_code: "trial",

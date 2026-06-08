@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import { useEffect } from "react";
 import { LuPencil, LuPlus } from "react-icons/lu";
 
 import {
@@ -117,41 +116,6 @@ export function PasoDosFormularioBloqueConfiguracion({
     componentForm.descripcion.trim() ||
     componentForm.nombre.trim() ||
     "Describe el trabajo para que aparezca como alcance comercial.";
-
-  // #region agent log
-  useEffect(() => {
-    if (!isMobilePointEdit || !editingItemId) return;
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bfa10d" },
-      body: JSON.stringify({
-        sessionId: "bfa10d",
-        runId: "pre-fix",
-        hypothesisId: "A",
-        location: "paso-dos-formulario-bloque-configuracion.tsx:system-ui",
-        message: "Point edit system selector state",
-        data: {
-          tipo: componentForm.tipo,
-          sistema: componentForm.sistema,
-          configuracion: componentForm.configuracion,
-          showSystemSelection,
-          systemOptionsCount: systemOptions.length,
-          configurationOptionsCount: configurationOptions.length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }, [
-    isMobilePointEdit,
-    editingItemId,
-    componentForm.tipo,
-    componentForm.sistema,
-    componentForm.configuracion,
-    showSystemSelection,
-    systemOptions.length,
-    configurationOptions.length,
-  ]);
-  // #endregion
 
   const linePricingBlock = (
     <>
