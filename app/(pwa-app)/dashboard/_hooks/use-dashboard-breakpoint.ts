@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-const DESKTOP_QUERY = "(min-width: 1024px)";
+const DESKTOP_QUERY = "(min-width: 861px)";
 
 function subscribe(onStoreChange: () => void) {
   if (typeof window === "undefined") {

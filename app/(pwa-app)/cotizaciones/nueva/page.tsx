@@ -222,7 +222,7 @@ function NuevaCotizacionPageContent() {
   }, []);
 
   useLayoutEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 800px)");
+    const mediaQuery = window.matchMedia("(max-width: 860px)");
     const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
 
     syncViewport();

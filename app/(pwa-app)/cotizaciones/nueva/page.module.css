@@ -901,7 +901,7 @@
   display: flex; gap: 0.65rem; align-items: center; justify-content: flex-end; flex-wrap: wrap;
 }
 
-@media (min-width: 801px) {
+@media (min-width: 861px) {
   .headerActionsStep1 {
     display: none;
   }
@@ -6194,7 +6194,7 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 860px) {
   .root {
     background: #f2f1ed;
     padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
