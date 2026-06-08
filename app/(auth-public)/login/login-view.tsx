@@ -575,7 +575,7 @@ export default function LoginView({
 
             <p className={s.signupText}>
               <span>{copy.signupPrompt}</span>{" "}
-              <Link href="/planes">{copy.signupAction}</Link>
+              <Link href="/registro">{copy.signupAction}</Link>
             </p>
           </div>
         </div>

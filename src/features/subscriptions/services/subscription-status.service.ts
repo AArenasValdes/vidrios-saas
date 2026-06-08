@@ -307,10 +307,26 @@ export function buildSubscriptionActivationWhatsappHref(input: {
   companyName: string;
   plan: "mensual" | "anual";
 }) {
-  const phone = normalizeWhatsappDigits(VENTORA_CONTACT.phoneHref);
-  const message = encodeURIComponent(
-    `Hola, quiero activar mi cuenta Ventora. Mi empresa es ${input.companyName}. Quiero el plan ${input.plan}.`
-  );
+  const planLabel = input.plan === "mensual" ? "Mensual" : "Anual";
+  return buildPlanContractWhatsappHref({
+    planLabel,
+    companyName: input.companyName,
+  });
+}
 
-  return `https://wa.me/${phone}?text=${message}`;
+export function buildPlanContractWhatsappHref(input: {
+  planLabel: string;
+  companyName?: string | null;
+}) {
+  const phone = normalizeWhatsappDigits(VENTORA_CONTACT.phoneHref);
+  const planLabel = input.planLabel.trim();
+
+  let message = `Hola, quiero contratar el plan: ${planLabel}.`;
+
+  const companyName = input.companyName?.trim();
+  if (companyName) {
+    message += ` Mi empresa es ${companyName}.`;
+  }
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }

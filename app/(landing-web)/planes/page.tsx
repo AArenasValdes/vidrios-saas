@@ -32,8 +32,8 @@ const OPTIONS = [
       "Feedback directo para ajustes del producto",
     ],
     cta: {
-      href: "/login",
-      label: "Entrar a mi cuenta",
+      href: "/registro",
+      label: "Crear cuenta piloto",
       external: false,
     },
     tone: "secondary",

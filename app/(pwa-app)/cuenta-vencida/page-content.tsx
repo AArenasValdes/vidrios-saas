@@ -7,15 +7,21 @@ import { LuArrowLeft } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
-  buildSubscriptionActivationWhatsappHref,
+  buildPlanContractWhatsappHref,
   resolveOrganizationSubscriptionState,
   VENTORA_MONTHLY_PRICE,
   VENTORA_YEARLY_PRICE,
   VENTORA_QUOTE_ONLY_YEARLY_PRICE,
 } from "@/features/subscriptions/services/subscription-status.service";
-import { useBillingCheckout } from "@/features/billing/hooks/useBillingCheckout";
 
 import s from "./page.module.css";
+
+const PLAN_LABELS = {
+  founderFullAnnual: "Founder Full Anual",
+  quoteOnlyAnnual: "Solo Cotizacion Anual",
+  monthly: "Mensual",
+  enterprise: "Plan Empresa Acompanado",
+} as const;
 
 export function CuentaVencidaPageContent() {
   const { profile } = useOrganizationProfile();
@@ -23,7 +29,6 @@ export function CuentaVencidaPageContent() {
   const searchParams = useSearchParams();
   const pagoFallido = searchParams.get("pago_fallido") === "1";
   const pagoPendiente = searchParams.get("pago_pendiente") === "1";
-  const { pagar, cargando: cargandoCheckout, error: errorCheckout } = useBillingCheckout();
   const companyName = profile?.empresaNombre ?? "Mi empresa";
   const subscriptionState = resolveOrganizationSubscriptionState({
     subscriptionStatus: profile?.subscriptionStatus ?? null,
@@ -42,18 +47,24 @@ export function CuentaVencidaPageContent() {
     subscriptionState.effectiveStatus === "active" &&
     !subscriptionState.isTrial &&
     Boolean(subscriptionState.subscriptionEndsAt);
-  const checkoutDisabled = cargandoCheckout || hasActivePaidSubscription;
-  const monthlyHref = buildSubscriptionActivationWhatsappHref({
-    companyName,
-    plan: "mensual",
-  });
-  const pagarFounderFull = useCallback(() => {
-    pagar("founder_full_annual", "flow");
-  }, [pagar]);
+  const whatsappDisabled = hasActivePaidSubscription;
 
-  const pagarQuoteOnly = useCallback(() => {
-    pagar("quote_only_annual", "flow");
-  }, [pagar]);
+  const founderFullHref = buildPlanContractWhatsappHref({
+    planLabel: PLAN_LABELS.founderFullAnnual,
+    companyName,
+  });
+  const quoteOnlyHref = buildPlanContractWhatsappHref({
+    planLabel: PLAN_LABELS.quoteOnlyAnnual,
+    companyName,
+  });
+  const monthlyHref = buildPlanContractWhatsappHref({
+    planLabel: PLAN_LABELS.monthly,
+    companyName,
+  });
+  const enterpriseHref = buildPlanContractWhatsappHref({
+    planLabel: PLAN_LABELS.enterprise,
+    companyName,
+  });
 
   const volver = useCallback(() => {
     if (window.history.length > 1) {
@@ -98,8 +109,8 @@ export function CuentaVencidaPageContent() {
           <span className={s.eyebrow}>Cuenta en modo lectura</span>
           <h1 className={s.title}>Activa Ventora y vuelve a operar sin cortes.</h1>
           <p className={s.text}>
-            Elige un plan para seguir creando cotizaciones, capturando solicitudes y cerrando
-            trabajos desde el celular.
+            Elige un plan y te contactamos por WhatsApp para activarlo. Todos los pagos se
+            confirman de forma manual por ahora.
           </p>
         </div>
 
@@ -107,9 +118,10 @@ export function CuentaVencidaPageContent() {
           {statusText}
         </div>
 
-        {(pagoFallido || errorCheckout) ? (
+        {pagoFallido ? (
           <div className={s.errorBanner} role="alert">
-            {errorCheckout ?? "El pago no pudo procesarse. Intenta de nuevo o contactanos por WhatsApp."}
+            No pudimos confirmar un pago automatico. Escríbenos por WhatsApp y te activamos el
+            plan manualmente.
           </div>
         ) : null}
 
@@ -132,14 +144,20 @@ export function CuentaVencidaPageContent() {
             <p className={s.priceHint}>
               Cotizaciones, solicitudes, página pública, WhatsApp y aprobación de presupuestos.
             </p>
-            <button
-              className={s.webpayButton}
-              onClick={pagarFounderFull}
-              disabled={checkoutDisabled}
-              type="button"
-            >
-              {cargandoCheckout ? "Redirigiendo a Flow..." : "Activar Founder Full Anual"}
-            </button>
+            {whatsappDisabled ? (
+              <span className={`${s.webpayButton} ${s.buttonDisabled}`} aria-disabled="true">
+                Contratar por WhatsApp
+              </span>
+            ) : (
+              <a
+                className={s.webpayButton}
+                href={founderFullHref}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Contratar por WhatsApp
+              </a>
+            )}
           </article>
           <article className={s.priceCard}>
             <div className={s.planTopline}>
@@ -152,14 +170,23 @@ export function CuentaVencidaPageContent() {
             <p className={s.priceHint}>
               Cotiza rápido desde el celular, genera PDF profesional y comparte por WhatsApp.
             </p>
-            <button
-              className={s.webpayButtonOutline}
-              onClick={pagarQuoteOnly}
-              disabled={checkoutDisabled}
-              type="button"
-            >
-              {cargandoCheckout ? "Redirigiendo a Flow..." : "Activar Solo Cotizacion"}
-            </button>
+            {whatsappDisabled ? (
+              <span
+                className={`${s.webpayButtonOutline} ${s.buttonDisabled}`}
+                aria-disabled="true"
+              >
+                Contratar por WhatsApp
+              </span>
+            ) : (
+              <a
+                className={s.webpayButtonOutline}
+                href={quoteOnlyHref}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Contratar por WhatsApp
+              </a>
+            )}
           </article>
           <article className={`${s.priceCard} ${s.priceCardManual}`}>
             <div className={s.planTopline}>
@@ -173,9 +200,20 @@ export function CuentaVencidaPageContent() {
             <p className={s.priceHint}>
               Pago mensual manual por WhatsApp. Ideal si quieres comenzar sin compromiso anual.
             </p>
-            <a className={s.whatsappButton} href={monthlyHref} target="_blank" rel="noreferrer">
-              Contactar por WhatsApp
-            </a>
+            {whatsappDisabled ? (
+              <span className={`${s.whatsappButton} ${s.buttonDisabled}`} aria-disabled="true">
+                Contratar por WhatsApp
+              </span>
+            ) : (
+              <a
+                className={s.whatsappButton}
+                href={monthlyHref}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Contratar por WhatsApp
+              </a>
+            )}
           </article>
         </div>
 
@@ -190,11 +228,11 @@ export function CuentaVencidaPageContent() {
           </div>
           <a
             className={s.supportButton}
-            href="mailto:ventora.cl@gmail.com?subject=Plan%20Empresa%20Acompanado"
+            href={enterpriseHref}
             target="_blank"
             rel="noreferrer"
           >
-            Contactar soporte
+            Consultar por WhatsApp
           </a>
         </aside>
 

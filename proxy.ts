@@ -65,6 +65,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected = isProtectedPath(pathname);
   const isLogin = pathname === "/login";
+  const isRegister = pathname === "/registro";
   const hasSessionCookie = hasSupabaseSessionCookie(request);
 
   if (!hasSessionCookie) {
@@ -126,7 +127,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isLogin) {
+  if (user && (isLogin || isRegister)) {
     const url = request.nextUrl.clone();
     url.pathname = growthOnly ? "/admin/growth" : "/dashboard";
     return NextResponse.redirect(url);
@@ -138,6 +139,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/registro",
     "/auth/callback",
     "/dashboard/:path*",
     "/admin/:path*",

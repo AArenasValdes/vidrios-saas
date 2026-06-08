@@ -1,0 +1,43 @@
+# SOP Cobro Manual - Ventora
+
+## Cuando usar
+
+Mientras no haya cuenta bancaria de empresa para Flow o Transbank, todos los pagos se confirman manualmente por transferencia y WhatsApp.
+
+## Planes SaaS con script
+
+| Plan | Comando | Monto | Duracion |
+|------|---------|-------|----------|
+| Founder mensual | `--plan founder_monthly` | $8.990 | 1 mes |
+| Founder anual | `--plan founder_full_annual` | $79.990 | 12 meses |
+| Solo cotizacion anual | `--plan quote_only_annual` | $59.990 | 12 meses |
+
+```bash
+pnpm pilot:payment:activate --organization-id 12 --plan founder_monthly --reference "transferencia junio 2026"
+# O en una linea sin flags (util en Windows):
+pnpm pilot:payment:activate 12 founder_monthly "transferencia junio 2026"
+```
+
+Tambien disponible desde `/admin/clientes` (allowlist).
+
+## Flujo operativo
+
+1. Cliente confirma plan por WhatsApp.
+2. Cliente transfiere y envia comprobante.
+3. Activas con el script o panel admin usando el `organization_id` correcto.
+4. Respondes por WhatsApp: empresa, plan y fecha de vencimiento.
+
+## Mensaje tipo al cliente
+
+> Hola [nombre], recibimos tu pago. Tu cuenta Ventora queda activa hasta [fecha]. Cualquier duda, escribenos.
+
+## Fuera de este flujo
+
+- **Plan Empresa Acompanado desde $250.000:** oferta consultiva. No usar el script de pagos SaaS.
+
+## Auditoria de trial incorrecto
+
+```bash
+pnpm pilot:org:audit-trials
+pnpm pilot:org:fix-trials --dry-run
+```

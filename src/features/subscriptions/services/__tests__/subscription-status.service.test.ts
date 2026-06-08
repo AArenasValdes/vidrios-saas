@@ -1,5 +1,6 @@
 import {
   assertSubscriptionAllowsWrite,
+  buildPlanContractWhatsappHref,
   canAccessPrivatePathWithSubscription,
   resolveOrganizationSubscriptionState,
   SubscriptionWriteAccessError,
@@ -99,6 +100,18 @@ describe("subscription-status.service", () => {
 
     expect(() => assertSubscriptionAllowsWrite(state)).toThrow(
       SubscriptionWriteAccessError
+    );
+  });
+
+  it("arma el enlace de WhatsApp con el plan elegido", () => {
+    const href = buildPlanContractWhatsappHref({
+      planLabel: "Founder Full Anual",
+      companyName: "Vidrios del Sur",
+    });
+
+    expect(href).toContain("https://wa.me/56987654321?text=");
+    expect(decodeURIComponent(href.split("text=")[1] ?? "")).toBe(
+      "Hola, quiero contratar el plan: Founder Full Anual. Mi empresa es Vidrios del Sur."
     );
   });
 });
