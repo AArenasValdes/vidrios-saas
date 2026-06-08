@@ -8,6 +8,7 @@ import {
   reconcileWorkflowItemsPricing,
   getSheetSchemeOptions,
   getSheetVariantOptions,
+  GLASS_OPTIONS,
   buildQuickEditDraft,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
@@ -74,6 +75,25 @@ function createBaseItem() {
 }
 
 describe("workflow-ui paso 2", () => {
+  it("debe incluir DVH / Termopaneles en orden comercial", () => {
+    const dvhGroup = GLASS_OPTIONS.find((group) => group.grupo === "DVH / Termopaneles");
+
+    expect(dvhGroup).toBeDefined();
+    expect(dvhGroup?.prefix).toBe("DVH");
+    expect(dvhGroup?.items).toEqual([
+      "4+9+4",
+      "4 + 10 + 4",
+      "4 + 10 + 5",
+      "5 + 10 + 5",
+      "4+12+4",
+      "4 Low-E + 12 + 4",
+      "4T + 12 + 4T",
+      "6+12+4",
+      "3+3+9+4",
+      "3+3 / 12 / 3+3.",
+    ]);
+  });
+
   it("debe usar precio por línea como unitario final en precio directo con cantidad 1", () => {
     const item = buildItemFromForm(createLinePricingForm(), [], null);
 

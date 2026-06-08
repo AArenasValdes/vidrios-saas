@@ -215,8 +215,19 @@ export const GLASS_OPTIONS = [
     prefix: "Incoloro monolítico",
   },
   {
-    grupo: "DVH (doble vidriado)",
-    items: ["4+9+4", "4+12+4", "6+12+4", "3+3+9+4", "3+3 / 12 / 3+3."],
+    grupo: "DVH / Termopaneles",
+    items: [
+      "4+9+4",
+      "4 + 10 + 4",
+      "4 + 10 + 5",
+      "5 + 10 + 5",
+      "4+12+4",
+      "4 Low-E + 12 + 4",
+      "4T + 12 + 4T",
+      "6+12+4",
+      "3+3+9+4",
+      "3+3 / 12 / 3+3.",
+    ],
     prefix: "DVH",
   },
   {
