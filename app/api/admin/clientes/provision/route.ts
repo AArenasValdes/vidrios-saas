@@ -11,6 +11,7 @@ type ProvisionBody = {
   email?: string;
   password?: string;
   empresaNombre?: string;
+  isTestAccount?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
       email: body?.email ?? "",
       password: body?.password ?? "",
       empresaNombre: body?.empresaNombre ?? "",
+      isTestAccount: body?.isTestAccount === true,
     });
 
     return NextResponse.json({ ok: true, result });

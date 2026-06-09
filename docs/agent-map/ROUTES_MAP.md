@@ -104,11 +104,65 @@
 
 ---
 
+## Ruta: /admin
+
+- **Tipo**: Privada (autenticada + founder allowlist)
+- **Archivo principal**: `app/admin/page.tsx`
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
+- **Proposito**: Dashboard interno de Ventora para operar clientes SaaS, trials, cobros y foco comercial founder sin entrar al panel cliente.
+- **Usuario objetivo**: Founder/admin interno allowlist por correo
+- **Funcionalidades visibles**: Hero interno, KPIs globales (activos, trial, vencen esta semana, MRR/ARR estimado, pagos pendientes), tablas de trials urgentes, pagos recientes y altas recientes
+- **Componentes principales**: `AdminShell`, `AdminSidebar`, `AdminKpiCard`, `ClientStatusBadge`, `SourceBadge`
+- **Hooks**: Ninguno en Fase 1
+- **Datos que consume**: Resumen server-side via `adminSummaryService`
+- **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
+- **Acciones principales**: Navegar a clientes SaaS, abrir prospectos `/admin/growth`, revisar urgencias
+- **Archivos a tocar para modificar**: `app/admin/layout.tsx`, `app/admin/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/components/*`, `src/features/admin/services/admin-summary.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`, `proxy.ts`
+- **Riesgos**: No reutilizar `AppShell`. No abrir esta ruta a admins normales de una organizacion. No exponer `service_role` ni datos multi-tenant al cliente.
+
+---
+
+## Ruta: /admin/clientes
+
+- **Tipo**: Privada (autenticada + founder allowlist)
+- **Archivo principal**: `app/admin/clientes/page.tsx`
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
+- **Proposito**: Tabla global de organizaciones SaaS con plan, estado, trial, suscripcion y ultimo pago.
+- **Usuario objetivo**: Founder/admin interno allowlist por correo
+- **Funcionalidades visibles**: Tabla con empresa, correo principal, telefono, plan, estado de suscripcion, `trial_ends_at`, `subscription_ends_at`, ultimo pago y acceso a ficha
+- **Componentes principales**: `ClientStatusBadge`, `SourceBadge`
+- **Hooks**: Ninguno en Fase 1
+- **Datos que consume**: Listado server-side via `adminClientsService`
+- **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
+- **Acciones principales**: Ver ficha por organizacion
+- **Archivos a tocar para modificar**: `app/admin/clientes/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/services/admin-clients.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`
+- **Riesgos**: No mezclar esta vista global con CRUD de clientes finales (`/clientes`). Mantener acciones sensibles server-side.
+
+---
+
+## Ruta: /admin/clientes/[organizationId]
+
+- **Tipo**: Privada (autenticada + founder allowlist), dinamica
+- **Archivo principal**: `app/admin/clientes/[organizationId]/page.tsx`
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
+- **Proposito**: Ficha interna de una organizacion SaaS con datos de empresa, usuario principal, estado de trial/suscripcion y ledger de pagos.
+- **Usuario objetivo**: Founder/admin interno allowlist por correo
+- **Funcionalidades visibles**: Datos `organizations` + `organization_profile`, usuario principal, estado efectivo de trial/suscripcion, historial `pagos_suscripcion`, links rapidos a pagina publica y WhatsApp, placeholders visuales para extender trial / activar pago / cambiar plan
+- **Componentes principales**: `ClientStatusBadge`, `SourceBadge`
+- **Hooks**: Ninguno en Fase 1
+- **Datos que consume**: Detalle server-side via `adminClientsService`
+- **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
+- **Acciones principales**: Revisar ficha, abrir pagina publica, abrir WhatsApp, auditar pagos
+- **Archivos a tocar para modificar**: `app/admin/clientes/[organizationId]/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/services/admin-clients.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`
+- **Riesgos**: No convertir placeholders en acciones cliente-side. Si se agregan acciones reales, deben confirmar cobro/trial desde servidor.
+
+---
+
 ## Ruta: /admin/growth
 
-- **Tipo**: Privada (autenticada + admin allowlist)
+- **Tipo**: Privada (autenticada + founder allowlist)
 - **Archivo principal**: `app/admin/growth/page.tsx`
-- **Layout usado**: `app/layout.tsx` (standalone, sin `AppShell`)
+- **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
 - **Proposito**: Panel operativo privado de growth para fundador/admin autorizado. Organiza trabajo diario, prospectos prioritarios, metas, MRR y proyecciones simples sin depender del shell principal.
 - **Usuario objetivo**: Fundador o admin autorizado por correo
 - **Funcionalidades visibles**: Header compacto con periodo/meta/MRR, bloque principal `Trabajo de hoy`, tabla editable de prospectos prioritarios, metricas compactas, embudo compacto, canales, datos manuales, experimentos secundarios y modal `Configurar crecimiento`
@@ -118,7 +172,7 @@
 - **Tablas Supabase relacionadas**: Ninguna todavia. La conexion futura deberia leer `solicitudes_contacto`, `cotizaciones` y eventualmente un ledger manual definido aparte.
 - **Acciones principales**: Agregar prospecto, editar estado/proximo paso/fecha, cambiar metas, actualizar datos manuales, registrar experimentos y filtrar trabajo operativo del dia
 - **Archivos a tocar para modificar**: `app/admin/growth/*`, `src/features/growth/*`, `proxy.ts`
-- **Riesgos**: No exponer esta ruta a usuarios normales. No mostrar mocks como si fueran datos reales. No usar esta ruta para tocar `/solicitud/[empresa]`, `/presupuesto/[token]`, PDF ni WhatsApp.
+- **Riesgos**: No exponer esta ruta a usuarios normales. No mostrar mocks como si fueran datos reales. Aunque viva bajo `AdminShell`, sigue usando `localStorage` y no debe confundirse con datos SaaS reales.
 
 ---
 

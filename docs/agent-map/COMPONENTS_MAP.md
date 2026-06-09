@@ -4,6 +4,26 @@
 
 ## Layout
 
+### Componente: AdminShell
+
+- **Archivo**: `src/features/admin/components/admin-shell.tsx`
+- **Proposito**: Shell interno founder para `/admin`. Header propio + sidebar + superficie de trabajo separada del panel cliente.
+- **Usado en**: `app/admin/layout.tsx`
+- **Props importantes**: `children: ReactNode`, `founderEmail: string | null`
+- **Dependencias**: `AdminSidebar`
+- **Cuando modificarlo**: Cambios de chrome interno founder, header, acciones globales o estructura del centro de operaciones
+- **Riesgos**: No reutilizar logica ni estilos de `AppShell`. Cambios afectan todas las rutas `/admin`.
+
+### Componente: AdminSidebar
+
+- **Archivo**: `src/features/admin/components/admin-sidebar.tsx`
+- **Proposito**: Navegacion interna founder para `Resumen`, `Clientes SaaS` y `Prospectos`.
+- **Usado en**: `AdminShell`
+- **Props importantes**: `founderEmail: string | null`
+- **Dependencias**: `usePathname`, `SourceBadge`
+- **Cuando modificarlo**: Cambios de IA/nav interna de `/admin`
+- **Riesgos**: Mantener claro que `Prospectos` sigue siendo local y no datos SaaS reales.
+
 ### Componente: AppShell
 
 - **Archivo**: `src/components/layout/app-shell.tsx` (990 lineas)
@@ -24,6 +44,30 @@
 ---
 
 ## Navegacion
+
+### Componente: ClientStatusBadge
+
+- **Archivo**: `src/features/admin/components/client-status-badge.tsx`
+- **Proposito**: Badge compacto para estado efectivo de trial/suscripcion en tablas y fichas admin.
+- **Usado en**: `/admin`, `/admin/clientes`, `/admin/clientes/[organizationId]`
+- **Props importantes**: `status`, `label?`
+- **Cuando modificarlo**: Cambios de copy/colores de estado en panel founder
+
+### Componente: SourceBadge
+
+- **Archivo**: `src/features/admin/components/source-badge.tsx`
+- **Proposito**: Badge de fuente (`Sistema`, `Manual`, `Local`) para distinguir datos SaaS reales vs seguimiento local/manual.
+- **Usado en**: `AdminSidebar`, `/admin`, `/admin/clientes/[organizationId]`
+- **Props importantes**: `source`, `label?`
+- **Cuando modificarlo**: Cambios de taxonomia visual de fuente
+
+### Componente: AdminKpiCard
+
+- **Archivo**: `src/features/admin/components/admin-kpi-card.tsx`
+- **Proposito**: Tarjeta KPI del dashboard founder para activos, trials, MRR/ARR y pagos pendientes.
+- **Usado en**: `/admin`
+- **Props importantes**: `eyebrow`, `value`, `hint`, `href?`, `linkLabel?`
+- **Cuando modificarlo**: Cambios en resumen ejecutivo del centro de operaciones
 
 ### Componente: MobilePageHeader
 

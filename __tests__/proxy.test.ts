@@ -6,7 +6,7 @@ import { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { proxy } from "../proxy";
 
-function createSupabaseMock(user: { id: string } | null) {
+function createSupabaseMock(user: { id: string; email?: string | null } | null) {
   return {
     auth: {
       getUser: jest.fn().mockResolvedValue({
@@ -67,7 +67,7 @@ describe("proxy", () => {
 
   it("permite el acceso cuando existe usuario autenticado", async () => {
     (createServerClient as jest.Mock).mockReturnValue(
-      createSupabaseMock({ id: "auth-1" })
+      createSupabaseMock({ id: "auth-1", email: "cliente@vidrio.cl" })
     );
 
     const request = new NextRequest("http://localhost:3000/solicitudes", {
@@ -79,5 +79,68 @@ describe("proxy", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("redirige founder autenticado desde login hacia /admin", async () => {
+    (createServerClient as jest.Mock).mockReturnValue(
+      createSupabaseMock({
+        id: "auth-founder",
+        email: "alessandroreal2.0@gmail.com",
+      })
+    );
+
+    const request = new NextRequest("http://localhost:3000/login", {
+      headers: {
+        cookie: "sb-test-auth-token=abc123",
+      },
+    });
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/admin"
+    );
+  });
+
+  it("redirige founder autenticado desde /dashboard hacia /admin", async () => {
+    (createServerClient as jest.Mock).mockReturnValue(
+      createSupabaseMock({
+        id: "auth-founder",
+        email: "alessandroreal2.0@gmail.com",
+      })
+    );
+
+    const request = new NextRequest("http://localhost:3000/dashboard", {
+      headers: {
+        cookie: "sb-test-auth-token=abc123",
+      },
+    });
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/admin"
+    );
+  });
+
+  it("bloquea acceso a /admin para admin normal autenticado", async () => {
+    (createServerClient as jest.Mock).mockReturnValue(
+      createSupabaseMock({
+        id: "auth-admin-normal",
+        email: "admin@vidrio.cl",
+      })
+    );
+
+    const request = new NextRequest("http://localhost:3000/admin", {
+      headers: {
+        cookie: "sb-test-auth-token=abc123",
+      },
+    });
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/dashboard"
+    );
   });
 });

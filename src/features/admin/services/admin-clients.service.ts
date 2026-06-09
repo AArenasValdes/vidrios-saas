@@ -1,116 +1,255 @@
 import "server-only";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getAdminOrganizationSnapshot,
+  listAdminOrganizationsSnapshot,
+  type AdminOrganizationPaymentRow,
+  type AdminOrganizationProfileRow,
+  type AdminOrganizationRow,
+  type AdminOrganizationUserRow,
+} from "@/features/admin/repositories/admin-clients.repository";
+import type {
+  AdminClientDetail,
+  AdminClientListItem,
+  AdminClientPayment,
+  AdminClientSource,
+  AdminClientSubscription,
+  AdminClientUser,
+} from "@/features/admin/types/admin-client";
+import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
+import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
+import { mapAdminProfileSubscription } from "@/features/admin/services/admin-subscription-mapper";
+import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
-export type AdminClientRow = {
-  organizationId: number;
-  empresaNombre: string;
-  adminEmail: string | null;
-  subscriptionStatus: string | null;
-  planCode: string | null;
-  trialEndsAt: string | null;
-  subscriptionEndsAt: string | null;
-  paymentMethod: string | null;
-};
+function pickPrimaryUser(rows: AdminOrganizationUserRow[]) {
+  return [...rows].sort((left, right) => {
+    const leftRank = left.rol === "admin" ? 0 : 1;
+    const rightRank = right.rol === "admin" ? 0 : 1;
 
-type OrganizationRow = {
-  id: number | string;
-  nombre: string | null;
-};
-
-type OrganizationProfileRow = {
-  organization_id: number | string;
-  empresa_nombre: string | null;
-  subscription_status: string | null;
-  plan_code: string | null;
-  trial_ends_at: string | null;
-  subscription_ends_at: string | null;
-  payment_method: string | null;
-};
-
-type OrganizationAdminUserRow = {
-  organization_id: number | string;
-  correo: string | null;
-};
-
-export async function listAdminClients(): Promise<AdminClientRow[]> {
-  const admin = createAdminClient();
-  const { data: organizations, error: organizationsError } = await admin
-    .from("organizations")
-    .select("id, nombre, eliminado_en")
-    .is("eliminado_en", null)
-    .order("id", { ascending: false });
-
-  if (organizationsError) {
-    throw new Error(
-      `No pudimos listar organizaciones: ${organizationsError.message}`
-    );
-  }
-
-  const organizationRows = (organizations ?? []) as OrganizationRow[];
-  const organizationIds = organizationRows.map((row) => Number(row.id));
-
-  if (organizationIds.length === 0) {
-    return [];
-  }
-
-  const [profilesResult, usersResult] = await Promise.all([
-    admin
-      .from("organization_profile")
-      .select(
-        "organization_id, empresa_nombre, subscription_status, plan_code, trial_ends_at, subscription_ends_at, payment_method"
-      )
-      .in("organization_id", organizationIds),
-    admin
-      .from("users")
-      .select("organization_id, correo, rol, eliminado_en")
-      .in("organization_id", organizationIds)
-      .eq("rol", "admin")
-      .is("eliminado_en", null),
-  ]);
-
-  if (profilesResult.error) {
-    throw new Error(
-      `No pudimos listar perfiles: ${profilesResult.error.message}`
-    );
-  }
-
-  if (usersResult.error) {
-    throw new Error(`No pudimos listar usuarios: ${usersResult.error.message}`);
-  }
-
-  const profileRows = (profilesResult.data ?? []) as OrganizationProfileRow[];
-  const adminUserRows = (usersResult.data ?? []) as OrganizationAdminUserRow[];
-
-  const profileByOrg = new Map(
-    profileRows.map((row) => [Number(row.organization_id), row])
-  );
-  const adminEmailByOrg = new Map<number, string>();
-
-  for (const user of adminUserRows) {
-    const organizationId = Number(user.organization_id);
-    if (!adminEmailByOrg.has(organizationId) && user.correo) {
-      adminEmailByOrg.set(organizationId, user.correo);
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
     }
+
+    return new Date(left.creado_en ?? 0).getTime() - new Date(right.creado_en ?? 0).getTime();
+  })[0] ?? null;
+}
+
+function mapUser(row: AdminOrganizationUserRow): AdminClientUser {
+  return {
+    id: Number(row.id),
+    correo: row.correo ?? "sin-correo",
+    rol: row.rol ?? "sin-rol",
+    authUserId: row.auth_user_id ?? null,
+    createdAt: row.creado_en ?? null,
+  };
+}
+
+function mapPayment(row: AdminOrganizationPaymentRow): AdminClientPayment {
+  return {
+    id: Number(row.id),
+    organizationId: Number(row.organization_id),
+    planCode: row.plan_code,
+    billingPeriod: row.billing_period,
+    amountClp: Number(row.amount_clp ?? 0),
+    currency: row.currency,
+    paymentProvider: row.payment_provider,
+    providerStatus: row.provider_status ?? null,
+    status: row.status,
+    paidAt: row.paid_at ?? null,
+    periodStartsAt: row.period_starts_at ?? null,
+    periodEndsAt: row.period_ends_at ?? null,
+    createdAt: row.creado_en,
+    buyOrder: row.buy_order ?? null,
+  };
+}
+
+function resolvePaymentSource(payment: AdminClientPayment | null): AdminClientSource {
+  if (!payment) {
+    return "sistema";
   }
 
-  return organizationRows.map((organization) => {
-    const organizationId = Number(organization.id);
-    const profile = profileByOrg.get(organizationId);
+  return payment.paymentProvider === "manual_transfer" ? "manual" : "sistema";
+}
 
-    return {
-      organizationId,
-      empresaNombre:
-        profile?.empresa_nombre ??
-        organization.nombre ??
-        `Empresa ${organizationId}`,
-      adminEmail: adminEmailByOrg.get(organizationId) ?? null,
-      subscriptionStatus:
-        profile?.subscription_status ?? null,
-      planCode: profile?.plan_code ?? null,
-      trialEndsAt: profile?.trial_ends_at ?? null,
-      subscriptionEndsAt: profile?.subscription_ends_at ?? null,
-      paymentMethod: profile?.payment_method ?? null,
-    };
-  });
+function buildSubscription(profile: AdminOrganizationProfileRow | null): AdminClientSubscription {
+  const resolved = resolveOrganizationSubscriptionState(
+    mapAdminProfileSubscription(profile)
+  );
+
+  return {
+    subscriptionStatus: resolved.subscriptionStatus,
+    effectiveStatus: resolved.effectiveStatus,
+    planCode: resolved.planCode,
+    planType: resolved.planType,
+    billingPeriod: resolved.billingPeriod,
+    paymentMethod: resolved.paymentMethod,
+    trialStartedAt: resolved.trialStartedAt,
+    trialEndsAt: resolved.trialEndsAt,
+    subscriptionStartedAt: resolved.subscriptionStartedAt,
+    subscriptionEndsAt: resolved.subscriptionEndsAt,
+    lastPaymentAt: resolved.lastPaymentAt,
+    founderPriceLocked: resolved.founderPriceLocked,
+    daysRemaining: resolved.daysRemaining,
+    isActive: resolved.isActive,
+    isTrial: resolved.isTrial,
+    isExpiringSoon: resolved.isExpiringSoon,
+    isExpired: resolved.isExpired,
+  };
+}
+
+function buildEmpresaNombre(
+  organization: AdminOrganizationRow,
+  profile: AdminOrganizationProfileRow | null
+) {
+  return (
+    profile?.empresa_nombre ??
+    profile?.public_name ??
+    organization.nombre ??
+    `Empresa ${Number(organization.id)}`
+  );
+}
+
+function buildQuickLinks(
+  organizationPhone: string | null,
+  profile: AdminOrganizationProfileRow | null
+) {
+  const phone = profile?.empresa_telefono ?? organizationPhone ?? null;
+
+  return {
+    publicPageUrl: profile?.solicitud_publica_slug
+      ? `/solicitud/${profile.solicitud_publica_slug}`
+      : null,
+    whatsappUrl: phone
+      ? buildPublicLeadWhatsappUrl(phone, {
+          mensaje: "Hola, vengo desde Centro de Operaciones Ventora.",
+        })
+      : null,
+    dashboardReadOnlyUrl: null,
+  };
+}
+
+function buildAdminClientListItem(input: {
+  organization: AdminOrganizationRow;
+  profile: AdminOrganizationProfileRow | null;
+  users: AdminOrganizationUserRow[];
+  payments: AdminOrganizationPaymentRow[];
+}): AdminClientListItem {
+  const principalUserRow = pickPrimaryUser(input.users);
+  const principalUser = principalUserRow ? mapUser(principalUserRow) : null;
+  const subscription = buildSubscription(input.profile);
+  const payments = input.payments.map(mapPayment);
+  const lastApprovedPayment =
+    payments.find((payment) => payment.status === "aprobado") ?? null;
+
+  return {
+    organizationId: Number(input.organization.id),
+    empresaNombre: buildEmpresaNombre(input.organization, input.profile),
+    correoPrincipal:
+      principalUser?.correo ?? input.profile?.empresa_email ?? input.organization.correo ?? null,
+    telefonoPrincipal:
+      input.profile?.empresa_telefono ?? input.organization.telefono ?? null,
+    planCode: subscription.planCode,
+    planLabel: getPlanLabel(subscription.planCode),
+    estadoSuscripcion: subscription.subscriptionStatus,
+    estadoEfectivo: subscription.effectiveStatus,
+    trialEndsAt: subscription.trialEndsAt,
+    subscriptionEndsAt: subscription.subscriptionEndsAt,
+    ultimoPagoAt: lastApprovedPayment?.paidAt ?? lastApprovedPayment?.createdAt ?? null,
+    ultimoPagoMontoClp: lastApprovedPayment?.amountClp ?? null,
+    ultimoPagoFuente: resolvePaymentSource(lastApprovedPayment),
+    isTestAccount: input.profile?.is_test_account ?? false,
+  };
+}
+
+export async function listAdminClients(): Promise<AdminClientListItem[]> {
+  const snapshot = await listAdminOrganizationsSnapshot();
+  const profileByOrg = new Map(
+    snapshot.profiles.map((row) => [Number(row.organization_id), row])
+  );
+  const usersByOrg = new Map<number, AdminOrganizationUserRow[]>();
+  const paymentsByOrg = new Map<number, AdminOrganizationPaymentRow[]>();
+
+  for (const user of snapshot.users) {
+    const organizationId = Number(user.organization_id);
+    const current = usersByOrg.get(organizationId) ?? [];
+    current.push(user);
+    usersByOrg.set(organizationId, current);
+  }
+
+  for (const payment of snapshot.payments) {
+    const organizationId = Number(payment.organization_id);
+    const current = paymentsByOrg.get(organizationId) ?? [];
+    current.push(payment);
+    paymentsByOrg.set(organizationId, current);
+  }
+
+  return snapshot.organizations.map((organization) =>
+    buildAdminClientListItem({
+      organization,
+      profile: profileByOrg.get(Number(organization.id)) ?? null,
+      users: usersByOrg.get(Number(organization.id)) ?? [],
+      payments: paymentsByOrg.get(Number(organization.id)) ?? [],
+    })
+  );
+}
+
+export async function getAdminClientDetail(
+  organizationId: number
+): Promise<AdminClientDetail | null> {
+  const snapshot = await getAdminOrganizationSnapshot(organizationId);
+
+  if (!snapshot) {
+    return null;
+  }
+
+  const principalUserRow = pickPrimaryUser(snapshot.users);
+  const users = snapshot.users.map(mapUser);
+  const payments = snapshot.payments.map(mapPayment);
+  const lastApprovedPayment =
+    payments.find((payment) => payment.status === "aprobado") ?? null;
+  const baseSubscription = buildSubscription(snapshot.profile);
+  const subscription: AdminClientSubscription = {
+    ...baseSubscription,
+    lastPaymentAt:
+      baseSubscription.lastPaymentAt ??
+      lastApprovedPayment?.paidAt ??
+      lastApprovedPayment?.createdAt ??
+      null,
+  };
+  const quickLinks = buildQuickLinks(
+    snapshot.organization.telefono ?? null,
+    snapshot.profile
+  );
+
+  return {
+    organizationId,
+    organizationName: snapshot.organization.nombre ?? `Empresa ${organizationId}`,
+    organizationEmail: snapshot.organization.correo ?? null,
+    organizationPhone: snapshot.organization.telefono ?? null,
+    organizationAddress: snapshot.organization.direccion ?? null,
+    legacyPlan: snapshot.organization.plan ?? null,
+    createdAt: snapshot.organization.creado_en ?? null,
+    updatedAt: snapshot.organization.actualizado_en ?? null,
+    profile: {
+      empresaNombre: snapshot.profile?.empresa_nombre ?? null,
+      empresaEmail: snapshot.profile?.empresa_email ?? null,
+      empresaTelefono: snapshot.profile?.empresa_telefono ?? null,
+      empresaDireccion: snapshot.profile?.empresa_direccion ?? null,
+      publicName: snapshot.profile?.public_name ?? null,
+      publicZone: snapshot.profile?.public_zone ?? null,
+      brandColor: snapshot.profile?.brand_color ?? null,
+      solicitudPublicaSlug: snapshot.profile?.solicitud_publica_slug ?? null,
+    },
+    principalUser: principalUserRow ? mapUser(principalUserRow) : null,
+    users,
+    subscription,
+    payments,
+    lastPayment: lastApprovedPayment,
+    isTestAccount: snapshot.profile?.is_test_account ?? false,
+    quickLinks: {
+      publicPageUrl: quickLinks.publicPageUrl,
+      whatsappUrl: quickLinks.whatsappUrl,
+      dashboardReadOnlyUrl: quickLinks.dashboardReadOnlyUrl,
+    },
+  };
 }

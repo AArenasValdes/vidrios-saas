@@ -1,0 +1,47 @@
+.card {
+  display: grid;
+  gap: 0.8rem;
+  min-height: 148px;
+  padding: 1.15rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    #0f1520;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+.eyebrow {
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #8a96a6;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.value {
+  font-size: clamp(1.85rem, 2.4vw, 2.4rem);
+  line-height: 1;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.hint {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #b9c3cf;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #8ec0ff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: #c9e0ff;
+}

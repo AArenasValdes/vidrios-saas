@@ -1,0 +1,276 @@
+.workspace {
+  display: grid;
+  gap: 1rem;
+}
+
+.bannerError,
+.bannerSuccess {
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.bannerError {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fecaca;
+}
+
+.bannerSuccess {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.24);
+  color: #bbf7d0;
+}
+
+.opsGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.panelHint {
+  margin: -0.35rem 0 0;
+  color: #8a96a6;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.successTitle {
+  margin: 0;
+  font-weight: 700;
+}
+
+.successMeta {
+  margin: 0.35rem 0 0;
+  color: #d9fae0;
+  font-size: 0.88rem;
+}
+
+.testBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  color: #fde68a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filterButton,
+.filterActive {
+  min-height: 34px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filterButton {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #b9c3cf;
+}
+
+.filterActive {
+  border: 1px solid rgba(30, 136, 255, 0.24);
+  background: rgba(30, 136, 255, 0.14);
+  color: #ffffff;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #b9c3cf;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.checkboxField input {
+  width: 16px;
+  height: 16px;
+}
+
+.form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #b9c3cf;
+}
+
+.input,
+.select {
+  min-height: 42px;
+  padding: 0 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  color: #f8fafc;
+  font-size: 0.92rem;
+}
+
+.input:focus,
+.select:focus {
+  outline: 2px solid rgba(30, 136, 255, 0.45);
+  outline-offset: 1px;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  min-height: 42px;
+  padding: 0 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: #1e88ff;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8edf3;
+}
+
+.ghostButton {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: #b9c3cf;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.ghostButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.listTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.search {
+  min-width: min(100%, 260px);
+}
+
+.muted {
+  margin: 0;
+  color: #8a96a6;
+  font-size: 0.88rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 0.65rem 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8a96a6;
+}
+
+.table td {
+  color: #e8edf3;
+  font-size: 0.9rem;
+}
+
+.rowButton {
+  border: none;
+  background: none;
+  color: #8ec0ff;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.rowButton:hover {
+  color: #c9e0ff;
+}
+
+.linkInline {
+  color: #8ec0ff;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.linkInline:hover {
+  color: #c9e0ff;
+}
+
+@media (max-width: 900px) {
+  .opsGrid {
+    grid-template-columns: 1fr;
+  }
+}

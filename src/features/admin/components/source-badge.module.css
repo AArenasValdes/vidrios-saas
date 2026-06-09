@@ -1,0 +1,29 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.72rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.sistema {
+  background: rgba(30, 136, 255, 0.14);
+  color: #75b2ff;
+  border: 1px solid rgba(30, 136, 255, 0.22);
+}
+
+.manual {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f4c15d;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+.local {
+  background: rgba(138, 150, 166, 0.14);
+  color: #d6dce3;
+  border: 1px solid rgba(138, 150, 166, 0.22);
+}

@@ -1,24 +1,12 @@
 import type { UserRole } from "@/features/auth/types/auth";
-
-const DEFAULT_ALLOWED_EMAILS = ["alessandroreal2.0@gmail.com"];
+import { getFounderAdminEmails } from "@/features/admin/services/admin-access.service";
 
 function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() ?? "";
 }
 
 export function getGrowthAllowedEmails() {
-  const raw =
-    process.env.NEXT_PUBLIC_GROWTH_ADMIN_EMAILS ??
-    process.env.GROWTH_ADMIN_EMAILS;
-
-  if (!raw?.trim()) {
-    return DEFAULT_ALLOWED_EMAILS;
-  }
-
-  return raw
-    .split(",")
-    .map((entry) => normalizeEmail(entry))
-    .filter(Boolean);
+  return getFounderAdminEmails();
 }
 
 export function getGrowthOnlyEmails() {

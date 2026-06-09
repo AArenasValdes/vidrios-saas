@@ -4,6 +4,31 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-09 - Centro de Operaciones founder en /admin
+
+### Resumen
+
+Se implemento Fase 1 de un backoffice interno separado del panel cliente. `/admin` ahora usa `AdminShell` propio y no reutiliza `AppShell`. Founder entra por allowlist (`VENTORA_FOUNDER_ADMIN_EMAILS`) y el login/proxy lo empuja por defecto a `/admin`. Se agregaron dashboard interno, tabla global de organizaciones SaaS y ficha por organizacion con trial, suscripcion y ledger `pagos_suscripcion`. `/admin/growth` se mantiene, pero ahora navega dentro del shell founder y sigue marcado como panel local basado en `localStorage`.
+
+### Archivos nuevos o fuertemente modificados
+
+| Archivo | Cambio |
+|---|---|
+| `app/admin/layout.tsx` | Nuevo layout founder con guard server-side y `AdminShell`. |
+| `app/admin/page.tsx` | Nuevo dashboard interno con KPIs, trials urgentes, pagos recientes y altas recientes. |
+| `app/admin/clientes/page.tsx` | Tabla global de organizaciones SaaS y acceso a ficha. |
+| `app/admin/clientes/[organizationId]/page.tsx` | Ficha interna por organizacion con datos de empresa, estado y pagos. |
+| `app/admin/admin.module.css` | Superficies, tablas y bloques visuales compartidos del centro de operaciones. |
+| `src/features/admin/components/*` | Nuevo set de `AdminShell`, `AdminSidebar`, `AdminKpiCard`, `ClientStatusBadge`, `SourceBadge`. |
+| `src/features/admin/repositories/admin-clients.repository.ts` | Query global founder sobre `organizations`, `organization_profile`, `users`, `pagos_suscripcion`. |
+| `src/features/admin/services/admin-clients.service.ts` | Orquestacion de listado/ficha, usuario principal, ultimo pago y estado efectivo. |
+| `src/features/admin/services/admin-summary.service.ts` | Calculo server-side de KPIs founder y actividad reciente. |
+| `src/features/admin/services/admin-access.service.ts` | Allowlist founder nueva via `VENTORA_FOUNDER_ADMIN_EMAILS` con compat legacy. |
+| `proxy.ts` | Redirect founder por defecto a `/admin`, guard de acceso a `/admin`, rebote desde `/dashboard`. |
+| `app/admin/growth/page.tsx` | Simplificado para heredar guard/shell founder desde layout. |
+
+---
+
 ## 2026-06-05 - Flujo de item libre con valor y separacion de modos de cotizacion
 
 ### Resumen

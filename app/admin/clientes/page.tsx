@@ -1,22 +1,8 @@
-import { redirect } from "next/navigation";
-
-import { canAccessVentoraAdminPanel } from "@/features/admin/services/admin-access.service";
-import { resolveAuthenticatedRouteContext } from "@/features/auth/services/auth-route-access.service";
-import { AdminClientesPageClient } from "./page-client";
+import { AdminClientesWorkspace } from "@/features/admin/components/admin-clientes-workspace";
+import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 
 export default async function AdminClientesPage() {
-  const context = await resolveAuthenticatedRouteContext({
-    requireOrganization: false,
-  });
+  const clients = await listAdminClients();
 
-  if (
-    !canAccessVentoraAdminPanel({
-      email: context.user.email,
-      rol: context.profile.rol,
-    })
-  ) {
-    redirect("/dashboard");
-  }
-
-  return <AdminClientesPageClient />;
+  return <AdminClientesWorkspace initialClients={clients} />;
 }

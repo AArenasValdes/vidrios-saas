@@ -195,6 +195,45 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
+## Feature: Centro de Operaciones Founder
+
+- **Que hace**: Crea un backoffice interno separado del panel cliente. Da shell propio para founder, resumen global de clientes SaaS, tabla de organizaciones y ficha por organizacion con trial/suscripcion/pagos.
+- **Rutas involucradas**: `/admin`, `/admin/clientes`, `/admin/clientes/[organizationId]`
+- **Archivos principales**:
+  - `app/admin/layout.tsx`
+  - `app/admin/page.tsx`
+  - `app/admin/clientes/page.tsx`
+  - `app/admin/clientes/[organizationId]/page.tsx`
+  - `app/admin/admin.module.css`
+  - `src/features/admin/components/admin-shell.tsx`
+  - `src/features/admin/components/admin-sidebar.tsx`
+  - `src/features/admin/components/admin-kpi-card.tsx`
+  - `src/features/admin/components/client-status-badge.tsx`
+  - `src/features/admin/components/source-badge.tsx`
+  - `src/features/admin/services/admin-access.service.ts`
+  - `src/features/admin/services/admin-summary.service.ts`
+  - `src/features/admin/services/admin-clients.service.ts`
+  - `src/features/admin/repositories/admin-clients.repository.ts`
+  - `src/features/admin/types/admin-client.ts`
+  - `src/features/admin/types/admin-summary.ts`
+  - `proxy.ts`
+- **Componentes principales**: `AdminShell`, `AdminSidebar`, `AdminKpiCard`, `ClientStatusBadge`, `SourceBadge`
+- **Hooks/servicios/actions**: acceso founder via `resolveVentoraAdminRouteContext`, resumen via `adminSummaryService`, listado/ficha via `adminClientsService`
+- **Tablas Supabase**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
+- **Flujo de datos**:
+  - Login founder -> `proxy.ts` redirige por defecto a `/admin`
+  - `app/admin/layout.tsx` -> guard server-side founder allowlist -> `AdminShell`
+  - Page server -> service -> repository -> `createAdminClient()` -> Supabase
+  - Estado de trial/suscripcion se recalcula con `resolveOrganizationSubscriptionState()`
+- **Estados importantes**: `active`, `trial_active`, `trial_expiring`, `trial_expired`, `past_due`, `cancelled`
+- **Donde editar UI**: `app/admin/*`, `src/features/admin/components/*`
+- **Donde editar logica**: `src/features/admin/services/*`
+- **Donde editar persistencia**: `src/features/admin/repositories/admin-clients.repository.ts`
+- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth`, pero ese panel sigue siendo local (`localStorage`) y debe marcarse como tal.
+- **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor.
+
+---
+
 ## Feature: Founder Growth Panel
 
 - **Que hace**: Panel privado del fundador con 4 tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en `localStorage` (`ventora:growth-workspace:v3`) con migracion desde v2 y separa `Real`, `Manual` y `Mock`.
@@ -212,13 +251,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Componentes principales**: `GrowthPageClient`
 - **Hooks/servicios/actions**: `useGrowthDashboard`, `growthDashboardService`, `growthDashboardRepository`, `canAccessGrowthPanel`
 - **Tablas Supabase**: Ninguna en esta V1 local
-- **Flujo de datos**: Page server -> access guard (`resolveAuthenticatedRouteContext` + `canAccessGrowthPanel`) -> client page -> hook -> service -> repository `localStorage`
+- **Flujo de datos**: `app/admin/layout.tsx` aplica guard founder -> page client -> hook -> service -> repository `localStorage`
 - **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; colas de trabajo `tareas_pendientes`, `seguimientos_atrasados`, `demos_por_hacer`, `clientes_por_cobrar`, `cuentas_por_configurar`
 - **Donde editar UI**: `app/admin/growth/`
 - **Donde editar logica**: `src/features/growth/services/growth-dashboard.service.ts`
 - **Donde editar persistencia**: `src/features/growth/repositories/growth-dashboard.repository.ts`
-- **Consideraciones UX**: Ruta standalone fuera de `AppShell`. El CTA principal es `Agregar prospecto`. `Trabajo de hoy` manda la pantalla y la tabla de prospectos debe quedar visible y editable sin scroll excesivo.
-- **Riesgos al modificar**: No volver esto un BI decorativo. No mostrar datos mock como reales. No abrir CRM enterprise ni tocar rutas publicas criticas. Mantener acceso restringido a admin allowlist y soportar modo `growth-only` por correo.
+- **Consideraciones UX**: Ahora vive dentro de `AdminShell`, pero conserva foco propio. El CTA principal es `Agregar prospecto`. `Trabajo de hoy` manda la pantalla y la tabla de prospectos debe quedar visible y editable sin scroll excesivo.
+- **Riesgos al modificar**: No volver esto un BI decorativo. No mostrar datos mock como reales. No abrir CRM enterprise ni tocar rutas publicas criticas. Aunque comparta shell founder, sigue siendo un panel local y separado de datos SaaS reales.
 
 ---
 

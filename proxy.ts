@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { isFounderAdminEmail } from "@/features/admin/services/admin-access.service";
 import { isGrowthOnlyUser } from "@/features/growth/services/growth-access.service";
 
 const protectedPrefixes = [
@@ -115,6 +116,15 @@ export async function proxy(request: NextRequest) {
   }
 
   const growthOnly = isGrowthOnlyUser(user?.email);
+  const founderAdmin = isFounderAdminEmail(user?.email);
+
+  if (user && pathname.startsWith("/admin")) {
+    if (!founderAdmin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (
     user &&
@@ -127,9 +137,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user && founderAdmin && pathname === "/dashboard") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    return NextResponse.redirect(url);
+  }
+
   if (user && (isLogin || isRegister)) {
     const url = request.nextUrl.clone();
-    url.pathname = growthOnly ? "/admin/growth" : "/dashboard";
+    if (founderAdmin) {
+      url.pathname = "/admin";
+    } else {
+      url.pathname = growthOnly ? "/admin/growth" : "/dashboard";
+    }
     return NextResponse.redirect(url);
   }
 

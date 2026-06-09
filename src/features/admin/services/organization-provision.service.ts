@@ -21,6 +21,7 @@ export type ProvisionOrganizationInput = {
   email: string;
   password: string;
   empresaNombre: string;
+  isTestAccount?: boolean;
 };
 
 export type ProvisionOrganizationResult = {
@@ -29,6 +30,7 @@ export type ProvisionOrganizationResult = {
   userId: number;
   email: string;
   empresaNombre: string;
+  trialEndsAt: string | null;
 };
 
 function normalizeEmail(email: string) {
@@ -175,12 +177,37 @@ export async function provisionOrganizationAccount(
       );
     }
 
+    if (input.isTestAccount) {
+      type UpdateTestAccountTable = {
+        update(values: { is_test_account: boolean }): {
+          eq(column: "organization_id", value: number): Promise<{
+            error: { message: string } | null;
+          }>;
+        };
+      };
+
+      const organizationProfileTable = admin.from(
+        "organization_profile"
+      ) as unknown as UpdateTestAccountTable;
+
+      const { error: testAccountError } = await organizationProfileTable
+        .update({ is_test_account: true })
+        .eq("organization_id", organizationId);
+
+      if (testAccountError) {
+        throw new OrganizationProvisionError(
+          `No pudimos marcar la cuenta de prueba: ${testAccountError.message}`
+        );
+      }
+    }
+
     return {
       organizationId,
       authUserId,
       userId: Number(publicUser.id),
       email,
       empresaNombre,
+      trialEndsAt: profile?.trial_ends_at ?? null,
     };
   } catch (error) {
     if (authUserId) {

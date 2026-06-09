@@ -1,6 +1,6 @@
 import "server-only";
 
-import { canAccessVentoraAdminPanel } from "@/features/admin/services/admin-access.service";
+import { canAccessFounderAdminPanel } from "@/features/admin/services/admin-access.service";
 import {
   AuthRouteAccessError,
   resolveAuthenticatedRouteContext,
@@ -12,7 +12,7 @@ export async function resolveVentoraAdminRouteContext() {
   });
 
   if (
-    !canAccessVentoraAdminPanel({
+    !canAccessFounderAdminPanel({
       email: context.user.email,
       rol: context.profile.rol,
     })
