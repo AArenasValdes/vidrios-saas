@@ -30,7 +30,7 @@
 - **Componentes principales**: Internos de la pagina
 - **Datos que consume**: Estatico
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: Navegacion, CTA a registro
+- **Acciones principales**: Navegacion, CTA a solicitar cuenta
 - **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`, `app/(landing-web)/planes/page.module.css`
 - **Riesgos**: Copy comercial sensible. No cambiar precios sin instruccion.
 
@@ -67,6 +67,22 @@
 - **Acciones principales**: `signIn` via `authService`
 - **Archivos a tocar para modificar**: `app/(auth-public)/login/page.tsx`, `src/features/auth/hooks/useAuth.ts`, `src/features/auth/services/auth.service.ts`, `src/features/auth/repositories/auth.repository.ts`
 - **Riesgos**: No romper flujo PKCE. El proxy redirige usuarios autenticados a `/dashboard`. No cambiar manejo de `?next=` param. No volver a colapsar errores distintos bajo "correo o contrasena incorrecta"; el login ahora clasifica timeout, cookie no lista, perfil faltante, red y permisos.
+
+---
+
+## Ruta: /registro
+
+- **Tipo**: Publica
+- **Archivo principal**: `app/(auth-public)/registro/page.tsx`
+- **Componente principal**: `app/(auth-public)/registro/registro-view.tsx`
+- **API usada**: `app/api/auth/register/route.ts`
+- **Proposito**: Solicitar cuenta de prueba asistida. Captura nombre, empresa, WhatsApp, ciudad/comuna y mensaje opcional.
+- **Usuario objetivo**: Prospecto SaaS que necesita onboarding asistido
+- **Datos que consume/escribe**: Inserta lead en `solicitudes_contacto` con `contexto = registro-saas`, `organization_id = null`
+- **Tablas Supabase relacionadas**: `solicitudes_contacto`
+- **Acciones principales**: Enviar solicitud y mostrar confirmacion. No crea usuario Supabase Auth, organizacion, perfil ni trial.
+- **Archivos a tocar para modificar**: `app/(auth-public)/registro/registro-view.tsx`, `app/api/auth/register/route.ts`, `src/features/solicitudes/services/solicitudes-contacto.service.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`
+- **Riesgos**: Mantener cerrado el autoservicio. No reintroducir creacion directa de Auth/organizacion desde esta ruta. Si se cambia `contexto`, revisar constraint/RLS de `solicitudes_contacto`.
 
 ---
 

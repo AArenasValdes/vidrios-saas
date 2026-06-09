@@ -148,7 +148,7 @@ Usa subquery cruzada hacia `system_lines`.
 
 | Policy | Operación | USING | WITH CHECK | Rol |
 |---|---|---|---|---|
-| `solicitudes_contacto_insert_public` | INSERT | — | `estado = 'nueva'` y contexto válido | `anon`, `authenticated` |
+| `solicitudes_contacto_insert_public` | INSERT | — | `estado = 'nueva'` y (`landing`/`registro-saas` sin org o `empresa-publica` con org) | `anon`, `authenticated` |
 | `solicitudes_contacto_select_own` | SELECT | `organization_id = get_org_id()` | `authenticated` |
 | `solicitudes_contacto_update_own` | UPDATE | `organization_id = get_org_id()` | `organization_id = get_org_id()` | `authenticated` |
 

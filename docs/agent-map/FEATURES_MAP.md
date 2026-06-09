@@ -197,7 +197,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado de growth para el fundador con foco en trabajo diario de prospeccion, follow-up, demos, pilotos, pagos y metas. En esta primera version usa estado local persistido en `localStorage` y separa de forma explicita `Real`, `Manual` y `Mock`.
+- **Que hace**: Panel privado del fundador con 4 tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en `localStorage` (`ventora:growth-workspace:v3`) con migracion desde v2 y separa `Real`, `Manual` y `Mock`.
 - **Rutas involucradas**: `/admin/growth`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`
@@ -213,7 +213,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Hooks/servicios/actions**: `useGrowthDashboard`, `growthDashboardService`, `growthDashboardRepository`, `canAccessGrowthPanel`
 - **Tablas Supabase**: Ninguna en esta V1 local
 - **Flujo de datos**: Page server -> access guard (`resolveAuthenticatedRouteContext` + `canAccessGrowthPanel`) -> client page -> hook -> service -> repository `localStorage`
-- **Estados importantes**: tabs `resumen`, `manuales`, `experimentos`; focus filters `todos`, `followups`, `contactar`, `demos`, `pilotos`
+- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; colas de trabajo `tareas_pendientes`, `seguimientos_atrasados`, `demos_por_hacer`, `clientes_por_cobrar`, `cuentas_por_configurar`
 - **Donde editar UI**: `app/admin/growth/`
 - **Donde editar logica**: `src/features/growth/services/growth-dashboard.service.ts`
 - **Donde editar persistencia**: `src/features/growth/repositories/growth-dashboard.repository.ts`

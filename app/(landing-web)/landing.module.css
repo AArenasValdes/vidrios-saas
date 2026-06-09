@@ -1553,6 +1553,10 @@
   min-width: 0;
 }
 
+.pricingRevealAnchor {
+  grid-column: 1 / -1;
+}
+
 .pricingCard {
   position: relative;
   width: 100%;
@@ -1598,8 +1602,15 @@
 }
 
 .pricingCardAnchor {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(240px, 0.72fr);
+  align-items: center;
+  gap: 22px;
+  padding: 22px 26px;
   background:
-    linear-gradient(180deg, rgba(17, 24, 39, 0.78) 0%, rgba(8, 13, 22, 0.92) 100%);
+    linear-gradient(180deg, rgba(17, 24, 39, 0.62) 0%, rgba(8, 13, 22, 0.8) 100%);
+  border-style: dashed;
+  opacity: 0.86;
 }
 
 .pricingCardAnchor .pricingAmount {
@@ -1611,13 +1622,35 @@
 
 .pricingCardAnchor .pricingAmount strong {
   max-width: none;
-  font-size: clamp(28px, 2.25vw, 32px);
+  font-size: clamp(24px, 2.1vw, 30px);
   line-height: 0.98;
   white-space: nowrap;
 }
 
 .pricingCardAnchor .pricingAmount span {
   margin-top: 0;
+}
+
+.pricingCardAnchor .pricingCardTop,
+.pricingCardAnchor .pricingDescription {
+  grid-column: 1;
+}
+
+.pricingCardAnchor .pricingCta {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  justify-self: end;
+  min-width: 230px;
+}
+
+.pricingCardAnchor .pricingBenefits {
+  grid-column: 2;
+  grid-row: 2 / span 3;
+  align-self: start;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
 }
 
 .pricingCardTop {
@@ -2074,7 +2107,7 @@
   }
 
   .pricingReveal:nth-child(1) {
-    order: 2;
+    order: 3;
   }
 
   .pricingReveal:nth-child(2) {
@@ -2082,7 +2115,30 @@
   }
 
   .pricingReveal:nth-child(3) {
-    order: 3;
+    order: 2;
+  }
+
+  .pricingReveal:nth-child(4) {
+    order: 4;
+  }
+
+  .pricingCardAnchor {
+    display: flex;
+    grid-template-columns: none;
+    opacity: 1;
+  }
+
+  .pricingCardAnchor .pricingCardTop,
+  .pricingCardAnchor .pricingDescription,
+  .pricingCardAnchor .pricingCta,
+  .pricingCardAnchor .pricingBenefits {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .pricingCardAnchor .pricingCta {
+    justify-self: stretch;
+    min-width: 0;
   }
 
   .pricingCardFeatured {

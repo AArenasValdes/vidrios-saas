@@ -72,8 +72,9 @@ Oferta comercial sugerida para etapa piloto:
 - piloto de 7 dias
 - feedback directo con el cliente
 - implementacion rapida y acompanamiento cercano
-- precio sugerido de `CLP 10.000 mensual`
-- precio sugerido de `CLP 100.000 anual`
+- precio sugerido de `CLP 8.990 mensual`
+- precio sugerido de `CLP 79.990 Founder anual`
+- precio sugerido de `CLP 59.990 Solo Cotizacion anual`
 
 Objetivo del piloto:
 

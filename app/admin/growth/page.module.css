@@ -183,8 +183,49 @@
 
 .workGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
+}
+
+.recordList {
+  display: grid;
+  gap: 12px;
+}
+
+.recordCard {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.recordTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recordSub,
+.recordHint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.recordGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recordActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .workCard,
@@ -522,7 +563,8 @@
   .manualGrid,
   .formGrid,
   .experimentFields,
-  .checkboxGrid {
+  .checkboxGrid,
+  .recordGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -550,7 +592,8 @@
   .experimentFields,
   .projectionList,
   .checkboxGrid,
-  .miniFunnel {
+  .miniFunnel,
+  .recordGrid {
     grid-template-columns: 1fr;
   }
 

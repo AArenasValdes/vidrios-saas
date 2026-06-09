@@ -1,38 +1,41 @@
 import { growthDashboardRepository } from "@/features/growth/repositories/growth-dashboard.repository";
 import type {
+  CreateGrowthClientInput,
+  CreateGrowthMarketingTaskInput,
   CreateGrowthProspectInput,
-  GrowthChannel,
-  GrowthChannelPerformance,
+  GrowthClientAccount,
   GrowthDashboardViewModel,
-  GrowthFocusFilter,
-  GrowthFunnelMetrics,
-  GrowthKpi,
+  GrowthMarketingTask,
   GrowthPanelTab,
-  GrowthPriority,
   GrowthProspect,
   GrowthProspectStatus,
-  GrowthProjection,
   GrowthTodayItem,
+  GrowthWorkQueue,
   GrowthWorkspace,
+  UpdateGrowthClientInput,
   UpdateGrowthManualMetricsInput,
+  UpdateGrowthMarketingTaskInput,
   UpdateGrowthProspectInput,
   UpdateGrowthSettingsInput,
 } from "@/features/growth/types/growth-dashboard";
 
-const ADVANCED_STATUSES: GrowthProspectStatus[] = [
-  "Respondio",
-  "Demo agendada",
-  "Demo realizada",
-  "Piloto",
-  "Pagado",
+const TERMINAL_PROSPECT_STATUSES: GrowthProspectStatus[] = ["pagado", "perdido"];
+
+const DEMO_PENDING_STATUSES: GrowthProspectStatus[] = [
+  "contactado",
+  "demo_enviada",
 ];
 
-const DEMO_STATUSES: GrowthProspectStatus[] = [
-  "Demo agendada",
-  "Demo realizada",
-];
-
-const TERMINAL_STATUSES: GrowthProspectStatus[] = ["Pagado", "Perdido"];
+const STATUS_LABELS: Record<GrowthProspectStatus, string> = {
+  nuevo: "Nuevo",
+  contactado: "Contactado",
+  demo_enviada: "Demo enviada",
+  demo_agendada: "Demo agendada",
+  piloto_activo: "Piloto activo",
+  esperando_pago: "Esperando pago",
+  pagado: "Pagado",
+  perdido: "Perdido",
+};
 
 function getTodayYmd() {
   return new Date().toISOString().slice(0, 10);
@@ -40,6 +43,14 @@ function getTodayYmd() {
 
 function cloneWorkspace(workspace: GrowthWorkspace) {
   return JSON.parse(JSON.stringify(workspace)) as GrowthWorkspace;
+}
+
+function createId(prefix: string) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${prefix}-${Date.now()}`;
 }
 
 function formatClp(value: number) {
@@ -82,242 +93,170 @@ function formatDateTimeLabel(value: string) {
   }).format(new Date(value));
 }
 
-function nextActionLabel(status: GrowthProspectStatus) {
-  if (status === "Nuevo") return "Marcar contacto";
-  if (status === "Contactado") return "Marcar respuesta";
-  if (status === "Respondio") return "Agendar demo";
-  if (status === "Demo agendada") return "Marcar demo";
-  if (status === "Demo realizada") return "Activar piloto";
-  if (status === "Piloto") return "Mover a pagado";
-  if (status === "Pausado" || status === "Perdido") return "Reactivar";
-  return "Actualizado";
-}
-
-function nextStatus(status: GrowthProspectStatus): GrowthProspectStatus {
-  if (status === "Nuevo") return "Contactado";
-  if (status === "Contactado") return "Respondio";
-  if (status === "Respondio") return "Demo agendada";
-  if (status === "Demo agendada") return "Demo realizada";
-  if (status === "Demo realizada") return "Piloto";
-  if (status === "Piloto") return "Pagado";
-  if (status === "Pausado" || status === "Perdido") return "Contactado";
+function nextProspectStatus(status: GrowthProspectStatus): GrowthProspectStatus {
+  if (status === "nuevo") return "contactado";
+  if (status === "contactado") return "demo_enviada";
+  if (status === "demo_enviada") return "demo_agendada";
+  if (status === "demo_agendada") return "piloto_activo";
+  if (status === "piloto_activo") return "esperando_pago";
+  if (status === "esperando_pago") return "pagado";
+  if (status === "perdido") return "contactado";
   return status;
 }
 
-function buildFunnel(prospects: GrowthProspect[]): GrowthFunnelMetrics {
-  return {
-    encontrados: prospects.length,
-    contactados: prospects.filter((item) => item.estado !== "Nuevo").length,
-    respondieron: prospects.filter((item) =>
-      ADVANCED_STATUSES.includes(item.estado)
-    ).length,
-    demos: prospects.filter((item) => DEMO_STATUSES.includes(item.estado))
-      .length,
-    pilotos: prospects.filter((item) => item.estado === "Piloto").length,
-    pagos: prospects.filter((item) => item.estado === "Pagado").length,
-  };
-}
-
-function buildKpis(
-  workspace: GrowthWorkspace,
-  funnel: GrowthFunnelMetrics
-): GrowthKpi[] {
-  return [
-    {
-      id: "encontrados",
-      label: "Encontrados",
-      value: String(funnel.encontrados),
-      source: "manual",
-    },
-    {
-      id: "contactados",
-      label: "Contactados",
-      value: String(funnel.contactados),
-      source: "manual",
-    },
-    {
-      id: "respondieron",
-      label: "Respondieron",
-      value: String(funnel.respondieron),
-      source: "manual",
-    },
-    {
-      id: "demos",
-      label: "Demos",
-      value: String(funnel.demos),
-      source: "manual",
-    },
-    {
-      id: "pilotos",
-      label: "Pilotos",
-      value: String(workspace.manualMetrics.pilotosActivosActuales),
-      source: workspace.manualMetrics.dataStatus,
-    },
-    {
-      id: "pagos",
-      label: "Pagos",
-      value: String(workspace.manualMetrics.clientesPagadosActuales),
-      source: workspace.manualMetrics.dataStatus,
-    },
-    {
-      id: "mrr",
-      label: "MRR",
-      value: formatClp(workspace.manualMetrics.mrrActualClp),
-      source: workspace.manualMetrics.dataStatus,
-    },
-  ];
-}
-
-function buildTodayWork(prospects: GrowthProspect[]): GrowthTodayItem[] {
-  const followups = prospects.filter(
-    (item) =>
-      item.estado !== "Nuevo" &&
-      !TERMINAL_STATUSES.includes(item.estado) &&
-      isOnOrBeforeToday(item.fechaProximoContacto)
-  );
-  const contactar = prospects.filter(
-    (item) =>
-      item.estado === "Nuevo" &&
-      (item.prioridad === "A1" || item.prioridad === "A2")
-  );
-  const demos = prospects.filter((item) => item.estado === "Respondio");
-  const pilotos = prospects.filter(
-    (item) => item.estado === "Demo realizada"
-  );
-
-  return [
-    {
-      id: "followups",
-      title: "Follow-ups vencidos",
-      count: followups.length,
-      names: followups.slice(0, 3).map((item) => item.empresa),
-      priorityLabel: "Alta",
-      nextStep: "Retomar conversaciones que ya van atrasadas.",
-      actionLabel: "Ver follow-ups",
-    },
-    {
-      id: "contactar",
-      title: "Prospectos por contactar",
-      count: contactar.length,
-      names: contactar.slice(0, 3).map((item) => item.empresa),
-      priorityLabel: "Alta",
-      nextStep: "Enviar el primer contacto a la lista corta del dia.",
-      actionLabel: "Ver prospectos",
-    },
-    {
-      id: "demos",
-      title: "Demos por agendar",
-      count: demos.length,
-      names: demos.slice(0, 3).map((item) => item.empresa),
-      priorityLabel: "Media",
-      nextStep: "Mover respuestas reales a una fecha concreta.",
-      actionLabel: "Ver demos",
-    },
-    {
-      id: "pilotos",
-      title: "Pilotos por activar",
-      count: pilotos.length,
-      names: pilotos.slice(0, 3).map((item) => item.empresa),
-      priorityLabel: "Media",
-      nextStep: "Cerrar activacion y primer valor esta semana.",
-      actionLabel: "Ver pilotos",
-    },
-  ];
-}
-
-function buildChannels(
-  prospects: GrowthProspect[]
-): GrowthChannelPerformance[] {
-  const channels: GrowthChannel[] = [
-    "Facebook",
-    "Instagram",
-    "Google Maps",
-    "WhatsApp",
-    "TikTok",
-    "Referidos",
-  ];
-
-  return channels.map((channel) => {
-    const items = prospects.filter((prospect) => prospect.canal === channel);
-    const avanzados = items.filter((prospect) =>
-      ADVANCED_STATUSES.includes(prospect.estado)
-    ).length;
-
-    return {
-      channel,
-      total: items.length,
-      avanzados,
-      effectivenessPct: items.length > 0 ? avanzados / items.length : 0,
-    };
-  });
-}
-
-function buildProjections(workspace: GrowthWorkspace): GrowthProjection[] {
-  return [6, 12].map((months) => ({
-    months: months as 6 | 12,
-    paidClients:
-      workspace.manualMetrics.clientesPagadosActuales +
-      workspace.settings.monthlyPaidGoal * months,
-    mrrClp:
-      workspace.manualMetrics.mrrActualClp +
-      workspace.settings.monthlyPaidGoal *
-        workspace.settings.monthlyPriceClp *
-        months,
-  }));
-}
-
-function applyFocusFilter(
-  prospects: GrowthProspect[],
-  focusFilter: GrowthFocusFilter
-) {
-  if (focusFilter === "todos") {
-    return prospects;
-  }
-
-  if (focusFilter === "followups") {
-    return prospects.filter(
-      (item) =>
-        item.estado !== "Nuevo" &&
-        !TERMINAL_STATUSES.includes(item.estado) &&
-        isOnOrBeforeToday(item.fechaProximoContacto)
-    );
-  }
-
-  if (focusFilter === "contactar") {
-    return prospects.filter(
-      (item) =>
-        item.estado === "Nuevo" &&
-        (item.prioridad === "A1" || item.prioridad === "A2")
-    );
-  }
-
-  if (focusFilter === "demos") {
-    return prospects.filter(
-      (item) =>
-        item.estado === "Respondio" || item.estado === "Demo agendada"
-    );
-  }
-
-  return prospects.filter(
-    (item) => item.estado === "Demo realizada" || item.estado === "Piloto"
-  );
+function nextProspectStep(status: GrowthProspectStatus) {
+  if (status === "contactado") return "Esperar respuesta o enviar follow-up";
+  if (status === "demo_enviada") return "Confirmar si vieron la demo";
+  if (status === "demo_agendada") return "Hacer demo y activar piloto";
+  if (status === "piloto_activo") return "Acompañar onboarding y primer valor";
+  if (status === "esperando_pago") return "Cerrar pago o plan";
+  if (status === "pagado") return "Pedir referido o caso de exito";
+  return "Actualizar seguimiento";
 }
 
 function sortProspects(prospects: GrowthProspect[]) {
-  const priorityWeight: Record<GrowthPriority, number> = {
-    A1: 0,
-    A2: 1,
-    B1: 2,
-    B2: 3,
+  const statusWeight: Record<GrowthProspectStatus, number> = {
+    nuevo: 0,
+    contactado: 1,
+    demo_enviada: 2,
+    demo_agendada: 3,
+    piloto_activo: 4,
+    esperando_pago: 5,
+    pagado: 6,
+    perdido: 7,
   };
 
   return [...prospects].sort((left, right) => {
-    if (priorityWeight[left.prioridad] !== priorityWeight[right.prioridad]) {
-      return priorityWeight[left.prioridad] - priorityWeight[right.prioridad];
+    if (statusWeight[left.estado] !== statusWeight[right.estado]) {
+      return statusWeight[left.estado] - statusWeight[right.estado];
     }
 
-    return compareDate(left.fechaProximoContacto, right.fechaProximoContacto);
+    return compareDate(
+      left.fechaProximoSeguimiento,
+      right.fechaProximoSeguimiento
+    );
   });
+}
+
+function sortClients(clients: GrowthClientAccount[]) {
+  return [...clients].sort((left, right) => {
+    if (left.estadoPago !== right.estadoPago) {
+      const weight = { vencido: 0, pendiente: 1, pagado: 2 };
+      return weight[left.estadoPago] - weight[right.estadoPago];
+    }
+
+    return compareDate(left.fechaVencimiento, right.fechaVencimiento);
+  });
+}
+
+function sortMarketingTasks(tasks: GrowthMarketingTask[]) {
+  return [...tasks].sort((left, right) =>
+    compareDate(left.fecha, right.fecha)
+  );
+}
+
+function buildTodayWork(workspace: GrowthWorkspace): GrowthTodayItem[] {
+  const prospects = workspace.prospects;
+  const clients = workspace.clientAccounts;
+  const marketing = workspace.marketingTasks;
+
+  const tareasPendientes = marketing.filter(
+    (item) => item.estado === "pendiente" || item.estado === "en_proceso"
+  );
+  const seguimientosAtrasados = prospects.filter(
+    (item) =>
+      !TERMINAL_PROSPECT_STATUSES.includes(item.estado) &&
+      isOnOrBeforeToday(item.fechaProximoSeguimiento)
+  );
+  const demosPorHacer = prospects.filter((item) =>
+    DEMO_PENDING_STATUSES.includes(item.estado)
+  );
+  const clientesPorCobrar = clients.filter(
+    (item) => item.estadoPago === "pendiente" || item.estadoPago === "vencido"
+  );
+  const cuentasPorConfigurar = clients.filter(
+    (item) =>
+      item.onboarding !== "completado" ||
+      !item.pwaInstalada ||
+      !item.videosEnviados ||
+      !item.primeraCotizacionCreada
+  );
+
+  const queues: Array<Omit<GrowthTodayItem, "count" | "names">> = [
+    {
+      id: "tareas_pendientes",
+      title: "Tareas pendientes",
+      priorityLabel: "Media",
+      nextStep: "Cerrar contenido o acciones comerciales abiertas.",
+      actionLabel: "Ver marketing",
+      targetTab: "marketing",
+    },
+    {
+      id: "seguimientos_atrasados",
+      title: "Seguimientos atrasados",
+      priorityLabel: "Alta",
+      nextStep: "Retomar conversaciones con fecha vencida.",
+      actionLabel: "Ver prospectos",
+      targetTab: "prospectos",
+    },
+    {
+      id: "demos_por_hacer",
+      title: "Demos por hacer",
+      priorityLabel: "Alta",
+      nextStep: "Mover contactos calientes a demo concreta.",
+      actionLabel: "Ver demos",
+      targetTab: "prospectos",
+    },
+    {
+      id: "clientes_por_cobrar",
+      title: "Clientes por cobrar",
+      priorityLabel: "Alta",
+      nextStep: "Cobrar o reactivar cuentas con pago pendiente.",
+      actionLabel: "Ver pagos",
+      targetTab: "clientes",
+    },
+    {
+      id: "cuentas_por_configurar",
+      title: "Cuentas por configurar",
+      priorityLabel: "Media",
+      nextStep: "Terminar onboarding, PWA, videos o primera cotizacion.",
+      actionLabel: "Ver clientes",
+      targetTab: "clientes",
+    },
+  ];
+
+  const counts: Record<GrowthWorkQueue, { count: number; names: string[] }> = {
+    tareas_pendientes: {
+      count: tareasPendientes.length,
+      names: tareasPendientes.slice(0, 3).map((item) => item.campanaCanal),
+    },
+    seguimientos_atrasados: {
+      count: seguimientosAtrasados.length,
+      names: seguimientosAtrasados.slice(0, 3).map((item) => item.empresa),
+    },
+    demos_por_hacer: {
+      count: demosPorHacer.length,
+      names: demosPorHacer.slice(0, 3).map((item) => item.empresa),
+    },
+    clientes_por_cobrar: {
+      count: clientesPorCobrar.length,
+      names: clientesPorCobrar.slice(0, 3).map((item) => item.empresa),
+    },
+    cuentas_por_configurar: {
+      count: cuentasPorConfigurar.length,
+      names: cuentasPorConfigurar.slice(0, 3).map((item) => item.empresa),
+    },
+  };
+
+  return queues.map((queue) => ({
+    ...queue,
+    count: counts[queue.id].count,
+    names: counts[queue.id].names,
+  }));
+}
+
+async function persistWorkspace(nextWorkspace: GrowthWorkspace) {
+  return growthDashboardRepository.saveWorkspace(nextWorkspace);
 }
 
 export const growthDashboardService = {
@@ -332,18 +271,14 @@ export const growthDashboardService = {
     const nextWorkspace = cloneWorkspace(workspace);
     nextWorkspace.prospects.unshift({
       ...input,
-      id:
-        typeof crypto !== "undefined" &&
-        typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `prospecto-${Date.now()}`,
+      id: createId("prospecto"),
       createdAt: now,
       updatedAt: now,
       dataStatus: "manual",
     });
     nextWorkspace.updatedAt = now;
 
-    return growthDashboardRepository.saveWorkspace(nextWorkspace);
+    return persistWorkspace(nextWorkspace);
   },
   async updateProspect(
     workspace: GrowthWorkspace,
@@ -357,14 +292,14 @@ export const growthDashboardService = {
         ? {
             ...prospect,
             ...patch,
-            dataStatus: "manual",
+            dataStatus: patch.dataStatus ?? "manual",
             updatedAt: now,
           }
         : prospect
     );
     nextWorkspace.updatedAt = now;
 
-    return growthDashboardRepository.saveWorkspace(nextWorkspace);
+    return persistWorkspace(nextWorkspace);
   },
   async advanceProspect(workspace: GrowthWorkspace, prospectId: string) {
     const prospect = workspace.prospects.find((item) => item.id === prospectId);
@@ -373,30 +308,119 @@ export const growthDashboardService = {
       return workspace;
     }
 
-    const nextProspectStatus = nextStatus(prospect.estado);
-    const nextStep =
-      nextProspectStatus === "Contactado"
-        ? "Esperar respuesta o enviar follow-up"
-        : nextProspectStatus === "Respondio"
-          ? "Agendar demo corta"
-          : nextProspectStatus === "Demo agendada"
-            ? "Confirmar demo"
-            : nextProspectStatus === "Demo realizada"
-              ? "Activar piloto"
-              : nextProspectStatus === "Piloto"
-                ? "Mover a pago"
-                : nextProspectStatus === "Pagado"
-                  ? "Pedir referido o caso"
-                  : prospect.proximoPaso;
+    const nextStatus = nextProspectStatus(prospect.estado);
 
     return growthDashboardService.updateProspect(workspace, prospectId, {
-      estado: nextProspectStatus,
-      proximoPaso: nextStep,
-      fechaProximoContacto:
-        nextProspectStatus === "Pagado"
-          ? prospect.fechaProximoContacto
+      estado: nextStatus,
+      proximoPaso: nextProspectStep(nextStatus),
+      fechaProximoSeguimiento:
+        nextStatus === "pagado"
+          ? prospect.fechaProximoSeguimiento
           : getTodayYmd(),
     });
+  },
+  async deleteProspect(workspace: GrowthWorkspace, prospectId: string) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.prospects = nextWorkspace.prospects.filter(
+      (item) => item.id !== prospectId
+    );
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async addClient(workspace: GrowthWorkspace, input: CreateGrowthClientInput) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.clientAccounts.unshift({
+      ...input,
+      id: createId("cliente"),
+      createdAt: now,
+      updatedAt: now,
+      dataStatus: "manual",
+    });
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async updateClient(
+    workspace: GrowthWorkspace,
+    clientId: string,
+    patch: UpdateGrowthClientInput
+  ) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.clientAccounts = nextWorkspace.clientAccounts.map((client) =>
+      client.id === clientId
+        ? {
+            ...client,
+            ...patch,
+            dataStatus: patch.dataStatus ?? "manual",
+            updatedAt: now,
+          }
+        : client
+    );
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async deleteClient(workspace: GrowthWorkspace, clientId: string) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.clientAccounts = nextWorkspace.clientAccounts.filter(
+      (item) => item.id !== clientId
+    );
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async addMarketingTask(
+    workspace: GrowthWorkspace,
+    input: CreateGrowthMarketingTaskInput
+  ) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.marketingTasks.unshift({
+      ...input,
+      id: createId("marketing"),
+      createdAt: now,
+      updatedAt: now,
+      dataStatus: "manual",
+    });
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async updateMarketingTask(
+    workspace: GrowthWorkspace,
+    taskId: string,
+    patch: UpdateGrowthMarketingTaskInput
+  ) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.marketingTasks = nextWorkspace.marketingTasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            ...patch,
+            dataStatus: patch.dataStatus ?? "manual",
+            updatedAt: now,
+          }
+        : task
+    );
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
+  },
+  async deleteMarketingTask(workspace: GrowthWorkspace, taskId: string) {
+    const now = new Date().toISOString();
+    const nextWorkspace = cloneWorkspace(workspace);
+    nextWorkspace.marketingTasks = nextWorkspace.marketingTasks.filter(
+      (item) => item.id !== taskId
+    );
+    nextWorkspace.updatedAt = now;
+
+    return persistWorkspace(nextWorkspace);
   },
   async updateSettings(
     workspace: GrowthWorkspace,
@@ -410,7 +434,7 @@ export const growthDashboardService = {
     };
     nextWorkspace.updatedAt = now;
 
-    return growthDashboardRepository.saveWorkspace(nextWorkspace);
+    return persistWorkspace(nextWorkspace);
   },
   async updateManualMetrics(
     workspace: GrowthWorkspace,
@@ -425,43 +449,18 @@ export const growthDashboardService = {
     };
     nextWorkspace.updatedAt = now;
 
-    return growthDashboardRepository.saveWorkspace(nextWorkspace);
-  },
-  async updateExperiments(
-    workspace: GrowthWorkspace,
-    experiments: GrowthWorkspace["experiments"]
-  ) {
-    const now = new Date().toISOString();
-    const nextWorkspace = cloneWorkspace(workspace);
-    nextWorkspace.experiments = experiments;
-    nextWorkspace.updatedAt = now;
-
-    return growthDashboardRepository.saveWorkspace(nextWorkspace);
+    return persistWorkspace(nextWorkspace);
   },
   buildDashboardViewModel(
     workspace: GrowthWorkspace,
-    currentTab: GrowthPanelTab,
-    focusFilter: GrowthFocusFilter
+    currentTab: GrowthPanelTab
   ): GrowthDashboardViewModel {
-    const orderedProspects = sortProspects(workspace.prospects);
-    const funnel = buildFunnel(orderedProspects);
-    const workToday = buildTodayWork(orderedProspects);
-    const channels = buildChannels(orderedProspects).filter(
-      (channel) =>
-        workspace.settings.activeChannels.includes(channel.channel) ||
-        channel.total > 0
-    );
-    const topChannel =
-      [...channels].sort((left, right) => {
-        if (right.effectivenessPct !== left.effectivenessPct) {
-          return right.effectivenessPct - left.effectivenessPct;
-        }
-
-        return right.total - left.total;
-      })[0] ?? null;
+    const prospects = sortProspects(workspace.prospects);
+    const clientAccounts = sortClients(workspace.clientAccounts);
+    const marketingTasks = sortMarketingTasks(workspace.marketingTasks);
 
     return {
-      title: "Crecimiento Ventora",
+      title: "Panel fundador Ventora",
       periodLabel: formatPeriodLabel(
         workspace.settings.periodStartDate,
         workspace.settings.periodEndDate
@@ -472,31 +471,48 @@ export const growthDashboardService = {
       mrrActualLabel: formatClp(workspace.manualMetrics.mrrActualClp),
       updatedAtLabel: formatDateTimeLabel(workspace.updatedAt),
       currentTab,
-      focusFilter,
-      kpis: buildKpis(workspace, funnel),
-      funnel,
-      workToday,
-      visibleProspects: applyFocusFilter(orderedProspects, focusFilter),
-      allProspects: orderedProspects,
-      channels,
-      topChannel,
-      manualMetrics: workspace.manualMetrics,
-      projections: buildProjections(workspace),
+      workToday: buildTodayWork(workspace),
+      prospects,
+      clientAccounts,
+      marketingTasks,
       settings: workspace.settings,
-      experiments: workspace.experiments,
+      manualMetrics: workspace.manualMetrics,
       tabs: [
-        { id: "resumen", label: "Resumen" },
-        { id: "manuales", label: "Datos manuales" },
-        { id: "experimentos", label: "Experimentos" },
+        { id: "trabajo", label: "Trabajo de hoy" },
+        { id: "prospectos", label: "Prospectos" },
+        { id: "clientes", label: "Clientes y pagos" },
+        { id: "marketing", label: "Marketing y tareas" },
       ],
+      counts: {
+        prospectosActivos: prospects.filter(
+          (item) => !TERMINAL_PROSPECT_STATUSES.includes(item.estado)
+        ).length,
+        clientesActivos: clientAccounts.length,
+        marketingPendiente: marketingTasks.filter(
+          (item) => item.estado === "pendiente" || item.estado === "en_proceso"
+        ).length,
+      },
     };
   },
+  getProspectStatusLabel(status: GrowthProspectStatus) {
+    return STATUS_LABELS[status];
+  },
   getStatusActionLabel(status: GrowthProspectStatus) {
-    return nextActionLabel(status);
+    if (status === "nuevo") return "Marcar contactado";
+    if (status === "contactado") return "Demo enviada";
+    if (status === "demo_enviada") return "Demo agendada";
+    if (status === "demo_agendada") return "Activar piloto";
+    if (status === "piloto_activo") return "Esperando pago";
+    if (status === "esperando_pago") return "Marcar pagado";
+    if (status === "perdido") return "Reactivar";
+    return "Actualizado";
   },
   getDataStatusLabel(status: "real" | "manual" | "mock") {
     if (status === "real") return "Real";
     if (status === "manual") return "Manual";
     return "Mock";
+  },
+  getProspectStatuses(): GrowthProspectStatus[] {
+    return Object.keys(STATUS_LABELS) as GrowthProspectStatus[];
   },
 };

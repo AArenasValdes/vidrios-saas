@@ -1,34 +1,43 @@
 export type GrowthDataStatus = "real" | "manual" | "mock";
 
-export type GrowthPanelTab = "resumen" | "manuales" | "experimentos";
+export type GrowthPanelTab =
+  | "trabajo"
+  | "prospectos"
+  | "clientes"
+  | "marketing";
 
-export type GrowthFocusFilter =
-  | "todos"
-  | "followups"
-  | "contactar"
-  | "demos"
-  | "pilotos";
-
-export type GrowthChannel =
-  | "Facebook"
-  | "Instagram"
-  | "Google Maps"
-  | "WhatsApp"
-  | "TikTok"
-  | "Referidos";
+export type GrowthWorkQueue =
+  | "tareas_pendientes"
+  | "seguimientos_atrasados"
+  | "demos_por_hacer"
+  | "clientes_por_cobrar"
+  | "cuentas_por_configurar";
 
 export type GrowthProspectStatus =
-  | "Nuevo"
-  | "Contactado"
-  | "Respondio"
-  | "Demo agendada"
-  | "Demo realizada"
-  | "Piloto"
-  | "Pagado"
-  | "Perdido"
-  | "Pausado";
+  | "nuevo"
+  | "contactado"
+  | "demo_enviada"
+  | "demo_agendada"
+  | "piloto_activo"
+  | "esperando_pago"
+  | "pagado"
+  | "perdido";
 
-export type GrowthPriority = "A1" | "A2" | "B1" | "B2";
+export type GrowthClientPlan =
+  | "founder_full"
+  | "quote_only"
+  | "mensual"
+  | "trial";
+
+export type GrowthPaymentStatus = "pendiente" | "pagado" | "vencido";
+
+export type GrowthOnboardingStatus = "pendiente" | "en_proceso" | "completado";
+
+export type GrowthMarketingStatus =
+  | "pendiente"
+  | "en_proceso"
+  | "publicado"
+  | "cerrado";
 
 export type GrowthSettings = {
   periodStartDate: string;
@@ -39,7 +48,7 @@ export type GrowthSettings = {
   dailyContactGoal: number;
   monthlyPriceClp: number;
   annualPriceClp: number;
-  activeChannels: GrowthChannel[];
+  activeChannels: string[];
   priorityRegions: string[];
 };
 
@@ -53,86 +62,73 @@ export type GrowthManualMetrics = {
 
 export type GrowthProspect = {
   id: string;
+  nombre: string;
   empresa: string;
-  rubro: string;
-  canal: GrowthChannel;
-  contactoPublico: string;
-  regionComuna: string;
-  score: string;
+  whatsapp: string;
+  ciudad: string;
+  origen: string;
   estado: GrowthProspectStatus;
-  prioridad: GrowthPriority;
-  porQueCalza: string;
-  anguloPrimerMensaje: string;
-  fuenteUrl?: string;
   proximoPaso: string;
-  fechaProximoContacto: string;
+  fechaProximoSeguimiento: string;
+  notas: string;
   dataStatus: GrowthDataStatus;
   createdAt: string;
   updatedAt: string;
 };
 
-export type GrowthExperiment = {
+export type GrowthClientAccount = {
   id: string;
-  nombre: string;
-  objetivo: string;
-  estado: "idea" | "activo" | "medicion" | "cerrado";
-  owner: string;
-  kpi: string;
+  empresa: string;
+  contacto: string;
+  whatsapp: string;
+  correoAcceso: string;
+  plan: GrowthClientPlan;
+  montoPagadoClp: number;
+  estadoPago: GrowthPaymentStatus;
+  fechaInicio: string;
+  fechaVencimiento: string;
+  onboarding: GrowthOnboardingStatus;
+  pwaInstalada: boolean;
+  videosEnviados: boolean;
+  primeraCotizacionCreada: boolean;
+  notas: string;
   dataStatus: GrowthDataStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GrowthMarketingTask = {
+  id: string;
+  campanaCanal: string;
+  mensajeUsado: string;
+  contenidoPendiente: string;
+  fecha: string;
+  estado: GrowthMarketingStatus;
+  resultado: string;
+  notas: string;
+  dataStatus: GrowthDataStatus;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type GrowthWorkspace = {
   settings: GrowthSettings;
   manualMetrics: GrowthManualMetrics;
   prospects: GrowthProspect[];
-  experiments: GrowthExperiment[];
+  clientAccounts: GrowthClientAccount[];
+  marketingTasks: GrowthMarketingTask[];
   updatedAt: string;
 };
 
-export type GrowthKpi = {
-  id:
-    | "encontrados"
-    | "contactados"
-    | "respondieron"
-    | "demos"
-    | "pilotos"
-    | "pagos"
-    | "mrr";
-  label: string;
-  value: string;
-  source: GrowthDataStatus;
-};
-
-export type GrowthFunnelMetrics = {
-  encontrados: number;
-  contactados: number;
-  respondieron: number;
-  demos: number;
-  pilotos: number;
-  pagos: number;
-};
-
 export type GrowthTodayItem = {
-  id: Exclude<GrowthFocusFilter, "todos">;
+  id: GrowthWorkQueue;
   title: string;
   count: number;
   names: string[];
   priorityLabel: string;
   nextStep: string;
   actionLabel: string;
-};
-
-export type GrowthChannelPerformance = {
-  channel: GrowthChannel;
-  total: number;
-  avanzados: number;
-  effectivenessPct: number;
-};
-
-export type GrowthProjection = {
-  months: 6 | 12;
-  paidClients: number;
-  mrrClp: number;
+  targetTab: GrowthPanelTab;
 };
 
 export type GrowthDashboardViewModel = {
@@ -142,19 +138,18 @@ export type GrowthDashboardViewModel = {
   mrrActualLabel: string;
   updatedAtLabel: string;
   currentTab: GrowthPanelTab;
-  focusFilter: GrowthFocusFilter;
-  kpis: GrowthKpi[];
-  funnel: GrowthFunnelMetrics;
   workToday: GrowthTodayItem[];
-  visibleProspects: GrowthProspect[];
-  allProspects: GrowthProspect[];
-  channels: GrowthChannelPerformance[];
-  topChannel: GrowthChannelPerformance | null;
-  manualMetrics: GrowthManualMetrics;
-  projections: GrowthProjection[];
+  prospects: GrowthProspect[];
+  clientAccounts: GrowthClientAccount[];
+  marketingTasks: GrowthMarketingTask[];
   settings: GrowthSettings;
-  experiments: GrowthExperiment[];
+  manualMetrics: GrowthManualMetrics;
   tabs: Array<{ id: GrowthPanelTab; label: string }>;
+  counts: {
+    prospectosActivos: number;
+    clientesActivos: number;
+    marketingPendiente: number;
+  };
 };
 
 export type CreateGrowthProspectInput = Omit<
@@ -162,10 +157,28 @@ export type CreateGrowthProspectInput = Omit<
   "id" | "createdAt" | "updatedAt" | "dataStatus"
 >;
 
-export type UpdateGrowthSettingsInput = Partial<GrowthSettings>;
-
-export type UpdateGrowthManualMetricsInput = Partial<GrowthManualMetrics>;
-
 export type UpdateGrowthProspectInput = Partial<
   Omit<GrowthProspect, "id" | "createdAt">
 >;
+
+export type CreateGrowthClientInput = Omit<
+  GrowthClientAccount,
+  "id" | "createdAt" | "updatedAt" | "dataStatus"
+>;
+
+export type UpdateGrowthClientInput = Partial<
+  Omit<GrowthClientAccount, "id" | "createdAt">
+>;
+
+export type CreateGrowthMarketingTaskInput = Omit<
+  GrowthMarketingTask,
+  "id" | "createdAt" | "updatedAt" | "dataStatus"
+>;
+
+export type UpdateGrowthMarketingTaskInput = Partial<
+  Omit<GrowthMarketingTask, "id" | "createdAt">
+>;
+
+export type UpdateGrowthSettingsInput = Partial<GrowthSettings>;
+
+export type UpdateGrowthManualMetricsInput = Partial<GrowthManualMetrics>;

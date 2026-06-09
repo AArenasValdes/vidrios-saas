@@ -10,6 +10,7 @@ import type {
   SolicitudContacto,
   CrearSolicitudContactoInput,
   CrearSolicitudEmpresaInput,
+  CrearSolicitudRegistroSaasInput,
   SolicitudEmpresaPublicaConfig,
 } from "@/features/solicitudes/types/solicitud-contacto";
 
@@ -34,6 +35,7 @@ const FIELD_LIMITS = {
   telefono: 32,
   contacto: 160,
   tipoTrabajo: 100,
+  ciudadComuna: 100,
   mensaje: 280,
   origen: 40,
   ip: 80,
@@ -138,6 +140,7 @@ export interface SolicitudesContactoService {
   }>;
   getPublicRequestConfig(slug: string): Promise<SolicitudEmpresaPublicaConfig | null>;
   createSolicitud(input: CrearSolicitudContactoInput): Promise<SolicitudContacto>;
+  createSaasRegistrationRequest(input: CrearSolicitudRegistroSaasInput): Promise<SolicitudContacto>;
   createPublicRequest(input: CrearSolicitudEmpresaInput): Promise<SolicitudContacto>;
   updateSolicitudStatus(input: {
     id: string;
@@ -215,7 +218,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("La empresa es obligatoria.");
       }
 
-      if (!EMAIL_REGEX.test(correo)) {
+      if (correo && !EMAIL_REGEX.test(correo)) {
         throw new SolicitudContactoValidationError("El correo no es válido.");
       }
 
@@ -246,6 +249,59 @@ export function createSolicitudesContactoService(
           : null,
         utmCampaign: input.utmCampaign?.trim()
           ? limitText(normalizeText(input.utmCampaign), FIELD_LIMITS.utmCampaign)
+          : null,
+        sourceUrl: normalizeOptionalUrl(input.sourceUrl),
+      });
+    },
+
+    async createSaasRegistrationRequest(input: CrearSolicitudRegistroSaasInput) {
+      const nombre = limitText(normalizeText(input.nombre), FIELD_LIMITS.nombre);
+      const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
+      const whatsappRaw = limitText(normalizePhone(input.whatsapp), FIELD_LIMITS.telefono);
+      const whatsapp = normalizeChileMobilePhone(whatsappRaw) ?? whatsappRaw;
+      const ciudadComuna = limitText(
+        normalizeText(input.ciudadComuna),
+        FIELD_LIMITS.ciudadComuna
+      );
+      const mensajeUsuario = limitText(
+        normalizeText(input.mensaje ?? ""),
+        FIELD_LIMITS.mensaje
+      );
+      const mensaje = [
+        `Ciudad/comuna: ${ciudadComuna}`,
+        mensajeUsuario ? `Mensaje: ${mensajeUsuario}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      if (nombre.length < 3) {
+        throw new SolicitudContactoValidationError("El nombre debe tener al menos 3 caracteres.");
+      }
+
+      if (empresa.length < 2) {
+        throw new SolicitudContactoValidationError("La empresa es obligatoria.");
+      }
+
+      if (!isValidChileMobilePhone(whatsappRaw)) {
+        throw new SolicitudContactoValidationError("Ingresa un WhatsApp válido.");
+      }
+
+      if (ciudadComuna.length < 2) {
+        throw new SolicitudContactoValidationError("Ingresa tu ciudad o comuna.");
+      }
+
+      return repository.createSaasRegistrationRequest({
+        nombre,
+        empresa,
+        whatsapp,
+        ciudadComuna,
+        mensaje,
+        origen:
+          limitText(normalizeText(input.origen ?? "registro-saas"), FIELD_LIMITS.origen) ||
+          "registro-saas",
+        ip: input.ip?.trim() ? limitText(input.ip.trim(), FIELD_LIMITS.ip) : null,
+        userAgent: input.userAgent?.trim()
+          ? limitText(input.userAgent.trim(), FIELD_LIMITS.userAgent)
           : null,
         sourceUrl: normalizeOptionalUrl(input.sourceUrl),
       });

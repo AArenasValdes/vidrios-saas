@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, RefreshCcw } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
@@ -41,7 +41,7 @@ const copy = {
   submit: "Iniciar sesion",
   submitting: "Ingresando...",
   signupPrompt: "Aun no tienes acceso?",
-  signupAction: "Crear cuenta",
+  signupAction: "Solicitar cuenta",
   oauthError:
     "No pudimos completar el acceso con Google. Intenta con tu correo y contrasena.",
   authCodeLabel: "Codigo de acceso:",
@@ -53,6 +53,10 @@ const copy = {
   recoveryHint: "No borra tus datos.",
   recoveryAction: "Reiniciar esta app",
   recovering: "Reiniciando...",
+  installHelpTitle: "¿Primera vez usando Ventora?",
+  installHelpText: "Mira cómo instalarla en tu celular.",
+  androidVideo: "Video Android",
+  iphoneVideo: "Video iPhone",
   diagnosticLabel: "Detalle tecnico:",
   diagnosticCopy: "Copiar diagnostico",
   diagnosticCopied: "Diagnostico copiado",
@@ -66,6 +70,8 @@ const copy = {
 const LOGIN_TIMEOUT_MS = 12000;
 const LOGIN_COOKIE_READY_TIMEOUT_MS = 4000;
 const LOGIN_COOKIE_POLL_INTERVAL_MS = 120;
+const ANDROID_INSTALL_VIDEO_URL = "https://example.com/ventora-android";
+const IPHONE_INSTALL_VIDEO_URL = "https://example.com/ventora-iphone";
 
 type BrowserWindowWithIdleCallback = Window &
   typeof globalThis & {
@@ -571,6 +577,23 @@ export default function LoginView({
                 <RefreshCcw size={16} aria-hidden />
                 {isRecoveringApp ? copy.recovering : copy.recoveryAction}
               </button>
+            </section>
+
+            <section className={s.installHelp} aria-label={copy.installHelpTitle}>
+              <div>
+                <p className={s.installHelpTitle}>{copy.installHelpTitle}</p>
+                <p className={s.installHelpText}>{copy.installHelpText}</p>
+              </div>
+              <div className={s.installHelpActions}>
+                <a href={ANDROID_INSTALL_VIDEO_URL} target="_blank" rel="noreferrer">
+                  <PlayCircle size={15} aria-hidden />
+                  {copy.androidVideo}
+                </a>
+                <a href={IPHONE_INSTALL_VIDEO_URL} target="_blank" rel="noreferrer">
+                  <PlayCircle size={15} aria-hidden />
+                  {copy.iphoneVideo}
+                </a>
+              </div>
             </section>
 
             <p className={s.signupText}>

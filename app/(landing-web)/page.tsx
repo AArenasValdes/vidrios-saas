@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
+import { BILLING_PLANS } from "@/features/billing/types/plans";
 import s from "./landing.module.css";
 
 const WHATSAPP_LANDING_HREF =
@@ -220,6 +221,14 @@ const monthlyPlanBenefits = [
   "Puedes pasar al anual cuando quieras",
 ] as const;
 
+const quoteOnlyPlanBenefits = [
+  "Cotizaciones profesionales desde el celular",
+  "PDF con imagen comercial",
+  "Link público para revisión del presupuesto",
+  "Aprobación o rechazo del cliente",
+  "Sin página pública ni bandeja de solicitudes",
+] as const;
+
 const accompaniedPlanBenefits = [
   "Todo lo del Plan Fundador",
   "Configuración asistida completa",
@@ -247,12 +256,22 @@ type PricingPlan = {
   benefits?: readonly string[];
 };
 
+function CLP(value: number) {
+  return `$${value.toLocaleString("es-CL")}`;
+}
+
+const monthlyPrice = BILLING_PLANS.founder_monthly.amountClp;
+const yearlyPrice = BILLING_PLANS.founder_full_annual.amountClp;
+const quoteOnlyPrice = BILLING_PLANS.quote_only_annual.amountClp;
+const yearlyEquivalentMonthlyPrice = Math.round(yearlyPrice / 12);
+const annualSavingsVsMonthly = monthlyPrice * 12 - yearlyPrice;
+
 const pricingPlans: readonly PricingPlan[] = [
   {
     name: "Plan Mensual",
-    price: "$10.000",
+    price: CLP(monthlyPrice),
     period: "/ mes",
-    description: "Para probar Ventora mes a mes, sin compromiso anual.",
+    description: "Para partir mes a mes con Ventora completo, sin compromiso anual.",
     ctaLabel: "Probar 7 días gratis",
     href: "/planes",
     ctaKind: "internal",
@@ -262,9 +281,9 @@ const pricingPlans: readonly PricingPlan[] = [
   },
   {
     name: "Plan Fundador Anual",
-    price: "$80.000",
+    price: CLP(yearlyPrice),
     period: "/ año",
-    description: "Equivale a $6.667 al mes",
+    description: `Equivale a ${CLP(yearlyEquivalentMonthlyPrice)} al mes`,
     ctaLabel: "Empezar 7 días gratis",
     href: "/planes",
     ctaKind: "internal",
@@ -272,15 +291,28 @@ const pricingPlans: readonly PricingPlan[] = [
     trackingLocation: "precios-fundador",
     badge: "Recomendado",
     helper: "La opción más conveniente para empezar en serio.",
-    savings: "Ahorras $40.000 al año frente al pago mensual",
+    savings: `Ahorras ${CLP(annualSavingsVsMonthly)} al año frente al pago mensual`,
     benefits: founderPlanBenefits,
+  },
+  {
+    name: "Solo Cotización Anual",
+    price: CLP(quoteOnlyPrice),
+    period: "/ año",
+    description: "Para vender con presupuestos profesionales sin página pública ni captación.",
+    ctaLabel: "Ver plan de cotización",
+    href: "/planes",
+    ctaKind: "internal",
+    tone: "secondary",
+    trackingLocation: "precios-solo-cotizacion",
+    helper: "La opción simple si solo necesitas cotizar y enviar PDF.",
+    benefits: quoteOnlyPlanBenefits,
   },
   {
     name: "Plan Empresa Acompañado",
     price: "Desde $250.000",
     period: "/ año",
     description:
-      "Para empresas que quieren dejar Ventora configurado con acompañamiento comercial, capacitación y soporte prioritario.",
+      "Para empresas que necesitan configuración asistida, capacitación y soporte de arranque.",
     ctaLabel: "Solicitar implementación",
     href: PRICING_IMPLEMENTATION_HREF,
     ctaKind: "whatsapp",
@@ -494,10 +526,11 @@ export default function LandingPage() {
       const nombre = String(formData.get("nombre") ?? "").trim();
       const negocio = String(formData.get("empresa") ?? "").trim();
       const whatsapp = String(formData.get("telefono") ?? "").trim();
+      const ayuda = String(formData.get("ayuda") ?? "demo").trim();
       const mensaje = [
-        "Hola Ventora, quiero mi demo.",
+        "Hola, quiero un piloto de Ventora para mi empresa.",
         nombre ? `Nombre: ${nombre}` : "",
-        negocio ? `Negocio: ${negocio}` : "",
+        negocio ? `Tipo de negocio: ${negocio}` : "",
         whatsapp ? `WhatsApp: ${whatsapp}` : "",
       ]
         .filter(Boolean)
@@ -505,11 +538,37 @@ export default function LandingPage() {
 
       const href = `https://wa.me/56977338906?text=${encodeURIComponent(mensaje)}`;
 
+      const response = await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre,
+          empresa: negocio,
+          correo: "",
+          telefono: whatsapp,
+          ayuda: ayuda === "cotizacion" || ayuda === "ventas" ? ayuda : "demo",
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No pudimos guardar tus datos.");
+      }
+
       googleTagService.trackFormSubmitIntent({
         formName: "landing-demo",
         source: "landing",
       });
       trackLandingCta("formulario-demo", "whatsapp");
+      setContactFeedback({
+        kind: "success",
+        message: "Datos guardados. Abrimos WhatsApp para coordinar tu piloto.",
+      });
       window.location.href = href;
     } catch (error) {
       setContactFeedback({
@@ -939,7 +998,12 @@ export default function LandingPage() {
                     : s.pricingCardSecondary;
 
               return (
-                <SectionReveal key={plan.name} className={s.pricingReveal}>
+                <SectionReveal
+                  key={plan.name}
+                  className={`${s.pricingReveal} ${
+                    plan.tone === "anchor" ? s.pricingRevealAnchor : ""
+                  }`}
+                >
                   <article className={`${s.pricingCard} ${cardToneClass}`}>
                     <div className={s.pricingCardTop}>
                       <div>
@@ -1095,7 +1159,7 @@ export default function LandingPage() {
               </div>
 
               <form className={s.contactForm} onSubmit={handleContactSubmit}>
-                <input type="hidden" name="ayuda" value="demo-comercial" />
+                <input type="hidden" name="ayuda" value="demo" />
 
                 <label className={s.field}>
                   <span>Nombre</span>

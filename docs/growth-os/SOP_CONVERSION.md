@@ -107,8 +107,9 @@ Respuesta:
 
 Oferta sugerida:
 
-- `CLP 10.000 mensual`
-- `CLP 100.000 anual`
+- `CLP 8.990 mensual`
+- `CLP 79.990 Founder anual`
+- `CLP 59.990 Solo Cotizacion anual`
 
 Estructura de cierre:
 

@@ -2,7 +2,7 @@ import type { SolicitudPublicaHorarioDia } from "@/features/organization-profile
 import type { PublicLandingService } from "@/features/organization-profile/types/organization-profile";
 
 export type AyudaSolicitudContacto = "demo" | "cotizacion" | "ventas";
-export type ContextoSolicitudContacto = "landing" | "empresa-publica";
+export type ContextoSolicitudContacto = "landing" | "empresa-publica" | "registro-saas";
 
 export type EstadoSolicitudContacto =
   | "nueva"
@@ -49,6 +49,18 @@ export type CrearSolicitudContactoInput = {
   utmSource?: string | null;
   utmMedium?: string | null;
   utmCampaign?: string | null;
+  sourceUrl?: string | null;
+};
+
+export type CrearSolicitudRegistroSaasInput = {
+  nombre: string;
+  empresa: string;
+  whatsapp: string;
+  ciudadComuna: string;
+  mensaje?: string;
+  origen?: string;
+  ip?: string | null;
+  userAgent?: string | null;
   sourceUrl?: string | null;
 };
 

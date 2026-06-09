@@ -230,7 +230,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 ### 8. `solicitudes_contacto`
 
-**Propósito:** Leads entrantes desde landing o solicitud pública por empresa. Core del producto.
+**Propósito:** Leads entrantes desde landing, solicitud de cuenta SaaS o solicitud pública por empresa. Core del producto.
 
 | Columna | Tipo | Notable |
 |---|---|---|
@@ -245,8 +245,8 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `tipo_trabajo` | text | |
 | `estado` | text NOT NULL | CHECK: `nueva`, `contactada`, `cerrada`, `descartada` |
 | `origen` | text NOT NULL | Default: `landing` |
-| `contexto` | text NOT NULL | CHECK: `landing`, `empresa-publica` |
-| `organization_id` | bigint | FK → organizations (nullable para leads de landing global) |
+| `contexto` | text NOT NULL | CHECK: `landing`, `empresa-publica`, `registro-saas` |
+| `organization_id` | bigint | FK → organizations (nullable para leads globales y registro SaaS) |
 | `utm_source` | text | |
 | `utm_medium` | text | |
 | `utm_campaign` | text | |

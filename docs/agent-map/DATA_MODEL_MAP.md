@@ -104,11 +104,11 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: solicitudes_contacto
 
 - **Proposito**: Leads capturados. Tabla CORE de captacion.
-- **Campos importantes**: `id` (uuid PK, gen_random_uuid), `nombre` (NOT NULL), `empresa` (NOT NULL), `correo`, `telefono`, `contacto`, `ayuda` (CHECK: demo/cotizacion/ventas), `mensaje`, `tipo_trabajo`, `estado` (CHECK: nueva/contactada/cerrada/descartada), `origen` (DEFAULT 'landing'), `contexto` (CHECK: landing/empresa-publica), `organization_id` (FK, nullable, ON DELETE CASCADE), `utm_source`, `utm_medium`, `utm_campaign`, `source_url`, `contactada_at`, `ip`, `user_agent`, `creado_en`, `actualizado_en`
+- **Campos importantes**: `id` (uuid PK, gen_random_uuid), `nombre` (NOT NULL), `empresa` (NOT NULL), `correo`, `telefono`, `contacto`, `ayuda` (CHECK: demo/cotizacion/ventas), `mensaje`, `tipo_trabajo`, `estado` (CHECK: nueva/contactada/cerrada/descartada), `origen` (DEFAULT 'landing'), `contexto` (CHECK: landing/empresa-publica/registro-saas), `organization_id` (FK, nullable, ON DELETE CASCADE), `utm_source`, `utm_medium`, `utm_campaign`, `source_url`, `contactada_at`, `ip`, `user_agent`, `creado_en`, `actualizado_en`
 - **Relaciones**: N:1 organizations (ON DELETE CASCADE)
 - **Usada por**: Solicitudes, Captacion, Notificaciones (push al crear lead)
 - **Archivos donde aparece**: `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`, `app/api/solicitud/[empresa]/route.ts`
-- **Riesgos**: RLS permite INSERT publico (anon) con estado='nueva'. `organization_id` nullable (leads de landing general sin empresa destino). Rate limiting por IP en API route.
+- **Riesgos**: RLS permite INSERT publico (anon) con estado='nueva'. `organization_id` nullable solo para leads globales (`landing`, `registro-saas`). Leads de `empresa-publica` requieren organizacion. Rate limiting por IP en API route.
 
 ---
 

@@ -941,7 +941,7 @@ CREATE TABLE IF NOT EXISTS "public"."solicitudes_contacto" (
     "source_url" "text",
     "contactada_at" timestamp with time zone,
     CONSTRAINT "solicitudes_contacto_ayuda_check" CHECK (("ayuda" = ANY (ARRAY['demo'::"text", 'cotizacion'::"text", 'ventas'::"text"]))),
-    CONSTRAINT "solicitudes_contacto_contexto_check" CHECK (("contexto" = ANY (ARRAY['landing'::"text", 'empresa-publica'::"text"]))),
+    CONSTRAINT "solicitudes_contacto_contexto_check" CHECK (("contexto" = ANY (ARRAY['landing'::"text", 'empresa-publica'::"text", 'registro-saas'::"text"]))),
     CONSTRAINT "solicitudes_contacto_estado_check" CHECK (("estado" = ANY (ARRAY['nueva'::"text", 'contactada'::"text", 'cerrada'::"text", 'descartada'::"text"])))
 );
 
@@ -969,7 +969,7 @@ COMMENT ON COLUMN "public"."solicitudes_contacto"."tipo_trabajo" IS 'Trabajo que
 
 
 
-COMMENT ON COLUMN "public"."solicitudes_contacto"."contexto" IS 'Origen funcional del lead: landing o empresa-publica.';
+COMMENT ON COLUMN "public"."solicitudes_contacto"."contexto" IS 'Origen funcional del lead: landing, registro-saas o empresa-publica.';
 
 
 
@@ -1789,7 +1789,7 @@ ALTER TABLE "public"."quote_item_breakdown" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."solicitudes_contacto" ENABLE ROW LEVEL SECURITY;
 
 
-CREATE POLICY "solicitudes_contacto_insert_public" ON "public"."solicitudes_contacto" FOR INSERT TO "anon", "authenticated" WITH CHECK ((("estado" = 'nueva'::"text") AND ((("contexto" = 'landing'::"text") AND ("organization_id" IS NULL)) OR (("contexto" = 'empresa-publica'::"text") AND ("organization_id" IS NOT NULL)))));
+CREATE POLICY "solicitudes_contacto_insert_public" ON "public"."solicitudes_contacto" FOR INSERT TO "anon", "authenticated" WITH CHECK ((("estado" = 'nueva'::"text") AND ((("contexto" = ANY (ARRAY['landing'::"text", 'registro-saas'::"text"])) AND ("organization_id" IS NULL)) OR (("contexto" = 'empresa-publica'::"text") AND ("organization_id" IS NOT NULL)))));
 
 
 

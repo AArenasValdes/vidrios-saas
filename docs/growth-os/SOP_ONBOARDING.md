@@ -11,7 +11,7 @@ Activar a un nuevo cliente para que llegue rapido a su primer resultado comercia
 - **Founder Full pagado:** `plan_code = founder_full` + `subscription_status = active`.
   - Mensual manual: $8.990 (`billing_period = monthly`, `plan_type = monthly`).
   - Anual: $79.990 (`billing_period = yearly`, `plan_type = founder`).
-- **Alta de cuenta:** usar `pnpm pilot:org:provision` o `/registro` publico. Solo crea org + usuario + trial.
+- **Alta de cuenta operativa:** usar `pnpm pilot:org:provision` o el panel admin. `/registro` publico solo guarda una solicitud asistida en `solicitudes_contacto` con `contexto = registro-saas`; no crea Auth, organizacion ni trial.
 - **Datos de empresa** (logo, slug, telefono, pagina): completarlos en Ventora en `/configuracion/empresa` y `/configuracion/pagina-venta`, no en SQL.
 
 Ver cobros manuales en `SOP_COBRO_MANUAL.md`.

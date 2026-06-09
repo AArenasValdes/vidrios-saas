@@ -109,6 +109,14 @@
   gap: 9px;
 }
 
+.fieldCompact {
+  gap: 7px;
+}
+
+.fieldOptional {
+  gap: 8px;
+}
+
 .fieldLabel {
   color: var(--login-muted-strong);
   font-family: "Space Grotesk", sans-serif;
@@ -158,6 +166,14 @@
 .fieldInput:focus-visible {
   border-color: #1e88ff;
   box-shadow: 0 0 0 4px rgba(30, 136, 255, 0.16);
+}
+
+.fieldTextarea {
+  min-height: 92px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .passwordToggle {
@@ -333,8 +349,47 @@
   line-height: 1.1;
 }
 
+.successState {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(73, 163, 120, 0.34);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(73, 163, 120, 0.16), transparent 34%),
+    rgba(73, 163, 120, 0.08);
+  color: #d5ffe8;
+}
+
+.successState svg {
+  color: #69d89b;
+}
+
+.successState h2 {
+  margin: 0 0 8px;
+  color: #f1fff7;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.successState p {
+  margin: 0;
+  color: #bfebd1;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.successActions {
+  display: grid;
+  gap: 10px;
+}
+
 .primaryButton,
-.googleButton {
+.googleButton,
+.secondaryButton {
   min-height: 56px;
   width: 100%;
   border-radius: 18px;
@@ -345,6 +400,7 @@
   font-family: "Space Grotesk", sans-serif;
   font-size: 1rem;
   font-weight: 700;
+  text-decoration: none;
   transition:
     background-color 0.18s ease,
     border-color 0.18s ease,
@@ -360,6 +416,19 @@
   box-shadow:
     0 18px 36px rgba(30, 136, 255, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.secondaryButton {
+  border: 1px solid rgba(230, 232, 235, 0.14);
+  background: rgba(11, 15, 23, 0.72);
+  color: #edf4ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  border-color: rgba(30, 136, 255, 0.28);
+  color: #ffffff;
 }
 
 .primaryButton:hover:not(:disabled) {
@@ -492,6 +561,59 @@
 .recoveryButton:disabled {
   opacity: 0.72;
   cursor: not-allowed;
+}
+
+.installHelp {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(30, 136, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(30, 136, 255, 0.07);
+}
+
+.installHelpTitle,
+.installHelpText {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  line-height: 1.45;
+}
+
+.installHelpTitle {
+  color: #d7e5ff;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.installHelpText {
+  color: #8ea2bf;
+  font-size: 0.82rem;
+}
+
+.installHelpActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.installHelpActions a {
+  min-height: 44px;
+  border: 1px solid rgba(230, 232, 235, 0.14);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: rgba(11, 15, 23, 0.68);
+  color: #edf4ff;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.installHelpActions a:hover {
+  border-color: rgba(30, 136, 255, 0.28);
 }
 
 .signupText {
@@ -635,28 +757,29 @@
   }
 
   .formShell {
-    gap: 16px;
-    max-width: min(78vw, 390px);
+    gap: 12px;
+    max-width: min(82vw, 390px);
     margin: 0 auto;
   }
 
   .formCard {
-    gap: 22px;
-    padding: 24px 20px;
+    gap: 16px;
+    padding: 22px 18px;
     border-radius: 24px;
   }
 
   .formTitle {
-    font-size: clamp(1.9rem, 9vw, 2.4rem);
+    font-size: clamp(1.72rem, 8vw, 2.18rem);
+    line-height: 1;
   }
 
   .formSubtitle {
-    font-size: 0.92rem;
-    line-height: 1.58;
+    font-size: 0.86rem;
+    line-height: 1.48;
   }
 
   .brandLogo {
-    height: 58px;
+    height: 54px;
   }
 
   .formHeader {
@@ -664,11 +787,15 @@
   }
 
   .form {
-    gap: 14px;
+    gap: 11px;
   }
 
   .field {
-    gap: 7px;
+    gap: 6px;
+  }
+
+  .fieldLabel {
+    font-size: 0.82rem;
   }
 
   .utilityRow {
@@ -679,8 +806,26 @@
 
   .fieldInput,
   .primaryButton,
-  .googleButton {
-    min-height: 50px;
+  .googleButton,
+  .secondaryButton {
+    min-height: 48px;
+  }
+
+  .fieldInput {
+    padding-left: 44px;
+    padding-right: 16px;
+    border-radius: 15px;
+    font-size: 0.92rem;
+  }
+
+  .fieldControl svg {
+    left: 15px;
+  }
+
+  .fieldTextarea {
+    min-height: 76px;
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
 
   .passwordToggle {
@@ -710,5 +855,9 @@
 
   .recoveryButton {
     min-height: 44px;
+  }
+
+  .installHelpActions {
+    grid-template-columns: 1fr;
   }
 }

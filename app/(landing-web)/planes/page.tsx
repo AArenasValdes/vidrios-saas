@@ -3,7 +3,10 @@ import { FaArrowRight, FaCheckCircle, FaClock, FaComments, FaPhoneAlt } from "re
 
 import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
 import s from "./page.module.css";
-import { VENTORA_CONTACT } from "@/constants/ventora-brand";
+
+const DEMO_WHATSAPP_HREF = `https://wa.me/56977338906?text=${encodeURIComponent(
+  "Hola, quiero un piloto de Ventora para mi empresa."
+)}`;
 
 const OPTIONS = [
   {
@@ -16,7 +19,7 @@ const OPTIONS = [
       "Revision de tu flujo actual de ventas",
     ],
     cta: {
-      href: VENTORA_CONTACT.demoMailto,
+      href: DEMO_WHATSAPP_HREF,
       label: "Agendar demo",
       external: true,
     },
@@ -33,7 +36,7 @@ const OPTIONS = [
     ],
     cta: {
       href: "/registro",
-      label: "Crear cuenta piloto",
+      label: "Solicitar cuenta",
       external: false,
     },
     tone: "secondary",
@@ -96,7 +99,7 @@ export default function PlanesPage() {
               <div className={s.heroActions}>
                 <TrackedExternalLink
                   className={s.primaryButton}
-                  href={VENTORA_CONTACT.demoMailto}
+                  href={DEMO_WHATSAPP_HREF}
                   trackingSource="planes"
                   trackingLocation="hero-demo"
                   trackingLabel="planes:hero-demo"

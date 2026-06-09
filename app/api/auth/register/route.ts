@@ -1,24 +1,22 @@
 import { NextResponse } from "next/server";
 
-import {
-  OrganizationProvisionError,
-  provisionOrganizationAccount,
-} from "@/features/admin/services/organization-provision.service";
 import { assertAuthRegisterRateLimit } from "@/features/auth/services/auth-register-rate-limit.service";
+import {
+  resolveRequestIp,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
+import {
+  SolicitudContactoValidationError,
+  solicitudesContactoService,
+} from "@/features/solicitudes/services/solicitudes-contacto.service";
 
-type RegisterBody = {
-  email?: string;
-  password?: string;
-  empresaNombre?: string;
+type RegisterBody = Record<string, unknown> & {
+  nombre?: string;
+  empresa?: string;
+  whatsapp?: string;
+  ciudadComuna?: string;
+  mensaje?: string;
 };
-
-function parseRegisterBody(value: unknown): RegisterBody | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  return value as RegisterBody;
-}
 
 export async function POST(request: Request) {
   try {
@@ -33,45 +31,38 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: RegisterBody | null = null;
-
-  try {
-    body = parseRegisterBody(await request.json());
-  } catch {
-    return NextResponse.json({ error: "JSON invalido." }, { status: 400 });
-  }
+  const body = await parseJsonObjectBody<RegisterBody>(request);
 
   if (!body) {
     return NextResponse.json({ error: "JSON invalido." }, { status: 400 });
   }
 
   try {
-    const result = await provisionOrganizationAccount({
-      email: body.email ?? "",
-      password: body.password ?? "",
-      empresaNombre: body.empresaNombre ?? "",
+    await solicitudesContactoService.createSaasRegistrationRequest({
+      nombre: body.nombre ?? "",
+      empresa: body.empresa ?? "",
+      whatsapp: body.whatsapp ?? "",
+      ciudadComuna: body.ciudadComuna ?? "",
+      mensaje: body.mensaje ?? "",
+      origen: "registro-saas",
+      ip: resolveRequestIp(request),
+      userAgent: request.headers.get("user-agent"),
+      sourceUrl: request.headers.get("referer") ?? request.url,
     });
 
     return NextResponse.json({
       ok: true,
-      organizationId: result.organizationId,
-      email: result.email,
+      message:
+        "Recibimos tus datos. Te contactaremos por WhatsApp para dejar tu cuenta configurada.",
     });
   } catch (error) {
-    if (error instanceof OrganizationProvisionError) {
-      const status =
-        error.code === "email_taken"
-          ? 409
-          : error.code === "invalid_input"
-            ? 400
-            : 500;
-
-      return NextResponse.json({ error: error.message }, { status });
+    if (error instanceof SolicitudContactoValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    console.error("Fallo el registro publico.", error);
+    console.error("Fallo la solicitud de cuenta de prueba.", error);
     return NextResponse.json(
-      { error: "No pudimos crear tu cuenta. Intenta de nuevo." },
+      { error: "No pudimos recibir tu solicitud. Intenta de nuevo." },
       { status: 500 }
     );
   }

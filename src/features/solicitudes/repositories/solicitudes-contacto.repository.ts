@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CrearSolicitudEmpresaInput,
   CrearSolicitudContactoInput,
+  CrearSolicitudRegistroSaasInput,
   EstadoSolicitudContacto,
   SolicitudEmpresaPublicaConfig,
   SolicitudContacto,
@@ -855,6 +856,43 @@ export function createSolicitudesContactoRepository(
       });
     },
 
+    async createSaasRegistrationRequest(input: CrearSolicitudRegistroSaasInput) {
+      const { data, error } = await supabase
+        .from(TABLE_NAME as never)
+        .insert({
+          organization_id: null,
+          nombre: input.nombre,
+          empresa: input.empresa,
+          correo: null,
+          telefono: input.whatsapp,
+          contacto: input.whatsapp,
+          tipo_trabajo: "Solicitud de cuenta Ventora",
+          mensaje: input.mensaje?.trim() || null,
+          ayuda: "demo",
+          contexto: "registro-saas",
+          estado: "nueva",
+          origen: input.origen ?? "registro-saas",
+          ip: input.ip ?? null,
+          user_agent: input.userAgent ?? null,
+          utm_source: "registro-saas",
+          utm_medium: "formulario",
+          utm_campaign: null,
+          source_url: input.sourceUrl ?? null,
+          actualizado_en: new Date().toISOString(),
+        } as never)
+        .select(SOLICITUD_SELECT_LEGACY)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapSolicitudContacto({
+        ...(data as SolicitudContactoRow),
+        contactada_at: null,
+      });
+    },
+
     async createPublicRequest(input: CrearSolicitudEmpresaInput) {
       const isEmailContact = input.contacto.includes("@");
       const { data, error } = await supabase
@@ -1008,6 +1046,11 @@ export const solicitudesContactoRepository: SolicitudesContactoRepository = {
   },
   create(...args) {
     return getDefaultSolicitudesContactoRepository().create(...args);
+  },
+  createSaasRegistrationRequest(...args) {
+    return getDefaultSolicitudesContactoRepository().createSaasRegistrationRequest(
+      ...args
+    );
   },
   createPublicRequest(...args) {
     return getDefaultSolicitudesContactoRepository().createPublicRequest(

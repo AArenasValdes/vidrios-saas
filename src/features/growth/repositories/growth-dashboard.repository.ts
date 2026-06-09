@@ -1,8 +1,14 @@
+import {
+  isGrowthWorkspaceV3,
+  isLegacyWorkspaceV2,
+  migrateWorkspaceV2ToV3,
+} from "@/features/growth/services/growth-workspace-migration";
 import type { GrowthWorkspace } from "@/features/growth/types/growth-dashboard";
 
-const STORAGE_KEY = "ventora:growth-workspace:v2";
+const STORAGE_KEY_V3 = "ventora:growth-workspace:v3";
+const STORAGE_KEY_V2 = "ventora:growth-workspace:v2";
 
-const DEFAULT_WORKSPACE: GrowthWorkspace = {
+const LEGACY_DEFAULT_WORKSPACE_V2 = {
   settings: {
     periodStartDate: "2026-05-21",
     periodEndDate: "2026-06-30",
@@ -466,12 +472,73 @@ const DEFAULT_WORKSPACE: GrowthWorkspace = {
   updatedAt: "2026-05-21T10:20:00.000Z",
 };
 
+const DEFAULT_WORKSPACE: GrowthWorkspace = {
+  ...migrateWorkspaceV2ToV3(
+    LEGACY_DEFAULT_WORKSPACE_V2 as Parameters<typeof migrateWorkspaceV2ToV3>[0]
+  ),
+  clientAccounts: [
+    {
+      id: "cliente-ejemplo-piloto",
+      empresa: "Vidrieria ejemplo piloto",
+      contacto: "Juan Perez",
+      whatsapp: "+56 9 1234 5678",
+      correoAcceso: "piloto@ejemplo.cl",
+      plan: "trial",
+      montoPagadoClp: 0,
+      estadoPago: "pendiente",
+      fechaInicio: "2026-06-01",
+      fechaVencimiento: "2026-06-30",
+      onboarding: "en_proceso",
+      pwaInstalada: false,
+      videosEnviados: true,
+      primeraCotizacionCreada: false,
+      notas: "Ejemplo mock para probar cuentas por configurar.",
+      dataStatus: "mock",
+      createdAt: "2026-06-01T10:00:00.000Z",
+      updatedAt: "2026-06-01T10:00:00.000Z",
+    },
+  ],
+  marketingTasks: [
+    {
+      id: "marketing-ejemplo-reel",
+      campanaCanal: "Instagram reel",
+      mensajeUsado: "Captura leads mientras estas en obra",
+      contenidoPendiente: "Grabar pantalla de bandeja de solicitudes",
+      fecha: "2026-06-09",
+      estado: "pendiente",
+      resultado: "",
+      notas: "Mock de tarea comercial pendiente.",
+      dataStatus: "mock",
+      createdAt: "2026-06-09T10:00:00.000Z",
+      updatedAt: "2026-06-09T10:00:00.000Z",
+    },
+  ],
+};
+
 function cloneWorkspace(workspace: GrowthWorkspace) {
   return JSON.parse(JSON.stringify(workspace)) as GrowthWorkspace;
 }
 
 function canUseStorage() {
   return typeof window !== "undefined";
+}
+
+function parseStoredWorkspace(raw: string): GrowthWorkspace | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (isGrowthWorkspaceV3(parsed)) {
+      return cloneWorkspace(parsed);
+    }
+
+    if (isLegacyWorkspaceV2(parsed)) {
+      return cloneWorkspace(migrateWorkspaceV2ToV3(parsed));
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export const growthDashboardRepository = {
@@ -481,15 +548,30 @@ export const growthDashboardRepository = {
     }
 
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const rawV3 = window.localStorage.getItem(STORAGE_KEY_V3);
 
-      if (!raw) {
-        const seed = cloneWorkspace(DEFAULT_WORKSPACE);
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-        return seed;
+      if (rawV3) {
+        const workspace = parseStoredWorkspace(rawV3);
+
+        if (workspace) {
+          return workspace;
+        }
       }
 
-      return JSON.parse(raw) as GrowthWorkspace;
+      const rawV2 = window.localStorage.getItem(STORAGE_KEY_V2);
+
+      if (rawV2) {
+        const workspace = parseStoredWorkspace(rawV2);
+
+        if (workspace) {
+          window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(workspace));
+          return workspace;
+        }
+      }
+
+      const seed = cloneWorkspace(DEFAULT_WORKSPACE);
+      window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(seed));
+      return seed;
     } catch {
       return cloneWorkspace(DEFAULT_WORKSPACE);
     }
@@ -501,14 +583,14 @@ export const growthDashboardRepository = {
       return nextWorkspace;
     }
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextWorkspace));
+    window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(nextWorkspace));
     return nextWorkspace;
   },
   async resetWorkspace() {
     const nextWorkspace = cloneWorkspace(DEFAULT_WORKSPACE);
 
     if (canUseStorage()) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextWorkspace));
+      window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(nextWorkspace));
     }
 
     return nextWorkspace;
