@@ -9312,6 +9312,16 @@
 .stepTwoMobileChoiceChipRecSoft {
   border-color: rgba(47, 163, 107, 0.28);
   background: rgba(47, 163, 107, 0.05);
+  color: #1a7a50;
+}
+
+.stepTwoMobileChoiceChipRecSoft.stepTwoMobileChoiceChipActive {
+  border-color: #2fa36b !important;
+  background: linear-gradient(180deg, #ecfdf5 0%, #d7f4e5 100%) !important;
+  color: #0f5132 !important;
+  box-shadow:
+    0 0 0 2px rgba(47, 163, 107, 0.28),
+    0 8px 16px rgba(47, 163, 107, 0.14) !important;
 }
 
 .stepTwoMobileChoiceChipBadge {
@@ -9322,6 +9332,20 @@
   border-radius: 999px;
   background: rgba(47, 163, 107, 0.12);
   color: #1a7a50;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stepTwoMobileChoiceChipBadgeSelected {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.15rem;
+  padding: 0 0.38rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
   font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.04em;

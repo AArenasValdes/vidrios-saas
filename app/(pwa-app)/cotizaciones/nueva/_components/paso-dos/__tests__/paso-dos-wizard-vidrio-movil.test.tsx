@@ -31,7 +31,24 @@ describe("PasoDosWizardVidrioMovil", () => {
 
     expect(screen.getByText("Cristal / Vidrio")).toBeInTheDocument();
     expect(screen.getByText("Incoloro monolítico 5mm")).toBeInTheDocument();
-    expect(screen.getByText("Vidrio elegido: Incoloro monolítico 5mm")).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: true })).toHaveTextContent(
+      "Incoloro monolítico 5mm"
+    );
+  });
+
+  it("debe mostrar chip seleccionado cuando el vidrio no esta en sugeridos", () => {
+    render(
+      <PasoDosWizardVidrioMovil
+        {...baseProps}
+        currentGlass="Incoloro monolitico 8mm"
+      />
+    );
+
+    expect(screen.getByText("Seleccionado")).toBeInTheDocument();
+    expect(screen.getByText("Incoloro monolítico 8mm")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Vidrio elegido: Incoloro monolítico 8mm")
+    ).not.toBeInTheDocument();
   });
 
   it("debe abrir modal y permitir elegir un vidrio del catalogo", () => {

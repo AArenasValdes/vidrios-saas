@@ -35,6 +35,10 @@ export function PasoDosWizardVidrioMovil({
   vidSearch,
 }: Props) {
   const [isGlassModalOpen, setIsGlassModalOpen] = useState(false);
+  const isCurrentGlassRecommended =
+    Boolean(currentGlass) && recommendedVidrios.includes(currentGlass);
+  const showSelectedCustomChip =
+    Boolean(currentGlass) && !isCurrentGlassRecommended;
 
   return (
     <>
@@ -55,8 +59,21 @@ export function PasoDosWizardVidrioMovil({
           </button>
         </div>
 
-        {recommendedVidrios.length > 0 ? (
+        {recommendedVidrios.length > 0 || showSelectedCustomChip ? (
           <div className={s.stepTwoMobileChoiceChips}>
+            {showSelectedCustomChip ? (
+              <button
+                className={`${s.stepTwoMobileChoiceChip} ${s.stepTwoMobileChoiceChipActive}`}
+                onClick={() => setIsGlassModalOpen(true)}
+                type="button"
+                aria-pressed="true"
+              >
+                <span>{repairBrokenText(currentGlass)}</span>
+                <small className={s.stepTwoMobileChoiceChipBadgeSelected}>
+                  Seleccionado
+                </small>
+              </button>
+            ) : null}
             {recommendedVidrios.map((option) => (
               <button
                 key={option}
@@ -65,6 +82,7 @@ export function PasoDosWizardVidrioMovil({
                 }`}
                 onClick={() => onVidrioChange(option)}
                 type="button"
+                aria-pressed={currentGlass === option}
               >
                 <span>{repairBrokenText(option)}</span>
                 <small className={s.stepTwoMobileChoiceChipBadge}>Sugerido</small>
@@ -81,11 +99,6 @@ export function PasoDosWizardVidrioMovil({
           </div>
         )}
 
-        {currentGlass ? (
-          <span className={s.stepTwoMobileBlockHelp}>
-            Vidrio elegido: {repairBrokenText(currentGlass)}
-          </span>
-        ) : null}
       </div>
 
       {isGlassModalOpen ? (
@@ -169,6 +182,7 @@ export function PasoDosWizardVidrioMovil({
                         {group.options.map((option) => (
                           <button
                             key={option}
+                            aria-pressed={currentGlass === option}
                             className={`${s.stepTwoMobileChoiceChip} ${
                               isRecommendedGlass(option) ? s.stepTwoMobileChoiceChipRecSoft : ""
                             } ${
