@@ -98,6 +98,20 @@ describe("workflow-ui paso 2", () => {
     ]);
   });
 
+  it("debe incluir catalogo de acrilicos con nombre comercial", () => {
+    const acrylicGroup = GLASS_OPTIONS.find((group) => group.grupo === "Acrílicos");
+
+    expect(acrylicGroup).toBeDefined();
+    expect(acrylicGroup?.prefix).toBe("Acrílico");
+    expect(acrylicGroup?.items).toEqual([
+      "Amazonas",
+      "Lluvia",
+      "Niágara",
+      "Semilla Plástico",
+      "Liso Transparente",
+    ]);
+  });
+
   it("debe usar precio por línea como unitario final en precio directo con cantidad 1", () => {
     const item = buildItemFromForm(createLinePricingForm(), [], null);
 

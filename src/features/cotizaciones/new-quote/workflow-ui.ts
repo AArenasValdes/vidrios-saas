@@ -256,6 +256,17 @@ export const GLASS_OPTIONS = [
     ],
     prefix: "",
   },
+  {
+    grupo: "Acrílicos",
+    items: [
+      "Amazonas",
+      "Lluvia",
+      "Niágara",
+      "Semilla Plástico",
+      "Liso Transparente",
+    ],
+    prefix: "Acrílico",
+  },
 ] as const;
 
 export const STATUS_COPY = {
