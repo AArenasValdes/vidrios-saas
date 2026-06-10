@@ -198,6 +198,7 @@
 .problemSection,
 .solutionSection,
 .processSection,
+.complementSection,
 .showcaseSection,
 .resultsSection,
 .pricingSection,
@@ -314,12 +315,19 @@
 
 .heroVisualShell {
   position: relative;
-  width: min(100%, 600px);
-  min-height: 600px;
+  width: min(94vw, 420px);
+  min-height: 0;
+  padding-bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   isolation: isolate;
+}
+
+@media (min-width: 900px) {
+  .heroVisualShell {
+    width: min(100%, 480px);
+  }
 }
 
 .heroVisualShell::before {
@@ -395,6 +403,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-top: clamp(10px, 2vw, 22px);
+}
+
+.quickGridFour {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .quickCard,
@@ -1284,6 +1296,62 @@
   gap: 16px;
 }
 
+.processGridFive {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.complementSection {
+  background: linear-gradient(180deg, #0d1219 0%, #090d14 100%);
+}
+
+.complementLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.88fr);
+  gap: 34px;
+  align-items: center;
+}
+
+.complementLayout .sectionHeading {
+  margin-bottom: 0;
+}
+
+.complementActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.complementVisual {
+  display: flex;
+  justify-content: center;
+}
+
+.complementImageShell {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 18px;
+  border-radius: 28px;
+  border: 1px solid rgba(30, 136, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.72) 0%, rgba(10, 15, 25, 0.82) 100%);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  opacity: 0.92;
+}
+
+.complementImageShell img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+}
+
+.resultsLayoutSingle {
+  display: grid;
+  gap: 22px;
+}
+
 .processCard {
   padding: 24px;
   border-radius: 28px;
@@ -1548,6 +1616,25 @@
   align-items: start;
 }
 
+@media (min-width: 901px) {
+  /* Fila superior: Mensual | Fundador (centro) | Solo Cotizacion */
+  .pricingReveal:nth-child(1) {
+    order: 2;
+  }
+
+  .pricingReveal:nth-child(2) {
+    order: 3;
+  }
+
+  .pricingReveal:nth-child(3) {
+    order: 1;
+  }
+
+  .pricingReveal:nth-child(4) {
+    order: 4;
+  }
+}
+
 .pricingReveal {
   display: flex;
   min-width: 0;
@@ -1599,6 +1686,24 @@
 
 .pricingCardSecondary {
   border-color: rgba(230, 232, 235, 0.12);
+}
+
+.pricingCardHighlight {
+  border-color: rgba(30, 136, 255, 0.38);
+  background:
+    linear-gradient(180deg, rgba(18, 28, 46, 0.94) 0%, rgba(8, 13, 22, 0.97) 100%);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.pricingCardHighlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(circle at 82% 0%, rgba(30, 136, 255, 0.1), transparent 46%);
 }
 
 .pricingCardAnchor {
@@ -2019,13 +2124,23 @@
 
   .heroVisualShell {
     margin-inline: auto;
-    width: min(100%, 620px);
-    min-height: 420px;
+    width: min(94vw, 420px);
+    min-height: 0;
+    padding-bottom: 0;
   }
 
   .problemSplit,
-  .processGrid {
+  .processGrid,
+  .processGridFive {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quickGridFour {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .complementLayout {
+    grid-template-columns: 1fr;
   }
 
   .solutionFlowGrid {
@@ -2091,7 +2206,17 @@
     height: 702px;
   }
 
-  .quickGrid {
+  .quickGrid,
+  .quickGridFour {
+    grid-template-columns: 1fr;
+  }
+
+  .processGrid,
+  .processGridFive {
+    grid-template-columns: 1fr;
+  }
+
+  .complementLayout {
     grid-template-columns: 1fr;
   }
 
@@ -2104,22 +2229,6 @@
     grid-template-columns: 1fr;
     max-width: 640px;
     margin-inline: auto;
-  }
-
-  .pricingReveal:nth-child(1) {
-    order: 3;
-  }
-
-  .pricingReveal:nth-child(2) {
-    order: 1;
-  }
-
-  .pricingReveal:nth-child(3) {
-    order: 2;
-  }
-
-  .pricingReveal:nth-child(4) {
-    order: 4;
   }
 
   .pricingCardAnchor {
@@ -2196,7 +2305,7 @@
   }
 
   .heroTitle {
-    max-width: 8ch;
+    max-width: 12ch;
     margin-inline: auto;
     font-size: clamp(34px, 11vw, 52px);
     line-height: 0.98;
@@ -2244,12 +2353,12 @@
   }
 
   .heroVisual {
-    margin-top: -14px;
+    margin-top: 8px;
   }
 
   .heroVisualShell {
-    width: min(100%, 312px);
-    min-height: 350px;
+    width: min(94vw, 420px);
+    min-height: 0;
   }
 
   .heroVisualShell::before {
