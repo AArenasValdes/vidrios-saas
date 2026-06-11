@@ -2117,16 +2117,36 @@
 }
 
 @media (max-width: 1080px) {
+  .heroSection::before {
+    background-position: center center;
+  }
+
   .heroLayout,
   .contactLayout {
     grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .heroContent {
+    width: 100%;
+    justify-items: center;
+  }
+
+  .heroVisual {
+    width: 100%;
+    justify-content: center;
   }
 
   .heroVisualShell {
     margin-inline: auto;
-    width: min(94vw, 420px);
+    width: min(100%, 420px);
     min-height: 0;
     padding-bottom: 0;
+  }
+
+  .heroVisualShell::before,
+  .heroVisualShell::after {
+    display: none;
   }
 
   .problemSplit,
@@ -2186,16 +2206,9 @@
   }
 
   .heroVisualShell {
-    width: min(100%, 460px);
-    min-height: 540px;
-  }
-
-  .heroVisualShell::before {
-    inset: 90px 88px 104px;
-  }
-
-  .heroVisualShell::after {
-    inset: 26px 26px 22px;
+    width: min(100%, 420px);
+    margin-inline: auto;
+    min-height: 0;
   }
 
   .heroMockupPrimary {
@@ -2354,21 +2367,14 @@
 
   .heroVisual {
     margin-top: 8px;
+    width: 100%;
+    justify-content: center;
   }
 
   .heroVisualShell {
-    width: min(94vw, 420px);
+    width: min(100%, 420px);
+    margin-inline: auto;
     min-height: 0;
-  }
-
-  .heroVisualShell::before {
-    inset: 92px 52px 68px;
-    border-radius: 999px;
-  }
-
-  .heroVisualShell::after {
-    inset: 42px 16px 12px;
-    border-radius: 52px;
   }
 
   .heroMockupPrimary {

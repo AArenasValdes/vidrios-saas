@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { HeroPhoneMockup } from "@/components/landing/hero-phone-mockup";
+import { PublicLinkSection } from "@/components/landing/public-link-section";
 import { QuoteFlowSection } from "@/components/landing/quote-flow-section";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { BILLING_PLANS } from "@/features/billing/types/plans";
@@ -40,7 +41,6 @@ const WHATSAPP_LANDING_HREF =
 const navLinks = [
   { href: "#problema", label: "Problema" },
   { href: "#solucion", label: "Flujo" },
-  { href: "#orden", label: "Orden" },
   { href: "#captacion", label: "Link público" },
   { href: "#precios", label: "Precios" },
   { href: "#preguntas", label: "Preguntas" },
@@ -98,33 +98,6 @@ const problemCards = [
     description:
       "No queda claro qué presupuesto quedó pendiente, enviado, aprobado o rechazado.",
     meta: "Seguimiento a ciegas",
-  },
-] as const;
-
-const orderFeatures = [
-  {
-    step: "01",
-    title: "Listado de cotizaciones",
-    description:
-      "Todas tus cotizaciones en un panel claro, sin buscar en chats ni carpetas.",
-  },
-  {
-    step: "02",
-    title: "Estados comerciales",
-    description:
-      "Pendiente, enviada, aprobada, rechazada o terminada. Sabes en qué va cada trabajo.",
-  },
-  {
-    step: "03",
-    title: "Clientes centralizados",
-    description:
-      "Nombre, contacto e historial de presupuestos en un solo lugar.",
-  },
-  {
-    step: "04",
-    title: "Historial simple",
-    description:
-      "Revisas qué se cotizó, cuándo se envió y qué quedó pendiente de cerrar.",
   },
 ] as const;
 
@@ -786,65 +759,7 @@ export default function LandingPage() {
 
       <QuoteFlowSection />
 
-      <section id="orden" className={s.processSection}>
-        <div className={s.container}>
-          <SectionReveal>
-            <SectionHeading
-              label="ORDEN COMERCIAL"
-              title="Tus clientes, presupuestos y estados quedan ordenados."
-              description="Sin revisar chats ni carpetas sueltas. Sabes qué cotización sigue pendiente, enviada, aprobada o rechazada."
-            />
-          </SectionReveal>
-
-          <div className={s.processGrid}>
-            {orderFeatures.map((item) => (
-              <SectionReveal key={item.step}>
-                <article className={s.processCard}>
-                  <span className={s.processStep}>{item.step}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </article>
-              </SectionReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="captacion" className={s.complementSection}>
-        <div className={s.container}>
-          <div className={s.complementLayout}>
-            <SectionReveal>
-              <SectionHeading
-                label="COMPLEMENTO OPCIONAL"
-                title="Y si quieres captar solicitudes, también tienes tu link público"
-                description="Comparte tu página pública o QR para que tus clientes pidan presupuesto cuando no puedes responder. Las solicitudes llegan ordenadas y puedes convertirlas en cotización."
-              />
-              <div className={s.complementActions}>
-                <a
-                  href={WHATSAPP_LANDING_HREF}
-                  className={s.secondaryButton}
-                  onClick={() => trackLandingCta("captacion-whatsapp", "whatsapp")}
-                >
-                  Ver demo por WhatsApp
-                </a>
-              </div>
-            </SectionReveal>
-
-            <SectionReveal className={s.complementVisual}>
-              <div className={s.complementImageShell}>
-                <Image
-                  src="/ventora-landing-page/minilanding1-crop.png"
-                  alt="Página pública opcional para recibir solicitudes de presupuesto"
-                  width={1000}
-                  height={750}
-                  unoptimized
-                  sizes="(max-width: 900px) 100vw, 42vw"
-                />
-              </div>
-            </SectionReveal>
-          </div>
-        </div>
-      </section>
+      <PublicLinkSection />
 
       <section id="resultados" className={s.resultsSection}>
         <div className={s.container}>
@@ -1175,7 +1090,7 @@ export default function LandingPage() {
             <div className={s.footerLinks}>
               <a href="#top">Inicio</a>
               <a href="#solucion">Flujo</a>
-              <a href="#orden">Orden</a>
+              <a href="#captacion">Link público</a>
               <a href="#preguntas">Preguntas</a>
               <a href="#contacto">Contacto</a>
             </div>
