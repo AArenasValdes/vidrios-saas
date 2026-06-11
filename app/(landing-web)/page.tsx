@@ -15,20 +15,18 @@ import {
   ArrowRight,
   ArrowUpRight,
   CircleCheck,
-  ClipboardList,
   Clock3,
   FileText,
-  FolderKanban,
   FolderOpen,
   Menu,
-  MessageSquareText,
   ShieldCheck,
   TrendingUp,
-  UserRound,
   X,
 } from "lucide-react";
 
+import { BenefitsQuickSection } from "@/components/landing/benefits-quick-section";
 import { HeroPhoneMockup } from "@/components/landing/hero-phone-mockup";
+import { ProblemFlowSection } from "@/components/landing/problem-flow-section";
 import { PublicLinkSection } from "@/components/landing/public-link-section";
 import { QuoteFlowSection } from "@/components/landing/quote-flow-section";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
@@ -47,58 +45,11 @@ const navLinks = [
   { href: "#contacto", label: "Contacto" },
 ] as const;
 
-const quickCards = [
-  {
-    icon: FileText,
-    title: "PDF profesional",
-    description: "Presupuestos con imagen comercial lista para enviar al cliente.",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Envío por WhatsApp",
-    description: "Comparte el PDF directo desde el celular, sin vueltas.",
-  },
-  {
-    icon: FolderKanban,
-    title: "Clientes ordenados",
-    description: "Cada cliente y cotización queda guardada en un solo lugar.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Link público opcional",
-    description: "Recibe solicitudes cuando no puedes responder al tiro.",
-  },
-] as const;
-
 const heroTrustItems = [
   "PDF profesional",
   "Envío por WhatsApp",
   "Clientes ordenados",
   "Link público opcional",
-] as const;
-
-const problemCards = [
-  {
-    icon: Clock3,
-    title: "Cotizaciones hechas tarde",
-    description:
-      "Entre obra, instalación y WhatsApp, el presupuesto sale cuando el cliente ya comparó con otro.",
-    meta: "Respuesta lenta, trabajo perdido",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Presupuestos desordenados",
-    description:
-      "Medidas, valores y fotos quedan repartidos entre chats, notas y archivos sueltos.",
-    meta: "Sin historial claro ni respaldo",
-  },
-  {
-    icon: UserRound,
-    title: "Clientes perdidos en WhatsApp",
-    description:
-      "No queda claro qué presupuesto quedó pendiente, enviado, aprobado o rechazado.",
-    meta: "Seguimiento a ciegas",
-  },
 ] as const;
 
 const resultMetrics = [
@@ -674,88 +625,12 @@ export default function LandingPage() {
               </div>
             </SectionReveal>
           </div>
-
-          <SectionReveal>
-            <div className={`${s.quickGrid} ${s.quickGridFour}`}>
-              {quickCards.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <article key={item.title} className={s.quickCard}>
-                    <span className={s.quickIcon}>
-                      <Icon size={18} aria-hidden />
-                    </span>
-                    <strong>{item.title}</strong>
-                    <p>{item.description}</p>
-                  </article>
-                );
-              })}
-            </div>
-          </SectionReveal>
         </div>
       </section>
 
-      <section id="problema" className={s.problemSection}>
-          <div className={s.container}>
-            <div className={s.problemBackdrop} aria-hidden="true">
-              <div className={s.problemBackdropGrid} />
-              <div className={s.problemBackdropGlow} />
-            </div>
+      <BenefitsQuickSection />
 
-            <SectionReveal>
-              <div className={s.problemIntro}>
-                <SectionHeading
-                  label="EL PROBLEMA DEL COTIZADOR MANUAL"
-                  title="Cotizar tarde y desordenado te hace perder trabajos que ya tenías encaminados."
-                  description="Cuando el presupuesto sale tarde, queda en WhatsApp o se arma a mano en Word, pierdes seriedad y el cliente sigue comparando con otro."
-                />
-              </div>
-            </SectionReveal>
-
-            <div className={s.problemSplit}>
-              <SectionReveal className={s.problemVisualWrap}>
-                <article className={s.problemVisualCard}>
-                  <div className={s.problemVisualMedia}>
-                    <Image
-                      src="/brand/landing-problema-scene.png"
-                      alt="Encargado comercial revisando solicitudes y planos en un entorno premium de vidrio y aluminio"
-                      width={1680}
-                      height={945}
-                      sizes="(max-width: 900px) 100vw, 44vw"
-                    />
-                  </div>
-
-                  <div className={s.problemVisualBody}>
-                    <span className={s.problemVisualEyebrow}>Lo que hoy te frena</span>
-                    <strong>
-                      El trabajo no se pierde por falta de clientes. Se pierde por
-                      cotizar tarde, desordenado o con PDFs poco profesionales.
-                    </strong>
-                    <p>
-                      Ventora te ayuda a armar presupuestos rápido desde el celular,
-                      enviarlos por WhatsApp y saber qué quedó pendiente de cerrar.
-                    </p>
-                  </div>
-                </article>
-              </SectionReveal>
-
-              <div className={s.problemGrid}>
-                {problemCards.map((item) => (
-                  <SectionReveal key={item.title}>
-                    <article className={s.problemCard}>
-                      <div className={s.iconChip}>
-                        <item.icon size={20} strokeWidth={2.1} />
-                      </div>
-                      <h3>{item.title}</h3>
-                      <p>{item.description}</p>
-                      <span className={s.problemMeta}>{item.meta}</span>
-                    </article>
-                  </SectionReveal>
-                ))}
-              </div>
-            </div>
-          </div>
-      </section>
+      <ProblemFlowSection />
 
       <QuoteFlowSection />
 

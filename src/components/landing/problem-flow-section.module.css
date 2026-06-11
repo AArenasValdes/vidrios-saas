@@ -1,0 +1,349 @@
+.section {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(48px, 7vw, 72px) 0 clamp(40px, 6vw, 64px);
+  background:
+    radial-gradient(circle at 18% 72%, rgba(30, 136, 255, 0.1), transparent 28%),
+    radial-gradient(circle at 82% 18%, rgba(230, 232, 235, 0.04), transparent 24%),
+    linear-gradient(180deg, #0e1420 0%, #0a1018 100%);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background:
+    linear-gradient(rgba(30, 136, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 136, 255, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 36%, rgba(30, 136, 255, 0.08), transparent 40%),
+    radial-gradient(circle at 72% 80%, rgba(239, 68, 68, 0.05), transparent 22%);
+}
+
+.frameCornerTop {
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 72px;
+  height: 72px;
+  border-top: 1px solid rgba(30, 136, 255, 0.12);
+  border-right: 1px solid rgba(30, 136, 255, 0.12);
+  opacity: 0.45;
+}
+
+.frameCornerBottom {
+  position: absolute;
+  bottom: 14%;
+  left: 4%;
+  width: 64px;
+  height: 64px;
+  border-bottom: 1px solid rgba(30, 136, 255, 0.1);
+  border-left: 1px solid rgba(30, 136, 255, 0.1);
+  opacity: 0.4;
+}
+
+.windowOutline {
+  position: absolute;
+  top: 22%;
+  left: -18px;
+  width: 120px;
+  height: 150px;
+  border: 1px solid rgba(30, 136, 255, 0.08);
+  border-radius: 4px;
+  opacity: 0.35;
+  transform: rotate(-6deg);
+}
+
+.windowOutline::before {
+  content: "";
+  position: absolute;
+  inset: 18% 50% 18% 0;
+  border-right: 1px solid rgba(30, 136, 255, 0.08);
+}
+
+.windowOutline::after {
+  content: "";
+  position: absolute;
+  inset: 50% 8% 0 8%;
+  border-top: 1px solid rgba(30, 136, 255, 0.08);
+}
+
+.pdfGhost {
+  position: absolute;
+  right: 8%;
+  bottom: 18%;
+  width: 54px;
+  height: 68px;
+  border: 1px solid rgba(230, 232, 235, 0.07);
+  border-radius: 6px;
+  opacity: 0.22;
+  transform: rotate(8deg);
+}
+
+.pdfGhost::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  background: rgba(230, 232, 235, 0.08);
+  box-shadow:
+    0 10px 0 rgba(230, 232, 235, 0.07),
+    0 20px 0 rgba(230, 232, 235, 0.06);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: min(680px, calc(100% - 28px));
+  margin-inline: auto;
+}
+
+.header {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  text-align: center;
+  margin-bottom: clamp(18px, 3.5vw, 24px);
+}
+
+.badge {
+  margin: 0;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 136, 255, 0.22);
+  background: rgba(17, 24, 39, 0.72);
+  color: #58a6ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.title {
+  margin: 0;
+  max-width: 14ch;
+  font-size: clamp(30px, 8.2vw, 46px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 900;
+  color: #f4f7fb;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 33ch;
+  color: rgba(174, 182, 195, 0.9);
+  font-size: clamp(14px, 3.6vw, 16px);
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.rail {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.rail::before {
+  content: "";
+  position: absolute;
+  left: 25px;
+  top: 23px;
+  bottom: 23px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 136, 255, 0.38) 0%,
+    rgba(30, 136, 255, 0.22) 55%,
+    rgba(239, 68, 68, 0.3) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+.step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.railCol {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.iconBox {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: #58a6ff;
+  background: rgba(12, 18, 30, 0.96);
+  border: 1px solid rgba(30, 136, 255, 0.28);
+  box-shadow:
+    0 0 0 3px rgba(10, 15, 24, 0.92),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.iconBoxDanger {
+  color: #ff8f8f;
+  background: rgba(22, 12, 14, 0.96);
+  border-color: rgba(239, 68, 68, 0.34);
+  box-shadow:
+    0 0 0 3px rgba(10, 15, 24, 0.92),
+    0 0 18px rgba(239, 68, 68, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  padding: 13px 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(230, 232, 235, 0.1);
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(10, 15, 24, 0.94) 100%);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cardDanger {
+  border-color: rgba(239, 68, 68, 0.24);
+  background:
+    linear-gradient(180deg, rgba(36, 18, 22, 0.92) 0%, rgba(14, 10, 16, 0.96) 100%);
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: #f4f7fb;
+}
+
+.quote,
+.text {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.quote {
+  color: rgba(174, 182, 195, 0.9);
+  font-style: italic;
+}
+
+.text {
+  color: rgba(174, 182, 195, 0.86);
+}
+
+.cardDanger .quote {
+  color: #ff9f9f;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.closing {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  margin-top: clamp(18px, 3.5vw, 22px);
+  padding: 14px 14px 0;
+  border-top: 1px solid rgba(30, 136, 255, 0.14);
+}
+
+.closingIcon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
+  border-radius: 999px;
+  color: #58a6ff;
+  background: rgba(30, 136, 255, 0.1);
+  border: 1px solid rgba(30, 136, 255, 0.22);
+}
+
+.closingText {
+  margin: 0;
+  max-width: 28ch;
+  font-size: clamp(15px, 3.8vw, 17px);
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: rgba(196, 210, 230, 0.95);
+  text-wrap: balance;
+}
+
+@media (min-width: 720px) {
+  .container {
+    width: min(720px, calc(100% - 40px));
+  }
+
+  .rail {
+    gap: 12px;
+  }
+
+  .rail::before {
+    left: 28px;
+    top: 25px;
+    bottom: 25px;
+  }
+
+  .step {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .iconBox {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+  }
+
+  .card {
+    padding: 15px 17px;
+  }
+
+  .card h3 {
+    font-size: 16px;
+  }
+
+  .quote,
+  .text {
+    font-size: 14px;
+  }
+}
