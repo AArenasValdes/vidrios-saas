@@ -65,6 +65,7 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isProtected = isProtectedPath(pathname);
+  const isAdminApi = pathname.startsWith("/api/admin");
   const isLogin = pathname === "/login";
   const isRegister = pathname === "/registro";
   const hasSessionCookie = hasSupabaseSessionCookie(request);
@@ -75,6 +76,10 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/login";
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
+    }
+
+    if (isAdminApi) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
     }
 
     return NextResponse.next({ request });
@@ -117,6 +122,21 @@ export async function proxy(request: NextRequest) {
 
   const growthOnly = isGrowthOnlyUser(user?.email);
   const founderAdmin = isFounderAdminEmail(user?.email);
+
+  if (isAdminApi) {
+    if (!user) {
+      return NextResponse.json({ error: "No autorizado." }, { status: 401 });
+    }
+
+    if (!founderAdmin) {
+      return NextResponse.json(
+        { error: "No tienes acceso a esta seccion." },
+        { status: 403 }
+      );
+    }
+
+    return supabaseResponse;
+  }
 
   if (user && pathname.startsWith("/admin")) {
     if (!founderAdmin) {
@@ -168,5 +188,6 @@ export const config = {
     "/solicitudes/:path*",
     "/configuracion/:path*",
     "/cuenta-vencida",
+    "/api/admin/:path*",
   ],
 };

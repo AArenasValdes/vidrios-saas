@@ -9,6 +9,10 @@ import {
 export async function resolveVentoraAdminRouteContext() {
   const context = await resolveAuthenticatedRouteContext({
     requireOrganization: false,
+    messages: {
+      unauthorized:
+        "Tu sesion no esta disponible para esta accion. Cierra sesion y vuelve a entrar.",
+    },
   });
 
   if (

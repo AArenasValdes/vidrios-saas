@@ -123,6 +123,43 @@ describe("proxy", () => {
     );
   });
 
+  it("renueva sesion y permite /api/admin para founder autenticado", async () => {
+    (createServerClient as jest.Mock).mockReturnValue(
+      createSupabaseMock({
+        id: "auth-founder",
+        email: "alessandroreal2.0@gmail.com",
+      })
+    );
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/admin/clientes/provision",
+      {
+        method: "POST",
+        headers: {
+          cookie: "sb-test-auth-token=abc123",
+        },
+      }
+    );
+    const response = await proxy(request);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("bloquea /api/admin sin sesion con 401", async () => {
+    const request = new NextRequest(
+      "http://localhost:3000/api/admin/clientes/provision",
+      {
+        method: "POST",
+      }
+    );
+    const response = await proxy(request);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "No autorizado." });
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
   it("bloquea acceso a /admin para admin normal autenticado", async () => {
     (createServerClient as jest.Mock).mockReturnValue(
       createSupabaseMock({
