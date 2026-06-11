@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  type FormEvent,
   type ReactNode,
   useEffect,
   useRef,
@@ -19,13 +18,13 @@ import {
   FileText,
   FolderOpen,
   Menu,
-  ShieldCheck,
   TrendingUp,
   X,
 } from "lucide-react";
 
 import { BenefitsQuickSection } from "@/components/landing/benefits-quick-section";
 import { HeroPhoneMockup } from "@/components/landing/hero-phone-mockup";
+import { LandingContactSection } from "@/components/landing/landing-contact-section";
 import { ProblemFlowSection } from "@/components/landing/problem-flow-section";
 import { PublicLinkSection } from "@/components/landing/public-link-section";
 import { QuoteFlowSection } from "@/components/landing/quote-flow-section";
@@ -364,12 +363,6 @@ function CountUpNumber({
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
-  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
-  const [contactFeedback, setContactFeedback] = useState<{
-    kind: "success" | "error";
-    message: string;
-  } | null>(null);
-  const hasStartedContactFormRef = useRef(false);
 
   function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
     if (kind === "whatsapp") {
@@ -387,91 +380,6 @@ export default function LandingPage() {
       source: "landing",
       location,
     });
-  }
-
-  function trackLandingFormStart() {
-    if (hasStartedContactFormRef.current) {
-      return;
-    }
-
-    hasStartedContactFormRef.current = true;
-    googleTagService.trackFormStart({
-      formName: "landing-demo",
-      source: "landing",
-    });
-  }
-
-  async function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (isSubmittingContact) {
-      return;
-    }
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    setIsSubmittingContact(true);
-    setContactFeedback(null);
-
-    try {
-      const nombre = String(formData.get("nombre") ?? "").trim();
-      const negocio = String(formData.get("empresa") ?? "").trim();
-      const whatsapp = String(formData.get("telefono") ?? "").trim();
-      const ayuda = String(formData.get("ayuda") ?? "demo").trim();
-      const mensaje = [
-        "Hola, quiero un piloto de Ventora para mi empresa.",
-        nombre ? `Nombre: ${nombre}` : "",
-        negocio ? `Tipo de negocio: ${negocio}` : "",
-        whatsapp ? `WhatsApp: ${whatsapp}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const href = `https://wa.me/56977338906?text=${encodeURIComponent(mensaje)}`;
-
-      const response = await fetch("/api/solicitudes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nombre,
-          empresa: negocio,
-          correo: "",
-          telefono: whatsapp,
-          ayuda: ayuda === "cotizacion" || ayuda === "ventas" ? ayuda : "demo",
-        }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "No pudimos guardar tus datos.");
-      }
-
-      googleTagService.trackFormSubmitIntent({
-        formName: "landing-demo",
-        source: "landing",
-      });
-      trackLandingCta("formulario-demo", "whatsapp");
-      setContactFeedback({
-        kind: "success",
-        message: "Datos guardados. Abrimos WhatsApp para coordinar tu piloto.",
-      });
-      window.location.href = href;
-    } catch (error) {
-      setContactFeedback({
-        kind: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "No pudimos enviar tu solicitud. Intenta nuevamente.",
-      });
-    } finally {
-      setIsSubmittingContact(false);
-    }
   }
 
   return (
@@ -684,14 +592,15 @@ export default function LandingPage() {
       <section id="precios" className={s.pricingSection}>
         <div className={s.container}>
           <SectionReveal>
-            <div className={s.pricingHeader}>
-              <SectionHeading
-                title="Planes simples para cotizar mejor y no perder clientes"
-                description="Prueba Ventora 7 días gratis. Empieza solo con el cotizador o suma página pública cuando la necesites."
-              />
-              <p className={s.pricingValueLine}>
-                Si pierdes una sola cotización por responder tarde, probablemente ya perdiste más
-                que el valor anual de Ventora.
+            <div className={s.pricingIntro}>
+              <div className={s.pricingHeader}>
+                <SectionHeading
+                  title="Parte 7 días gratis con Ventora"
+                  description="Prueba el cotizador y elige después el plan que mejor calce con tu negocio."
+                />
+              </div>
+              <p className={s.pricingStrip}>
+                Una sola cotización perdida puede costar más que todo el año de Ventora.
               </p>
             </div>
           </SectionReveal>
@@ -819,130 +728,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="contacto" className={s.contactSection}>
-        <div className={s.container}>
-          <div className={s.contactLayout}>
-            <SectionReveal className={s.contactIntro}>
-              <SectionHeading
-                title="Empieza a cotizar con presupuestos más profesionales."
-                description="Ventora te ayuda a crear PDF, enviar por WhatsApp y mantener clientes ordenados sin depender del caos del chat."
-              />
-
-              <div className={s.contactActions}>
-                <Link
-                  href="/planes"
-                  className={s.primaryButton}
-                  prefetch={false}
-                  onClick={() => trackLandingCta("contacto-probar-demo", "internal")}
-                >
-                  Probar cotizador gratis
-                  <ArrowRight size={18} aria-hidden />
-                </Link>
-                <a
-                  href={WHATSAPP_LANDING_HREF}
-                  className={s.secondaryButton}
-                  onClick={() => trackLandingCta("contacto-whatsapp-secundario", "whatsapp")}
-                >
-                  Ver demo por WhatsApp
-                </a>
-              </div>
-
-              <div className={s.contactProof}>
-                <div className={s.proofItem}>
-                  <CircleCheck size={18} aria-hidden />
-                  <span>Cotiza desde el celular y envía PDF profesional al tiro.</span>
-                </div>
-                <div className={s.proofItem}>
-                  <ShieldCheck size={18} aria-hidden />
-                  <span>Clientes, presupuestos y estados quedan ordenados.</span>
-                </div>
-                <div className={s.proofItem}>
-                  <FileText size={18} aria-hidden />
-                  <span>Tu página pública queda como complemento para captar solicitudes.</span>
-                </div>
-              </div>
-            </SectionReveal>
-
-            <SectionReveal className={s.contactCard}>
-              <div className={s.contactCardHeader}>
-                <h3>Quiero que me contacten</h3>
-                <p>Te mostramos el flujo real y cómo quedaría en tu negocio.</p>
-              </div>
-
-              <form className={s.contactForm} onSubmit={handleContactSubmit}>
-                <input type="hidden" name="ayuda" value="demo" />
-
-                <label className={s.field}>
-                  <span>Nombre</span>
-                  <input
-                    type="text"
-                    name="nombre"
-                    placeholder="Juan Perez"
-                    autoComplete="name"
-                    onFocus={trackLandingFormStart}
-                    required
-                  />
-                </label>
-
-                <label className={s.field}>
-                  <span>WhatsApp</span>
-                  <input
-                    type="tel"
-                    name="telefono"
-                    placeholder="+56 9 0000 0000"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    onFocus={trackLandingFormStart}
-                    required
-                  />
-                </label>
-
-                <label className={s.field}>
-                  <span>Tipo de negocio</span>
-                  <select name="empresa" defaultValue="" onFocus={trackLandingFormStart} required>
-                    <option value="" disabled>
-                      Selecciona una opción
-                    </option>
-                    <option value="maestro">Maestro independiente</option>
-                    <option value="vidrieria">Vidriería</option>
-                    <option value="taller">Taller / empresa</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </label>
-
-                <button
-                  type="submit"
-                  className={s.contactSubmit}
-                  disabled={isSubmittingContact}
-                  aria-busy={isSubmittingContact}
-                >
-                  {isSubmittingContact ? "Enviando..." : "Quiero mi demo"}
-                  <ArrowRight size={18} aria-hidden />
-                </button>
-              </form>
-
-              {contactFeedback ? (
-                <p
-                  className={`${s.contactFeedback} ${
-                    contactFeedback.kind === "error" ? s.contactFeedbackError : ""
-                  }`}
-                  role="status"
-                >
-                  {contactFeedback.message}
-                </p>
-              ) : null}
-
-              <a
-                className={s.contactWhatsapp}
-                href={WHATSAPP_LANDING_HREF}
-                onClick={() => trackLandingCta("contacto-whatsapp", "whatsapp")}
-              >
-                Hablar por WhatsApp
-              </a>
-            </SectionReveal>
-          </div>
-        </div>
-      </section>
+      <LandingContactSection />
 
       <footer className={s.footer}>
         <div className={s.container}>
