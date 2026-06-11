@@ -22,10 +22,28 @@ const baseProps = {
   recommendedReason: "Opciones frecuentes para partir rapido.",
   recommendedVidrios: ["Incoloro monolitico 5mm", "Templado 8mm"],
   searchResults: ["Templado 8mm"],
+  subtipo: "Ventana",
   vidSearch: "",
 };
 
 describe("PasoDosWizardVidrioMovil", () => {
+  it("debe mostrar seccion de espejos recomendados para componente Espejo", () => {
+    render(
+      <PasoDosWizardVidrioMovil
+        {...baseProps}
+        currentGlass="Espejo 4mm"
+        recommendedReason="Espesores habituales para espejos a medida."
+        recommendedVidrios={["Espejo 3mm", "Espejo 4mm", "Espejo 5mm", "Espejo 6mm"]}
+        subtipo="Espejo"
+      />
+    );
+
+    expect(screen.getByText("Espejos")).toBeInTheDocument();
+    expect(screen.getByText("Recomendado para espejos a medida.")).toBeInTheDocument();
+    expect(screen.getByText("Espejo 4mm")).toBeInTheDocument();
+    expect(screen.queryByText("Cristal / Vidrio")).not.toBeInTheDocument();
+  });
+
   it("debe mostrar sugeridos y reparar texto visible", () => {
     render(<PasoDosWizardVidrioMovil {...baseProps} />);
 

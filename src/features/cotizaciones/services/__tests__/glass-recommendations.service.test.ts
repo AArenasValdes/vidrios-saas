@@ -5,6 +5,10 @@ import {
 
 describe("glass-recommendations service", () => {
   const catalogo = [
+    "Espejo 3mm",
+    "Espejo 4mm",
+    "Espejo 5mm",
+    "Espejo 6mm",
     "Incoloro monolitico 5mm",
     "Incoloro monolitico 6mm",
     "DVH 4+12+4",
@@ -72,6 +76,21 @@ describe("glass-recommendations service", () => {
     expect(isRecommendedGlass("Incoloro monolitico 5mm", result.recommendedOptions)).toBe(
       false
     );
+  });
+
+  it("debe recomendar espesores de espejo para componentes Espejo", () => {
+    const result = getGlassRecommendations(
+      { subtipo: "Espejo", sistema: "Muro" },
+      catalogo
+    );
+
+    expect(result.recommendedOptions).toEqual([
+      "Espejo 3mm",
+      "Espejo 4mm",
+      "Espejo 5mm",
+      "Espejo 6mm",
+    ]);
+    expect(result.reason).toContain("espejos");
   });
 
   it("debe poner primero el vidrio recomendado por la linea sin bloquear el resto", () => {

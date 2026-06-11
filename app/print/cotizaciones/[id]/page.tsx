@@ -28,8 +28,11 @@ import {
 } from "@/utils/cotizacion-document";
 import { buildReadableCotizacionPdfFileName } from "@/utils/cotizacion-pdf";
 import {
+  buildCotizacionMirrorFormatLabel,
+  buildCotizacionMirrorPaneMeasure,
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
+  isCotizacionMirrorDivided,
   shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
@@ -37,6 +40,7 @@ import { generateComponentSVG } from "@/utils/window-drawings";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
 import { splitDescriptionChecklistItems } from "./_utils/description-checklist";
+import { buildCotizacionItemPrintSpecs } from "./_utils/item-print-specs";
 import { buildPrintPlan, isFreePrintItem } from "./_utils/print-plan";
 import {
   buildTotalGlobalPrintPlan,
@@ -103,6 +107,10 @@ type ItemPresentation = {
   sheetVariant: string;
   customSchemeDescription: string;
   isCustomScheme: boolean;
+  mirrorFormat: "single" | "divided";
+  mirrorPaneCount: number | null;
+  mirrorPaneDirection: "vertical" | "horizontal";
+  mirrorInteriorLine: "fine" | "marked";
   colorName: string;
   surface: string;
   specs: Array<{ key: string; value: string }>;
@@ -716,6 +724,10 @@ export default function CotizacionPrintPage() {
         isCustomScheme,
         palilloEnabled,
         palilloType,
+        mirrorFormat,
+        mirrorPaneCount,
+        mirrorPaneDirection,
+        mirrorInteriorLine,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -737,18 +749,37 @@ export default function CotizacionPrintPage() {
         sheetVariant,
         customSchemeDescription,
       });
-      const specs = [
-        { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-        ...(configuracion ? [{ key: "Configuración", value: configuracion }] : []),
-        ...(shouldShowSheetSchemeSpec ? [{ key: "Esquema", value: sheetSchemeLabel }] : []),
-        { key: "Sistema", value: systemLabel },
-        { key: "Línea", value: lineLabel },
-        { key: "Material", value: material },
-        { key: "Color", value: colorName },
-        { key: "Vidrio", value: item.vidrio || "-" },
-        ...(palilloEnabled ? [{ key: "Palillo", value: palilloType || "Con palillo" }] : []),
-        { key: "Superficie", value: surface },
-      ];
+      const isDividedMirror = isCotizacionMirrorDivided({
+        tipo: item.tipo,
+        mirrorFormat,
+        mirrorPaneCount,
+      });
+      const mirrorPaneMeasure = buildCotizacionMirrorPaneMeasure({
+        ancho: item.ancho,
+        alto: item.alto,
+        mirrorPaneCount,
+        mirrorPaneDirection,
+      });
+      const specs = buildCotizacionItemPrintSpecs({
+        tipo: item.tipo,
+        dimensionsLabel: formatDimensions(item.ancho, item.alto),
+        surfaceLabel: surface,
+        vidrio: item.vidrio || "-",
+        material,
+        colorName,
+        systemLabel,
+        lineLabel,
+        configuracion: configuracion || undefined,
+        sheetSchemeLabel,
+        shouldShowSheetSchemeSpec,
+        palilloEnabled,
+        palilloType,
+        mirrorFormatLabel: isDividedMirror
+          ? buildCotizacionMirrorFormatLabel({ mirrorPaneCount })
+          : null,
+        mirrorTotalMeasureLabel: isDividedMirror ? formatDimensions(item.ancho, item.alto) : null,
+        mirrorPaneMeasureLabel: isDividedMirror ? mirrorPaneMeasure?.label ?? null : null,
+      });
       map.set(item.id, {
         colorHex,
         material,
@@ -760,6 +791,10 @@ export default function CotizacionPrintPage() {
         sheetVariant,
         customSchemeDescription,
         isCustomScheme,
+        mirrorFormat,
+        mirrorPaneCount,
+        mirrorPaneDirection,
+        mirrorInteriorLine,
         colorName,
         surface,
         specs,
@@ -783,6 +818,10 @@ export default function CotizacionPrintPage() {
           variant: "pdf",
           palilloEnabled,
           palilloType: palilloType || undefined,
+          mirrorFormat,
+          mirrorPaneCount,
+          mirrorPaneDirection,
+          mirrorInteriorLine,
         }),
       });
     }
@@ -1421,14 +1460,18 @@ export default function CotizacionPrintPage() {
                 const material = presentation?.material ?? "Material a definir";
                 const colorName = presentation?.colorName ?? "Color a definir";
                 const surface = presentation?.surface ?? "-";
-                const specs = presentation?.specs ?? [
-                    { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
-                    { key: "Material", value: material },
-                    { key: "Color", value: colorName },
-                    { key: "Línea", value: "-" },
-                    { key: "Vidrio", value: item.vidrio || "-" },
-                    { key: "Superficie", value: surface },
-                    ];
+                const specs =
+                  presentation?.specs ??
+                  buildCotizacionItemPrintSpecs({
+                    tipo: item.tipo,
+                    dimensionsLabel: formatDimensions(item.ancho, item.alto),
+                    surfaceLabel: surface,
+                    vidrio: item.vidrio || "-",
+                    material,
+                    colorName,
+                    systemLabel: "-",
+                    lineLabel: "-",
+                  });
                 const drawingSvg =
                   presentation?.drawingSvg ??
                   (() => {
@@ -1451,6 +1494,10 @@ export default function CotizacionPrintPage() {
                     variant: "pdf",
                     palilloEnabled: fallbackMeta.palilloEnabled,
                     palilloType: fallbackMeta.palilloType || undefined,
+                    mirrorFormat: fallbackMeta.mirrorFormat,
+                    mirrorPaneCount: fallbackMeta.mirrorPaneCount,
+                    mirrorPaneDirection: fallbackMeta.mirrorPaneDirection,
+                    mirrorInteriorLine: fallbackMeta.mirrorInteriorLine,
                   });
                   })();
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;

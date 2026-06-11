@@ -19,6 +19,7 @@ import {
   MATERIAL_OPTIONS,
   MAX_COMPONENTS_PER_QUOTE,
   requiresCustomSheetDescription,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -73,9 +74,10 @@ export function PasoDosFormularioBloqueConfiguracion({
   variant = "default",
 }: Props) {
   const isMobilePointEdit = variant === "mobilePointEdit";
-  const visibleLineTemplates = activeLineTemplates.filter(
-    (template) => template.material === componentForm.material
-  );
+  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(componentForm.tipo);
+  const visibleLineTemplates = requiresProfileMaterial
+    ? activeLineTemplates.filter((template) => template.material === componentForm.material)
+    : activeLineTemplates;
   const showSheetScheme = shouldShowSheetSchemeForComponent({
     tipo: componentForm.tipo,
     sistema: componentForm.sistema,
@@ -302,7 +304,7 @@ export function PasoDosFormularioBloqueConfiguracion({
 
   return (
     <>
-      {!isFreeValue ? (
+      {!isFreeValue && requiresProfileMaterial ? (
       <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Material</span>

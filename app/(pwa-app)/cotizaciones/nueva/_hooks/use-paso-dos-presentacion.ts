@@ -144,6 +144,10 @@ export function usePasoDosPresentacion(
         colorHex: params.componentForm.colorHex,
         maxW: 92,
         maxH: 72,
+        mirrorFormat: params.componentForm.mirrorFormat,
+        mirrorPaneCount: params.componentForm.mirrorPaneCount,
+        mirrorPaneDirection: params.componentForm.mirrorPaneDirection,
+        mirrorInteriorLine: params.componentForm.mirrorInteriorLine,
       }),
     [
       params.componentForm.alto,
@@ -153,6 +157,10 @@ export function usePasoDosPresentacion(
       params.componentForm.referencia,
       params.componentForm.sistema,
       params.componentForm.tipo,
+      params.componentForm.mirrorFormat,
+      params.componentForm.mirrorInteriorLine,
+      params.componentForm.mirrorPaneCount,
+      params.componentForm.mirrorPaneDirection,
     ]
   );
 

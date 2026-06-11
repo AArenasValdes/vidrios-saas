@@ -12,6 +12,7 @@ import {
   getSheetVariantOptions,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -170,6 +171,7 @@ export function PasoDosAgregarGrupoSheet({
     sistema: draft.sistema,
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const freeValueGuidance = getComponentDescripcion(draft.subtipo);
@@ -716,33 +718,35 @@ export function PasoDosAgregarGrupoSheet({
                 </section>
               ) : null}
 
-              <section className={s.formSection}>
-                <div className={s.formSectionHead}>
-                  <span className={s.formSectionEyebrow}>Material</span>
-                  <strong>Se aplica a todo el grupo</strong>
-                </div>
+              {requiresProfileMaterial ? (
+                <section className={s.formSection}>
+                  <div className={s.formSectionHead}>
+                    <span className={s.formSectionEyebrow}>Material</span>
+                    <strong>Se aplica a todo el grupo</strong>
+                  </div>
 
-                <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Material del grupo">
-                  {MATERIAL_OPTIONS.map((materialOption) => (
-                    <label
-                      key={materialOption}
-                      className={`${s.segmentedChoice} ${
-                        draft.material === materialOption ? s.segmentedChoiceActive : ""
-                      }`}
-                    >
-                      <input
-                        checked={draft.material === materialOption}
-                        className={s.segmentedChoiceInput}
-                        name="group-material"
-                        onChange={() => onMaterialChange(materialOption)}
-                        type="radio"
-                        value={materialOption}
-                      />
-                      <span className={s.segmentedChoiceTitle}>{materialOption}</span>
-                    </label>
-                  ))}
-                </div>
-              </section>
+                  <div className={s.segmentedChoiceGrid} role="radiogroup" aria-label="Material del grupo">
+                    {MATERIAL_OPTIONS.map((materialOption) => (
+                      <label
+                        key={materialOption}
+                        className={`${s.segmentedChoice} ${
+                          draft.material === materialOption ? s.segmentedChoiceActive : ""
+                        }`}
+                      >
+                        <input
+                          checked={draft.material === materialOption}
+                          className={s.segmentedChoiceInput}
+                          name="group-material"
+                          onChange={() => onMaterialChange(materialOption)}
+                          type="radio"
+                          value={materialOption}
+                        />
+                        <span className={s.segmentedChoiceTitle}>{materialOption}</span>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               {showSystemSelection ? (
               <div className={s.groupSheetInlineField}>
@@ -864,10 +868,12 @@ export function PasoDosAgregarGrupoSheet({
                   <dt>Unidades</dt>
                   <dd>{draft.cantidad}</dd>
                 </div>
-                <div className={s.groupSheetSummaryRow}>
-                  <dt>Material</dt>
-                  <dd>{draft.material}</dd>
-                </div>
+                {requiresProfileMaterial ? (
+                  <div className={s.groupSheetSummaryRow}>
+                    <dt>Material</dt>
+                    <dd>{draft.material}</dd>
+                  </div>
+                ) : null}
                 {showSystemSelection ? (
                 <div className={s.groupSheetSummaryRow}>
                   <dt>Sistema</dt>

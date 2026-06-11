@@ -2,7 +2,10 @@
 
 import { LuFileText, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
 
-import { COLOR_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  COLOR_OPTIONS,
+  shouldRequireProfileMaterialForComponent,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -129,6 +132,7 @@ export function PasoDosListaMovil({
               const displayCode = item.codigo || "--";
               const adjustedFromBaseCode = adjustedItems[item.id] ?? null;
               const isAdjusted = Boolean(adjustedFromBaseCode);
+              const showProfileDetails = shouldRequireProfileMaterialForComponent(item.tipo);
               const colorLabel =
                 itemMeta.material === "PVC"
                   ? "PVC blanco"
@@ -226,10 +230,10 @@ export function PasoDosListaMovil({
                   ) : (
                     <>
                       <div className={s.stepTwoMobileItemMeta}>
-                        {!isFreeValueItem && itemMeta.material ? (
+                        {!isFreeValueItem && showProfileDetails && itemMeta.material ? (
                           <span>{repairBrokenText(itemMeta.material)}</span>
                         ) : null}
-                        {!isFreeValueItem && itemMeta.colorHex ? (
+                        {!isFreeValueItem && showProfileDetails && itemMeta.colorHex ? (
                           <span className={s.stepTwoMobileItemColorChip}>
                             <i
                               className={s.stepTwoMobileItemColorSwatch}

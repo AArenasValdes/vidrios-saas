@@ -33,6 +33,11 @@ const baseProps = {
     sheetVariant: "",
     customSchemeDescription: "",
     isCustomScheme: false,
+    mirrorFormat: "single" as const,
+    mirrorPaneCount: null,
+    mirrorPaneDirection: "vertical" as const,
+    mirrorInteriorLine: "fine" as const,
+    mirrorCustomPaneCount: "",
     vidrio: "Incoloro monolitico 5mm",
     lineTemplateId: "",
     referencia: "",
@@ -80,6 +85,11 @@ const baseProps = {
   onSheetSchemeChange: jest.fn(),
   onSheetVariantChange: jest.fn(),
   onCustomSchemeDescriptionChange: jest.fn(),
+  onMirrorFormatChange: jest.fn(),
+  onMirrorPaneCountChange: jest.fn(),
+  onMirrorCustomPaneCountChange: jest.fn(),
+  onMirrorPaneDirectionChange: jest.fn(),
+  onMirrorInteriorLineChange: jest.fn(),
   onPrecioChange: jest.fn(),
   onPricingModeChange: jest.fn(),
   onSistemaChange: jest.fn(),
@@ -114,6 +124,114 @@ const baseProps = {
 };
 
 describe("PasoDosWizardConfiguracionMovil", () => {
+  it("debe mostrar espejos recomendados al cotizar un espejo", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displayConfigurationOptions={["Pulido", "Biselado"]}
+        displaySystemOptions={["Muro", "Pegado"]}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Espejo",
+          sistema: "Muro",
+          configuracion: "Pulido",
+          vidrio: "Espejo 4mm",
+        }}
+        recommendedReason="Espesores habituales para espejos a medida."
+        recommendedVidrios={["Espejo 3mm", "Espejo 4mm", "Espejo 5mm", "Espejo 6mm"]}
+      />
+    );
+
+    expect(screen.getByText("Espejos")).toBeInTheDocument();
+    expect(screen.getByText("Recomendado para espejos a medida.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Espejo 4mm/i })).toBeInTheDocument();
+  });
+
+  it("no debe pedir material ni color de perfil para espejos", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displayConfigurationOptions={["Pulido", "Biselado"]}
+        displaySystemOptions={["Muro", "Pegado"]}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Espejo",
+          sistema: "Muro",
+          configuracion: "Pulido",
+        }}
+      />
+    );
+
+    expect(screen.queryByText("Material")).not.toBeInTheDocument();
+    expect(screen.queryByText("Color perfil")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aluminio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "PVC" })).not.toBeInTheDocument();
+  });
+
+  it("debe mostrar formato del espejo solo para espejos", () => {
+    const { rerender } = render(<PasoDosWizardConfiguracionMovil {...baseProps} />);
+
+    expect(screen.queryByText("Formato del espejo")).not.toBeInTheDocument();
+
+    rerender(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displayConfigurationOptions={["Pulido", "Biselado"]}
+        displaySystemOptions={["Muro", "Pegado", "Con instalacion"]}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Espejo",
+          sistema: "Muro",
+          configuracion: "Pulido",
+          vidrio: "Espejo 4mm",
+        }}
+      />
+    );
+
+    expect(screen.getByText("Formato del espejo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 paño" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dividido en paños" })).toBeInTheDocument();
+  });
+
+  it("debe configurar paños de espejo y mostrar ayuda calculada", () => {
+    const onMirrorPaneCountChange = jest.fn();
+    const onMirrorPaneDirectionChange = jest.fn();
+    const onMirrorInteriorLineChange = jest.fn();
+
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displayConfigurationOptions={["Pulido", "Biselado"]}
+        displaySystemOptions={["Muro", "Pegado", "Con instalacion"]}
+        draft={{
+          ...baseProps.draft,
+          subtipo: "Espejo",
+          sistema: "Muro",
+          configuracion: "Pulido",
+          vidrio: "Espejo 4mm",
+          ancho: "3000",
+          alto: "870",
+          cantidad: 1,
+          mirrorFormat: "divided",
+          mirrorPaneCount: 6,
+          mirrorPaneDirection: "vertical",
+          mirrorInteriorLine: "fine",
+        }}
+        onMirrorPaneCountChange={onMirrorPaneCountChange}
+        onMirrorPaneDirectionChange={onMirrorPaneDirectionChange}
+        onMirrorInteriorLineChange={onMirrorInteriorLineChange}
+      />
+    );
+
+    expect(screen.getByText("6 paños de 500 x 870 mm aprox.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+    expect(onMirrorPaneCountChange).toHaveBeenCalledWith(4);
+    fireEvent.click(screen.getByRole("button", { name: "Horizontal" }));
+    expect(onMirrorPaneDirectionChange).toHaveBeenCalledWith("horizontal");
+    fireEvent.click(screen.getByRole("button", { name: "Junta marcada" }));
+    expect(onMirrorInteriorLineChange).toHaveBeenCalledWith("marked");
+  });
+
   it("debe mostrar margen solo cuando aplica", () => {
     const onPricingModeChange = jest.fn();
     const { rerender } = render(

@@ -110,7 +110,7 @@ const DEFAULT_SUGGESTIONS: Record<string, Omit<ComponentSuggestion, "referencia"
   Espejo: {
     tipo: "Espejo",
     material: "PVC",
-    vidrio: "Esmerilado / Satinado",
+    vidrio: "Espejo 4mm",
     margenPct: 100,
     descripcion: "Espejo a medida listo para instalacion.",
     colorHex: "#f0eeeb",

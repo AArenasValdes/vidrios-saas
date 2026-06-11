@@ -20,6 +20,7 @@ type Props = {
   recommendedReason: string;
   recommendedVidrios: readonly string[];
   searchResults: readonly string[];
+  subtipo: string;
   vidSearch: string;
 };
 
@@ -32,9 +33,11 @@ export function PasoDosWizardVidrioMovil({
   recommendedReason,
   recommendedVidrios,
   searchResults,
+  subtipo,
   vidSearch,
 }: Props) {
   const [isGlassModalOpen, setIsGlassModalOpen] = useState(false);
+  const isMirrorComponent = subtipo.trim() === "Espejo";
   const isCurrentGlassRecommended =
     Boolean(currentGlass) && recommendedVidrios.includes(currentGlass);
   const showSelectedCustomChip =
@@ -42,12 +45,20 @@ export function PasoDosWizardVidrioMovil({
 
   return (
     <>
-      <div className={s.stepTwoMobileBlockSecundario}>
+      <div
+        className={
+          isMirrorComponent ? s.stepTwoMobileBlockHero : s.stepTwoMobileBlockSecundario
+        }
+      >
         <div className={s.stepTwoMobileBlockHeaderInline}>
           <div>
-            <div className={s.stepTwoMobileBlockLabel}>Cristal / Vidrio</div>
+            <div className={s.stepTwoMobileBlockLabel}>
+              {isMirrorComponent ? "Espejos" : "Cristal / Vidrio"}
+            </div>
             <p className={s.stepTwoMobileGlassIntro}>
-              {recommendedReason}
+              {isMirrorComponent
+                ? "Recomendado para espejos a medida."
+                : recommendedReason}
             </p>
           </div>
           <button
@@ -85,7 +96,9 @@ export function PasoDosWizardVidrioMovil({
                 aria-pressed={currentGlass === option}
               >
                 <span>{repairBrokenText(option)}</span>
-                <small className={s.stepTwoMobileChoiceChipBadge}>Sugerido</small>
+                <small className={s.stepTwoMobileChoiceChipBadge}>
+                  {isMirrorComponent ? "Recomendado" : "Sugerido"}
+                </small>
               </button>
             ))}
           </div>

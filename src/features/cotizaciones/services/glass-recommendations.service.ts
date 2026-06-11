@@ -1,3 +1,4 @@
+import { MIRROR_GLASS_THICKNESS_OPTIONS } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { normalizeBrokenText } from "@/utils/repair-broken-text";
 
 export type GlassRecommendationContext = {
@@ -121,9 +122,9 @@ const GLASS_RECOMMENDATION_RULES: readonly GlassRecommendationRule[] = [
   },
   {
     id: "espejo",
-    reason: "Opciones simples para trabajos decorativos.",
+    reason: "Espesores habituales para espejos a medida.",
     matches: ({ subtipo }) => subtipo.includes("espejo"),
-    recommendations: ["Incoloro monolitico 5mm", "Incoloro monolitico 6mm"],
+    recommendations: MIRROR_GLASS_THICKNESS_OPTIONS,
   },
 ];
 

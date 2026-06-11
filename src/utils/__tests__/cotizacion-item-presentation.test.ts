@@ -80,6 +80,10 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       encodedCostInputScope: "",
+      mirrorFormat: "single",
+      mirrorPaneCount: null,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -115,6 +119,10 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       encodedCostInputScope: "",
+      mirrorFormat: "single",
+      mirrorPaneCount: null,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
       raw: "Cierre de terraza",
     });
   });
@@ -153,6 +161,33 @@ describe("cotizacion-item-presentation", () => {
         sheetVariant: "",
         customSchemeDescription: "3 hojas con pano fijo superior",
         isCustomScheme: true,
+      })
+    );
+  });
+
+  it("debe codificar formato de espejo dividido sin mezclarlo con observaciones visibles", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      sistema: "Muro",
+      mirrorFormat: "divided",
+      mirrorPaneCount: 6,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "marked",
+      raw: "Nota interna",
+    });
+
+    expect(encoded).toContain("[mf:divided]");
+    expect(encoded).toContain("[mpc:6]");
+    expect(encoded).toContain("[mpd:vertical]");
+    expect(encoded).toContain("[mil:marked]");
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        mirrorFormat: "divided",
+        mirrorPaneCount: 6,
+        mirrorPaneDirection: "vertical",
+        mirrorInteriorLine: "marked",
+        raw: "Nota interna",
       })
     );
   });
@@ -228,6 +263,10 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       encodedCostInputScope: "",
+      mirrorFormat: "single",
+      mirrorPaneCount: null,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
       raw: "",
     });
   });
@@ -263,6 +302,10 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       encodedCostInputScope: "",
+      mirrorFormat: "single",
+      mirrorPaneCount: null,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
       raw: "Ventana corredera",
     });
   });

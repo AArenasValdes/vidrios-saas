@@ -17,10 +17,12 @@ import {
   formatCurrencyInput,
   getSheetVariantOptions,
   requiresCustomSheetDescription,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormLinePricingSummary,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { buildCotizacionMirrorPaneMeasure } from "@/utils/cotizacion-item-presentation";
 import {
   getComponentDescripcion,
   getSystemDisplayLabel,
@@ -97,6 +99,11 @@ type Props = {
   onSheetSchemeChange: (value: string) => void;
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
+  onMirrorFormatChange: (value: PasoDosGrupoDraft["mirrorFormat"]) => void;
+  onMirrorPaneCountChange: (value: number | null) => void;
+  onMirrorCustomPaneCountChange: (value: string) => void;
+  onMirrorPaneDirectionChange: (value: PasoDosGrupoDraft["mirrorPaneDirection"]) => void;
+  onMirrorInteriorLineChange: (value: PasoDosGrupoDraft["mirrorInteriorLine"]) => void;
   onPrecioChange: (value: string) => void;
   onPricingModeChange: (mode: PricingMode) => void;
   onSistemaChange: (value: string) => void;
@@ -160,6 +167,11 @@ export function PasoDosWizardConfiguracionMovil({
   onSheetSchemeChange,
   onSheetVariantChange,
   onCustomSchemeDescriptionChange,
+  onMirrorFormatChange,
+  onMirrorPaneCountChange,
+  onMirrorCustomPaneCountChange,
+  onMirrorPaneDirectionChange,
+  onMirrorInteriorLineChange,
   onPrecioChange,
   onPricingModeChange,
   onSistemaChange,
@@ -212,6 +224,7 @@ export function PasoDosWizardConfiguracionMovil({
     sistema: draft.sistema,
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
+  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(draft.subtipo);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const freeValueGuidance = getComponentDescripcion(draft.subtipo);
@@ -233,6 +246,24 @@ export function PasoDosWizardConfiguracionMovil({
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
   });
+  const isMirrorComponent = draft.subtipo.trim().toLowerCase() === "espejo";
+  const mirrorPaneCountOptions = [2, 3, 4, 5, 6] as const;
+  const isCustomMirrorPaneCount =
+    draft.mirrorFormat === "divided" &&
+    (draft.mirrorCustomPaneCount.trim() !== "" ||
+      (draft.mirrorPaneCount !== null && !mirrorPaneCountOptions.includes(
+        draft.mirrorPaneCount as (typeof mirrorPaneCountOptions)[number]
+      )));
+  const mirrorPaneMeasure = buildCotizacionMirrorPaneMeasure({
+    ancho: draft.ancho ? Number(draft.ancho) : null,
+    alto: draft.alto ? Number(draft.alto) : null,
+    mirrorPaneCount: draft.mirrorPaneCount,
+    mirrorPaneDirection: draft.mirrorPaneDirection,
+  });
+  const mirrorPaneHelp =
+    draft.mirrorFormat === "divided" && draft.mirrorPaneCount && mirrorPaneMeasure
+      ? `${draft.mirrorPaneCount} pa\u00f1os de ${mirrorPaneMeasure.label}`
+      : "Ingresa medidas y cantidad de pa\u00f1os para ver la medida aproximada.";
   const globalTotalInputValue =
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
@@ -951,6 +982,127 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ) : null}
 
+      {isMirrorComponent ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockLabel}>Formato del espejo</div>
+          <div className={s.stepTwoMobileChoiceChips}>
+            <button
+              className={`${s.stepTwoMobileChoiceChip} ${
+                draft.mirrorFormat === "single" ? s.stepTwoMobileChoiceChipActive : ""
+              }`}
+              onClick={() => onMirrorFormatChange("single")}
+              type="button"
+            >
+              1 paño
+            </button>
+            <button
+              className={`${s.stepTwoMobileChoiceChip} ${
+                draft.mirrorFormat === "divided" ? s.stepTwoMobileChoiceChipActive : ""
+              }`}
+              onClick={() => onMirrorFormatChange("divided")}
+              type="button"
+            >
+              Dividido en paños
+            </button>
+          </div>
+
+          {draft.mirrorFormat === "divided" ? (
+            <>
+              <div className={s.stepTwoMobileBlockHelp}>Cantidad de paños</div>
+              <div className={s.stepTwoMobileChoiceChips}>
+                {mirrorPaneCountOptions.map((option) => (
+                  <button
+                    key={option}
+                    className={`${s.stepTwoMobileChoiceChip} ${
+                      draft.mirrorPaneCount === option && !isCustomMirrorPaneCount
+                        ? s.stepTwoMobileChoiceChipActive
+                        : ""
+                    }`}
+                    onClick={() => onMirrorPaneCountChange(option)}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                ))}
+                <button
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    isCustomMirrorPaneCount ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() =>
+                    onMirrorCustomPaneCountChange(
+                      draft.mirrorCustomPaneCount || String(draft.mirrorPaneCount ?? "")
+                    )
+                  }
+                  type="button"
+                >
+                  Personalizado
+                </button>
+              </div>
+
+              {isCustomMirrorPaneCount ? (
+                <label className={s.stepTwoMobileInlineField}>
+                  <span className={s.label}>Cantidad personalizada</span>
+                  <input
+                    className={s.input}
+                    inputMode="numeric"
+                    placeholder="Ej: 8"
+                    type="text"
+                    value={draft.mirrorCustomPaneCount}
+                    onChange={(event) => onMirrorCustomPaneCountChange(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              <div className={s.stepTwoMobileBlockHelp}>Dirección</div>
+              <div className={s.stepTwoMobileChoiceChips}>
+                <button
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    draft.mirrorPaneDirection === "vertical" ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onMirrorPaneDirectionChange("vertical")}
+                  type="button"
+                >
+                  Vertical
+                </button>
+                <button
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    draft.mirrorPaneDirection === "horizontal" ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onMirrorPaneDirectionChange("horizontal")}
+                  type="button"
+                >
+                  Horizontal
+                </button>
+              </div>
+
+              <div className={s.stepTwoMobileBlockHelp}>Línea interior</div>
+              <div className={s.stepTwoMobileChoiceChips}>
+                <button
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    draft.mirrorInteriorLine === "fine" ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onMirrorInteriorLineChange("fine")}
+                  type="button"
+                >
+                  Línea fina
+                </button>
+                <button
+                  className={`${s.stepTwoMobileChoiceChip} ${
+                    draft.mirrorInteriorLine === "marked" ? s.stepTwoMobileChoiceChipActive : ""
+                  }`}
+                  onClick={() => onMirrorInteriorLineChange("marked")}
+                  type="button"
+                >
+                  Junta marcada
+                </button>
+              </div>
+
+              <span className={s.stepTwoMobileBlockHelp}>{mirrorPaneHelp}</span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       {!isTrabajoPersonalizado && !isFreeValue && draft.subtipo === "Puerta" ? (
         <div className={s.stepTwoMobileBlockSecundario}>
           <div className={s.stepTwoMobileBlockLabel}>Palillo</div>
@@ -1041,25 +1193,27 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ) : null}
 
-      <div className={s.stepTwoMobileBlockSecundario}>
-        <div className={s.stepTwoMobileBlockLabel}>Material</div>
-        <div className={s.stepTwoMobileMaterialGrid}>
-          {(["Aluminio", "PVC"] as const).map((material) => (
-            <button
-              key={material}
-              className={`${s.stepTwoMobileMaterialButton} ${draft.material === material ? s.stepTwoMobileMaterialButtonActive : ""}`}
-              onClick={() => {
-                setShowAllColors(false);
-                closeLineSelector();
-                onMaterialChange(material);
-              }}
-              type="button"
-            >
-              <span className={s.stepTwoMobileMaterialButtonLabel}>{material}</span>
-            </button>
-          ))}
+      {requiresProfileMaterial ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockLabel}>Material</div>
+          <div className={s.stepTwoMobileMaterialGrid}>
+            {(["Aluminio", "PVC"] as const).map((material) => (
+              <button
+                key={material}
+                className={`${s.stepTwoMobileMaterialButton} ${draft.material === material ? s.stepTwoMobileMaterialButtonActive : ""}`}
+                onClick={() => {
+                  setShowAllColors(false);
+                  closeLineSelector();
+                  onMaterialChange(material);
+                }}
+                type="button"
+              >
+                <span className={s.stepTwoMobileMaterialButtonLabel}>{material}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className={s.stepTwoMobileBlockSecundario}>
         <div className={s.stepTwoMobileBlockHeaderInline}>
@@ -1104,12 +1258,18 @@ export function PasoDosWizardConfiguracionMovil({
               <div className={s.stepTwoMobileLineSheetHeading}>
                 <div className={s.stepTwoMobileBlockLabel}>Línea comercial</div>
                 <strong className={s.stepTwoMobileLineSheetTitle}>
-                  {lineSheetView === "create" ? `Nueva línea ${draft.material}` : "Elegir línea"}
+                  {lineSheetView === "create"
+                    ? requiresProfileMaterial
+                      ? `Nueva línea ${draft.material}`
+                      : "Nueva línea"
+                    : "Elegir línea"}
                 </strong>
                 <span className={s.stepTwoMobileLineSheetSubtitle}>
                   {lineSheetView === "create"
                     ? "Guárdala para usarla ahora y reutilizarla en futuras cotizaciones."
-                    : `Mostrando líneas de ${draft.material}. Usa una guardada o cotiza con precio manual.`}
+                    : requiresProfileMaterial
+                      ? `Mostrando líneas de ${draft.material}. Usa una guardada o cotiza con precio manual.`
+                      : "Usa una línea guardada o cotiza con precio manual."}
                 </span>
               </div>
               <button className={s.stepTwoMobileLineSheetClose} onClick={closeLineSelector} type="button">
@@ -1130,20 +1290,23 @@ export function PasoDosWizardConfiguracionMovil({
                       onChange={(event) => setLineSelectorQuery(event.target.value)}
                     />
                   </div>
-                  <div className={s.stepTwoMobileLineFilterBanner}>
-                    <span
-                      className={`${s.stepTwoMobileLineFilterChip} ${
-                        draft.material === "PVC"
-                          ? s.stepTwoMobileLineFilterChipPvc
-                          : s.stepTwoMobileLineFilterChipAluminio
-                      }`}
-                    >
-                      {draft.material}
-                    </span>
-                    <span className={s.stepTwoMobileLineFilterText}>
-                      {filteredLineTemplates.length} línea{filteredLineTemplates.length === 1 ? "" : "s"} disponibles
-                    </span>
-                  </div>
+                  {requiresProfileMaterial ? (
+                    <div className={s.stepTwoMobileLineFilterBanner}>
+                      <span
+                        className={`${s.stepTwoMobileLineFilterChip} ${
+                          draft.material === "PVC"
+                            ? s.stepTwoMobileLineFilterChipPvc
+                            : s.stepTwoMobileLineFilterChipAluminio
+                        }`}
+                      >
+                        {draft.material}
+                      </span>
+                      <span className={s.stepTwoMobileLineFilterText}>
+                        {filteredLineTemplates.length} línea
+                        {filteredLineTemplates.length === 1 ? "" : "s"} disponibles
+                      </span>
+                    </div>
+                  ) : null}
                   <div className={s.stepTwoMobileLineSheetList}>
                     <button
                       className={`${s.stepTwoMobileLineOption} ${s.stepTwoMobileLineOptionUtility} ${!draft.lineTemplateId ? s.stepTwoMobileLineOptionActive : ""}`}
@@ -1209,15 +1372,17 @@ export function PasoDosWizardConfiguracionMovil({
                 </>
               ) : (
                 <div className={s.stepTwoMobileQuickLineForm}>
-                  <div
-                    className={`${s.stepTwoMobileLineFilterChip} ${
-                      draft.material === "PVC"
-                        ? s.stepTwoMobileLineFilterChipPvc
-                        : s.stepTwoMobileLineFilterChipAluminio
-                    } ${s.stepTwoMobileQuickLineMaterialBadge}`}
-                  >
-                    Material: {draft.material}
-                  </div>
+                  {requiresProfileMaterial ? (
+                    <div
+                      className={`${s.stepTwoMobileLineFilterChip} ${
+                        draft.material === "PVC"
+                          ? s.stepTwoMobileLineFilterChipPvc
+                          : s.stepTwoMobileLineFilterChipAluminio
+                      } ${s.stepTwoMobileQuickLineMaterialBadge}`}
+                    >
+                      Material: {draft.material}
+                    </div>
+                  ) : null}
 
                   <label className={s.field}>
                     <span className={s.stepTwoMobileQuickLineLabel}>Nombre comercial</span>
@@ -1584,7 +1749,7 @@ export function PasoDosWizardConfiguracionMovil({
         </div>
       ) : null}
 
-      {draft.material === "Aluminio" || draft.material === "PVC" ? (
+      {requiresProfileMaterial ? (
         <div className={s.stepTwoMobileBlockSecundario}>
           <div className={s.stepTwoMobileBlockHeaderInline}>
             <div className={s.stepTwoMobileBlockLabel}>Color perfil</div>
@@ -1680,6 +1845,7 @@ export function PasoDosWizardConfiguracionMovil({
         recommendedReason={recommendedReason}
         recommendedVidrios={recommendedVidrios}
         searchResults={searchResults}
+        subtipo={draft.subtipo}
         vidSearch={vidSearch}
       />
     </div>

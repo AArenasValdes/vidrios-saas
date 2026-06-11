@@ -23,7 +23,17 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
   return useMemo<ComponentListCardViewModel[]>(
     () =>
       params.items.map((item) => {
-        const { colorHex, referencia, material, pricingMode, displayMode } =
+        const {
+          colorHex,
+          referencia,
+          material,
+          pricingMode,
+          displayMode,
+          mirrorFormat,
+          mirrorPaneCount,
+          mirrorPaneDirection,
+          mirrorInteriorLine,
+        } =
           decodeCotizacionItemPresentationMeta(item.observaciones);
         const effectiveDraft = params.borradoresRapidos[item.id];
         const effectiveItem = item;
@@ -100,6 +110,10 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
                   colorHex,
                   maxW: 46,
                   maxH: 46,
+                  mirrorFormat,
+                  mirrorPaneCount,
+                  mirrorPaneDirection,
+                  mirrorInteriorLine,
                 }),
         };
       }),

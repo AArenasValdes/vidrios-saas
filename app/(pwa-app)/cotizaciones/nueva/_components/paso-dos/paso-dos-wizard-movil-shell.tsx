@@ -96,6 +96,11 @@ export type WizardActions = {
   onSheetSchemeChange: (value: string) => void;
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
+  onMirrorFormatChange: (value: PasoDosGrupoDraft["mirrorFormat"]) => void;
+  onMirrorPaneCountChange: (value: number | null) => void;
+  onMirrorCustomPaneCountChange: (value: string) => void;
+  onMirrorPaneDirectionChange: (value: PasoDosGrupoDraft["mirrorPaneDirection"]) => void;
+  onMirrorInteriorLineChange: (value: PasoDosGrupoDraft["mirrorInteriorLine"]) => void;
   onVidrioChange: (value: string) => void;
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
@@ -353,16 +358,23 @@ export function PasoDosWizardMovil({
     () => filterVidrios(vidSearch, orderedGlassOptions),
     [vidSearch, orderedGlassOptions]
   );
-  const glassCatalogGroups = useMemo(
-    () =>
-      GLASS_OPTIONS.map((group) => ({
-        grupo: group.grupo,
-        options: sortGlassOptions(
-          group.items.map((item) => buildGlassValue(group.prefix, item))
-        ),
-      })),
-    []
-  );
+  const glassCatalogGroups = useMemo(() => {
+    const groups = GLASS_OPTIONS.map((group) => ({
+      grupo: group.grupo,
+      options: sortGlassOptions(
+        group.items.map((item) => buildGlassValue(group.prefix, item))
+      ),
+    }));
+
+    if (wizard.draft.subtipo !== "Espejo") {
+      return groups;
+    }
+
+    const mirrorGroup = groups.find((group) => group.grupo === "Espejos");
+    const otherGroups = groups.filter((group) => group.grupo !== "Espejos");
+
+    return mirrorGroup ? [mirrorGroup, ...otherGroups] : groups;
+  }, [wizard.draft.subtipo]);
 
   const visibleSystemOptions = wizard.systemOptions.slice(0, 3);
   const displaySystemOptions = showAllSystems
@@ -570,6 +582,11 @@ export function PasoDosWizardMovil({
                   onSheetSchemeChange={wizard.onSheetSchemeChange}
                   onSheetVariantChange={wizard.onSheetVariantChange}
                   onCustomSchemeDescriptionChange={wizard.onCustomSchemeDescriptionChange}
+                  onMirrorFormatChange={wizard.onMirrorFormatChange}
+                  onMirrorPaneCountChange={wizard.onMirrorPaneCountChange}
+                  onMirrorCustomPaneCountChange={wizard.onMirrorCustomPaneCountChange}
+                  onMirrorPaneDirectionChange={wizard.onMirrorPaneDirectionChange}
+                  onMirrorInteriorLineChange={wizard.onMirrorInteriorLineChange}
                   onPrecioChange={wizard.onPrecioChange}
                   onPricingModeChange={wizard.onPricingModeChange}
                   onCobraPrecioSeparadoChange={wizard.onCobraPrecioSeparadoChange}

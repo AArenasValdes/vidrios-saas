@@ -40,6 +40,10 @@ export function buildPasoDosWizardMovilState({
       Number(draft.cantidadPersonalizada) > 0);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const shouldShowPriceField = quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
+  const hasValidMirrorFormat =
+    draft.subtipo !== "Espejo" ||
+    draft.mirrorFormat !== "divided" ||
+    Boolean(draft.mirrorPaneCount && draft.mirrorPaneCount >= 2);
   const hasCustomDescription =
     quotePricingMode === "total_global" && isFreeValue
       ? (draft.nombre ?? "").trim() !== "" && (draft.descripcion ?? "").trim() !== ""
@@ -53,6 +57,7 @@ export function buildPasoDosWizardMovilState({
         : draft.sistema.trim() !== "" &&
           (!hasPerSystem || draft.configuracion.trim() !== "") &&
           draft.vidrio.trim() !== "" &&
+          hasValidMirrorFormat &&
           isPositiveNumber(draft.ancho) &&
           isPositiveNumber(draft.alto);
   const hasRequiredPrice =

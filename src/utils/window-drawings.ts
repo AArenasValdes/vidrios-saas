@@ -26,6 +26,10 @@ export type ComponentSVGParams = {
   variant?: "default" | "pdf";
   palilloEnabled?: boolean;
   palilloType?: string;
+  mirrorFormat?: "single" | "divided";
+  mirrorPaneCount?: number | null;
+  mirrorPaneDirection?: "vertical" | "horizontal";
+  mirrorInteriorLine?: "fine" | "marked";
 };
 
 type Palette = {
@@ -1092,6 +1096,54 @@ function drawEspejoPegado(x: number, y: number, w: number, h: number, v: string,
   ].join("");
 }
 
+function mirrorPaneDividerAttrs(v: string, interiorLine: "fine" | "marked"): string {
+  const isMarked = interiorLine === "marked";
+  const strokeWidth = isMarked
+    ? dw(v) * 1.15
+    : Math.max(v === "pdf" ? 2 : 1.5, dw(v) * 0.95);
+  const opacity = isMarked ? (v === "pdf" ? 0.9 : 0.82) : v === "pdf" ? 0.75 : 0.7;
+  const dashArray = isMarked ? (v === "pdf" ? "14,8" : "12,7") : v === "pdf" ? "11,9" : "9,8";
+  return [
+    `stroke-width="${px(strokeWidth)}"`,
+    `stroke-dasharray="${dashArray}"`,
+    'stroke-linecap="round"',
+    `opacity="${opacity}"`,
+  ].join(" ");
+}
+
+function drawEspejoDividido(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  paneCount: number,
+  direction: "vertical" | "horizontal",
+  interiorLine: "fine" | "marked"
+): string {
+  const GW = gsw(v);
+  const safePaneCount = Math.max(2, Math.round(paneCount));
+  const dividerAttrs = mirrorPaneDividerAttrs(v, interiorLine);
+  const dividers = Array.from({ length: safePaneCount - 1 }, (_, index) => {
+    const position = index + 1;
+
+    if (direction === "horizontal") {
+      const lineY = y + (h / safePaneCount) * position;
+      return `<line data-mirror-pane-divider="true" x1="${px(x + 2)}" y1="${px(lineY)}" x2="${px(x + w - 2)}" y2="${px(lineY)}" stroke="${p.div}" ${dividerAttrs}/>`;
+    }
+
+    const lineX = x + (w / safePaneCount) * position;
+    return `<line data-mirror-pane-divider="true" x1="${px(lineX)}" y1="${px(y + 2)}" x2="${px(lineX)}" y2="${px(y + h - 2)}" stroke="${p.div}" ${dividerAttrs}/>`;
+  });
+
+  return [
+    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" rx="1"/>`,
+    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${p.dim}" stroke-width="1" stroke-dasharray="6,4" rx="1"/>`,
+    ...dividers,
+  ].join("");
+}
+
 // ─── Componente: Cubierta de mesa ─────────────────────────────────────────────
 
 function drawMesa(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
@@ -1268,7 +1320,11 @@ function routeDrawing(
   p: Palette,
   doorConfig?: string | null,
   palilloEnabled?: boolean,
-  palilloType?: string
+  palilloType?: string,
+  mirrorFormat?: "single" | "divided",
+  mirrorPaneCount?: number | null,
+  mirrorPaneDirection?: "vertical" | "horizontal",
+  mirrorInteriorLine?: "fine" | "marked"
 ): string {
   const binaryLeafCount: 1 | 2 = hojasBase === 1 ? 1 : 2;
 
@@ -1300,6 +1356,19 @@ function routeDrawing(
       return drawBarandaBotones(x, y, w, h, v, p); // Botones por defecto
 
     case "Espejo":
+      if (mirrorFormat === "divided" && mirrorPaneCount && mirrorPaneCount >= 2) {
+        return drawEspejoDividido(
+          x,
+          y,
+          w,
+          h,
+          v,
+          p,
+          mirrorPaneCount,
+          mirrorPaneDirection ?? "vertical",
+          mirrorInteriorLine ?? "fine"
+        );
+      }
       if (sistemaNorm === "Marco")  return drawEspejoMarco(x, y, w, h, v, p);
       if (sistemaNorm === "Pegado") return drawEspejoPegado(x, y, w, h, v, p);
       return drawEspejoMuro(x, y, w, h, v, p); // Muro por defecto
@@ -1433,7 +1502,11 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     palette,
     params.configuracion,
     params.palilloEnabled,
-    params.palilloType
+    params.palilloType,
+    params.mirrorFormat,
+    params.mirrorPaneCount,
+    params.mirrorPaneDirection,
+    params.mirrorInteriorLine
   );
 
   const dimY = variant === "pdf" ? originY - 8 : originY + drawH + 18;

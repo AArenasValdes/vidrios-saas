@@ -136,6 +136,71 @@ describe("generateComponentSVG", () => {
     expect(svg).toContain("— mm");
   });
 
+  it("dibuja espejo dividido vertical sin crear items separados", () => {
+    const svg = generateComponentSVG({
+      tipo: "Espejo",
+      sistema: "Muro",
+      ancho: 3000,
+      alto: 870,
+      mirrorFormat: "divided",
+      mirrorPaneCount: 6,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
+    });
+
+    expect((svg.match(/data-mirror-pane-divider="true"/g) ?? []).length).toBe(5);
+    expect(svg).toContain('data-mirror-pane-divider="true"');
+    expect(svg).toMatch(/data-mirror-pane-divider="true"[^>]*stroke-dasharray="/);
+    expect(svg).toMatch(/data-mirror-pane-divider="true"[^>]*stroke-linecap="round"/);
+    expect(svg).toContain("3000 mm");
+    expect(svg).toContain("870 mm");
+  });
+
+  it("dibuja espejo dividido horizontal con junta marcada", () => {
+    const svg = generateComponentSVG({
+      tipo: "Espejo",
+      sistema: "Muro",
+      ancho: 900,
+      alto: 1800,
+      mirrorFormat: "divided",
+      mirrorPaneCount: 3,
+      mirrorPaneDirection: "horizontal",
+      mirrorInteriorLine: "marked",
+    });
+
+    expect((svg.match(/data-mirror-pane-divider="true"/g) ?? []).length).toBe(2);
+    expect(svg).toMatch(/data-mirror-pane-divider="true"[^>]*stroke-dasharray="12,7"/);
+    expect(svg).toContain('opacity="0.82"');
+  });
+
+  it("usa trazo discontinuo mas visible en espejo dividido para PDF", () => {
+    const svg = generateComponentSVG({
+      tipo: "Espejo",
+      sistema: "Muro",
+      ancho: 1200,
+      alto: 1500,
+      variant: "pdf",
+      mirrorFormat: "divided",
+      mirrorPaneCount: 2,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
+    });
+
+    expect(svg).toMatch(/data-mirror-pane-divider="true"[^>]*stroke-dasharray="11,9"/);
+    expect(svg).toMatch(/data-mirror-pane-divider="true"[^>]*stroke-width="2\.4"/);
+  });
+
+  it("mantiene espejo normal sin divisiones interiores", () => {
+    const svg = generateComponentSVG({
+      tipo: "Espejo",
+      sistema: "Muro",
+      ancho: 900,
+      alto: 1800,
+    });
+
+    expect(svg).not.toContain('data-mirror-pane-divider="true"');
+  });
+
   it("usa más área útil para que el componente sea legible en pantalla", () => {
     const svg = generateComponentSVG({
       tipo: "Ventana",

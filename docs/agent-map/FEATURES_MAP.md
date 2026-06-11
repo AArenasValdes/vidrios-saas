@@ -273,7 +273,12 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx` (selector de modo inicial: 2 tarjetas)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx` (formulario standalone de item libre con preview)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (wizard desktop 5 pasos, paso 4 adaptado para items libres)
-  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` (configuracion mobile con early return para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` (configuracion mobile; oculta Material/Color perfil para `Espejo` y `Cubierta de mesa`)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx` (seccion **Espejos** con espesores recomendados 3–6 mm)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-configuracion.tsx` (material condicional desktop)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-vidrio.tsx` (bloque vidrio/espejos desktop)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-ajustes.tsx` (color avanzado solo con perfileria)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-lista-movil.tsx` (oculta chips material/color en espejo/cubierta)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-footer-movil.tsx` (footer dinamico: "Agregar item" / "Agregar componente")
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil-shell.tsx` (orquestador mobile, stages dinamicos)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil.state.ts` (validacion de estado para items libres)
@@ -301,7 +306,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/types/cotizacion-workflow.ts` (`tipoItem` field)
   - `src/features/cotizaciones/types/quote-pricing-mode.ts`
   - `src/features/cotizaciones/types/pricing-mode.ts`
-  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (~1567 lineas, `buildFreeValueItemFromForm`, `buildQuickEditDraft`, `isWorkflowItemComplete`, `applyQuickEditDraftStatesToItems`)
+  - `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`, grupo `Espejos` en `GLASS_OPTIONS`, `buildFreeValueItemFromForm`, `buildQuickEditDraft`, `isWorkflowItemComplete`, `applyQuickEditDraftStatesToItems`)
+  - `src/features/cotizaciones/new-quote/__tests__/profile-material-regression.test.ts` (regresion catalogo completo: solo Espejo/Cubierta omiten perfil)
   - `src/features/cotizaciones/new-quote/solicitud-prefill.ts`
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
   - `src/utils/cotizacion-approval.ts`
@@ -325,20 +331,21 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario.
-- **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`): no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
+- **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
 
 ---
 
 ## Feature: PDF de Cotizacion
 
-- **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa. Al descargar/abrir el PDF desde el visor interno, registra `pdf_descargado_en` en silencio y muestra toast "PDF descargado" sin modal ni cambio de estado comercial.
+- **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa. Al descargar/abrir el PDF desde el visor interno, registra `pdf_descargado_en` en silencio y muestra toast "PDF descargado" sin modal ni cambio de estado comercial. Las caracteristicas de cada item se arman con `buildCotizacionItemPrintSpecs()`; **Espejo** y **Cubierta de mesa** omiten Material y Color en la grilla sin romper el layout.
 - **Rutas involucradas**: `/print/cotizaciones/[id]`, detalle cotizacion
 - **Archivos principales**:
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
   - `src/features/cotizaciones/pdf-cache/services/cotizacion-pdf-cache.service.ts`
   - `src/features/cotizaciones/pdf-cache/repositories/cotizacion-pdf-cache.repository.ts`
   - `app/print/cotizaciones/[id]/page.tsx`
+  - `app/print/cotizaciones/[id]/_utils/item-print-specs.ts` (`buildCotizacionItemPrintSpecs`)
   - `app/api/cotizaciones/[id]/pdf-descargado/route.ts`
 - **Componentes principales**: N/A (utilidad)
 - **Hooks/servicios/actions**: `exportCotizacionPdf()`, `downloadPdfBlob()`, `recordPdfDownload()`, `markWorkflowPdfDownloaded()`, `cotizacionPdfCacheService`

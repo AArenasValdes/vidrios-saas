@@ -4,6 +4,48 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-11 - Componentes solo vidrio (Espejo y Cubierta de mesa)
+
+### Resumen
+
+Se cerro la UX de **Espejo** y **Cubierta de mesa** como componentes sin perfileria (no Aluminio/PVC). En cotizacion ya no se pide material ni color de perfil para esos dos tipos. En **Espejo** se agrego seccion dedicada de espesores recomendados (`Espejo 3mm`, `4mm`, `5mm`, `6mm`). En PDF, la grilla de **CARACTERISTICAS** omite **Material** y **Color** solo para esos tipos; ventanas, puertas y el resto del catalogo siguen igual.
+
+### Archivos nuevos o fuertemente modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/cotizaciones/new-quote/workflow-ui.ts` | `shouldRequireProfileMaterialForComponent()`, `MIRROR_GLASS_THICKNESS_OPTIONS`, grupo `Espejos` en `GLASS_OPTIONS` |
+| `src/features/cotizaciones/services/glass-recommendations.service.ts` | Regla `espejo` recomienda espesores 3–6 mm |
+| `src/features/cotizaciones/services/component-suggestions.service.ts` | Default `Espejo 4mm` para Espejo |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` | Oculta Material/Color perfil si no aplica |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx` | Seccion **Espejos** con chips recomendados |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-configuracion.tsx` | Material condicional en desktop |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-vidrio.tsx` | Titulo **Espejos recomendados** en desktop |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-ajustes.tsx` | Color avanzado oculto sin perfileria |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-lista-movil.tsx` | Chips material/color ocultos en listado |
+| `app/print/cotizaciones/[id]/_utils/item-print-specs.ts` | `buildCotizacionItemPrintSpecs()` omite Material/Color en PDF |
+| `app/print/cotizaciones/[id]/page.tsx` | Usa helper de specs para caracteristicas del item |
+| `src/features/cotizaciones/new-quote/__tests__/profile-material-regression.test.ts` | Regresion sobre todo el catalogo |
+| `app/print/cotizaciones/[id]/_utils/__tests__/item-print-specs.test.ts` | Contrato PDF por tipo |
+
+### Reglas de producto
+
+- **Fuente de verdad**: `shouldRequireProfileMaterialForComponent(tipo)` en `workflow-ui.ts`.
+- **Solo vidrio sin perfil hoy**: `Espejo`, `Cubierta de mesa`. Cualquier otro tipo nuevo solo-vidrio debe agregarse explicitamente al set interno.
+- **Cotizacion**: no mostrar selector Aluminio/PVC, no exigir material en validacion, no mostrar color de perfil ni en resumen/listado.
+- **Espejo**: recomendar `Espejo 3mm`–`6mm`; catalogo general sigue disponible via **Cambiar**.
+- **PDF**: no mostrar filas Material/Color en caracteristicas; conservar Dimensiones, Configuracion, Sistema, Linea, Vidrio, Superficie. La grilla CSS de 2 columnas se reacomoda sola.
+- **Persistencia**: el metadata interno puede seguir guardando material heredado por compatibilidad; no debe mostrarse al usuario en estos dos tipos.
+
+### Mapas actualizados
+
+- `docs/agent-map/FEATURES_MAP.md` (Cotizaciones, PDF)
+- `docs/agent-map/ROUTES_MAP.md` (`/cotizaciones/nueva`, `/print/cotizaciones/[id]`)
+- `docs/agent-map/AGENT_TASK_GUIDE.md`
+- `AGENTS.md`
+
+---
+
 ## 2026-06-11 - UX silenciosa de PDF y metricas comerciales neutrales
 
 ### Resumen

@@ -1,6 +1,6 @@
 # AGENTS.md - Ventora
 
-Lee antes de editar. Ultima consolidacion: 2026-05-09.
+Lee antes de editar. Ultima consolidacion: 2026-06-11.
 
 ## Regla principal
 
@@ -74,6 +74,15 @@ Ultima actualizacion operativa: 2026-06-11
   - `/configuracion/empresa` ahora expone bloque compacto `Lineas y precios base`
   - override manual protegido con accion `Recalcular con plantilla`
   - calculadora integrada secundaria en edicion rapida
+
+### Ya resuelto en pasada 2026-06-11 (Espejo y Cubierta de mesa sin perfileria)
+
+- `Espejo` y `Cubierta de mesa` ya no piden Aluminio/PVC ni color de perfil en Paso 2 (movil y desktop)
+- Fuente de verdad: `shouldRequireProfileMaterialForComponent()` en `workflow-ui.ts`
+- Espejo muestra seccion **Espejos** con recomendados `3mm`, `4mm`, `5mm`, `6mm` (`MIRROR_GLASS_THICKNESS_OPTIONS`)
+- PDF omite filas **Material** y **Color** solo para esos dos tipos via `buildCotizacionItemPrintSpecs()`
+- Regresion: `profile-material-regression.test.ts` + `item-print-specs.test.ts`
+- Ventanas, puertas y demas componentes con perfileria siguen igual
 
 ### Ya resuelto en pasada 2026-06-11 (UX estados y metricas cotizaciones)
 
@@ -161,7 +170,7 @@ Ultima actualizacion operativa: 2026-06-11
   - `/cotizaciones/[id]`
   - flujos profundos de `/cotizaciones/nueva`
   - acciones de edicion/eliminacion en `/clientes`
-- Actualizar `docs/agent-map/` si cambian rutas, features, tablas o componentes en la siguiente pasada
+- Correr smoke visual de Espejo/Cubierta de mesa en cotizacion y PDF si se toca `shouldRequireProfileMaterialForComponent` o `item-print-specs.ts`
 - Mantener foco en Fase 2: captacion, centralizacion y cierre comercial; no abrir pipeline Kanban ni modulos posteriores
 
 ## Notas de QA

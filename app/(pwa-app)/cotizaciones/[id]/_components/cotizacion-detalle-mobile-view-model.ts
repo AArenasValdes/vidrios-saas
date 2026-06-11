@@ -6,7 +6,12 @@ import {
   resolveCotizacionClosureState,
   resolveCotizacionWorkflowState,
 } from "@/features/cotizaciones/services/cotizacion-display-state.service";
-import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import {
+  buildCotizacionMirrorFormatLabel,
+  buildCotizacionMirrorPaneMeasure,
+  decodeCotizacionItemPresentationMeta,
+  isCotizacionMirrorDivided,
+} from "@/utils/cotizacion-item-presentation";
 import { repairBrokenText } from "@/utils/repair-broken-text";
 
 const CLP_FORMATTER = new Intl.NumberFormat("es-CL", {
@@ -101,8 +106,27 @@ function resolveResponseChannelLabel(value: string | null | undefined) {
 function buildItemMeta(item: CotizacionWorkflowItem) {
   const size =
     item.ancho && item.alto ? `${item.ancho} × ${item.alto} mm` : "Medidas por definir";
-  const { referencia } = decodeCotizacionItemPresentationMeta(item.observaciones);
-  const lineLabel = referencia.trim() ? `Línea ${referencia.trim()}` : null;
+  const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const { referencia } = meta;
+  const mirrorFormatLabel = isCotizacionMirrorDivided({
+    tipo: item.tipo,
+    mirrorFormat: meta.mirrorFormat,
+    mirrorPaneCount: meta.mirrorPaneCount,
+  })
+    ? buildCotizacionMirrorFormatLabel({ mirrorPaneCount: meta.mirrorPaneCount })
+    : null;
+  const mirrorPaneMeasure = mirrorFormatLabel
+    ? buildCotizacionMirrorPaneMeasure({
+        ancho: item.ancho,
+        alto: item.alto,
+        mirrorPaneCount: meta.mirrorPaneCount,
+        mirrorPaneDirection: meta.mirrorPaneDirection,
+      })?.label ?? null
+    : null;
+  const referenceLabel = referencia.trim() ? `Línea ${referencia.trim()}` : null;
+  const lineLabel = [mirrorFormatLabel, mirrorPaneMeasure, referenceLabel]
+    .filter(Boolean)
+    .join(" · ");
 
   return [size, `${item.cantidad} ud`, lineLabel].filter(Boolean).join(" · ");
 }

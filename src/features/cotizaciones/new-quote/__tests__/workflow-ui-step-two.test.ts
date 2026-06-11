@@ -12,6 +12,7 @@ import {
   GLASS_OPTIONS,
   buildQuickEditDraft,
   resolveWorkflowItemDisplayName,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
   syncTemplatePricingInComponentForm,
@@ -57,6 +58,11 @@ function createLinePricingForm(
     observaciones: "",
     colorHex: "#a8a8a8",
     loteCantidad: "1",
+    mirrorFormat: "single",
+    mirrorPaneCount: null,
+    mirrorPaneDirection: "vertical",
+    mirrorInteriorLine: "fine",
+    mirrorCustomPaneCount: "",
     ...overrides,
   };
 }
@@ -760,6 +766,26 @@ describe("workflow-ui paso 2", () => {
     expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
   });
 
+  it("no debe exigir material de perfil para espejos ni cubiertas de mesa", () => {
+    expect(shouldRequireProfileMaterialForComponent("Espejo")).toBe(false);
+    expect(shouldRequireProfileMaterialForComponent("Cubierta de mesa")).toBe(false);
+    expect(shouldRequireProfileMaterialForComponent("Ventana")).toBe(true);
+
+    const errors = validateComponentForm(
+      {
+        ...createLinePricingForm(),
+        tipo: "Espejo",
+        material: "",
+        sistema: "Muro",
+        configuracion: "Pulido",
+      },
+      [],
+      null
+    );
+
+    expect(errors.material).toBeUndefined();
+  });
+
   it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {
     const item = buildItemFromForm(
       {
@@ -910,5 +936,47 @@ describe("workflow-ui paso 2", () => {
     expect(savedItem.ancho).toBe(2000);
     expect(savedItem.alto).toBe(1500);
     expect(savedItem.precioUnitario).toBe(225000);
+  });
+
+  it("debe guardar espejo dividido como un solo item con descripcion comercial y mismo precio total", () => {
+    const item = buildItemFromForm(
+      createLinePricingForm({
+        codigo: "E1",
+        tipo: "Espejo",
+        sistema: "Muro",
+        configuracion: "Pulido",
+        sheetScheme: "",
+        sheetVariant: "",
+        referencia: "Muro - Pulido",
+        vidrio: "Espejo 4mm",
+        ancho: "3000",
+        alto: "870",
+        cantidad: "1",
+        precioPorM2: "50000",
+        costoProveedorUnitario: "131000",
+        precioPlantillaSugerido: "131000",
+        mirrorFormat: "divided",
+        mirrorPaneCount: 6,
+        mirrorPaneDirection: "vertical",
+        mirrorInteriorLine: "fine",
+      }),
+      [],
+      null
+    );
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(item.nombre).toBe("Espejo mural dividido en 6 paños");
+    expect(item.descripcion).toContain("Medida total: 3000 x 870 mm");
+    expect(item.descripcion).toContain("Medida por paño: 500 x 870 mm aprox.");
+    expect(item.cantidad).toBe(1);
+    expect(item.precioTotal).toBe(131000);
+    expect(meta).toEqual(
+      expect.objectContaining({
+        mirrorFormat: "divided",
+        mirrorPaneCount: 6,
+        mirrorPaneDirection: "vertical",
+        mirrorInteriorLine: "fine",
+      })
+    );
   });
 });

@@ -15,7 +15,9 @@ import {
   normalizeCurrencyInput,
   MATERIAL_OPTIONS,
   PVC_COLOR_OPTIONS,
+  MIRROR_GLASS_THICKNESS_OPTIONS,
   normalizeSearchValue,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
   syncTemplatePricingInComponentForm,
@@ -91,6 +93,11 @@ export type PasoDosGrupoDraft = {
   sheetVariant: string;
   customSchemeDescription: string;
   isCustomScheme: boolean;
+  mirrorFormat: NonNullable<ComponentFormState["mirrorFormat"]>;
+  mirrorPaneCount: number | null;
+  mirrorPaneDirection: NonNullable<ComponentFormState["mirrorPaneDirection"]>;
+  mirrorInteriorLine: NonNullable<ComponentFormState["mirrorInteriorLine"]>;
+  mirrorCustomPaneCount: string;
   vidrio: string;
   lineTemplateId: string;
   referencia: string;
@@ -440,7 +447,7 @@ export function getGlassOptionsForSubtype(subtipo: string) {
   const normalizedSubtype = normalizeSearchValue(subtipo);
   const preferredOptions =
     normalizedSubtype === "espejo"
-      ? ["Esmerilado / Satinado", "Incoloro monolitico 5mm", "Laminado 3+3"]
+      ? [...MIRROR_GLASS_THICKNESS_OPTIONS, "Esmerilado / Satinado"]
       : normalizedSubtype === "shower door" || normalizedSubtype === "baranda"
         ? ["Templado 8mm", "Templado 10mm", "Templado 12mm", "Laminado 4+4"]
         : ["Incoloro monolitico 5mm", "Incoloro monolitico 6mm", "DVH 4+9+4", "Templado 8mm"];
@@ -470,18 +477,22 @@ export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
     isCustomScheme: draft.isCustomScheme,
   });
 
+  const materialSegment = shouldRequireProfileMaterialForComponent(draft.subtipo)
+    ? ` ${draft.material.toLowerCase()}`
+    : "";
+
   if (
     shouldShowSheetSchemeForComponent({ tipo: draft.subtipo, sistema: draft.sistema }) &&
     sheetLabel
   ) {
-    return `${cantidad} ${baseName} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
+    return `${cantidad} ${baseName}${materialSegment} con ${draft.vidrio.toLowerCase()}`;
   }
 
   const systemSegment = shouldShowSystemSelectionForComponent(draft.subtipo)
     ? ` ${systemLabel.toLowerCase()}`
     : "";
 
-  return `${cantidad} ${subtipo}${systemSegment} ${draft.material.toLowerCase()} con ${draft.vidrio.toLowerCase()}`;
+  return `${cantidad} ${subtipo}${systemSegment}${materialSegment} con ${draft.vidrio.toLowerCase()}`;
 }
 
 export function createInitialPasoDosGrupoDraft({
@@ -533,6 +544,11 @@ export function createInitialPasoDosGrupoDraft({
     sheetVariant: seedForm?.sheetVariant ?? "",
     customSchemeDescription: seedForm?.customSchemeDescription ?? "",
     isCustomScheme: seedForm?.isCustomScheme ?? false,
+    mirrorFormat: seedForm?.mirrorFormat ?? "single",
+    mirrorPaneCount: seedForm?.mirrorPaneCount ?? null,
+    mirrorPaneDirection: seedForm?.mirrorPaneDirection ?? "vertical",
+    mirrorInteriorLine: seedForm?.mirrorInteriorLine ?? "fine",
+    mirrorCustomPaneCount: seedForm?.mirrorCustomPaneCount ?? "",
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     referencia,
@@ -574,6 +590,11 @@ export function buildPasoDosGrupoComponentForm({
       sheetVariant: draft.sheetVariant,
       customSchemeDescription: draft.customSchemeDescription,
       isCustomScheme: draft.isCustomScheme,
+      mirrorFormat: draft.mirrorFormat,
+      mirrorPaneCount: draft.mirrorPaneCount,
+      mirrorPaneDirection: draft.mirrorPaneDirection,
+      mirrorInteriorLine: draft.mirrorInteriorLine,
+      mirrorCustomPaneCount: draft.mirrorCustomPaneCount,
       nombre: draft.nombre ?? "",
       descripcion: draft.descripcion ?? "",
       pricingMode: draft.pricingMode,
@@ -602,6 +623,11 @@ export function buildPasoDosGrupoComponentForm({
     sheetVariant: draft.sheetVariant,
     customSchemeDescription: draft.customSchemeDescription,
     isCustomScheme: draft.isCustomScheme,
+    mirrorFormat: draft.mirrorFormat,
+    mirrorPaneCount: draft.mirrorPaneCount,
+    mirrorPaneDirection: draft.mirrorPaneDirection,
+    mirrorInteriorLine: draft.mirrorInteriorLine,
+    mirrorCustomPaneCount: draft.mirrorCustomPaneCount,
     nombre: draft.nombre ?? "",
     descripcion: draft.descripcion ?? "",
     lineTemplateId: draft.lineTemplateId,
@@ -640,34 +666,7 @@ export function buildPasoDosGrupoSelectionPatch({
   const defaultSistema = systemOptions[0] || "";
   const configurationOptions = getConfigurationOptionsForSubtype(subtipo, defaultSistema);
 
-  return {
-    subtipo,
-    hojasBase: getBaseLeafCountForComponent(subtipo),
-    cantidad: current.cantidad > 0 ? current.cantidad : 1,
-    usaCantidadPersonalizada: false,
-    cantidadPersonalizada: "",
-    pricingMode: normalizePricingMode(current.pricingMode),
-    material: suggestedForm.material,
-    colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
-    sistema: defaultSistema,
-    configuracion: configurationOptions[0] || "",
-    sheetScheme: "",
-    sheetVariant: "",
-    customSchemeDescription: "",
-    isCustomScheme: false,
-    nombre: buildDefaultFreeValueName(subtipo),
-    descripcion: isFreeValueComponentType(subtipo)
-      ? ""
-      : subtipo === "Trabajo personalizado"
-        ? ""
-        : suggestedForm.descripcion,
-    cobraPrecioSeparado: false,
-    alcanceDetalles: [],
-    vidrio: suggestedForm.vidrio,
-    palilloEnabled: false,
-    palilloType: "",
-    costInputScope: "group_total" as CostInputScope,
-  } satisfies Pick<
+  const selectionPatch: Pick<
     PasoDosGrupoDraft,
     | "subtipo"
     | "hojasBase"
@@ -683,6 +682,11 @@ export function buildPasoDosGrupoSelectionPatch({
     | "sheetVariant"
     | "customSchemeDescription"
     | "isCustomScheme"
+    | "mirrorFormat"
+    | "mirrorPaneCount"
+    | "mirrorPaneDirection"
+    | "mirrorInteriorLine"
+    | "mirrorCustomPaneCount"
     | "nombre"
     | "descripcion"
     | "cobraPrecioSeparado"
@@ -691,7 +695,41 @@ export function buildPasoDosGrupoSelectionPatch({
     | "palilloEnabled"
     | "palilloType"
     | "costInputScope"
-  >;
+  > = {
+    subtipo,
+    hojasBase: getBaseLeafCountForComponent(subtipo),
+    cantidad: current.cantidad > 0 ? current.cantidad : 1,
+    usaCantidadPersonalizada: false,
+    cantidadPersonalizada: "",
+    pricingMode: normalizePricingMode(current.pricingMode),
+    material: suggestedForm.material,
+    colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
+    sistema: defaultSistema,
+    configuracion: configurationOptions[0] || "",
+    sheetScheme: "",
+    sheetVariant: "",
+    customSchemeDescription: "",
+    isCustomScheme: false,
+    mirrorFormat: "single",
+    mirrorPaneCount: null,
+    mirrorPaneDirection: "vertical",
+    mirrorInteriorLine: "fine",
+    mirrorCustomPaneCount: "",
+    nombre: buildDefaultFreeValueName(subtipo),
+    descripcion: isFreeValueComponentType(subtipo)
+      ? ""
+      : subtipo === "Trabajo personalizado"
+        ? ""
+        : suggestedForm.descripcion,
+    cobraPrecioSeparado: false,
+    alcanceDetalles: [],
+    vidrio: suggestedForm.vidrio,
+    palilloEnabled: false,
+    palilloType: "",
+    costInputScope: "group_total" as CostInputScope,
+  };
+
+  return selectionPatch;
 }
 
 export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
@@ -968,6 +1006,47 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
+  const updateMirrorFormat = (mirrorFormat: PasoDosGrupoDraft["mirrorFormat"]) => {
+    setDraft((current) => ({
+      ...current,
+      mirrorFormat,
+      mirrorPaneCount: mirrorFormat === "divided" ? current.mirrorPaneCount ?? 2 : null,
+      mirrorCustomPaneCount: mirrorFormat === "divided" ? current.mirrorCustomPaneCount : "",
+    }));
+  };
+
+  const updateMirrorPaneCount = (paneCount: number | null) => {
+    setDraft((current) => ({
+      ...current,
+      mirrorPaneCount: paneCount && paneCount >= 2 ? Math.round(paneCount) : null,
+      mirrorCustomPaneCount: "",
+    }));
+  };
+
+  const updateMirrorCustomPaneCount = (value: string) => {
+    const digitsOnly = sanitizeDigits(value);
+    const parsed = Number.parseInt(digitsOnly || "0", 10);
+
+    setDraft((current) => ({
+      ...current,
+      mirrorFormat: "divided",
+      mirrorCustomPaneCount: digitsOnly,
+      mirrorPaneCount: parsed >= 2 ? parsed : null,
+    }));
+  };
+
+  const updateMirrorPaneDirection = (
+    mirrorPaneDirection: PasoDosGrupoDraft["mirrorPaneDirection"]
+  ) => {
+    setDraft((current) => ({ ...current, mirrorPaneDirection }));
+  };
+
+  const updateMirrorInteriorLine = (
+    mirrorInteriorLine: PasoDosGrupoDraft["mirrorInteriorLine"]
+  ) => {
+    setDraft((current) => ({ ...current, mirrorInteriorLine }));
+  };
+
   const updateNombre = (nombre: string) => {
     setDraft((current) => ({ ...current, nombre }));
   };
@@ -1124,6 +1203,11 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,
+    updateMirrorFormat,
+    updateMirrorPaneCount,
+    updateMirrorCustomPaneCount,
+    updateMirrorPaneDirection,
+    updateMirrorInteriorLine,
     updateNombre,
     updateDescripcion,
     updateIvaMode,

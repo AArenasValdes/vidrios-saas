@@ -18,6 +18,7 @@ const VIDRIO_SEARCH_ALIASES: Record<string, string> = {
   lam: "laminado",
   ref: "reflectivo",
   esm: "esmerilado",
+  esp: "espejo",
   sat: "satinado",
   cat: "catedral",
   acan: "acanalado",
@@ -53,6 +54,7 @@ function normalizeGlassLabel(value: string) {
 function getGlassCategoryRank(option: string) {
   const normalized = normalizeGlassLabel(option);
 
+  if (normalized.includes("espejo")) return -1;
   if (normalized.includes("incoloro monolit")) return 0;
   if (normalized.includes("dvh") || normalized.includes("termopanel")) return 1;
   if (normalized.includes("laminado")) return 2;

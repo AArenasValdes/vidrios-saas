@@ -40,11 +40,13 @@ export function PasoDosFormularioBloqueVidrio({
     return null;
   }
 
+  const isMirrorComponent = componentForm.tipo === "Espejo";
+
   return (
     <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
       <div className={s.formSectionHead}>
-        <span className={s.formSectionEyebrow}>Vidrio</span>
-        <strong>Vidrio</strong>
+        <span className={s.formSectionEyebrow}>{isMirrorComponent ? "Espejos" : "Vidrio"}</span>
+        <strong>{isMirrorComponent ? "Espejos recomendados" : "Vidrio"}</strong>
         {!isMobileViewport ? <p>Dejalo visible desde el inicio porque suele cambiar en terreno.</p> : null}
       </div>
 
@@ -85,9 +87,11 @@ export function PasoDosFormularioBloqueVidrio({
                 <div className={s.stepTwoMobileGlassRecommendedBox}>
                   <div className={s.stepTwoMobileGlassRecommendedHeader}>
                     <strong>
-                      {lineTemplateRecommendedGlass
-                        ? "Recomendado para esta linea"
-                        : "Vidrios sugeridos"}
+                      {isMirrorComponent
+                        ? "Recomendado para espejos"
+                        : lineTemplateRecommendedGlass
+                          ? "Recomendado para esta linea"
+                          : "Vidrios sugeridos"}
                     </strong>
                     <span>{recommendedGlassReason}</span>
                   </div>

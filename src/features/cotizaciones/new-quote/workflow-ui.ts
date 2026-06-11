@@ -16,8 +16,13 @@ import type {
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 import {
+  buildCotizacionMirrorPaneMeasure,
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
+  isCotizacionMirrorDivided,
+  type CotizacionMirrorFormat,
+  type CotizacionMirrorInteriorLine,
+  type CotizacionMirrorPaneDirection,
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import {
@@ -74,6 +79,11 @@ export type ComponentFormState = {
   palilloEnabled?: boolean;
   palilloType?: string;
   costInputScope?: CostInputScope;
+  mirrorFormat?: CotizacionMirrorFormat;
+  mirrorPaneCount?: number | null;
+  mirrorPaneDirection?: CotizacionMirrorPaneDirection;
+  mirrorInteriorLine?: CotizacionMirrorInteriorLine;
+  mirrorCustomPaneCount?: string;
 };
 
 export type FieldErrors = Partial<
@@ -241,6 +251,11 @@ export const GLASS_OPTIONS = [
     prefix: "Templado",
   },
   {
+    grupo: "Espejos",
+    items: ["3mm", "4mm", "5mm", "6mm"],
+    prefix: "Espejo",
+  },
+  {
     grupo: "Reflectivo",
     items: ["Cafe 6mm", "Gris 6mm", "Azul 6mm"],
     prefix: "Reflectivo",
@@ -267,6 +282,13 @@ export const GLASS_OPTIONS = [
     ],
     prefix: "Acrílico",
   },
+] as const;
+
+export const MIRROR_GLASS_THICKNESS_OPTIONS = [
+  "Espejo 3mm",
+  "Espejo 4mm",
+  "Espejo 5mm",
+  "Espejo 6mm",
 ] as const;
 
 export const STATUS_COPY = {
@@ -567,6 +589,15 @@ export function shouldShowSystemSelectionForComponent(tipo: string) {
   return normalizedTipo !== "pano fijo" && normalizedTipo !== "paño fijo";
 }
 
+const GLASS_ONLY_COMPONENT_TYPES = new Set([
+  normalizeSearchValue("Espejo"),
+  normalizeSearchValue("Cubierta de mesa"),
+]);
+
+export function shouldRequireProfileMaterialForComponent(tipo: string) {
+  return !GLASS_ONLY_COMPONENT_TYPES.has(normalizeSearchValue(tipo));
+}
+
 export function getSheetSchemeOptions(input: { tipo: string; sistema?: string | null }) {
   const tipo = normalizeSearchValue(input.tipo);
   const sistema = normalizeSearchValue(input.sistema ?? "");
@@ -691,6 +722,71 @@ export function buildCommercialComponentDisplayName(
   const displaySchemeLabel = shouldAvoidDuplicatedSystem ? lowerFirst(schemeLabel) : schemeLabel;
 
   return displaySchemeLabel ? `${base} ${displaySchemeLabel}` : base;
+}
+
+function buildMirrorSystemLabel(sistema: string) {
+  const normalized = normalizeComparableComponentText(sistema);
+
+  if (!normalized || normalized === "muro") {
+    return "mural";
+  }
+
+  if (normalized === "pegado") {
+    return "pegado";
+  }
+
+  if (normalized.includes("instalacion")) {
+    return "con instalacion";
+  }
+
+  return sistema.trim().toLowerCase();
+}
+
+function buildDividedMirrorDisplayName(
+  form: Pick<ComponentFormState, "tipo" | "sistema" | "mirrorFormat" | "mirrorPaneCount">
+) {
+  if (
+    !isCotizacionMirrorDivided({
+      tipo: form.tipo,
+      mirrorFormat: form.mirrorFormat ?? "single",
+      mirrorPaneCount: form.mirrorPaneCount ?? null,
+    })
+  ) {
+    return "";
+  }
+
+  return `Espejo ${buildMirrorSystemLabel(form.sistema ?? "")} dividido en ${form.mirrorPaneCount} pa\u00f1os`;
+}
+
+function buildDividedMirrorDescription(
+  form: Pick<
+    ComponentFormState,
+    "tipo" | "ancho" | "alto" | "mirrorFormat" | "mirrorPaneCount" | "mirrorPaneDirection"
+  >
+) {
+  const ancho = form.ancho ? Number(form.ancho) : null;
+  const alto = form.alto ? Number(form.alto) : null;
+  const paneMeasure = buildCotizacionMirrorPaneMeasure({
+    ancho,
+    alto,
+    mirrorPaneCount: form.mirrorPaneCount ?? null,
+    mirrorPaneDirection: form.mirrorPaneDirection ?? "vertical",
+  });
+
+  if (
+    !isCotizacionMirrorDivided({
+      tipo: form.tipo,
+      mirrorFormat: form.mirrorFormat ?? "single",
+      mirrorPaneCount: form.mirrorPaneCount ?? null,
+    }) ||
+    !ancho ||
+    !alto ||
+    !paneMeasure
+  ) {
+    return "";
+  }
+
+  return `Medida total: ${Math.round(ancho)} x ${Math.round(alto)} mm\nMedida por pa\u00f1o: ${paneMeasure.label}`;
 }
 
 function normalizeComparableComponentText(value: string) {
@@ -1295,6 +1391,11 @@ export function buildSuggestedComponentForm(
         ? normalizeLegacyAluminumColorHex(current.colorHex)
         : suggestion.colorHex,
     loteCantidad: current.loteCantidad ?? "1",
+    mirrorFormat: current.mirrorFormat ?? "single",
+    mirrorPaneCount: current.mirrorPaneCount ?? null,
+    mirrorPaneDirection: current.mirrorPaneDirection ?? "vertical",
+    mirrorInteriorLine: current.mirrorInteriorLine ?? "fine",
+    mirrorCustomPaneCount: current.mirrorCustomPaneCount ?? "",
   };
 }
 
@@ -1390,6 +1491,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
       margenPct: "0",
       pricingMode: "precio_directo",
       observaciones: decodeCotizacionItemPresentationMeta(item.observaciones).raw,
+      mirrorFormat: "single",
+      mirrorPaneCount: null,
+      mirrorPaneDirection: "vertical",
+      mirrorInteriorLine: "fine",
+      mirrorCustomPaneCount: "",
     };
   }
 
@@ -1416,6 +1522,10 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     origenPrecio,
     encodedMargenPct,
     encodedCostInputScope,
+    mirrorFormat,
+    mirrorPaneCount,
+    mirrorPaneDirection,
+    mirrorInteriorLine,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -1489,6 +1599,11 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     colorHex: normalizeLegacyAluminumColorHex(colorHex),
     loteCantidad: "1",
     costInputScope: (encodedCostInputScope || "unit") as CostInputScope,
+    mirrorFormat,
+    mirrorPaneCount,
+    mirrorPaneDirection,
+    mirrorInteriorLine,
+    mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
   };
 }
 
@@ -1560,7 +1675,8 @@ export function buildItemFromForm(
     (syncedForm.isCustomScheme ||
       sheetScheme === "Personalizado" ||
       sheetVariant === "Otro");
-  const generatedDisplayName = buildCommercialComponentDisplayName({
+  const dividedMirrorName = buildDividedMirrorDisplayName(syncedForm);
+  const generatedDisplayName = dividedMirrorName || buildCommercialComponentDisplayName({
     tipo: syncedForm.tipo,
     sistema,
     sheetScheme,
@@ -1578,7 +1694,8 @@ export function buildItemFromForm(
   )
     ? generatedDisplayName || buildAutoComponentName(syncedForm)
     : syncedForm.nombre.trim() || generatedDisplayName || buildAutoComponentName(syncedForm);
-  const rawDescription = form.descripcion.trim();
+  const dividedMirrorDescription = buildDividedMirrorDescription(syncedForm);
+  const rawDescription = dividedMirrorDescription || form.descripcion.trim();
   const normalizedAutoName = normalizeComparableComponentText(autoName);
   const descripcion =
     rawDescription &&
@@ -1641,6 +1758,10 @@ export function buildItemFromForm(
       palilloType: syncedForm.palilloType,
       margenPct: Number.isFinite(margenPct) ? margenPct : null,
       costInputScope,
+      mirrorFormat: syncedForm.mirrorFormat,
+      mirrorPaneCount: syncedForm.mirrorPaneCount,
+      mirrorPaneDirection: syncedForm.mirrorPaneDirection,
+      mirrorInteriorLine: syncedForm.mirrorInteriorLine,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",
@@ -1678,6 +1799,10 @@ export function applyQuotePricingToItems(
       minimoCobrable,
       redondeoPrecio,
       precioAjustadoManual,
+      mirrorFormat,
+      mirrorPaneCount,
+      mirrorPaneDirection,
+      mirrorInteriorLine,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return calculateComponentItem({
@@ -1725,6 +1850,10 @@ export function applyQuotePricingToItems(
             ? precioAjustadoManual || item.precioAjustadoManual
             : false,
         origenPrecio: pricingMode === "precio_directo" ? item.origenPrecio : "margen",
+        mirrorFormat,
+        mirrorPaneCount,
+        mirrorPaneDirection,
+        mirrorInteriorLine,
         raw,
       }),
     });
@@ -1754,9 +1883,18 @@ export function validateComponentForm(
     errors.codigo = "Ese codigo ya existe en esta cotizacion";
   }
   if (!form.tipo.trim()) errors.tipo = "Selecciona un tipo";
-  if (!form.material.trim()) errors.material = "Selecciona material";
+  if (shouldRequireProfileMaterialForComponent(form.tipo) && !form.material.trim()) {
+    errors.material = "Selecciona material";
+  }
   const qty = Number(form.cantidad);
   if (!form.cantidad || Number.isNaN(qty) || qty < 1) errors.cantidad = "Minimo 1";
+  if (
+    form.tipo.trim().toLowerCase().startsWith("esp") &&
+    form.mirrorFormat === "divided" &&
+    (!form.mirrorPaneCount || form.mirrorPaneCount < 2)
+  ) {
+    errors.mirrorPaneCount = "Indica al menos 2 pa\u00f1os";
+  }
   const hasCostValue = form.costoProveedorUnitario.trim() !== "";
   const costo = Number(form.costoProveedorUnitario);
   if (quotePricingMode !== "total_global" && hasCostValue && (Number.isNaN(costo) || costo < 0)) {

@@ -149,7 +149,7 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Espejo",
         descripcion: "Espejos para muro, marco o instalacion.",
-        sistemas: ["Muro", "Pegado", "Con instalacion", "Con marco"],
+        sistemas: ["Muro", "Pegado", "Con instalacion"],
         configuraciones: ["Pulido", "Biselado", "Recto"],
       },
       {

@@ -6,6 +6,7 @@ import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
   getSheetSchemeOptions,
+  shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
   type PreferredProvider,
@@ -98,10 +99,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   );
   const visibleLineTemplates = useMemo(
     () =>
-      activeLineTemplates.filter(
-        (template) => template.material === draft.material
-      ),
-    [activeLineTemplates, draft.material]
+      shouldRequireProfileMaterialForComponent(draft.subtipo)
+        ? activeLineTemplates.filter((template) => template.material === draft.material)
+        : activeLineTemplates,
+    [activeLineTemplates, draft.material, draft.subtipo]
   );
   const linePricingSummary = useMemo(
     () =>
@@ -363,6 +364,47 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft((current) => ({ ...current, customSchemeDescription }));
   };
 
+  const updateMirrorFormat = (mirrorFormat: PasoDosGrupoDraft["mirrorFormat"]) => {
+    setDraft((current) => ({
+      ...current,
+      mirrorFormat,
+      mirrorPaneCount: mirrorFormat === "divided" ? current.mirrorPaneCount ?? 2 : null,
+      mirrorCustomPaneCount: mirrorFormat === "divided" ? current.mirrorCustomPaneCount : "",
+    }));
+  };
+
+  const updateMirrorPaneCount = (paneCount: number | null) => {
+    setDraft((current) => ({
+      ...current,
+      mirrorPaneCount: paneCount && paneCount >= 2 ? Math.round(paneCount) : null,
+      mirrorCustomPaneCount: "",
+    }));
+  };
+
+  const updateMirrorCustomPaneCount = (value: string) => {
+    const digits = sanitizeDigits(value);
+    const parsed = Number.parseInt(digits || "0", 10);
+
+    setDraft((current) => ({
+      ...current,
+      mirrorFormat: "divided",
+      mirrorCustomPaneCount: digits,
+      mirrorPaneCount: parsed >= 2 ? parsed : null,
+    }));
+  };
+
+  const updateMirrorPaneDirection = (
+    mirrorPaneDirection: PasoDosGrupoDraft["mirrorPaneDirection"]
+  ) => {
+    setDraft((current) => ({ ...current, mirrorPaneDirection }));
+  };
+
+  const updateMirrorInteriorLine = (
+    mirrorInteriorLine: PasoDosGrupoDraft["mirrorInteriorLine"]
+  ) => {
+    setDraft((current) => ({ ...current, mirrorInteriorLine }));
+  };
+
   const updateNombre = (nombre: string) => {
     setDraft((current) => ({ ...current, nombre }));
   };
@@ -523,6 +565,11 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,
+    updateMirrorFormat,
+    updateMirrorPaneCount,
+    updateMirrorCustomPaneCount,
+    updateMirrorPaneDirection,
+    updateMirrorInteriorLine,
     updateNombre,
     updateDescripcion,
     updateIvaMode,

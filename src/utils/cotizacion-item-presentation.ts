@@ -4,6 +4,9 @@ export type ComponentMaterial = "Aluminio" | "PVC";
 export type CotizacionItemPriceOrigin = "margen" | "plantilla" | "manual";
 export type CotizacionItemFreeValueIvaMode = "total_incluye_iva" | "neto_mas_iva";
 export type CotizacionItemDisplayMode = "componente" | "item_libre";
+export type CotizacionMirrorFormat = "single" | "divided";
+export type CotizacionMirrorPaneDirection = "vertical" | "horizontal";
+export type CotizacionMirrorInteriorLine = "fine" | "marked";
 
 export type CotizacionItemPresentationMeta = {
   colorHex: string;
@@ -33,6 +36,10 @@ export type CotizacionItemPresentationMeta = {
   palilloType: string;
   encodedMargenPct: number | null;
   encodedCostInputScope: string;
+  mirrorFormat: CotizacionMirrorFormat;
+  mirrorPaneCount: number | null;
+  mirrorPaneDirection: CotizacionMirrorPaneDirection;
+  mirrorInteriorLine: CotizacionMirrorInteriorLine;
   raw: string;
 };
 
@@ -114,6 +121,33 @@ function normalizeDisplayMode(value: string | null | undefined): CotizacionItemD
   return value === "item_libre" ? "item_libre" : "componente";
 }
 
+function normalizeMirrorFormat(value: string | null | undefined): CotizacionMirrorFormat {
+  return value === "divided" ? "divided" : "single";
+}
+
+function normalizeMirrorPaneCount(value: number | string | null | undefined): number | null {
+  const parsed =
+    typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
+
+  if (!Number.isFinite(parsed) || parsed < 2) {
+    return null;
+  }
+
+  return Math.round(parsed);
+}
+
+function normalizeMirrorPaneDirection(
+  value: string | null | undefined
+): CotizacionMirrorPaneDirection {
+  return value === "horizontal" ? "horizontal" : "vertical";
+}
+
+function normalizeMirrorInteriorLine(
+  value: string | null | undefined
+): CotizacionMirrorInteriorLine {
+  return value === "marked" ? "marked" : "fine";
+}
+
 export function encodeCotizacionItemPresentationMeta(input: {
   colorHex: string;
   material: ComponentMaterial;
@@ -142,6 +176,10 @@ export function encodeCotizacionItemPresentationMeta(input: {
   palilloType?: string;
   margenPct?: number | null;
   costInputScope?: string;
+  mirrorFormat?: CotizacionMirrorFormat;
+  mirrorPaneCount?: number | null;
+  mirrorPaneDirection?: CotizacionMirrorPaneDirection;
+  mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -197,6 +235,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
       ? String(Math.round(input.margenPct))
       : "";
   const costInputScope = (input.costInputScope ?? "").trim().replace(/\]/g, "");
+  const mirrorFormat = normalizeMirrorFormat(input.mirrorFormat);
+  const mirrorPaneCount =
+    mirrorFormat === "divided" ? normalizeMirrorPaneCount(input.mirrorPaneCount) : null;
+  const mirrorPaneDirection = normalizeMirrorPaneDirection(input.mirrorPaneDirection);
+  const mirrorInteriorLine = normalizeMirrorInteriorLine(input.mirrorInteriorLine);
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +
@@ -225,7 +268,11 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[pe:${palilloEnabled}]` +
     `[pt:${palilloType}]` +
     `[mp:${margenPct}]` +
-    `[csi:${costInputScope}]`;
+    `[csi:${costInputScope}]` +
+    `[mf:${mirrorFormat}]` +
+    `[mpc:${mirrorPaneCount ?? ""}]` +
+    `[mpd:${mirrorPaneDirection}]` +
+    `[mil:${mirrorInteriorLine}]`;
 
   return raw ? `${meta} ${raw}` : meta;
 }
@@ -262,6 +309,14 @@ export function decodeCotizacionItemPresentationMeta(
   const palilloType = source.match(/\[pt:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const encodedMargenPct = parseOptionalNumber(source.match(/\[mp:([^\]]*)\]/)?.[1]);
   const encodedCostInputScope = source.match(/\[csi:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const mirrorFormat = normalizeMirrorFormat(source.match(/\[mf:([^\]]*)\]/)?.[1]);
+  const mirrorPaneCount = normalizeMirrorPaneCount(source.match(/\[mpc:([^\]]*)\]/)?.[1]);
+  const mirrorPaneDirection = normalizeMirrorPaneDirection(
+    source.match(/\[mpd:([^\]]*)\]/)?.[1]
+  );
+  const mirrorInteriorLine = normalizeMirrorInteriorLine(
+    source.match(/\[mil:([^\]]*)\]/)?.[1]
+  );
   const referencia =
     source.match(/\[r:([^\]]*)\]/)?.[1]?.trim() ??
     source.match(/\[l:([^\]]*)\]/)?.[1]?.trim() ??
@@ -294,6 +349,10 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[pt:[^\]]*\]/g, "")
     .replace(/\[mp:[^\]]*\]/g, "")
     .replace(/\[csi:[^\]]*\]/g, "")
+    .replace(/\[mf:[^\]]*\]/g, "")
+    .replace(/\[mpc:[^\]]*\]/g, "")
+    .replace(/\[mpd:[^\]]*\]/g, "")
+    .replace(/\[mil:[^\]]*\]/g, "")
     .trim();
 
   return {
@@ -324,8 +383,64 @@ export function decodeCotizacionItemPresentationMeta(
     palilloType,
     encodedMargenPct,
     encodedCostInputScope,
+    mirrorFormat,
+    mirrorPaneCount,
+    mirrorPaneDirection,
+    mirrorInteriorLine,
     raw,
   };
+}
+
+export function isCotizacionMirrorDivided(input: {
+  tipo?: string | null;
+  mirrorFormat: CotizacionMirrorFormat;
+  mirrorPaneCount: number | null;
+}) {
+  return (
+    (input.tipo ?? "").trim().toLowerCase().startsWith("esp") &&
+    input.mirrorFormat === "divided" &&
+    input.mirrorPaneCount !== null &&
+    input.mirrorPaneCount >= 2
+  );
+}
+
+export function buildCotizacionMirrorPaneMeasure(input: {
+  ancho: number | null;
+  alto: number | null;
+  mirrorPaneCount: number | null;
+  mirrorPaneDirection: CotizacionMirrorPaneDirection;
+}) {
+  if (
+    !input.ancho ||
+    !input.alto ||
+    !input.mirrorPaneCount ||
+    input.mirrorPaneCount < 2
+  ) {
+    return null;
+  }
+
+  const paneWidth =
+    input.mirrorPaneDirection === "vertical"
+      ? input.ancho / input.mirrorPaneCount
+      : input.ancho;
+  const paneHeight =
+    input.mirrorPaneDirection === "horizontal"
+      ? input.alto / input.mirrorPaneCount
+      : input.alto;
+
+  return {
+    paneWidth: Math.round(paneWidth),
+    paneHeight: Math.round(paneHeight),
+    label: `${Math.round(paneWidth)} x ${Math.round(paneHeight)} mm aprox.`,
+  };
+}
+
+export function buildCotizacionMirrorFormatLabel(input: {
+  mirrorPaneCount: number | null;
+}) {
+  return input.mirrorPaneCount && input.mirrorPaneCount >= 2
+    ? `Dividido en ${input.mirrorPaneCount} pa\u00f1os`
+    : "1 pa\u00f1o";
 }
 
 export function buildCotizacionItemSheetSchemeLabel(input: SheetSchemeInput): string {

@@ -7,6 +7,10 @@ type QuoteComponentSketchProps = {
   maxH?: number;
   label?: string;
   showMeasurements?: boolean;
+  mirrorFormat?: "single" | "divided";
+  mirrorPaneCount?: number | null;
+  mirrorPaneDirection?: "vertical" | "horizontal";
+  mirrorInteriorLine?: "fine" | "marked";
 };
 
 export function QuoteComponentSketch({
@@ -18,6 +22,10 @@ export function QuoteComponentSketch({
   maxH = 140,
   label,
   showMeasurements = false,
+  mirrorFormat = "single",
+  mirrorPaneCount = null,
+  mirrorPaneDirection = "vertical",
+  mirrorInteriorLine = "fine",
 }: QuoteComponentSketchProps) {
   const width = Math.max(ancho ?? 1200, 1);
   const height = Math.max(alto ?? 1000, 1);
@@ -50,8 +58,65 @@ export function QuoteComponentSketch({
   const totalHeight = svgHeight + paddingTop + paddingBottom;
   const measurementColor = "rgba(107, 114, 128, 0.7)";
   const hasMeasurements = showMeasurements && Boolean(ancho && alto);
+  const isDividedMirror =
+    normalizedType.startsWith("esp") &&
+    mirrorFormat === "divided" &&
+    mirrorPaneCount !== null &&
+    mirrorPaneCount >= 2;
 
   function renderInterior() {
+    if (isDividedMirror) {
+      const paneCount = Math.max(2, Math.round(mirrorPaneCount ?? 2));
+      const strokeWidth = mirrorInteriorLine === "marked" ? 1.7 : 0.8;
+      const opacity = mirrorInteriorLine === "marked" ? 0.72 : 0.5;
+
+      return (
+        <>
+          <rect
+            x={frame}
+            y={frame}
+            width={svgWidth - frame * 2}
+            height={svgHeight - frame * 2}
+            fill="rgba(140,196,228,0.22)"
+            stroke={glassStroke}
+            strokeWidth={0.7}
+          />
+          {Array.from({ length: paneCount - 1 }, (_, index) => {
+            const position = index + 1;
+            if (mirrorPaneDirection === "horizontal") {
+              const y = frame + ((svgHeight - frame * 2) / paneCount) * position;
+              return (
+                <line
+                  key={`mirror-horizontal-${position}`}
+                  x1={frame}
+                  y1={y}
+                  x2={svgWidth - frame}
+                  y2={y}
+                  stroke={colorHex}
+                  strokeWidth={strokeWidth}
+                  opacity={opacity}
+                />
+              );
+            }
+
+            const x = frame + ((svgWidth - frame * 2) / paneCount) * position;
+            return (
+              <line
+                key={`mirror-vertical-${position}`}
+                x1={x}
+                y1={frame}
+                x2={x}
+                y2={svgHeight - frame}
+                stroke={colorHex}
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
     if (normalizedType.startsWith("puert")) {
       return (
         <>

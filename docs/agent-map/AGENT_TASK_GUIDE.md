@@ -17,16 +17,26 @@ Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la se
 9. `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle)
 
 ### Para nueva cotizacion especificamente:
-1. `src/features/cotizaciones/new-quote/workflow-ui.ts`
+1. `src/features/cotizaciones/new-quote/workflow-ui.ts` (incluye `shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`, `GLASS_OPTIONS`)
 2. `src/features/cotizaciones/new-quote/solicitud-prefill.ts`
 3. `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`
 4. `src/features/cotizaciones/services/component-catalog.service.ts`
 5. `src/features/cotizaciones/services/component-suggestions.service.ts`
+6. `src/features/cotizaciones/services/glass-recommendations.service.ts`
+7. `app/(pwa-app)/cotizaciones/nueva/_hooks/use-paso-dos-agregar-grupo.ts`
+8. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx`
+9. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx`
+
+#### Regla rapida: componentes solo vidrio
+- Hoy solo aplican: **`Espejo`**, **`Cubierta de mesa`**.
+- Usar siempre `shouldRequireProfileMaterialForComponent(tipo)` antes de mostrar/exigir Material, Color perfil o filas PDF de material/color.
+- Si agregas otro tipo solo vidrio, actualizar el set en `workflow-ui.ts` y correr `profile-material-regression.test.ts`.
 
 ### Para PDF especificamente:
 1. `src/utils/cotizacion-pdf.ts`
 2. `src/features/cotizaciones/pdf-cache/services/cotizacion-pdf-cache.service.ts`
-3. `app/print/cotizaciones/[id]/`
+3. `app/print/cotizaciones/[id]/page.tsx`
+4. `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`
 
 ---
 
