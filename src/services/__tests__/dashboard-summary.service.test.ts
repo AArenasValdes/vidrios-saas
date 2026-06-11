@@ -29,6 +29,7 @@ describe("dashboard-summary.service", () => {
               clienteVioEn: null,
               clienteRespondioEn: null,
               clienteRespuestaCanal: null,
+              pdfDescargadoEn: null,
               createdAt: "2026-04-01T10:00:00.000Z",
               updatedAt: "2026-04-01T10:00:00.000Z",
               items: [],
@@ -53,10 +54,11 @@ describe("dashboard-summary.service", () => {
             },
           ],
           totalCount: 14,
-          pendingCount: 3,
+          quotedTotal: 714000,
+          pdfGeneratedCount: 5,
+          approvedCount: 3,
           monthCount: 8,
           approvedTodayCount: 1,
-          approvedMonthTotal: 714000,
         },
       }),
     } as Response);
@@ -68,7 +70,8 @@ describe("dashboard-summary.service", () => {
       cache: "no-store",
     });
     expect(summary.totalCount).toBe(14);
-    expect(summary.pendingCount).toBe(3);
+    expect(summary.quotedTotal).toBe(714000);
+    expect(summary.pdfGeneratedCount).toBe(5);
     expect(summary.recentRecords[0]?.clienteNombre).toBe("Alejandro Flores");
     expect(summary.alerts).toHaveLength(1);
   });

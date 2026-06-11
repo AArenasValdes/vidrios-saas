@@ -236,12 +236,14 @@ export default function PaginaVentaPage() {
   }, [pendingGalleryUploads]);
 
   useEffect(() => {
+    const galleryMetadataTimeouts = galleryMetadataTimeoutsRef.current;
+
     return () => {
       if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl);
       pendingGalleryUploadsRef.current.forEach((item) =>
         URL.revokeObjectURL(item.previewUrl)
       );
-      Object.values(galleryMetadataTimeoutsRef.current).forEach((timeoutId) => {
+      Object.values(galleryMetadataTimeouts).forEach((timeoutId) => {
         window.clearTimeout(timeoutId);
       });
       clearAutosaveTimeout();
@@ -304,6 +306,8 @@ export default function PaginaVentaPage() {
     }, 700);
 
     return () => clearAutosaveTimeout();
+    // persistCurrentForm se define en el mismo componente y no debe reiniciar el debounce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- estable en comportamiento
   }, [form, isReady, profile]);
 
   function handleFieldChange(

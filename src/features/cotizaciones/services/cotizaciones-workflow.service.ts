@@ -22,6 +22,14 @@ const DEFAULT_FLETE = 0;
 const COTIZACION_CODE_STORAGE_PREFIX = "vidrios-saas:cotizacion-code:";
 const cotizacionCodeCounters = new Map<string, number>();
 
+function createUniqueWorkflowItemId(prefix: string) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 type CalculateComponentItemInput = {
   id?: string;
   tipoItem?: CotizacionWorkflowItem["tipoItem"];
@@ -258,12 +266,11 @@ export function calculateComponentItem(
       : round(costoUnitario * cantidad, 2);
   const precioUnitario = round(costoUnitario * (1 + margenPct / 100), 2);
   const precioTotal = round(precioUnitario * cantidad, 2);
-  const utilidad = round(precioTotal - costoTotal, 2);
   const areaM2 =
     ancho !== null && alto !== null ? round((ancho / 1000) * (alto / 1000), 2) : null;
 
   return {
-    id: input.id ?? `item-${codigo.toLowerCase()}-${Date.now()}`,
+    id: input.id ?? createUniqueWorkflowItemId(`item-${codigo.toLowerCase()}`),
     tipoItem: input.tipoItem ?? "componente",
     codigo,
     tipo,
@@ -310,7 +317,7 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
   }
 
   return {
-    id: input.id ?? `item-libre-${Date.now()}`,
+    id: input.id ?? createUniqueWorkflowItemId("item-libre"),
     tipoItem: "item_libre_con_valor",
     codigo,
     tipo: "Item libre",
@@ -383,6 +390,7 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
   items?: CotizacionWorkflowItem[];
+  flete?: number;
 }) {
   const costoTotalFabricacion = round(
     normalizeNonNegativeNumber(input.costoTotalFabricacion),
@@ -400,25 +408,25 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
       .reduce((accumulator, item) => accumulator + item.precioTotal, 0),
     2
   );
-  const totalSinRedondeo = round(totalBase + extraTotal, 2);
-  const totalCliente = roundCommercialTotal(totalSinRedondeo);
-  const redondeoComercial = round(totalCliente - totalSinRedondeo, 2);
-  const utilidadTotal = round(totalCliente - costoTotalFabricacion, 2);
+  const neto = round(totalBase + extraTotal, 2);
+  const flete = round(normalizeNonNegativeNumber(input.flete), 2);
+  const mostrarIva = input.mostrarIva ?? true;
+  const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
+  const totalSinRedondeo = round(neto + iva + flete, 2);
+  const total = roundCommercialTotal(totalSinRedondeo);
+  const redondeoComercial = round(total - totalSinRedondeo, 2);
+  const utilidadTotal = round(total - costoTotalFabricacion, 2);
   const margenGlobalPct =
     costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
-  const mostrarIva = input.mostrarIva ?? true;
-  const ivaBase = mostrarIva ? round(totalCliente * (impuestos.iva / (1 + impuestos.iva)), 2) : 0;
-  const iva = ivaBase > 0 ? ivaBase : 0;
-  const subtotalNeto = round(totalCliente - iva, 2);
 
   return {
-    subtotal: subtotalNeto,
+    subtotal: neto,
     descuentoValor: 0,
-    neto: subtotalNeto,
+    neto,
     iva,
-    flete: 0,
+    flete,
     redondeoComercial,
-    total: totalCliente,
+    total,
     costoTotalFabricacion,
     margenGlobalPct,
     utilidadTotal,
@@ -448,6 +456,7 @@ export function calculateWorkflowTotalsForPricingMode(
       totalClienteManual: draft.totalClienteManual,
       mostrarIva: draft.mostrarIva,
       items: draft.items,
+      flete: draft.flete,
     });
   }
 

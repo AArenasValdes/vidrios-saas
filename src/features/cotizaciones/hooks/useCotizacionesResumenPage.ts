@@ -160,6 +160,7 @@ export function useCotizacionesResumenPage(
       totalCount: 0,
       totalAmount: 0,
       approvedAmount: 0,
+      pdfGeneratedCount: 0,
       counts: {
         borrador: 0,
         creada: 0,
@@ -224,6 +225,7 @@ export function useCotizacionesResumenPage(
           totalCount: currentCachedPage.totalCount,
           totalAmount: 0,
           approvedAmount: 0,
+          pdfGeneratedCount: 0,
           counts: {
             borrador: 0,
             creada: 0,
@@ -250,6 +252,7 @@ export function useCotizacionesResumenPage(
       totalCount: 0,
       totalAmount: 0,
       approvedAmount: 0,
+      pdfGeneratedCount: 0,
       counts: {
         borrador: 0,
         creada: 0,

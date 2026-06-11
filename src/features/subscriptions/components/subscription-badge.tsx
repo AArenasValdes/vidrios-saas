@@ -35,9 +35,11 @@ const STATUS_CLASSES: Record<string, string> = {
 export function SubscriptionBadge({
   subscription,
   planCode,
+  variant = "default",
 }: {
   subscription: EffectiveSubscriptionState | null | undefined;
   planCode: string | null | undefined;
+  variant?: "default" | "compact";
 }) {
   if (!subscription) return null;
 
@@ -58,7 +60,7 @@ export function SubscriptionBadge({
     subscription.subscriptionEndsAt ?? subscription.trialEndsAt ?? null;
 
   return (
-    <span className={s.badge}>
+    <span className={`${s.badge} ${variant === "compact" ? s.badgeCompact : ""}`}>
       <strong className={s.plan}>{planLabel}</strong>
       <span className={`${s.status} ${statusClass}`}>{statusLabel}</span>
       {showDate && date ? (

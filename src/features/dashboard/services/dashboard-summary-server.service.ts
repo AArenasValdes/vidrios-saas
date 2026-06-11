@@ -86,6 +86,7 @@ function mapCotizacionToWorkflowRecord(input: {
     clienteVioEn: input.cotizacion.clienteVioEn ?? null,
     clienteRespondioEn: input.cotizacion.clienteRespondioEn ?? null,
     clienteRespuestaCanal: input.cotizacion.clienteRespuestaCanal ?? null,
+    pdfDescargadoEn: input.cotizacion.pdfDescargadoEn ?? null,
     createdAt: input.cotizacion.creadoEn ?? new Date().toISOString(),
     updatedAt:
       input.cotizacion.actualizadoEn ??
@@ -128,16 +129,21 @@ export async function getDashboardSummaryByOrganizationId(
 
   const [
     totalCount,
-    pendingCount,
+    quotedTotal,
+    pdfGeneratedCount,
+    approvedCount,
     monthCount,
     approvedTodayCount,
-    approvedMonthTotal,
     recentRecordsBase,
     alertRecordsBase,
   ] = await Promise.all([
     cotizacionesRepository.countByOrganizationId(organizationId),
+    cotizacionesRepository.sumTotalByOrganizationId(organizationId),
     cotizacionesRepository.countByOrganizationId(organizationId, {
-      estados: ["creada", "borrador", "enviada"],
+      pdfDownloadedOnly: true,
+    }),
+    cotizacionesRepository.countByOrganizationId(organizationId, {
+      estados: ["aprobada"],
     }),
     cotizacionesRepository.countByOrganizationId(organizationId, {
       updatedFrom: monthStartIso,
@@ -147,11 +153,6 @@ export async function getDashboardSummaryByOrganizationId(
       estados: ["aprobada"],
       updatedFrom: todayStartIso,
       updatedTo: tomorrowStartIso,
-    }),
-    cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
-      estados: ["aprobada"],
-      updatedFrom: monthStartIso,
-      updatedTo: monthEndIso,
     }),
     cotizacionesRepository.listRecentByOrganizationId(organizationId, 24),
     cotizacionesRepository.listDashboardAlertCandidatesByOrganizationId(
@@ -210,9 +211,10 @@ export async function getDashboardSummaryByOrganizationId(
     recentRecords,
     alerts: buildCotizacionAlerts(alertRecords, { limit: 3 }),
     totalCount,
-    pendingCount,
+    quotedTotal,
+    pdfGeneratedCount,
+    approvedCount,
     monthCount,
     approvedTodayCount,
-    approvedMonthTotal,
   };
 }

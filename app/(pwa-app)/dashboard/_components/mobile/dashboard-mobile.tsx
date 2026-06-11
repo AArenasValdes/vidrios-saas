@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, Clock, Plus } from "lucide-react";
+import { CheckCircle2, ChevronRight, FileText, Plus, TrendingUp } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
@@ -14,6 +14,8 @@ import styles from "./page.mobile.module.css";
 function pillClassName(stateColor: DashboardMobileProps["quoteCards"][number]["stateColor"]) {
   if (stateColor === "success") return `${styles.pill} ${styles.pillSuccess}`;
   if (stateColor === "destructive") return `${styles.pill} ${styles.pillDanger}`;
+  if (stateColor === "info") return `${styles.pill} ${styles.pillInfo}`;
+  if (stateColor === "neutral") return `${styles.pill} ${styles.pillNeutral}`;
   return `${styles.pill} ${styles.pillWarning}`;
 }
 
@@ -21,13 +23,16 @@ export const DashboardMobile = memo(function DashboardMobile({
   greetingName,
   mobileDateLabel,
   newQuoteHref,
-  attentionHref,
-  attentionTitle,
+  summaryHref,
+  summaryTitle,
+  summarySubtitle,
+  quotedTotalLabel,
   totalCount,
-  approvedTodayCount,
-  approvedMonthLabel,
+  pdfGeneratedCount,
+  approvedCount,
   quotesHref,
   quoteCards,
+  responseAlerts,
   isLoading,
   isEmpty,
 }: DashboardMobileProps) {
@@ -40,7 +45,7 @@ export const DashboardMobile = memo(function DashboardMobile({
         data-onboarding-target="dashboard-header"
       >
         <div className={styles.headerCopy}>
-          <h1 className={styles.title}>Buen dia, {greetingName}</h1>
+          <h1 className={styles.title}>Buenos días, {greetingName}</h1>
           <p className={styles.date}>{mobileDateLabel}</p>
         </div>
         <DashboardAppRefreshButton className={styles.appRefreshButton} label="Actualizar" />
@@ -53,45 +58,61 @@ export const DashboardMobile = memo(function DashboardMobile({
           data-onboarding-target="dashboard-new-quote"
         >
           <Plus size={18} strokeWidth={2.75} />
-          Crear cotizacion rapida
+          Crear cotización rápida
         </Link>
       </PremiumPageSection>
 
       <OnboardingGuide controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection>
-        <Link href={attentionHref} className={styles.alertCard}>
-          <span className={styles.alertIcon}>
-            <AlertTriangle size={17} strokeWidth={2.25} />
+        <Link href={summaryHref} className={styles.summaryCard}>
+          <span className={styles.summaryIcon}>
+            <TrendingUp size={17} strokeWidth={2.25} />
           </span>
-          <span className={styles.alertBody}>
-            <span className={styles.alertEyebrow}>ATENCION HOY</span>
-            <span className={styles.alertTitle}>{attentionTitle}</span>
-            <span className={styles.alertSuccess}>
-              {approvedTodayCount} aprobada{approvedTodayCount === 1 ? "" : "s"} hoy
-            </span>
+          <span className={styles.summaryBody}>
+            <span className={styles.summaryEyebrow}>Resumen comercial</span>
+            <span className={styles.summaryTitle}>{summaryTitle}</span>
+            <strong className={styles.summaryAmount}>{quotedTotalLabel}</strong>
+            <span className={styles.summaryMeta}>{summarySubtitle}</span>
           </span>
-          <ChevronRight size={18} strokeWidth={2.25} className={styles.alertArrow} />
+          <ChevronRight size={18} strokeWidth={2.25} className={styles.summaryArrow} />
         </Link>
       </PremiumPageSection>
 
+      {responseAlerts.length > 0 ? (
+        <PremiumPageSection className={styles.responseAlerts}>
+          {responseAlerts.map((alert) => (
+            <Link key={alert.href} href={alert.href} className={styles.responseAlertLink}>
+              <CheckCircle2 size={16} strokeWidth={2.25} aria-hidden />
+              {alert.title}
+            </Link>
+          ))}
+        </PremiumPageSection>
+      ) : null}
+
       <PremiumPageSection className={styles.metricGrid}>
         <div className={styles.metricCard}>
-          <Clock size={16} className={`${styles.metricIcon} ${styles.metricIconPrimary}`} />
-          <span className={styles.metricLabel}>COTIZACIONES</span>
+          <FileText size={14} strokeWidth={2} className={`${styles.metricIcon} ${styles.metricIconPrimary}`} />
+          <span className={styles.metricLabel}>Cotizaciones</span>
           <strong className={styles.metricValue}>{totalCount}</strong>
         </div>
 
         <div className={styles.metricCard}>
-          <CheckCircle2 size={16} className={`${styles.metricIcon} ${styles.metricIconSuccess}`} />
-          <span className={styles.metricLabel}>APROBADO MES</span>
-          <strong className={styles.metricMono}>{approvedMonthLabel}</strong>
+          <FileText size={14} strokeWidth={2} className={`${styles.metricIcon} ${styles.metricIconInfo}`} />
+          <span className={styles.metricLabel}>PDFs</span>
+          <strong className={styles.metricValue}>{pdfGeneratedCount}</strong>
+        </div>
+
+        <div className={styles.metricCard}>
+          <CheckCircle2 size={14} strokeWidth={2} className={`${styles.metricIcon} ${styles.metricIconSuccess}`} />
+          <span className={styles.metricLabel}>Aprobadas</span>
+          <strong className={styles.metricValue}>{approvedCount}</strong>
         </div>
       </PremiumPageSection>
 
       <PremiumPageSection className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>ULTIMAS COTIZACIONES</h2>
+          <h2 className={styles.sectionTitle}>Últimas cotizaciones</h2>
           <Link href={quotesHref} className={styles.sectionLink}>
             Ver todas
           </Link>

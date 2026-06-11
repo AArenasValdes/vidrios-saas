@@ -436,13 +436,13 @@ describe("cotizaciones.service", () => {
     expect(cotizacionesRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         pricingMode: "total_global",
-        subtotalNeto: 504201.68,
-        iva: 95798.32,
+        subtotalNeto: 600000,
+        iva: 114000,
         flete: 0,
         costoTotal: 0,
         margenPct: 0,
         utilidadTotal: 0,
-        total: 600000,
+        total: 739000,
         items: [
           expect.objectContaining({
             precioUnitario: 0,

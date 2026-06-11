@@ -107,6 +107,7 @@ function createCotizacion(
     updatedAt: string;
     total: number;
     estado: string;
+    pdfDescargadoEn: string | null;
   }> = {}
 ) {
   return {
@@ -127,6 +128,7 @@ function createCotizacion(
     clienteVioEn: null,
     clienteRespondioEn: null,
     clienteRespuestaCanal: null,
+    pdfDescargadoEn: overrides.pdfDescargadoEn ?? null,
     createdAt: overrides.updatedAt ?? "2026-04-26T10:00:00.000Z",
     updatedAt: overrides.updatedAt ?? "2026-04-26T10:00:00.000Z",
     items: [],
@@ -147,6 +149,7 @@ const baseCotizaciones = [
     obra: "Ventana corredera",
     total: 1000000,
     estado: "enviada",
+    pdfDescargadoEn: "2026-04-26T11:00:00.000Z",
   }),
   createCotizacion({
     id: "cot-2",
@@ -171,6 +174,7 @@ function buildSummary() {
     totalCount: 86,
     totalAmount: 14_000_000,
     approvedAmount: 8_000_000,
+    pdfGeneratedCount: 12,
     counts: {
       borrador: 2,
       creada: 1,
@@ -195,10 +199,8 @@ function setupHookMock() {
           ? baseCotizaciones.filter((item) => item.estado === "aprobada")
           : estado === "Rechazada"
             ? baseCotizaciones.filter((item) => item.estado === "rechazada")
-            : estado === "Pendiente"
-              ? baseCotizaciones.filter((item) =>
-                  ["borrador", "creada", "enviada"].includes(item.estado)
-                )
+            : estado === "Pdf_generado"
+              ? baseCotizaciones.filter((item) => Boolean(item.pdfDescargadoEn))
               : baseCotizaciones;
 
       if (search) {
@@ -272,23 +274,24 @@ describe("CotizacionesPage", () => {
     renderPage();
 
     expect(screen.getByText("$14M")).toBeInTheDocument();
-    expect(screen.getByText("$8.000.000")).toBeInTheDocument();
+    expect(screen.getByText("$14.000.000")).toBeInTheDocument();
+    expect(screen.getAllByText("12").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("8").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("86")).toBeInTheDocument();
   });
 
-  it("debe marcar el atajo activo y pedir pendientes reales al hook", () => {
+  it("debe marcar el atajo activo y pedir PDF generados al hook", () => {
     renderPage();
 
-    const botonPendientes = screen.getByRole("button", { name: /pend\./i });
-    fireEvent.click(botonPendientes);
+    const botonPdf = screen.getByRole("button", { name: /12 PDF/i });
+    fireEvent.click(botonPdf);
 
-    expect(botonPendientes).toHaveAttribute("aria-pressed", "true");
+    expect(botonPdf).toHaveAttribute("aria-pressed", "true");
     const lastCall =
       mockUseCotizacionesResumenPage.mock.calls[
         mockUseCotizacionesResumenPage.mock.calls.length - 1
       ]?.[0];
-    expect(lastCall).toMatchObject({ estado: "Pendiente" });
+    expect(lastCall).toMatchObject({ estado: "Pdf_generado" });
     expect(screen.getAllByTestId("cotizacion-mobile-card")).toHaveLength(1);
   });
 
@@ -323,6 +326,7 @@ describe("CotizacionesPage", () => {
         totalCount: 0,
         totalAmount: 0,
         approvedAmount: 0,
+        pdfGeneratedCount: 0,
         counts: {
           borrador: 0,
           creada: 0,
@@ -340,7 +344,7 @@ describe("CotizacionesPage", () => {
     render(<CotizacionesPage />);
 
     expect(screen.queryByText("Cargando cotizaciones")).not.toBeInTheDocument();
-    expect(screen.getByText("Cotizaciones")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cotizaciones" })).toBeInTheDocument();
     expect(screen.getByText("Resultados")).toBeInTheDocument();
   });
 

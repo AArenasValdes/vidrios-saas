@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import {
@@ -146,12 +147,13 @@ export default async function PresupuestoPublicoPage({
           <div className={s.heroTop}>
             <div className={s.heroTrustBar}>
               <div className={s.logoWrap}>
-                <img
+                <Image
                   src="/brand/ventora-logo-compact-on-light.svg"
                   alt="Ventora"
                   width={228}
                   height={54}
                   className={s.ventoraLogo}
+                  unoptimized
                 />
               </div>
               <span className={s.heroTrustPill}>

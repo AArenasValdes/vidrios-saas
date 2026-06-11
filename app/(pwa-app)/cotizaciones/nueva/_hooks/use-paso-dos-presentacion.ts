@@ -136,6 +136,8 @@ export function usePasoDosPresentacion(
     () =>
       generateComponentSVG({
         tipo: params.componentForm.tipo,
+        sistema: params.componentForm.sistema,
+        configuracion: params.componentForm.configuracion,
         referencia: params.componentForm.referencia,
         ancho: params.componentForm.ancho ? Number(params.componentForm.ancho) : null,
         alto: params.componentForm.alto ? Number(params.componentForm.alto) : null,
@@ -147,7 +149,9 @@ export function usePasoDosPresentacion(
       params.componentForm.alto,
       params.componentForm.ancho,
       params.componentForm.colorHex,
+      params.componentForm.configuracion,
       params.componentForm.referencia,
+      params.componentForm.sistema,
       params.componentForm.tipo,
     ]
   );

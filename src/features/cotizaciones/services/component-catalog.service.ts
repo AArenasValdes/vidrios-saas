@@ -153,9 +153,9 @@ export const COMPONENT_CATALOG = [
         configuraciones: ["Pulido", "Biselado", "Recto"],
       },
       {
-        tipo: "Tapa de mesa",
+        tipo: "Cubierta de mesa",
         descripcion: "Cubiertas de vidrio para mesa.",
-        sistemas: ["Recta", "Forma especial"],
+        sistemas: ["Recta", "Forma especial", "Circular"],
         configuraciones: ["Canto pulido", "Biselado"],
       },
     ],
@@ -236,6 +236,7 @@ const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   "proyecto a medida": "trabajo personalizado",
   "otro trabajo especial": "trabajo personalizado",
   otro: "trabajo personalizado",
+  "tapa de mesa": "cubierta de mesa",
   // Legacy: old "Proyecto libre y Mantencion" subtypes → canonical single type
   [normalizeCatalogText("Item libre con valor")]: normalizeCatalogText("Trabajo libre / Mantencion"),
   [normalizeCatalogText("Cambio de vidrio")]: normalizeCatalogText("Trabajo libre / Mantencion"),

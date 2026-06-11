@@ -11,10 +11,11 @@ type DashboardSummaryState = {
   recentRecords: CotizacionWorkflowRecord[];
   alerts: CotizacionAlert[];
   totalCount: number;
-  pendingCount: number;
+  quotedTotal: number;
+  pdfGeneratedCount: number;
+  approvedCount: number;
   monthCount: number;
   approvedTodayCount: number;
-  approvedMonthTotal: number;
   isLoading: boolean;
   isReady: boolean;
 };
@@ -28,8 +29,38 @@ const dashboardSummaryCache = new Map<string, DashboardSummaryCacheEntry>();
 const dashboardSummaryPromiseCache = new Map<string, Promise<DashboardSummaryCacheEntry>>();
 const DASHBOARD_SUMMARY_STORAGE_PREFIX = "vidrios-saas:dashboard-summary:";
 
+const EMPTY_SUMMARY: DashboardSummaryCacheEntry = {
+  recentRecords: [],
+  alerts: [],
+  totalCount: 0,
+  quotedTotal: 0,
+  pdfGeneratedCount: 0,
+  approvedCount: 0,
+  monthCount: 0,
+  approvedTodayCount: 0,
+};
+
 function getDashboardSummaryStorageKey(organizationKey: string) {
   return `${DASHBOARD_SUMMARY_STORAGE_PREFIX}${organizationKey}`;
+}
+
+function normalizeDashboardSummaryCacheEntry(
+  value: Partial<DashboardSummaryCacheEntry> | null | undefined
+): DashboardSummaryCacheEntry {
+  if (!value) {
+    return EMPTY_SUMMARY;
+  }
+
+  return {
+    recentRecords: value.recentRecords ?? [],
+    alerts: value.alerts ?? [],
+    totalCount: value.totalCount ?? 0,
+    quotedTotal: value.quotedTotal ?? value.approvedMonthTotal ?? 0,
+    pdfGeneratedCount: value.pdfGeneratedCount ?? 0,
+    approvedCount: value.approvedCount ?? 0,
+    monthCount: value.monthCount ?? 0,
+    approvedTodayCount: value.approvedTodayCount ?? 0,
+  };
 }
 
 function readDashboardSummaryFromStorage(organizationKey: string) {
@@ -44,7 +75,9 @@ function readDashboardSummaryFromStorage(organizationKey: string) {
       return null;
     }
 
-    return JSON.parse(raw) as DashboardSummaryCacheEntry;
+    return normalizeDashboardSummaryCacheEntry(
+      JSON.parse(raw) as Partial<DashboardSummaryCacheEntry>
+    );
   } catch {
     return null;
   }
@@ -103,13 +136,7 @@ function readInitialDashboardSummaryState(
   if (organizationId === null || organizationId === undefined) {
     return {
       organizationKey: organizationKeyOrNull,
-      recentRecords: [],
-      alerts: [],
-      totalCount: 0,
-      pendingCount: 0,
-      monthCount: 0,
-      approvedTodayCount: 0,
-      approvedMonthTotal: 0,
+      ...EMPTY_SUMMARY,
       isLoading: false,
       isReady: false,
     };
@@ -142,13 +169,7 @@ function readInitialDashboardSummaryState(
 
   return {
     organizationKey,
-    recentRecords: [],
-    alerts: [],
-    totalCount: 0,
-    pendingCount: 0,
-    monthCount: 0,
-    approvedTodayCount: 0,
-    approvedMonthTotal: 0,
+    ...EMPTY_SUMMARY,
     isLoading: false,
     isReady: false,
   };
@@ -167,13 +188,7 @@ export function useDashboardSummary(organizationId: string | number | null | und
       if (isMountedRef.current) {
         setState({
           organizationKey: null,
-          recentRecords: [],
-          alerts: [],
-          totalCount: 0,
-          pendingCount: 0,
-          monthCount: 0,
-          approvedTodayCount: 0,
-          approvedMonthTotal: 0,
+          ...EMPTY_SUMMARY,
           isLoading: false,
           isReady: true,
         });
@@ -192,15 +207,18 @@ export function useDashboardSummary(organizationId: string | number | null | und
       const summaryPromise =
         inFlightPromise ??
         getDashboardSummaryByOrganizationId(organizationId)
-          .then((summary) => ({
-            recentRecords: summary.recentRecords,
-            alerts: summary.alerts,
-            totalCount: summary.totalCount,
-            pendingCount: summary.pendingCount,
-            monthCount: summary.monthCount,
-            approvedTodayCount: summary.approvedTodayCount,
-            approvedMonthTotal: summary.approvedMonthTotal,
-          }))
+          .then((summary) =>
+            normalizeDashboardSummaryCacheEntry({
+              recentRecords: summary.recentRecords,
+              alerts: summary.alerts,
+              totalCount: summary.totalCount,
+              quotedTotal: summary.quotedTotal,
+              pdfGeneratedCount: summary.pdfGeneratedCount,
+              approvedCount: summary.approvedCount,
+              monthCount: summary.monthCount,
+              approvedTodayCount: summary.approvedTodayCount,
+            })
+          )
           .finally(() => {
             dashboardSummaryPromiseCache.delete(organizationKey);
           });

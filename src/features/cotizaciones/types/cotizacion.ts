@@ -32,6 +32,7 @@ export type Cotizacion = {
   clienteVioEn: string | null;
   clienteRespondioEn: string | null;
   clienteRespuestaCanal: string | null;
+  pdfDescargadoEn: string | null;
   creadoEn: string | null;
   actualizadoEn: string | null;
   eliminadoEn: string | null;
@@ -60,6 +61,7 @@ export type CrearCotizacionInput = {
   clienteVioEn?: string | null;
   clienteRespondioEn?: string | null;
   clienteRespuestaCanal?: string | null;
+  pdfDescargadoEn?: string | null;
   items: CrearCotizacionItemInput[];
   total: number;
 };

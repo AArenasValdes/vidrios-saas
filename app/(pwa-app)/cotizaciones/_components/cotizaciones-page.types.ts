@@ -1,7 +1,7 @@
 export type CotizacionesMobileSummaryKey =
   | "todos"
   | "aprobadas"
-  | "pendientes"
+  | "pdfGenerados"
   | "rechazadas";
 
 export type CotizacionesMobileSummaryTone = "blue" | "green" | "amber" | "red";

@@ -54,6 +54,7 @@ export type CotizacionWorkflowRecord = {
   clienteVioEn: string | null;
   clienteRespondioEn: string | null;
   clienteRespuestaCanal: string | null;
+  pdfDescargadoEn: string | null;
   createdAt: string;
   updatedAt: string;
   items: CotizacionWorkflowItem[];

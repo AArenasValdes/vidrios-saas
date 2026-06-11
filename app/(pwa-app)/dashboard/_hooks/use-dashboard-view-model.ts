@@ -3,11 +3,12 @@
 import { useMemo } from "react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { resolveCotizacionWorkflowState } from "@/features/cotizaciones/services/cotizacion-display-state.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useDashboardSummary } from "./use-dashboard-summary";
 
-export type DashboardQuoteStateColor = "success" | "warning" | "destructive";
+export type DashboardQuoteStateColor = "success" | "warning" | "destructive" | "neutral" | "info";
 
 export type DashboardQuoteCard = {
   id: string;
@@ -25,14 +26,18 @@ export type DashboardMobileProps = {
   greetingName: string;
   mobileDateLabel: string;
   newQuoteHref: string;
-  attentionHref: string;
-  attentionTitle: string;
+  summaryHref: string;
+  summaryTitle: string;
+  summarySubtitle: string;
+  quotedTotalLabel: string;
   totalCount: number;
+  pdfGeneratedCount: number;
+  approvedCount: number;
   approvedTodayCount: number;
   monthCount: number;
-  approvedMonthLabel: string;
   quotesHref: string;
   quoteCards: DashboardQuoteCard[];
+  responseAlerts: Array<{ href: string; title: string }>;
   isLoading: boolean;
   isEmpty: boolean;
 };
@@ -41,10 +46,12 @@ export type DashboardDesktopProps = {
   greetingName: string;
   subtitle: string;
   newQuoteHref: string;
-  pendingCount: number;
+  quotedTotalLabel: string;
+  totalCount: number;
+  pdfGeneratedCount: number;
+  approvedCount: number;
   monthCount: number;
   approvedTodayCount: number;
-  approvedMonthLabel: string;
   quotesHref: string;
   quoteCards: DashboardQuoteCard[];
   isLoading: boolean;
@@ -78,6 +85,16 @@ function formatMobileDateLabel(value: string) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function mapDisplayStateToColor(
+  cls: string
+): DashboardQuoteStateColor {
+  if (cls === "stAprobada") return "success";
+  if (cls === "stRechazada") return "destructive";
+  if (cls === "stTerminada" || cls === "stCreada" || cls === "stSinCierre") return "neutral";
+  if (cls === "stPdfGenerado" || cls === "stEnviada") return "info";
+  return "warning";
+}
+
 export function useDashboardViewModel(): DashboardViewModel {
   const { user, organizacionId } = useAuth();
   const { profile } = useOrganizationProfile();
@@ -96,34 +113,25 @@ export function useDashboardViewModel(): DashboardViewModel {
   );
   const subtitle = `${todayLabel} - ${companyName}`;
   const mobileDateLabel = formatMobileDateLabel(todayLabel);
-  const hasSeguimiento = dashboardSummary.alerts.some((a) => a.kind === "seguimiento");
-
-  const attentionHref = dashboardSummary.alerts[0]?.href ?? "/cotizaciones?estado=pendientes";
-  const attentionTitle = hasSeguimiento
-    ? "Hay clientes esperando seguimiento"
-    : dashboardSummary.alerts.length > 0
-      ? `${dashboardSummary.alerts.length} respuesta${
-          dashboardSummary.alerts.length === 1 ? "" : "s"
-        } por revisar`
-      : `${dashboardSummary.pendingCount} presupuesto${
-          dashboardSummary.pendingCount === 1 ? "" : "s"
-        } pendiente${dashboardSummary.pendingCount === 1 ? "" : "s"}`;
+  const quotedTotalLabel = formatClp(dashboardSummary.quotedTotal);
+  const summaryTitle = "Valor cotizado";
+  const summarySubtitle = `${dashboardSummary.totalCount} cotizacion${
+    dashboardSummary.totalCount === 1 ? "" : "es"
+  } · ${dashboardSummary.pdfGeneratedCount} PDF${
+    dashboardSummary.pdfGeneratedCount === 1 ? "" : "s"
+  } · ${dashboardSummary.approvedCount} aprobada${
+    dashboardSummary.approvedCount === 1 ? "" : "s"
+  }`;
 
   const quoteCards = useMemo<DashboardQuoteCard[]>(() => {
     return [...dashboardSummary.recentRecords]
       .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
       .slice(0, 3)
       .map((record) => {
-        let stateLabel = "PENDIENTE";
-        let stateColor: DashboardQuoteStateColor = "warning";
-
-        if (record.estado === "aprobada") {
-          stateLabel = "APROBADA";
-          stateColor = "success";
-        } else if (record.estado === "rechazada") {
-          stateLabel = "RECHAZADA";
-          stateColor = "destructive";
-        }
+        const displayState = resolveCotizacionWorkflowState({
+          estado: record.estado,
+          pdfDescargadoEn: record.pdfDescargadoEn,
+        });
 
         return {
           id: record.id,
@@ -132,13 +140,21 @@ export function useDashboardViewModel(): DashboardViewModel {
           code: record.codigo,
           amount: formatClp(record.total ?? 0),
           date: formatCotizacionDate(record.updatedAt),
-          stateLabel,
-          stateColor,
+          stateLabel: displayState.label.toUpperCase(),
+          stateColor: mapDisplayStateToColor(displayState.cls),
         };
       });
   }, [dashboardSummary.recentRecords]);
 
-  const approvedMonthLabel = formatClp(dashboardSummary.approvedMonthTotal);
+  const responseAlerts = useMemo(
+    () =>
+      dashboardSummary.alerts.map((alert) => ({
+        href: alert.href,
+        title: alert.title,
+      })),
+    [dashboardSummary.alerts]
+  );
+
   const isLoading = dashboardSummary.isLoading && dashboardSummary.recentRecords.length === 0;
   const isEmpty = !isLoading && dashboardSummary.isReady && quoteCards.length === 0;
 
@@ -147,14 +163,18 @@ export function useDashboardViewModel(): DashboardViewModel {
       greetingName,
       mobileDateLabel,
       newQuoteHref: "/cotizaciones/nueva",
-      attentionHref,
-      attentionTitle,
+      summaryHref: "/cotizaciones",
+      summaryTitle,
+      summarySubtitle,
+      quotedTotalLabel,
       totalCount: dashboardSummary.totalCount,
+      pdfGeneratedCount: dashboardSummary.pdfGeneratedCount,
+      approvedCount: dashboardSummary.approvedCount,
       approvedTodayCount: dashboardSummary.approvedTodayCount,
       monthCount: dashboardSummary.monthCount,
-      approvedMonthLabel,
       quotesHref: "/cotizaciones",
       quoteCards,
+      responseAlerts,
       isLoading: isLoading || !dashboardSummary.isReady,
       isEmpty,
     },
@@ -162,10 +182,12 @@ export function useDashboardViewModel(): DashboardViewModel {
       greetingName,
       subtitle,
       newQuoteHref: "/cotizaciones/nueva",
-      pendingCount: dashboardSummary.pendingCount,
+      quotedTotalLabel,
+      totalCount: dashboardSummary.totalCount,
+      pdfGeneratedCount: dashboardSummary.pdfGeneratedCount,
+      approvedCount: dashboardSummary.approvedCount,
       monthCount: dashboardSummary.monthCount,
       approvedTodayCount: dashboardSummary.approvedTodayCount,
-      approvedMonthLabel,
       quotesHref: "/cotizaciones",
       quoteCards,
       isLoading: isLoading || !dashboardSummary.isReady,

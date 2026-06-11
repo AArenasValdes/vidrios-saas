@@ -91,16 +91,16 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/dashboard/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Dashboard operativo con KPIs y cotizaciones recientes
+- **Proposito**: Dashboard comercial con KPIs orientados al valor cotizado y cotizaciones recientes
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Saludo, onboarding comercial guiado, KPIs (total, pendientes, mes, aprobadas hoy), cotizaciones recientes, CTA nueva cotizacion
+- **Funcionalidades visibles**: Saludo, onboarding comercial guiado, resumen comercial (valor cotizado, creadas, PDF generados, aprobadas), alertas secundarias solo si hay respuesta publica real, cotizaciones recientes con estados neutrales, CTA nueva cotizacion
 - **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingGuide`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
 - **Acciones principales**: Navegacion a nueva cotizacion, ver cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/dashboard/page.tsx`, `app/(pwa-app)/dashboard/_components/*`, `app/(pwa-app)/dashboard/_hooks/*`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/dashboard/summary/route.ts`
-- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding. Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
+- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding. No reintroducir "pendientes" como alerta principal. Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
 
 ---
 
@@ -184,14 +184,14 @@
 - **CSS**: `app/(pwa-app)/cotizaciones/page.module.css`
 - **Proposito**: Listado de cotizaciones con filtros, busqueda y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, cards mobile, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
+- **Funcionalidades visibles**: Filtros (estado, cliente, periodo, orden), busqueda, chips mobile (valor, aprobadas, PDF generados, rechazadas), KPIs (valor cotizado, creadas, PDF generados, aprobadas, terminadas), cards mobile con estados neutrales, acciones (copiar link, PDF, WhatsApp, editar, eliminar)
 - **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`
 - **Hooks**: `useCotizacionesStore`, `useCotizacionAlerts`
 - **Datos que consume**: Resumen cotizaciones via `/api/cotizaciones/resumen`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Listar, filtrar, copiar link, descargar PDF, enviar WhatsApp, editar, eliminar (soft delete)
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/page.tsx`, `app/(pwa-app)/cotizaciones/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `app/api/cotizaciones/resumen/route.ts`
-- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF. Con cuenta vencida el listado puede seguir leyendose, pero acciones de crear/editar/eliminar deben quedar bloqueadas o redirigidas a `/cuenta-vencida`.
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/page.tsx`, `app/(pwa-app)/cotizaciones/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `src/features/cotizaciones/services/cotizacion-display-state.service.ts`, `app/api/cotizaciones/resumen/route.ts`
+- **Riesgos**: Pagina grande (1055 lineas). No romper filtros ni acciones de WhatsApp/PDF. No usar "Pendiente" como badge dominante; usar display state service. Con cuenta vencida el listado puede seguir leyendose, pero acciones de crear/editar/eliminar deben quedar bloqueadas o redirigidas a `/cuenta-vencida`.
 
 ---
 
@@ -220,13 +220,13 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Detalle de cotizacion con items, totales y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Header con estado, items, totales, recordatorio contextual para compartir la primera cotizacion, acciones (PDF, WhatsApp, editar, eliminar)
+- **Funcionalidades visibles**: Header con estado visible neutro (Creada/PDF generado/Enviada/etc.), cierre comercial manual en seccion secundaria, items, totales, recordatorio contextual para compartir la primera cotizacion, acciones (PDF, WhatsApp, editar, eliminar)
 - **Componentes principales**: `CotizacionDetalleMobileView`, `CotizacionDetalleMobileViewModel`
 - **Hooks**: `useCotizacionesStore`
 - **Datos que consume**: Cotizacion por ID con items
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Ver detalle, generar PDF, compartir WhatsApp, editar, eliminar
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `src/features/cotizaciones/services/cotizacion-display-state.service.ts`
 - **Riesgos**: No romper generacion de PDF, link de WhatsApp ni la marca de `first_share`.
 
 ---
@@ -447,6 +447,7 @@
 | `/api/solicitud/[empresa]` | POST | Crear solicitud publica (rate limited) | `app/api/solicitud/[empresa]/route.ts` |
 | `/api/solicitudes/resumen` | GET | Resumen solicitudes por org (auth) | `app/api/solicitudes/resumen/route.ts` |
 | `/api/cotizaciones/resumen` | GET | Resumen cotizaciones por org (auth) | `app/api/cotizaciones/resumen/route.ts` |
+| `/api/cotizaciones/[id]/pdf-descargado` | POST | Registra descarga silenciosa de PDF (auth) | `app/api/cotizaciones/[id]/pdf-descargado/route.ts` |
 | `/api/clientes/resumen` | GET | Resumen clientes por org (auth) | `app/api/clientes/resumen/route.ts` |
 | `/api/dashboard/summary` | GET | Dashboard KPIs por org (auth) | `app/api/dashboard/summary/route.ts` |
 | `/api/pwa/push-subscriptions` | POST/DELETE | Registrar/eliminar suscripcion push | `app/api/pwa/push-subscriptions/route.ts` |
@@ -461,4 +462,4 @@
 
 | Ruta | Proposito | Archivo |
 |---|---|---|
-| `/print/cotizaciones/[id]` | Vista de impresion PDF de cotizacion | `app/print/cotizaciones/[id]/` |
+| `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. WhatsApp sigue marcando enviada. | `app/print/cotizaciones/[id]/page.tsx` |

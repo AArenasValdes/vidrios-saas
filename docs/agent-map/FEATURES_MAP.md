@@ -100,7 +100,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Dashboard
 
-- **Que hace**: Resumen operativo con KPIs (total cotizaciones, pendientes, del mes, aprobadas hoy/mes) y cotizaciones recientes
+- **Que hace**: Resumen comercial con KPIs orientados al trabajo real del maestro: valor cotizado, cotizaciones creadas, PDF generados, aprobadas registradas, actividad del mes y cotizaciones recientes
 - **Rutas involucradas**: `/dashboard`
 - **Archivos principales**:
   - `app/(pwa-app)/dashboard/page.tsx`
@@ -116,12 +116,12 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Hooks/servicios/actions**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Tablas Supabase**: `cotizaciones`, `clients`, `projects`
 - **Flujo de datos**: Page -> `useDashboardViewModel` -> `useDashboardSummary` -> API `/api/dashboard/summary` -> `dashboardSummaryServerService` -> repositories directos
-- **Estados importantes**: isLoading, isReady, isEmpty
+- **Estados importantes**: isLoading, isReady, isEmpty; KPIs `quotedTotal`, `pdfGeneratedCount`, `approvedCount`, `totalCount`, `monthCount`, `approvedTodayCount`
 - **Donde editar UI**: `app/(pwa-app)/dashboard/_components/`
 - **Donde editar logica**: `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`
 - **Donde editar persistencia**: `app/api/dashboard/summary/route.ts` (usa repositories directamente)
-- **Consideraciones UX**: Breakpoint 1024px desktop/mobile. KPIs formateados en CLP compacto.
-- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda
+- **Consideraciones UX**: Breakpoint 1024px desktop/mobile. KPI principal = **Valor cotizado** (`sum(total)`), no "pendientes". Alertas de respuesta publica (aprobada/rechazada/seguimiento) solo si existen; no usar pendientes como alerta dominante. Cards recientes usan estados neutrales via `cotizacion-display-state.service.ts`.
+- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" como metrica principal.
 
 ---
 
@@ -286,6 +286,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/services/cotizaciones-workflow.service.ts` (~550 lineas, `calculateFreeValueItem`, `calculateCotizacionWorkflowTotals` con soporte IVA, `cloneCotizacionAsDraft`)
   - `src/features/cotizaciones/services/cotizaciones-summary.service.ts`
   - `src/features/cotizaciones/services/cotizacion-alerts.service.ts`
+  - `src/features/cotizaciones/services/cotizacion-display-state.service.ts`
   - `src/features/cotizaciones/services/cotizacion-line-pricing.service.ts`
   - `src/features/cotizaciones/services/component-catalog.service.ts` (catalogo con categoria `"Proyecto libre y Mantencion"`, flag `esItemLibre`, helper `isFreeValueComponentType()`)
   - `src/features/cotizaciones/services/component-suggestions.service.ts`
@@ -310,42 +311,45 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/constants/impuestos.ts` (IVA 19%)
   - `src/constants/component-colors.ts`
   - `app/api/cotizaciones/resumen/route.ts`
+  - `app/api/cotizaciones/[id]/pdf-descargado/route.ts`
 - **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleMobileView`, `PasoDosModoCotizacion`, `PasoDosItemLibreForm`, `PasoDosWizardFooterMovil`, `PasoDosWizardPrecioMovil`
-- **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`, `isFreeValueComponentType`
+- **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`, `resolveCotizacionWorkflowState`, `resolveCotizacionClosureState`, `isFreeValueComponentType`
 - **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `cotizacion_line_templates`, `clients`, `projects`, `cotizacion_code_counters`
 - **Flujo de datos**:
   - Listado: Page -> `useCotizacionesStore` -> API `/api/cotizaciones/resumen` -> server service -> repositories
   - Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
   - Item libre: wizard/sheet -> categoria "Proyecto libre y Mantencion" -> subtipo -> formulario simplificado (nombre, descripcion, valor, IVA) -> `buildFreeValueItemFromForm` -> `calculateFreeValueItem` -> `item_libre_con_valor`
   - Detalle: Page -> `useCotizacionesStore.getById()` -> repository
-- **Estados importantes**: `borrador`, `creada`, `enviada`, `aprobada`, `rechazada`, `terminada`
+  - PDF descargado: `/print/cotizaciones/[id]` -> `recordPdfDownload()` -> API `/api/cotizaciones/[id]/pdf-descargado` -> `markWorkflowPdfDownloaded()` -> `cotizaciones.pdf_descargado_en`
+- **Estados importantes**: DB `borrador`, `creada`, `enviada`, `aprobada`, `rechazada`, `terminada`; UI visible via `cotizacion-display-state.service.ts`: **Creada**, **PDF generado**, **Enviada**, **Aprobada**, **Rechazada**, **Terminada**, **Sin cierre registrado**
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados.
-- **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario.
+- **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas.
 
 ---
 
 ## Feature: PDF de Cotizacion
 
-- **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa.
-- **Rutas involucradas**: Interna (usada desde detalle cotizacion y print)
+- **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa. Al descargar/abrir el PDF desde el visor interno, registra `pdf_descargado_en` en silencio y muestra toast "PDF descargado" sin modal ni cambio de estado comercial.
+- **Rutas involucradas**: `/print/cotizaciones/[id]`, detalle cotizacion
 - **Archivos principales**:
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
   - `src/features/cotizaciones/pdf-cache/services/cotizacion-pdf-cache.service.ts`
   - `src/features/cotizaciones/pdf-cache/repositories/cotizacion-pdf-cache.repository.ts`
-  - `app/print/cotizaciones/[id]/`
+  - `app/print/cotizaciones/[id]/page.tsx`
+  - `app/api/cotizaciones/[id]/pdf-descargado/route.ts`
 - **Componentes principales**: N/A (utilidad)
-- **Hooks/servicios/actions**: `exportCotizacionPdf()`, `cotizacionPdfCacheService`
-- **Tablas Supabase**: Storage bucket `organization-assets` (path: `{orgId}/cotizaciones/{cotizacionId}/{version}.pdf`)
-- **Flujo de datos**: HTML del componente -> html2canvas -> jsPDF -> blob -> cache Storage o download
-- **Estados importantes**: isPreparingPdf
-- **Donde editar UI**: `src/utils/cotizacion-pdf.ts` (layout del PDF)
-- **Donde editar logica**: `src/utils/cotizacion-pdf.ts`
-- **Donde editar persistencia**: `src/features/cotizaciones/pdf-cache/`
-- **Consideraciones UX**: PDF multi-pagina con headers corrientes. Puede fallar en mobile por memoria.
-- **Riesgos al modificar**: No romper paginacion ni bloques protegidos. Cambios afectan impresion fisica.
+- **Hooks/servicios/actions**: `exportCotizacionPdf()`, `downloadPdfBlob()`, `recordPdfDownload()`, `markWorkflowPdfDownloaded()`, `cotizacionPdfCacheService`
+- **Tablas Supabase**: `cotizaciones.pdf_descargado_en`; Storage bucket privado `quote-pdfs`
+- **Flujo de datos**: HTML del componente -> html2canvas -> jsPDF -> blob -> download/open -> POST `/api/cotizaciones/[id]/pdf-descargado` -> `pdf_descargado_en`
+- **Estados importantes**: isPreparingPdf, isExporting
+- **Donde editar UI**: `src/utils/cotizacion-pdf.ts` (layout del PDF), `app/print/cotizaciones/[id]/page.tsx` (visor y acciones)
+- **Donde editar logica**: `src/utils/cotizacion-pdf.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`
+- **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts` (`recordPdfDownload`)
+- **Consideraciones UX**: PDF multi-pagina con headers corrientes. Puede fallar en mobile por memoria. iPhone abre/comparte PDF via fallback nativo; igual registra descarga. **No** preguntar si marcar como enviada despues de descargar.
+- **Riesgos al modificar**: No romper paginacion ni bloques protegidos. No acoplar descarga PDF a `markWorkflowAsSent`. Cambios afectan impresion fisica.
 
 ---
 

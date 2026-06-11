@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowUpRight, Mail, MapPin, Phone } from "lucide-react";
@@ -56,12 +57,13 @@ export function FooterSection({ navLinks }: FooterSectionProps) {
         <div className={s.shell}>
           <Reveal>
             <div className={s.brandBlock}>
-              <img
+              <Image
                 src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
                 width={344}
                 height={80}
                 className={s.brandWordmark}
+                unoptimized
               />
 
               <p className={s.brandText}>

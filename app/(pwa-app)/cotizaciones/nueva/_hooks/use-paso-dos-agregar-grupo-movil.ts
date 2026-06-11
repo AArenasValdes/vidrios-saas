@@ -21,6 +21,7 @@ import type { PasoDosGrupoDraft } from "./use-paso-dos-agregar-grupo";
 import type { AlcanceDetalle } from "./use-paso-dos-agregar-grupo";
 import {
   applyLineTemplateToGrupoDraft,
+  buildFreeTotalNotebookDraftState,
   createEmptyAlcanceDetalle,
   createInitialPasoDosGrupoDraft,
   buildPasoDosGrupoSelectionPatch,
@@ -32,6 +33,7 @@ import {
   shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
   type PasoDosGrupoCategoria,
+  type PasoDosGrupoEntryMode,
 } from "./use-paso-dos-agregar-grupo";
 
 export type PasoDosGrupoPasoMovil = 1 | 2 | 3;
@@ -42,6 +44,7 @@ type Params = {
   provider: PreferredProvider;
   activeLineTemplates: CotizacionLineTemplate[];
   seedForm?: ComponentFormState | null;
+  onSheetClosed?: (itemCount: number) => void;
 };
 
 function sanitizeDigits(value: string) {
@@ -52,9 +55,17 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const activeLineTemplates = params.activeLineTemplates;
   const [isOpen, setIsOpen] = useState(false);
   const [paso, setPaso] = useState<PasoDosGrupoPasoMovil>(1);
+  const [entryMode, setEntryMode] = useState<PasoDosGrupoEntryMode>("normal");
+  const [editingFreeTotalMainItemId, setEditingFreeTotalMainItemId] = useState<string | null>(null);
+  const [editingFreeTotalItemIds, setEditingFreeTotalItemIds] = useState<string[] | null>(null);
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() =>
     createInitialPasoDosGrupoDraft(params)
   );
+
+  const resetFreeTotalEditState = () => {
+    setEditingFreeTotalMainItemId(null);
+    setEditingFreeTotalItemIds(null);
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -66,25 +77,6 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
 
     return () => {
       document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-        setPaso(1);
-      }
-    };
-
-    window.addEventListener("keydown", handleEscape);
-
-    return () => {
-      window.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
 
@@ -133,14 +125,70 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         seedForm: seedForm ?? params.seedForm ?? undefined,
       })
     );
+    resetFreeTotalEditState();
+    setEntryMode("normal");
     setPaso(1);
     setIsOpen(true);
   };
 
+  const openFreeTotalNotebook = (seedForm?: ComponentFormState | null) => {
+    resetFreeTotalEditState();
+    const nextDraft = buildFreeTotalNotebookDraftState({
+      items: params.items,
+      pricingMode: params.pricingMode,
+      provider: params.provider,
+      seedForm: seedForm ?? params.seedForm ?? undefined,
+    });
+
+    setDraft(nextDraft);
+    setEntryMode("free_total_single");
+    setPaso(3);
+    setIsOpen(true);
+  };
+
+  const openFreeTotalNotebookForEdit = (
+    nextDraft: PasoDosGrupoDraft,
+    mainItemId: string,
+    itemIds: string[]
+  ) => {
+    resetFreeTotalEditState();
+    setDraft(nextDraft);
+    setEditingFreeTotalMainItemId(mainItemId);
+    setEditingFreeTotalItemIds(itemIds);
+    setEntryMode("free_total_single");
+    setPaso(3);
+    setIsOpen(true);
+  };
+
   const closeSheet = () => {
+    const itemCount = params.items.length;
+
     setIsOpen(false);
     setPaso(1);
+    setEntryMode("normal");
+    resetFreeTotalEditState();
+    params.onSheetClosed?.(itemCount);
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSheet();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+    // closeSheet se recrea por render; el listener se re-registra al abrir/cerrar el sheet.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const goToStep = (nextPaso: PasoDosGrupoPasoMovil) => {
     setPaso(nextPaso);
@@ -422,6 +470,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const goBack = () => {
+    if (entryMode === "free_total_single") {
+      return;
+    }
+
     setPaso((current) => {
       const isFreeValue = isFreeValueComponentType(draft.subtipo);
       const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft(draft);
@@ -440,6 +492,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   return {
     isOpen,
     paso,
+    entryMode,
     draft,
     subtypeOptions,
     systemOptions,
@@ -448,6 +501,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     visibleLineTemplates,
     linePricingSummary,
     openSheet,
+    openFreeTotalNotebook,
+    openFreeTotalNotebookForEdit,
+    editingFreeTotalMainItemId,
+    editingFreeTotalItemIds,
     closeSheet,
     goToStep,
     selectCategoria,

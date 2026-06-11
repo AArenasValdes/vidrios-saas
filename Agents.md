@@ -42,7 +42,7 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-05-13
+Ultima actualizacion operativa: 2026-06-11
 
 - **Fase actual**: estabilizacion, hardening y limpieza de rutas criticas de captacion y cierre
 - **Estado del baseline**: `npm run lint`, `npm test` y `npm run build` estan pasando en el workspace principal
@@ -74,6 +74,15 @@ Ultima actualizacion operativa: 2026-05-13
   - `/configuracion/empresa` ahora expone bloque compacto `Lineas y precios base`
   - override manual protegido con accion `Recalcular con plantilla`
   - calculadora integrada secundaria en edicion rapida
+
+### Ya resuelto en pasada 2026-06-11 (UX estados y metricas cotizaciones)
+
+- Se agrego `cotizaciones.pdf_descargado_en` para registrar descarga de PDF en silencio sin cambiar estado comercial
+- Nuevo endpoint `POST /api/cotizaciones/[id]/pdf-descargado` y `recordPdfDownload()` en store/repository
+- Visor `/print/cotizaciones/[id]` muestra toast "PDF descargado" y no interrumpe al maestro post-descarga
+- Dashboard reorientado a **Valor cotizado** + metricas: creadas, PDF generados, aprobadas registradas (sin alerta dominante de pendientes)
+- Nuevo `cotizacion-display-state.service.ts` con estados visibles neutrales (**PDF generado**, **Sin cierre registrado**, etc.)
+- Listado y detalle de cotizaciones dejaron de mostrar "Pendiente" como estado dominante
 
 ### Ya resuelto en esta pasada
 

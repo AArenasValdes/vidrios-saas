@@ -118,7 +118,7 @@ function normalizeType(tipo: string): string {
   if (t.startsWith("cier")) return "Cierre";
   if (t.startsWith("bar")) return "Baranda";
   if (t.startsWith("esp")) return "Espejo";
-  if (t.includes("mesa") || t.includes("tapa")) return "Mesa";
+  if (t.includes("mesa") || t.includes("tapa") || t.includes("cubierta")) return "Mesa";
   if (t.includes("fachada")) return "Fachada";
   if (t.includes("muro") && t.includes("cort")) return "MuroCortina";
   if (t.includes("vitrina")) return "Vitrina";
@@ -142,6 +142,7 @@ function normalizeSistema(sistema: string | null | undefined): string {
   if (s.includes("marco")) return "Marco";
   if (s.includes("peg")) return "Pegado";
   if (s.includes("muro")) return "Muro";
+  if (s.includes("circ")) return "Circular";
   return "default";
 }
 
@@ -758,6 +759,7 @@ function drawVentanaOscilobatiente(
 }
 
 // ─── Componentes: Puertas ─────────────────────────────────────────────────────
+/* eslint-disable @typescript-eslint/no-unused-vars -- dibujos de puerta reservados para catalogo */
 
 function drawPuertaAbatible(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
   const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
@@ -838,6 +840,8 @@ function drawPuertaPivotante(x: number, y: number, w: number, h: number, v: stri
     lHandle(cx + gW * 0.18, y + h * 0.50, hH, "right", DT, p.detail),
   ].join("");
 }
+
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 // ─── Componente: Paño Fijo ────────────────────────────────────────────────────
 
@@ -1088,35 +1092,29 @@ function drawEspejoPegado(x: number, y: number, w: number, h: number, v: string,
   ].join("");
 }
 
-// ─── Componente: Tapa de mesa ─────────────────────────────────────────────────
+// ─── Componente: Cubierta de mesa ─────────────────────────────────────────────
 
 function drawMesa(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  // Vista isométrica simplificada: solo plano superior + canto
-  // Se mantiene isométrico como excepción funcional — sin rellenos laterales
-  const oX = w * 0.20;
-  const oY = h * 0.28;
-  const tk = clamp(h * 0.16, 8, 14); // grosor del canto
-  const topPts = [
-    [x + oX, y], [x + w, y],
-    [x + w - oX, y + oY], [x, y + oY],
-  ].map(([px2, py]) => `${px(px2)},${px(py)}`).join(" ");
-  const frontPts = [
-    [x, y + oY], [x + w - oX, y + oY],
-    [x + w - oX, y + oY + tk], [x, y + oY + tk],
-  ].map(([px2, py]) => `${px(px2)},${px(py)}`).join(" ");
-  const sidePts = [
-    [x + w - oX, y + oY], [x + w, y],
-    [x + w, y + tk], [x + w - oX, y + oY + tk],
-  ].map(([px2, py]) => `${px(px2)},${px(py)}`).join(" ");
-  const F = fw(v), GW = gsw(v);
+  // Vista en planta: la cubierta ocupa el rectángulo cotado (ancho × alto).
+  const GW = gsw(v);
+  const edge = clamp(Math.min(w, h) * 0.035, 2, 7);
   return [
-    // Cara superior (vidrio)
-    `<polygon points="${topPts}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}"/>`,
-    // Reflexión
-    // Canto frontal (solo contorno, sin relleno = plano)
-    `<polygon points="${frontPts}" fill="none" stroke="${p.frame}" stroke-width="${F}"/>`,
-    // Canto lateral derecho
-    `<polygon points="${sidePts}" fill="none" stroke="${p.div}" stroke-width="${dw(v)}"/>`,
+    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" rx="1"/>`,
+    `<line x1="${px(x + edge)}" y1="${px(y + h - edge * 0.45)}" x2="${px(x + w - edge)}" y2="${px(y + h - edge * 0.45)}" stroke="${p.frame}" stroke-width="${dw(v)}" opacity="0.65"/>`,
+    `<line x1="${px(x + w - edge * 0.45)}" y1="${px(y + edge)}" x2="${px(x + w - edge * 0.45)}" y2="${px(y + h - edge)}" stroke="${p.div}" stroke-width="${dw(v)}" opacity="0.5"/>`,
+  ].join("");
+}
+
+function drawMesaCircular(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
+  const GW = gsw(v);
+  const size = Math.min(w, h);
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const radius = size / 2;
+  const edge = clamp(radius * 0.08, 2, 6);
+  return [
+    `<circle cx="${px(cx)}" cy="${px(cy)}" r="${px(radius)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}"/>`,
+    `<path d="M ${px(cx - radius + edge)} ${px(cy)} A ${px(radius - edge)} ${px(radius - edge)} 0 0 1 ${px(cx + radius - edge)} ${px(cy)}" fill="none" stroke="${p.frame}" stroke-width="${dw(v)}" opacity="0.65"/>`,
   ].join("");
 }
 
@@ -1307,6 +1305,7 @@ function routeDrawing(
       return drawEspejoMuro(x, y, w, h, v, p); // Muro por defecto
 
     case "Mesa":
+      if (sistemaNorm === "Circular") return drawMesaCircular(x, y, w, h, v, p);
       return drawMesa(x, y, w, h, v, p);
 
     case "Fachada":
@@ -1340,7 +1339,7 @@ function baseSizeFor(tipoNorm: string): { w: number; h: number } {
     Cierre:     { w: 210, h: 115 },
     Baranda:    { w: 210, h:  80 },
     Espejo:     { w: 110, h: 155 },
-    Mesa:       { w: 185, h:  75 },
+    Mesa:       { w: 110, h: 180 },
     Fachada:    { w: 130, h: 165 },
     MuroCortina:{ w: 130, h: 175 },
     Vitrina:    { w: 100, h: 175 },
@@ -1358,6 +1357,7 @@ function fitBoxFor(tipoNorm: string): { maxW: number; maxH: number } {
     Shower:    { maxW: 132, maxH: 214 },
     Cierre:    { maxW: 240, maxH: 148 },
     Baranda:   { maxW: 240, maxH: 118 },
+    Mesa:      { maxW: 200, maxH: 210 },
   };
 
   return map[tipoNorm] ?? { maxW: 200, maxH: 180 };
@@ -1371,6 +1371,17 @@ function buildLabel(tipo: string, sistema: string | null | undefined, variant: s
   return `${tipo.trim().toLowerCase() === "ventana 1 hoja" ? "Fijo" : tipo}${sys}`;
 }
 
+function resolveMesaDiameter(
+  params: ComponentSVGParams,
+  base: { w: number; h: number }
+): number {
+  if (params.ancho && params.alto) {
+    return Math.max(params.ancho, params.alto);
+  }
+
+  return params.ancho ?? params.alto ?? Math.max(base.w, base.h);
+}
+
 // ─── Exportación principal ────────────────────────────────────────────────────
 
 export function generateComponentSVG(params: ComponentSVGParams): string {
@@ -1382,17 +1393,24 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const palette   = resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
-  const rW    = params.ancho && params.alto ? params.ancho : base.w;
-  const rH    = params.ancho && params.alto ? params.alto  : base.h;
+  const isMesa  = tipoNorm === "Mesa";
+  const isMesaCircular = isMesa && sisNorm === "Circular";
+  let rW = params.ancho && params.alto ? params.ancho : base.w;
+  let rH = params.ancho && params.alto ? params.alto : base.h;
+
+  if (isMesaCircular) {
+    const diameter = resolveMesaDiameter(params, base);
+    rW = diameter;
+    rH = diameter;
+  }
+
   const fitBox = fitBoxFor(tipoNorm);
   const maxW  = params.maxW ?? fitBox.maxW;
   const maxH  = params.maxH ?? fitBox.maxH;
   const scale = Math.min(maxW / rW, maxH / rH, 1.8);
-  const drawW = Math.max(68, Math.round(rW * scale));
-  const drawH = Math.max(52, Math.round(rH * scale));
-
-  const isMesa  = tipoNorm === "Mesa";
-  const dimLeft = isMesa ? 40 : variant === "pdf" ? 52 : 46;
+  const drawW = Math.max(isMesaCircular ? 52 : 68, Math.round(rW * scale));
+  const drawH = Math.max(isMesaCircular ? 52 : 52, Math.round(rH * scale));
+  const dimLeft = variant === "pdf" ? 52 : 46;
   const dimBot  = variant === "pdf" ? 8 : 42;
   const topPad  = variant === "pdf" ? 34 : 12;
   const rightPad = variant === "pdf" ? 6 : 12;
@@ -1418,29 +1436,27 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     params.palilloType
   );
 
-  let dimensions: string;
-  if (isMesa) {
-    dimensions = dimV(
-      originX - 22,
-      originY + drawH * 0.28,
-      Math.max(14, drawH * 0.16),
-      formatMm(params.alto ?? 10),
-      palette, variant
-    );
-  } else {
-    const dimY = variant === "pdf" ? originY - 8 : originY + drawH + 18;
-    dimensions = [
-      dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
-      dimV(
-        originX - (variant === "pdf" ? 22 : 20),
-        originY,
-        drawH,
-        formatMm(params.alto),
+  const dimY = variant === "pdf" ? originY - 8 : originY + drawH + 18;
+  const dimensions = isMesaCircular
+    ? dimH(
+        originX,
+        dimY,
+        drawW,
+        formatMm(resolveMesaDiameter(params, base)),
         palette,
         variant
-      ),
-    ].join("");
-  }
+      )
+    : [
+        dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
+        dimV(
+          originX - (variant === "pdf" ? 22 : 20),
+          originY,
+          drawH,
+          formatMm(params.alto),
+          palette,
+          variant
+        ),
+      ].join("");
 
   const label = buildLabel(params.tipo, params.sistema, variant);
   const labelEl = label
@@ -1474,7 +1490,14 @@ function pdFrame(x: number, y: number, w: number, h: number, sw: number, color: 
   ].join("\n");
 }
 
-function pdGlass(x: number, y: number, w: number, h: number, _frameColor?: string): string {
+function pdGlass(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- color de marco reservado para variantes futuras
+  frameColor?: string
+): string {
   return `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="0.5"/>`;
 }
 

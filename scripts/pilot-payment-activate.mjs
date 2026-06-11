@@ -5,7 +5,6 @@ import {
   addMonths,
   exitWithError,
   loadPilotRuntime,
-  parseArgs,
   resolvePilotOptions,
 } from "./pilot-shared.mjs";
 

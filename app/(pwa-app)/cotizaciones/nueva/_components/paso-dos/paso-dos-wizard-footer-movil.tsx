@@ -10,6 +10,7 @@ type Props = {
   isCompactDataStep: boolean;
   isFreeValueItem?: boolean;
   isTotalGlobal?: boolean;
+  isSingleStepFreeTotal?: boolean;
   precioFormateado?: string;
   onBack: () => void;
   onClose: () => void;
@@ -25,6 +26,7 @@ export function PasoDosWizardFooterMovil({
   isCompactDataStep,
   isFreeValueItem = false,
   isTotalGlobal = false,
+  isSingleStepFreeTotal = false,
   precioFormateado = "",
   onBack,
   onClose,
@@ -47,7 +49,7 @@ export function PasoDosWizardFooterMovil({
         isCompactDataStep ? s.stepTwoMobileCreatorFooterCompact : ""
       }`}
     >
-      {visualStage === 1 ? (
+      {visualStage === 1 || isSingleStepFreeTotal ? (
         <button className={s.btnGhost} onClick={onClose} type="button">
           Cancelar
         </button>

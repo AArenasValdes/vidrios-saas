@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LuChevronLeft, LuChevronRight, LuNotebookPen, LuPlus, LuSparkles, LuX } from "react-icons/lu";
+import { LuChevronLeft, LuPlus, LuX } from "react-icons/lu";
 
 import {
   COMPONENT_TYPE_GROUPS,
@@ -23,9 +23,11 @@ import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-prici
 import {
   ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
-import type {
-  PasoDosGrupoDraft,
-  PasoDosGrupoPaso,
+import {
+  shouldHideFreeNotebookCategoryInWizard,
+  type PasoDosGrupoDraft,
+  type PasoDosGrupoEntryMode,
+  type PasoDosGrupoPaso,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
 import { getVisibleSubtypeLabel } from "./paso-dos-wizard-movil.utils";
 
@@ -34,6 +36,7 @@ import s from "../../page.module.css";
 type Props = {
   isOpen: boolean;
   paso: PasoDosGrupoPaso;
+  entryMode: PasoDosGrupoEntryMode;
   draft: PasoDosGrupoDraft;
   subtypeOptions: readonly string[];
   systemOptions: readonly string[];
@@ -115,6 +118,7 @@ function getContinueLabel(paso: PasoDosGrupoPaso) {
 export function PasoDosAgregarGrupoSheet({
   isOpen,
   paso,
+  entryMode,
   draft,
   subtypeOptions,
   systemOptions,
@@ -144,10 +148,8 @@ export function PasoDosAgregarGrupoSheet({
   onRemoveAlcanceDetalle,
   quotePricingMode,
   totalClienteManual,
-  mostrarIva,
   internalObservation,
   onGlobalTotalClienteChange,
-  onMostrarIvaChange,
   onInternalObservationChange,
   canContinueFromQuantity,
   canContinueFromConfig,
@@ -173,6 +175,10 @@ export function PasoDosAgregarGrupoSheet({
   const freeValueGuidance = getComponentDescripcion(draft.subtipo);
   const shouldShowFreeValuePrice =
     quotePricingMode !== "total_global" || draft.cobraPrecioSeparado;
+  const isSingleStepFreeTotal = entryMode === "free_total_single";
+  const visibleTypeGroups = shouldHideFreeNotebookCategoryInWizard(quotePricingMode, entryMode)
+    ? COMPONENT_TYPE_GROUPS.filter((group) => group.title !== "Proyecto libre y Mantencion")
+    : COMPONENT_TYPE_GROUPS;
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -224,46 +230,23 @@ export function PasoDosAgregarGrupoSheet({
           </button>
         </header>
 
-        <div className={s.groupSheetProgress} aria-hidden="true">
-          {[1, 2, 3, 4, 5].map((stepNumber) => (
-            <span
-              key={stepNumber}
-              className={`${s.groupSheetProgressStep} ${
-                stepNumber <= paso ? s.groupSheetProgressStepActive : ""
-              }`}
-            />
-          ))}
-        </div>
+        {isSingleStepFreeTotal ? null : (
+          <div className={s.groupSheetProgress} aria-hidden="true">
+            {[1, 2, 3, 4, 5].map((stepNumber) => (
+              <span
+                key={stepNumber}
+                className={`${s.groupSheetProgressStep} ${
+                  stepNumber <= paso ? s.groupSheetProgressStepActive : ""
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         <div className={s.groupSheetBody}>
           {paso === 1 ? (
-            quotePricingMode === "total_global" ? (
-              <button
-                className={s.stepTwoMobileNotebookCard}
-                onClick={() => onSelectSubtipo("Trabajo libre / Mantencion")}
-                type="button"
-              >
-                <span className={s.stepTwoMobileNotebookIcon}>
-                  <LuNotebookPen aria-hidden size={28} />
-                </span>
-                <span className={s.stepTwoMobileNotebookCopy}>
-                  <span className={s.stepTwoMobileNotebookKicker}>
-                    <LuSparkles aria-hidden size={14} />
-                    Presupuesto por total
-                  </span>
-                  <strong>Trabajo libre / Mantencion</strong>
-                  <small>
-                    Usalo para reparaciones, cambios de vidrio, mantenciones,
-                    sellados o trabajos personalizados.
-                  </small>
-                </span>
-                <span className={s.stepTwoMobileCreatorOptionArrow}>
-                  <LuChevronRight aria-hidden size={18} />
-                </span>
-              </button>
-            ) : (
               <div className={s.groupSheetOptionGrid}>
-                {COMPONENT_TYPE_GROUPS.map((group) => {
+                {visibleTypeGroups.map((group) => {
                   const isLibre = group.title === "Proyecto libre y Mantencion";
                   const isSingle = group.items.length === 1;
                   const isActive = !isSingle && draft.categoria === group.title;
@@ -292,7 +275,6 @@ export function PasoDosAgregarGrupoSheet({
                   );
                 })}
               </div>
-            )
           ) : null}
 
           {paso === 2 ? (
@@ -663,29 +645,6 @@ export function PasoDosAgregarGrupoSheet({
                             onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
                           />
                         </label>
-                        <div className={s.field}>
-                          <span className={s.label}>IVA</span>
-                          <div className={s.ivaCompactRow}>
-                            <button
-                              type="button"
-                              className={`${s.ivaCompactOption} ${
-                                mostrarIva ? s.ivaCompactOptionActive : ""
-                              }`}
-                              onClick={mostrarIva ? undefined : onMostrarIvaChange}
-                            >
-                              <span className={s.ivaCompactLabel}>Incluye IVA</span>
-                            </button>
-                            <button
-                              type="button"
-                              className={`${s.ivaCompactOption} ${
-                                !mostrarIva ? s.ivaCompactOptionActive : ""
-                              }`}
-                              onClick={mostrarIva ? onMostrarIvaChange : undefined}
-                            >
-                              <span className={s.ivaCompactLabel}>Sin IVA</span>
-                            </button>
-                          </div>
-                        </div>
                       </section>
                     ) : null}
 

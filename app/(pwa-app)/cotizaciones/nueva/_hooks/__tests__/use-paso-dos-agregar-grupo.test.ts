@@ -1,4 +1,7 @@
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+
 import {
+  buildFreeTotalNotebookDraftFromWorkflow,
   buildPasoDosGrupoSelectionPatch,
   buildPasoDosGrupoComponentForm,
   buildPasoDosGrupoSummary,
@@ -7,6 +10,7 @@ import {
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
+  resolveFreeTotalNotebookEditScope,
   shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
 } from "../use-paso-dos-agregar-grupo";
@@ -397,5 +401,77 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       "Batiente",
     ]);
     expect(getConfigurationOptionsForSubtype("Shower door")).toContain("Frontal");
+  });
+
+  it("debe resolver el alcance de edicion del cuaderno libre por total", () => {
+    const items: CotizacionWorkflowItem[] = [
+      {
+        id: "main-id",
+        codigo: "L1",
+        tipoItem: "item_libre_con_valor",
+        nombre: "Mantencion",
+        descripcion: "Trabajo principal",
+        cantidad: 1,
+        precioUnitario: 0,
+        subtotal: 0,
+      } as CotizacionWorkflowItem,
+      {
+        id: "detail-id",
+        codigo: "L2",
+        tipoItem: "item_libre_con_valor",
+        nombre: "Creacion logo",
+        descripcion: "Detalle incluido",
+        cantidad: 1,
+        precioUnitario: 0,
+        subtotal: 0,
+      } as CotizacionWorkflowItem,
+    ];
+
+    const scope = resolveFreeTotalNotebookEditScope(items, "detail-id");
+
+    expect(scope.mainItemId).toBe("main-id");
+    expect(scope.editingItemIds).toEqual(["main-id", "detail-id"]);
+    expect(scope.detailItems.map((item) => item.id)).toEqual(["detail-id"]);
+  });
+
+  it("debe reconstruir el draft del cuaderno libre desde items existentes", () => {
+    const mainItem = {
+      id: "main-id",
+      codigo: "L1",
+      tipoItem: "item_libre_con_valor",
+      nombre: "Mantencion",
+      descripcion: "Trabajo principal",
+      cantidad: 1,
+      precioUnitario: 0,
+      subtotal: 0,
+    } as CotizacionWorkflowItem;
+    const detailItems = [
+      {
+        id: "detail-id",
+        codigo: "L2",
+        tipoItem: "item_libre_con_valor",
+        nombre: "Creacion logo",
+        descripcion: "Logo corporativo",
+        cantidad: 1,
+        precioUnitario: 0,
+        subtotal: 0,
+      } as CotizacionWorkflowItem,
+    ];
+
+    const draft = buildFreeTotalNotebookDraftFromWorkflow({
+      items: [mainItem, ...detailItems],
+      pricingMode: "precio_directo",
+      provider: "",
+      mainItem,
+      detailItems,
+      totalClienteManual: 274000,
+    });
+
+    expect(draft.nombre).toBe("Mantencion");
+    expect(draft.descripcion).toBe("Trabajo principal");
+    expect(draft.precio).toBe("274000");
+    expect(draft.alcanceDetalles).toHaveLength(1);
+    expect(draft.alcanceDetalles[0]?.nombre).toBe("Creacion logo");
+    expect(draft.alcanceDetalles[0]?.descripcion).toBe("Logo corporativo");
   });
 });

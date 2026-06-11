@@ -32,7 +32,7 @@ describe("generateComponentSVG", () => {
       "Cierre terraza/logia",
       "Baranda",
       "Espejo",
-      "Tapa de mesa",
+      "Cubierta de mesa",
       "Fachada vidriada",
       "Muro cortina",
       "Vitrina",
@@ -61,6 +61,69 @@ describe("generateComponentSVG", () => {
 
     expect(svg).toContain("1200 mm");
     expect(svg).toContain("1000 mm");
+  });
+
+  it("muestra ancho y alto completos en cubierta de mesa sin recortar cotas", () => {
+    const svg = generateComponentSVG({
+      tipo: "Cubierta de mesa",
+      ancho: 1200,
+      alto: 1500,
+      variant: "pdf",
+      maxW: 470,
+      maxH: 210,
+    });
+
+    expect(svg).toContain("1200 mm");
+    expect(svg).toContain("1500 mm");
+    expect(svg).not.toMatch(/<text x="[0-9]" y="/);
+    expect(svg).not.toMatch(/rotate\(-90 3 /);
+  });
+
+  it("dibuja cubierta de mesa circular con un circulo y cota de diametro", () => {
+    const svg = generateComponentSVG({
+      tipo: "Cubierta de mesa",
+      sistema: "Circular",
+      ancho: 900,
+      alto: 900,
+      variant: "pdf",
+      maxW: 470,
+      maxH: 210,
+    });
+
+    expect(svg).toContain("<circle");
+    expect(svg).toContain("900 mm");
+    expect(svg).not.toContain('x1="30" y1=');
+  });
+
+  it("dibuja cubierta de mesa con proporción acorde a ancho y alto", () => {
+    const svg = generateComponentSVG({
+      tipo: "Cubierta de mesa",
+      ancho: 700,
+      alto: 1900,
+      variant: "pdf",
+      maxW: 470,
+      maxH: 210,
+    });
+
+    const glass = svg.match(
+      /<rect x="(\d+(?:\.\d+)?)" y="(\d+(?:\.\d+)?)" width="(\d+(?:\.\d+)?)" height="(\d+(?:\.\d+)?)" fill="rgba\(220,234,247,0\.86\)"/
+    );
+    const dimV = svg.match(
+      /x1="30" y1="(\d+(?:\.\d+)?)" x2="30" y2="(\d+(?:\.\d+)?)" stroke="#999999"/
+    );
+
+    expect(glass).not.toBeNull();
+    expect(dimV).not.toBeNull();
+
+    const glassY = Number(glass?.[2]);
+    const glassW = Number(glass?.[3]);
+    const glassH = Number(glass?.[4]);
+    const dimSpan = Number(dimV?.[2]) - Number(dimV?.[1]);
+
+    expect(glassH).toBeGreaterThan(glassW);
+    expect(glassY).toBe(Number(dimV?.[1]));
+    expect(glassH).toBeCloseTo(dimSpan, 0);
+    expect(glassW / glassH).toBeCloseTo(700 / 1900, 1);
   });
 
   it("muestra cotas vacías cuando no llegan dimensiones", () => {

@@ -313,3 +313,15 @@
   color: var(--dashboard-danger);
   border-color: rgba(217, 92, 92, 0.16);
 }
+
+.pillInfo {
+  background: #edf3ff;
+  color: #335ea9;
+  border-color: rgba(79, 125, 212, 0.16);
+}
+
+.pillNeutral {
+  background: #eef2f8;
+  color: #41536f;
+  border-color: rgba(65, 83, 111, 0.12);
+}

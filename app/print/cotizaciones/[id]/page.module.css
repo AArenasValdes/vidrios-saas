@@ -1073,13 +1073,13 @@
 
 .globalDescriptionChecklistItem {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 14px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
   min-height: 24px;
   padding: 5px 8px 5px 6px;
   border-left: 2px solid var(--brand);
-  background: linear-gradient(90deg, rgba(35, 185, 139, 0.08), #ffffff);
+  background: linear-gradient(90deg, var(--brand-soft), #ffffff);
   font-family: var(--font-sans), Arial, sans-serif;
   font-size: 10.8px;
   line-height: 1.42;
@@ -1089,18 +1089,14 @@
 }
 
 .globalDescriptionChecklistMark {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 2px;
   background: var(--brand);
-  color: #ffffff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 7.5px;
-  font-weight: 800;
-  line-height: 1;
-  box-shadow: 0 0 0 3px rgba(35, 185, 139, 0.12);
+  box-shadow: 0 0 0 2px var(--brand-ring);
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .totalGlobalDetailsSection {

@@ -1,0 +1,13 @@
+.mobileSubscriptionWrap {
+  margin-bottom: 4px;
+}
+
+.mobileSubscriptionWrapUrgent {
+  margin-bottom: 8px;
+}
+
+.desktopSubscriptionWrap {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: flex-start;
+}

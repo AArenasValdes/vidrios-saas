@@ -388,12 +388,13 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.navbarInner}>
             <a href="#top" className={s.navLogo} aria-label="Ventora inicio">
-              <img
+              <Image
                 src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
                 width={184}
                 height={42}
                 className={s.wordmark}
+                unoptimized
               />
             </a>
 
@@ -734,12 +735,13 @@ export default function LandingPage() {
         <div className={s.container}>
           <div className={s.footerLayout}>
             <div className={s.footerBrand}>
-              <img
+              <Image
                 src="/brand/ventora-logo-premium-dark.svg"
                 alt="Ventora"
                 width={344}
                 height={80}
                 className={s.footerBrandLogo}
+                unoptimized
               />
               <p>
                 Cotizador comercial para empresas de vidrios y aluminio. Crea

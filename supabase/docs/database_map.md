@@ -139,6 +139,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `cliente_vio_en` | timestamptz | |
 | `cliente_respondio_en` | timestamptz | |
 | `cliente_respuesta_canal` | text | |
+| `pdf_descargado_en` | timestamptz | Marca silenciosa cuando el maestro descarga/abre PDF desde la app; no cambia `estado` |
 | `creado_en` | timestamptz | |
 | `actualizado_en` | timestamptz | |
 | `eliminado_en` | timestamptz | Soft delete |

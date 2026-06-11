@@ -5,8 +5,13 @@ export type DashboardSummary = {
   recentRecords: CotizacionWorkflowRecord[];
   alerts: CotizacionAlert[];
   totalCount: number;
-  pendingCount: number;
+  quotedTotal: number;
+  pdfGeneratedCount: number;
+  approvedCount: number;
   monthCount: number;
+  /** @deprecated Usar quotedTotal y pdfGeneratedCount. Se mantiene por cache local. */
+  pendingCount?: number;
   approvedTodayCount: number;
-  approvedMonthTotal: number;
+  /** @deprecated Usar quotedTotal. Se mantiene por cache local. */
+  approvedMonthTotal?: number;
 };

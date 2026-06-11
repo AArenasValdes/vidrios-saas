@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
@@ -11,7 +12,10 @@ import { splitComponentReference } from "@/features/cotizaciones/services/compon
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
-import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
+import {
+  hexToRgbChannels,
+  resolveOrganizationProfile,
+} from "@/features/organization-profile/services/organization-profile.service";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import {
   buildDocumentCompanyName,
@@ -32,6 +36,7 @@ import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/ut
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
+import { splitDescriptionChecklistItems } from "./_utils/description-checklist";
 import { buildPrintPlan, isFreePrintItem } from "./_utils/print-plan";
 import {
   buildTotalGlobalPrintPlan,
@@ -251,15 +256,6 @@ function splitTextIntoChunks(text: string, firstChunkSize = 1050, nextChunkSize 
   return chunks;
 }
 
-function splitDescriptionChecklistItems(text: string) {
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.replace(/^\d+[\).-]?\s*/, "").trim())
-    .filter(Boolean);
-}
-
 function formatPageNumber(current: number, total: number) {
   return `${String(current).padStart(2, "0")}/${String(total).padStart(2, "0")}`;
 }
@@ -425,7 +421,7 @@ function ExportPager({
 export default function CotizacionPrintPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const { getCotizacionById, loadCotizacionById, markQuoteAsSent, isReady } =
+  const { getCotizacionById, loadCotizacionById, markQuoteAsSent, recordPdfDownload, isReady } =
     useCotizacionesStore({ autoLoadSummary: false });
   const { profile: rawOrganizationProfile, isReady: isProfileReady } = useOrganizationProfile();
   const cotizacion = getCotizacionById(params.id);
@@ -584,8 +580,11 @@ export default function CotizacionPrintPage() {
   const shouldShowCompanyLogo =
     Boolean(companyLogoUrl) && failedLogoUrl !== companyLogoUrl;
 
+  const brandRgb = hexToRgbChannels(organizationProfile.brandColor);
   const pageStyle = {
     "--brand": organizationProfile.brandColor,
+    "--brand-soft": `rgba(${brandRgb}, 0.1)`,
+    "--brand-ring": `rgba(${brandRgb}, 0.14)`,
     "--carbon": "#111827",
   } as CSSProperties;
 
@@ -791,6 +790,16 @@ export default function CotizacionPrintPage() {
     return map;
   }, [visibleCotizacion?.items]);
 
+  const markPdfDownloadInBackground = useCallback(() => {
+    if (!visibleCotizacion) {
+      return;
+    }
+
+    void recordPdfDownload(String(visibleCotizacion.id)).catch(() => {
+      return;
+    });
+  }, [recordPdfDownload, visibleCotizacion]);
+
   const markQuoteAsSentInBackground = useCallback(() => {
     if (!visibleCotizacion) {
       return;
@@ -927,14 +936,19 @@ export default function CotizacionPrintPage() {
         setExportError(
           "No pudimos abrir el PDF en este telefono. Intenta nuevamente y, si sigue fallando, envia el link por WhatsApp y comparte el archivo manualmente."
         );
-      } else if (
-        downloadResult !== "downloaded" &&
-        typeof navigator !== "undefined" &&
-        requiresPdfOpenFallback(navigator.userAgent)
-      ) {
-        setExportError(
-          "En iPhone abrimos el archivo PDF para que lo guardes o compartas usando las opciones del navegador."
-        );
+      } else {
+        markPdfDownloadInBackground();
+        toast("PDF descargado");
+
+        if (
+          downloadResult !== "downloaded" &&
+          typeof navigator !== "undefined" &&
+          requiresPdfOpenFallback(navigator.userAgent)
+        ) {
+          setExportError(
+            "En iPhone abrimos el archivo PDF para que lo guardes o compartas usando las opciones del navegador."
+          );
+        }
       }
     } catch (error) {
       const { formatCotizacionPdfError } = await loadCotizacionPdfModule();
@@ -942,7 +956,7 @@ export default function CotizacionPrintPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [buildPdfFile, exportFileName]);
+  }, [buildPdfFile, exportFileName, markPdfDownloadInBackground]);
 
   const handleWhatsappShare = useCallback(async () => {
     try {
@@ -1153,9 +1167,7 @@ export default function CotizacionPrintPage() {
                     <div className={s.globalDescriptionChecklist}>
                       {splitDescriptionChecklistItems(pagePlan.description).map((item, index) => (
                         <div key={`${pageNumber}-${index}-${item}`} className={s.globalDescriptionChecklistItem}>
-                          <span className={s.globalDescriptionChecklistMark} aria-hidden>
-                            {index + 1}
-                          </span>
+                          <span className={s.globalDescriptionChecklistMark} aria-hidden="true" />
                           <span>{item}</span>
                         </div>
                       ))}

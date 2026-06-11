@@ -17,7 +17,7 @@ describe("component-catalog service", () => {
     ]);
     expect(getComponentTypeOptionsForCategory("Interiores y decoracion")).toEqual([
       "Espejo",
-      "Tapa de mesa",
+      "Cubierta de mesa",
     ]);
     const especiales = getComponentTypeOptionsForCategory("Especiales");
 
@@ -31,6 +31,14 @@ describe("component-catalog service", () => {
     const libres = getComponentTypeOptionsForCategory("Proyecto libre y Mantencion");
     expect(libres).toHaveLength(1);
     expect(libres).toEqual(["Trabajo libre / Mantencion"]);
+  });
+
+  it("debe exponer circular como sistema de cubierta de mesa", () => {
+    expect(getSystemOptionsForComponent("Cubierta de mesa")).toEqual([
+      "Recta",
+      "Forma especial",
+      "Circular",
+    ]);
   });
 
   it("debe separar sistema y configuracion en paño fijo y shower door", () => {

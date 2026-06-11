@@ -12,6 +12,7 @@ type Stage = {
 
 type Props = {
   stages: readonly Stage[];
+  hideStages?: boolean;
   visualStage: PasoDosGrupoPasoMovil;
   title: string;
   subtitle: string;
@@ -21,6 +22,7 @@ type Props = {
 
 export function PasoDosWizardEncabezadoMovil({
   stages,
+  hideStages = false,
   visualStage,
   title,
   subtitle,
@@ -40,23 +42,25 @@ export function PasoDosWizardEncabezadoMovil({
         </button>
       </header>
 
-      <div className={s.stepTwoMobileCreatorStageRow}>
-        {stages.map((stage) => (
-          <button
-            key={stage.id}
-            type="button"
-            onClick={() => onGoToStep(stage.id as PasoDosGrupoPasoMovil)}
-            className={`${s.stepTwoMobileCreatorStagePill} ${
-              stage.id === visualStage ? s.stepTwoMobileCreatorStagePillActive : ""
-            } ${stage.id < visualStage ? s.stepTwoMobileCreatorStagePillDone : ""}`}
-          >
-            <span>
-              {stage.id < visualStage ? <LuCheck aria-hidden size={10} /> : stage.id}
-            </span>
-            <strong>{stage.label}</strong>
-          </button>
-        ))}
-      </div>
+      {hideStages ? null : (
+        <div className={s.stepTwoMobileCreatorStageRow}>
+          {stages.map((stage) => (
+            <button
+              key={stage.id}
+              type="button"
+              onClick={() => onGoToStep(stage.id as PasoDosGrupoPasoMovil)}
+              className={`${s.stepTwoMobileCreatorStagePill} ${
+                stage.id === visualStage ? s.stepTwoMobileCreatorStagePillActive : ""
+              } ${stage.id < visualStage ? s.stepTwoMobileCreatorStagePillDone : ""}`}
+            >
+              <span>
+                {stage.id < visualStage ? <LuCheck aria-hidden size={10} /> : stage.id}
+              </span>
+              <strong>{stage.label}</strong>
+            </button>
+          ))}
+        </div>
+      )}
     </>
   );
 }

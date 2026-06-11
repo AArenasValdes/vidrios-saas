@@ -17,7 +17,9 @@ type PasoDosSeccionProps = {
   formulario: PasoDosFormularioComponenteProps;
   panel: PasoDosPanelComponentesProps;
   itemLibreForm: PasoDosItemLibreFormProps;
+  quoteModeChosen: boolean;
   onOpenCreator: () => void;
+  onOpenFreeTotalNotebook: () => void;
   onSelectMode: (mode: QuotePricingMode) => void;
 };
 
@@ -25,20 +27,29 @@ export function PasoDosSeccion({
   formulario,
   panel,
   itemLibreForm,
+  quoteModeChosen,
   onOpenCreator,
+  onOpenFreeTotalNotebook,
   onSelectMode,
 }: PasoDosSeccionProps) {
   const showModeChoice =
     panel.items.length === 0 &&
     !formulario.editingItemId &&
-    !itemLibreForm.isOpen;
+    !itemLibreForm.isOpen &&
+    !quoteModeChosen;
 
   if (showModeChoice) {
     return (
       <PasoDosModoCotizacion
         onSelectMode={(mode) => {
           onSelectMode(mode);
-          onOpenCreator();
+          if (mode === "por_item") {
+            onOpenCreator();
+          }
+        }}
+        onSelectFreeTotalMode={() => {
+          onSelectMode("total_global");
+          onOpenFreeTotalNotebook();
         }}
       />
     );

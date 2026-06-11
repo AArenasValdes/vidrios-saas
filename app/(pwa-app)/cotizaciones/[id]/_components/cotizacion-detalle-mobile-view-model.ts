@@ -2,6 +2,10 @@ import type {
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import {
+  resolveCotizacionClosureState,
+  resolveCotizacionWorkflowState,
+} from "@/features/cotizaciones/services/cotizacion-display-state.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { repairBrokenText } from "@/utils/repair-broken-text";
 
@@ -10,14 +14,6 @@ const CLP_FORMATTER = new Intl.NumberFormat("es-CL", {
   currency: "CLP",
   maximumFractionDigits: 0,
 });
-
-const STATUS_META: Record<string, { cls: string; label: string }> = {
-  aprobada: { cls: "stAprobada", label: "Aprobada" },
-  enviada: { cls: "stEnviada", label: "Enviada" },
-  borrador: { cls: "stBorrador", label: "Borrador" },
-  creada: { cls: "stCreada", label: "Pendiente" },
-  rechazada: { cls: "stRechazada", label: "Rechazada" },
-};
 
 export type CotizacionDetalleMobileItem = {
   id: string;
@@ -65,22 +61,6 @@ function clp(value: number) {
 function safeText(value: string | null | undefined, fallback: string) {
   const trimmed = value?.trim();
   return trimmed ? repairBrokenText(trimmed) : fallback;
-}
-
-function resolveManualResponseMeta(estado: CotizacionWorkflowRecord["estado"]) {
-  if (estado === "aprobada") {
-    return { cls: "stAprobada", label: "Aprobada" };
-  }
-
-  if (estado === "rechazada") {
-    return { cls: "stRechazada", label: "Rechazada" };
-  }
-
-  if (estado === "terminada") {
-    return { cls: "stTerminada", label: "Terminada" };
-  }
-
-  return { cls: "stEnviada", label: "Pendiente" };
 }
 
 function formatTrackingDate(value: string | null | undefined) {
@@ -131,8 +111,12 @@ export function buildCotizacionDetalleMobileViewModel(
   record: CotizacionWorkflowRecord,
   options: BuildCotizacionDetalleMobileViewModelOptions = {}
 ): CotizacionDetalleMobileViewModel {
-  const status = STATUS_META[record.estado] ?? STATUS_META.borrador;
-  const response = resolveManualResponseMeta(record.estado);
+  const displayInput = {
+    estado: record.estado,
+    pdfDescargadoEn: record.pdfDescargadoEn,
+  };
+  const status = resolveCotizacionWorkflowState(displayInput);
+  const response = resolveCotizacionClosureState(displayInput);
   const isTotalGlobal = record.quotePricingMode === "total_global";
   const items = record.items.map((item, index) => ({
     id: item.id,

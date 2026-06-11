@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { IconType } from "react-icons";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
@@ -1092,10 +1093,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className={s.bootRoot}>
         <div className={s.bootCard}>
-          <img
+          <Image
             alt="Ventora"
             className={s.bootBrandLogo}
             src="/brand/ventora-logo-boot.svg"
+            width={320}
+            height={76}
+            unoptimized
+            priority
           />
           <p className={s.bootLoadingText}>
             Preparando tu espacio de trabajo

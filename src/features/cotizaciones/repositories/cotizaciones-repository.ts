@@ -37,6 +37,7 @@ type CotizacionRow = {
   cliente_vio_en: string | null;
   cliente_respondio_en: string | null;
   cliente_respuesta_canal: string | null;
+  pdf_descargado_en: string | null;
   creado_en: string | null;
   total: number;
 };
@@ -91,11 +92,11 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, pricing_mode, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, pricing_mode, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, actualizado_en, total";
 const COTIZACION_LIST_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, creado_en, actualizado_en, total";
 const COTIZACION_ITEM_SELECT =
@@ -129,6 +130,7 @@ type CotizacionesDashboardFilter = {
   respondedTo?: string;
   viewedOnly?: boolean;
   respondedOnly?: boolean;
+  pdfDownloadedOnly?: boolean;
   allowedProjectIds?: EntityId[] | null;
   searchProjectIds?: EntityId[] | null;
   search?: string | null;
@@ -157,6 +159,7 @@ type CotizacionesResumenGlobalResult = {
   totalCount: number;
   totalAmount: number;
   approvedAmount: number;
+  pdfGeneratedCount: number;
   counts: {
     borrador: number;
     creada: number;
@@ -221,7 +224,8 @@ function isMissingApprovalFieldsError(error: unknown) {
       haystack.includes("approval_token_expires_at") ||
       haystack.includes("cliente_vio_en") ||
       haystack.includes("cliente_respondio_en") ||
-      haystack.includes("cliente_respuesta_canal")) &&
+      haystack.includes("cliente_respuesta_canal") ||
+      haystack.includes("pdf_descargado_en")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -340,6 +344,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     clienteVioEn: row.cliente_vio_en ?? null,
     clienteRespondioEn: row.cliente_respondio_en ?? null,
     clienteRespuestaCanal: row.cliente_respuesta_canal ?? null,
+    pdfDescargadoEn: row.pdf_descargado_en ?? null,
     creadoEn: row.creado_en,
     items: [],
     total: row.total,
@@ -386,6 +391,11 @@ function applyCotizacionesDashboardFilters<T extends DashboardCotizacionesFilter
       filters.estados[0]?.toLowerCase() === "pendiente"
     ) {
       nextQuery = nextQuery.in("estado", ["borrador", "creada", "enviada"]) as T;
+    } else if (
+      filters.estados.length === 1 &&
+      filters.estados[0]?.toLowerCase() === "pdf_generado"
+    ) {
+      nextQuery = nextQuery.not("pdf_descargado_en", "is", null) as T;
     } else {
       nextQuery = nextQuery.in("estado", filters.estados) as T;
     }
@@ -401,6 +411,10 @@ function applyCotizacionesDashboardFilters<T extends DashboardCotizacionesFilter
 
   if (filters.respondedOnly) {
     nextQuery = nextQuery.not("cliente_respondio_en", "is", null) as T;
+  }
+
+  if (filters.pdfDownloadedOnly) {
+    nextQuery = nextQuery.not("pdf_descargado_en", "is", null) as T;
   }
 
   if (filters.updatedFrom) {
@@ -1110,6 +1124,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       cliente_vio_en: null,
       cliente_respondio_en: null,
       cliente_respuesta_canal: null,
+      pdf_descargado_en: null,
     })) as CotizacionRow[]).map(mapCotizacion);
 
     return {
@@ -1126,7 +1141,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     filters: CotizacionesDashboardFilter = {}
   ): Promise<CotizacionesResumenGlobalResult> {
     const query = applyCotizacionesDashboardFilters(
-      supabase.from("cotizaciones").select("estado, total"),
+      supabase.from("cotizaciones").select("estado, total, pdf_descargado_en"),
       organizationId,
       filters
     );
@@ -1137,7 +1152,11 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     }
 
     const rows =
-      ((data as Array<{ estado: string | null; total: number | string | null }>) ?? []);
+      ((data as Array<{
+        estado: string | null;
+        total: number | string | null;
+        pdf_descargado_en?: string | null;
+      }>) ?? []);
 
     return rows.reduce<CotizacionesResumenGlobalResult>(
       (summary, row) => {
@@ -1146,6 +1165,10 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
 
         summary.totalCount += 1;
         summary.totalAmount += total;
+
+        if (row.pdf_descargado_en) {
+          summary.pdfGeneratedCount += 1;
+        }
 
         if (estado === "borrador") {
           summary.counts.borrador += 1;
@@ -1168,6 +1191,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
         totalCount: 0,
         totalAmount: 0,
         approvedAmount: 0,
+        pdfGeneratedCount: 0,
         counts: {
           borrador: 0,
           creada: 0,
@@ -1689,6 +1713,46 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
 
       return hydrateCotizacion(mapCotizacion(updated));
     },
+
+    async recordPdfDownload(id: EntityId, organizationId: EntityId) {
+      const existing = await getCotizacionBase(id, organizationId);
+
+      if (!existing) {
+        throw new Error("No se encontro la cotizacion para registrar la descarga del PDF.");
+      }
+
+      if (existing.pdf_descargado_en) {
+        return hydrateCotizacion(mapCotizacion(existing));
+      }
+
+      const downloadedAt = new Date().toISOString();
+      const { error } = await supabase
+        .from("cotizaciones")
+        .update({
+          pdf_descargado_en: downloadedAt,
+        })
+        .eq("id", id)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null);
+
+      if (error && !isMissingApprovalFieldsError(error)) {
+        throw error;
+      }
+
+      if (error && isMissingApprovalFieldsError(error)) {
+        return hydrateCotizacion(mapCotizacion(existing));
+      }
+
+      const updated = await getCotizacionBase(id, organizationId);
+
+      if (!updated) {
+        throw new Error(
+          "La descarga del PDF se registro, pero no se pudo recuperar la cotizacion actualizada."
+        );
+      }
+
+      return hydrateCotizacion(mapCotizacion(updated));
+    },
   };
 }
 
@@ -1756,5 +1820,8 @@ export const cotizacionesRepository: CotizacionesRepository = {
   },
   updateShareStatus(...args) {
     return getDefaultCotizacionesRepository().updateShareStatus(...args);
+  },
+  recordPdfDownload(...args) {
+    return getDefaultCotizacionesRepository().recordPdfDownload(...args);
   },
 };

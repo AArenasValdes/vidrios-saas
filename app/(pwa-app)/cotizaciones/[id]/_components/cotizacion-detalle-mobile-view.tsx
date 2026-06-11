@@ -300,7 +300,7 @@ export function CotizacionDetalleMobileView({
 
         <div className={s.statusOptionList}>
           {[
-            { value: "pendiente", label: "Pendiente" },
+            { value: "pendiente", label: "Sin cierre registrado" },
             { value: "aprobada", label: "Aprobada" },
             { value: "rechazada", label: "Rechazada" },
             { value: "terminada", label: "Proyecto terminado" },

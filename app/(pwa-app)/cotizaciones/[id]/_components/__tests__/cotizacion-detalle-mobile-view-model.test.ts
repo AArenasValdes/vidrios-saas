@@ -21,6 +21,7 @@ function createRecord(
     clienteVioEn: null,
     clienteRespondioEn: null,
     clienteRespuestaCanal: null,
+    pdfDescargadoEn: null,
     createdAt: "2026-05-01T12:00:00.000Z",
     updatedAt: "2026-05-01T12:00:00.000Z",
     subtotal: 1000000,
@@ -59,8 +60,9 @@ describe("buildCotizacionDetalleMobileViewModel", () => {
     const model = buildCotizacionDetalleMobileViewModel(createRecord());
 
     expect(model.code).toBe("COT-010526-001");
-    expect(model.statusLabel).toBe("Pendiente");
+    expect(model.statusLabel).toBe("Creada");
     expect(model.responseStatus).toBe("pendiente");
+    expect(model.responseStatusLabel).toBe("Sin cierre registrado");
     expect(model.responseChannelLabel).toBe("Sin seguimiento registrado");
     expect(model.total).toBe("$1.190.000");
     expect(model.heroSubtext).toBe("Alejandro Flores · Vina del Mar 2722 · 1 componente");

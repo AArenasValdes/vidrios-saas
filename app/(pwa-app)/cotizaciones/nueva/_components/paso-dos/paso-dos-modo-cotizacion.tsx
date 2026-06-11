@@ -1,6 +1,6 @@
 "use client";
 
-import { LuComponent, LuFileText } from "react-icons/lu";
+import { LuComponent, LuNotebookPen } from "react-icons/lu";
 
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
@@ -8,47 +8,71 @@ import s from "../../page.module.css";
 
 type PasoDosModoCotizacionProps = {
   onSelectMode: (mode: QuotePricingMode) => void;
+  onSelectFreeTotalMode: () => void;
 };
 
-export function PasoDosModoCotizacion({ onSelectMode }: PasoDosModoCotizacionProps) {
+export function PasoDosModoCotizacion({
+  onSelectMode,
+  onSelectFreeTotalMode,
+}: PasoDosModoCotizacionProps) {
   return (
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
-        <h2>Como quieres empezar?</h2>
-        <p>La unica diferencia es como defines el precio: por cada item o con un total al final.</p>
+        <h2>¿Cómo quieres calcular el presupuesto?</h2>
+        <p>Elige si quieres sumar ítems o ingresar un total final.</p>
       </div>
+
       <div className={s.stepTwoModeChoiceGrid}>
-        <article className={s.stepTwoModeChoiceCard}>
+        <article
+          className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardRecommended}`}
+        >
+          <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeRecommended}`}>
+            Recomendado
+          </span>
+
           <div className={s.stepTwoModeChoiceCardIcon} aria-hidden>
-            <LuComponent size={28} />
+            <LuComponent size={24} />
           </div>
-          <div>
+
+          <div className={s.stepTwoModeChoiceCardCopy}>
             <strong>Cotizar por ítems</strong>
-            <p>Agrega ventanas, puertas, reparaciones o cobros adicionales. Cada item lleva su propio precio y el total se calcula automatico.</p>
+            <p>Para ventanas, puertas, shower o varios trabajos.</p>
           </div>
+
           <button
             type="button"
             className={s.btnPrimary}
             onClick={() => onSelectMode("por_item")}
           >
-            Armar por ítems
+            Usar ítems
           </button>
         </article>
 
-        <article className={s.stepTwoModeChoiceCard}>
-          <div className={s.stepTwoModeChoiceCardIcon} aria-hidden>
-            <LuFileText size={28} />
+        <article
+          className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}
+        >
+          <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
+            Modo rápido
+          </span>
+
+          <div
+            className={`${s.stepTwoModeChoiceCardIcon} ${s.stepTwoModeChoiceCardIconFast}`}
+            aria-hidden
+          >
+            <LuNotebookPen size={24} />
           </div>
-          <div>
-            <strong>Cotizar por total</strong>
-            <p>Describe el trabajo completo como una sola partida, sin desglosar precios por componente. Tu defines el valor final al terminar.</p>
+
+          <div className={s.stepTwoModeChoiceCardCopy}>
+            <strong>Cotizar libre por total</strong>
+            <p>Para reparaciones, cambios de vidrio o trabajos personalizados.</p>
           </div>
+
           <button
             type="button"
             className={s.btnPrimary}
-            onClick={() => onSelectMode("total_global")}
+            onClick={onSelectFreeTotalMode}
           >
-            Crear cotización
+            Usar total final
           </button>
         </article>
       </div>

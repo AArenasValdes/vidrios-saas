@@ -83,6 +83,7 @@ type WorkflowSummaryPageResult = {
     totalCount: number;
     totalAmount: number;
     approvedAmount: number;
+    pdfGeneratedCount: number;
     counts: {
       borrador: number;
       creada: number;
@@ -277,6 +278,7 @@ function mapCotizacionToWorkflowRecord(input: {
     clienteVioEn: input.cotizacion.clienteVioEn,
     clienteRespondioEn: input.cotizacion.clienteRespondioEn,
     clienteRespuestaCanal: input.cotizacion.clienteRespuestaCanal,
+    pdfDescargadoEn: input.cotizacion.pdfDescargadoEn,
     createdAt: input.cotizacion.creadoEn ?? new Date().toISOString(),
     updatedAt:
       input.cotizacion.actualizadoEn ??
@@ -586,6 +588,7 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
           totalCount: 0,
           totalAmount: 0,
           approvedAmount: 0,
+          pdfGeneratedCount: 0,
           counts: {
             borrador: 0,
             creada: 0,
@@ -1011,6 +1014,32 @@ return workflowRecord;
     });
   }
 
+  async function markWorkflowPdfDownloaded(input: {
+    id: EntityId;
+    organizationId: EntityId;
+  }) {
+    const updated = await cotizacionesRepo.recordPdfDownload(
+      input.id,
+      input.organizationId
+    );
+    const project = updated.proyectoId
+      ? await projectsRepo.getById(updated.proyectoId, input.organizationId)
+      : null;
+    const client =
+      project?.clienteId !== null && project?.clienteId !== undefined
+        ? await clientesRepo.getById(project.clienteId, input.organizationId)
+        : null;
+
+    return mapCotizacionToWorkflowRecord({
+      cotizacion: updated,
+      clientId: project?.clienteId ?? null,
+      clientName: client?.nombre ?? "Cliente sin nombre",
+      clientPhone: client?.telefono ?? "",
+      clientAddress: client?.direccion ?? "",
+      projectTitle: project?.titulo ?? "Proyecto sin nombre",
+    });
+  }
+
   return {
     listClientsByOrganizationId,
     listWorkflowByOrganizationId: listWorkflowSummaryByOrganizationId,
@@ -1021,6 +1050,7 @@ return workflowRecord;
     deleteWorkflow,
     updateManualResponseStatus,
     markWorkflowAsSent,
+    markWorkflowPdfDownloaded,
   };
 }
 

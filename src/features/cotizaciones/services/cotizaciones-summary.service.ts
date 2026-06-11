@@ -4,6 +4,7 @@ export type CotizacionesResumenGlobal = {
   totalCount: number;
   totalAmount: number;
   approvedAmount: number;
+  pdfGeneratedCount: number;
   counts: {
     borrador: number;
     creada: number;
@@ -84,6 +85,7 @@ export async function getCotizacionesResumenPage(
       totalCount: payload.totalCount ?? 0,
       totalAmount: 0,
       approvedAmount: 0,
+      pdfGeneratedCount: 0,
       counts: {
         borrador: 0,
         creada: 0,

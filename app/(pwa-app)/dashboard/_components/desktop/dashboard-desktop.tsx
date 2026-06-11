@@ -13,6 +13,8 @@ import styles from "./page.desktop.module.css";
 function pillClassName(stateColor: DashboardDesktopProps["quoteCards"][number]["stateColor"]) {
   if (stateColor === "success") return `${styles.pill} ${styles.pillSuccess}`;
   if (stateColor === "destructive") return `${styles.pill} ${styles.pillDanger}`;
+  if (stateColor === "info") return `${styles.pill} ${styles.pillInfo}`;
+  if (stateColor === "neutral") return `${styles.pill} ${styles.pillNeutral}`;
   return `${styles.pill} ${styles.pillWarning}`;
 }
 
@@ -20,10 +22,12 @@ export const DashboardDesktop = memo(function DashboardDesktop({
   greetingName,
   subtitle,
   newQuoteHref,
-  pendingCount,
+  quotedTotalLabel,
+  totalCount,
+  pdfGeneratedCount,
+  approvedCount,
   monthCount,
   approvedTodayCount,
-  approvedMonthLabel,
   quotesHref,
   quoteCards,
   isLoading,
@@ -59,8 +63,20 @@ export const DashboardDesktop = memo(function DashboardDesktop({
 
       <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>
-          <span className={styles.statLabel}>Pendientes</span>
-          <strong className={styles.statValue}>{pendingCount}</strong>
+          <span className={styles.statLabel}>Valor cotizado</span>
+          <strong className={`${styles.statValue} ${styles.statMono}`}>{quotedTotalLabel}</strong>
+        </article>
+        <article className={styles.statCard}>
+          <span className={styles.statLabel}>Cotizaciones creadas</span>
+          <strong className={styles.statValue}>{totalCount}</strong>
+        </article>
+        <article className={styles.statCard}>
+          <span className={styles.statLabel}>PDF generados</span>
+          <strong className={styles.statValue}>{pdfGeneratedCount}</strong>
+        </article>
+        <article className={styles.statCard}>
+          <span className={styles.statLabel}>Aprobadas registradas</span>
+          <strong className={styles.statValue}>{approvedCount}</strong>
         </article>
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Cotizaciones del mes</span>
@@ -69,10 +85,6 @@ export const DashboardDesktop = memo(function DashboardDesktop({
         <article className={styles.statCard}>
           <span className={styles.statLabel}>Aprobadas hoy</span>
           <strong className={styles.statValue}>{approvedTodayCount}</strong>
-        </article>
-        <article className={styles.statCard}>
-          <span className={styles.statLabel}>Aprobado mes</span>
-          <strong className={`${styles.statValue} ${styles.statMono}`}>{approvedMonthLabel}</strong>
         </article>
       </PremiumPageSection>
 

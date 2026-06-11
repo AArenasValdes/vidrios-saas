@@ -31,6 +31,7 @@ import { CotizacionMobileCard } from "./_components/cotizacion-mobile-card";
 import { CotizacionesFilterFields } from "./_components/cotizaciones-filter-fields";
 import { CotizacionesMobileSummary } from "./_components/cotizaciones-mobile-summary";
 import type { CotizacionesMobileSummaryKey } from "./_components/cotizaciones-page.types";
+import { resolveCotizacionClosureState } from "@/features/cotizaciones/services/cotizacion-display-state.service";
 import s from "./page.module.css";
 
 const ESTADOS = [
@@ -190,8 +191,8 @@ export default function CotizacionesPage() {
       return "Rechazada";
     }
 
-    if (atajoEstado === "pendientes") {
-      return "Pendiente";
+    if (atajoEstado === "pdfGenerados") {
+      return "Pdf_generado";
     }
 
     return estadoFiltro;
@@ -228,12 +229,10 @@ export default function CotizacionesPage() {
       (accumulator, cotizacion) => accumulator + cotizacion.total,
       0
     );
-    const totalPendientes =
-      summary.counts.borrador + summary.counts.creada + summary.counts.enviada;
     const mobileStatsBase = [
       {
         key: "todos",
-        label: "Total",
+        label: "Valor",
         value: shouldShowSummaryPlaceholder
           ? "..."
           : formatCompactAmount(summary.totalAmount),
@@ -246,9 +245,11 @@ export default function CotizacionesPage() {
         tone: "green",
       },
       {
-        key: "pendientes",
-        label: "Pend.",
-        value: shouldShowSummaryPlaceholder ? "..." : String(totalPendientes),
+        key: "pdfGenerados",
+        label: "PDF",
+        value: shouldShowSummaryPlaceholder
+          ? "..."
+          : String(summary.pdfGeneratedCount ?? 0),
         tone: "amber",
       },
       {
@@ -269,8 +270,8 @@ export default function CotizacionesPage() {
       filtrosActivos: [
         atajoEstado === "aprobadas"
           ? "Atajo: aprobadas"
-          : atajoEstado === "pendientes"
-          ? "Atajo: pendientes"
+          : atajoEstado === "pdfGenerados"
+          ? "Atajo: PDF generados"
           : atajoEstado === "rechazadas"
           ? "Atajo: rechazadas"
           : null,
@@ -290,35 +291,37 @@ export default function CotizacionesPage() {
       ].filter(Boolean) as string[],
       kpis: [
         {
-          label: "Total",
-          value: shouldShowSummaryPlaceholder ? "..." : String(summary.totalCount),
-          sub: "cotizaciones",
+          label: "Valor cotizado",
+          value: shouldShowSummaryPlaceholder ? "..." : CLP(summary.totalAmount),
+          sub: "monto total",
           tone: "blue",
+          mono: true,
+        },
+        {
+          label: "Cotizaciones",
+          value: shouldShowSummaryPlaceholder ? "..." : String(summary.totalCount),
+          sub: "creadas",
+          tone: "blue",
+        },
+        {
+          label: "PDF generados",
+          value: shouldShowSummaryPlaceholder
+            ? "..."
+            : String(summary.pdfGeneratedCount ?? 0),
+          sub: "descargas registradas",
+          tone: "amber",
         },
         {
           label: "Aprobadas",
           value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.aprobada),
-          sub: "aprobadas",
+          sub: "registradas",
           tone: "green",
-        },
-        {
-          label: "Pendientes",
-          value: shouldShowSummaryPlaceholder ? "..." : String(totalPendientes),
-          sub: "por revisar",
-          tone: "amber",
         },
         {
           label: "Terminadas",
           value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.terminada),
           sub: "obras cerradas",
           tone: "strong",
-        },
-        {
-          label: "Aprobado",
-          value: shouldShowSummaryPlaceholder ? "..." : CLP(summary.approvedAmount),
-          sub: "monto total",
-          tone: "blue",
-          mono: true,
         },
       ],
       mobileStats: mobileStatsBase.map((item) => ({
@@ -393,14 +396,10 @@ export default function CotizacionesPage() {
           label: cotizacion.estado,
         };
         const manualResponse = getManualResponseValue(cotizacion.estado);
-        const responseMeta =
-          manualResponse === "aprobada"
-            ? { cls: "stAprobada", label: "Aprobada" }
-            : manualResponse === "rechazada"
-              ? { cls: "stRechazada", label: "Rechazada" }
-              : manualResponse === "terminada"
-                ? { cls: "stTerminada", label: "Terminada" }
-                : { cls: "stEnviada", label: "Pendiente" };
+        const responseMeta = resolveCotizacionClosureState({
+          estado: cotizacion.estado,
+          pdfDescargadoEn: cotizacion.pdfDescargadoEn,
+        });
         const isUpdatingResponse = responseUpdatingId === cotizacion.id;
         const hasWhatsappPhone = Boolean(cotizacion.clienteTelefono?.trim());
         const isSending = sendingId === cotizacion.id;
@@ -856,7 +855,7 @@ export default function CotizacionesPage() {
                           }
                           disabled={row.isUpdatingResponse || isSaving}
                         >
-                          <option value="pendiente">Pendiente</option>
+                          <option value="pendiente">Sin cierre registrado</option>
                           <option value="aprobada">Aprobada</option>
                           <option value="rechazada">Rechazada</option>
                           <option value="terminada">Proyecto terminado</option>

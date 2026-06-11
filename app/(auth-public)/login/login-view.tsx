@@ -393,12 +393,13 @@ export default function LoginView({
       <section className={s.formPanel}>
         <div className={s.formShell}>
           <Link href="/" className={s.brand} aria-label={copy.brand}>
-            <img
+            <Image
               src="/brand/ventora-logo-premium-dark.svg"
               alt="Ventora"
               width={348}
               height={82}
               className={s.brandLogo}
+              unoptimized
             />
           </Link>
 

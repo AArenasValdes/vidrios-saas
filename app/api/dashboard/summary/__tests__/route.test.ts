@@ -46,10 +46,11 @@ describe("/api/dashboard/summary", () => {
     });
     (getDashboardSummaryByOrganizationId as jest.Mock).mockResolvedValue({
       totalCount: 3,
-      pendingCount: 1,
+      quotedTotal: 99000,
+      pdfGeneratedCount: 2,
+      approvedCount: 1,
       monthCount: 2,
       approvedTodayCount: 1,
-      approvedMonthTotal: 99000,
       recentRecords: [],
       alerts: [],
     });

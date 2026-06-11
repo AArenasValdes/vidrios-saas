@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { LuChevronLeft, LuSearch, LuTrash2, LuX } from "react-icons/lu";
+import { useMemo, useState } from "react";
+import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -173,10 +173,8 @@ export function PasoDosWizardConfiguracionMovil({
   onRemoveAlcanceDetalle,
   quotePricingMode = "por_item",
   totalClienteManual,
-  mostrarIva,
   internalObservation,
   onGlobalTotalClienteChange,
-  onMostrarIvaChange,
   onInternalObservationChange,
   priceHelp,
   priceLabel,
@@ -204,10 +202,8 @@ export function PasoDosWizardConfiguracionMovil({
   const [isInternalObservationOpen, setIsInternalObservationOpen] = useState(
     Boolean(internalObservation.trim())
   );
-  const [activeAlcanceDetalleId, setActiveAlcanceDetalleId] = useState<string | null>(null);
   const [showPlantillas, setShowPlantillas] = useState(false);
   const [quickDetalleInput, setQuickDetalleInput] = useState("");
-  const alcanceCountRef = useRef(draft.alcanceDetalles.length);
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
@@ -241,38 +237,6 @@ export function PasoDosWizardConfiguracionMovil({
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
       : "";
-  const activeAlcanceDetalle =
-    draft.alcanceDetalles.find((detalle) => detalle.id === activeAlcanceDetalleId) ?? null;
-
-  useEffect(() => {
-    let shouldUpdateActiveAlcanceDetalle = false;
-    let nextActiveAlcanceDetalleId: string | null = null;
-
-    if (draft.alcanceDetalles.length > alcanceCountRef.current) {
-      shouldUpdateActiveAlcanceDetalle = true;
-      nextActiveAlcanceDetalleId =
-        draft.alcanceDetalles[draft.alcanceDetalles.length - 1]?.id ?? null;
-    } else if (
-      activeAlcanceDetalleId &&
-      !draft.alcanceDetalles.some((detalle) => detalle.id === activeAlcanceDetalleId)
-    ) {
-      shouldUpdateActiveAlcanceDetalle = true;
-      nextActiveAlcanceDetalleId = draft.alcanceDetalles[0]?.id ?? null;
-    }
-
-    alcanceCountRef.current = draft.alcanceDetalles.length;
-
-    if (!shouldUpdateActiveAlcanceDetalle) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setActiveAlcanceDetalleId(nextActiveAlcanceDetalleId);
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [activeAlcanceDetalleId, draft.alcanceDetalles]);
-
   const primaryColorOptions = useMemo(() => colorOptions.slice(0, 4), [colorOptions]);
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
   const selectedLineLabel = useMemo(() => {
@@ -453,19 +417,19 @@ export function PasoDosWizardConfiguracionMovil({
           />
         </label>
 
-        <section className={s.stepTwoNotebookSection} aria-labelledby="detalles-incluidos-title">
-          <h3 id="detalles-incluidos-title" className={s.stepTwoNotebookSectionTitle}>
-            DETALLES INCLUIDOS
+        <section className={s.stepTwoNotebookSection} aria-labelledby="componentes-libres-title">
+          <h3 id="componentes-libres-title" className={s.stepTwoNotebookSectionTitle}>
+            AGREGAR COMPONENTES LIBRES
           </h3>
           <span className={s.stepTwoNotebookSectionHelp}>
-            Agrega partidas que apareceran en el PDF sin precio individual.
+            Se listan en el PDF sin precio individual.
           </span>
 
           <div className={s.stepTwoNotebookQuickInputRow}>
             <input
               className={s.stepTwoNotebookQuickInput}
               maxLength={120}
-              placeholder="Escribe un detalle incluido..."
+              placeholder="Ej: Colocar ventana"
               type="text"
               value={quickDetalleInput}
               onChange={(event) => setQuickDetalleInput(event.target.value)}
@@ -481,7 +445,7 @@ export function PasoDosWizardConfiguracionMovil({
               className={s.stepTwoNotebookQuickAdd}
               onClick={handleQuickAddDetalle}
               disabled={!quickDetalleInput.trim()}
-              aria-label="Agregar detalle"
+              aria-label="Agregar componente libre"
             >
               +
             </button>
@@ -491,178 +455,29 @@ export function PasoDosWizardConfiguracionMovil({
             <div className={s.stepTwoNotebookDetailList}>
               {draft.alcanceDetalles.map((detalle) => (
                 <div key={detalle.id} className={s.stepTwoNotebookDetailItem}>
-                  <span className={s.stepTwoNotebookDetailItemText}>
-                    {getDetalleResumen(detalle)}
-                  </span>
-                  <div className={s.stepTwoNotebookDetailItemActions}>
-                    <button
-                      type="button"
-                      className={s.stepTwoNotebookDetailItemAction}
-                      onClick={() => {
-                        setActiveAlcanceDetalleId(
-                          activeAlcanceDetalleId === detalle.id ? null : detalle.id
-                        );
-                      }}
-                      aria-label="Editar detalle"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className={s.stepTwoNotebookDetailItemAction}
-                      onClick={() => onRemoveAlcanceDetalle(detalle.id)}
-                      aria-label="Eliminar detalle"
-                    >
-                      <LuX aria-hidden size={14} />
-                    </button>
-                  </div>
+                  <input
+                    className={s.stepTwoNotebookDetailItemInput}
+                    maxLength={120}
+                    placeholder="Nombre del componente"
+                    type="text"
+                    value={detalle.nombre.trim() ? detalle.nombre : getDetalleResumen(detalle)}
+                    onChange={(event) =>
+                      onUpdateAlcanceDetalle(detalle.id, "nombre", event.target.value)
+                    }
+                  />
+                  <button
+                    type="button"
+                    className={s.stepTwoNotebookDetailItemRemove}
+                    onClick={() => onRemoveAlcanceDetalle(detalle.id)}
+                    aria-label="Eliminar componente"
+                  >
+                    <LuX aria-hidden size={14} />
+                  </button>
                 </div>
               ))}
             </div>
           ) : null}
         </section>
-
-        {activeAlcanceDetalle ? (
-          <div className={s.stepTwoNotebookDetailEditor}>
-            <div className={s.stepTwoNotebookDetailEditorHeader}>
-              <strong className={s.stepTwoNotebookDetailEditorTitle}>
-                Editar detalle incluido
-              </strong>
-              <button
-                type="button"
-                className={s.stepTwoNotebookDangerLink}
-                onClick={() => {
-                  onRemoveAlcanceDetalle(activeAlcanceDetalle.id);
-                  setActiveAlcanceDetalleId(null);
-                }}
-              >
-                <LuTrash2 aria-hidden size={15} />
-                Eliminar
-              </button>
-            </div>
-
-            <div className={s.stepTwoMobileChoiceChips}>
-              <button
-                type="button"
-                className={`${s.stepTwoMobileChoiceChip} ${
-                  activeAlcanceDetalle.tipo === "manual" ? s.stepTwoMobileChoiceChipActive : ""
-                }`}
-                onClick={() => onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "tipo", "manual")}
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                className={`${s.stepTwoMobileChoiceChip} ${
-                  activeAlcanceDetalle.tipo === "estructurado"
-                    ? s.stepTwoMobileChoiceChipActive
-                    : ""
-                }`}
-                onClick={() =>
-                  onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "tipo", "estructurado")
-                }
-              >
-                Estructurado
-              </button>
-            </div>
-
-            {activeAlcanceDetalle.tipo === "estructurado" ? (
-              <>
-                <label className={s.stepTwoMobileInlineField}>
-                  <span className={s.label}>Componente</span>
-                  <div className={s.selectWrap}>
-                    <select
-                      className={s.input}
-                      value={
-                        activeAlcanceDetalle.subtipo || ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS[0]
-                      }
-                      onChange={(event) =>
-                        onUpdateAlcanceDetalle(
-                          activeAlcanceDetalle.id,
-                          "subtipo",
-                          event.target.value
-                        )
-                      }
-                    >
-                      {ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </label>
-                <div className={s.alcanceDetalleGrid}>
-                  <label className={s.stepTwoMobileInlineField}>
-                    <span className={s.label}>Cantidad</span>
-                    <input
-                      className={s.input}
-                      inputMode="numeric"
-                      placeholder="1"
-                      value={activeAlcanceDetalle.cantidad}
-                      onChange={(event) =>
-                        onUpdateAlcanceDetalle(
-                          activeAlcanceDetalle.id,
-                          "cantidad",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </label>
-                  <label className={s.stepTwoMobileInlineField}>
-                    <span className={s.label}>Ancho (mm)</span>
-                    <input
-                      className={s.input}
-                      inputMode="numeric"
-                      placeholder="1500"
-                      value={activeAlcanceDetalle.ancho}
-                      onChange={(event) =>
-                        onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "ancho", event.target.value)
-                      }
-                    />
-                  </label>
-                  <label className={s.stepTwoMobileInlineField}>
-                    <span className={s.label}>Alto (mm)</span>
-                    <input
-                      className={s.input}
-                      inputMode="numeric"
-                      placeholder="2000"
-                      value={activeAlcanceDetalle.alto}
-                      onChange={(event) =>
-                        onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "alto", event.target.value)
-                      }
-                    />
-                  </label>
-                </div>
-                <label className={s.stepTwoMobileInlineField}>
-                  <span className={s.label}>Etiqueta visible</span>
-                  <input
-                    className={s.input}
-                    placeholder="Ej: 3 ventanas correderas 1500 x 2000"
-                    type="text"
-                    value={activeAlcanceDetalle.nombre}
-                    onChange={(event) =>
-                      onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "nombre", event.target.value)
-                    }
-                  />
-                </label>
-              </>
-            ) : (
-              <label className={s.stepTwoMobileInlineField}>
-                <span className={s.label}>Detalle</span>
-                <input
-                  className={s.input}
-                  placeholder="Ej: Sellado perimetral"
-                  type="text"
-                  value={activeAlcanceDetalle.nombre}
-                  onChange={(event) =>
-                    onUpdateAlcanceDetalle(activeAlcanceDetalle.id, "nombre", event.target.value)
-                  }
-                />
-              </label>
-            )}
-          </div>
-        ) : null}
 
         <div className={s.stepTwoNotebookPriceCard}>
           <div className={s.stepTwoNotebookPriceTitle}>PRECIO FINAL</div>
@@ -676,26 +491,8 @@ export function PasoDosWizardConfiguracionMovil({
               onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
             />
           </label>
-          <div className={s.ivaCompactRow}>
-            <button
-              type="button"
-              className={`${s.ivaCompactOption} ${mostrarIva ? s.ivaCompactOptionActive : ""}`}
-              onClick={mostrarIva ? undefined : onMostrarIvaChange}
-            >
-              <span className={s.ivaCompactLabel}>Incluye IVA</span>
-            </button>
-            <button
-              type="button"
-              className={`${s.ivaCompactOption} ${!mostrarIva ? s.ivaCompactOptionActive : ""}`}
-              onClick={mostrarIva ? onMostrarIvaChange : undefined}
-            >
-              <span className={s.ivaCompactLabel}>Sin IVA</span>
-            </button>
-          </div>
           <span className={s.stepTwoMobileBlockHelp}>
-            {mostrarIva
-              ? "El total ingresado sera el valor final para el cliente."
-              : "El valor se mostrara sin IVA."}
+            Configura IVA y flete en el resumen, igual que en cotizacion por componentes.
           </span>
         </div>
 
@@ -1017,26 +814,6 @@ export function PasoDosWizardConfiguracionMovil({
                   onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
                 />
               </label>
-              <div className={s.ivaCompactRow}>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    mostrarIva ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={mostrarIva ? undefined : onMostrarIvaChange}
-                >
-                  <span className={s.ivaCompactLabel}>Incluye IVA</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    !mostrarIva ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={mostrarIva ? onMostrarIvaChange : undefined}
-                >
-                  <span className={s.ivaCompactLabel}>Sin IVA</span>
-                </button>
-              </div>
             </div>
 
             <div className={s.stepTwoMobileBlockSecundario}>
@@ -1731,26 +1508,6 @@ export function PasoDosWizardConfiguracionMovil({
                   onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
                 />
               </label>
-              <div className={s.ivaCompactRow}>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    mostrarIva ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={mostrarIva ? undefined : onMostrarIvaChange}
-                >
-                  <span className={s.ivaCompactLabel}>Incluye IVA</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${s.ivaCompactOption} ${
-                    !mostrarIva ? s.ivaCompactOptionActive : ""
-                  }`}
-                  onClick={mostrarIva ? onMostrarIvaChange : undefined}
-                >
-                  <span className={s.ivaCompactLabel}>Sin IVA</span>
-                </button>
-              </div>
             </div>
 
             <div className={s.stepTwoMobileBlockSecundario}>

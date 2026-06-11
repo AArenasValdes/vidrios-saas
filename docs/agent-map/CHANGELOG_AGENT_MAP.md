@@ -4,6 +4,49 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-11 - UX silenciosa de PDF y metricas comerciales neutrales
+
+### Resumen
+
+Se alineo la UX de estados y metricas de cotizaciones al flujo real del maestro: descargar PDF, enviar manualmente por WhatsApp y seguir trabajando sin interrupciones. La descarga de PDF ahora registra actividad en silencio (`pdf_descargado_en`), muestra solo un toast y no abre modales ni pregunta si marcar como enviada. El dashboard dejo de usar "presupuestos pendientes" como alerta principal y paso a mostrar **Valor cotizado**, cotizaciones creadas, PDF generados y aprobadas registradas. Los estados visibles de cotizacion ahora son neutrales: **Creada**, **PDF generado**, **Enviada**, **Aprobada**, **Rechazada**, **Terminada** y **Sin cierre registrado** (reemplaza "Pendiente" como etiqueta dominante).
+
+### Archivos nuevos o fuertemente modificados
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260611120000_cotizaciones_pdf_descargado_en.sql` | Nueva columna `pdf_descargado_en` en `cotizaciones` |
+| `src/features/cotizaciones/services/cotizacion-display-state.service.ts` | Fuente de verdad de estados visibles (`resolveCotizacionWorkflowState`, `resolveCotizacionClosureState`) |
+| `app/api/cotizaciones/[id]/pdf-descargado/route.ts` | POST auth para registrar descarga silenciosa de PDF |
+| `src/features/cotizaciones/repositories/cotizaciones-repository.ts` | `recordPdfDownload()`, filtro `pdfDownloadedOnly`, conteo en resumen global |
+| `src/features/cotizaciones/services/cotizaciones.service.ts` | `markWorkflowPdfDownloaded()` |
+| `src/features/cotizaciones/hooks/useCotizacionesStore.ts` | `recordPdfDownload()` en background |
+| `app/print/cotizaciones/[id]/page.tsx` | Toast "PDF descargado" + registro silencioso al descargar/abrir PDF |
+| `src/features/dashboard/types/dashboard-summary.ts` | KPIs: `quotedTotal`, `pdfGeneratedCount`, `approvedCount` |
+| `src/features/dashboard/services/dashboard-summary-server.service.ts` | Resumen comercial por valor cotizado, no por pendientes |
+| `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts` | Tarjeta "Resumen comercial" + estados neutrales en cards |
+| `app/(pwa-app)/dashboard/_components/mobile/dashboard-mobile.tsx` | Hero valor cotizado + grid 4 metricas |
+| `app/(pwa-app)/dashboard/_components/desktop/dashboard-desktop.tsx` | Stats: valor cotizado, creadas, PDF, aprobadas |
+| `app/(pwa-app)/cotizaciones/page.tsx` | KPIs/atajos sin "pendientes"; badges con display state |
+| `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-mobile-view-model.ts` | Estados visibles neutrales en detalle |
+
+### Reglas de producto
+
+- **Descargar PDF**: registra `pdf_descargado_en`, toast maximo, sin modal, sin cambiar `estado` comercial.
+- **WhatsApp / link publico**: siguen marcando `enviada` o respuesta publica como antes; no interrumpir al maestro post-PDF.
+- **Dashboard**: no usar "pendientes" como alerta principal; KPI principal = valor monetario cotizado (`sum(total)`).
+- **Estados UI**: si hay PDF descargado sin cierre -> **PDF generado**; sin cierre comercial -> **Sin cierre registrado**; no mostrar **Pendiente** como estado dominante.
+- **Acciones manuales**: aprobar/rechazar/terminar siguen en detalle o menu secundario.
+
+### Mapas actualizados
+
+- `docs/agent-map/FEATURES_MAP.md` (Dashboard, Cotizaciones, PDF)
+- `docs/agent-map/ROUTES_MAP.md` (`/dashboard`, `/cotizaciones`, `/print`, API)
+- `docs/agent-map/DATA_MODEL_MAP.md` (`cotizaciones.pdf_descargado_en`)
+- `supabase/docs/database_map.md`
+- `AGENTS.md`
+
+---
+
 ## 2026-06-09 - Centro de Operaciones founder en /admin
 
 ### Resumen

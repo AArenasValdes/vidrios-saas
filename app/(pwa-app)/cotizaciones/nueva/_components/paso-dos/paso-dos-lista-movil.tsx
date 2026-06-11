@@ -54,11 +54,13 @@ export function PasoDosListaMovil({
     : items.filter((item) => item.tipoItem !== "item_libre_con_valor" && isItemIncomplete(item)).length;
   const itemNoun = isGlobalPricing ? "trabajo" : "componente";
   const itemNounPlural = isGlobalPricing ? "trabajos" : "componentes";
-  const totalGlobalLabel =
-    totalClienteManual && totalClienteManual > 0
-      ? `Total ${total} · ${mostrarIva ? "IVA incluido" : "Sin IVA"}`
-      : "Precio final pendiente";
   const itemPricingLabel = mostrarIva ? "Sumar IVA al final" : "Precios finales";
+  const totalGlobalFooterLabel =
+    totalClienteManual && totalClienteManual > 0
+      ? `${items.length} trabajo${items.length !== 1 ? "s" : ""} - ${itemPricingLabel} ${subtotal}`
+      : `${items.length} trabajo${items.length !== 1 ? "s" : ""} agregado${items.length !== 1 ? "s" : ""}`;
+  const totalGlobalFooterValue =
+    totalClienteManual && totalClienteManual > 0 ? `Total ${total}` : "Precio final pendiente";
 
   return (
     <>
@@ -266,11 +268,11 @@ export function PasoDosListaMovil({
           <div className={s.stepTwoMobileFooterTotals}>
             <span>
               {quotePricingMode === "total_global"
-                ? `${items.length} trabajo${items.length !== 1 ? "s" : ""} agregado${items.length !== 1 ? "s" : ""}`
+                ? totalGlobalFooterLabel
                 : `${items.length} componente${items.length !== 1 ? "s" : ""} - ${itemPricingLabel} ${subtotal}`}
             </span>
             <strong>
-              {quotePricingMode === "total_global" ? totalGlobalLabel : `Total ${total}`}
+              {quotePricingMode === "total_global" ? totalGlobalFooterValue : `Total ${total}`}
             </strong>
           </div>
           <div className={s.stepTwoMobileFooterActions}>

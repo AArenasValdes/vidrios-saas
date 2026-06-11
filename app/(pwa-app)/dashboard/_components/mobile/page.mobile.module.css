@@ -3,34 +3,44 @@
   display: grid;
   gap: var(--dashboard-space-4);
   color: var(--dashboard-text);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.kpiNumber {
+  font-family: var(--font-sans, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .headerCopy {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .title {
   margin: 0;
-  font-family: "Syne", sans-serif;
-  font-size: 30px;
-  line-height: 1;
-  letter-spacing: -0.04em;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 600;
 }
 
 .date {
   margin: 0;
   color: var(--dashboard-text-muted);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .appRefreshButton {
@@ -81,11 +91,12 @@
 }
 
 .alertCard,
+.summaryCard,
 .metricCard,
 .quotesPanel {
-  border: 1px solid rgba(217, 224, 234, 0.96);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 254, 0.98));
-  box-shadow: 0 14px 28px rgba(28, 44, 79, 0.07);
+  border: 1px solid rgba(217, 224, 234, 0.88);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(28, 44, 79, 0.04);
 }
 
 .alertCard {
@@ -103,11 +114,12 @@
 .alertIcon,
 .alertArrow,
 .metricIcon {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .alertIcon {
@@ -124,10 +136,9 @@
 .metricLabel,
 .quoteCode,
 .quotesEyebrow {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .alertEyebrow {
@@ -150,28 +161,131 @@
   color: #9d6a0c;
 }
 
+.summaryCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border-color: rgba(79, 125, 212, 0.16);
+  box-shadow:
+    0 1px 2px rgba(28, 44, 79, 0.04),
+    0 8px 20px rgba(28, 44, 79, 0.05);
+  text-decoration: none;
+}
+
+.summaryIcon,
+.summaryArrow {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.summaryIcon {
+  color: var(--dashboard-accent-strong);
+  opacity: 0.88;
+}
+
+.summaryBody {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.summaryEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7b8794;
+}
+
+.summaryTitle {
+  color: var(--dashboard-text);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.summaryAmount {
+  composes: kpiNumber;
+  font-size: 30px;
+  line-height: 1.05;
+  color: var(--dashboard-text);
+}
+
+.summaryMeta {
+  color: #7b8697;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summarySuccess {
+  color: var(--dashboard-success);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.summaryArrow {
+  color: var(--dashboard-accent-strong);
+}
+
+.responseAlerts {
+  display: grid;
+  gap: 8px;
+}
+
+.responseAlertLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 224, 234, 0.96);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--dashboard-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .metricGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .metricCard {
   display: grid;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 5px;
+  padding: 11px 10px;
+  border-radius: 14px;
+  text-align: left;
+  background: #fafbfc;
+  border-color: rgba(217, 224, 234, 0.72);
 }
 
 .metricLabel {
-  color: #7b8697;
+  color: #667085;
+  line-height: 1.2;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .metricValue {
-  font-family: "Syne", sans-serif;
-  font-size: 28px;
+  composes: kpiNumber;
+  font-size: 21px;
   line-height: 1;
-  letter-spacing: -0.04em;
+  color: var(--dashboard-text);
 }
 
 .metricMono {
@@ -182,11 +296,15 @@
 }
 
 .metricIconPrimary {
-  color: var(--dashboard-accent);
+  color: #6b8fc9;
 }
 
 .metricIconSuccess {
-  color: var(--dashboard-success);
+  color: #5aab7d;
+}
+
+.metricIconInfo {
+  color: #6b8fc9;
 }
 
 .section {
@@ -204,10 +322,10 @@
 .sectionTitle {
   margin: 0;
   color: #667085;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .sectionLink {
@@ -265,9 +383,8 @@
 }
 
 .quoteAmount {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 15px;
-  font-weight: 700;
+  composes: kpiNumber;
+  font-size: 14px;
   color: var(--dashboard-accent-strong);
 }
 
@@ -301,6 +418,18 @@
   background: #fff1f1;
   color: var(--dashboard-danger);
   border-color: rgba(217, 92, 92, 0.16);
+}
+
+.pillInfo {
+  background: #edf3ff;
+  color: #335ea9;
+  border-color: rgba(79, 125, 212, 0.16);
+}
+
+.pillNeutral {
+  background: #eef2f8;
+  color: #41536f;
+  border-color: rgba(65, 83, 111, 0.12);
 }
 
 .emptyCard {

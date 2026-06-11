@@ -86,44 +86,26 @@ export function PasoTresDetalleFinal({
       <div className={s.summaryAdjustmentHeader}>
         <span className={s.summaryAdjustmentEyebrow}>Total del trabajo</span>
       </div>
-      <div className={s.formGrid2}>
-        <label className={s.field}>
-          <span className={s.label}>Total a cobrar al cliente</span>
-          <div className={s.moneyInputWrap}>
-            <span className={s.moneyPrefix}>CLP</span>
-            <input
-              className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-              inputMode="numeric"
-              value={globalTotalInputValue}
-              onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <span className={s.helpText}>Este es el total final que vera el cliente.</span>
-        </label>
-        <div className={s.field}>
-          <span className={s.label}>IVA</span>
-          <div className={s.ivaTogglePillLight}>
-            <button
-              type="button"
-              className={`${s.ivaPillOptionLight} ${mostrarIva ? s.ivaPillActiveLight : ""}`}
-              onClick={mostrarIva ? undefined : onMostrarIvaChange}
-            >
-              Con IVA
-            </button>
-            <button
-              type="button"
-              className={`${s.ivaPillOptionLight} ${!mostrarIva ? s.ivaPillActiveLight : ""}`}
-              onClick={mostrarIva ? onMostrarIvaChange : undefined}
-            >
-              Sin IVA
-            </button>
-          </div>
-          <span className={s.helpText}>
-            {mostrarIva ? "El IVA se separa desde el total final." : "El total final se guarda sin IVA."}
-          </span>
+      <label className={s.field}>
+        <span className={s.label}>
+          {mostrarIva ? "Subtotal neto del trabajo" : "Total a cobrar al cliente"}
+        </span>
+        <div className={s.moneyInputWrap}>
+          <span className={s.moneyPrefix}>CLP</span>
+          <input
+            className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+            inputMode="numeric"
+            value={globalTotalInputValue}
+            onChange={(event) => onGlobalTotalClienteChange(event.target.value)}
+            placeholder="0"
+          />
         </div>
-      </div>
+        <span className={s.helpText}>
+          {mostrarIva
+            ? "Ventora sumara el 19% sobre este valor en el resumen final."
+            : "Este es el total final que vera el cliente."}
+        </span>
+      </label>
     </section>
   );
 
@@ -200,37 +182,28 @@ export function PasoTresDetalleFinal({
 
   const totalsPanel = (
     <div className={s.totalPanel}>
-      {!isGlobal ? (
-        <>
-          <div className={s.totalRow}>
-            <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
-            <strong>{subtotal}</strong>
-          </div>
-          {mostrarIva ? (
-            <div className={s.totalRow}>
-              <span>IVA 19%</span>
-              <strong>{iva}</strong>
-            </div>
-          ) : null}
-          {draft.flete > 0 ? (
-            <div className={s.totalRow}>
-              <span>Flete</span>
-              <strong>{flete}</strong>
-            </div>
-          ) : null}
-          {hasRedondeoComercial ? (
-            <div className={s.totalRow}>
-              <span>Redondeo comercial</span>
-              <strong>{redondeoComercial}</strong>
-            </div>
-          ) : null}
-        </>
-      ) : (
+      <div className={s.totalRow}>
+        <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
+        <strong>{subtotal}</strong>
+      </div>
+      {mostrarIva ? (
         <div className={s.totalRow}>
-          <span>{mostrarIva ? "IVA incluido" : "Sin IVA"}</span>
+          <span>IVA 19%</span>
           <strong>{iva}</strong>
         </div>
-      )}
+      ) : null}
+      {draft.flete > 0 ? (
+        <div className={s.totalRow}>
+          <span>Flete</span>
+          <strong>{flete}</strong>
+        </div>
+      ) : null}
+      {hasRedondeoComercial ? (
+        <div className={s.totalRow}>
+          <span>Redondeo comercial</span>
+          <strong>{redondeoComercial}</strong>
+        </div>
+      ) : null}
       <div className={s.totalGrand}>
         <span>Total final</span>
         <strong>{total}</strong>
@@ -311,8 +284,9 @@ export function PasoTresDetalleFinal({
         </section>
 
         {itemsCard}
-        {isGlobal ? globalPricingEditor : quoteIvaEditor}
-        {!isGlobal ? freightEditor : null}
+        {isGlobal ? globalPricingEditor : null}
+        {quoteIvaEditor}
+        {freightEditor}
         {totalsPanel}
       </div>
     );
@@ -352,34 +326,31 @@ export function PasoTresDetalleFinal({
       </div>
 
       <div className={s.summaryAdjustments}>
-        {isGlobal ? globalPricingEditor : (
-          <>
-            {quoteIvaEditor}
-            <div className={s.summaryAdjustmentCard}>
-              <div className={s.summaryAdjustmentHeader}>
-                <div>
-                  <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
-                  <strong>Flete</strong>
-                </div>
-                <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
-              </div>
-              <label className={s.field}>
-                <span className={s.label}>Valor del flete</span>
-                <div className={s.moneyInputWrap}>
-                  <span className={s.moneyPrefix}>CLP</span>
-                  <input
-                    className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-                    inputMode="numeric"
-                    value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
-                    onChange={(event) => onDraftFleteChange(event.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
-              </label>
+        {isGlobal ? globalPricingEditor : null}
+        {quoteIvaEditor}
+        <div className={s.summaryAdjustmentCard}>
+          <div className={s.summaryAdjustmentHeader}>
+            <div>
+              <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
+              <strong>Flete</strong>
             </div>
-          </>
-        )}
+            <span className={s.summaryAdjustmentValue}>{draft.flete > 0 ? flete : "No incluido"}</span>
+          </div>
+          <label className={s.field}>
+            <span className={s.label}>Valor del flete</span>
+            <div className={s.moneyInputWrap}>
+              <span className={s.moneyPrefix}>CLP</span>
+              <input
+                className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                inputMode="numeric"
+                value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
+                onChange={(event) => onDraftFleteChange(event.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
+          </label>
+        </div>
       </div>
 
       {totalsPanel}

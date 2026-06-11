@@ -1,6 +1,4 @@
 import type {
-  GrowthClientAccount,
-  GrowthMarketingTask,
   GrowthProspect,
   GrowthProspectStatus,
   GrowthWorkspace,

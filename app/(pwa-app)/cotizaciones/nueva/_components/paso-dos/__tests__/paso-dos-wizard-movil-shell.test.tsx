@@ -10,6 +10,7 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
   return {
     isOpen: true,
     paso: 1,
+    entryMode: "normal",
     draft: {
       categoria: "Aberturas",
       subtipo: "Ventana",
@@ -66,6 +67,7 @@ function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
     },
     isSavingLineTemplate: false,
     onOpen: jest.fn(),
+    onOpenFreeTotalNotebook: jest.fn(),
     onClose: jest.fn(),
     onGoToStep: jest.fn(),
     onBack: jest.fn(),
@@ -157,6 +159,7 @@ const baseProps = {
   onEditItem: jest.fn(),
   onRemoveItem: jest.fn(),
   onOpenFreeValueItemForm: jest.fn(),
+  quoteModeChosen: true,
   onGlobalTotalClienteChange: jest.fn(),
   onMostrarIvaChange: jest.fn(),
   onInternalObservationChange: jest.fn(),

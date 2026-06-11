@@ -7,6 +7,17 @@ import { DashboardDesktop } from "./_components/desktop/dashboard-desktop";
 import { DashboardMobile } from "./_components/mobile/dashboard-mobile";
 import { useDashboardBreakpoint } from "./_hooks/use-dashboard-breakpoint";
 import { useDashboardViewModel } from "./_hooks/use-dashboard-view-model";
+import s from "./page.module.css";
+
+function isSubscriptionUrgent(
+  status: string | null | undefined
+) {
+  return (
+    status === "trial_expiring" ||
+    status === "trial_expired" ||
+    status === "past_due"
+  );
+}
 
 export default function DashboardPage() {
   const viewModel = useDashboardViewModel();
@@ -16,17 +27,34 @@ export default function DashboardPage() {
   const planCode = profile?.planCode;
   const subscription = profile?.subscription;
   const showBadge = subscription && planCode && planCode !== "trial";
+  const subscriptionIsUrgent = isSubscriptionUrgent(subscription?.effectiveStatus);
 
-  const badge = showBadge ? (
-    <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-start" }}>
+  const desktopBadge = showBadge ? (
+    <div className={s.desktopSubscriptionWrap}>
       <SubscriptionBadge subscription={subscription} planCode={planCode} />
+    </div>
+  ) : null;
+
+  const mobileBadge = showBadge ? (
+    <div
+      className={
+        subscriptionIsUrgent
+          ? s.mobileSubscriptionWrapUrgent
+          : s.mobileSubscriptionWrap
+      }
+    >
+      <SubscriptionBadge
+        subscription={subscription}
+        planCode={planCode}
+        variant={subscriptionIsUrgent ? "default" : "compact"}
+      />
     </div>
   ) : null;
 
   if (isDesktop) {
     return (
       <PremiumPageReveal>
-        {badge}
+        {desktopBadge}
         <DashboardDesktop {...viewModel.desktop} />
       </PremiumPageReveal>
     );
@@ -34,7 +62,7 @@ export default function DashboardPage() {
 
   return (
     <PremiumPageReveal>
-      {badge}
+      {mobileBadge}
       <DashboardMobile {...viewModel.mobile} />
     </PremiumPageReveal>
   );

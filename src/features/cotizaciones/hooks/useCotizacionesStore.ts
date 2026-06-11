@@ -721,6 +721,48 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     }
   };
 
+  const recordPdfDownload = async (id: string) => {
+    if (!organizacionId) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`/api/cotizaciones/${id}/pdf-descargado`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { record?: CotizacionWorkflowRecord; error?: string }
+        | null;
+
+      if (!response.ok || !payload?.record) {
+        return null;
+      }
+
+      const record = payload.record;
+      const currentCotizaciones = cotizacionesRef.current;
+      const nextCotizaciones = sortCotizaciones(
+        currentCotizaciones.some((item) => item.id === record.id)
+          ? currentCotizaciones.map((item) => (item.id === record.id ? record : item))
+          : [record, ...currentCotizaciones]
+      );
+
+      cotizacionesRef.current = nextCotizaciones;
+      setCotizaciones(nextCotizaciones);
+      const nextCacheEntry = {
+        organizationId: String(organizacionId),
+        cotizaciones: nextCotizaciones,
+        clientes: clientesRef.current,
+      };
+      cotizacionesCache.set(String(organizacionId), nextCacheEntry);
+      persistCotizacionesCache(nextCacheEntry);
+
+      return record;
+    } catch {
+      return null;
+    }
+  };
+
   const getCotizacionById = useCallback((id: string) => {
     return (
       cotizacionesRef.current.find((record) => record.id === id) ??
@@ -823,6 +865,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
     deleteWorkflow,
     updateManualResponseStatus,
     markQuoteAsSent,
+    recordPdfDownload,
     getCotizacionById,
     loadCotizacionById,
     prefetchCotizacionById,

@@ -61,21 +61,22 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(100000);
   });
 
-  it("mantiene el total final global y separa IVA incluido", () => {
+  it("suma IVA al final sobre el total manual global", () => {
     const totals = calculateGlobalQuoteWorkflowTotals({
       totalClienteManual: 600000,
       mostrarIva: true,
     });
 
-    expect(totals.total).toBe(600000);
-    expect(totals.iva).toBeCloseTo(95798.32, 2);
-    expect(totals.subtotal).toBeCloseTo(504201.68, 2);
-    expect(totals.neto).toBeCloseTo(504201.68, 2);
+    expect(totals.subtotal).toBe(600000);
+    expect(totals.neto).toBe(600000);
+    expect(totals.iva).toBe(114000);
+    expect(totals.redondeoComercial).toBe(0);
+    expect(totals.total).toBe(714000);
     expect(totals.flete).toBe(0);
     expect(totals.totalClienteManual).toBe(600000);
   });
 
-  it("mantiene el total final global sin IVA", () => {
+  it("mantiene precios finales sin sumar IVA al final en total global", () => {
     const totals = calculateGlobalQuoteWorkflowTotals({
       totalClienteManual: 600000,
       mostrarIva: false,
@@ -85,6 +86,18 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.iva).toBe(0);
     expect(totals.subtotal).toBe(600000);
     expect(totals.neto).toBe(600000);
+  });
+
+  it("replica el ejemplo comercial de subtotal neto + IVA + redondeo", () => {
+    const totals = calculateGlobalQuoteWorkflowTotals({
+      totalClienteManual: 384000,
+      mostrarIva: true,
+    });
+
+    expect(totals.subtotal).toBe(384000);
+    expect(totals.iva).toBe(72960);
+    expect(totals.redondeoComercial).toBe(40);
+    expect(totals.total).toBe(457000);
   });
 
   it("deja total global en cero si no hay total manual", () => {
@@ -98,6 +111,21 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(0);
     expect(totals.iva).toBe(0);
     expect(totals.subtotal).toBe(0);
+  });
+
+  it("genera ids unicos para items libres creados en el mismo tick", () => {
+    const first = calculateFreeValueItem({
+      codigo: "L1",
+      nombre: "Colocar ventana",
+      valor: 1000,
+    });
+    const second = calculateFreeValueItem({
+      codigo: "L2",
+      nombre: "Cambio de rieles",
+      valor: 2000,
+    });
+
+    expect(first.id).not.toBe(second.id);
   });
 
   it("trata item libre como valor visible y usa IVA de la cotizacion", () => {
@@ -248,8 +276,8 @@ describe("cotizaciones-workflow.service", () => {
       mostrarIva: true,
     });
 
-    expect(totals.total).toBe(619000);
-    expect(totals.iva).toBeCloseTo(98831.93, 2);
-    expect(totals.subtotal).toBeCloseTo(520168.07, 2);
+    expect(totals.subtotal).toBe(619000);
+    expect(totals.iva).toBe(117610);
+    expect(totals.total).toBe(737000);
   });
 });

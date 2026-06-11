@@ -10,6 +10,41 @@
   white-space: nowrap;
 }
 
+.badgeCompact {
+  padding: 1px 8px;
+  font-size: 0.68rem;
+  border-color: rgba(217, 224, 234, 0.32);
+  background: rgba(248, 250, 252, 0.82);
+  opacity: 0.82;
+  box-shadow: none;
+  gap: 6px;
+}
+
+.badgeCompact .plan {
+  font-weight: 500;
+  color: #7b8794;
+}
+
+.badgeCompact .status {
+  padding: 0 5px;
+  font-size: 0.64rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  font-weight: 600;
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+}
+
+.badgeCompact .statusActive {
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+}
+
+.badgeCompact .date {
+  font-size: 0.66rem;
+  color: #94a3b8;
+}
+
 .plan {
   color: #243b6b;
   font-weight: 700;

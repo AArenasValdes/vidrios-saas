@@ -32,7 +32,9 @@ import type { PasoDosGrupoDraft, AlcanceDetalle } from "../../_hooks/use-paso-do
 import type { PasoDosGrupoPasoMovil } from "../../_hooks/use-paso-dos-agregar-grupo-movil";
 import {
   getSubtypeOptionsForCategory,
+  shouldHideFreeNotebookCategoryInWizard,
   shouldSkipCantidadForGrupoDraft,
+  type PasoDosGrupoEntryMode,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
   filterVidrios,
@@ -57,6 +59,7 @@ import s from "../../page.module.css";
 export type WizardActions = {
   isOpen: boolean;
   paso: PasoDosGrupoPasoMovil;
+  entryMode: PasoDosGrupoEntryMode;
   draft: PasoDosGrupoDraft;
   subtypeOptions: readonly string[];
   systemOptions: readonly string[];
@@ -66,6 +69,7 @@ export type WizardActions = {
   linePricingSummary: ComponentFormLinePricingSummary;
   isSavingLineTemplate: boolean;
   onOpen: () => void;
+  onOpenFreeTotalNotebook: () => void;
   onClose: () => void;
   onGoToStep: (paso: PasoDosGrupoPasoMovil) => void;
   onBack: () => void;
@@ -142,6 +146,7 @@ type Props = {
   onRemoveItem: (itemId: string) => void;
   onOpenFreeValueItemForm: () => void;
   wizard: WizardActions;
+  quoteModeChosen: boolean;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
   onInternalObservationChange: (value: string) => void;
@@ -192,6 +197,8 @@ const VISUAL_STAGES_FREE_VALUE = [
   { id: 3, label: "Datos" },
 ] as const;
 
+const VISUAL_STAGES_FREE_TOTAL_SINGLE = [{ id: 3, label: "Datos" }] as const;
+
 export function PasoDosWizardMovil({
   formulario,
   itemLibreForm,
@@ -212,6 +219,7 @@ export function PasoDosWizardMovil({
   onRemoveItem,
   onOpenFreeValueItemForm,
   wizard,
+  quoteModeChosen,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
   onInternalObservationChange,
@@ -220,16 +228,21 @@ export function PasoDosWizardMovil({
   const [showAllConfigurations, setShowAllConfigurations] = useState(false);
   const [vidSearch, setVidSearch] = useState("");
 
+  const quotePricingMode = formulario.quotePricingMode;
   const isCompactDataStep = wizard.paso === 3;
   const visualStage = wizard.paso;
-  const normalizedCategoryOptions = useMemo(
-    () =>
-      CATEGORY_OPTIONS.map((option) => ({
-        ...option,
-        subtitle: option.subtitle.replace("paÃ±os", "paños"),
-      })),
-    []
-  );
+  const normalizedCategoryOptions = useMemo(() => {
+    const base = CATEGORY_OPTIONS.map((option) => ({
+      ...option,
+      subtitle: option.subtitle.replace("paÃ±os", "paños"),
+    }));
+
+    if (shouldHideFreeNotebookCategoryInWizard(quotePricingMode, wizard.entryMode)) {
+      return base.filter((option) => option.title !== "Proyecto libre y Mantencion");
+    }
+
+    return base;
+  }, [quotePricingMode, wizard.entryMode]);
 
   const resetLocalWizardState = () => {
     setShowAllSystems(false);
@@ -244,7 +257,15 @@ export function PasoDosWizardMovil({
 
   const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
     formulario.onQuotePricingModeChange(mode);
-    handleOpenWizard();
+    if (mode === "por_item") {
+      handleOpenWizard();
+    }
+  };
+
+  const handleSelectFreeTotalMode = () => {
+    formulario.onQuotePricingModeChange("total_global");
+    resetLocalWizardState();
+    wizard.onOpenFreeTotalNotebook();
   };
 
   const handleCloseWizard = () => {
@@ -279,8 +300,15 @@ export function PasoDosWizardMovil({
     ]
   );
 
-  const quotePricingMode = formulario.quotePricingMode;
-  const shouldSkipCantidadStep = shouldSkipCantidadForGrupoDraft(wizard.draft);
+  const isSingleStepFreeTotal = wizard.entryMode === "free_total_single";
+  const shouldSkipCantidadStep =
+    isSingleStepFreeTotal || shouldSkipCantidadForGrupoDraft(wizard.draft);
+  const wizardStages = isSingleStepFreeTotal
+    ? VISUAL_STAGES_FREE_TOTAL_SINGLE
+    : shouldSkipCantidadStep
+      ? VISUAL_STAGES_FREE_VALUE
+      : VISUAL_STAGES;
+
   const {
     activePricingMode,
     cantidadDisplayValue,
@@ -362,6 +390,7 @@ export function PasoDosWizardMovil({
       onClose={handleCloseWizard}
       onConfirm={wizard.onConfirm}
       onNext={wizard.onNext}
+      isSingleStepFreeTotal={isSingleStepFreeTotal}
       visualStage={visualStage}
       wizardStep={wizard.paso}
     />
@@ -423,8 +452,11 @@ export function PasoDosWizardMovil({
 
   return (
     <section className={s.stepTwoMobileExperience}>
-      {!wizard.isOpen && items.length === 0 ? (
-        <PasoDosModoCotizacion onSelectMode={handleSelectModeAndOpen} />
+      {!wizard.isOpen && items.length === 0 && !quoteModeChosen ? (
+        <PasoDosModoCotizacion
+          onSelectMode={handleSelectModeAndOpen}
+          onSelectFreeTotalMode={handleSelectFreeTotalMode}
+        />
       ) : (
         <PasoDosListaMovil
           isWizardOpen={wizard.isOpen}
@@ -452,31 +484,28 @@ export function PasoDosWizardMovil({
             }`}
           >
             <PasoDosWizardEncabezadoMovil
-              stages={
-                shouldSkipCantidadStep
-                  ? VISUAL_STAGES_FREE_VALUE
-                  : VISUAL_STAGES
-              }
+              stages={wizardStages}
+              hideStages={isSingleStepFreeTotal}
               visualStage={visualStage}
               title={
-                shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
-                  ? "Datos del trabajo"
-                  : getStageTitle(visualStage)
+                isSingleStepFreeTotal
+                  ? "Cotiza libre por total"
+                  : shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
+                    ? "Datos del trabajo"
+                    : getStageTitle(visualStage)
               }
               subtitle={
-                visualStage === 1
-                  ? quotePricingMode === "total_global"
-                    ? "Parte desde un cuaderno comercial para describir el trabajo."
-                    : "Elige el tipo base del componente."
-                  : visualStage === 2
-                    ? "Indica cuantas unidades iguales van en este grupo."
-                  : shouldSkipCantidadStep
-                    ? quotePricingMode === "total_global"
-                      ? "Describe el trabajo, agrega detalles y define el precio final."
-                      : "Redacta el trabajo y define el valor."
-                      : quotePricingMode === "total_global"
-                        ? "Completa datos comerciales y precio final antes de agregar."
-                        : "Completa sistema, medidas y valor antes de agregar."
+                isSingleStepFreeTotal
+                  ? "Describe el trabajo, agrega detalles y define el precio final."
+                  : visualStage === 1
+                    ? "Elige el tipo base del componente."
+                    : visualStage === 2
+                      ? "Indica cuantas unidades iguales van en este grupo."
+                      : shouldSkipCantidadStep
+                        ? "Redacta el trabajo y define el valor."
+                        : quotePricingMode === "total_global"
+                          ? "Completa datos comerciales y precio final antes de agregar."
+                          : "Completa sistema, medidas y valor antes de agregar."
               }
               onClose={handleCloseWizard}
               onGoToStep={wizard.onGoToStep}
@@ -491,7 +520,6 @@ export function PasoDosWizardMovil({
                 <PasoDosWizardTipoMovil
                   categoryOptions={normalizedCategoryOptions}
                   draft={wizard.draft}
-                  quotePricingMode={quotePricingMode}
                   subtypeOptions={wizard.subtypeOptions}
                   subtypePreviewMarkup={subtypePreviewMarkup}
                   onSelectCategoria={wizard.onSelectCategoria}

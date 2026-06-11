@@ -294,16 +294,15 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(screen.queryByText("Cobrar este item por separado")).not.toBeInTheDocument();
     expect(screen.getByText("NOMBRE DEL TRABAJO")).toBeInTheDocument();
     expect(screen.getByText("DESCRIPCION PARA CLIENTE")).toBeInTheDocument();
-    expect(screen.getByText("DETALLES INCLUIDOS")).toBeInTheDocument();
-    expect(screen.getByText("3 ventanas correderas 1500 x 2000")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Escribe un detalle incluido...")).toBeInTheDocument();
+    expect(screen.getByText("AGREGAR COMPONENTES LIBRES")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("3 ventanas correderas 1500 x 2000")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Ej: Colocar ventana")).toBeInTheDocument();
     expect(screen.getByText("PRECIO FINAL")).toBeInTheDocument();
     expect(screen.getByDisplayValue("600.000")).toBeInTheDocument();
-    expect(screen.getByText("Incluye IVA")).toBeInTheDocument();
+    expect(screen.queryByText("Incluye IVA")).not.toBeInTheDocument();
+    expect(screen.getByText(/Configura IVA y flete en el resumen/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Editar"));
-    expect(screen.getByText("Manual")).toBeInTheDocument();
-    expect(screen.getByText("Estructurado")).toBeInTheDocument();
+    expect(screen.queryByText("Editar detalle incluido")).not.toBeInTheDocument();
     expect(screen.getByText("+ Agregar observacion interna")).toBeInTheDocument();
   });
 });

@@ -30,7 +30,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     "Cierre terraza/logia": "Serie 25",
     Baranda: "Baranda estandar",
     Espejo: "Sin linea",
-    "Tapa de mesa": "Sin linea",
+    "Cubierta de mesa": "Sin linea",
     "Trabajo personalizado": "Linea estandar",
   },
   Alumco: {
@@ -41,7 +41,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     "Cierre terraza/logia": "Linea 25",
     Baranda: "Baranda estandar",
     Espejo: "Sin linea",
-    "Tapa de mesa": "Sin linea",
+    "Cubierta de mesa": "Sin linea",
     "Trabajo personalizado": "Linea estandar",
   },
   TecnoPerfiles: {
@@ -52,7 +52,7 @@ const DEFAULT_PROVIDER_LINES: Record<
     "Cierre terraza/logia": "TP 4200",
     Baranda: "TP Baranda",
     Espejo: "Sin linea",
-    "Tapa de mesa": "Sin linea",
+    "Cubierta de mesa": "Sin linea",
     "Trabajo personalizado": "Linea estandar",
   },
   Otro: {},
@@ -115,12 +115,12 @@ const DEFAULT_SUGGESTIONS: Record<string, Omit<ComponentSuggestion, "referencia"
     descripcion: "Espejo a medida listo para instalacion.",
     colorHex: "#f0eeeb",
   },
-  "Tapa de mesa": {
-    tipo: "Tapa de mesa",
+  "Cubierta de mesa": {
+    tipo: "Cubierta de mesa",
     material: "PVC",
     vidrio: "Templado 10mm",
     margenPct: 100,
-    descripcion: "Tapa de mesa de vidrio templado.",
+    descripcion: "Cubierta de mesa de vidrio templado.",
     colorHex: "#f0eeeb",
   },
   "Trabajo personalizado": {
@@ -142,6 +142,7 @@ const LEGACY_COMPONENT_SUGGESTION_ALIASES: Record<string, keyof typeof DEFAULT_S
   "Proyecto a medida": "Trabajo personalizado",
   "Otro trabajo especial": "Trabajo personalizado",
   Otro: "Trabajo personalizado",
+  "Tapa de mesa": "Cubierta de mesa",
 };
 
 export function normalizePreferredProvider(
