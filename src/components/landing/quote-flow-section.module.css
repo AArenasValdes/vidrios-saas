@@ -136,7 +136,7 @@
   width: 100%;
   max-width: 240px;
   line-height: 0;
-  border-radius: 22px;
+  border-radius: 29px;
   overflow: hidden;
   background: #0b1018;
   box-shadow:
@@ -151,7 +151,7 @@
   user-select: none;
   pointer-events: none;
   /* top | right | bottom | left — recorta blanco del PNG sin desplazar la imagen */
-  clip-path: inset(4px 11px 16px 12px round 22px);
+  clip-path: inset(4px 12px 16px 12px round 29px);
 }
 
 @keyframes stepIn {
