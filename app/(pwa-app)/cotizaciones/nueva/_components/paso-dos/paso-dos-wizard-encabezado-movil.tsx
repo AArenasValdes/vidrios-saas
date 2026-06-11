@@ -8,11 +8,17 @@ import s from "../../page.module.css";
 type Stage = {
   id: number;
   label: string;
+  paso?: PasoDosGrupoPasoMovil;
 };
+
+function resolveStagePaso(stage: Stage): PasoDosGrupoPasoMovil {
+  return stage.paso ?? (stage.id as PasoDosGrupoPasoMovil);
+}
 
 type Props = {
   stages: readonly Stage[];
   hideStages?: boolean;
+  centerStages?: boolean;
   visualStage: PasoDosGrupoPasoMovil;
   title: string;
   subtitle: string;
@@ -23,6 +29,7 @@ type Props = {
 export function PasoDosWizardEncabezadoMovil({
   stages,
   hideStages = false,
+  centerStages = false,
   visualStage,
   title,
   subtitle,
@@ -43,22 +50,30 @@ export function PasoDosWizardEncabezadoMovil({
       </header>
 
       {hideStages ? null : (
-        <div className={s.stepTwoMobileCreatorStageRow}>
-          {stages.map((stage) => (
-            <button
-              key={stage.id}
-              type="button"
-              onClick={() => onGoToStep(stage.id as PasoDosGrupoPasoMovil)}
-              className={`${s.stepTwoMobileCreatorStagePill} ${
-                stage.id === visualStage ? s.stepTwoMobileCreatorStagePillActive : ""
-              } ${stage.id < visualStage ? s.stepTwoMobileCreatorStagePillDone : ""}`}
-            >
-              <span>
-                {stage.id < visualStage ? <LuCheck aria-hidden size={10} /> : stage.id}
-              </span>
-              <strong>{stage.label}</strong>
-            </button>
-          ))}
+        <div
+          className={`${s.stepTwoMobileCreatorStageRow} ${
+            centerStages ? s.stepTwoMobileCreatorStageRowCentered : ""
+          }`}
+        >
+          {stages.map((stage) => {
+            const stagePaso = resolveStagePaso(stage);
+            const isDone = stagePaso < visualStage;
+            const isActive = stagePaso === visualStage;
+
+            return (
+              <button
+                key={`${stage.id}-${stage.label}`}
+                type="button"
+                onClick={() => onGoToStep(stagePaso)}
+                className={`${s.stepTwoMobileCreatorStagePill} ${
+                  isActive ? s.stepTwoMobileCreatorStagePillActive : ""
+                } ${isDone ? s.stepTwoMobileCreatorStagePillDone : ""}`}
+              >
+                <span>{isDone ? <LuCheck aria-hidden size={10} /> : stage.id}</span>
+                <strong>{stage.label}</strong>
+              </button>
+            );
+          })}
         </div>
       )}
     </>

@@ -247,7 +247,6 @@ export function PasoDosAgregarGrupoSheet({
           {paso === 1 ? (
               <div className={s.groupSheetOptionGrid}>
                 {visibleTypeGroups.map((group) => {
-                  const isLibre = group.title === "Proyecto libre y Mantencion";
                   const isSingle = group.items.length === 1;
                   const isActive = !isSingle && draft.categoria === group.title;
                   const handleClick = () => {
@@ -262,15 +261,12 @@ export function PasoDosAgregarGrupoSheet({
                     key={group.title}
                     className={`${s.groupSheetOptionButton} ${
                       isActive ? s.groupSheetOptionButtonActive : ""
-                    } ${isLibre ? s.groupSheetOptionButtonLibre : ""}`}
+                    }`}
                     onClick={handleClick}
                     type="button"
                   >
                     <strong>{group.title}</strong>
                     <span>{group.items.slice(0, 2).map(getVisibleSubtypeLabel).join(", ")}</span>
-                    {isLibre ? (
-                      <span className={s.groupSheetLibreBadge}>Libre</span>
-                    ) : null}
                   </button>
                   );
                 })}

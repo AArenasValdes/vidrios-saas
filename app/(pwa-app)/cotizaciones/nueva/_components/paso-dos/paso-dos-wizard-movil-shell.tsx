@@ -193,8 +193,8 @@ const VISUAL_STAGES = [
 ] as const;
 
 const VISUAL_STAGES_FREE_VALUE = [
-  { id: 1, label: "Tipo" },
-  { id: 3, label: "Datos" },
+  { id: 1, label: "Tipo", paso: 1 as const },
+  { id: 2, label: "Datos", paso: 3 as const },
 ] as const;
 
 const VISUAL_STAGES_FREE_TOTAL_SINGLE = [{ id: 3, label: "Datos" }] as const;
@@ -486,6 +486,7 @@ export function PasoDosWizardMovil({
             <PasoDosWizardEncabezadoMovil
               stages={wizardStages}
               hideStages={isSingleStepFreeTotal}
+              centerStages={wizardStages.length === 2}
               visualStage={visualStage}
               title={
                 isSingleStepFreeTotal

@@ -332,7 +332,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
 
     expect(patch.nombre).toBe("");
     expect(patch.cantidad).toBe(4);
-    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(false);
+    expect(shouldSkipCantidadForGrupoDraft({ ...current, subtipo: patch.subtipo })).toBe(true);
   });
 
   it("debe conservar cantidad en trabajo personalizado de especiales (flujo libre)", () => {

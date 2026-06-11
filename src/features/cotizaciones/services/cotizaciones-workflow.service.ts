@@ -540,6 +540,7 @@ export function createCotizacionRecord(
     clienteVioEn: null,
     clienteRespondioEn: null,
     clienteRespuestaCanal: null,
+    pdfDescargadoEn: null,
     createdAt: input.createdAt ?? timestamp,
     updatedAt: timestamp,
     items: input.draft.items,

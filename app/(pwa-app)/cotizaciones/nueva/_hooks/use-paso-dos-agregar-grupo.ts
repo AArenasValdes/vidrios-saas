@@ -220,7 +220,16 @@ function safeTrim(value: string | null | undefined) {
 export function shouldSkipCantidadForGrupoDraft(
   draft?: Pick<PasoDosGrupoDraft, "categoria" | "subtipo">
 ) {
-  void draft;
+  if (!draft) return false;
+
+  if (draft.categoria === FREE_TOTAL_NOTEBOOK_CATEGORIA) {
+    return true;
+  }
+
+  if (safeTrim(draft.subtipo) === FREE_TOTAL_NOTEBOOK_SUBTIPO) {
+    return true;
+  }
+
   return false;
 }
 

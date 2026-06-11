@@ -25,6 +25,11 @@ type DashboardSummaryCacheEntry = Omit<
   "organizationKey" | "isLoading" | "isReady"
 >;
 
+/** Campos obsoletos que pueden existir en sessionStorage de versiones anteriores. */
+type DashboardSummaryLegacyCacheFields = {
+  approvedMonthTotal?: number;
+};
+
 const dashboardSummaryCache = new Map<string, DashboardSummaryCacheEntry>();
 const dashboardSummaryPromiseCache = new Map<string, Promise<DashboardSummaryCacheEntry>>();
 const DASHBOARD_SUMMARY_STORAGE_PREFIX = "vidrios-saas:dashboard-summary:";
@@ -40,12 +45,8 @@ const EMPTY_SUMMARY: DashboardSummaryCacheEntry = {
   approvedTodayCount: 0,
 };
 
-function getDashboardSummaryStorageKey(organizationKey: string) {
-  return `${DASHBOARD_SUMMARY_STORAGE_PREFIX}${organizationKey}`;
-}
-
 function normalizeDashboardSummaryCacheEntry(
-  value: Partial<DashboardSummaryCacheEntry> | null | undefined
+  value: (Partial<DashboardSummaryCacheEntry> & DashboardSummaryLegacyCacheFields) | null | undefined
 ): DashboardSummaryCacheEntry {
   if (!value) {
     return EMPTY_SUMMARY;
@@ -63,6 +64,10 @@ function normalizeDashboardSummaryCacheEntry(
   };
 }
 
+function getDashboardSummaryStorageKey(organizationKey: string) {
+  return `${DASHBOARD_SUMMARY_STORAGE_PREFIX}${organizationKey}`;
+}
+
 function readDashboardSummaryFromStorage(organizationKey: string) {
   if (typeof window === "undefined") {
     return null;
@@ -76,7 +81,7 @@ function readDashboardSummaryFromStorage(organizationKey: string) {
     }
 
     return normalizeDashboardSummaryCacheEntry(
-      JSON.parse(raw) as Partial<DashboardSummaryCacheEntry>
+      JSON.parse(raw) as Partial<DashboardSummaryCacheEntry> & DashboardSummaryLegacyCacheFields
     );
   } catch {
     return null;

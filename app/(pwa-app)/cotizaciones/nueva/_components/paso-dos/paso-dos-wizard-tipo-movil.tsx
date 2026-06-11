@@ -4,7 +4,10 @@ import { useMemo } from "react";
 import { LuChevronRight } from "react-icons/lu";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
-import { getSubtypeOptionsForCategory } from "../../_hooks/use-paso-dos-agregar-grupo";
+import {
+  FREE_TOTAL_NOTEBOOK_CATEGORIA,
+  getSubtypeOptionsForCategory,
+} from "../../_hooks/use-paso-dos-agregar-grupo";
 import {
   getVisibleSubtypeLabel,
   getSubtypeBadge,
@@ -34,10 +37,19 @@ export function PasoDosWizardTipoMovil({
   onSelectSubtipo,
 }: Props) {
   const singleSubtypeCategories = useMemo(
-    () => new Set(categoryOptions.filter((c) => {
-      const count = parseInt(c.countLabel, 10);
-      return !isNaN(count) && count === 1;
-    }).map((c) => c.title)),
+    () =>
+      new Set(
+        categoryOptions
+          .filter((category) => {
+            if (category.title === FREE_TOTAL_NOTEBOOK_CATEGORIA) {
+              return true;
+            }
+
+            const count = Number.parseInt(category.countLabel, 10);
+            return !Number.isNaN(count) && count === 1;
+          })
+          .map((category) => category.title)
+      ),
     [categoryOptions]
   );
 
@@ -45,7 +57,6 @@ export function PasoDosWizardTipoMovil({
     <div className={s.stepTwoMobileCreatorStack}>
       <div className={s.stepTwoMobileCategoryTabs}>
         {categoryOptions.map((option) => {
-          const isLibre = option.title === "Proyecto libre y Mantencion";
           const isSingle = singleSubtypeCategories.has(option.title);
           const isActive = !isSingle && draft.categoria === option.title;
           const handleClick = () => {
@@ -63,7 +74,7 @@ export function PasoDosWizardTipoMovil({
               key={option.title}
               className={`${s.stepTwoMobileCategoryTab} ${
                 isActive ? s.stepTwoMobileCategoryTabActive : ""
-              } ${isLibre ? s.stepTwoMobileCategoryTabLibre : ""}`}
+              }`}
               onClick={handleClick}
               type="button"
             >
@@ -71,17 +82,23 @@ export function PasoDosWizardTipoMovil({
                 <strong>{option.title}</strong>
                 <span>{repairBrokenText(option.subtitle)}</span>
               </div>
-              {isLibre ? (
-                <span className={s.stepTwoMobileLibreBadge}>Libre</span>
-              ) : (
-                <small className={s.stepTwoMobileCategoryTabCount}>{option.countLabel}</small>
-              )}
+              <small
+                className={`${s.stepTwoMobileCategoryTabCount} ${
+                  option.title === FREE_TOTAL_NOTEBOOK_CATEGORIA
+                    ? s.stepTwoMobileCategoryTabCountLibre
+                    : ""
+                }`}
+              >
+                {option.title === FREE_TOTAL_NOTEBOOK_CATEGORIA ? "Libre" : option.countLabel}
+              </small>
             </button>
           );
         })}
       </div>
 
       <div className={s.stepTwoMobileCreatorOptionList}>
+        {draft.categoria === FREE_TOTAL_NOTEBOOK_CATEGORIA ? null : (
+          <>
         {subtypeOptions.map((subtipo) => (
           <button
             key={subtipo}
@@ -114,6 +131,8 @@ export function PasoDosWizardTipoMovil({
             </span>
           </button>
         ))}
+          </>
+        )}
       </div>
     </div>
   );
