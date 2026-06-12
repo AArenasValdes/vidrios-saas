@@ -49,6 +49,7 @@ type UseFlujoNuevaCotizacionParams = {
   isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
+  customGlassOptions: readonly string[];
   items: CotizacionWorkflowItem[];
   pendingItemsCount: number;
   completedItemsCount: number;
@@ -98,6 +99,7 @@ type UseFlujoNuevaCotizacionParams = {
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onResetStep2Form: () => void;
   onAddOrUpdateItem: () => void;
   onRecalculateCurrentTemplatePrice: () => void;
@@ -162,6 +164,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     isSavingQuickPriceTemplate: params.isSavingQuickPriceTemplate,
     isGlassPanelOpen: params.isGlassPanelOpen,
     glassQuery: params.glassQuery,
+    customGlassOptions: params.customGlassOptions,
     pendingItemsCount: params.pendingItemsCount,
     completedItemsCount: params.completedItemsCount,
     effectiveShowOnlyPendingItems: params.effectiveShowOnlyPendingItems,
@@ -190,6 +193,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onToggleGlassPanel: params.onToggleGlassPanel,
     onGlassQueryChange: params.onGlassQueryChange,
     onGlassSelect: params.onGlassSelect,
+    onCreateCustomGlass: params.onCreateCustomGlass,
     onResetStep2Form: params.onResetStep2Form,
     onSaveDraft: params.onSaveDraft,
     onAddOrUpdateItem: params.onAddOrUpdateItem,

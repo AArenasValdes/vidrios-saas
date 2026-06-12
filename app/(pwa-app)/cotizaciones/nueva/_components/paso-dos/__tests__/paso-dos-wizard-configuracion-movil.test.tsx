@@ -55,6 +55,7 @@ const baseProps = {
   formattedPriceValue: "$ 120.000",
   glassCatalogGroups: [],
   isRecommendedGlass: () => false,
+  canCreateCustomGlass: false,
   isSavingLineTemplate: false,
   linePricingSummary: {
     areaM2: null,
@@ -121,6 +122,7 @@ const baseProps = {
   onSetShowAllConfigurations: jest.fn(),
   onSetShowAllSystems: jest.fn(),
   onSetVidSearch: jest.fn(),
+  onCreateCustomGlass: jest.fn(),
 };
 
 describe("PasoDosWizardConfiguracionMovil", () => {

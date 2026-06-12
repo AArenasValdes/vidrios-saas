@@ -84,6 +84,11 @@ import {
   getConfigurationOptionsForComponentSistema,
   hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
+import {
+  normalizeCustomGlassValue,
+  readCustomGlassOptions,
+  saveCustomGlassOption,
+} from "@/features/cotizaciones/new-quote/custom-glass-options";
 
 import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-desktop";
 import { NuevaCotizacionMobile } from "./_components/mobile/nueva-cotizacion-mobile";
@@ -151,10 +156,16 @@ function NuevaCotizacionPageContent() {
   const [lastSaveMode, setLastSaveMode] = useState<keyof typeof STATUS_COPY | null>(null);
   const [isGlassPanelOpen, setIsGlassPanelOpen] = useState(false);
   const [glassQuery, setGlassQuery] = useState("");
+  const [customGlassOptions, setCustomGlassOptions] = useState<string[]>([]);
   const [showStep1MoreData, setShowStep1MoreData] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [hasUnsavedProgress, setHasUnsavedProgress] = useState(false);
   const [quoteModeChosen, setQuoteModeChosen] = useState(false);
+  const customGlassOrganizationId = organizationProfile?.organizationId ?? null;
+
+  useEffect(() => {
+    setCustomGlassOptions(readCustomGlassOptions(customGlassOrganizationId));
+  }, [customGlassOrganizationId]);
 
   useEffect(() => {
     if (draft.items.length > 0) {
@@ -324,6 +335,7 @@ function NuevaCotizacionPageContent() {
     pricingMode: componentForm.pricingMode,
     provider: suggestionProvider,
     seedForm: componentForm,
+    customGlassOptions,
     onSheetClosed: handleAddGroupSheetClosed,
   });
   const pasoDosAgregarGrupoMovil = usePasoDosAgregarGrupoMovil({
@@ -332,6 +344,7 @@ function NuevaCotizacionPageContent() {
     provider: suggestionProvider,
     activeLineTemplates,
     seedForm: componentForm,
+    customGlassOptions,
     onSheetClosed: handleAddGroupSheetClosed,
   });
 
@@ -1525,6 +1538,22 @@ function NuevaCotizacionPageContent() {
     }, 200);
   };
 
+  const handleCreateCustomGlass = (value: string) => {
+    const nextOptions = saveCustomGlassOption(
+      customGlassOrganizationId,
+      customGlassOptions,
+      value
+    );
+    const savedValue = normalizeCustomGlassValue(value);
+
+    setCustomGlassOptions([...nextOptions]);
+
+    if (savedValue) {
+      handleComponentChange("vidrio", savedValue);
+      setGlassQuery("");
+    }
+  };
+
   function goNextFromStep1() {
     const nextDraft = resolveStep1Draft(draft);
     const errors = validateStep1(nextDraft);
@@ -1652,6 +1681,7 @@ function NuevaCotizacionPageContent() {
     isSavingQuickPriceTemplate,
     isGlassPanelOpen,
     glassQuery,
+    customGlassOptions,
     items: draft.items,
     pendingItemsCount,
     completedItemsCount,
@@ -1723,6 +1753,7 @@ function NuevaCotizacionPageContent() {
         setGlassQuery("");
       }
     },
+    onCreateCustomGlass: handleCreateCustomGlass,
     onResetStep2Form: handleResetStep2Form,
     onAddOrUpdateItem: handleAddOrUpdateItem,
     onRecalculateCurrentTemplatePrice: handleRecalculateCurrentTemplatePrice,
@@ -1868,6 +1899,18 @@ function NuevaCotizacionPageContent() {
               onMirrorPaneDirectionChange: pasoDosAgregarGrupoMovil.updateMirrorPaneDirection,
               onMirrorInteriorLineChange: pasoDosAgregarGrupoMovil.updateMirrorInteriorLine,
               onVidrioChange: pasoDosAgregarGrupoMovil.updateVidrio,
+              onCreateCustomGlass: (value) => {
+                const savedValue = normalizeCustomGlassValue(value);
+                const nextOptions = saveCustomGlassOption(
+                  customGlassOrganizationId,
+                  customGlassOptions,
+                  value
+                );
+                setCustomGlassOptions([...nextOptions]);
+                if (savedValue) {
+                  pasoDosAgregarGrupoMovil.updateVidrio(savedValue);
+                }
+              },
               onAnchoChange: pasoDosAgregarGrupoMovil.updateAncho,
               onAltoChange: pasoDosAgregarGrupoMovil.updateAlto,
               onPrecioChange: pasoDosAgregarGrupoMovil.updatePrecio,
@@ -1941,6 +1984,18 @@ function NuevaCotizacionPageContent() {
             onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,
             onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
+            onCreateCustomGlass: (value) => {
+              const savedValue = normalizeCustomGlassValue(value);
+              const nextOptions = saveCustomGlassOption(
+                customGlassOrganizationId,
+                customGlassOptions,
+                value
+              );
+              setCustomGlassOptions([...nextOptions]);
+              if (savedValue) {
+                pasoDosAgregarGrupo.updateVidrio(savedValue);
+              }
+            },
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onCobraPrecioSeparadoChange: pasoDosAgregarGrupo.updateCobraPrecioSeparado,
             onAddAlcanceDetalle: pasoDosAgregarGrupo.addAlcanceDetalle,

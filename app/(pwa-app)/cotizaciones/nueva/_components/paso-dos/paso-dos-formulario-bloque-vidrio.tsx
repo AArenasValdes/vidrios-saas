@@ -18,9 +18,11 @@ type Props = Pick<
   | "recommendedGlassReason"
   | "lineTemplateRecommendedGlass"
   | "filteredGlassGroups"
+  | "canCreateCustomGlass"
   | "onToggleGlassPanel"
   | "onGlassQueryChange"
   | "onGlassSelect"
+  | "onCreateCustomGlass"
 >;
 
 export function PasoDosFormularioBloqueVidrio({
@@ -32,9 +34,11 @@ export function PasoDosFormularioBloqueVidrio({
   recommendedGlassReason,
   lineTemplateRecommendedGlass,
   filteredGlassGroups,
+  canCreateCustomGlass,
   onToggleGlassPanel,
   onGlassQueryChange,
   onGlassSelect,
+  onCreateCustomGlass,
 }: Props) {
   if (componentForm.tipo === "Trabajo personalizado" || isFreeValueComponentType(componentForm.tipo)) {
     return null;
@@ -116,7 +120,18 @@ export function PasoDosFormularioBloqueVidrio({
 
               <div className={s.glassGroups}>
                 {filteredGlassGroups.length === 0 ? (
-                  <div className={s.glassEmptyState}>No encontramos opciones con ese texto.</div>
+                  <div className={s.glassEmptyState}>
+                    <span>No encontramos opciones con ese texto.</span>
+                    {canCreateCustomGlass ? (
+                      <button
+                        className={s.glassChip}
+                        type="button"
+                        onClick={() => onCreateCustomGlass(glassQuery)}
+                      >
+                        Guardar {glassQuery.trim()}
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
                   filteredGlassGroups.map((group, groupIndex) => (
                     <section key={group.grupo} className={s.glassGroup}>
@@ -147,6 +162,15 @@ export function PasoDosFormularioBloqueVidrio({
               <div className={s.inlineSelectorActions}>
                 {!isMobileViewport ? (
                   <span className={s.helpText}>Se guarda igual a como saldra en el PDF.</span>
+                ) : null}
+                {filteredGlassGroups.length > 0 && canCreateCustomGlass ? (
+                  <button
+                    className={s.inlineSelectorClear}
+                    type="button"
+                    onClick={() => onCreateCustomGlass(glassQuery)}
+                  >
+                    Guardar {glassQuery.trim()}
+                  </button>
                 ) : null}
                 {componentForm.vidrio ? (
                   <button className={s.inlineSelectorClear} type="button" onClick={() => onGlassSelect("")}>

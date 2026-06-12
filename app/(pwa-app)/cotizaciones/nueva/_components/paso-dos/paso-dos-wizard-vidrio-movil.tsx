@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { LuSearch, LuX } from "react-icons/lu";
 
 import { repairBrokenText } from "./paso-dos-wizard-movil.utils";
@@ -16,12 +17,14 @@ type Props = {
   glassCatalogGroups: readonly GlassCatalogGroup[];
   isRecommendedGlass: (option: string) => boolean;
   onSetVidSearch: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onVidrioChange: (value: string) => void;
   recommendedReason: string;
   recommendedVidrios: readonly string[];
   searchResults: readonly string[];
   subtipo: string;
   vidSearch: string;
+  canCreateCustomGlass: boolean;
 };
 
 export function PasoDosWizardVidrioMovil({
@@ -29,12 +32,14 @@ export function PasoDosWizardVidrioMovil({
   glassCatalogGroups,
   isRecommendedGlass,
   onSetVidSearch,
+  onCreateCustomGlass,
   onVidrioChange,
   recommendedReason,
   recommendedVidrios,
   searchResults,
   subtipo,
   vidSearch,
+  canCreateCustomGlass,
 }: Props) {
   const [isGlassModalOpen, setIsGlassModalOpen] = useState(false);
   const isMirrorComponent = subtipo.trim() === "Espejo";
@@ -42,6 +47,140 @@ export function PasoDosWizardVidrioMovil({
     Boolean(currentGlass) && recommendedVidrios.includes(currentGlass);
   const showSelectedCustomChip =
     Boolean(currentGlass) && !isCurrentGlassRecommended;
+  const glassModal =
+    isGlassModalOpen && typeof document !== "undefined" ? (
+      <div className={s.stepTwoMobileNestedModalOverlay}>
+        <div className={s.stepTwoMobileNestedModal}>
+          <div className={s.stepTwoMobileNestedModalHeader}>
+            <div>
+              <span className={s.cardLabel}>Catalogo de vidrios</span>
+              <strong>Cambiar vidrio</strong>
+              <span className={s.stepTwoMobileNestedModalSubtle}>{recommendedReason}</span>
+            </div>
+            <button
+              className={s.stepTwoMobileHeaderAction}
+              onClick={() => setIsGlassModalOpen(false)}
+              type="button"
+              aria-label="Cerrar catalogo de vidrios"
+            >
+              <LuX aria-hidden />
+            </button>
+          </div>
+
+          <div className={s.stepTwoMobileNestedModalBody}>
+            <div className={s.stepTwoMobileVidrioSearchWrap}>
+              <LuSearch
+                aria-hidden
+                className={s.stepTwoMobileVidrioSearchIcon}
+                size={14}
+              />
+              <input
+                className={s.stepTwoMobileVidrioSearchInput}
+                placeholder='Buscar... ej: "inc", "dvh", "temp"'
+                type="text"
+                value={vidSearch}
+                onChange={(event) => onSetVidSearch(event.target.value)}
+              />
+              {vidSearch ? (
+                <button
+                  className={s.stepTwoMobileVidrioSearchClear}
+                  onClick={() => onSetVidSearch("")}
+                  type="button"
+                  aria-label="Limpiar busqueda"
+                >
+                  <LuX aria-hidden size={11} />
+                </button>
+              ) : null}
+            </div>
+
+            {vidSearch.trim() ? (
+              <div className={s.stepTwoMobileChoiceChips}>
+                {searchResults.length > 0 ? (
+                  searchResults.map((option) => (
+                    <button
+                      key={option}
+                      className={`${s.stepTwoMobileChoiceChip} ${
+                        currentGlass === option ? s.stepTwoMobileChoiceChipActive : ""
+                      }`}
+                      onClick={() => {
+                        onVidrioChange(option);
+                        onSetVidSearch("");
+                        setIsGlassModalOpen(false);
+                      }}
+                      type="button"
+                    >
+                      {repairBrokenText(option)}
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <span className={s.stepTwoMobileVidrioNoResults}>
+                      Sin resultados para {vidSearch}. Puedes guardarlo como nuevo.
+                    </span>
+                    {canCreateCustomGlass ? (
+                      <button
+                        className={s.stepTwoMobileChoiceChip}
+                        onClick={() => {
+                          onCreateCustomGlass(vidSearch);
+                          onSetVidSearch("");
+                          setIsGlassModalOpen(false);
+                        }}
+                        type="button"
+                      >
+                        Guardar {vidSearch.trim()}
+                      </button>
+                    ) : null}
+                  </>
+                )}
+                {searchResults.length > 0 && canCreateCustomGlass ? (
+                  <button
+                    className={s.stepTwoMobileChoiceChip}
+                    onClick={() => {
+                      onCreateCustomGlass(vidSearch);
+                      onSetVidSearch("");
+                      setIsGlassModalOpen(false);
+                    }}
+                    type="button"
+                  >
+                    Guardar {vidSearch.trim()}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className={s.stepTwoMobileGlassCatalog}>
+                {glassCatalogGroups.map((group) => (
+                  <div className={s.stepTwoMobileGlassGroup} key={group.grupo}>
+                    <div className={s.stepTwoMobileGlassGroupTitle}>
+                      {repairBrokenText(group.grupo)}
+                    </div>
+                    <div className={s.stepTwoMobileChoiceChips}>
+                      {group.options.map((option) => (
+                        <button
+                          key={option}
+                          aria-pressed={currentGlass === option}
+                          className={`${s.stepTwoMobileChoiceChip} ${
+                            isRecommendedGlass(option) ? s.stepTwoMobileChoiceChipRecSoft : ""
+                          } ${
+                            currentGlass === option ? s.stepTwoMobileChoiceChipActive : ""
+                          }`}
+                          onClick={() => {
+                            onVidrioChange(option);
+                            setIsGlassModalOpen(false);
+                          }}
+                          type="button"
+                        >
+                          {repairBrokenText(option)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ) : null;
 
   return (
     <>
@@ -114,111 +253,7 @@ export function PasoDosWizardVidrioMovil({
 
       </div>
 
-      {isGlassModalOpen ? (
-        <div className={s.stepTwoMobileNestedModalOverlay}>
-          <div className={s.stepTwoMobileNestedModal}>
-            <div className={s.stepTwoMobileNestedModalHeader}>
-              <div>
-                <span className={s.cardLabel}>Catalogo de vidrios</span>
-                <strong>Cambiar vidrio</strong>
-                <span className={s.stepTwoMobileNestedModalSubtle}>{recommendedReason}</span>
-              </div>
-              <button
-                className={s.stepTwoMobileHeaderAction}
-                onClick={() => setIsGlassModalOpen(false)}
-                type="button"
-                aria-label="Cerrar catalogo de vidrios"
-              >
-                <LuX aria-hidden />
-              </button>
-            </div>
-
-            <div className={s.stepTwoMobileNestedModalBody}>
-              <div className={s.stepTwoMobileVidrioSearchWrap}>
-                <LuSearch
-                  aria-hidden
-                  className={s.stepTwoMobileVidrioSearchIcon}
-                  size={14}
-                />
-                <input
-                  className={s.stepTwoMobileVidrioSearchInput}
-                  placeholder='Buscar... ej: "inc", "dvh", "temp"'
-                  type="text"
-                  value={vidSearch}
-                  onChange={(event) => onSetVidSearch(event.target.value)}
-                />
-                {vidSearch ? (
-                  <button
-                    className={s.stepTwoMobileVidrioSearchClear}
-                    onClick={() => onSetVidSearch("")}
-                    type="button"
-                    aria-label="Limpiar busqueda"
-                  >
-                    <LuX aria-hidden size={11} />
-                  </button>
-                ) : null}
-              </div>
-
-              {vidSearch.trim() ? (
-                <div className={s.stepTwoMobileChoiceChips}>
-                  {searchResults.length > 0 ? (
-                    searchResults.map((option) => (
-                      <button
-                        key={option}
-                        className={`${s.stepTwoMobileChoiceChip} ${
-                          currentGlass === option ? s.stepTwoMobileChoiceChipActive : ""
-                        }`}
-                        onClick={() => {
-                          onVidrioChange(option);
-                          onSetVidSearch("");
-                          setIsGlassModalOpen(false);
-                        }}
-                        type="button"
-                      >
-                        {repairBrokenText(option)}
-                      </button>
-                    ))
-                  ) : (
-                    <span className={s.stepTwoMobileVidrioNoResults}>
-                      Sin resultados para {vidSearch}. Prueba con dvh o temp.
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <div className={s.stepTwoMobileGlassCatalog}>
-                  {glassCatalogGroups.map((group) => (
-                    <div className={s.stepTwoMobileGlassGroup} key={group.grupo}>
-                      <div className={s.stepTwoMobileGlassGroupTitle}>
-                        {repairBrokenText(group.grupo)}
-                      </div>
-                      <div className={s.stepTwoMobileChoiceChips}>
-                        {group.options.map((option) => (
-                          <button
-                            key={option}
-                            aria-pressed={currentGlass === option}
-                            className={`${s.stepTwoMobileChoiceChip} ${
-                              isRecommendedGlass(option) ? s.stepTwoMobileChoiceChipRecSoft : ""
-                            } ${
-                              currentGlass === option ? s.stepTwoMobileChoiceChipActive : ""
-                            }`}
-                            onClick={() => {
-                              onVidrioChange(option);
-                              setIsGlassModalOpen(false);
-                            }}
-                            type="button"
-                          >
-                            {repairBrokenText(option)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {glassModal ? createPortal(glassModal, document.body) : null}
     </>
   );
 }

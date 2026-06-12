@@ -48,6 +48,7 @@ export type PasoDosFormularioComponenteProps = {
     prefix: string;
     items: string[];
   }>;
+  canCreateCustomGlass: boolean;
   onPricingModeSelection: (mode: "margen" | "precio_directo") => void;
   onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onComponentChange: <K extends keyof ComponentFormState>(key: K, value: ComponentFormState[K]) => void;
@@ -55,6 +56,7 @@ export type PasoDosFormularioComponenteProps = {
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveAndExit: () => void;
   onAddOrUpdateItem: () => void;

@@ -18,6 +18,10 @@ import {
   PVC_COLOR_OPTIONS,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
+  hasGlassOption,
+  normalizeCustomGlassValue,
+} from "@/features/cotizaciones/new-quote/custom-glass-options";
+import {
   getGlassRecommendations,
   isRecommendedGlass,
 } from "@/features/cotizaciones/services/glass-recommendations.service";
@@ -102,6 +106,7 @@ export type WizardActions = {
   onMirrorPaneDirectionChange: (value: PasoDosGrupoDraft["mirrorPaneDirection"]) => void;
   onMirrorInteriorLineChange: (value: PasoDosGrupoDraft["mirrorInteriorLine"]) => void;
   onVidrioChange: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
   onPrecioChange: (value: string) => void;
@@ -358,6 +363,11 @@ export function PasoDosWizardMovil({
     () => filterVidrios(vidSearch, orderedGlassOptions),
     [vidSearch, orderedGlassOptions]
   );
+  const canCreateCustomGlass = useMemo(() => {
+    const candidate = normalizeCustomGlassValue(vidSearch);
+
+    return Boolean(candidate) && !hasGlassOption(orderedGlassOptions, candidate);
+  }, [orderedGlassOptions, vidSearch]);
   const glassCatalogGroups = useMemo(() => {
     const groups = GLASS_OPTIONS.map((group) => ({
       grupo: group.grupo,
@@ -559,6 +569,7 @@ export function PasoDosWizardMovil({
                   displaySystemOptions={displaySystemOptions}
                   formattedPriceValue={formattedPriceValue}
                   glassCatalogGroups={glassCatalogGroups}
+                  canCreateCustomGlass={canCreateCustomGlass}
                   isRecommendedGlass={(option) =>
                     isRecommendedGlass(option, glassRecommendation.recommendedOptions)
                   }
@@ -619,6 +630,7 @@ export function PasoDosWizardMovil({
                   onSetShowAllConfigurations={setShowAllConfigurations}
                   onSetShowAllSystems={setShowAllSystems}
                   onSetVidSearch={setVidSearch}
+                  onCreateCustomGlass={wizard.onCreateCustomGlass}
                 />
               ) : null}
 

@@ -60,6 +60,7 @@ type Props = {
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
   onVidrioChange: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onPrecioChange: (value: string) => void;
   onCobraPrecioSeparadoChange: (value: boolean) => void;
   onAddAlcanceDetalle: (initialNombre?: string) => void;
@@ -142,6 +143,7 @@ export function PasoDosAgregarGrupoSheet({
   onSheetVariantChange,
   onCustomSchemeDescriptionChange,
   onVidrioChange,
+  onCreateCustomGlass,
   onPrecioChange,
   onCobraPrecioSeparadoChange,
   onAddAlcanceDetalle,
@@ -828,19 +830,29 @@ export function PasoDosAgregarGrupoSheet({
                 <label className={s.label} htmlFor="grupo-vidrio">
                   Tipo de vidrio
                 </label>
-                <div className={s.selectWrap}>
-                  <select
+                <div>
+                  <input
                     className={s.input}
+                    list="grupo-vidrio-opciones"
                     id="grupo-vidrio"
+                    placeholder="Buscar o escribir vidrio"
                     value={draft.vidrio}
+                    onBlur={(event) => onCreateCustomGlass(event.target.value)}
                     onChange={(event) => onVidrioChange(event.target.value)}
-                  >
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        onCreateCustomGlass(event.currentTarget.value);
+                      }
+                    }}
+                  />
+                  <datalist id="grupo-vidrio-opciones">
                     {glassOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
               </>

@@ -80,6 +80,7 @@ type Props = {
   formattedPriceValue: string;
   glassCatalogGroups: readonly GlassCatalogGroup[];
   isRecommendedGlass: (option: string) => boolean;
+  canCreateCustomGlass: boolean;
   isSavingLineTemplate: boolean;
   linePricingSummary: ComponentFormLinePricingSummary;
   lineTemplateOptions: readonly CotizacionLineTemplate[];
@@ -139,6 +140,7 @@ type Props = {
   onSetShowAllConfigurations: (value: boolean) => void;
   onSetShowAllSystems: (value: boolean) => void;
   onSetVidSearch: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
 };
 
 export function PasoDosWizardConfiguracionMovil({
@@ -150,6 +152,7 @@ export function PasoDosWizardConfiguracionMovil({
   formattedPriceValue,
   glassCatalogGroups,
   isRecommendedGlass,
+  canCreateCustomGlass,
   isSavingLineTemplate,
   linePricingSummary,
   lineTemplateOptions,
@@ -201,6 +204,7 @@ export function PasoDosWizardConfiguracionMovil({
   onSetShowAllConfigurations,
   onSetShowAllSystems,
   onSetVidSearch,
+  onCreateCustomGlass,
 }: Props) {
   const [showAllColors, setShowAllColors] = useState(false);
   const [isLineSelectorOpen, setIsLineSelectorOpen] = useState(false);
@@ -1837,9 +1841,11 @@ export function PasoDosWizardConfiguracionMovil({
       ) : null}
 
       <PasoDosWizardVidrioMovil
+        canCreateCustomGlass={canCreateCustomGlass}
         currentGlass={draft.vidrio}
         glassCatalogGroups={glassCatalogGroups}
         isRecommendedGlass={isRecommendedGlass}
+        onCreateCustomGlass={onCreateCustomGlass}
         onSetVidSearch={onSetVidSearch}
         onVidrioChange={onVidrioChange}
         recommendedReason={recommendedReason}

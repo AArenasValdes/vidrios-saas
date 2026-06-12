@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { PasoDosWizardVidrioMovil } from "../paso-dos-wizard-vidrio-movil";
 
 const baseProps = {
+  canCreateCustomGlass: false,
   currentGlass: "Incoloro monolitico 5mm",
   glassCatalogGroups: [
     {
@@ -18,6 +19,7 @@ const baseProps = {
   ],
   isRecommendedGlass: (option: string) => option === "Incoloro monolitico 5mm",
   onSetVidSearch: jest.fn(),
+  onCreateCustomGlass: jest.fn(),
   onVidrioChange: jest.fn(),
   recommendedReason: "Opciones frecuentes para partir rapido.",
   recommendedVidrios: ["Incoloro monolitico 5mm", "Templado 8mm"],
@@ -107,6 +109,28 @@ describe("PasoDosWizardVidrioMovil", () => {
     fireEvent.click(screen.getAllByText("Templado 8mm").at(-1)!);
 
     expect(onVidrioChange).toHaveBeenCalledWith("Templado 8mm");
+    expect(onSetVidSearch).toHaveBeenCalledWith("");
+  });
+
+  it("debe permitir guardar un vidrio escrito cuando no esta en la lista", () => {
+    const onCreateCustomGlass = jest.fn();
+    const onSetVidSearch = jest.fn();
+
+    render(
+      <PasoDosWizardVidrioMovil
+        {...baseProps}
+        canCreateCustomGlass
+        onCreateCustomGlass={onCreateCustomGlass}
+        onSetVidSearch={onSetVidSearch}
+        searchResults={[]}
+        vidSearch="Laminado extra claro 10mm"
+      />
+    );
+
+    fireEvent.click(screen.getByText("Cambiar"));
+    fireEvent.click(screen.getByRole("button", { name: /Guardar/i }));
+
+    expect(onCreateCustomGlass).toHaveBeenCalledWith("Laminado extra claro 10mm");
     expect(onSetVidSearch).toHaveBeenCalledWith("");
   });
 });

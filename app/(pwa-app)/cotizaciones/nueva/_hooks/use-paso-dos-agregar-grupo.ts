@@ -47,6 +47,7 @@ import {
   splitComponentReference,
   type ComponentCategoryTitle,
 } from "@/features/cotizaciones/services/component-catalog.service";
+import { mergeGlassOptions } from "@/features/cotizaciones/new-quote/custom-glass-options";
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
@@ -204,6 +205,7 @@ type CreateInitialDraftParams = {
   quotePricingMode?: QuotePricingMode;
   provider: PreferredProvider;
   seedForm?: ComponentFormState | null;
+  customGlassOptions?: readonly string[];
   onSheetClosed?: (itemCount: number) => void;
 };
 
@@ -439,7 +441,10 @@ export function getConfigurationOptionsForSubtype(subtipo: string, sistema?: str
   return getConfigurationOptionsForComponent(subtipo);
 }
 
-export function getGlassOptionsForSubtype(subtipo: string) {
+export function getGlassOptionsForSubtype(
+  subtipo: string,
+  customGlassOptions: readonly string[] = []
+) {
   const flattened = GLASS_OPTIONS.flatMap((group) =>
     group.items.map((item) => buildGlassValue(group.prefix, item))
   );
@@ -452,7 +457,7 @@ export function getGlassOptionsForSubtype(subtipo: string) {
         ? ["Templado 8mm", "Templado 10mm", "Templado 12mm", "Laminado 4+4"]
         : ["Incoloro monolitico 5mm", "Incoloro monolitico 6mm", "DVH 4+9+4", "Templado 8mm"];
 
-  return Array.from(new Set([...preferredOptions, ...flattened]));
+  return mergeGlassOptions(Array.from(new Set([...preferredOptions, ...flattened])), customGlassOptions);
 }
 
 export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
@@ -771,8 +776,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     [draft.subtipo, draft.sistema]
   );
   const glassOptions = useMemo(
-    () => getGlassOptionsForSubtype(draft.subtipo),
-    [draft.subtipo]
+    () => getGlassOptionsForSubtype(draft.subtipo, params.customGlassOptions),
+    [draft.subtipo, params.customGlassOptions]
   );
   const summary = useMemo(() => buildPasoDosGrupoSummary(draft), [draft]);
 

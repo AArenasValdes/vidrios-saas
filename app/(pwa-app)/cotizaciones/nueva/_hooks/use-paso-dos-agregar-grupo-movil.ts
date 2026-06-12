@@ -45,6 +45,7 @@ type Params = {
   provider: PreferredProvider;
   activeLineTemplates: CotizacionLineTemplate[];
   seedForm?: ComponentFormState | null;
+  customGlassOptions?: readonly string[];
   onSheetClosed?: (itemCount: number) => void;
 };
 
@@ -94,8 +95,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     [draft.subtipo, draft.sistema]
   );
   const glassOptions = useMemo(
-    () => getGlassOptionsForSubtype(draft.subtipo),
-    [draft.subtipo]
+    () => getGlassOptionsForSubtype(draft.subtipo, params.customGlassOptions),
+    [draft.subtipo, params.customGlassOptions]
   );
   const visibleLineTemplates = useMemo(
     () =>

@@ -19,6 +19,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
+import { hasGlassOption, normalizeCustomGlassValue } from "@/features/cotizaciones/new-quote/custom-glass-options";
 
 import type {
   PasoDosFormularioComponenteProps,
@@ -39,6 +40,7 @@ type UsePasoDosPresentacionParams = {
   isSavingQuickPriceTemplate: boolean;
   isGlassPanelOpen: boolean;
   glassQuery: string;
+  customGlassOptions: readonly string[];
   pendingItemsCount: number;
   completedItemsCount: number;
   effectiveShowOnlyPendingItems: boolean;
@@ -67,6 +69,7 @@ type UsePasoDosPresentacionParams = {
   onToggleGlassPanel: () => void;
   onGlassQueryChange: (value: string) => void;
   onGlassSelect: (value: string) => void;
+  onCreateCustomGlass: (value: string) => void;
   onResetStep2Form: () => void;
   onSaveDraft: () => void;
   onAddOrUpdateItem: () => void;
@@ -103,7 +106,32 @@ export function usePasoDosPresentacion(
   propsPasoDosFormulario: PasoDosFormularioComponenteProps;
   propsPasoDosPanel: PasoDosPanelComponentesProps;
 } {
-  const filteredGlassGroups = useMemo(() => filterGlassOptions(params.glassQuery), [params.glassQuery]);
+  const filteredGlassGroups = useMemo(() => {
+    const groups = filterGlassOptions(params.glassQuery);
+    const normalizedQuery = params.glassQuery.trim();
+    const customItems = params.customGlassOptions.filter((option) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return normalizeCustomGlassValue(option)
+        .toLowerCase()
+        .includes(normalizeCustomGlassValue(normalizedQuery).toLowerCase());
+    });
+
+    if (customItems.length === 0) {
+      return groups;
+    }
+
+    return [
+      {
+        grupo: "Vidrios guardados",
+        prefix: "",
+        items: customItems,
+      },
+      ...groups,
+    ];
+  }, [params.customGlassOptions, params.glassQuery]);
   const selectedLineTemplate = useMemo(
     () =>
       params.activeLineTemplates.find(
@@ -119,14 +147,27 @@ export function usePasoDosPresentacion(
           sistema: params.componentForm.referencia,
           lineTemplateRecommendedGlass: selectedLineTemplate?.vidrioPrincipalRecomendado ?? null,
         },
-        getGlassOptionsForSubtype(params.componentForm.tipo)
+        getGlassOptionsForSubtype(params.componentForm.tipo, params.customGlassOptions)
       ),
     [
       params.componentForm.referencia,
       params.componentForm.tipo,
+      params.customGlassOptions,
       selectedLineTemplate?.vidrioPrincipalRecomendado,
     ]
   );
+  const canCreateCustomGlass = useMemo(() => {
+    const candidate = normalizeCustomGlassValue(params.glassQuery);
+
+    if (!candidate) {
+      return false;
+    }
+
+    return !hasGlassOption(
+      getGlassOptionsForSubtype(params.componentForm.tipo, params.customGlassOptions),
+      candidate
+    );
+  }, [params.componentForm.tipo, params.customGlassOptions, params.glassQuery]);
   const linePricingSummary = useMemo(
     () => buildComponentFormLinePricingSummary(params.componentForm),
     [params.componentForm]
@@ -216,6 +257,7 @@ export function usePasoDosPresentacion(
       recommendedGlassReason: glassRecommendation.reason,
       lineTemplateRecommendedGlass: glassRecommendation.lineTemplateRecommendedOption,
       filteredGlassGroups,
+      canCreateCustomGlass,
       onQuotePricingModeChange: params.onQuotePricingModeChange,
       onPricingModeSelection: params.onPricingModeSelection,
       onComponentChange: params.onComponentChange,
@@ -223,6 +265,7 @@ export function usePasoDosPresentacion(
       onToggleGlassPanel: params.onToggleGlassPanel,
       onGlassQueryChange: params.onGlassQueryChange,
       onGlassSelect: params.onGlassSelect,
+      onCreateCustomGlass: params.onCreateCustomGlass,
       onResetStep2Form: params.onResetStep2Form,
       onSaveAndExit: guardarBorradorYSalir,
       onAddOrUpdateItem: params.onAddOrUpdateItem,
@@ -234,6 +277,7 @@ export function usePasoDosPresentacion(
       batchPreviewTypeLabel,
       currentComponentPreviewSvg,
       filteredGlassGroups,
+      canCreateCustomGlass,
       glassRecommendation.lineTemplateRecommendedOption,
       glassRecommendation.reason,
       glassRecommendation.recommendedOptions,
