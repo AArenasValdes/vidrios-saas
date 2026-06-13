@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { LuChevronLeft, LuPlus } from "react-icons/lu";
 
 import s from "../../page.module.css";
@@ -35,6 +36,13 @@ export function PasoDosWizardFooterMovil({
   visualStage,
   wizardStep,
 }: Props) {
+  const [isIphoneViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return /iphone|ipod/i.test(window.navigator.userAgent);
+  });
   const agregarLabel = isTotalGlobal
     ? "Continuar al resumen"
     : isFreeValueItem
@@ -47,6 +55,8 @@ export function PasoDosWizardFooterMovil({
     <footer
       className={`${s.stepTwoMobileCreatorFooter} ${
         isCompactDataStep ? s.stepTwoMobileCreatorFooterCompact : ""
+      } ${
+        isIphoneViewport ? s.stepTwoMobileCreatorFooterIphone : ""
       }`}
     >
       {visualStage === 1 || isSingleStepFreeTotal ? (

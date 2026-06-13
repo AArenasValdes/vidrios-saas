@@ -4721,6 +4721,26 @@
   backdrop-filter: blur(8px);
 }
 
+.stepTwoMobileCreatorFooterIphone {
+  position: fixed;
+  left: max(18px, env(safe-area-inset-left, 0px));
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  z-index: 72;
+  margin-top: 0;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.stepTwoMobileCreatorBody:has(.stepTwoMobileCreatorFooterIphone) {
+  padding-bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+}
+
+.stepTwoMobileCreatorBodyCompact:has(.stepTwoMobileCreatorFooterIphone) {
+  padding-bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px));
+}
+
 .stepTwoMobileCreatorFooter .btnGhost,
 .stepTwoMobileCreatorFooter .btnPrimary {
   min-height: 3.4rem;
