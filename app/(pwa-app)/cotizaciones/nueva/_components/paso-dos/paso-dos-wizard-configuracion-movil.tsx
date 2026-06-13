@@ -207,6 +207,13 @@ export function PasoDosWizardConfiguracionMovil({
   onCreateCustomGlass,
 }: Props) {
   const [showAllColors, setShowAllColors] = useState(false);
+  const [isIphoneViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return /iphone|ipod/i.test(window.navigator.userAgent);
+  });
   const [isLineSelectorOpen, setIsLineSelectorOpen] = useState(false);
   const [lineSelectorQuery, setLineSelectorQuery] = useState("");
   const [lineSheetView, setLineSheetView] = useState<"list" | "create">("list");
@@ -1256,7 +1263,11 @@ export function PasoDosWizardConfiguracionMovil({
             type="button"
             aria-label="Cerrar selector"
           />
-          <div className={s.stepTwoMobileLineSheet}>
+          <div
+            className={`${s.stepTwoMobileLineSheet} ${
+              isIphoneViewport ? s.stepTwoMobileLineSheetIphone : ""
+            }`}
+          >
             <div className={s.stepTwoMobileLineSheetHandle} />
             <div className={s.stepTwoMobileLineSheetHeader}>
               <div className={s.stepTwoMobileLineSheetHeading}>

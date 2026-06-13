@@ -4734,11 +4734,11 @@
 }
 
 .stepTwoMobileCreatorBody:has(.stepTwoMobileCreatorFooterIphone) {
-  padding-bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.15rem + env(safe-area-inset-bottom, 0px));
 }
 
 .stepTwoMobileCreatorBodyCompact:has(.stepTwoMobileCreatorFooterIphone) {
-  padding-bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .stepTwoMobileCreatorFooter .btnGhost,
@@ -8971,6 +8971,22 @@
   max-height: min(68dvh, 35rem);
 }
 
+.stepTwoMobileLineSheetIphone {
+  bottom: calc(0.46rem + env(safe-area-inset-bottom, 0px));
+  grid-template-rows: auto auto minmax(0, auto) auto;
+  max-height: min(76svh, 33rem);
+}
+
+.stepTwoMobileLineSheetIphone .stepTwoMobileLineSheetBody {
+  max-height: min(42svh, 21rem);
+}
+
+.stepTwoMobileLineSheetIphone .stepTwoMobileLineSheetFooter {
+  position: static;
+  padding-bottom: 0;
+  background: transparent;
+}
+
 .stepTwoMobileLineSheetHandle {
   width: 2.6rem;
   height: 0.24rem;
@@ -9590,6 +9606,13 @@
   border-color: #C5D0E0 !important;
   box-shadow: none !important;
   color: #8a9ab0 !important;
+}
+
+.stepTwoMobileCreatorFooterIphone .stepTwoMobileCtaAgregar:disabled {
+  background: linear-gradient(180deg, rgba(51, 94, 169, 0.5) 0%, rgba(36, 59, 107, 0.42) 100%) !important;
+  border-color: rgba(36, 59, 107, 0.28) !important;
+  box-shadow: 0 8px 18px rgba(36, 59, 107, 0.1) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
 }
  
  
