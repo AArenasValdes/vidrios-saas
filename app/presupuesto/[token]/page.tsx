@@ -10,6 +10,7 @@ import {
 } from "react-icons/lu";
 
 import { acceptPublicQuoteAction, rejectPublicQuoteAction } from "./actions";
+import { PublicQuoteActionButton } from "./public-quote-action-button";
 import { PublicQuoteMobile } from "./public-quote-mobile";
 import { PublicQuotePreviewLoader } from "./public-quote-preview-loader";
 import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
@@ -351,14 +352,26 @@ export default async function PresupuestoPublicoPage({
 
                 <div className={s.actions}>
                   <form action={rejectAction} className={s.actionForm}>
-                    <button className={s.actionSecondary} type="submit">
+                    <PublicQuoteActionButton
+                      className={s.actionSecondary}
+                      contentClassName={s.actionButtonContent}
+                      pendingClassName={s.actionPending}
+                      spinnerClassName={s.actionSpinner}
+                      pendingLabel="Registrando respuesta..."
+                    >
                       Prefiero revisarlo antes
-                    </button>
+                    </PublicQuoteActionButton>
                   </form>
                   <form action={acceptAction} className={s.actionForm}>
-                    <button className={s.actionPrimary} type="submit">
+                    <PublicQuoteActionButton
+                      className={s.actionPrimary}
+                      contentClassName={s.actionButtonContent}
+                      pendingClassName={s.actionPending}
+                      spinnerClassName={s.actionSpinner}
+                      pendingLabel="Registrando aprobacion..."
+                    >
                       Aprobar y continuar
-                    </button>
+                    </PublicQuoteActionButton>
                   </form>
                 </div>
               </>

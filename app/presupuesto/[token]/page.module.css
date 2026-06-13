@@ -722,7 +722,9 @@
     transform 180ms ease,
     box-shadow 180ms ease,
     border-color 180ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    opacity 180ms ease,
+    filter 180ms ease;
 }
 
 .actionPrimary {
@@ -754,6 +756,43 @@
 .actionSecondary:focus-visible {
   border-color: rgba(79, 125, 212, 0.48);
   background: linear-gradient(180deg, #ffffff, #eef5ff);
+}
+
+.actionPrimary:active:not(:disabled),
+.actionSecondary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.actionPending,
+.actionPending:hover,
+.actionPending:focus-visible {
+  cursor: wait;
+  opacity: 0.86;
+  filter: saturate(0.92);
+  transform: none;
+}
+
+.actionButtonContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.actionSpinner {
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  opacity: 0.9;
+  animation: publicQuoteActionSpin 0.72s linear infinite;
+}
+
+@keyframes publicQuoteActionSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .stateCard {

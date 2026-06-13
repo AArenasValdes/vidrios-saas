@@ -17,6 +17,7 @@ import { googleTagService } from "@/features/analytics/services/google-tag.servi
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "./public-quote-mobile.module.css";
+import { PublicQuoteActionButton } from "./public-quote-action-button";
 
 const PublicQuoteDocument = dynamic(
   () => import("./documento/public-quote-document").then((mod) => mod.PublicQuoteDocument),
@@ -337,14 +338,26 @@ export function PublicQuoteMobile({
         ) : quote.canRespond ? (
           <div className={s.actionsSticky}>
             <form action={acceptAction ?? undefined} className={s.actionForm}>
-              <button className={s.actionPrimary} type="submit">
+              <PublicQuoteActionButton
+                className={s.actionPrimary}
+                contentClassName={s.actionButtonContent}
+                pendingClassName={s.actionPending}
+                spinnerClassName={s.actionSpinner}
+                pendingLabel="Registrando aprobacion..."
+              >
                 Aprobar presupuesto
-              </button>
+              </PublicQuoteActionButton>
             </form>
             <form action={rejectAction ?? undefined} className={s.actionForm}>
-              <button className={s.actionSecondary} type="submit">
+              <PublicQuoteActionButton
+                className={s.actionSecondary}
+                contentClassName={s.actionButtonContent}
+                pendingClassName={s.actionPending}
+                spinnerClassName={s.actionSpinner}
+                pendingLabel="Registrando respuesta..."
+              >
                 Prefiero revisarlo
-              </button>
+              </PublicQuoteActionButton>
             </form>
           </div>
         ) : (

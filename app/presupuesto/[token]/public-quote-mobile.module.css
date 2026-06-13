@@ -427,6 +427,11 @@
   font-family: "Lato", sans-serif;
   font-size: 15px;
   font-weight: 700;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    opacity 0.16s ease,
+    filter 0.16s ease;
 }
 
 .actionPrimary {
@@ -439,6 +444,41 @@
   color: #243b6b;
   background: linear-gradient(180deg, #ffffff, #f6f9ff);
   border-color: rgba(79, 125, 212, 0.28);
+}
+
+.actionPrimary:active:not(:disabled),
+.actionSecondary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.actionPending {
+  cursor: wait;
+  opacity: 0.86;
+  filter: saturate(0.92);
+  transform: none;
+}
+
+.actionButtonContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.actionSpinner {
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  opacity: 0.9;
+  animation: publicQuoteActionSpin 0.72s linear infinite;
+}
+
+@keyframes publicQuoteActionSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .overlay {
