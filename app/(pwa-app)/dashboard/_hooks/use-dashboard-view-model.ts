@@ -23,6 +23,7 @@ export type DashboardQuoteCard = {
 };
 
 export type DashboardMobileProps = {
+  greetingLabel: string;
   greetingName: string;
   mobileDateLabel: string;
   newQuoteHref: string;
@@ -43,6 +44,7 @@ export type DashboardMobileProps = {
 };
 
 export type DashboardDesktopProps = {
+  greetingLabel: string;
   greetingName: string;
   subtitle: string;
   newQuoteHref: string;
@@ -71,18 +73,25 @@ function formatClp(value: number) {
   }).format(value);
 }
 
-function buildUserName(email: string | null | undefined) {
-  const base = email?.split("@")[0]?.replace(/[._-]+/g, " ").trim();
-
-  if (!base) return "admin";
-  if (base.toLowerCase() === "admin") return "admin";
-
-  return base.replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function formatMobileDateLabel(value: string) {
   const normalized = value.replace(",", " -");
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function getChileHour(date = new Date()) {
+  const hour = new Intl.DateTimeFormat("es-CL", {
+    hour: "numeric",
+    hour12: false,
+    timeZone: "America/Santiago",
+  }).format(date);
+
+  return Number.parseInt(hour, 10);
+}
+
+function getGreetingLabel(date = new Date()) {
+  const chileHour = getChileHour(date);
+
+  return chileHour >= 12 ? "Buenas tardes" : "Buenos días";
 }
 
 function mapDisplayStateToColor(
@@ -96,12 +105,13 @@ function mapDisplayStateToColor(
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { user, organizacionId } = useAuth();
+  const { organizacionId } = useAuth();
   const { profile } = useOrganizationProfile();
   const dashboardSummary = useDashboardSummary(organizacionId);
 
   const companyName = profile?.empresaNombre?.trim() || "Mi empresa";
-  const greetingName = buildUserName(user?.email) || companyName;
+  const greetingLabel = useMemo(() => getGreetingLabel(), []);
+  const greetingName = companyName;
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("es-CL", {
@@ -160,6 +170,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   return {
     mobile: {
+      greetingLabel,
       greetingName,
       mobileDateLabel,
       newQuoteHref: "/cotizaciones/nueva",
@@ -179,6 +190,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       isEmpty,
     },
     desktop: {
+      greetingLabel,
       greetingName,
       subtitle,
       newQuoteHref: "/cotizaciones/nueva",

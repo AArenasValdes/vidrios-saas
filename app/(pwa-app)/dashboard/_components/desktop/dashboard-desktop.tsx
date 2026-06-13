@@ -19,6 +19,7 @@ function pillClassName(stateColor: DashboardDesktopProps["quoteCards"][number]["
 }
 
 export const DashboardDesktop = memo(function DashboardDesktop({
+  greetingLabel,
   greetingName,
   subtitle,
   newQuoteHref,
@@ -42,7 +43,7 @@ export const DashboardDesktop = memo(function DashboardDesktop({
         data-onboarding-target="dashboard-header"
       >
         <div className={styles.headerMain}>
-          <h1 className={styles.title}>Buen dia, {greetingName}</h1>
+          <h1 className={styles.title}>{greetingLabel}, {greetingName}</h1>
           <p className={styles.subtitle}>{subtitle}</p>
         </div>
 

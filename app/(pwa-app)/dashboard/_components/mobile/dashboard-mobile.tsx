@@ -20,6 +20,7 @@ function pillClassName(stateColor: DashboardMobileProps["quoteCards"][number]["s
 }
 
 export const DashboardMobile = memo(function DashboardMobile({
+  greetingLabel,
   greetingName,
   mobileDateLabel,
   newQuoteHref,
@@ -45,7 +46,7 @@ export const DashboardMobile = memo(function DashboardMobile({
         data-onboarding-target="dashboard-header"
       >
         <div className={styles.headerCopy}>
-          <h1 className={styles.title}>Buenos días, {greetingName}</h1>
+          <h1 className={styles.title}>{greetingLabel}, {greetingName}</h1>
           <p className={styles.date}>{mobileDateLabel}</p>
         </div>
         <DashboardAppRefreshButton className={styles.appRefreshButton} label="Actualizar" />

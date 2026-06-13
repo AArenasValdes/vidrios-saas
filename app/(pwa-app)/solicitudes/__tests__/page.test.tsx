@@ -148,9 +148,7 @@ describe("SolicitudesPage", () => {
 
     expect(screen.queryByText("Cargando solicitudes")).not.toBeInTheDocument();
     expect(screen.getByText("Solicitudes recibidas")).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Buscar por nombre, contacto o trabajo")
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Buscar solicitud")).toBeInTheDocument();
   });
 
   it("persiste las solicitudes nuevas como vistas al abrir la bandeja", async () => {

@@ -17,10 +17,10 @@
 }
 
 .heroCard {
-  padding: 16px;
-  border-radius: 22px;
+  padding: 14px;
+  border-radius: 20px;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .heroTop {
@@ -43,12 +43,18 @@
 
 .heroTotal {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   font-family: "Syne", sans-serif;
-  font-size: clamp(34px, 8vw, 42px);
-  line-height: 0.95;
-  letter-spacing: -0.06em;
+  font-size: clamp(30px, 7.2vw, 38px);
+  line-height: 1;
+  letter-spacing: -0.045em;
   color: #243b6b;
+}
+
+.heroTotal span {
+  font-size: 0.58em;
+  letter-spacing: -0.025em;
+  font-weight: 800;
 }
 
 .heroTotalSkeleton,
@@ -81,15 +87,15 @@
 }
 
 .heroSub {
-  margin-top: 6px;
+  margin-top: 4px;
   color: #667085;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .todayBadge {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 26px;
+  padding: 0 9px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -97,39 +103,42 @@
   background: #e6f7ee;
   color: #2fa36b;
   font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 
 .heroActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .heroActionPrimary,
 .heroActionSecondary {
-  min-height: 48px;
-  border-radius: 15px;
+  min-height: 42px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .heroActionPrimary {
   border: 1px solid transparent;
-  background: #eef4ff;
-  color: #243b6b;
+  background: linear-gradient(180deg, #335ea9, #243b6b);
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(36, 59, 107, 0.16);
+  grid-column: 1 / -1;
 }
 
 .heroActionSecondary {
   border: 1px solid #d9e0ea;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.86);
   color: #243b6b;
+  box-shadow: 0 8px 16px rgba(36, 59, 107, 0.04);
 }
 
 .heroActionSecondary:disabled {
@@ -137,24 +146,25 @@
 }
 
 .heroActionWide {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .filtersSection {
   display: grid;
   gap: 8px;
+  margin-top: -4px;
 }
 
 .searchBar {
-  min-height: 48px;
-  padding: 0 14px;
+  min-height: 44px;
+  padding: 0 13px;
   border: 1px solid rgba(217, 224, 234, 0.96);
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 255, 0.98));
-  box-shadow: 0 14px 28px rgba(36, 59, 107, 0.05);
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.045);
 }
 
 .searchIcon {
@@ -181,15 +191,16 @@
 .filterGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .filterCard {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 18px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 14px;
   display: grid;
-  gap: 6px;
+  gap: 0;
   text-align: left;
   cursor: pointer;
   transition:
@@ -212,24 +223,33 @@
 
 .filterInline {
   display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 7px;
   min-width: 0;
 }
 
 .filterInlineCount {
-  font-family: "Syne", sans-serif;
-  font-size: 30px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
   line-height: 1;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
   color: #243b6b;
+  background: rgba(255, 255, 255, 0.68);
 }
 
 .filterInlineLabel {
   color: #243b6b;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .filterBlue {
@@ -274,13 +294,13 @@
 
 .filterActive {
   border-color: rgba(79, 125, 212, 0.42);
-  box-shadow: 0 18px 30px rgba(79, 125, 212, 0.12);
+  box-shadow: 0 12px 22px rgba(79, 125, 212, 0.1);
   transform: translateY(-1px);
 }
 
 .filterCheck {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -288,51 +308,9 @@
   color: #ffffff;
 }
 
-.alertCard {
-  width: 100%;
-  padding: 14px;
-  border-radius: 20px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 14px;
-  text-align: left;
-  cursor: pointer;
-  background: linear-gradient(180deg, rgba(242, 247, 255, 0.98), rgba(236, 243, 255, 0.96));
-}
-
-.alertIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: #edf3ff;
-  color: #335ea9;
-  font-size: 18px;
-}
-
-.alertCopy {
-  display: grid;
-  gap: 6px;
-}
-
-.alertCopy strong {
-  font-size: 15px;
-  line-height: 1.35;
-  color: #243b6b;
-}
-
-.alertCopy span {
-  color: #335ea9;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.alertArrow {
-  color: #667085;
-  width: 18px;
-  height: 18px;
+.filterCheck svg {
+  width: 12px;
+  height: 12px;
 }
 
 .feedbackBanner,

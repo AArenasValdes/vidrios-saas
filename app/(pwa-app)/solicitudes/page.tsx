@@ -6,7 +6,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "rea
 import {
   LuArrowUpRight,
   LuCheck,
-  LuChevronRight,
   LuCopy,
   LuInbox,
   LuQrCode,
@@ -327,8 +326,6 @@ export default function SolicitudesPage() {
     });
   }, [profile?.empresaNombre, solicitudes]);
 
-  const nuevasCount = resumen.counts.nueva;
-
   useEffect(() => {
     if (!menuSolicitudId) {
       return;
@@ -494,9 +491,16 @@ export default function SolicitudesPage() {
           <div>
             <span className={s.heroEyebrow}>Solicitudes recibidas</span>
             <strong className={s.heroTotal}>
-              {isColdBoot ? <span className={s.heroTotalSkeleton} aria-hidden /> : resumen.total}
+              {isColdBoot ? (
+                <span className={s.heroTotalSkeleton} aria-hidden />
+              ) : (
+                <>
+                  {resumen.total}
+                  <span> solicitudes</span>
+                </>
+              )}
             </strong>
-            <p className={s.heroSub}>Desde tu enlace publico</p>
+            <p className={s.heroSub}>Recibidas desde tu página pública</p>
           </div>
           <span className={s.todayBadge}>
             {isColdBoot ? <span className={s.todayBadgeSkeleton} aria-hidden /> : `+${resumen.hoy} hoy`}
@@ -510,7 +514,7 @@ export default function SolicitudesPage() {
               onClick={() => void handleCopyPublicLink()}
             >
               <LuCopy aria-hidden />
-              Copiar texto + link
+              Copiar enlace
             </button>
           {previewPublicRequestUrl ? (
             <a
@@ -520,17 +524,17 @@ export default function SolicitudesPage() {
               rel="noopener noreferrer"
             >
               <LuArrowUpRight aria-hidden />
-              Ver pagina
+              Ver página
             </a>
           ) : (
             <button type="button" className={s.heroActionSecondary} disabled>
               <LuArrowUpRight aria-hidden />
-              Ver pagina
+              Ver página
             </button>
           )}
           <Link href="/solicitudes/canales" className={`${s.heroActionSecondary} ${s.heroActionWide}`} prefetch={false}>
             <LuQrCode aria-hidden />
-            Canales y QR
+            Canales / QR
           </Link>
         </div>
       </PremiumPageSection>
@@ -545,7 +549,7 @@ export default function SolicitudesPage() {
             type="search"
             value={busqueda}
             onChange={(event) => setBusqueda(event.target.value)}
-            placeholder="Buscar por nombre, contacto o trabajo"
+            placeholder="Buscar solicitud"
             disabled={isColdBoot}
           />
         </div>
@@ -594,28 +598,6 @@ export default function SolicitudesPage() {
           ))}
         </div>
       </PremiumPageSection>
-
-      {nuevasCount > 0 ? (
-        <PremiumPageSection>
-          <button
-            type="button"
-            className={s.alertCard}
-            onClick={() => setFiltroActivo("nueva")}
-          >
-            <div className={s.alertIcon}>
-              <LuInbox aria-hidden />
-            </div>
-            <div className={s.alertCopy}>
-              <strong>
-                Tienes {nuevasCount} solicitud{nuevasCount === 1 ? "" : "es"} nueva
-                {nuevasCount === 1 ? "" : "s"} esperando respuesta
-              </strong>
-              <span>Revisar nuevas</span>
-            </div>
-            <LuChevronRight className={s.alertArrow} aria-hidden />
-          </button>
-        </PremiumPageSection>
-      ) : null}
 
       {feedback ? (
         <PremiumPageSection className={s.feedbackBanner}>{feedback}</PremiumPageSection>
