@@ -54,7 +54,7 @@ const copy = {
   recoveryAction: "Reiniciar esta app",
   recovering: "Reiniciando...",
   installHelpTitle: "¿Primera vez usando Ventora?",
-  installHelpText: "Mira cómo instalarla en tu celular.",
+  installHelpText: "Mira como usar Ventora desde tu celular.",
   androidVideo: "Video Android",
   iphoneVideo: "Video iPhone",
   diagnosticLabel: "Detalle tecnico:",

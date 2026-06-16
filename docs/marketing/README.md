@@ -13,6 +13,7 @@ Objetivo:
 - `brand-guidelines.md`: sistema oficial de marca, logo, paleta y reglas de uso por canal
 - `prospecting-system.md`: sistema de busqueda, contacto, seguimiento y registro
 - `content-system.md`: sistema de contenido organico para Facebook, Instagram y TikTok
+- `onboarding-video-pilots.md`: guiones piloto para videos de onboarding comercial de Ventora
 - `kpi-dashboard-spec.md`: definicion de metricas, formulas y estructura de dashboard HTML
 - `whatsapp-automation-plan.md`: plan de integracion y uso responsable de WhatsApp
 

@@ -39,6 +39,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+android-twa/.secrets/
+android-twa/.gradle/
+android-twa/android-keystore
+android-twa/app/build/
+android-twa/build/
+android-twa/local.properties
+android-twa/app-release-*.aab
+android-twa/app-release-*.apk
+android-twa/*.idsig
 
 # vercel
 .vercel

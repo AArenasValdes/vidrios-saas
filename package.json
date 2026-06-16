@@ -21,6 +21,7 @@
     "pilot:org:audit-trials": "node scripts/pilot-org-provision.mjs audit-trials",
     "pilot:org:fix-trials": "node scripts/pilot-org-provision.mjs fix-trials",
     "pilot:payment:activate": "node scripts/pilot-payment-activate.mjs",
+    "pilot:trial:extend": "node scripts/pilot-trial-extend.mjs",
     "video:preview": "remotion preview remotion/index.tsx",
     "video:render": "remotion render remotion/index.tsx VentoraExplainer out/ventora-explainer-16x9.mp4",
     "video:render:vertical": "remotion render remotion/index.tsx VentoraExplainerVertical out/ventora-explainer-9x16.mp4",

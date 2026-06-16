@@ -304,7 +304,7 @@ export function InstallAppPrompt() {
     <div className={s.root}>
       <div className={s.bar}>
         <div className={s.barCopy}>
-          <p className={s.barTitle}>Descargar app</p>
+          <p className={s.barTitle}>Usar desde el celular</p>
           <p className={s.barText}>
             {deferredPrompt
               ? "Guardala en tu inicio."
@@ -321,11 +321,11 @@ export function InstallAppPrompt() {
         <div className={s.barActions}>
           {deferredPrompt ? (
             <button type="button" className={s.primary} onClick={handleInstall}>
-              Descargar app
+              Entrar a Ventora
             </button>
           ) : (
             <button type="button" className={s.primary} onClick={openGuide}>
-              Descargar app
+              Usar desde el celular
             </button>
           )}
         </div>
