@@ -180,7 +180,53 @@ export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
 const COMPOSITION_OPTIONS_BY_SYSTEM: Record<string, readonly string[]> = {
   abatible: ["1 hoja", "2 hojas", "1 abatible + 1 fija", "Personalizado"],
   oscilobatiente: ["1 hoja", "2 hojas", "Oscilobatiente + fijo", "Personalizado"],
-  proyectante: ["1 hoja", "Proyectante + fijo", "2 proyectantes", "Personalizado"],
+  proyectante: [
+    "1 hoja",
+    "Proyectante + fijo",
+    "Proyectante arriba + fijo abajo",
+    "Proyectante abajo + fijo arriba",
+    "2 proyectantes",
+    "Personalizado",
+  ],
+};
+
+const BOW_WINDOW_COMPOSITION_OPTIONS_BY_OPENING: Record<string, readonly string[]> = {
+  corredera: [
+    "Fijos laterales + corredera central 2 hojas",
+    "Fijos laterales + corredera central 3 hojas",
+    "Corredera central + paños fijos",
+    "Corredera + fijo derecho",
+    "Corredera + fijo izquierdo",
+    "Personalizado",
+  ],
+  proyectante: [
+    "Fijo central + proyectantes laterales",
+    "Fijos laterales + proyectante central",
+    "1 proyectante + fijos",
+    "2 proyectantes + fijos",
+    "Personalizado",
+  ],
+  "batiente abatible": [
+    "Fijo central + abatibles laterales",
+    "2 fijos + 1 abatible",
+    "3 paños abatibles",
+    "4 o más abatibles en arco",
+    "Personalizado",
+  ],
+  fija: [
+    "3 paños fijos",
+    "4 paños fijos",
+    "5 paños fijos",
+    "Fijo central + fijos laterales",
+    "Personalizado",
+  ],
+  mixta: [
+    "Fijo + corredera",
+    "Fijo + proyectante",
+    "Fijo + abatible",
+    "Corredera + proyectante",
+    "Personalizado",
+  ],
 };
 
 const FIXED_PANE_COMPOSITION_OPTIONS = ["1 paño", "2 paños", "3 paños", "Personalizado"] as const;
@@ -566,6 +612,27 @@ function lowerFirst(value: string) {
   return `${clean.charAt(0).toLowerCase()}${clean.slice(1)}`;
 }
 
+function isBowWindowSystem(sistema?: string | null) {
+  return normalizeSearchValue(sistema ?? "") === "bow window";
+}
+
+function normalizeBowWindowOpening(configuracion?: string | null) {
+  return normalizeSearchValue(configuracion ?? "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatBowWindowOpening(configuracion: string) {
+  const normalized = normalizeBowWindowOpening(configuracion);
+
+  if (normalized === "batiente abatible") {
+    return "batiente/abatible";
+  }
+
+  return lowerFirst(configuracion);
+}
+
 export function shouldShowSheetSchemeForComponent(input: {
   tipo: string;
   sistema?: string | null;
@@ -579,7 +646,7 @@ export function shouldShowSheetSchemeForComponent(input: {
 
   return (
     tipo === "ventana" &&
-    ["corredera", "abatible", "oscilobatiente", "proyectante"].includes(sistema)
+    ["corredera", "abatible", "oscilobatiente", "proyectante", "bow window"].includes(sistema)
   );
 }
 
@@ -598,9 +665,14 @@ export function shouldRequireProfileMaterialForComponent(tipo: string) {
   return !GLASS_ONLY_COMPONENT_TYPES.has(normalizeSearchValue(tipo));
 }
 
-export function getSheetSchemeOptions(input: { tipo: string; sistema?: string | null }) {
+export function getSheetSchemeOptions(input: {
+  tipo: string;
+  sistema?: string | null;
+  configuracion?: string | null;
+}) {
   const tipo = normalizeSearchValue(input.tipo);
   const sistema = normalizeSearchValue(input.sistema ?? "");
+  const configuracion = normalizeBowWindowOpening(input.configuracion);
 
   if (tipo === "pano fijo" || tipo === "paño fijo") {
     return FIXED_PANE_COMPOSITION_OPTIONS;
@@ -608,6 +680,10 @@ export function getSheetSchemeOptions(input: { tipo: string; sistema?: string | 
 
   if (tipo === "ventana" && sistema === "corredera") {
     return SHEET_SCHEME_OPTIONS;
+  }
+
+  if (tipo === "ventana" && sistema === "bow window") {
+    return BOW_WINDOW_COMPOSITION_OPTIONS_BY_OPENING[configuracion] ?? [];
   }
 
   if (tipo === "ventana") {
@@ -690,6 +766,7 @@ export function buildCommercialComponentDisplayName(
   const normalizedSistema = normalizeSearchValue(sistema);
   const scheme = form.sheetScheme.trim();
   const normalizedScheme = normalizeSearchValue(scheme);
+  const isBowWindow = normalizedTipo === "ventana" && isBowWindowSystem(sistema);
   const shouldAvoidDuplicatedSystem =
     normalizedTipo === "ventana" &&
     Boolean(normalizedSistema) &&
@@ -717,6 +794,12 @@ export function buildCommercialComponentDisplayName(
 
   if (normalizeSearchValue(tipo) === "pano fijo" && schemeLabel.startsWith("personalizada")) {
     schemeLabel = schemeLabel.replace(/^personalizada/, "personalizado");
+  }
+
+  if (isBowWindow) {
+    const opening = formatBowWindowOpening(configuracion);
+    const bowBase = opening ? `Bow Window ${opening}` : "Bow Window";
+    return schemeLabel ? `${bowBase} - ${lowerFirst(schemeLabel)}` : bowBase;
   }
 
   const displaySchemeLabel = shouldAvoidDuplicatedSystem ? lowerFirst(schemeLabel) : schemeLabel;
@@ -1654,7 +1737,11 @@ export function buildItemFromForm(
     tipo: syncedForm.tipo,
     sistema,
   });
-  const sheetSchemeOptions = getSheetSchemeOptions({ tipo: syncedForm.tipo, sistema });
+  const sheetSchemeOptions = getSheetSchemeOptions({
+    tipo: syncedForm.tipo,
+    sistema,
+    configuracion,
+  });
   const sheetVariantOptions = getSheetVariantOptions(syncedForm.sheetScheme, {
     tipo: syncedForm.tipo,
     sistema,

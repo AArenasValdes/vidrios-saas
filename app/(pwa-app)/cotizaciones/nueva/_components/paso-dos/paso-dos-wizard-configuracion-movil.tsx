@@ -230,6 +230,7 @@ export function PasoDosWizardConfiguracionMovil({
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
+  const isBowWindow = draft.subtipo === "Ventana" && draft.sistema === "Bow Window";
   const showSheetScheme = shouldShowSheetSchemeForComponent({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -244,6 +245,7 @@ export function PasoDosWizardConfiguracionMovil({
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
+    configuracion: draft.configuracion,
   });
   const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme, {
     tipo: draft.subtipo,
@@ -966,7 +968,11 @@ export function PasoDosWizardConfiguracionMovil({
       {displayConfigurationOptions.length > 0 ? (
         <div className={s.stepTwoMobileBlockSecundario}>
           <div className={s.stepTwoMobileBlockLabel}>
-            {draft.subtipo === "Puerta" ? "Configuración de puerta" : "Configuración"}
+            {isBowWindow
+              ? "Tipo de apertura"
+              : draft.subtipo === "Puerta"
+                ? "Configuración de puerta"
+                : "Configuración"}
           </div>
           <div className={s.stepTwoMobileChoiceChips}>
             {displayConfigurationOptions.map((option) => (

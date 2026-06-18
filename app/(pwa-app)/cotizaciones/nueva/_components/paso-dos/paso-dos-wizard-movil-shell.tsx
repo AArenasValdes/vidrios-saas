@@ -394,7 +394,9 @@ export function PasoDosWizardMovil({
     0,
     wizard.draft.subtipo === "Puerta" ? 6 : 3
   );
+  const isBowWindow = wizard.draft.subtipo === "Ventana" && wizard.draft.sistema === "Bow Window";
   const displayConfigurationOptions = showAllConfigurations
+    || isBowWindow
     ? wizard.configurationOptions
     : visibleConfigurationOptions;
   const materialColorOptions =
@@ -621,6 +623,7 @@ export function PasoDosWizardMovil({
                   showAllSystems={showAllSystems}
                   showAllConfigurations={showAllConfigurations}
                   showConfigurationToggle={
+                    !isBowWindow &&
                     wizard.configurationOptions.length > visibleConfigurationOptions.length
                   }
                   showSystemToggle={

@@ -476,6 +476,7 @@ export function buildPasoDosGrupoSummary(draft: PasoDosGrupoDraft) {
   const baseName = buildCommercialComponentDisplayName({
     tipo: draft.subtipo,
     sistema: draft.sistema,
+    configuracion: draft.configuracion,
     sheetScheme: draft.sheetScheme,
     sheetVariant: draft.sheetVariant,
     customSchemeDescription: draft.customSchemeDescription,
@@ -945,12 +946,16 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
 
   const updateSistema = (sistema: string) => {
     setDraft((current) => {
-      const sheetSchemeOptions = getSheetSchemeOptions({ tipo: current.subtipo, sistema });
+      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
+      const nextConfig = nextConfigOptions[0] || "";
+      const sheetSchemeOptions = getSheetSchemeOptions({
+        tipo: current.subtipo,
+        sistema,
+        configuracion: nextConfig,
+      });
       const shouldKeepComposition =
         shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
         sheetSchemeOptions.includes(current.sheetScheme);
-      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
-      const nextConfig = nextConfigOptions[0] || "";
 
       return {
         ...current,
@@ -969,7 +974,29 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateConfiguracion = (configuracion: string) => {
-    setDraft((current) => ({ ...current, configuracion }));
+    setDraft((current) => {
+      const sheetSchemeOptions = getSheetSchemeOptions({
+        tipo: current.subtipo,
+        sistema: current.sistema,
+        configuracion,
+      });
+      const shouldKeepComposition =
+        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema: current.sistema }) &&
+        sheetSchemeOptions.includes(current.sheetScheme);
+
+      return {
+        ...current,
+        configuracion,
+        ...(shouldKeepComposition
+          ? {}
+          : {
+              sheetScheme: "",
+              sheetVariant: "",
+              customSchemeDescription: "",
+              isCustomScheme: false,
+            }),
+      };
+    });
   };
 
   const updatePalilloEnabled = (enabled: boolean) => {
@@ -1165,6 +1192,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     (draft.cantidadPersonalizada.trim() !== "" && Number(draft.cantidadPersonalizada) > 0);
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValueItem = isFreeValueComponentType(draft.subtipo);
+  const requiresConfiguration =
+    getConfigurationOptionsForComponentSistema(draft.subtipo, draft.sistema).length > 0;
   const canContinueFromConfig = isFreeValueItem
     ? (draft.nombre ?? "").trim() !== "" &&
       (params.quotePricingMode === "total_global" && !draft.cobraPrecioSeparado
@@ -1173,7 +1202,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     : isTrabajoPersonalizado
       ? (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== ""
       : draft.sistema.trim() !== "" &&
-        (!hasPerSystemConfigurations(draft.subtipo) || draft.configuracion.trim() !== "") &&
+        (!requiresConfiguration || draft.configuracion.trim() !== "") &&
         draft.vidrio.trim() !== "";
 
   return {

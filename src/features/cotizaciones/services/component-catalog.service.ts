@@ -28,7 +28,16 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Ventana",
         descripcion: "Ventanas de aluminio o PVC.",
-        sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"],
+        sistemas: ["Corredera", "Proyectante", "Abatible", "Oscilobatiente", "Bow Window"],
+        configuracionesPorSistema: {
+          "Bow Window": [
+            "Corredera",
+            "Proyectante",
+            "Batiente / abatible",
+            "Fija",
+            "Mixta",
+          ],
+        },
       },
       {
         tipo: "Puerta",
@@ -435,6 +444,7 @@ export function getExtendedSystemOptionsForComponent(tipo: string): readonly str
 export function getSystemDisplayLabel(sistema: string): string {
   const labels: Record<string, string> = {
     Abatible: "Abatir",
+    "Bow Window": "Bow window",
     Vaiven: "Vaivén",
     Automatica: "Automática",
   };

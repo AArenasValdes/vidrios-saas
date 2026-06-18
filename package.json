@@ -25,6 +25,9 @@
     "video:preview": "remotion preview remotion/index.tsx",
     "video:render": "remotion render remotion/index.tsx VentoraExplainer out/ventora-explainer-16x9.mp4",
     "video:render:vertical": "remotion render remotion/index.tsx VentoraExplainerVertical out/ventora-explainer-9x16.mp4",
+    "video:capture-demo-assets": "node --experimental-strip-types scripts/capture-ventora-demo-assets.ts",
+    "video:preview:demo-master": "remotion preview remotion/index.tsx --props='{}' --initial-composition=VentoraDemoMasterVertical",
+    "video:render:demo-master": "remotion render remotion/index.tsx VentoraDemoMasterVertical out/ventora-demo-master-vertical.mp4 --concurrency=1 --crf=28",
     "push:vapid": "web-push generate-vapid-keys"
   },
   "dependencies": {

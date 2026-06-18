@@ -186,6 +186,7 @@ export function PasoDosAgregarGrupoSheet({
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: draft.subtipo,
     sistema: draft.sistema,
+    configuracion: draft.configuracion,
   });
   const sheetVariantOptions = getSheetVariantOptions(draft.sheetScheme, {
     tipo: draft.subtipo,

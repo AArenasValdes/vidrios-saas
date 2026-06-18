@@ -197,7 +197,7 @@ export function getGroupStatusTitle(
   sistema: string,
   draft?: Pick<
     PasoDosGrupoDraft,
-    "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
+    "configuracion" | "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
   >
 ) {
   const typeLabel = getSubtypeGroupLabel(cantidad, subtipo);
@@ -207,6 +207,7 @@ export function getGroupStatusTitle(
     return `${cantidad} ${buildCommercialComponentDisplayName({
       tipo: subtipo,
       sistema,
+      configuracion: draft.configuracion,
       sheetScheme: draft.sheetScheme,
       sheetVariant: draft.sheetVariant,
       customSchemeDescription: draft.customSchemeDescription,

@@ -11,6 +11,26 @@ function getPrimaryFrameSize(svg: string) {
   };
 }
 
+function getSvgHeight(svg: string) {
+  const match = svg.match(/viewBox="0 0 [^"]+ ([^"]+)"/);
+
+  return match ? Number(match[1]) : 0;
+}
+
+function getFixedBadgeTextY(svg: string) {
+  const match = svg.match(/<text x="[^"]+" y="([^"]+)"[^>]*>FIJO<\/text>/);
+
+  return match ? Number(match[1]) : 0;
+}
+
+function getBowFrontWidths(svg: string) {
+  return [...svg.matchAll(/data-bow-front-width="([^"]+)"/g)].map((match) => Number(match[1]));
+}
+
+function getUniqueNumbers(values: number[]) {
+  return [...new Set(values.map((value) => Math.round(value * 10) / 10))];
+}
+
 describe("generateComponentSVG", () => {
   it("retorna un string SVG válido", () => {
     const svg = generateComponentSVG({
@@ -330,6 +350,131 @@ describe("generateComponentSVG", () => {
 
     expect((cuatroHojas.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(4);
     expect((cuatroHojas.match(/opacity="0.58"/g) ?? []).length).toBe(4);
+  });
+
+  it("dibuja proyectante con fijo como dos paños verticales y no como dos proyectantes", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Proyectante",
+      hojasBase: 2,
+      sheetScheme: "Proyectante + fijo",
+      ancho: 780,
+      alto: 1020,
+      variant: "pdf",
+    });
+
+    expect(svg).toContain(">FIJO</text>");
+    expect((svg.match(/>FIJO<\/text>/g) ?? []).length).toBe(1);
+    expect((svg.match(/stroke-dasharray="5,3"/g) ?? []).length).toBe(2);
+    expect(getFixedBadgeTextY(svg)).toBeGreaterThan(getSvgHeight(svg) / 2);
+  });
+
+  it("permite invertir proyectante con fijo superior", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Proyectante",
+      hojasBase: 2,
+      sheetScheme: "Proyectante abajo + fijo arriba",
+      ancho: 780,
+      alto: 1020,
+      variant: "pdf",
+    });
+
+    expect(svg).toContain(">FIJO</text>");
+    expect(getFixedBadgeTextY(svg)).toBeLessThan(getSvgHeight(svg) / 2);
+  });
+
+  it("dibuja Bow Window como paños en arco desde metadata comercial", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Fija",
+      sheetScheme: "5 paños fijos",
+      ancho: 2200,
+      alto: 1300,
+      variant: "pdf",
+    });
+
+    expect((svg.match(/data-bow-pane="true"/g) ?? []).length).toBe(5);
+    expect(svg).toContain(">FIJO</text>");
+    expect(svg).not.toContain("angulo");
+    expect(svg).not.toContain("perfil");
+  });
+
+  it("dibuja Bow Window con fijos laterales y corredera central de 2 hojas como 4 paños", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Corredera",
+      sheetScheme: "Fijos laterales + corredera central 2 hojas",
+      ancho: 1200,
+      alto: 2000,
+      variant: "pdf",
+    });
+
+    expect((svg.match(/data-bow-pane="true"/g) ?? []).length).toBe(4);
+    expect((svg.match(/data-bow-role="fixed"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-bow-role="sliding-left"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-role="sliding-right"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-zone="side-left"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-zone="side-right"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-zone="front"/g) ?? []).length).toBe(2);
+    expect(getUniqueNumbers(getBowFrontWidths(svg))).toHaveLength(1);
+  });
+
+  it("dibuja Bow Window corredera con fijo lateral derecho o izquierdo", () => {
+    const derecho = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Corredera",
+      sheetScheme: "Corredera + fijo derecho",
+      ancho: 1600,
+      alto: 1200,
+      variant: "pdf",
+    });
+    const izquierdo = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Corredera",
+      sheetScheme: "Corredera + fijo izquierdo",
+      ancho: 1600,
+      alto: 1200,
+      variant: "pdf",
+    });
+
+    expect((derecho.match(/data-bow-pane="true"/g) ?? []).length).toBe(3);
+    expect((izquierdo.match(/data-bow-pane="true"/g) ?? []).length).toBe(3);
+    expect((derecho.match(/data-bow-role="fixed"/g) ?? []).length).toBe(1);
+    expect((izquierdo.match(/data-bow-role="fixed"/g) ?? []).length).toBe(1);
+    expect((derecho.match(/data-bow-zone="side-right"/g) ?? []).length).toBe(1);
+    expect((derecho.match(/data-bow-zone="side-left"/g) ?? []).length).toBe(0);
+    expect((izquierdo.match(/data-bow-zone="side-left"/g) ?? []).length).toBe(1);
+    expect((izquierdo.match(/data-bow-zone="side-right"/g) ?? []).length).toBe(0);
+    expect((derecho.match(/data-bow-zone="front"/g) ?? []).length).toBe(2);
+    expect((izquierdo.match(/data-bow-zone="front"/g) ?? []).length).toBe(2);
+    expect(getUniqueNumbers(getBowFrontWidths(derecho))).toHaveLength(1);
+    expect(getUniqueNumbers(getBowFrontWidths(izquierdo))).toHaveLength(1);
+  });
+
+  it("dibuja Bow Window con corredera central y panos fijos sin agrandar hojas frontales", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Bow Window",
+      configuracion: "Corredera",
+      sheetScheme: "Corredera central + panos fijos",
+      ancho: 2200,
+      alto: 1200,
+      variant: "pdf",
+    });
+
+    expect((svg.match(/data-bow-pane="true"/g) ?? []).length).toBe(5);
+    expect((svg.match(/data-bow-zone="side-left"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-zone="side-right"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-zone="front"/g) ?? []).length).toBe(3);
+    expect((svg.match(/data-bow-role="fixed"/g) ?? []).length).toBe(3);
+    expect((svg.match(/data-bow-role="sliding-left"/g) ?? []).length).toBe(1);
+    expect((svg.match(/data-bow-role="sliding-right"/g) ?? []).length).toBe(1);
+    expect(getUniqueNumbers(getBowFrontWidths(svg))).toHaveLength(1);
   });
 
   it("usa la descripcion personalizada para inferir cantidad de hojas cuando corresponde", () => {

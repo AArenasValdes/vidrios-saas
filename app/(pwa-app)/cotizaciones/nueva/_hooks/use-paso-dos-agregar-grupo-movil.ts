@@ -299,12 +299,16 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
 
   const updateSistema = (sistema: string) => {
     setDraft((current) => {
-      const sheetSchemeOptions = getSheetSchemeOptions({ tipo: current.subtipo, sistema });
+      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
+      const nextConfig = nextConfigOptions[0] || "";
+      const sheetSchemeOptions = getSheetSchemeOptions({
+        tipo: current.subtipo,
+        sistema,
+        configuracion: nextConfig,
+      });
       const shouldKeepComposition =
         shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
         sheetSchemeOptions.includes(current.sheetScheme);
-      const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
-      const nextConfig = nextConfigOptions[0] || "";
 
       return {
         ...current,
@@ -323,7 +327,29 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   };
 
   const updateConfiguracion = (configuracion: string) => {
-    setDraft((current) => ({ ...current, configuracion }));
+    setDraft((current) => {
+      const sheetSchemeOptions = getSheetSchemeOptions({
+        tipo: current.subtipo,
+        sistema: current.sistema,
+        configuracion,
+      });
+      const shouldKeepComposition =
+        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema: current.sistema }) &&
+        sheetSchemeOptions.includes(current.sheetScheme);
+
+      return {
+        ...current,
+        configuracion,
+        ...(shouldKeepComposition
+          ? {}
+          : {
+              sheetScheme: "",
+              sheetVariant: "",
+              customSchemeDescription: "",
+              isCustomScheme: false,
+            }),
+      };
+    });
   };
 
   const updatePalilloEnabled = (enabled: boolean) => {

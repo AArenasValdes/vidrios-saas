@@ -385,6 +385,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       "Proyectante",
       "Abatible",
       "Oscilobatiente",
+      "Bow Window",
     ]);
     expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual(["Fijo"]);
   });

@@ -754,7 +754,36 @@ describe("workflow-ui paso 2", () => {
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Proyectante" })).toEqual([
       "1 hoja",
       "Proyectante + fijo",
+      "Proyectante arriba + fijo abajo",
+      "Proyectante abajo + fijo arriba",
       "2 proyectantes",
+      "Personalizado",
+    ]);
+    expect(
+      getSheetSchemeOptions({
+        tipo: "Ventana",
+        sistema: "Bow Window",
+        configuracion: "Corredera",
+      })
+    ).toEqual([
+      "Fijos laterales + corredera central 2 hojas",
+      "Fijos laterales + corredera central 3 hojas",
+      "Corredera central + paños fijos",
+      "Corredera + fijo derecho",
+      "Corredera + fijo izquierdo",
+      "Personalizado",
+    ]);
+    expect(
+      getSheetSchemeOptions({
+        tipo: "Ventana",
+        sistema: "Bow Window",
+        configuracion: "Proyectante",
+      })
+    ).toEqual([
+      "Fijo central + proyectantes laterales",
+      "Fijos laterales + proyectante central",
+      "1 proyectante + fijos",
+      "2 proyectantes + fijos",
       "Personalizado",
     ]);
     expect(getSheetSchemeOptions({ tipo: "Paño fijo", sistema: "Fijo" })).toEqual([
@@ -826,6 +855,48 @@ describe("workflow-ui paso 2", () => {
 
     expect(item.nombre).toBe("Ventana proyectante + fijo");
     expect(item.precioUnitario).toBe(180000);
+  });
+
+  it("debe generar nombre comercial para Bow Window sin agregar calculo tecnico", () => {
+    const item = buildItemFromForm(
+      {
+        codigo: "V3",
+        tipo: "Ventana",
+        hojasBase: 2,
+        material: "Aluminio",
+        referencia: "L25",
+        sistema: "Bow Window",
+        configuracion: "Batiente / abatible",
+        sheetScheme: "2 fijos + 1 abatible",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        lineTemplateId: "tpl-25",
+        pricingMode: "precio_directo",
+        vidrio: "Incoloro monolitico 5mm",
+        nombre: "",
+        descripcion: "",
+        ancho: "1800",
+        alto: "1200",
+        cantidad: "1",
+        costoProveedorUnitario: "280000",
+        margenPct: "0",
+        precioPorM2: "150000",
+        minimoCobrable: "0",
+        redondeoPrecio: "1000",
+        precioPlantillaSugerido: "280000",
+        precioAjustadoManual: false,
+        origenPrecio: "plantilla",
+        observaciones: "",
+        colorHex: "#a8a8a8",
+        loteCantidad: "1",
+      },
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Bow Window batiente/abatible - 2 fijos + 1 abatible");
+    expect(item.precioUnitario).toBe(324000);
   });
 
   it("debe generar nombre comercial para paño fijo sin sistema de apertura visible", () => {

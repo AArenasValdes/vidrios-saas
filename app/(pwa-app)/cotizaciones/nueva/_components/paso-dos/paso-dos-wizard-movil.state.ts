@@ -2,7 +2,7 @@ import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
   isFreeValueComponentType,
-  hasPerSystemConfigurations,
+  getConfigurationOptionsForComponentSistema,
 } from "@/features/cotizaciones/services/component-catalog.service";
 
 import type { PasoDosGrupoDraft } from "../../_hooks/use-paso-dos-agregar-grupo";
@@ -48,14 +48,15 @@ export function buildPasoDosWizardMovilState({
     quotePricingMode === "total_global" && isFreeValue
       ? (draft.nombre ?? "").trim() !== "" && (draft.descripcion ?? "").trim() !== ""
       : (draft.nombre ?? "").trim() !== "" || (draft.descripcion ?? "").trim() !== "";
-  const hasPerSystem = hasPerSystemConfigurations(draft.subtipo);
+  const requiresConfiguration =
+    getConfigurationOptionsForComponentSistema(draft.subtipo, draft.sistema).length > 0;
   const hasCommercialDetail =
     isFreeValue
       ? hasCustomDescription
       : isTrabajoPersonalizado
         ? hasCustomDescription
         : draft.sistema.trim() !== "" &&
-          (!hasPerSystem || draft.configuracion.trim() !== "") &&
+          (!requiresConfiguration || draft.configuracion.trim() !== "") &&
           draft.vidrio.trim() !== "" &&
           hasValidMirrorFormat &&
           isPositiveNumber(draft.ancho) &&

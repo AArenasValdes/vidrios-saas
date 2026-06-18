@@ -723,9 +723,26 @@ function NuevaCotizacionPageContent() {
         const sheetSchemeOptions = getSheetSchemeOptions({
           tipo: nextTipo,
           sistema: nextSistema,
+          configuracion: next.configuracion,
         });
         if (
           !shouldShowSheetSchemeForComponent({ tipo: nextTipo, sistema: nextSistema }) ||
+          !sheetSchemeOptions.includes(next.sheetScheme)
+        ) {
+          next.sheetScheme = "";
+          next.sheetVariant = "";
+          next.customSchemeDescription = "";
+          next.isCustomScheme = false;
+        }
+      }
+      if (key === "configuracion") {
+        const sheetSchemeOptions = getSheetSchemeOptions({
+          tipo: next.tipo,
+          sistema: next.sistema,
+          configuracion: String(value),
+        });
+        if (
+          !shouldShowSheetSchemeForComponent({ tipo: next.tipo, sistema: next.sistema }) ||
           !sheetSchemeOptions.includes(next.sheetScheme)
         ) {
           next.sheetScheme = "";

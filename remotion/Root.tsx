@@ -1,4 +1,8 @@
 import { Composition } from "remotion";
+import {
+  VentoraDemoMaster,
+  VENTORA_DEMO_MASTER_DURATION,
+} from "../src/features/video/VentoraDemoMaster";
 import { VentoraExplainer } from "../src/features/video/VentoraExplainer";
 import { VENTORA_VIDEO_FPS } from "../src/features/video/video-assets";
 
@@ -31,6 +35,14 @@ export const RemotionRoot = () => {
         defaultProps={{
           layout: "portrait",
         }}
+      />
+      <Composition
+        id="VentoraDemoMasterVertical"
+        component={VentoraDemoMaster}
+        durationInFrames={VENTORA_DEMO_MASTER_DURATION}
+        fps={VENTORA_VIDEO_FPS}
+        width={PORTRAIT_WIDTH}
+        height={PORTRAIT_HEIGHT}
       />
     </>
   );

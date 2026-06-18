@@ -12,7 +12,7 @@ export type ComponentSVGParams = {
   tipo: string;
   sistema?: string | null;
   configuracion?: string | null;
-  hojasBase?: 1 | 2 | 3 | 4 | null;
+  hojasBase?: 1 | 2 | 3 | 4 | 5 | null;
   sheetScheme?: string | null;
   sheetVariant?: string | null;
   customSchemeDescription?: string | null;
@@ -41,7 +41,7 @@ type Palette = {
   label: string;  // etiquetas
 };
 
-type WindowLeafCount = 1 | 2 | 3 | 4;
+type WindowLeafCount = 1 | 2 | 3 | 4 | 5;
 
 // ─── Vidrio: 100% uniforme en todos los componentes ─────────────────────────
 
@@ -133,6 +133,7 @@ function normalizeType(tipo: string): string {
 
 function normalizeSistema(sistema: string | null | undefined): string {
   const s = (sistema ?? "").trim().toLowerCase();
+  if (s.includes("bow")) return "BowWindow";
   if (s.includes("oscilo")) return "Oscilobatiente";
   if (s.includes("corr")) return "Corredera";
   if (s.includes("abat")) return "Abatible";
@@ -166,7 +167,7 @@ function normalizeLeafCount(value: number | string | null | undefined): WindowLe
   const parsed =
     typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
 
-  if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4) {
+  if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4 || parsed === 5) {
     return parsed;
   }
 
@@ -219,6 +220,52 @@ function normalizeSearchText(value: string | null | undefined): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function resolveBowWindowPaneCount(params: ComponentSVGParams): WindowLeafCount {
+  const source = normalizeSearchText(
+    [params.sheetScheme, params.sheetVariant, params.customSchemeDescription]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (source.includes("fijos laterales") && source.includes("corredera central 3 hojas")) {
+    return 5;
+  }
+
+  if (
+    source.includes("fijos laterales") &&
+    source.includes("corredera central 2 hojas")
+  ) {
+    return 4;
+  }
+
+  if (source.includes("corredera central") && source.includes("panos fijos")) {
+    return 5;
+  }
+
+  if (
+    source.includes("corredera") &&
+    (source.includes("fijo derecho") || source.includes("fijo izquierdo"))
+  ) {
+    return 3;
+  }
+
+  const countMatch = source.match(/\b([3-5])\s*(panos|hojas|abatibles|proyectantes)\b/);
+
+  if (countMatch) {
+    return normalizeLeafCount(countMatch[1]) ?? 3;
+  }
+
+  if (source.includes("4 o mas")) {
+    return 4;
+  }
+
+  if (source.includes("2 proyectantes") || source.includes("corredera central 3 hojas")) {
+    return 4;
+  }
+
+  return 3;
 }
 
 function resolveFixedSlidingPaneIndexes(
@@ -438,6 +485,37 @@ type WindowPane = {
   centerX: number;
   centerY: number;
 };
+
+type ProjectedFixedLayout = "none" | "projected_top" | "projected_bottom";
+
+function resolveProjectedFixedLayout(params: ComponentSVGParams): ProjectedFixedLayout {
+  const source = normalizeSearchText(
+    [
+      params.sheetScheme,
+      params.sheetVariant,
+      params.customSchemeDescription,
+      params.configuracion,
+      params.referencia,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (!source.includes("proyectante") || !source.includes("fijo")) {
+    return "none";
+  }
+
+  if (
+    source.includes("proyectante abajo") ||
+    source.includes("proyectante inferior") ||
+    source.includes("fijo arriba") ||
+    source.includes("fijo superior")
+  ) {
+    return "projected_bottom";
+  }
+
+  return "projected_top";
+}
 
 function buildWindowPanes(
   x: number,
@@ -725,6 +803,343 @@ function drawVentanaProyectante(
           .join("");
 
   return [outer, glass, divider, hinges, guides, handles].join("");
+}
+
+function drawVentanaProyectanteFijoVertical(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  layout: Exclude<ProjectedFixedLayout, "none">
+): string {
+  const F = fw(v);
+  const D = dw(v);
+  const DT = det(v);
+  const GW = gsw(v);
+  const FI = fi(v);
+  const dividerH = Math.max(3.2, D * 1.55);
+  const usableH = Math.max(20, h - FI * 2 - dividerH);
+  const projectedH = usableH * 0.5;
+  const fixedH = usableH - projectedH;
+  const paneX = x + FI;
+  const paneW = w - FI * 2;
+  const topPaneH = layout === "projected_top" ? projectedH : fixedH;
+  const bottomPaneH = layout === "projected_top" ? fixedH : projectedH;
+  const topPane: WindowPane = {
+    x: paneX,
+    y: y + FI,
+    w: paneW,
+    h: topPaneH,
+    centerX: paneX + paneW / 2,
+    centerY: y + FI + topPaneH / 2,
+  };
+  const bottomPane: WindowPane = {
+    x: paneX,
+    y: topPane.y + topPane.h + dividerH,
+    w: paneW,
+    h: bottomPaneH,
+    centerX: paneX + paneW / 2,
+    centerY: topPane.y + topPane.h + dividerH + bottomPaneH / 2,
+  };
+  const projectedPane = layout === "projected_top" ? topPane : bottomPane;
+  const fixedPane = layout === "projected_top" ? bottomPane : topPane;
+  const hingeW = Math.max(11, projectedPane.w * 0.15);
+  const hingeH = Math.max(3.4, D * 1.2);
+  const stroke = DT * 1.1;
+
+  return [
+    outerFrame(x, y, w, h, F, p.frame),
+    glassFill(topPane.x, topPane.y, topPane.w, topPane.h, GW),
+    glassFill(bottomPane.x, bottomPane.y, bottomPane.w, bottomPane.h, GW),
+    `<line x1="${px(x + FI * 0.5)}" y1="${px(topPane.y + topPane.h + dividerH / 2)}" x2="${px(x + w - FI * 0.5)}" y2="${px(topPane.y + topPane.h + dividerH / 2)}" stroke="${p.frame}" stroke-width="${px(dividerH)}" stroke-linecap="square"/>`,
+    `<rect x="${px(projectedPane.x + projectedPane.w * 0.26 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
+    `<rect x="${px(projectedPane.x + projectedPane.w * 0.74 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
+    drawProyectanteGuides(projectedPane, stroke, p),
+    lHandle(
+      projectedPane.centerX,
+      projectedPane.y + projectedPane.h - FI * 0.9,
+      clamp(projectedPane.h * 0.18, 12, 17),
+      "right",
+      DT,
+      p.detail
+    ),
+    fixedBadge(fixedPane.centerX, fixedPane.centerY, p),
+  ].join("");
+}
+
+function drawBowWindow(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  paneCount: WindowLeafCount,
+  opening: string | null | undefined,
+  composition: string | null | undefined
+): string {
+  const F = fw(v);
+  const D = dw(v);
+  const DT = det(v);
+  const GW = gsw(v);
+  const FI = fi(v);
+  const count = clamp(paneCount, 3, 5);
+  const depth = Math.min(h * 0.1, 18);
+  const normalizedOpening = normalizeSearchText(opening);
+  const normalizedComposition = normalizeSearchText(composition);
+  const panes: string[] = [];
+  const dividers: string[] = [];
+
+  type BowPaneRole = "fixed" | "sliding-left" | "sliding-right" | "sliding-neutral" | "projected" | "abatible";
+
+  const bowPaneRole = (index: number): BowPaneRole => {
+    const isFirst = index === 0;
+    const isLast = index === count - 1;
+
+    if (normalizedOpening.includes("corredera")) {
+      if (normalizedComposition.includes("fijo derecho")) {
+        if (isLast) return "fixed";
+        return index === 0 ? "sliding-right" : "sliding-left";
+      }
+
+      if (normalizedComposition.includes("fijo izquierdo")) {
+        if (isFirst) return "fixed";
+        return index === count - 2 ? "sliding-right" : "sliding-left";
+      }
+
+      if (
+        normalizedComposition.includes("fijos laterales") ||
+        normalizedComposition.includes("panos fijos")
+      ) {
+        if (isFirst || isLast || (count === 5 && normalizedComposition.includes("panos fijos") && index === 1)) {
+          return "fixed";
+        }
+
+        if (count === 4 && normalizedComposition.includes("corredera central 2 hojas")) {
+          return index === 1 ? "sliding-right" : "sliding-left";
+        }
+
+        if (count === 5 && normalizedComposition.includes("panos fijos")) {
+          if (index === 2) return "sliding-right";
+          return "sliding-left";
+        }
+
+        if (count === 5 && normalizedComposition.includes("corredera central 3 hojas")) {
+          if (index === 1) return "sliding-left";
+          if (index === 2) return "sliding-neutral";
+          return "sliding-right";
+        }
+
+        return index <= Math.floor((count - 1) / 2) ? "sliding-left" : "sliding-right";
+      }
+
+      if (count === 3) {
+        return isLast ? "fixed" : index === 0 ? "sliding-right" : "sliding-left";
+      }
+
+      return isFirst || isLast ? "fixed" : index <= Math.floor(count / 2) ? "sliding-left" : "sliding-right";
+    }
+
+    if (normalizedOpening.includes("proyectante")) {
+      if (normalizedComposition.includes("central")) {
+        return index === Math.floor(count / 2) ? "projected" : "fixed";
+      }
+
+      return isFirst || isLast ? "projected" : "fixed";
+    }
+
+    if (normalizedOpening.includes("abatible") || normalizedOpening.includes("batiente")) {
+      if (normalizedComposition.includes("central")) {
+        return index === Math.floor(count / 2) ? "fixed" : "abatible";
+      }
+
+      return normalizedComposition.includes("fijo") && (isFirst || isLast) ? "fixed" : "abatible";
+    }
+
+    return "fixed";
+  };
+
+  const roles = Array.from({ length: count }, (_, index) => bowPaneRole(index));
+  const isSlidingBow = normalizedOpening.includes("corredera");
+  const hasLeftSide =
+    roles[0] === "fixed" &&
+    (!isSlidingBow ||
+      normalizedComposition.includes("fijo izquierdo") ||
+      normalizedComposition.includes("fijos laterales") ||
+      normalizedComposition.includes("panos fijos"));
+  const hasRightSide =
+    roles[count - 1] === "fixed" &&
+    (!isSlidingBow ||
+      normalizedComposition.includes("fijo derecho") ||
+      normalizedComposition.includes("fijos laterales") ||
+      normalizedComposition.includes("panos fijos"));
+  const sideCount = Number(hasLeftSide) + Number(hasRightSide);
+  const sideW =
+    sideCount === 2
+      ? clamp(w * 0.145, 16, 34)
+      : sideCount === 1
+        ? clamp(w * 0.22, 20, 44)
+        : 0;
+  const frontLeft = x + (hasLeftSide ? sideW : 0);
+  const frontRight = x + w - (hasRightSide ? sideW : 0);
+  const frontTop = y + FI + depth * 0.45;
+  const frontBottom = y + h - FI - depth * 0.45;
+  const frontCount = Math.max(1, count - sideCount);
+  const frontPaneW = (frontRight - frontLeft - FI * 2) / frontCount;
+  const frontIndexOffset = hasLeftSide ? 1 : 0;
+  const sideInsetY = depth * 0.72;
+  const railTopY = frontTop - F * 0.55;
+  const railBottomY = frontBottom + F * 0.55;
+  const railOverhang = Math.max(2.5, F * 0.55);
+
+  const bowFixedMarker = (cx: number, cy: number, size = 14) =>
+    `<text x="${px(cx)}" y="${px(cy + size * 0.35)}" text-anchor="middle" font-size="${px(size)}" font-family="sans-serif" fill="${p.detail}" font-weight="700">F</text>`;
+
+  const renderPaneContent = (
+    role: BowPaneRole,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number,
+    centerX: number,
+    centerY: number,
+    isSide: boolean
+  ) => {
+    if (role === "sliding-left" || role === "sliding-right") {
+      const arrowW = clamp((right - left) * 0.34, 14, 28);
+      return directionArrow(
+        centerX - arrowW / 2,
+        centerY,
+        arrowW,
+        role === "sliding-left" ? "left" : "right",
+        Math.max(1, DT * 1.15),
+        p.detail
+      );
+    }
+
+    if (role === "sliding-neutral") {
+      const lineW = clamp((right - left) * 0.28, 10, 22);
+      return `<line x1="${px(centerX - lineW / 2)}" y1="${px(centerY)}" x2="${px(centerX + lineW / 2)}" y2="${px(centerY)}" stroke="${p.detail}" stroke-width="${px(DT)}" stroke-linecap="round"/>`;
+    }
+
+    if (role === "projected") {
+      return drawProyectanteGuides(
+        {
+          x: left + 3,
+          y: top + 3,
+          w: right - left - 6,
+          h: bottom - top - 6,
+          centerX,
+          centerY,
+        },
+        DT,
+        p
+      );
+    }
+
+    if (role === "abatible") {
+      return `<line x1="${px(left + 6)}" y1="${px(top + 6)}" x2="${px(right - 6)}" y2="${px(bottom - 6)}" stroke="${p.detail}" stroke-width="${px(DT)}" stroke-dasharray="5,3" stroke-linecap="round"/>`;
+    }
+
+    if (role === "fixed") {
+      return isSide || right - left < 46 ? bowFixedMarker(centerX, centerY) : fixedBadge(centerX, centerY, p);
+    }
+
+    return "";
+  };
+
+  if (hasLeftSide) {
+    const role = roles[0];
+    const outerX = x + FI;
+    const innerX = frontLeft + FI;
+    const panePath = [
+      `M${px(outerX)} ${px(frontTop + sideInsetY)}`,
+      `L${px(innerX)} ${px(frontTop)}`,
+      `L${px(innerX)} ${px(frontBottom)}`,
+      `L${px(outerX)} ${px(frontBottom - sideInsetY)}`,
+      "Z",
+    ].join(" ");
+    const centerX = (outerX + innerX) / 2;
+    const centerY = (frontTop + frontBottom) / 2;
+
+    panes.push(
+      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-left" data-bow-role="${role}"/>`,
+      renderPaneContent(role, outerX, frontTop, innerX, frontBottom, centerX, centerY, true),
+      `<line x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+    );
+  }
+
+  if (hasRightSide) {
+    const role = roles[count - 1];
+    const innerX = frontRight - FI;
+    const outerX = x + w - FI;
+    const panePath = [
+      `M${px(innerX)} ${px(frontTop)}`,
+      `L${px(outerX)} ${px(frontTop + sideInsetY)}`,
+      `L${px(outerX)} ${px(frontBottom - sideInsetY)}`,
+      `L${px(innerX)} ${px(frontBottom)}`,
+      "Z",
+    ].join(" ");
+    const centerX = (innerX + outerX) / 2;
+    const centerY = (frontTop + frontBottom) / 2;
+
+    panes.push(
+      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-right" data-bow-role="${role}"/>`,
+      renderPaneContent(role, innerX, frontTop, outerX, frontBottom, centerX, centerY, true),
+      `<line x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+    );
+  }
+
+  for (let frontIndex = 0; frontIndex < frontCount; frontIndex += 1) {
+    const roleIndex = frontIndex + frontIndexOffset;
+    const role = roles[roleIndex] ?? "fixed";
+    const left = frontLeft + FI + frontPaneW * frontIndex;
+    const right = left + frontPaneW;
+    const top = frontTop;
+    const bottom = frontBottom;
+    const panePath = [
+      `M${px(left)} ${px(top)}`,
+      `L${px(right)} ${px(top)}`,
+      `L${px(right)} ${px(bottom)}`,
+      `L${px(left)} ${px(bottom)}`,
+      "Z",
+    ].join(" ");
+    const centerX = left + frontPaneW / 2;
+    const centerY = (top + bottom) / 2;
+
+    panes.push(
+      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="front" data-bow-front-pane="true" data-bow-front-width="${px(frontPaneW)}" data-bow-role="${role}"/>`,
+      renderPaneContent(role, left, top, right, bottom, centerX, centerY, false)
+    );
+
+    if (frontIndex > 0) {
+      dividers.push(
+        `<line x1="${px(left)}" y1="${px(top)}" x2="${px(left)}" y2="${px(bottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+      );
+    }
+  }
+
+  const topRail = [
+    `M${px(x + railOverhang)} ${px(hasLeftSide ? frontTop + sideInsetY - F * 0.35 : railTopY)}`,
+    hasLeftSide ? `L${px(frontLeft + FI)} ${px(railTopY)}` : "",
+    `L${px(frontRight - FI)} ${px(railTopY)}`,
+    hasRightSide ? `L${px(x + w - railOverhang)} ${px(frontTop + sideInsetY - F * 0.35)}` : "",
+  ].filter(Boolean).join(" ");
+  const bottomRail = [
+    `M${px(x + railOverhang)} ${px(hasLeftSide ? frontBottom - sideInsetY + F * 0.35 : railBottomY)}`,
+    hasLeftSide ? `L${px(frontLeft + FI)} ${px(railBottomY)}` : "",
+    `L${px(frontRight - FI)} ${px(railBottomY)}`,
+    hasRightSide ? `L${px(x + w - railOverhang)} ${px(frontBottom - sideInsetY + F * 0.35)}` : "",
+  ].filter(Boolean).join(" ");
+
+  return [
+    `<path d="${topRail}" fill="none" stroke="${p.frame}" stroke-width="${F}" stroke-linecap="round"/>`,
+    `<path d="${bottomRail}" fill="none" stroke="${p.frame}" stroke-width="${F}" stroke-linecap="round"/>`,
+    ...panes,
+    ...dividers,
+  ].join("");
 }
 
 function drawTiltMarker(pane: WindowPane, stroke: number, p: Palette) {
@@ -1315,6 +1730,9 @@ function routeDrawing(
   sistemaNorm: string,
   hojasBase: WindowLeafCount | null,
   fixedSlidingPaneIndexes: Set<number>,
+  projectedFixedLayout: ProjectedFixedLayout,
+  bowPaneCount: WindowLeafCount,
+  bowComposition: string,
   x: number, y: number, w: number, h: number,
   v: string,
   p: Palette,
@@ -1330,8 +1748,14 @@ function routeDrawing(
 
   switch (tipoNorm) {
     case "Ventana":
+      if (sistemaNorm === "BowWindow") {
+        return drawBowWindow(x, y, w, h, v, p, bowPaneCount, doorConfig, bowComposition);
+      }
       if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, binaryLeafCount);
       if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, binaryLeafCount);
+      if (sistemaNorm === "Proyectante" && projectedFixedLayout !== "none") {
+        return drawVentanaProyectanteFijoVertical(x, y, w, h, v, p, projectedFixedLayout);
+      }
       if (sistemaNorm === "Proyectante") return drawVentanaProyectante(x, y, w, h, v, p, binaryLeafCount);
       return drawVentanaCorredera(x, y, w, h, v, p, hojasBase ?? 2, fixedSlidingPaneIndexes); // Corredera por defecto
 
@@ -1459,6 +1883,13 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const sisNorm   = resolveSistema(params);
   const hojasBase = resolveWindowLeafCount(params, sisNorm);
   const fixedSlidingPaneIndexes = resolveFixedSlidingPaneIndexes(params, hojasBase);
+  const projectedFixedLayout = resolveProjectedFixedLayout(params);
+  const bowPaneCount = resolveBowWindowPaneCount(params);
+  const bowComposition = [
+    params.sheetScheme,
+    params.sheetVariant,
+    params.customSchemeDescription,
+  ].filter(Boolean).join(" ");
   const palette   = resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
@@ -1494,6 +1925,9 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     sisNorm,
     hojasBase,
     fixedSlidingPaneIndexes,
+    projectedFixedLayout,
+    bowPaneCount,
+    bowComposition,
     originX,
     originY,
     drawW,

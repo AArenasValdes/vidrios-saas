@@ -1,6 +1,7 @@
 import {
   getBaseLeafCountForComponent,
   getConfigurationOptionsForComponent,
+  getConfigurationOptionsForComponentSistema,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
   resolveComponentCategory,
@@ -66,6 +67,14 @@ describe("component-catalog service", () => {
       "Proyectante",
       "Abatible",
       "Oscilobatiente",
+      "Bow Window",
+    ]);
+    expect(getConfigurationOptionsForComponentSistema("Ventana", "Bow Window")).toEqual([
+      "Corredera",
+      "Proyectante",
+      "Batiente / abatible",
+      "Fija",
+      "Mixta",
     ]);
     expect(getSystemOptionsForComponent("Ventana 1 hoja")).toEqual(["Fijo"]);
 

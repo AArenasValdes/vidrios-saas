@@ -126,6 +126,38 @@ const baseProps = {
 };
 
 describe("PasoDosWizardConfiguracionMovil", () => {
+  it("debe mostrar tipo de apertura y composicion dinamica para Bow Window", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        displayConfigurationOptions={[
+          "Corredera",
+          "Proyectante",
+          "Batiente / abatible",
+          "Fija",
+          "Mixta",
+        ]}
+        displaySystemOptions={["Corredera", "Proyectante", "Abatible", "Oscilobatiente", "Bow Window"]}
+        draft={{
+          ...baseProps.draft,
+          sistema: "Bow Window",
+          configuracion: "Proyectante",
+          sheetScheme: "Fijo central + proyectantes laterales",
+        }}
+      />
+    );
+
+    expect(screen.getByText("Tipo de apertura")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Proyectante" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Composición")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Fijo central + proyectantes laterales" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Fijos laterales + proyectante central" })
+    ).toBeInTheDocument();
+  });
+
   it("debe mostrar espejos recomendados al cotizar un espejo", () => {
     render(
       <PasoDosWizardConfiguracionMovil

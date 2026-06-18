@@ -85,6 +85,7 @@ export function PasoDosFormularioBloqueConfiguracion({
   const sheetSchemeOptions = getSheetSchemeOptions({
     tipo: componentForm.tipo,
     sistema: componentForm.sistema,
+    configuracion: componentForm.configuracion,
   });
   const sheetVariantOptions = getSheetVariantOptions(componentForm.sheetScheme, {
     tipo: componentForm.tipo,
