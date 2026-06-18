@@ -715,8 +715,6 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
 
                           <aside className={printStyles.totalsColumn}>
                             <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
-                            {showItemPrices ? (
-                              <>
                             <div className={printStyles.totalRow}>
                               <span>Subtotal</span>
                               <strong>{CLP(quote.subtotal)}</strong>
@@ -735,20 +733,20 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                               <span>IVA 19%</span>
                               <strong>{CLP(quote.iva)}</strong>
                             </div>
-                              </>
-                            ) : null}
                             {showItemPrices && quote.flete > 0 ? (
                               <div className={printStyles.totalRow}>
                                 <span>Flete</span>
                                 <strong>{CLP(quote.flete)}</strong>
                               </div>
                             ) : null}
-                            <div
-                              className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}
-                            >
-                              <span>Carpinteria total</span>
-                              <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                            </div>
+                            {showItemPrices ? (
+                              <div
+                                className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}
+                              >
+                                <span>Carpinteria total</span>
+                                <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                              </div>
+                            ) : null}
                           </aside>
                         </section>
 

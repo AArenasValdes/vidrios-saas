@@ -1177,7 +1177,6 @@ export default function CotizacionPrintPage() {
                   <section className={s.globalWorkSummary}>
                     <div className={s.globalWorkSummaryHeader}>
                       <span className={s.sectionLabel}>TRABAJO GENERAL</span>
-                      <strong>{CLP(visibleCotizacion.total)}</strong>
                     </div>
                     <strong className={s.globalWorkSummaryTitle}>{totalGlobalWorkName}</strong>
                     <div className={s.globalWorkSummaryMeta}>
@@ -1275,25 +1274,21 @@ export default function CotizacionPrintPage() {
                     <aside className={s.totalsColumn}>
                       <span className={s.summaryLabel}>RESUMEN FINAL</span>
                       <div className={s.totalRow}>
-                        <span>Precio final</span>
-                        <strong>{CLP(visibleCotizacion.total)}</strong>
+                        <span>Subtotal</span>
+                        <strong>{CLP(visibleCotizacion.subtotal)}</strong>
                       </div>
                       <div className={s.totalRow}>
-                        <span>{globalIvaLabel}</span>
-                        <strong>
-                          {visibleCotizacion.mostrarIva ? CLP(visibleCotizacion.iva) : "No aplica"}
-                        </strong>
+                        <span>Descuento</span>
+                        <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                      </div>
+                      <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                        <span>Neto</span>
+                        <strong>{CLP(visibleCotizacion.neto)}</strong>
                       </div>
                       <div className={s.totalRow}>
-                        <span>Detalles incluidos</span>
-                        <strong>{printableItems.length}</strong>
+                        <span>IVA 19%</span>
+                        <strong>{CLP(visibleCotizacion.iva)}</strong>
                       </div>
-                      {totalSurfaceM2 > 0 ? (
-                        <div className={`${s.totalRow} ${s.totalRowStrong}`}>
-                          <span>Superficie referencial</span>
-                          <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                        </div>
-                      ) : null}
                     </aside>
                   </section>
 
@@ -1426,7 +1421,6 @@ export default function CotizacionPrintPage() {
               <section className={s.globalWorkSummary}>
                 <div className={s.globalWorkSummaryHeader}>
                   <span className={s.sectionLabel}>TRABAJO GENERAL</span>
-                  <strong>{CLP(visibleCotizacion.total)}</strong>
                 </div>
                 <strong className={s.globalWorkSummaryTitle}>{totalGlobalLeadItem.nombre}</strong>
                 <p className={s.globalWorkSummaryDescription}>
@@ -1665,14 +1659,20 @@ export default function CotizacionPrintPage() {
                     ) : (
                       <>
                         <div className={s.totalRow}>
-                          <span>Precio final</span>
-                          <strong>{CLP(visibleCotizacion.total)}</strong>
+                          <span>Subtotal</span>
+                          <strong>{CLP(visibleCotizacion.subtotal)}</strong>
                         </div>
                         <div className={s.totalRow}>
-                          <span>{globalIvaLabel}</span>
-                          <strong>
-                            {visibleCotizacion.mostrarIva ? CLP(visibleCotizacion.iva) : "No aplica"}
-                          </strong>
+                          <span>Descuento</span>
+                          <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                        </div>
+                        <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                          <span>Neto</span>
+                          <strong>{CLP(visibleCotizacion.neto)}</strong>
+                        </div>
+                        <div className={s.totalRow}>
+                          <span>IVA 19%</span>
+                          <strong>{CLP(visibleCotizacion.iva)}</strong>
                         </div>
                       </>
                     )}
@@ -1682,10 +1682,12 @@ export default function CotizacionPrintPage() {
                         <strong>{CLP(visibleCotizacion.flete)}</strong>
                       </div>
                     ) : null}
-                    <div className={`${s.totalRow} ${s.totalRowStrong}`}>
-                      <span>Carpintería total</span>
-                      <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                    </div>
+                    {showItemPrices ? (
+                      <div className={`${s.totalRow} ${s.totalRowStrong}`}>
+                        <span>Carpintería total</span>
+                        <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                      </div>
+                    ) : null}
                   </aside>
                 </section>
 
@@ -1734,7 +1736,6 @@ export default function CotizacionPrintPage() {
       isTotalGlobalQuote,
       paymentTermsDisplay,
       printPages,
-      printableItems,
       quoteModeBadgeLabel,
       showItemPrices,
       shouldShowCompanyLogo,

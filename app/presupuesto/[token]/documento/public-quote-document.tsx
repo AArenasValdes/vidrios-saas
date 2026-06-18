@@ -630,7 +630,6 @@ export function PublicQuoteDocument({
                     <section className={printStyles.globalWorkSummary}>
                       <div className={printStyles.globalWorkSummaryHeader}>
                         <span className={printStyles.sectionLabel}>TRABAJO GENERAL</span>
-                        <strong>{CLP(quote.total)}</strong>
                       </div>
                       <strong className={printStyles.globalWorkSummaryTitle}>
                         {totalGlobalLeadItem.nombre}
@@ -811,8 +810,6 @@ export function PublicQuoteDocument({
 
                         <aside className={printStyles.totalsColumn}>
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
-                          {showItemPrices ? (
-                            <>
                           <div className={printStyles.totalRow}>
                             <span>Subtotal</span>
                             <strong>{CLP(quote.subtotal)}</strong>
@@ -829,29 +826,18 @@ export function PublicQuoteDocument({
                             <span>IVA 19%</span>
                             <strong>{CLP(quote.iva)}</strong>
                           </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className={printStyles.totalRow}>
-                                <span>Precio final</span>
-                                <strong>{CLP(quote.total)}</strong>
-                              </div>
-                              <div className={printStyles.totalRow}>
-                                <span>{globalIvaLabel}</span>
-                                <strong>{quote.iva > 0 ? CLP(quote.iva) : "No aplica"}</strong>
-                              </div>
-                            </>
-                          )}
                           {showItemPrices && quote.flete > 0 ? (
                             <div className={printStyles.totalRow}>
                               <span>Flete</span>
                               <strong>{CLP(quote.flete)}</strong>
                             </div>
                           ) : null}
-                          <div className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}>
-                            <span>Carpinteria total</span>
-                            <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
-                          </div>
+                          {showItemPrices ? (
+                            <div className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}>
+                              <span>Carpinteria total</span>
+                              <strong>{totalSurfaceM2.toFixed(2)} m2</strong>
+                            </div>
+                          ) : null}
                         </aside>
                       </section>
 

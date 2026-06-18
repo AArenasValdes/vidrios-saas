@@ -70,6 +70,11 @@ describe("public quote total global", () => {
     render(<PublicQuotePreview quote={quote} />);
 
     expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
+    expect(screen.getAllByText("Subtotal").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Descuento").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Neto").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("IVA 19%").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Carpinteria total")).not.toBeInTheDocument();
     expect(screen.queryByText("Precio unitario")).not.toBeInTheDocument();
     expect(screen.queryByText(/margen/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/utilidad/i)).not.toBeInTheDocument();
@@ -86,8 +91,12 @@ describe("public quote total global", () => {
     );
 
     expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
-    expect(screen.getAllByText("Precio final").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Subtotal").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Descuento").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Neto").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("IVA 19%").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Sin IVA").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Carpinteria total")).not.toBeInTheDocument();
     expect(screen.queryByText("Precio unitario")).not.toBeInTheDocument();
     expect(screen.queryByText(/margen/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/utilidad/i)).not.toBeInTheDocument();
