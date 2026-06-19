@@ -21,28 +21,26 @@ export type OnboardingGuideRouteKey =
   | "cotizacion_nueva";
 
 const STEP_ORDER: OnboardingStepKey[] = [
-  "company_ready",
-  "public_page_live",
-  "channel_ready",
-  "first_lead",
   "first_quote",
+  "company_ready",
+  "first_share",
 ];
 
 const PREVIEW_STEP_BY_ROUTE: Record<OnboardingGuideRouteKey, OnboardingStepKey> = {
-  dashboard: "company_ready",
+  dashboard: "first_quote",
   empresa: "company_ready",
-  pagina_venta: "public_page_live",
-  solicitudes: "first_lead",
-  canales: "channel_ready",
+  pagina_venta: "company_ready",
+  solicitudes: "first_quote",
+  canales: "first_quote",
   cotizacion_nueva: "first_quote",
 };
 
 const ROUTE_STEP_SUPPORT: Record<OnboardingGuideRouteKey, OnboardingStepKey[]> = {
   dashboard: STEP_ORDER,
   empresa: ["company_ready"],
-  pagina_venta: ["public_page_live"],
-  solicitudes: ["first_lead"],
-  canales: ["channel_ready"],
+  pagina_venta: [],
+  solicitudes: [],
+  canales: [],
   cotizacion_nueva: ["first_quote"],
 };
 
@@ -127,27 +125,27 @@ function usePwaInstallPromptVisible() {
 }
 
 function resolveGuideCopy(stepKey: OnboardingStepKey) {
+  if (stepKey === "first_quote") {
+    return {
+      title: "Crea tu primera cotizacion",
+      text: "Parte rapido. Puedes completar logo y datos despues.",
+      ctaLabel: "Crear cotizacion",
+    };
+  }
+
   if (stepKey === "company_ready") {
     return {
-      title: "Configura tu empresa",
-      text: "Estos datos aparecen en tu cotizacion y pagina publica.",
-      ctaLabel: "Completar datos",
+      title: "Deja tu cotizacion lista para enviar",
+      text: "Agrega nombre, telefono y logo opcional para mejorar el PDF.",
+      ctaLabel: "Agregar datos",
     };
   }
 
-  if (stepKey === "public_page_live") {
+  if (stepKey === "first_share") {
     return {
-      title: "Revisa tu pagina publica",
-      text: "Esta pagina recibe solicitudes aunque estes trabajando.",
-      ctaLabel: "Ver pagina",
-    };
-  }
-
-  if (stepKey === "channel_ready") {
-    return {
-      title: "Comparte tu link o QR",
-      text: "Usalo en WhatsApp, Instagram, Facebook o tarjetas.",
-      ctaLabel: "Copiar texto + link",
+      title: "Envia tu PDF por WhatsApp",
+      text: "Abre la cotizacion y usa el PDF profesional con tu cliente.",
+      ctaLabel: "Abrir cotizacion",
     };
   }
 
@@ -161,7 +159,7 @@ function resolveGuideCopy(stepKey: OnboardingStepKey) {
 
   return {
     title: "Crea tu primera cotizacion",
-    text: "Guarda una cotizacion real y compartela por WhatsApp.",
+    text: "Parte rapido. Puedes completar logo y datos despues.",
     ctaLabel: "Crear cotizacion",
   };
 }

@@ -47,6 +47,73 @@
   display: grid;
 }
 
+.initialSetupCard {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(30, 136, 255, 0.18);
+  border-radius: 24px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 250, 255, 0.98)),
+    #ffffff;
+  box-shadow: 0 14px 32px rgba(36, 59, 107, 0.07);
+}
+
+.initialSetupHeader {
+  display: grid;
+  gap: 8px;
+}
+
+.initialSetupHeader h1 {
+  margin: 0;
+  color: #111827;
+  font-size: clamp(25px, 7vw, 34px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.initialSetupHeader p {
+  margin: 0;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.initialSetupPreview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(217, 224, 234, 0.88);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.initialSetupPreview div:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.initialSetupPreview strong {
+  color: #243b6b;
+  font-size: 17px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.initialSetupPreview span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.initialSetupActions {
+  display: grid;
+  gap: 10px;
+}
+
 .publicCardTop,
 .publicCardIdentity,
 .publicCardActions,

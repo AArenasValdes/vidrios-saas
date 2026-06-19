@@ -16,47 +16,27 @@ import type { EntityId } from "@/types/common";
 
 const STEP_DEFINITIONS: OnboardingStepDefinition[] = [
   {
-    key: "company_ready",
-    title: "Completa tu empresa",
-    helper: "Nombre, telefono, email y slug listos para captar.",
-    ctaLabel: "Completar empresa",
-  },
-  {
-    key: "public_page_live",
-    title: "Publica tu pagina",
-    helper: "Activa tu pagina publica para recibir solicitudes reales.",
-    ctaLabel: "Publicar pagina",
-  },
-  {
-    key: "channel_ready",
-    title: "Copia tu link o QR",
-    helper: "Comparte tu pagina en WhatsApp, Instagram o con QR.",
-    ctaLabel: "Ir a canales",
-  },
-  {
-    key: "first_lead",
-    title: "Prueba tu primera solicitud",
-    helper: "Envia una solicitud de prueba desde tu pagina publica.",
-    ctaLabel: "Abrir pagina publica",
-  },
-  {
     key: "first_quote",
-    title: "Crea tu primera cotizacion",
-    helper: "Convierte una solicitud en una cotizacion util.",
-    ctaLabel: "Crear cotizacion",
+    title: "Haz tu primera cotizacion",
+    helper: "Parte con una cotizacion rapida y ve el PDF profesional.",
+    ctaLabel: "Crear mi primera cotizacion",
+  },
+  {
+    key: "company_ready",
+    title: "Agrega tus datos de empresa",
+    helper: "Nombre, telefono, logo opcional y condiciones para enviar mejor.",
+    ctaLabel: "Agregar datos de empresa",
   },
   {
     key: "first_share",
-    title: "Comparte tu primer PDF o link",
-    helper: "Envia la cotizacion por WhatsApp o comparte el link publico.",
-    ctaLabel: "Compartir cotizacion",
+    title: "Descarga y envia tu PDF por WhatsApp",
+    helper: "Abre tu PDF profesional y envialo al cliente.",
+    ctaLabel: "Abrir cotizacion",
   },
 ];
 
 const DERIVED_STEP_KEYS: OnboardingStepKey[] = [
   "company_ready",
-  "public_page_live",
-  "first_lead",
   "first_quote",
 ];
 
@@ -76,7 +56,7 @@ function buildStepHref(
   profile: OrganizationProfile | null,
   latestQuoteId: string | null
 ) {
-  if (stepKey === "company_ready") return "/configuracion/empresa";
+  if (stepKey === "company_ready") return "/configuracion/empresa?inicio=1";
   if (stepKey === "public_page_live") return "/configuracion/pagina-venta";
   if (stepKey === "channel_ready") return "/solicitudes/canales";
 
@@ -113,9 +93,7 @@ function buildTransitionEventPayload(input: {
 export function deriveCompanyReadyState(profile: OrganizationProfile | null): OnboardingStepState {
   if (
     profile?.empresaNombre.trim() &&
-    profile.empresaTelefono.trim() &&
-    profile.empresaEmail.trim() &&
-    profile.solicitudPublicaSlug.trim()
+    profile.empresaTelefono.trim()
   ) {
     return "completado";
   }

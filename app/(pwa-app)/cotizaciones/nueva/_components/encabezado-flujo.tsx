@@ -42,7 +42,7 @@ export function EncabezadoFlujo({
               </button>
               <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
                 <LuFileCheck2 aria-hidden />{" "}
-                {isSaving ? "Guardando..." : step === 3 ? "Guardar y abrir PDF" : "Guardar presupuesto"}
+                {isSaving ? "Guardando..." : step === 3 ? "Guardar y ver resultado" : "Guardar presupuesto"}
               </button>
             </>
           ) : null}

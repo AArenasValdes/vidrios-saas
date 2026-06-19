@@ -17,8 +17,6 @@ import {
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
-import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
   calculateWorkflowTotalsForPricingMode,
@@ -112,7 +110,6 @@ import { usePersistenciaNuevaCotizacion } from "./_hooks/use-persistencia-nueva-
 import s from "./page.module.css";
 
 function NuevaCotizacionPageContent() {
-  const onboarding = useOnboardingChecklist();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit");
@@ -1427,9 +1424,6 @@ function NuevaCotizacionPageContent() {
     },
     applyQuickEditDraftsToItems,
     resetWorkflowToBlank,
-    openPrintViewer: (recordId) => {
-      router.replace(`/print/cotizaciones/${recordId}?from=wizard&created=1`);
-    },
     openQuotesList: () => {
       router.push("/cotizaciones");
     },
@@ -1824,8 +1818,6 @@ function NuevaCotizacionPageContent() {
       }`}
       data-onboarding-target="cotizacion-nueva-root"
     >
-      <OnboardingGuide controller={onboarding} routeKey="cotizacion_nueva" />
-
       {flujo.esVistaMovil ? (
         <NuevaCotizacionMobile
           rootClassName={`${s.root} ${flujo.paso === 2 ? s.rootStepTwoMobile : ""}`}

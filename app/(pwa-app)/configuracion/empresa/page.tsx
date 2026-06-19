@@ -12,6 +12,7 @@ import {
   LuCopy,
   LuCreditCard,
   LuEye,
+  LuFileText,
   LuGlobe,
   LuImagePlus,
   LuMail,
@@ -177,8 +178,14 @@ export default function ConfiguracionEmpresaPage() {
     message: "Revisando este dispositivo.",
   });
   const [isActivatingAlerts, setIsActivatingAlerts] = useState(false);
+  const [isInitialCompanySetup, setIsInitialCompanySetup] = useState(false);
   const [subscriptionSummary, setSubscriptionSummary] =
     useState<SubscriptionSummary | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsInitialCompanySetup(new URLSearchParams(window.location.search).get("inicio") === "1");
+  }, []);
 
   useEffect(() => {
     if (!profile) return;
@@ -564,6 +571,125 @@ export default function ConfiguracionEmpresaPage() {
     return (
       <div className={s.root}>
         <div className={s.loadingState}>Cargando tu configuracion comercial...</div>
+      </div>
+    );
+  }
+
+  if (isInitialCompanySetup) {
+    return (
+      <div className={s.root} data-onboarding-target="empresa-config">
+        <section className={s.initialSetupCard}>
+          <div className={s.initialSetupHeader}>
+            <span className={s.cardEyebrow}>
+              <LuFileText aria-hidden />
+              PDF profesional
+            </span>
+            <h1>Deja tu cotizacion lista para enviar</h1>
+            <p>
+              Agrega solo los datos que ayudan a que tu presupuesto se vea mas
+              profesional. Lo demas puede quedar para despues.
+            </p>
+          </div>
+
+          <div className={s.initialSetupPreview}>
+            <div className={s.publicLogo} style={{ ["--brand" as string]: form.brandColor }}>
+              {previewIdentity ? (
+                <Image
+                  src={previewIdentity}
+                  alt={form.empresaNombre || "Logo de la empresa"}
+                  width={56}
+                  height={56}
+                  className={s.publicLogoImage}
+                  unoptimized
+                />
+              ) : (
+                <span>{previewInitials}</span>
+              )}
+            </div>
+            <div>
+              <strong>{form.empresaNombre || "Tu empresa"}</strong>
+              <span>{form.empresaTelefono || "Telefono para el PDF"}</span>
+            </div>
+          </div>
+
+          <div className={s.fieldGrid}>
+            <label className={s.field}>
+              <span className={s.label}>Nombre de empresa</span>
+              <input
+                className={s.input}
+                value={form.empresaNombre}
+                onChange={(event) => handleEmpresaNombreChange(event.target.value)}
+                placeholder="Ej: Vidrieria San Marco"
+              />
+            </label>
+            <label className={s.field}>
+              <span className={s.label}>Telefono</span>
+              <input
+                className={s.input}
+                value={form.empresaTelefono}
+                onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)}
+                placeholder="+56 9 1234 5678"
+              />
+            </label>
+            <label className={s.field}>
+              <span className={s.label}>Logo opcional</span>
+              <label className={s.logoUpload}>
+                <div className={s.logoUploadIcon}>
+                  <LuImagePlus aria-hidden />
+                </div>
+                <div className={s.logoUploadBody}>
+                  <strong>{isUploading ? "Subiendo logo..." : "Subir logo"}</strong>
+                  <span>Opcional. PNG o JPG.</span>
+                </div>
+                <div className={s.logoUploadAction}>↑</div>
+                <input type="file" accept="image/*" onChange={handleLogoChange} disabled={isUploading} />
+              </label>
+            </label>
+            <label className={s.field}>
+              <span className={s.label}>Direccion opcional</span>
+              <input
+                className={s.input}
+                value={form.empresaDireccion}
+                onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)}
+                placeholder="Ej: Apoquindo 4501, Las Condes"
+              />
+            </label>
+            <label className={s.field}>
+              <span className={s.label}>Condiciones de pago opcionales</span>
+              <textarea
+                className={s.textarea}
+                rows={3}
+                value={form.formaPago}
+                onChange={(event) => handleFieldChange("formaPago", event.target.value)}
+                placeholder="Ej: 50% al inicio y 50% al finalizar"
+              />
+            </label>
+          </div>
+
+          {sectionFeedback ? (
+            <p className={sectionFeedback.kind === "error" ? s.error : s.success}>
+              {sectionFeedback.message}
+            </p>
+          ) : null}
+
+          <div className={s.initialSetupActions}>
+            <button
+              type="button"
+              className={s.saveButton}
+              onClick={() => void handleSaveSection("empresa")}
+              disabled={isSaving || savingSection === "empresa"}
+            >
+              <LuSave aria-hidden />
+              {savingSection === "empresa" ? "Guardando..." : "Guardar datos"}
+            </button>
+            <Link href="/dashboard" className={s.secondaryAction}>
+              Hacerlo despues
+            </Link>
+            <Link href="/configuracion/empresa" className={s.secondaryLink}>
+              Ver configuracion completa
+            </Link>
+          </div>
+        </section>
       </div>
     );
   }

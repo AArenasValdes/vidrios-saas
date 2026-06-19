@@ -5,7 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, FileText, Plus, TrendingUp } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
+import { OnboardingActivationCard } from "@/features/onboarding/components/onboarding-activation-card";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
@@ -63,7 +63,9 @@ export const DashboardMobile = memo(function DashboardMobile({
         </Link>
       </PremiumPageSection>
 
-      <OnboardingGuide controller={onboarding} routeKey="dashboard" />
+      <PremiumPageSection>
+        <OnboardingActivationCard controller={onboarding} />
+      </PremiumPageSection>
 
       <PremiumPageSection>
         <Link href={summaryHref} className={styles.summaryCard}>

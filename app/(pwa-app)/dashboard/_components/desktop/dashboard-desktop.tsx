@@ -4,7 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
+import { OnboardingActivationCard } from "@/features/onboarding/components/onboarding-activation-card";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardDesktopProps } from "../../_hooks/use-dashboard-view-model";
 import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
@@ -60,7 +60,9 @@ export const DashboardDesktop = memo(function DashboardDesktop({
         </div>
       </PremiumPageSection>
 
-      <OnboardingGuide controller={onboarding} routeKey="dashboard" />
+      <PremiumPageSection>
+        <OnboardingActivationCard controller={onboarding} />
+      </PremiumPageSection>
 
       <PremiumPageSection className={styles.statsGrid}>
         <article className={styles.statCard}>

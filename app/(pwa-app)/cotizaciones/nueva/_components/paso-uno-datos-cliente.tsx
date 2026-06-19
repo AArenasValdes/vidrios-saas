@@ -561,12 +561,12 @@ export function PasoUnoDatosCliente({
                 onClick={onContinue}
                 disabled={!canContinue}
               >
-                Ir a componentes
+                Elegir cotizacion
               </button>
             </div>
             <div className={s.stepOneBottomBarMeta}>
               {draft.obra.trim() !== ""
-                ? "Listo para agregar componentes"
+                ? "Listo para elegir el tipo de cotizacion"
                 : "Puedes seguir y completar la obra automaticamente."}
             </div>
           </div>
@@ -592,7 +592,7 @@ export function PasoUnoDatosCliente({
             onClick={onContinue}
             disabled={!canContinue}
           >
-            Ir a componentes <LuChevronRight aria-hidden />
+            Elegir cotizacion <LuChevronRight aria-hidden />
           </button>
         </div>
       )}

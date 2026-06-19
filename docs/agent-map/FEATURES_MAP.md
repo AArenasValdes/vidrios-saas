@@ -127,13 +127,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Onboarding Comercial Guiado
 
-- **Que hace**: Checklist admin-only de activacion comercial con persistencia compartida por organizacion. Orquesta el primer circuito de valor: empresa lista, pagina publicada, canal compartido, primera solicitud, primera cotizacion y primer PDF/link compartido.
-- **Rutas involucradas**: `/dashboard`, `/configuracion/empresa`, `/configuracion/pagina-venta`, `/solicitudes/canales`, `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
+- **Que hace**: Checklist admin-only de activacion minima con persistencia compartida por organizacion. Orquesta el primer logro real: crear una cotizacion, agregar datos minimos de empresa y descargar/enviar el PDF profesional por WhatsApp. La configuracion de pagina publica, colores, horarios y canales queda fuera del inicio.
+- **Rutas involucradas**: `/dashboard`, `/configuracion/empresa?inicio=1`, `/cotizaciones/nueva`, `/cotizaciones/[id]`, `/print/cotizaciones/[id]`
 - **Archivos principales**:
   - `src/features/onboarding/types/onboarding-checklist.ts`
   - `src/features/onboarding/repositories/onboarding-checklist.repository.ts`
   - `src/features/onboarding/services/onboarding-checklist.service.ts`
   - `src/features/onboarding/hooks/useOnboardingChecklist.ts`
+  - `src/features/onboarding/components/onboarding-activation-card.tsx`
   - `src/features/onboarding/components/onboarding-guide.tsx`
   - `src/features/onboarding/components/onboarding-mobile-guide.tsx`
   - `src/features/onboarding/components/onboarding-inline-hint.tsx`
@@ -141,19 +142,19 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/onboarding/components/onboarding-progress.tsx`
   - `src/features/onboarding/components/onboarding-guide.module.css`
   - `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Componentes principales**: `OnboardingGuide`, `OnboardingMobileGuide`, `OnboardingInlineHint`, `OnboardingStepCard`, `OnboardingProgress`
+- **Componentes principales**: `OnboardingActivationCard`, `OnboardingGuide`, `OnboardingMobileGuide`, `OnboardingInlineHint`, `OnboardingStepCard`, `OnboardingProgress`
 - **Hooks/servicios/actions**: `useOnboardingChecklist`, `onboardingChecklistService`, `createOnboardingChecklistRepository`
 - **Tablas Supabase**: `onboarding_checklists`, `organization_profile`, `solicitudes_contacto`, `cotizaciones`, `users`
 - **Flujo de datos**:
   - Ruta privada -> `useOnboardingChecklist()` -> `onboardingChecklistService.getChecklistByOrganizationId()` -> repository -> Supabase
-  - Pasos derivados: `organization_profile` + `solicitudes_contacto` + `cotizaciones`
-  - Pasos manuales: interacciones reales en copy/share/QR/PDF/WhatsApp -> `markChannelReady()` / `markFirstShare()`
+  - Pasos derivados activos: `cotizaciones` para `first_quote` y `organization_profile` para `company_ready`
+  - Paso manual activo: interacciones reales de PDF/WhatsApp -> `markFirstShare()`
 - **Estados importantes**: `pendiente`, `en_progreso`, `completado`, `omitido`
 - **Donde editar UI**: `src/features/onboarding/components/`, rutas privadas que montan Joyride
 - **Donde editar logica**: `src/features/onboarding/services/onboarding-checklist.service.ts`
 - **Donde editar persistencia**: `src/features/onboarding/repositories/onboarding-checklist.repository.ts`, `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Consideraciones UX**: Solo visible para `rol === "admin"` y solo mientras `first_quote` siga incompleto. En movil usa una guia propia tipo bottom sheet y se pausa si aparece el banner PWA de instalacion. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`. Se muestra una vez por paso/ruta usando `localStorage` para no interrumpir en cada carga.
-- **Riesgos al modificar**: No marcar pasos por UI decorativa ni por visitas pasivas. `channel_ready` y `first_share` deben salir de acciones reales. No romper el flujo de PDF, WhatsApp ni el aislamiento por `organization_id`.
+- **Consideraciones UX**: Solo visible para `rol === "admin"` mientras falte activar el circuito minimo. En dashboard muestra una card mobile-first con maximo 3 pasos: primera cotizacion, datos de empresa, PDF/WhatsApp. En `/configuracion/empresa?inicio=1` se muestra configuracion minima sin colores, horarios, pagina publica ni catalogo. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`.
+- **Riesgos al modificar**: No volver a poner empresa/pagina/canales antes de cotizar. No marcar pasos por UI decorativa ni por visitas pasivas. `first_share` debe salir de acciones reales. No romper el flujo de PDF, WhatsApp ni el aislamiento por `organization_id`.
 
 ---
 

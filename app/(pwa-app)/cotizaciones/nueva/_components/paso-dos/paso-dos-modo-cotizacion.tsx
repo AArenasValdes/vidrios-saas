@@ -18,8 +18,8 @@ export function PasoDosModoCotizacion({
   return (
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
-        <h2>¿Cómo quieres calcular el presupuesto?</h2>
-        <p>Elige si quieres sumar ítems o ingresar un total final.</p>
+        <h2>Elige el tipo de cotizacion</h2>
+        <p>Parte simple. Si ya sabes el precio, crea un PDF profesional en pocos pasos.</p>
       </div>
 
       <div className={s.stepTwoModeChoiceGrid}>
@@ -30,31 +30,6 @@ export function PasoDosModoCotizacion({
             Recomendado
           </span>
 
-          <div className={s.stepTwoModeChoiceCardIcon} aria-hidden>
-            <LuComponent size={24} />
-          </div>
-
-          <div className={s.stepTwoModeChoiceCardCopy}>
-            <strong>Cotizar por ítems</strong>
-            <p>Para ventanas, puertas, shower o varios trabajos.</p>
-          </div>
-
-          <button
-            type="button"
-            className={s.btnPrimary}
-            onClick={() => onSelectMode("por_item")}
-          >
-            Usar ítems
-          </button>
-        </article>
-
-        <article
-          className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}
-        >
-          <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
-            Modo rápido
-          </span>
-
           <div
             className={`${s.stepTwoModeChoiceCardIcon} ${s.stepTwoModeChoiceCardIconFast}`}
             aria-hidden
@@ -63,8 +38,8 @@ export function PasoDosModoCotizacion({
           </div>
 
           <div className={s.stepTwoModeChoiceCardCopy}>
-            <strong>Cotizar libre por total</strong>
-            <p>Para reparaciones, cambios de vidrio o trabajos personalizados.</p>
+            <strong>Cotizacion rapida</strong>
+            <p>Si ya sabes el precio y solo quieres generar un PDF profesional.</p>
           </div>
 
           <button
@@ -72,7 +47,30 @@ export function PasoDosModoCotizacion({
             className={s.btnPrimary}
             onClick={onSelectFreeTotalMode}
           >
-            Usar total final
+            Elegir cotizacion rapida
+          </button>
+        </article>
+
+        <article className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}>
+          <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
+            Mas detalle
+          </span>
+
+          <div className={s.stepTwoModeChoiceCardIcon} aria-hidden>
+            <LuComponent size={24} />
+          </div>
+
+          <div className={s.stepTwoModeChoiceCardCopy}>
+            <strong>Cotizacion por componentes</strong>
+            <p>Si quieres separar ventanas, puertas, shower door, medidas y cantidades.</p>
+          </div>
+
+          <button
+            type="button"
+            className={s.btnPrimary}
+            onClick={() => onSelectMode("por_item")}
+          >
+            Elegir componentes
           </button>
         </article>
       </div>

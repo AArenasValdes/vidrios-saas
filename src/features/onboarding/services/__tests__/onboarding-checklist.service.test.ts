@@ -86,11 +86,12 @@ function buildRecord(
 }
 
 describe("onboarding-checklist.service", () => {
-  it("deriva company_ready solo con nombre, telefono, email y slug", () => {
+  it("deriva company_ready solo con nombre y telefono", () => {
     expect(
       deriveCompanyReadyState(
         buildProfile({
-          empresaDireccion: "",
+          empresaEmail: "",
+          solicitudPublicaSlug: "",
         })
       )
     ).toBe("completado");
@@ -126,12 +127,9 @@ describe("onboarding-checklist.service", () => {
     expect(deriveFirstQuoteState(["borrador", "creada"])).toBe("completado");
   });
 
-  it("calcula el siguiente paso correcto en el orden comercial", () => {
+  it("calcula el siguiente paso desde la primera cotizacion", () => {
     const checklist = buildOnboardingChecklistViewModel({
-      records: [
-        buildRecord("company_ready", "completado"),
-        buildRecord("public_page_live", "pendiente"),
-      ],
+      records: [buildRecord("company_ready", "completado")],
       context: {
         profile: buildProfile({ isPublished: false }),
         leadCount: 0,
@@ -140,30 +138,26 @@ describe("onboarding-checklist.service", () => {
       },
     });
 
-    expect(checklist.firstPendingStepKey).toBe("public_page_live");
-    expect(checklist.nextAction?.href).toBe("/configuracion/pagina-venta");
-    expect(checklist.nextAction?.label).toBe("Publicar pagina");
+    expect(checklist.firstPendingStepKey).toBe("first_quote");
+    expect(checklist.nextAction?.href).toBe("/cotizaciones/nueva");
+    expect(checklist.nextAction?.label).toBe("Crear mi primera cotizacion");
   });
 
-  it("envia first_lead a preview de solicitud en nueva pestaña", () => {
+  it("envia datos de empresa al modo inicial minimo", () => {
     const checklist = buildOnboardingChecklistViewModel({
-      records: [
-        buildRecord("company_ready", "completado"),
-        buildRecord("public_page_live", "completado"),
-        buildRecord("channel_ready", "completado"),
-      ],
+      records: [buildRecord("first_quote", "completado")],
       context: {
-        profile: buildProfile({ isPublished: true, solicitudPublicaSlug: "vidrios-demo" }),
+        profile: buildProfile({ empresaNombre: "", empresaTelefono: "" }),
         leadCount: 0,
-        quoteStates: [],
+        quoteStates: ["creada"],
         latestQuoteId: null,
       },
     });
 
     const nextAction = buildNextOnboardingAction({ steps: checklist.steps });
 
-    expect(nextAction?.stepKey).toBe("first_lead");
-    expect(nextAction?.href).toBe("/solicitud/vidrios-demo?preview=1");
-    expect(nextAction?.openInNewTab).toBe(true);
+    expect(nextAction?.stepKey).toBe("company_ready");
+    expect(nextAction?.href).toBe("/configuracion/empresa?inicio=1");
+    expect(nextAction?.openInNewTab).toBe(false);
   });
 });
