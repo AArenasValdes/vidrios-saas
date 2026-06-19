@@ -661,6 +661,7 @@ CREATE TABLE IF NOT EXISTS "public"."organization_profile" (
   "organization_id" bigint NOT NULL,
   "empresa_nombre" "text",
   "empresa_logo_url" "text",
+  "responsable_comercial" "text",
   "empresa_direccion" "text",
   "empresa_telefono" "text",
   "empresa_email" "text",
@@ -712,6 +713,10 @@ COMMENT ON COLUMN "public"."organization_profile"."brand_color" IS 'Color princi
 
 
 COMMENT ON COLUMN "public"."organization_profile"."forma_pago" IS 'Texto libre de condiciones de pago para mostrar en el PDF.';
+
+
+
+COMMENT ON COLUMN "public"."organization_profile"."responsable_comercial" IS 'Nombre del responsable comercial que aparece en PDF como Cotiza.';
 
 
 

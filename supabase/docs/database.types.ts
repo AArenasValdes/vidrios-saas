@@ -673,6 +673,7 @@ export type Database = {
           modo_precio_preferido: string
           organization_id: number
           proveedor_preferido: string | null
+          responsable_comercial: string | null
           solicitud_publica_privacidad: string | null
           solicitud_publica_slug: string | null
           solicitud_publica_valor: string | null
@@ -691,6 +692,7 @@ export type Database = {
           modo_precio_preferido?: string
           organization_id: number
           proveedor_preferido?: string | null
+          responsable_comercial?: string | null
           solicitud_publica_privacidad?: string | null
           solicitud_publica_slug?: string | null
           solicitud_publica_valor?: string | null
@@ -709,6 +711,7 @@ export type Database = {
           modo_precio_preferido?: string
           organization_id?: number
           proveedor_preferido?: string | null
+          responsable_comercial?: string | null
           solicitud_publica_privacidad?: string | null
           solicitud_publica_slug?: string | null
           solicitud_publica_valor?: string | null

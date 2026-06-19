@@ -18,6 +18,7 @@ describe("organization-profile.repository", () => {
         organization_id: 3,
         empresa_nombre: "Ventora",
         empresa_logo_url: null,
+        responsable_comercial: "Juan Perez",
         empresa_direccion: "La Serena",
         empresa_telefono: "+56 9 1111 1111",
         empresa_email: "hola@ventora.cl",
@@ -58,6 +59,7 @@ describe("organization-profile.repository", () => {
     expect(profile).toMatchObject({
       organizationId: 3,
       empresaNombre: "Ventora",
+      responsableComercial: "Juan Perez",
       solicitudPublicaSlug: "ventora-serena",
       solicitudPublicaDescripcionCorta: "Especialistas en vidrios y aluminio.",
       solicitudPublicaValor: "Recibe una orientacion comercial inicial.",

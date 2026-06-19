@@ -57,6 +57,7 @@ const quote: PublicPreviewQuote = {
   organizationProfile: {
     empresaNombre: "Ventora Aluminios",
     empresaLogoUrl: null,
+    responsableComercial: "Juan Perez",
     empresaDireccion: "Av. Vidrios 123",
     empresaTelefono: "+56 9 1234 5678",
     empresaEmail: "ventas@ventora.test",
@@ -70,6 +71,7 @@ describe("public quote total global", () => {
     render(<PublicQuotePreview quote={quote} />);
 
     expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
+    expect(screen.getByText("Cotiza: Juan Perez")).toBeInTheDocument();
     expect(screen.getAllByText("Subtotal").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Descuento").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Neto").length).toBeGreaterThan(0);
@@ -91,6 +93,7 @@ describe("public quote total global", () => {
     );
 
     expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
+    expect(screen.getByText("Cotiza: Juan Perez")).toBeInTheDocument();
     expect(screen.getAllByText("Subtotal").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Descuento").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Neto").length).toBeGreaterThan(0);

@@ -35,6 +35,7 @@ export type OrganizationProfile = {
   organizationId: EntityId | null;
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  responsableComercial: string;
   empresaDireccion: string;
   empresaTelefono: string;
   empresaEmail: string;
@@ -97,6 +98,7 @@ export type OrganizationProfile = {
 export type UpdateOrganizationProfileInput = {
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  responsableComercial: string;
   empresaDireccion: string;
   empresaTelefono: string;
   empresaEmail: string;
@@ -146,6 +148,7 @@ export type ResolvedPublicLandingConfig = {
   organizationId: EntityId | string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  responsableComercial: string;
   empresaDireccion: string;
   empresaTelefono: string;
   empresaEmail: string;

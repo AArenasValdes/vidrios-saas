@@ -407,6 +407,7 @@ function buildNormalizedProfileInput(
   return {
     empresaNombre: resolved.empresaNombre,
     empresaLogoUrl: resolved.empresaLogoUrl,
+    responsableComercial: resolved.responsableComercial,
     empresaDireccion: resolved.empresaDireccion,
     empresaTelefono: resolved.empresaTelefono,
     empresaEmail: resolved.empresaEmail,
@@ -465,6 +466,7 @@ export function resolvePublicLandingConfig(source: {
   organizationId: EntityId | string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;
+  responsableComercial?: string;
   empresaDireccion: string;
   empresaTelefono: string;
   empresaEmail: string;
@@ -510,6 +512,7 @@ export function resolvePublicLandingConfig(source: {
     organizationId: source.organizationId,
     empresaNombre: source.empresaNombre,
     empresaLogoUrl: source.empresaLogoUrl,
+    responsableComercial: source.responsableComercial ?? "",
     empresaDireccion: source.empresaDireccion,
     empresaTelefono: source.empresaTelefono,
     empresaEmail: source.empresaEmail,
@@ -561,6 +564,7 @@ export function resolvePublicLandingConfig(source: {
     organizationId: source.organizationId,
     empresaNombre: resolved.empresaNombre,
     empresaLogoUrl: resolved.empresaLogoUrl,
+    responsableComercial: resolved.responsableComercial,
     empresaDireccion: resolved.empresaDireccion,
     empresaTelefono: resolved.empresaTelefono,
     empresaEmail: resolved.empresaEmail,
@@ -639,6 +643,7 @@ export function resolveOrganizationProfile(
     organizationId,
     empresaNombre,
     empresaLogoUrl: profile?.empresaLogoUrl ?? null,
+    responsableComercial: normalizeText(profile?.responsableComercial),
     empresaDireccion: normalizeText(profile?.empresaDireccion),
     empresaTelefono: normalizeText(profile?.empresaTelefono),
     empresaEmail: normalizeText(profile?.empresaEmail),
@@ -756,6 +761,7 @@ export function createOrganizationProfileService(
         const persisted = await repository.upsertByOrganizationId(organizationId, {
           empresaNombre,
           empresaLogoUrl: input.empresaLogoUrl,
+          responsableComercial: normalizeText(input.responsableComercial),
           empresaDireccion: normalizeText(input.empresaDireccion),
           empresaTelefono: normalizeText(input.empresaTelefono),
           empresaEmail,

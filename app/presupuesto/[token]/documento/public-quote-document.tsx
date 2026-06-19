@@ -76,6 +76,7 @@ type PublicPreviewQuote = {
   organizationProfile: {
     empresaNombre: string;
     empresaLogoUrl: string | null;
+    responsableComercial?: string;
     empresaDireccion: string;
     empresaTelefono: string;
     empresaEmail: string;
@@ -263,6 +264,9 @@ export function PublicQuoteDocument({
   const companyName = buildDocumentCompanyName(
     quote.organizationProfile.empresaNombre
   );
+  const commercialResponsibleDisplay = quote.organizationProfile.responsableComercial?.trim()
+    ? `Cotiza: ${quote.organizationProfile.responsableComercial.trim()}`
+    : "";
   const companyLogoFallbackLabel = buildDocumentInitials(companyName);
   const companyLogoUrl = quote.organizationProfile.empresaLogoUrl;
   const shouldShowCompanyLogo =
@@ -351,6 +355,9 @@ export function PublicQuoteDocument({
   ]);
   const hasNormalizedCompanyAddress = Boolean(
     companyAddressPrimaryDisplay || companyAddressSecondaryClean
+  );
+  const hasCompanyHeaderDetails = Boolean(
+    commercialResponsibleDisplay || hasNormalizedCompanyAddress
   );
   const paymentTermsDisplay = resolveDocumentPaymentTerms(
     quote.organizationProfile.formaPago
@@ -579,7 +586,12 @@ export function PublicQuoteDocument({
                           {companyName}
                         </strong>
                         <div className={printStyles.companyAddress}>
-                          {hasNormalizedCompanyAddress ? (
+                          {commercialResponsibleDisplay ? (
+                            <span className={printStyles.companyAddressPrimary}>
+                              {commercialResponsibleDisplay}
+                            </span>
+                          ) : null}
+                          {hasCompanyHeaderDetails ? (
                             <>
                               {companyAddressPrimaryDisplay ? (
                                 <span className={printStyles.companyAddressPrimary}>

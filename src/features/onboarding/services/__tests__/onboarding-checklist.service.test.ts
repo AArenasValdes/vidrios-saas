@@ -16,6 +16,7 @@ function buildProfile(
     organizationId: 1,
     empresaNombre: "Ventora Demo",
     empresaLogoUrl: null,
+    responsableComercial: "",
     empresaDireccion: "",
     empresaTelefono: "+56 9 1111 1111",
     empresaEmail: "demo@ventora.cl",

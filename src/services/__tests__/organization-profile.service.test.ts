@@ -63,6 +63,7 @@ await expect(
  service.updateByOrganizationId("org-1", {
  empresaNombre: " ",
  empresaLogoUrl: null,
+ responsableComercial: "",
  empresaDireccion: "",
  empresaTelefono: "",
  empresaEmail: "",
@@ -110,6 +111,7 @@ await expect(
 await service.updateByOrganizationId("org-1", {
  empresaNombre: " San Marco ",
  empresaLogoUrl: null,
+ responsableComercial: " Juan Perez ",
  empresaDireccion: " La Serena ",
  empresaTelefono: " +56 9 1234 5678 ",
  empresaEmail: " INFO@MARCA.CL ",
@@ -151,9 +153,10 @@ await service.updateByOrganizationId("org-1", {
  isPublished: false,
  });
 
-  expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", expect.objectContaining({
+ expect(repository.upsertByOrganizationId).toHaveBeenCalledWith("org-1", expect.objectContaining({
  empresaNombre: "San Marco",
  empresaLogoUrl: null,
+ responsableComercial: "Juan Perez",
  empresaDireccion: "La Serena",
  empresaTelefono: "+56 9 1234 5678",
  empresaEmail: "info@marca.cl",

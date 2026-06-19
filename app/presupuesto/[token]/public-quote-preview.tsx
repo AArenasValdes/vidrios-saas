@@ -69,6 +69,7 @@ export type PublicPreviewQuote = {
   organizationProfile: {
     empresaNombre: string;
     empresaLogoUrl: string | null;
+    responsableComercial?: string;
     empresaDireccion: string;
     empresaTelefono: string;
     empresaEmail: string;
@@ -242,6 +243,9 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
   const companyName = buildDocumentCompanyName(
     quote.organizationProfile.empresaNombre
   );
+  const commercialResponsibleDisplay = quote.organizationProfile.responsableComercial?.trim()
+    ? `Cotiza: ${quote.organizationProfile.responsableComercial.trim()}`
+    : "";
   const companyLogoFallbackLabel = buildDocumentInitials(companyName);
   const companyLogoUrl = quote.organizationProfile.empresaLogoUrl;
   const shouldShowCompanyLogo =
@@ -526,9 +530,22 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                           <strong className={printStyles.companyName}>
                             {companyName}
                           </strong>
-                          <span className={printStyles.companyAddress}>
-                            {companyAddressLine || "Perfil comercial aun no configurado"}
-                          </span>
+                          <div className={printStyles.companyAddress}>
+                            {commercialResponsibleDisplay ? (
+                              <span className={printStyles.companyAddressPrimary}>
+                                {commercialResponsibleDisplay}
+                              </span>
+                            ) : null}
+                            {companyAddressLine ? (
+                              <span className={printStyles.companyAddressSecondary}>
+                                {companyAddressLine}
+                              </span>
+                            ) : !commercialResponsibleDisplay ? (
+                              <span className={printStyles.companyAddressSecondary}>
+                                Perfil comercial aun no configurado
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
 

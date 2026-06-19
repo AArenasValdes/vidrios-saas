@@ -44,6 +44,7 @@ type OrganizationProfileRow = {
   organization_id: EntityId;
   empresa_nombre: string | null;
   empresa_logo_url: string | null;
+  responsable_comercial?: string | null;
   empresa_direccion: string | null;
   empresa_telefono: string | null;
   empresa_email: string | null;
@@ -76,6 +77,7 @@ const ORGANIZATION_PROFILE_SELECT = `
   organization_id,
   empresa_nombre,
   empresa_logo_url,
+  responsable_comercial,
   empresa_direccion,
   empresa_telefono,
   empresa_email,
@@ -88,6 +90,7 @@ const ORGANIZATION_PROFILE_SELECT_LEGACY = `
   organization_id,
   empresa_nombre,
   empresa_logo_url,
+  responsable_comercial,
   empresa_direccion,
   empresa_telefono,
   empresa_email,

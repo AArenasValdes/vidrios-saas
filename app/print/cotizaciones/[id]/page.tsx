@@ -583,6 +583,9 @@ export default function CotizacionPrintPage() {
   );
   const visibleCotizacion = renderableCotizacion;
   const companyName = buildDocumentCompanyName(organizationProfile.empresaNombre);
+  const commercialResponsibleDisplay = organizationProfile.responsableComercial.trim()
+    ? `Cotiza: ${organizationProfile.responsableComercial.trim()}`
+    : "";
   const companyLogoFallbackLabel = buildDocumentInitials(companyName);
   const companyLogoUrl = organizationProfile.empresaLogoUrl;
   const shouldShowCompanyLogo =
@@ -623,6 +626,9 @@ export default function CotizacionPrintPage() {
   ]);
   const hasNormalizedCompanyAddress = Boolean(
     companyAddressPrimaryDisplay || companyAddressSecondaryClean
+  );
+  const hasCompanyHeaderDetails = Boolean(
+    commercialResponsibleDisplay || hasNormalizedCompanyAddress
   );
   const paymentTermsDisplay = resolveDocumentPaymentTerms(
     organizationProfile.formaPago
@@ -1126,7 +1132,12 @@ export default function CotizacionPrintPage() {
                   <div className={s.companyMeta}>
                     <strong className={s.companyName}>{companyName}</strong>
                     <div className={s.companyAddress}>
-                      {hasNormalizedCompanyAddress ? (
+                      {commercialResponsibleDisplay ? (
+                        <span className={s.companyAddressPrimary}>
+                          {commercialResponsibleDisplay}
+                        </span>
+                      ) : null}
+                      {hasCompanyHeaderDetails ? (
                         <>
                           {companyAddressPrimaryDisplay ? (
                             <span className={s.companyAddressPrimary}>
@@ -1369,7 +1380,12 @@ export default function CotizacionPrintPage() {
                         <div className={s.companyMeta}>
                           <strong className={s.companyName}>{companyName}</strong>
                           <div className={s.companyAddress}>
-                            {hasNormalizedCompanyAddress ? (
+                            {commercialResponsibleDisplay ? (
+                              <span className={s.companyAddressPrimary}>
+                                {commercialResponsibleDisplay}
+                              </span>
+                            ) : null}
+                            {hasCompanyHeaderDetails ? (
                               <>
                                 {companyAddressPrimaryDisplay ? (
                                   <span className={s.companyAddressPrimary}>
@@ -1728,9 +1744,10 @@ export default function CotizacionPrintPage() {
       companyName,
       companyLogoFallbackLabel,
       companyLogoUrl,
+      commercialResponsibleDisplay,
       detailHeadingLabel,
       freePrintItems,
-      hasNormalizedCompanyAddress,
+      hasCompanyHeaderDetails,
       itemPresentationMap,
       globalIvaLabel,
       isTotalGlobalQuote,

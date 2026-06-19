@@ -24,6 +24,7 @@ type OrganizationProfileRow = {
   organization_id: EntityId;
   empresa_nombre: string | null;
   empresa_logo_url: string | null;
+  responsable_comercial?: string | null;
   empresa_direccion: string | null;
   empresa_telefono: string | null;
   empresa_email: string | null;
@@ -134,6 +135,7 @@ function mapOrganizationProfile(
     organizationId: row.organization_id,
     empresaNombre: row.empresa_nombre ?? "",
     empresaLogoUrl: row.empresa_logo_url,
+    responsableComercial: row.responsable_comercial ?? "",
     empresaDireccion: row.empresa_direccion ?? "",
     empresaTelefono: row.empresa_telefono ?? "",
     empresaEmail: row.empresa_email ?? "",
@@ -236,6 +238,7 @@ export function createOrganizationProfileRepository(
           organization_id: organizationId,
           empresa_nombre: input.empresaNombre,
           empresa_logo_url: input.empresaLogoUrl,
+          responsable_comercial: input.responsableComercial,
           empresa_direccion: input.empresaDireccion,
           empresa_telefono: input.empresaTelefono,
           empresa_email: input.empresaEmail,

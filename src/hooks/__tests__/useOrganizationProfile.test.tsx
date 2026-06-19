@@ -38,6 +38,7 @@ function createProfile(
     organizationId,
     empresaNombre,
     empresaLogoUrl: null,
+    responsableComercial: "",
     empresaDireccion: "",
     empresaTelefono: "",
     empresaEmail: "",

@@ -61,6 +61,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildEmpresaProfileInput({
   organizationId: null,
   empresaNombre: "",
   empresaLogoUrl: null,
+  responsableComercial: "",
   empresaDireccion: "",
   empresaTelefono: "",
   empresaEmail: "",
@@ -611,6 +612,11 @@ export default function ConfiguracionEmpresaPage() {
 
             <div className={s.quoteIdentityCopy}>
               <strong>{form.empresaNombre || "Tu empresa"}</strong>
+              {form.responsableComercial.trim() ? (
+                <span className={s.inlineInfo}>
+                  Cotiza: {form.responsableComercial.trim()}
+                </span>
+              ) : null}
               <div className={s.quoteMetaList}>
                 <span>
                   <LuMapPin aria-hidden />
@@ -672,6 +678,11 @@ export default function ConfiguracionEmpresaPage() {
                   <span className={s.label}>Nombre de empresa</span>
                   <input className={s.input} value={form.empresaNombre} onChange={(event) => handleEmpresaNombreChange(event.target.value)} placeholder="Ej: Vidrieria San Marco" />
                   <span className={s.inlineInfo}>Base interna de tu empresa.</span>
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Responsable comercial</span>
+                  <input className={s.input} value={form.responsableComercial} onChange={(event) => handleFieldChange("responsableComercial", event.target.value)} placeholder="Ej: Juan Perez" />
+                  <span className={s.inlineInfo}>Se muestra en el PDF como Cotiza: nombre.</span>
                 </label>
                 <label className={s.field}>
                   <span className={s.label}>Rubro o especialidad</span>

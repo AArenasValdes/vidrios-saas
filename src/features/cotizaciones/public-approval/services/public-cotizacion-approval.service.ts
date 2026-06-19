@@ -206,6 +206,7 @@ async function buildPublicApprovalQuoteView(
             organizationId: payload.organizationProfile.organization_id,
             empresaNombre: payload.organizationProfile.empresa_nombre ?? "",
             empresaLogoUrl: payload.organizationProfile.empresa_logo_url,
+            responsableComercial: payload.organizationProfile.responsable_comercial ?? "",
             empresaDireccion: payload.organizationProfile.empresa_direccion ?? "",
             empresaTelefono: payload.organizationProfile.empresa_telefono ?? "",
             empresaEmail: payload.organizationProfile.empresa_email ?? "",

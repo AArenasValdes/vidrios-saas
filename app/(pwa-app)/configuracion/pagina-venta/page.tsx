@@ -52,6 +52,7 @@ const EMPTY_FORM: UpdateOrganizationProfileInput = buildPaginaVentaProfileInput(
   organizationId: null,
   empresaNombre: "",
   empresaLogoUrl: null,
+  responsableComercial: "",
   empresaDireccion: "",
   empresaTelefono: "",
   empresaEmail: "",

@@ -17,6 +17,7 @@ function createProfile(overrides: Partial<OrganizationProfile> = {}): Organizati
     organizationId: 14,
     empresaNombre: "Vidriería Norte",
     empresaLogoUrl: null,
+    responsableComercial: "Juan Perez",
     empresaDireccion: "La Serena 123",
     empresaTelefono: "+56 9 8899 3049",
     empresaEmail: "hola@vidrierianorte.cl",
