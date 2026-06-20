@@ -144,6 +144,7 @@ export function PublicQuoteMobile({
   const downloadUrl = `/presupuesto/${quote.approvalToken}/documento?download=1&embed=1`;
   const issueDate = formatShortDate(quote.createdAt ?? quote.updatedAt);
   const isFinalState = Boolean(decisionMessage);
+  const canShowReviewTools = quote.canRespond && !isFinalState;
   const summaryAlcance =
     surfaceM2 > 0
       ? `${quote.items.length} componentes · ${surfaceM2.toFixed(1)} m2`
@@ -223,6 +224,8 @@ export function PublicQuoteMobile({
           </div>
         </article>
 
+        {canShowReviewTools ? (
+          <>
         <details className={s.detailsCard}>
           <summary className={s.detailsSummary}>Ver que incluye este presupuesto</summary>
           <div className={s.detailsBody}>
@@ -292,6 +295,8 @@ export function PublicQuoteMobile({
           <LuShieldCheck aria-hidden />
           Al aprobar, notificamos al equipo comercial al instante. Tus datos estan protegidos.
         </p>
+          </>
+        ) : null}
 
         {isFinalState ? (
           <article className={s.finalCard}>

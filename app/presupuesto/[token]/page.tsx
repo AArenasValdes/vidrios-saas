@@ -379,7 +379,7 @@ export default async function PresupuestoPublicoPage({
           </article>
         ) : null}
 
-        {!hasDecisionState ? <PublicQuotePreviewLoader quote={quote} /> : null}
+        {!hasDecisionState && quote.canRespond ? <PublicQuotePreviewLoader quote={quote} /> : null}
         </section>
       )}
     </main>
