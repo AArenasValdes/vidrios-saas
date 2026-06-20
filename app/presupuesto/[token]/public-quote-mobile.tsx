@@ -222,6 +222,10 @@ export function PublicQuoteMobile({
             <span className={s.summaryLabel}>ALCANCE</span>
             <strong className={s.summaryValue}>{summaryAlcance}</strong>
           </div>
+          <div className={s.summaryRow}>
+            <span className={s.summaryLabel}>TOTAL</span>
+            <strong className={`${s.summaryValue} ${s.summaryValueTotal}`}>{CLP(quote.total)}</strong>
+          </div>
         </article>
 
         {canShowReviewTools ? (

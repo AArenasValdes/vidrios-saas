@@ -135,9 +135,10 @@
 .totalValue {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-family: "JetBrains Mono", monospace;
-  font-size: clamp(42px, 12vw, 66px);
-  line-height: 0.95;
+  font-family: "Lato", sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.08;
   color: #243b6b;
 }
 
@@ -189,6 +190,11 @@
 .summaryValueProject {
   font-size: 15px;
   font-weight: 800;
+  color: #0f346a;
+}
+
+.summaryValueTotal {
+  font-size: 16px;
   color: #0f346a;
 }
 
