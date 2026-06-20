@@ -18,8 +18,13 @@ export function PasoDosModoCotizacion({
   return (
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
+<<<<<<< HEAD
         <h2>Elige el tipo de cotizacion</h2>
         <p>Parte simple. Si ya sabes el precio, crea un PDF profesional en pocos pasos.</p>
+=======
+        <h2>Como quieres calcular el presupuesto?</h2>
+        <p>Elige si quieres sumar items o ingresar un total final.</p>
+>>>>>>> codex/TWA-Android
       </div>
 
       <div className={s.stepTwoModeChoiceGrid}>
@@ -30,6 +35,34 @@ export function PasoDosModoCotizacion({
             Recomendado
           </span>
 
+<<<<<<< HEAD
+=======
+          <div className={s.stepTwoModeChoiceCardIcon} aria-hidden>
+            <LuComponent size={24} />
+          </div>
+
+          <div className={s.stepTwoModeChoiceCardCopy}>
+            <strong>Cotizar por items</strong>
+            <p>Para ventanas, puertas, shower o varios trabajos.</p>
+          </div>
+
+          <button
+            type="button"
+            className={s.btnPrimary}
+            onClick={() => onSelectMode("por_item")}
+          >
+            Usar items
+          </button>
+        </article>
+
+        <article
+          className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}
+        >
+          <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
+            Modo rapido
+          </span>
+
+>>>>>>> codex/TWA-Android
           <div
             className={`${s.stepTwoModeChoiceCardIcon} ${s.stepTwoModeChoiceCardIconFast}`}
             aria-hidden

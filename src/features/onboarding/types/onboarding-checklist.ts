@@ -7,7 +7,8 @@ export type OnboardingStepKey =
   | "channel_ready"
   | "first_lead"
   | "first_quote"
-  | "first_share";
+  | "first_share"
+  | "activation_complete";
 
 export type OnboardingStepState =
   | "pendiente"

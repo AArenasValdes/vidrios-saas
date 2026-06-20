@@ -18,26 +18,27 @@ const STEP_DEFINITIONS: OnboardingStepDefinition[] = [
   {
     key: "first_quote",
     title: "Haz tu primera cotizacion",
-    helper: "Parte con una cotizacion rapida y ve el PDF profesional.",
+    helper: "Crea una cotizacion rapida y revisa el PDF profesional.",
     ctaLabel: "Crear mi primera cotizacion",
   },
   {
     key: "company_ready",
     title: "Agrega tus datos de empresa",
-    helper: "Nombre, telefono, logo opcional y condiciones para enviar mejor.",
-    ctaLabel: "Agregar datos de empresa",
+    helper: "Nombre, telefono y logo para dejar el PDF listo para enviar.",
+    ctaLabel: "Agregar mis datos de empresa",
   },
   {
     key: "first_share",
-    title: "Descarga y envia tu PDF por WhatsApp",
-    helper: "Abre tu PDF profesional y envialo al cliente.",
-    ctaLabel: "Abrir cotizacion",
+    title: "Descarga y envia tu PDF",
+    helper: "Revisa el PDF y compartelo por WhatsApp.",
+    ctaLabel: "Ver PDF",
   },
 ];
 
 const DERIVED_STEP_KEYS: OnboardingStepKey[] = [
-  "company_ready",
   "first_quote",
+  "company_ready",
+  "first_share",
 ];
 
 function isCompletedState(state: OnboardingStepState) {
@@ -161,6 +162,7 @@ export function buildOnboardingChecklistViewModel(input: {
     first_lead: deriveFirstLeadState(input.context.leadCount),
     first_quote: deriveFirstQuoteState(input.context.quoteStates),
     first_share: getManualStepState(recordsByKey, "first_share"),
+    activation_complete: recordsByKey.get("activation_complete")?.estado ?? "pendiente",
   };
 
   const firstPendingStepKey =
@@ -285,6 +287,7 @@ class OnboardingChecklistService {
     const recordsByKey = new Map(records.map((record) => [record.stepKey, record]));
     const quoteStates = quoteRows.map((row) => row.estado);
     const latestQuoteId = quoteRows[0]?.id ?? null;
+    const hasDownloadedPdf = quoteRows.some((row) => Boolean(row.pdfDescargadoEn));
     const transitions: OnboardingSyncTransition[] = [];
 
     const derivedStateMap: Record<OnboardingStepKey, OnboardingStepState> = {
@@ -293,7 +296,8 @@ class OnboardingChecklistService {
       channel_ready: getManualStepState(recordsByKey, "channel_ready"),
       first_lead: deriveFirstLeadState(leadCount),
       first_quote: deriveFirstQuoteState(quoteStates),
-      first_share: getManualStepState(recordsByKey, "first_share"),
+      first_share: hasDownloadedPdf ? "completado" : getManualStepState(recordsByKey, "first_share"),
+      activation_complete: recordsByKey.get("activation_complete")?.estado ?? "pendiente",
     };
 
     for (const stepKey of DERIVED_STEP_KEYS) {
@@ -366,6 +370,31 @@ class OnboardingChecklistService {
     });
   }
 
+  async markActivationFlow(input: {
+    organizationId: EntityId;
+    authUserId?: string | null;
+    completionSource: string;
+    estado: "completado" | "omitido";
+    metadataJson?: Record<string, unknown>;
+  }) {
+    const internalUserId = await this.repository.resolveCurrentUserId(
+      input.authUserId ?? null,
+      input.organizationId
+    );
+
+    const { previousState, record } = await this.repository.syncStep({
+      organizationId: input.organizationId,
+      stepKey: "activation_complete",
+      estado: input.estado,
+      completedByUserId: internalUserId,
+      completionSource: input.completionSource,
+      metadataJson: input.metadataJson ?? {},
+    });
+
+    await this.trackTransition(input.organizationId, record, previousState);
+    return record;
+  }
+
   private async markManualStep(input: {
     organizationId: EntityId;
     authUserId?: string | null;
@@ -394,11 +423,15 @@ class OnboardingChecklistService {
 
 let onboardingChecklistServiceInstance: OnboardingChecklistService | null = null;
 
+export function createOnboardingChecklistService(
+  deps: Parameters<typeof createOnboardingChecklistRepository>[0] = {}
+) {
+  return new OnboardingChecklistService(createOnboardingChecklistRepository(deps));
+}
+
 function resolveOnboardingChecklistService() {
   if (!onboardingChecklistServiceInstance) {
-    onboardingChecklistServiceInstance = new OnboardingChecklistService(
-      createOnboardingChecklistRepository()
-    );
+    onboardingChecklistServiceInstance = createOnboardingChecklistService();
   }
 
   return onboardingChecklistServiceInstance;
@@ -411,5 +444,7 @@ export const onboardingChecklistService = {
     resolveOnboardingChecklistService().markChannelReady(...args),
   markFirstShare: (...args: Parameters<OnboardingChecklistService["markFirstShare"]>) =>
     resolveOnboardingChecklistService().markFirstShare(...args),
+  markActivationFlow: (...args: Parameters<OnboardingChecklistService["markActivationFlow"]>) =>
+    resolveOnboardingChecklistService().markActivationFlow(...args),
 };
 export { STEP_DEFINITIONS };

@@ -86,6 +86,27 @@
 
 ---
 
+## Ruta: /activacion
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/activacion/page.tsx`
+- **CSS**: `app/(pwa-app)/activacion/page.module.css`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (variante **minimal**: sin bottom nav)
+- **Proposito**: Wizard de **primera activacion** separado del dashboard. Guia al admin sin cotizaciones hasta crear su primera cotizacion, ver PDF y opcionalmente cargar datos de empresa.
+- **Usuario objetivo**: Admin nuevo (`quoteCount === 0`, step `activation_complete` pendiente)
+- **Funcionalidades visibles**: Bienvenida, elegir demo vs real, rapida por total vs con componentes, resumen con desglose neto/IVA, Ver PDF, datos empresa (opcionales), entrar a Ventora
+- **Componentes principales**: Wizard inline en `page.tsx` (sin componentes externos aun)
+- **Hooks/servicios**: `useActivationGate`, `useCotizacionesStore`, `useOrganizationProfile`, `onboarding-activation-flow.service.ts`
+- **API**: `GET/POST /api/onboarding/activation/status`
+- **Tablas Supabase**: `onboarding_checklists` (`activation_complete`), `cotizaciones`, `cotizacion_items`, `organization_profile`
+- **Query QA**: `?replay=1` o `?activacion_preview=1` (no persiste complete/skip; bypass gate)
+- **Navegacion PDF**: `?from=activacion` -> boton **Volver a la guia**
+- **Archivos a tocar**: `app/(pwa-app)/activacion/*`, `src/features/onboarding/services/onboarding-activation-flow.service.ts`, `src/features/onboarding/hooks/useActivationGate.ts`, `app/api/onboarding/activation/status/route.ts`, `app/print/cotizaciones/[id]/page.tsx` (solo back nav)
+- **Documentacion detallada**: `docs/agent-map/ACTIVATION_ONBOARDING.md`
+- **Riesgos**: No mezclar con wizard de `/cotizaciones/nueva`. Usar `finalizeActivationDraftForSave()` antes de guardar. Total global no debe inventar componentes ficticios. No reintroducir card de onboarding dentro del dashboard.
+
+---
+
 ## Ruta: /dashboard
 
 - **Tipo**: Privada (autenticada)
@@ -93,14 +114,14 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Dashboard comercial con KPIs orientados al valor cotizado y cotizaciones recientes
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Saludo, onboarding de activacion minima en 3 pasos, resumen comercial (valor cotizado, creadas, PDF generados, aprobadas), alertas secundarias solo si hay respuesta publica real, cotizaciones recientes con estados neutrales, CTA nueva cotizacion
-- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `OnboardingActivationCard`, `PremiumPageReveal`
+- **Funcionalidades visibles**: Saludo, resumen comercial (valor cotizado, creadas, PDF generados, aprobadas), alertas secundarias solo si hay respuesta publica real, cotizaciones recientes con estados neutrales, CTA nueva cotizacion. Admin sin cotizaciones es redirigido a `/activacion` (no hay card de onboarding embebida).
+- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
 - **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
 - **Acciones principales**: Navegacion a nueva cotizacion, ver cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/dashboard/page.tsx`, `app/(pwa-app)/dashboard/_components/*`, `app/(pwa-app)/dashboard/_hooks/*`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/dashboard/summary/route.ts`
-- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs ni el CTA de siguiente paso del onboarding. No reintroducir "pendientes" como alerta principal. Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
+- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs. No reintroducir "pendientes" como alerta principal ni card de onboarding en dashboard (activacion vive en `/activacion`). Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
 
 ---
 
@@ -202,14 +223,16 @@
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
 - **Proposito**: Formulario guiado de nueva cotizacion. Workflow con pasos, items por componente, calculo por item o total global del trabajo.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, tipo de cotizacion, totales), decision inicial en Paso 2 con "Cotizacion rapida" como opcion principal y "Cotizacion por componentes" como opcion secundaria, modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con items descriptivos y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto con pantalla de exito y acciones PDF/datos empresa/otra cotizacion. En **Espejo** y **Cubierta de mesa** no se pide Aluminio/PVC ni color de perfil; en **Espejo** se muestran espesores recomendados 3–6 mm.
+- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), Joyride contextual de onboarding, decision inicial en Paso 2 entre "Por componentes" y "Total del trabajo", modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con items descriptivos y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto. En **Espejo** y **Cubierta de mesa** no se pide Aluminio/PVC ni color de perfil; en **Espejo** se muestran espesores recomendados 3–6 mm.
 - **Componentes principales**: Internos de la pagina (1198 lineas)
+- **Nota onboarding 2026-06-19**: La entrada inicial debe priorizar `Cotizacion rapida` (`total_global`) y mostrar exito/resumen de PDF antes de pedir datos de empresa. No volver a montar Joyride contextual en esta ruta.
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
 - **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`), `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`, `src/features/cotizaciones/services/glass-recommendations.service.ts`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
+- **Riesgo onboarding 2026-06-19**: No reintroducir empresa/pagina/canales antes de crear una cotizacion ni redirigir automaticamente al PDF al guardar.
 
 ---
 
@@ -352,9 +375,9 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Configuracion del perfil de empresa. En modo inicial `?inicio=1` solo pide datos minimos para el PDF; la vista completa mantiene datos basicos, telefono, email, direccion, brand color, logo, push, slug publico y QR.
+- **Proposito**: Configuracion del perfil de empresa: datos basicos, telefono, email, direccion, brand color, logo, push, slug publico, QR
 - **Usuario objetivo**: Admin autenticado
-- **Funcionalidades visibles**: Formulario datos empresa, modo inicial minimo "Deja tu cotizacion lista para enviar", guia contextual, color picker con presets, upload logo, push notifications, slug publico, preview QR
+- **Funcionalidades visibles**: Formulario datos empresa, Joyride contextual, color picker con presets, upload logo, push notifications, slug publico, preview QR
 - **Componentes principales**: Internos de la pagina
 - **Hooks**: `useOrganizationProfile`
 - **Datos que consume**: Perfil org

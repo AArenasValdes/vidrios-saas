@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { execSync } from "child_process";
+import path from "path";
 
 type ResolveBuildVersionOptions = {
   env?: NodeJS.ProcessEnv;
@@ -52,10 +53,34 @@ export function resolveBuildVersion({
 
 const appVersion = resolveBuildVersion();
 
+const emptyPolyfillModule = path.join(process.cwd(), "src/lib/empty-module.ts");
+const nextPolyfillModuleJs = path.join(
+  process.cwd(),
+  "node_modules/next/dist/build/polyfills/polyfill-module.js",
+);
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.0.12"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion"],
+  },
   turbopack: {
     root: process.cwd(),
+    resolveAlias: {
+      "next/dist/build/polyfills/polyfill-module": emptyPolyfillModule,
+      [nextPolyfillModuleJs]: emptyPolyfillModule,
+    },
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        "next/dist/build/polyfills/polyfill-module": emptyPolyfillModule,
+        [nextPolyfillModuleJs]: emptyPolyfillModule,
+      };
+    }
+
+    return config;
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,

@@ -207,7 +207,7 @@ export function useOnboardingChecklist(): UseOnboardingChecklistResult {
       isVisible: Boolean(
         isEnabled &&
           checklist &&
-          (isPreviewMode || (!hasCompletedFirstQuote && !isDismissed))
+          (isPreviewMode || (!checklist.isComplete && !isDismissed))
       ),
       error,
       isDismissed,

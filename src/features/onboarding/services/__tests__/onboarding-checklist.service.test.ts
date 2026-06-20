@@ -16,7 +16,6 @@ function buildProfile(
     organizationId: 1,
     empresaNombre: "Ventora Demo",
     empresaLogoUrl: null,
-    responsableComercial: "",
     empresaDireccion: "",
     empresaTelefono: "+56 9 1111 1111",
     empresaEmail: "demo@ventora.cl",
@@ -127,7 +126,7 @@ describe("onboarding-checklist.service", () => {
     expect(deriveFirstQuoteState(["borrador", "creada"])).toBe("completado");
   });
 
-  it("calcula el siguiente paso desde la primera cotizacion", () => {
+  it("calcula el siguiente paso partiendo por la primera cotizacion", () => {
     const checklist = buildOnboardingChecklistViewModel({
       records: [buildRecord("company_ready", "completado")],
       context: {
@@ -143,14 +142,14 @@ describe("onboarding-checklist.service", () => {
     expect(checklist.nextAction?.label).toBe("Crear mi primera cotizacion");
   });
 
-  it("envia datos de empresa al modo inicial minimo", () => {
+  it("despues de cotizar envia a datos minimos de empresa", () => {
     const checklist = buildOnboardingChecklistViewModel({
       records: [buildRecord("first_quote", "completado")],
       context: {
         profile: buildProfile({ empresaNombre: "", empresaTelefono: "" }),
         leadCount: 0,
         quoteStates: ["creada"],
-        latestQuoteId: null,
+        latestQuoteId: "cot-1",
       },
     });
 

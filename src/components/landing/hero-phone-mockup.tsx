@@ -5,7 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import s from "./hero-phone-mockup.module.css";
 
-const HERO_QUOTE_SCREENSHOT = "/ventora-landing-page/capturalanding-pdf.png";
+const HERO_QUOTE_SCREENSHOT = "/ventora-landing-page/capturalanding-pdf-800.webp";
 
 export function HeroPhoneMockup() {
   return (
@@ -19,8 +19,29 @@ export function HeroPhoneMockup() {
               fill
               className={s.screenImage}
               priority
-              unoptimized
               sizes="(max-width: 640px) 420px, 480px"
+              onLoad={(event) => {
+                const img = event.currentTarget;
+                // #region agent log
+                fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "729d6f" },
+                  body: JSON.stringify({
+                    sessionId: "729d6f",
+                    runId: "post-fix",
+                    hypothesisId: "B",
+                    location: "hero-phone-mockup.tsx:onLoad",
+                    message: "hero screenshot loaded",
+                    data: {
+                      src: img.currentSrc || img.src,
+                      naturalWidth: img.naturalWidth,
+                      naturalHeight: img.naturalHeight,
+                    },
+                    timestamp: Date.now(),
+                  }),
+                }).catch(() => {});
+                // #endregion
+              }}
             />
           </div>
         </div>

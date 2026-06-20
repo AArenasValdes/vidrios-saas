@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+<<<<<<< HEAD
 import {
   LuArrowLeft,
   LuBuilding2,
@@ -11,6 +12,9 @@ import {
   LuSave,
   LuUserRound,
 } from "react-icons/lu";
+=======
+import { LuArrowLeft, LuDownload, LuFileCheck2, LuPencil, LuPlus, LuSave, LuUserRound } from "react-icons/lu";
+>>>>>>> codex/TWA-Android
 
 import { STATUS_COPY } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -60,7 +64,11 @@ export function PasoTresPanelAcciones({
               <strong>{isSavingQuote ? "Guardando cotizacion..." : "Guardando borrador..."}</strong>
               <span>
                 {isSavingQuote
+<<<<<<< HEAD
                   ? "No cierres esta pantalla. Apenas termine, veras el resultado."
+=======
+                  ? "No cierres esta pantalla. Apenas termine, veras el resumen del PDF."
+>>>>>>> codex/TWA-Android
                   : "Estamos dejando el borrador listo para seguir despues."}
               </span>
             </div>
@@ -113,8 +121,12 @@ export function PasoTresPanelAcciones({
             <div>
               <strong>Asi se vera tu cotizacion profesional.</strong>
               <span>
+<<<<<<< HEAD
                 Puedes agregar tu logo, telefono y datos de empresa para que el PDF quede
                 listo para enviar.
+=======
+                Puedes agregar tu logo, telefono y datos de empresa para que el PDF quede listo para enviar.
+>>>>>>> codex/TWA-Android
               </span>
             </div>
           </div>
@@ -125,9 +137,9 @@ export function PasoTresPanelAcciones({
           <div className={s.actionCluster}>
             <Link
               className={s.btnPrimary}
-              href={`/print/cotizaciones/${savedRecord.id}`}
-              target={isMobileViewport ? undefined : "_blank"}
+              href="/configuracion/empresa?inicio=1"
             >
+<<<<<<< HEAD
               <LuDownload aria-hidden /> Descargar PDF de prueba
             </Link>
             <Link className={s.btnGhost} href="/configuracion/empresa?inicio=1">
@@ -139,6 +151,22 @@ export function PasoTresPanelAcciones({
           </div>
           <p className={s.actionHintCard}>
             Desde el PDF puedes revisar la hoja final y luego compartir por WhatsApp.
+=======
+              <LuUserRound aria-hidden /> Agregar mis datos de empresa
+            </Link>
+            <Link className={s.btnGhost} href={`/print/cotizaciones/${savedRecord.id}`} target="_blank">
+              <LuDownload aria-hidden /> Descargar PDF de prueba
+            </Link>
+            <Link className={s.btnGhost} href="/cotizaciones/nueva?step=2&onboarding_preview=1">
+              <LuPlus aria-hidden /> Crear otra cotizacion
+            </Link>
+            <button className={s.btnGhost} type="button" onClick={onGoToStepTwo}>
+              <LuPencil aria-hidden /> Editar cotizacion
+            </button>
+          </div>
+          <p className={s.actionHintCard}>
+            Desde el PDF puedes revisar la hoja final y luego descargarla o compartirla por WhatsApp.
+>>>>>>> codex/TWA-Android
           </p>
         </>
       ) : (
@@ -160,7 +188,11 @@ export function PasoTresPanelAcciones({
                 </strong>
                 <span>
                   {isSavingQuote
+<<<<<<< HEAD
                     ? "No cierres esta pantalla. Apenas termine, veras el resultado."
+=======
+                    ? "No cierres esta pantalla. Apenas termine, veras el resumen del PDF."
+>>>>>>> codex/TWA-Android
                     : "Estamos dejando el borrador listo para seguir despues."}
                 </span>
               </div>
@@ -170,7 +202,11 @@ export function PasoTresPanelAcciones({
           <div className={s.actionCluster}>
             <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
               <LuFileCheck2 aria-hidden />{" "}
+<<<<<<< HEAD
               {isSavingQuote ? "Guardando..." : "Guardar y ver resultado"}
+=======
+              {isSavingQuote ? "Guardando..." : "Ver PDF profesional"}
+>>>>>>> codex/TWA-Android
             </button>
             <button className={s.btnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
               <LuSave aria-hidden /> {isSavingDraft ? "Guardando borrador..." : "Guardar borrador"}

@@ -429,7 +429,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     [companyName]
   );
   const isCuentaVencidaRoute = pathname === "/cuenta-vencida";
-  const usesMinimalShell = isCuentaVencidaRoute;
+  const isActivationRoute = pathname.startsWith("/activacion");
+  const usesMinimalShell = isCuentaVencidaRoute || isActivationRoute;
   const shouldRedirectForSubscription =
     profile !== null &&
     subscription.isWriteBlocked &&

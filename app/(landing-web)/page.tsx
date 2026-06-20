@@ -9,7 +9,6 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -247,6 +246,16 @@ const faqs = [
   },
 ] as const;
 
+function subscribeReducedMotion(onStoreChange: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => mediaQuery.removeEventListener("change", onStoreChange);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function SectionReveal({
   children,
   className,
@@ -254,28 +263,50 @@ function SectionReveal({
   children: ReactNode;
   className?: string;
 }) {
-  const reduceMotion = useReducedMotion();
-  const mounted = useSyncExternalStore(
-    () => () => undefined,
-    () => true,
+  const reduceMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
     () => false,
   );
+  const revealRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(reduceMotion);
 
-  if (!mounted || reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
+  useEffect(() => {
+    if (reduceMotion) {
+      setIsVisible(true);
+      return;
+    }
 
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+    const node = revealRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [reduceMotion]);
+
+  const revealClassName = [
+    className,
+    !reduceMotion ? s.sectionReveal : null,
+    !reduceMotion && isVisible ? s.sectionRevealVisible : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return <div ref={revealRef} className={revealClassName}>{children}</div>;
 }
 
 function SectionHeading({
@@ -363,6 +394,47 @@ function CountUpNumber({
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
+
+  useEffect(() => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    const resources = performance
+      .getEntriesByType("resource")
+      .filter(
+        (entry): entry is PerformanceResourceTiming =>
+          "initiatorType" in entry && entry.initiatorType === "script",
+      )
+      .map((entry) => ({
+        name: entry.name.split("/").pop() ?? entry.name,
+        transferSize: "transferSize" in entry ? entry.transferSize : 0,
+        duration: Math.round(entry.duration),
+      }))
+      .sort((a, b) => b.transferSize - a.transferSize)
+      .slice(0, 8);
+
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "729d6f" },
+      body: JSON.stringify({
+        sessionId: "729d6f",
+        runId: "post-fix",
+        hypothesisId: "B",
+        location: "landing-web/page.tsx:useEffect",
+        message: "landing main-thread baseline",
+        data: {
+          domContentLoaded: navigationEntry
+            ? Math.round(navigationEntry.domContentLoadedEventEnd)
+            : null,
+          loadEventEnd: navigationEntry ? Math.round(navigationEntry.loadEventEnd) : null,
+          scriptResources: resources,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, []);
 
   function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
     if (kind === "whatsapp") {

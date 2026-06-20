@@ -100,11 +100,13 @@ export function preparePasoTresGuardado({
   const step1Errors = validateStep1(draftToSave);
   const finalErrors: FieldErrors = { ...step1Errors };
 
-  if (estado === "creada" && draftToSave.items.length === 0) {
+  const quotePricingMode = normalizeQuotePricingMode(draftToSave.quotePricingMode);
+
+  if (estado === "creada" && draftToSave.items.length === 0 && quotePricingMode !== "total_global") {
     finalErrors.items = "Agrega al menos un componente";
   }
 
-  if (estado === "creada" && normalizeQuotePricingMode(draftToSave.quotePricingMode) === "total_global") {
+  if (estado === "creada" && quotePricingMode === "total_global") {
     const totals = calculateGlobalQuoteWorkflowTotals({
       totalClienteManual: draftToSave.totalClienteManual,
       mostrarIva: draftToSave.mostrarIva,
@@ -213,16 +215,23 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
           return;
         }
 
+<<<<<<< HEAD
         if (estado === "creada") {
           await onQuoteCreated?.(record);
         }
 
+=======
+>>>>>>> codex/TWA-Android
         setSaveIntent(null);
         setDraft(draftToSave);
         setSavedRecord(record);
         setLastSaveMode(wasUpdatingRecord ? "actualizada" : estado);
         setStep(3);
         scrollPageToTop();
+
+        if (estado === "creada") {
+          await onQuoteCreated?.(record);
+        }
 
         if (isNewWorkflow) {
           syncWizardWithRecord(record.id);

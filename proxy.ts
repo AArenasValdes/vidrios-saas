@@ -7,6 +7,7 @@ import { isGrowthOnlyUser } from "@/features/growth/services/growth-access.servi
 const protectedPrefixes = [
   "/dashboard",
   "/admin",
+  "/activacion",
   "/clientes",
   "/cotizaciones",
   "/solicitudes",

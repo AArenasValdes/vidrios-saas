@@ -777,12 +777,23 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
     const existingCotizacion = input.existingId
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
+    const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
     const normalizedItems = reconcileWorkflowItemsPricing(
       input.draft.items,
-      normalizeQuotePricingMode(input.draft.quotePricingMode)
+      quotePricingMode
     );
+    const hasTotalGlobalManualTotal =
+      quotePricingMode === "total_global" &&
+      input.draft.totalClienteManual !== null &&
+      input.draft.totalClienteManual !== undefined &&
+      Number.isFinite(input.draft.totalClienteManual) &&
+      input.draft.totalClienteManual > 0;
 
-    if (input.estado !== "borrador" && normalizedItems.length === 0) {
+    if (
+      input.estado !== "borrador" &&
+      normalizedItems.length === 0 &&
+      !hasTotalGlobalManualTotal
+    ) {
       throw new Error("La cotizacion debe tener al menos un componente");
     }
 

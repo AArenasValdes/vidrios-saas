@@ -12,7 +12,11 @@ import {
   LuCopy,
   LuCreditCard,
   LuEye,
+<<<<<<< HEAD
   LuFileText,
+=======
+  LuFileCheck2,
+>>>>>>> codex/TWA-Android
   LuGlobe,
   LuImagePlus,
   LuMail,
@@ -29,7 +33,6 @@ import {
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
@@ -181,6 +184,7 @@ export default function ConfiguracionEmpresaPage() {
   const [isInitialCompanySetup, setIsInitialCompanySetup] = useState(false);
   const [subscriptionSummary, setSubscriptionSummary] =
     useState<SubscriptionSummary | null>(null);
+  const [isInicioMode, setIsInicioMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -191,6 +195,16 @@ export default function ConfiguracionEmpresaPage() {
     if (!profile) return;
     setForm(buildEmpresaProfileInput(profile));
   }, [profile]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const value = new URLSearchParams(window.location.search).get("inicio");
+    const shouldUseInicioMode = value === "1" || value === "true" || value === "si";
+    setIsInicioMode(shouldUseInicioMode);
+    if (shouldUseInicioMode) {
+      setOpenSection("empresa");
+    }
+  }, []);
 
   useEffect(() => {
     if (!profile?.subscription?.isConfigured) return;
@@ -575,6 +589,7 @@ export default function ConfiguracionEmpresaPage() {
     );
   }
 
+<<<<<<< HEAD
   if (isInitialCompanySetup) {
     return (
       <div className={s.root} data-onboarding-target="empresa-config">
@@ -688,6 +703,108 @@ export default function ConfiguracionEmpresaPage() {
             <Link href="/configuracion/empresa" className={s.secondaryLink}>
               Ver configuracion completa
             </Link>
+=======
+  if (isInicioMode) {
+    return (
+      <div className={s.root} data-onboarding-target="empresa-config-minima">
+        <section className={s.publicCard}>
+          <div className={s.publicCardTop}>
+            <span className={s.cardEyebrow}>
+              <LuFileCheck2 aria-hidden />
+              PDF listo para enviar
+            </span>
+            <span className={s.previewModePill}>Opcional</span>
+          </div>
+          <div className={s.publicCardCopy}>
+            <strong>Deja tu cotizacion lista para enviar</strong>
+            <p className={s.publicUrl}>
+              Agrega solo lo basico. Estos datos apareceran en tu PDF profesional.
+            </p>
+          </div>
+        </section>
+
+        <section className={`${s.accordion} ${s.accordionOpen}`}>
+          <div className={s.accordionPanel}>
+            <div className={s.accordionInner}>
+              <div className={s.fieldGrid}>
+                <label className={s.field}>
+                  <span className={s.label}>Nombre de empresa</span>
+                  <input
+                    className={s.input}
+                    value={form.empresaNombre}
+                    onChange={(event) => handleEmpresaNombreChange(event.target.value)}
+                    placeholder="Ej: Vidrieria San Marco"
+                  />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Telefono</span>
+                  <input
+                    className={s.input}
+                    value={form.empresaTelefono}
+                    onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)}
+                    placeholder="+56 9 1234 5678"
+                  />
+                </label>
+                <div className={s.field}>
+                  <span className={s.label}>Logo opcional</span>
+                  <label className={s.logoUpload}>
+                    <div className={s.logoUploadIcon}>
+                      <LuImagePlus aria-hidden />
+                    </div>
+                    <div className={s.logoUploadBody}>
+                      <strong>{isUploading ? "Subiendo logo..." : "Subir logo"}</strong>
+                      <span>PNG o JPG</span>
+                    </div>
+                    <div className={s.logoUploadAction}>+</div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      disabled={isUploading}
+                    />
+                  </label>
+                </div>
+                <label className={s.field}>
+                  <span className={s.label}>Direccion opcional</span>
+                  <input
+                    className={s.input}
+                    value={form.empresaDireccion}
+                    onChange={(event) => handleFieldChange("empresaDireccion", event.target.value)}
+                    placeholder="Ej: Apoquindo 4501, Las Condes"
+                  />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Condiciones de pago opcionales</span>
+                  <textarea
+                    className={s.textarea}
+                    rows={3}
+                    value={form.formaPago}
+                    onChange={(event) => handleFieldChange("formaPago", event.target.value)}
+                    placeholder="Ej: 50% al inicio y 50% al finalizar"
+                  />
+                </label>
+              </div>
+              {sectionFeedback ? (
+                <p className={sectionFeedback.kind === "error" ? s.error : s.success}>
+                  {sectionFeedback.message}
+                </p>
+              ) : null}
+              <div className={s.sectionActions}>
+                <button
+                  type="button"
+                  className={s.saveButton}
+                  onClick={() => void handleSaveSection("empresa")}
+                  disabled={isSaving || savingSection === "empresa"}
+                >
+                  <LuSave aria-hidden />
+                  {savingSection === "empresa" ? "Guardando..." : "Guardar y dejar listo"}
+                </button>
+                <Link href="/dashboard?onboarding_preview=1" className={s.secondaryLink}>
+                  Volver al inicio
+                </Link>
+              </div>
+            </div>
+>>>>>>> codex/TWA-Android
           </div>
         </section>
       </div>
@@ -696,8 +813,6 @@ export default function ConfiguracionEmpresaPage() {
 
   return (
     <div className={s.root} data-onboarding-target="empresa-config">
-      {!isQuoteOnlyPlan ? <OnboardingGuide controller={onboarding} routeKey="empresa" /> : null}
-
       <section className={s.publicCard}>
         <div className={s.publicCardTop}>
           <span className={s.cardEyebrow}>

@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
+import { resolvePrintViewerBackNavigation } from "@/features/onboarding/services/onboarding-activation-flow.service";
 import { splitComponentReference } from "@/features/cotizaciones/services/component-catalog.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { resolveComponentColorName } from "@/constants/component-colors";
@@ -460,9 +461,19 @@ export default function CotizacionPrintPage() {
   const [sheetPreviewHeight, setSheetPreviewHeight] = useState(0);
   const shareIntent = searchParams.get("intent");
   const previewMode = searchParams.get("preview");
-  const fromWizard = searchParams.get("from") === "wizard";
+  const fromContext = searchParams.get("from");
+  const isActivationReplay = searchParams.get("replay") === "1";
   const wasJustCreated = searchParams.get("created") === "1";
   const isEmbeddedPreview = previewMode === "embed";
+  const backNavigation = useMemo(
+    () =>
+      resolvePrintViewerBackNavigation({
+        from: fromContext,
+        cotizacionId: cotizacion?.id ?? params.id,
+        isReplayMode: isActivationReplay,
+      }),
+    [cotizacion?.id, fromContext, isActivationReplay, params.id]
+  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -1768,9 +1779,9 @@ export default function CotizacionPrintPage() {
     return (
       <main className={s.page} style={pageStyle}>
         <div className={s.toolbar}>
-          <Link className={s.actionSecondary} href={fromWizard ? "/cotizaciones" : `/cotizaciones/${params.id}`}>
+          <Link className={s.actionSecondary} href={backNavigation.href}>
             <LuArrowLeft aria-hidden />
-            {fromWizard ? "Volver a cotizaciones" : "Volver"}
+            {backNavigation.label === "Volver al detalle" ? "Volver" : backNavigation.label}
           </Link>
         </div>
 
@@ -1802,7 +1813,7 @@ export default function CotizacionPrintPage() {
                   </button>
                   <Link
                     className={s.actionSecondary}
-                    href={fromWizard ? "/cotizaciones" : `/cotizaciones/${params.id}`}
+                    href={backNavigation.href}
                   >
                     Volver
                   </Link>
@@ -1847,9 +1858,9 @@ export default function CotizacionPrintPage() {
     <main className={s.page} style={pageStyle}>
       {isEmbeddedPreview ? null : (
         <div className={s.toolbar}>
-          <Link className={s.actionSecondary} href={fromWizard ? "/cotizaciones" : `/cotizaciones/${visibleCotizacion.id}`}>
+          <Link className={s.actionSecondary} href={backNavigation.href}>
             <LuArrowLeft aria-hidden />
-            {fromWizard ? "Volver a cotizaciones" : "Volver al detalle"}
+            {backNavigation.label}
           </Link>
 
           <div className={s.toolbarActions}>
