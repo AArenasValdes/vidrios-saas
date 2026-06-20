@@ -151,15 +151,15 @@ function persistActivationResult(input: PersistedActivationResult | null) {
   }
 }
 
-function ActivationBrand() {
+function ActivationBrand({ welcome = false }: { welcome?: boolean }) {
   return (
-    <div className={s.activationBrand}>
+    <div className={`${s.activationBrand} ${welcome ? s.activationBrandWelcome : ""}`}>
       <Image
         alt="Ventora"
-        className={s.activationBrandLogo}
+        className={`${s.activationBrandLogo} ${welcome ? s.activationBrandLogoWelcome : ""}`}
         src="/brand/ventora-logo-boot.svg"
-        width={160}
-        height={38}
+        width={280}
+        height={66}
         unoptimized
         priority
       />
@@ -733,17 +733,18 @@ function ActivacionPageContent() {
   if (step === "welcome") {
     return (
       <div className={s.activationRoot}>
-        <section className={`${s.activationCard} ${s.activationWelcomeCard}`}>
-          <ActivationBrand />
-          <h1 className={s.activationTitle}>Así se verá tu primera cotización</h1>
-          <p className={s.activationText}>
-            Sin configurar nada todavía. En menos de 2 minutos verás el PDF que
-            podrás enviar por WhatsApp.
-          </p>
+        <section className={`${s.activationPage} ${s.activationWelcomePage}`}>
+          <div className={s.activationWelcomeHero}>
+            <ActivationBrand welcome />
+            <h1 className={s.activationTitle}>Crea tu primera cotización</h1>
+            <p className={s.activationText}>
+              Sin configurar precios ni líneas todavía. En menos de 2 minutos tendrás un PDF
+              listo para enviar por WhatsApp.
+            </p>
+          </div>
           <div className={s.activationWelcomePreview} aria-label="Vista previa del PDF">
             <div className={s.activationWelcomePreviewTop}>
-              <span>Vista previa del PDF</span>
-              <strong>Tu Empresa</strong>
+              <span>EJEMPLO DE COTIZACIÓN</span>
             </div>
             <div className={s.activationWelcomePreviewBody}>
               <div className={s.activationWindowPreview} aria-hidden="true">
@@ -765,13 +766,17 @@ function ActivacionPageContent() {
             <button
               type="button"
               className={s.activationPrimary}
+              onClick={startRealQuote}
+            >
+              Crear mi primera cotización
+              <ArrowRight size={18} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={s.activationWelcomeExampleButton}
               onClick={() => setStep("demo")}
             >
               Ver ejemplo de cotización
-              <ArrowRight size={18} aria-hidden />
-            </button>
-            <button type="button" className={s.activationSecondary} onClick={startRealQuote}>
-              Crear una cotización para un cliente
             </button>
             <button type="button" className={s.activationGhost} onClick={() => void skipActivation()}>
               Entrar sin guía
@@ -785,7 +790,7 @@ function ActivacionPageContent() {
   if (step === "choose") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Elige como partir</h1>
@@ -832,7 +837,7 @@ function ActivacionPageContent() {
   if (step === "demo") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Ver un ejemplo</h1>
@@ -897,7 +902,7 @@ function ActivacionPageContent() {
   if (step === "real_mode") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Como quieres crear tu cotizacion?</h1>
@@ -961,7 +966,7 @@ function ActivacionPageContent() {
   if (step === "component_method") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Como quieres calcular este trabajo?</h1>
@@ -1017,7 +1022,7 @@ function ActivacionPageContent() {
   if (step === "real_total") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Ingresar precio final</h1>
@@ -1084,7 +1089,7 @@ function ActivacionPageContent() {
   if (step === "line_setup") {
     return (
       <div className={s.activationRoot}>
-        <section className={`${s.activationCard} ${s.activationCardWithStickyActions}`}>
+        <section className={`${s.activationPage} ${s.activationPageWithStickyActions}`}>
           <ActivationBrand />
           <ActivationLineFlowNav phase="line" />
           <h1 className={s.activationTitle}>Configura tu primera linea</h1>
@@ -1191,7 +1196,7 @@ function ActivacionPageContent() {
 
     return (
       <div className={s.activationRoot}>
-        <section className={`${s.activationCard} ${s.activationCardWithStickyActions}`}>
+        <section className={`${s.activationPage} ${s.activationPageWithStickyActions}`}>
           <ActivationBrand />
           <ActivationLineFlowNav phase="work" />
           <article className={s.activationLineCompactCard}>
@@ -1331,7 +1336,7 @@ function ActivacionPageContent() {
   if (step === "real_component") {
     return (
       <div className={s.activationRoot}>
-        <section className={`${s.activationCard} ${s.activationCardWithStickyActions}`}>
+        <section className={`${s.activationPage} ${s.activationPageWithStickyActions}`}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Ingresa el precio manual</h1>
@@ -1444,7 +1449,7 @@ function ActivacionPageContent() {
 
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>
@@ -1600,7 +1605,7 @@ function ActivacionPageContent() {
   if (step === "company") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationCard}>
+        <section className={s.activationPage}>
           <ActivationBrand />
           <ActivationProgress step={step} />
           <h1 className={s.activationTitle}>Deja tu PDF listo con tus datos</h1>
@@ -1729,7 +1734,7 @@ function ActivacionPageContent() {
 
   return (
     <div className={s.activationRoot}>
-      <section className={s.activationCard}>
+      <section className={s.activationPage}>
         <ActivationBrand />
         <ActivationProgress step={step} />
         <Sparkles size={28} color="#1e88ff" aria-hidden />

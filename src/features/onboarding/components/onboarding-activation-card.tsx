@@ -15,6 +15,7 @@ const STEP_ICON: Record<OnboardingStepKey, ReactNode> = {
   public_page_live: <LuCheck aria-hidden />,
   channel_ready: <LuCheck aria-hidden />,
   first_lead: <LuCheck aria-hidden />,
+  activation_complete: <LuCheck aria-hidden />,
 };
 
 export function OnboardingActivationCard({

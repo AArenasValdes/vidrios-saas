@@ -1154,7 +1154,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={`${s.root}${usesMinimalShell ? ` ${s.rootMinimal}` : ""}`}>
+    <div
+      className={`${s.root}${
+        usesMinimalShell && !isActivationRoute ? ` ${s.rootMinimal}` : ""
+      }`}
+    >
       {!usesMinimalShell ? (
       <aside className={s.sidebar}>
         <div className={s.sidebarTop}>
@@ -1305,9 +1309,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <main
-        className={`${s.main}${usesMinimalShell ? ` ${s.mainMinimal}` : ""}${
-          isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""
-        }`}
+        className={`${s.main}${
+          isActivationRoute
+            ? ` ${s.mainActivation}`
+            : usesMinimalShell
+              ? ` ${s.mainMinimal}`
+              : ""
+        }${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}
       >
         {!usesMinimalShell && !isNuevaCotizacionRoute ? (
           <div className={s.topbar}>
@@ -1361,9 +1369,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
         ) : null}
 
         <div
-          className={`${s.pageContent}${usesMinimalShell ? ` ${s.pageContentMinimal}` : ""}${
-            isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""
-          }`}
+          className={`${s.pageContent}${
+            isActivationRoute
+              ? ` ${s.pageContentActivation}`
+              : usesMinimalShell
+                ? ` ${s.pageContentMinimal}`
+                : ""
+          }${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}`}
         >
           {shouldShowDashboardTrialPill ? (
             <section className={s.trialCompactNotice} role="status" aria-live="polite">

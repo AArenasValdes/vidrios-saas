@@ -73,7 +73,7 @@ type UsePasoTresGuardadoParams = {
     existingClientId?: string | number;
     existingProjectId?: string | number | null;
   }) => Promise<CotizacionWorkflowRecord>;
-  onQuoteCreated?: (record: CotizacionWorkflowRecord) => Promise<void> | void;
+  onQuoteCreated?: (record: CotizacionWorkflowRecord) => Promise<boolean | void> | boolean | void;
   applyQuickEditDraftsToItems: (items: CotizacionWorkflowItem[]) => CotizacionWorkflowItem[];
   resetWorkflowToBlank: () => void;
   openQuotesList: () => void;
@@ -215,13 +215,6 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
           return;
         }
 
-<<<<<<< HEAD
-        if (estado === "creada") {
-          await onQuoteCreated?.(record);
-        }
-
-=======
->>>>>>> codex/TWA-Android
         setSaveIntent(null);
         setDraft(draftToSave);
         setSavedRecord(record);
@@ -230,7 +223,10 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         scrollPageToTop();
 
         if (estado === "creada") {
-          await onQuoteCreated?.(record);
+          const handledPostSaveNavigation = await onQuoteCreated?.(record);
+          if (handledPostSaveNavigation) {
+            return;
+          }
         }
 
         if (isNewWorkflow) {

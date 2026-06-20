@@ -561,7 +561,7 @@ export function PasoUnoDatosCliente({
                 onClick={onContinue}
                 disabled={!canContinue}
               >
-                Elegir cotizacion
+                Ir a componentes
               </button>
             </div>
             <div className={s.stepOneBottomBarMeta}>
@@ -592,7 +592,7 @@ export function PasoUnoDatosCliente({
             onClick={onContinue}
             disabled={!canContinue}
           >
-            Elegir cotizacion <LuChevronRight aria-hidden />
+            Ir a componentes <LuChevronRight aria-hidden />
           </button>
         </div>
       )}

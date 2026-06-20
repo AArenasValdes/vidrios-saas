@@ -112,16 +112,9 @@ export function resolvePrintViewerBackNavigation(input: {
     };
   }
 
-  if (input.from === "wizard") {
-    return {
-      href: "/cotizaciones",
-      label: "Volver a cotizaciones",
-    };
-  }
-
   return {
-    href: `/cotizaciones/${input.cotizacionId}`,
-    label: "Volver al detalle",
+    href: "/cotizaciones",
+    label: "Volver a cotizaciones",
   };
 }
 

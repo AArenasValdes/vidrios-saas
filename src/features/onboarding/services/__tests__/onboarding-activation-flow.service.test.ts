@@ -200,6 +200,15 @@ describe("onboarding-activation-flow.service", () => {
       href: "/activacion?step=result&cotizacion=cot-1",
       label: "Volver a la guia",
     });
+    expect(
+      resolvePrintViewerBackNavigation({
+        from: null,
+        cotizacionId: "cot-1",
+      })
+    ).toEqual({
+      href: "/cotizaciones",
+      label: "Volver a cotizaciones",
+    });
   });
 
   it("debe armar resumen detallado con neto e iva para activacion", () => {

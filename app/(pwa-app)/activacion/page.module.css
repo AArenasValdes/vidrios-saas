@@ -1,26 +1,45 @@
 .activationRoot {
-  min-height: 100dvh;
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 18px 16px calc(26px + env(safe-area-inset-bottom, 0px));
-  background:
-    linear-gradient(135deg, rgba(30, 136, 255, 0.08), transparent 34%),
-    linear-gradient(180deg, #f4f8ff 0%, #ffffff 55%);
+  padding:
+    calc(10px + env(safe-area-inset-top, 0px))
+    16px
+    calc(16px + env(safe-area-inset-bottom, 0px));
+  background: transparent;
+  color: var(--text, #0b1324);
 }
 
-.activationCard {
-  width: min(100%, 420px);
+.activationPage {
+  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   animation: activationStepIn 180ms ease-out both;
 }
 
-.activationWelcomeCard {
-  gap: 20px;
-  padding-top: 8px;
+.activationWelcomePage {
+  gap: 0;
+  min-height: 100%;
+  justify-content: space-between;
+}
+
+.activationWelcomeHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding-top: 4px;
+  margin-bottom: 20px;
+}
+
+.activationWelcomeHero .activationTitle,
+.activationWelcomeHero .activationText {
+  max-width: 34ch;
 }
 
 @keyframes activationStepIn {
@@ -38,13 +57,24 @@
 .activationBrand {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   margin-bottom: 2px;
 }
 
+.activationBrandWelcome {
+  padding: 4px 0 2px;
+}
+
 .activationBrandLogo {
-  width: 150px;
-  height: auto;
+  width: auto;
+  height: 46px;
   display: block;
+}
+
+.activationBrandLogoWelcome {
+  height: clamp(56px, 16vw, 74px);
+  max-width: min(94vw, 320px);
 }
 
 .activationBrandMark {
@@ -69,17 +99,18 @@
 
 .activationTitle {
   margin: 0;
-  font-size: clamp(1.5rem, 5vw, 1.95rem);
-  line-height: 1.15;
+  font-size: clamp(1.55rem, 5.2vw, 2rem);
+  line-height: 1.12;
   color: #0b1324;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .activationText {
   margin: 0;
   color: #475569;
   font-size: 1rem;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .activationActions {
@@ -90,17 +121,19 @@
 }
 
 .activationWelcomeActions {
-  margin-top: 2px;
+  margin-top: auto;
+  padding-top: 18px;
+  width: 100%;
 }
 
 .activationWelcomePreview {
   display: grid;
-  gap: 14px;
-  border: 1px solid #dbe7f5;
-  border-radius: 18px;
-  background: #ffffff;
-  padding: 16px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  gap: 12px;
+  border: 1px solid rgba(217, 224, 234, 0.9);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+  margin-bottom: 4px;
 }
 
 .activationWelcomePreviewTop,
@@ -117,15 +150,16 @@
 }
 
 .activationWelcomePreviewTop {
-  padding-bottom: 12px;
+  justify-content: flex-start;
+  padding-bottom: 10px;
   border-bottom: 1px solid #e8eef6;
 }
 
 .activationWelcomePreviewTop span {
   color: #1e88ff;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
 }
 
 .activationWelcomePreviewTop strong {
@@ -134,7 +168,7 @@
 }
 
 .activationWelcomePreviewBody {
-  gap: 14px;
+  gap: 13px;
 }
 
 .activationWindowPreview {
@@ -192,7 +226,7 @@
 }
 
 .activationWelcomePreviewTotal {
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid #e8eef6;
 }
 
@@ -200,6 +234,21 @@
   color: #0f172a;
   font-size: 1.22rem;
   line-height: 1;
+}
+
+.activationWelcomeExampleButton {
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: #1e88ff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.activationWelcomeExampleButton:hover {
+  color: #0f6fe0;
 }
 
 .activationGlassSketch {
@@ -264,7 +313,8 @@
   justify-content: center;
   gap: 8px;
   min-height: 52px;
-  box-shadow: 0 12px 22px rgba(30, 136, 255, 0.18);
+  width: 100%;
+  box-shadow: 0 8px 18px rgba(30, 136, 255, 0.2);
 }
 
 .activationPrimary:disabled {
@@ -294,10 +344,10 @@
 .activationProgress {
   display: grid;
   gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid #dbeafe;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 0 0 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .activationProgressTop {
@@ -368,8 +418,8 @@
 }
 
 .activationOptionCardRecommended {
-  border-color: #1e88ff;
-  box-shadow: 0 10px 28px rgba(30, 136, 255, 0.12);
+  border-color: rgba(30, 136, 255, 0.42);
+  box-shadow: none;
 }
 
 .activationBadge {
@@ -526,8 +576,8 @@
   line-height: 1.4;
 }
 
-.activationCardWithStickyActions {
-  padding-bottom: 8px;
+.activationPageWithStickyActions {
+  padding-bottom: 4px;
 }
 
 .activationLabelReadable {
@@ -999,11 +1049,15 @@
 }
 
 .activationLoading {
-  min-height: 100dvh;
+  flex: 1;
+  width: 100%;
+  min-height: 100%;
   display: grid;
   place-items: center;
+  padding: 16px;
   color: #64748b;
   font-size: 0.95rem;
+  background: transparent;
 }
 
 :global(body[data-activation-route="true"] [data-nextjs-devtools-button]),
@@ -1016,32 +1070,39 @@
 
 @media (max-width: 640px) {
   .activationRoot {
-    padding: 16px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    padding:
+      calc(8px + env(safe-area-inset-top, 0px))
+      16px
+      calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  .activationCard {
+  .activationPage {
     width: 100%;
   }
 
   .activationActions {
     position: sticky;
     bottom: 0;
-    z-index: 5;
-    margin-inline: -14px;
-    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid rgba(226, 232, 240, 0.82);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.72), #ffffff 34%);
-    backdrop-filter: blur(10px);
+    z-index: 2;
+    margin-top: auto;
+    margin-inline: 0;
+    padding: 14px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(217, 224, 234, 0.72);
+    background: color-mix(in srgb, var(--bg, #f3f5f9) 88%, transparent);
+    backdrop-filter: blur(6px);
   }
 
   .activationWelcomeActions {
-    position: static;
-    margin-inline: 0;
-    padding: 0;
-    border-top: none;
-    background: transparent;
-    backdrop-filter: none;
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    margin: 0;
+    padding: 14px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(217, 224, 234, 0.72);
+    background: color-mix(in srgb, var(--bg, #f3f5f9) 88%, transparent);
+    box-shadow: none;
+    transform: none;
+    backdrop-filter: blur(6px);
   }
 
   .activationFieldRow:not(.activationFieldRowKeepCols),

@@ -5,11 +5,6 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, FileText, Plus, TrendingUp } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-<<<<<<< HEAD
-import { OnboardingActivationCard } from "@/features/onboarding/components/onboarding-activation-card";
-import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
-=======
->>>>>>> codex/TWA-Android
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
 import styles from "./page.mobile.module.css";
@@ -64,13 +59,6 @@ export const DashboardMobile = memo(function DashboardMobile({
         </Link>
       </PremiumPageSection>
 
-<<<<<<< HEAD
-      <PremiumPageSection>
-        <OnboardingActivationCard controller={onboarding} />
-      </PremiumPageSection>
-
-=======
->>>>>>> codex/TWA-Android
       <PremiumPageSection>
         <Link href={summaryHref} className={styles.summaryCard}>
           <span className={styles.summaryIcon}>

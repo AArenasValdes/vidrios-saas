@@ -1401,26 +1401,27 @@ function NuevaCotizacionPageContent() {
     isNewWorkflow: !editId && !duplicateId,
     persistenciaWizard,
     saveWorkflow,
-    onQuoteCreated: async () => {
-      if (!sourceSolicitudId) {
-        return;
+    onQuoteCreated: async (record) => {
+      if (sourceSolicitudId) {
+        try {
+          await fetch("/api/solicitudes", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: sourceSolicitudId,
+              estado: "cerrada",
+            }),
+          });
+        } finally {
+          clearNuevaCotizacionSolicitudSourceId();
+          setSourceSolicitudId(null);
+        }
       }
 
-      try {
-        await fetch("/api/solicitudes", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: sourceSolicitudId,
-            estado: "cerrada",
-          }),
-        });
-      } finally {
-        clearNuevaCotizacionSolicitudSourceId();
-        setSourceSolicitudId(null);
-      }
+      router.push(`/print/cotizaciones/${record.id}?created=1`);
+      return true;
     },
     applyQuickEditDraftsToItems,
     resetWorkflowToBlank,

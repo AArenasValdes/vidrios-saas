@@ -674,6 +674,25 @@
     calc(32px + var(--shell-safe-bottom)) calc(20px + var(--shell-safe-left));
 }
 
+.mainActivation {
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-height: 100dvh;
+  padding: 0;
+}
+
+.pageContentActivation {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -1536,6 +1555,11 @@
   .mainMinimal {
     padding: calc(20px + var(--shell-safe-top)) calc(14px + var(--shell-safe-right))
       calc(20px + var(--shell-safe-bottom)) calc(14px + var(--shell-safe-left));
+  }
+
+  .mainActivation {
+    min-height: 100dvh;
+    padding: 0;
   }
 
   .topbar {

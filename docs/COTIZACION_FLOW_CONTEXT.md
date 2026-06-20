@@ -220,7 +220,7 @@ Acciones:
 - Guardar borrador: estado `borrador`.
 - Guardar cotizacion final: estado `creada`.
 - Guardar y salir: vuelve a `/cotizaciones`.
-- Guardar final abre `/print/cotizaciones/[id]?from=wizard&created=1`.
+- Guardar final abre `/print/cotizaciones/[id]?created=1`.
 
 Validacion final:
 
@@ -682,4 +682,3 @@ Smoke manual recomendado:
 - Confirmar que PDF y WhatsApp siguen funcionando.
 - Agregar o ajustar tests proporcionales al riesgo.
 - Actualizar `docs/agent-map/` si cambian rutas, features, tablas o componentes.
-

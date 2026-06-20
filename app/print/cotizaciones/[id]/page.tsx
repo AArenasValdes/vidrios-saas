@@ -624,7 +624,7 @@ export default function CotizacionPrintPage() {
     : null;
   const isAppleMobile =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const shouldWarmPdf = wasJustCreated || shareIntent === "warm";
+  const shouldWarmPdf = shareIntent === "warm";
   const whatsappActionLabel = "Enviar link por WhatsApp";
   const shareHintText =
     "Para mantener aprobacion y rechazo rastreables, este boton abre WhatsApp con el link publico de la cotizacion. Si ademas necesitas archivo, usa Descargar PDF.";
@@ -948,8 +948,8 @@ export default function CotizacionPrintPage() {
       });
     };
 
-    const idleTimeout = wasJustCreated ? 500 : 1200;
-    const fallbackDelay = wasJustCreated ? 180 : 900;
+    const idleTimeout = 1800;
+    const fallbackDelay = 1400;
     const idleCallback =
       "requestIdleCallback" in window
         ? window.requestIdleCallback(scheduleWarmPdf, { timeout: idleTimeout })
@@ -975,7 +975,6 @@ export default function CotizacionPrintPage() {
     pdfCacheKey,
     renderedPageCount,
     shouldWarmPdf,
-    wasJustCreated,
   ]);
 
   const handleDownloadPdf = useCallback(async () => {
@@ -1781,7 +1780,7 @@ export default function CotizacionPrintPage() {
         <div className={s.toolbar}>
           <Link className={s.actionSecondary} href={backNavigation.href}>
             <LuArrowLeft aria-hidden />
-            {backNavigation.label === "Volver al detalle" ? "Volver" : backNavigation.label}
+            {backNavigation.label}
           </Link>
         </div>
 
