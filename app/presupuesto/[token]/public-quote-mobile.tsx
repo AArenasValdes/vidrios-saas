@@ -1,15 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import type { ComponentPropsWithoutRef } from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   LuCalendarClock,
   LuDownload,
   LuFileText,
   LuShieldCheck,
-  LuX,
 } from "react-icons/lu";
 
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
@@ -18,19 +16,6 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 
 import s from "./public-quote-mobile.module.css";
 import { PublicQuoteActionButton } from "./public-quote-action-button";
-
-const PublicQuoteDocument = dynamic(
-  () => import("./documento/public-quote-document").then((mod) => mod.PublicQuoteDocument),
-  {
-    ssr: false,
-    loading: () => (
-      <div className={s.overlayLoading}>
-        <strong>Preparando documento...</strong>
-        <span>Tu PDF se abre sin recargar pagina.</span>
-      </div>
-    ),
-  }
-);
 
 const CLP = (value: number) =>
   new Intl.NumberFormat("es-CL", {
@@ -131,8 +116,6 @@ export function PublicQuoteMobile({
   acceptAction,
   rejectAction,
 }: PublicQuoteMobileProps) {
-  const [isDocumentOpen, setIsDocumentOpen] = useState(false);
-
   useEffect(() => {
     if (!decisionMessage) {
       return;
@@ -149,19 +132,6 @@ export function PublicQuoteMobile({
     });
   }, [decisionMessage, quote.codigo, quote.estado, quote.total]);
 
-  useEffect(() => {
-    if (!isDocumentOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isDocumentOpen]);
-
   const surfaceM2 = quote.items.reduce((accumulator, item) => {
     if (!item.ancho || !item.alto) {
       return accumulator;
@@ -170,6 +140,7 @@ export function PublicQuoteMobile({
     return accumulator + (item.ancho * item.alto * item.cantidad) / 1_000_000;
   }, 0);
   const showItemPrices = quote.pricingMode !== "total_global";
+  const documentUrl = `/presupuesto/${quote.approvalToken}/documento?embed=1`;
   const downloadUrl = `/presupuesto/${quote.approvalToken}/documento?download=1&embed=1`;
   const issueDate = formatShortDate(quote.createdAt ?? quote.updatedAt);
   const isFinalState = Boolean(decisionMessage);
@@ -189,7 +160,6 @@ export function PublicQuoteMobile({
       quoteCode: quote.codigo,
       source: "public-quote",
     });
-    setIsDocumentOpen(true);
   };
   const handleDownload = () => {
     googleTagService.trackPdfAction({
@@ -197,12 +167,10 @@ export function PublicQuoteMobile({
       quoteCode: quote.codigo,
       source: "public-quote",
     });
-    window.open(downloadUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
-    <>
-      <section className={s.mobileShell}>
+    <section className={s.mobileShell}>
         <article className={s.topCard}>
           <div className={s.topRow}>
             <div className={s.logoWrap}>
@@ -305,18 +273,18 @@ export function PublicQuoteMobile({
           </div>
 
           <div className={s.pdfActions}>
-            <button className={s.pdfActionSecondary} type="button" onClick={handleOpenDocument}>
+            <a className={s.pdfActionSecondary} href={documentUrl} onClick={handleOpenDocument}>
               <LuFileText aria-hidden />
               Ver
-            </button>
-            <button
+            </a>
+            <a
               className={s.pdfActionSecondary}
-              type="button"
+              href={downloadUrl}
               onClick={handleDownload}
             >
               <LuDownload aria-hidden />
               Descargar
-            </button>
+            </a>
           </div>
         </article>
 
@@ -376,45 +344,6 @@ export function PublicQuoteMobile({
           </article>
         )}
 
-      </section>
-
-      {isDocumentOpen ? (
-        <div className={s.overlay} role="dialog" aria-modal="true" aria-label="Vista completa del presupuesto">
-          <button className={s.overlayBackdrop} type="button" onClick={() => setIsDocumentOpen(false)} />
-          <div className={s.overlayPanel}>
-            <div className={s.overlayHeader}>
-              <div className={s.overlayTitleBlock}>
-                <span className={s.sectionLabel}>PROPUESTA COMPLETA</span>
-                <strong className={s.overlayTitle}>{quote.codigo}</strong>
-              </div>
-              <div className={s.overlayActions}>
-                <button
-                  className={s.overlayAction}
-                  type="button"
-                  onClick={handleDownload}
-                >
-                  <LuDownload aria-hidden />
-                  Descargar
-                </button>
-                <button className={s.overlayClose} type="button" onClick={() => setIsDocumentOpen(false)}>
-                  <LuX aria-hidden />
-                </button>
-              </div>
-            </div>
-
-            <div className={s.overlayBody}>
-              <div className={s.overlayDocument}>
-                <PublicQuoteDocument
-                  quote={quote}
-                  backHref={`/presupuesto/${quote.approvalToken}`}
-                  downloadOnLoad={false}
-                  embedded
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </>
+    </section>
   );
 }

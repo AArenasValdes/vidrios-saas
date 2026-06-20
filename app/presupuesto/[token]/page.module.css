@@ -838,8 +838,10 @@
 
 @media screen and (max-width: 720px) {
   .page {
+    background: #eef3f8;
     padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
       env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    overflow-x: hidden;
   }
 
   .mobileOnly {
