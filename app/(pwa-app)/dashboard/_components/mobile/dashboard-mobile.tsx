@@ -5,8 +5,6 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, FileText, Plus, TrendingUp } from "lucide-react";
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
-import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { DashboardMobileProps } from "../../_hooks/use-dashboard-view-model";
 import { DashboardAppRefreshButton } from "../shared/dashboard-app-refresh-button";
 import styles from "./page.mobile.module.css";
@@ -37,8 +35,6 @@ export const DashboardMobile = memo(function DashboardMobile({
   isLoading,
   isEmpty,
 }: DashboardMobileProps) {
-  const onboarding = useOnboardingChecklist();
-
   return (
     <div className={styles.page}>
       <PremiumPageSection
@@ -62,8 +58,6 @@ export const DashboardMobile = memo(function DashboardMobile({
           Crear cotización rápida
         </Link>
       </PremiumPageSection>
-
-      <OnboardingGuide controller={onboarding} routeKey="dashboard" />
 
       <PremiumPageSection>
         <Link href={summaryHref} className={styles.summaryCard}>

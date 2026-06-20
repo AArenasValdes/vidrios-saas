@@ -282,7 +282,9 @@ export function usePersistenciaNuevaCotizacion(
       initializedRef.current = true;
       lastCommittedSignatureRef.current = blankSignature;
 
-      if (persisted) {
+      const shouldStartAtRequestedStep = requestedStep === 2;
+
+      if (persisted && !shouldStartAtRequestedStep) {
         programarBootstrapWorkflow({
           draft: persisted.draft,
           componentForm: persisted.componentForm,
@@ -301,7 +303,7 @@ export function usePersistenciaNuevaCotizacion(
           selectedClientId: "",
           clientQuery: "",
           showStep1MoreData: false,
-          step: 1,
+          step: shouldStartAtRequestedStep ? 2 : 1,
           expandedQuickEditItemId: null,
         });
       }

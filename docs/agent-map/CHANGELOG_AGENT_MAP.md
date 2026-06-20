@@ -4,6 +4,34 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-19 - Onboarding de activacion `/activacion`
+
+### Resumen
+
+Se documento el nuevo flujo de **primera activacion** separado del dashboard: wizard en `/activacion` para admins sin cotizaciones, con demo, cotizacion real por total o por componentes, resumen neto/IVA, PDF con vuelta a la guia, y datos de empresa opcionales.
+
+### Documentacion nueva/actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/ACTIVATION_ONBOARDING.md` | **Nuevo** - doc maestra del flujo, QA, handoff visual |
+| `docs/agent-map/README.md` | Indice con link a ACTIVATION_ONBOARDING |
+| `docs/agent-map/ROUTES_MAP.md` | Ruta `/activacion`; dashboard sin card embebida |
+| `docs/agent-map/FEATURES_MAP.md` | Feature activacion + checklist legacy actualizado |
+
+### Implementacion de referencia
+
+| Area | Archivos |
+|---|---|
+| UI wizard | `app/(pwa-app)/activacion/page.tsx`, `page.module.css` |
+| Borradores + resumen | `src/features/onboarding/services/onboarding-activation-flow.service.ts` |
+| Gate | `useActivationGate.ts`, `app/api/onboarding/activation/status/route.ts` |
+| PDF back nav | `app/print/cotizaciones/[id]/page.tsx` (`from=activacion`) |
+| Save total global | `cotizaciones.service.ts` (items vacios + total manual) |
+| Migracion | `20260619120000_onboarding_activation_complete.sql` |
+
+---
+
 ## 2026-06-11 - Componentes solo vidrio (Espejo y Cubierta de mesa)
 
 ### Resumen

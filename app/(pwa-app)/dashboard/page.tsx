@@ -2,6 +2,7 @@
 
 import { PremiumPageReveal } from "@/components/motion/premium-page-reveal";
 import { SubscriptionBadge } from "@/features/subscriptions/components/subscription-badge";
+import { useActivationGate } from "@/features/onboarding/hooks/useActivationGate";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { DashboardDesktop } from "./_components/desktop/dashboard-desktop";
 import { DashboardMobile } from "./_components/mobile/dashboard-mobile";
@@ -20,6 +21,7 @@ function isSubscriptionUrgent(
 }
 
 export default function DashboardPage() {
+  useActivationGate({ redirectWhenNeeded: true });
   const viewModel = useDashboardViewModel();
   const isDesktop = useDashboardBreakpoint();
   const { profile } = useOrganizationProfile();

@@ -28,6 +28,7 @@ type OnboardingChecklistRow = {
 type QuoteStateRow = {
   id: EntityId;
   estado: string | null;
+  pdf_descargado_en: string | null;
   actualizado_en: string | null;
   creado_en: string | null;
 };
@@ -128,7 +129,7 @@ export function createOnboardingChecklistRepository(
     async listQuoteStates(organizationId: EntityId) {
       const { data, error } = await supabase
         .from("cotizaciones")
-        .select("id, estado, actualizado_en, creado_en")
+        .select("id, estado, pdf_descargado_en, actualizado_en, creado_en")
         .eq("organization_id", organizationId)
         .is("eliminado_en", null)
         .order("actualizado_en", { ascending: false, nullsFirst: false })
@@ -142,6 +143,7 @@ export function createOnboardingChecklistRepository(
       return (data as QuoteStateRow[]).map((row) => ({
         id: String(row.id),
         estado: row.estado ?? "",
+        pdfDescargadoEn: row.pdf_descargado_en,
         actualizadoEn: row.actualizado_en,
         creadoEn: row.creado_en,
       }));

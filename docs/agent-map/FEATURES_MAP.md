@@ -125,35 +125,46 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
-## Feature: Onboarding Comercial Guiado
+## Feature: Onboarding de activacion (`/activacion`)
 
-- **Que hace**: Checklist admin-only de activacion comercial con persistencia compartida por organizacion. Orquesta el primer circuito de valor: empresa lista, pagina publicada, canal compartido, primera solicitud, primera cotizacion y primer PDF/link compartido.
-- **Rutas involucradas**: `/dashboard`, `/configuracion/empresa`, `/configuracion/pagina-venta`, `/solicitudes/canales`, `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
+- **Que hace**: Wizard mobile-first **separado del dashboard** para admins sin cotizaciones. Primer logro = crear cotizacion + ver PDF. Opcional: datos de empresa. Persiste cierre en `activation_complete`.
+- **Rutas involucradas**: `/activacion`, `/dashboard` (gate redirect), `/print/cotizaciones/[id]`, `/configuracion/empresa` (opcional post-wizard)
+- **Documentacion completa**: `docs/agent-map/ACTIVATION_ONBOARDING.md`
+- **Archivos principales**:
+  - `app/(pwa-app)/activacion/page.tsx`
+  - `app/(pwa-app)/activacion/page.module.css`
+  - `src/features/onboarding/services/onboarding-activation-flow.service.ts`
+  - `src/features/onboarding/hooks/useActivationGate.ts`
+  - `app/api/onboarding/activation/status/route.ts`
+  - `supabase/migrations/20260619120000_onboarding_activation_complete.sql`
+  - `src/components/layout/app-shell.tsx` (shell minimal)
+  - `proxy.ts`
+- **Modos de cotizacion**:
+  - Demo fijo (por_item, ventana ejemplo)
+  - Real rapida por total (`total_global`, sin items ficticios)
+  - Real con componentes (`por_item`, PDF igual al productivo)
+- **Hooks/servicios**: `useActivationGate`, `buildActivation*Draft`, `finalizeActivationDraftForSave`, `buildActivationQuoteSummary`
+- **Tablas Supabase**: `onboarding_checklists`, `cotizaciones`, `cotizacion_items`, `organization_profile`
+- **Consideraciones UX**: Sin bottom nav en `/activacion`. `?replay=1` para QA. PDF vuelve a guia con `?from=activacion`. Resumen explica neto vs IVA.
+- **Riesgos**: No abrir wizard completo de `/cotizaciones/nueva` aqui. No reintroducir card en dashboard. Total global debe permitir guardado sin items.
+
+---
+
+## Feature: Onboarding Comercial Guiado (checklist)
+
+- **Que hace**: Checklist admin-only con persistencia por organizacion. Pasos derivados (`first_quote`, empresa minima, `first_share`). **La entrada principal de primera cotizacion ahora es `/activacion`** (card del dashboard eliminada).
+- **Rutas involucradas**: `/configuracion/empresa?inicio=1`, `/cotizaciones`, `/cotizaciones/[id]`, `/print/cotizaciones/[id]`
 - **Archivos principales**:
   - `src/features/onboarding/types/onboarding-checklist.ts`
   - `src/features/onboarding/repositories/onboarding-checklist.repository.ts`
   - `src/features/onboarding/services/onboarding-checklist.service.ts`
   - `src/features/onboarding/hooks/useOnboardingChecklist.ts`
-  - `src/features/onboarding/components/onboarding-guide.tsx`
-  - `src/features/onboarding/components/onboarding-mobile-guide.tsx`
-  - `src/features/onboarding/components/onboarding-inline-hint.tsx`
-  - `src/features/onboarding/components/onboarding-step-card.tsx`
-  - `src/features/onboarding/components/onboarding-progress.tsx`
-  - `src/features/onboarding/components/onboarding-guide.module.css`
+  - `src/features/onboarding/components/onboarding-guide.tsx` (legacy)
   - `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Componentes principales**: `OnboardingGuide`, `OnboardingMobileGuide`, `OnboardingInlineHint`, `OnboardingStepCard`, `OnboardingProgress`
-- **Hooks/servicios/actions**: `useOnboardingChecklist`, `onboardingChecklistService`, `createOnboardingChecklistRepository`
-- **Tablas Supabase**: `onboarding_checklists`, `organization_profile`, `solicitudes_contacto`, `cotizaciones`, `users`
-- **Flujo de datos**:
-  - Ruta privada -> `useOnboardingChecklist()` -> `onboardingChecklistService.getChecklistByOrganizationId()` -> repository -> Supabase
-  - Pasos derivados: `organization_profile` + `solicitudes_contacto` + `cotizaciones`
-  - Pasos manuales: interacciones reales en copy/share/QR/PDF/WhatsApp -> `markChannelReady()` / `markFirstShare()`
-- **Estados importantes**: `pendiente`, `en_progreso`, `completado`, `omitido`
-- **Donde editar UI**: `src/features/onboarding/components/`, rutas privadas que montan Joyride
-- **Donde editar logica**: `src/features/onboarding/services/onboarding-checklist.service.ts`
-- **Donde editar persistencia**: `src/features/onboarding/repositories/onboarding-checklist.repository.ts`, `supabase/migrations/20260522113000_onboarding_checklists.sql`
-- **Consideraciones UX**: Solo visible para `rol === "admin"` y solo mientras `first_quote` siga incompleto. En movil usa una guia propia tipo bottom sheet y se pausa si aparece el banner PWA de instalacion. No aparece en `/solicitud/[empresa]` ni en `/presupuesto/[token]`. Se muestra una vez por paso/ruta usando `localStorage` para no interrumpir en cada carga.
-- **Riesgos al modificar**: No marcar pasos por UI decorativa ni por visitas pasivas. `channel_ready` y `first_share` deben salir de acciones reales. No romper el flujo de PDF, WhatsApp ni el aislamiento por `organization_id`.
+- **Hooks/servicios/actions**: `useOnboardingChecklist`, `onboardingChecklistService`
+- **Tablas Supabase**: `onboarding_checklists`, `organization_profile`, `cotizaciones`
+- **Consideraciones UX**: `?onboarding_preview=1` en checklist legacy. Primera cotizacion guiada -> `/activacion`.
+- **Riesgos**: No duplicar UX de activacion en dashboard. `first_share` requiere accion real de compartir.
 
 ---
 

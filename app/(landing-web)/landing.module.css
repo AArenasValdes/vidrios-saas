@@ -213,13 +213,38 @@
   background: linear-gradient(180deg, rgba(11, 15, 23, 0.96) 0%, rgba(5, 5, 5, 0.98) 100%);
 }
 
+.sectionReveal {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+}
+
+.sectionRevealVisible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sectionReveal,
+  .sectionRevealVisible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .heroSection::before {
   content: "";
   position: absolute;
   inset: 0;
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.96) 0%, rgba(11, 15, 23, 0.9) 42%, rgba(11, 15, 23, 0.72) 62%, rgba(5, 5, 5, 0.78) 100%),
-    url("/brand/landing-cotizar-bg.png");
+    image-set(
+      url("/brand/landing-cotizar-bg.webp") type("image/webp"),
+      url("/brand/landing-cotizar-bg.png") type("image/png")
+    );
   background-position: center right;
   background-size: cover;
   opacity: 0.9;
@@ -550,7 +575,10 @@
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.88) 0%, rgba(11, 15, 23, 0.74) 48%, rgba(11, 15, 23, 0.86) 100%),
     linear-gradient(180deg, rgba(11, 15, 23, 0.22) 0%, rgba(5, 5, 5, 0.64) 100%),
-    url("/brand/landing-cotizar-bg.png");
+    image-set(
+      url("/brand/landing-cotizar-bg.webp") type("image/webp"),
+      url("/brand/landing-cotizar-bg.png") type("image/png")
+    );
   background-size: cover;
   background-position: center center;
   opacity: 0.78;

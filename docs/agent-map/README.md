@@ -20,6 +20,7 @@ Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones a
 6. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
 7. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
 8. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
+9. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
 
 ## Advertencia critica
 
@@ -50,4 +51,5 @@ docs/agent-map/
   AGENT_TASK_GUIDE.md       <- Guia practica por tarea
   TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
   CHANGELOG_AGENT_MAP.md    <- Historial de cambios
+  ACTIVATION_ONBOARDING.md  <- Onboarding /activacion (primera cotizacion)
 ```

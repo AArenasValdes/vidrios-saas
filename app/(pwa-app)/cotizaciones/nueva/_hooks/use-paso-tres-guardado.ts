@@ -101,11 +101,13 @@ export function preparePasoTresGuardado({
   const step1Errors = validateStep1(draftToSave);
   const finalErrors: FieldErrors = { ...step1Errors };
 
-  if (estado === "creada" && draftToSave.items.length === 0) {
+  const quotePricingMode = normalizeQuotePricingMode(draftToSave.quotePricingMode);
+
+  if (estado === "creada" && draftToSave.items.length === 0 && quotePricingMode !== "total_global") {
     finalErrors.items = "Agrega al menos un componente";
   }
 
-  if (estado === "creada" && normalizeQuotePricingMode(draftToSave.quotePricingMode) === "total_global") {
+  if (estado === "creada" && quotePricingMode === "total_global") {
     const totals = calculateGlobalQuoteWorkflowTotals({
       totalClienteManual: draftToSave.totalClienteManual,
       mostrarIva: draftToSave.mostrarIva,
@@ -138,7 +140,6 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
     onQuoteCreated,
     applyQuickEditDraftsToItems,
     resetWorkflowToBlank,
-    openPrintViewer,
     openQuotesList,
     syncWizardWithRecord,
     setDraft,
@@ -215,18 +216,16 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
           return;
         }
 
-        if (estado === "creada") {
-          await onQuoteCreated?.(record);
-          openPrintViewer(record.id);
-          return;
-        }
-
         setSaveIntent(null);
         setDraft(draftToSave);
         setSavedRecord(record);
         setLastSaveMode(wasUpdatingRecord ? "actualizada" : estado);
         setStep(3);
         scrollPageToTop();
+
+        if (estado === "creada") {
+          await onQuoteCreated?.(record);
+        }
 
         if (isNewWorkflow) {
           syncWizardWithRecord(record.id);
@@ -249,7 +248,6 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
       draft,
       editingItemId,
       isNewWorkflow,
-      openPrintViewer,
       onQuoteCreated,
       openQuotesList,
       persistenciaWizard,

@@ -18,8 +18,8 @@ export function PasoDosModoCotizacion({
   return (
     <section className={s.stepTwoModeChoice}>
       <div className={s.stepTwoModeChoiceHead}>
-        <h2>¿Cómo quieres calcular el presupuesto?</h2>
-        <p>Elige si quieres sumar ítems o ingresar un total final.</p>
+        <h2>Como quieres calcular el presupuesto?</h2>
+        <p>Elige si quieres sumar items o ingresar un total final.</p>
       </div>
 
       <div className={s.stepTwoModeChoiceGrid}>
@@ -35,7 +35,7 @@ export function PasoDosModoCotizacion({
           </div>
 
           <div className={s.stepTwoModeChoiceCardCopy}>
-            <strong>Cotizar por ítems</strong>
+            <strong>Cotizar por items</strong>
             <p>Para ventanas, puertas, shower o varios trabajos.</p>
           </div>
 
@@ -44,7 +44,7 @@ export function PasoDosModoCotizacion({
             className={s.btnPrimary}
             onClick={() => onSelectMode("por_item")}
           >
-            Usar ítems
+            Usar items
           </button>
         </article>
 
@@ -52,7 +52,7 @@ export function PasoDosModoCotizacion({
           className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}
         >
           <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
-            Modo rápido
+            Modo rapido
           </span>
 
           <div

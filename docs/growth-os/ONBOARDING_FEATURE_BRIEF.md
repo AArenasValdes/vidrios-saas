@@ -13,28 +13,33 @@ Un cliente nuevo puede entrar a Ventora, ver valor conceptual, pero no llegar ra
 
 ## Objetivo
 
-Guiar al usuario hasta completar su primer circuito de valor:
+Guiar al usuario hasta completar su primer circuito de valor comercial minimo:
 
-`perfil listo -> landing publica -> primer lead -> primera cotizacion -> primer link/PDF compartido`
+`primera cotizacion -> ver PDF -> (opcional) datos empresa -> entrar a Ventora`
 
-## Pasos guiados
+**Entrada principal (2026-06-19):** wizard `/activacion` para admins sin cotizaciones. Ver `docs/agent-map/ACTIVATION_ONBOARDING.md`.
+
+Circuito extendido (checklist legacy): perfil listo -> landing publica -> primer lead -> compartir PDF/link.
+
+## Pasos guiados (activacion /activacion)
+
+1. bienvenida
+2. elegir demo o cotizacion real
+3. generar cotizacion (rapida por total o con componentes)
+4. ver PDF como lo vera el cliente
+5. opcional: datos de empresa
+6. entrar a Ventora
+
+## Pasos guiados (checklist legacy)
 
 1. completar empresa
 2. activar pagina publica
 3. copiar link o QR
 4. generar solicitud de prueba
-5. crear primera cotizacion
+5. crear primera cotizacion (ahora preferir `/activacion`)
 6. compartir PDF o link
 
-## Rutas donde aparece
-
-- `/dashboard`
-- `/configuracion/empresa`
-- `/configuracion/pagina-venta`
-- `/solicitudes/canales`
-- `/cotizaciones/nueva`
-
-## Ruta con ayuda contextual opcional
+## Rutas donde aparece checklist legacy
 
 - `/cotizaciones/[id]`
 
@@ -91,11 +96,13 @@ Requisitos:
 
 ## QA
 
-- el checklist aparece en dashboard para clientes nuevos
-- cada paso lleva a la ruta correcta
-- el progreso cambia al completar accion real
-- mobile first sin saturar la pantalla
-- no bloquea rutas existentes
+- admin nuevo sin cotizaciones redirige a `/activacion`
+- demo, real por total y real por componentes generan cotizacion y PDF coherentes
+- PDF desde activacion vuelve a la guia (`from=activacion`)
+- datos empresa opcionales persisten en perfil
+- `?replay=1` permite repetir sin persistir complete/skip
+- mobile first sin bottom nav en `/activacion`
+- checklist legacy no duplica UX en dashboard
 
 ## Riesgos
 
@@ -106,8 +113,8 @@ Requisitos:
 
 ## Criterios de terminado
 
-- el usuario nuevo ve el checklist
-- al menos 6 pasos estan definidos
-- el sistema puede detectar completitud minima de pasos clave
-- existe plan de QA por ruta
-- la experiencia no reintroduce complejidad innecesaria
+- admin nuevo completa primera cotizacion + ve PDF en `/activacion`
+- puede omitir guia o completar datos empresa opcionales
+- gate no re-redirige tras `activation_complete`
+- existe plan de QA por modo (demo, total, componentes)
+- la experiencia no abre wizard completo de `/cotizaciones/nueva`

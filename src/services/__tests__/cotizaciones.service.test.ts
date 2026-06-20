@@ -860,6 +860,44 @@ describe("cotizaciones.service", () => {
     expect(cotizacionesRepository.create).not.toHaveBeenCalled();
   });
 
+  it("debe permitir guardar total global sin componentes cuando hay total manual", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    const record = await service.saveWorkflow({
+      organizationId: 77,
+      estado: "creada",
+      draft: {
+        clienteNombre: "Marcos Banda",
+        clienteTelefono: "+56 9 1234 5678",
+        obra: "Puerta",
+        direccion: "",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "Puerta 2000x1800",
+        quotePricingMode: "total_global",
+        totalClienteManual: 250000,
+        mostrarIva: false,
+        items: [],
+      },
+    });
+
+    expect(cotizacionesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pricingMode: "total_global",
+        total: 250000,
+        items: [],
+      })
+    );
+  });
+
   it("debe eliminar una cotizacion con soft delete", async () => {
     const cotizacionesRepository = createCotizacionesRepositoryMock();
     const service = createCotizacionesAppService({
