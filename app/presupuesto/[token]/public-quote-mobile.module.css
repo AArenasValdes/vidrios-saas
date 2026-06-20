@@ -128,7 +128,7 @@
 }
 
 .totalBlock {
-  display: grid;
+  display: none;
   gap: 8px;
 }
 
