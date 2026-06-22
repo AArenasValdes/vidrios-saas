@@ -305,6 +305,7 @@
 
 .pdfActionsCompact {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -312,9 +313,9 @@
 .pdfActionSecondary {
   min-height: 52px;
   border-radius: 16px;
-  border: 1px solid rgba(79, 125, 212, 0.24);
+  border: 1px solid rgba(79, 125, 212, 0.22);
   font-family: "Lato", sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -325,13 +326,13 @@
 }
 
 .pdfActionPrimary {
-  background: #4f7dd4;
-  border-color: #4f7dd4;
-  color: #ffffff;
+  background: rgba(79, 125, 212, 0.1);
+  border-color: rgba(79, 125, 212, 0.18);
+  color: #243b6b;
 }
 
 .pdfActionSecondary {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.72);
   color: #243b6b;
 }
 
@@ -457,5 +458,11 @@
 @media screen and (max-width: 768px) {
   .mobileShell {
     gap: 12px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .pdfActionsCompact {
+    grid-template-columns: 1fr;
   }
 }

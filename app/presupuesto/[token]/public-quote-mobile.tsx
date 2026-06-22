@@ -140,8 +140,8 @@ export function PublicQuoteMobile({
     return accumulator + (item.ancho * item.alto * item.cantidad) / 1_000_000;
   }, 0);
   const showItemPrices = quote.pricingMode !== "total_global";
-  const documentUrl = `/presupuesto/${quote.approvalToken}/documento?embed=1`;
-  const downloadUrl = `/presupuesto/${quote.approvalToken}/documento?download=1&embed=1`;
+  const documentUrl = `/presupuesto/${quote.approvalToken}/documento`;
+  const downloadUrl = `/presupuesto/${quote.approvalToken}/documento?download=1`;
   const issueDate = formatShortDate(quote.createdAt ?? quote.updatedAt);
   const isFinalState = Boolean(decisionMessage);
   const canShowReviewTools = quote.canRespond && !isFinalState;

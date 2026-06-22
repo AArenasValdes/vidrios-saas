@@ -19,6 +19,9 @@
 }
 
 .toolbar {
+  position: sticky;
+  top: 10px;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -125,5 +128,31 @@
 
   .sheetWrap {
     overflow: visible;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .page {
+    padding: 10px 10px 24px;
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+    display: grid;
+    gap: 8px;
+    top: 8px;
+  }
+
+  .toolbarLink,
+  .toolbarAction {
+    width: 100%;
+  }
+
+  .toolbarLink {
+    justify-content: flex-start;
+  }
+
+  .toolbarInfo {
+    padding: 2px 4px;
   }
 }
