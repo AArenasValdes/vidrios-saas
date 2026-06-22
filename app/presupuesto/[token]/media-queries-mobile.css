@@ -8,15 +8,13 @@
   .topCard,
   .summaryCard,
   .detailsCard,
-  .pdfCard,
   .finalCard {
     border-radius: 18px;
   }
   
   .topCard,
   .summaryCard,
-  .detailsCard,
-  .pdfCard {
+  .detailsCard {
     padding: 12px;
   }
   
@@ -36,7 +34,7 @@
     font-size: clamp(36px, 10vw, 54px);
   }
   
-  .pdfActions {
-    grid-template-columns: 1fr;
+  .pdfActionsCompact {
+    gap: 10px;
   }
 }

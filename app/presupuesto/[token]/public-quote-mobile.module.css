@@ -25,7 +25,6 @@
 .topCard,
 .summaryCard,
 .detailsCard,
-.pdfCard,
 .finalCard {
   position: relative;
   z-index: 0;
@@ -303,68 +302,36 @@
   color: #667085;
 }
 
-.pdfCard {
-  padding: 14px;
+.pdfActionsCompact {
   display: grid;
-  gap: 14px;
-}
-
-.pdfHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.pdfTitle {
-  margin: 4px 0 4px;
-  font-family: "Syne", sans-serif;
-  font-size: 18px;
-  line-height: 1.08;
-  color: #243b6b;
-}
-
-.pdfText {
-  margin: 0;
-  font-family: "Lato", sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #667085;
-}
-
-.pdfIcon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: rgba(79, 125, 212, 0.08);
-  color: #335ea9;
-  border: 1px solid rgba(79, 125, 212, 0.12);
-  flex-shrink: 0;
-}
-
-.pdfActions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
+.pdfActionPrimary,
 .pdfActionSecondary {
-  min-height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(79, 125, 212, 0.2);
-  background: #ffffff;
-  color: #243b6b;
+  min-height: 52px;
+  border-radius: 16px;
+  border: 1px solid rgba(79, 125, 212, 0.24);
   font-family: "Lato", sans-serif;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
   text-decoration: none;
   cursor: pointer;
+  box-sizing: border-box;
+}
+
+.pdfActionPrimary {
+  background: #4f7dd4;
+  border-color: #4f7dd4;
+  color: #ffffff;
+}
+
+.pdfActionSecondary {
+  background: #ffffff;
+  color: #243b6b;
 }
 
 .trustNote {

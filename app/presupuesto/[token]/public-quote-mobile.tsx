@@ -5,8 +5,6 @@ import type { ComponentPropsWithoutRef } from "react";
 import { useEffect } from "react";
 import {
   LuCalendarClock,
-  LuDownload,
-  LuFileText,
   LuShieldCheck,
 } from "react-icons/lu";
 
@@ -267,33 +265,14 @@ export function PublicQuoteMobile({
           </div>
         </details>
 
-        <article className={s.pdfCard}>
-          <div className={s.pdfHeader}>
-            <div>
-              <span className={s.sectionLabel}>PDF</span>
-              <h2 className={s.pdfTitle}>Ver propuesta completa</h2>
-              <p className={s.pdfText}>Documento detallado listo para descargar o imprimir.</p>
-            </div>
-            <div className={s.pdfIcon}>
-              <LuFileText aria-hidden />
-            </div>
-          </div>
-
-          <div className={s.pdfActions}>
-            <a className={s.pdfActionSecondary} href={documentUrl} onClick={handleOpenDocument}>
-              <LuFileText aria-hidden />
-              Ver
-            </a>
-            <a
-              className={s.pdfActionSecondary}
-              href={downloadUrl}
-              onClick={handleDownload}
-            >
-              <LuDownload aria-hidden />
-              Descargar
-            </a>
-          </div>
-        </article>
+        <div className={s.pdfActionsCompact} aria-label="Acciones del PDF">
+          <a className={s.pdfActionPrimary} href={documentUrl} onClick={handleOpenDocument}>
+            Ver PDF
+          </a>
+          <a className={s.pdfActionSecondary} href={downloadUrl} onClick={handleDownload}>
+            Descargar PDF
+          </a>
+        </div>
 
         <p className={s.trustNote}>
           <LuShieldCheck aria-hidden />
