@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { ComponentPropsWithoutRef } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   LuCalendarClock,
   LuShieldCheck,
@@ -114,6 +114,8 @@ export function PublicQuoteMobile({
   acceptAction,
   rejectAction,
 }: PublicQuoteMobileProps) {
+  const [showDetails, setShowDetails] = useState(true);
+
   useEffect(() => {
     if (!decisionMessage) {
       return;
@@ -228,9 +230,17 @@ export function PublicQuoteMobile({
 
         {canShowReviewTools ? (
           <>
-        <details className={s.detailsCard}>
-          <summary className={s.detailsSummary}>Ver que incluye este presupuesto</summary>
-          <div className={s.detailsBody}>
+        <article className={s.detailsCard}>
+          <button
+            type="button"
+            className={s.detailsSummary}
+            onClick={() => setShowDetails((current) => !current)}
+            aria-expanded={showDetails}
+          >
+            {showDetails ? "Ocultar detalle del presupuesto" : "Ver que incluye este presupuesto"}
+          </button>
+          {showDetails ? (
+            <div className={s.detailsBody}>
             {quote.items.slice(0, 3).map((item) => {
                 const itemMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
                 const isFreeValueItem =
@@ -262,8 +272,9 @@ export function PublicQuoteMobile({
             {quote.items.length > 3 ? (
               <p className={s.moreItems}>+ {quote.items.length - 3} componentes mas</p>
             ) : null}
-          </div>
-        </details>
+            </div>
+          ) : null}
+        </article>
 
         <div className={s.pdfActionsCompact} aria-label="Acciones del PDF">
           <a className={s.pdfActionPrimary} href={documentUrl} onClick={handleOpenDocument}>
