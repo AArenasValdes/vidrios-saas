@@ -134,6 +134,8 @@ function normalizeType(tipo: string): string {
 function normalizeSistema(sistema: string | null | undefined): string {
   const s = (sistema ?? "").trim().toLowerCase();
   if (s.includes("bow")) return "BowWindow";
+  if (s.includes("guillot")) return "Guillotina";
+  if (s.includes("celos")) return "Celosia";
   if (s.includes("oscilo")) return "Oscilobatiente";
   if (s.includes("corr")) return "Corredera";
   if (s.includes("abat")) return "Abatible";
@@ -672,6 +674,116 @@ function drawVentanaCorredera(
     divider,
     rail,
     mobileDetails,
+  ].join("");
+}
+
+function drawVerticalMotionArrow(
+  x: number,
+  y1: number,
+  y2: number,
+  direction: "up" | "down",
+  sw: number,
+  color: string
+): string {
+  const headY = direction === "up" ? y1 : y2;
+
+  return [
+    `<line x1="${px(x)}" y1="${px(y1)}" x2="${px(x)}" y2="${px(y2)}" stroke="${color}" stroke-width="${px(sw)}" stroke-linecap="round"/>`,
+    arrowTip(x, headY, direction, sw, color),
+  ].join("");
+}
+
+function drawVentanaGuillotina(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  configurationSource?: string | null
+): string {
+  const F = fw(v);
+  const D = dw(v);
+  const DT = det(v);
+  const FI = fi(v);
+  const source = normalizeSearchText(configurationSource);
+  const isDouble = source.includes("doble");
+  const dividerY = y + h / 2;
+  const glassX = x + FI;
+  const glassW = w - FI * 2;
+  const topY = y + FI;
+  const paneH = h / 2 - FI * 1.5;
+  const bottomY = dividerY + FI * 0.5;
+  const arrowStroke = DT * 1.15;
+
+  return [
+    outerFrame(x, y, w, h, F, p.frame),
+    glassFill(glassX, topY, glassW, paneH, gsw(v)),
+    glassFill(glassX, bottomY, glassW, paneH, gsw(v)),
+    `<line data-guillotina-divider="horizontal" x1="${px(x + FI * 0.35)}" y1="${px(dividerY)}" x2="${px(x + w - FI * 0.35)}" y2="${px(dividerY)}" stroke="${p.frame}" stroke-width="${px(Math.max(3.2, D * 1.55))}" stroke-linecap="square"/>`,
+    `<line x1="${px(glassX)}" y1="${px(dividerY - D * 1.15)}" x2="${px(glassX + glassW)}" y2="${px(dividerY - D * 1.15)}" stroke="${p.div}" stroke-width="${px(D * 0.7)}" opacity="0.7"/>`,
+    isDouble
+      ? drawVerticalMotionArrow(x + w / 2, topY + paneH * 0.62, topY + paneH * 0.3, "down", arrowStroke, p.detail)
+      : "",
+    drawVerticalMotionArrow(x + w / 2, bottomY + paneH * 0.68, bottomY + paneH * 0.35, "up", arrowStroke, p.detail),
+  ].join("");
+}
+
+function drawVentanaCelosia(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  configurationSource?: string | null
+): string {
+  const F = fw(v);
+  const D = dw(v);
+  const DT = det(v);
+  const FI = fi(v);
+  const source = normalizeSearchText(configurationSource);
+  const hasFixedBottom = source.includes("fijo") || source.includes("inferior");
+  const ventH = hasFixedBottom ? h * 0.66 : h - FI * 2;
+  const ventY = y + FI;
+  const fixedY = ventY + ventH + D * 1.5;
+  const fixedH = y + h - FI - fixedY;
+  const glassX = x + FI;
+  const glassW = w - FI * 2;
+  const slatCount = hasFixedBottom ? 4 : 6;
+  const slatGap = ventH / (slatCount + 0.65);
+  const slatH = clamp(slatGap * 0.42, 5, 12);
+  const sideInset = Math.max(4, D * 1.5);
+  const slats = Array.from({ length: slatCount }, (_, index) => {
+    const cy = ventY + slatGap * (index + 0.72);
+    const leftTop = glassX + sideInset;
+    const rightTop = glassX + glassW - sideInset;
+    const tilt = slatH * 0.7;
+
+    return [
+      `<path data-celosia-lama="true" d="M${px(leftTop)} ${px(cy + tilt)} L${px(rightTop)} ${px(cy + tilt)} L${px(rightTop - sideInset * 0.55)} ${px(cy - slatH)} L${px(leftTop + sideInset * 0.55)} ${px(cy - slatH)} Z" fill="${G_FILL}" stroke="${p.frame}" stroke-width="${px(Math.max(0.9, DT * 0.9))}" stroke-linejoin="round"/>`,
+      `<line x1="${px(leftTop + sideInset * 0.55)}" y1="${px(cy - slatH)}" x2="${px(leftTop)}" y2="${px(cy + tilt)}" stroke="${p.div}" stroke-width="${px(DT * 0.7)}" opacity="0.75"/>`,
+      `<line x1="${px(rightTop - sideInset * 0.55)}" y1="${px(cy - slatH)}" x2="${px(rightTop)}" y2="${px(cy + tilt)}" stroke="${p.div}" stroke-width="${px(DT * 0.7)}" opacity="0.75"/>`,
+    ].join("");
+  }).join("");
+  const sideRails = [
+    `<line x1="${px(glassX + sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${p.div}" stroke-width="${px(D * 0.9)}"/>`,
+    `<line x1="${px(glassX + glassW - sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + glassW - sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${p.div}" stroke-width="${px(D * 0.9)}"/>`,
+  ].join("");
+  const handle = sidePullHandle(x + w - FI - sideInset * 0.35, ventY + ventH / 2, clamp(h * 0.13, 14, 20));
+  const fixedPane = hasFixedBottom
+    ? [
+        `<line x1="${px(x + FI * 0.35)}" y1="${px(fixedY - D * 0.75)}" x2="${px(x + w - FI * 0.35)}" y2="${px(fixedY - D * 0.75)}" stroke="${p.frame}" stroke-width="${px(Math.max(3.2, D * 1.4))}" stroke-linecap="square"/>`,
+        glassFill(glassX, fixedY, glassW, Math.max(1, fixedH), gsw(v)),
+      ].join("")
+    : "";
+
+  return [
+    outerFrame(x, y, w, h, F, p.frame),
+    sideRails,
+    slats,
+    handle,
+    fixedPane,
   ].join("");
 }
 
@@ -1750,6 +1862,12 @@ function routeDrawing(
     case "Ventana":
       if (sistemaNorm === "BowWindow") {
         return drawBowWindow(x, y, w, h, v, p, bowPaneCount, doorConfig, bowComposition);
+      }
+      if (sistemaNorm === "Guillotina") {
+        return drawVentanaGuillotina(x, y, w, h, v, p, bowComposition || doorConfig);
+      }
+      if (sistemaNorm === "Celosia") {
+        return drawVentanaCelosia(x, y, w, h, v, p, bowComposition || doorConfig);
       }
       if (sistemaNorm === "Oscilobatiente") return drawVentanaOscilobatiente(x, y, w, h, v, p, binaryLeafCount);
       if (sistemaNorm === "Abatible")    return drawVentanaAbatible(x, y, w, h, v, p, binaryLeafCount);

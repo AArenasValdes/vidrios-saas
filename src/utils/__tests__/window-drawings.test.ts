@@ -491,4 +491,43 @@ describe("generateComponentSVG", () => {
 
     expect((personalizada.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(3);
   });
+
+  it("dibuja guillotina como dos hojas apiladas sin division vertical", () => {
+    const svg = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Guillotina",
+      sheetScheme: "Guillotina doble",
+      ancho: 900,
+      alto: 1600,
+      variant: "pdf",
+    });
+
+    expect((svg.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(2);
+    expect(svg).toContain('data-guillotina-divider="horizontal"');
+    expect(svg).not.toContain('data-guillotina-divider="vertical"');
+  });
+
+  it("dibuja celosia con lamas horizontales y paño fijo inferior opcional", () => {
+    const completa = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Celosía",
+      sheetScheme: "Celosía completa",
+      ancho: 900,
+      alto: 1200,
+      variant: "pdf",
+    });
+    const conFijo = generateComponentSVG({
+      tipo: "Ventana",
+      sistema: "Celosía",
+      sheetScheme: "Celosía con paño fijo inferior",
+      ancho: 900,
+      alto: 1200,
+      variant: "pdf",
+    });
+
+    expect((completa.match(/data-celosia-lama="true"/g) ?? []).length).toBe(6);
+    expect((conFijo.match(/data-celosia-lama="true"/g) ?? []).length).toBe(4);
+    expect((conFijo.match(/fill="rgba\(220,234,247,0.86\)"/g) ?? []).length).toBe(5);
+    expect(completa).not.toContain('data-bow-pane="true"');
+  });
 });

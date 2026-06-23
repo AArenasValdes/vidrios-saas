@@ -149,7 +149,7 @@ describe("PasoDosWizardConfiguracionMovil", () => {
 
     expect(screen.getByText("Tipo de apertura")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Proyectante" }).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Composición")).toBeInTheDocument();
+    expect(screen.getByText("Esquema de hojas")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Fijo central + proyectantes laterales" })
     ).toBeInTheDocument();

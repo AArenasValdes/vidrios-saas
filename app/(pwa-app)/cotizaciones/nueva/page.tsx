@@ -55,6 +55,7 @@ import {
   scrollPageToTop,
   scrollToSection,
   shouldShowSheetSchemeForComponent,
+  shouldAutoSelectFirstSheetScheme,
   STATUS_COPY,
   Step1FieldKey,
   StepKey,
@@ -726,10 +727,15 @@ function NuevaCotizacionPageContent() {
           !shouldShowSheetSchemeForComponent({ tipo: nextTipo, sistema: nextSistema }) ||
           !sheetSchemeOptions.includes(next.sheetScheme)
         ) {
-          next.sheetScheme = "";
+          next.sheetScheme = shouldAutoSelectFirstSheetScheme({
+            tipo: nextTipo,
+            sistema: nextSistema,
+          })
+            ? sheetSchemeOptions[0] ?? ""
+            : "";
           next.sheetVariant = "";
           next.customSchemeDescription = "";
-          next.isCustomScheme = false;
+          next.isCustomScheme = next.sheetScheme === "Personalizado";
         }
       }
       if (key === "configuracion") {
@@ -742,10 +748,15 @@ function NuevaCotizacionPageContent() {
           !shouldShowSheetSchemeForComponent({ tipo: next.tipo, sistema: next.sistema }) ||
           !sheetSchemeOptions.includes(next.sheetScheme)
         ) {
-          next.sheetScheme = "";
+          next.sheetScheme = shouldAutoSelectFirstSheetScheme({
+            tipo: next.tipo,
+            sistema: next.sistema,
+          })
+            ? sheetSchemeOptions[0] ?? ""
+            : "";
           next.sheetVariant = "";
           next.customSchemeDescription = "";
-          next.isCustomScheme = false;
+          next.isCustomScheme = next.sheetScheme === "Personalizado";
         }
       }
       if (key === "sheetScheme") {

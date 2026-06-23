@@ -26,6 +26,12 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
         const {
           colorHex,
           referencia,
+          sistema,
+          configuracion,
+          sheetScheme,
+          sheetVariant,
+          customSchemeDescription,
+          isCustomScheme,
           material,
           pricingMode,
           displayMode,
@@ -104,7 +110,13 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
               ? ""
               : generateComponentSVG({
                   tipo: effectiveItem.tipo,
+                  sistema,
+                  configuracion,
                   referencia,
+                  sheetScheme,
+                  sheetVariant,
+                  customSchemeDescription,
+                  isCustomScheme,
                   ancho: effectiveItem.ancho,
                   alto: effectiveItem.alto,
                   colorHex,

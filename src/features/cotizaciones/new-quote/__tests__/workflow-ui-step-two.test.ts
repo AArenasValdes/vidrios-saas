@@ -9,10 +9,12 @@ import {
   reconcileWorkflowItemsPricing,
   getSheetSchemeOptions,
   getSheetVariantOptions,
+  getCompositionSectionLabel,
   GLASS_OPTIONS,
   buildQuickEditDraft,
   resolveWorkflowItemDisplayName,
   shouldRequireProfileMaterialForComponent,
+  shouldAutoSelectFirstSheetScheme,
   shouldShowSystemSelectionForComponent,
   isWorkflowItemEffectivelyComplete,
   syncTemplatePricingInComponentForm,
@@ -759,6 +761,33 @@ describe("workflow-ui paso 2", () => {
       "2 proyectantes",
       "Personalizado",
     ]);
+    expect(getSystemOptionsForComponent("Ventana")).toEqual([
+      "Corredera",
+      "Proyectante",
+      "Abatible",
+      "Oscilobatiente",
+      "Bow Window",
+      "Guillotina",
+      "Celosía",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Guillotina" })).toEqual([
+      "Guillotina simple",
+      "Guillotina doble",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Celosía" })).toEqual([
+      "Celosía completa",
+      "Celosía con paño fijo inferior",
+    ]);
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Guillotina" })).not.toContain("2 hojas");
+    expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Celosía" })).not.toContain("3 hojas");
+    expect(getCompositionSectionLabel({ tipo: "Ventana", sistema: "Guillotina" })).toBe(
+      "Configuración de guillotina"
+    );
+    expect(getCompositionSectionLabel({ tipo: "Ventana", sistema: "Celosía" })).toBe(
+      "Configuración de celosía"
+    );
+    expect(shouldAutoSelectFirstSheetScheme({ tipo: "Ventana", sistema: "Guillotina" })).toBe(true);
+    expect(shouldAutoSelectFirstSheetScheme({ tipo: "Ventana", sistema: "Corredera" })).toBe(false);
     expect(
       getSheetSchemeOptions({
         tipo: "Ventana",
@@ -897,6 +926,32 @@ describe("workflow-ui paso 2", () => {
 
     expect(item.nombre).toBe("Bow Window batiente/abatible - 2 fijos + 1 abatible");
     expect(item.precioUnitario).toBe(324000);
+  });
+
+  it("debe generar nombres comerciales para guillotina y celosia sin duplicar sistema", () => {
+    const guillotina = buildItemFromForm(
+      createLinePricingForm({
+        sistema: "Guillotina",
+        sheetScheme: "Guillotina doble",
+        sheetVariant: "",
+      }),
+      [],
+      null
+    );
+    const celosia = buildItemFromForm(
+      createLinePricingForm({
+        sistema: "Celosía",
+        sheetScheme: "Celosía con paño fijo inferior",
+        sheetVariant: "",
+      }),
+      [],
+      null
+    );
+
+    expect(guillotina.nombre).toBe("Ventana guillotina doble");
+    expect(celosia.nombre).toBe("Ventana celosía con paño fijo inferior");
+    expect(guillotina.precioUnitario).toBe(78000);
+    expect(celosia.precioUnitario).toBe(78000);
   });
 
   it("debe generar nombre comercial para paño fijo sin sistema de apertura visible", () => {

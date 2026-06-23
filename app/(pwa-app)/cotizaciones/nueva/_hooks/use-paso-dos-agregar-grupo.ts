@@ -18,6 +18,7 @@ import {
   MIRROR_GLASS_THICKNESS_OPTIONS,
   normalizeSearchValue,
   shouldRequireProfileMaterialForComponent,
+  shouldAutoSelectFirstSheetScheme,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
   syncTemplatePricingInComponentForm,
@@ -964,7 +965,12 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         ...(shouldKeepComposition
           ? {}
           : {
-              sheetScheme: "",
+              sheetScheme: shouldAutoSelectFirstSheetScheme({
+                tipo: current.subtipo,
+                sistema,
+              })
+                ? sheetSchemeOptions[0] ?? ""
+                : "",
               sheetVariant: "",
               customSchemeDescription: "",
               isCustomScheme: false,
@@ -990,7 +996,12 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         ...(shouldKeepComposition
           ? {}
           : {
-              sheetScheme: "",
+              sheetScheme: shouldAutoSelectFirstSheetScheme({
+                tipo: current.subtipo,
+                sistema: current.sistema,
+              })
+                ? sheetSchemeOptions[0] ?? ""
+                : "",
               sheetVariant: "",
               customSchemeDescription: "",
               isCustomScheme: false,

@@ -6,6 +6,7 @@ import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
   getSheetSchemeOptions,
+  shouldAutoSelectFirstSheetScheme,
   shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
@@ -317,7 +318,12 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         ...(shouldKeepComposition
           ? {}
           : {
-              sheetScheme: "",
+              sheetScheme: shouldAutoSelectFirstSheetScheme({
+                tipo: current.subtipo,
+                sistema,
+              })
+                ? sheetSchemeOptions[0] ?? ""
+                : "",
               sheetVariant: "",
               customSchemeDescription: "",
               isCustomScheme: false,
@@ -343,7 +349,12 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
         ...(shouldKeepComposition
           ? {}
           : {
-              sheetScheme: "",
+              sheetScheme: shouldAutoSelectFirstSheetScheme({
+                tipo: current.subtipo,
+                sistema: current.sistema,
+              })
+                ? sheetSchemeOptions[0] ?? ""
+                : "",
               sheetVariant: "",
               customSchemeDescription: "",
               isCustomScheme: false,

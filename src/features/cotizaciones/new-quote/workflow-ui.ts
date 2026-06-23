@@ -170,6 +170,14 @@ export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
 export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
 
 export const SHEET_SCHEME_OPTIONS = ["2 hojas", "3 hojas", "4 hojas", "Personalizado"] as const;
+export const GUILLOTINA_CONFIGURATION_OPTIONS = [
+  "Guillotina simple",
+  "Guillotina doble",
+] as const;
+export const CELOSIA_CONFIGURATION_OPTIONS = [
+  "Celosía completa",
+  "Celosía con paño fijo inferior",
+] as const;
 
 export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
   "2 hojas": ["1 fija + 1 móvil", "2 móviles", "Otro"],
@@ -646,8 +654,26 @@ export function shouldShowSheetSchemeForComponent(input: {
 
   return (
     tipo === "ventana" &&
-    ["corredera", "abatible", "oscilobatiente", "proyectante", "bow window"].includes(sistema)
+    [
+      "corredera",
+      "abatible",
+      "oscilobatiente",
+      "proyectante",
+      "bow window",
+      "guillotina",
+      "celosia",
+    ].includes(sistema)
   );
+}
+
+export function shouldAutoSelectFirstSheetScheme(input: {
+  tipo: string;
+  sistema?: string | null;
+}) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+
+  return tipo === "ventana" && (sistema === "guillotina" || sistema === "celosia");
 }
 
 export function shouldShowSystemSelectionForComponent(tipo: string) {
@@ -686,6 +712,14 @@ export function getSheetSchemeOptions(input: {
     return BOW_WINDOW_COMPOSITION_OPTIONS_BY_OPENING[configuracion] ?? [];
   }
 
+  if (tipo === "ventana" && sistema === "guillotina") {
+    return GUILLOTINA_CONFIGURATION_OPTIONS;
+  }
+
+  if (tipo === "ventana" && sistema === "celosia") {
+    return CELOSIA_CONFIGURATION_OPTIONS;
+  }
+
   if (tipo === "ventana") {
     return COMPOSITION_OPTIONS_BY_SYSTEM[sistema] ?? [];
   }
@@ -701,7 +735,17 @@ export function getCompositionSectionLabel(input: { tipo: string; sistema?: stri
     return "Composición de paños";
   }
 
-  return sistema === "corredera" ? "Esquema de hojas" : "Composición";
+  if (sistema === "guillotina") {
+    return "Configuración de guillotina";
+  }
+
+  if (sistema === "celosia") {
+    return "Configuración de celosía";
+  }
+
+  return sistema === "corredera" || sistema === "bow window"
+    ? "Esquema de hojas"
+    : "Composición";
 }
 
 export function getSheetVariantOptions(
@@ -800,6 +844,14 @@ export function buildCommercialComponentDisplayName(
     const opening = formatBowWindowOpening(configuracion);
     const bowBase = opening ? `Bow Window ${opening}` : "Bow Window";
     return schemeLabel ? `${bowBase} - ${lowerFirst(schemeLabel)}` : bowBase;
+  }
+
+  if (
+    normalizedTipo === "ventana" &&
+    (normalizedSistema === "guillotina" || normalizedSistema === "celosia") &&
+    schemeLabel
+  ) {
+    return `${tipo} ${lowerFirst(schemeLabel)}`;
   }
 
   const displaySchemeLabel = shouldAvoidDuplicatedSystem ? lowerFirst(schemeLabel) : schemeLabel;

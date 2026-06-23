@@ -292,6 +292,11 @@ export function PasoDosWizardMovil({
             tipo: subtipo,
             sistema: wizard.draft.subtipo === subtipo ? wizard.draft.sistema : undefined,
             configuracion: wizard.draft.subtipo === subtipo ? wizard.draft.configuracion : undefined,
+            sheetScheme: wizard.draft.subtipo === subtipo ? wizard.draft.sheetScheme : undefined,
+            sheetVariant: wizard.draft.subtipo === subtipo ? wizard.draft.sheetVariant : undefined,
+            customSchemeDescription:
+              wizard.draft.subtipo === subtipo ? wizard.draft.customSchemeDescription : undefined,
+            isCustomScheme: wizard.draft.subtipo === subtipo ? wizard.draft.isCustomScheme : undefined,
             ancho: null,
             alto: null,
             colorHex: wizard.draft.colorHex || getColorByMaterial(wizard.draft.material),
@@ -303,7 +308,11 @@ export function PasoDosWizardMovil({
     [
       wizard.draft.colorHex,
       wizard.draft.configuracion,
+      wizard.draft.customSchemeDescription,
+      wizard.draft.isCustomScheme,
       wizard.draft.material,
+      wizard.draft.sheetScheme,
+      wizard.draft.sheetVariant,
       wizard.draft.sistema,
       wizard.draft.subtipo,
       wizard.subtypeOptions,
@@ -386,7 +395,8 @@ export function PasoDosWizardMovil({
     return mirrorGroup ? [mirrorGroup, ...otherGroups] : groups;
   }, [wizard.draft.subtipo]);
 
-  const visibleSystemOptions = wizard.systemOptions.slice(0, 3);
+  const isWindowSubtype = wizard.draft.subtipo === "Ventana";
+  const visibleSystemOptions = isWindowSubtype ? wizard.systemOptions : wizard.systemOptions.slice(0, 3);
   const displaySystemOptions = showAllSystems
     ? wizard.systemOptions
     : visibleSystemOptions;
@@ -627,6 +637,7 @@ export function PasoDosWizardMovil({
                     wizard.configurationOptions.length > visibleConfigurationOptions.length
                   }
                   showSystemToggle={
+                    !isWindowSubtype &&
                     wizard.systemOptions.length > visibleSystemOptions.length
                   }
                   vidSearch={vidSearch}
