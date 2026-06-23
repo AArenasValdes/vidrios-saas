@@ -1,0 +1,430 @@
+.internalPage {
+  --ventora-black: #050505;
+  --ventora-navy: #0b0f17;
+  --ventora-graphite: #111827;
+  --ventora-blue: #1e88ff;
+  --ventora-blue-soft: rgba(30, 136, 255, 0.14);
+  --ventora-silver: #e6e8eb;
+  --ventora-steel: #8a96a6;
+  --ventora-surface: rgba(17, 24, 39, 0.92);
+  --ventora-surface-strong: rgba(11, 15, 23, 0.98);
+  --ventora-border: rgba(230, 232, 235, 0.12);
+  --ventora-border-strong: rgba(30, 136, 255, 0.28);
+
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top, rgba(30, 136, 255, 0.1), transparent 28%),
+    linear-gradient(180deg, var(--ventora-navy) 0%, var(--ventora-black) 100%);
+  color: var(--ventora-silver);
+  padding:
+    calc(var(--safe-top) + 0.75rem)
+    calc(var(--safe-right) + 0.875rem)
+    calc(var(--safe-bottom) + 1.25rem)
+    calc(var(--safe-left) + 0.875rem);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+}
+
+.internalContainer {
+  width: min(100%, 26rem);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.brandHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 0.25rem;
+}
+
+.brandLogo {
+  width: auto;
+  height: 2.75rem;
+}
+
+.brandMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--ventora-blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--ventora-silver);
+  font-size: clamp(1.2rem, 4.5vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--ventora-steel);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.warningBanner {
+  border: 1px solid color-mix(in srgb, var(--ventora-blue) 35%, var(--ventora-border));
+  background: color-mix(in srgb, var(--ventora-blue) 10%, var(--ventora-surface-strong));
+  color: var(--ventora-silver);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.surfaceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border: 1px solid var(--ventora-border);
+  border-radius: calc(var(--radius) + 4px);
+  background: linear-gradient(
+    180deg,
+    var(--ventora-surface) 0%,
+    var(--ventora-surface-strong) 100%
+  );
+  padding: 0.875rem;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pilotCard {
+  border-color: var(--ventora-border-strong);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ventora-blue) 8%, var(--ventora-graphite)) 0%,
+    var(--ventora-surface-strong) 100%
+  );
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--ventora-silver);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ventora-steel);
+}
+
+.fieldHint {
+  margin: 0;
+  color: var(--ventora-steel);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.input,
+.select {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--ventora-border);
+  border-radius: var(--radius);
+  background: rgba(5, 5, 5, 0.45);
+  color: var(--ventora-silver);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ventora-steel) 50%),
+    linear-gradient(135deg, var(--ventora-steel) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 12px) calc(50% + 2px);
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2rem;
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ventora-blue) 55%, transparent);
+  outline-offset: 1px;
+  border-color: var(--ventora-border-strong);
+}
+
+.pilotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ventora-border);
+}
+
+.pilotItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.84rem;
+}
+
+.pilotItem strong {
+  color: var(--ventora-silver);
+  font-weight: 600;
+}
+
+.errorList {
+  margin: 0;
+  padding: 0.75rem 0.875rem 0.75rem 1.75rem;
+  color: #ff8f8f;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid rgba(255, 120, 120, 0.28);
+  border-radius: var(--radius);
+  background: rgba(120, 24, 24, 0.22);
+}
+
+.resultCard {
+  border: 1px solid var(--ventora-border-strong);
+  border-radius: calc(var(--radius) + 4px);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ventora-blue) 12%, var(--ventora-graphite)) 0%,
+    var(--ventora-surface-strong) 100%
+  );
+  padding: 0.875rem;
+  display: grid;
+  gap: 0.625rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.resultHighlight {
+  margin: 0;
+  color: var(--ventora-blue);
+  font-size: clamp(1.35rem, 4.8vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.resultGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.resultItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+}
+
+.resultItemHighlight strong {
+  color: var(--ventora-blue);
+}
+
+.resultLabel {
+  color: var(--ventora-steel);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--ventora-blue-soft);
+  color: var(--ventora-blue);
+  white-space: nowrap;
+}
+
+.scenarioSelector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  background: rgba(5, 5, 5, 0.35);
+  border: 1px solid var(--ventora-border);
+}
+
+.scenarioTab {
+  min-height: 2.35rem;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--ventora-steel);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scenarioTabActive {
+  background: color-mix(in srgb, var(--ventora-blue) 18%, var(--ventora-graphite));
+  color: var(--ventora-silver);
+  box-shadow: inset 0 0 0 1px var(--ventora-border-strong);
+}
+
+.scenarioDetail {
+  border: 1px solid var(--ventora-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+  background: rgba(5, 5, 5, 0.28);
+}
+
+.scenarioRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.84rem;
+  color: var(--ventora-steel);
+}
+
+.scenarioRow strong {
+  color: var(--ventora-silver);
+}
+
+.scenarioRowTotal {
+  margin-top: 0.2rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--ventora-border);
+  font-weight: 600;
+}
+
+.scenarioRowTotal span,
+.scenarioRowTotal strong {
+  color: var(--ventora-silver);
+  font-size: 0.9rem;
+}
+
+.accordion {
+  border: 1px solid var(--ventora-border);
+  border-radius: calc(var(--radius) + 2px);
+  padding: 0.625rem 0.75rem;
+  background: var(--ventora-surface);
+}
+
+.accordionSummary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--ventora-silver);
+  list-style-position: outside;
+}
+
+.accordionBody {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formulaBody {
+  display: grid;
+  gap: 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  color: var(--ventora-steel);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  justify-content: stretch;
+  padding-top: 0.25rem;
+}
+
+.resetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--ventora-border-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--ventora-blue) 12%, var(--ventora-graphite));
+  color: var(--ventora-silver);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.resetButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ventora-blue) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.resetButton:active {
+  transform: translateY(1px);
+}
+
+.chartSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chartCaption {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--ventora-steel);
+}
+
+@media (min-width: 640px) {
+  .internalContainer {
+    max-width: 28rem;
+  }
+
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resultGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brandLogo {
+    height: 3.25rem;
+  }
+}

@@ -13,6 +13,7 @@ const protectedPrefixes = [
   "/solicitudes",
   "/configuracion",
   "/cuenta-vencida",
+  "/internal",
 ];
 
 const isProtectedPath = (pathname: string) => {
@@ -189,6 +190,7 @@ export const config = {
     "/solicitudes/:path*",
     "/configuracion/:path*",
     "/cuenta-vencida",
+    "/internal/:path*",
     "/api/admin/:path*",
   ],
 };
