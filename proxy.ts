@@ -31,7 +31,11 @@ const hasSupabaseSessionCookie = (request: NextRequest) => {
   });
 };
 
-const canonicalPrefixes = [...protectedPrefixes, "/auth/callback"];
+const canonicalPrefixes = [
+  ...protectedPrefixes,
+  "/auth/callback",
+  "/auth/completar-cuenta",
+];
 const canonicalExactPaths = new Set<string>(["/dashboard"]);
 
 const shouldUseCanonicalHost = (pathname: string) => {
@@ -69,6 +73,7 @@ export async function proxy(request: NextRequest) {
   const isAdminApi = pathname.startsWith("/api/admin");
   const isLogin = pathname === "/login";
   const isRegister = pathname === "/registro";
+  const isCompleteAccount = pathname === "/auth/completar-cuenta";
   const hasSessionCookie = hasSupabaseSessionCookie(request);
 
   if (!hasSessionCookie) {
@@ -164,7 +169,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (isLogin || isRegister)) {
+  if (user && (isLogin || isRegister) && !isCompleteAccount) {
     const url = request.nextUrl.clone();
     if (founderAdmin) {
       url.pathname = "/admin";
@@ -182,6 +187,7 @@ export const config = {
     "/login",
     "/registro",
     "/auth/callback",
+    "/auth/completar-cuenta",
     "/dashboard/:path*",
     "/admin/:path*",
     "/clientes/:path*",

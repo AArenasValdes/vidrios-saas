@@ -7,6 +7,7 @@ import LoginView from "../login-view";
 import { authLoginRateLimitService } from "@/features/auth/services/auth-login-rate-limit.service";
 
 const mockSignIn = jest.fn();
+const mockSignInWithGoogle = jest.fn();
 const mockPrefetch = jest.fn();
 const mockResetCurrentDeviceAppState = jest.fn();
 
@@ -52,6 +53,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/features/auth/hooks/useAuth", () => ({
   useAuth: () => ({
     signIn: mockSignIn,
+    signInWithGoogle: mockSignInWithGoogle,
   }),
 }));
 
@@ -68,6 +70,7 @@ describe("LoginView", () => {
     jest.clearAllMocks();
     authLoginRateLimitService.clear();
     mockSignIn.mockResolvedValue(undefined);
+    mockSignInWithGoogle.mockResolvedValue(undefined);
     mockPrefetch.mockClear();
     mockResetCurrentDeviceAppState.mockResolvedValue(undefined);
     Object.defineProperty(window, "matchMedia", {
@@ -96,7 +99,15 @@ describe("LoginView", () => {
 
   it("usa los valores reales del formulario cuando autofill no dispara onChange", async () => {
     mockSignIn.mockImplementation(() => new Promise(() => undefined));
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     const emailInput = screen.getByLabelText("Correo") as HTMLInputElement;
     const passwordInput = screen.getByLabelText("Contrasena") as HTMLInputElement;
@@ -117,7 +128,15 @@ describe("LoginView", () => {
   it("muestra un mensaje mas preciso cuando las credenciales no coinciden", async () => {
     mockSignIn.mockRejectedValueOnce(new Error("Invalid login credentials"));
 
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
@@ -135,7 +154,15 @@ describe("LoginView", () => {
   });
 
   it("permite ver y ocultar la contrasena", () => {
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     const passwordInput = screen.getByLabelText("Contrasena") as HTMLInputElement;
     const toggle = screen.getByRole("button", { name: /Mostrar/i });
@@ -149,7 +176,15 @@ describe("LoginView", () => {
   });
 
   it("permite reiniciar la app local del dispositivo", async () => {
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Reiniciar esta app/i }));
 
@@ -169,7 +204,15 @@ describe("LoginView", () => {
       new Error("SecurityError: Failed to read the 'localStorage' property")
     );
 
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
@@ -189,7 +232,15 @@ describe("LoginView", () => {
       () => new Promise<void>(() => undefined)
     );
 
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
@@ -211,7 +262,15 @@ describe("LoginView", () => {
   it("no activa countdown local en el primer rate limit", async () => {
     mockSignIn.mockRejectedValueOnce(new Error("Request rate limit reached"));
 
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
@@ -235,7 +294,15 @@ describe("LoginView", () => {
       .mockRejectedValueOnce(new Error("Request rate limit reached"))
       .mockRejectedValueOnce(new Error("Request rate limit reached"));
 
-    render(<LoginView oauthError={false} nextPath={null} appResetDone={false} />);
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath={null}
+        appResetDone={false}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Correo"), {
       target: { value: "sanmarcoaluminios@gmail.com" },
@@ -256,5 +323,26 @@ describe("LoginView", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Espera/i })).toBeDisabled();
     expect(screen.getByText(/Espera y vuelve a intentar sin repetir toques/i)).toBeInTheDocument();
+  });
+
+  it("dispara signInWithGoogle al pulsar Continuar con Google", async () => {
+    render(
+      <LoginView
+        oauthError={false}
+        oauthNoEmailError={false}
+        identityConflictError={false}
+        nextPath="/cotizaciones"
+        appResetDone={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Continuar con Google/i }));
+
+    await waitFor(() => {
+      expect(mockSignInWithGoogle).toHaveBeenCalledWith({
+        intent: "login",
+        nextPath: "/cotizaciones",
+      });
+    });
   });
 });

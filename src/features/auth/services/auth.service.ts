@@ -6,6 +6,7 @@ import { GET_ORG_ID_PERMISSION_ERROR_MESSAGE } from "@/features/auth/services/au
 import type {
   AuthProfileLookupOptions,
   AuthSignInInput,
+  AuthSignInWithOAuthInput,
   AuthSessionChangePayload,
   AuthenticatedUser,
 } from "@/features/auth/types/auth";
@@ -236,6 +237,10 @@ export function createAuthService(deps: AuthServiceDeps = {}) {
         retryServerOnUnauthorized: true,
         throwOnMissingOrganization: true,
       });
+    },
+
+    async signInWithOAuth(input: AuthSignInWithOAuthInput) {
+      await repository.signInWithOAuth(input);
     },
 
     async signOut() {

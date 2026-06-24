@@ -6,6 +6,7 @@ import { authService } from "@/features/auth/services/auth.service";
 import type {
   AuthSessionChangePayload,
   AuthSignInInput,
+  AuthSignInWithOAuthInput,
   AuthUserState,
 } from "@/features/auth/types/auth";
 
@@ -343,7 +344,7 @@ function isPassiveAuthRoute() {
   }
 
   const pathname = window.location.pathname;
-  return pathname === "/login" || pathname.startsWith("/auth/");
+  return pathname === "/login" || pathname.startsWith("/auth/") || pathname === "/registro";
 }
 
 export function useAuth(options: { passive?: boolean } = {}) {
@@ -451,6 +452,29 @@ export function useAuth(options: { passive?: boolean } = {}) {
     });
   };
 
+  const signInWithOAuth = async (input: AuthSignInWithOAuthInput) => {
+    const origin =
+      input.origin ??
+      (typeof window !== "undefined" ? window.location.origin : undefined);
+
+    await authService.signInWithOAuth({
+      ...input,
+      origin,
+    });
+  };
+
+  const signInWithGoogle = async (
+    input: Omit<AuthSignInWithOAuthInput, "provider">
+  ) => {
+    await signInWithOAuth({ ...input, provider: "google" });
+  };
+
+  const signInWithFacebook = async (
+    input: Omit<AuthSignInWithOAuthInput, "provider">
+  ) => {
+    await signInWithOAuth({ ...input, provider: "facebook" });
+  };
+
   const signOut = async () => {
     invalidateAuthResolution("signOut");
     authStateHydratedFromNetwork = true;
@@ -470,6 +494,9 @@ export function useAuth(options: { passive?: boolean } = {}) {
   return {
     ...authUser,
     signIn,
+    signInWithOAuth,
+    signInWithGoogle,
+    signInWithFacebook,
     signOut,
   };
 }

@@ -22,6 +22,25 @@ export interface AuthSignInInput {
   password: string;
 }
 
+export type AuthOAuthIntent = "login" | "signup";
+
+export type AuthOAuthProvider = "google" | "facebook";
+
+export interface AuthSignInWithOAuthInput {
+  provider: AuthOAuthProvider;
+  intent: AuthOAuthIntent;
+  nextPath?: string | null;
+  origin?: string;
+}
+
+/** @deprecated Usar AuthSignInWithOAuthInput */
+export type AuthSignInWithGoogleInput = Omit<
+  AuthSignInWithOAuthInput,
+  "provider"
+> & {
+  provider?: never;
+};
+
 export type AuthLoginErrorCode =
   | "invalid_credentials"
   | "network_unavailable"

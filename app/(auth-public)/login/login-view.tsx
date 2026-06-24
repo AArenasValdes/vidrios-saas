@@ -7,6 +7,9 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { FacebookAuthButton } from "../_components/facebook-auth-button";
+import { GoogleAuthButton } from "../_components/google-auth-button";
+import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { authDeviceRecoveryService } from "@/features/auth/services/auth-device-recovery.service";
 import { authLoginDiagnosticsService } from "@/features/auth/services/auth-login-diagnostics.service";
@@ -24,6 +27,8 @@ import s from "./login.module.css";
 
 interface LoginViewProps {
   oauthError: boolean;
+  oauthNoEmailError: boolean;
+  identityConflictError: boolean;
   nextPath: string | null;
   appResetDone: boolean;
 }
@@ -43,7 +48,14 @@ const copy = {
   signupPrompt: "Aun no tienes acceso?",
   signupAction: "Solicitar cuenta",
   oauthError:
-    "No pudimos completar el acceso con Google. Intenta con tu correo y contrasena.",
+    "No pudimos completar el acceso social. Intenta con tu correo y contrasena.",
+  oauthNoEmailError:
+    "Tu cuenta social no compartio un correo. Usa otra cuenta o entra con correo y contrasena.",
+  identityConflictError:
+    "Este correo ya esta vinculado a otra cuenta de acceso. Usa el metodo con el que te dieron acceso o contactanos.",
+  googleContinue: "Continuar con Google",
+  facebookContinue: "Continuar con Facebook",
+  divider: "o",
   authCodeLabel: "Codigo de acceso:",
   passwordShow: "Mostrar",
   passwordHide: "Ocultar",
@@ -176,16 +188,19 @@ function formatRateLimitRemaining(remainingMs: number) {
 
 export default function LoginView({
   oauthError,
+  oauthNoEmailError,
+  identityConflictError,
   nextPath,
   appResetDone,
 }: LoginViewProps) {
-  const { signIn } = useAuth({ passive: true });
+  const { signIn, signInWithGoogle, signInWithFacebook } = useAuth({ passive: true });
   const router = useRouter();
 
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [mantenerSesion, setMantenerSesion] = useState(true);
   const [cargando, setCargando] = useState(false);
+  const [cargandoOAuth, setCargandoOAuth] = useState<AuthOAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<AuthLoginErrorCode | null>(null);
   const [errorDiagnostic, setErrorDiagnostic] = useState<string | null>(null);
@@ -201,6 +216,46 @@ export default function LoginView({
       router.prefetch("/dashboard");
     });
   }, [router]);
+
+  const handleOAuthSignIn = async (provider: AuthOAuthProvider) => {
+    if (cargandoOAuth || cargando) {
+      return;
+    }
+
+    setCargandoOAuth(provider);
+    setError(null);
+    setErrorCode(null);
+    setErrorDiagnostic(null);
+
+    googleTagService.trackEvent(`${provider}_oauth_started`, {
+      event_category: "auth",
+      event_label: "login",
+      next_path: nextPath ?? "/dashboard",
+      platform_mode: getPlatformMode(),
+      oauth_provider: provider,
+    });
+
+    try {
+      const signInFn =
+        provider === "facebook" ? signInWithFacebook : signInWithGoogle;
+
+      await signInFn({
+        intent: "login",
+        nextPath,
+      });
+    } catch {
+      setError(copy.oauthError);
+      setErrorCode("unknown");
+      googleTagService.trackEvent("login_failure", {
+        event_category: "auth",
+        event_label: `${provider}_oauth`,
+        next_path: nextPath ?? "/dashboard",
+        platform_mode: getPlatformMode(),
+        oauth_provider: provider,
+      });
+      setCargandoOAuth(null);
+    }
+  };
 
   useEffect(() => {
     const syncRateLimit = () => {
@@ -416,6 +471,30 @@ export default function LoginView({
               method="post"
               action="javascript:void(0)"
             >
+              <GoogleAuthButton
+                label={copy.googleContinue}
+                loading={cargandoOAuth === "google"}
+                disabled={cargando || Boolean(cargandoOAuth) || rateLimitRemainingMs > 0}
+                onClick={() => {
+                  void handleOAuthSignIn("google");
+                }}
+              />
+
+              <FacebookAuthButton
+                label={copy.facebookContinue}
+                loading={cargandoOAuth === "facebook"}
+                disabled={cargando || Boolean(cargandoOAuth) || rateLimitRemainingMs > 0}
+                onClick={() => {
+                  void handleOAuthSignIn("facebook");
+                }}
+              />
+
+              <div className={s.divider}>
+                <span aria-hidden />
+                <p>{copy.divider}</p>
+                <span aria-hidden />
+              </div>
+
               <div className={s.field}>
                 <label className={s.fieldLabel} htmlFor="correo">
                   {copy.emailLabel}
@@ -496,13 +575,18 @@ export default function LoginView({
                 </a>
               </div>
 
-              {(oauthError || error) && (
+              {(oauthError || oauthNoEmailError || identityConflictError || error) && (
                 <div className={s.errorBox} role="alert" aria-live="polite">
                   <span className={s.errorMark} aria-hidden>
                     !
                   </span>
                   <span>
-                    {error ?? copy.oauthError}
+                    {error ??
+                      (oauthNoEmailError
+                        ? copy.oauthNoEmailError
+                        : identityConflictError
+                          ? copy.identityConflictError
+                          : copy.oauthError)}
                     {errorCode ? (
                       <>
                         {" "}
@@ -546,7 +630,7 @@ export default function LoginView({
               <button
                 type="submit"
                 className={s.primaryButton}
-                disabled={cargando || rateLimitRemainingMs > 0}
+                disabled={cargando || Boolean(cargandoOAuth) || rateLimitRemainingMs > 0}
               >
                 <span className={s.buttonContent}>
                   {cargando ? <span className={s.spinner} aria-hidden /> : null}

@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GoogleTagProvider } from "@/features/analytics/components/google-tag-provider";
+import { OAuthReturnTracker } from "@/features/auth/components/oauth-return-tracker";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
 import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
@@ -67,8 +68,13 @@ export default function RootLayout({
         {gtmContainerId ? (
           <Suspense fallback={null}>
             <GoogleTagProvider />
+            <OAuthReturnTracker />
           </Suspense>
-        ) : null}
+        ) : (
+          <Suspense fallback={null}>
+            <OAuthReturnTracker />
+          </Suspense>
+        )}
         {gtmContainerId ? (
           <noscript>
             <iframe

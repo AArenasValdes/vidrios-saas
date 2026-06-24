@@ -13,12 +13,22 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { googleTagService } from "@/features/analytics/services/google-tag.service";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { AuthOAuthProvider } from "@/features/auth/types/auth";
+import { FacebookAuthButton } from "../_components/facebook-auth-button";
+import { GoogleAuthButton } from "../_components/google-auth-button";
 import s from "../login/login.module.css";
 
 const copy = {
-  title: "Solicitar cuenta de prueba",
+  title: "Empieza tu prueba gratis",
   subtitle:
-    "Te contactamos por WhatsApp para dejar Ventora configurado antes de que empieces a usarlo.",
+    "Crea tu cuenta en segundos con Google o Facebook, o solicita configuracion asistida por WhatsApp.",
+  googlePrimary: "Crear prueba gratis con Google",
+  facebookPrimary: "Crear prueba gratis con Facebook",
+  assistedTitle: "Prefieres onboarding asistido?",
+  assistedSubtitle:
+    "Completa el formulario y te contactamos por WhatsApp para dejar Ventora listo.",
   nombreLabel: "Nombre",
   nombrePlaceholder: "Tu nombre",
   empresaLabel: "Nombre de la empresa",
@@ -29,30 +39,69 @@ const copy = {
   ciudadPlaceholder: "Ej: Puente Alto",
   mensajeLabel: "Mensaje opcional",
   mensajePlaceholder: "Algo especial para configurar tu cuenta?",
-  submit: "Solicitar cuenta",
+  submit: "Solicitar configuracion asistida",
   submitting: "Enviando solicitud...",
   loginPrompt: "Ya tienes acceso?",
   loginAction: "Iniciar sesion",
   trialNote:
-    "No se crea una cuenta automática. Revisamos tus datos y te ayudamos a entrar con el flujo correcto.",
+    "Con Google o Facebook activas tu prueba al instante. El formulario es solo si prefieres que te configuremos la cuenta.",
   successTitle: "Solicitud recibida",
   successMessage:
     "Recibimos tus datos. Te contactaremos por WhatsApp para dejar tu cuenta configurada.",
-  visualEyebrow: "Onboarding asistido",
+  visualEyebrow: "Prueba gratuita",
   visualTitle: "Empieza con Ventora configurado para tu forma real de vender",
   visualDescription:
     "Pensado para maestros, talleres y empresas de vidrios y aluminio que necesitan captar, ordenar y cotizar sin improvisar.",
+  divider: "o solicita configuracion asistida",
 };
 
 export default function RegistroView() {
+  const { signInWithGoogle, signInWithFacebook } = useAuth({ passive: true });
   const [nombre, setNombre] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [whatsapp, setWhatsapp] = useState("+56 9 ");
   const [ciudadComuna, setCiudadComuna] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [cargandoOAuth, setCargandoOAuth] = useState<AuthOAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+
+  const handleOAuthSignup = async (provider: AuthOAuthProvider) => {
+    if (cargandoOAuth || cargando) {
+      return;
+    }
+
+    setCargandoOAuth(provider);
+    setError(null);
+
+    googleTagService.trackEvent(`${provider}_oauth_started`, {
+      event_category: "auth",
+      event_label: "signup",
+      next_path: "/activacion",
+      oauth_provider: provider,
+    });
+
+    try {
+      const signInFn =
+        provider === "facebook" ? signInWithFacebook : signInWithGoogle;
+
+      await signInFn({
+        intent: "signup",
+        nextPath: "/activacion",
+      });
+    } catch {
+      setError(
+        `No pudimos iniciar el registro con ${provider === "facebook" ? "Facebook" : "Google"}. Intenta de nuevo.`
+      );
+      googleTagService.trackEvent(`${provider}_signup_abandoned`, {
+        event_category: "auth",
+        event_label: "oauth_start_failed",
+        oauth_provider: provider,
+      });
+      setCargandoOAuth(null);
+    }
+  };
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,150 +179,183 @@ export default function RegistroView() {
                 </div>
               </div>
             ) : (
-              <form
-                className={s.form}
-                onSubmit={onSubmit}
-                noValidate
-                method="post"
-                action="javascript:void(0)"
-              >
-                <div className={`${s.field} ${s.fieldCompact}`}>
-                  <label className={s.fieldLabel} htmlFor="nombre">
-                    {copy.nombreLabel}
-                  </label>
-                  <div className={s.fieldControl}>
-                    <UserRound size={18} aria-hidden />
-                    <input
-                      id="nombre"
-                      name="nombre"
-                      type="text"
-                      className={s.fieldInput}
-                      placeholder={copy.nombrePlaceholder}
-                      value={nombre}
-                      onChange={(event) => {
-                        setNombre(event.target.value);
-                        setError(null);
-                      }}
-                      autoComplete="name"
-                      required
-                    />
+              <>
+                <div className={s.form}>
+                  <GoogleAuthButton
+                    label={copy.googlePrimary}
+                    loading={cargandoOAuth === "google"}
+                    disabled={cargando || Boolean(cargandoOAuth)}
+                    onClick={() => {
+                      void handleOAuthSignup("google");
+                    }}
+                  />
+
+                  <FacebookAuthButton
+                    label={copy.facebookPrimary}
+                    loading={cargandoOAuth === "facebook"}
+                    disabled={cargando || Boolean(cargandoOAuth)}
+                    onClick={() => {
+                      void handleOAuthSignup("facebook");
+                    }}
+                  />
+
+                  <div className={s.divider}>
+                    <span aria-hidden />
+                    <p>{copy.divider}</p>
+                    <span aria-hidden />
                   </div>
+
+                  <header className={s.formHeader}>
+                    <h2 className={s.formTitle}>{copy.assistedTitle}</h2>
+                    <p className={s.formSubtitle}>{copy.assistedSubtitle}</p>
+                  </header>
                 </div>
 
-                <div className={`${s.field} ${s.fieldCompact}`}>
-                  <label className={s.fieldLabel} htmlFor="empresa">
-                    {copy.empresaLabel}
-                  </label>
-                  <div className={s.fieldControl}>
-                    <Building2 size={18} aria-hidden />
-                    <input
-                      id="empresa"
-                      name="empresa"
-                      type="text"
-                      className={s.fieldInput}
-                      placeholder={copy.empresaPlaceholder}
-                      value={empresa}
-                      onChange={(event) => {
-                        setEmpresa(event.target.value);
-                        setError(null);
-                      }}
-                      autoComplete="organization"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className={`${s.field} ${s.fieldCompact}`}>
-                  <label className={s.fieldLabel} htmlFor="whatsapp">
-                    {copy.whatsappLabel}
-                  </label>
-                  <div className={s.fieldControl}>
-                    <Phone size={18} aria-hidden />
-                    <input
-                      id="whatsapp"
-                      name="whatsapp"
-                      type="tel"
-                      className={s.fieldInput}
-                      placeholder={copy.whatsappPlaceholder}
-                      value={whatsapp}
-                      onChange={(event) => {
-                        setWhatsapp(event.target.value);
-                        setError(null);
-                      }}
-                      autoComplete="tel"
-                      inputMode="tel"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className={`${s.field} ${s.fieldCompact}`}>
-                  <label className={s.fieldLabel} htmlFor="ciudadComuna">
-                    {copy.ciudadLabel}
-                  </label>
-                  <div className={s.fieldControl}>
-                    <MapPin size={18} aria-hidden />
-                    <input
-                      id="ciudadComuna"
-                      name="ciudadComuna"
-                      type="text"
-                      className={s.fieldInput}
-                      placeholder={copy.ciudadPlaceholder}
-                      value={ciudadComuna}
-                      onChange={(event) => {
-                        setCiudadComuna(event.target.value);
-                        setError(null);
-                      }}
-                      autoComplete="address-level2"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className={`${s.field} ${s.fieldOptional}`}>
-                  <label className={s.fieldLabel} htmlFor="mensaje">
-                    {copy.mensajeLabel}
-                  </label>
-                  <div className={s.fieldControl}>
-                    <MessageSquareText size={18} aria-hidden />
-                    <textarea
-                      id="mensaje"
-                      name="mensaje"
-                      className={`${s.fieldInput} ${s.fieldTextarea}`}
-                      placeholder={copy.mensajePlaceholder}
-                      value={mensaje}
-                      onChange={(event) => {
-                        setMensaje(event.target.value);
-                        setError(null);
-                      }}
-                      rows={4}
-                    />
-                  </div>
-                </div>
-
-                <p className={s.helperText}>{copy.trialNote}</p>
-
-                {error ? (
-                  <div className={s.errorBox} role="alert" aria-live="polite">
-                    <span className={s.errorMark} aria-hidden>
-                      !
-                    </span>
-                    <span>{error}</span>
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  className={s.primaryButton}
-                  disabled={cargando}
+                <form
+                  className={s.form}
+                  onSubmit={onSubmit}
+                  noValidate
+                  method="post"
+                  action="javascript:void(0)"
                 >
-                  <span className={s.buttonContent}>
-                    {cargando ? <span className={s.spinner} aria-hidden /> : null}
-                    {cargando ? copy.submitting : copy.submit}
-                  </span>
-                  <ArrowRight size={18} aria-hidden />
-                </button>
-              </form>
+                  <div className={`${s.field} ${s.fieldCompact}`}>
+                    <label className={s.fieldLabel} htmlFor="nombre">
+                      {copy.nombreLabel}
+                    </label>
+                    <div className={s.fieldControl}>
+                      <UserRound size={18} aria-hidden />
+                      <input
+                        id="nombre"
+                        name="nombre"
+                        type="text"
+                        className={s.fieldInput}
+                        placeholder={copy.nombrePlaceholder}
+                        value={nombre}
+                        onChange={(event) => {
+                          setNombre(event.target.value);
+                          setError(null);
+                        }}
+                        autoComplete="name"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${s.field} ${s.fieldCompact}`}>
+                    <label className={s.fieldLabel} htmlFor="empresa">
+                      {copy.empresaLabel}
+                    </label>
+                    <div className={s.fieldControl}>
+                      <Building2 size={18} aria-hidden />
+                      <input
+                        id="empresa"
+                        name="empresa"
+                        type="text"
+                        className={s.fieldInput}
+                        placeholder={copy.empresaPlaceholder}
+                        value={empresa}
+                        onChange={(event) => {
+                          setEmpresa(event.target.value);
+                          setError(null);
+                        }}
+                        autoComplete="organization"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${s.field} ${s.fieldCompact}`}>
+                    <label className={s.fieldLabel} htmlFor="whatsapp">
+                      {copy.whatsappLabel}
+                    </label>
+                    <div className={s.fieldControl}>
+                      <Phone size={18} aria-hidden />
+                      <input
+                        id="whatsapp"
+                        name="whatsapp"
+                        type="tel"
+                        className={s.fieldInput}
+                        placeholder={copy.whatsappPlaceholder}
+                        value={whatsapp}
+                        onChange={(event) => {
+                          setWhatsapp(event.target.value);
+                          setError(null);
+                        }}
+                        autoComplete="tel"
+                        inputMode="tel"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${s.field} ${s.fieldCompact}`}>
+                    <label className={s.fieldLabel} htmlFor="ciudadComuna">
+                      {copy.ciudadLabel}
+                    </label>
+                    <div className={s.fieldControl}>
+                      <MapPin size={18} aria-hidden />
+                      <input
+                        id="ciudadComuna"
+                        name="ciudadComuna"
+                        type="text"
+                        className={s.fieldInput}
+                        placeholder={copy.ciudadPlaceholder}
+                        value={ciudadComuna}
+                        onChange={(event) => {
+                          setCiudadComuna(event.target.value);
+                          setError(null);
+                        }}
+                        autoComplete="address-level2"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${s.field} ${s.fieldOptional}`}>
+                    <label className={s.fieldLabel} htmlFor="mensaje">
+                      {copy.mensajeLabel}
+                    </label>
+                    <div className={s.fieldControl}>
+                      <MessageSquareText size={18} aria-hidden />
+                      <textarea
+                        id="mensaje"
+                        name="mensaje"
+                        className={`${s.fieldInput} ${s.fieldTextarea}`}
+                        placeholder={copy.mensajePlaceholder}
+                        value={mensaje}
+                        onChange={(event) => {
+                          setMensaje(event.target.value);
+                          setError(null);
+                        }}
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+
+                  <p className={s.helperText}>{copy.trialNote}</p>
+
+                  {error ? (
+                    <div className={s.errorBox} role="alert" aria-live="polite">
+                      <span className={s.errorMark} aria-hidden>
+                        !
+                      </span>
+                      <span>{error}</span>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    className={s.secondaryButton}
+                    disabled={cargando || Boolean(cargandoOAuth)}
+                  >
+                    <span className={s.buttonContent}>
+                      {cargando ? <span className={s.spinner} aria-hidden /> : null}
+                      {cargando ? copy.submitting : copy.submit}
+                    </span>
+                    <ArrowRight size={18} aria-hidden />
+                  </button>
+                </form>
+              </>
             )}
 
             <p className={s.signupText}>

@@ -1,10 +1,12 @@
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { buildOAuthCallbackUrl } from "@/features/auth/services/auth-safe-redirect.service";
 import type {
   AuthProfile,
   AuthProfileLookupOptions,
   AuthSessionChangePayload,
   AuthSignInInput,
   AuthSignInResult,
+  AuthSignInWithOAuthInput,
   AuthSignOutOptions,
 } from "@/features/auth/types/auth";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -238,6 +240,7 @@ export interface AuthRepository {
     options?: AuthProfileLookupOptions
   ): Promise<AuthProfile | null>;
   signInWithPassword(credentials: AuthSignInInput): Promise<AuthSignInResult>;
+  signInWithOAuth(input: AuthSignInWithOAuthInput): Promise<void>;
   signOut(options?: AuthSignOutOptions): Promise<void>;
   subscribeToAuthStateChange(
     listener: (payload: AuthSessionChangePayload) => void
@@ -453,6 +456,45 @@ export function createAuthRepository(
           return null;
         }
 
+        throw error;
+      }
+    },
+
+    async signInWithOAuth(input) {
+      const supabase = browserClientFactory();
+      const origin =
+        input.origin?.trim() ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+
+      if (!origin) {
+        throw new Error("No pudimos iniciar el acceso social.");
+      }
+
+      const oauthOptions =
+        input.provider === "google"
+          ? {
+              queryParams: {
+                prompt: "select_account",
+              },
+            }
+          : {
+              scopes: "email public_profile",
+            };
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: input.provider,
+        options: {
+          redirectTo: buildOAuthCallbackUrl({
+            origin,
+            intent: input.intent,
+            provider: input.provider,
+            nextPath: input.nextPath,
+          }),
+          ...oauthOptions,
+        },
+      });
+
+      if (error) {
         throw error;
       }
     },

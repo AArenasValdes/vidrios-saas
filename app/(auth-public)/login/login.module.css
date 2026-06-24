@@ -389,6 +389,7 @@
 
 .primaryButton,
 .googleButton,
+.facebookButton,
 .secondaryButton {
   min-height: 56px;
   width: 100%;
@@ -437,7 +438,8 @@
 }
 
 .primaryButton:focus-visible,
-.googleButton:focus-visible {
+.googleButton:focus-visible,
+.facebookButton:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px rgba(30, 136, 255, 0.16);
 }
@@ -487,11 +489,35 @@
   background: #f5f7fb;
   color: #15233a;
   box-shadow: none;
-  cursor: not-allowed;
+  cursor: pointer;
+}
+
+.googleButton:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #c5d0e0;
 }
 
 .googleButton:disabled {
   opacity: 0.92;
+  cursor: not-allowed;
+}
+
+.facebookButton {
+  border: 1px solid #145dbf;
+  background: #1877f2;
+  color: #ffffff;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.facebookButton:hover:not(:disabled) {
+  background: #166fe5;
+  border-color: #145dbf;
+}
+
+.facebookButton:disabled {
+  opacity: 0.92;
+  cursor: not-allowed;
 }
 
 .helperText {
@@ -807,6 +833,7 @@
   .fieldInput,
   .primaryButton,
   .googleButton,
+  .facebookButton,
   .secondaryButton {
     min-height: 48px;
   }
