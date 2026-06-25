@@ -74,7 +74,6 @@ import {
 } from "@/components/ui/drawer";
 import { Toaster } from "@/components/ui/sonner";
 import { UpdateChecker } from "@/components/pwa/update-checker";
-import { PushNotificationsPrompt } from "@/components/pwa/push-notifications-prompt";
 
 import s from "./app-shell.module.css";
 
@@ -1437,7 +1436,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </div>
             </section>
           ) : null}
-          {!usesMinimalShell && !isNuevaCotizacionRoute ? <PushNotificationsPrompt /> : null}
           {children}
         </div>
       </main>
