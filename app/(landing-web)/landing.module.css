@@ -2150,13 +2150,15 @@
 }
 
 .footerLinks a,
-.footerBottom span {
+.footerBottom span,
+.footerBottom a {
   color: var(--ink-soft);
   text-decoration: none;
   font-size: 14px;
 }
 
-.footerLinks a:hover {
+.footerLinks a:hover,
+.footerBottom a:hover {
   color: var(--ink);
 }
 

@@ -835,6 +835,8 @@ export default function LandingPage() {
             <span>Hecho para terreno - Chile</span>
             <span>Cotiza rápido · PDF profesional · WhatsApp</span>
             <span>ventora.cl@gmail.com</span>
+            <Link href="/privacy">Privacidad</Link>
+            <Link href="/terms">Términos</Link>
           </div>
         </div>
       </footer>
