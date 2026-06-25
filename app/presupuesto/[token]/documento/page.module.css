@@ -88,7 +88,14 @@
 }
 
 .sheetWrap {
-  overflow-x: auto;
+  overflow: hidden;
+  width: 100%;
+}
+
+.sheetScaleFrame {
+  width: max-content;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
 
 .pageEmbedded .shell {
@@ -128,6 +135,13 @@
 
   .sheetWrap {
     overflow: visible;
+    height: auto !important;
+  }
+
+  .sheetScaleFrame {
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
   }
 }
 

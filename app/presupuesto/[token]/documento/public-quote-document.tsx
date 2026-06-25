@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowLeft, LuDownload } from "react-icons/lu";
 
@@ -34,6 +35,7 @@ import s from "./page.module.css";
 const FIRST_PAGE_COMPONENTS = 3;
 const NEXT_PAGE_COMPONENTS = 3;
 const APP_NAME = "Ventora";
+const DEFAULT_DOCUMENT_BRAND_COLOR = "#335ea9";
 
 const clpFormatter = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -229,6 +231,25 @@ function buildPublicQuotePdfFileName(quote: PublicPreviewQuote) {
   return buildReadableCotizacionPdfFileName(quote);
 }
 
+function isHexColor(value: string) {
+  return /^#[0-9a-f]{6}$/i.test(value.trim());
+}
+
+function resolveDocumentBrandColor(value: string) {
+  const normalized = value.trim();
+
+  return isHexColor(normalized) ? normalized : DEFAULT_DOCUMENT_BRAND_COLOR;
+}
+
+function hexToRgbChannels(value: string) {
+  const normalized = resolveDocumentBrandColor(value).replace("#", "");
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+  return `${red}, ${green}, ${blue}`;
+}
+
 function ClientField({
   label,
   value,
@@ -261,6 +282,9 @@ export function PublicQuoteDocument({
   const [embeddedScale, setEmbeddedScale] = useState(1);
   const [embeddedWidth, setEmbeddedWidth] = useState(0);
   const [embeddedHeight, setEmbeddedHeight] = useState(0);
+  const [previewScale, setPreviewScale] = useState(1);
+  const [previewWidth, setPreviewWidth] = useState(0);
+  const [previewHeight, setPreviewHeight] = useState(0);
   const companyName = buildDocumentCompanyName(
     quote.organizationProfile.empresaNombre
   );
@@ -271,6 +295,13 @@ export function PublicQuoteDocument({
   const companyLogoUrl = quote.organizationProfile.empresaLogoUrl;
   const shouldShowCompanyLogo =
     Boolean(companyLogoUrl) && failedLogoUrl !== companyLogoUrl;
+  const brandColor = resolveDocumentBrandColor(quote.organizationProfile.brandColor);
+  const brandRgb = hexToRgbChannels(brandColor);
+  const documentStyle = {
+    "--brand": brandColor,
+    "--brand-soft": `rgba(${brandRgb}, 0.1)`,
+    "--brand-ring": `rgba(${brandRgb}, 0.14)`,
+  } as CSSProperties;
 
   useEffect(() => {
     if (!downloadOnLoad || didAutoDownloadRef.current) {
@@ -331,6 +362,45 @@ export function PublicQuoteDocument({
       setEmbeddedWidth(nextWidth);
       setEmbeddedHeight(nextHeight);
       setEmbeddedScale(Math.min(0.82, Math.max(0.56, availableWidth / nextWidth)));
+    };
+
+    updateMetrics();
+
+    const observer = new ResizeObserver(() => updateMetrics());
+    observer.observe(viewportNode);
+    observer.observe(sheetNode);
+    window.addEventListener("resize", updateMetrics);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateMetrics);
+    };
+  }, [embedded, quote.codigo, quote.items.length]);
+
+  useEffect(() => {
+    if (embedded || typeof window === "undefined" || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const viewportNode = viewportRef.current;
+    const sheetNode = sheetRef.current;
+
+    if (!viewportNode || !sheetNode) {
+      return;
+    }
+
+    const updateMetrics = () => {
+      const nextWidth = sheetNode.scrollWidth;
+      const nextHeight = sheetNode.scrollHeight;
+      const availableWidth = viewportNode.clientWidth;
+
+      if (!nextWidth || !nextHeight || !availableWidth) {
+        return;
+      }
+
+      setPreviewWidth(nextWidth);
+      setPreviewHeight(nextHeight);
+      setPreviewScale(Math.min(1, Math.max(0.34, availableWidth / nextWidth)));
     };
 
     updateMetrics();
@@ -492,7 +562,7 @@ export function PublicQuoteDocument({
   }, [quote.items]);
 
   return (
-    <main className={`${s.page} ${embedded ? s.pageEmbedded : ""}`}>
+    <main className={`${s.page} ${embedded ? s.pageEmbedded : ""}`} style={documentStyle}>
       <div className={s.shell}>
         {!embedded ? (
           <div className={s.toolbar}>
@@ -522,17 +592,31 @@ export function PublicQuoteDocument({
         ) : null}
 
         <div
-          ref={embedded ? viewportRef : undefined}
+          ref={viewportRef}
           className={`${s.sheetWrap} ${embedded ? s.embeddedViewport : ""}`}
+          style={
+            !embedded && previewWidth > 0 && previewHeight > 0
+              ? {
+                  height: `${Math.round(previewHeight * previewScale)}px`,
+                }
+              : undefined
+          }
         >
           <div
-            className={embedded ? s.embeddedScaleFrame : undefined}
+            className={embedded ? s.embeddedScaleFrame : s.sheetScaleFrame}
             style={
               embedded && embeddedWidth > 0 && embeddedHeight > 0
                 ? {
                     width: `${Math.round(embeddedWidth * embeddedScale)}px`,
                     height: `${Math.round(embeddedHeight * embeddedScale)}px`,
                   }
+                : !embedded && previewWidth > 0 && previewHeight > 0
+                  ? {
+                      width: `${previewWidth}px`,
+                      height: `${previewHeight}px`,
+                      transform: `scale(${previewScale})`,
+                      transformOrigin: "top left",
+                    }
                 : undefined
             }
           >
