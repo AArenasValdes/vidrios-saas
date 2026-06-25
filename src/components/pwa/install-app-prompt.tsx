@@ -22,6 +22,27 @@ declare global {
 
 const DISMISS_KEY = "ventora:pwa-install-dismissed";
 const MANUAL_INSTALL_FALLBACK_DELAY_MS = 1800;
+const INSTALL_PROMPT_ALLOWED_PREFIXES = [
+  "/activacion",
+  "/admin",
+  "/clientes",
+  "/configuracion",
+  "/cotizaciones",
+  "/cuenta",
+  "/cuenta-vencida",
+  "/dashboard",
+  "/solicitudes",
+];
+
+function shouldShowInstallPromptOnPath(pathname: string | null) {
+  if (!pathname) {
+    return false;
+  }
+
+  return INSTALL_PROMPT_ALLOWED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
 
 function isStandaloneMode() {
   if (typeof window === "undefined") {
@@ -143,6 +164,7 @@ function getAndroidManualInstallHint() {
 
 export function InstallAppPrompt() {
   const pathname = usePathname();
+  const canShowOnRoute = shouldShowInstallPromptOnPath(pathname);
   const [isHydrated, setIsHydrated] = useState(false);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -155,6 +177,18 @@ export function InstallAppPrompt() {
   >>(null);
 
   useEffect(() => {
+    if (!canShowOnRoute) {
+      queueMicrotask(() => {
+        setShowIosHint(false);
+        setShowAndroidHint(false);
+        setIsGuideOpen(false);
+        setAndroidHint(null);
+        setDismissed(true);
+        setIsHydrated(true);
+      });
+      return;
+    }
+
     if (!isCanonicalPwaHost(window.location.hostname)) {
       queueMicrotask(() => {
         setShowIosHint(false);
@@ -179,10 +213,14 @@ export function InstallAppPrompt() {
       setDismissed(wasDismissed || standalone);
       setIsHydrated(true);
     });
-  }, []);
+  }, [canShowOnRoute]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!canShowOnRoute) {
       return;
     }
 
@@ -207,7 +245,7 @@ export function InstallAppPrompt() {
         handleBeforeInstallPrompt
       );
     };
-  }, []);
+  }, [canShowOnRoute]);
 
   useEffect(() => {
     if (
@@ -275,6 +313,7 @@ export function InstallAppPrompt() {
     const isVisible = Boolean(
       isHydrated &&
         !pathname?.startsWith("/print") &&
+        canShowOnRoute &&
         !dismissed &&
         !isStandaloneMode() &&
         (deferredPrompt || showIosHint || showAndroidHint)
@@ -285,10 +324,19 @@ export function InstallAppPrompt() {
     return () => {
       setPwaInstallPromptVisible(false);
     };
-  }, [deferredPrompt, dismissed, isHydrated, pathname, showAndroidHint, showIosHint]);
+  }, [
+    canShowOnRoute,
+    deferredPrompt,
+    dismissed,
+    isHydrated,
+    pathname,
+    showAndroidHint,
+    showIosHint,
+  ]);
 
   if (
     !isHydrated ||
+    !canShowOnRoute ||
     pathname?.startsWith("/print") ||
     dismissed ||
     isStandaloneMode()
