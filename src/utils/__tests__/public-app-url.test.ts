@@ -12,7 +12,7 @@ describe("public-app-url", () => {
     }
   });
 
-  it("debe usar ventorap.cl cuando origen local no sirve para compartir", () => {
+  it("debe usar www.ventorap.cl cuando origen local no sirve para compartir", () => {
     Object.defineProperty(global, "window", {
       value: {
         location: {
@@ -23,7 +23,7 @@ describe("public-app-url", () => {
       configurable: true,
     });
 
-    expect(resolvePublicAppUrl()).toBe("https://ventorap.cl");
+    expect(resolvePublicAppUrl()).toBe("https://www.ventorap.cl");
   });
 
   it("debe usar origen local cuando se pide preview local", () => {

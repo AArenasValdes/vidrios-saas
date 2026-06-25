@@ -355,15 +355,16 @@ export function createSolicitudesContactoService(
         sourceUrl: normalizeOptionalUrl(input.sourceUrl),
       });
 
-      // Notificar al vendedor (async, no bloquea)
-      void notificationsService
-        .sendLeadCreatedPush({
+      try {
+        await notificationsService.sendLeadCreatedPush({
           organizationId: input.organizationId,
           prospectoNombre: nombre,
           empresaNombre: empresa,
           tipoTrabajo,
-        })
-        .catch(() => undefined);
+        });
+      } catch (error) {
+        console.error("No pudimos enviar el push de nueva solicitud.", error);
+      }
 
       return solicitud;
     },

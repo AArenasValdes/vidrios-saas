@@ -264,6 +264,33 @@ describe("solicitudes-contacto.service", () => {
     });
   });
 
+  it("debe mantener creada la solicitud publica aunque falle el push", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const notificationsService = createNotificationsServiceMock();
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    notificationsService.sendLeadCreatedPush.mockRejectedValueOnce(
+      new Error("Push no disponible")
+    );
+    const service = createSolicitudesContactoService({
+      repository,
+      notificationsService,
+    });
+
+    const solicitud = await service.createPublicRequest({
+      organizationId: "org-7",
+      empresa: "Ventora Norte",
+      nombre: "Ana Soto",
+      contacto: "+56998765432",
+      tipoTrabajo: "Cierre de terraza",
+    });
+
+    expect(solicitud.id).toBe("lead-public-1");
+    expect(notificationsService.sendLeadCreatedPush).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
   it("debe rechazar una solicitud publica sin contacto valido", async () => {
     const service = createSolicitudesContactoService({
       repository: createSolicitudesContactoRepositoryMock(),

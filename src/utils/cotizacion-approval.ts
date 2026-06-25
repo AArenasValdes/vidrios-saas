@@ -1,6 +1,6 @@
 const APPROVAL_TOKEN_LENGTH = 32;
 const PUBLIC_URL_PLACEHOLDER = "https://tu-dominio.cl";
-const CANONICAL_PUBLIC_ORIGIN = "https://ventorap.cl";
+const CANONICAL_PUBLIC_ORIGIN = "https://www.ventorap.cl";
 const CANONICAL_PUBLIC_HOSTS = new Set(["ventorap.cl", "www.ventorap.cl"]);
 
 function normalizeOrigin(origin: string | null | undefined) {

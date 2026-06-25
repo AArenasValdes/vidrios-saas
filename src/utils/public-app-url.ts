@@ -1,4 +1,4 @@
-const FALLBACK_PUBLIC_APP_URL = "https://ventorap.cl";
+const FALLBACK_PUBLIC_APP_URL = "https://www.ventorap.cl";
 
 function isLocalHostname(hostname: string) {
   return (

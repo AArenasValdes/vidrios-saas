@@ -33,7 +33,7 @@ describe("cotizacion-approval utils", () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://www.ventorap.cl/";
     process.env.NEXT_PUBLIC_SITE_URL = "";
 
-    expect(resolveAppOrigin()).toBe("https://ventorap.cl");
+    expect(resolveAppOrigin()).toBe("https://www.ventorap.cl");
   });
 
   it("debe usar el dominio canonico de ventorap si no hay app url configurada", () => {
@@ -41,7 +41,7 @@ describe("cotizacion-approval utils", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "";
     process.env.VERCEL_URL = "vidrios-saas.vercel.app";
 
-    expect(resolveAppOrigin()).toBe("https://ventorap.cl");
+    expect(resolveAppOrigin()).toBe("https://www.ventorap.cl");
   });
 
   it("debe construir la url completa del presupuesto", () => {

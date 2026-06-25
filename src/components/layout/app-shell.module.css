@@ -1362,6 +1362,12 @@
   border-color: rgba(79, 125, 212, 0.16);
 }
 
+.alertChipLead {
+  background: #eaf7f0;
+  color: #2fa36b;
+  border-color: rgba(47, 163, 107, 0.16);
+}
+
 .alertsFooterLink {
   min-height: 48px;
   border-radius: 16px;

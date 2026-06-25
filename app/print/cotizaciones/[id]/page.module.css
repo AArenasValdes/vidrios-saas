@@ -1059,16 +1059,16 @@
 .globalDescriptionText {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 11.3px;
-  line-height: 1.52;
-  color: #253244;
+  font-size: 13.2px;
+  line-height: 1.62;
+  color: #111827;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .globalDescriptionChecklist {
   display: grid;
-  gap: 7px;
+  gap: 8px;
 }
 
 .globalDescriptionChecklistItem {
@@ -1076,22 +1076,23 @@
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
-  min-height: 24px;
-  padding: 5px 8px 5px 6px;
-  border-left: 2px solid var(--brand);
-  background: linear-gradient(90deg, var(--brand-soft), #ffffff);
+  min-height: 28px;
+  padding: 7px 10px 7px 7px;
+  border-left: 3px solid var(--brand);
+  background: #eef8ff;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 10.8px;
-  line-height: 1.42;
-  color: #253244;
+  font-size: 12.4px;
+  line-height: 1.48;
+  font-weight: 700;
+  color: #111827;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
 .globalDescriptionChecklistMark {
-  width: 8px;
-  height: 8px;
-  margin-top: 4px;
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
   border-radius: 2px;
   background: var(--brand);
   box-shadow: 0 0 0 2px var(--brand-ring);
@@ -2070,9 +2071,10 @@
 .freeItemDescription {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 9px;
-  line-height: 1.45;
-  color: #4b5563;
+  font-size: 11px;
+  line-height: 1.52;
+  font-weight: 600;
+  color: #1f2937;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -2087,9 +2089,10 @@
 
 .freeItemChecklistItem {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 9px;
-  line-height: 1.45;
-  color: #4b5563;
+  font-size: 10.8px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .freeItemMeta {

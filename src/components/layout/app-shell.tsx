@@ -74,6 +74,7 @@ import {
 } from "@/components/ui/drawer";
 import { Toaster } from "@/components/ui/sonner";
 import { UpdateChecker } from "@/components/pwa/update-checker";
+import { PushNotificationsPrompt } from "@/components/pwa/push-notifications-prompt";
 
 import s from "./app-shell.module.css";
 
@@ -259,7 +260,11 @@ function shouldSkipRoutePrefetch() {
   );
 }
 
-function formatAlertDate(value: string) {
+function formatAlertDate(value: string | null | undefined) {
+  if (!value) {
+    return "Hace un momento";
+  }
+
   const timestamp = new Date(value).getTime();
 
   if (Number.isNaN(timestamp)) {
@@ -540,6 +545,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
         return getAlertTimestamp(solicitud.creadoEn) > solicitudesSeenAt;
       }).length,
     [solicitudesSeenAt, solicitudesShell]
+  );
+  const commercialAlertCount = alertCount + nuevasSolicitudesCount;
+  const visibleSolicitudAlerts = useMemo(
+    () =>
+      solicitudesShell
+        .filter((solicitud) => solicitud.estado === "nueva")
+        .slice(0, isCompactMobile ? 3 : 4),
+    [isCompactMobile, solicitudesShell]
   );
 
   const handleLogout = async () => {
@@ -1052,12 +1065,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
     if (nextIsOpen) {
       markAlertsAsSeen();
+      markSolicitudesAsSeen();
       void refresh();
     }
   };
 
   const handleClearAlerts = () => {
     markAlertsAsSeen();
+    markSolicitudesAsSeen();
     const latestClearedAt = alerts.reduce(
       (latest, alert) => Math.max(latest, getAlertTimestamp(alert.occurredAt)),
       alertsClearedAt
@@ -1284,8 +1299,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onClick={handleToggleAlerts}
             >
               <LuBell aria-hidden />
-              {alertCount > 0 ? (
-                <span className={s.alertDot}>{alertCount > 9 ? "9+" : alertCount}</span>
+              {commercialAlertCount > 0 ? (
+                <span className={s.alertDot}>
+                  {commercialAlertCount > 9 ? "9+" : commercialAlertCount}
+                </span>
               ) : null}
             </button>
             <div className={s.profileMenuWrap}>
@@ -1340,8 +1357,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               >
                 <LuBell aria-hidden />
                 Alertas
-                {alertCount > 0 ? (
-                  <span className={s.alertPill}>{alertCount > 9 ? "9+" : alertCount}</span>
+                {commercialAlertCount > 0 ? (
+                  <span className={s.alertPill}>
+                    {commercialAlertCount > 9 ? "9+" : commercialAlertCount}
+                  </span>
                 ) : null}
               </button>
               <div className={s.profileMenuWrap}>
@@ -1418,6 +1437,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </div>
             </section>
           ) : null}
+          {!usesMinimalShell && !isNuevaCotizacionRoute ? <PushNotificationsPrompt /> : null}
           {children}
         </div>
       </main>
@@ -1509,8 +1529,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div>
               <strong>Alertas comerciales</strong>
               <p>
-                {alertCount > 0
-                  ? `${alertCount} alerta${alertCount === 1 ? "" : "s"} para revisar`
+                {commercialAlertCount > 0
+                  ? `${commercialAlertCount} alerta${commercialAlertCount === 1 ? "" : "s"} para revisar`
                   : "Sin alertas activas"}
               </p>
             </div>
@@ -1539,7 +1559,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span className={s.alertsSpinner} aria-hidden />
               <div>
                 <strong>Actualizando alertas</strong>
-                <p>Estamos revisando respuestas nuevas de tus clientes.</p>
+                <p>Estamos revisando solicitudes y respuestas nuevas.</p>
               </div>
             </div>
           ) : null}
@@ -1551,8 +1571,33 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
 
-          {visibleAlerts.length > 0 ? (
+          {visibleSolicitudAlerts.length > 0 || visibleAlerts.length > 0 ? (
             <div className={s.alertsList}>
+              {visibleSolicitudAlerts.map((solicitud) => (
+                <Link
+                  key={`solicitud-${solicitud.id}`}
+                  href="/solicitudes"
+                  className={s.alertItem}
+                  onClick={() => setIsAlertsOpen(false)}
+                >
+                  <div className={s.alertItemIcon}>
+                    <LuInbox aria-hidden />
+                  </div>
+                  <div className={s.alertItemBody}>
+                    <div className={s.alertItemTop}>
+                      <strong>Nueva solicitud comercial</strong>
+                      <span className={`${s.alertChip} ${s.alertChipLead}`}>Solicitud</span>
+                    </div>
+                    <p>
+                      {solicitud.nombre} pidio {solicitud.tipoTrabajo ?? "un trabajo"}.
+                    </p>
+                    <div className={s.alertItemMeta}>
+                      <span>{solicitud.contacto}</span>
+                      <span>{formatAlertDate(solicitud.creadoEn)}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
               {visibleAlerts.map((alert) => {
                 const meta = getAlertMeta(alert);
                 const Icon = meta.Icon;
@@ -1586,14 +1631,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <div className={s.alertsEmptyState}>
               <strong>Sin respuestas nuevas</strong>
               <p>
-                Cuando un cliente apruebe, rechace o vea un presupuesto sin responder,
+                Cuando llegue una solicitud o un cliente responda un presupuesto,
                 aparecera aqui.
               </p>
             </div>
           ) : null}
 
-          <Link className={s.alertsFooterLink} href="/cotizaciones" onClick={() => setIsAlertsOpen(false)}>
-            Ir a cotizaciones
+          <Link className={s.alertsFooterLink} href="/solicitudes" onClick={() => setIsAlertsOpen(false)}>
+            Ir a solicitudes
           </Link>
         </aside>
       ) : null}

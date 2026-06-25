@@ -20,8 +20,8 @@
     "path": "C:\\Users\\aless\\vidrios-saas\\android-twa\\android-keystore",
     "alias": "ventora"
   },
-  "appVersionName": "3",
-  "appVersionCode": 3,
+  "appVersionName": "5",
+  "appVersionCode": 5,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://www.ventorap.cl/manifest.webmanifest",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "3"
+  "appVersion": "5"
 }
