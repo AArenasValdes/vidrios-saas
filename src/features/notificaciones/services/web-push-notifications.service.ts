@@ -30,6 +30,7 @@ type SendQuoteDecisionPushInput = {
 
 type SendLeadCreatedPushInput = {
   organizationId: string | number;
+  solicitudId?: string | null;
   prospectoNombre: string;
   empresaNombre: string;
   tipoTrabajo: string;
@@ -131,11 +132,16 @@ function buildQuoteDecisionPushPayload(
 function buildLeadCreatedPushPayload(
   input: SendLeadCreatedPushInput
 ): LeadCreatedPushPayload {
+  const solicitudId = input.solicitudId?.trim() || null;
+
   return {
     title: "Nueva solicitud comercial",
     body: `${input.prospectoNombre} pidió ${input.tipoTrabajo} para ${input.empresaNombre}.`,
     url: "/solicitudes",
-    tag: `solicitud-publica-${String(input.organizationId)}`,
+    tag: solicitudId
+      ? `solicitud-publica-${solicitudId}`
+      : `solicitud-publica-${String(input.organizationId)}-${Date.now()}`,
+    solicitudId: solicitudId ?? undefined,
     organizationId: String(input.organizationId),
     kind: "solicitud-publica",
   };

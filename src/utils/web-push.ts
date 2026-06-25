@@ -70,6 +70,53 @@ function shouldRetrySubscription(error: unknown) {
   );
 }
 
+function pushSubscriptionUsesApplicationServerKey(
+  subscription: PushSubscription,
+  applicationServerKey: Uint8Array
+) {
+  const currentKey = subscription.options?.applicationServerKey;
+
+  if (!currentKey) {
+    return true;
+  }
+
+  const currentBytes = new Uint8Array(currentKey);
+
+  if (currentBytes.length !== applicationServerKey.length) {
+    return false;
+  }
+
+  return currentBytes.every((byte, index) => byte === applicationServerKey[index]);
+}
+
+async function resolveReusablePushSubscription(
+  registration: ServiceWorkerRegistration,
+  applicationServerKey: Uint8Array
+) {
+  const existingSubscription = await registration.pushManager.getSubscription();
+
+  if (!existingSubscription) {
+    return null;
+  }
+
+  if (
+    pushSubscriptionUsesApplicationServerKey(
+      existingSubscription,
+      applicationServerKey
+    )
+  ) {
+    return existingSubscription;
+  }
+
+  try {
+    await existingSubscription.unsubscribe();
+  } catch {
+    // If Android/Chrome refuses cleanup, the fresh subscribe below will surface the real error.
+  }
+
+  return null;
+}
+
 async function resetPushRegistration() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
     throw new Error("Este dispositivo no soporta service workers.");
@@ -102,7 +149,10 @@ export async function subscribeToPushNotifications(vapidPublicKey: string) {
 
   const trySubscribe = async () => {
     const registration = await resolvePushServiceWorkerRegistration();
-    const existingSubscription = await registration.pushManager.getSubscription();
+    const existingSubscription = await resolveReusablePushSubscription(
+      registration,
+      applicationServerKey
+    );
 
     if (existingSubscription) {
       return existingSubscription;

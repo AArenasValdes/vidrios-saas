@@ -57,6 +57,36 @@ describe("web push utils", () => {
     expect(registration.pushManager.subscribe).not.toHaveBeenCalled();
   });
 
+  it("debe renovar una suscripcion existente cuando pertenece a otra clave publica", async () => {
+    const oldSubscription = {
+      endpoint: "https://push.example.com/old",
+      options: {
+        applicationServerKey: new Uint8Array([9, 9, 9]).buffer,
+      },
+      unsubscribe: jest.fn().mockResolvedValue(true),
+    } as unknown as PushSubscription;
+    const newSubscription = {
+      endpoint: "https://push.example.com/new",
+    } as PushSubscription;
+    const registration = {
+      pushManager: {
+        getSubscription: jest.fn().mockResolvedValue(oldSubscription),
+        subscribe: jest.fn().mockResolvedValue(newSubscription),
+      },
+    } as unknown as ServiceWorkerRegistration;
+
+    (resolvePushServiceWorkerRegistration as jest.Mock).mockResolvedValue(registration);
+
+    const resolved = await subscribeToPushNotifications("AQIDBA");
+
+    expect(resolved).toBe(newSubscription);
+    expect(oldSubscription.unsubscribe).toHaveBeenCalled();
+    expect(registration.pushManager.subscribe).toHaveBeenCalledWith({
+      userVisibleOnly: true,
+      applicationServerKey: expect.any(Uint8Array),
+    });
+  });
+
   it("debe recrear el service worker y reintentar cuando chromium devuelve push service error", async () => {
     const retriedSubscription = {
       endpoint: "https://push.example.com/retry",

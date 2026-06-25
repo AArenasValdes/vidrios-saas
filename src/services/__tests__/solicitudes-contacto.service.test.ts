@@ -258,6 +258,7 @@ describe("solicitudes-contacto.service", () => {
     });
     expect(notificationsService.sendLeadCreatedPush).toHaveBeenCalledWith({
       organizationId: "org-7",
+      solicitudId: "lead-public-1",
       prospectoNombre: "Ana Soto",
       tipoTrabajo: "Cierre de terraza",
       empresaNombre: "Ventora Norte",

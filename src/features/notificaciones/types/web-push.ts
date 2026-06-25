@@ -57,6 +57,7 @@ export type LeadCreatedPushPayload = {
   body: string;
   url: string;
   tag: string;
+  solicitudId?: string;
   organizationId: string;
   kind: PushNotificationKind;
 };

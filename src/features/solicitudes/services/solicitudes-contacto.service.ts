@@ -356,12 +356,23 @@ export function createSolicitudesContactoService(
       });
 
       try {
-        await notificationsService.sendLeadCreatedPush({
+        const pushResult = await notificationsService.sendLeadCreatedPush({
           organizationId: input.organizationId,
+          solicitudId: solicitud.id,
           prospectoNombre: nombre,
           empresaNombre: empresa,
           tipoTrabajo,
         });
+
+        if (pushResult.sent === 0) {
+          console.warn("No se envio push de nueva solicitud a ningun dispositivo.", {
+            organizationId: String(input.organizationId),
+            solicitudId: solicitud.id,
+            skipped: pushResult.skipped,
+            failed: pushResult.failed,
+            deactivated: pushResult.deactivated,
+          });
+        }
       } catch (error) {
         console.error("No pudimos enviar el push de nueva solicitud.", error);
       }

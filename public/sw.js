@@ -206,6 +206,8 @@ self.addEventListener("push", (event) => {
 
   const title = payload?.title || "Ventora";
   const isQuoteResponse = payload?.kind === "cotizacion-respuesta";
+  const isLeadCreated = payload?.kind === "solicitud-publica";
+  const isImportantNotification = isQuoteResponse || isLeadCreated;
   const options = {
     body: payload?.body || "Tienes una actualizacion nueva.",
     icon: "/icons/pwa-192.png",
@@ -215,8 +217,8 @@ self.addEventListener("push", (event) => {
     },
     tag: payload?.tag || "ventora-push",
     renotify: true,
-    requireInteraction: isQuoteResponse,
-    vibrate: isQuoteResponse ? [250, 100, 250, 100, 600] : undefined,
+    requireInteraction: isImportantNotification,
+    vibrate: isImportantNotification ? [250, 100, 250, 100, 600] : undefined,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

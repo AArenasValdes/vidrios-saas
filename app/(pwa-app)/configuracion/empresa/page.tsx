@@ -252,17 +252,9 @@ export default function ConfiguracionEmpresaPage() {
         return;
       }
 
-      const registration = await resolvePushServiceWorkerRegistration();
-      const existingSubscription = await registration.pushManager.getSubscription();
-      if (!existingSubscription) {
-        setDeviceAlertsState({
-          kind: "available",
-          message: "El navegador permite alertas, pero aun no queda suscrito.",
-        });
-        return;
-      }
-
-      await persistSubscription(existingSubscription);
+      await resolvePushServiceWorkerRegistration();
+      const subscription = await subscribeToPushNotifications(vapidPublicKey);
+      await persistSubscription(subscription);
       setDeviceAlertsState({
         kind: "enabled",
         message: "Este dispositivo ya recibe alertas de respuesta y seguimiento.",
