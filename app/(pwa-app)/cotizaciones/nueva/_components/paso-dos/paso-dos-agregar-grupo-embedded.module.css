@@ -1,0 +1,9 @@
+.host {
+  min-width: 0;
+}
+
+@media (min-width: 861px) {
+  .host {
+    min-height: 0;
+  }
+}
