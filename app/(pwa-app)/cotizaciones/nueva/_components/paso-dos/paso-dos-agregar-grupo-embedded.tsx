@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { ComponentProps } from "react";
 
 import { PasoDosAgregarGrupoSheet } from "./paso-dos-agregar-grupo-sheet";
@@ -20,19 +20,29 @@ export function PasoDosAgregarGrupoEmbedded({
 }: PasoDosAgregarGrupoEmbeddedProps) {
   const hostRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) {
       return;
     }
 
+    const overlay = hostRef.current?.querySelector<HTMLElement>(`.${pageStyles.groupSheetOverlay}`);
     const dialog = hostRef.current?.querySelector<HTMLElement>("[aria-modal='true']");
-    if (!dialog) {
+    if (!overlay || !dialog) {
       return;
     }
 
     dialog.removeAttribute("aria-modal");
     dialog.setAttribute("role", "region");
     dialog.setAttribute("aria-label", "Asistente para agregar componente");
+
+    const preventBackdropClose = (event: MouseEvent) => {
+      if (event.target === overlay) {
+        event.stopImmediatePropagation();
+      }
+    };
+
+    overlay.addEventListener("click", preventBackdropClose, true);
+    return () => overlay.removeEventListener("click", preventBackdropClose, true);
   }, [isOpen]);
 
   const embeddedSheetStyles = `
