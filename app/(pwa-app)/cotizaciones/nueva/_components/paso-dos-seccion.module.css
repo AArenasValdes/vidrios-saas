@@ -1,0 +1,52 @@
+.workspace {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.assistant,
+.panel {
+  min-width: 0;
+}
+
+.emptyState {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1.1rem;
+  border: 1px dashed rgba(79, 125, 212, 0.34);
+  border-radius: 18px;
+  background: rgba(238, 244, 255, 0.62);
+  color: #51627f;
+}
+
+.emptyState strong {
+  color: #243b6b;
+  font-size: 0.92rem;
+}
+
+.emptyState span {
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 861px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1.32fr) minmax(320px, 0.88fr);
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .assistant {
+    min-height: min(720px, calc(100dvh - 188px));
+  }
+
+  .panel {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+    max-height: calc(100dvh - 188px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+}
