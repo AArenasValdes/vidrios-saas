@@ -1,7 +1,6 @@
 "use client";
 
 import { EncabezadoFlujo } from "../encabezado-flujo";
-import { PasoDosAgregarGrupoSheet } from "../paso-dos/paso-dos-agregar-grupo-sheet";
 import { PasoDosSeccion } from "../paso-dos-seccion";
 import { PasoTresResumen } from "../paso-tres-resumen";
 import { PasoUnoDatosCliente } from "../paso-uno-datos-cliente";
@@ -27,7 +26,9 @@ export function NuevaCotizacionDesktop({
       <div className={`${styles.layout} ${layoutClassName}`}>
         <div className={styles.main}>
           {step === 1 ? <PasoUnoDatosCliente {...stepOneProps} /> : null}
-          {step === 2 ? <PasoDosSeccion {...stepTwoSectionProps} /> : null}
+          {step === 2 ? (
+            <PasoDosSeccion {...stepTwoSectionProps} addGroupSheet={addGroupSheetProps} />
+          ) : null}
           {step === 3 ? <PasoTresResumen {...stepThreeProps} /> : null}
         </div>
 
@@ -37,8 +38,6 @@ export function NuevaCotizacionDesktop({
           </div>
         ) : null}
       </div>
-
-      {step === 2 ? <PasoDosAgregarGrupoSheet {...addGroupSheetProps} /> : null}
     </div>
   );
 }
