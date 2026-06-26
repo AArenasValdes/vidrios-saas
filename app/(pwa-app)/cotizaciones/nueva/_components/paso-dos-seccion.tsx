@@ -13,7 +13,6 @@ import { PasoDosAgregarGrupoEmbedded } from "./paso-dos/paso-dos-agregar-grupo-e
 import { PasoDosItemLibreForm } from "./paso-dos/paso-dos-item-libre-form";
 import { PasoDosPanelComponentes } from "./paso-dos-panel-componentes";
 import { PasoDosModoCotizacion } from "./paso-dos/paso-dos-modo-cotizacion";
-import s from "../page.module.css";
 import styles from "./paso-dos-seccion.module.css";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
@@ -46,27 +45,27 @@ export function PasoDosSeccion({
     !quoteModeChosen &&
     !isAssistantOpen;
 
-  if (showModeChoice) {
-    return (
-      <PasoDosModoCotizacion
-        onSelectMode={(mode) => {
-          onSelectMode(mode);
-          if (mode === "por_item") {
-            onOpenCreator();
-          }
-        }}
-        onSelectFreeTotalMode={() => {
-          onSelectMode("total_global");
-          onOpenFreeTotalNotebook();
-        }}
-      />
-    );
-  }
+  const modeChoice = (
+    <PasoDosModoCotizacion
+      onSelectMode={(mode) => {
+        onSelectMode(mode);
+        if (mode === "por_item") {
+          onOpenCreator();
+        }
+      }}
+      onSelectFreeTotalMode={() => {
+        onSelectMode("total_global");
+        onOpenFreeTotalNotebook();
+      }}
+    />
+  );
 
   return (
     <div className={styles.workspace}>
       <div className={styles.assistant}>
-        {isAssistantOpen && addGroupSheet ? (
+        {showModeChoice ? (
+          modeChoice
+        ) : isAssistantOpen && addGroupSheet ? (
           <PasoDosAgregarGrupoEmbedded {...addGroupSheet} />
         ) : itemLibreForm.isOpen ? (
           <PasoDosItemLibreForm {...itemLibreForm} />
