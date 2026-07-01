@@ -1,8 +1,15 @@
+import { Suspense } from "react";
+
 import { AdminClientesWorkspace } from "@/features/admin/components/admin-clientes-workspace";
-import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 
-export default async function AdminClientesPage() {
-  const clients = await listAdminClients();
+function ClientesLoading() {
+  return <div>Cargando cuentas SaaS…</div>;
+}
 
-  return <AdminClientesWorkspace initialClients={clients} />;
+export default function AdminClientesPage() {
+  return (
+    <Suspense fallback={<ClientesLoading />}>
+      <AdminClientesWorkspace />
+    </Suspense>
+  );
 }

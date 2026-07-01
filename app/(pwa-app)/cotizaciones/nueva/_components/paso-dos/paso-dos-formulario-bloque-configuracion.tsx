@@ -49,7 +49,15 @@ type Props = Pick<
   | "onRecalculateCurrentTemplatePrice"
   | "onSaveQuickPriceTemplate"
   | "variant"
+  | "desktopAssistantStage"
 >;
+
+function isDesktopAssistantStageVisible(
+  stage: 1 | 2 | 3,
+  desktopAssistantStage?: 1 | 2 | 3 | null
+) {
+  return !desktopAssistantStage || desktopAssistantStage === stage;
+}
 
 export function PasoDosFormularioBloqueConfiguracion({
   itemsCount,
@@ -72,6 +80,7 @@ export function PasoDosFormularioBloqueConfiguracion({
   onRecalculateCurrentTemplatePrice,
   onSaveQuickPriceTemplate,
   variant = "default",
+  desktopAssistantStage = null,
 }: Props) {
   const isMobilePointEdit = variant === "mobilePointEdit";
   const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(componentForm.tipo);
@@ -109,6 +118,13 @@ export function PasoDosFormularioBloqueConfiguracion({
   const isFreeValue = isTrabajoPersonalizado || isFreeValueComponentType(componentForm.tipo);
   const showSystemSelection = shouldShowSystemSelectionForComponent(componentForm.tipo);
   const systemOptions = getSystemOptionsForComponent(componentForm.tipo);
+  const commonDesktopSystemOptions = ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"].filter((option) =>
+    systemOptions.includes(option)
+  );
+  const secondaryDesktopSystemOptions = systemOptions.filter(
+    (option) => !commonDesktopSystemOptions.includes(option)
+  );
+  const selectedSistema = componentForm.sistema?.trim() ?? "";
   const configurationOptions = hasPerSystemConfigurations(componentForm.tipo)
     ? getConfigurationOptionsForComponentSistema(
         componentForm.tipo,
@@ -305,7 +321,7 @@ export function PasoDosFormularioBloqueConfiguracion({
 
   return (
     <>
-      {!isFreeValue && requiresProfileMaterial ? (
+      {!isFreeValue && requiresProfileMaterial && isDesktopAssistantStageVisible(1, desktopAssistantStage) ? (
       <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Material</span>
@@ -344,7 +360,7 @@ export function PasoDosFormularioBloqueConfiguracion({
       </section>
       ) : null}
 
-      {!isFreeValue ? (
+      {!isFreeValue && isDesktopAssistantStageVisible(1, desktopAssistantStage) ? (
       <section className={`${s.formSection} ${s.providerOnboardingCard} ${s.stepTwoSectionStrong}`}>
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>Precio</span>
@@ -438,7 +454,7 @@ export function PasoDosFormularioBloqueConfiguracion({
       </section>
       ) : null}
 
-      {editingItemId && !isFreeValue ? (
+      {editingItemId && !isFreeValue && isDesktopAssistantStageVisible(3, desktopAssistantStage) ? (
         <section
           className={`${s.formSection} ${s.stepTwoSectionStrong} ${
             isMobilePointEdit ? s.stepTwoMobilePointEditSection : ""
@@ -507,23 +523,50 @@ export function PasoDosFormularioBloqueConfiguracion({
         </section>
       ) : null}
 
+      {isDesktopAssistantStageVisible(2, desktopAssistantStage) && desktopAssistantStage === 2 ? (
+        <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
+          <div className={s.formSectionHead}>
+            <span className={s.formSectionEyebrow}>Componente</span>
+            <strong>Elige el tipo de trabajo</strong>
+            <p>Selecciona ventana, puerta, shower, cierre u otro componente base.</p>
+          </div>
+          <div className={s.stepTwoDesktopTypeGridWrap}>{componentTypeSelector}</div>
+        </section>
+      ) : null}
+
+      {(!desktopAssistantStage || desktopAssistantStage === 3) ? (
       <section
         className={`${s.formSection} ${s.stepTwoSectionStrong} ${
           isMobilePointEdit ? s.stepTwoMobilePointEditSection : ""
-        }`}
+        } ${desktopAssistantStage === 3 ? s.stepTwoDesktopConfigSection : ""}`}
       >
         <div className={s.formSectionHead}>
           <span className={s.formSectionEyebrow}>
-            {isMobilePointEdit ? "Componente" : "Carga rapida"}
+            {isMobilePointEdit ? "Componente" : desktopAssistantStage === 3 ? "Configuración" : "Carga rapida"}
           </span>
-          <strong>{isMobilePointEdit ? componentForm.tipo : isMobileViewport ? "Elige el componente" : "Elige el componente base"}</strong>
-          {!isMobileViewport && !isMobilePointEdit ? (
+          <strong>
+            {isMobilePointEdit
+              ? componentForm.tipo
+              : desktopAssistantStage === 3
+                ? "Completa sistema, medidas y detalles"
+                : isMobileViewport
+                  ? "Elige el componente"
+                  : "Elige el componente base"}
+          </strong>
+          {!isMobileViewport && !isMobilePointEdit && desktopAssistantStage !== 3 ? (
             <p>Te sugerimos una base para que ajustes solo lo necesario.</p>
+          ) : null}
+          {desktopAssistantStage === 3 ? (
+            <p>Define sistema, composición, cantidad y datos técnicos del componente.</p>
           ) : null}
         </div>
 
-        {!isMobilePointEdit ? (
-          <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
+        {!isMobilePointEdit && (!desktopAssistantStage || (desktopAssistantStage === 3 && isMobileViewport)) ? (
+          <div
+            className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard} ${
+              desktopAssistantStage === 3 ? s.stepTwoDesktopPreviewCompact : ""
+            }`}
+          >
             <div className={s.quickPreviewThumb}>
               {isTrabajoPersonalizado ? (
                 <div className={s.customWorkPreview}>
@@ -537,18 +580,20 @@ export function PasoDosFormularioBloqueConfiguracion({
                 />
               )}
             </div>
-            <div className={s.quickPreviewBody}>
-              <strong>{componentForm.tipo}</strong>
-              {!isMobileViewport ? (
-                <span>
-                  {isTrabajoPersonalizado
-                    ? "Detalle libre para trabajos especiales o fabricacion a medida."
-                    : "Vista rapida. Las medidas y valores finales se ajustan abajo."}
-                </span>
-              ) : null}
-            </div>
+            {desktopAssistantStage !== 3 ? (
+              <div className={s.quickPreviewBody}>
+                <strong>{componentForm.tipo}</strong>
+                {!isMobileViewport ? (
+                  <span>
+                    {isTrabajoPersonalizado
+                      ? "Detalle libre para trabajos especiales o fabricacion a medida."
+                      : "Vista rapida. Las medidas y valores finales se ajustan abajo."}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
-        ) : (
+        ) : isMobilePointEdit ? (
           <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard} ${s.stepTwoMobilePointEditPreview}`}>
             <div className={s.quickPreviewThumb}>
               {isTrabajoPersonalizado ? (
@@ -564,34 +609,77 @@ export function PasoDosFormularioBloqueConfiguracion({
               )}
             </div>
           </div>
-        )}
+        ) : null}
 
-        {isMobilePointEdit ? (
-          <details className={s.stepTwoMobileTypeDetails}>
-            <summary>Cambiar tipo de componente</summary>
-            {componentTypeSelector}
-          </details>
-        ) : (
-          componentTypeSelector
-        )}
+        {!desktopAssistantStage ? (
+          isMobilePointEdit ? (
+            <details className={s.stepTwoMobileTypeDetails}>
+              <summary>Cambiar tipo de componente</summary>
+              {componentTypeSelector}
+            </details>
+          ) : (
+            componentTypeSelector
+          )
+        ) : null}
 
         {showSystemSelection ? (
           <div className={`${s.field} ${s.fieldFull}`}>
             <span className={s.label}>Sistema</span>
-            <div className={s.typeGroupGrid} role="group" aria-label="Sistema del componente">
-              {systemOptions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${s.typeChip} ${
-                    componentForm.sistema === option ? s.typeChipActive : ""
-                  }`}
-                  onClick={() => onComponentChange("sistema", option)}
+            {desktopAssistantStage === 3 && !isMobileViewport ? (
+              <div className={s.stepTwoDesktopSystemPicker}>
+                <div className={s.typeGroupGrid} role="group" aria-label="Sistemas frecuentes">
+                  {commonDesktopSystemOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      className={`${s.typeChip} ${
+                        componentForm.sistema === option ? s.typeChipActive : ""
+                      }`}
+                      onClick={() => onComponentChange("sistema", option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                {secondaryDesktopSystemOptions.length > 0 ? (
+                <details
+                  className={s.stepTwoDesktopOtherSystems}
+                  open={secondaryDesktopSystemOptions.includes(selectedSistema)}
                 >
-                  {option}
-                </button>
-              ))}
-            </div>
+                    <summary>Otros sistemas</summary>
+                    <div className={s.typeGroupGrid} role="group" aria-label="Otros sistemas">
+                      {secondaryDesktopSystemOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`${s.typeChip} ${
+                            componentForm.sistema === option ? s.typeChipActive : ""
+                          }`}
+                          onClick={() => onComponentChange("sistema", option)}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            ) : (
+              <div className={s.typeGroupGrid} role="group" aria-label="Sistema del componente">
+                {systemOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`${s.typeChip} ${
+                      componentForm.sistema === option ? s.typeChipActive : ""
+                    }`}
+                    onClick={() => onComponentChange("sistema", option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -729,6 +817,7 @@ export function PasoDosFormularioBloqueConfiguracion({
           </div>
         )}
       </section>
+      ) : null}
     </>
   );
 }

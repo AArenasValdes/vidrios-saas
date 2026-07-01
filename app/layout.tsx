@@ -3,14 +3,13 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Geist } from "next/font/google";
 import { GoogleTagProvider } from "@/features/analytics/components/google-tag-provider";
 import { OAuthReturnTracker } from "@/features/auth/components/oauth-return-tracker";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
-import { InstallAppPrompt } from "@/components/pwa/install-app-prompt";
-import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
-import "./globals.css";
-import { Geist } from "next/font/google";
+import { DynamicPwaComponents } from "@/components/pwa/dynamic-pwa-components";
 import { cn } from "@/lib/utils";
+import "./globals.css";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
@@ -85,8 +84,7 @@ export default function RootLayout({
             />
           </noscript>
         ) : null}
-        <RegisterServiceWorker />
-        <InstallAppPrompt />
+        <DynamicPwaComponents />
         {children}
         {shouldRenderVercelInsights ? <Analytics /> : null}
         {shouldRenderVercelInsights ? <SpeedInsights /> : null}

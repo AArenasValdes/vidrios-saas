@@ -10,17 +10,26 @@ Esta documentacion sirve como **indice maestro** para que cualquier agente de co
 
 Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones antes de explorar el proyecto. Si es sobre una ruta especifica, leer `ROUTES_MAP.md`. Si es sobre base de datos, leer `DATA_MODEL_MAP.md`.
 
+Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.
+
 ## Orden recomendado de lectura
 
-1. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
-2. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
-3. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
-4. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
-5. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
-6. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
-7. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
-8. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
-9. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
+1. **`../VENTORA_DESKTOP_TALLER_ROADMAP.md`** - Documento rector de desktop taller y orden de milestones
+2. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
+3. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
+4. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
+5. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
+6. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
+7. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
+8. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
+9. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
+10. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
+
+## Foco actual
+
+- Desktop taller, no CRM generico.
+- Prioridad: estabilizar cotizacion desktop, tablero comercial real, Quote Studio desktop, luego constructor visual guiado.
+- Catalogo privado y cubicacion quedan fuera del alcance inmediato.
 
 ## Advertencia critica
 
@@ -43,6 +52,7 @@ Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones a
 ```
 docs/agent-map/
   README.md                 <- Este archivo
+  ../VENTORA_DESKTOP_TALLER_ROADMAP.md <- Documento rector de desktop taller
   PROJECT_OVERVIEW.md       <- Stack, arquitectura, carpetas
   ROUTES_MAP.md             <- Mapa completo de rutas
   FEATURES_MAP.md           <- Organizacion por feature

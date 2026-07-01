@@ -63,6 +63,11 @@ export type PasoDosFormularioComponenteProps = {
   onRecalculateCurrentTemplatePrice: () => void;
   onSaveQuickPriceTemplate: () => void;
   variant?: "default" | "mobilePointEdit";
+  showDesktopContextRail?: boolean;
+  desktopAssistantStage?: 1 | 2 | 3 | null;
+  isDesktopQuoteStudio?: boolean;
+  originalFormSnapshot?: ComponentFormState | null;
+  onDuplicateItemFromEditor?: () => void;
 };
 
 export type PasoDosPanelComponentesProps = {
@@ -112,11 +117,20 @@ export type PasoDosPanelComponentesProps = {
   onMeasureFirstItem: (node: HTMLElement | null) => void;
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
+  onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
   onRecalculateTemplatePrice: (itemId: string) => void;
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   isSavingQuickPriceTemplate: boolean;
   onGoToSummary: () => void;
+  isAddGroupWizardOpen?: boolean;
+  activeDraftCard?: {
+    code: string;
+    title: string;
+    stepLabel: string;
+    missingLabel: string;
+  } | null;
+  onContinueActiveDraft?: () => void;
 };
 
 export type PasoDosItemLibreFormProps = {

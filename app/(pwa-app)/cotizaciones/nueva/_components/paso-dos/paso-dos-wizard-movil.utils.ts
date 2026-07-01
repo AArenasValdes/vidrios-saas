@@ -114,7 +114,7 @@ export function getSubtypeBadge(subtipo: string) {
 }
 
 export function getColorByMaterial(material: PasoDosGrupoDraft["material"]) {
-  return material === "PVC" ? "#f0eeeb" : "#8f99a8";
+  return material === "PVC" ? "#ffffff" : "#8f99a8";
 }
 
 export function isPositiveNumber(value: string) {

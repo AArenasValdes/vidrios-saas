@@ -30,6 +30,7 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
+  DEFAULT_MARGIN_PCT,
   normalizePricingMode,
   type PricingMode,
   type CostInputScope,
@@ -74,6 +75,8 @@ export const ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS = [
   "Espejo",
 ] as const;
 
+export type PasoDosGrupoPriceInputMode = "line_m2" | "unit_direct" | "piece_total";
+
 export type PasoDosGrupoDraft = {
   categoria: PasoDosGrupoCategoria;
   subtipo: string;
@@ -87,6 +90,7 @@ export type PasoDosGrupoDraft = {
   cobraPrecioSeparado: boolean;
   alcanceDetalles: AlcanceDetalle[];
   pricingMode: PricingMode;
+  priceInputMode: PasoDosGrupoPriceInputMode;
   material: (typeof MATERIAL_OPTIONS)[number];
   colorHex: string;
   sistema: string;
@@ -207,7 +211,9 @@ type CreateInitialDraftParams = {
   provider: PreferredProvider;
   seedForm?: ComponentFormState | null;
   customGlassOptions?: readonly string[];
+  activeLineTemplates?: readonly CotizacionLineTemplate[];
   onSheetClosed?: (itemCount: number) => void;
+  lockBodyScroll?: boolean;
 };
 
 type BuildGroupComponentFormParams = CreateInitialDraftParams & {
@@ -332,16 +338,17 @@ function buildDefaultFreeValueName(subtipo: string) {
   return "";
 }
 
-export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
-  if (!safeTrim(draft.referencia) || !safeTrim(draft.precioPorM2)) {
-    return draft;
-  }
+function moneyToNumber(value: string | null | undefined) {
+  return Number(String(value ?? "").replace(/[^\d]/g, "")) || 0;
+}
 
-  if (draft.pricingMode === "margen") {
-    return draft;
-  }
-
-  const pricing = calculateLineTemplatePricing({
+export function buildGrupoDraftLinePricingSummary(
+  draft: Pick<
+    PasoDosGrupoDraft,
+    "ancho" | "alto" | "cantidad" | "precioPorM2" | "minimoCobrable" | "redondeoPrecio"
+  >
+) {
+  return calculateLineTemplatePricing({
     ancho: draft.ancho ? Number(draft.ancho) : null,
     alto: draft.alto ? Number(draft.alto) : null,
     cantidad: draft.cantidad,
@@ -349,14 +356,132 @@ export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupo
     minimoCobrable: draft.minimoCobrable ? Number(draft.minimoCobrable) : 0,
     redondeoPrecio: draft.redondeoPrecio ? Number(draft.redondeoPrecio) : 1000,
   });
+}
 
-  if (draft.precioAjustadoManual || pricing.totalSugerido === null) {
+export function resolveGrupoDraftSubtotal(draft: PasoDosGrupoDraft) {
+  const qty = Math.max(1, draft.cantidad);
+
+  if (draft.priceInputMode === "piece_total") {
+    const total = moneyToNumber(draft.precio);
+    return total;
+  }
+
+  if (draft.priceInputMode === "unit_direct") {
+    return Math.round(moneyToNumber(draft.precio) * qty);
+  }
+
+  if (draft.precioAjustadoManual && moneyToNumber(draft.precio) > 0) {
+    return Math.round(moneyToNumber(draft.precio) * qty);
+  }
+
+  const summary = buildGrupoDraftLinePricingSummary(draft);
+  return Math.round(summary.totalSugerido ?? 0);
+}
+
+export function resolveGrupoDraftReferentialUnitPrice(draft: PasoDosGrupoDraft) {
+  const qty = Math.max(1, draft.cantidad);
+
+  if (draft.priceInputMode === "piece_total") {
+    const total = moneyToNumber(draft.precio);
+    return total > 0 ? total / qty : 0;
+  }
+
+  return resolveGrupoDraftUnitPrice(draft);
+}
+
+export function resolveGrupoDraftUnitPrice(draft: PasoDosGrupoDraft) {
+  const qty = Math.max(1, draft.cantidad);
+  const subtotal = resolveGrupoDraftSubtotal(draft);
+
+  if (subtotal <= 0) {
+    return 0;
+  }
+
+  return Math.round(subtotal / qty);
+}
+
+export function isGrupoDraftPriceStepValid(draft: PasoDosGrupoDraft) {
+  if (draft.priceInputMode === "piece_total") {
+    return moneyToNumber(draft.precio) > 0;
+  }
+
+  if (draft.priceInputMode === "unit_direct") {
+    return moneyToNumber(draft.precio) > 0;
+  }
+
+  const summary = buildGrupoDraftLinePricingSummary(draft);
+
+  if (!summary.areaM2 || moneyToNumber(draft.precioPorM2) <= 0) {
+    return false;
+  }
+
+  return resolveGrupoDraftSubtotal(draft) > 0;
+}
+
+function resolveDraftSubtotalForModeSwitch(draft: PasoDosGrupoDraft) {
+  if (draft.priceInputMode === "piece_total") {
+    return moneyToNumber(draft.precio);
+  }
+
+  if (draft.priceInputMode === "unit_direct") {
+    return Math.round(moneyToNumber(draft.precio) * Math.max(1, draft.cantidad));
+  }
+
+  if (draft.precioAjustadoManual && moneyToNumber(draft.precio) > 0) {
+    return Math.round(moneyToNumber(draft.precio) * Math.max(1, draft.cantidad));
+  }
+
+  const summary = buildGrupoDraftLinePricingSummary(draft);
+  return Math.round(summary.totalSugerido ?? 0);
+}
+
+function resolveInitialPriceInputMode(input: {
+  precioPorM2?: string;
+  referencia?: string;
+  lineTemplateId?: string;
+  priceInputMode?: PasoDosGrupoPriceInputMode;
+}) {
+  if (
+    input.priceInputMode === "line_m2" ||
+    input.priceInputMode === "unit_direct" ||
+    input.priceInputMode === "piece_total"
+  ) {
+    return input.priceInputMode;
+  }
+
+  const hasLinePricing =
+    safeTrim(input.precioPorM2) !== "" &&
+    (safeTrim(input.referencia) !== "" || safeTrim(input.lineTemplateId) !== "");
+
+  return hasLinePricing ? "line_m2" : "unit_direct";
+}
+
+export function syncDraftTemplatePricing(draft: PasoDosGrupoDraft): PasoDosGrupoDraft {
+  if (draft.priceInputMode === "unit_direct" || draft.priceInputMode === "piece_total") {
+    return draft;
+  }
+
+  if (!safeTrim(draft.referencia) && !safeTrim(draft.precioPorM2)) {
+    return draft;
+  }
+
+  if (draft.pricingMode === "margen") {
+    return draft;
+  }
+
+  if (draft.precioAjustadoManual) {
+    return draft;
+  }
+
+  const pricing = buildGrupoDraftLinePricingSummary(draft);
+
+  if (pricing.precioUnitarioSugerido === null) {
     return draft;
   }
 
   return {
     ...draft,
-    precio: String(Math.round(pricing.totalSugerido)),
+    precio: String(Math.round(pricing.precioUnitarioSugerido)),
   };
 }
 
@@ -380,6 +505,7 @@ export function applyLineTemplateToGrupoDraft(
     referencia: template.nombre,
     vidrio: template.vidrioPrincipalRecomendado?.trim() || draft.vidrio,
     pricingMode: "precio_directo",
+    priceInputMode: "line_m2",
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
     minimoCobrable: String(Math.round(template.minimoCobrable)),
     redondeoPrecio: String(Math.round(template.redondeoPrecio || 1000)),
@@ -399,15 +525,19 @@ export function resolveMaterialColorHex(
   const normalizedColor = currentColorHex?.trim().toLowerCase();
 
   if (material === "PVC") {
+    if (!normalizedColor || normalizedColor === "#a8a8a8" || normalizedColor === "#f0eeeb") {
+      return "#ffffff";
+    }
+
     const isKnownPvcColor = PVC_COLOR_OPTIONS.some(
       (option) => option.hex.toLowerCase() === normalizedColor
     );
 
     if (normalizedColor && isKnownPvcColor) {
-      return currentColorHex ?? "#f0eeeb";
+      return currentColorHex ?? "#ffffff";
     }
 
-    return "#f0eeeb";
+    return "#ffffff";
   }
 
   const isKnownColor = ALUMINUM_COLOR_OPTIONS.some(
@@ -543,6 +673,11 @@ export function createInitialPasoDosGrupoDraft({
     cobraPrecioSeparado: false,
     alcanceDetalles: [],
     pricingMode: normalizePricingMode(seedForm?.pricingMode ?? pricingMode),
+    priceInputMode: resolveInitialPriceInputMode({
+      precioPorM2: seedForm?.precioPorM2,
+      referencia,
+      lineTemplateId: seedForm?.lineTemplateId,
+    }),
     material: suggestedForm.material,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
     sistema: seedForm?.sistema?.trim() || referenceParts.sistema || systemOptions[0] || "",
@@ -648,11 +783,14 @@ export function buildPasoDosGrupoComponentForm({
     precioPorM2: draft.precioPorM2,
     minimoCobrable: draft.minimoCobrable,
     redondeoPrecio: draft.redondeoPrecio || "1000",
-    precioAjustadoManual: draft.precioAjustadoManual,
+    precioAjustadoManual:
+      draft.priceInputMode === "unit_direct" || draft.priceInputMode === "piece_total"
+        ? true
+        : draft.precioAjustadoManual,
     loteCantidad: "1",
     palilloEnabled: draft.palilloEnabled,
     palilloType: draft.palilloType,
-    costInputScope: draft.costInputScope,
+    costInputScope: draft.priceInputMode === "piece_total" ? "group_total" : "unit",
   });
 }
 
@@ -740,12 +878,17 @@ export function buildPasoDosGrupoSelectionPatch({
 }
 
 export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
+  const activeLineTemplates = useMemo(
+    () => params.activeLineTemplates ?? [],
+    [params.activeLineTemplates]
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [paso, setPaso] = useState<PasoDosGrupoPaso>(1);
   const [entryMode, setEntryMode] = useState<PasoDosGrupoEntryMode>("normal");
   const [editingFreeTotalMainItemId, setEditingFreeTotalMainItemId] = useState<string | null>(null);
   const [editingFreeTotalItemIds, setEditingFreeTotalItemIds] = useState<string[] | null>(null);
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() => createInitialPasoDosGrupoDraft(params));
+  const lockBodyScroll = params.lockBodyScroll !== false;
 
   const resetFreeTotalEditState = () => {
     setEditingFreeTotalMainItemId(null);
@@ -753,7 +896,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !lockBodyScroll) {
       return;
     }
 
@@ -763,7 +906,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen]);
+  }, [isOpen, lockBodyScroll]);
 
   const subtypeOptions = useMemo(
     () => getSubtypeOptionsForCategory(draft.categoria),
@@ -780,6 +923,13 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const glassOptions = useMemo(
     () => getGlassOptionsForSubtype(draft.subtipo, params.customGlassOptions),
     [draft.subtipo, params.customGlassOptions]
+  );
+  const visibleLineTemplates = useMemo(
+    () =>
+      shouldRequireProfileMaterialForComponent(draft.subtipo)
+        ? activeLineTemplates.filter((template) => template.material === draft.material)
+        : activeLineTemplates,
+    [activeLineTemplates, draft.material, draft.subtipo]
   );
   const summary = useMemo(() => buildPasoDosGrupoSummary(draft), [draft]);
 
@@ -839,8 +989,8 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setPaso(1);
   };
 
-  const closeSheet = () => {
-    const itemCount = params.items.length;
+  const closeSheet = (options?: { itemCountOverride?: number }) => {
+    const itemCount = options?.itemCountOverride ?? params.items.length;
 
     setIsOpen(false);
     setPaso(1);
@@ -886,11 +1036,6 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const selectSubtipo = (subtipo: string) => {
-    const shouldSkipCantidad = shouldSkipCantidadForGrupoDraft({
-      categoria: draft.categoria,
-      subtipo,
-    });
-
     setDraft((current) => ({
       ...current,
       ...buildPasoDosGrupoSelectionPatch({
@@ -900,8 +1045,13 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         provider: params.provider,
         subtipo,
       }),
+      sistema: "",
+      configuracion: "",
+      sheetScheme: "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
     }));
-    setPaso(shouldSkipCantidad ? 4 : 3);
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -933,12 +1083,72 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     }));
   };
 
+  const updateCantidadInput = (value: string) => {
+    const digitsOnly = sanitizeDigits(value);
+    const parsed = Number.parseInt(digitsOnly || "0", 10);
+
+    setDraft((current) =>
+      syncDraftTemplatePricing({
+        ...current,
+        usaCantidadPersonalizada: true,
+        cantidadPersonalizada: digitsOnly,
+        cantidad: digitsOnly && parsed > 0 ? parsed : 0,
+      })
+    );
+  };
+
+  const normalizeCantidadInput = () => {
+    setDraft((current) => {
+      const parsed = Number.parseInt(
+        current.cantidadPersonalizada || String(Math.max(0, current.cantidad)),
+        10
+      );
+      const nextCantidad = parsed > 0 ? parsed : 1;
+
+      return syncDraftTemplatePricing({
+        ...current,
+        cantidad: nextCantidad,
+        cantidadPersonalizada: "",
+        usaCantidadPersonalizada: false,
+      });
+    });
+  };
+
   const updateMaterial = (material: PasoDosGrupoDraft["material"]) => {
     setDraft((current) => ({
       ...current,
       material,
+      lineTemplateId: "",
+      referencia: "",
+      precioPorM2: "",
+      minimoCobrable: "",
+      redondeoPrecio: "1000",
       colorHex: resolveMaterialColorHex(material, current.colorHex),
     }));
+  };
+
+  const selectLineTemplate = (templateId: string) => {
+    if (!templateId) {
+      setDraft((current) => ({
+        ...current,
+        lineTemplateId: "",
+        referencia: "",
+        precioPorM2: "",
+        minimoCobrable: "",
+        redondeoPrecio: "1000",
+      }));
+      return;
+    }
+
+    const template = activeLineTemplates.find(
+      (currentTemplate) => String(currentTemplate.id) === templateId
+    );
+
+    if (!template) {
+      return;
+    }
+
+    setDraft((current) => applyLineTemplateToGrupoDraft(current, template));
   };
 
   const updateColorHex = (colorHex: string) => {
@@ -1115,11 +1325,11 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateAncho = (value: string) => {
-    setDraft((current) => ({ ...current, ancho: sanitizeDigits(value) }));
+    setDraft((current) => syncDraftTemplatePricing({ ...current, ancho: sanitizeDigits(value) }));
   };
 
   const updateAlto = (value: string) => {
-    setDraft((current) => ({ ...current, alto: sanitizeDigits(value) }));
+    setDraft((current) => syncDraftTemplatePricing({ ...current, alto: sanitizeDigits(value) }));
   };
 
   const updatePrecio = (value: string) => {
@@ -1127,6 +1337,172 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       ...current,
       precio: normalizeCurrencyInput(value),
       precioAjustadoManual: true,
+    }));
+  };
+
+  const updatePrecioPorM2 = (value: string) => {
+    setDraft((current) => {
+      const next = {
+        ...current,
+        precioPorM2: normalizeCurrencyInput(value),
+      };
+
+      if (current.priceInputMode === "line_m2" && current.precioAjustadoManual) {
+        return next;
+      }
+
+      return syncDraftTemplatePricing({
+        ...next,
+        precioAjustadoManual: false,
+      });
+    });
+  };
+
+  const updateMinimoCobrable = (value: string) => {
+    setDraft((current) => {
+      const next = {
+        ...current,
+        minimoCobrable: normalizeCurrencyInput(value),
+      };
+
+      if (current.priceInputMode === "line_m2" && current.precioAjustadoManual) {
+        return next;
+      }
+
+      return syncDraftTemplatePricing({
+        ...next,
+        precioAjustadoManual: false,
+      });
+    });
+  };
+
+  const updateRedondeoPrecio = (value: string) => {
+    setDraft((current) => {
+      const next = {
+        ...current,
+        redondeoPrecio: normalizeCurrencyInput(value),
+      };
+
+      if (current.priceInputMode === "line_m2" && current.precioAjustadoManual) {
+        return next;
+      }
+
+      return syncDraftTemplatePricing({
+        ...next,
+        precioAjustadoManual: false,
+      });
+    });
+  };
+
+  const updatePriceInputMode = (mode: PasoDosGrupoPriceInputMode) => {
+    setDraft((current) => {
+      if (current.priceInputMode === mode) {
+        return current;
+      }
+
+      const qty = Math.max(1, current.cantidad);
+      const currentSubtotal = resolveDraftSubtotalForModeSwitch(current);
+
+      if (mode === "piece_total") {
+        return {
+          ...current,
+          priceInputMode: "piece_total",
+          pricingMode: "precio_directo",
+          margenPct: "0",
+          costInputScope: "group_total",
+          precio: currentSubtotal > 0 ? String(currentSubtotal) : current.precio,
+          precioAjustadoManual: true,
+        };
+      }
+
+      if (mode === "unit_direct") {
+        const unitPrice =
+          current.priceInputMode === "piece_total" && moneyToNumber(current.precio) > 0
+            ? String(Math.round(moneyToNumber(current.precio) / qty))
+            : current.precioAjustadoManual && moneyToNumber(current.precio) > 0
+              ? current.precio
+              : (() => {
+                  const summary = buildGrupoDraftLinePricingSummary(current);
+                  return summary.precioUnitarioSugerido !== null
+                    ? String(Math.round(summary.precioUnitarioSugerido))
+                    : currentSubtotal > 0
+                      ? String(Math.round(currentSubtotal / qty))
+                      : current.precio;
+                })();
+
+        return {
+          ...current,
+          priceInputMode: "unit_direct",
+          pricingMode: "precio_directo",
+          margenPct: "0",
+          costInputScope: "unit",
+          precio: unitPrice,
+          precioAjustadoManual: true,
+        };
+      }
+
+      return syncDraftTemplatePricing({
+        ...current,
+        priceInputMode: "line_m2",
+        pricingMode: "precio_directo",
+        margenPct: "0",
+        costInputScope: "unit",
+        precioAjustadoManual: false,
+      });
+    });
+  };
+
+  const toggleCustomizeUnitPrice = (enabled: boolean) => {
+    setDraft((current) => {
+      if (current.priceInputMode !== "line_m2") {
+        return current;
+      }
+
+      if (!enabled) {
+        return syncDraftTemplatePricing({
+          ...current,
+          precioAjustadoManual: false,
+        });
+      }
+
+      const summary = buildGrupoDraftLinePricingSummary(current);
+      const unitPrice =
+        summary.precioUnitarioSugerido !== null
+          ? String(Math.round(summary.precioUnitarioSugerido))
+          : current.precio;
+
+      return {
+        ...current,
+        precioAjustadoManual: true,
+        precio: unitPrice,
+      };
+    });
+  };
+
+  const updatePricingMode = (pricingMode: PricingMode) => {
+    setDraft((current) => {
+      const hasTemplate = Boolean(
+        (current.referencia ?? "").trim() && (current.precioPorM2 ?? "").trim()
+      );
+      const shouldClearTemplateAutoPrice =
+        pricingMode === "margen" && hasTemplate && !current.precioAjustadoManual;
+      const nextDraft = {
+        ...current,
+        pricingMode,
+        margenPct: pricingMode === "precio_directo" ? "0" : String(DEFAULT_MARGIN_PCT),
+        ...(shouldClearTemplateAutoPrice ? { precio: "" } : {}),
+      };
+
+      return pricingMode === "precio_directo" && hasTemplate
+        ? syncDraftTemplatePricing(nextDraft)
+        : nextDraft;
+    });
+  };
+
+  const updateMargenPct = (value: string) => {
+    setDraft((current) => ({
+      ...current,
+      margenPct: sanitizeDigits(value),
     }));
   };
 
@@ -1198,6 +1574,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     });
   };
 
+  const goToStep = (nextPaso: PasoDosGrupoPaso) => {
+    setPaso(nextPaso);
+  };
+
   const canContinueFromQuantity =
     !draft.usaCantidadPersonalizada ||
     (draft.cantidadPersonalizada.trim() !== "" && Number(draft.cantidadPersonalizada) > 0);
@@ -1225,6 +1605,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     systemOptions,
     configurationOptions,
     glassOptions,
+    visibleLineTemplates,
     summary,
     openSheet,
     openFreeTotalNotebook,
@@ -1238,7 +1619,10 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     selectCantidad,
     enableCustomQuantity,
     updateCustomQuantity,
+    updateCantidadInput,
+    normalizeCantidadInput,
     updateMaterial,
+    selectLineTemplate,
     updateColorHex,
     updateSistema,
     updateConfiguracion,
@@ -1261,11 +1645,19 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateAncho,
     updateAlto,
     updatePrecio,
+    updatePrecioPorM2,
+    updateMinimoCobrable,
+    updateRedondeoPrecio,
+    updatePriceInputMode,
+    toggleCustomizeUnitPrice,
+    updatePricingMode,
+    updateMargenPct,
     addAlcanceDetalle,
     updateAlcanceDetalle,
     removeAlcanceDetalle,
     goBack,
     goNext,
+    goToStep,
     canContinueFromQuantity,
     canContinueFromConfig,
   };

@@ -3,6 +3,8 @@ import {
   applyQuickEditDraftStatesToItems,
   buildFreeValueItemFromForm,
   buildItemFromForm,
+  buildNextComponentCode,
+  buildUpcomingComponentCodes,
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
   mapRecordToDraft,
@@ -16,6 +18,7 @@ import {
   shouldRequireProfileMaterialForComponent,
   shouldAutoSelectFirstSheetScheme,
   shouldShowSystemSelectionForComponent,
+  isDesktopPieceSystemStepComplete,
   isWorkflowItemEffectivelyComplete,
   syncTemplatePricingInComponentForm,
   validateComponentForm,
@@ -174,6 +177,35 @@ describe("workflow-ui paso 2", () => {
     expect(item.nombre).toBe("Ventana living premium");
   });
 
+  it("debe calcular el siguiente codigo por tipo de componente", () => {
+    const base = createBaseItem();
+    const items = [
+      { ...base, id: "item-v1", codigo: "V1", tipo: "Ventana" },
+      { ...base, id: "item-v2", codigo: "V2", tipo: "Ventana" },
+      { ...base, id: "item-b1", codigo: "B1", tipo: "Baranda" },
+      { ...base, id: "item-v3", codigo: "V3", tipo: "Ventana" },
+      { ...base, id: "item-p1", codigo: "P1", tipo: "Puerta" },
+      { ...base, id: "item-f1", codigo: "F1", tipo: "Pano fijo" },
+    ];
+
+    expect(buildNextComponentCode(items, "Ventana")).toBe("V4");
+    expect(buildNextComponentCode(items, "Puerta")).toBe("P2");
+    expect(buildNextComponentCode(items, "Baranda")).toBe("B2");
+    expect(buildNextComponentCode(items, "Pano fijo")).toBe("F2");
+  });
+
+  it("debe sugerir codigos de lote desde el mayor codigo existente del mismo tipo", () => {
+    const base = createBaseItem();
+    const items = [
+      { ...base, id: "item-v1", codigo: "V1", tipo: "Ventana" },
+      { ...base, id: "item-v3", codigo: "V3", tipo: "Ventana" },
+      { ...base, id: "item-p1", codigo: "P1", tipo: "Puerta" },
+    ];
+
+    expect(buildUpcomingComponentCodes(items, "Ventana", 2)).toEqual(["V4", "V5"]);
+    expect(buildUpcomingComponentCodes(items, "Puerta", 2)).toEqual(["P2", "P3"]);
+  });
+
   it("debe mantener unitario por línea y duplicar subtotal cuando cantidad es 2", () => {
     const item = buildItemFromForm(
       createLinePricingForm({
@@ -262,7 +294,7 @@ describe("workflow-ui paso 2", () => {
       createLinePricingForm({
         hojasBase: 2,
         sheetScheme: "3 hojas",
-        sheetVariant: "Fija central",
+        sheetVariant: "2 móviles + 1 fija",
       }),
       [],
       null
@@ -690,7 +722,7 @@ describe("workflow-ui paso 2", () => {
         sistema: "Corredera",
         configuracion: "",
         sheetScheme: "3 hojas",
-        sheetVariant: "Fija central",
+        sheetVariant: "2 móviles + 1 fija",
         customSchemeDescription: "",
         isCustomScheme: false,
         lineTemplateId: "tpl-25",
@@ -717,12 +749,12 @@ describe("workflow-ui paso 2", () => {
       null
     );
 
-    expect(item.nombre).toBe("Ventana corredera 3 hojas, fija central");
+    expect(item.nombre).toBe("Ventana corredera 3 hojas, 2 móviles + 1 fija");
     expect(item.precioUnitario).toBe(432000);
     expect(decodeCotizacionItemPresentationMeta(item.observaciones)).toEqual(
       expect.objectContaining({
         sheetScheme: "3 hojas",
-        sheetVariant: "Fija central",
+        sheetVariant: "2 móviles + 1 fija",
         isCustomScheme: false,
       })
     );
@@ -736,9 +768,8 @@ describe("workflow-ui paso 2", () => {
       "Personalizado",
     ]);
     expect(getSheetVariantOptions("4 hojas", { tipo: "Ventana", sistema: "Corredera" })).toEqual([
-      "2 fijas + 2 móviles",
-      "Todas móviles",
-      "Laterales fijas + centrales móviles",
+      "2 móviles + 2 fijas",
+      "4 móviles",
       "Otro",
     ]);
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Abatible" })).toEqual([
@@ -821,6 +852,58 @@ describe("workflow-ui paso 2", () => {
       "3 paños",
       "Personalizado",
     ]);
+    expect(
+      getSheetSchemeOptions({
+        tipo: "Shower door",
+        sistema: "Corredera",
+        configuracion: "Frontal",
+      })
+    ).toEqual(["2 hojas correderas", "1 fija + 1 corredera", "1 fija + 2 correderas"]);
+    expect(
+      getSheetSchemeOptions({
+        tipo: "Shower door",
+        sistema: "Batiente",
+        configuracion: "Esquinero",
+      })
+    ).toEqual(["1 puerta + 1 fijo lateral", "2 puertas al vértice"]);
+    expect(
+      getSheetSchemeOptions({
+        tipo: "Shower door",
+        sistema: "Fijo / Walk-in",
+        configuracion: "En L",
+      })
+    ).toEqual(["2 paños fijos en L"]);
+    expect(getSheetVariantOptions("2 hojas correderas", {
+      tipo: "Shower door",
+      sistema: "Corredera",
+    })).toEqual([]);
+    expect(getCompositionSectionLabel({ tipo: "Shower door", sistema: "Corredera" })).toBe(
+      "Composición recomendada"
+    );
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Shower door",
+        sistema: "Corredera",
+        configuracion: "Frontal",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        configurationOptionsCount: 3,
+      })
+    ).toBe(false);
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Shower door",
+        sistema: "Corredera",
+        configuracion: "Frontal",
+        sheetScheme: "2 hojas correderas",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        configurationOptionsCount: 3,
+      })
+    ).toBe(true);
     expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
   });
 

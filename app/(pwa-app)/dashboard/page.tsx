@@ -4,11 +4,18 @@ import { PremiumPageReveal } from "@/components/motion/premium-page-reveal";
 import { SubscriptionBadge } from "@/features/subscriptions/components/subscription-badge";
 import { useActivationGate } from "@/features/onboarding/hooks/useActivationGate";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
-import { DashboardDesktop } from "./_components/desktop/dashboard-desktop";
-import { DashboardMobile } from "./_components/mobile/dashboard-mobile";
+import dynamic from "next/dynamic";
 import { useDashboardBreakpoint } from "./_hooks/use-dashboard-breakpoint";
 import { useDashboardViewModel } from "./_hooks/use-dashboard-view-model";
 import s from "./page.module.css";
+
+const DashboardDesktop = dynamic(
+  () => import("./_components/desktop/dashboard-desktop").then((m) => ({ default: m.DashboardDesktop })),
+);
+
+const DashboardMobile = dynamic(
+  () => import("./_components/mobile/dashboard-mobile").then((m) => ({ default: m.DashboardMobile })),
+);
 
 function isSubscriptionUrgent(
   status: string | null | undefined

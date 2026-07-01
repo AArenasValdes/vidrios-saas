@@ -181,7 +181,7 @@
 - **Usado en**: Detalle de cotizacion, nueva cotizacion
 - **Props importantes**: `tipo`, `ancho`, `alto`, `colorHex`, `maxW?`, `maxH?`, `label?`, `showMeasurements?`
 - **Cuando modificarlo**: Cambios en dibujos SVG de componentes
-- **Riesgos**: Depende de `src/utils/window-drawings.ts` (1074 lineas). No romper generacion SVG.
+- **Riesgos**: Depende de `src/utils/window-drawings.ts`. Ventanas usan primitives SVG compartidas (`drawOuterAluminumFrame`, `drawInnerTrack`, `drawSlidingSash`, `drawFixedPanel`, etc.) para mantener un catalogo tecnico unificado. No mezclar cambios visuales con pricing, workflow, PDF comercial, Supabase ni WhatsApp.
 
 ---
 
@@ -217,14 +217,26 @@
 ### Componente: PasoDosModoCotizacion
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx`
-- **Proposito**: Pantalla inicial de Paso 2 con 2 tarjetas: "Cotizar por items" y "Presupuesto por total". Ambas abren el wizard con el pricing mode correspondiente.
-- **Usado en**: `PasoDosSeccion` (desktop), `PasoDosWizardMovil` (mobile)
+- **Proposito**: Fallback/pantalla inicial de Paso 2 con 2 tarjetas: "Cotizar por items" y "Presupuesto por total". En desktop nuevo, la modalidad se elige en Paso 1; este componente sigue activo como fallback y para mobile.
+- **Usado en**: `PasoDosSeccion` (fallback desktop), `PasoDosWizardMovil` (mobile)
+
+### Componente: PasoDosAgregarGrupoSheet
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`
+- **Proposito**: Nucleo actual del Quote Studio desktop. En desktop embebido renderiza el editor comercial de pieza activa en 4 pasos (`Tipo`, `Sistema`, `Medidas y detalles`, `Precio`) y mantiene el cuaderno comercial para modo `total_global`. En overlay/legacy conserva el flujo anterior.
+- **Usado en**: `PasoDosSeccion` (desktop) y orquestacion de `page.tsx`.
+
+### Componente: PasoDosPanelComponentes
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-panel-componentes.tsx`
+- **Proposito**: Panel vivo del presupuesto y segunda columna del Quote Studio desktop. En desktop muestra sticky panel con items completos, draft local "En edicion", totales y bloqueo de "Continuar a revisar" si existe pieza pendiente o valor cero.
+- **Usado en**: `PasoDosSeccion`.
 - **Props importantes**: `onSelectMode: (mode: QuotePricingMode) => void`
 
 ### Componente: PasoDosItemLibreForm
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx`
-- **Proposito**: Formulario standalone de item libre con valor. Muestra nombre, descripcion, valor CLP, selector IVA compacto `[Incluido] [Agregar IVA]`, boton dinamico con precio, y preview PDF.
+- **Proposito**: Formulario standalone de item libre con valor. Es parte del Quote Studio desktop y del wizard mobile; muestra nombre, descripcion, valor CLP, selector IVA compacto `[Incluido] [Agregar IVA]`, boton dinamico con precio y preview PDF.
 - **Usado en**: `PasoDosSeccion` (desktop), `PasoDosWizardMovil` (mobile). Tambien accesible desde el panel header via "+ Agregar item libre".
 - **Props importantes**: `isOpen`, `editingItemId`, `form: FreeValueItemFormState`, `fieldErrors`, `isSaving`, `onChange`, `onSubmit`, `onCancel`
 

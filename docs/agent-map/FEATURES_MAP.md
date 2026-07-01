@@ -100,7 +100,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Dashboard
 
-- **Que hace**: Resumen comercial con KPIs orientados al trabajo real del maestro: valor cotizado, cotizaciones creadas, PDF generados, aprobadas registradas, actividad del mes y cotizaciones recientes
+- **Que hace**: Tablero comercial real del producto actual. Resume valor cotizado, cotizaciones creadas, PDF generados, aprobadas registradas, actividad reciente y, cuando se implemente sin migraciones nuevas, embudo real de solicitudes y obras activas.
 - **Rutas involucradas**: `/dashboard`
 - **Archivos principales**:
   - `app/(pwa-app)/dashboard/page.tsx`
@@ -114,14 +114,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/api/dashboard/summary/route.ts`
 - **Componentes principales**: `DashboardDesktop`, `DashboardMobile`
 - **Hooks/servicios/actions**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
-- **Tablas Supabase**: `cotizaciones`, `clients`, `projects`
+- **Tablas Supabase**: `cotizaciones`, `clients`, `projects`, `solicitudes_contacto`
 - **Flujo de datos**: Page -> `useDashboardViewModel` -> `useDashboardSummary` -> API `/api/dashboard/summary` -> `dashboardSummaryServerService` -> repositories directos
 - **Estados importantes**: isLoading, isReady, isEmpty; KPIs `quotedTotal`, `pdfGeneratedCount`, `approvedCount`, `totalCount`, `monthCount`, `approvedTodayCount`
 - **Donde editar UI**: `app/(pwa-app)/dashboard/_components/`
 - **Donde editar logica**: `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`
 - **Donde editar persistencia**: `app/api/dashboard/summary/route.ts` (usa repositories directamente)
-- **Consideraciones UX**: Breakpoint 1024px desktop/mobile. KPI principal = **Valor cotizado** (`sum(total)`), no "pendientes". Alertas de respuesta publica (aprobada/rechazada/seguimiento) solo si existen; no usar pendientes como alerta dominante. Cards recientes usan estados neutrales via `cotizacion-display-state.service.ts`.
-- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" como metrica principal.
+- **Consideraciones UX**: Breakpoint 1024px desktop/mobile. KPI principal = **Valor cotizado** (`sum(total)`), no "pendientes". Alertas de respuesta publica (aprobada/rechazada/seguimiento) solo si existen; no usar pendientes como alerta dominante. Cards recientes usan estados neutrales via `cotizacion-display-state.service.ts`. No convertir esta vista en CRM ni tablero de cobros.
+- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" como metrica principal. No agregar KPIs mock o de fuentes mezcladas.
 
 ---
 
@@ -240,50 +240,55 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/admin/*`, `src/features/admin/components/*`
 - **Donde editar logica**: `src/features/admin/services/*`
 - **Donde editar persistencia**: `src/features/admin/repositories/admin-clients.repository.ts`
-- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth`, pero ese panel sigue siendo local (`localStorage`) y debe marcarse como tal.
+- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth` con datos en Supabase (`growth_*`).
 - **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor.
 
 ---
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado del fundador con 4 tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en `localStorage` (`ventora:growth-workspace:v3`) con migracion desde v2 y separa `Real`, `Manual` y `Mock`.
-- **Rutas involucradas**: `/admin/growth`
+- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`.
+- **Rutas involucradas**: `/admin/growth`, `/api/admin/growth/*`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`
   - `app/admin/growth/page-client.tsx`
   - `app/admin/growth/page.module.css`
+  - `app/api/admin/growth/**`
   - `src/features/growth/hooks/useGrowthDashboard.ts`
-  - `src/features/growth/services/growth-dashboard.service.ts`
-  - `src/features/growth/services/growth-access.service.ts`
-  - `src/features/growth/repositories/growth-dashboard.repository.ts`
+  - `src/features/growth/client/growth-api.client.ts`
+  - `src/features/growth/services/growth-*.service.ts`
+  - `src/features/growth/repositories/growth-*.repository.ts`
   - `src/features/growth/types/growth-dashboard.ts`
+  - `src/features/growth/types/growth-supabase.ts`
+  - `supabase/migrations/20260627120000_growth_workspace.sql`
   - `proxy.ts`
 - **Componentes principales**: `GrowthPageClient`
-- **Hooks/servicios/actions**: `useGrowthDashboard`, `growthDashboardService`, `growthDashboardRepository`, `canAccessGrowthPanel`
-- **Tablas Supabase**: Ninguna en esta V1 local
-- **Flujo de datos**: `app/admin/layout.tsx` aplica guard founder -> page client -> hook -> service -> repository `localStorage`
-- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; colas de trabajo `tareas_pendientes`, `seguimientos_atrasados`, `demos_por_hacer`, `clientes_por_cobrar`, `cuentas_por_configurar`
+- **Hooks/servicios/actions**: `useGrowthDashboard`, `growthApiClient`, `resolveGrowthRouteContext`, repositories Supabase
+- **Tablas Supabase**: `growth_workspaces`, `growth_workspace_members`, `growth_prospects`, `growth_activities`, `growth_tasks`
+- **Flujo de datos**: guard founder -> hook -> fetch API -> service -> repository Supabase (RLS por membership)
+- **Estados importantes**: tabs `trabajo`, `prospectos`, `clientes`, `marketing`; colas server-side en `growth-work-today.service.ts`
 - **Donde editar UI**: `app/admin/growth/`
-- **Donde editar logica**: `src/features/growth/services/growth-dashboard.service.ts`
-- **Donde editar persistencia**: `src/features/growth/repositories/growth-dashboard.repository.ts`
-- **Consideraciones UX**: Ahora vive dentro de `AdminShell`, pero conserva foco propio. El CTA principal es `Agregar prospecto`. `Trabajo de hoy` manda la pantalla y la tabla de prospectos debe quedar visible y editable sin scroll excesivo.
-- **Riesgos al modificar**: No volver esto un BI decorativo. No mostrar datos mock como reales. No abrir CRM enterprise ni tocar rutas publicas criticas. Aunque comparta shell founder, sigue siendo un panel local y separado de datos SaaS reales.
+- **Donde editar logica**: `src/features/growth/services/`
+- **Donde editar persistencia**: `src/features/growth/repositories/` + migraciones SQL
+- **Consideraciones UX**: Vive dentro de `AdminShell`. CTA principal: `Agregar prospecto`. Import desde navegador con backup JSON.
+- **Riesgos al modificar**: No mezclar con `solicitudes_contacto`. No usar `organization_id` como dueno de prospectos pre-conversion. KPI cross-tenant solo en `growth-kpi.service.ts` post-guard.
 
 ---
 
 ## Feature: Cotizaciones
 
-- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp, estados. Soporta tres modos de item: componente calculado (con medidas, linea, vidrio y precio), item libre con valor (redactable, sin datos tecnicos) y cotizacion rapida por total (presupuesto global sin desglose por item).
+- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp y estados. Hoy tiene dos frentes claros del roadmap: primero estabilizacion del flujo desktop compartido; despues evolucion a Quote Studio desktop sin romper mobile.
 - **Rutas involucradas**: `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
 - **Archivos principales**:
   - `app/(pwa-app)/cotizaciones/page.tsx` (listado, 1055 lineas)
   - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1710+ lineas)
   - `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle)
   - `app/(pwa-app)/configuracion/empresa/page.tsx` (bloque compacto `Lineas y precios base`)
-  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx` (selector de modo inicial: 2 tarjetas)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-uno-datos-cliente.tsx` (desktop integra buscador, datos del trabajo y selector compacto de metodo de presupuesto)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/resumen-desktop-lateral.tsx` (desktop: resumen sticky con accion unica de continuar al presupuesto)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx` (fallback/selector inicial de Paso 2; mobile lo sigue usando)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx` (formulario standalone de item libre con preview)
-  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (wizard desktop 5 pasos, paso 4 adaptado para items libres)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (desktop embebido: editor comercial de pieza en 4 pasos Tipo/Sistema/Medidas/Precio; modo total usa cuaderno comercial)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` (configuracion mobile; oculta Material/Color perfil para `Espejo` y `Cubierta de mesa`)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx` (seccion **Espejos** con espesores recomendados 3–6 mm)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-configuracion.tsx` (material condicional desktop)
@@ -341,8 +346,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Estados importantes**: DB `borrador`, `creada`, `enviada`, `aprobada`, `rechazada`, `terminada`; UI visible via `cotizacion-display-state.service.ts`: **Creada**, **PDF generado**, **Enviada**, **Aprobada**, **Rechazada**, **Terminada**, **Sin cierre registrado**
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
+- **Prioridad de roadmap**:
+  - Milestone 0: estabilizar cotizacion desktop actual.
+  - Milestone 2: dejar Quote Studio desktop impecable y vendible.
+  - Milestone 3: validar constructor visual guiado sobre esta base, no antes.
+- **Futuro documentado, no activo**: configuracion visual versionada por item y catalogo privado/cubicacion como piloto posterior.
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Ambos modos comparten el mismo wizard. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`): no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`): no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
 - **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
 
 ---
@@ -626,13 +636,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 - **Que hace**: CRUD de proyectos/obras vinculados a clientes. Sin ruta directa (se accede desde ficha de cliente).
 - **Rutas involucradas**: Sin ruta directa
+- **Nombre visible en producto**: **Obras**
 - **Archivos principales**:
   - `src/features/projects/repositories/projects.repository.ts`
   - `src/features/projects/types/project.ts`
 - **Hooks/servicios/actions**: Usado indirectamente por `clientesService` y `cotizacionesAppService`
 - **Tablas Supabase**: `projects`
 - **Donde editar persistencia**: `src/features/projects/repositories/projects.repository.ts`
-- **Riesgos al modificar**: No romper FK con clients ni cotizaciones
+- **Riesgos al modificar**: No romper FK con clients ni cotizaciones. No abrir ruta nueva `/obras` hasta que el roadmap la pida explicitamente.
 
 ---
 
@@ -651,5 +662,5 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Hooks/servicios/actions**: N/A
 - **Tablas Supabase**: Ninguna
 - **Flujo de datos**: escenas de Remotion -> assets en `public/video-assets` -> render MP4/vertical
-- **Consideraciones UX**: Mantener mobile-first, texto legible y sin palabras tipo leads/CRM/pipeline/funnel
+- **Consideraciones UX**: Mantener mobile-first, texto legible y sin palabras tipo leads/CRM/pipeline/funnel en la UI cliente. En desktop comercial, usar lenguaje de cotizacion, obras, configuracion visual y cierre.
 - **Riesgos al modificar**: No romper paths de assets ni compatibilidad con Remotion render/preview

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Suspense,
   type KeyboardEvent,
@@ -56,6 +57,7 @@ import {
   scrollToSection,
   shouldShowSheetSchemeForComponent,
   shouldAutoSelectFirstSheetScheme,
+  isWorkflowItemComplete,
   STATUS_COPY,
   Step1FieldKey,
   StepKey,
@@ -89,8 +91,17 @@ import {
   saveCustomGlassOption,
 } from "@/features/cotizaciones/new-quote/custom-glass-options";
 
-import { NuevaCotizacionDesktop } from "./_components/desktop/nueva-cotizacion-desktop";
-import { NuevaCotizacionMobile } from "./_components/mobile/nueva-cotizacion-mobile";
+const NuevaCotizacionDesktop = dynamic(
+  () => import("./_components/desktop/nueva-cotizacion-desktop").then((m) => ({
+    default: m.NuevaCotizacionDesktop,
+  })),
+);
+
+const NuevaCotizacionMobile = dynamic(
+  () => import("./_components/mobile/nueva-cotizacion-mobile").then((m) => ({
+    default: m.NuevaCotizacionMobile,
+  })),
+);
 import { useFlujoNuevaCotizacion } from "./_hooks/use-flujo-nueva-cotizacion";
 import {
   buildFreeTotalNotebookDraftFromWorkflow,
@@ -119,6 +130,7 @@ function NuevaCotizacionPageContent() {
   const requestedStep: StepKey | null =
     requestedStepParam === "2" ? 2 : requestedStepParam === "3" ? 3 : null;
   const glassCloseTimeoutRef = useRef<number | null>(null);
+  const pendingNextDraftRef = useRef(false);
   const step1InputRefs = useRef<Record<Step1FieldKey, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({
     clientSearch: null,
     clienteNombre: null,
@@ -157,8 +169,12 @@ function NuevaCotizacionPageContent() {
   const [customGlassOptions, setCustomGlassOptions] = useState<string[]>([]);
   const [showStep1MoreData, setShowStep1MoreData] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isDesktopQuoteStudio, setIsDesktopQuoteStudio] = useState(false);
+  const [editingFormSnapshot, setEditingFormSnapshot] = useState<ComponentFormState | null>(null);
   const [hasUnsavedProgress, setHasUnsavedProgress] = useState(false);
   const [quoteModeChosen, setQuoteModeChosen] = useState(false);
+  const [duplicateSourceCode, setDuplicateSourceCode] = useState("");
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const customGlassOrganizationId = organizationProfile?.organizationId ?? null;
 
   useEffect(() => {
@@ -240,19 +256,51 @@ function NuevaCotizacionPageContent() {
   }, []);
 
   useLayoutEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 860px)");
-    const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
+    const mobileQuery = window.matchMedia("(max-width: 860px)");
+    const syncViewport = () => setIsMobileViewport(mobileQuery.matches);
 
     syncViewport();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", syncViewport);
-      return () => mediaQuery.removeEventListener("change", syncViewport);
+    if (typeof mobileQuery.addEventListener === "function") {
+      mobileQuery.addEventListener("change", syncViewport);
+    } else {
+      mobileQuery.addListener(syncViewport);
     }
 
-    mediaQuery.addListener(syncViewport);
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const syncDesktop = () => setIsDesktopQuoteStudio(desktopQuery.matches);
+    syncDesktop();
+    if (typeof desktopQuery.addEventListener === "function") {
+      desktopQuery.addEventListener("change", syncDesktop);
+    } else {
+      desktopQuery.addListener(syncDesktop);
+    }
 
-    return () => mediaQuery.removeListener(syncViewport);
+    return () => {
+      if (typeof mobileQuery.removeEventListener === "function") {
+        mobileQuery.removeEventListener("change", syncViewport);
+      } else {
+        mobileQuery.removeListener(syncViewport);
+      }
+      if (typeof desktopQuery.removeEventListener === "function") {
+        desktopQuery.removeEventListener("change", syncDesktop);
+      } else {
+        desktopQuery.removeListener(syncDesktop);
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport && step === 2) {
+      document.body.dataset.ventoraDesktopStepTwo = "true";
+    } else {
+      delete document.body.dataset.ventoraDesktopStepTwo;
+    }
+
+    return () => {
+      delete document.body.dataset.ventoraDesktopStepTwo;
+    };
+  }, [isMobileViewport, step]);
+
   useEffect(() => {
     void ensureClientesLoaded();
   }, [ensureClientesLoaded]);
@@ -321,20 +369,31 @@ function NuevaCotizacionPageContent() {
     itemSeleccionadoId: selectedQuickEditItem?.id ?? null,
   });
   const handleAddGroupSheetClosed = (itemCount: number) => {
+    setDuplicateSourceCode("");
     if (itemCount > 0) {
+      const shouldOpenNext = pendingNextDraftRef.current;
+      pendingNextDraftRef.current = false;
+      if (shouldOpenNext) {
+        handleOpenAddGroupSheet();
+      }
       return;
     }
 
-    setQuoteModeChosen(false);
+    if (isMobileViewport) {
+      setQuoteModeChosen(false);
+    }
   };
 
   const pasoDosAgregarGrupo = usePasoDosAgregarGrupo({
     items: draft.items,
     pricingMode: componentForm.pricingMode,
+    quotePricingMode,
     provider: suggestionProvider,
     seedForm: componentForm,
     customGlassOptions,
+    activeLineTemplates,
     onSheetClosed: handleAddGroupSheetClosed,
+    lockBodyScroll: false,
   });
   const pasoDosAgregarGrupoMovil = usePasoDosAgregarGrupoMovil({
     items: draft.items,
@@ -377,14 +436,37 @@ function NuevaCotizacionPageContent() {
     handleDraftChange("flete", normalizedValue ? Number(normalizedValue) : 0);
   };
 
-  const handleQuotePricingModeChange = (mode: QuotePricingMode) => {
+  const handleCondicionesPagoChange = (value: string) => {
+    handleDraftChange("condicionesDePago", value);
+  };
+
+  const hasUnsavedComponentDraft =
+    Boolean(editingItemId) ||
+    pasoDosAgregarGrupo.isOpen ||
+    pasoDosAgregarGrupoMovil.isOpen;
+  const hasUnsavedFreeValueDraft =
+    isFreeValueItemFormOpen &&
+    (Boolean(freeValueItemForm.nombre.trim()) ||
+      Boolean(freeValueItemForm.descripcion.trim()) ||
+      Boolean(freeValueItemForm.valor.trim()));
+  const hasStepTwoRelevantData =
+    draft.items.length > 0 || hasUnsavedComponentDraft || hasUnsavedFreeValueDraft;
+
+  const handleQuotePricingModeChange = (
+    mode: QuotePricingMode,
+    options?: { force?: boolean }
+  ) => {
     if (mode === quotePricingMode) {
       setQuoteModeChosen(true);
+      if (mode === "por_item" && draft.items.length === 0) {
+        handleOpenAddGroupSheet();
+      }
       return;
     }
 
     if (
-      draft.items.length > 0 &&
+      !options?.force &&
+      hasStepTwoRelevantData &&
       !window.confirm("Cambiar el modo conserva los componentes cargados y ajusta las reglas de precio. ¿Quieres cambiarlo?")
     ) {
       return;
@@ -411,6 +493,10 @@ function NuevaCotizacionPageContent() {
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
     setFreeValueItemForm(createEmptyFreeValueItemForm());
+
+    if (isMobileViewport && mode === "por_item" && draft.items.length === 0) {
+      handleOpenAddGroupSheet();
+    }
   };
 
   const handleGlobalTotalClienteChange = (value: string) => {
@@ -524,6 +610,9 @@ function NuevaCotizacionPageContent() {
     item: CotizacionWorkflowItem,
     nextItemsOverride?: CotizacionWorkflowItem[]
   ) => {
+    pasoDosAgregarGrupo.closeSheet();
+    pasoDosAgregarGrupoMovil.closeSheet();
+
     if (item.tipoItem === "item_libre_con_valor") {
       if (quotePricingMode === "total_global") {
         const currentItems = nextItemsOverride ?? draft.items;
@@ -568,7 +657,9 @@ function NuevaCotizacionPageContent() {
       setGlobalError(null);
       setStep(2);
       window.requestAnimationFrame(() => {
-        scrollToSection("component-form");
+        if (isMobileViewport) {
+          scrollToSection("component-form");
+        }
       });
       return;
     }
@@ -578,6 +669,7 @@ function NuevaCotizacionPageContent() {
     const nextEditingItemId = item.id;
     setEditingItemId(item.id);
     setComponentForm(parsed);
+    setEditingFormSnapshot({ ...parsed });
     setIsGlassPanelOpen(false);
     setGlassQuery("");
     setStep(2);
@@ -594,7 +686,9 @@ function NuevaCotizacionPageContent() {
       step: 2,
     });
     window.requestAnimationFrame(() => {
-      scrollToSection("component-form");
+      if (isMobileViewport) {
+        scrollToSection("component-form");
+      }
     });
   };
   const pasoDosVariaciones = usePasoDosVariaciones({
@@ -1124,6 +1218,7 @@ function NuevaCotizacionPageContent() {
   };
 
   const handleOpenAddGroupSheet = () => {
+    setQuoteModeChosen(true);
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
     if (isMobileViewport) {
@@ -1131,7 +1226,21 @@ function NuevaCotizacionPageContent() {
       return;
     }
 
-    pasoDosAgregarGrupo.openSheet(componentForm);
+    const cleanForm = createEmptyComponentForm(
+      draft.items,
+      suggestionProvider,
+      componentForm.pricingMode,
+      organizationProfile?.margenDefecto
+    );
+
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    setEditingItemId(null);
+    setComponentForm(cleanForm);
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setFieldErrors({});
+    setGlobalError(null);
+    pasoDosAgregarGrupo.openSheet(cleanForm);
   };
 
   const handleOpenFreeTotalNotebook = () => {
@@ -1146,9 +1255,19 @@ function NuevaCotizacionPageContent() {
     pasoDosAgregarGrupo.openFreeTotalNotebook(componentForm);
   };
 
+  const returnToModeSelector = () => {
+    pasoDosAgregarGrupo.closeSheet();
+    setEditingItemId(null);
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
+    setQuoteModeChosen(false);
+  };
+
+  const hasComponentDraftInProgress = hasUnsavedComponentDraft;
+
   const confirmAddGroup = (
     groupDraft: Parameters<typeof buildPasoDosGrupoComponentForm>[0]["draft"],
-    onCloseWizard: () => void
+    onCloseWizard: (nextItemCount: number) => void
   ) => {
     try {
       const isFreeValue = isFreeValueComponentType(groupDraft.subtipo);
@@ -1246,6 +1365,7 @@ function NuevaCotizacionPageContent() {
         items: nextItems,
         totalClienteManual: nextTotalClienteManual,
       }));
+      setQuoteModeChosen(true);
 
       if (isMobileViewport) {
         pasoDosEdicionRapida.seleccionarItemEdicionRapida(
@@ -1268,18 +1388,25 @@ function NuevaCotizacionPageContent() {
       setGlassQuery("");
       setFieldErrors({});
       setGlobalError(null);
-      onCloseWizard();
+      onCloseWizard(nextItems.length);
     } catch (err) {
       setGlobalError(err instanceof Error ? err.message : "No se pudo agregar el grupo");
     }
   };
 
   const handleConfirmAddGroupDesktop = () => {
-    confirmAddGroup(pasoDosAgregarGrupo.draft, pasoDosAgregarGrupo.closeSheet);
+    if (!isMobileViewport && quotePricingMode === "por_item") {
+      pendingNextDraftRef.current = true;
+    }
+    confirmAddGroup(pasoDosAgregarGrupo.draft, (nextItemCount) =>
+      pasoDosAgregarGrupo.closeSheet({ itemCountOverride: nextItemCount })
+    );
   };
 
   const handleConfirmAddGroupMovil = () => {
-    confirmAddGroup(pasoDosAgregarGrupoMovil.draft, pasoDosAgregarGrupoMovil.closeSheet);
+    confirmAddGroup(pasoDosAgregarGrupoMovil.draft, (nextItemCount) =>
+      pasoDosAgregarGrupoMovil.closeSheet({ itemCountOverride: nextItemCount })
+    );
   };
 
   const handleEditItem = (item: CotizacionWorkflowItem) => {
@@ -1299,6 +1426,63 @@ function NuevaCotizacionPageContent() {
 
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     openItemForEditing(item);
+  };
+
+  const handleDuplicateItem = (item: CotizacionWorkflowItem) => {
+    setQuoteModeChosen(true);
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    pasoDosAgregarGrupo.closeSheet();
+    pasoDosAgregarGrupoMovil.closeSheet();
+
+    if (item.tipoItem === "item_libre_con_valor") {
+      setFreeValueItemForm({
+        ...mapFreeValueItemToForm(item),
+      });
+      setEditingFreeValueItemId(null);
+      setEditingItemId(null);
+      setIsFreeValueItemFormOpen(true);
+      setFieldErrors({});
+      setGlobalError(null);
+      setStep(2);
+      return;
+    }
+
+    const duplicatedForm = {
+      ...mapItemToForm(item),
+      codigo: "",
+      loteCantidad: "1",
+    } satisfies ComponentFormState;
+
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
+    setEditingItemId(null);
+    setComponentForm(duplicatedForm);
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setFieldErrors({});
+    setGlobalError(null);
+    setDuplicateSourceCode(item.codigo);
+    pasoDosAgregarGrupo.openSheet(duplicatedForm);
+    pasoDosAgregarGrupo.goToStep(3);
+  };
+
+  const handleDuplicateItemInPaso3 = (item: CotizacionWorkflowItem) => {
+    const sourceIndex = draft.items.findIndex((i) => i.id === item.id);
+    if (sourceIndex === -1) return;
+
+    const nextCode = buildNextComponentCode(draft.items, item.tipo, item.codigo);
+    const clone: CotizacionWorkflowItem = {
+      ...item,
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      codigo: nextCode,
+    };
+
+    const nextItems = [...draft.items];
+    nextItems.splice(sourceIndex + 1, 0, clone);
+
+    setDraft((cur) => ({ ...cur, items: nextItems }));
+    setToastMessage(`${nextCode} duplicada correctamente`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -1332,13 +1516,16 @@ function NuevaCotizacionPageContent() {
 
     setDraft(nextDraft);
     if (isLastItemRemoved) {
-      setQuoteModeChosen(false);
       setFieldErrors((current) => ({
         ...current,
         totalClienteManual: undefined,
         costoTotalFabricacion: undefined,
         margenGlobalPct: undefined,
       }));
+
+      if (quotePricingMode !== "total_global") {
+        handleOpenAddGroupSheet();
+      }
     }
     if (isRemovingEditedFreeItem) {
       setFreeValueItemForm(createEmptyFreeValueItemForm());
@@ -1370,6 +1557,7 @@ function NuevaCotizacionPageContent() {
   const handleResetStep2Form = () => {
     pasoDosVariaciones.restorePendingForcedFullEditIfNeeded(editingItemId);
     setEditingItemId(null);
+    setEditingFormSnapshot(null);
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     setComponentForm(
       createEmptyComponentForm(
@@ -1577,7 +1765,7 @@ function NuevaCotizacionPageContent() {
     }
   };
 
-  function goNextFromStep1() {
+function goNextFromStep1() {
     const nextDraft = resolveStep1Draft(draft);
     const errors = validateStep1(nextDraft);
     if (errors.step1) {
@@ -1585,6 +1773,11 @@ function NuevaCotizacionPageContent() {
       return;
     }
     setFieldErrors((cur) => ({ ...cur, step1: undefined }));
+    if (draft.items.length === 0) {
+      setQuoteModeChosen(false);
+    } else {
+      setQuoteModeChosen(true);
+    }
     setStep(2);
     scrollPageToTop();
   }
@@ -1673,6 +1866,36 @@ function NuevaCotizacionPageContent() {
       setStep(2);
       return;
     }
+    if (target === 3 && step === 2 && !isMobileViewport) {
+      if (pasoDosAgregarGrupo.isOpen) {
+        pasoDosAgregarGrupo.closeSheet();
+      }
+      if (quotePricingMode === "por_item") {
+        const pendingCount = itemsForNextStep.filter(
+          (item) =>
+            !isWorkflowItemComplete(item, quotePricingMode) ||
+            Number(item.precioTotal ?? 0) <= 0
+        ).length;
+
+        if (pendingCount > 0) {
+          setFieldErrors((cur) => ({
+            ...cur,
+            items: `Completa ${pendingCount} ${
+              pendingCount === 1 ? "pieza pendiente" : "piezas pendientes"
+            } para continuar.`,
+          }));
+          setStep(2);
+          return;
+        }
+      } else if (totals.total <= 0) {
+        setFieldErrors((cur) => ({
+          ...cur,
+          items: "Define un valor final mayor a $0 para continuar.",
+        }));
+        setStep(2);
+        return;
+      }
+    }
     setStep(target);
     if (target === 2 || target === 3) {
       scrollPageToTop();
@@ -1727,6 +1950,8 @@ function NuevaCotizacionPageContent() {
     flete: CLP(totals.flete),
     redondeoComercial: CLP(totals.redondeoComercial ?? 0),
     hasRedondeoComercial: (totals.redondeoComercial ?? 0) > 0,
+    ajusteComercial: CLP((totals as Record<string, unknown>).ajusteComercial as number ?? 0),
+    hasAjusteComercial: ((totals as Record<string, unknown>).ajusteComercial as number ?? 0) !== 0,
     total: CLP(totals.total),
     savedRecord,
     lastSaveMode,
@@ -1794,16 +2019,28 @@ function NuevaCotizacionPageContent() {
     onMeasureFirstItem: pasoDosLista.medirPrimeraFila,
     onSelectQuickEditItem: handleSelectQuickEditItem,
     onEditItem: handleEditItem,
+    onDuplicateItem: handleDuplicateItem,
+    onDuplicateItemPaso3: handleDuplicateItemInPaso3,
     onRemoveItem: handleRemoveItem,
     onRecalculateTemplatePrice: handleRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
     onDraftFleteChange: handleDraftFleteChange,
+    onCondicionesPagoChange: handleCondicionesPagoChange,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     onMostrarIvaChange: handleMostrarIvaChange,
     formatCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
     stepTwoSummaryRef: pasoDosLista.resumenRef,
+    isDesktopQuoteStudio,
+    editingFormSnapshot,
+    onDuplicateItemFromEditor: () => {
+      const item = draft.items.find((i) => i.id === editingItemId);
+      if (!item) return;
+      const codigo = buildNextComponentCode(draft.items, item.tipo, item.codigo);
+      const clone: CotizacionWorkflowItem = { ...item, id: `item-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`, codigo };
+      setDraft((cur) => ({ ...cur, items: [...cur.items, clone] }));
+    },
   });
 
   if (!isReady && (editId || duplicateId) && !sourceRecord) return null;
@@ -1837,6 +2074,7 @@ function NuevaCotizacionPageContent() {
           step={flujo.paso}
           headerProps={{
             step: flujo.paso,
+            isMobileViewport: true,
             isSaving: flujo.estaGuardando,
             isEditing: flujo.esEdicion,
             onGoToStep: goToStep,
@@ -1947,11 +2185,12 @@ function NuevaCotizacionPageContent() {
         />
       ) : (
         <NuevaCotizacionDesktop
-          rootClassName={s.root}
-          layoutClassName={`${s.layout} ${flujo.paso === 1 ? s.layoutStepOne : ""} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
+          rootClassName={`${s.root} ${flujo.paso === 1 ? s.rootStepOneDesktop : ""} ${flujo.paso === 2 ? s.rootStepTwoDesktop : ""}`}
+          layoutClassName={`${flujo.paso === 1 ? s.layoutStepOne : s.layout} ${flujo.paso === 2 ? s.layoutStepTwo : ""} ${flujo.paso === 3 ? s.layoutFinalStep : ""}`}
           step={flujo.paso}
           headerProps={{
             step: flujo.paso,
+            isMobileViewport: false,
             isSaving: flujo.estaGuardando,
             isEditing: flujo.esEdicion,
             onGoToStep: goToStep,
@@ -1961,7 +2200,10 @@ function NuevaCotizacionPageContent() {
           stepOneProps={flujo.propsPasoUno}
           stepTwoSectionProps={{
             formulario: flujo.propsPasoDosFormulario,
-            panel: flujo.propsPasoDosPanel,
+            panel: {
+              ...flujo.propsPasoDosPanel,
+              isAddGroupWizardOpen: pasoDosAgregarGrupo.isOpen,
+            },
             itemLibreForm: {
               isOpen: isFreeValueItemFormOpen,
               editingItemId: editingFreeValueItemId,
@@ -1973,9 +2215,18 @@ function NuevaCotizacionPageContent() {
               onCancel: handleCloseFreeValueItemForm,
             },
             quoteModeChosen,
+            quotePricingMode,
+            isMobileViewport,
+            hasComponentDraftInProgress,
+            budgetContext: {
+              clienteNombre: draft.clienteNombre,
+              obra: draft.obra,
+            },
             onOpenCreator: handleOpenAddGroupSheet,
             onOpenFreeTotalNotebook: handleOpenFreeTotalNotebook,
             onSelectMode: handleQuotePricingModeChange,
+            onReturnToModeSelector: returnToModeSelector,
+            duplicateSourceCode,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}
@@ -1987,20 +2238,28 @@ function NuevaCotizacionPageContent() {
             subtypeOptions: pasoDosAgregarGrupo.subtypeOptions,
             systemOptions: pasoDosAgregarGrupo.systemOptions,
             glassOptions: pasoDosAgregarGrupo.glassOptions,
+            visibleLineTemplates: pasoDosAgregarGrupo.visibleLineTemplates,
             summary: pasoDosAgregarGrupo.summary,
             onClose: pasoDosAgregarGrupo.closeSheet,
             onBack: pasoDosAgregarGrupo.goBack,
             onNext: pasoDosAgregarGrupo.goNext,
+            onGoToStep: pasoDosAgregarGrupo.goToStep,
             onConfirm: handleConfirmAddGroupDesktop,
             onSelectCategoria: pasoDosAgregarGrupo.selectCategoria,
             onSelectSubtipo: pasoDosAgregarGrupo.selectSubtipo,
             onSelectCantidad: pasoDosAgregarGrupo.selectCantidad,
             onEnableCustomQuantity: pasoDosAgregarGrupo.enableCustomQuantity,
             onCustomQuantityChange: pasoDosAgregarGrupo.updateCustomQuantity,
+            onCantidadInputChange: pasoDosAgregarGrupo.updateCantidadInput,
+            onNormalizeCantidadInput: pasoDosAgregarGrupo.normalizeCantidadInput,
             onMaterialChange: pasoDosAgregarGrupo.updateMaterial,
+            onSelectLineTemplate: pasoDosAgregarGrupo.selectLineTemplate,
+            onColorChange: pasoDosAgregarGrupo.updateColorHex,
             onNombreChange: pasoDosAgregarGrupo.updateNombre,
             onDescripcionChange: pasoDosAgregarGrupo.updateDescripcion,
             onSistemaChange: pasoDosAgregarGrupo.updateSistema,
+            configurationOptions: pasoDosAgregarGrupo.configurationOptions,
+            onConfiguracionChange: pasoDosAgregarGrupo.updateConfiguracion,
             onSheetSchemeChange: pasoDosAgregarGrupo.updateSheetScheme,
             onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,
             onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
@@ -2017,7 +2276,16 @@ function NuevaCotizacionPageContent() {
                 pasoDosAgregarGrupo.updateVidrio(savedValue);
               }
             },
+            onAnchoChange: pasoDosAgregarGrupo.updateAncho,
+            onAltoChange: pasoDosAgregarGrupo.updateAlto,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
+            onPrecioPorM2Change: pasoDosAgregarGrupo.updatePrecioPorM2,
+            onMinimoCobrableChange: pasoDosAgregarGrupo.updateMinimoCobrable,
+            onRedondeoPrecioChange: pasoDosAgregarGrupo.updateRedondeoPrecio,
+            onPriceInputModeChange: pasoDosAgregarGrupo.updatePriceInputMode,
+            onToggleCustomizeUnitPrice: pasoDosAgregarGrupo.toggleCustomizeUnitPrice,
+            onPricingModeChange: pasoDosAgregarGrupo.updatePricingMode,
+            onMargenChange: pasoDosAgregarGrupo.updateMargenPct,
             onCobraPrecioSeparadoChange: pasoDosAgregarGrupo.updateCobraPrecioSeparado,
             onAddAlcanceDetalle: pasoDosAgregarGrupo.addAlcanceDetalle,
             onUpdateAlcanceDetalle: pasoDosAgregarGrupo.updateAlcanceDetalle,
@@ -2031,9 +2299,30 @@ function NuevaCotizacionPageContent() {
             onInternalObservationChange: handleInternalObservationChange,
             canContinueFromQuantity: pasoDosAgregarGrupo.canContinueFromQuantity,
             canContinueFromConfig: pasoDosAgregarGrupo.canContinueFromConfig,
+            detailOnlyMode: quotePricingMode === "total_global",
           }}
         />
       )}
+      {toastMessage ? (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "1.5rem",
+            right: "1.5rem",
+            zIndex: 9999,
+            padding: "0.65rem 1.15rem",
+            borderRadius: "10px",
+            background: "#06162f",
+            color: "#ffffff",
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            pointerEvents: "none",
+          }}
+        >
+          {toastMessage}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -19,21 +19,37 @@ import type {
   UpdateGrowthSettingsInput,
 } from "@/features/growth/types/growth-dashboard";
 
-const TERMINAL_PROSPECT_STATUSES: GrowthProspectStatus[] = ["pagado", "perdido"];
+const TERMINAL_PROSPECT_STATUSES: GrowthProspectStatus[] = [
+  "pagado",
+  "perdido",
+  "sin_respuesta",
+  "no_calza",
+  "no_contactar",
+];
 
 const DEMO_PENDING_STATUSES: GrowthProspectStatus[] = [
   "contactado",
+  "respondio",
   "demo_enviada",
+  "calificado",
 ];
 
 const STATUS_LABELS: Record<GrowthProspectStatus, string> = {
   nuevo: "Nuevo",
+  investigado: "Investigado",
+  listo_para_contactar: "Listo para contactar",
   contactado: "Contactado",
-  demo_enviada: "Demo enviada",
+  respondio: "Respondió",
+  calificado: "Calificado",
   demo_agendada: "Demo agendada",
   piloto_activo: "Piloto activo",
-  esperando_pago: "Esperando pago",
+  activado: "Activado",
   pagado: "Pagado",
+  sin_respuesta: "Sin respuesta",
+  no_calza: "No calza",
+  no_contactar: "No contactar",
+  demo_enviada: "Demo enviada",
+  esperando_pago: "Esperando pago",
   perdido: "Perdido",
 };
 
@@ -115,20 +131,31 @@ function nextProspectStep(status: GrowthProspectStatus) {
 }
 
 function sortProspects(prospects: GrowthProspect[]) {
-  const statusWeight: Record<GrowthProspectStatus, number> = {
+  const statusWeight: Partial<Record<GrowthProspectStatus, number>> = {
     nuevo: 0,
-    contactado: 1,
-    demo_enviada: 2,
-    demo_agendada: 3,
-    piloto_activo: 4,
-    esperando_pago: 5,
-    pagado: 6,
-    perdido: 7,
+    investigado: 1,
+    listo_para_contactar: 2,
+    contactado: 3,
+    respondio: 4,
+    demo_enviada: 4,
+    calificado: 5,
+    demo_agendada: 6,
+    piloto_activo: 7,
+    activado: 8,
+    esperando_pago: 8,
+    pagado: 9,
+    sin_respuesta: 10,
+    no_calza: 11,
+    no_contactar: 12,
+    perdido: 10,
   };
 
   return [...prospects].sort((left, right) => {
-    if (statusWeight[left.estado] !== statusWeight[right.estado]) {
-      return statusWeight[left.estado] - statusWeight[right.estado];
+    const leftWeight = statusWeight[left.estado] ?? 99;
+    const rightWeight = statusWeight[right.estado] ?? 99;
+
+    if (leftWeight !== rightWeight) {
+      return leftWeight - rightWeight;
     }
 
     return compareDate(
@@ -487,7 +514,9 @@ export const growthDashboardService = {
         prospectosActivos: prospects.filter(
           (item) => !TERMINAL_PROSPECT_STATUSES.includes(item.estado)
         ).length,
-        clientesActivos: clientAccounts.length,
+        clientesActivos: prospects.filter(
+          (item) => item.convertedOrganizationId
+        ).length,
         marketingPendiente: marketingTasks.filter(
           (item) => item.estado === "pendiente" || item.estado === "en_proceso"
         ).length,
@@ -498,13 +527,16 @@ export const growthDashboardService = {
     return STATUS_LABELS[status];
   },
   getStatusActionLabel(status: GrowthProspectStatus) {
-    if (status === "nuevo") return "Marcar contactado";
-    if (status === "contactado") return "Demo enviada";
-    if (status === "demo_enviada") return "Demo agendada";
+    if (status === "nuevo" || status === "investigado") return "Marcar contactado";
+    if (status === "listo_para_contactar") return "Contactar";
+    if (status === "contactado") return "Registrar respuesta";
+    if (status === "respondio" || status === "demo_enviada") return "Agendar demo";
+    if (status === "calificado") return "Agendar demo";
     if (status === "demo_agendada") return "Activar piloto";
-    if (status === "piloto_activo") return "Esperando pago";
-    if (status === "esperando_pago") return "Marcar pagado";
-    if (status === "perdido") return "Reactivar";
+    if (status === "piloto_activo") return "Marcar activado";
+    if (status === "activado" || status === "esperando_pago") return "Marcar pagado";
+    if (status === "sin_respuesta" || status === "perdido") return "Reactivar";
+    if (status === "no_calza") return "Reevaluar";
     return "Actualizado";
   },
   getDataStatusLabel(status: "real" | "manual" | "mock") {
@@ -513,6 +545,20 @@ export const growthDashboardService = {
     return "Mock";
   },
   getProspectStatuses(): GrowthProspectStatus[] {
-    return Object.keys(STATUS_LABELS) as GrowthProspectStatus[];
+    return [
+      "nuevo",
+      "investigado",
+      "listo_para_contactar",
+      "contactado",
+      "respondio",
+      "calificado",
+      "demo_agendada",
+      "piloto_activo",
+      "activado",
+      "pagado",
+      "sin_respuesta",
+      "no_calza",
+      "no_contactar",
+    ];
   },
 };

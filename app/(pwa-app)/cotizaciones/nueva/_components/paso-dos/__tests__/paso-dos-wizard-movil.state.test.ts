@@ -15,6 +15,7 @@ function createDraft(overrides: Partial<PasoDosGrupoDraft> = {}): PasoDosGrupoDr
     cobraPrecioSeparado: false,
     alcanceDetalles: [],
     pricingMode: "precio_directo",
+    priceInputMode: "unit_direct",
     material: "Aluminio",
     colorHex: "#a8a8a8",
     sistema: "Corredera",

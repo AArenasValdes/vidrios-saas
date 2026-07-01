@@ -68,7 +68,7 @@ Si una de esas falla, no hay `go`.
 ### Sigue siendo riesgo real
 
 - validacion real de push y email en entorno final
-- pipeline comercial aun no consolidado
+- desktop comercial aun no consolidado
 - falta smoke test manual completo
 - falta observabilidad minima
 - PWA/offline no validado en dispositivo
@@ -233,7 +233,9 @@ No salir si cualquiera de estos sigue pendiente:
 - [ ] WhatsApp Business API
 - [ ] billing
 - [ ] OAuth real
-- [ ] CRM profundo
+- [ ] escritorio desktop de cotizacion presentable
+- [ ] dashboard comercial con datos reales
+- [ ] Quote Studio desktop impecable
 - [ ] gestion explicita de proyectos
 
 ---

@@ -1,8 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState, type KeyboardEvent } from "react";
 import {
+  LuChevronDown,
   LuChevronRight,
+  LuChevronUp,
   LuCircleX,
   LuFilterX,
   LuMapPin,
@@ -20,6 +23,7 @@ import {
   type Step1FieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import s from "../page.module.css";
 
@@ -50,6 +54,7 @@ type PasoUnoDatosClienteProps = {
   mobileRecentClients: Cliente[];
   showStep1MoreData: boolean;
   isMobileViewport: boolean;
+  quotePricingMode: QuotePricingMode;
   isSaving: boolean;
   stepOneSummary: StepOneSummary;
   buildClientInitials: (name: string) => string;
@@ -67,6 +72,7 @@ type PasoUnoDatosClienteProps = {
   onDireccionChange: (value: string) => void;
   onValidezChange: (value: string) => void;
   onObservacionesChange: (value: string) => void;
+  onQuotePricingModeChange: (mode: QuotePricingMode) => void;
   onStep1KeyDown: (
     field: Step1FieldKey,
     event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -75,6 +81,7 @@ type PasoUnoDatosClienteProps = {
   onReset: () => void;
   onSaveAndExit: () => void;
   onContinue: () => void;
+  summarySlot?: ReactNode;
 };
 
 export function PasoUnoDatosCliente({
@@ -108,6 +115,7 @@ export function PasoUnoDatosCliente({
   onReset,
   onSaveAndExit,
   onContinue,
+  summarySlot,
 }: PasoUnoDatosClienteProps) {
   const [isCreatingClient, setIsCreatingClient] = useState(false);
   const [showOptionalClientFields, setShowOptionalClientFields] = useState(false);
@@ -134,6 +142,18 @@ export function PasoUnoDatosCliente({
   const compactPiecesTotal = `Total ${stepOneSummary.total}`;
   const statusLabel = canContinue ? "LISTO" : "PENDIENTE";
   const statusClassName = canContinue ? s.stepOneStatusReady : s.stepOneStatusPending;
+  const isDesktopStepOneLayout = !isMobileViewport;
+
+  const showCompactSelectedClient =
+    isDesktopStepOneLayout && Boolean(selectedClient || selectedClientId) && !isCreatingClient;
+
+  const showDesktopClientList =
+    isDesktopStepOneLayout &&
+    !showCompactSelectedClient &&
+    !hasQuery &&
+    !isCreatingClient &&
+    !showSearchResults &&
+    !showCreateFromSearch;
 
   const openCreateFromQuery = () => {
     setIsCreatingClient(true);
@@ -167,6 +187,341 @@ export function PasoUnoDatosCliente({
     onClienteNombreChange("");
     onTelefonoChange("");
   };
+
+  const handleChangeSelectedClient = () => {
+    onClearSelectedClient();
+    onClientQueryChange("");
+    setIsCreatingClient(false);
+    setShowOptionalClientFields(false);
+    setClienteCorreoDraft("");
+    setIsEditingDraftClientName(false);
+  };
+
+  const compactSelectedClientName = selectedClient?.nombre || draft.clienteNombre;
+  const compactSelectedClientPhone = selectedClient?.telefono || draft.clienteTelefono;
+
+  const showEditableClientFieldsInWorkData =
+    !showCompactSelectedClient && !isCreatingClient;
+
+  if (isDesktopStepOneLayout) {
+    return (
+      <section className={s.desktopStepOne}>
+        <div className={s.desktopStepOneColumns}>
+          <div className={s.desktopStepOneMain}>
+            <section className={s.desktopStepOneCard} aria-label="Cliente">
+          {showCompactSelectedClient ? (
+            <div className={s.desktopSelectedClientCompact}>
+              <span className={s.desktopRecentSectionLabel}>Cliente seleccionado</span>
+              <div className={s.desktopSelectedClientCompactRow}>
+                <span className={s.desktopRecentAvatar}>
+                  {buildClientInitials(compactSelectedClientName)}
+                </span>
+                <div className={s.desktopRecentCopy}>
+                  <strong>{compactSelectedClientName}</strong>
+                  <small>
+                    {compactSelectedClientPhone
+                      ? formatDraftPhoneValue(compactSelectedClientPhone)
+                      : "Sin teléfono"}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  className={s.desktopChangeClientButton}
+                  onClick={handleChangeSelectedClient}
+                >
+                  Cambiar cliente
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className={s.desktopClientSearch}>
+                <LuSearch className={s.desktopClientSearchIcon} aria-hidden />
+                <input
+                  ref={(node) => onRegisterInputRef("clientSearch", node)}
+                  className={s.desktopClientSearchInput}
+                  value={clientQuery}
+                  onChange={(event) => onClientQueryChange(event.target.value)}
+                  onKeyDown={(event) => onStep1KeyDown("clientSearch", event)}
+                  placeholder="Busca un cliente o crea uno nuevo"
+                />
+                {hasQuery ? (
+                  <button
+                    type="button"
+                    className={s.desktopClientSearchClear}
+                    onClick={handleClearClientSearch}
+                    aria-label="Limpiar busqueda"
+                  >
+                    <LuCircleX aria-hidden />
+                  </button>
+                ) : null}
+              </div>
+            </>
+          )}
+
+          {!showCompactSelectedClient && showSearchResults ? (
+            <div className={s.desktopRecentList}>
+              {filteredClientes.slice(0, 5).map((cliente) => (
+                <button
+                  key={cliente.id}
+                  type="button"
+                  className={s.desktopRecentRow}
+                  onClick={() => onSelectClient(String(cliente.id))}
+                >
+                  <span className={s.desktopRecentAvatar}>{buildClientInitials(cliente.nombre)}</span>
+                  <span className={s.desktopRecentCopy}>
+                    <strong>{cliente.nombre}</strong>
+                    <small>
+                      {cliente.telefono
+                        ? formatDraftPhoneValue(cliente.telefono)
+                        : cliente.correo || "Sin teléfono"}
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {!showCompactSelectedClient && showCreateFromSearch ? (
+            <div className={s.stepOneSearchEmptyState}>
+              <p className={s.stepOneSearchEmptyText}>No encontramos &quot;{trimmedQuery}&quot;</p>
+              <button type="button" className={s.stepOneSearchEmptyAction} onClick={openCreateFromQuery}>
+                <LuPlus aria-hidden />
+                Crear cliente &quot;{trimmedQuery}&quot;
+              </button>
+            </div>
+          ) : null}
+
+          {showDesktopClientList ? (
+            <div className={s.desktopRecentSection}>
+              <span className={s.desktopRecentSectionLabel}>Clientes recientes</span>
+              {recentClients.length > 0 ? (
+                <div className={s.desktopRecentList}>
+                  {recentClients.slice(0, 3).map((cliente) => {
+                    const isActive = String(cliente.id) === selectedClientId;
+
+                    return (
+                      <button
+                        key={cliente.id}
+                        type="button"
+                        className={`${s.desktopRecentRow} ${isActive ? s.desktopRecentRowActive : ""}`}
+                        onClick={() => onSelectClient(String(cliente.id))}
+                      >
+                        <span className={s.desktopRecentAvatar}>{buildClientInitials(cliente.nombre)}</span>
+                        <span className={s.desktopRecentCopy}>
+                          <strong>{cliente.nombre}</strong>
+                          <small>
+                            {cliente.telefono ? formatDraftPhoneValue(cliente.telefono) : "Sin teléfono"}
+                            {cliente.direccion ? ` · ${cliente.direccion}` : ""}
+                          </small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={s.stepOneEmptyRecent}>Aún no hay clientes recientes.</div>
+              )}
+            </div>
+          ) : null}
+
+          {!showCompactSelectedClient && showNewClientForm ? (
+            <div className={s.desktopNewClientPanel}>
+              <label className={s.field}>
+                <span className={s.desktopFieldLabel}>
+                  Nombre del cliente <span className={s.required}>*</span>
+                </span>
+                <input
+                  ref={(node) => onRegisterInputRef("clienteNombre", node)}
+                  className={`${s.input} ${fieldErrors.clienteNombre ? s.inputError : ""}`}
+                  maxLength={FIELD_LIMITS.clienteNombre}
+                  value={draft.clienteNombre}
+                  onChange={(event) => onClienteNombreChange(event.target.value)}
+                  onKeyDown={(event) => onStep1KeyDown("clienteNombre", event)}
+                  placeholder="Ej. Alexis Collao"
+                />
+                {fieldErrors.clienteNombre ? (
+                  <span className={s.fieldError}>{fieldErrors.clienteNombre}</span>
+                ) : null}
+              </label>
+
+              <label className={s.field}>
+                <span className={s.desktopFieldLabel}>Teléfono</span>
+                <input
+                  ref={(node) => onRegisterInputRef("clienteTelefono", node)}
+                  className={s.input}
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  pattern="[0-9 ]*"
+                  value={draft.clienteTelefono}
+                  onChange={(event) => onTelefonoChange(event.target.value)}
+                  onKeyDown={(event) => onStep1KeyDown("clienteTelefono", event)}
+                  placeholder="Ej. +56 9 6789 0123"
+                />
+              </label>
+
+              <button type="button" className={s.desktopInlineLinkButton} onClick={cancelCreateClient}>
+                Volver a buscar
+              </button>
+            </div>
+          ) : null}
+
+          {!showCompactSelectedClient && !selectedClient && !isCreatingClient ? (
+            <button
+              type="button"
+              className={s.desktopCreateClientButton}
+              onClick={() => {
+                setIsCreatingClient(true);
+                setIsEditingDraftClientName(true);
+              }}
+            >
+              <LuPlus aria-hidden />
+              Crear cliente nuevo
+            </button>
+          ) : null}
+            </section>
+
+            <section className={s.desktopStepOneCard} aria-label="Datos del trabajo">
+          <div className={s.desktopCardTitle}>Datos del trabajo</div>
+          <div
+            className={
+              showEditableClientFieldsInWorkData ? s.desktopStepOneGrid : s.desktopWorkDataCompactGrid
+            }
+          >
+            {showEditableClientFieldsInWorkData ? (
+              <>
+                <label className={s.field}>
+                  <span className={s.desktopFieldLabel}>Nombre del cliente</span>
+                  <input
+                    ref={(node) => onRegisterInputRef("clienteNombre", node)}
+                    className={`${s.input} ${fieldErrors.clienteNombre ? s.inputError : ""}`}
+                    maxLength={FIELD_LIMITS.clienteNombre}
+                    value={draft.clienteNombre}
+                    onChange={(event) => onClienteNombreChange(event.target.value)}
+                    onKeyDown={(event) => onStep1KeyDown("clienteNombre", event)}
+                    placeholder="Ej. Alexis Collao"
+                  />
+                  {fieldErrors.clienteNombre ? (
+                    <span className={s.fieldError}>{fieldErrors.clienteNombre}</span>
+                  ) : null}
+                </label>
+
+                <label className={s.field}>
+                  <span className={s.desktopFieldLabel}>Teléfono</span>
+                  <input
+                    ref={(node) => onRegisterInputRef("clienteTelefono", node)}
+                    className={s.input}
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    pattern="[0-9 ]*"
+                    value={draft.clienteTelefono}
+                    onChange={(event) => onTelefonoChange(event.target.value)}
+                    onKeyDown={(event) => onStep1KeyDown("clienteTelefono", event)}
+                    placeholder="Ej. +56 9 6789 0123"
+                  />
+                </label>
+              </>
+            ) : null}
+
+            <label
+              className={`${s.field} ${showEditableClientFieldsInWorkData ? s.desktopFullField : s.desktopWorkObraField}`}
+            >
+              <span className={s.desktopFieldLabel}>Obra o trabajo</span>
+              <input
+                ref={(node) => onRegisterInputRef("obra", node)}
+                className={`${s.input} ${fieldErrors.obra ? s.inputError : ""}`}
+                maxLength={FIELD_LIMITS.obra}
+                value={draft.obra}
+                onChange={(event) => onObraChange(event.target.value)}
+                onKeyDown={(event) => onStep1KeyDown("obra", event)}
+                placeholder="Ej. Shower door baño principal"
+              />
+              {fieldErrors.obra ? <span className={s.fieldError}>{fieldErrors.obra}</span> : null}
+            </label>
+          </div>
+
+          <button
+            type="button"
+            className={s.desktopMoreDataButton}
+            onClick={onToggleMoreData}
+            aria-expanded={showStep1MoreData}
+          >
+            {showStep1MoreData ? <LuChevronUp aria-hidden /> : <LuChevronDown aria-hidden />}
+            Más datos
+          </button>
+
+          {showStep1MoreData ? (
+            <div className={s.desktopMoreDataGrid}>
+              <label className={s.field}>
+                <span className={s.desktopFieldLabel}>Dirección</span>
+                <input
+                  ref={(node) => onRegisterInputRef("direccion", node)}
+                  className={s.input}
+                  maxLength={FIELD_LIMITS.direccion}
+                  value={draft.direccion}
+                  onChange={(event) => onDireccionChange(event.target.value)}
+                  onKeyDown={(event) => onStep1KeyDown("direccion", event)}
+                  placeholder="Ej. Apoquindo 1540, Las Condes"
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.desktopFieldLabel}>Correo</span>
+                <input
+                  className={s.input}
+                  type="email"
+                  autoComplete="email"
+                  maxLength={120}
+                  value={clienteCorreoDraft}
+                  onChange={(event) => setClienteCorreoDraft(event.target.value)}
+                  placeholder="cliente@correo.cl"
+                />
+              </label>
+
+              <label className={s.field}>
+                <span className={s.desktopFieldLabel}>Validez del presupuesto</span>
+                <div className={s.selectWrap}>
+                  <select
+                    ref={(node) => onRegisterInputRef("validez", node)}
+                    className={s.input}
+                    value={draft.validez}
+                    onChange={(event) => onValidezChange(event.target.value)}
+                    onKeyDown={(event) => onStep1KeyDown("validez", event)}
+                  >
+                    {VALIDEZ_OPTIONS.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+
+              <label className={`${s.field} ${s.desktopFullField}`}>
+                <span className={s.desktopFieldLabel}>Notas</span>
+                <textarea
+                  ref={(node) => onRegisterInputRef("observaciones", node)}
+                  className={s.textarea}
+                  rows={3}
+                  maxLength={FIELD_LIMITS.observaciones}
+                  value={draft.observaciones}
+                  onChange={(event) => onObservacionesChange(event.target.value)}
+                  onKeyDown={(event) => onStep1KeyDown("observaciones", event)}
+                  placeholder="Notas comerciales para el presupuesto."
+                />
+              </label>
+            </div>
+          ) : null}
+
+          {fieldErrors.step1 ? <div className={s.inlineError}>{fieldErrors.step1}</div> : null}
+            </section>
+          </div>
+
+          {summarySlot ? <div className={s.desktopStepOneAside}>{summarySlot}</div> : null}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={`${s.card} ${s.heroCard} ${s.stepOneHeroCard} ${s.stepOneMobileLayout}`}>

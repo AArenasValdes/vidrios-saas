@@ -94,7 +94,7 @@ function darkenHex(hex: string, amt: number): string {
 function resolvePalette(colorHex: string | null | undefined): Palette {
   if (!isValidHex(colorHex)) {
     return {
-      frame: "#16233B", div: "#3E587F", detail: "#274C8C",
+      frame: "#6B7280", div: "#5F6670", detail: "#4B5563",
       dim: "#999999", dimTxt: "#777777", label: "#888888",
     };
   }
@@ -139,6 +139,7 @@ function normalizeSistema(sistema: string | null | undefined): string {
   if (s.includes("oscilo")) return "Oscilobatiente";
   if (s.includes("corr")) return "Corredera";
   if (s.includes("abat")) return "Abatible";
+  if (s.includes("bati")) return "Batiente";
   if (s.includes("proye")) return "Proyectante";
   if (s.includes("pivot")) return "Pivotante";
   if (s.includes("pleg")) return "Plegable";
@@ -286,26 +287,62 @@ function resolveFixedSlidingPaneIndexes(
     return new Set<number>();
   }
 
-  if (source.includes("todas moviles") || source.includes(`${hojas} moviles`)) {
+  if (source.includes("todas moviles")) {
+    return new Set<number>();
+  }
+
+  if (hojas === 2) {
+    if (source.includes("2 moviles") && !source.includes("fija")) {
+      return new Set<number>();
+    }
+
+    if (source.includes("fija")) {
+      return new Set<number>([0]);
+    }
+  }
+
+  if (hojas === 3) {
+    if (source.includes("2 moviles") && source.includes("1 fija")) {
+      return new Set<number>([1]);
+    }
+
+    if (source.includes("1 movil") && source.includes("2 fijas")) {
+      return new Set<number>([0, 2]);
+    }
+
+    if (source.includes("3 moviles")) {
+      return new Set<number>();
+    }
+
+    if (source.includes("fija central") || source.includes("central") || source.includes("medio")) {
+      return new Set<number>([1]);
+    }
+
+    if (source.includes("lateral") || source.includes("fijo lateral")) {
+      return new Set<number>([0]);
+    }
+  }
+
+  if (hojas === 4) {
+    if (source.includes("4 moviles") && !source.includes("fija")) {
+      return new Set<number>();
+    }
+
+    if (
+      (source.includes("2 moviles") && source.includes("2 fijas")) ||
+      source.includes("2 fijas") ||
+      source.includes("laterales")
+    ) {
+      return new Set<number>([0, 3]);
+    }
+  }
+
+  if (source.includes(`${hojas} moviles`) && !source.includes("fija")) {
     return new Set<number>();
   }
 
   if (hojas === 2 && source.includes("fija")) {
     return new Set<number>([0]);
-  }
-
-  if (hojas === 3) {
-    if (source.includes("central") || source.includes("medio")) {
-      return new Set<number>([1]);
-    }
-
-    if (source.includes("lateral")) {
-      return new Set<number>([0]);
-    }
-  }
-
-  if (hojas === 4 && (source.includes("laterales") || source.includes("2 fijas"))) {
-    return new Set<number>([0, 3]);
   }
 
   return new Set<number>();
@@ -420,6 +457,7 @@ function hinge(x: number, cy: number, hW: number, hH: number, color: string): st
 }
 
 /** Arco de apertura uniforme para hojas abatibles */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function swingArc(
   startX: number,
   startY: number,
@@ -490,6 +528,281 @@ type WindowPane = {
 
 type ProjectedFixedLayout = "none" | "projected_top" | "projected_bottom";
 
+type WindowVisualPalette = Palette & {
+  glass: string;
+  glassStroke: string;
+  relief: string;
+};
+
+const WINDOW_ALUMINUM = "#6B7280";
+const WINDOW_ALUMINUM_SECONDARY = "#5F6670";
+const WINDOW_ALUMINUM_RELIEF = "#8A949E";
+const WINDOW_BLACK_FRAME = "#2A2A2A";
+const WINDOW_BLACK_SECONDARY = "#444444";
+const WINDOW_GLASS = "#DCEAF7";
+const WINDOW_GLASS_STROKE = "#A7C7E7";
+const WINDOW_DIM = "#8A8F98";
+const WINDOW_DIM_TEXT = "#59616B";
+const WINDOW_DETAIL = "#4B5563";
+
+function isExplicitBlackProfile(colorHex: string | null | undefined): boolean {
+  return ["#000000", "#111827", "#1f2937", "#2a2a2a", "#444444"].includes(
+    colorHex?.trim().toLowerCase() ?? ""
+  );
+}
+
+function normalizeWindowProfileColor(colorHex: string | null | undefined): string {
+  const normalized = colorHex?.trim().toLowerCase();
+
+  if (!isValidHex(normalized)) return WINDOW_ALUMINUM;
+  if (normalized === "#a8a8a8") return WINDOW_ALUMINUM;
+  if (normalized === "#f0eeeb" || normalized === "#ffffff") return "#FFFFFF";
+  if (isExplicitBlackProfile(normalized)) return WINDOW_BLACK_FRAME;
+
+  return normalized.toUpperCase();
+}
+
+function resolveWindowPalette(colorHex?: string | null): WindowVisualPalette {
+  const frame = normalizeWindowProfileColor(colorHex);
+  const isBlack = isExplicitBlackProfile(frame);
+  const isNaturalAluminum = frame === WINDOW_ALUMINUM;
+  const isWhite = frame === "#FFFFFF";
+
+  return {
+    frame,
+    div: isBlack
+      ? WINDOW_BLACK_SECONDARY
+      : isNaturalAluminum
+        ? WINDOW_ALUMINUM_SECONDARY
+        : isWhite
+          ? "#D1D5DB"
+          : darkenHex(frame, 0.14),
+    detail: WINDOW_DETAIL,
+    dim: WINDOW_DIM,
+    dimTxt: WINDOW_DIM_TEXT,
+    label: WINDOW_DIM_TEXT,
+    glass: WINDOW_GLASS,
+    glassStroke: WINDOW_GLASS_STROKE,
+    relief: isWhite ? "#E5E7EB" : isNaturalAluminum ? WINDOW_ALUMINUM_RELIEF : darkenHex(frame, 0.04),
+  };
+}
+
+function windowOuterFrameWeight(v: string): number {
+  return v === "pdf" ? 6 : 5;
+}
+
+function windowSashWeight(v: string): number {
+  return v === "pdf" ? 3.2 : 2.6;
+}
+
+function windowTrackWeight(v: string): number {
+  return v === "pdf" ? 3 : 2.4;
+}
+
+function windowDetailWeight(v: string): number {
+  return v === "pdf" ? 1.2 : 1.05;
+}
+
+function windowFrameInset(v: string): number {
+  return v === "pdf" ? 5.6 : 4.8;
+}
+
+function drawOuterAluminumFrame(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: WindowVisualPalette
+): string {
+  const outerW = windowOuterFrameWeight(v);
+  const innerInset = Math.max(3.2, outerW * 0.68);
+  const channelW = Math.max(0.85, outerW * 0.18);
+
+  return [
+    `<rect data-window-frame="outer" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${p.frame}" stroke-width="${px(outerW)}" rx="0" stroke-linejoin="miter"/>`,
+    `<rect data-window-frame="inner-channel" x="${px(x + innerInset)}" y="${px(y + innerInset)}" width="${px(w - innerInset * 2)}" height="${px(h - innerInset * 2)}" fill="none" stroke="${p.relief}" stroke-width="${px(channelW)}" rx="0" stroke-linejoin="miter" opacity="0.72"/>`,
+  ].join("");
+}
+
+function drawInnerTrack(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: WindowVisualPalette,
+  orientation: "horizontal" | "vertical" = "horizontal"
+): string {
+  const sw = windowTrackWeight(v);
+  const inset = windowFrameInset(v) * 0.82;
+
+  if (orientation === "vertical") {
+    return [
+      `<line data-window-track="left" x1="${px(x + inset)}" y1="${px(y + inset)}" x2="${px(x + inset)}" y2="${px(y + h - inset)}" stroke="${p.div}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+      `<line data-window-track="right" x1="${px(x + w - inset)}" y1="${px(y + inset)}" x2="${px(x + w - inset)}" y2="${px(y + h - inset)}" stroke="${p.div}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+    ].join("");
+  }
+
+  return [
+    `<line data-window-track="top" x1="${px(x + inset)}" y1="${px(y + inset)}" x2="${px(x + w - inset)}" y2="${px(y + inset)}" stroke="${p.div}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+    `<line data-window-track="bottom" x1="${px(x + inset)}" y1="${px(y + h - inset)}" x2="${px(x + w - inset)}" y2="${px(y + h - inset)}" stroke="${p.div}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+  ].join("");
+}
+
+function drawGlassPanel(pane: WindowPane, v: string, p: WindowVisualPalette, extraData = ""): string {
+  if (pane.w <= 0 || pane.h <= 0) return "";
+  return `<rect data-window-glass="true"${extraData} x="${px(pane.x)}" y="${px(pane.y)}" width="${px(pane.w)}" height="${px(pane.h)}" fill="${p.glass}" fill-opacity="0.82" stroke="${p.glassStroke}" stroke-width="${px(gsw(v))}" rx="0"/>`;
+}
+
+function drawSashFrame(pane: WindowPane, v: string, p: WindowVisualPalette, extraData = ""): string {
+  return `<rect data-window-sash="true"${extraData} x="${px(pane.x)}" y="${px(pane.y)}" width="${px(pane.w)}" height="${px(pane.h)}" fill="none" stroke="${p.div}" stroke-width="${px(windowSashWeight(v))}" rx="0" stroke-linejoin="miter"/>`;
+}
+
+function drawFixedPanel(pane: WindowPane, v: string, p: WindowVisualPalette): string {
+  return [
+    `<g data-window-fixed-panel="true">`,
+    drawGlassPanel(pane, v, p, ' data-window-panel-role="fixed"'),
+    drawSashFrame(pane, v, p, ' data-window-panel-role="fixed"'),
+    `</g>`,
+  ].join("");
+}
+
+function drawRecessedHandle(
+  x: number,
+  cy: number,
+  h: number,
+  v: string,
+  p: WindowVisualPalette
+): string {
+  const sw = windowDetailWeight(v);
+  const bodyW = v === "pdf" ? 7 : 6;
+  const bodyH = clamp(h, 16, 24);
+  const slotW = Math.max(1.7, bodyW * 0.32);
+  const slotH = bodyH - 6;
+
+  return [
+    `<rect data-window-handle="recessed" x="${px(x - bodyW / 2)}" y="${px(cy - bodyH / 2)}" width="${px(bodyW)}" height="${px(bodyH)}" rx="0" fill="#E8EDF3" stroke="${p.detail}" stroke-width="${px(sw)}"/>`,
+    `<rect data-window-handle-slot="true" x="${px(x - slotW / 2)}" y="${px(cy - slotH / 2)}" width="${px(slotW)}" height="${px(slotH)}" rx="0" fill="${p.detail}"/>`,
+  ].join("");
+}
+
+function drawSlidingArrow(
+  cx: number,
+  cy: number,
+  w: number,
+  direction: "left" | "right",
+  v: string,
+  p: WindowVisualPalette
+): string {
+  const sw = windowDetailWeight(v);
+  const head = direction === "right" ? cx + w / 2 : cx - w / 2;
+  const tail = direction === "right" ? cx - w / 2 : cx + w / 2;
+  const chevron = Math.max(4, w * 0.13);
+  const sign = direction === "right" ? -1 : 1;
+
+  return [
+    `<line data-window-sliding-arrow="true" x1="${px(tail)}" y1="${px(cy)}" x2="${px(head)}" y2="${px(cy)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+    `<path data-window-sliding-arrow-head="true" d="M${px(head + sign * chevron)} ${px(cy - chevron * 0.62)} L${px(head)} ${px(cy)} L${px(head + sign * chevron)} ${px(cy + chevron * 0.62)}" fill="none" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-linecap="butt" stroke-linejoin="miter"/>`,
+  ].join("");
+}
+
+function drawSlidingSash(
+  pane: WindowPane,
+  v: string,
+  p: WindowVisualPalette,
+  direction: "left" | "right",
+  handleSide: "left" | "right"
+): string {
+  const handleX =
+    handleSide === "right"
+      ? pane.x + pane.w - Math.max(6, pane.w * 0.06)
+      : pane.x + Math.max(6, pane.w * 0.06);
+  const arrowW = clamp(pane.w * 0.36, 18, 48);
+
+  return [
+    `<g data-window-sliding-sash="true" data-window-slide-direction="${direction}">`,
+    drawGlassPanel(pane, v, p, ' data-window-panel-role="sliding"'),
+    drawSashFrame(pane, v, p, ' data-window-panel-role="sliding"'),
+    drawRecessedHandle(handleX, pane.centerY, pane.h * 0.15, v, p),
+    drawSlidingArrow(pane.centerX, pane.centerY, arrowW, direction, v, p),
+    `</g>`,
+  ].join("");
+}
+
+function drawMeetingProfiles(panes: WindowPane[], v: string, p: WindowVisualPalette): string {
+  if (panes.length < 2) return "";
+  const sw = Math.max(windowSashWeight(v), windowTrackWeight(v));
+  const top = panes[0].y;
+  const bottom = panes[0].y + panes[0].h;
+
+  return panes
+    .slice(0, -1)
+    .map((pane, index) => {
+      const next = panes[index + 1];
+      const gapCenter = (pane.x + pane.w + next.x) / 2;
+      const offset = Math.max(1.4, sw * 0.36);
+      return [
+        `<line data-window-meeting-profile="true" x1="${px(gapCenter - offset)}" y1="${px(top)}" x2="${px(gapCenter - offset)}" y2="${px(bottom)}" stroke="${p.frame}" stroke-width="${px(sw * 0.82)}" stroke-linecap="butt"/>`,
+        `<line data-window-meeting-profile="true" x1="${px(gapCenter + offset)}" y1="${px(top)}" x2="${px(gapCenter + offset)}" y2="${px(bottom)}" stroke="${p.frame}" stroke-width="${px(sw * 0.82)}" stroke-linecap="butt"/>`,
+      ].join("");
+    })
+    .join("");
+}
+
+function drawHinges(pane: WindowPane, side: "left" | "right", v: string, p: WindowVisualPalette): string {
+  const hingeW = v === "pdf" ? 6 : 5;
+  const hingeH = clamp(pane.h * 0.09, 9, 14);
+  const x = side === "left" ? pane.x - hingeW * 0.45 : pane.x + pane.w - hingeW * 0.55;
+  const positions = [pane.y + pane.h * 0.24, pane.y + pane.h * 0.74];
+
+  return positions
+    .map(
+      (cy) =>
+        `<rect data-window-hinge="true" x="${px(x)}" y="${px(cy - hingeH / 2)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="0" fill="${p.detail}"/>`
+    )
+    .join("");
+}
+
+function drawSwingArc(pane: WindowPane, side: "left" | "right", v: string, p: WindowVisualPalette): string {
+  const inset = Math.max(5, windowFrameInset(v) * 0.68);
+  const radius = Math.min(pane.w * 0.82, pane.h * 0.82);
+  const sw = windowDetailWeight(v);
+  const startX = side === "left" ? pane.x + inset : pane.x + pane.w - inset;
+  const endX = side === "left" ? pane.x + pane.w - inset : pane.x + inset;
+  const sweep = side === "left" ? 1 : 0;
+
+  return `<path data-window-swing-arc="true" d="M${px(startX)} ${px(pane.y + inset)} A${px(radius)} ${px(radius)} 0 0 ${sweep} ${px(endX)} ${px(pane.y + pane.h * 0.58)}" fill="none" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-dasharray="5,3" stroke-linecap="butt"/>`;
+}
+
+function drawProjectionIndicator(pane: WindowPane, v: string, p: WindowVisualPalette): string {
+  const sw = windowDetailWeight(v);
+  const topY = pane.y + Math.max(10, pane.h * 0.14);
+  const bottomY = pane.y + pane.h - Math.max(10, pane.h * 0.16);
+  const leftX = pane.x + Math.max(9, pane.w * 0.2);
+  const rightX = pane.x + pane.w - Math.max(9, pane.w * 0.2);
+
+  return [
+    `<line data-window-projection-indicator="true" x1="${px(leftX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-dasharray="5,3" stroke-linecap="butt"/>`,
+    `<line data-window-projection-indicator="true" x1="${px(rightX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-dasharray="5,3" stroke-linecap="butt"/>`,
+    `<line data-window-projection-indicator="true" x1="${px(pane.centerX)}" y1="${px(bottomY - Math.max(12, pane.h * 0.12))}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+  ].join("");
+}
+
+function drawTiltIndicator(pane: WindowPane, v: string, p: WindowVisualPalette): string {
+  const sw = windowDetailWeight(v);
+  const topY = pane.y + Math.max(12, pane.h * 0.18);
+  const baseY = pane.y + pane.h - Math.max(11, pane.h * 0.14);
+  const leftX = pane.x + Math.max(10, pane.w * 0.22);
+  const rightX = pane.x + pane.w - Math.max(10, pane.w * 0.22);
+
+  return [
+    `<line data-window-tilt-indicator="true" x1="${px(leftX)}" y1="${px(baseY)}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-dasharray="4,3" stroke-linecap="butt"/>`,
+    `<line data-window-tilt-indicator="true" x1="${px(rightX)}" y1="${px(baseY)}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-dasharray="4,3" stroke-linecap="butt"/>`,
+    `<path data-window-tilt-indicator="true" d="M${px(pane.centerX - 5)} ${px(topY + 8)} L${px(pane.centerX)} ${px(topY)} L${px(pane.centerX + 5)} ${px(topY + 8)}" fill="none" stroke="${p.detail}" stroke-width="${px(sw)}" stroke-linecap="butt" stroke-linejoin="miter"/>`,
+  ].join("");
+}
+
 function resolveProjectedFixedLayout(params: ComponentSVGParams): ProjectedFixedLayout {
   const source = normalizeSearchText(
     [
@@ -526,25 +839,27 @@ function buildWindowPanes(
   h: number,
   v: string,
   hojas: WindowLeafCount,
-  p: Palette
+  _p: Palette
 ) {
-  const F = fw(v);
-  const D = dw(v);
-  const GW = gsw(v);
+  void _p;
+  const p = resolveWindowPalette(_p.frame);
+  const F = windowOuterFrameWeight(v);
+  const D = windowSashWeight(v);
   const FI = fi(v);
-  const glassY = y + FI;
-  const glassH = h - FI * 2;
+  const frameInset = windowFrameInset(v);
+  const glassY = y + frameInset;
+  const glassH = h - frameInset * 2;
 
   if (hojas === 1) {
     const pane = {
-      x: x + FI,
+      x: x + frameInset,
       y: glassY,
-      w: w - FI * 2,
+      w: w - frameInset * 2,
       h: glassH,
     };
 
     return {
-      outer: outerFrame(x, y, w, h, F, p.frame),
+      outer: drawOuterAluminumFrame(x, y, w, h, v, p),
       divider: "",
       panes: [
         {
@@ -553,17 +868,18 @@ function buildWindowPanes(
           centerY: pane.y + pane.h / 2,
         },
       ] satisfies WindowPane[],
-      glass: glassFill(pane.x, pane.y, pane.w, pane.h, GW),
+      glass: drawGlassPanel({ ...pane, centerX: pane.x + pane.w / 2, centerY: pane.y + pane.h / 2 }, v, p),
       railY: y + h - FI - D * 0.5,
       handleInset: Math.max(5, F * 1.1),
+      palette: p,
     };
   }
 
   const dividerW = Math.max(3.2, D * 1.55);
-  const paneW = (w - FI * 2 - dividerW * (hojas - 1)) / hojas;
+  const paneW = (w - frameInset * 2 - dividerW * (hojas - 1)) / hojas;
   const panes = Array.from({ length: hojas }, (_, index) => {
     const pane = {
-      x: x + FI + index * (paneW + dividerW),
+      x: x + frameInset + index * (paneW + dividerW),
       y: glassY,
       w: paneW,
       h: glassH,
@@ -580,17 +896,18 @@ function buildWindowPanes(
     .map((pane) => {
       const dividerX = pane.x + pane.w + dividerW / 2;
 
-      return `<line x1="${px(dividerX)}" y1="${px(y + FI * 0.5)}" x2="${px(dividerX)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(dividerW)}" stroke-linecap="square"/>`;
+      return `<line data-window-divider="true" x1="${px(dividerX)}" y1="${px(y + frameInset * 0.5)}" x2="${px(dividerX)}" y2="${px(y + h - frameInset * 0.5)}" stroke="${p.frame}" stroke-width="${px(dividerW)}" stroke-linecap="butt"/>`;
     })
     .join("");
 
   return {
-    outer: outerFrame(x, y, w, h, F, p.frame),
+    outer: drawOuterAluminumFrame(x, y, w, h, v, p),
     divider,
     panes,
-    glass: panes.map((pane) => glassFill(pane.x, pane.y, pane.w, pane.h, GW)).join(""),
+    glass: panes.map((pane) => drawGlassPanel(pane, v, p)).join(""),
     railY: y + h - FI - D * 0.5,
     handleInset: Math.max(5, F * 1.1),
+    palette: p,
   };
 }
 
@@ -604,9 +921,7 @@ function drawVentanaCorredera(
   hojas: WindowLeafCount,
   fixedPaneIndexes: Set<number>
 ): string {
-  const D = dw(v);
-  const DT = det(v);
-  const { outer, divider, panes, glass, railY, handleInset } = buildWindowPanes(
+  const { outer, panes, palette } = buildWindowPanes(
     x,
     y,
     w,
@@ -615,65 +930,35 @@ function drawVentanaCorredera(
     hojas,
     p
   );
-  const arrowStroke = DT * 1.15;
-  const rail = `<line x1="${px(panes[0].x)}" y1="${px(railY)}" x2="${px(panes[panes.length - 1].x + panes[panes.length - 1].w)}" y2="${px(railY)}" stroke="${p.div}" stroke-width="${px(D * 1.05)}" stroke-linecap="round"/>`;
 
   if (hojas === 1) {
     const pane = panes[0];
-    const arrowW = Math.max(30, pane.w * 0.42);
 
     return [
       outer,
-      glass,
-      rail,
-      sidePullHandle(pane.x + pane.w - handleInset, pane.centerY, clamp(h * 0.15, 15, 20)),
-      directionArrow(
-        pane.centerX - arrowW / 2,
-        pane.centerY,
-        arrowW,
-        "left",
-        arrowStroke,
-        p.detail
-      ),
+      drawInnerTrack(x, y, w, h, v, palette),
+      drawSlidingSash(pane, v, palette, "left", "right"),
     ].join("");
   }
 
-  const arrowW = clamp(panes[0].w * 0.46, 16, 38);
-  const mobileDetails = panes
+  const paneLayers = panes
     .map((pane, index) => {
       if (fixedPaneIndexes.has(index)) {
-        const markerInset = Math.max(6, Math.min(10, pane.w * 0.15));
-
-        return [
-          `<line x1="${px(pane.x + markerInset)}" y1="${px(pane.y + markerInset)}" x2="${px(pane.x + pane.w - markerInset)}" y2="${px(pane.y + pane.h - markerInset)}" stroke="${p.div}" stroke-width="${px(DT * 0.8)}" stroke-linecap="round" opacity="0.58"/>`,
-          `<line x1="${px(pane.x + pane.w - markerInset)}" y1="${px(pane.y + markerInset)}" x2="${px(pane.x + markerInset)}" y2="${px(pane.y + pane.h - markerInset)}" stroke="${p.div}" stroke-width="${px(DT * 0.8)}" stroke-linecap="round" opacity="0.58"/>`,
-        ].join("");
+        return drawFixedPanel(pane, v, palette);
       }
 
-      const handleX =
-        index % 2 === 0 ? pane.x + pane.w - handleInset : pane.x + handleInset;
       const direction = index % 2 === 0 ? "right" : "left";
+      const handleSide = index % 2 === 0 ? "right" : "left";
 
-      return [
-        sidePullHandle(handleX, pane.centerY, clamp(h * 0.15, 13, 20)),
-        directionArrow(
-          pane.centerX - arrowW / 2,
-          pane.centerY,
-          arrowW,
-          direction,
-          arrowStroke,
-          p.detail
-        ),
-      ].join("");
+      return drawSlidingSash(pane, v, palette, direction, handleSide);
     })
     .join("");
 
   return [
     outer,
-    glass,
-    divider,
-    rail,
-    mobileDetails,
+    drawInnerTrack(x, y, w, h, v, palette),
+    paneLayers,
+    drawMeetingProfiles(panes, v, palette),
   ].join("");
 }
 
@@ -686,10 +971,15 @@ function drawVerticalMotionArrow(
   color: string
 ): string {
   const headY = direction === "up" ? y1 : y2;
+  const chevron = 4.6;
+  const d =
+    direction === "up"
+      ? `M${px(x - chevron * 0.62)} ${px(headY + chevron)} L${px(x)} ${px(headY)} L${px(x + chevron * 0.62)} ${px(headY + chevron)}`
+      : `M${px(x - chevron * 0.62)} ${px(headY - chevron)} L${px(x)} ${px(headY)} L${px(x + chevron * 0.62)} ${px(headY - chevron)}`;
 
   return [
-    `<line x1="${px(x)}" y1="${px(y1)}" x2="${px(x)}" y2="${px(y2)}" stroke="${color}" stroke-width="${px(sw)}" stroke-linecap="round"/>`,
-    arrowTip(x, headY, direction, sw, color),
+    `<line data-window-vertical-arrow="true" x1="${px(x)}" y1="${px(y1)}" x2="${px(x)}" y2="${px(y2)}" stroke="${color}" stroke-width="${px(sw)}" stroke-linecap="butt"/>`,
+    `<path data-window-vertical-arrow-head="true" d="${d}" fill="none" stroke="${color}" stroke-width="${px(sw)}" stroke-linecap="butt" stroke-linejoin="miter"/>`,
   ].join("");
 }
 
@@ -702,10 +992,9 @@ function drawVentanaGuillotina(
   p: Palette,
   configurationSource?: string | null
 ): string {
-  const F = fw(v);
-  const D = dw(v);
-  const DT = det(v);
-  const FI = fi(v);
+  const wp = resolveWindowPalette(p.frame);
+  const dividerW = Math.max(3.5, windowSashWeight(v) * 1.35);
+  const FI = windowFrameInset(v);
   const source = normalizeSearchText(configurationSource);
   const isDouble = source.includes("doble");
   const dividerY = y + h / 2;
@@ -714,18 +1003,36 @@ function drawVentanaGuillotina(
   const topY = y + FI;
   const paneH = h / 2 - FI * 1.5;
   const bottomY = dividerY + FI * 0.5;
-  const arrowStroke = DT * 1.15;
+  const arrowStroke = windowDetailWeight(v);
+  const topPane: WindowPane = {
+    x: glassX,
+    y: topY,
+    w: glassW,
+    h: paneH,
+    centerX: glassX + glassW / 2,
+    centerY: topY + paneH / 2,
+  };
+  const bottomPane: WindowPane = {
+    x: glassX,
+    y: bottomY,
+    w: glassW,
+    h: paneH,
+    centerX: glassX + glassW / 2,
+    centerY: bottomY + paneH / 2,
+  };
 
   return [
-    outerFrame(x, y, w, h, F, p.frame),
-    glassFill(glassX, topY, glassW, paneH, gsw(v)),
-    glassFill(glassX, bottomY, glassW, paneH, gsw(v)),
-    `<line data-guillotina-divider="horizontal" x1="${px(x + FI * 0.35)}" y1="${px(dividerY)}" x2="${px(x + w - FI * 0.35)}" y2="${px(dividerY)}" stroke="${p.frame}" stroke-width="${px(Math.max(3.2, D * 1.55))}" stroke-linecap="square"/>`,
-    `<line x1="${px(glassX)}" y1="${px(dividerY - D * 1.15)}" x2="${px(glassX + glassW)}" y2="${px(dividerY - D * 1.15)}" stroke="${p.div}" stroke-width="${px(D * 0.7)}" opacity="0.7"/>`,
+    drawOuterAluminumFrame(x, y, w, h, v, wp),
+    drawInnerTrack(x, y, w, h, v, wp),
+    drawGlassPanel(topPane, v, wp),
+    drawSashFrame(topPane, v, wp),
+    drawGlassPanel(bottomPane, v, wp),
+    drawSashFrame(bottomPane, v, wp),
+    `<line data-guillotina-divider="horizontal" x1="${px(x + FI * 0.35)}" y1="${px(dividerY)}" x2="${px(x + w - FI * 0.35)}" y2="${px(dividerY)}" stroke="${wp.frame}" stroke-width="${px(dividerW)}" stroke-linecap="butt"/>`,
     isDouble
-      ? drawVerticalMotionArrow(x + w / 2, topY + paneH * 0.62, topY + paneH * 0.3, "down", arrowStroke, p.detail)
+      ? drawVerticalMotionArrow(x + w / 2, topY + paneH * 0.62, topY + paneH * 0.3, "down", arrowStroke, wp.detail)
       : "",
-    drawVerticalMotionArrow(x + w / 2, bottomY + paneH * 0.68, bottomY + paneH * 0.35, "up", arrowStroke, p.detail),
+    drawVerticalMotionArrow(x + w / 2, bottomY + paneH * 0.68, bottomY + paneH * 0.35, "up", arrowStroke, wp.detail),
   ].join("");
 }
 
@@ -738,10 +1045,9 @@ function drawVentanaCelosia(
   p: Palette,
   configurationSource?: string | null
 ): string {
-  const F = fw(v);
-  const D = dw(v);
-  const DT = det(v);
-  const FI = fi(v);
+  const wp = resolveWindowPalette(p.frame);
+  const D = windowTrackWeight(v);
+  const FI = windowFrameInset(v);
   const source = normalizeSearchText(configurationSource);
   const hasFixedBottom = source.includes("fijo") || source.includes("inferior");
   const ventH = hasFixedBottom ? h * 0.66 : h - FI * 2;
@@ -756,30 +1062,36 @@ function drawVentanaCelosia(
   const sideInset = Math.max(4, D * 1.5);
   const slats = Array.from({ length: slatCount }, (_, index) => {
     const cy = ventY + slatGap * (index + 0.72);
-    const leftTop = glassX + sideInset;
-    const rightTop = glassX + glassW - sideInset;
-    const tilt = slatH * 0.7;
+    const left = glassX + sideInset;
+    const right = glassX + glassW - sideInset;
 
     return [
-      `<path data-celosia-lama="true" d="M${px(leftTop)} ${px(cy + tilt)} L${px(rightTop)} ${px(cy + tilt)} L${px(rightTop - sideInset * 0.55)} ${px(cy - slatH)} L${px(leftTop + sideInset * 0.55)} ${px(cy - slatH)} Z" fill="${G_FILL}" stroke="${p.frame}" stroke-width="${px(Math.max(0.9, DT * 0.9))}" stroke-linejoin="round"/>`,
-      `<line x1="${px(leftTop + sideInset * 0.55)}" y1="${px(cy - slatH)}" x2="${px(leftTop)}" y2="${px(cy + tilt)}" stroke="${p.div}" stroke-width="${px(DT * 0.7)}" opacity="0.75"/>`,
-      `<line x1="${px(rightTop - sideInset * 0.55)}" y1="${px(cy - slatH)}" x2="${px(rightTop)}" y2="${px(cy + tilt)}" stroke="${p.div}" stroke-width="${px(DT * 0.7)}" opacity="0.75"/>`,
+      `<rect data-celosia-lama="true" x="${px(left)}" y="${px(cy - slatH / 2)}" width="${px(right - left)}" height="${px(slatH)}" rx="0" fill="${wp.glass}" fill-opacity="0.82" stroke="${wp.frame}" stroke-width="${px(windowDetailWeight(v))}" stroke-linejoin="miter"/>`,
+      `<line data-celosia-lama-axis="true" x1="${px(left)}" y1="${px(cy)}" x2="${px(right)}" y2="${px(cy)}" stroke="${wp.div}" stroke-width="${px(windowDetailWeight(v) * 0.8)}" stroke-linecap="butt"/>`,
     ].join("");
   }).join("");
   const sideRails = [
-    `<line x1="${px(glassX + sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${p.div}" stroke-width="${px(D * 0.9)}"/>`,
-    `<line x1="${px(glassX + glassW - sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + glassW - sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${p.div}" stroke-width="${px(D * 0.9)}"/>`,
+    `<line x1="${px(glassX + sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${wp.div}" stroke-width="${px(D * 0.9)}" stroke-linecap="butt"/>`,
+    `<line x1="${px(glassX + glassW - sideInset * 0.35)}" y1="${px(ventY)}" x2="${px(glassX + glassW - sideInset * 0.35)}" y2="${px(ventY + ventH)}" stroke="${wp.div}" stroke-width="${px(D * 0.9)}" stroke-linecap="butt"/>`,
   ].join("");
-  const handle = sidePullHandle(x + w - FI - sideInset * 0.35, ventY + ventH / 2, clamp(h * 0.13, 14, 20));
+  const handle = drawRecessedHandle(x + w - FI - sideInset * 0.35, ventY + ventH / 2, clamp(h * 0.13, 14, 20), v, wp);
+  const fixedPaneRect: WindowPane = {
+    x: glassX,
+    y: fixedY,
+    w: glassW,
+    h: Math.max(1, fixedH),
+    centerX: glassX + glassW / 2,
+    centerY: fixedY + Math.max(1, fixedH) / 2,
+  };
   const fixedPane = hasFixedBottom
     ? [
-        `<line x1="${px(x + FI * 0.35)}" y1="${px(fixedY - D * 0.75)}" x2="${px(x + w - FI * 0.35)}" y2="${px(fixedY - D * 0.75)}" stroke="${p.frame}" stroke-width="${px(Math.max(3.2, D * 1.4))}" stroke-linecap="square"/>`,
-        glassFill(glassX, fixedY, glassW, Math.max(1, fixedH), gsw(v)),
+        `<line x1="${px(x + FI * 0.35)}" y1="${px(fixedY - D * 0.75)}" x2="${px(x + w - FI * 0.35)}" y2="${px(fixedY - D * 0.75)}" stroke="${wp.frame}" stroke-width="${px(Math.max(3.2, D * 1.4))}" stroke-linecap="butt"/>`,
+        drawFixedPanel(fixedPaneRect, v, wp),
       ].join("")
     : "";
 
   return [
-    outerFrame(x, y, w, h, F, p.frame),
+    drawOuterAluminumFrame(x, y, w, h, v, wp),
     sideRails,
     slats,
     handle,
@@ -796,87 +1108,47 @@ function drawVentanaAbatible(
   p: Palette,
   hojas: 1 | 2
 ): string {
-  const F = fw(v);
-  const DT = det(v);
-  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
-  const hingeW = clamp(F * 0.8, 4, 7);
-  const hingeH = clamp(h * 0.1, 9, 13);
-  const handleH = clamp(h * 0.14, 13, 18);
-  const leafInset = 5;
-  const stroke = DT * 1.2;
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const handleH = clamp(h * 0.14, 13, 19);
+
+  const leaf = (pane: WindowPane, side: "left" | "right") => {
+    const handleX =
+      side === "left"
+        ? pane.x + pane.w - Math.max(6, pane.w * 0.08)
+        : pane.x + Math.max(6, pane.w * 0.08);
+    return [
+      drawGlassPanel(pane, v, palette),
+      drawSashFrame(pane, v, palette, ' data-window-panel-role="abatible"'),
+      drawHinges(pane, side, v, palette),
+      drawRecessedHandle(handleX, pane.centerY, handleH, v, palette),
+      drawSwingArc(pane, side, v, palette),
+    ].join("");
+  };
 
   if (hojas === 1) {
     const pane = panes[0];
-    const arcRadius = Math.min(pane.w * 0.9, pane.h * 0.9);
 
     return [
       outer,
-      glass,
-      hinge(x - hingeW * 0.3, y + h * 0.22, hingeW, hingeH, p.detail),
-      hinge(x - hingeW * 0.3, y + h * 0.74, hingeW, hingeH, p.detail),
-      lHandle(x + w - fi(v) * 0.85, y + h * 0.5, handleH, "left", DT, p.detail),
-      `<line x1="${px(pane.x + leafInset)}" y1="${px(pane.y + leafInset)}" x2="${px(pane.x + pane.w - leafInset)}" y2="${px(pane.y + pane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
-      swingArc(
-        pane.x + pane.w - leafInset,
-        pane.y + leafInset,
-        arcRadius,
-        pane.x + leafInset,
-        pane.y + pane.h * 0.56,
-        stroke,
-        p.detail
-      ),
+      drawInnerTrack(x, y, w, h, v, palette, "vertical"),
+      leaf(pane, "left"),
     ].join("");
   }
 
   const leftPane = panes[0];
   const rightPane = panes[1];
-  const arcRadius = Math.min(leftPane.w * 0.85, leftPane.h * 0.82);
 
   return [
     outer,
-    glass,
     divider,
-    hinge(x - hingeW * 0.3, y + h * 0.22, hingeW, hingeH, p.detail),
-    hinge(x - hingeW * 0.3, y + h * 0.74, hingeW, hingeH, p.detail),
-    hinge(x + w - hingeW * 0.7, y + h * 0.22, hingeW, hingeH, p.detail),
-    hinge(x + w - hingeW * 0.7, y + h * 0.74, hingeW, hingeH, p.detail),
-    lHandle(leftPane.x + leftPane.w - Math.max(4.5, F * 0.8), leftPane.centerY, handleH, "left", DT, p.detail),
-    lHandle(rightPane.x + Math.max(4.5, F * 0.8), rightPane.centerY, handleH, "right", DT, p.detail),
-    `<line x1="${px(leftPane.x + leafInset)}" y1="${px(leftPane.y + leafInset)}" x2="${px(leftPane.x + leftPane.w - leafInset)}" y2="${px(leftPane.y + leftPane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
-    `<line x1="${px(rightPane.x + rightPane.w - leafInset)}" y1="${px(rightPane.y + leafInset)}" x2="${px(rightPane.x + leafInset)}" y2="${px(rightPane.y + rightPane.h - leafInset)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
-    swingArc(
-      leftPane.x + leftPane.w - leafInset,
-      leftPane.y + leafInset,
-      arcRadius,
-      leftPane.x + leafInset,
-      leftPane.y + leftPane.h * 0.54,
-      stroke,
-      p.detail
-    ),
-    swingArc(
-      rightPane.x + leafInset,
-      rightPane.y + leafInset,
-      arcRadius,
-      rightPane.x + rightPane.w - leafInset,
-      rightPane.y + rightPane.h * 0.54,
-      stroke,
-      p.detail
-    ),
+    drawInnerTrack(x, y, w, h, v, palette, "vertical"),
+    leaf(leftPane, "left"),
+    leaf(rightPane, "right"),
   ].join("");
 }
 
-function drawProyectanteGuides(pane: WindowPane, stroke: number, p: Palette) {
-  const topY = pane.y + Math.max(8, pane.h * 0.14);
-  const bottomY = pane.y + pane.h - Math.max(10, pane.h * 0.18);
-  const topLeftX = pane.x + Math.max(9, pane.w * 0.2);
-  const topRightX = pane.x + pane.w - Math.max(9, pane.w * 0.2);
-
-  return [
-    `<line x1="${px(topLeftX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(topRightX)}" y1="${px(topY)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(pane.centerX)}" y1="${px(bottomY - 16)}" x2="${px(pane.centerX)}" y2="${px(bottomY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
-    arrowTip(pane.centerX, bottomY, "down", stroke, p.detail),
-  ].join("");
+function drawProyectanteGuides(pane: WindowPane, v: string, p: WindowVisualPalette) {
+  return drawProjectionIndicator(pane, v, p);
 }
 
 function drawVentanaProyectante(
@@ -888,33 +1160,38 @@ function drawVentanaProyectante(
   p: Palette,
   hojas: 1 | 2
 ): string {
-  const D = dw(v);
-  const DT = det(v);
-  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
   const handleH = clamp(h * 0.12, 12, 17);
-  const stroke = DT * 1.1;
   const hinges = panes
     .map((pane) => {
       const hingeW = Math.max(8, pane.w * 0.18);
-      const hingeH = Math.max(3.4, D * 1.2);
+      const hingeH = Math.max(3.4, windowTrackWeight(v) * 1.2);
 
       return [
-        `<rect x="${px(pane.x + pane.w * 0.26 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
-        `<rect x="${px(pane.x + pane.w * 0.74 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
+        `<rect data-window-projecting-hinge="true" x="${px(pane.x + pane.w * 0.26 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="0" fill="${palette.detail}"/>`,
+        `<rect data-window-projecting-hinge="true" x="${px(pane.x + pane.w * 0.74 - hingeW / 2)}" y="${px(pane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="0" fill="${palette.detail}"/>`,
       ].join("");
     })
     .join("");
-  const guides = panes.map((pane) => drawProyectanteGuides(pane, stroke, p)).join("");
+  const paneLayers = panes
+    .map((pane) =>
+      [
+        drawGlassPanel(pane, v, palette),
+        drawSashFrame(pane, v, palette, ' data-window-panel-role="proyectante"'),
+      ].join("")
+    )
+    .join("");
+  const guides = panes.map((pane) => drawProyectanteGuides(pane, v, palette)).join("");
   const handles =
     hojas === 1
-      ? lHandle(x + w * 0.5, y + h - fi(v) * 0.9, handleH, "right", DT, p.detail)
+      ? drawRecessedHandle(x + w * 0.5, y + h - windowFrameInset(v) * 0.9, handleH, v, palette)
       : panes
           .map((pane) =>
-            lHandle(pane.centerX, y + h - fi(v) * 0.9, handleH, "right", DT, p.detail)
+            drawRecessedHandle(pane.centerX, y + h - windowFrameInset(v) * 0.9, handleH, v, palette)
           )
           .join("");
 
-  return [outer, glass, divider, hinges, guides, handles].join("");
+  return [outer, drawInnerTrack(x, y, w, h, v, palette), paneLayers, divider, hinges, guides, handles].join("");
 }
 
 function drawVentanaProyectanteFijoVertical(
@@ -926,11 +1203,9 @@ function drawVentanaProyectanteFijoVertical(
   p: Palette,
   layout: Exclude<ProjectedFixedLayout, "none">
 ): string {
-  const F = fw(v);
-  const D = dw(v);
-  const DT = det(v);
-  const GW = gsw(v);
-  const FI = fi(v);
+  const wp = resolveWindowPalette(p.frame);
+  const D = windowSashWeight(v);
+  const FI = windowFrameInset(v);
   const dividerH = Math.max(3.2, D * 1.55);
   const usableH = Math.max(20, h - FI * 2 - dividerH);
   const projectedH = usableH * 0.5;
@@ -956,28 +1231,27 @@ function drawVentanaProyectanteFijoVertical(
     centerY: topPane.y + topPane.h + dividerH + bottomPaneH / 2,
   };
   const projectedPane = layout === "projected_top" ? topPane : bottomPane;
-  const fixedPane = layout === "projected_top" ? bottomPane : topPane;
   const hingeW = Math.max(11, projectedPane.w * 0.15);
   const hingeH = Math.max(3.4, D * 1.2);
-  const stroke = DT * 1.1;
 
   return [
-    outerFrame(x, y, w, h, F, p.frame),
-    glassFill(topPane.x, topPane.y, topPane.w, topPane.h, GW),
-    glassFill(bottomPane.x, bottomPane.y, bottomPane.w, bottomPane.h, GW),
-    `<line x1="${px(x + FI * 0.5)}" y1="${px(topPane.y + topPane.h + dividerH / 2)}" x2="${px(x + w - FI * 0.5)}" y2="${px(topPane.y + topPane.h + dividerH / 2)}" stroke="${p.frame}" stroke-width="${px(dividerH)}" stroke-linecap="square"/>`,
-    `<rect x="${px(projectedPane.x + projectedPane.w * 0.26 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
-    `<rect x="${px(projectedPane.x + projectedPane.w * 0.74 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="1.1" fill="${p.detail}"/>`,
-    drawProyectanteGuides(projectedPane, stroke, p),
-    lHandle(
+    drawOuterAluminumFrame(x, y, w, h, v, wp),
+    drawInnerTrack(x, y, w, h, v, wp),
+    layout === "projected_top" ? drawGlassPanel(topPane, v, wp) : drawFixedPanel(topPane, v, wp),
+    layout === "projected_top" ? drawSashFrame(topPane, v, wp, ' data-window-panel-role="proyectante"') : "",
+    layout === "projected_top" ? drawFixedPanel(bottomPane, v, wp) : drawGlassPanel(bottomPane, v, wp),
+    layout === "projected_top" ? "" : drawSashFrame(bottomPane, v, wp, ' data-window-panel-role="proyectante"'),
+    `<line x1="${px(x + FI * 0.5)}" y1="${px(topPane.y + topPane.h + dividerH / 2)}" x2="${px(x + w - FI * 0.5)}" y2="${px(topPane.y + topPane.h + dividerH / 2)}" stroke="${wp.frame}" stroke-width="${px(dividerH)}" stroke-linecap="butt"/>`,
+    `<rect data-window-projecting-hinge="true" x="${px(projectedPane.x + projectedPane.w * 0.26 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="0" fill="${wp.detail}"/>`,
+    `<rect data-window-projecting-hinge="true" x="${px(projectedPane.x + projectedPane.w * 0.74 - hingeW / 2)}" y="${px(projectedPane.y - hingeH * 0.3)}" width="${px(hingeW)}" height="${px(hingeH)}" rx="0" fill="${wp.detail}"/>`,
+    drawProyectanteGuides(projectedPane, v, wp),
+    drawRecessedHandle(
       projectedPane.centerX,
       projectedPane.y + projectedPane.h - FI * 0.9,
       clamp(projectedPane.h * 0.18, 12, 17),
-      "right",
-      DT,
-      p.detail
+      v,
+      wp
     ),
-    fixedBadge(fixedPane.centerX, fixedPane.centerY, p),
   ].join("");
 }
 
@@ -992,11 +1266,12 @@ function drawBowWindow(
   opening: string | null | undefined,
   composition: string | null | undefined
 ): string {
-  const F = fw(v);
-  const D = dw(v);
-  const DT = det(v);
+  const wp = resolveWindowPalette(p.frame);
+  const F = windowOuterFrameWeight(v);
+  const D = windowSashWeight(v);
+  const DT = windowDetailWeight(v);
   const GW = gsw(v);
-  const FI = fi(v);
+  const FI = windowFrameInset(v);
   const count = clamp(paneCount, 3, 5);
   const depth = Math.min(h * 0.1, 18);
   const normalizedOpening = normalizeSearchText(opening);
@@ -1055,8 +1330,39 @@ function drawBowWindow(
     }
 
     if (normalizedOpening.includes("proyectante")) {
-      if (normalizedComposition.includes("central")) {
+      const isFixedCenterWithProjectingLaterals =
+        normalizedComposition.includes("fijo central") &&
+        normalizedComposition.includes("proyectantes laterales");
+      const isFixedLateralsWithProjectingCenter =
+        normalizedComposition.includes("fijos laterales") &&
+        normalizedComposition.includes("proyectante central");
+
+      if (isFixedCenterWithProjectingLaterals) {
+        return index === Math.floor(count / 2) ? "fixed" : "projected";
+      }
+
+      if (isFixedLateralsWithProjectingCenter) {
         return index === Math.floor(count / 2) ? "projected" : "fixed";
+      }
+
+      if (normalizedComposition.includes("2 proyectantes")) {
+        if (index === 1 || index === count - 2) {
+          return "projected";
+        }
+
+        return "fixed";
+      }
+
+      if (normalizedComposition.includes("1 proyectante")) {
+        return index === Math.floor(count / 2) ? "projected" : "fixed";
+      }
+
+      if (normalizedComposition.includes("proyectante central")) {
+        return index === Math.floor(count / 2) ? "projected" : "fixed";
+      }
+
+      if (normalizedComposition.includes("fijo central")) {
+        return index === Math.floor(count / 2) ? "fixed" : "projected";
       }
 
       return isFirst || isLast ? "projected" : "fixed";
@@ -1075,14 +1381,15 @@ function drawBowWindow(
 
   const roles = Array.from({ length: count }, (_, index) => bowPaneRole(index));
   const isSlidingBow = normalizedOpening.includes("corredera");
+  const isProjectingBow = normalizedOpening.includes("proyectante");
   const hasLeftSide =
-    roles[0] === "fixed" &&
+    (roles[0] === "fixed" || (isProjectingBow && roles[0] === "projected")) &&
     (!isSlidingBow ||
       normalizedComposition.includes("fijo izquierdo") ||
       normalizedComposition.includes("fijos laterales") ||
       normalizedComposition.includes("panos fijos"));
   const hasRightSide =
-    roles[count - 1] === "fixed" &&
+    (roles[count - 1] === "fixed" || (isProjectingBow && roles[count - 1] === "projected")) &&
     (!isSlidingBow ||
       normalizedComposition.includes("fijo derecho") ||
       normalizedComposition.includes("fijos laterales") ||
@@ -1106,9 +1413,6 @@ function drawBowWindow(
   const railBottomY = frontBottom + F * 0.55;
   const railOverhang = Math.max(2.5, F * 0.55);
 
-  const bowFixedMarker = (cx: number, cy: number, size = 14) =>
-    `<text x="${px(cx)}" y="${px(cy + size * 0.35)}" text-anchor="middle" font-size="${px(size)}" font-family="sans-serif" fill="${p.detail}" font-weight="700">F</text>`;
-
   const renderPaneContent = (
     role: BowPaneRole,
     left: number,
@@ -1116,24 +1420,23 @@ function drawBowWindow(
     right: number,
     bottom: number,
     centerX: number,
-    centerY: number,
-    isSide: boolean
+    centerY: number
   ) => {
     if (role === "sliding-left" || role === "sliding-right") {
       const arrowW = clamp((right - left) * 0.34, 14, 28);
-      return directionArrow(
-        centerX - arrowW / 2,
+      return drawSlidingArrow(
+        centerX,
         centerY,
         arrowW,
         role === "sliding-left" ? "left" : "right",
-        Math.max(1, DT * 1.15),
-        p.detail
+        v,
+        wp
       );
     }
 
     if (role === "sliding-neutral") {
       const lineW = clamp((right - left) * 0.28, 10, 22);
-      return `<line x1="${px(centerX - lineW / 2)}" y1="${px(centerY)}" x2="${px(centerX + lineW / 2)}" y2="${px(centerY)}" stroke="${p.detail}" stroke-width="${px(DT)}" stroke-linecap="round"/>`;
+      return `<line data-window-sliding-arrow="true" x1="${px(centerX - lineW / 2)}" y1="${px(centerY)}" x2="${px(centerX + lineW / 2)}" y2="${px(centerY)}" stroke="${wp.detail}" stroke-width="${px(DT)}" stroke-linecap="butt"/>`;
     }
 
     if (role === "projected") {
@@ -1146,18 +1449,16 @@ function drawBowWindow(
           centerX,
           centerY,
         },
-        DT,
-        p
+        v,
+        wp
       );
     }
 
     if (role === "abatible") {
-      return `<line x1="${px(left + 6)}" y1="${px(top + 6)}" x2="${px(right - 6)}" y2="${px(bottom - 6)}" stroke="${p.detail}" stroke-width="${px(DT)}" stroke-dasharray="5,3" stroke-linecap="round"/>`;
+      return `<line data-window-swing-arc="true" x1="${px(left + 6)}" y1="${px(top + 6)}" x2="${px(right - 6)}" y2="${px(bottom - 6)}" stroke="${wp.detail}" stroke-width="${px(DT)}" stroke-dasharray="5,3" stroke-linecap="butt"/>`;
     }
 
-    if (role === "fixed") {
-      return isSide || right - left < 46 ? bowFixedMarker(centerX, centerY) : fixedBadge(centerX, centerY, p);
-    }
+    if (role === "fixed") return "";
 
     return "";
   };
@@ -1177,9 +1478,9 @@ function drawBowWindow(
     const centerY = (frontTop + frontBottom) / 2;
 
     panes.push(
-      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-left" data-bow-role="${role}"/>`,
-      renderPaneContent(role, outerX, frontTop, innerX, frontBottom, centerX, centerY, true),
-      `<line x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+      `<path data-window-bow-pane="true" d="${panePath}" fill="${wp.glass}" fill-opacity="0.82" stroke="${wp.glassStroke}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-left" data-bow-role="${role}"/>`,
+      renderPaneContent(role, outerX, frontTop, innerX, frontBottom, centerX, centerY),
+      `<line data-window-divider="true" x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${wp.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="butt"/>`
     );
   }
 
@@ -1198,9 +1499,9 @@ function drawBowWindow(
     const centerY = (frontTop + frontBottom) / 2;
 
     panes.push(
-      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-right" data-bow-role="${role}"/>`,
-      renderPaneContent(role, innerX, frontTop, outerX, frontBottom, centerX, centerY, true),
-      `<line x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+      `<path data-window-bow-pane="true" d="${panePath}" fill="${wp.glass}" fill-opacity="0.82" stroke="${wp.glassStroke}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="side-right" data-bow-role="${role}"/>`,
+      renderPaneContent(role, innerX, frontTop, outerX, frontBottom, centerX, centerY),
+      `<line data-window-divider="true" x1="${px(innerX)}" y1="${px(frontTop)}" x2="${px(innerX)}" y2="${px(frontBottom)}" stroke="${wp.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="butt"/>`
     );
   }
 
@@ -1222,13 +1523,13 @@ function drawBowWindow(
     const centerY = (top + bottom) / 2;
 
     panes.push(
-      `<path d="${panePath}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="front" data-bow-front-pane="true" data-bow-front-width="${px(frontPaneW)}" data-bow-role="${role}"/>`,
-      renderPaneContent(role, left, top, right, bottom, centerX, centerY, false)
+      `<path data-window-bow-pane="true" d="${panePath}" fill="${wp.glass}" fill-opacity="0.82" stroke="${wp.glassStroke}" stroke-width="${GW}" data-bow-pane="true" data-bow-zone="front" data-bow-front-pane="true" data-bow-front-width="${px(frontPaneW)}" data-bow-role="${role}"/>`,
+      renderPaneContent(role, left, top, right, bottom, centerX, centerY)
     );
 
     if (frontIndex > 0) {
       dividers.push(
-        `<line x1="${px(left)}" y1="${px(top)}" x2="${px(left)}" y2="${px(bottom)}" stroke="${p.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="square"/>`
+        `<line data-window-divider="true" x1="${px(left)}" y1="${px(top)}" x2="${px(left)}" y2="${px(bottom)}" stroke="${wp.frame}" stroke-width="${px(Math.max(2.6, D * 1.35))}" stroke-linecap="butt"/>`
       );
     }
   }
@@ -1247,25 +1548,15 @@ function drawBowWindow(
   ].filter(Boolean).join(" ");
 
   return [
-    `<path d="${topRail}" fill="none" stroke="${p.frame}" stroke-width="${F}" stroke-linecap="round"/>`,
-    `<path d="${bottomRail}" fill="none" stroke="${p.frame}" stroke-width="${F}" stroke-linecap="round"/>`,
+    `<path data-window-frame="outer" d="${topRail}" fill="none" stroke="${wp.frame}" stroke-width="${F}" stroke-linecap="butt" stroke-linejoin="miter"/>`,
+    `<path data-window-frame="outer" d="${bottomRail}" fill="none" stroke="${wp.frame}" stroke-width="${F}" stroke-linecap="butt" stroke-linejoin="miter"/>`,
     ...panes,
     ...dividers,
   ].join("");
 }
 
-function drawTiltMarker(pane: WindowPane, stroke: number, p: Palette) {
-  const topY = pane.y + Math.max(14, pane.h * 0.2);
-  const arrowY = pane.y + Math.max(28, pane.h * 0.34);
-  const leftX = pane.x + Math.max(10, pane.w * 0.22);
-  const rightX = pane.x + pane.w - Math.max(10, pane.w * 0.22);
-
-  return [
-    `<line x1="${px(leftX)}" y1="${px(pane.y + pane.h - Math.max(12, pane.h * 0.14))}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(rightX)}" y1="${px(pane.y + pane.h - Math.max(12, pane.h * 0.14))}" x2="${px(pane.centerX)}" y2="${px(topY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-dasharray="5,3" stroke-linecap="round"/>`,
-    `<line x1="${px(pane.centerX)}" y1="${px(pane.y + 6)}" x2="${px(pane.centerX)}" y2="${px(arrowY)}" stroke="${p.detail}" stroke-width="${px(stroke)}" stroke-linecap="round"/>`,
-    arrowTip(pane.centerX, arrowY, "down", stroke, p.detail),
-  ].join("");
+function drawTiltMarker(pane: WindowPane, v: string, p: WindowVisualPalette) {
+  return drawTiltIndicator(pane, v, p);
 }
 
 function drawVentanaOscilobatiente(
@@ -1277,16 +1568,39 @@ function drawVentanaOscilobatiente(
   p: Palette,
   hojas: 1 | 2
 ): string {
-  const DT = det(v);
-  const { outer, divider, panes, glass } = buildWindowPanes(x, y, w, h, v, hojas, p);
-  const stroke = DT * 1.1;
-  const abatibleLayer = drawVentanaAbatible(x, y, w, h, v, p, hojas)
-    .replace(outer, "")
-    .replace(glass, "")
-    .replace(divider, "");
-  const tiltMarkers = panes.map((pane) => drawTiltMarker(pane, stroke, p)).join("");
+  const { outer, divider, panes, palette } = buildWindowPanes(x, y, w, h, v, hojas, p);
+  const handleH = clamp(h * 0.14, 13, 19);
+  const leaf = (pane: WindowPane, side: "left" | "right") => {
+    const handleX =
+      side === "left"
+        ? pane.x + pane.w - Math.max(6, pane.w * 0.08)
+        : pane.x + Math.max(6, pane.w * 0.08);
 
-  return [outer, glass, divider, abatibleLayer, tiltMarkers].join("");
+    return [
+      drawGlassPanel(pane, v, palette),
+      drawSashFrame(pane, v, palette, ' data-window-panel-role="oscilobatiente"'),
+      drawHinges(pane, side, v, palette),
+      drawRecessedHandle(handleX, pane.centerY, handleH, v, palette),
+      drawSwingArc(pane, side, v, palette),
+      drawTiltMarker(pane, v, palette),
+    ].join("");
+  };
+
+  if (hojas === 1) {
+    return [
+      outer,
+      drawInnerTrack(x, y, w, h, v, palette, "vertical"),
+      leaf(panes[0], "left"),
+    ].join("");
+  }
+
+  return [
+    outer,
+    divider,
+    drawInnerTrack(x, y, w, h, v, palette, "vertical"),
+    leaf(panes[0], "left"),
+    leaf(panes[1], "right"),
+  ].join("");
 }
 
 // ─── Componentes: Puertas ─────────────────────────────────────────────────────
@@ -1388,6 +1702,7 @@ function drawPanoFijo(x: number, y: number, w: number, h: number, v: string, p: 
 
 // ─── Componentes: Shower door ─────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function drawShowerAbatible(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
   const F = fw(v), DT = det(v), GW = gsw(v);
   const edgeW = clamp(F * 0.55, 2.5, 4.5); // grosor del canto del vidrio
@@ -1416,6 +1731,7 @@ function drawShowerAbatible(x: number, y: number, w: number, h: number, v: strin
   ].join("");
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function drawShowerCorredera(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
   const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
   const midX = x + w / 2;
@@ -1446,16 +1762,326 @@ function drawShowerCorredera(x: number, y: number, w: number, h: number, v: stri
 
 // ─── Componentes: Cierres terraza / logia ─────────────────────────────────────
 
+function normalizeShowerKey(value: string | null | undefined): string {
+  return normalizeSearchText(value)
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function showerLine(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  width: number,
+  extra = ""
+): string {
+  return `<line x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${color}" stroke-width="${px(width)}" stroke-linecap="butt" stroke-linejoin="miter"${extra}/>`;
+}
+
+function showerGlassRect(x: number, y: number, w: number, h: number, gw: number, id: string): string {
+  if (w <= 0 || h <= 0) return "";
+  return `<rect data-shower-pane="${id}" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${px(gw)}" stroke-linejoin="miter"/>`;
+}
+
+function showerGlassPoly(points: Array<[number, number]>, gw: number, id: string): string {
+  const value = points.map(([pointX, pointY]) => `${px(pointX)},${px(pointY)}`).join(" ");
+  return `<polygon data-shower-pane="${id}" points="${value}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${px(gw)}" stroke-linejoin="miter"/>`;
+}
+
+function showerHandle(cx: number, cy: number, h: number, color: string): string {
+  const bodyW = 4.8;
+  const bodyH = clamp(h, 16, 34);
+  return [
+    `<rect data-shower-handle="true" x="${px(cx - bodyW / 2)}" y="${px(cy - bodyH / 2)}" width="${px(bodyW)}" height="${px(bodyH)}" rx="0" fill="${HANDLE_FILL}" stroke="${HANDLE_STROKE}" stroke-width="1"/>`,
+    `<rect x="${px(cx - 0.8)}" y="${px(cy - bodyH / 2 + 4)}" width="1.6" height="${px(bodyH - 8)}" rx="0" fill="${color}"/>`,
+  ].join("");
+}
+
+function showerHinge(x: number, cy: number, w: number, h: number, color: string): string {
+  return `<rect data-shower-hinge="true" x="${px(x)}" y="${px(cy - h / 2)}" width="${px(w)}" height="${px(h)}" rx="0" fill="${color}"/>`;
+}
+
+function showerArrow(cx: number, y: number, dir: "left" | "right", size: number, color: string): string {
+  const line = dir === "right"
+    ? showerLine(cx - size, y, cx + size, y, color, 1.4)
+    : showerLine(cx + size, y, cx - size, y, color, 1.4);
+  const headX = dir === "right" ? cx + size : cx - size;
+  const sign = dir === "right" ? -1 : 1;
+  return [
+    line,
+    `<path d="M${px(headX)} ${px(y)} L${px(headX + sign * 5)} ${px(y - 4)} M${px(headX)} ${px(y)} L${px(headX + sign * 5)} ${px(y + 4)}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="butt" stroke-linejoin="miter"/>`,
+  ].join("");
+}
+
+function showerFrame(x: number, y: number, w: number, h: number, sw: number, color: string): string {
+  return `<rect data-shower-frame="outer" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${color}" stroke-width="${px(sw)}" stroke-linejoin="miter"/>`;
+}
+
+function showerFrontSliding(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  composition: string
+): string {
+  const F = clamp(fw(v) * 1.35, 5, 8);
+  const G = gsw(v);
+  const inset = F * 0.75;
+  const three = composition.includes("2 correderas");
+  const fixedLeft = composition.includes("1 fija") && !three;
+  const paneCount = three ? 3 : 2;
+  const paneW = (w - inset * 2) / paneCount;
+  const panes = Array.from({ length: paneCount }, (_, index) =>
+    showerGlassRect(x + inset + paneW * index, y + inset, paneW, h - inset * 2, G, `frontal-${index + 1}`)
+  );
+  const dividers = Array.from({ length: paneCount - 1 }, (_, index) =>
+    showerLine(x + inset + paneW * (index + 1), y + inset * 0.35, x + inset + paneW * (index + 1), y + h - inset * 0.35, p.frame, F * 0.72)
+  );
+  const arrowY = y + h * 0.58;
+  const arrows = three
+    ? [
+        showerArrow(x + inset + paneW * 1.5, arrowY, "right", paneW * 0.18, p.detail),
+        showerArrow(x + inset + paneW * 2.5, arrowY, "right", paneW * 0.18, p.detail),
+      ]
+    : fixedLeft
+      ? [showerArrow(x + inset + paneW * 1.5, arrowY, "right", paneW * 0.22, p.detail)]
+      : [
+          showerArrow(x + inset + paneW * 0.5, arrowY, "right", paneW * 0.2, p.detail),
+          showerArrow(x + inset + paneW * 1.5, arrowY, "left", paneW * 0.2, p.detail),
+        ];
+  return [
+    showerFrame(x, y, w, h, F, p.frame),
+    ...panes,
+    ...dividers,
+    showerLine(x, y + F * 0.8, x + w, y + F * 0.8, p.div, F * 0.72),
+    showerLine(x, y + h - F * 0.8, x + w, y + h - F * 0.8, p.div, F * 0.72),
+    ...arrows,
+    fixedLeft ? `<text x="${px(x + inset + paneW * 0.5)}" y="${px(y + h - inset - 8)}" text-anchor="middle" font-size="8" font-family="sans-serif" fill="${p.label}" font-weight="700">FIJO</text>` : "",
+    showerHandle(x + w - inset * 1.5, y + h * 0.5, h * 0.18, p.detail),
+  ].join("");
+}
+
+function showerCornerSliding(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  config: string,
+  composition: string
+): string {
+  const F = clamp(fw(v) * 1.25, 4.8, 7.5);
+  const G = gsw(v);
+  const dx = w * 0.25;
+  const dy = h * 0.14;
+  const cornerX = config === "en l" ? x + w * 0.48 : x + w * 0.52;
+  const topY = y + dy;
+  const bottomY = y + h - dy * 0.65;
+  const left = [
+    [x + dx * 0.15, topY + dy * 0.2],
+    [cornerX, y + dy * 0.55],
+    [cornerX, bottomY],
+    [x + dx * 0.15, y + h - dy * 0.2],
+  ] as Array<[number, number]>;
+  const right = [
+    [cornerX, y + dy * 0.55],
+    [x + w - dx * 0.1, topY + dy * 0.15],
+    [x + w - dx * 0.1, y + h - dy * 0.3],
+    [cornerX, bottomY],
+  ] as Array<[number, number]>;
+  return [
+    showerGlassPoly(left, G, "corner-left"),
+    showerGlassPoly(right, G, "corner-right"),
+    showerLine(left[0][0], left[0][1], left[3][0], left[3][1], p.frame, F),
+    showerLine(cornerX, y + dy * 0.45, cornerX, bottomY + F * 0.15, p.frame, F),
+    showerLine(right[1][0], right[1][1], right[2][0], right[2][1], p.frame, F),
+    showerLine(left[3][0], left[3][1], cornerX, bottomY, p.div, F * 0.65),
+    showerLine(cornerX, bottomY, right[2][0], right[2][1], p.div, F * 0.65),
+    composition.includes("por lado")
+      ? showerArrow(x + w * 0.35, y + h * 0.52, "right", w * 0.05, p.detail) + showerArrow(x + w * 0.69, y + h * 0.52, "left", w * 0.05, p.detail)
+      : showerArrow(x + w * 0.38, y + h * 0.52, "right", w * 0.06, p.detail),
+    showerHandle(cornerX - F * 1.5, y + h * 0.5, h * 0.18, p.detail),
+    showerHandle(cornerX + F * 1.5, y + h * 0.5, h * 0.18, p.detail),
+  ].join("");
+}
+
+function showerFrontSwing(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  composition: string
+): string {
+  const F = clamp(fw(v) * 1.3, 5, 8);
+  const G = gsw(v);
+  const inset = F * 0.75;
+  const three = composition.includes("1 fijo 1 puerta 1 fijo");
+  const two = composition.includes("1 fijo 1 puerta") && !three;
+  const count = three ? 3 : two ? 2 : 1;
+  const paneW = (w - inset * 2) / count;
+  const panes = Array.from({ length: count }, (_, index) =>
+    showerGlassRect(x + inset + paneW * index, y + inset, paneW, h - inset * 2, G, `batiente-${index + 1}`)
+  );
+  const dividers = Array.from({ length: count - 1 }, (_, index) =>
+    showerLine(x + inset + paneW * (index + 1), y + inset * 0.35, x + inset + paneW * (index + 1), y + h - inset * 0.35, p.frame, F * 0.72)
+  );
+  const doorIndex = two ? 1 : three ? 1 : 0;
+  const doorLeft = x + inset + paneW * doorIndex;
+  const arcR = Math.min(paneW * 0.92, h * 0.42);
+  return [
+    showerFrame(x, y, w, h, F, p.frame),
+    ...panes,
+    ...dividers,
+    showerHinge(doorLeft - F * 0.75, y + h * 0.25, F * 0.85, h * 0.08, p.detail),
+    showerHinge(doorLeft - F * 0.75, y + h * 0.68, F * 0.85, h * 0.08, p.detail),
+    showerHandle(doorLeft + paneW - F * 1.25, y + h * 0.5, h * 0.2, p.detail),
+    `<path data-shower-swing="true" d="M${px(doorLeft + paneW)} ${px(y + h - inset)} A${px(arcR)} ${px(arcR)} 0 0 0 ${px(doorLeft + paneW - arcR)} ${px(y + h - inset + arcR * 0.52)}" fill="none" stroke="${p.detail}" stroke-width="${px(det(v))}" stroke-dasharray="5,3" stroke-linejoin="miter"/>`,
+    two || three ? `<text x="${px(x + inset + paneW * 0.5)}" y="${px(y + h - inset - 8)}" text-anchor="middle" font-size="8" font-family="sans-serif" fill="${p.label}" font-weight="700">FIJO</text>` : "",
+    three ? `<text x="${px(x + inset + paneW * 2.5)}" y="${px(y + h - inset - 8)}" text-anchor="middle" font-size="8" font-family="sans-serif" fill="${p.label}" font-weight="700">FIJO</text>` : "",
+  ].join("");
+}
+
+function showerCornerSwing(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  config: string,
+  composition: string
+): string {
+  const F = clamp(fw(v) * 1.25, 4.8, 7.5);
+  const G = gsw(v);
+  const dx = w * 0.24;
+  const dy = h * 0.14;
+  const cornerX = x + w * 0.5;
+  const bottomY = y + h - dy * 0.65;
+  const left = [
+    [x + dx * 0.2, y + dy * 1.15],
+    [cornerX, y + dy * 0.55],
+    [cornerX, bottomY],
+    [x + dx * 0.2, y + h - dy * 0.2],
+  ] as Array<[number, number]>;
+  const right = [
+    [cornerX, y + dy * 0.55],
+    [x + w - dx * 0.1, y + dy * 1.05],
+    [x + w - dx * 0.1, y + h - dy * 0.25],
+    [cornerX, bottomY],
+  ] as Array<[number, number]>;
+  const doubleDoor = composition.includes("2 puertas");
+  const sideLabel = config === "en l" ? "l" : "corner";
+  return [
+    showerGlassPoly(left, G, `${sideLabel}-left`),
+    showerGlassPoly(right, G, `${sideLabel}-right`),
+    showerLine(left[0][0], left[0][1], left[3][0], left[3][1], p.frame, F),
+    showerLine(cornerX, y + dy * 0.45, cornerX, bottomY + F * 0.15, p.frame, F),
+    showerLine(right[1][0], right[1][1], right[2][0], right[2][1], p.frame, F),
+    showerHinge(cornerX - F, y + h * 0.28, F, h * 0.08, p.detail),
+    showerHinge(cornerX - F, y + h * 0.68, F, h * 0.08, p.detail),
+    doubleDoor ? showerHinge(cornerX, y + h * 0.28, F, h * 0.08, p.detail) : "",
+    doubleDoor ? showerHinge(cornerX, y + h * 0.68, F, h * 0.08, p.detail) : "",
+    showerHandle(cornerX - F * 1.7, y + h * 0.5, h * 0.18, p.detail),
+    doubleDoor ? showerHandle(cornerX + F * 1.7, y + h * 0.5, h * 0.18, p.detail) : "",
+    `<path data-shower-swing="true" d="M${px(cornerX)} ${px(bottomY)} A${px(w * 0.18)} ${px(w * 0.18)} 0 0 0 ${px(cornerX - w * 0.17)} ${px(bottomY + h * 0.12)}" fill="none" stroke="${p.detail}" stroke-width="${px(det(v))}" stroke-dasharray="5,3" stroke-linejoin="miter"/>`,
+    doubleDoor ? `<path data-shower-swing="true" d="M${px(cornerX)} ${px(bottomY)} A${px(w * 0.18)} ${px(w * 0.18)} 0 0 1 ${px(cornerX + w * 0.17)} ${px(bottomY + h * 0.12)}" fill="none" stroke="${p.detail}" stroke-width="${px(det(v))}" stroke-dasharray="5,3" stroke-linejoin="miter"/>` : "",
+  ].join("");
+}
+
+function showerWalkIn(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  config: string,
+  composition: string
+): string {
+  const F = clamp(fw(v) * 1.25, 4.8, 7.5);
+  const G = gsw(v);
+  const inset = F * 0.55;
+  if (config === "frontal" || composition.includes("1 pano")) {
+    const barY = y + h * 0.1;
+    return [
+      showerGlassRect(x + w * 0.22, y + inset, w * 0.42, h - inset * 2, G, "walkin-front"),
+      showerLine(x + w * 0.22, y + inset, x + w * 0.22, y + h - inset, p.frame, F),
+      showerLine(x + w * 0.64, y + inset, x + w * 0.64, y + h - inset, p.frame, F * 0.65),
+      showerLine(x + w * 0.64, barY, x + w * 0.9, y + h * 0.18, p.div, F * 0.42),
+      `<rect data-shower-support="true" x="${px(x + w * 0.88)}" y="${px(y + h * 0.16)}" width="${px(F * 1.2)}" height="${px(F * 0.75)}" rx="0" fill="${p.div}"/>`,
+      showerLine(x + w * 0.18, y + h - inset, x + w * 0.68, y + h - inset, p.div, F * 0.45),
+    ].join("");
+  }
+
+  return config === "en l"
+    ? showerCornerSliding(x, y, w, h, v, p, "en l", composition)
+    : showerCornerSliding(x, y, w, h, v, p, "esquinero", composition);
+}
+
+function drawShowerDoor(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  v: string,
+  p: Palette,
+  sistemaNorm: string,
+  configuracion?: string | null,
+  composition?: string | null
+): string {
+  const systemKey =
+    sistemaNorm === "Fijo"
+      ? "fijo walk in"
+      : sistemaNorm === "default"
+        ? "corredera"
+        : normalizeShowerKey(sistemaNorm);
+  const configKey = normalizeShowerKey(configuracion) || "frontal";
+  const compositionKey = normalizeShowerKey(composition);
+  const body =
+    systemKey === "corredera"
+      ? configKey === "frontal"
+        ? showerFrontSliding(x, y, w, h, v, p, compositionKey)
+        : showerCornerSliding(x, y, w, h, v, p, configKey, compositionKey)
+      : systemKey === "batiente" || systemKey === "abatible"
+        ? configKey === "frontal"
+          ? showerFrontSwing(x, y, w, h, v, p, compositionKey)
+          : showerCornerSwing(x, y, w, h, v, p, configKey, compositionKey)
+        : showerWalkIn(x, y, w, h, v, p, configKey, compositionKey);
+
+  return `<g data-shower-door="true" data-shower-system="${escapeXml(systemKey)}" data-shower-config="${escapeXml(configKey)}" data-shower-composition="${escapeXml(compositionKey)}">${body}</g>`;
+}
+
+function cierreFrameWeight(v: string): number {
+  return clamp(fw(v) * 1.35, 5, 8);
+}
+
+function cierreFrame(x: number, y: number, w: number, h: number, sw: number, color: string): string {
+  return `<rect data-cierre-frame="outer" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${color}" stroke-width="${px(sw)}" stroke-linejoin="miter"/>`;
+}
+
+function cierreProfileLine(x1: number, y1: number, x2: number, y2: number, color: string, width: number, id: string): string {
+  return `<line data-cierre-profile="${id}" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${color}" stroke-width="${px(width)}" stroke-linecap="butt" stroke-linejoin="miter"/>`;
+}
+
 function drawCierreCorredera(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
+  const F = cierreFrameWeight(v), D = dw(v), DT = det(v), GW = gsw(v);
+  const FI = F * 0.75;
   const n = 3;
-  const mulW = D * 1.4;
+  const mulW = F * 0.72;
   const paneW = (w - FI * 2 - mulW * (n - 1)) / n;
   const hH = clamp(h * 0.15, 12, 20);
   const arrowY = y + h * 0.62;
   const arrowW = paneW * 0.42;
   return [
-    outerFrame(x, y, w, h, F, p.frame),
+    cierreFrame(x, y, w, h, F, p.frame),
     // Paneles de vidrio
     ...Array.from({ length: n }, (_, i) => {
       const px2 = x + FI + i * (paneW + mulW);
@@ -1465,14 +2091,14 @@ function drawCierreCorredera(x: number, y: number, w: number, h: number, v: stri
     ...Array.from({ length: n - 1 }, (_, i) => {
       const mx = x + FI + (i + 1) * paneW + i * mulW;
       return [
-        `<line x1="${px(mx)}" y1="${px(y + FI * 0.5)}" x2="${px(mx)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(mulW)}" stroke-linecap="square"/>`,
+        cierreProfileLine(mx, y + FI * 0.5, mx, y + h - FI * 0.5, p.frame, mulW, "vertical"),
         // Manillas a cada lado del parteluz
         sidePullHandle(mx - Math.max(4, mulW * 0.55), y + h * 0.50, hH),
         sidePullHandle(mx + Math.max(4, mulW * 0.55), y + h * 0.50, hH),
       ].join("");
     }),
     // Riel inferior
-    `<line x1="${px(x + FI)}" y1="${px(y + h - FI - D * 0.5)}" x2="${px(x + w - FI)}" y2="${px(y + h - FI - D * 0.5)}" stroke="${p.div}" stroke-width="${D}" stroke-linecap="round"/>`,
+    cierreProfileLine(x + FI, y + h - FI - D * 0.5, x + w - FI, y + h - FI - D * 0.5, p.frame, D * 1.25, "bottom-rail"),
     // Flechas (paneles extremos)
     directionArrow(x + FI + paneW * 0.18, arrowY, arrowW, "left", DT * 1.15, p.detail),
     directionArrow(x + w - FI - paneW * 0.18 - arrowW, arrowY, arrowW, "right", DT * 1.15, p.detail),
@@ -1480,12 +2106,13 @@ function drawCierreCorredera(x: number, y: number, w: number, h: number, v: stri
 }
 
 function drawCierrePlegable(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), D = dw(v), DT = det(v), GW = gsw(v), FI = fi(v);
+  const F = cierreFrameWeight(v), D = dw(v), DT = det(v), GW = gsw(v);
+  const FI = F * 0.75;
   const n = 4;
   const paneW = (w - FI * 2) / n;
   const pivR = clamp(D * 0.7, 2, 3.5);
   return [
-    outerFrame(x, y, w, h, F, p.frame),
+    cierreFrame(x, y, w, h, F, p.frame),
     // Paneles de vidrio
     ...Array.from({ length: n }, (_, i) => {
       return glassFill(x + FI + i * paneW, y + FI, paneW, h - FI * 2, GW);
@@ -1494,7 +2121,7 @@ function drawCierrePlegable(x: number, y: number, w: number, h: number, v: strin
     ...Array.from({ length: n - 1 }, (_, i) => {
       const fX = x + FI + (i + 1) * paneW;
       return [
-        `<line x1="${px(fX)}" y1="${px(y + FI)}" x2="${px(fX)}" y2="${px(y + h - FI)}" stroke="${p.div}" stroke-width="${D}" stroke-dasharray="4,3"/>`,
+        `<line data-cierre-profile="fold" x1="${px(fX)}" y1="${px(y + FI)}" x2="${px(fX)}" y2="${px(y + h - FI)}" stroke="${p.frame}" stroke-width="${px(Math.max(D, F * 0.42))}" stroke-dasharray="4,3" stroke-linecap="butt" stroke-linejoin="miter"/>`,
         `<circle cx="${px(fX)}" cy="${px(y + FI + (h - FI * 2) * 0.15)}" r="${pivR}" fill="${p.detail}"/>`,
         `<circle cx="${px(fX)}" cy="${px(y + h - FI - (h - FI * 2) * 0.15)}" r="${pivR}" fill="${p.detail}"/>`,
       ].join("");
@@ -1505,19 +2132,20 @@ function drawCierrePlegable(x: number, y: number, w: number, h: number, v: strin
 }
 
 function drawCierreFijo(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
-  const F = fw(v), D = dw(v), GW = gsw(v), FI = fi(v);
+  const F = cierreFrameWeight(v), GW = gsw(v);
+  const FI = F * 0.75;
   const n = 3;
-  const mulW = D * 1.4;
+  const mulW = F * 0.72;
   const paneW = (w - FI * 2 - mulW * (n - 1)) / n;
   return [
-    outerFrame(x, y, w, h, F, p.frame),
+    cierreFrame(x, y, w, h, F, p.frame),
     ...Array.from({ length: n }, (_, i) => {
       const pX = x + FI + i * (paneW + mulW);
       return glassFill(pX, y + FI, paneW, h - FI * 2, GW);
     }),
     ...Array.from({ length: n - 1 }, (_, i) => {
       const mX = x + FI + (i + 1) * paneW + i * mulW;
-      return `<line x1="${px(mX)}" y1="${px(y + FI * 0.5)}" x2="${px(mX)}" y2="${px(y + h - FI * 0.5)}" stroke="${p.frame}" stroke-width="${px(mulW)}" stroke-linecap="square"/>`;
+      return cierreProfileLine(mX, y + FI * 0.5, mX, y + h - FI * 0.5, p.frame, mulW, "vertical");
     }),
     fixedBadge(x + w / 2, y + h / 2, p),
   ].join("");
@@ -1884,8 +2512,7 @@ function routeDrawing(
       return drawPanoFijo(x, y, w, h, v, p);
 
     case "Shower":
-      if (sistemaNorm === "Corredera") return drawShowerCorredera(x, y, w, h, v, p);
-      return drawShowerAbatible(x, y, w, h, v, p); // Abatible por defecto
+      return drawShowerDoor(x, y, w, h, v, p, sistemaNorm, doorConfig, bowComposition);
 
     case "Cierre":
       if (sistemaNorm === "Plegable") return drawCierrePlegable(x, y, w, h, v, p);
@@ -2008,7 +2635,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     params.sheetVariant,
     params.customSchemeDescription,
   ].filter(Boolean).join(" ");
-  const palette   = resolvePalette(params.colorHex);
+  const palette   = tipoNorm === "Ventana" ? resolveWindowPalette(params.colorHex) : resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
   const isMesa  = tipoNorm === "Mesa";
@@ -2026,7 +2653,32 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
   const maxW  = params.maxW ?? fitBox.maxW;
   const maxH  = params.maxH ?? fitBox.maxH;
   const scale = Math.min(maxW / rW, maxH / rH, 1.8);
-  const drawW = Math.max(isMesaCircular ? 52 : 68, Math.round(rW * scale));
+  const abatibleDoorConfig = tipoNorm === "Puerta" && sisNorm === "Abatible"
+    ? mapDoorConfig(params.configuracion)
+    : null;
+  const slidingDoorConfig = tipoNorm === "Puerta" && sisNorm === "Corredera"
+    ? mapDoorConfig(params.configuracion)
+    : null;
+  const abatibleDoorMinW =
+    abatibleDoorConfig === "4_hojas_abatibles"
+      ? 132
+      : abatibleDoorConfig && abatibleDoorConfig !== "1_hoja"
+        ? 122
+        : 88;
+  const slidingDoorMinW =
+    slidingDoorConfig === "4_hojas_moviles_corredera" || slidingDoorConfig === "4_hojas_2_fijas_2_moviles"
+      ? 136
+      : slidingDoorConfig === "3_hojas" || slidingDoorConfig === "triple_riel"
+        ? 128
+        : 118;
+  const minDrawW = isMesaCircular
+    ? 52
+    : abatibleDoorConfig
+      ? abatibleDoorMinW
+      : slidingDoorConfig
+        ? slidingDoorMinW
+        : 68;
+  const drawW = Math.max(minDrawW, Math.round(rW * scale));
   const drawH = Math.max(isMesaCircular ? 52 : 52, Math.round(rH * scale));
   const dimLeft = variant === "pdf" ? 52 : 46;
   const dimBot  = variant === "pdf" ? 8 : 42;
@@ -2107,12 +2759,608 @@ const PD = {
   fw: 2.4,
 };
 
+const DOOR_GLASS_FILL = "#DCEAF7";
+const DOOR_GLASS_STROKE = "#B9D2EA";
+const DOOR_DETAIL = "#4B5563";
+const DOOR_OPENING_BLUE = "#1E88FF";
+
+const ABATIBLE_DOOR_CONFIGS = new Set([
+  "1_hoja",
+  "2_hojas_puerta_doble",
+  "4_hojas_abatibles",
+  "1_hoja_fijo_lateral",
+  "2_hojas_fijo_lateral",
+  "2_hojas_2_fijos_laterales",
+  "con_fijo_superior",
+  "con_fijo_lateral_fijo_superior",
+]);
+
+const SLIDING_DOOR_CONFIGS = new Set([
+  "1_hoja_movil",
+  "2_hojas_1_fija_1_movil",
+  "2_hojas_moviles_encuentro_central",
+  "4_hojas_2_fijas_2_moviles",
+  "4_hojas_moviles_corredera",
+  "3_hojas",
+  "doble_riel",
+  "triple_riel",
+  "elevadora_corredera_hs",
+]);
+
+const UNIFIED_FRAMED_DOOR_CONFIGS = new Set([
+  "1_hoja_pivotante",
+  "pivotante_fijo_lateral",
+  "pivotante_doble",
+  "2_hojas_plegables",
+  "3_hojas_plegables",
+  "4_hojas_plegables",
+  "acordeon",
+  "1_hoja_vaiven",
+  "2_hojas_vaiven",
+  "vidrio_templado_vaiven",
+  "1_hoja_vidrio_templado",
+  "doble_hoja_vidrio_templado",
+  "vaiven_vidrio_templado",
+  "corredera_vidrio_templado",
+  "con_quicio_pivote",
+  "con_tirador",
+  "1_hoja_colgante",
+  "2_hojas_colgantes",
+  "vidrio_templado_colgante",
+  "1_hoja_automatica",
+  "2_hojas_automaticas",
+  "corredera_automatica",
+]);
+
 function pdFrame(x: number, y: number, w: number, h: number, sw: number, color: string): string {
   const innerOffset = sw * 0.55;
   return [
     `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="2" fill="none" stroke="${color}" stroke-width="${sw}"/>`,
     `<rect x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="1.5" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.55"/>`,
   ].join("\n");
+}
+
+function drawDoorOuterFrame(x: number, y: number, w: number, h: number, frameColor: string): string {
+  const sw = 4.2;
+  const innerOffset = 5.2;
+  return [
+    `<rect data-door-frame="outer" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="${sw}" stroke-linejoin="miter"/>`,
+    `<rect data-door-frame="inner-channel" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="1.2" opacity="0.55" stroke-linejoin="miter"/>`,
+  ].join("\n");
+}
+
+function drawDoorGlassPanel(x: number, y: number, w: number, h: number): string {
+  return `<rect data-door-glass="true" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="${DOOR_GLASS_FILL}" stroke="${DOOR_GLASS_STROKE}" stroke-width="0.6"/>`;
+}
+
+function drawDoorLeafFrame(x: number, y: number, w: number, h: number, frameColor: string, type: "swing" | "fixed"): string {
+  const sw = type === "swing" ? 2.8 : 2.4;
+  const innerOffset = 3.4;
+  return [
+    `<rect data-door-${type}-frame="true" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="${sw}" stroke-linejoin="miter"/>`,
+    `<rect data-door-${type}-channel="true" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="0.9" opacity="0.5" stroke-linejoin="miter"/>`,
+  ].join("\n");
+}
+
+function drawDoorHandle(x: number, cy: number, side: "left" | "right", scale = 1): string {
+  const plateW = 6 * scale;
+  const plateH = 34 * scale;
+  const leverW = 19 * scale;
+  const leverH = 4.2 * scale;
+  const plateX = side === "right" ? x - plateW : x;
+  const plateY = cy - plateH / 2;
+  const leverX = side === "right" ? plateX + plateW - 1 : plateX - leverW + 1;
+  const keyX = plateX + plateW / 2;
+  return [
+    `<g data-door-handle="true">`,
+    `<rect x="${px(plateX)}" y="${px(plateY)}" width="${px(plateW)}" height="${px(plateH)}" rx="${px(3 * scale)}" fill="#D9DEE5" stroke="${DOOR_DETAIL}" stroke-width="${px(1.2 * scale)}"/>`,
+    `<circle cx="${px(keyX)}" cy="${px(plateY + 7 * scale)}" r="${px(0.9 * scale)}" fill="#F8FAFC" stroke="${DOOR_DETAIL}" stroke-width="${px(0.7 * scale)}"/>`,
+    `<rect x="${px(leverX)}" y="${px(cy - leverH / 2)}" width="${px(leverW)}" height="${px(leverH)}" rx="${px(3 * scale)}" fill="#E8EDF3" stroke="${DOOR_DETAIL}" stroke-width="${px(1.2 * scale)}"/>`,
+    `<circle cx="${px(keyX)}" cy="${px(plateY + plateH - 9 * scale)}" r="${px(1.7 * scale)}" fill="#F8FAFC" stroke="${DOOR_DETAIL}" stroke-width="${px(0.7 * scale)}"/>`,
+    `<line x1="${px(keyX)}" y1="${px(plateY + plateH - 7.5 * scale)}" x2="${px(keyX)}" y2="${px(plateY + plateH - 4 * scale)}" stroke="${DOOR_DETAIL}" stroke-width="${px(0.8 * scale)}" stroke-linecap="round"/>`,
+    `</g>`,
+  ].join("\n");
+}
+
+function drawOpeningArrow(pivotX: number, pivotY: number, r: number, direction: "right" | "left", scale = 1): string {
+  const endX = direction === "right" ? pivotX + r : pivotX - r;
+  const startY = pivotY - r;
+  const sweep = direction === "right" ? 1 : 0;
+  const headSize = 8 * scale;
+  const head = direction === "right"
+    ? `${px(endX - headSize)},${px(pivotY - 5 * scale)} ${px(endX)},${px(pivotY)} ${px(endX - headSize)},${px(pivotY + 5 * scale)}`
+    : `${px(endX + headSize)},${px(pivotY - 5 * scale)} ${px(endX)},${px(pivotY)} ${px(endX + headSize)},${px(pivotY + 5 * scale)}`;
+  return [
+    `<g data-door-opening-arrow="true">`,
+    `<path d="M${px(pivotX)},${px(startY)} A${px(r)},${px(r)} 0 0 ${sweep} ${px(endX)},${px(pivotY)}" fill="none" stroke="${DOOR_OPENING_BLUE}" stroke-width="${px(2.2 * scale)}" stroke-linecap="round"/>`,
+    `<polyline points="${head}" fill="none" stroke="${DOOR_OPENING_BLUE}" stroke-width="${px(2.2 * scale)}" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `</g>`,
+  ].join("\n");
+}
+
+function drawOpenProjection(pivotX: number, pivotY: number, leafW: number, leafH: number, direction: "right" | "left"): string {
+  const sign = direction === "right" ? 1 : -1;
+  const openX = pivotX + sign * leafW * 0.72;
+  const topY = pivotY - leafH;
+  return [
+    `<g data-door-open-projection="true">`,
+    `<line x1="${px(pivotX)}" y1="${px(pivotY)}" x2="${px(openX)}" y2="${px(topY)}" stroke="${DOOR_DETAIL}" stroke-width="1" stroke-dasharray="4 3" opacity="0.55"/>`,
+    `<line x1="${px(openX)}" y1="${px(topY)}" x2="${px(openX)}" y2="${px(pivotY)}" stroke="${DOOR_DETAIL}" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>`,
+    `</g>`,
+  ].join("\n");
+}
+
+function drawDoorHinges(x: number, y: number, h: number, side: "left" | "right", frameColor: string): string {
+  const hingeX = side === "left" ? x - 1 : x + 1;
+  const hinges = [y + h * 0.22, y + h * 0.5, y + h * 0.78];
+  return [
+    `<g data-door-hinges="${side}">`,
+    ...hinges.map((hy) => `<rect x="${px(hingeX - 1.5)}" y="${px(hy - 4)}" width="3" height="8" rx="0" fill="${frameColor}" opacity="0.75"/>`),
+    `</g>`,
+  ].join("\n");
+}
+
+function drawSwingLeaf(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  hingeSide: "left" | "right",
+  handleSide: "left" | "right",
+  palilloType?: string,
+  options: { showHandle?: boolean; showOpening?: boolean; showProjection?: boolean; handleScale?: number; arrowScale?: number } = {}
+): string {
+  const { showHandle = true, showOpening = true, showProjection = true } = options;
+  const handleScale = options.handleScale ?? Math.min(0.88, Math.max(0.6, w / 72));
+  const arrowScale = options.arrowScale ?? Math.min(1, Math.max(0.62, w / 56));
+  const glassInset = 4;
+  const pivotX = hingeSide === "left" ? x : x + w;
+  const direction = hingeSide === "left" ? "right" : "left";
+  const handleX = handleSide === "right" ? x + w - 9 : x + 9;
+  return [
+    `<g data-door-swing-leaf="true">`,
+    drawDoorGlassPanel(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2),
+    pdPalillo(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2, palilloType, frameColor),
+    drawDoorLeafFrame(x, y, w, h, frameColor, "swing"),
+    drawDoorHinges(hingeSide === "left" ? x : x + w, y, h, hingeSide, frameColor),
+    showHandle ? drawDoorHandle(handleX, y + h * 0.46, handleSide, handleScale) : "",
+    showOpening && showProjection ? drawOpenProjection(pivotX, y + h, w, h, direction) : "",
+    showOpening ? drawOpeningArrow(pivotX, y + h, Math.min(w * 0.72, h * 0.38), direction, arrowScale) : "",
+    `</g>`,
+  ].join("\n");
+}
+
+function drawDoorFixedPanel(x: number, y: number, w: number, h: number, frameColor: string): string {
+  const glassInset = 4;
+  return [
+    `<g data-door-fixed-panel="true">`,
+    drawDoorGlassPanel(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2),
+    drawDoorLeafFrame(x, y, w, h, frameColor, "fixed"),
+    `</g>`,
+  ].join("\n");
+}
+
+function drawDoorAluminumBase(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  family: "sliding" | "swing" | "general"
+): string {
+  const familyFillAttr =
+    family === "sliding"
+      ? ' data-door-sliding-aluminum-fill="true"'
+      : family === "swing"
+        ? ' data-door-swing-aluminum-fill="true"'
+        : ' data-door-general-aluminum-fill="true"';
+  const bandAttr =
+    family === "sliding"
+      ? "data-door-sliding-aluminum-band"
+      : family === "swing"
+        ? "data-door-swing-aluminum-band"
+        : "data-door-general-aluminum-band";
+  return [
+    `<rect data-door-aluminum-fill="true"${familyFillAttr} x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(h - 5)}" rx="0" fill="${frameColor}" opacity="0.24" stroke="none"/>`,
+    `<rect data-door-aluminum-band="top" ${bandAttr}="top" x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" opacity="0.48" stroke="${frameColor}" stroke-width="0.9"/>`,
+    `<rect data-door-aluminum-band="bottom" ${bandAttr}="bottom" x="${px(x + 2.5)}" y="${px(y + h - 10.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" opacity="0.48" stroke="${frameColor}" stroke-width="0.9"/>`,
+    `<rect data-door-aluminum-band="left" ${bandAttr}="left" x="${px(x + 2.5)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" opacity="0.4" stroke="${frameColor}" stroke-width="0.8"/>`,
+    `<rect data-door-aluminum-band="right" ${bandAttr}="right" x="${px(x + w - 9)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" opacity="0.4" stroke="${frameColor}" stroke-width="0.8"/>`,
+  ].join("\n");
+}
+
+function drawDoorSlidingTracks(x: number, y: number, w: number, h: number, frameColor: string, trackCount = 2): string {
+  const inset = 4;
+  const railGap = 2.8;
+  const rails: string[] = [drawDoorAluminumBase(x, y, w, h, frameColor, "sliding")];
+  for (let i = 0; i < trackCount; i++) {
+    const offset = inset + i * railGap;
+    rails.push(`<line data-door-sliding-track="top" x1="${px(x + inset)}" y1="${px(y + offset)}" x2="${px(x + w - inset)}" y2="${px(y + offset)}" stroke="${frameColor}" stroke-width="1" opacity="0.68" stroke-linecap="butt"/>`);
+    rails.push(`<line data-door-sliding-track="bottom" x1="${px(x + inset)}" y1="${px(y + h - offset)}" x2="${px(x + w - inset)}" y2="${px(y + h - offset)}" stroke="${frameColor}" stroke-width="1" opacity="0.68" stroke-linecap="butt"/>`);
+  }
+  return rails.join("\n");
+}
+
+function drawSlidingDoorHandle(x: number, cy: number, side: "left" | "right"): string {
+  const plateW = 5.2;
+  const plateH = 34;
+  const plateX = side === "right" ? x - plateW : x;
+  const y = cy - plateH / 2;
+  return [
+    `<g data-door-sliding-handle="true">`,
+    `<rect x="${px(plateX)}" y="${px(y)}" width="${px(plateW)}" height="${px(plateH)}" rx="2" fill="#F8FAFC" stroke="${DOOR_DETAIL}" stroke-width="1"/>`,
+    `<rect x="${px(plateX + 1.5)}" y="${px(y + 7)}" width="${px(plateW - 3)}" height="${px(plateH - 14)}" rx="1" fill="none" stroke="${DOOR_DETAIL}" stroke-width="0.8"/>`,
+    `</g>`,
+  ].join("\n");
+}
+
+function drawDoorSlidingArrow(cx: number, cy: number, direction: "left" | "right", width: number, color: string): string {
+  const half = width / 2;
+  const startX = direction === "right" ? cx - half : cx + half;
+  const endX = direction === "right" ? cx + half : cx - half;
+  const head = direction === "right"
+    ? `${px(endX - 7)},${px(cy - 5)} ${px(endX)},${px(cy)} ${px(endX - 7)},${px(cy + 5)}`
+    : `${px(endX + 7)},${px(cy - 5)} ${px(endX)},${px(cy)} ${px(endX + 7)},${px(cy + 5)}`;
+  return [
+    `<g data-door-sliding-arrow="true">`,
+    `<line x1="${px(startX)}" y1="${px(cy)}" x2="${px(endX)}" y2="${px(cy)}" stroke="${color}" stroke-width="1.4" stroke-linecap="butt"/>`,
+    `<polyline points="${head}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="butt" stroke-linejoin="miter"/>`,
+    `</g>`,
+  ].join("\n");
+}
+
+function drawSlidingDoorLeaf(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  options: {
+    fixed?: boolean;
+    handleSide?: "left" | "right";
+    arrowDirection?: "left" | "right";
+    palilloType?: string;
+  } = {}
+): string {
+  const glassInset = 3.2;
+  const type = options.fixed ? "fixed" : "sliding";
+  return [
+    `<g data-door-sliding-leaf="${type}">`,
+    drawDoorGlassPanel(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2),
+    options.palilloType ? pdPalillo(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2, options.palilloType, frameColor) : "",
+    `<rect data-door-sliding-sash="true" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="2.7" stroke-linejoin="miter"/>`,
+    `<rect data-door-sliding-channel="true" x="${px(x + 3)}" y="${px(y + 3)}" width="${px(w - 6)}" height="${px(h - 6)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="0.9" opacity="0.55" stroke-linejoin="miter"/>`,
+    !options.fixed && options.handleSide ? drawSlidingDoorHandle(options.handleSide === "right" ? x + w - 5.5 : x + 5.5, y + h * 0.5, options.handleSide) : "",
+    !options.fixed && options.arrowDirection ? drawDoorSlidingArrow(x + w * 0.5, y + h * 0.5, options.arrowDirection, Math.min(w * 0.34, 34), DOOR_DETAIL) : "",
+    `</g>`,
+  ].join("\n");
+}
+
+function composeSlidingDoorSystem(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  config: string,
+  palilloType?: string
+): string {
+  const m = PD.m;
+  const outerX = x + m;
+  const outerY = y + m;
+  const outerW = w - m * 2;
+  const outerH = h - m * 2;
+  const pocket = 5.5;
+  const leafY = outerY + pocket;
+  const leafH = outerH - pocket * 2;
+  const leafStartX = outerX + pocket;
+  const leafTotalW = outerW - pocket * 2;
+  const gap = 2;
+  const trackCount = config === "triple_riel" ? 3 : 2;
+  const parts = [
+    `<g data-door-sliding-base="true" data-door-config="${config}">`,
+    drawDoorOuterFrame(outerX, outerY, outerW, outerH, frameColor),
+    drawDoorSlidingTracks(outerX, outerY, outerW, outerH, frameColor, trackCount),
+  ];
+
+  const addLeaf = (
+    leafX: number,
+    leafW: number,
+    options: Parameters<typeof drawSlidingDoorLeaf>[5] = {}
+  ) => {
+    parts.push(drawSlidingDoorLeaf(leafX, leafY, leafW, leafH, frameColor, { ...options, palilloType }));
+  };
+
+  switch (config) {
+    case "1_hoja_movil": {
+      addLeaf(leafStartX, leafTotalW, { handleSide: "right", arrowDirection: "right" });
+      break;
+    }
+    case "2_hojas_1_fija_1_movil":
+    case "elevadora_corredera_hs": {
+      const leafW = (leafTotalW - gap) / 2;
+      addLeaf(leafStartX, leafW, { fixed: true });
+      addLeaf(leafStartX + leafW + gap, leafW, { handleSide: "left", arrowDirection: "left" });
+      break;
+    }
+    case "4_hojas_2_fijas_2_moviles": {
+      const leafW = (leafTotalW - gap * 3) / 4;
+      for (let i = 0; i < 4; i++) {
+        const leafX = leafStartX + (leafW + gap) * i;
+        const fixed = i === 0 || i === 3;
+        addLeaf(leafX, leafW, fixed
+          ? { fixed: true }
+          : { handleSide: i === 1 ? "right" : "left", arrowDirection: i === 1 ? "left" : "right" });
+      }
+      break;
+    }
+    case "4_hojas_moviles_corredera": {
+      const leafW = (leafTotalW - gap * 3) / 4;
+      for (let i = 0; i < 4; i++) {
+        const leafX = leafStartX + (leafW + gap) * i;
+        addLeaf(leafX, leafW, {
+          handleSide: i % 2 === 0 ? "right" : "left",
+          arrowDirection: i % 2 === 0 ? "left" : "right",
+        });
+      }
+      break;
+    }
+    case "3_hojas":
+    case "triple_riel": {
+      const leafW = (leafTotalW - gap * 2) / 3;
+      for (let i = 0; i < 3; i++) {
+        const leafX = leafStartX + (leafW + gap) * i;
+        addLeaf(leafX, leafW, {
+          handleSide: i === 0 ? "right" : "left",
+          arrowDirection: i === 1 ? "right" : "left",
+        });
+      }
+      break;
+    }
+    case "doble_riel":
+    case "2_hojas_moviles_encuentro_central":
+    default: {
+      const leafW = (leafTotalW - gap) / 2;
+      addLeaf(leafStartX, leafW, { handleSide: "right", arrowDirection: "left" });
+      addLeaf(leafStartX + leafW + gap, leafW, { handleSide: "left", arrowDirection: "right" });
+      break;
+    }
+  }
+
+  parts.push(`</g>`);
+  return parts.join("\n");
+}
+
+function drawUnifiedDoorPanel(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  options: {
+    fixed?: boolean;
+    handleSide?: "left" | "right";
+    palilloType?: string;
+    detail?: "pivot" | "fold" | "vaiven" | "hanging" | "automatic";
+  } = {}
+): string {
+  const glassInset = 4;
+  const handleX = options.handleSide === "left" ? x + 7 : x + w - 7;
+  const panelType = options.fixed ? "fixed" : "active";
+  return [
+    `<g data-door-unified-panel="${panelType}">`,
+    drawDoorGlassPanel(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2),
+    options.palilloType ? pdPalillo(x + glassInset, y + glassInset, w - glassInset * 2, h - glassInset * 2, options.palilloType, frameColor) : "",
+    drawDoorLeafFrame(x, y, w, h, frameColor, options.fixed ? "fixed" : "swing"),
+    options.detail === "pivot" ? pdPivotDot(x + w * 0.36, y + h * 0.5, frameColor) : "",
+    options.detail === "fold" ? `<line data-door-fold-line="true" x1="${px(x + w * 0.5)}" y1="${px(y + 3)}" x2="${px(x + 3)}" y2="${px(y + h - 3)}" stroke="${frameColor}" stroke-width="0.8" stroke-dasharray="4 3" opacity="0.55"/>` : "",
+    options.detail === "vaiven" ? drawOpeningArrow(x + w * 0.5, y + h, Math.min(w * 0.34, h * 0.26), "right", 0.55) : "",
+    options.handleSide && !options.fixed ? drawDoorHandle(handleX, y + h * 0.5, options.handleSide, Math.min(0.72, Math.max(0.52, w / 88))) : "",
+    `</g>`,
+  ].join("\n");
+}
+
+function composeUnifiedFramedDoorSystem(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  config: string,
+  palilloType?: string
+): string {
+  const m = PD.m;
+  const outerX = x + m;
+  const outerY = y + m;
+  const outerW = w - m * 2;
+  const outerH = h - m * 2;
+  const pocket = 5.5;
+  const panelX = outerX + pocket;
+  const panelY = outerY + pocket;
+  const panelW = outerW - pocket * 2;
+  const panelH = outerH - pocket * 2;
+  const gap = 4.5;
+  const isPlegable = config.includes("plegable") || config === "acordeon";
+  const isPivotante = config.includes("pivot");
+  const isVaiven = config.includes("vaiven");
+  const isColgante = config.includes("colgante");
+  const isAutomatica = config.includes("automatica");
+  const isTemplado = config.includes("vidrio_templado") || config.includes("quicio") || config === "con_tirador";
+  const base = [
+    `<g data-door-unified-base="true" data-door-config="${config}">`,
+    drawDoorOuterFrame(outerX, outerY, outerW, outerH, frameColor),
+    drawDoorAluminumBase(outerX, outerY, outerW, outerH, frameColor, "general"),
+  ];
+
+  type UnifiedDoorPanelOptions = NonNullable<Parameters<typeof drawUnifiedDoorPanel>[5]>;
+  const addPanels = (count: number, fixedIndexes = new Set<number>(), detail?: UnifiedDoorPanelOptions["detail"]) => {
+    const leafW = (panelW - gap * (count - 1)) / count;
+    for (let i = 0; i < count; i++) {
+      const leafX = panelX + (leafW + gap) * i;
+      const handleSide = i % 2 === 0 ? "right" : "left";
+      base.push(drawUnifiedDoorPanel(leafX, panelY, leafW, panelH, frameColor, {
+        fixed: fixedIndexes.has(i),
+        handleSide,
+        palilloType,
+        detail,
+      }));
+    }
+  };
+
+  if (isColgante || isAutomatica) {
+    base.push(`<rect data-door-top-rail="true" x="${px(panelX)}" y="${px(panelY - 1)}" width="${px(panelW)}" height="5" rx="0" fill="${frameColor}" opacity="0.72"/>`);
+  }
+
+  if (isAutomatica) {
+    base.push(pdSensor(panelX + panelW / 2, frameColor));
+  }
+
+  if (config === "pivotante_fijo_lateral") {
+    addPanels(2, new Set([0]), "pivot");
+  } else if (config === "pivotante_doble") {
+    addPanels(2, new Set(), "pivot");
+  } else if (isPivotante || config === "con_quicio_pivote") {
+    addPanels(1, new Set(), "pivot");
+  } else if (config === "3_hojas_plegables") {
+    addPanels(3, new Set(), "fold");
+  } else if (config === "4_hojas_plegables" || config === "acordeon") {
+    addPanels(4, new Set(), "fold");
+  } else if (isPlegable) {
+    addPanels(2, new Set(), "fold");
+  } else if (config === "2_hojas_vaiven" || config === "doble_hoja_vidrio_templado" || config === "2_hojas_colgantes" || config === "2_hojas_automaticas") {
+    addPanels(2, new Set(), isVaiven ? "vaiven" : undefined);
+  } else if (config === "vidrio_templado_colgante") {
+    addPanels(2, new Set([1]));
+  } else if (config === "corredera_vidrio_templado" || config === "corredera_automatica") {
+    addPanels(2, new Set([0]));
+  } else {
+    addPanels(1, new Set(), isVaiven ? "vaiven" : isTemplado ? undefined : undefined);
+  }
+
+  base.push(`</g>`);
+  return base.join("\n");
+}
+
+function composeAbatibleSystem(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  frameColor: string,
+  config: string,
+  palilloType?: string
+): string {
+  const m = PD.m;
+  const outerX = x + m;
+  const outerY = y + m;
+  const outerW = w - m * 2;
+  const outerH = h - m * 2;
+  const pocket = 5.5;
+  const doorX = outerX + pocket;
+  const doorY = outerY + pocket;
+  const doorW = outerW - pocket * 2;
+  const doorH = outerH - pocket * 2;
+  const gap = 4.5;
+  const parts = [
+    `<g data-door-abatible-base="true" data-door-config="${config}">`,
+    drawDoorOuterFrame(outerX, outerY, outerW, outerH, frameColor),
+    drawDoorAluminumBase(outerX, outerY, outerW, outerH, frameColor, "swing"),
+  ];
+
+  const addSwing = (
+    leafX: number,
+    leafY: number,
+    leafW: number,
+    leafH: number,
+    hingeSide: "left" | "right",
+    handleSide: "left" | "right",
+    options?: { showHandle?: boolean; showOpening?: boolean; showProjection?: boolean; handleScale?: number; arrowScale?: number }
+  ) => {
+    parts.push(drawSwingLeaf(leafX, leafY, leafW, leafH, frameColor, hingeSide, handleSide, palilloType, options));
+  };
+  const addFixed = (panelX: number, panelY: number, panelW: number, panelH: number) => {
+    parts.push(drawDoorFixedPanel(panelX, panelY, panelW, panelH, frameColor));
+  };
+
+  switch (config) {
+    case "2_hojas_puerta_doble": {
+      const leafW = (doorW - gap) / 2;
+      addSwing(doorX, doorY, leafW, doorH, "left", "right");
+      addSwing(doorX + leafW + gap, doorY, leafW, doorH, "right", "left");
+      break;
+    }
+    case "4_hojas_abatibles": {
+      const leafW = (doorW - gap * 3) / 4;
+      for (let i = 0; i < 4; i++) {
+        const leafX = doorX + (leafW + gap) * i;
+        const hingeSide = i === 0 || i === 2 ? "left" : "right";
+        const handleSide = i === 0 || i === 2 ? "right" : "left";
+        addSwing(leafX, doorY, leafW, doorH, hingeSide, handleSide, {
+          showHandle: true,
+          showOpening: true,
+          showProjection: false,
+          arrowScale: 0.72,
+        });
+      }
+      break;
+    }
+    case "1_hoja_fijo_lateral": {
+      const fixedW = doorW * 0.34;
+      const swingW = doorW - fixedW - gap;
+      addFixed(doorX, doorY, fixedW, doorH);
+      addSwing(doorX + fixedW + gap, doorY, swingW, doorH, "right", "left");
+      break;
+    }
+    case "2_hojas_fijo_lateral": {
+      const fixedW = doorW * 0.26;
+      const leafW = (doorW - fixedW - gap * 2) / 2;
+      addFixed(doorX, doorY, fixedW, doorH);
+      addSwing(doorX + fixedW + gap, doorY, leafW, doorH, "left", "right");
+      addSwing(doorX + fixedW + gap + leafW + gap, doorY, leafW, doorH, "right", "left");
+      break;
+    }
+    case "2_hojas_2_fijos_laterales": {
+      const fixedW = doorW * 0.18;
+      const leafW = (doorW - fixedW * 2 - gap * 3) / 2;
+      const firstLeafX = doorX + fixedW + gap;
+      addFixed(doorX, doorY, fixedW, doorH);
+      addSwing(firstLeafX, doorY, leafW, doorH, "left", "right", {
+        showProjection: false,
+        arrowScale: 0.82,
+      });
+      addSwing(firstLeafX + leafW + gap, doorY, leafW, doorH, "right", "left", {
+        showProjection: false,
+        arrowScale: 0.82,
+      });
+      addFixed(doorX + fixedW + gap + leafW + gap + leafW + gap, doorY, fixedW, doorH);
+      break;
+    }
+    case "con_fijo_superior": {
+      const topH = doorH * 0.26;
+      const swingH = doorH - topH - gap;
+      addFixed(doorX, doorY, doorW, topH);
+      addSwing(doorX, doorY + topH + gap, doorW, swingH, "left", "right");
+      break;
+    }
+    case "con_fijo_lateral_fijo_superior": {
+      const topH = doorH * 0.24;
+      const bottomH = doorH - topH - gap;
+      const fixedW = doorW * 0.32;
+      const swingW = doorW - fixedW - gap;
+      addFixed(doorX, doorY, doorW, topH);
+      addFixed(doorX, doorY + topH + gap, fixedW, bottomH);
+      addSwing(doorX + fixedW + gap, doorY + topH + gap, swingW, bottomH, "right", "left");
+      break;
+    }
+    case "1_hoja":
+    default:
+      addSwing(doorX, doorY, doorW, doorH, "left", "right");
+      break;
+  }
+
+  parts.push(`</g>`);
+  return parts.join("\n");
 }
 
 function pdGlass(
@@ -2236,7 +3484,7 @@ const CONFIG_MAP: Record<string, string> = {
   "2 hojas / puerta doble": "2_hojas_puerta_doble",
   "1 hoja + fijo lateral": "1_hoja_fijo_lateral",
   "2 hojas + fijo lateral": "2_hojas_fijo_lateral",
-  "2 hojas + 2 fijos laterales": "2_hojas_fijo_lateral",
+  "2 hojas + 2 fijos laterales": "2_hojas_2_fijos_laterales",
   "4 hojas abatibles": "4_hojas_abatibles",
   "Con fijo superior": "con_fijo_superior",
   "Con fijo lateral + fijo superior": "con_fijo_lateral_fijo_superior",
@@ -2292,6 +3540,30 @@ function drawPuertaComposite(
 
   const usePalillo = palilloEnabled && palilloType;
   const palType = usePalillo ? palilloType : undefined;
+
+  const abatibleConfig = ABATIBLE_DOOR_CONFIGS.has(config)
+    ? config
+    : sistemaNorm === "Abatible"
+      ? "1_hoja"
+      : null;
+
+  if (abatibleConfig) {
+    return composeAbatibleSystem(x, y, w, h, frameColor, abatibleConfig, palType);
+  }
+
+  if (UNIFIED_FRAMED_DOOR_CONFIGS.has(config)) {
+    return composeUnifiedFramedDoorSystem(x, y, w, h, frameColor, config, palType);
+  }
+
+  const slidingConfig = SLIDING_DOOR_CONFIGS.has(config)
+    ? config
+    : sistemaNorm === "Corredera"
+      ? "2_hojas_moviles_encuentro_central"
+      : null;
+
+  if (slidingConfig) {
+    return composeSlidingDoorSystem(x, y, w, h, frameColor, slidingConfig, palType);
+  }
 
   const corrRails = (): string => {
     const railY1 = y + m + 3, railY2 = y + h - m - 3;

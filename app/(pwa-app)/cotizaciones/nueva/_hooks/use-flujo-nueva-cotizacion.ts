@@ -72,6 +72,8 @@ type UseFlujoNuevaCotizacionParams = {
   flete: string;
   redondeoComercial: string;
   hasRedondeoComercial: boolean;
+  ajusteComercial: string;
+  hasAjusteComercial: boolean;
   total: string;
   savedRecord: CotizacionWorkflowRecord | null;
   lastSaveMode: "borrador" | "creada" | "actualizada" | null;
@@ -88,6 +90,7 @@ type UseFlujoNuevaCotizacionParams = {
   onDireccionChange: (value: string) => void;
   onValidezChange: (value: string) => void;
   onObservacionesChange: (value: string) => void;
+  onCondicionesPagoChange: (value: string) => void;
   onStep1KeyDown: (field: Step1FieldKey, event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onToggleMoreData: () => void;
   onResetStep1: () => void;
@@ -117,10 +120,15 @@ type UseFlujoNuevaCotizacionParams = {
   onMeasureFirstItem: (node: HTMLElement | null) => void;
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
+  onDuplicateItem: (item: CotizacionWorkflowItem) => void;
+  onDuplicateItemPaso3: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
   onRecalculateTemplatePrice: (itemId: string) => void;
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
+  isDesktopQuoteStudio: boolean;
+  editingFormSnapshot: ComponentFormState | null;
+  onDuplicateItemFromEditor: () => void;
   onDraftFleteChange: (value: string) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
@@ -214,10 +222,14 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onMeasureFirstItem: params.onMeasureFirstItem,
     onSelectQuickEditItem: params.onSelectQuickEditItem,
     onEditItem: params.onEditItem,
+    onDuplicateItem: params.onDuplicateItem,
     onRemoveItem: params.onRemoveItem,
     onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
+    isDesktopQuoteStudio: params.isDesktopQuoteStudio,
+    editingFormSnapshot: params.editingFormSnapshot,
+    onDuplicateItemFromEditor: params.onDuplicateItemFromEditor,
   });
 
   const propsPasoUno = useMemo(() => ({
@@ -232,6 +244,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     mobileRecentClients: params.clientesRecientesMovil,
     showStep1MoreData: params.showStep1MoreData,
     isMobileViewport: params.isMobileViewport,
+    quotePricingMode: params.quotePricingMode,
     isSaving: params.isSaving,
     stepOneSummary,
     buildClientInitials,
@@ -246,6 +259,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onDireccionChange: params.onDireccionChange,
     onValidezChange: params.onValidezChange,
     onObservacionesChange: params.onObservacionesChange,
+    onQuotePricingModeChange: params.onQuotePricingModeChange,
     onStep1KeyDown: params.onStep1KeyDown,
     onToggleMoreData: params.onToggleMoreData,
     onReset: params.onResetStep1,
@@ -260,6 +274,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     flete: params.flete,
     redondeoComercial: params.redondeoComercial,
     hasRedondeoComercial: params.hasRedondeoComercial,
+    ajusteComercial: params.ajusteComercial,
+    hasAjusteComercial: params.hasAjusteComercial,
     total: params.total,
     quotePricingMode: params.quotePricingMode,
     totalClienteManual: params.totalClienteManual,
@@ -273,7 +289,12 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onGlobalTotalClienteChange: params.onGlobalTotalClienteChange,
     onMostrarIvaChange: params.onMostrarIvaChange,
     onValidezChange: params.onValidezChange,
+    onObservacionesChange: params.onObservacionesChange,
+    onCondicionesPagoChange: params.onCondicionesPagoChange,
     onGoToStepTwo: () => params.onGoToStep(2),
+    onEditItem: params.onEditItem,
+    onDuplicateItem: params.onDuplicateItemPaso3,
+    onRemoveItem: params.onRemoveItem,
     onSaveQuote: params.onSaveQuote,
     onSaveDraft: params.onSaveDraft,
     formatCurrencyInput: params.formatCurrencyInput,
@@ -286,12 +307,16 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     iva: params.iva,
     redondeoComercial: params.redondeoComercial,
     hasRedondeoComercial: params.hasRedondeoComercial,
+    ajusteComercial: params.ajusteComercial,
+    hasAjusteComercial: params.hasAjusteComercial,
     total: params.total,
     mostrarIva: params.mostrarIva,
+    quotePricingMode: params.quotePricingMode,
     selectedClientMode: params.clienteSeleccionado ? "Existente" as const : "Nuevo" as const,
     isSaving: params.isSaving,
     onSaveDraft: params.onSaveDraft,
     onSaveQuote: params.onSaveQuote,
+    onContinue: params.onContinueStep1,
   }), [params]);
 
   return {

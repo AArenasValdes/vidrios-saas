@@ -20,10 +20,6 @@ export async function GET() {
   try {
     const context = await resolveAuthenticatedRouteContext();
 
-    // #region agent log
-    fetch('http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'729d6f'},body:JSON.stringify({sessionId:'729d6f',runId:'pre-fix',hypothesisId:'C',location:'activation/status/route.ts:GET:auth',message:'auth context resolved',data:{rol:context.profile.rol,organizationId:context.profile.organizationId},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-
     if (context.profile.rol !== "admin" || !context.profile.organizationId) {
       return NextResponse.json({
         shouldRedirect: false,
@@ -37,9 +33,6 @@ export async function GET() {
     const repository = createOnboardingChecklistRepository({
       clientFactory: supabase as never,
     });
-    // #region agent log
-    fetch('http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'729d6f'},body:JSON.stringify({sessionId:'729d6f',runId:'post-fix',hypothesisId:'A',location:'activation/status/route.ts:GET:repo',message:'using server supabase client',data:{organizationId,clientSource:'@/lib/supabase/server'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     let activationRecord;
     let quoteRows;
@@ -49,15 +42,8 @@ export async function GET() {
         repository.listQuoteStates(organizationId),
       ]);
     } catch (repoError) {
-      // #region agent log
-      fetch('http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'729d6f'},body:JSON.stringify({sessionId:'729d6f',runId:'pre-fix',hypothesisId:'A-D-E',location:'activation/status/route.ts:GET:repoError',message:'repository query failed',data:{errorMessage:repoError instanceof Error?repoError.message:String(repoError),errorCode:(repoError as {code?:string})?.code??null,errorDetails:(repoError as {details?:string})?.details??null},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       throw repoError;
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'729d6f'},body:JSON.stringify({sessionId:'729d6f',runId:'post-fix',hypothesisId:'B',location:'activation/status/route.ts:GET:success',message:'repository queries ok',data:{hasActivationRecord:Boolean(activationRecord),quoteCount:quoteRows.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     const status = resolveActivationFlowStatus({
       rol: context.profile.rol,
@@ -70,10 +56,6 @@ export async function GET() {
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'729d6f'},body:JSON.stringify({sessionId:'729d6f',runId:'pre-fix',hypothesisId:'C-E',location:'activation/status/route.ts:GET:catch',message:'unhandled GET error',data:{errorMessage:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:'unknown'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     console.error("[API] /api/onboarding/activation/status", error);
     return NextResponse.json(

@@ -141,7 +141,17 @@ describe("auth-oauth-completion.service", () => {
         }
 
         if (table === "organization_profile") {
+          const upsert = jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: { plan_code: "trial", trial_ends_at: "2026-07-01" },
+                error: null,
+              }),
+            }),
+          });
+
           return {
+            upsert,
             select: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
                 maybeSingle: jest.fn().mockResolvedValue({

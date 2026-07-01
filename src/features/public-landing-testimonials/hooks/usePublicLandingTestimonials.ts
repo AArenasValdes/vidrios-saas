@@ -13,7 +13,7 @@ import type {
   PublicLandingTestimonialStatus,
 } from "@/features/public-landing-testimonials/types/public-landing-testimonial";
 
-export function usePublicLandingTestimonials() {
+export function usePublicLandingTestimonials({ lazy = false }: { lazy?: boolean } = {}) {
   const { organizacionId } = useAuth();
   const [testimonials, setTestimonials] = useState<PublicLandingTestimonial[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,12 +34,16 @@ export function usePublicLandingTestimonials() {
   }, []);
 
   useEffect(() => {
+    if (lazy) {
+      return;
+    }
+
     if (!organizacionId) {
       return;
     }
 
     void refreshTestimonials(organizacionId);
-  }, [organizacionId, refreshTestimonials]);
+  }, [organizacionId, lazy, refreshTestimonials]);
 
   async function updateStatus(
     id: string | number,
@@ -68,6 +72,7 @@ export function usePublicLandingTestimonials() {
     testimonials: organizacionId ? testimonials : [],
     isLoading: organizacionId ? isLoading : false,
     error: organizacionId ? error : null,
+    refreshTestimonials,
     updateStatus,
     PublicLandingTestimonialValidationError,
   };

@@ -13,6 +13,33 @@ type QuoteComponentSketchProps = {
   mirrorInteriorLine?: "fine" | "marked";
 };
 
+const WINDOW_SKETCH_ALUMINUM = "#6B7280";
+const WINDOW_SKETCH_SECONDARY = "#5F6670";
+const WINDOW_SKETCH_BLACK = "#2A2A2A";
+const WINDOW_SKETCH_WHITE = "#FFFFFF";
+const WINDOW_SKETCH_GLASS = "rgba(220,234,247,0.82)";
+const WINDOW_SKETCH_GLASS_STROKE = "rgba(167,199,231,0.72)";
+
+function isExplicitBlackProfile(colorHex: string) {
+  return ["#000000", "#111827", "#1f2937", "#2a2a2a", "#444444"].includes(
+    colorHex.trim().toLowerCase()
+  );
+}
+
+function resolveWindowSketchColor(colorHex: string) {
+  const normalized = colorHex.trim().toLowerCase();
+
+  if (normalized === "#a8a8a8" || !/^#[0-9a-f]{6}$/i.test(normalized)) {
+    return WINDOW_SKETCH_ALUMINUM;
+  }
+
+  if (normalized === "#f0eeeb" || normalized === "#ffffff") {
+    return WINDOW_SKETCH_WHITE;
+  }
+
+  return isExplicitBlackProfile(normalized) ? WINDOW_SKETCH_BLACK : colorHex;
+}
+
 export function QuoteComponentSketch({
   tipo,
   ancho,
@@ -50,6 +77,17 @@ export function QuoteComponentSketch({
   const glassStroke = "rgba(140,196,228,0.5)";
   const middle = svgWidth / 2;
   const normalizedType = tipo.trim().toLowerCase();
+  const isWindow = normalizedType.startsWith("vent");
+  const profileColor = isWindow ? resolveWindowSketchColor(colorHex) : colorHex;
+  const profileSecondary = isWindow
+    ? profileColor === WINDOW_SKETCH_ALUMINUM
+      ? WINDOW_SKETCH_SECONDARY
+      : profileColor === WINDOW_SKETCH_WHITE
+        ? "#D1D5DB"
+        : profileColor
+    : colorHex;
+  const componentGlass = isWindow ? WINDOW_SKETCH_GLASS : glass;
+  const componentGlassStroke = isWindow ? WINDOW_SKETCH_GLASS_STROKE : glassStroke;
   const paddingLeft = showMeasurements ? 38 : 12;
   const paddingRight = 14;
   const paddingTop = showMeasurements ? 32 : 12;
@@ -207,43 +245,43 @@ export function QuoteComponentSketch({
 
     return (
       <>
-        <rect
-          x={frame}
-          y={frame}
-          width={middle - frame - 1}
-          height={svgHeight - frame * 2}
-          fill={glass}
-          stroke={glassStroke}
-          strokeWidth={0.5}
-        />
-        <rect
-          x={middle + 1}
-          y={frame}
-          width={middle - frame - 1}
-          height={svgHeight - frame * 2}
-          fill={glass}
-          stroke={glassStroke}
-          strokeWidth={0.5}
-        />
-        <line x1={middle} y1={frame} x2={middle} y2={svgHeight - frame} stroke={colorHex} strokeWidth={2.5} />
-        <line
-          x1={middle - 5}
-          y1={svgHeight / 2 - 7}
-          x2={middle - 5}
-          y2={svgHeight / 2 + 7}
-          stroke={colorHex}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-        />
+          <rect
+            x={frame}
+            y={frame}
+            width={middle - frame - 1}
+            height={svgHeight - frame * 2}
+            fill={componentGlass}
+            stroke={componentGlassStroke}
+            strokeWidth={0.5}
+          />
+          <rect
+            x={middle + 1}
+            y={frame}
+            width={middle - frame - 1}
+            height={svgHeight - frame * 2}
+            fill={componentGlass}
+            stroke={componentGlassStroke}
+            strokeWidth={0.5}
+          />
+          <line x1={middle} y1={frame} x2={middle} y2={svgHeight - frame} stroke={profileSecondary} strokeWidth={2.5} />
+          <line
+            x1={middle - 5}
+            y1={svgHeight / 2 - 7}
+            x2={middle - 5}
+            y2={svgHeight / 2 + 7}
+            stroke={profileColor}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         <line
           x1={middle + 5}
-          y1={svgHeight / 2 - 7}
-          x2={middle + 5}
-          y2={svgHeight / 2 + 7}
-          stroke={colorHex}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-        />
+            y1={svgHeight / 2 - 7}
+            x2={middle + 5}
+            y2={svgHeight / 2 + 7}
+            stroke={profileColor}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
       </>
     );
   }
@@ -257,7 +295,7 @@ export function QuoteComponentSketch({
       aria-hidden
     >
       <g transform={`translate(${paddingLeft},${paddingTop})`}>
-        <rect x={0} y={0} width={svgWidth} height={svgHeight} fill="none" stroke={colorHex} strokeWidth={frame} rx={1} />
+        <rect x={0} y={0} width={svgWidth} height={svgHeight} fill="none" stroke={profileColor} strokeWidth={frame} rx={1} />
         {renderInterior()}
         {label ? (
           <text
@@ -266,7 +304,7 @@ export function QuoteComponentSketch({
             textAnchor="middle"
             fontSize={8}
             fontFamily="sans-serif"
-            fill={colorHex}
+            fill={profileColor}
             opacity={0.35}
           >
             {label}

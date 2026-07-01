@@ -53,7 +53,7 @@ Dueño, maestro, vendedor o administrador de una empresa pequeña o mediana de:
 - comparte PDFs
 - no quiere sistemas complejos
 - pierde consultas cuando está ocupado
-- necesita una forma simple de registrar, seguir y cerrar oportunidades
+- necesita una forma simple de registrar solicitudes, convertirlas en obras/cotizaciones y cerrar trabajos
 
 ### Cliente final del usuario
 
@@ -88,7 +88,7 @@ Ventora resuelve eso en un flujo simple:
 3. la contacta por WhatsApp
 4. si avanza, crea una cotización
 5. comparte PDF o link público
-6. registra si la oportunidad quedó pendiente, aprobada, rechazada o terminada
+6. registra si la cotizacion quedo enviada, aprobada, rechazada o terminada
 
 ---
 
@@ -96,15 +96,18 @@ Ventora resuelve eso en un flujo simple:
 
 ### Fase actual
 
-**Fase 2: estabilización, hardening y consolidación de captación + centralización + cierre comercial**
+**Fase 2: estabilizacion de cotizacion desktop, dashboard comercial real y consolidacion de captacion + cierre**
 
-Esto significa que hoy el foco fuerte está en:
+Esto significa que hoy el foco fuerte esta en:
 
-- rutas públicas críticas
-- seguimiento comercial móvil
-- cotización operativa real
+- rutas publicas criticas
+- seguimiento comercial movil
+- cotizacion operativa real
+- estabilizacion de cotizacion desktop
+- dashboard comercial con datos reales
+- Quote Studio desktop como siguiente paso
 - PDF y WhatsApp
-- aprobación pública
+- aprobacion publica
 - rendimiento, robustez y consistencia
 
 ### Qué no debe abrirse todavía
@@ -119,6 +122,7 @@ No abrir Fase 3+ todavía. Eso incluye:
 - reglas avanzadas de perfilería
 - automatizaciones complejas
 - CRM profundo tipo pipeline enterprise
+- oportunidades y cobros como modulo activo
 
 ---
 
@@ -399,9 +403,10 @@ Gana por ser:
 - simple
 - comercial
 - usable desde celular
+- usable desde desktop para preparar mejor la cotizacion
 - útil para gente que vive en WhatsApp
 - específico para vidrios y aluminio
-- orientado a no perder oportunidades
+- orientado a no perder solicitudes, obras ni cotizaciones
 
 La combinación valiosa es:
 
@@ -492,34 +497,40 @@ Ventora ya tiene una base muy útil para BI porque registra eventos comerciales 
 
 ### Promesa principal
 
-**No pierdas leads mientras estás trabajando.**
+**Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos.**
+
+### Transformación central
+
+De llegar a casa a hacer presupuestos en el computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos.
 
 ### Problemas de marketing reales que Ventora puede atacar
 
-- “Las consultas me llegan por todos lados y se me pierden.”
-- “Me escriben al WhatsApp y después no encuentro el mensaje.”
-- “No sé de dónde vienen mis contactos.”
-- “Cotizo tarde y pierdo ventas.”
-- “No tengo una página simple para que me pidan presupuesto.”
+- “Cotizo tarde cuando llego a casa.”
+- “Dependo de Excel, Word, notas o precios enviados por WhatsApp.”
+- “Pierdo tiempo preparando presupuestos.”
+- “Tengo clientes y cotizaciones desordenados.”
+- “Quiero verme más profesional frente a mis clientes.”
 
 ### Mensajes fuertes
 
-- Captura solicitudes aunque estés en terreno
-- Centraliza todo en un solo lugar
-- Responde por WhatsApp más rápido
-- Comparte tu enlace o QR y deja de perder consultas
-- Cotiza desde el celular y envía PDF al instante
-- Haz seguimiento comercial sin depender de la memoria
+- Cotiza desde cualquier lugar.
+- Envía presupuestos claros y profesionales.
+- Mantiene clientes y cotizaciones ordenados.
+- Convierte precios, medidas o cálculos ya realizados en una cotización lista para enviar.
+- Responde más rápido con un PDF profesional.
 
 ### Posicionamiento correcto
 
 Ventora no debe venderse como:
 
-- “software técnico de vidriería”
+- “cotizador técnico barato”
+- “sistema de cubicación”
+- “software que calcula perfiles, cortes, herrajes o desperdicio”
+- promesa de “ganarás más clientes” o “cerrarás más ventas”
 
 Debe venderse como:
 
-- **herramienta comercial para captar, ordenar y cerrar trabajos**
+- **cotizador móvil y capa comercial para maestros e instaladores**
 
 ---
 
@@ -558,9 +569,9 @@ Ya no estamos en “MVP solo para probar idea”.
 Estamos en:
 
 - consolidar el producto comercial
-- endurecer rutas críticas
-- simplificar configuración
-- mejorar conversión y seguimiento
+- estabilizar cotizacion desktop
+- dejar dashboard comercial con datos reales
+- preparar Quote Studio desktop vendible
 - preparar salida piloto seria
 
 ### Qué sigue después de esta fase
@@ -569,11 +580,11 @@ No agregar módulos gigantes todavía.
 
 Lo siguiente correcto es:
 
-- medición comercial real
-- inteligencia de negocios
-- mejora de conversión
+- validacion de constructor visual guiado
+- medicion comercial real
+- mejora de conversion
+- catalogo privado piloto
 - marketing con mensaje claro
-- validación con pilotos
 
 ---
 
@@ -581,7 +592,7 @@ Lo siguiente correcto es:
 
 Si necesitas una versión ultra corta, usa esto:
 
-> Ventora es un SaaS comercial para empresas de vidrios y aluminio. Su objetivo no es ser un cotizador técnico ni un ERP, sino captar leads desde una landing pública por empresa, centralizarlos, responder por WhatsApp, convertirlos en clientes/cotizaciones y ayudar al cierre con PDF y aprobación pública. El núcleo del producto es captación + seguimiento + cotización + cierre, con foco mobile-first para dueños y maestros que trabajan en terreno. La fase actual es Fase 2: estabilización, hardening, rendimiento, simplificación de configuración y preparación para piloto. Las rutas más críticas son `/solicitud/[empresa]` y `/presupuesto/[token]`. No reabrir lógica técnica de materiales o perfilería. Toda propuesta debe fortalecer captación, centralización y cierre comercial.
+> Ventora es un cotizador móvil y una capa comercial para maestros e instaladores de vidrios, aluminio, ventanas, PVC, shower y cierres. Su objetivo de marketing no es competir como cotizador técnico barato ni prometer cubicación, perfiles, cortes, herrajes o desperdicio. El mensaje central es: "Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos." La fase actual es Fase 2: estabilización, hardening, rendimiento, simplificación de configuración y preparación para piloto. Las rutas más críticas son `/solicitud/[empresa]` y `/presupuesto/[token]`. Toda propuesta debe fortalecer cotización móvil, PDF profesional, orden de clientes/cotizaciones, respuesta rápida o seguimiento.
 
 ---
 

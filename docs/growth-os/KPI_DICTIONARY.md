@@ -2,6 +2,10 @@
 
 Este diccionario define las metricas del Growth OS.
 
+Metrica principal vigente:
+
+**No optimizar por vistas. Medir mensajes recibidos -> demos -> pruebas iniciadas -> primera cotizacion creada -> pagos.**
+
 Cada KPI tiene:
 
 - definicion
@@ -10,6 +14,38 @@ Cada KPI tiene:
 - frecuencia de revision
 - umbral saludable
 - accion recomendada si esta bajo
+
+---
+
+## mensajes recibidos
+
+- definicion: cantidad de conversaciones entrantes generadas por contenido, prospeccion o referidos
+- formula: `count(mensajes_recibidos)`
+- fuente de datos: registro manual de WhatsApp, Instagram, Facebook, formulario o CRM interno
+- estado de medicion: manual hoy
+- frecuencia de revision: semanal
+- umbral saludable: tendencia creciente con calidad suficiente para clasificar
+- accion si esta bajo: revisar dolor, demostracion y CTA unico de cada pieza
+
+## pruebas iniciadas
+
+- definicion: cantidad de usuarios que comenzaron una prueba guiada despues de demo o conversacion
+- formula: `count(pruebas_iniciadas)`
+- fuente de datos: registro comercial manual; no existe tabla nativa hoy
+- estado de medicion: manual hoy, nativo requiere implementacion
+- frecuencia de revision: semanal
+- umbral saludable: `>= 1 por semana` en etapa inicial
+- accion si esta bajo: cerrar cada demo con la accion "crear primera cotizacion hoy"
+
+## primera cotizacion creada
+
+- definicion: cantidad de usuarios de prueba que crean su primera cotizacion en Ventora
+- formula: `count(usuarios_con_primera_cotizacion)`
+- fuente de datos: `cotizaciones` filtrada por organizacion/usuario y fecha de prueba, o registro manual mientras no exista atribucion robusta
+- estado de medicion: parcial hoy
+- frecuencia de revision: semanal
+- umbral saludable: `>= 70%` de pruebas iniciadas
+- accion si esta bajo: simplificar onboarding, usar datos reales del maestro y acompanar la primera cotizacion el mismo dia
 
 ---
 

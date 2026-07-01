@@ -2,39 +2,41 @@
 
 ## Objetivo
 
-Crear contenido organico que apoye prospeccion, autoridad y conversion comercial en Facebook, Instagram y TikTok.
+Crear contenido organico que muestre la transformacion central de Ventora: de llegar a casa a hacer presupuestos en computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos.
+
+Mensaje principal:
+
+**"Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."**
 
 ## Pilares de contenido
 
-### 1. Dolor del rubro
+Distribucion:
 
-- pierden consultas
-- responden tarde
-- WhatsApp se desordena
-- cotizan lento
-- no hacen seguimiento
+- 70% dolor y transformacion
+- 20% demostraciones reales del producto en celular
+- 10% funciones complementarias
 
-### 2. Demostracion del flujo
+### 1. Dolor y transformacion
 
-- mini landing publica
-- lead que entra
-- respuesta por WhatsApp
-- cotizacion creada
-- PDF o link compartido
-- aprobacion o rechazo
+- Excel de noche
+- presupuestos pendientes
+- precios por WhatsApp
+- clientes y cotizaciones desordenados
+- mejor impresion frente al cliente
 
-### 3. Casos y prueba social
+### 2. Demostracion en celular
 
-- mini historias de pilotos
-- antes y despues
-- aprendizajes reales del rubro
+- crear cotizacion desde el celular
+- convertir medidas, precio o calculo final en propuesta
+- generar PDF profesional
+- enviar por WhatsApp
 
-### 4. Educacion comercial simple
+### 3. Funciones complementarias
 
-- como responder mas rapido
-- como no perder una consulta
-- que medir en un negocio pequeno
-- por que una landing simple vale mas que una web pesada
+- clientes ordenados
+- pagina publica
+- seguimiento
+- historial de cotizaciones
 
 ## Calendario semanal
 
@@ -56,26 +58,26 @@ Crear contenido organico que apoye prospeccion, autoridad y conversion comercial
 
 ## Guiones de reels
 
-### Reel 1: Consulta perdida
+### Reel 1: Excel de noche
 
-1. gancho: `Te llegan consultas y despues no sabes donde quedaron`
-2. problema: mostrar WhatsApp desordenado
-3. cambio: mostrar solicitud centralizada
-4. cierre: `Ventora ordena consulta, WhatsApp y cotizacion`
+1. gancho: `Llegaste a casa y todavia tienes presupuestos pendientes`
+2. problema: mostrar notas, Excel o WhatsApp con medidas
+3. cambio: mostrar cotizacion creada desde el celular
+4. cierre: `Escribeme DEMO`
 
-### Reel 2: Respuesta rapida
+### Reel 2: PDF profesional
 
-1. gancho: `En este rubro, responder tarde cuesta ventas`
-2. problema: lead entra mientras el dueno esta ocupado
-3. cambio: mini landing + lista de solicitudes
-4. cierre: `La idea no es producir mas software. Es perder menos oportunidades`
+1. gancho: `Si ya tienes el precio, no deberias armar el presupuesto dos veces`
+2. problema: precio final suelto en WhatsApp o libreta
+3. cambio: convertirlo en PDF profesional
+4. cierre: `Te muestro una cotizacion real`
 
-### Reel 3: Cierre simple
+### Reel 3: Cotizacion en terreno
 
-1. gancho: `No necesitas un ERP para cerrar mejor`
-2. problema: cotizacion manual lenta
-3. cambio: cotizacion + PDF/link publico + aprobacion
-4. cierre: `Ventora esta hecho para cerrar, no para complicarte`
+1. gancho: `Cotiza antes de irte de la obra`
+2. problema: esperar hasta la noche para usar computador
+3. cambio: cotizacion movil + PDF + WhatsApp
+4. cierre: `Escribeme DEMO`
 
 ## Estructura de carruseles
 
@@ -90,15 +92,15 @@ Crear contenido organico que apoye prospeccion, autoridad y conversion comercial
 
 ### Atraccion fria
 
-- `Si te pasa esto, escribeme y te muestro un ejemplo`
+- `Escribeme DEMO`
 
 ### Interes
 
-- `Te puedo mostrar como quedaria para tu negocio`
+- `Te muestro una cotizacion real`
 
 ### Conversion
 
-- `Si quieres, activamos un piloto de 7 dias`
+- `Probemos creando tu primera cotizacion hoy`
 
 ## Como reutilizar capturas de Ventora
 
@@ -117,8 +119,10 @@ Crear contenido organico que apoye prospeccion, autoridad y conversion comercial
 - visualizaciones y retencion dentro de la red social
 - respuestas a stories o mensajes directos dentro de la red social
 - mensajes entrantes declarados manualmente por canal
-- demos generadas solo si se registran manualmente
-- solicitudes atribuidas por UTM cuando el contenido empuja a links de Ventora
+- demos
+- pruebas iniciadas
+- primera cotizacion creada
+- pagos
 
 ## Nota operativa
 
@@ -134,8 +138,10 @@ Por eso:
 
 - el mensaje esta aterrizado al rubro
 - el CTA es claro
+- el CTA es unico
 - no suena a software generico
-- no promete ERP ni produccion
+- no promete ERP, produccion, cubicacion, perfiles, cortes, herrajes ni desperdicio
+- no promete "ganaras mas clientes" ni "cerraras mas ventas"
 - la pieza se entiende sin audio cuando aplique
 - la captura no expone datos sensibles
 - existe una hipotesis de para que sirve la pieza

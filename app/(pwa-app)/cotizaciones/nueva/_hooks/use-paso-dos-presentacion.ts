@@ -94,10 +94,14 @@ type UsePasoDosPresentacionParams = {
   onMeasureFirstItem: (node: HTMLElement | null) => void;
   onSelectQuickEditItem: (itemId: string) => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
+  onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
   onRecalculateTemplatePrice: (itemId: string) => void;
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
+  isDesktopQuoteStudio: boolean;
+  editingFormSnapshot: ComponentFormState | null;
+  onDuplicateItemFromEditor: () => void;
 };
 
 export function usePasoDosPresentacion(
@@ -279,6 +283,9 @@ export function usePasoDosPresentacion(
       onAddOrUpdateItem: params.onAddOrUpdateItem,
       onRecalculateCurrentTemplatePrice: params.onRecalculateCurrentTemplatePrice,
       onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
+      isDesktopQuoteStudio: params.isDesktopQuoteStudio,
+      originalFormSnapshot: params.editingFormSnapshot,
+      onDuplicateItemFromEditor: params.onDuplicateItemFromEditor,
     }),
     [
       batchPreviewCodes,
@@ -341,6 +348,7 @@ export function usePasoDosPresentacion(
       onMeasureFirstItem: params.onMeasureFirstItem,
       onSelectQuickEditItem: params.onSelectQuickEditItem,
       onEditItem: params.onEditItem,
+      onDuplicateItem: params.onDuplicateItem,
       onRemoveItem: params.onRemoveItem,
       onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
       onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,

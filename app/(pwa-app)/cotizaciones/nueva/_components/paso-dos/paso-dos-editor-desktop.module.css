@@ -1,0 +1,363 @@
+@media (min-width: 1024px) {
+  .root {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(100dvh - 10.5rem);
+    overflow: hidden;
+    border: 1px solid #d6dfeb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(27, 43, 74, 0.05);
+  }
+
+  /* ─── Header ─── */
+
+  .header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.15rem 0.7rem;
+    border-bottom: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .headerLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .headerTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .headerSubtitle {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .headerPrice {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.2rem;
+  }
+
+  .headerPriceLabel {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .headerPriceValue {
+    color: #18335f;
+    font-size: 0.92rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .headerPriceEdit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+    margin-left: 0.1rem;
+    padding: 0.18rem 0.52rem;
+    border: 1px solid #d9e4f1;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1e88ff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+
+  .headerPriceEdit:hover {
+    border-color: #1e88ff;
+    background: #f8fbff;
+  }
+
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .headerIconBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+  }
+
+  .headerIconBtn:hover {
+    border-color: #dce6f2;
+    background: #f5f8fc;
+    color: #1e375f;
+  }
+
+  /* ─── Tabs ─── */
+
+  .tabs {
+    flex-shrink: 0;
+    display: flex;
+    gap: 0;
+    padding: 0 1.15rem;
+    border-bottom: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.6rem 0.85rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 140ms ease, border-color 140ms ease;
+  }
+
+  .tab:hover {
+    color: #1e375f;
+  }
+
+  .tabActive {
+    color: #18335f;
+    border-bottom-color: #1e88ff;
+    font-weight: 700;
+  }
+
+  .tabCheck {
+    color: #18744f;
+    flex-shrink: 0;
+  }
+
+  /* ─── Tab body ─── */
+
+  .tabBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(108, 139, 190, 0.46) rgba(222, 232, 244, 0.72);
+    padding: 0.75rem 1.15rem 0.5rem;
+  }
+
+  .tabBody::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .tabBody::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(122, 168, 255, 0.45);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .tabBody::-webkit-scrollbar-track {
+    background: rgba(222, 232, 244, 0.72);
+    border-radius: 999px;
+  }
+
+  .tabContent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+  }
+
+  /* ─── Área display ─── */
+
+  .areaDisplay {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    background: #f5f8fc;
+    border: 1px solid #dce6f2;
+  }
+
+  .areaValue {
+    color: #18335f;
+    font-size: 0.9rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .areaHint {
+    color: #64748b;
+    font-size: 0.72rem;
+  }
+
+  /* ─── Linea actual ─── */
+
+  .lineaActual {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    background: #fef9f0;
+    border: 1px solid #fcd9a8;
+  }
+
+  .lineaActualLabel {
+    color: #9a6612;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .lineaActualAction {
+    padding: 0.18rem 0.52rem;
+    border: 1px solid #fcd9a8;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1e88ff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 140ms ease;
+  }
+
+  .lineaActualAction:hover {
+    border-color: #1e88ff;
+  }
+
+  /* ─── Resumen sección ─── */
+
+  .resumenSection {
+    border: 1px solid #d6dfeb;
+  }
+
+  .resumenGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .resumenItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 10px;
+    background: #f8fbff;
+    border: 1px solid #dce6f2;
+  }
+
+  .resumenLabel {
+    color: #64748b;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .resumenValue {
+    color: #18335f;
+    font-size: 0.88rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .resumenTotal {
+    color: #1e88ff;
+    font-size: 0.96rem;
+  }
+
+  /* ─── Margen fields ─── */
+
+  .margenFields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .precioSugerido {
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    background: #f5f8fc;
+    border: 1px solid #dce6f2;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+
+  /* ─── Linea ajuste ─── */
+
+  .lineaAjusteRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    margin-top: 0.55rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid #dce6f2;
+  }
+
+  /* ─── Footer ─── */
+
+  .footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.65rem 1.15rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .footerLeft {
+    min-width: 0;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .footerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+}

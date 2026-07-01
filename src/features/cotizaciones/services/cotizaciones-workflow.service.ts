@@ -265,7 +265,10 @@ export function calculateComponentItem(
       ? costoIngresado
       : round(costoUnitario * cantidad, 2);
   const precioUnitario = round(costoUnitario * (1 + margenPct / 100), 2);
-  const precioTotal = round(precioUnitario * cantidad, 2);
+  const precioTotal =
+    costInputScope === "group_total"
+      ? round(costoIngresado * (1 + margenPct / 100), 2)
+      : round(precioUnitario * cantidad, 2);
   const areaM2 =
     ancho !== null && alto !== null ? round((ancho / 1000) * (alto / 1000), 2) : null;
 
@@ -460,17 +463,86 @@ export function calculateWorkflowTotalsForPricingMode(
     });
   }
 
+  const componentTotals = calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete, {
+    mostrarIva: draft.mostrarIva ?? true,
+  });
+  const mostrarIva = draft.mostrarIva ?? true;
+  const hasManualFinalTotal =
+    draft.totalClienteManual !== null &&
+    draft.totalClienteManual !== undefined &&
+    Number.isFinite(draft.totalClienteManual) &&
+    draft.totalClienteManual > 0;
+
+  if (!hasManualFinalTotal) {
+    return {
+      ...componentTotals,
+      ajusteComercial: 0,
+      costoTotalFabricacion: round(
+        draft.items.reduce((accumulator, item) => accumulator + item.costoProveedorTotal, 0),
+        2
+      ),
+      margenGlobalPct: 0,
+      utilidadTotal: 0,
+      totalClienteManual: null,
+    };
+  }
+
+  const manualAmount = round(Number(draft.totalClienteManual), 2);
+  const fleteAmount = round(draft.flete ?? 0, 2);
+  const rawComponentSum = round(
+    componentTotals.neto + componentTotals.iva + componentTotals.flete + componentTotals.redondeoComercial,
+    2
+  );
+
+  if (!mostrarIva) {
+    const netoReverse = round(manualAmount / (1 + impuestos.iva), 2);
+    const ivaReverse = round(manualAmount - netoReverse, 2);
+    const ajusteComercial = round(manualAmount - rawComponentSum, 2);
+
+    return {
+      ...componentTotals,
+      subtotal: manualAmount,
+      descuentoValor: 0,
+      neto: netoReverse,
+      iva: ivaReverse,
+      flete: fleteAmount,
+      redondeoComercial: 0,
+      total: manualAmount,
+      ajusteComercial,
+      costoTotalFabricacion: round(
+        draft.items.reduce((accumulator, item) => accumulator + item.costoProveedorTotal, 0),
+        2
+      ),
+      margenGlobalPct: 0,
+      utilidadTotal: 0,
+      totalClienteManual: manualAmount,
+    };
+  }
+
+  const netoManual = manualAmount;
+  const ivaManual = round(netoManual * impuestos.iva, 2);
+  const totalSinRedondeo = round(netoManual + ivaManual + fleteAmount, 2);
+  const totalFinal = roundCommercialTotal(totalSinRedondeo);
+  const redondeo = round(totalFinal - totalSinRedondeo, 2);
+  const ajusteComercialConIva = round(totalSinRedondeo - rawComponentSum, 2);
+
   return {
-    ...calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete, {
-      mostrarIva: draft.mostrarIva ?? true,
-    }),
+    ...componentTotals,
+    subtotal: netoManual,
+    descuentoValor: 0,
+    neto: netoManual,
+    iva: ivaManual,
+    flete: fleteAmount,
+    redondeoComercial: redondeo,
+    total: totalFinal,
+    ajusteComercial: ajusteComercialConIva,
     costoTotalFabricacion: round(
       draft.items.reduce((accumulator, item) => accumulator + item.costoProveedorTotal, 0),
       2
     ),
     margenGlobalPct: 0,
     utilidadTotal: 0,
-    totalClienteManual: null,
+    totalClienteManual: manualAmount,
   };
 }
 

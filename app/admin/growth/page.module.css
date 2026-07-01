@@ -608,3 +608,22 @@
     flex: 1 1 auto;
   }
 }
+
+.importSummary {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.92rem;
+}
+
+.importEmpty,
+.importResult {
+  margin: 0 0 16px;
+  font-size: 0.92rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.importResult {
+  color: var(--text-primary, #0f172a);
+  font-weight: 500;
+}

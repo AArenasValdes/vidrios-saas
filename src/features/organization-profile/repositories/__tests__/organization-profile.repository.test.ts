@@ -73,4 +73,61 @@ describe("organization-profile.repository", () => {
       margenDefecto: 100,
     });
   });
+
+  it("repara localmente el estado de trial si la organizacion es nueva", async () => {
+    const profileQuery = createSingleQuery({
+      data: {
+        organization_id: 3,
+        empresa_nombre: "Ventora",
+        brand_color: "#335EA9",
+        modo_precio_preferido: "margen",
+        subscription_status: "trial_expired",
+        trial_started_at: "2026-06-30T12:00:00.000Z",
+        trial_ends_at: "2026-06-30T12:00:00.000Z",
+        plan_type: "trial",
+        plan_code: "trial",
+        billing_period: "none",
+        payment_method: "none",
+        founder_price_locked: false,
+      },
+      error: null,
+    });
+    const organizationQuery = createSingleQuery({
+      data: { creado_en: "2026-06-30T12:00:00.000Z" },
+      error: null,
+    });
+    const update = jest.fn();
+    const client = {
+      from: jest.fn((table: string) => {
+        if (table === "organization_profile") {
+          return {
+            select: jest.fn().mockReturnValue(profileQuery),
+            update,
+          };
+        }
+
+        if (table === "organizations") {
+          return {
+            select: jest.fn().mockReturnValue(organizationQuery),
+          };
+        }
+
+        throw new Error(`tabla inesperada: ${table}`);
+      }),
+    } as never;
+
+    const repository = createOrganizationProfileRepository({
+      clientFactory: client,
+    });
+
+    const profile = await repository.getByOrganizationId(3);
+
+    expect(profile).toMatchObject({
+      subscriptionStatus: "trial_active",
+      trialEndsAt: "2026-07-07T12:00:00.000Z",
+      planType: "trial",
+      planCode: "trial",
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
 });

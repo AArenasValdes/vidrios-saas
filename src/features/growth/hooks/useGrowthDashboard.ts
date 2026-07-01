@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { growthApiClient } from "@/features/growth/client/growth-api.client";
 import { growthDashboardService } from "@/features/growth/services/growth-dashboard.service";
 import type {
   CreateGrowthClientInput,
   CreateGrowthMarketingTaskInput,
   CreateGrowthProspectInput,
   GrowthPanelTab,
+  GrowthTodayItem,
   GrowthWorkspace,
   UpdateGrowthClientInput,
   UpdateGrowthManualMetricsInput,
@@ -15,100 +17,118 @@ import type {
   UpdateGrowthProspectInput,
   UpdateGrowthSettingsInput,
 } from "@/features/growth/types/growth-dashboard";
+import type { GrowthImportResult } from "@/features/growth/types/growth-supabase";
 
 type GrowthDashboardState = {
   workspace: GrowthWorkspace | null;
+  workToday: GrowthTodayItem[] | null;
   isLoading: boolean;
   error: string | null;
   currentTab: GrowthPanelTab;
   isConfigOpen: boolean;
   isAddProspectOpen: boolean;
-  isAddClientOpen: boolean;
-  isAddMarketingOpen: boolean;
+  importSummary: GrowthImportResult | null;
+  isImportOpen: boolean;
 };
 
 export function useGrowthDashboard() {
   const [state, setState] = useState<GrowthDashboardState>({
     workspace: null,
+    workToday: null,
     isLoading: true,
     error: null,
     currentTab: "trabajo",
     isConfigOpen: false,
     isAddProspectOpen: false,
-    isAddClientOpen: false,
-    isAddMarketingOpen: false,
+    importSummary: null,
+    isImportOpen: false,
   });
   const isMountedRef = useRef(true);
 
   useEffect(() => {
     isMountedRef.current = true;
-
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
+  const reload = useCallback(async () => {
+    const [workspace, workToday] = await Promise.all([
+      growthApiClient.loadWorkspace(),
+      growthApiClient.loadWorkToday(),
+    ]);
+
+    if (!isMountedRef.current) return;
+
+    setState((current) => ({
+      ...current,
+      workspace,
+      workToday,
+      isLoading: false,
+      error: null,
+    }));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadWorkspace() {
+    async function load() {
       try {
-        const workspace = await growthDashboardService.loadWorkspace();
-
-        if (!isMountedRef.current || cancelled) {
-          return;
+        await reload();
+      } catch (loadError) {
+        if (!cancelled && isMountedRef.current) {
+          setState((current) => ({
+            ...current,
+            workspace: null,
+            workToday: null,
+            isLoading: false,
+            error:
+              loadError instanceof Error
+                ? loadError.message
+                : "No pudimos cargar el panel de fundador.",
+          }));
         }
-
-        setState((current) => ({
-          ...current,
-          workspace,
-          isLoading: false,
-          error: null,
-        }));
-      } catch {
-        if (!isMountedRef.current || cancelled) {
-          return;
-        }
-
-        setState((current) => ({
-          ...current,
-          workspace: null,
-          isLoading: false,
-          error: "No pudimos cargar el panel de fundador.",
-        }));
       }
     }
 
-    void loadWorkspace();
+    void load();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
   const viewModel = useMemo(() => {
     if (!state.workspace) {
       return null;
     }
 
-    return growthDashboardService.buildDashboardViewModel(
+    const base = growthDashboardService.buildDashboardViewModel(
       state.workspace,
       state.currentTab
     );
-  }, [state.currentTab, state.workspace]);
 
-  async function applyWorkspace(nextWorkspacePromise: Promise<GrowthWorkspace>) {
-    const nextWorkspace = await nextWorkspacePromise;
+    if (state.workToday) {
+      return { ...base, workToday: state.workToday };
+    }
 
-    if (!isMountedRef.current) {
+    return base;
+  }, [state.currentTab, state.workspace, state.workToday]);
+
+  async function refreshAfterMutation(nextWorkspace?: GrowthWorkspace) {
+    if (nextWorkspace) {
+      const workToday = await growthApiClient.loadWorkToday();
+      if (!isMountedRef.current) return;
+      setState((current) => ({
+        ...current,
+        workspace: nextWorkspace,
+        workToday,
+        error: null,
+      }));
       return;
     }
 
-    setState((current) => ({
-      ...current,
-      workspace: nextWorkspace,
-      error: null,
-    }));
+    await reload();
   }
 
   return {
@@ -116,22 +136,19 @@ export function useGrowthDashboard() {
     viewModel,
     isLoading: state.isLoading,
     error: state.error,
+    reload,
     currentTab: state.currentTab,
     isConfigOpen: state.isConfigOpen,
     isAddProspectOpen: state.isAddProspectOpen,
-    isAddClientOpen: state.isAddClientOpen,
-    isAddMarketingOpen: state.isAddMarketingOpen,
+    isAddClientOpen: false,
+    isAddMarketingOpen: false,
+    importSummary: state.importSummary,
+    isImportOpen: state.isImportOpen,
     setCurrentTab(nextTab: GrowthPanelTab) {
-      setState((current) => ({
-        ...current,
-        currentTab: nextTab,
-      }));
+      setState((current) => ({ ...current, currentTab: nextTab }));
     },
     jumpToWorkQueue(targetTab: GrowthPanelTab) {
-      setState((current) => ({
-        ...current,
-        currentTab: targetTab,
-      }));
+      setState((current) => ({ ...current, currentTab: targetTab }));
     },
     openConfig() {
       setState((current) => ({ ...current, isConfigOpen: true }));
@@ -145,25 +162,19 @@ export function useGrowthDashboard() {
     closeAddProspect() {
       setState((current) => ({ ...current, isAddProspectOpen: false }));
     },
-    openAddClient() {
-      setState((current) => ({ ...current, isAddClientOpen: true }));
+    openAddClient() {},
+    closeAddClient() {},
+    openAddMarketing() {},
+    closeAddMarketing() {},
+    openImport() {
+      setState((current) => ({ ...current, isImportOpen: true }));
     },
-    closeAddClient() {
-      setState((current) => ({ ...current, isAddClientOpen: false }));
-    },
-    openAddMarketing() {
-      setState((current) => ({ ...current, isAddMarketingOpen: true }));
-    },
-    closeAddMarketing() {
-      setState((current) => ({ ...current, isAddMarketingOpen: false }));
+    closeImport() {
+      setState((current) => ({ ...current, isImportOpen: false }));
     },
     async addProspect(input: CreateGrowthProspectInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.addProspect(state.workspace, input)
-      );
-
+      await growthApiClient.addProspect(input);
+      await reload();
       setState((current) => ({
         ...current,
         isAddProspectOpen: false,
@@ -171,103 +182,66 @@ export function useGrowthDashboard() {
       }));
     },
     async updateProspect(prospectId: string, patch: UpdateGrowthProspectInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.updateProspect(state.workspace, prospectId, patch)
-      );
+      await growthApiClient.updateProspect(prospectId, patch);
+      await reload();
     },
     async advanceProspect(prospectId: string) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.advanceProspect(state.workspace, prospectId)
-      );
+      await growthApiClient.advanceProspect(prospectId);
+      await reload();
     },
     async deleteProspect(prospectId: string) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.deleteProspect(state.workspace, prospectId)
-      );
+      const workspace = await growthApiClient.deleteProspect(prospectId);
+      await refreshAfterMutation(workspace);
     },
-    async addClient(input: CreateGrowthClientInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.addClient(state.workspace, input)
-      );
-
-      setState((current) => ({
-        ...current,
-        isAddClientOpen: false,
-        currentTab: "clientes",
-      }));
-    },
-    async updateClient(clientId: string, patch: UpdateGrowthClientInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.updateClient(state.workspace, clientId, patch)
-      );
-    },
-    async deleteClient(clientId: string) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.deleteClient(state.workspace, clientId)
-      );
-    },
-    async addMarketingTask(input: CreateGrowthMarketingTaskInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.addMarketingTask(state.workspace, input)
-      );
-
-      setState((current) => ({
-        ...current,
-        isAddMarketingOpen: false,
-        currentTab: "marketing",
-      }));
-    },
-    async updateMarketingTask(
-      taskId: string,
-      patch: UpdateGrowthMarketingTaskInput
+    async registerContact(
+      prospectId: string,
+      input: { canal?: string; contenido?: string }
     ) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.updateMarketingTask(state.workspace, taskId, patch)
-      );
+      await growthApiClient.registerContact(prospectId, input);
+      await reload();
     },
-    async deleteMarketingTask(taskId: string) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.deleteMarketingTask(state.workspace, taskId)
-      );
-    },
+    async addClient(_input: CreateGrowthClientInput) {},
+    async updateClient(_clientId: string, _patch: UpdateGrowthClientInput) {},
+    async deleteClient(_clientId: string) {},
+    async addMarketingTask(_input: CreateGrowthMarketingTaskInput) {},
+    async updateMarketingTask(
+      _taskId: string,
+      _patch: UpdateGrowthMarketingTaskInput
+    ) {},
+    async deleteMarketingTask(_taskId: string) {},
     async updateSettings(patch: UpdateGrowthSettingsInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.updateSettings(state.workspace, patch)
-      );
+      const workspace = await growthApiClient.updateSettings(patch);
+      await refreshAfterMutation(workspace);
     },
     async updateManualMetrics(patch: UpdateGrowthManualMetricsInput) {
-      if (!state.workspace) return;
-
-      await applyWorkspace(
-        growthDashboardService.updateManualMetrics(state.workspace, patch)
-      );
+      const workspace = await growthApiClient.updateManualMetrics(patch);
+      await refreshAfterMutation(workspace);
     },
-    async resetWorkspace() {
-      await applyWorkspace(growthDashboardService.resetWorkspace());
-
+    async importLocalWorkspace(workspace: GrowthWorkspace) {
+      const { result, workspace: nextWorkspace } =
+        await growthApiClient.importLocalWorkspace(workspace);
+      await refreshAfterMutation(nextWorkspace);
       setState((current) => ({
         ...current,
-        currentTab: "trabajo",
+        importSummary: result,
+        isImportOpen: false,
+      }));
+      return result;
+    },
+    async importSpreadsheet(file: File) {
+      const { result, workspace: nextWorkspace } =
+        await growthApiClient.importSpreadsheet(file);
+      await refreshAfterMutation(nextWorkspace);
+      setState((current) => ({
+        ...current,
+        importSummary: result,
+      }));
+      return result;
+    },
+    async resetWorkspace() {
+      setState((current) => ({
+        ...current,
+        error: "El reset local ya no aplica. Los datos viven en Supabase.",
       }));
     },
   };

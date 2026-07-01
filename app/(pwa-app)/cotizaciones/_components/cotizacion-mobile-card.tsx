@@ -23,11 +23,11 @@ export function CotizacionMobileCard({
     <motion.article
       className={row.cardClassName}
       data-testid="cotizacion-mobile-card"
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      initial={false}
+      animate={{ opacity: 1, y: 0 }}
       transition={
         reduceMotion
-          ? undefined
+          ? { duration: 0 }
           : {
               duration: 0.18,
               delay: Math.min(index * 0.03, 0.12),

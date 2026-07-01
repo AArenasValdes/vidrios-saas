@@ -189,6 +189,23 @@ const baseProps = {
 };
 
 describe("PasoDosWizardMovil", () => {
+  it("muestra selector de modalidad al entrar sin componentes cargados", () => {
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen={false}
+        wizard={createWizard({ isOpen: false })}
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", { name: /como quieres calcular el presupuesto/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Cotizar por items")).toBeInTheDocument();
+    expect(screen.getByText("Cotizar libre por total")).toBeInTheDocument();
+    expect(screen.queryByText("Componentes cargados")).not.toBeInTheDocument();
+  });
+
   it("debe mostrar etapa 1 con CTA cancelar", () => {
     const wizard = createWizard({ paso: 1 });
     render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);

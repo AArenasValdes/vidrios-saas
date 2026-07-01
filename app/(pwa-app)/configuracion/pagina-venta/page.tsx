@@ -159,15 +159,17 @@ export default function PaginaVentaPage() {
   const {
     gallery,
     isUploading: isGalleryUploading,
+    loadGallery,
     uploadAndAddImage,
     updateImage,
     deleteImage,
-  } = useLandingGallery();
+  } = useLandingGallery({ lazy: true });
   const {
     testimonials,
     isLoading: isLoadingTestimonials,
+    refreshTestimonials,
     updateStatus: updateTestimonialStatus,
-  } = usePublicLandingTestimonials();
+  } = usePublicLandingTestimonials({ lazy: true });
 
   const [form, setForm] = useState<UpdateOrganizationProfileInput>(EMPTY_FORM);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -185,6 +187,7 @@ export default function PaginaVentaPage() {
   const autosaveTimeoutRef = useRef<number | null>(null);
   const galleryMetadataTimeoutsRef = useRef<Record<string, number>>({});
   const pendingGalleryUploadsRef = useRef<PendingGalleryUpload[]>([]);
+  const loadedSectionsRef = useRef<Set<string>>(new Set());
 
   function serializeFormState(value: UpdateOrganizationProfileInput) {
     return JSON.stringify(value);
@@ -304,12 +307,31 @@ export default function PaginaVentaPage() {
       void persistCurrentForm(form, {
         successMessage: "Cambios guardados.",
       });
-    }, 700);
+    }, 1200);
 
     return () => clearAutosaveTimeout();
     // persistCurrentForm se define en el mismo componente y no debe reiniciar el debounce.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- estable en comportamiento
   }, [form, isReady, profile]);
+
+  useEffect(() => {
+    if (!isReady || !profile?.organizationId) {
+      return;
+    }
+
+    const section = activeSection;
+    if (loadedSectionsRef.current.has(section)) {
+      return;
+    }
+
+    if (section === "galeria") {
+      loadedSectionsRef.current.add(section);
+      void loadGallery();
+    } else if (section === "valoraciones") {
+      loadedSectionsRef.current.add(section);
+      void refreshTestimonials(String(profile.organizationId));
+    }
+  }, [activeSection, isReady, profile?.organizationId, loadGallery, refreshTestimonials]);
 
   function handleFieldChange(
     key: keyof UpdateOrganizationProfileInput,

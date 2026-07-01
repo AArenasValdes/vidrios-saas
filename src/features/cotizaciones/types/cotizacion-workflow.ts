@@ -82,6 +82,7 @@ export type CotizacionWorkflowDraft = {
   descuentoPct: number;
   flete: number;
   observaciones: string;
+  condicionesDePago?: string;
   items: CotizacionWorkflowItem[];
   quotePricingMode?: QuotePricingMode;
   costoTotalFabricacion?: number;

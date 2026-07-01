@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Conseguir pilotos y clientes pagados con prospeccion manual de bajo costo, alta personalizacion y seguimiento disciplinado.
+Conseguir conversaciones, demos, pruebas guiadas y pagos con prospeccion manual de bajo costo, alta personalizacion y seguimiento disciplinado.
 
 ## Cliente objetivo
 
@@ -14,7 +14,11 @@ Prioridad inicial:
 - shower door
 - termopanel
 - cierres de terraza
-- instaladores independientes
+- instaladores que cotizan manualmente por metro cuadrado, precio directo, margen o valor final
+
+Prioridad secundaria:
+
+- usuarios con cotizador tecnico que necesitan convertir el calculo final en propuesta profesional, movil, enviable por WhatsApp y con seguimiento
 
 ## Fuentes para encontrar prospectos
 
@@ -30,8 +34,9 @@ Prioridad inicial:
 
 - publica trabajos o instalaciones recientes
 - usa WhatsApp como canal principal
-- no tiene formulario claro o landing simple
-- tarda en responder o no centraliza consultas
+- menciona presupuestos, visitas a terreno o medidas por chat
+- muestra trabajos profesionales pero propuestas poco formales
+- atiende en terreno y probablemente cotiza al final del dia
 - tiene presencia digital minima, pero activa
 
 ## Flujo operativo
@@ -42,9 +47,12 @@ Prioridad inicial:
 4. Enviar mensaje manual personalizado
 5. Registrar respuesta o silencio
 6. Hacer seguimiento corto y respetuoso
-7. Llevar a demo corta
-8. Ofrecer piloto de 7 dias
-9. Medir conversion
+7. Llevar a demo corta con una cotizacion real
+8. Activar prueba guiada
+9. Lograr primera cotizacion creada el mismo dia
+10. Hacer seguimiento antes del vencimiento
+11. Ofrecer plan adecuado
+12. Medir conversion
 
 ## Cadencia semanal
 
@@ -67,16 +75,16 @@ Etapa inicial:
 
 ```text
 Hola [nombre], vi [empresa/perfil] y note que trabajan [rubro/proyecto].
-Estoy mostrando una herramienta simple para que no se pierdan consultas, puedan responder mas rapido por WhatsApp y convertirlas en cotizacion con link o PDF.
-Si te hace sentido, te muestro un ejemplo corto de 7 minutos.
+Estoy mostrando Ventora: una forma simple de cotizar desde el celular y enviar un PDF profesional sin llegar a casa a armar presupuestos.
+Si te hace sentido, te muestro una cotizacion real en 7 minutos.
 ```
 
 ## Plantilla de seguimiento
 
 ```text
 Hola [nombre], te escribo solo para retomar lo anterior.
-Creo que Ventora puede servirles sobre todo si hoy las consultas entran por WhatsApp y se mezclan entre chats, notas y cotizaciones.
-Si quieres, te envio un ejemplo puntual de como quedaria para [empresa].
+Creo que Ventora puede servirles si hoy toman medidas o precios en WhatsApp y despues tienen que armar el presupuesto en computador.
+Si quieres, te muestro como quedaria una cotizacion real para [rubro].
 ```
 
 ## Registros minimos
@@ -113,5 +121,6 @@ No se busca volumen masivo. Se busca:
 
 - entender el lenguaje del cliente
 - detectar objeciones reales
-- cerrar pilotos pequenos
+- llevar interesados a demo y prueba guiada
+- lograr primera cotizacion creada el mismo dia
 - convertir aprendizaje en mejoras del producto

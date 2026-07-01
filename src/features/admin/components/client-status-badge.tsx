@@ -6,7 +6,7 @@ const STATUS_LABELS: Record<SubscriptionStatus, string> = {
   trial_active: "Trial activo",
   trial_expiring: "Trial por vencer",
   trial_expired: "Trial vencido",
-  past_due: "Vencida",
+  past_due: "Suscripción vencida",
   cancelled: "Cancelada",
 };
 

@@ -68,7 +68,7 @@ export function PasoDosFormularioAcciones({
             {editingItemId
               ? isMobileViewport
                 ? "Guardar"
-                : "Guardar componente"
+                : "Guardar cambios"
               : isMobileViewport
                 ? "Agregar"
                 : "Agregar componente"}

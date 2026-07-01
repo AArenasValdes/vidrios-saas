@@ -159,6 +159,23 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(253000);
   });
 
+  it("debe conservar el total exacto cuando el costo se ingresa como total del grupo", () => {
+    const item = calculateComponentItem({
+      codigo: "V4",
+      tipo: "Ventana",
+      nombre: "Ventana living",
+      cantidad: 3,
+      costoProveedorUnitario: 400000,
+      margenPct: 0,
+      costInputScope: "group_total",
+    });
+
+    expect(item.costoProveedorTotal).toBe(400000);
+    expect(item.costoProveedorUnitario).toBe(133333.33);
+    expect(item.precioUnitario).toBe(133333.33);
+    expect(item.precioTotal).toBe(400000);
+  });
+
   it("debe dejar vidrio vacio cuando no viene informado", () => {
     const item = calculateComponentItem({
       codigo: "V2",

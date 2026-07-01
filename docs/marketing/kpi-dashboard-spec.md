@@ -6,18 +6,15 @@ Definir que debe medir cualquier dashboard comercial o de growth para Ventora y 
 
 ## KPIs base
 
-- leads encontrados
-- leads contactados
-- respuestas
-- conversaciones reales
-- demos agendadas
-- pilotos activos
-- pilotos convertidos a pago
-- CAC estimado
-- conversion contacto -> respuesta
-- conversion respuesta -> demo
-- conversion demo -> piloto
-- conversion piloto -> pago
+- mensajes recibidos
+- demos
+- pruebas iniciadas
+- primera cotizacion creada
+- pagos
+- conversion mensaje -> demo
+- conversion demo -> prueba
+- conversion prueba -> primera cotizacion
+- conversion primera cotizacion -> pago
 
 ## KPIs complementarios
 
@@ -25,15 +22,16 @@ Definir que debe medir cualquier dashboard comercial o de growth para Ventora y 
 - canal de origen
 - objecion principal
 - dias promedio a demo
-- dias promedio a piloto
-- cantidad de cotizaciones creadas por piloto
+- dias promedio a prueba guiada
+- dias promedio a primera cotizacion creada
+- cantidad de cotizaciones creadas por prueba
 
 ## Formulas sugeridas
 
-- `conversion contacto -> respuesta = respuestas / leads contactados`
-- `conversion respuesta -> demo = demos agendadas / respuestas`
-- `conversion demo -> piloto = pilotos activos / demos agendadas`
-- `conversion piloto -> pago = pilotos convertidos a pago / pilotos activos`
+- `conversion mensaje -> demo = demos / mensajes recibidos`
+- `conversion demo -> prueba = pruebas iniciadas / demos`
+- `conversion prueba -> primera cotizacion = primeras cotizaciones creadas / pruebas iniciadas`
+- `conversion primera cotizacion -> pago = pagos / primeras cotizaciones creadas`
 - `CAC estimado = costo total del periodo / clientes pagados`
 
 ## Estructura del dashboard HTML
@@ -70,11 +68,10 @@ Todo dashboard debe incluir:
 
 ### Embudo
 
-- prospectos
-- contactos
-- respuestas
+- mensajes recibidos
 - demos
-- pilotos
+- pruebas iniciadas
+- primera cotizacion creada
 - pagos
 
 ### Canales
@@ -100,4 +97,4 @@ Todo dashboard debe incluir:
 
 ## Regla obligatoria
 
-Si un agente propone metricas o dashboards, debe entregar tambien una version HTML simple y editable.
+No optimizar por vistas. Si un agente propone metricas o dashboards, debe priorizar mensajes recibidos -> demos -> pruebas iniciadas -> primera cotizacion creada -> pagos y entregar tambien una version HTML simple y editable.

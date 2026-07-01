@@ -452,6 +452,7 @@ export default function CotizacionPrintPage() {
   const [recordLoadError, setRecordLoadError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [showWhatsappFallbackActions, setShowWhatsappFallbackActions] = useState(false);
+  const [showExportRender, setShowExportRender] = useState(false);
   const [isHydratingRecord, setIsHydratingRecord] = useState(
     !Boolean(cotizacion && hasWorkflowItemData(cotizacion))
   );
@@ -982,6 +983,8 @@ export default function CotizacionPrintPage() {
       setIsExporting(true);
       setExportError(null);
       setShowWhatsappFallbackActions(false);
+      setShowExportRender(true);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const { blob } = await buildPdfFile();
       const { downloadPdfBlob, requiresPdfOpenFallback } =
         await loadCotizacionPdfModule();
@@ -1011,7 +1014,7 @@ export default function CotizacionPrintPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [buildPdfFile, exportFileName, markPdfDownloadInBackground]);
+  }, [buildPdfFile, exportFileName, markPdfDownloadInBackground, setShowExportRender]);
 
   const handleWhatsappShare = useCallback(async () => {
     try {
@@ -1130,9 +1133,11 @@ export default function CotizacionPrintPage() {
                       <img
                         alt={companyName}
                         className={s.companyLogo}
+                        height={76}
                         loading="eager"
                         onError={() => setFailedLogoUrl(companyLogoUrl)}
                         src={companyLogoUrl ?? undefined}
+                        width={76}
                       />
                     ) : (
                       <div className={s.companyLogoFallback}>{companyLogoFallbackLabel}</div>
@@ -1256,7 +1261,8 @@ export default function CotizacionPrintPage() {
                       const absoluteIndex = detailStartIndex + itemIndex + 1;
                       const dimensions = item.ancho && item.alto ? formatDimensions(item.ancho, item.alto) : null;
                       const description = item.descripcion?.trim();
-                      const referenceSvg = resolveTotalGlobalReferenceSvg(item.nombre, description);
+                      const presentationSvg = itemPresentationMap.get(item.id)?.drawingSvg;
+                      const referenceSvg = presentationSvg || resolveTotalGlobalReferenceSvg(item.nombre, description);
 
                       return (
                         <article key={item.id} className={s.totalGlobalDetailRow}>
@@ -1378,9 +1384,11 @@ export default function CotizacionPrintPage() {
                     <img
                       alt={companyName}
                       className={s.companyLogo}
+                      height={76}
                       loading="eager"
                       onError={() => setFailedLogoUrl(companyLogoUrl)}
                       src={companyLogoUrl ?? undefined}
+                      width={76}
                     />
                   ) : (
                     <div className={s.companyLogoFallback}>{companyLogoFallbackLabel}</div>
@@ -1959,11 +1967,13 @@ export default function CotizacionPrintPage() {
         </div>
       </div>
 
-      <div className={s.exportRenderHost} aria-hidden>
-        <section ref={exportSheetRef} className={`${s.sheet} ${s.exportSheet}`}>
-          {renderPrintPages("export")}
-        </section>
-      </div>
+      {showExportRender ? (
+        <div className={s.exportRenderHost} aria-hidden>
+          <section ref={exportSheetRef} className={`${s.sheet} ${s.exportSheet}`}>
+            {renderPrintPages("export")}
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

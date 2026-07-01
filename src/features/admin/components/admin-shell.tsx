@@ -1,37 +1,57 @@
+"use client";
+
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { useState } from "react";
+
+import { AdminHeaderProvider, useAdminHeader } from "@/features/admin/components/admin-header-context";
+import { AdminPageHeader } from "@/features/admin/components/admin-page-header";
 import { AdminSidebar } from "@/features/admin/components/admin-sidebar";
+import { ADMIN_PORTAL_ROOT_ID } from "@/features/admin/components/admin-portal";
+import tokens from "@/features/admin/styles/admin-design-tokens.module.css";
 import s from "./admin-shell.module.css";
 
 type AdminShellProps = {
   children: ReactNode;
-  founderEmail: string | null;
 };
 
-export function AdminShell({ children, founderEmail }: AdminShellProps) {
+function AdminShellFrame({ children }: AdminShellProps) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const header = useAdminHeader();
+
   return (
-    <div className={s.shell}>
-      <div className={s.inner}>
-        <header className={s.header}>
-          <div className={s.headerText}>
-            <strong className={s.title}>Ventora Admin</strong>
-            {founderEmail ? (
-              <span className={s.subtitle}>{founderEmail}</span>
-            ) : null}
-          </div>
+    <div className={`${tokens.tokens} ${s.shell}`}>
+      <AdminSidebar
+        mobileOpen={mobileNavOpen}
+        onNavigate={() => setMobileNavOpen(false)}
+      />
 
-          <div className={s.headerActions}>
-            <Link href="/auth/logout" className={s.primaryLink}>
-              Cerrar sesión
-            </Link>
-          </div>
-        </header>
-
-        <div className={s.body}>
-          <AdminSidebar />
-          <main className={s.content}>{children}</main>
+      <div className={s.main}>
+        <div className={s.headerWrap}>
+          <AdminPageHeader
+            syncedAt={header.syncedAt}
+            periodDays={header.periodDays}
+            onPeriodChange={header.onPeriodChange}
+            onRefresh={header.onRefresh}
+            isRefreshing={header.isRefreshing}
+            onNewProspect={header.onNewProspect}
+            customPrimaryAction={header.customPrimaryAction}
+            customSecondaryAction={header.customSecondaryAction}
+            customTertiaryAction={header.customTertiaryAction}
+            hideDefaultPrimaryActions={header.hideDefaultPrimaryActions}
+            onOpenNav={() => setMobileNavOpen(true)}
+          />
         </div>
+        <div className={s.content}>{children}</div>
       </div>
+      <div id={ADMIN_PORTAL_ROOT_ID} className={s.portalRoot} />
     </div>
+  );
+}
+
+export function AdminShell({ children }: AdminShellProps) {
+  return (
+    <AdminHeaderProvider>
+      <AdminShellFrame>{children}</AdminShellFrame>
+    </AdminHeaderProvider>
   );
 }

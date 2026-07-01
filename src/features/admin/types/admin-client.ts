@@ -1,4 +1,8 @@
 import type {
+  AdminPublicChannelDetail,
+  AdminPublicChannelListItem,
+} from "@/features/admin/types/admin-public-channel";
+import type {
   BillingPeriod,
   PaymentMethod,
   PlanCode,
@@ -72,6 +76,16 @@ export type AdminClientListItem = {
   ultimoPagoMontoClp: number | null;
   ultimoPagoFuente: AdminClientSource;
   isTestAccount: boolean;
+  cotizacionesCount: number;
+  pdfsGeneradosCount: number;
+  clientesRegistradosCount: number;
+  firstQuoteAt: string | null;
+  firstPdfAt: string | null;
+  lastActivityAt: string | null;
+  publicPageActive: boolean;
+  createdAt: string | null;
+  publicPageUrl: string | null;
+  publicChannel: AdminPublicChannelListItem;
 };
 
 export type AdminClientDetail = {
@@ -104,4 +118,13 @@ export type AdminClientDetail = {
     whatsappUrl: string | null;
     dashboardReadOnlyUrl: string | null;
   };
+  usage: {
+    cotizacionesCount: number;
+    pdfsGeneradosCount: number;
+    clientesRegistradosCount: number;
+    firstQuoteAt: string | null;
+    lastActivityAt: string | null;
+    publicPageActive: boolean;
+  };
+  publicChannel: AdminPublicChannelDetail;
 };

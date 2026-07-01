@@ -1,0 +1,173 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-height: var(--admin-header-height);
+  padding-bottom: var(--admin-space-block);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.leading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-top: 2px;
+  border-radius: var(--admin-radius-sm);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-bg-surface);
+  color: var(--admin-text);
+  cursor: pointer;
+}
+
+.titleBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-weight: 800;
+  color: var(--admin-text);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--admin-text-muted);
+}
+
+.syncRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  color: var(--admin-text-subtle);
+  font-size: 0.78rem;
+}
+
+.syncButton {
+  border: none;
+  background: transparent;
+  color: var(--admin-brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.spin {
+  animation: adminSpin 900ms linear infinite;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.periodField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--admin-radius-sm);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-bg-surface);
+  color: var(--admin-text-muted);
+  font-size: 0.84rem;
+}
+
+.periodField select {
+  border: none;
+  background: transparent;
+  color: var(--admin-text);
+  font: inherit;
+  outline: none;
+}
+
+.secondaryAction,
+.tertiaryAction,
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--admin-radius-sm);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.secondaryAction {
+  border: 1px solid var(--admin-border);
+  background: var(--admin-bg-surface);
+  color: var(--admin-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tertiaryAction {
+  border: none;
+  background: transparent;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  font: inherit;
+  min-height: 40px;
+  padding: 0 10px;
+}
+
+.primaryAction {
+  border: 1px solid var(--admin-border-strong);
+  background: var(--admin-brand);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+
+@media (min-width: 1024px) {
+  .menuButton {
+    display: none;
+  }
+}
+
+@keyframes adminSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .actions {
+    width: 100%;
+  }
+
+  .periodField,
+  .tertiaryAction,
+  .secondaryAction,
+  .primaryAction {
+    flex: 1 1 auto;
+  }
+}

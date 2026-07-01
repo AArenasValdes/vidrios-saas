@@ -11,6 +11,9 @@ import {
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
   resolveFreeTotalNotebookEditScope,
+  resolveMaterialColorHex,
+  resolveGrupoDraftReferentialUnitPrice,
+  resolveGrupoDraftSubtotal,
   shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
 } from "../use-paso-dos-agregar-grupo";
@@ -31,6 +34,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
     cobraPrecioSeparado: false,
     alcanceDetalles: [],
     pricingMode: "precio_directo" as const,
+    priceInputMode: "unit_direct" as const,
     material: "Aluminio" as const,
     colorHex: "#a8a8a8",
     sistema: "Corredera",
@@ -143,6 +147,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       ancho: "1500",
       alto: "2000",
       referencia: "L25",
+      priceInputMode: "line_m2",
       precioPorM2: "75000",
       minimoCobrable: "45000",
       redondeoPrecio: "1000",
@@ -150,7 +155,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     });
     const syncedVisibleDraft = syncDraftTemplatePricing(draft);
 
-    expect(syncedVisibleDraft.precio).toBe("675000");
+    expect(syncedVisibleDraft.precio).toBe("225000");
 
     const form = buildPasoDosGrupoComponentForm({
       items: [],
@@ -165,6 +170,30 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(item.precioTotal).toBe(675000);
   });
 
+  it("debe conservar el total exacto en modo valor total de pieza", () => {
+    const draft = createDraft({
+      cantidad: 3,
+      priceInputMode: "piece_total",
+      precio: "400000",
+      precioAjustadoManual: true,
+    });
+
+    expect(resolveGrupoDraftSubtotal(draft)).toBe(400000);
+    expect(Math.round(resolveGrupoDraftReferentialUnitPrice(draft))).toBe(133333);
+
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft,
+    });
+    const item = buildItemFromForm(form, [], null);
+
+    expect(form.costInputScope).toBe("group_total");
+    expect(form.costoProveedorUnitario).toBe("400000");
+    expect(item.precioTotal).toBe(400000);
+  });
+
   it("debe respetar precio manual sin línea como total del grupo", () => {
     const form = buildPasoDosGrupoComponentForm({
       items: [],
@@ -173,11 +202,10 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       draft: createDraft({
         cantidad: 3,
         referencia: "",
+        priceInputMode: "piece_total",
         precioPorM2: "",
         precio: "450000",
         precioAjustadoManual: true,
-        origenPrecio: "manual",
-        costInputScope: "group_total",
       }),
     });
     const item = buildItemFromForm(form, [], null);
@@ -386,6 +414,8 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       "Abatible",
       "Oscilobatiente",
       "Bow Window",
+      "Guillotina",
+      "Celosía",
     ]);
     expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual(["Fijo"]);
   });
@@ -400,8 +430,16 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(getSystemOptionsForSubtype("Shower door")).toEqual([
       "Corredera",
       "Batiente",
+      "Fijo / Walk-in",
     ]);
     expect(getConfigurationOptionsForSubtype("Shower door")).toContain("Frontal");
+  });
+
+  it("debe usar blanco fuerte por defecto al cambiar material a PVC", () => {
+    expect(resolveMaterialColorHex("PVC", "#a8a8a8")).toBe("#ffffff");
+    expect(resolveMaterialColorHex("PVC", "#f0eeeb")).toBe("#ffffff");
+    expect(resolveMaterialColorHex("PVC", "#b7bcc4")).toBe("#b7bcc4");
+    expect(resolveMaterialColorHex("Aluminio", "#ffffff")).toBe("#a8a8a8");
   });
 
   it("debe resolver el alcance de edicion del cuaderno libre por total", () => {

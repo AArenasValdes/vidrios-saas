@@ -42,6 +42,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: projects
 
 - **Proposito**: Obras/trabajos vinculados a un cliente
+- **Nombre visible en producto**: **Obras**. La tabla tecnica sigue siendo `projects`.
 - **Campos importantes**: `id` (bigint PK), `titulo` (NOT NULL), `descripcion`, `cliente_id` (FK), `organization_id` (FK), `estado`, `eliminado_en`
 - **Relaciones**: N:1 organizations, N:1 clients, 1:N cotizaciones
 - **Usada por**: Clientes (ficha), Cotizaciones (auto-creacion)
@@ -72,6 +73,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
   - `ancho`, `alto`, `area_m2` = null (no tienen dimensiones fisicas).
   - `linea`, `color`, `vidrio` = "" (no tienen datos tecnicos).
   - Metadata en `observaciones` via `encodeCotizacionItemPresentationMeta`: incluye `ivaMode` (`total_incluye_iva` / `neto_mas_iva`), `displayMode: "item_libre"`, `netoCalculado`, `ivaCalculado`, `totalClienteVisible`.
+- **Nota de roadmap**: `observaciones` ya concentra metadata comercial y visual derivada del workflow actual. No seguir cargando configuracion visual compleja ahi sin una estructura aditiva aprobada.
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
 - **Usada por**: Cotizaciones, PDF, presupuesto publico
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`
@@ -87,6 +89,30 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
 - **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea`. Multi-tenant estricto y soft delete obligatorio.
+
+---
+
+## Tablas propuestas no implementadas (solo documental)
+
+Estas tablas no estan aprobadas para implementacion inmediata. Sirven solo como referencia del roadmap Desktop Taller.
+
+### Tabla candidata: cotizacion_item_visual_configs
+
+- **Estado**: Propuesta futura, no implementada.
+- **Proposito**: Persistir configuracion visual guiada y SVG reutilizable por item de cotizacion sin sobrecargar `cotizacion_items.observaciones`.
+- **Campos esperados**: `id`, `organization_id`, `cotizacion_item_id`, `schema_version`, `config_json`, `svg_markup`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Reglas**:
+  - debe respetar `organization_id` y soft delete;
+  - `config_json` seria la fuente de render;
+  - `svg_markup` seria cache regenerable;
+  - no se debe mezclar con tablas legacy tecnicas.
+
+### Tablas no aprobadas en esta etapa
+
+- `oportunidades`
+- `cobros`
+
+Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar migraciones sin aprobacion explicita.
 
 ---
 
@@ -316,6 +342,22 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 | organization_profile | `lower(solicitud_publica_slug)` WHERE non-empty | Unique partial |
 | public_landing_gallery | `(organization_id, sort_order)` | btree |
 | web_push_subscriptions | `(organization_id, is_active)` | btree |
+
+---
+
+## Tablas growth (operaciones comerciales internas Ventora)
+
+Dominio separado de `solicitudes_contacto` y multi-tenant SaaS. Acceso via RLS + `growth_workspace_members.auth_user_id = auth.uid()`.
+
+| Tabla | Proposito |
+|---|---|
+| `growth_workspaces` | Workspace interno (`ventora-founder`); settings/metricas/experimentos en JSON |
+| `growth_workspace_members` | Membership por `auth_user_id`; seed fundador condicional |
+| `growth_prospects` | Prospectos comerciales Ventora; opcional `converted_organization_id` |
+| `growth_activities` | Historial auditable por prospecto |
+| `growth_tasks` | Trabajo diario (follow-ups, trials, pagos) |
+
+Migracion: `supabase/migrations/20260627120000_growth_workspace.sql`
 
 ---
 

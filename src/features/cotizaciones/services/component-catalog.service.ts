@@ -140,7 +140,7 @@ export const COMPONENT_CATALOG = [
       {
         tipo: "Shower door",
         descripcion: "Mamparas y shower door.",
-        sistemas: ["Corredera", "Batiente"],
+        sistemas: ["Corredera", "Batiente", "Fijo / Walk-in"],
         configuraciones: ["Frontal", "Esquinero", "En L"],
       },
     ],

@@ -15,12 +15,21 @@ export type GrowthWorkQueue =
 
 export type GrowthProspectStatus =
   | "nuevo"
+  | "investigado"
+  | "listo_para_contactar"
   | "contactado"
-  | "demo_enviada"
+  | "respondio"
+  | "calificado"
   | "demo_agendada"
   | "piloto_activo"
-  | "esperando_pago"
+  | "activado"
   | "pagado"
+  | "sin_respuesta"
+  | "no_calza"
+  | "no_contactar"
+  // compat lectura legacy local v3
+  | "demo_enviada"
+  | "esperando_pago"
   | "perdido";
 
 export type GrowthClientPlan =
@@ -72,6 +81,11 @@ export type GrowthProspect = {
   fechaProximoSeguimiento: string;
   notas: string;
   dataStatus: GrowthDataStatus;
+  convertedOrganizationId?: number | null;
+  legacySourceId?: string | null;
+  segmento?: string | null;
+  rubro?: string | null;
+  noContactar?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -107,16 +121,21 @@ export type GrowthMarketingTask = {
   resultado: string;
   notas: string;
   dataStatus: GrowthDataStatus;
+  prospectId?: string | null;
+  tipo?: string;
+  prioridad?: string;
   createdAt: string;
   updatedAt: string;
 };
 
 export type GrowthWorkspace = {
+  workspaceId?: string;
   settings: GrowthSettings;
   manualMetrics: GrowthManualMetrics;
   prospects: GrowthProspect[];
   clientAccounts: GrowthClientAccount[];
   marketingTasks: GrowthMarketingTask[];
+  experimentos?: unknown[];
   updatedAt: string;
 };
 

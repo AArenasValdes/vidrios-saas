@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OrganizacionId } from "@/features/auth/types/auth";
+import { TRIAL_DURATION_DAYS } from "@/features/subscriptions/services/subscription-status.service";
 
 export class AuthOAuthCompletionError extends Error {
   constructor(
@@ -51,6 +52,11 @@ type PublicUserRow = {
   eliminado_en: string | null;
 };
 
+type OAuthTrialProfileRow = {
+  plan_code?: string | null;
+  trial_ends_at?: string | null;
+};
+
 const PUBLIC_USER_SELECT =
   "id, correo, auth_user_id, organization_id, eliminado_en";
 
@@ -60,6 +66,61 @@ function normalizeEmail(email: string) {
 
 function normalizeEmpresaNombre(value: string) {
   return value.trim().replace(/\s+/gu, " ");
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function buildOAuthTrialProfilePatch(now = new Date()) {
+  const trialStartedAt = now.toISOString();
+  const trialEndsAt = addDays(now, TRIAL_DURATION_DAYS).toISOString();
+
+  return {
+    subscription_status: "trial_active",
+    trial_started_at: trialStartedAt,
+    trial_ends_at: trialEndsAt,
+    plan_type: "trial",
+    plan_code: "trial",
+    billing_period: "none",
+    payment_method: "none",
+    founder_price_locked: false,
+  };
+}
+
+async function ensureOAuthTrialProfile(input: {
+  admin: SupabaseClient;
+  organizationId: number;
+}) {
+  const { admin, organizationId } = input;
+  const trialPatch = buildOAuthTrialProfilePatch();
+  const { data, error } = await admin
+    .from("organization_profile")
+    .upsert(
+      {
+        organization_id: organizationId,
+        ...trialPatch,
+      },
+      { onConflict: "organization_id" }
+    )
+    .select("plan_code, trial_ends_at")
+    .single();
+
+  if (error) {
+    throw new AuthOAuthCompletionError(
+      `No pudimos activar la prueba gratuita: ${error.message}`
+    );
+  }
+
+  const profile = data as OAuthTrialProfileRow | null;
+
+  if (profile?.plan_code !== "trial" || !profile.trial_ends_at) {
+    throw new AuthOAuthCompletionError(
+      "La organizacion no quedo con una prueba gratuita valida."
+    );
+  }
+
+  return profile;
 }
 
 async function getPublicUserByAuthUserId(
@@ -283,23 +344,10 @@ export async function provisionOrganizationFromOAuthUser(
       );
     }
 
-    const { data: profile, error: profileError } = await admin
-      .from("organization_profile")
-      .select("plan_code, trial_ends_at")
-      .eq("organization_id", organizationId)
-      .maybeSingle();
-
-    if (profileError) {
-      throw new AuthOAuthCompletionError(
-        `No pudimos validar el trial: ${profileError.message}`
-      );
-    }
-
-    if (profile?.plan_code !== "trial") {
-      throw new AuthOAuthCompletionError(
-        `La organizacion quedo con plan_code ${profile?.plan_code ?? "null"} en vez de trial.`
-      );
-    }
+    const profile = await ensureOAuthTrialProfile({
+      admin,
+      organizationId,
+    });
 
     return {
       organizationId,

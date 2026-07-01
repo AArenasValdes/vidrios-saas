@@ -19,6 +19,15 @@ import type {
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 import { mapAdminProfileSubscription } from "@/features/admin/services/admin-subscription-mapper";
+import {
+  fetchAdminClientUsage,
+  fetchAdminClientsUsageMap,
+} from "@/features/admin/services/admin-clients-enrichment.service";
+import {
+  buildPublicChannelListLabel,
+  fetchPublicChannelDetail,
+  fetchPublicChannelSummaries,
+} from "@/features/admin/services/admin-public-channel.service";
 import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
 function pickPrimaryUser(rows: AdminOrganizationUserRow[]) {
@@ -133,6 +142,16 @@ function buildAdminClientListItem(input: {
   profile: AdminOrganizationProfileRow | null;
   users: AdminOrganizationUserRow[];
   payments: AdminOrganizationPaymentRow[];
+  usage?: {
+    cotizacionesCount: number;
+    pdfsGeneradosCount: number;
+    clientesRegistradosCount: number;
+    firstQuoteAt: string | null;
+    firstPdfAt: string | null;
+    lastActivityAt: string | null;
+    publicPageActive: boolean;
+  };
+  publicChannel?: AdminClientListItem["publicChannel"];
 }): AdminClientListItem {
   const principalUserRow = pickPrimaryUser(input.users);
   const principalUser = principalUserRow ? mapUser(principalUserRow) : null;
@@ -140,6 +159,19 @@ function buildAdminClientListItem(input: {
   const payments = input.payments.map(mapPayment);
   const lastApprovedPayment =
     payments.find((payment) => payment.status === "aprobado") ?? null;
+  const usage = input.usage ?? {
+    cotizacionesCount: 0,
+    pdfsGeneradosCount: 0,
+    clientesRegistradosCount: 0,
+    firstQuoteAt: null,
+    firstPdfAt: null,
+    lastActivityAt: null,
+    publicPageActive: Boolean(input.profile?.solicitud_publica_slug),
+  };
+  const quickLinks = buildQuickLinks(
+    input.organization.telefono ?? null,
+    input.profile
+  );
 
   return {
     organizationId: Number(input.organization.id),
@@ -158,11 +190,36 @@ function buildAdminClientListItem(input: {
     ultimoPagoMontoClp: lastApprovedPayment?.amountClp ?? null,
     ultimoPagoFuente: resolvePaymentSource(lastApprovedPayment),
     isTestAccount: input.profile?.is_test_account ?? false,
+    cotizacionesCount: usage.cotizacionesCount,
+    pdfsGeneradosCount: usage.pdfsGeneradosCount,
+    clientesRegistradosCount: usage.clientesRegistradosCount,
+    firstQuoteAt: usage.firstQuoteAt,
+    firstPdfAt: usage.firstPdfAt ?? null,
+    lastActivityAt:
+      usage.lastActivityAt ??
+      lastApprovedPayment?.paidAt ??
+      subscription.trialEndsAt ??
+      input.organization.creado_en ??
+      null,
+    publicPageActive: usage.publicPageActive,
+    createdAt: input.organization.creado_en ?? null,
+    publicPageUrl: quickLinks.publicPageUrl,
+    publicChannel: input.publicChannel ?? {
+      pageStatusLabel: usage.publicPageActive ? "Publicada" : "No configurada",
+      solicitudesLast30Days: 0,
+      lastSolicitudLabel: null,
+      solicitudesPending: 0,
+    },
   };
 }
 
 export async function listAdminClients(): Promise<AdminClientListItem[]> {
   const snapshot = await listAdminOrganizationsSnapshot();
+  const organizationIds = snapshot.organizations.map((row) => Number(row.id));
+  const [usageMap, publicSummaries] = await Promise.all([
+    fetchAdminClientsUsageMap(organizationIds),
+    fetchPublicChannelSummaries(organizationIds),
+  ]);
   const profileByOrg = new Map(
     snapshot.profiles.map((row) => [Number(row.organization_id), row])
   );
@@ -183,14 +240,43 @@ export async function listAdminClients(): Promise<AdminClientListItem[]> {
     paymentsByOrg.set(organizationId, current);
   }
 
-  return snapshot.organizations.map((organization) =>
-    buildAdminClientListItem({
+  return snapshot.organizations.map((organization) => {
+    const organizationId = Number(organization.id);
+    const usageSnapshot = usageMap.get(organizationId);
+    const channelSummary = publicSummaries.get(organizationId);
+    const channelLabel = channelSummary
+      ? buildPublicChannelListLabel(channelSummary)
+      : null;
+
+    return buildAdminClientListItem({
       organization,
-      profile: profileByOrg.get(Number(organization.id)) ?? null,
-      users: usersByOrg.get(Number(organization.id)) ?? [],
-      payments: paymentsByOrg.get(Number(organization.id)) ?? [],
-    })
-  );
+      profile: profileByOrg.get(organizationId) ?? null,
+      users: usersByOrg.get(organizationId) ?? [],
+      payments: paymentsByOrg.get(organizationId) ?? [],
+      usage: usageSnapshot
+        ? {
+            cotizacionesCount: usageSnapshot.cotizacionesCount,
+            pdfsGeneradosCount: usageSnapshot.pdfsGeneradosCount,
+            clientesRegistradosCount: usageSnapshot.clientesRegistradosCount,
+            firstQuoteAt: usageSnapshot.firstQuoteAt,
+            firstPdfAt: usageSnapshot.firstPdfAt,
+            lastActivityAt:
+              usageSnapshot.lastQuoteAt ??
+              organization.creado_en ??
+              null,
+            publicPageActive: usageSnapshot.publicPageActive,
+          }
+        : undefined,
+      publicChannel: channelSummary
+        ? {
+            pageStatusLabel: channelLabel?.statusLine ?? channelSummary.pageStatusLabel,
+            solicitudesLast30Days: channelSummary.solicitudesLast30Days,
+            lastSolicitudLabel: channelLabel?.detailLine ?? null,
+            solicitudesPending: channelSummary.solicitudesPending,
+          }
+        : undefined,
+    });
+  });
 }
 
 export async function getAdminClientDetail(
@@ -220,6 +306,10 @@ export async function getAdminClientDetail(
     snapshot.organization.telefono ?? null,
     snapshot.profile
   );
+  const [usageSnapshot, publicChannel] = await Promise.all([
+    fetchAdminClientUsage(organizationId),
+    fetchPublicChannelDetail(organizationId),
+  ]);
 
   return {
     organizationId,
@@ -251,5 +341,19 @@ export async function getAdminClientDetail(
       whatsappUrl: quickLinks.whatsappUrl,
       dashboardReadOnlyUrl: quickLinks.dashboardReadOnlyUrl,
     },
+    usage: {
+      cotizacionesCount: usageSnapshot.cotizacionesCount,
+      pdfsGeneradosCount: usageSnapshot.pdfsGeneradosCount,
+      clientesRegistradosCount: usageSnapshot.clientesRegistradosCount,
+      firstQuoteAt: usageSnapshot.firstQuoteAt,
+      lastActivityAt:
+        usageSnapshot.lastQuoteAt ??
+        lastApprovedPayment?.paidAt ??
+        subscription.trialEndsAt ??
+        snapshot.organization.creado_en ??
+        null,
+      publicPageActive: usageSnapshot.publicPageActive,
+    },
+    publicChannel,
   };
 }

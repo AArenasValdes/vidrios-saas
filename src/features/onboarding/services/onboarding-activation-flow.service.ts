@@ -199,7 +199,7 @@ function buildActivationItemDetail(item: CotizacionWorkflowItem): string {
     parts.push(`Cant. ${item.cantidad}`);
   }
 
-  const lineLabel = item.lineaComercial.trim() || presentation.sistema.trim();
+  const lineLabel = (item.lineaComercial.trim() || presentation.sistema.trim()).replace(/^Linea\s+/i, "");
   if (lineLabel) {
     parts.push(`Linea ${lineLabel}`);
   }
@@ -481,7 +481,7 @@ export function buildActivationDemoDraft(): CotizacionWorkflowDraft {
     tipoTrabajo: ACTIVATION_DEMO.obra,
     componenteNombre: ACTIVATION_DEMO.componenteNombre,
     descripcion: ACTIVATION_DEMO.componenteNombre,
-    lineaComercial: "Linea 5000",
+    lineaComercial: "Corredera",
     ancho: ACTIVATION_DEMO.ancho,
     alto: ACTIVATION_DEMO.alto,
     cantidad: ACTIVATION_DEMO.cantidad,

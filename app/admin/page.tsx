@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { AdminDashboardWorkspace } from "@/features/admin/components/admin-dashboard-workspace";
 
 export default function AdminHomePage() {
-  redirect("/admin/clientes");
+  return <AdminDashboardWorkspace />;
 }

@@ -36,6 +36,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.cursor/
+hs_err_*.log
+replay_*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -55,5 +58,11 @@ android-twa/*.idsig
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local docs and work in progress
+docs/EXECUTION_NOW.md
+docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
+*.swp
+*.swo
 
 .vercel

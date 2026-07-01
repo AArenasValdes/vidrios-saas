@@ -1,10 +1,13 @@
 "use client";
 
-import { LuCheck, LuFolderOpen, LuPencil, LuTrash2 } from "react-icons/lu";
+import { LuCheck, LuCopy, LuFolderOpen, LuPencil, LuTrash2 } from "react-icons/lu";
+
+import type { ComponentListCardViewModel } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 import type { PasoDosPanelComponentesProps } from "../../_types/paso-dos";
 
 import { EditorRapidoMovil } from "../editor-rapido-movil";
+import panelDesktop from "../paso-dos-panel-desktop.module.css";
 import s from "../../page.module.css";
 
 type Props = Pick<
@@ -39,10 +42,14 @@ type Props = Pick<
   | "onMeasureFirstItem"
   | "onSelectQuickEditItem"
   | "onEditItem"
+  | "onDuplicateItem"
   | "onRemoveItem"
   | "onRecalculateTemplatePrice"
   | "onSaveQuickPriceTemplateFromItem"
   | "isSavingQuickPriceTemplate"
+  | "isAddGroupWizardOpen"
+  | "activeDraftCard"
+  | "onContinueActiveDraft"
 >;
 
 export function PasoDosPanelLista({
@@ -76,11 +83,159 @@ export function PasoDosPanelLista({
   onMeasureFirstItem,
   onSelectQuickEditItem,
   onEditItem,
+  onDuplicateItem,
   onRemoveItem,
   onRecalculateTemplatePrice,
   onSaveQuickPriceTemplateFromItem,
   isSavingQuickPriceTemplate,
+  isAddGroupWizardOpen = false,
+  activeDraftCard = null,
+  onContinueActiveDraft,
 }: Props) {
+  if (!isMobileViewport) {
+    const allCards = visibleComponentListState.cards;
+    const incompleteCards = allCards.filter((item) => !item.isComplete);
+    const completeCards = allCards.filter((item) => item.isComplete);
+    const hasEditingSection = Boolean(activeDraftCard) || incompleteCards.length > 0;
+    const isEmpty = items.length === 0 && !activeDraftCard;
+
+    const renderDesktopCard = (item: ComponentListCardViewModel) => {
+      const isQuickEditSelected = expandedQuickEditItemId === item.id;
+      const isEditing = editingItemId === item.id;
+      const cardClassName = [
+        panelDesktop.pieceCard,
+        panelDesktop.pieceCardClickable,
+        !item.isComplete ? panelDesktop.pieceCardEditing : "",
+        isQuickEditSelected || isEditing ? panelDesktop.pieceCardSelected : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return (
+        <article
+          key={item.id}
+          data-step-two-item-id={item.id}
+          className={cardClassName}
+          onClick={() => onEditItem(item.source)}
+        >
+          <div className={panelDesktop.pieceCardRowTop}>
+            <span className={panelDesktop.pieceCardTitle}>{item.title}</span>
+            {quotePricingMode === "por_item" ? (
+              <strong className={panelDesktop.pieceCardAmount}>{item.price}</strong>
+            ) : null}
+          </div>
+          <p className={panelDesktop.pieceCardMeta}>{item.metaPrimary || item.compactMeta}</p>
+          <div className={panelDesktop.pieceCardFooter}>
+            <span
+              className={`${panelDesktop.pieceBadge} ${
+                item.isComplete ? panelDesktop.pieceBadgeComplete : panelDesktop.pieceBadgePending
+              }`}
+            >
+              {item.isComplete ? <LuCheck size={11} aria-hidden /> : null}
+              {item.isComplete ? "Completo" : "Pendiente"}
+            </span>
+            <div className={panelDesktop.pieceCardActions}>
+              <button
+                className={panelDesktop.pieceIconButton}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditItem(item.source);
+                }}
+                type="button"
+                title="Editar"
+                aria-label={`Editar ${item.title}`}
+              >
+                <LuPencil size={13} aria-hidden />
+              </button>
+              <button
+                className={panelDesktop.pieceIconButton}
+                type="button"
+                title="Duplicar"
+                aria-label={`Duplicar ${item.title}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDuplicateItem(item.source);
+                }}
+              >
+                <LuCopy size={13} aria-hidden />
+              </button>
+              <button
+                className={panelDesktop.pieceIconButtonDanger}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemoveItem(item.id);
+                }}
+                type="button"
+                title="Eliminar"
+                aria-label={`Eliminar ${item.title}`}
+              >
+                <LuTrash2 size={13} aria-hidden />
+              </button>
+            </div>
+          </div>
+        </article>
+      );
+    };
+
+    return (
+      <>
+        {fieldErrorItems ? <div className={s.inlineError}>{fieldErrorItems}</div> : null}
+
+        {isEmpty ? (
+          <div className={panelDesktop.emptyState}>
+            <LuFolderOpen size={28} aria-hidden />
+            <strong>Aun no agregas componentes</strong>
+            <span>
+              {isAddGroupWizardOpen
+                ? "Termina el asistente de la izquierda."
+                : "Agrega el primer componente desde la izquierda."}
+            </span>
+          </div>
+        ) : (
+          <div className={panelDesktop.listBody}>
+            {hasEditingSection ? (
+              <section className={panelDesktop.pieceSection} aria-label="Piezas en edición">
+                <h4 className={panelDesktop.pieceSectionTitle}>En edición</h4>
+
+                {activeDraftCard ? (
+                  <article className={`${panelDesktop.pieceCard} ${panelDesktop.pieceCardEditing}`}>
+                    <div className={panelDesktop.pieceCardRowTop}>
+                      <span className={panelDesktop.pieceCardTitle}>
+                        {activeDraftCard.code} · {activeDraftCard.title}
+                      </span>
+                    </div>
+                    <span className={`${panelDesktop.pieceBadge} ${panelDesktop.pieceBadgeEditing}`}>
+                      En edición · {activeDraftCard.stepLabel}
+                    </span>
+                    <p className={panelDesktop.pieceCardMeta}>{activeDraftCard.missingLabel}</p>
+                    {onContinueActiveDraft ? (
+                      <button
+                        type="button"
+                        className={panelDesktop.pieceContinueButton}
+                        onClick={onContinueActiveDraft}
+                      >
+                        Continuar
+                      </button>
+                    ) : null}
+                  </article>
+                ) : null}
+
+                {incompleteCards.map(renderDesktopCard)}
+              </section>
+            ) : null}
+
+            {completeCards.length > 0 ? (
+              <section className={panelDesktop.pieceSection} aria-label="Piezas completas">
+                <h4 className={panelDesktop.pieceSectionTitle}>Completas · {completeCards.length}</h4>
+                {completeCards.map(renderDesktopCard)}
+              </section>
+            ) : null}
+          </div>
+        )}
+      </>
+    );
+  }
+
   const viewportModeClass = isMobileViewport
     ? s.stepTwoListViewportModeMobile
     : s.stepTwoListViewportModeDesktop;
@@ -124,11 +279,21 @@ export function PasoDosPanelLista({
 
       {fieldErrorItems ? <div className={s.inlineError}>{fieldErrorItems}</div> : null}
 
-      {items.length === 0 ? (
-        <div className={`${s.emptyState} ${s.stepTwoPanelEmpty} ${s.stepTwoPanelEmptyMobile}`}>
-          <LuFolderOpen size={32} aria-hidden />
+      {items.length === 0 && !activeDraftCard ? (
+        <div
+          className={`${s.emptyState} ${s.stepTwoPanelEmpty} ${
+            isMobileViewport ? s.stepTwoPanelEmptyMobile : s.stepTwoPanelEmptyDesktop
+          }`}
+        >
+          <LuFolderOpen size={isMobileViewport ? 32 : 28} aria-hidden />
           <strong>Aun no agregas componentes</strong>
-          <span>Primero elige arriba el componente y despues lo veras aqui.</span>
+          <span>
+            {isAddGroupWizardOpen
+              ? "Termina el asistente de la izquierda."
+              : isMobileViewport
+                ? "Primero elige arriba el componente y despues lo veras aqui."
+                : "Agrega el primer componente desde la izquierda."}
+          </span>
         </div>
       ) : (
         <div
@@ -138,6 +303,36 @@ export function PasoDosPanelLista({
           ref={stepTwoListRef}
         >
           <div className={`${s.stepTwoList} ${s.stepTwoListMobile} ${listModeClass}`}>
+            {activeDraftCard ? (
+              <article
+                className={`${s.stepTwoListCard} ${s.stepTwoListCardMobile} ${s.stepTwoListCardModeDesktop} ${s.desktopEditingDraftCard}`}
+              >
+                <div className={s.stepTwoListBody}>
+                  <div className={s.stepTwoListTop}>
+                    <div className={s.stepTwoListHeading}>
+                      <div className={s.stepTwoListName}>
+                        {activeDraftCard.code} · {activeDraftCard.title}
+                      </div>
+                      <div className={s.stepTwoStatusGroup}>
+                        <span className={`${s.stepTwoStatusPill} ${s.stepTwoStatusPillPending}`}>
+                          En edicion · {activeDraftCard.stepLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={s.stepTwoMetaLine}>{activeDraftCard.missingLabel}</div>
+                  {onContinueActiveDraft ? (
+                    <button
+                      type="button"
+                      className={panelDesktop.pieceContinueButton}
+                      onClick={onContinueActiveDraft}
+                    >
+                      Continuar
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            ) : null}
             {visibleComponentListState.paddingTop > 0 ? (
               <div
                 aria-hidden

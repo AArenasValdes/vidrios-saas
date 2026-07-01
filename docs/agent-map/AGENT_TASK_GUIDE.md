@@ -2,6 +2,33 @@
 
 Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la seccion correspondiente.
 
+## Prelectura obligatoria
+
+Antes de tocar desktop comercial, cotizaciones, dashboard, visual o catalogos, leer:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+2. `docs/agent-map/README.md`
+3. el bloque especifico de este `AGENT_TASK_GUIDE.md`
+
+---
+
+## Si la tarea es sobre dashboard comercial desktop, revisar primero:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 1
+2. `docs/agent-map/FEATURES_MAP.md` - Seccion "Dashboard"
+3. `docs/agent-map/ROUTES_MAP.md` - Ruta `/dashboard`
+4. `src/features/dashboard/services/dashboard-summary-server.service.ts`
+5. `app/api/dashboard/summary/route.ts`
+6. `app/(pwa-app)/dashboard/_components/desktop/dashboard-desktop.tsx`
+7. `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`
+
+Reglas:
+
+- usar solo datos reales existentes;
+- no inventar KPIs;
+- no abrir CRM, oportunidades ni cobros;
+- no romper contrato actual consumido por mobile.
+
 ---
 
 ## Si la tarea es sobre cotizaciones, revisar primero:
@@ -31,6 +58,41 @@ Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la se
 - Hoy solo aplican: **`Espejo`**, **`Cubierta de mesa`**.
 - Usar siempre `shouldRequireProfileMaterialForComponent(tipo)` antes de mostrar/exigir Material, Color perfil o filas PDF de material/color.
 - Si agregas otro tipo solo vidrio, actualizar el set en `workflow-ui.ts` y correr `profile-material-regression.test.ts`.
+
+### Si la tarea es sobre Quote Studio desktop especificamente:
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 0 y 2
+2. `app/(pwa-app)/cotizaciones/nueva/page.tsx`
+3. `app/(pwa-app)/cotizaciones/nueva/_components/resumen-desktop-lateral.tsx`
+4. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`
+5. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-panel-componentes.tsx`
+6. `app/(pwa-app)/cotizaciones/nueva/_hooks/use-paso-dos-agregar-grupo.ts`
+7. `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`
+8. `src/features/cotizaciones/services/cotizacion-line-pricing.service.ts`
+
+Reglas:
+
+- primero estabilizar desktop actual; despues pulir Quote Studio;
+- mobile no se toca salvo regresion compartida;
+- no romper PDF, WhatsApp, aprobacion publica ni contratos actuales;
+- normalizacion `861px -> 1024px` solo dentro de trabajo controlado de estabilizacion.
+
+---
+
+## Si la tarea es sobre constructor visual guiado, revisar primero:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 3
+2. `docs/COTIZACION_FLOW_CONTEXT.md`
+3. `src/utils/window-drawings.ts`
+4. `src/utils/cotizacion-item-presentation.ts`
+5. `src/features/cotizaciones/new-quote/workflow-ui.ts`
+6. `docs/agent-map/DATA_MODEL_MAP.md`
+
+Reglas:
+
+- no construir CAD libre;
+- no tocar PDF ni renderer publico sin revisar compatibilidad;
+- no crear migraciones ni tablas nuevas sin aprobacion;
+- no agregar cubicacion automatica en esta fase.
 
 ### Para PDF especificamente:
 1. `src/utils/cotizacion-pdf.ts`
@@ -179,6 +241,10 @@ Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la se
 - [ ] No tocar tablas legacy sin instruccion explicita
 - [ ] No reintroducir cotizador tecnico como centro del producto
 - [ ] Verificar RLS si se agrega query nueva
+- [ ] No crear migraciones sin aprobacion explicita
+- [ ] No tocar PDF, WhatsApp ni rutas publicas sin aprobacion
+- [ ] No agregar logica de cubicacion sin piloto aprobado
+- [ ] No abrir oportunidades, cobros, roles o equipos por fuera del roadmap
 
 ## Checklist despues de modificar codigo
 

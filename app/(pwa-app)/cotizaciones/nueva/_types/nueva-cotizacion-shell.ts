@@ -11,7 +11,10 @@ import type { ResumenDesktopLateral } from "../_components/resumen-desktop-later
 export type EncabezadoFlujoProps = ComponentProps<typeof EncabezadoFlujo>;
 export type PasoUnoDatosClienteProps = ComponentProps<typeof PasoUnoDatosCliente>;
 export type PasoDosWizardMovilProps = ComponentProps<typeof PasoDosWizardMovil>;
-export type PasoDosSeccionProps = ComponentProps<typeof PasoDosSeccion>;
+export type PasoDosSeccionProps = Omit<
+  ComponentProps<typeof PasoDosSeccion>,
+  "addGroupSheetProps"
+>;
 export type PasoTresResumenProps = ComponentProps<typeof PasoTresResumen>;
 export type ResumenDesktopLateralProps = ComponentProps<typeof ResumenDesktopLateral>;
 export type PasoDosAgregarGrupoSheetProps = ComponentProps<typeof PasoDosAgregarGrupoSheet>;

@@ -34,6 +34,2346 @@
     linear-gradient(180deg, #f7f9fc 0%, var(--flow-bg) 22%, #edf2f8 100%);
 }
 
+@media (min-width: 861px) {
+  .desktopStepOne {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .desktopStepOneColumns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.25rem 1.5rem;
+    align-items: start;
+  }
+
+  .desktopStepOneMain {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .desktopStepOneAside {
+    position: sticky;
+    top: calc(var(--step1-topbar, 4.35rem) + 0.75rem);
+    align-self: start;
+    min-width: 0;
+  }
+
+  .desktopStepIntro {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0 0 0.15rem;
+  }
+
+  .desktopStepIntro h1 {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.9375rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .desktopStepIntro p {
+    margin: 0;
+    color: #5f708a;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .desktopStepOneCard,
+  .desktopPieceEditor {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(20, 39, 70, 0.06);
+  }
+
+  .desktopStepOneCard {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.95rem 1.05rem;
+  }
+
+  .desktopSelectedClientCompact {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .desktopSelectedClientCompactRow {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+
+  .desktopChangeClientButton {
+    border: 0;
+    background: transparent;
+    color: #1459b8;
+    font-size: 0.84rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .desktopChangeClientButton:hover {
+    color: #243b6b;
+  }
+
+  .desktopStepOneCard .input,
+  .desktopStepOneCard .textarea,
+  .desktopNewClientPanel .input {
+    min-height: 50px;
+    font-size: 1rem;
+  }
+
+  .desktopClientSearch {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0 0.95rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .desktopClientSearchIcon {
+    color: #6b7f99;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  .desktopClientSearchInput {
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: #0a1c38;
+    font: inherit;
+    font-size: 1rem;
+  }
+
+  .desktopClientSearchInput::placeholder {
+    color: #8a96a6;
+  }
+
+  .desktopClientSearchClear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #8090aa;
+    cursor: pointer;
+  }
+
+  .desktopRecentSection {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .desktopRecentSectionLabel {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7f99;
+  }
+
+  .desktopRecentList {
+    overflow: hidden;
+    border: 1px solid #d7e1ee;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .desktopRecentRow {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: center;
+    width: 100%;
+    min-height: 62px;
+    padding: 0.75rem 0.95rem;
+    border: 0;
+    border-bottom: 1px solid #e8eef6;
+    background: transparent;
+    color: #0a1c38;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+
+  .desktopRecentRow:last-child {
+    border-bottom: 0;
+  }
+
+  .desktopRecentRow:hover {
+    background: #f8fafc;
+  }
+
+  .desktopRecentRowActive {
+    background: #f0f6ff;
+    box-shadow: inset 0 0 0 1px #c5daf5;
+  }
+
+  .desktopRecentAvatar {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef3fb;
+    color: #2f5ea8;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .desktopRecentCopy {
+    min-width: 0;
+  }
+
+  .desktopRecentRow strong,
+  .desktopRecentCopy strong {
+    display: block;
+    color: #06162f;
+    font-size: 0.98rem;
+    font-weight: 700;
+  }
+
+  .desktopRecentRow small,
+  .desktopRecentCopy small {
+    display: block;
+    overflow: hidden;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktopNewClientPanel {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .desktopInlineLinkButton {
+    justify-self: start;
+    border: 0;
+    background: transparent;
+    color: #1459b8;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .desktopCreateClientButton,
+  .desktopMoreDataButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+    border: 0;
+    background: transparent;
+    color: #1459b8;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+
+  .desktopInlineAction {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+    border: 0;
+    background: transparent;
+    color: #1459b8;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .desktopMoreDataButton {
+    color: #243b6b;
+    font-weight: 600;
+  }
+
+  .desktopCardTitle {
+    color: #06162f;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .desktopFieldLabel {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #4a5d78;
+  }
+
+  .desktopStepOneGrid,
+  .desktopMoreDataGrid,
+  .desktopMeasuresGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem 1rem;
+  }
+
+  .desktopStepOneGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desktopWorkDataCompactGrid {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .desktopWorkObraField {
+    grid-column: 1 / -1;
+  }
+
+  .desktopFullField {
+    grid-column: 1 / -1;
+  }
+
+  .desktopBudgetModeBlock {
+    display: grid;
+    gap: 0.65rem;
+    padding-top: 0.15rem;
+  }
+
+  .desktopBudgetModeGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .desktopBudgetModeButton {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    min-height: 74px;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #d7e1ee;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #0a1c38;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+
+  .desktopBudgetModeIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    margin-top: 0.05rem;
+    border-radius: 8px;
+    background: #eef3fb;
+    color: #335ea9;
+    font-size: 0.95rem;
+  }
+
+  .desktopBudgetModeCopy {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+
+  .desktopBudgetModeCopy strong {
+    color: #06162f;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .desktopBudgetModeCopy span {
+    color: #5f708a;
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .desktopBudgetModeButtonActive {
+    border-color: #1f66c7;
+    background: #edf5ff;
+    box-shadow: inset 0 0 0 1px #1f66c7;
+  }
+
+  .desktopBudgetModeButtonActive .desktopBudgetModeIcon {
+    background: #dbeafe;
+    color: #1459b8;
+  }
+
+  .desktopDraftBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    background: #edf2f7;
+    color: #50617a;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .desktopDraftBadgeDot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: #8090aa;
+  }
+
+  .desktopSideSummary {
+    width: 100%;
+  }
+
+  .desktopSideSummaryCard {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.95rem 1rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .desktopSideSummaryTitle {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7f99;
+  }
+
+  .desktopSideSummaryRows {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .desktopSideSummaryRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .desktopSideSummaryRow span {
+    flex: 0 0 auto;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .desktopSideSummaryRow strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: #06162f;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktopSideSummaryRowTotal {
+    padding-top: 0.4rem;
+    margin-top: 0.05rem;
+    border-top: 1px solid #e4ebf4;
+  }
+
+  .desktopSideSummaryStatus {
+    color: #5f708a !important;
+    font-weight: 600 !important;
+    font-size: 0.92rem !important;
+  }
+
+  .desktopSideSummaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    min-height: 46px;
+    margin-top: 0.1rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 10px;
+    background: #243b6b;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.98rem;
+    cursor: pointer;
+  }
+
+  .desktopSideSummaryButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .desktopSideSummaryHelp {
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .desktopSideSummaryButton svg {
+    font-size: 1.05rem;
+  }
+
+.desktopSideSummaryMuted {
+  color: #8090aa !important;
+  font-weight: 700 !important;
+}
+
+.stepThreeDesktopShell {
+  --step3-border: #d9e4f1;
+  --step3-ink: #142744;
+  --step3-muted: #64748b;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.stepThreeDesktopLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(330px, 0.88fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.stepThreeDesktopMain {
+  min-width: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.stepThreeDesktopHeader {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.stepThreeDesktopHeader h2 {
+  margin: 0;
+  color: #06162f;
+  font-size: clamp(1.35rem, 1.7vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.stepThreeDesktopHeader p {
+  margin: 0;
+  color: #6b7f99;
+  font-size: 0.9rem;
+}
+
+.stepThreeDesktopContext {
+  padding: 0.72rem 0.9rem;
+  border: 1px solid var(--step3-border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #52637a;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.stepThreeDesktopSection,
+.stepThreeDesktopSummaryPanel {
+  border: 1px solid var(--step3-border);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(20, 39, 70, 0.035);
+}
+
+.stepThreeDesktopSection {
+  overflow: hidden;
+}
+
+.stepThreeDesktopSectionHeader {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e5edf7;
+  background: #f8fbff;
+}
+
+.stepThreeDesktopSectionHeader h3 {
+  margin: 0;
+  color: var(--step3-ink);
+  font-size: 0.98rem;
+  letter-spacing: 0;
+}
+
+.stepThreeDesktopTableWrap {
+  overflow-x: auto;
+}
+
+.stepThreeDesktopTable {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  color: var(--step3-ink);
+  font-size: 0.8rem;
+}
+
+.stepThreeDesktopTable th,
+.stepThreeDesktopTable td {
+  padding: 0.72rem 0.78rem;
+  border-bottom: 1px solid #edf2f8;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.stepThreeDesktopTable th {
+  color: #6b7f99;
+  background: #fbfdff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepThreeDesktopTable tbody tr:hover {
+  background: #f8fbff;
+}
+
+.stepThreeDesktopCode,
+.stepThreeDesktopValueCell {
+  color: #06162f;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.stepThreeDesktopMutedCell {
+  max-width: 260px;
+  overflow: hidden;
+  color: var(--step3-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepThreeDesktopRowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.stepThreeDesktopIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d9e4f1;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #4f6684;
+  cursor: pointer;
+}
+
+.stepThreeDesktopIconButton:hover {
+  border-color: #b9cbe6;
+  background: #eef5ff;
+  color: #1c4f9d;
+}
+
+.stepThreeDesktopIconButton:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.stepThreeDesktopIconButtonDanger {
+  color: #b42318;
+  background: #fffafa;
+}
+
+.stepThreeDesktopAdjustments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.82rem;
+  padding: 1rem;
+}
+
+.stepThreeDesktopAdjustmentBlock {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.82rem;
+  border: 1px solid #e5edf7;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.stepThreeDesktopAdjustmentWide {
+  grid-column: 1 / -1;
+}
+
+.stepThreeDesktopFieldLabel {
+  color: #52637a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stepThreeValidityChoices,
+.stepThreeDesktopSegmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.stepThreeValidityChoice,
+.stepThreeDesktopSegmented button {
+  min-height: 2.2rem;
+  padding: 0 0.75rem;
+  border: 1px solid #d9e4f1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #243b6b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stepThreeValidityChoiceActive,
+.stepThreeDesktopSegmentedActive {
+  border-color: #326ed1 !important;
+  background: #eaf2ff !important;
+  color: #1c4f9d !important;
+}
+
+.stepThreeDesktopInlineHint {
+  color: #7a8aa1;
+  font-size: 0.74rem;
+}
+
+.stepThreeManualTotalBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.72rem;
+  border: 1px solid #d9e4f1;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.stepThreeManualTotalBox div,
+.stepThreeManualTotalInput {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.stepThreeManualTotalBox strong,
+.stepThreeManualTotalInput span {
+  color: var(--step3-ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.stepThreeManualTotalBox span,
+.stepThreeManualTotalInput small {
+  color: var(--step3-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.stepThreeLinkButton,
+.stepThreeTertiaryButton {
+  border: 0;
+  background: transparent;
+  color: #1e63c5;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.stepThreeDesktopAside {
+  position: sticky;
+  top: 5.25rem;
+}
+
+.stepThreeDesktopSummaryPanel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.stepThreeDesktopSummaryPanel h3 {
+  margin: 0;
+  color: var(--step3-ink);
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.stepThreeDesktopSummaryRows {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.stepThreeDesktopSummaryRows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.stepThreeDesktopSummaryRows span {
+  color: #6b7f99;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.stepThreeDesktopSummaryRows strong {
+  color: #06162f;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.stepThreeDesktopSummaryTotal {
+  padding-top: 0.72rem;
+  margin-top: 0.2rem;
+  border-top: 1px solid #e4ebf4;
+}
+
+.stepThreeDesktopSummaryTotal span {
+  color: var(--step3-ink);
+}
+
+.stepThreeDesktopSummaryTotal strong {
+  color: #06162f;
+  font-size: 1.35rem;
+}
+
+.stepThreeDesktopReadyState {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  padding: 0.38rem 0.6rem;
+  border-radius: 999px;
+  background: #e8f8ef;
+  color: #18744f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.stepThreeDesktopSummaryActions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.stepThreeDesktopSummaryActions .btnPrimary,
+.stepThreeDesktopSummaryActions .btnGhost {
+  width: 100%;
+  min-height: 42px;
+}
+
+.stepThreeTertiaryButton {
+  justify-self: center;
+  min-height: 34px;
+}
+
+@media (max-width: 1040px) {
+  .stepThreeDesktopLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stepThreeDesktopAside {
+    position: static;
+  }
+}
+
+.rtShell {
+  display: grid;
+  gap: 1rem;
+}
+
+.rtLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(330px, 0.92fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.rtMain {
+  min-width: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.rtHeader {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.rtHeader h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.85rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.rtHeader p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.rtContext {
+  padding: 0.56rem 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+.rtContextSep {
+  color: #cbd5e1;
+}
+
+.rtSection {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.rtSectionTitle {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid #e8edf4;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.rtTableWrap {
+  overflow-x: auto;
+}
+
+.rtTable {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  color: #0f172a;
+  font-size: 0.875rem;
+}
+
+.rtTable th {
+  padding: 0.62rem 0.8rem;
+  border-bottom: 1px solid #edf2f8;
+  text-align: left;
+  vertical-align: middle;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rtTable td {
+  padding: 0.72rem 0.8rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.rtRow {
+  height: 74px;
+}
+
+.rtThCode { width: 8%; }
+.rtThNameConfig { width: 42%; }
+.rtThMeasure { width: 13%; }
+.rtThQty { width: 8%; text-align: center; }
+.rtThValue { width: 14%; text-align: right; }
+.rtThActions { width: 15%; text-align: right; }
+
+.rtCode {
+  color: #0f172a;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rtNameConfig {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.rtNameConfigInner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.rtItemName {
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 620;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtItemConfig {
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtExpandChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  color: #94a3b8;
+  transition: transform 0.2s, color 0.15s;
+}
+
+.rtExpandChevronOpen {
+  transform: rotate(180deg);
+  color: #475569;
+}
+
+.rtRowClickable {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rtRowClickable:hover {
+  background: #f8fafd;
+}
+
+.rtRowClickable:hover .rtExpandChevron {
+  color: #64748b;
+}
+
+.rtRowExpanded {
+  background: #fafbfd;
+}
+
+.rtDetailRow {
+  background: #fafbfd;
+  border-bottom: 1px solid #e8edf4;
+}
+
+.rtDetailCell {
+  padding: 0.4rem 0.8rem 0.75rem 0.8rem;
+}
+
+.rtDetailGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  padding: 0.5rem 0.8rem;
+  border-top: 1px solid #e8edf4;
+}
+
+.rtDetailLine {
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.rtMeasure {
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.rtQty {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #334155;
+}
+
+.rtValue {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.rtRowActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.rtIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.rtIconBtn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.rtIconBtnDanger:hover {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.rtAdjustments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding: 0.75rem 0.9rem;
+}
+
+.rtAdjustRow {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rtAdjustRow:nth-child(odd):not(.rtAdjustWide) {
+  border-right: 1px solid #f1f5f9;
+}
+
+.rtAdjustRow:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.rtAdjustWide {
+  grid-column: 1 / -1;
+  border-right: 0 !important;
+}
+
+.rtAdjustWide:not(:last-child) {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rtFieldLabel {
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.rtSegmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.rtSegmentedBtn {
+  min-height: 2rem;
+  padding: 0 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.rtSegmentedBtn:hover {
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+.rtSegmentedBtnActive {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.rtMoneyInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  overflow: hidden;
+  max-width: 180px;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+.rtMoneyInputWrap:focus-within {
+  border-color: #93c5fd;
+}
+
+.rtMoneyPrefix {
+  padding: 0 0.45rem 0 0.6rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+.rtMoneyInput {
+  width: 100%;
+  min-width: 0;
+  padding: 0.48rem 0.5rem 0.48rem 0;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.rtMoneyInput::placeholder {
+  color: #cbd5e1;
+}
+
+.rtReadonlyInput {
+  padding: 0.48rem 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+  max-width: 340px;
+}
+
+.rtTextarea {
+  padding: 0.48rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 500;
+  outline: none;
+  resize: vertical;
+  min-height: 52px;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.rtTextarea:focus {
+  border-color: #93c5fd;
+}
+
+.rtTextarea::placeholder {
+  color: #cbd5e1;
+}
+
+.rtHint {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.rtManualTotalBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.56rem 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rtManualTotalInfo {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.rtManualTotalInfo strong {
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.rtManualTotalInfo span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.rtManualTotalInput {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.rtManualTotalInput > span {
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.rtLinkBtn {
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.rtLinkBtn:hover {
+  color: #1d4ed8;
+}
+
+.rtManualActive {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rtManualActiveSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rtManualComponentSum {
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rtManualInputBlock {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.rtManualInputLabel {
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.rtManualBreakdown {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rtManualBreakdownRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.rtManualBreakdownRow span {
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.rtManualBreakdownRow strong {
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rtManualBreakdownTotal {
+  padding-top: 0.45rem;
+  border-top: 1px solid #e8edf4;
+}
+
+.rtManualBreakdownTotal span {
+  color: #0f172a;
+  font-weight: 650;
+}
+
+.rtManualBreakdownTotal strong {
+  font-size: 1.05rem;
+}
+
+.rtManualBreakdownDiff strong {
+  color: #2563eb;
+}
+
+.rtAdjustSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0;
+  padding: 0.75rem 0.9rem;
+}
+
+.rtAdjustLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-right: 1px solid #f1f5f9;
+}
+
+.rtAdjustRight {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 0.6rem;
+}
+
+.rtAdjustDivider {
+  margin: 0 0.9rem;
+  border: none;
+  border-top: 1px solid #eef2f6;
+}
+
+.rtAdjustSection {
+  padding: 0.6rem 0.9rem 0.85rem;
+}
+
+.rtAdjustSectionTitle {
+  display: block;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.65rem;
+}
+
+.rtTextInput {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.72rem;
+  border: 1px solid #d6dfeb;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.rtTextInput:hover {
+  border-color: #b7c9df;
+}
+
+.rtTextInput:focus {
+  border-color: #4f7dd4;
+  box-shadow: 0 0 0 3px rgba(79, 125, 212, 0.12);
+}
+
+.rtHintSecondary {
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.rtHintPositive {
+  color: #18744f;
+  font-weight: 600;
+}
+
+.rtHintNegative {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.rtTotalAcordado {
+  padding: 0.85rem 0.9rem;
+  border-top: 2px solid #d6dfeb;
+  background: #fafbfc;
+  border-radius: 0 0 12px 12px;
+}
+
+.rtTotalCollapsed {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rtTotalInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rtTotalAmount {
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.rtTotalAdjustBtn {
+  min-height: 2.3rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid #1e88ff;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e88ff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 140ms ease, box-shadow 140ms ease;
+}
+
+.rtTotalAdjustBtn:hover {
+  background: #f0f7ff;
+  box-shadow: 0 2px 8px rgba(30, 136, 255, 0.12);
+}
+
+.rtTotalExpanded {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.rtTotalExpandedSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rtAside {
+  position: sticky;
+  top: 5.25rem;
+}
+
+.rtSummaryPanel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.rtSummaryTitle {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.rtSummaryClient {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #e8edf4;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.rtSummaryClientEyebrow {
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rtSummaryClientName {
+  color: #0f172a;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.rtSummaryClientMeta {
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.rtSummaryRows {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.rtSummaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.rtSummaryRow span {
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.rtSummaryRow strong {
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.rtSummaryDivider {
+  height: 1px;
+  background: #e8edf4;
+  margin: 0.1rem 0;
+}
+
+.rtSummaryTotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.rtSummaryTotal span {
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.rtSummaryTotal strong {
+  color: #0f172a;
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  text-align: right;
+}
+
+.rtReadyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.rtActions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.rtActions .btnPrimary {
+  width: 100%;
+  min-height: 42px;
+}
+
+.rtBtnGhost {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rtBtnGhost:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.rtBtnGhost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rtBtnTertiary {
+  justify-self: center;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.rtBtnTertiary:hover {
+  color: #2563eb;
+}
+
+@media (max-width: 1040px) {
+  .rtLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rtAside {
+    position: static;
+  }
+}
+
+@media (max-width: 860px) {
+  .rtSection,
+  .rtTableWrap,
+  .rtHeader,
+  .rtContext,
+  .rtAdjustments,
+  .rtAside,
+  .rtSummaryPanel {
+    display: block;
+    width: 100%;
+  }
+}
+
+  .stepTwoDesktopShell {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .stepTwoDesktopWorkspaceHeader {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .stepTwoDesktopWorkspaceTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.9375rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .stepTwoDesktopWorkspaceDescription {
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .stepTwoDesktopWorkspaceSwitch {
+    min-height: 38px;
+    padding: 0 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4a6fa8;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .stepTwoLayout {
+    grid-template-columns: minmax(0, 2fr) minmax(330px, 0.88fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .stepTwoPrimarySurface {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .stepTwoPrimarySurface > .stepTwoFormCard {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .stepTwoPrimarySurface > .stepTwoFormCard .formFields {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .desktopPieceEditor {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .stepTwoPrimarySurface .desktopPieceEditor {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .desktopPieceHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+    padding: 0.65rem 1.25rem 0.55rem;
+    border-bottom: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .desktopPieceHeaderMain {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .desktopPieceEyebrow {
+    color: #8a96a6;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .desktopPieceInlineModeSwitch {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.85rem;
+    z-index: 1;
+    display: inline-flex;
+    justify-content: flex-end;
+    max-width: min(13rem, calc(100% - 1.7rem));
+    padding: 0.15rem 0.35rem;
+    border: 0;
+    background: transparent;
+    color: #6b7f99;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: right;
+    white-space: normal;
+    cursor: pointer;
+  }
+
+  .desktopPieceInlineModeSwitch:hover {
+    color: #1e88ff;
+  }
+
+  .desktopPieceHeader h2,
+  .desktopEmptyPieceSurface h2 {
+    margin: 0;
+    color: #06162f;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .desktopPieceHeader p,
+  .desktopEmptyPieceSurface p,
+  .desktopHelpText {
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .desktopPieceHeaderActions {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+  }
+
+  .desktopPieceHeaderActions .desktopInlineAction {
+    display: inline-flex;
+    gap: 0.28rem;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #4a6fa8;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .desktopHeaderMenuButton {
+    display: inline-grid;
+    place-items: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #8a96a6;
+    cursor: pointer;
+  }
+
+  .desktopHeaderMenuButton:hover {
+    border-color: #d7e1ee;
+    color: #4a6fa8;
+    background: #fafbfc;
+  }
+
+  .desktopPiecePreviewLarge {
+    display: grid;
+    place-items: center;
+    min-height: 112px;
+    margin-top: 0.15rem;
+    padding: 0.55rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+
+  .desktopPieceStepperRail {
+    position: relative;
+    flex-shrink: 0;
+    padding: 0.65rem 1.25rem 0;
+    border-bottom: 1px solid #eef2f6;
+    background: #fafbfc;
+  }
+
+  .desktopPieceStepperTrackWrap {
+    position: absolute;
+    top: calc(0.65rem + 11px);
+    left: calc(1.25rem + 12.5%);
+    right: calc(1.25rem + 12.5%);
+    height: 2px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .desktopPieceStepperTrack {
+    position: relative;
+    height: 100%;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+  }
+
+  .desktopPieceStepperTrackFill {
+    height: 100%;
+    border-radius: inherit;
+    background: #1e88ff;
+    transition: width 220ms ease;
+  }
+
+  .desktopPieceStepper {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 0 0 0.7rem;
+    list-style: none;
+  }
+
+  .desktopPieceStepItem {
+    display: flex;
+    min-width: 0;
+  }
+
+  .desktopPieceStepButton {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    min-height: 3.75rem;
+    padding: 0 0.35rem 0.55rem;
+    border: 0;
+    background: transparent;
+    color: #6b7f99;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      color 140ms ease,
+      transform 140ms ease;
+  }
+
+  .desktopPieceStepButton:not(:disabled):hover {
+    color: #4a6fa8;
+  }
+
+  .desktopPieceStepButton:not(:disabled):hover .desktopPieceStepMark {
+    transform: scale(1.04);
+  }
+
+  .desktopPieceStepButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+  }
+
+  .desktopPieceStepMark {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    background: #eef2f7;
+    box-shadow: 0 0 0 1px #e2e8f0;
+    color: #64748b;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .desktopPieceStepMark svg {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+
+  .desktopPieceStepText {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .desktopPieceStepActive {
+    color: #1e88ff;
+  }
+
+  .desktopPieceStepActive .desktopPieceStepText {
+    font-weight: 700;
+  }
+
+  .desktopPieceStepActive .desktopPieceStepMark {
+    background: #1e88ff;
+    box-shadow: 0 0 0 1px #1e88ff;
+    color: #ffffff;
+  }
+
+  .desktopPieceStepComplete {
+    color: #4a6fa8;
+  }
+
+  .desktopPieceStepComplete .desktopPieceStepMark {
+    background: #eef3fb;
+    box-shadow: 0 0 0 1px #c5daf5;
+    color: #1e88ff;
+  }
+
+  .desktopPieceStepIdle .desktopPieceStepMark {
+    background: #f8fafc;
+    color: #8090aa;
+  }
+
+  .desktopPieceBody {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+    min-height: 0;
+    padding: 0.85rem 1.25rem 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .desktopPieceBody .field span {
+    color: #6b7f99;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .desktopPieceBody .input,
+  .desktopPieceBody .textarea,
+  .desktopPieceBody select.input {
+    min-height: 44px;
+    border-color: #e2e8f0;
+    border-radius: 10px;
+    color: #06162f;
+    font-size: 0.9375rem;
+  }
+
+  .desktopPieceBody .input:focus,
+  .desktopPieceBody .textarea:focus,
+  .desktopPieceBody select.input:focus {
+    border-color: #1e88ff;
+    box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.12);
+  }
+
+  .desktopPieceStepHeading {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+
+  .desktopPieceInstruction {
+    margin: 0;
+    color: #06162f;
+    font-weight: 800;
+  }
+
+  .desktopChipGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .desktopChoiceChip {
+    display: inline-flex;
+    gap: 0.28rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 0.55rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #243b6b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .desktopChoiceChip:hover {
+    border-color: #d7e1ee;
+    background: #fafbfc;
+  }
+
+  .desktopChoiceChipActive {
+    border-color: #1e88ff;
+    background: #1e88ff;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(30, 136, 255, 0.22);
+  }
+
+  .desktopChoiceChipActive:hover {
+    border-color: #1a7ae6;
+    background: #1a7ae6;
+  }
+
+  .desktopPieceConfigBlock {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .desktopPieceSystem,
+  .desktopPriceEditor {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .desktopPieceBody .stepOneFieldLabel,
+  .desktopPieceConfigBlock .stepOneFieldLabel {
+    color: #6b7f99;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .desktopSegmented {
+    display: inline-grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: fit-content;
+    overflow: hidden;
+    border: 1px solid #d7e1ee;
+    border-radius: 9px;
+    background: #f6f9fd;
+  }
+
+  .desktopSegmented button {
+    min-height: 38px;
+    padding: 0 0.95rem;
+    border: 0;
+    background: transparent;
+    color: #344761;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .desktopSegmentedActive {
+    background: #ffffff !important;
+    color: #06162f !important;
+    box-shadow: 0 1px 4px rgba(20, 39, 70, 0.12);
+  }
+
+  .desktopPieceValue {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    min-height: 52px;
+    padding: 0 1rem;
+    border-radius: 8px;
+    background: #172b4d;
+    color: #ffffff;
+  }
+
+  .desktopPieceValue strong {
+    font-size: 1.2rem;
+  }
+
+  .desktopPieceFooter {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0.7rem 1.25rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+    box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.04);
+  }
+
+  .desktopPieceFooterStatus {
+    min-width: 0;
+    max-width: 28rem;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .desktopPieceFooterActions {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .desktopPieceFooterActions .btnGhost {
+    min-height: 42px;
+    padding: 0 0.95rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .desktopPieceFooterActions .btnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 42px;
+    padding: 0 1.15rem;
+    border-radius: 10px;
+    background: #1e88ff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(30, 136, 255, 0.22);
+  }
+
+  .desktopPieceFooterActions .btnPrimary:hover:not(:disabled) {
+    background: #1a7ae6;
+  }
+
+  .desktopPieceFooterActions .btnPrimary:disabled {
+    opacity: 0.42;
+  }
+
+  .desktopPieceFooter div,
+  .desktopEmptyPieceSurface div {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .desktopEmptyPieceSurface {
+    position: relative;
+    display: grid;
+    gap: 0.85rem;
+    align-content: center;
+    justify-items: center;
+    min-height: 0;
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+  }
+
+  .desktopPieceEditor:has(.desktopEmptyPieceSurface) {
+    place-content: center;
+    min-height: 100%;
+  }
+
+  .desktopSummaryBlockReason {
+    margin: 0.55rem 0 0;
+    color: #8a5b12;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+}
+
 .warmFrame {
   position: absolute;
   width: 1px;
@@ -162,6 +2502,148 @@
   border-right-color: #2fa36b;
 }
 
+.desktopFlowHeader {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.desktopFlowHeaderInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  min-height: 60px;
+}
+
+.desktopFlowHeaderBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--flow-text-secondary);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.desktopFlowHeaderBack:hover {
+  color: var(--flow-accent-strong);
+}
+
+.desktopFlowHeaderSpacer {
+  flex: 0 0 auto;
+  width: 0;
+  visibility: hidden;
+}
+
+.desktopFlowStepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+  justify-content: center;
+}
+
+.desktopFlowStepperStep {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.desktopFlowStepperButton {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s;
+}
+.desktopFlowStepperButton:hover {
+  opacity: 0.85;
+}
+
+.desktopFlowStepperDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.desktopFlowStepperDot_active {
+  background: var(--flow-accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.14);
+}
+
+.desktopFlowStepperDot_done {
+  background: var(--flow-success);
+  color: #fff;
+}
+
+.desktopFlowStepperDot_idle {
+  background: var(--flow-surface-soft);
+  color: var(--flow-text-tertiary);
+  border: 1.5px solid var(--flow-border);
+}
+
+.desktopFlowStepperText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.35;
+}
+.desktopFlowStepperText strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--flow-text);
+}
+.desktopFlowStepperText small {
+  font-size: 0.71875rem;
+  color: var(--flow-text-tertiary);
+}
+.desktopFlowStepperText_done strong {
+  color: #1f7a4d;
+}
+.desktopFlowStepperText_done small {
+  color: var(--flow-success);
+}
+.desktopFlowStepperText_active strong {
+  color: var(--flow-accent-strong);
+}
+.desktopFlowStepperText_active small {
+  color: var(--flow-accent);
+}
+
+.desktopFlowStepperLine {
+  width: 40px;
+  height: 2px;
+  background: var(--flow-border);
+  border-radius: 999px;
+  flex-shrink: 0;
+  margin: 0 10px;
+  transition: background 0.25s;
+}
+
+.desktopFlowStepperLineDone {
+  background: var(--flow-success);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -172,6 +2654,10 @@
 .layoutStepTwo {
   grid-template-columns: 1fr;
   overflow-anchor: none;
+}
+.rootStepTwoDesktop {
+  --flow-bg: #eef2f7;
+  background: #eef2f7;
 }
 .layoutFinalStep {
   grid-template-columns: 1fr;
@@ -491,19 +2977,23 @@
 .stepOneMoreButton {}
 .stepOneStickyActions {}
 .stepTwoFormCardMobile {}
+.stepTwoFormCardDesktop {}
 .stepTwoSectionStrong {}
 .stepTwoSectionSoft {}
 .stepTwoPreviewCard {}
 .stepTwoFormFooter {}
 .stepTwoFormFooterGroup {}
 .stepTwoPanelMobile {}
+.stepTwoPanelDesktop {}
 .stepTwoPanelEmptyMobile {}
+.stepTwoPanelEmptyDesktop {}
 .stepTwoListMobile {}
 .stepTwoListCardMobile {}
 .stepTwoMobileDockEnhanced {}
 .mobileQuickEditorEnhanced {}
 .stepTwoPanelModeMobile {}
 .stepTwoPanelModeDesktop {}
+.stepTwoPanelBody {}
 .stepTwoListViewportModeMobile {}
 .stepTwoListViewportModeDesktop {}
 .stepTwoListModeMobile {}
@@ -1553,7 +4043,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) clamp(450px, 32vw, 500px);
   gap: 1.35rem;
-  align-items: start;
+  align-items: stretch;
   overflow-anchor: none;
 }
 
@@ -1681,6 +4171,126 @@
   justify-content: center;
   min-height: 42px;
   font-size: 0.9rem;
+}
+
+@media (min-width: 861px) {
+  .stepTwoModeChoiceDesktopWrap {
+    width: min(100%, 920px);
+  }
+
+  .stepTwoModeChoiceDesktop {
+    gap: 0.9rem;
+  }
+
+  .stepTwoModeChoiceDesktopContext {
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .stepTwoModeChoiceDesktop .stepTwoModeChoiceHead {
+    gap: 0.35rem;
+  }
+
+  .stepTwoModeChoiceDesktop .stepTwoModeChoiceHead h2 {
+    color: #06162f;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .stepTwoModeChoiceDesktop .stepTwoModeChoiceHead p {
+    color: #6b7f99;
+    font-size: 0.8125rem;
+  }
+
+  .stepTwoModeChoiceDesktopGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 1.15rem;
+  }
+
+  .stepTwoModeChoiceDesktopCard {
+    height: 100%;
+    padding: 1.15rem 1.25rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: none;
+    gap: 0.85rem;
+  }
+
+  .stepTwoModeChoiceDesktopCardAction {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .stepTwoModeChoiceDesktopCardAction:hover {
+    border-color: #c5daf5;
+    background: #fafcff;
+  }
+
+  .stepTwoModeChoiceDesktopCardAction:focus-visible {
+    outline: 2px solid #1e88ff;
+    outline-offset: 2px;
+  }
+
+  .stepTwoModeChoiceDesktopCard .stepTwoModeChoiceCardCopy strong {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .stepTwoModeChoiceDesktopCard .stepTwoModeChoiceCardCopy p {
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .stepTwoModeChoiceDesktopCardIconItems {
+    background: #1e88ff;
+    color: #ffffff;
+  }
+
+  .stepTwoModeChoiceDesktopCardIconTotal {
+    background: #eef3fb;
+    color: #4a6fa8;
+    border: 1px solid #d7e3f3;
+  }
+
+  .stepTwoModeChoiceDesktopCardCta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    min-height: 42px;
+    margin-top: auto;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: 10px;
+    background: #243b6b;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    pointer-events: none;
+  }
+
+  .stepTwoModeChoiceDesktopCardAction:hover .stepTwoModeChoiceDesktopCardCta {
+    background: #1b3158;
+  }
 }
 
 .stepTwoModeChip {
@@ -1926,7 +4536,7 @@
 }
 
 .stepTwoPanelModeDesktop {
-  min-height: clamp(36rem, 72vh, 52rem);
+  min-height: 0;
 }
 
 .stepTwoPanelModeMobile {
@@ -3023,6 +5633,620 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
   padding-top: 0.2rem;
+}
+
+@media (min-width: 861px) {
+  .stepTwoDesktopShell {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .stepTwoDesktopWorkspaceHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid #dde5ef;
+  }
+
+  .stepTwoDesktopWorkspaceHeaderCopy {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .stepTwoDesktopWorkspaceEyebrow {
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopWorkspaceTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.9375rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .stepTwoDesktopWorkspaceDescription {
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .stepTwoDesktopWorkspaceSwitch {
+    flex-shrink: 0;
+    max-width: 16rem;
+    min-height: 38px;
+    padding: 0 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4a6fa8;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .stepTwoDesktopWorkspaceSwitch:hover {
+    color: #1e88ff;
+  }
+
+  .stepTwoDesktopWorkspaceModeGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .stepTwoDesktopWorkspaceModeLabel {
+    color: #475569;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .stepTwoConfirmOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(15, 24, 43, 0.38);
+    backdrop-filter: blur(6px);
+  }
+
+  .stepTwoConfirmDialog {
+    width: min(100%, 26rem);
+    display: grid;
+    gap: 0.85rem;
+    padding: 1.15rem;
+    border: 1px solid #d6dfeb;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(17, 27, 49, 0.14);
+  }
+
+  .stepTwoConfirmTitle {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .stepTwoConfirmText {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .stepTwoConfirmActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .stepTwoDesktopAssistant {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(100dvh - 12rem);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(27, 43, 74, 0.05);
+  }
+
+  .stepTwoDesktopAssistantSteps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 1rem 1rem 0.75rem;
+    list-style: none;
+    border-bottom: 1px solid #e8edf4;
+  }
+
+  .stepTwoDesktopAssistantStep {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .stepTwoDesktopAssistantStepActive {
+    border-color: #bfd9ff;
+    background: #f0f6ff;
+    color: #0f172a;
+  }
+
+  .stepTwoDesktopAssistantStepComplete {
+    border-color: #dbeafe;
+    color: #334155;
+  }
+
+  .stepTwoDesktopAssistantStepNumber {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .stepTwoDesktopAssistantStepActive .stepTwoDesktopAssistantStepNumber {
+    background: #1e88ff;
+    color: #fff;
+  }
+
+  .stepTwoDesktopAssistantScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  .stepTwoDesktopAssistantFooter {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid #e8edf4;
+    background: #fff;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooter {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .stepTwoDesktopTypeGridWrap .typeGroup {
+    gap: 0.55rem;
+  }
+
+  .stepTwoDesktopTypeGridWrap .typeGroupGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .stepTwoDesktopTypeGridWrap .typeChip {
+    min-height: 2.75rem;
+    font-size: 0.8rem;
+  }
+
+  .stepTwoDesktopPreviewCompact {
+    grid-template-columns: 72px minmax(0, 1fr);
+    padding: 0.65rem;
+  }
+
+  .stepTwoDesktopPreviewCompact .quickPreviewThumb {
+    width: 72px;
+    min-height: 72px;
+  }
+
+  .stepTwoLayout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.9fr);
+    gap: 1.25rem;
+    max-height: calc(100dvh - 10.5rem);
+    overflow: hidden;
+  }
+
+  .stepTwoPrimarySurface {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stepTwoPrimarySurface .desktopPieceEditor {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .stepTwoPrimarySurface .stepTwoModeChoice,
+  .stepTwoPrimarySurface .stepTwoFormCard {
+    max-height: calc(100dvh - 10.5rem);
+  }
+
+  .stepTwoPrimarySurface .stepTwoModeChoice {
+    overflow-y: auto;
+    padding-right: 0.1rem;
+  }
+
+  .stepTwoFormCardDesktop {
+    box-shadow: 0 8px 20px rgba(27, 43, 74, 0.05);
+    border: 1px solid #d6dfeb;
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  .stepTwoLayout > .stepTwoPanel.stepTwoPanelDesktop {
+    position: sticky;
+    top: 0.75rem;
+    max-height: calc(100dvh - 10.5rem);
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 0;
+    padding: 0;
+    border-radius: 16px;
+    box-shadow: 0 10px 24px rgba(14, 24, 43, 0.18);
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelBody {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stepTwoPanelModeDesktop {
+    min-height: 0;
+  }
+
+  .stepTwoPanelHeader {
+    flex-shrink: 0;
+    padding: 0.85rem 0.95rem 0.7rem;
+  }
+
+  .stepTwoPanelTitle {
+    font-size: 0.98rem;
+  }
+
+  .stepTwoPanelEmptyDesktop {
+    min-height: 120px;
+    padding: 0.85rem 1rem;
+    font-size: 0.86rem;
+  }
+
+  .stepTwoPanelEmptyDesktop span {
+    opacity: 0.78;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 0.75rem 0.95rem 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    background: #1a2c4d;
+    box-shadow: 0 -10px 28px rgba(8, 14, 26, 0.42);
+    position: relative;
+    z-index: 3;
+    isolation: isolate;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalsGrid {
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0 0 0.6rem;
+    border-bottom: 0;
+    background: transparent;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCell {
+    padding: 0.6rem 0.65rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCellWide {
+    padding: 0.65rem 0.7rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCell span {
+    font-size: 0.64rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCell strong {
+    font-size: 0.98rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoSummaryButton {
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelBody .mobileQuickEditor {
+    margin: 0.7rem 0.85rem 0.5rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelBody .stepTwoListViewport {
+    max-height: none;
+    flex: 0 0 auto;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelBody .stepTwoList {
+    padding: 0 0.85rem 0.85rem;
+    flex: 0 0 auto;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelBody .stepTwoListCard {
+    position: relative;
+    z-index: 1;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop.mobileQuickEditor {
+    padding: 0.7rem 0.8rem;
+    gap: 0.55rem;
+    border: 1px solid #d9e0ea;
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(14, 24, 43, 0.1);
+    border-radius: 14px;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorEyebrow {
+    color: #8a98b2;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorHeader strong,
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorPrice {
+    color: #243b6b;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorMeta,
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorProgressHint,
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavLabel {
+    color: #667085;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavPill {
+    background: #edf3ff;
+    color: #335ea9;
+    border: 1px solid rgba(79, 125, 212, 0.16);
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavButtons {
+    display: inline-grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 0.4rem;
+    width: auto;
+    padding: 0.25rem;
+    background: #eef3f8;
+    border: 1px solid #d9e0ea;
+    border-radius: 12px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavButton {
+    min-height: 34px;
+    padding: 0.45rem 0.7rem;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    border-color: #d2dbe8;
+    background: linear-gradient(180deg, #f8fafc, #edf2f8);
+    color: #243b6b;
+    box-shadow: none;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavButton:hover:not(:disabled),
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavButton:focus-visible {
+    border-color: #bccae0;
+    background: linear-gradient(180deg, #ffffff, #eef3f8);
+    box-shadow: 0 4px 10px rgba(31, 49, 87, 0.08);
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorNavButtonPrimary {
+    border-color: rgba(79, 125, 212, 0.28);
+    background: linear-gradient(180deg, #6c98eb, #4f7dd4);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(79, 125, 212, 0.18);
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorProgressPillPending {
+    color: #9b6a17;
+    background: #fff5e5;
+    border: 1px solid #f1d39b;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorProgressPillComplete {
+    color: #1f7a51;
+    background: #eaf8f0;
+    border: 1px solid #bfe6cf;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .mobileQuickEditorRepeatButton {
+    border-color: rgba(79, 125, 212, 0.18);
+    background: #f7f9fc;
+    color: #243b6b;
+    box-shadow: none;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplatePanel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateSummaryGrid {
+    gap: 0.45rem;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateSummaryCard {
+    background: #fff;
+    border-color: #e2e8f0;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateSummaryCard span {
+    color: #667085;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateSummaryCard strong {
+    color: #243b6b;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickEditField span {
+    color: #667085;
+    font-size: 0.66rem;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickEditInput {
+    border-color: #d2dbe8;
+    background: #fff;
+    color: #243b6b;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateTitle,
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateHint,
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateBadge {
+    color: #667085;
+  }
+
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateTitle strong,
+  .stepTwoPanelDesktop .quickEditorDesktop .quickTemplateHint strong {
+    color: #243b6b;
+  }
+
+  .groupSheetEmbedded {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 9rem);
+    max-height: calc(100dvh - 9rem);
+    border-radius: 16px;
+    border: 1px solid #d6dfeb;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  .groupSheetEmbedded .groupSheetHandle {
+    display: none;
+  }
+
+  .groupSheetEmbedded .groupSheetBody {
+    padding-right: 0.25rem;
+  }
+
+  .groupSheetEmbedded .groupSheetOptionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .groupSheetEmbedded .groupSheetOptionButton {
+    min-height: 3.5rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .groupSheetEmbedded .groupSheetFooter {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e8edf4;
+    background: #fff;
+  }
+
+  .groupSheetProgressDesktop {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .groupSheetProgressDesktopStep {
+    display: grid;
+    gap: 0.2rem;
+    justify-items: center;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .groupSheetProgressDesktopStepNumber {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .groupSheetProgressDesktopStepLabel {
+    color: #98a2b3;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .groupSheetProgressDesktopStepComplete .groupSheetProgressDesktopStepNumber {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .groupSheetProgressDesktopStepComplete .groupSheetProgressDesktopStepLabel {
+    color: #475467;
+  }
+
+  .groupSheetProgressDesktopStepActive .groupSheetProgressDesktopStepNumber {
+    background: #1e88ff;
+    color: #fff;
+  }
+
+  .groupSheetProgressDesktopStepActive .groupSheetProgressDesktopStepLabel {
+    color: #0f172a;
+    font-weight: 700;
+  }
 }
 
 .stepTwoMobileExperience {
@@ -5208,16 +8432,28 @@
     gap: 1.45rem;
   }
 
-  .stepTwoPanel {
-    position: static;
-    top: auto;
-    max-height: none;
-    overflow: visible;
+  .stepTwoLayout > .stepTwoPanel.stepTwoPanelDesktop {
+    max-height: calc(100dvh - 10.5rem);
   }
 
-  .stepTwoPanelHeader,
-  .stepTwoPanelFooter {
+  .stepTwoPanelDesktop .stepTwoPanelHeader,
+  .stepTwoPanelDesktop .stepTwoPanelFooter {
     padding: 1.2rem 1.25rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalsGrid {
+    gap: 0.75rem;
+    padding: 0;
+    margin-bottom: 0.7rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCell {
+    padding: 0.75rem 0.8rem;
+    border-radius: 14px;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelFooter .stepTwoTotalCell strong {
+    font-size: 1.05rem;
   }
 
   .stepTwoFormCard .footerButtonGroup {
@@ -5237,32 +8473,32 @@
     grid-column: 1 / -1;
   }
 
-  .mobileQuickEditor {
+  .mobileQuickEditor:not(.quickEditorDesktop) {
     margin: 0 1.15rem 1.15rem;
     padding: 1rem 1.05rem;
     gap: 0.7rem;
     border-radius: 20px;
   }
 
-  .mobileQuickEditorHeader strong {
+  .mobileQuickEditor:not(.quickEditorDesktop) .mobileQuickEditorHeader strong {
     font-size: 1rem;
   }
 
-  .mobileQuickEditorPrice {
+  .mobileQuickEditor:not(.quickEditorDesktop) .mobileQuickEditorPrice {
     font-size: 0.94rem;
   }
 
-  .mobileQuickEditorMeta {
+  .mobileQuickEditor:not(.quickEditorDesktop) .mobileQuickEditorMeta {
     font-size: 0.8rem;
     line-height: 1.42;
   }
 
-  .mobileQuickEditorNavPill {
+  .mobileQuickEditor:not(.quickEditorDesktop) .mobileQuickEditorNavPill {
     min-height: 32px;
     font-size: 0.76rem;
   }
 
-  .mobileQuickEditorNavButton {
+  .mobileQuickEditor:not(.quickEditorDesktop) .mobileQuickEditorNavButton {
     min-height: 38px;
     padding: 0.55rem 0.85rem;
     font-size: 0.8rem;
@@ -7636,9 +10872,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   LISTA — Tarjeta base
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   LISTA â€” Tarjeta base
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileItemCard {
   background: #ffffff;
   border-radius: 16px;
@@ -7651,15 +10887,15 @@
   border-left: 4px solid #2FA36B;
 }
  
-/* Tarjeta incompleta: acento ámbar izquierdo */
+/* Tarjeta incompleta: acento Ã¡mbar izquierdo */
 .stepTwoMobileItemCardIncomplete {
   border-left: 4px solid #D89B3C;
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   LISTA — Cabecera de tarjeta (código · nombre · botones)
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   LISTA â€” Cabecera de tarjeta (cÃ³digo Â· nombre Â· botones)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileItemHead {
   display: flex;
   align-items: center;
@@ -7702,9 +10938,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   LISTA — Medidas + unidades
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   LISTA â€” Medidas + unidades
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileItemDims {
   display: flex;
   align-items: center;
@@ -7720,9 +10956,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   LISTA — Estado incompleto
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   LISTA â€” Estado incompleto
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileItemWarning {
   display: flex;
   align-items: center;
@@ -7743,7 +10979,7 @@
   color: #C0A060;
 }
  
-/* Botón CTA "Completar" — dark, full-width, peso visual alto */
+/* BotÃ³n CTA "Completar" â€” dark, full-width, peso visual alto */
 .stepTwoMobileItemCompleteBtn {
   display: flex;
   align-items: center;
@@ -7768,9 +11004,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   LISTA — Estado completo: meta chips + precio
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   LISTA â€” Estado completo: meta chips + precio
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileItemMeta {
   display: flex;
   flex-wrap: wrap;
@@ -7786,7 +11022,7 @@
   padding: 2px 8px;
 }
  
-/* Precio — protagonismo total */
+/* Precio â€” protagonismo total */
 .stepTwoMobileItemPrice {
   text-align: right;
   padding: 0.35rem 0.95rem 0.85rem;
@@ -8015,9 +11251,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — Status pill (arriba del formulario)
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” Status pill (arriba del formulario)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileConfigStatus {
   display: flex;
   flex-direction: column;
@@ -8042,10 +11278,10 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — BLOQUE HERO: Medidas
-   Máximo protagonismo — inputs grandes, fáciles de tocar con una mano
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” BLOQUE HERO: Medidas
+   MÃ¡ximo protagonismo â€” inputs grandes, fÃ¡ciles de tocar con una mano
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileBlockHero {
   background: #ffffff;
   border: 1.5px solid #D9E0EA;
@@ -8521,7 +11757,7 @@
   color: #9AAAC0;
 }
  
-/* Input grande: ancho / alto — 60px altura, fuente prominente */
+/* Input grande: ancho / alto â€” 60px altura, fuente prominente */
 .stepTwoMobileMedidaInput {
   width: 100%;
   height: 3.45rem;
@@ -8549,7 +11785,7 @@
   font-size: 1.08rem;
 }
  
-/* Separador "×" entre ancho y alto */
+/* Separador "Ã—" entre ancho y alto */
 .stepTwoMobileBlockX {
   font-size: 1.15rem;
   font-weight: 400;
@@ -8571,10 +11807,10 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — BLOQUE PRECIO
-   Segundo en jerarquía — borde azul, input muy grande
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” BLOQUE PRECIO
+   Segundo en jerarquÃ­a â€” borde azul, input muy grande
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileBlockPrecio {
   background: #ffffff;
   border: 2px solid #4F7DD4;
@@ -8715,7 +11951,7 @@
   color: #667085;
 }
  
-/* Input precio — ancho completo, número muy grande en azul */
+/* Input precio â€” ancho completo, nÃºmero muy grande en azul */
 .stepTwoMobilePrecioInput {
   width: 100%;
   height: 3.6rem;
@@ -8744,10 +11980,10 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — BLOQUE SECUNDARIO (vidrio, material, sistema)
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” BLOQUE SECUNDARIO (vidrio, material, sistema)
    Fondo suave, menos peso visual que los bloques hero
-────────────────────────────────────────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileBlockSecundario {
   background: #F7F9FC;
   border: 1px solid #D9E0EA;
@@ -9005,6 +12241,1005 @@
 .stepTwoMobileLineSheetHeading {
   display: grid;
   gap: 0.12rem;
+}
+
+@media (min-width: 861px) {
+  .stepTwoDesktopShell {
+    --step2-ink: #10213f;
+    --step2-muted: #5f6f88;
+    --step2-soft: #f4f7fb;
+    --step2-line: #dce5f1;
+    --step2-primary: #152744;
+    --step2-topbar: 3.75rem;
+    --step2-context: 4.65rem;
+    --step2-gap: 1rem;
+    --step2-main-height: calc(100dvh - var(--step2-topbar) - var(--step2-context) - var(--step2-gap) - 2.75rem);
+  }
+
+  .rootStepOneDesktop {
+    --step1-topbar: 4.35rem;
+    padding-bottom: 2rem;
+    background: #eef2f7;
+  }
+
+  .rootStepOneDesktop .mobileTopBand {
+    display: grid;
+    grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    min-height: var(--step1-topbar);
+    padding: 0.45rem 1.35rem;
+    border-bottom: 1px solid #d4deea;
+    background: rgba(248, 250, 253, 0.98);
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 24;
+  }
+
+  .rootStepOneDesktop .pageHeader {
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    position: static;
+  }
+
+  .rootStepOneDesktop .pageHeading,
+  .rootStepOneDesktop .pageBackRow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .rootStepOneDesktop .backLink {
+    margin: 0;
+    color: #4a5d78;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .rootStepOneDesktop .backLink:hover {
+    color: #243b6b;
+  }
+
+  .rootStepOneDesktop .pageStepKicker,
+  .rootStepOneDesktop .headerActions {
+    display: none;
+  }
+
+  .rootStepOneDesktop .wizardWrap {
+    grid-column: 2;
+    padding: 0;
+  }
+
+  .rootStepOneDesktop .wizardCard {
+    width: min(100%, 44rem);
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .rootStepOneDesktop .stepper {
+    gap: 0.85rem;
+  }
+
+  .rootStepOneDesktop .stepperItem {
+    min-height: 2.4rem;
+  }
+
+  .rootStepOneDesktop .stepperButton {
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .rootStepOneDesktop .stepperDot {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.78rem;
+    box-shadow: none;
+  }
+
+  .rootStepOneDesktop .stepperDot_active {
+    box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.12);
+  }
+
+  .rootStepOneDesktop .stepperText {
+    gap: 0.08rem;
+  }
+
+  .rootStepOneDesktop .stepperText strong {
+    font-size: 0.92rem;
+    line-height: 1.1;
+  }
+
+  .rootStepOneDesktop .stepperText small {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+
+  .rootStepOneDesktop .stepperLine {
+    height: 1px;
+  }
+
+  .rootStepOneDesktop .layoutStepOne {
+    padding-top: 0.5rem;
+  }
+
+  .rootStepTwoDesktop {
+    --step2-topbar: 3.75rem;
+    --step2-context: 4.65rem;
+    --step2-gap: 1rem;
+    --step2-main-height: calc(100dvh - var(--step2-topbar) - var(--step2-context) - var(--step2-gap) - 2.75rem);
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+    background: #eef3f8;
+  }
+
+  .rootStepTwoDesktop .mobileTopBand {
+    display: grid;
+    grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr) minmax(8rem, 13rem);
+    align-items: center;
+    min-height: var(--step2-topbar);
+    padding: 0.55rem 1.45rem;
+    border-bottom: 1px solid rgba(208, 219, 234, 0.86);
+    background: rgba(246, 249, 253, 0.92);
+    box-shadow: none;
+    backdrop-filter: blur(12px);
+  }
+
+  .rootStepTwoDesktop .pageHeader {
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .rootStepTwoDesktop .pageHeading,
+  .rootStepTwoDesktop .pageBackRow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .rootStepTwoDesktop .backLink {
+    margin: 0;
+    color: #5d6f89;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .rootStepTwoDesktop .pageStepKicker,
+  .rootStepTwoDesktop .headerActions {
+    display: none;
+  }
+
+  .rootStepTwoDesktop .wizardWrap {
+    grid-column: 2;
+    padding: 0;
+  }
+
+  .rootStepTwoDesktop .wizardCard {
+    width: min(100%, 44rem);
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .rootStepTwoDesktop .stepper {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .rootStepTwoDesktop .stepperItem {
+    min-height: 2.6rem;
+  }
+
+  .rootStepTwoDesktop .stepperButton {
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .rootStepTwoDesktop .stepperDot {
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 0.78rem;
+    box-shadow: none;
+  }
+
+  .rootStepTwoDesktop .stepperDot_active {
+    box-shadow: 0 0 0 4px rgba(79, 125, 212, 0.11);
+  }
+
+  .rootStepTwoDesktop .stepperText {
+    gap: 0.05rem;
+  }
+
+  .rootStepTwoDesktop .stepperText strong {
+    font-size: 0.82rem;
+    line-height: 1.08;
+  }
+
+  .rootStepTwoDesktop .stepperText small {
+    font-size: 0.68rem;
+    line-height: 1.05;
+  }
+
+  .rootStepTwoDesktop .stepperLine {
+    height: 1px;
+  }
+
+  .rootStepTwoDesktop .layoutStepTwo {
+    min-height: 0;
+    height: calc(100dvh - var(--step2-topbar));
+    overflow: hidden;
+    padding: 1rem 1.45rem 1rem;
+  }
+
+  .rootStepTwoDesktop .layoutStepTwo > :first-child {
+    min-height: 0;
+  }
+
+  .stepTwoDesktopWorkspaceHeader {
+    min-height: var(--step2-context);
+    margin-bottom: var(--step2-gap);
+    padding: 0;
+    border-bottom: 0;
+    align-items: center;
+  }
+
+  .stepTwoDesktopWorkspaceEyebrow {
+    color: #6b7f99;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopWorkspaceTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.9375rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  .stepTwoDesktopWorkspaceDescription {
+    max-width: 38rem;
+    margin: 0;
+    color: #6b7f99;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .stepTwoDesktopWorkspaceSwitch {
+    min-height: 38px;
+    padding: 0 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #4a6fa8;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .stepTwoDesktopWorkspaceSwitch:hover {
+    border-color: #c5daf5;
+    color: #1e88ff;
+  }
+
+  .rootStepTwoDesktop .stepTwoLayout {
+    grid-template-columns: minmax(0, 1.45fr) minmax(330px, 0.8fr);
+    gap: 1.25rem;
+    align-items: stretch;
+    height: var(--step2-main-height);
+    max-height: var(--step2-main-height);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .rootStepTwoDesktop .stepTwoPrimarySurface {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .rootStepTwoDesktop .stepTwoPrimarySurface .desktopPieceEditor {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .stepTwoDesktopShell .stepTwoLayout {
+    height: var(--step2-main-height);
+    max-height: var(--step2-main-height);
+    overflow: hidden;
+  }
+
+  .stepTwoDesktopAssistant {
+    height: var(--step2-main-height);
+    max-height: var(--step2-main-height);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    gap: 0.62rem;
+  }
+
+  .stepTwoDesktopShell .stepTwoDesktopAssistant {
+    height: var(--step2-main-height);
+    max-height: var(--step2-main-height);
+  }
+
+  .stepTwoDesktopCreationHero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr);
+    flex: 0 0 10.95rem;
+    min-height: 10.35rem;
+    max-height: 11.55rem;
+    overflow: hidden;
+    border: 1px solid rgba(205, 216, 231, 0.88);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 10px 26px rgba(20, 39, 70, 0.055);
+  }
+
+  .stepTwoDesktopCreationCopy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0.95rem 1.12rem;
+  }
+
+  .stepTwoDesktopCreationMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.48rem;
+    color: #326ed1;
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopCreationMeta span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.18rem;
+    padding: 0 0.42rem;
+    border-radius: 999px;
+    background: rgba(30, 136, 255, 0.08);
+  }
+
+  .stepTwoDesktopCreationMeta small {
+    color: #64748b;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .stepTwoDesktopCreationCopy h3 {
+    margin: 0;
+    color: var(--step2-ink);
+    font-size: clamp(1.34rem, 1.55vw, 1.62rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+  }
+
+  .stepTwoDesktopCreationCopy p {
+    margin: 0.28rem 0 0.72rem;
+    color: #334767;
+    font-size: 0.84rem;
+    line-height: 1.35;
+  }
+
+  .stepTwoDesktopCreationMetrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.72rem;
+    margin: 0;
+  }
+
+  .stepTwoDesktopCreationMetrics div {
+    min-width: 0;
+  }
+
+  .stepTwoDesktopCreationMetrics dt {
+    margin: 0 0 0.22rem;
+    color: #62718a;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopCreationMetrics dd {
+    margin: 0;
+    color: var(--step2-ink);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .stepTwoDesktopCreationMetrics span {
+    display: block;
+    margin-top: 0.16rem;
+    color: #6b7d96;
+    font-size: 0.72rem;
+  }
+
+  .stepTwoDesktopCreationEdit {
+    align-self: flex-start;
+    margin-top: 0.65rem;
+    min-height: 1.85rem;
+    padding: 0 0.65rem;
+    border: 1px solid #d8e2ef;
+    border-radius: 999px;
+    background: #f8fbff;
+    color: #335ea9;
+    font-size: 0.74rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .stepTwoDesktopCreationEdit:hover,
+  .stepTwoDesktopCreationEdit:focus-visible {
+    border-color: rgba(51, 94, 169, 0.28);
+    background: #eef5ff;
+    color: #243b6b;
+  }
+
+  .stepTwoDesktopCreationPreview {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    padding: 0.72rem;
+    border-left: 1px solid #e5edf6;
+    background: #f7faff;
+  }
+
+  .stepTwoDesktopCreationPreviewSvg {
+    width: min(100%, 245px);
+    max-height: 158px;
+    display: grid;
+    place-items: center;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .stepTwoDesktopCreationPreviewSvg svg {
+    width: 100%;
+    height: auto;
+    max-height: 158px;
+    display: block;
+  }
+
+  .stepTwoDesktopStageRail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.82fr);
+    gap: 0;
+    align-items: stretch;
+    flex: 0 0 3.35rem;
+    min-height: 3.25rem;
+    padding: 0.28rem;
+    border: 1px solid rgba(210, 221, 236, 0.82);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.66);
+    box-shadow: 0 8px 20px rgba(20, 39, 70, 0.035);
+  }
+
+  .stepTwoDesktopStageSummary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0.7rem;
+    min-height: 0;
+    padding: 0.42rem 0.65rem;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--step2-ink);
+    text-align: left;
+    box-shadow: none;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+
+  .stepTwoDesktopStageSummary::before {
+    content: "âœ“";
+    display: inline-grid;
+    place-items: center;
+    width: 1.28rem;
+    height: 1.28rem;
+    border-radius: 999px;
+    background: #d9f6ea;
+    color: #178159;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .stepTwoDesktopStageSummary:hover,
+  .stepTwoDesktopStageSummary:focus-visible {
+    transform: translateY(-1px);
+    border-color: transparent;
+    background: rgba(248, 251, 255, 0.9);
+  }
+
+  .stepTwoDesktopStageSummary span {
+    color: #52637a;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopStageSummary strong {
+    grid-column: 2;
+    min-width: 0;
+    color: var(--step2-ink);
+    font-size: 0.84rem;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stepTwoDesktopStageSummary small {
+    grid-row: 1 / span 2;
+    grid-column: 3;
+    color: #2f6ed3;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .stepTwoDesktopStageSummaryActive {
+    border-color: rgba(79, 125, 212, 0.34);
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(20, 39, 70, 0.045);
+  }
+
+  .stepTwoDesktopStageSummaryCurrent::before {
+    content: "3";
+    background: #326ed1;
+    color: #ffffff;
+  }
+
+  .stepTwoDesktopStageSummaryCurrent {
+    border-color: transparent;
+    background: rgba(239, 246, 255, 0.78);
+    box-shadow: none;
+    cursor: pointer;
+  }
+
+  .stepTwoDesktopAssistantScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .stepTwoDesktopAssistantScroll .formFields {
+    gap: 0.85rem;
+  }
+
+  .stepTwoDesktopAssistant .formSection {
+    border: 1px solid rgba(210, 221, 236, 0.92);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 8px 22px rgba(20, 39, 70, 0.035);
+  }
+
+  .stepTwoDesktopConfigSection {
+    padding: 0.92rem 1rem;
+  }
+
+  .stepTwoDesktopConfigSection .formSectionHead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    margin-bottom: 0.78rem;
+  }
+
+  .stepTwoDesktopConfigSection .formSectionEyebrow {
+    color: #326ed1;
+    letter-spacing: 0.14em;
+  }
+
+  .stepTwoDesktopConfigSection .formSectionHead strong {
+    color: var(--step2-ink);
+    font-size: 0.98rem;
+  }
+
+  .stepTwoDesktopConfigSection .formSectionHead p {
+    color: var(--step2-muted);
+    font-size: 0.74rem;
+  }
+
+  .stepTwoDesktopConfigSection .field {
+    gap: 0.42rem;
+  }
+
+  .stepTwoDesktopConfigSection .label {
+    color: #52637a;
+    letter-spacing: 0.08em;
+  }
+
+  .stepTwoDesktopConfigSection .typeGroupGrid,
+  .stepTwoDesktopConfigSection .batchCountRow {
+    gap: 0.42rem;
+  }
+
+  .stepTwoDesktopConfigSection .typeChip,
+  .stepTwoDesktopConfigSection .batchCountButton {
+    min-height: 2.05rem;
+    border-radius: 10px;
+    border-color: #d9e2ef;
+    background: #ffffff;
+    color: #304763;
+    transition: background 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .stepTwoDesktopConfigSection .typeChip:hover,
+  .stepTwoDesktopConfigSection .batchCountButton:hover {
+    transform: translateY(-1px);
+    border-color: #b9cbe6;
+    background: #f8fbff;
+  }
+
+  .stepTwoDesktopConfigSection .typeChipActive,
+  .stepTwoDesktopConfigSection .batchCountButtonActive {
+    border-color: #326ed1;
+    background: #eef5ff;
+    color: #1c4f9d;
+    box-shadow: 0 0 0 3px rgba(50, 110, 209, 0.08);
+  }
+
+  .stepTwoDesktopSystemPicker {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .stepTwoDesktopOtherSystems {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .stepTwoDesktopOtherSystems summary {
+    width: fit-content;
+    min-height: 1.95rem;
+    padding: 0.42rem 0.72rem;
+    border: 1px solid #d9e2ef;
+    border-radius: 999px;
+    background: #fbfdff;
+    color: #52637a;
+    font-size: 0.76rem;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .stepTwoDesktopOtherSystems summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .stepTwoDesktopOtherSystems[open] summary {
+    color: #1c4f9d;
+    background: #eef5ff;
+    border-color: #c5d7f2;
+  }
+
+  .stepTwoDesktopAssistantFooter {
+    position: static;
+    flex: 0 0 auto;
+    padding: 0.42rem 0 0;
+    border-top: 0;
+    background: linear-gradient(180deg, rgba(242, 246, 251, 0), rgba(242, 246, 251, 0.94) 28%, rgba(242, 246, 251, 0.98));
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooter {
+    position: static;
+    padding: 0.4rem 0.52rem;
+    border: 1px solid rgba(214, 224, 238, 0.9);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 14px 32px rgba(20, 39, 70, 0.08);
+    backdrop-filter: blur(10px);
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnGhost,
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnPrimary {
+    min-height: 2.35rem;
+    height: 2.38rem;
+    padding: 0 0.78rem;
+    border-radius: 12px;
+    justify-content: center;
+    font-size: 0.86rem;
+    transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnPrimary {
+    grid-column: auto;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnGhost:first-child {
+    border-color: transparent;
+    background: transparent;
+    color: #65758d;
+    box-shadow: none;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnGhost:nth-child(2) {
+    border-color: #d8e2ef;
+    background: #ffffff;
+    color: #243b6b;
+    box-shadow: none;
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnPrimary {
+    border-color: transparent;
+    background: #152744;
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(21, 39, 68, 0.18);
+  }
+
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnPrimary:hover,
+  .stepTwoDesktopAssistantFooter .stepTwoFormFooterGroup .btnPrimary:focus-visible {
+    transform: translateY(-1px);
+    background: #0f1f39;
+    box-shadow: 0 14px 28px rgba(21, 39, 68, 0.22);
+  }
+
+  .stepTwoDesktopAddedFeedback {
+    width: fit-content;
+    margin: 0 auto 0.45rem;
+    padding: 0.42rem 0.75rem;
+    border-radius: 999px;
+    background: #e8f8ef;
+    color: #18744f;
+    font-size: 0.76rem;
+    font-weight: 800;
+    box-shadow: 0 10px 24px rgba(24, 116, 79, 0.12);
+    animation: stepTwoFeedbackIn 180ms ease-out;
+  }
+
+  @keyframes stepTwoFeedbackIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .stepTwoDesktopShell .input,
+  .stepTwoDesktopShell .selectWrap select,
+  .stepTwoDesktopShell .stepTwoMobileMedidaInput {
+    border-color: #d9e2ef;
+    background: #fbfdff;
+    color: var(--step2-ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  }
+
+  .stepTwoDesktopShell .input:focus,
+  .stepTwoDesktopShell .selectWrap select:focus,
+  .stepTwoDesktopShell .stepTwoMobileMedidaInput:focus {
+    border-color: #326ed1;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(50, 110, 209, 0.1);
+  }
+
+  .stepTwoLayout > .stepTwoPanel.stepTwoPanelDesktop,
+  .stepTwoLayout > .stepTwoPanel.stepTwoPanelModeDesktop {
+    max-height: calc(100dvh - 16rem);
+    border: 1px solid #d9e4f1;
+    background: #f3f6fb;
+    box-shadow: 0 10px 26px rgba(20, 39, 70, 0.055);
+  }
+
+  .stepTwoDesktopShell .stepTwoLayout > .stepTwoPanel.stepTwoPanelDesktop,
+  .stepTwoDesktopShell .stepTwoLayout > .stepTwoPanel.stepTwoPanelModeDesktop {
+    height: var(--step2-main-height);
+    max-height: calc(100dvh - 16rem);
+    max-height: var(--step2-main-height);
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelHeader {
+    border-bottom: 1px solid #dce6f2;
+    background: #f7faff;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelTitle {
+    color: #142744;
+    font-size: 0.9rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelStats {
+    gap: 0.28rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelStatPending,
+  .stepTwoPanelDesktop .stepTwoPanelStatComplete {
+    color: #64748b;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelStatPending {
+    color: #9a6612;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelStatComplete {
+    color: #18744f;
+  }
+
+  .stepTwoPanelDesktop .stepTwoPanelStatDivider {
+    background: #cbd7e6;
+  }
+
+  .stepTwoPanelDesktop .stepTwoFilterButton {
+    min-height: 2rem;
+    padding: 0.35rem 0.7rem;
+    border-color: #d9e4f1;
+    background: #ffffff;
+    color: #243b6b;
+    font-size: 0.72rem;
+    box-shadow: none;
+  }
+
+  .stepTwoPanelDesktop .stepTwoCounter {
+    min-width: 1.85rem;
+    min-height: 1.85rem;
+    background: #152744;
+    box-shadow: none;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListCard {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 0.62rem;
+    min-height: 74px;
+    padding: 0.62rem 0.7rem;
+    border-color: #d9e4f1;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(20, 39, 70, 0.055);
+    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListCard:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(20, 39, 70, 0.08);
+  }
+
+  .stepTwoPanelDesktop .stepTwoListCard::before {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 14px 0 0 14px;
+    opacity: 1;
+    background: #d8a03d;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListCard:has(.stepTwoStatusPillComplete)::before {
+    background: #2fa36b;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListCardSelected::before,
+  .stepTwoPanelDesktop .stepTwoListCardEditing::before {
+    background: #326ed1;
+  }
+
+  .stepTwoPanelDesktop .stepTwoStatusPillComplete ~ .stepTwoStatusPillSelected,
+  .stepTwoPanelDesktop .stepTwoStatusPillComplete {
+    color: #18744f;
+    background: #e8f8ef;
+    border-color: #c9ecda;
+  }
+
+  .stepTwoPanelDesktop .stepTwoStatusPillPending {
+    color: #9a6612;
+    background: #fff4df;
+    border-color: #f0d5a4;
+  }
+
+  .stepTwoPanelDesktop .stepTwoStatusPillSelected,
+  .stepTwoPanelDesktop .stepTwoStatusPillEditing {
+    color: #1c4f9d;
+    background: #eaf2ff;
+    border-color: #cfe0fb;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListThumb,
+  .stepTwoPanelDesktop .stepTwoListThumbSvg {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+  }
+
+  .stepTwoPanelDesktop .customWorkThumb {
+    min-height: 40px;
+    font-size: 0.58rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListName {
+    font-size: 0.82rem;
+    color: #142744;
+  }
+
+  .stepTwoPanelDesktop .stepTwoListPrice {
+    font-size: 0.78rem;
+    color: #142744;
+  }
+
+  .stepTwoPanelDesktop .stepTwoMetaLine {
+    font-size: 0.72rem;
+    color: #64748b;
+  }
+
+  .stepTwoPanelDesktop .stepTwoMetaLine + .stepTwoMetaLine + .stepTwoMetaLine {
+    display: none;
+  }
+
+  .stepTwoPanelDesktop .stepTwoCardActions {
+    gap: 0.24rem;
+  }
+
+  .stepTwoPanelDesktop .stepTwoCardActions .iconButton,
+  .stepTwoPanelDesktop .stepTwoCardActions .iconButtonDanger {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: #f3f7fc;
+    border-color: #d8e2ef;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stepTwoDesktopShell *,
+    .stepTwoDesktopShell *::before,
+    .stepTwoDesktopShell *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 .stepTwoMobileLineSheetTitle {
@@ -9279,9 +13514,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — Búsqueda de vidrios
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” BÃºsqueda de vidrios
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileVidrioSearchWrap {
   position: relative;
   display: flex;
@@ -9343,7 +13578,7 @@
   color: #2FA36B;
 }
  
-/* Chip recomendado — borde verde suave */
+/* Chip recomendado â€” borde verde suave */
 .stepTwoMobileChoiceChipRec {
   border-color: #B8E6CF !important;
   background: rgba(47, 163, 107, 0.07) !important;
@@ -9586,10 +13821,10 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   CONFIG — CTA "Agregar componente"
-   El elemento visual más importante del wizard
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CONFIG â€” CTA "Agregar componente"
+   El elemento visual mÃ¡s importante del wizard
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepTwoMobileCtaAgregar {
   height: 3.4rem !important;
   font-size: 1rem !important;
@@ -9616,9 +13851,9 @@
 }
  
  
-/* ──────────────────────────────────────────────────────────────────────────
-   RESPONSIVE — mobile ≤ 560px
-────────────────────────────────────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   RESPONSIVE â€” mobile â‰¤ 560px
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 560px) {
   .stepTwoMobileCreatorShell {
     gap: 0.65rem;
@@ -9675,7 +13910,7 @@
     font-size: 1.18rem;
   }
 
-  /* Inputs medidas: ligeramente más pequeños en pantallas muy chicas */
+  /* Inputs medidas: ligeramente mÃ¡s pequeÃ±os en pantallas muy chicas */
   .stepTwoMobileMedidaInput {
     height: 3.2rem;
     font-size: 1.25rem;
@@ -9687,13 +13922,13 @@
     font-size: 1.34rem;
   }
  
-  /* Precio de item lista más compacto */
+  /* Precio de item lista mÃ¡s compacto */
   .stepTwoMobileItemPrice {
     font-size: 1rem;
     padding: 0.25rem 0.75rem 0.7rem;
   }
  
-  /* Bloques secundarios más compactos */
+  /* Bloques secundarios mÃ¡s compactos */
   .stepTwoMobileBlockSecundario {
     padding: 0.64rem 0.74rem;
   }
@@ -11354,6 +15589,29 @@
 
   .lineTemplateSummaryHeader {
     flex-direction: column;
+  }
+}
+
+@media (min-width: 861px) {
+  .stepTwoDesktopShell .stepTwoLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(330px, 0.88fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .stepTwoDesktopShell .stepTwoPrimarySurface {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stepTwoDesktopShell .stepTwoPanelModeDesktop {
+    position: static;
+    top: auto;
+    align-self: stretch;
+    min-height: 0;
   }
 }
  

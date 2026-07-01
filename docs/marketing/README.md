@@ -19,11 +19,32 @@ Objetivo:
 
 ## Principios
 
-- Ventora no se vende como ERP ni software de produccion
-- el primer objetivo es cerrar pilotos y pagos, no escalar volumen vacio
+- Ventora no se vende como ERP, software de produccion ni cotizador tecnico barato
+- el primer objetivo es llevar al usuario a crear su primera cotizacion movil y PDF profesional, no escalar volumen vacio
 - la prospeccion inicial es manual y personalizada
 - todo debe poder medirse en CSV, JSON y dashboard HTML
 - el feedback comercial debe convertirse en mejoras de producto y onboarding
+
+## Direccion central de marketing
+
+Mensaje principal:
+
+**"Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."**
+
+Ventora se comunica como cotizador movil y capa comercial para maestros e instaladores que cotizan con Excel, Word, notas, WhatsApp, precio por metro cuadrado, margen o valor final.
+
+No competir como sistema de cubicacion, perfiles, cortes, herrajes o desperdicio. Si el usuario ya tiene cotizador tecnico, Ventora convierte el calculo final en una propuesta profesional, movil, enviable por WhatsApp y con seguimiento.
+
+Embudo obligatorio:
+
+1. Contenido con dolor real.
+2. CTA unico: "Escribeme DEMO" o "Te muestro una cotizacion real".
+3. Conversacion breve de clasificacion.
+4. Mostrar una cotizacion real o demo.
+5. Prueba guiada.
+6. Primera cotizacion creada el mismo dia.
+7. Seguimiento antes del vencimiento.
+8. Oferta de plan adecuado.
 
 ## Secuencia recomendada para agentes
 

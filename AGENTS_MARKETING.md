@@ -2,68 +2,92 @@
 
 Lee antes de proponer acciones de growth, marketing, prospeccion, contenido, WhatsApp o pilotos.
 
-Ultima actualizacion: 2026-05-20.
+Ultima actualizacion: 2026-06-26.
 
 ## Objetivo de este archivo
 
 Dar contexto suficiente para que cualquier agente de IA pueda trabajar crecimiento comercial de Ventora sin volver a pedir el contexto base del producto.
 
-Ventora no compite como ERP ni como software de produccion. Su centro es ayudar a captar leads, centralizarlos, responder rapido, cotizar facil y cerrar mejor.
+Ventora no compite como ERP, software de produccion ni cotizador tecnico barato. Su centro de marketing es ayudar al maestro a cotizar desde el celular, enviar un PDF profesional y dejar de llegar a casa a preparar presupuestos.
 
-## Resumen comercial de Ventora
+## Direccion central de marketing
 
-**Ventora es un SaaS comercial para empresas de vidrios, aluminio y rubros cercanos que captura solicitudes, las centraliza y acelera el cierre por WhatsApp y cotizaciones.**
+Ventora no debe posicionarse como un cotizador tecnico barato ni competir directamente con sistemas de cubicacion, perfiles, cortes, herrajes o desperdicio.
 
-Flujo central del producto:
+Ventora es un cotizador movil y una capa comercial para maestros e instaladores que hoy:
 
-1. La empresa comparte su mini landing publica
-2. Un prospecto deja una solicitud
-3. Ventora centraliza el lead
-4. El negocio responde rapido por WhatsApp
-5. Se crea una cotizacion
-6. Se comparte por PDF o link publico
-7. Se registra aprobacion o rechazo
+- cotizan tarde al llegar a casa
+- dependen de Excel, Word, notas o precios enviados por WhatsApp
+- pierden tiempo preparando presupuestos
+- tienen clientes y cotizaciones desordenados
+- quieren verse mas profesionales frente a sus clientes
 
-Frase clave del producto:
+Transformacion a comunicar:
 
-**"Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."**
+**"De llegar a casa a hacer presupuestos en el computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos."**
+
+Mensaje principal:
+
+**"Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."**
+
+Promesas permitidas:
+
+- ahorrar tiempo al cotizar
+- cotizar desde cualquier lugar
+- enviar presupuestos claros y profesionales
+- mantener clientes y cotizaciones ordenados
+- responder mas rapido
+- dar una mejor impresion frente al cliente
+- convertir precios, medidas o calculos ya realizados en una cotizacion lista para enviar
+
+Promesas prohibidas:
+
+- "Ganaras mas clientes."
+- "Cerraras mas ventas."
+- "Ventora cubica."
+- "Ventora calcula perfiles, cortes, herrajes o desperdicio."
+- comparar Ventora como reemplazo barato de un cotizador tecnico
 
 ## Cliente objetivo
 
-Ventora esta pensado para negocios pequenos y medianos de Chile que venden e instalan soluciones relacionadas con:
+Audiencia principal:
 
-- vidrierias
-- empresas de aluminio
-- instaladores independientes
-- shower door
-- termopanel
-- cierres de terraza
-- PVC
+**Maestros e instaladores de vidrios, aluminio, ventanas, PVC, shower y cierres que cotizan manualmente, por metro cuadrado, precio directo, margen o valor final.**
 
-Perfil operativo esperado:
+Audiencia secundaria:
 
-- negocios donde el dueno tambien vende
-- equipos que dependen de WhatsApp para responder
-- empresas sin sistema comercial ordenado
-- negocios que ya reciben consultas, pero las gestionan de forma manual
+**Usuarios que ya tienen cotizador tecnico, pero necesitan transformar el calculo final en una propuesta profesional, movil, enviable por WhatsApp y con seguimiento.**
 
 ## Dolor principal
 
 Los problemas a resolver y comunicar siempre deben mantenerse en este marco:
 
-- pierden consultas
-- responden tarde
-- WhatsApp se desordena
-- no tienen seguimiento
-- cotizan lento
-- no tienen pagina simple para captar solicitudes
+- cotizar tarde en casa despues de trabajar en terreno
+- preparar presupuestos en computador, Excel, Word, notas o chats
+- perder tiempo armando una propuesta presentable
+- tener clientes y cotizaciones desordenados
+- responder lento por no tener presupuesto listo
+- verse poco profesional aunque el trabajo tecnico sea bueno
 
 Dolores secundarios validos:
 
-- la informacion queda repartida entre celular, papel y chats
-- no recuerdan a quien se cotizo y a quien no
-- no pueden medir si las consultas terminan en venta
-- dependen demasiado de la memoria del vendedor o del dueno
+- informacion repartida entre celular, papel, chats y archivos
+- precios, medidas o calculos ya hechos que aun no estan listos para enviar
+- dificultad para encontrar presupuestos anteriores
+- falta de seguimiento antes del vencimiento
+
+## Embudo obligatorio
+
+Toda accion de marketing debe respetar este embudo:
+
+1. Contenido con dolor real.
+2. CTA unico: "Escribeme DEMO" o "Te muestro una cotizacion real".
+3. Conversacion breve de clasificacion.
+4. Mostrar una cotizacion real o demo.
+5. Prueba guiada.
+6. Lograr que cree su primera cotizacion el mismo dia.
+7. Seguimiento antes del vencimiento.
+8. Oferta de plan adecuado.
 
 ## Oferta inicial
 
@@ -78,9 +102,9 @@ Oferta comercial sugerida para etapa piloto:
 
 Objetivo del piloto:
 
-- demostrar captura real de leads
-- ordenar respuesta comercial por WhatsApp
-- lograr al menos una cotizacion enviada dentro del periodo
+- lograr que el usuario cree su primera cotizacion el mismo dia
+- mostrar cotizacion movil y PDF profesional como primer valor
+- convertir precios, medidas o calculos existentes en una propuesta lista para enviar
 - validar si el negocio ve valor practico y pagaria por continuidad
 
 ## Canales de prospeccion
@@ -106,24 +130,22 @@ Fuentes utiles para encontrar prospectos:
 
 Toda operacion de growth debe registrar como minimo:
 
-- leads encontrados
-- leads contactados
-- respuestas
-- conversaciones reales
-- demos agendadas
-- pilotos activos
-- pilotos convertidos a pago
-- CAC estimado
-- conversion contacto -> respuesta
-- conversion respuesta -> demo
-- conversion demo -> piloto
-- conversion piloto -> pago
+- mensajes recibidos
+- demos
+- pruebas iniciadas
+- primera cotizacion creada
+- pagos
+- conversion mensaje -> demo
+- conversion demo -> prueba
+- conversion prueba -> primera cotizacion
+- conversion primera cotizacion -> pago
 
 KPIs complementarios recomendados:
 
 - tiempo a primera respuesta
 - dias desde primer contacto hasta demo
-- dias desde demo hasta piloto
+- dias desde demo hasta prueba guiada
+- dias desde prueba hasta primera cotizacion creada
 - canal que genero cada oportunidad
 - objeciones mas repetidas
 
@@ -144,8 +166,11 @@ Reglas practicas:
 - priorizar volumen pequeno con alta calidad de mensaje
 - medir por semana, no solo por mes
 - convertir feedback de prospectos en mejoras de producto y onboarding
-- toda propuesta debe fortalecer captacion, centralizacion, WhatsApp, cotizacion o cierre
+- toda propuesta debe fortalecer cotizacion movil, PDF profesional, orden de clientes/cotizaciones, respuesta rapida o seguimiento
 - no abrir CRM enterprise, ERP, inventario, produccion ni modulos fuera del foco comercial
+- cada pieza de contenido debe tener un solo dolor, una demostracion concreta de Ventora y un CTA unico
+- no explicar todas las funciones en un mismo Reel
+- no usar lenguaje tecnico innecesario ni contenido generico de SaaS
 
 ## Cadencia semanal
 
@@ -185,7 +210,7 @@ Un agente que trabaje growth para Ventora debe:
 
 - vender una solucion simple y concreta
 - hablar en lenguaje comercial, no tecnico
-- demostrar rapidez y orden, no complejidad
+- demostrar cotizacion movil, PDF profesional y orden, no complejidad
 - usar ejemplos del rubro de vidrios y aluminio
 - priorizar pilotos pequenos por sobre estrategias grandes
 - medir aprendizajes reales antes de escalar
@@ -193,6 +218,9 @@ Un agente que trabaje growth para Ventora debe:
 Un agente no debe:
 
 - presentar Ventora como ERP
+- presentar Ventora como cotizador tecnico barato
+- prometer cubicacion, perfiles, cortes, herrajes o desperdicio
+- prometer que el usuario ganara mas clientes o cerrara mas ventas
 - prometer automatizaciones invasivas
 - depender de anuncios pagados al inicio
 - hacer planes abstractos sin lista de tareas ni metricas

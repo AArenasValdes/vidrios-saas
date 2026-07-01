@@ -1,5 +1,5 @@
-import { GrowthPageClient } from "./page-client";
+import { redirect } from "next/navigation";
 
-export default function GrowthDashboardPage() {
-  return <GrowthPageClient />;
+export default function LegacyGrowthPage() {
+  redirect("/admin/prospectos");
 }

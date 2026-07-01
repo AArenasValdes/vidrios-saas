@@ -50,13 +50,13 @@ Publico: maestros, duenos y vendedores de vidrierias, aluminio, PVC, shower door
 | Tiempo | Visual | Subtitulo grande | Voz |
 |---|---|---|---|
 | 0:00-0:05 | Maestro trabajando en ventana o shower, celular vibra | "Te pidieron una cotizacion" | "Estas en terreno, trabajando, y te llega una consulta." |
-| 0:05-0:12 | Mensaje tipo WhatsApp: "Hola, me puede cotizar?" | "Si respondes tarde..." | "Si respondes tarde, el cliente puede buscar a otro." |
-| 0:12-0:22 | Pantalla Ventora en dashboard mobile | "Ventora es para vender" | "Ventora es un cotizador comercial movil para responder rapido, cotizar y enviar presupuestos profesionales." |
-| 0:22-0:35 | Texto comparativo simple, dos columnas | "Tecnico = fabricar" / "Ventora = vender" | "Tu cotizador tecnico te ayuda a fabricar. Ventora te ayuda a vender." |
+| 0:05-0:12 | Mensaje tipo WhatsApp con medidas o precio final | "No lo dejes para la noche" | "Si esperas llegar a casa, el presupuesto se atrasa." |
+| 0:12-0:22 | Pantalla Ventora en dashboard mobile | "Cotiza desde el celular" | "Ventora es un cotizador movil para crear y enviar presupuestos profesionales." |
+| 0:22-0:35 | Texto comparativo simple, dos columnas | "Tecnico = fabricar" / "Ventora = propuesta" | "Tu cotizador tecnico te ayuda a fabricar. Ventora convierte el calculo final en una propuesta profesional." |
 | 0:35-0:50 | Listado de cotizaciones y cliente ordenado | "Clientes y cotizaciones ordenadas" | "Aqui ordenas clientes, solicitudes y cotizaciones sin depender de la memoria ni de chats sueltos." |
 | 0:50-1:05 | Detalle cotizacion con botones PDF/WhatsApp | "PDF profesional por WhatsApp" | "Creas una propuesta simple, generas PDF y la envias por WhatsApp." |
 | 1:05-1:20 | Pantalla con negaciones claras | "No es pauta de corte" | "Ventora no entrega pautas de corte, despiece ni optimizacion de perfiles. Para eso existen sistemas tecnicos." |
-| 1:20-1:30 | Logo Ventora + celular con cotizacion | "Cotiza rapido. Vende mejor." | "Ventora complementa tu flujo: te ayuda a responder mas rapido y cerrar mas trabajos desde el celular." |
+| 1:20-1:30 | Logo Ventora + celular con cotizacion | "Cotiza desde el celular" | "Ventora complementa tu flujo: envia un PDF profesional sin llegar a casa a hacer presupuestos." |
 
 ### Version horizontal
 
@@ -155,7 +155,7 @@ Duracion objetivo: 90 a 150 segundos.
 | 0:55-1:10 | WhatsApp con mensaje prellenado | "Mensaje listo" | "El mensaje sale con el link o datos de la cotizacion para ahorrar tiempo." |
 | 1:10-1:28 | Volver a cotizacion/listado | "No pierdas seguimiento" | "Luego la cotizacion queda en Ventora para revisar si fue enviada, aprobada, rechazada o si falta seguimiento." |
 | 1:28-1:42 | Listado `/cotizaciones` con estados | "Orden comercial" | "Asi no dependes de recordar todo en la cabeza o buscar entre conversaciones." |
-| 1:42-1:55 | Logo + celular | "Mas rapido. Mas profesional." | "Ventora te ayuda a responder mas rapido, enviar mejor y cerrar mas trabajos." |
+| 1:42-1:55 | Logo + celular | "Mas rapido. Mas profesional." | "Ventora te ayuda a cotizar desde el celular y enviar un PDF profesional." |
 
 ### Version horizontal
 

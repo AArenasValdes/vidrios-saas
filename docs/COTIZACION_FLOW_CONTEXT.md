@@ -6,7 +6,7 @@ Este archivo existe para que cualquier IA/agente entienda el flujo mas important
 
 ## Objetivo de producto
 
-Ventora no es un ERP ni un cotizador tecnico pesado. La cotizacion es herramienta de cierre comercial dentro del producto principal: capturar leads cuando la empresa esta ocupada o dormida, centralizarlos y ayudar a cerrar trabajos sin perder oportunidades.
+Ventora no es un ERP ni un cotizador tecnico pesado. La cotizacion es herramienta de cierre comercial dentro del producto principal: capturar leads cuando la empresa esta ocupada o dormida, centralizarlos, convertirlos en obras/cotizaciones claras y ayudar a cerrar trabajos sin romper PDF, WhatsApp ni aprobacion publica.
 
 El flujo de cotizacion debe mantenerse enfocado en:
 
@@ -22,6 +22,7 @@ No reintroducir motor tecnico de compatibilidades, logistica, ERP, inventario ni
 
 Antes de tocar codigo del flujo, leer:
 
+- `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
 - `docs/agent-map/README.md`
 - `docs/agent-map/FEATURES_MAP.md`, seccion Cotizaciones
 - `docs/agent-map/ROUTES_MAP.md`, rutas `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`, `/presupuesto/[token]`, `/print/cotizaciones/[id]`
@@ -29,11 +30,20 @@ Antes de tocar codigo del flujo, leer:
 
 Flujo tecnico obligatorio: `page -> hook -> service -> repository -> Supabase`.
 
+## Prioridad de roadmap
+
+Este flujo es la base de:
+
+- **Milestone 0**: estabilizacion de cotizacion desktop;
+- **Milestone 2**: Quote Studio desktop.
+
+Cualquier constructor visual futuro debe montarse encima de este flujo y de sus contratos actuales. No lo reemplaza, no abre rutas publicas nuevas y no cambia PDF/WhatsApp sin aprobacion explicita.
+
 ## Resumen del circuito completo
 
 1. Lead entra por `/solicitud/[empresa]` o cliente ya existe.
 2. Vendedor abre `/cotizaciones/nueva`, opcionalmente con prefill desde solicitud.
-3. Paso 1 rellena cliente, telefono, obra, direccion y condiciones basicas.
+3. Paso 1 rellena cliente, telefono, obra (`projects`, visible como Obras), direccion y condiciones basicas.
 4. Paso 2 agrega componentes comerciales: linea, material, vidrio, medidas, cantidad y precio.
 5. Paso 3 revisa totales, flete/descuento o total global, y guarda borrador/cotizacion.
 6. Servicio crea o actualiza `clients`, `projects`, `cotizaciones` y `cotizacion_items`.

@@ -1,5 +1,6 @@
 export const COMPONENT_COLOR_NAMES: Record<string, string> = {
   "#a8a8a8": "Aluminio mate",
+  "#ffffff": "Blanco",
   "#f0eeeb": "Blanco",
   "#b7bcc4": "Gris",
   "#b7834a": "Roble Dorado",

@@ -53,6 +53,7 @@ describe("component-catalog service", () => {
     expect(getSystemOptionsForComponent("Shower door")).toEqual([
       "Corredera",
       "Batiente",
+      "Fijo / Walk-in",
     ]);
     expect(getConfigurationOptionsForComponent("Shower door")).toEqual([
       "Frontal",
@@ -68,6 +69,8 @@ describe("component-catalog service", () => {
       "Abatible",
       "Oscilobatiente",
       "Bow Window",
+      "Guillotina",
+      "Celosía",
     ]);
     expect(getConfigurationOptionsForComponentSistema("Ventana", "Bow Window")).toEqual([
       "Corredera",

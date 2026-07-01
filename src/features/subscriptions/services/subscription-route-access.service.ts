@@ -7,6 +7,7 @@ import {
   resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
 import {
+  buildFreshTrialRepairSnapshot,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
 import type { OrganizationSubscriptionSnapshot } from "@/features/subscriptions/types/subscription";
@@ -38,6 +39,10 @@ type OrganizationSubscriptionRow = {
   payment_method?: string | null;
   last_payment_at?: string | null;
   founder_price_locked?: boolean | null;
+};
+
+type OrganizationCreatedAtRow = {
+  creado_en?: string | null;
 };
 
 function mapOrganizationSubscriptionRow(
@@ -82,6 +87,63 @@ async function getSubscriptionSnapshotByOrganizationId(
   return mapOrganizationSubscriptionRow(data as OrganizationSubscriptionRow | null);
 }
 
+async function repairFreshTrialSnapshotIfNeeded(input: {
+  supabase: SupabaseClient;
+  organizationId: string | number;
+  snapshot: OrganizationSubscriptionSnapshot | null;
+}) {
+  const initialState = resolveOrganizationSubscriptionState(input.snapshot);
+
+  if (!initialState.isWriteBlocked) {
+    return input.snapshot;
+  }
+
+  const { data, error } = await input.supabase
+    .from("organizations")
+    .select("creado_en")
+    .eq("id", input.organizationId)
+    .maybeSingle();
+
+  if (error) {
+    return input.snapshot;
+  }
+
+  const repairedSnapshot = buildFreshTrialRepairSnapshot({
+    snapshot: input.snapshot,
+    organizationCreatedAt: (data as OrganizationCreatedAtRow | null)?.creado_en,
+  });
+
+  if (!repairedSnapshot) {
+    return input.snapshot;
+  }
+
+  const { error: repairError } = await input.supabase
+    .from("organization_profile")
+    .upsert(
+      {
+        organization_id: input.organizationId,
+        subscription_status: repairedSnapshot.subscriptionStatus,
+        trial_started_at: repairedSnapshot.trialStartedAt,
+        trial_ends_at: repairedSnapshot.trialEndsAt,
+        plan_type: repairedSnapshot.planType,
+        plan_code: repairedSnapshot.planCode,
+        billing_period: repairedSnapshot.billingPeriod,
+        payment_method: repairedSnapshot.paymentMethod,
+        founder_price_locked: repairedSnapshot.founderPriceLocked,
+      },
+      { onConflict: "organization_id" }
+    );
+
+  if (repairError) {
+    console.warn("[subscription] No se pudo persistir reparacion de trial", {
+      organizationId: input.organizationId,
+      message: repairError.message,
+    });
+  }
+
+  return repairedSnapshot;
+}
+
 export async function resolveAuthenticatedSubscriptionRouteContext(options: {
   requireOrganization?: boolean;
 } = {}) {
@@ -99,10 +161,15 @@ export async function resolveAuthenticatedSubscriptionRouteContext(options: {
     supabase,
     context.profile.organizationId
   );
+  const repairedSnapshot = await repairFreshTrialSnapshotIfNeeded({
+    supabase,
+    organizationId: context.profile.organizationId,
+    snapshot,
+  });
 
   return {
     ...context,
-    subscription: resolveOrganizationSubscriptionState(snapshot),
+    subscription: resolveOrganizationSubscriptionState(repairedSnapshot),
   };
 }
 
@@ -121,4 +188,5 @@ export {
   ORGANIZATION_SUBSCRIPTION_SELECT,
   getSubscriptionSnapshotByOrganizationId,
   mapOrganizationSubscriptionRow,
+  repairFreshTrialSnapshotIfNeeded,
 };

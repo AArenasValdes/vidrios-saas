@@ -1,20 +1,35 @@
 # AGENTS.md - Ventora
 
-Lee antes de editar. Ultima consolidacion: 2026-06-11.
+Lee antes de editar. Ultima consolidacion: 2026-06-30.
 
 ## Regla principal
 
 **Antes de modificar codigo, leer `docs/agent-map/README.md`.**
 
+**Antes de proponer o modificar cualquier cambio de desktop comercial, leer tambien `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.**
+
 Ahi esta el mapa tecnico completo del proyecto con rutas, features, tablas, componentes y guias por tipo de tarea. Usarlo reduce gasto de tokens y evita busquedas innecesarias.
+
+## Jerarquia documental
+
+Si dos documentos se contradicen, manda este orden:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+2. `AGENTS.md`
+3. `docs/agent-map/README.md`
+4. mapas tecnicos en `docs/agent-map/`
+5. briefs de apoyo (`docs/ventora-master-brief.md`, `docs/COTIZACION_FLOW_CONTEXT.md`, `docs/salida-beta-checklist.md`, `README.md`)
 
 ## Producto
 
-**Software comercial para empresas de vidrios y aluminio que captura, centraliza y ayuda a cerrar leads.**
+**Software comercial para empresas de vidrios, aluminio y PVC que ayuda a cotizar desde el celular, preparar mejor la cotizacion desde desktop, enviar PDF profesional, ordenar clientes/obras/cotizaciones y dar seguimiento comercial real.**
 
 - La cotizacion existe como herramienta de cierre, no como identidad del producto
 - Frase clave: "Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."
 - No reintroducir cotizador tecnico, ERP, logistica ni motor de compatibilidades
+- La prioridad de desktop ya no es un CRM generico. El foco es escritorio de cotizacion, configuracion visual guiada, catalogo privado futuro y control comercial real para talleres.
+- Para marketing, growth, contenido, campanas, mensajes, guiones, prospeccion o cambios de posicionamiento, leer primero `AGENTS_MARKETING.md` y respetar su seccion **Direccion central de marketing**.
+- Mensaje comercial vigente: "Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."
 
 ## Mapa tecnico
 
@@ -42,9 +57,9 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-06-11
+Ultima actualizacion operativa: 2026-06-30
 
-- **Fase actual**: estabilizacion, hardening y limpieza de rutas criticas de captacion y cierre
+- **Fase actual**: estabilizacion de cotizacion desktop, dashboard comercial real y preparacion del Quote Studio desktop
 - **Estado del baseline**: `npm run lint`, `npm test` y `npm run build` estan pasando en el workspace principal
 - **Rutas ya estabilizadas en esta pasada**:
   - `/api/solicitud/[empresa]`
@@ -67,7 +82,12 @@ Ultima actualizacion operativa: 2026-06-11
   - busquedas base de `clientes` y `cotizaciones` responden
   - `solicitudes` navega a `canales`
   - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
-- **Objetivo inmediato**: seguir cerrando deuda tecnica de Fase 2 sin abrir Fase 3+
+- **Objetivo inmediato**:
+  1. estabilizar cotizacion desktop;
+  2. dejar dashboard comercial con datos reales;
+  3. dejar Quote Studio desktop impecable y vendible;
+  4. luego validar constructor visual guiado;
+  5. catalogos privados y cubicacion quedan como piloto posterior.
 - **Nueva pasada cerrada en cotizaciones**:
   - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
   - nueva tabla activa `cotizacion_line_templates`
@@ -171,7 +191,7 @@ Ultima actualizacion operativa: 2026-06-11
   - flujos profundos de `/cotizaciones/nueva`
   - acciones de edicion/eliminacion en `/clientes`
 - Correr smoke visual de Espejo/Cubierta de mesa en cotizacion y PDF si se toca `shouldRequireProfileMaterialForComponent` o `item-print-specs.ts`
-- Mantener foco en Fase 2: captacion, centralizacion y cierre comercial; no abrir pipeline Kanban ni modulos posteriores
+- Mantener foco en Fase 2: cotizacion, cierre comercial y desktop taller; no abrir pipeline Kanban, CRM generico ni modulos posteriores
 
 ## Notas de QA
 
@@ -188,6 +208,7 @@ Ultima actualizacion operativa: 2026-06-11
 - **Codigo nuevo en `src/features/<feature>/`**: NO en `src/hooks/`, `src/services/`, `src/repositories/`, `src/types/` (son re-exports legacy)
 - **Salidas en espanol**: nunca responder en ingles
 - **Usar `proxy.ts`**: no asumir `middleware.ts`
+- **Antes de tocar cotizacion, dashboard, visual o catalogo**: leer roadmap + mapa tecnico correspondiente
 
 ## Identidad visual
 
@@ -208,7 +229,10 @@ Ultima actualizacion operativa: 2026-06-11
 - **No romper rutas publicas**: `/solicitud/[empresa]` (captacion) y `/presupuesto/[token]` (cierre) son criticas
 - **No romper PDF ni WhatsApp**: son herramientas de cierre activas
 - **No tocar tablas legacy**: `materials`, `product_types`, `system_lines`, etc. estan dormidas
-- **No abrir Fase 3+**: pipeline Kanban y metricas son Fase 2; lo demas se posterga
+- **No abrir Fase 3+**: pipeline Kanban y metricas decorativas no son prioridad; lo demas se posterga
+- **No crear `oportunidades` ni `cobros`**: roadmap congelado para una fase futura
+- **No crear roles, responsables, equipos ni permisos**
+- **No agregar logica de cubicacion ni tablas tecnicas nuevas sin aprobacion explicita**
 - **4 tablas sin RLS policies**: quote_item_breakdown, material_types, formula_variables, cotizacion_code_counters
 - **Email push depende de env vars**: `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`
 - **Bucket Storage**: `organization-assets` requerido para logos y PDFs

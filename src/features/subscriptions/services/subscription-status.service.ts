@@ -229,6 +229,65 @@ export function resolveOrganizationSubscriptionState(
   };
 }
 
+function addTrialDuration(date: Date) {
+  return new Date(date.getTime() + TRIAL_DURATION_DAYS * DAY_IN_MS);
+}
+
+function isRepairableFreshTrialSnapshot(
+  snapshot: OrganizationSubscriptionSnapshot | null
+): snapshot is OrganizationSubscriptionSnapshot {
+  if (!snapshot) {
+    return false;
+  }
+
+  if (snapshot.planType && snapshot.planType !== "trial") {
+    return false;
+  }
+
+  if (snapshot.planCode && snapshot.planCode !== "trial") {
+    return false;
+  }
+
+  return (
+    snapshot.subscriptionStatus === null ||
+    snapshot.subscriptionStatus === "trial_active" ||
+    snapshot.subscriptionStatus === "trial_expiring" ||
+    snapshot.subscriptionStatus === "trial_expired"
+  );
+}
+
+export function buildFreshTrialRepairSnapshot(input: {
+  snapshot: OrganizationSubscriptionSnapshot | null;
+  organizationCreatedAt: string | null | undefined;
+  now?: Date;
+}): OrganizationSubscriptionSnapshot | null {
+  const { snapshot, organizationCreatedAt } = input;
+  const now = input.now ?? new Date();
+  const createdAt = normalizeDate(organizationCreatedAt);
+
+  if (!createdAt || !isRepairableFreshTrialSnapshot(snapshot)) {
+    return null;
+  }
+
+  const trialEndsAt = addTrialDuration(createdAt);
+
+  if (trialEndsAt.getTime() <= now.getTime()) {
+    return null;
+  }
+
+  return {
+    ...snapshot,
+    subscriptionStatus: "trial_active",
+    trialStartedAt: snapshot.trialStartedAt ?? createdAt.toISOString(),
+    trialEndsAt: trialEndsAt.toISOString(),
+    planType: "trial",
+    planCode: "trial",
+    billingPeriod: "none",
+    paymentMethod: "none",
+    founderPriceLocked: false,
+  };
+}
+
 export function isWriteRestrictedPrivatePath(pathname: string) {
   if (!pathname) {
     return false;

@@ -1,8 +1,9 @@
 "use client";
 
-import { LuFileCheck2, LuSave } from "react-icons/lu";
+import { LuArrowRight } from "react-icons/lu";
 
 import type { CotizacionWorkflowDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
 import s from "../page.module.css";
 
@@ -15,79 +16,76 @@ type ResumenDesktopLateralProps = {
   hasRedondeoComercial: boolean;
   total: string;
   mostrarIva: boolean;
+  quotePricingMode: QuotePricingMode;
   selectedClientMode: "Existente" | "Nuevo";
   isSaving: boolean;
   onSaveDraft: () => void;
   onSaveQuote: () => void;
+  onContinue: () => void;
 };
 
 export function ResumenDesktopLateral({
   draft,
   totalItems,
-  subtotal,
-  iva,
-  redondeoComercial,
-  hasRedondeoComercial,
   total,
-  mostrarIva,
-  selectedClientMode,
   isSaving,
-  onSaveDraft,
-  onSaveQuote,
+  onContinue,
 }: ResumenDesktopLateralProps) {
-  return (
-    <aside className={s.sideCol}>
-      <section className={s.sideCard}>
-        <div className={s.sideTitle}>Resumen rapido</div>
-        <div className={s.sideRow}>
-          <span>Cliente</span>
-          <strong>{draft.clienteNombre || "-"}</strong>
-        </div>
-        <div className={s.sideRow}>
-          <span>Modo cliente</span>
-          <strong>{selectedClientMode}</strong>
-        </div>
-        <div className={s.sideRow}>
-          <span>Proyecto</span>
-          <strong>{draft.obra || "-"}</strong>
-        </div>
-        <div className={s.sideDivider} />
-        <div className={s.sideRow}>
-          <span>Componentes</span>
-          <strong>{totalItems}</strong>
-        </div>
-        <div className={s.sideRow}>
-          <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
-          <strong>{subtotal}</strong>
-        </div>
-        {mostrarIva ? (
-          <div className={s.sideRow}>
-            <span>IVA 19%</span>
-            <strong>{iva}</strong>
-          </div>
-        ) : null}
-        {hasRedondeoComercial ? (
-          <div className={s.sideRow}>
-            <span>Redondeo comercial</span>
-            <strong>{redondeoComercial}</strong>
-          </div>
-        ) : null}
-        <div className={s.sideTotal}>
-          <span>Total final</span>
-          <strong>{total}</strong>
-        </div>
-      </section>
+  const clienteNombre = draft.clienteNombre.trim();
+  const obra = draft.obra.trim();
+  const hasClient = clienteNombre.length > 0;
+  const hasWork = obra.length > 0;
+  const canContinue = hasClient && hasWork && !isSaving;
+  const totalLabel = totalItems > 0 ? total : "Por definir";
 
-      <section className={s.sideCard}>
-        <div className={s.sideTitle}>Acciones</div>
-        <div className={s.actionCluster}>
-          <button className={s.btnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
-            <LuSave aria-hidden /> Guardar borrador
-          </button>
-          <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
-            <LuFileCheck2 aria-hidden /> Guardar presupuesto
-          </button>
+  return (
+    <aside className={s.desktopSideSummary}>
+      <section className={s.desktopSideSummaryCard} aria-label="Resumen de la cotización">
+        <div className={s.desktopSideSummaryTitle}>Resumen</div>
+
+        <div className={s.desktopSideSummaryRows}>
+          <div className={s.desktopSideSummaryRow}>
+            <span>Cliente</span>
+            <strong className={!hasClient ? s.desktopSideSummaryMuted : undefined}>
+              {hasClient ? clienteNombre : "Sin seleccionar"}
+            </strong>
+          </div>
+          <div className={s.desktopSideSummaryRow}>
+            <span>Trabajo</span>
+            <strong className={!hasWork ? s.desktopSideSummaryMuted : undefined}>
+              {hasWork ? obra : "Sin definir"}
+            </strong>
+          </div>
+          <div className={s.desktopSideSummaryRow}>
+            <span>Componentes</span>
+            <strong>{totalItems}</strong>
+          </div>
+          <div className={`${s.desktopSideSummaryRow} ${s.desktopSideSummaryRowTotal}`}>
+            <span>Total</span>
+            <strong className={totalItems === 0 ? s.desktopSideSummaryMuted : undefined}>
+              {totalLabel}
+            </strong>
+          </div>
+          <div className={s.desktopSideSummaryRow}>
+            <span>Estado</span>
+            <strong className={s.desktopSideSummaryStatus}>Borrador</strong>
+          </div>
         </div>
+
+        <button
+          className={s.desktopSideSummaryButton}
+          onClick={onContinue}
+          type="button"
+          disabled={!canContinue}
+        >
+          Continuar al presupuesto <LuArrowRight aria-hidden />
+        </button>
+
+        {!canContinue ? (
+          <p className={s.desktopSideSummaryHelp}>
+            Selecciona un cliente y define el trabajo para continuar.
+          </p>
+        ) : null}
       </section>
     </aside>
   );

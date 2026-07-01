@@ -9,11 +9,13 @@ import s from "../../page.module.css";
 type Props = Pick<
   PasoDosPanelComponentesProps,
   | "items"
+  | "isMobileViewport"
   | "pendingItemsCount"
   | "completedItemsCount"
   | "quotePricingMode"
   | "effectiveShowOnlyPendingItems"
   | "showFilterToggle"
+  | "activeDraftCard"
   | "onOpenComponentCreator"
   | "onOpenFreeValueItemForm"
   | "onToggleShowOnlyPendingItems"
@@ -21,15 +23,66 @@ type Props = Pick<
 
 export function PasoDosPanelHeader({
   items,
+  isMobileViewport,
   pendingItemsCount,
   completedItemsCount,
   quotePricingMode,
   effectiveShowOnlyPendingItems,
   showFilterToggle,
+  activeDraftCard,
   onOpenComponentCreator,
   onOpenFreeValueItemForm,
   onToggleShowOnlyPendingItems,
 }: Props) {
+  if (!isMobileViewport) {
+    const draftInEdition = Boolean(activeDraftCard);
+    const isTotalMode = quotePricingMode === "total_global";
+    const piecesLabel = isTotalMode
+      ? `${items.length} ${items.length === 1 ? "detalle" : "detalles"}`
+      : `${items.length} ${items.length === 1 ? "pieza" : "piezas"}`;
+    const editingCount = pendingItemsCount + (draftInEdition ? 1 : 0);
+
+    return (
+      <div className={s.stepTwoPanelHeader}>
+        <div className={s.stepTwoPanelHeaderMain}>
+          <div className={s.stepTwoPanelTitle}>
+            {isTotalMode ? "Presupuesto por total" : "Presupuesto"}
+          </div>
+          <div className={s.stepTwoPanelStats}>
+            <span>{piecesLabel}</span>
+            {editingCount > 0 ? (
+              <>
+                <span className={s.stepTwoPanelStatDivider} aria-hidden />
+                <span className={s.stepTwoPanelStatPending}>
+                  {editingCount} en edición
+                </span>
+              </>
+            ) : null}
+          </div>
+        </div>
+        <div className={s.stepTwoPanelHeaderActions}>
+          {quotePricingMode === "por_item" ? (
+            <>
+              <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
+                <LuPlus aria-hidden />
+                Componente
+              </button>
+              <button className={s.stepTwoFilterButton} type="button" onClick={onOpenFreeValueItemForm}>
+                <LuFilePlus2 aria-hidden />
+                Ítem libre
+              </button>
+            </>
+          ) : (
+            <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
+              <LuPlus aria-hidden />
+              + Agregar detalle
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={s.stepTwoPanelHeader}>
       <div className={s.stepTwoPanelHeaderMain}>
@@ -45,11 +98,11 @@ export function PasoDosPanelHeader({
           <>
             <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
               <LuPlus aria-hidden />
-              Agregar componente con precio
+              {isMobileViewport ? "Agregar componente con precio" : "Con precio"}
             </button>
             <button className={s.stepTwoFilterButton} type="button" onClick={onOpenFreeValueItemForm}>
               <LuFilePlus2 aria-hidden />
-              Agregar item libre
+              {isMobileViewport ? "Agregar item libre" : "Item libre"}
             </button>
           </>
         ) : null}

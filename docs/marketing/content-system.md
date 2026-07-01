@@ -17,53 +17,50 @@ Crear contenido organico que ayude a:
 
 ## Tesis de contenido
 
-Ventora no debe comunicar complejidad. Debe comunicar:
+Ventora no debe comunicar complejidad ni competir como cotizador tecnico barato. Debe comunicar esta transformacion:
 
-- rapidez
-- orden
-- seguimiento
-- cierre comercial
+**"De llegar a casa a hacer presupuestos en el computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos."**
+
+Mensaje principal:
+
+**"Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."**
 
 ## Pilares
 
-### 1. Dolor real
+Distribucion obligatoria:
+
+- 70% dolor y transformacion
+- 20% demostraciones reales del producto en celular
+- 10% funciones complementarias: PDF, clientes, pagina publica, seguimiento
+
+### 1. Dolor y transformacion
 
 Temas:
 
-- se te pierden consultas
-- respondes tarde
-- WhatsApp se desordena
-- cotizas lento
-- no haces seguimiento
+- Excel de noche
+- presupuestos pendientes al llegar a casa
+- precios y medidas perdidos en WhatsApp
+- clientes y cotizaciones desordenados
+- querer verse mas profesional frente al cliente
 
-### 2. Demostracion de flujo
-
-Temas:
-
-- mini landing publica
-- lead captado
-- respuesta por WhatsApp
-- cotizacion creada
-- PDF o link publico
-- aprobacion o rechazo
-
-### 3. Casos y prueba social
+### 2. Demostracion real en celular
 
 Temas:
 
-- mini historias de pilotos
-- antes y despues
-- objeciones resueltas
-- aprendizajes del rubro
+- crear cotizacion desde el celular
+- convertir precio, medida o calculo en propuesta lista para enviar
+- generar PDF profesional
+- enviar por WhatsApp
+- revisar clientes y cotizaciones
 
-### 4. Educacion comercial simple
+### 3. Funciones complementarias
 
 Temas:
 
-- como responder una consulta mas rapido
-- como no perder oportunidades
-- que medir en un negocio pequeno
-- por que una landing simple vale mas que una web compleja
+- PDF profesional
+- clientes ordenados
+- pagina publica como apoyo
+- seguimiento de cotizaciones
 
 ## Frecuencia minima semanal
 
@@ -74,11 +71,11 @@ Temas:
 
 ## Ideas de piezas
 
-- "3 consultas que una vidrieria pierde sin darse cuenta"
-- "Asi se ve un WhatsApp desordenado y asi se ordena"
-- "Lo que una empresa de aluminio necesita no es otro ERP"
-- "De consulta a cotizacion enviada en minutos"
-- "Antes: chat suelto. Despues: lead centralizado"
+- "Llegaste a casa y todavia tienes presupuestos pendientes"
+- "De una medida en WhatsApp a un PDF profesional"
+- "Cotiza un shower desde el celular antes de irte de la obra"
+- "Excel de noche vs cotizacion lista en terreno"
+- "Si ya tienes el precio final, Ventora lo convierte en propuesta"
 
 ## Estructura de contenido sugerida
 
@@ -89,10 +86,8 @@ Temas:
 
 ## CTA sugeridos
 
-- pedir demo corta
-- pedir piloto de 7 dias
-- enviar mensaje directo
-- revisar ejemplo real del flujo
+- `Escribeme DEMO`
+- `Te muestro una cotizacion real`
 
 ## Reglas
 
@@ -101,11 +96,17 @@ Temas:
 - priorizar ejemplos simples y reales
 - convertir preguntas frecuentes en contenido nuevo
 - reutilizar contenido que ya sirvio en prospeccion
+- cada pieza debe tener solo un dolor, una demostracion concreta y un CTA unico
+- no explicar todas las funciones en un mismo Reel
+- no usar lenguaje tecnico innecesario
+- no crear contenido generico de SaaS
+- no prometer "ganaras mas clientes" ni "cerraras mas ventas"
+- no decir que Ventora cubica o calcula perfiles, cortes, herrajes o desperdicio
 
 ## Indicadores de contenido
 
-- mensajes entrantes generados
-- clics a perfil o landing
-- respuestas a stories
-- reuniones o demos originadas desde contenido
-- piezas que mejor explican el valor
+- mensajes recibidos
+- demos
+- pruebas iniciadas
+- primera cotizacion creada
+- pagos

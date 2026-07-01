@@ -10,9 +10,9 @@ Importante:
 
 ## Resumen corto
 
-Ventora es un SaaS vertical para **captar, centralizar y ayudar a cerrar leads comerciales** de empresas de vidrios y aluminio.
+Ventora es un SaaS vertical para **captar, centralizar y ayudar a cerrar trabajos comerciales** de empresas de vidrios, aluminio y PVC.
 
-La cotizacion sigue siendo importante, pero ya no define la identidad principal del producto. Hoy es una herramienta de cierre.
+La cotizacion sigue siendo importante, pero ya no define por si sola la identidad principal del producto. Hoy es una herramienta de cierre y el desktop evoluciona como escritorio de cotizacion/taller.
 
 Frase clave:
 
@@ -53,12 +53,14 @@ Pensado principalmente para:
 ### Si es
 
 - un sistema de captacion de leads para vidrios y aluminio
-- un CRM comercial liviano por canal y origen
+- una herramienta comercial para ordenar solicitudes, obras y cotizaciones
 - una herramienta de cierre con cotizacion, PDF y WhatsApp
+- un escritorio desktop para preparar mejor la cotizacion y controlar precio/margen
 
 ### No es
 
 - un ERP
+- un CRM enterprise
 - un sistema logistico
 - un software de produccion
 - un cotizador tecnico de perfiles, compatibilidades o despiece
@@ -91,9 +93,9 @@ Base funcional actual del repo:
 1. Empresa publica link o QR.
 2. Lead entra desde un canal trazable.
 3. Ventora guarda origen y centraliza la solicitud.
-4. Vendedor recibe aviso y responde.
-5. Lead avanza en seguimiento.
-6. Se crea cotizacion cuando la oportunidad madura.
+4. La empresa recibe aviso y responde.
+5. El trabajo avanza en seguimiento.
+6. Se crea cotizacion cuando corresponde.
 7. Se cierra con PDF, WhatsApp o link publico.
 
 ## Estado actual del proyecto
@@ -102,9 +104,11 @@ Este repo ya no esta en fase de discovery.
 
 La etapa actual es de:
 
+- estabilizacion de cotizacion desktop
+- dashboard comercial con datos reales
+- preparacion del Quote Studio desktop
 - endurecimiento de captacion y seguimiento
 - validacion real de UTM, QR, push y email
-- consolidacion de pipeline comercial
 - validacion de cotizacion, PDF y aprobacion publica como cierre
 - mejora de robustez y salida comercial
 
@@ -115,12 +119,13 @@ No es prioridad inmediata:
 - analytics por vendedor
 - integraciones profundas
 - reabrir el cotizador tecnico
+- oportunidades y cobros como modulo nuevo
 
 ## Riesgos o gaps actuales
 
 Los puntos mas sensibles hoy son:
 
-- pipeline comercial aun no consolidado
+- desktop comercial aun no consolidado
 - falta observabilidad minima de produccion
 - falta smoke test manual real de punta a punta
 - push y email aun requieren validacion real en entorno final

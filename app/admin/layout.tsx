@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { AdminShell } from "@/features/admin/components/admin-shell";
 import { resolveVentoraAdminRouteContext } from "@/features/admin/services/admin-route-access.service";
 import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
@@ -9,7 +10,16 @@ async function resolveAdminLayoutContext() {
     return await resolveVentoraAdminRouteContext();
   } catch (error) {
     if (error instanceof AuthRouteAccessError) {
-      if (error.status === 401 || error.status === 403) {
+      if (error.status === 401) {
+        const headerStore = await headers();
+        const pathname =
+          headerStore.get("x-pathname") ??
+          headerStore.get("next-url") ??
+          "/admin";
+        redirect(`/login?next=${encodeURIComponent(pathname)}`);
+      }
+
+      if (error.status === 403) {
         redirect("/dashboard");
       }
     }
@@ -23,9 +33,7 @@ export default async function AdminLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  const context = await resolveAdminLayoutContext();
+  await resolveAdminLayoutContext();
 
-  return (
-    <AdminShell founderEmail={context.user.email ?? null}>{children}</AdminShell>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

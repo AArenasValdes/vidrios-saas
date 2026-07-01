@@ -14,6 +14,12 @@ import {
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useGrowthDashboard } from "@/features/growth/hooks/useGrowthDashboard";
 import { growthDashboardService } from "@/features/growth/services/growth-dashboard.service";
+import {
+  clearLocalWorkspaceStorage,
+  downloadLocalWorkspaceBackup,
+  parseLocalWorkspaceFromStorage,
+  summarizeLocalWorkspace,
+} from "@/features/growth/services/growth-local-workspace.parser";
 import type {
   CreateGrowthClientInput,
   CreateGrowthMarketingTaskInput,
@@ -134,6 +140,10 @@ export function GrowthPageClient() {
   const [marketingForm, setMarketingForm] = useState(buildEmptyMarketingTask);
   const [configForm, setConfigForm] = useState<UpdateGrowthSettingsInput>({});
   const [manualForm, setManualForm] = useState<UpdateGrowthManualMetricsInput>({});
+  const [importPreview, setImportPreview] = useState<ReturnType<
+    typeof summarizeLocalWorkspace
+  > | null>(null);
+  const [csvImportMessage, setCsvImportMessage] = useState<string | null>(null);
 
   if (growth.error) {
     return (
@@ -153,6 +163,39 @@ export function GrowthPageClient() {
       </div>
     );
   }
+
+  const openImport = () => {
+    const parsed = parseLocalWorkspaceFromStorage();
+    if (parsed.workspace) {
+      setImportPreview(summarizeLocalWorkspace(parsed.workspace));
+    } else {
+      setImportPreview(null);
+    }
+    growth.openImport();
+  };
+
+  const runImport = async () => {
+    const parsed = parseLocalWorkspaceFromStorage();
+    if (!parsed.workspace) return;
+    downloadLocalWorkspaceBackup(parsed.workspace);
+    await growth.importLocalWorkspace(parsed.workspace);
+  };
+
+  const runCsvImport = async (file: File) => {
+    setCsvImportMessage(null);
+    try {
+      const result = await growth.importSpreadsheet(file);
+      setCsvImportMessage(
+        `Importados: ${result.imported} · Omitidos: ${result.skipped}${
+          result.errors.length ? ` · Errores: ${result.errors.length}` : ""
+        }`
+      );
+    } catch (error) {
+      setCsvImportMessage(
+        error instanceof Error ? error.message : "No pudimos importar el CSV."
+      );
+    }
+  };
 
   const openConfig = () => {
     setConfigForm({ ...viewModel.settings });
@@ -222,6 +265,28 @@ export function GrowthPageClient() {
                 {primaryLabel}
               </button>
             ) : null}
+            <label className={s.secondaryButton}>
+              Importar Excel/CSV
+              <input
+                type="file"
+                accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    void runCsvImport(file);
+                  }
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className={s.secondaryButton}
+              onClick={openImport}
+            >
+              Importar navegador
+            </button>
             <button
               type="button"
               className={s.secondaryButton}
@@ -233,9 +298,51 @@ export function GrowthPageClient() {
           </div>
         </div>
         <div className={s.headerFooter}>
-          Guardado local · {viewModel.counts.prospectosActivos} prospectos activos ·{" "}
-          {viewModel.counts.clientesActivos} clientes · actualizado{" "}
+          Supabase · {viewModel.counts.prospectosActivos} prospectos activos ·{" "}
+          {viewModel.counts.clientesActivos} cuentas vinculadas · actualizado{" "}
           {viewModel.updatedAtLabel}
+          <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>
+            {" "}
+            · MRR {growthDashboardService.getDataStatusLabel(viewModel.manualMetrics.dataStatus)}
+          </span>
+          {csvImportMessage ? (
+            <span className={s.importResult}> · {csvImportMessage}</span>
+          ) : null}
+        </div>
+      </PremiumPageSection>
+
+      <PremiumPageSection className={s.kpiGrid}>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>MRR</span>
+          <strong>{viewModel.mrrActualLabel}</strong>
+          <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>
+            {growthDashboardService.getDataStatusLabel(viewModel.manualMetrics.dataStatus)}
+          </span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Prospectos activos</span>
+          <strong>{viewModel.counts.prospectosActivos}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Real</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Meta pagos</span>
+          <strong>{viewModel.settings.monthlyPaidGoal}</strong>
+          <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>Manual</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Pilotos activos</span>
+          <strong>{viewModel.manualMetrics.pilotosActivosActuales}</strong>
+          <span className={sourceClass(viewModel.manualMetrics.dataStatus)}>Manual</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Cuentas vinculadas</span>
+          <strong>{viewModel.counts.clientesActivos}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Real</span>
+        </div>
+        <div className={s.kpiCard}>
+          <span className={s.kpiLabel}>Tareas pendientes</span>
+          <strong>{viewModel.counts.marketingPendiente}</strong>
+          <span className={`${s.sourceText} ${s.sourceTextReal}`}>Real</span>
         </div>
       </PremiumPageSection>
 
@@ -297,7 +404,7 @@ export function GrowthPageClient() {
             <div>
               <h2 className={s.sectionTitle}>Prospectos</h2>
               <p className={s.sectionDescription}>
-                Pipeline comercial simple. Edita inline y queda en localStorage.
+                Pipeline comercial en Supabase. Edita inline y sincroniza entre dispositivos.
               </p>
             </div>
           </div>
@@ -997,9 +1104,12 @@ export function GrowthPageClient() {
             <button
               type="button"
               className={s.secondaryButton}
-              onClick={() => void growth.resetWorkspace().then(() => growth.closeConfig())}
+              onClick={() => {
+                clearLocalWorkspaceStorage();
+                growth.closeConfig();
+              }}
             >
-              Resetear datos locales
+              Limpiar copia local
             </button>
             <button
               type="button"
@@ -1012,6 +1122,46 @@ export function GrowthPageClient() {
               }
             >
               Guardar configuracion
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+
+      {growth.isImportOpen ? (
+        <Modal
+          title="Importar datos de este navegador"
+          description="Sube ventora:growth-workspace:v3 a Supabase. Se descargará un respaldo JSON antes de importar."
+          onClose={growth.closeImport}
+        >
+          {importPreview ? (
+            <ul className={s.importSummary}>
+              <li>{importPreview.prospects} prospectos</li>
+              <li>{importPreview.tasks} tareas marketing</li>
+              <li>{importPreview.clientAccounts} cuentas locales (mock omitidos)</li>
+              <li>Métricas manuales incluidas</li>
+            </ul>
+          ) : (
+            <p className={s.importEmpty}>
+              No encontramos ventora:growth-workspace:v3 en este navegador.
+            </p>
+          )}
+          {growth.importSummary ? (
+            <p className={s.importResult}>
+              Importados: {growth.importSummary.imported} · Actualizados:{" "}
+              {growth.importSummary.updated} · Omitidos: {growth.importSummary.skipped}
+            </p>
+          ) : null}
+          <div className={s.formActions}>
+            <button type="button" className={s.secondaryButton} onClick={growth.closeImport}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={s.primaryButton}
+              disabled={!importPreview}
+              onClick={() => void runImport()}
+            >
+              Importar a Supabase
             </button>
           </div>
         </Modal>

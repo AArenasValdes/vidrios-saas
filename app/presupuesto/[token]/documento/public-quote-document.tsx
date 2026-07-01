@@ -654,9 +654,11 @@ export function PublicQuoteDocument({
                           <img
                             alt={companyName}
                             className={printStyles.companyLogo}
+                            height={76}
                             loading="eager"
                             onError={() => setFailedLogoUrl(companyLogoUrl)}
                             src={companyLogoUrl ?? undefined}
+                            width={76}
                           />
                         ) : (
                           <div className={printStyles.companyLogoFallback}>

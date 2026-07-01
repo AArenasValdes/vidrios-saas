@@ -180,9 +180,9 @@ export const CELOSIA_CONFIGURATION_OPTIONS = [
 ] as const;
 
 export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
-  "2 hojas": ["1 fija + 1 móvil", "2 móviles", "Otro"],
-  "3 hojas": ["Fija central", "Fijo lateral + 2 móviles", "3 móviles", "Otro"],
-  "4 hojas": ["2 fijas + 2 móviles", "Todas móviles", "Laterales fijas + centrales móviles", "Otro"],
+  "2 hojas": ["2 móviles", "1 fija + 1 móvil", "Otro"],
+  "3 hojas": ["2 móviles + 1 fija", "1 móvil + 2 fijas", "Otro"],
+  "4 hojas": ["2 móviles + 2 fijas", "4 móviles", "Otro"],
 };
 
 const COMPOSITION_OPTIONS_BY_SYSTEM: Record<string, readonly string[]> = {
@@ -237,6 +237,24 @@ const BOW_WINDOW_COMPOSITION_OPTIONS_BY_OPENING: Record<string, readonly string[
   ],
 };
 
+const SHOWER_DOOR_COMPOSITION_OPTIONS: Record<string, Record<string, readonly string[]>> = {
+  corredera: {
+    frontal: ["2 hojas correderas", "1 fija + 1 corredera", "1 fija + 2 correderas"],
+    esquinero: ["1 fija + 1 corredera por lado"],
+    "en l": ["1 corredera + 1 lateral fijo", "1 corredera por lado"],
+  },
+  batiente: {
+    frontal: ["1 puerta abatible", "1 fijo + 1 puerta", "1 fijo + 1 puerta + 1 fijo"],
+    esquinero: ["1 puerta + 1 fijo lateral", "2 puertas al vértice"],
+    "en l": ["1 puerta + 1 lateral fijo en L"],
+  },
+  "fijo walk in": {
+    frontal: ["1 paño fijo"],
+    esquinero: ["2 paños fijos con acceso lateral"],
+    "en l": ["2 paños fijos en L"],
+  },
+};
+
 const FIXED_PANE_COMPOSITION_OPTIONS = ["1 paño", "2 paños", "3 paños", "Personalizado"] as const;
 
 export const ALUMINUM_COLOR_OPTIONS = [
@@ -250,7 +268,7 @@ export const ALUMINUM_COLOR_OPTIONS = [
 ];
 
 export const PVC_COLOR_OPTIONS = [
-  { label: "Blanco", hex: "#f0eeeb" },
+  { label: "Blanco", hex: "#ffffff" },
   { label: "Gris", hex: "#b7bcc4" },
   { label: "Roble Dorado", hex: "#b7834a" },
   { label: "Nogal", hex: "#6f4a34" },
@@ -548,15 +566,40 @@ function getComponentPrefix(tipo: string) {
   return "I";
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getNextComponentIndex(
+  items: CotizacionWorkflowItem[],
+  prefix: string,
+  excludeItemId?: string | null
+) {
+  const exactCodePattern = new RegExp(`^${escapeRegExp(prefix)}(\\d+)$`, "i");
+  const highestIndex = items.reduce((highest, item) => {
+    if (item.id === excludeItemId) {
+      return highest;
+    }
+
+    const match = item.codigo.trim().match(exactCodePattern);
+    if (!match) {
+      return highest;
+    }
+
+    const nextIndex = Number.parseInt(match[1] ?? "0", 10);
+    return Number.isFinite(nextIndex) ? Math.max(highest, nextIndex) : highest;
+  }, 0);
+
+  return highestIndex + 1;
+}
+
 export function buildNextComponentCode(
   items: CotizacionWorkflowItem[],
   tipo = "Ventana",
   excludeItemId?: string | null
 ) {
   const prefix = getComponentPrefix(tipo);
-  const count =
-    items.filter((i) => i.id !== excludeItemId && i.codigo.startsWith(prefix)).length + 1;
-  return `${prefix}${count}`;
+  return `${prefix}${getNextComponentIndex(items, prefix, excludeItemId)}`;
 }
 
 function normalizeLegacyAluminumColorHex(value: string) {
@@ -573,9 +616,9 @@ export function buildUpcomingComponentCodes(
     return [];
   }
   const prefix = getComponentPrefix(tipo);
-  const existingCount = items.filter((item) => item.codigo.startsWith(prefix)).length;
+  const nextIndex = getNextComponentIndex(items, prefix);
 
-  return Array.from({ length: safeQuantity }, (_, index) => `${prefix}${existingCount + index + 1}`);
+  return Array.from({ length: safeQuantity }, (_, index) => `${prefix}${nextIndex + index}`);
 }
 
 export function getComponentTypeLabelForBatch(tipo: string, quantity: number) {
@@ -641,14 +684,123 @@ function formatBowWindowOpening(configuracion: string) {
   return lowerFirst(configuracion);
 }
 
+function normalizeShowerDoorOption(value?: string | null) {
+  return normalizeSearchValue(value ?? "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isCorrederaSheetConfiguration(input: {
+  tipo: string;
+  sistema?: string | null;
+}) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+  return tipo === "ventana" && sistema === "corredera";
+}
+
+export function isBowWindowConfiguration(input: {
+  tipo: string;
+  sistema?: string | null;
+}) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+  return tipo === "ventana" && sistema === "bow window";
+}
+
+export function isGuillotinaOrCelosiaConfiguration(input: {
+  tipo: string;
+  sistema?: string | null;
+}) {
+  const tipo = normalizeSearchValue(input.tipo);
+  const sistema = normalizeSearchValue(input.sistema ?? "");
+  return tipo === "ventana" && (sistema === "guillotina" || sistema === "celosia");
+}
+
+export function isDesktopPieceSystemStepComplete(input: {
+  subtipo: string;
+  sistema: string;
+  configuracion: string;
+  sheetScheme: string;
+  sheetVariant: string;
+  customSchemeDescription: string;
+  isCustomScheme: boolean;
+  configurationOptionsCount: number;
+}) {
+  const showSystemSelection = shouldShowSystemSelectionForComponent(input.subtipo);
+  if (showSystemSelection && !input.sistema.trim()) {
+    return false;
+  }
+
+  if (input.configurationOptionsCount > 0 && !input.configuracion.trim()) {
+    return false;
+  }
+
+  const showSheetScheme = shouldShowSheetSchemeForComponent({
+    tipo: input.subtipo,
+    sistema: input.sistema,
+  });
+
+  if (!showSheetScheme) {
+    return true;
+  }
+
+  const schemeOptions = getSheetSchemeOptions({
+    tipo: input.subtipo,
+    sistema: input.sistema,
+    configuracion: input.configuracion,
+  });
+
+  if (schemeOptions.length === 0) {
+    return true;
+  }
+
+  if (!input.sheetScheme.trim()) {
+    return false;
+  }
+
+  if (
+    requiresCustomSheetDescription({
+      sheetScheme: input.sheetScheme,
+      sheetVariant: input.sheetVariant,
+    })
+  ) {
+    return input.customSchemeDescription.trim() !== "" || input.isCustomScheme;
+  }
+
+  if (isCorrederaSheetConfiguration({ tipo: input.subtipo, sistema: input.sistema })) {
+    if (input.sheetScheme === "Personalizado") {
+      return true;
+    }
+
+    const variants = getSheetVariantOptions(input.sheetScheme, {
+      tipo: input.subtipo,
+      sistema: input.sistema,
+    });
+
+    return variants.length === 0 || input.sheetVariant.trim() !== "";
+  }
+
+  return true;
+}
+
 export function shouldShowSheetSchemeForComponent(input: {
   tipo: string;
   sistema?: string | null;
 }) {
   const tipo = normalizeSearchValue(input.tipo);
   const sistema = normalizeSearchValue(input.sistema ?? "");
+  const showerSistema = normalizeShowerDoorOption(input.sistema);
 
   if (tipo === "pano fijo" || tipo === "paño fijo") {
+    return true;
+  }
+
+  if (
+    tipo === "shower door" &&
+    ["corredera", "batiente", "fijo walk in"].includes(showerSistema)
+  ) {
     return true;
   }
 
@@ -699,9 +851,15 @@ export function getSheetSchemeOptions(input: {
   const tipo = normalizeSearchValue(input.tipo);
   const sistema = normalizeSearchValue(input.sistema ?? "");
   const configuracion = normalizeBowWindowOpening(input.configuracion);
+  const showerSistema = normalizeShowerDoorOption(input.sistema);
+  const showerConfiguracion = normalizeShowerDoorOption(input.configuracion);
 
   if (tipo === "pano fijo" || tipo === "paño fijo") {
     return FIXED_PANE_COMPOSITION_OPTIONS;
+  }
+
+  if (tipo === "shower door") {
+    return SHOWER_DOOR_COMPOSITION_OPTIONS[showerSistema]?.[showerConfiguracion] ?? [];
   }
 
   if (tipo === "ventana" && sistema === "corredera") {
@@ -735,6 +893,10 @@ export function getCompositionSectionLabel(input: { tipo: string; sistema?: stri
     return "Composición de paños";
   }
 
+  if (tipo === "shower door") {
+    return "Composición recomendada";
+  }
+
   if (sistema === "guillotina") {
     return "Configuración de guillotina";
   }
@@ -755,6 +917,10 @@ export function getSheetVariantOptions(
   if (input) {
     const tipo = normalizeSearchValue(input.tipo ?? "");
     const sistema = normalizeSearchValue(input.sistema ?? "");
+
+    if (tipo === "shower door") {
+      return [];
+    }
 
     if (!(tipo === "ventana" && sistema === "corredera")) {
       return [];
@@ -2099,4 +2265,97 @@ export function scrollToSection(sectionId: string) {
       document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+}
+
+export type FormPriceDisplay = {
+  precioUnitario: number;
+  precioTotal: number;
+  fuente: "linea" | "margen" | "manual_unitario" | "manual_total" | "indefinido";
+  areaM2: number | null;
+  precioM2: number | null;
+};
+
+export function resolveFormPrecioVenta(
+  form: Pick<
+    ComponentFormState,
+    "costoProveedorUnitario" | "margenPct" | "pricingMode" | "cantidad" | "precioAjustadoManual" | "precioPorM2" | "minimoCobrable" | "redondeoPrecio" | "ancho" | "alto"
+  >,
+  linePricingSummary?: ComponentFormLinePricingSummary | null
+): FormPriceDisplay {
+  const cantidad = Number(form.cantidad) > 0 ? Number(form.cantidad) : 1;
+  const costo = Number(form.costoProveedorUnitario);
+  const margenPct = Number(form.margenPct) || 0;
+  const summary = linePricingSummary ?? buildComponentFormLinePricingSummary(form);
+
+  const tieneLinea = Boolean(form.precioPorM2?.trim());
+
+  if (form.pricingMode === "precio_directo") {
+    if (tieneLinea && !form.precioAjustadoManual && summary.precioUnitarioSugerido !== null) {
+      return {
+        precioUnitario: Math.round(summary.precioUnitarioSugerido),
+        precioTotal: Math.round(summary.totalSugerido ?? summary.precioUnitarioSugerido * cantidad),
+        fuente: "linea",
+        areaM2: summary.areaM2,
+        precioM2: summary.precioM2Sugerido,
+      };
+    }
+
+    if (Number.isFinite(costo) && costo > 0) {
+      return {
+        precioUnitario: Math.round(costo),
+        precioTotal: Math.round(costo * cantidad),
+        fuente: "manual_unitario",
+        areaM2: summary.areaM2,
+        precioM2: null,
+      };
+    }
+
+    return {
+      precioUnitario: 0,
+      precioTotal: 0,
+      fuente: "indefinido",
+      areaM2: summary.areaM2,
+      precioM2: null,
+    };
+  }
+
+  if (Number.isFinite(costo) && costo > 0) {
+    const precioUnitario = Math.round(costo * (1 + margenPct / 100));
+    return {
+      precioUnitario,
+      precioTotal: Math.round(precioUnitario * cantidad),
+      fuente: "margen",
+      areaM2: summary.areaM2,
+      precioM2: null,
+    };
+  }
+
+  return {
+    precioUnitario: 0,
+    precioTotal: 0,
+    fuente: "indefinido",
+    areaM2: summary.areaM2,
+    precioM2: null,
+  };
+}
+
+export function buildEditorSubtitle(
+  form: Pick<ComponentFormState, "ancho" | "alto" | "material" | "referencia" | "vidrio" | "cantidad">
+): string {
+  const parts: string[] = [];
+  if (form.ancho && form.alto) {
+    parts.push(`${form.ancho} × ${form.alto} mm`);
+  }
+  if (form.material) {
+    parts.push(form.material);
+  }
+  if (form.referencia?.trim()) {
+    parts.push(form.referencia.trim());
+  }
+  if (form.vidrio?.trim()) {
+    parts.push(form.vidrio.trim());
+  }
+  const cantidad = Number(form.cantidad) > 0 ? Number(form.cantidad) : 1;
+  parts.push(`${cantidad} unidad${cantidad !== 1 ? "es" : ""}`);
+  return parts.join(" · ");
 }

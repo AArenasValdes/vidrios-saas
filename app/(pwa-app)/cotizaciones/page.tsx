@@ -99,7 +99,13 @@ function getErrorMessage(error: unknown) {
     }
   }
 
-  return "No se pudo actualizar la respuesta del presupuesto";
+  return "Error desconocido";
+}
+
+function useReducedMotionSafe(): boolean {
+  const reduceMotion = useReducedMotion();
+
+  return Boolean(reduceMotion);
 }
 
 type ManualResponseStatus = "pendiente" | "aprobada" | "rechazada" | "terminada";
@@ -137,7 +143,7 @@ function buildPageNumbers(currentPage: number, totalPages: number) {
 
 export default function CotizacionesPage() {
   const onboarding = useOnboardingChecklist();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionSafe();
   const router = useRouter();
   const {
     clientes: clientesDisponibles,
@@ -586,9 +592,9 @@ export default function CotizacionesPage() {
 
       <motion.div
         className={s.mobileToolbar}
-        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-        animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
+        initial={false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
       >
         <div className={s.searchWrap}>
           <span className={s.searchIcon}>

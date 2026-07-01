@@ -9,6 +9,7 @@ import s from "../page.module.css";
 
 type EncabezadoFlujoProps = {
   step: StepKey;
+  isMobileViewport?: boolean;
   isSaving: boolean;
   isEditing: boolean;
   onGoToStep: (step: StepKey) => void;
@@ -16,13 +17,69 @@ type EncabezadoFlujoProps = {
   onSaveQuote: () => void;
 };
 
+function DesktopFlowStepper({
+  step,
+  onGoToStep,
+}: {
+  step: StepKey;
+  onGoToStep: (step: StepKey) => void;
+}) {
+  return (
+    <div className={s.desktopFlowStepper}>
+      {STEP_LABELS.map((item, index) => {
+        const isLast = index === STEP_LABELS.length - 1;
+        const state = step === item.id ? "active" : step > item.id ? "done" : "idle";
+
+        return (
+          <div key={item.id} className={s.desktopFlowStepperStep}>
+            <button
+              type="button"
+              className={s.desktopFlowStepperButton}
+              onClick={() => onGoToStep(item.id)}
+            >
+              <span className={`${s.desktopFlowStepperDot} ${s[`desktopFlowStepperDot_${state}`]}`}>
+                {state === "done" ? <LuCheck size={14} aria-hidden /> : item.id}
+              </span>
+              <span className={`${s.desktopFlowStepperText} ${s[`desktopFlowStepperText_${state}`]}`}>
+                <strong>{item.title}</strong>
+                <small>{item.sub}</small>
+              </span>
+            </button>
+            {!isLast ? (
+              <span
+                className={`${s.desktopFlowStepperLine} ${state !== "idle" ? s.desktopFlowStepperLineDone : ""}`}
+                aria-hidden
+              />
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function EncabezadoFlujo({
   step,
+  isMobileViewport = true,
   isSaving,
   onGoToStep,
   onSaveDraft,
   onSaveQuote,
 }: EncabezadoFlujoProps) {
+  if (!isMobileViewport) {
+    return (
+      <div className={s.desktopFlowHeader}>
+        <div className={s.desktopFlowHeaderInner}>
+          <Link href="/cotizaciones" className={s.desktopFlowHeaderBack}>
+            <LuArrowLeft aria-hidden /> Volver
+          </Link>
+          <DesktopFlowStepper step={step} onGoToStep={onGoToStep} />
+          <div className={s.desktopFlowHeaderSpacer} aria-hidden />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={s.mobileTopBand}>
       <div className={s.pageHeader}>
@@ -35,7 +92,7 @@ export function EncabezadoFlujo({
           </div>
         </div>
         <div className={`${s.headerActions} ${step === 1 ? s.headerActionsStep1 : ""}`}>
-          {step !== 2 ? (
+          {isMobileViewport && step !== 2 ? (
             <>
               <button className={s.btnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
                 <LuSave aria-hidden /> {isSaving ? "Guardando..." : "Borrador"}

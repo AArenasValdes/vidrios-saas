@@ -57,6 +57,21 @@ const getCanonicalHost = (hostname: string, pathname: string) => {
 };
 
 export async function proxy(request: NextRequest) {
+  if (
+    request.nextUrl.pathname === "/" &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    const url = request.nextUrl.clone();
+    if (url.hostname === "ventorap.cl") {
+      url.hostname = "www.ventorap.cl";
+    }
+    url.pathname = "/auth/callback";
+    url.searchParams.set("intent", "login");
+    url.searchParams.set("provider", "google");
+    url.searchParams.set("next", "/dashboard");
+    return NextResponse.redirect(url);
+  }
+
   const canonicalHost = getCanonicalHost(
     request.nextUrl.hostname,
     request.nextUrl.pathname
@@ -155,11 +170,13 @@ export async function proxy(request: NextRequest) {
   if (
     user &&
     growthOnly &&
+    pathname !== "/admin/prospectos" &&
+    !pathname.startsWith("/admin/prospectos/") &&
     pathname !== "/admin/growth" &&
     !pathname.startsWith("/admin/growth/")
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/admin/growth";
+    url.pathname = "/admin/prospectos";
     return NextResponse.redirect(url);
   }
 
@@ -179,12 +196,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  supabaseResponse.headers.set("x-pathname", pathname);
+
   return supabaseResponse;
 }
 
 export const config = {
   matcher: [
     "/login",
+    "/",
     "/registro",
     "/auth/callback",
     "/auth/completar-cuenta",

@@ -10,7 +10,7 @@ import type {
   ReorderLandingGalleryItemInput,
 } from "@/features/landing-gallery/types/landing-gallery";
 
-export function useLandingGallery() {
+export function useLandingGallery({ lazy = false }: { lazy?: boolean } = {}) {
   const { organizacionId } = useAuth();
   const [gallery, setGallery] = useState<LandingGalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +19,10 @@ export function useLandingGallery() {
   const activeLoadIdRef = useRef(0);
 
   useEffect(() => {
+    if (lazy) {
+      return;
+    }
+
     if (!organizacionId) {
       setGallery([]);
       return;
@@ -50,7 +54,7 @@ export function useLandingGallery() {
       cancelled = true;
       activeLoadIdRef.current += 1;
     };
-  }, [organizacionId]);
+  }, [organizacionId, lazy]);
 
   async function uploadAndAddImage(
     file: File,

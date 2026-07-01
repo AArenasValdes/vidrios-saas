@@ -112,16 +112,16 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/dashboard/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Dashboard comercial con KPIs orientados al valor cotizado y cotizaciones recientes
+- **Proposito**: Dashboard comercial desktop del Milestone 1, con KPIs reales basados en cotizaciones, solicitudes y obras activas; no es un CRM ni un pipeline de oportunidades.
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Saludo, resumen comercial (valor cotizado, creadas, PDF generados, aprobadas), alertas secundarias solo si hay respuesta publica real, cotizaciones recientes con estados neutrales, CTA nueva cotizacion. Admin sin cotizaciones es redirigido a `/activacion` (no hay card de onboarding embebida).
 - **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `PremiumPageReveal`
 - **Hooks**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
-- **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`
-- **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`
+- **Datos que consume**: Resumen de cotizaciones + alertas via `/api/dashboard/summary`; el roadmap permite sumar embudo de solicitudes y obras activas solo desde datos reales existentes.
+- **Tablas Supabase relacionadas**: `cotizaciones`, `clients`, `projects`, `solicitudes_contacto`
 - **Acciones principales**: Navegacion a nueva cotizacion, ver cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/dashboard/page.tsx`, `app/(pwa-app)/dashboard/_components/*`, `app/(pwa-app)/dashboard/_hooks/*`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/dashboard/summary/route.ts`
-- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs. No reintroducir "pendientes" como alerta principal ni card de onboarding en dashboard (activacion vive en `/activacion`). Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
+- **Riesgos**: Vista responsive con breakpoint 1024px. No romper logica de KPIs. No reintroducir "pendientes" como alerta principal ni card de onboarding en dashboard (activacion vive en `/activacion`). No documentar cobros, oportunidades ni KPI inventados. Si la suscripcion/trial esta vencida, puede seguir mostrandose en modo lectura pero el shell debe levantar banner o redirect cuando el usuario intente escribir o ir a configuracion.
 
 ---
 
@@ -189,11 +189,12 @@
 - **Funcionalidades visibles**: Header compacto con periodo/meta/MRR, bloque principal `Trabajo de hoy`, tabla editable de prospectos prioritarios, metricas compactas, embudo compacto, canales, datos manuales, experimentos secundarios y modal `Configurar crecimiento`
 - **Componentes principales**: `GrowthPageClient`
 - **Hooks**: `useGrowthDashboard`
-- **Datos que consume**: Mock repository conectable (`growthDashboardRepository`) en esta primera implementacion
-- **Tablas Supabase relacionadas**: Ninguna todavia. La conexion futura deberia leer `solicitudes_contacto`, `cotizaciones` y eventualmente un ledger manual definido aparte.
-- **Acciones principales**: Agregar prospecto, editar estado/proximo paso/fecha, cambiar metas, actualizar datos manuales, registrar experimentos y filtrar trabajo operativo del dia
-- **Archivos a tocar para modificar**: `app/admin/growth/*`, `src/features/growth/*`, `proxy.ts`
-- **Riesgos**: No exponer esta ruta a usuarios normales. No mostrar mocks como si fueran datos reales. Aunque viva bajo `AdminShell`, sigue usando `localStorage` y no debe confundirse con datos SaaS reales.
+- **Datos que consume**: Supabase via `/api/admin/growth/*` — tablas `growth_workspaces`, `growth_prospects`, `growth_tasks`, `growth_activities`, `growth_workspace_members`
+- **Tablas Supabase relacionadas**: `growth_*` (dominio interno Ventora, separado de `solicitudes_contacto`). KPIs hibridos leen `organizations`, `organization_profile`, `cotizaciones`, `pagos_suscripcion` cuando hay `converted_organization_id`
+- **Acciones principales**: Agregar prospecto, editar estado/proximo paso/fecha, cambiar metas, actualizar datos manuales, importar workspace local v3, registrar contacto y filtrar trabajo operativo del dia
+- **APIs**: `/api/admin/growth/workspace`, `/prospects`, `/tasks`, `/activities`, `/work-today`, `/import-local-workspace`
+- **Archivos a tocar para modificar**: `app/admin/growth/*`, `src/features/growth/*`, `app/api/admin/growth/*`, `supabase/migrations/*growth*`
+- **Riesgos**: No exponer esta ruta a usuarios normales. No mezclar prospectos growth con `solicitudes_contacto`. RLS por membership (`auth.uid()`), no por correo
 
 ---
 
@@ -221,17 +222,17 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Formulario guiado de nueva cotizacion. Workflow con pasos, items por componente, calculo por item o total global del trabajo.
+- **Proposito**: Formulario guiado de nueva cotizacion. Es la prioridad actual de estabilizacion y luego la base del Quote Studio desktop.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (cliente/obra, items, totales), Joyride contextual de onboarding, decision inicial en Paso 2 entre "Por componentes" y "Total del trabajo", modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con items descriptivos y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto. En **Espejo** y **Cubierta de mesa** no se pide Aluminio/PVC ni color de perfil; en **Espejo** se muestran espesores recomendados 3–6 mm.
+- **Funcionalidades visibles**: Formulario multi-paso (Cliente, Presupuesto, Revisar y guardar), Joyride contextual de onboarding, selector compacto de metodo de presupuesto en Paso 1 desktop, estacion desktop de Paso 2 en dos columnas con pieza local "En edicion" y subpasos Tipo/Sistema/Medidas/Precio, modo `por_item` con costo proveedor + margen/precio por linea, modo `total_global` con cuaderno comercial y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto. En **Espejo** y **Cubierta de mesa** no se pide Aluminio/PVC ni color de perfil; en **Espejo** se muestran espesores recomendados 3–6 mm. Mobile mantiene el wizard actual.
 - **Componentes principales**: Internos de la pagina (1198 lineas)
 - **Nota onboarding 2026-06-19**: La entrada inicial debe priorizar `Cotizacion rapida` (`total_global`) y mostrar exito/resumen de PDF antes de pedir datos de empresa. No volver a montar Joyride contextual en esta ruta.
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
-- **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`), `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`, `src/features/cotizaciones/services/glass-recommendations.service.ts`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
+- **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto (`projects`, visible como Obras)
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-uno-datos-cliente.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-panel-componentes.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`), `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`, `src/features/cotizaciones/services/glass-recommendations.service.ts`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx`
+- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. No introducir aun constructor visual, nuevas rutas de obras ni tablas nuevas sin aprobacion. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
 - **Riesgo onboarding 2026-06-19**: No reintroducir empresa/pagina/canales antes de crear una cotizacion ni redirigir automaticamente al PDF al guardar.
 
 ---
@@ -290,16 +291,16 @@
 - **Tipo**: Privada (autenticada), dinamica
 - **Archivo principal**: `app/(pwa-app)/clientes/[id]/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Ficha de cliente con proyectos y cotizaciones asociadas
+- **Proposito**: Ficha de cliente con Obras (`projects`) y cotizaciones asociadas
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Header, estado badge, telefono, direccion, tabs proyectos/cotizaciones, menu contextual
+- **Funcionalidades visibles**: Header, estado badge, telefono, direccion, tabs Obras/cotizaciones, menu contextual
 - **Componentes principales**: `ClienteDetalleMobileView`, `ClienteDetalleMobileViewModel`
 - **Hooks**: `useClientes`
 - **Datos que consume**: Cliente detalle con proyectos y cotizaciones
 - **Tablas Supabase relacionadas**: `clients`, `projects`, `cotizaciones`
 - **Acciones principales**: Ver ficha, editar, ver proyectos/cotizaciones
 - **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/[id]/page.tsx`, `app/(pwa-app)/clientes/[id]/_components/*`, `src/features/clientes/services/clientes.service.ts`
-- **Riesgos**: No romper tabs ni navegacion a cotizaciones/proyectos.
+- **Riesgos**: No romper tabs ni navegacion a cotizaciones/obras.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Descripcion general del producto
 
-**Ventora** es un software comercial SaaS para empresas de vidrios y aluminio que **captura, centraliza y ayuda a cerrar leads**. No es un cotizador tecnico, ni un ERP, ni un sistema logistico. La cotizacion existe como herramienta de cierre comercial, no como identidad del producto.
+**Ventora** es un software comercial SaaS para empresas de vidrios, aluminio y PVC que **captura, centraliza y ayuda a cerrar leads**, y que ahora extiende su capa desktop para preparar mejor la cotizacion, configurar visualmente trabajos no estandar y emitir documentos profesionales. No es un ERP, no es un CRM enterprise y no es un cotizador tecnico universal. La cotizacion existe como herramienta de cierre comercial, no como identidad del producto.
 
 **Frase clave:** "Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."
 
@@ -60,6 +60,19 @@ pagina/componente -> hook -> service -> repository -> Supabase
 - **Server Components por defecto**, Client Components solo con `"use client"`
 - **ES en espanol**: nombres de variables, tipos, comentarios y UI en espanol
 - **Path alias**: `@/` mapea a `./src/` y `./`
+
+## Norte actual de producto
+
+- Mobile sigue siendo prioritario para cotizar en terreno.
+- Desktop evoluciona como escritorio de cotizacion y control comercial real.
+- `projects` es la tabla tecnica; en producto se presenta como **Obras**.
+- El orden activo de milestones es:
+  1. estabilizar cotizacion desktop;
+  2. dashboard comercial con datos reales;
+  3. Quote Studio desktop impecable;
+  4. validar constructor visual guiado;
+  5. catalogo privado y cubicacion como piloto posterior.
+- Desktop no esta abriendo pipeline CRM, oportunidades, cobros ni multiusuario en esta etapa.
 
 ## Estructura de carpetas
 

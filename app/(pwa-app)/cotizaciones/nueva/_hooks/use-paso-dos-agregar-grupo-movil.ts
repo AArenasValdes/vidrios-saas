@@ -163,8 +163,8 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setIsOpen(true);
   };
 
-  const closeSheet = () => {
-    const itemCount = params.items.length;
+  const closeSheet = (options?: { itemCountOverride?: number }) => {
+    const itemCount = options?.itemCountOverride ?? params.items.length;
 
     setIsOpen(false);
     setPaso(1);

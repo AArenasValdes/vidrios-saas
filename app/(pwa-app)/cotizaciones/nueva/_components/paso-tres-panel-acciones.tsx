@@ -171,13 +171,17 @@ export function PasoTresPanelAcciones({
           <div className={s.actionCluster}>
             <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
               <LuFileCheck2 aria-hidden />{" "}
-              {isSavingQuote ? "Guardando..." : "Guardar y abrir PDF"}
+              {isSavingQuote
+                ? "Guardando..."
+                : isMobileViewport
+                  ? "Guardar y abrir PDF"
+                  : "Guardar presupuesto"}
             </button>
             <button className={s.btnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
               <LuSave aria-hidden /> {isSavingDraft ? "Guardando borrador..." : "Guardar borrador"}
             </button>
             <button className={s.btnGhost} type="button" onClick={onGoToStepTwo}>
-              <LuPencil aria-hidden /> Volver
+              <LuPencil aria-hidden /> Volver a editar
             </button>
           </div>
         </>

@@ -156,7 +156,7 @@ describe("usePasoDosAgregarGrupoMovil", () => {
       fireEvent.click(screen.getByText("alto"));
     });
 
-    expect(screen.getByTestId("precio")).toHaveTextContent("2160000");
+    expect(screen.getByTestId("precio")).toHaveTextContent("540000");
 
     act(() => {
       fireEvent.click(screen.getByText("cambiar a margen"));
@@ -170,7 +170,7 @@ describe("usePasoDosAgregarGrupoMovil", () => {
     });
 
     expect(screen.getByTestId("modo")).toHaveTextContent("precio_directo");
-    expect(screen.getByTestId("precio")).toHaveTextContent("2160000");
+    expect(screen.getByTestId("precio")).toHaveTextContent("540000");
   });
 
   it("debe conservar precio manual sin plantilla al alternar modo móvil", () => {

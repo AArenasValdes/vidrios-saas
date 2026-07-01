@@ -7,6 +7,7 @@ import { PasoDosFormularioBloqueAjustes } from "./paso-dos/paso-dos-formulario-b
 import { PasoDosFormularioBloqueConfiguracion } from "./paso-dos/paso-dos-formulario-bloque-configuracion";
 import { PasoDosFormularioBloqueDetalles } from "./paso-dos/paso-dos-formulario-bloque-detalles";
 import { PasoDosFormularioBloqueVidrio } from "./paso-dos/paso-dos-formulario-bloque-vidrio";
+import { PasoDosEditorDesktop } from "./paso-dos/paso-dos-editor-desktop";
 import s from "../page.module.css";
 
 export function PasoDosFormularioComponente(props: PasoDosFormularioComponenteProps) {
@@ -14,17 +15,30 @@ export function PasoDosFormularioComponente(props: PasoDosFormularioComponentePr
     itemsCount,
     editingItemId,
     quotePricingMode,
+    isMobileViewport,
     onQuotePricingModeChange,
     variant = "default",
+    showDesktopContextRail = false,
+    isDesktopQuoteStudio = false,
   } = props;
   const isMobilePointEdit = variant === "mobilePointEdit";
   const modeLabel = quotePricingMode === "total_global" ? "Total del trabajo" : "Por componentes";
   const nextMode = quotePricingMode === "total_global" ? "por_item" : "total_global";
+  const useDesktopFormCard = !isMobileViewport && !isMobilePointEdit;
+  const title = editingItemId ? "Editar componente" : "Agregar componente";
+
+  if (isDesktopQuoteStudio && editingItemId) {
+    return <PasoDosEditorDesktop {...props} />;
+  }
 
   return (
     <section
       className={`${s.card} ${s.stepTwoFormCard} ${
-        isMobilePointEdit ? s.stepTwoFormCardMobilePointEdit : s.stepTwoFormCardMobile
+        isMobilePointEdit
+          ? s.stepTwoFormCardMobilePointEdit
+          : useDesktopFormCard
+            ? s.stepTwoFormCardDesktop
+            : s.stepTwoFormCardMobile
       }`}
       id="component-form"
     >
@@ -32,10 +46,10 @@ export function PasoDosFormularioComponente(props: PasoDosFormularioComponentePr
         <>
           <div className={s.cardHeaderRow}>
             <div>
-              <div className={s.cardLabel}>Paso 2 / Componentes</div>
-              <h2 className={s.cardTitle}>
-                {editingItemId ? "Editar componente" : "Agregar componente"}
-              </h2>
+              {showDesktopContextRail ? null : (
+                <div className={s.cardLabel}>Paso 2 / Componentes</div>
+              )}
+              <h2 className={s.cardTitle}>{title}</h2>
             </div>
             {itemsCount > 0 ? (
               <span className={s.headerPill}>
@@ -44,7 +58,7 @@ export function PasoDosFormularioComponente(props: PasoDosFormularioComponentePr
             ) : null}
           </div>
 
-          {itemsCount > 0 ? (
+          {itemsCount > 0 && !showDesktopContextRail ? (
             <div className={s.stepTwoModeChip}>
               <span>Modo: {modeLabel}</span>
               <button type="button" onClick={() => onQuotePricingModeChange(nextMode)}>

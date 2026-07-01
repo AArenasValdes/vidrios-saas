@@ -127,6 +127,27 @@ describe("cotizacion-item-presentation", () => {
     });
   });
 
+  it("debe preservar sistema, configuracion y composicion de shower door sin variante", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#111827",
+      material: "Aluminio",
+      referencia: "Corredera - Frontal",
+      sistema: "Corredera",
+      configuracion: "Frontal",
+      sheetScheme: "2 hojas correderas",
+      sheetVariant: "",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        sistema: "Corredera",
+        configuracion: "Frontal",
+        sheetScheme: "2 hojas correderas",
+        sheetVariant: "",
+      })
+    );
+  });
+
   it("debe conservar referencias compuestas de sistema y configuracion", () => {
     const encoded = encodeCotizacionItemPresentationMeta({
       colorHex: "#a8a8a8",

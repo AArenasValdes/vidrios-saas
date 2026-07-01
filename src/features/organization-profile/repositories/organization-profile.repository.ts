@@ -10,11 +10,16 @@ import type {
 import { normalizePricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type {
   BillingPeriod,
+  OrganizationSubscriptionSnapshot,
   PaymentMethod,
   PlanCode,
   PlanType,
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
+import {
+  buildFreshTrialRepairSnapshot,
+  resolveOrganizationSubscriptionState,
+} from "@/features/subscriptions/services/subscription-status.service";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -81,6 +86,10 @@ type OrganizationProfileRow = {
   payment_method?: PaymentMethod | null;
   last_payment_at?: string | null;
   founder_price_locked?: boolean | null;
+};
+
+type OrganizationCreatedAtRow = {
+  creado_en?: string | null;
 };
 
 const TABLE_NAME = "organization_profile";
@@ -203,6 +212,24 @@ function mapOrganizationProfile(
   };
 }
 
+function mapProfileToSubscriptionSnapshot(
+  profile: OrganizationProfile
+): OrganizationSubscriptionSnapshot {
+  return {
+    subscriptionStatus: profile.subscriptionStatus,
+    trialStartedAt: profile.trialStartedAt,
+    trialEndsAt: profile.trialEndsAt,
+    subscriptionStartedAt: profile.subscriptionStartedAt,
+    subscriptionEndsAt: profile.subscriptionEndsAt,
+    planType: profile.planType,
+    planCode: profile.planCode,
+    billingPeriod: profile.billingPeriod,
+    paymentMethod: profile.paymentMethod,
+    lastPaymentAt: profile.lastPaymentAt,
+    founderPriceLocked: profile.founderPriceLocked,
+  };
+}
+
 export function createOrganizationProfileRepository(
   deps: OrganizationProfileRepositoryDeps = {}
 ) {
@@ -224,7 +251,45 @@ export function createOrganizationProfileRepository(
         throw error;
       }
 
-      return mapOrganizationProfile(data as OrganizationProfileRow | null);
+      const profile = mapOrganizationProfile(data as OrganizationProfileRow | null);
+
+      if (!profile) {
+        return null;
+      }
+
+      const subscription = resolveOrganizationSubscriptionState(profile);
+
+      if (!subscription.isWriteBlocked) {
+        return profile;
+      }
+
+      const { data: organization } = await supabase
+        .from("organizations")
+        .select("creado_en")
+        .eq("id", organizationId)
+        .maybeSingle();
+
+      const repairedSubscription = buildFreshTrialRepairSnapshot({
+        snapshot: mapProfileToSubscriptionSnapshot(profile),
+        organizationCreatedAt:
+          (organization as OrganizationCreatedAtRow | null)?.creado_en,
+      });
+
+      if (!repairedSubscription) {
+        return profile;
+      }
+
+      return {
+        ...profile,
+        subscriptionStatus: repairedSubscription.subscriptionStatus,
+        trialStartedAt: repairedSubscription.trialStartedAt,
+        trialEndsAt: repairedSubscription.trialEndsAt,
+        planType: repairedSubscription.planType,
+        planCode: repairedSubscription.planCode,
+        billingPeriod: repairedSubscription.billingPeriod,
+        paymentMethod: repairedSubscription.paymentMethod,
+        founderPriceLocked: repairedSubscription.founderPriceLocked,
+      };
     },
 
   async upsertByOrganizationId(

@@ -72,6 +72,10 @@
   .stateCard {
     width: 100%;
   }
+
+  .stateTitle {
+    font-size: 22px;
+  }
 }
 
 @media (min-width: 768px) {

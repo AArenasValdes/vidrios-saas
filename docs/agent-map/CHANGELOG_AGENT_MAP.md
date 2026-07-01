@@ -4,6 +4,78 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-06-30 - Sincronizacion documental Desktop Taller
+
+### Resumen
+
+Se alineo la documentacion principal del repo al roadmap `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`. El foco oficial de desktop pasa a ser: estabilizar cotizacion desktop, dejar dashboard comercial con datos reales, pulir Quote Studio desktop y despues validar constructor visual guiado. `oportunidades + cobros` queda congelado como fase futura. Tambien se fijo que `projects` se presenta como **Obras** y que no se deben abrir tablas, rutas publicas, PDF/WhatsApp, dependencias ni cubicacion sin aprobacion.
+
+### Documentacion actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `AGENTS.md` | Jerarquia documental, foco desktop taller y prohibiciones explicitas |
+| `docs/agent-map/README.md` | Roadmap nuevo como primera lectura y foco actual |
+| `docs/agent-map/PROJECT_OVERVIEW.md` | Norte de producto y orden de milestones |
+| `docs/agent-map/AGENT_TASK_GUIDE.md` | Prelectura obligatoria y bloques para dashboard, Quote Studio y visual guiado |
+| `docs/agent-map/DATA_MODEL_MAP.md` | `projects` como Obras y tabla candidata `cotizacion_item_visual_configs` solo documental |
+| `docs/agent-map/ROUTES_MAP.md` | `/dashboard`, `/cotizaciones/nueva` y `/clientes/[id]` alineadas al roadmap |
+| `docs/agent-map/FEATURES_MAP.md` | Dashboard real, cotizaciones como base de Quote Studio y `projects` como Obras |
+| `docs/agent-map/COMPONENTS_MAP.md` | Componentes desktop descritos como base del tablero y Quote Studio |
+| `docs/ventora-master-brief.md` | Limpieza de lenguaje tipo CRM/oportunidades como promesa actual |
+| `docs/COTIZACION_FLOW_CONTEXT.md` | Flujo de cotizacion como base de Milestone 0 y 2 |
+| `docs/salida-beta-checklist.md` | Checklist alineado a desktop taller |
+| `README.md` | Resumen del repo sin foco CRM generico |
+| `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` | Jerarquia documental y nota de normalizacion `861px -> 1024px` |
+
+---
+
+## 2026-06-29 - Estandarizacion SVG de ventanas
+
+### Resumen
+
+Se documento el refactor visual de ventanas en `window-drawings.ts`: correderas, fijas, proyectantes, abatibles, oscilobatientes, bow windows, guillotinas y celosias comparten primitives SVG de marco, vidrio, hojas, rieles, manillas, flechas e indicadores tecnicos. El cambio es solo de representacion visual.
+
+### Documentacion actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/COMPONENTS_MAP.md` | `QuoteComponentSketch` registra la dependencia en primitives SVG compartidas para ventanas |
+
+---
+
+## 2026-06-29 - Rediseño desktop de `/cotizaciones/nueva`
+
+### Resumen
+
+Se documento el nuevo flujo desktop de cotizacion: Paso 1 integra cliente, datos del trabajo y metodo de presupuesto; Paso 2 usa estacion de trabajo en dos columnas con pieza local "En edicion" y subpasos Tipo/Sistema/Medidas/Precio; Paso 3 mantiene revision y guardado antes de PDF/WhatsApp. Mobile conserva su wizard actual.
+
+### Documentacion actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/FEATURES_MAP.md` | Cotizaciones documenta el estado local de pieza desktop y el modo total como cuaderno comercial |
+| `docs/agent-map/ROUTES_MAP.md` | `/cotizaciones/nueva` describe el flujo desktop y archivos principales nuevos |
+| `docs/agent-map/COMPONENTS_MAP.md` | Componentes PasoDos actualizados para selector fallback, editor desktop y panel vivo |
+
+---
+
+## 2026-06-27 - Growth panel migrado a Supabase
+
+### Resumen
+
+`/admin/growth` deja de usar `localStorage` como fuente de verdad. Nuevas tablas `growth_*`, APIs `/api/admin/growth/*`, RLS por membership, import idempotente desde navegador y KPIs hibridos acotados.
+
+### Documentacion actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `docs/agent-map/ROUTES_MAP.md` | `/admin/growth` + APIs growth |
+| `docs/agent-map/FEATURES_MAP.md` | Founder Growth Panel -> Supabase |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Tablas `growth_*` |
+
+---
+
 ## 2026-06-19 - Onboarding de activacion `/activacion`
 
 ### Resumen
