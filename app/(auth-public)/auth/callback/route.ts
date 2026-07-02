@@ -16,6 +16,15 @@ type CookieToSet = {
   options: CookieOptionsWithName;
 };
 
+type ManualCookieOptions = {
+  domain?: string;
+  httpOnly?: boolean;
+  maxAge?: number;
+  path?: string;
+  sameSite?: "lax" | "strict" | "none";
+  secure?: boolean;
+};
+
 function resolveIntent(value: string | null): AuthOAuthIntent {
   return value === "signup" ? "signup" : "login";
 }
@@ -103,6 +112,62 @@ function chunkCookieValue(name: string, value: string, chunkSize = 3180) {
   return chunks;
 }
 
+function serializeCookie(input: {
+  name: string;
+  value: string;
+  options: {
+    domain?: string;
+    httpOnly?: boolean;
+    maxAge?: number;
+    path?: string;
+    sameSite?: "lax" | "strict" | "none";
+    secure?: boolean;
+  };
+}) {
+  const segments = [
+    `${input.name}=${encodeURIComponent(input.value)}`,
+    `Path=${input.options.path ?? "/"}`,
+  ];
+
+  if (input.options.maxAge !== undefined) {
+    segments.push(`Max-Age=${input.options.maxAge}`);
+  }
+
+  if (input.options.domain) {
+    segments.push(`Domain=${input.options.domain}`);
+  }
+
+  if (input.options.httpOnly) {
+    segments.push("HttpOnly");
+  }
+
+  if (input.options.secure) {
+    segments.push("Secure");
+  }
+
+  if (input.options.sameSite) {
+    segments.push(`SameSite=${input.options.sameSite}`);
+  }
+
+  return segments.join("; ");
+}
+
+function appendSetCookie(
+  response: NextResponse,
+  name: string,
+  value: string,
+  options: ManualCookieOptions
+) {
+  response.headers.append(
+    "Set-Cookie",
+    serializeCookie({
+      name,
+      value,
+      options,
+    })
+  );
+}
+
 function applySessionCookieFromOAuthResponse(
   response: NextResponse,
   request: NextRequest,
@@ -114,31 +179,36 @@ function applySessionCookieFromOAuthResponse(
     return response;
   }
 
-  const cookieOptions = {
+  const sharedOptions = getSupabaseCookieOptions(request.nextUrl.hostname);
+  const cookieOptions: ManualCookieOptions = {
     path: "/",
-    sameSite: "lax" as const,
+    sameSite: "lax",
     httpOnly: false,
     maxAge: 400 * 24 * 60 * 60,
-    ...getSupabaseCookieOptions(request.nextUrl.hostname),
+    domain: sharedOptions?.domain,
+    secure: sharedOptions?.secure,
   };
   const cookieValue = `base64-${toBase64Url(JSON.stringify(session))}`;
   const chunks = chunkCookieValue(cookieName, cookieValue);
 
-  response.cookies.set(cookieName, "", {
+  appendSetCookie(response, cookieName, "", {
     ...cookieOptions,
     maxAge: 0,
   });
 
   for (let index = 0; index < 8; index += 1) {
-    response.cookies.set(`${cookieName}.${index}`, "", {
+    appendSetCookie(response, `${cookieName}.${index}`, "", {
       ...cookieOptions,
       maxAge: 0,
     });
   }
 
   chunks.forEach((chunk) => {
-    response.cookies.set(chunk.name, chunk.value, cookieOptions);
+    appendSetCookie(response, chunk.name, chunk.value, cookieOptions);
   });
+
+  response.headers.set("x-oauth-cookie-count", String(chunks.length));
+  response.headers.set("x-oauth-cookie-name", cookieName);
 
   return response;
 }
