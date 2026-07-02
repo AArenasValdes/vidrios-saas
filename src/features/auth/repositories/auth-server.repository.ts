@@ -1,5 +1,5 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createServerClient>>;
 
@@ -8,7 +8,10 @@ type AuthServerRepositoryDeps = {
 };
 
 export interface AuthServerRepository {
-  exchangeCodeForSession(code: string): Promise<User>;
+  exchangeCodeForSession(code: string): Promise<{
+    user: User;
+    session: Session;
+  }>;
 }
 
 export function createAuthServerRepository(
@@ -19,10 +22,14 @@ export function createAuthServerRepository(
   return {
     async exchangeCodeForSession(code) {
       const supabase = await serverClientFactory();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         throw error;
+      }
+
+      if (!data.session) {
+        throw new Error("No pudimos crear la sesion de Google.");
       }
 
       const {
@@ -38,7 +45,10 @@ export function createAuthServerRepository(
         throw new Error("Tu cuenta de Google no tiene correo disponible.");
       }
 
-      return user;
+      return {
+        user,
+        session: data.session,
+      };
     },
   };
 }

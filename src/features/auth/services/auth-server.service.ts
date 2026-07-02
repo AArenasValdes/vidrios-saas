@@ -13,6 +13,7 @@ import {
 import { sanitizeAuthNextPath } from "@/features/auth/services/auth-safe-redirect.service";
 import type { AuthOAuthIntent, AuthOAuthProvider } from "@/features/auth/types/auth";
 import type { OAuthAnalyticsEvent } from "@/features/auth/services/auth-oauth-analytics.service";
+import type { Session } from "@supabase/supabase-js";
 
 type AuthServerServiceDeps = {
   repository?: AuthServerRepository;
@@ -28,6 +29,7 @@ export type OAuthCallbackResolution =
         intent: AuthOAuthIntent;
         syncedAuthUserId: boolean;
       };
+      session: Session;
     }
   | {
       kind: "error_redirect";
@@ -68,7 +70,7 @@ export function createAuthServerService(
         };
       }
 
-      const user = await repository.exchangeCodeForSession(normalizedCode);
+      const { user, session } = await repository.exchangeCodeForSession(normalizedCode);
 
       if (!user.email?.trim()) {
         return {
@@ -92,6 +94,7 @@ export function createAuthServerService(
         intent,
         provider,
         safeNext,
+        session,
       });
     },
   };
@@ -102,6 +105,7 @@ function mapIdentityToCallbackResolution(input: {
   intent: AuthOAuthIntent;
   provider: AuthOAuthProvider;
   safeNext: string;
+  session: Session;
 }): OAuthCallbackResolution {
   if (input.identity.status === "identity_conflict") {
     return {
@@ -125,6 +129,7 @@ function mapIdentityToCallbackResolution(input: {
         intent: input.intent,
         syncedAuthUserId: input.identity.syncedAuthUserId,
       },
+      session: input.session,
     };
   }
 
@@ -143,6 +148,7 @@ function mapIdentityToCallbackResolution(input: {
       intent: input.intent,
       syncedAuthUserId: false,
     },
+    session: input.session,
   };
 }
 

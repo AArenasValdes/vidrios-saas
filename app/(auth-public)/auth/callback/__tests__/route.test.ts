@@ -14,48 +14,38 @@ import { resolveOAuthIdentity } from "@/features/auth/services/auth-oauth-comple
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://yrtrwgkaopfumpidjthk.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
   });
 
-  it("preserva cookies de sesion Supabase en el redirect final", async () => {
+  it("escribe cookie de sesion Supabase en el redirect final aunque setAll no corra", async () => {
     (createServerClient as jest.Mock).mockImplementation(
-      (_url: string, _key: string, options: {
-        cookies: {
-          setAll: (
-            cookies: Array<{
-              name: string;
-              value: string;
-              options: Record<string, unknown>;
-            }>
-          ) => void;
+      () => {
+        const user = {
+          id: "auth-1",
+          email: "maestro@test.com",
+          app_metadata: {},
+          user_metadata: {},
+          aud: "authenticated",
+          created_at: "2026-01-01T00:00:00.000Z",
         };
-      }) => {
-        options.cookies.setAll([
-          {
-            name: "sb-test-auth-token",
-            value: "session-value",
-            options: {
-              path: "/",
-              sameSite: "lax",
-              secure: true,
-            },
-          },
-        ]);
-
         return {
           auth: {
-            exchangeCodeForSession: jest.fn().mockResolvedValue({ error: null }),
+            exchangeCodeForSession: jest.fn().mockResolvedValue({
+              data: {
+                session: {
+                  access_token: "access-token",
+                  refresh_token: "refresh-token",
+                  expires_in: 3600,
+                  token_type: "bearer",
+                  user,
+                },
+              },
+              error: null,
+            }),
             getUser: jest.fn().mockResolvedValue({
               data: {
-                user: {
-                  id: "auth-1",
-                  email: "maestro@test.com",
-                  app_metadata: {},
-                  user_metadata: {},
-                  aud: "authenticated",
-                  created_at: "2026-01-01T00:00:00.000Z",
-                },
+                user,
               },
               error: null,
             }),
@@ -81,7 +71,10 @@ describe("GET /auth/callback", () => {
       "https://www.ventorap.cl/dashboard"
     );
     expect(response.headers.getSetCookie().join("\n")).toContain(
-      "sb-test-auth-token=session-value"
+      "sb-yrtrwgkaopfumpidjthk-auth-token="
+    );
+    expect(response.headers.getSetCookie().join("\n")).toContain(
+      "base64-"
     );
   });
 });
