@@ -59,6 +59,25 @@ const clpFormatter = new Intl.NumberFormat("es-CL", {
 const CLP = (value: number) => clpFormatter.format(value);
 type CotizacionPdfModule = typeof import("@/utils/cotizacion-pdf");
 
+function resolveTotalGlobalIvaLabel(input: {
+  leadItemObservaciones?: string | null;
+  mostrarIva?: boolean | null;
+}) {
+  const ivaMode = input.leadItemObservaciones
+    ? decodeCotizacionItemPresentationMeta(input.leadItemObservaciones).ivaMode
+    : null;
+
+  if (ivaMode === "total_incluye_iva") {
+    return "Precio final";
+  }
+
+  if (ivaMode === "neto_mas_iva") {
+    return "IVA se suma al final";
+  }
+
+  return input.mostrarIva ?? true ? "IVA se suma al final" : "Precio final";
+}
+
 function resolvePrintRuntimeMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
@@ -671,7 +690,14 @@ export default function CotizacionPrintPage() {
 
     return visibleCotizacion.items.filter((item) => item.id !== totalGlobalLeadItem.id);
   }, [totalGlobalLeadItem, visibleCotizacion]);
-  const globalIvaLabel = (visibleCotizacion?.mostrarIva ?? true) ? "IVA incluido" : "Sin IVA";
+  const globalIvaLabel = isTotalGlobalQuote
+    ? resolveTotalGlobalIvaLabel({
+        leadItemObservaciones: totalGlobalLeadItem?.observaciones,
+        mostrarIva: visibleCotizacion?.mostrarIva,
+      })
+    : (visibleCotizacion?.mostrarIva ?? true)
+      ? "IVA incluido"
+      : "Sin IVA";
   const detailHeadingLabel = showItemPrices
     ? "COMPONENTES COTIZADOS"
     : "DETALLES INCLUIDOS";

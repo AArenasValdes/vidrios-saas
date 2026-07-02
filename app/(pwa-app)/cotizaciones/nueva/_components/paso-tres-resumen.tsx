@@ -400,7 +400,7 @@ export function PasoTresResumen({
 
                     <label className={s.rtManualInputBlock}>
                       <span className={s.rtManualInputLabel}>
-                        {!mostrarIva ? "Valor final acordado · IVA incluido" : "Subtotal acordado · IVA no incluido"}
+                        {!mostrarIva ? "Precio final acordado" : "Subtotal acordado · IVA no incluido"}
                       </span>
                       <div className={s.rtMoneyInputWrap}>
                         <span className={s.rtMoneyPrefix}>$</span>

@@ -1382,7 +1382,7 @@ export function buildFreeValueItemFromForm(
     descripcion: form.descripcion,
     valor: normalizedValue ? Number(normalizedValue) : 0,
     cantidad: Number.isFinite(cantidad) && cantidad > 0 ? Math.round(cantidad) : 1,
-    ivaMode: "total_incluye_iva",
+    ivaMode: form.ivaMode,
     allowZeroValue: options?.allowZeroValue,
   });
 }

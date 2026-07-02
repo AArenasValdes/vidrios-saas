@@ -492,6 +492,28 @@ describe("workflow-ui paso 2", () => {
     expect(item.precioTotal).toBe(240000);
   });
 
+  it("debe conservar modo de IVA de precios finales en item libre", () => {
+    const item = buildFreeValueItemFromForm(
+      {
+        ...createEmptyFreeValueItemForm(),
+        nombre: "Trabajo completo",
+        descripcion: "Precio final para el cliente.",
+        valor: "240000",
+        cantidad: "1",
+        ivaMode: "total_incluye_iva",
+      },
+      [],
+      null
+    );
+
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+
+    expect(meta.ivaMode).toBe("total_incluye_iva");
+    expect(meta.totalClienteVisible).toBe(240000);
+    expect(meta.netoCalculado).toBe(201681);
+    expect(meta.ivaCalculado).toBe(38319);
+  });
+
   it("debe considerar completo un item libre descriptivo sin precio en total global", () => {
     const item = buildFreeValueItemFromForm(
       {

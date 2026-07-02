@@ -310,6 +310,13 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
   const cantidad = Number(input.cantidad) > 0 ? Math.round(Number(input.cantidad)) : 1;
   const precioTotal = round(valorUnitario * cantidad, 2);
   const codigo = input.codigo?.trim() || `L${Date.now()}`;
+  const ivaMode = input.ivaMode ?? "total_incluye_iva";
+  const netoCalculado =
+    ivaMode === "neto_mas_iva" ? precioTotal : round(precioTotal / (1 + impuestos.iva), 2);
+  const ivaCalculado =
+    ivaMode === "neto_mas_iva"
+      ? round(precioTotal * impuestos.iva, 2)
+      : round(precioTotal - netoCalculado, 2);
 
   if (!nombre) {
     throw new Error("El nombre del item libre es obligatorio");
@@ -348,10 +355,10 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
       colorHex: "#a8a8a8",
       material: "Aluminio",
       pricingMode: "precio_directo",
-      ivaMode: "total_incluye_iva",
+      ivaMode,
       totalClienteVisible: precioTotal,
-      netoCalculado: precioTotal,
-      ivaCalculado: 0,
+      netoCalculado,
+      ivaCalculado,
       displayMode: "item_libre",
       raw: input.observaciones ?? "",
     }),
