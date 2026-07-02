@@ -31,10 +31,6 @@ export function canAccessFounderAdminPanel(input: {
   email: string | null | undefined;
   rol: UserRole | null | undefined;
 }) {
-  if (input.rol !== "admin") {
-    return false;
-  }
-
   return isFounderAdminEmail(input.email);
 }
 
