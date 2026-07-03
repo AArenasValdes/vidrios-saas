@@ -218,7 +218,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         setSaveIntent(null);
         setDraft(draftToSave);
         setSavedRecord(record);
-        setLastSaveMode(wasUpdatingRecord ? "actualizada" : estado);
+        setLastSaveMode(estado === "borrador" ? "borrador" : wasUpdatingRecord ? "actualizada" : estado);
         setStep(3);
         scrollPageToTop();
 

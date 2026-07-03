@@ -147,6 +147,64 @@ export function PasoTresResumen({
   const manualTotalInputValue = hasManualTotal
     ? formatCurrencyInput(String(totalClienteManual))
     : "";
+  const isDraftSaved = Boolean(savedRecord && lastSaveMode === "borrador");
+  const [hasUnsavedDraftChanges, setHasUnsavedDraftChanges] = useState(false);
+
+  const markDraftDirtyIfNeeded = useCallback(() => {
+    if (isDraftSaved) {
+      setHasUnsavedDraftChanges(true);
+    }
+  }, [isDraftSaved]);
+
+  const handleDraftFleteChange = useCallback(
+    (value: string) => {
+      markDraftDirtyIfNeeded();
+      onDraftFleteChange(value);
+    },
+    [markDraftDirtyIfNeeded, onDraftFleteChange]
+  );
+
+  const handleDraftDiscountChange = useCallback(
+    (value: string) => {
+      markDraftDirtyIfNeeded();
+      onDraftDiscountChange(value);
+    },
+    [markDraftDirtyIfNeeded, onDraftDiscountChange]
+  );
+
+  const handleDraftDiscountTypeChange = useCallback(
+    (value: CotizacionWorkflowDraft["descuentoTipo"]) => {
+      markDraftDirtyIfNeeded();
+      onDraftDiscountTypeChange(value);
+    },
+    [markDraftDirtyIfNeeded, onDraftDiscountTypeChange]
+  );
+
+  const handleGlobalTotalClienteChange = useCallback(
+    (value: string) => {
+      markDraftDirtyIfNeeded();
+      onGlobalTotalClienteChange(value);
+    },
+    [markDraftDirtyIfNeeded, onGlobalTotalClienteChange]
+  );
+
+  const handleMostrarIvaChange = useCallback(() => {
+    markDraftDirtyIfNeeded();
+    onMostrarIvaChange();
+  }, [markDraftDirtyIfNeeded, onMostrarIvaChange]);
+
+  const handleValidezChange = useCallback(
+    (value: string) => {
+      markDraftDirtyIfNeeded();
+      onValidezChange(value);
+    },
+    [markDraftDirtyIfNeeded, onValidezChange]
+  );
+
+  const handleSaveDraft = useCallback(() => {
+    setHasUnsavedDraftChanges(false);
+    onSaveDraft();
+  }, [onSaveDraft]);
 
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
@@ -640,12 +698,12 @@ export function PasoTresResumen({
           mostrarIva={mostrarIva}
           savedRecord={savedRecord}
           isMobileViewport={isMobileViewport}
-          onDraftFleteChange={onDraftFleteChange}
-          onDraftDiscountChange={onDraftDiscountChange}
-          onDraftDiscountTypeChange={onDraftDiscountTypeChange}
-          onGlobalTotalClienteChange={onGlobalTotalClienteChange}
-          onMostrarIvaChange={onMostrarIvaChange}
-          onValidezChange={onValidezChange}
+          onDraftFleteChange={handleDraftFleteChange}
+          onDraftDiscountChange={handleDraftDiscountChange}
+          onDraftDiscountTypeChange={handleDraftDiscountTypeChange}
+          onGlobalTotalClienteChange={handleGlobalTotalClienteChange}
+          onMostrarIvaChange={handleMostrarIvaChange}
+          onValidezChange={handleValidezChange}
           validezOptions={VALIDEZ_OPTIONS}
           formatCurrencyInput={formatCurrencyInput}
         />
@@ -657,9 +715,10 @@ export function PasoTresResumen({
           isMobileViewport={isMobileViewport}
           isSaving={isSaving}
           saveIntent={saveIntent}
+          hasUnsavedDraftChanges={hasUnsavedDraftChanges}
           onGoToStepTwo={onGoToStepTwo}
           onSaveQuote={onSaveQuote}
-          onSaveDraft={onSaveDraft}
+          onSaveDraft={handleSaveDraft}
         />
       </div>
     </section>

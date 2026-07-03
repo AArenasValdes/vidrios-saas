@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { LuBuilding2, LuDownload, LuFileCheck2, LuPencil, LuPlus, LuSave } from "react-icons/lu";
+import {
+  LuBuilding2,
+  LuCircleCheck,
+  LuDownload,
+  LuFileCheck2,
+  LuPencil,
+  LuPlus,
+  LuSave,
+} from "react-icons/lu";
 
 import { STATUS_COPY } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -17,6 +25,7 @@ type PasoTresPanelAccionesProps = {
   isMobileViewport: boolean;
   isSaving: boolean;
   saveIntent: SaveIntent | null;
+  hasUnsavedDraftChanges: boolean;
   onGoToStepTwo: () => void;
   onSaveQuote: () => void;
   onSaveDraft: () => void;
@@ -30,16 +39,39 @@ export function PasoTresPanelAcciones({
   isMobileViewport,
   isSaving,
   saveIntent,
+  hasUnsavedDraftChanges,
   onGoToStepTwo,
   onSaveQuote,
   onSaveDraft,
 }: PasoTresPanelAccionesProps) {
   const isSavingQuote = isSaving && saveIntent === "quote";
   const isSavingDraft = isSaving && saveIntent === "draft";
+  const isDraftSaved = Boolean(savedRecord && lastSaveMode === "borrador");
+  const isQuoteSaved = Boolean(savedRecord && lastSaveMode && lastSaveMode !== "borrador");
+  const showDraftDirtyFooter = isDraftSaved && hasUnsavedDraftChanges;
+  const showDraftSavedFooter = isDraftSaved && !hasUnsavedDraftChanges;
 
-  if (isMobileViewport && !savedRecord) {
+  if (isMobileViewport && !isQuoteSaved) {
     return (
       <aside className={`${s.finalActionCard} ${s.stepThreeActionCardMobile} ${s.stepThreeStickyActionBar}`}>
+        {showDraftSavedFooter ? (
+          <div className={s.stepThreeFooterStatus} role="status">
+            <LuCircleCheck aria-hidden />
+            <div>
+              <strong>Borrador guardado</strong>
+              <span>Puedes continuar ahora o salir y retomarlo despu&eacute;s.</span>
+            </div>
+          </div>
+        ) : null}
+        {showDraftDirtyFooter ? (
+          <div className={`${s.stepThreeFooterStatus} ${s.stepThreeFooterStatusDirty}`} role="status">
+            <LuPencil aria-hidden />
+            <div>
+              <strong>Cambios sin guardar</strong>
+              <span>Guarda los cambios antes de crear la cotizacion final.</span>
+            </div>
+          </div>
+        ) : null}
         {isSaving ? (
           <div className={s.finalLoadingNotice} aria-live="polite">
             <div className={s.inlineLoadingDots} aria-hidden>
@@ -59,31 +91,40 @@ export function PasoTresPanelAcciones({
         ) : null}
         {globalError ? <div className={s.inlineError}>{globalError}</div> : null}
 
-        <button
-          className={`${s.btnPrimary} ${s.stepThreePrimaryButton}`}
-          onClick={onSaveQuote}
-          type="button"
-          disabled={isSaving}
-        >
-          <LuFileCheck2 aria-hidden />
-          {isSavingQuote ? "Guardando..." : "Crear cotización y abrir PDF"}
-        </button>
+        {!showDraftDirtyFooter ? (
+          <button
+            className={`${s.btnPrimary} ${s.stepThreePrimaryButton}`}
+            onClick={onSaveQuote}
+            type="button"
+            disabled={isSaving}
+          >
+            <LuFileCheck2 aria-hidden />
+            {isSavingQuote ? "Guardando..." : "Crear cotizaci\u00f3n y abrir PDF"}
+          </button>
+        ) : null}
 
-        <button
-          className={s.stepThreeDraftTextButton}
-          onClick={onSaveDraft}
-          type="button"
-          disabled={isSaving}
-        >
-          <LuSave aria-hidden /> {isSavingDraft ? "Guardando..." : "Guardar como borrador"}
-        </button>
+        {showDraftSavedFooter ? (
+          <Link className={s.stepThreeDraftTextButton} href="/cotizaciones">
+            Salir y continuar despu&eacute;s
+          </Link>
+        ) : (
+          <button
+            className={s.stepThreeDraftTextButton}
+            onClick={onSaveDraft}
+            type="button"
+            disabled={isSaving}
+          >
+            <LuSave aria-hidden />{" "}
+            {isSavingDraft ? "Guardando..." : showDraftDirtyFooter ? "Guardar cambios" : "Guardar como borrador"}
+          </button>
+        )}
       </aside>
     );
   }
 
   return (
     <aside className={s.finalActionCard}>
-      {savedRecord && lastSaveMode ? (
+      {isQuoteSaved && savedRecord ? (
         <>
           <div className={s.savedBadge}>
             <LuFileCheck2 size={16} aria-hidden />
@@ -122,9 +163,13 @@ export function PasoTresPanelAcciones({
         </>
       ) : (
         <>
-          <div className={s.finalActionTitle}>Guardar presupuesto</div>
+          <div className={s.finalActionTitle}>
+            {isDraftSaved ? "Borrador guardado" : "Guardar presupuesto"}
+          </div>
           <p className={s.finalActionText}>
-            Guarda primero. Despues podras ver el PDF y enviarlo por WhatsApp.
+            {isDraftSaved
+              ? "Puedes seguir editando o crear la cotizacion cuando este lista."
+              : "Guarda primero. Despues podras ver el PDF y enviarlo por WhatsApp."}
           </p>
           {isSaving ? (
             <div className={s.finalLoadingNotice} aria-live="polite">
