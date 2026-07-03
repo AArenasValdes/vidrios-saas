@@ -17,6 +17,7 @@ import s from "../page.module.css";
 type PasoTresResumenProps = {
   draft: CotizacionWorkflowDraft;
   subtotal: string;
+  descuento: string;
   iva: string;
   flete: string;
   redondeoComercial: string;
@@ -34,6 +35,8 @@ type PasoTresResumenProps = {
   isSaving: boolean;
   saveIntent: SaveIntent | null;
   onDraftFleteChange: (value: string) => void;
+  onDraftDiscountChange: (value: string) => void;
+  onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
   onValidezChange: (value: string) => void;
@@ -101,6 +104,7 @@ function buildItemDetailLines(item: CotizacionWorkflowItem) {
 export function PasoTresResumen({
   draft,
   subtotal,
+  descuento,
   iva,
   flete,
   redondeoComercial,
@@ -118,6 +122,8 @@ export function PasoTresResumen({
   isSaving,
   saveIntent,
   onDraftFleteChange,
+  onDraftDiscountChange,
+  onDraftDiscountTypeChange,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
   onValidezChange,
@@ -314,6 +320,50 @@ export function PasoTresResumen({
                       />
                     </div>
                   </label>
+
+                  <div className={s.rtAdjustRow}>
+                    <span className={s.rtFieldLabel}>Descuento comercial</span>
+                    <div className={s.rtSegmented}>
+                      <button
+                        type="button"
+                        className={`${s.rtSegmentedBtn} ${
+                          (draft.descuentoTipo ?? "porcentaje") === "porcentaje" ? s.rtSegmentedBtnActive : ""
+                        }`}
+                        onClick={() => onDraftDiscountTypeChange("porcentaje")}
+                      >
+                        Porcentaje
+                      </button>
+                      <button
+                        type="button"
+                        className={`${s.rtSegmentedBtn} ${
+                          draft.descuentoTipo === "monto" ? s.rtSegmentedBtnActive : ""
+                        }`}
+                        onClick={() => onDraftDiscountTypeChange("monto")}
+                      >
+                        Monto
+                      </button>
+                    </div>
+                    <div className={s.rtMoneyInputWrap}>
+                      <span className={s.rtMoneyPrefix}>
+                        {(draft.descuentoTipo ?? "porcentaje") === "monto" ? "$" : "%"}
+                      </span>
+                      <input
+                        className={s.rtMoneyInput}
+                        inputMode="numeric"
+                        value={
+                          (draft.descuentoTipo ?? "porcentaje") === "monto"
+                            ? draft.descuentoMonto && draft.descuentoMonto > 0
+                              ? formatCurrencyInput(String(draft.descuentoMonto))
+                              : ""
+                            : draft.descuentoPct > 0
+                              ? String(draft.descuentoPct)
+                              : ""
+                        }
+                        onChange={(event) => onDraftDiscountChange(event.target.value)}
+                        placeholder={(draft.descuentoTipo ?? "porcentaje") === "monto" ? "Sin descuento" : "0"}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className={s.rtAdjustRight}>
@@ -441,6 +491,10 @@ export function PasoTresResumen({
                         <strong>{subtotal}</strong>
                       </div>
                       <div className={s.rtManualBreakdownRow}>
+                        <span>Descuento</span>
+                        <strong>{draft.descuentoPct > 0 || (draft.descuentoMonto ?? 0) > 0 ? `- ${descuento}` : "—"}</strong>
+                      </div>
+                      <div className={s.rtManualBreakdownRow}>
                         <span>IVA{!mostrarIva ? " (calculado inverso)" : ""}</span>
                         <strong>{iva}</strong>
                       </div>
@@ -497,6 +551,10 @@ export function PasoTresResumen({
                 <div className={s.rtSummaryRow}>
                   <span>Subtotal neto</span>
                   <strong>{subtotal}</strong>
+                </div>
+                <div className={s.rtSummaryRow}>
+                  <span>Descuento</span>
+                  <strong>{draft.descuentoPct > 0 || (draft.descuentoMonto ?? 0) > 0 ? `- ${descuento}` : "—"}</strong>
                 </div>
                 <div className={s.rtSummaryRow}>
                   <span>IVA</span>
@@ -571,6 +629,7 @@ export function PasoTresResumen({
         <PasoTresDetalleFinal
           draft={draft}
           subtotal={subtotal}
+          descuento={descuento}
           iva={iva}
           flete={flete}
           redondeoComercial={redondeoComercial}
@@ -582,6 +641,8 @@ export function PasoTresResumen({
           savedRecord={savedRecord}
           isMobileViewport={isMobileViewport}
           onDraftFleteChange={onDraftFleteChange}
+          onDraftDiscountChange={onDraftDiscountChange}
+          onDraftDiscountTypeChange={onDraftDiscountTypeChange}
           onGlobalTotalClienteChange={onGlobalTotalClienteChange}
           onMostrarIvaChange={onMostrarIvaChange}
           onValidezChange={onValidezChange}

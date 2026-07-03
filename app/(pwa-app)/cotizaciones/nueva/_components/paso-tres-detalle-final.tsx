@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LuChevronDown, LuTruck } from "react-icons/lu";
+import { LuBadgePercent, LuChevronDown, LuTruck } from "react-icons/lu";
 
 import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -12,6 +12,7 @@ import s from "../page.module.css";
 type PasoTresDetalleFinalProps = {
   draft: CotizacionWorkflowDraft;
   subtotal: string;
+  descuento: string;
   iva: string;
   flete: string;
   redondeoComercial: string;
@@ -23,6 +24,8 @@ type PasoTresDetalleFinalProps = {
   savedRecord: CotizacionWorkflowRecord | null;
   isMobileViewport: boolean;
   onDraftFleteChange: (value: string) => void;
+  onDraftDiscountChange: (value: string) => void;
+  onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
   onValidezChange: (value: string) => void;
@@ -33,6 +36,7 @@ type PasoTresDetalleFinalProps = {
 export function PasoTresDetalleFinal({
   draft,
   subtotal,
+  descuento,
   iva,
   flete,
   redondeoComercial,
@@ -44,6 +48,8 @@ export function PasoTresDetalleFinal({
   savedRecord,
   isMobileViewport,
   onDraftFleteChange,
+  onDraftDiscountChange,
+  onDraftDiscountTypeChange,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
   onValidezChange,
@@ -51,6 +57,7 @@ export function PasoTresDetalleFinal({
   formatCurrencyInput,
 }: PasoTresDetalleFinalProps) {
   const [showFreightEditor, setShowFreightEditor] = useState(false);
+  const [showDiscountEditor, setShowDiscountEditor] = useState(false);
   const [showAllItems, setShowAllItems] = useState(false);
 
   const formatMoney = (value: number) =>
@@ -80,6 +87,12 @@ export function PasoTresDetalleFinal({
     totalClienteManual !== null && totalClienteManual !== undefined
       ? formatCurrencyInput(String(totalClienteManual))
       : "";
+  const normalizedProjectName = draft.obra
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const shouldShowProject = Boolean(draft.obra.trim()) && normalizedProjectName !== "cotizacion";
 
   const globalPricingEditor = (
     <section className={s.summaryAdjustmentCard}>
@@ -114,7 +127,7 @@ export function PasoTresDetalleFinal({
       <div className={s.summaryAdjustmentHeader}>
         <div>
           <span className={s.summaryAdjustmentEyebrow}>IVA de la cotizacion</span>
-          <strong>Define como cobrara Ventora</strong>
+          <strong>¿Cómo verá el cliente el precio?</strong>
         </div>
       </div>
       <div className={s.ivaTogglePillLight}>
@@ -135,48 +148,119 @@ export function PasoTresDetalleFinal({
       </div>
       <span className={s.helpText}>
         {mostrarIva
-          ? "Ventora sumara el 19% sobre el subtotal."
-          : "El cliente vera estos valores tal como estan. No se suma IVA al final."}
+          ? "Se suma 19% sobre el subtotal antes de cerrar el total."
+          : "El cliente ve estos valores como precio final."}
       </span>
     </section>
   );
 
-  const freightEditor = (
-    <section className={s.stepThreeFreightCard}>
-      <div className={s.stepThreeFreightRow}>
-        <div className={s.stepThreeFreightMain}>
+  const hasDiscount = draft.descuentoPct > 0 || (draft.descuentoMonto ?? 0) > 0;
+  const discountMode = draft.descuentoTipo ?? "porcentaje";
+  const discountInputValue =
+    discountMode === "monto"
+      ? draft.descuentoMonto && draft.descuentoMonto > 0
+        ? formatCurrencyInput(String(draft.descuentoMonto))
+        : ""
+      : draft.descuentoPct > 0
+        ? String(draft.descuentoPct)
+        : "";
+  const adjustmentsEditor = (
+    <section className={s.stepThreeAdjustmentsCard}>
+      <div className={s.stepThreeAdjustmentsTitle}>Ajustes</div>
+      <div className={s.stepThreeAdjustmentItem}>
+        <button
+          type="button"
+          className={s.stepThreeAdjustmentRow}
+          onClick={() => setShowFreightEditor((current) => !current)}
+          aria-expanded={showFreightEditor}
+        >
           <span className={s.stepThreeFreightIcon}>
             <LuTruck aria-hidden />
           </span>
-          <div className={s.stepThreeFreightText}>
+          <span className={s.stepThreeFreightText}>
             <strong>Flete</strong>
             <span>{draft.flete > 0 ? flete : "No incluido"}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className={s.stepThreeFreightToggle}
-          onClick={() => setShowFreightEditor((current) => !current)}
-        >
-          Editar <LuChevronDown className={showFreightEditor ? s.stepThreeFreightToggleOpen : ""} aria-hidden />
+          </span>
+          <LuChevronDown
+            className={showFreightEditor ? s.stepThreeFreightToggleOpen : ""}
+            aria-hidden
+          />
         </button>
+        {showFreightEditor ? (
+          <label className={s.stepThreeAdjustmentEditor}>
+            <span className={s.label}>Valor del flete</span>
+            <div className={s.moneyInputWrap}>
+              <span className={s.moneyPrefix}>CLP</span>
+              <input
+                className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                inputMode="numeric"
+                value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
+                onChange={(event) => onDraftFleteChange(event.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </label>
+        ) : null}
       </div>
 
-      {showFreightEditor ? (
-        <label className={s.field}>
-          <span className={s.label}>Valor del flete</span>
-          <div className={s.moneyInputWrap}>
-            <span className={s.moneyPrefix}>CLP</span>
-            <input
-              className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
-              inputMode="numeric"
-              value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
-              onChange={(event) => onDraftFleteChange(event.target.value)}
-              placeholder="0"
-            />
+      <div className={s.stepThreeAdjustmentItem}>
+        <button
+          type="button"
+          className={s.stepThreeAdjustmentRow}
+          onClick={() => setShowDiscountEditor((current) => !current)}
+          aria-expanded={showDiscountEditor}
+        >
+          <span className={s.stepThreeFreightIcon}>
+            <LuBadgePercent aria-hidden />
+          </span>
+          <span className={s.stepThreeFreightText}>
+            <strong>Descuento</strong>
+            <span>{hasDiscount ? `- ${descuento}` : "No aplicado"}</span>
+          </span>
+          <LuChevronDown
+            className={showDiscountEditor ? s.stepThreeFreightToggleOpen : ""}
+            aria-hidden
+          />
+        </button>
+        {showDiscountEditor ? (
+          <div className={s.stepThreeAdjustmentEditor}>
+            <div className={s.ivaTogglePillLight}>
+              <button
+                type="button"
+                className={`${s.ivaPillOptionLight} ${discountMode === "porcentaje" ? s.ivaPillActiveLight : ""}`}
+                onClick={() => onDraftDiscountTypeChange("porcentaje")}
+              >
+                Porcentaje
+              </button>
+              <button
+                type="button"
+                className={`${s.ivaPillOptionLight} ${discountMode === "monto" ? s.ivaPillActiveLight : ""}`}
+                onClick={() => onDraftDiscountTypeChange("monto")}
+              >
+                Monto
+              </button>
+            </div>
+            <label className={s.field}>
+              <span className={s.label}>
+                {discountMode === "monto" ? "Monto del descuento" : "Porcentaje de descuento"}
+              </span>
+              <div className={s.moneyInputWrap}>
+                <span className={s.moneyPrefix}>{discountMode === "monto" ? "CLP" : "%"}</span>
+                <input
+                  className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                  inputMode="numeric"
+                  value={discountInputValue}
+                  onChange={(event) => onDraftDiscountChange(event.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <span className={s.helpText}>
+                Se descuenta antes de calcular IVA, flete y redondeo.
+              </span>
+            </label>
           </div>
-        </label>
-      ) : null}
+        ) : null}
+      </div>
     </section>
   );
 
@@ -186,6 +270,12 @@ export function PasoTresDetalleFinal({
         <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
         <strong>{subtotal}</strong>
       </div>
+      {hasDiscount ? (
+        <div className={s.totalRow}>
+          <span>Descuento</span>
+          <strong>- {descuento}</strong>
+        </div>
+      ) : null}
       {mostrarIva ? (
         <div className={s.totalRow}>
           <span>IVA 19%</span>
@@ -255,17 +345,13 @@ export function PasoTresDetalleFinal({
     return (
       <div className={s.finalStageMain}>
         <section className={s.stepThreeSummaryCard}>
-          <div className={s.stepThreeSummaryRow}>
-            <span>CLIENTE</span>
-            <strong>{draft.clienteNombre || "-"}</strong>
-          </div>
-          <div className={s.stepThreeSummaryRow}>
-            <span>PROYECTO</span>
-            <strong>{draft.obra || "-"}</strong>
-          </div>
-          <div className={s.stepThreeSummaryRow}>
-            <span>VALIDEZ</span>
-            <div className={s.stepThreeValidityEditor}>
+          <div className={s.stepThreeSummaryTopRow}>
+            <div className={s.stepThreeSummaryCell}>
+              <span>CLIENTE</span>
+              <strong>{draft.clienteNombre || "-"}</strong>
+            </div>
+            <label className={`${s.stepThreeSummaryCell} ${s.stepThreeValidityCell}`}>
+              <span>VIGENCIA</span>
               <div className={s.selectWrap}>
                 <select
                   className={`${s.input} ${s.stepThreeValiditySelect}`}
@@ -279,14 +365,20 @@ export function PasoTresDetalleFinal({
                   ))}
                 </select>
               </div>
-            </div>
+            </label>
           </div>
+          {shouldShowProject ? (
+            <div className={s.stepThreeSummaryRow}>
+              <span>PROYECTO</span>
+              <strong>{draft.obra}</strong>
+            </div>
+          ) : null}
         </section>
 
         {itemsCard}
         {isGlobal ? globalPricingEditor : null}
         {quoteIvaEditor}
-        {freightEditor}
+        {adjustmentsEditor}
         {totalsPanel}
       </div>
     );
@@ -345,6 +437,47 @@ export function PasoTresDetalleFinal({
                 inputMode="numeric"
                 value={draft.flete > 0 ? formatCurrencyInput(String(draft.flete)) : ""}
                 onChange={(event) => onDraftFleteChange(event.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <span className={s.helpText}>Solo aparece en el PDF si es mayor a 0.</span>
+          </label>
+        </div>
+        <div className={s.summaryAdjustmentCard}>
+          <div className={s.summaryAdjustmentHeader}>
+            <div>
+              <span className={s.summaryAdjustmentEyebrow}>Ajuste final</span>
+              <strong>Descuento</strong>
+            </div>
+            <span className={s.summaryAdjustmentValue}>{hasDiscount ? `- ${descuento}` : "No aplicado"}</span>
+          </div>
+          <div className={s.ivaTogglePillLight}>
+            <button
+              type="button"
+              className={`${s.ivaPillOptionLight} ${discountMode === "porcentaje" ? s.ivaPillActiveLight : ""}`}
+              onClick={() => onDraftDiscountTypeChange("porcentaje")}
+            >
+              Porcentaje
+            </button>
+            <button
+              type="button"
+              className={`${s.ivaPillOptionLight} ${discountMode === "monto" ? s.ivaPillActiveLight : ""}`}
+              onClick={() => onDraftDiscountTypeChange("monto")}
+            >
+              Monto
+            </button>
+          </div>
+          <label className={s.field}>
+            <span className={s.label}>
+              {discountMode === "monto" ? "Monto del descuento" : "Porcentaje de descuento"}
+            </span>
+            <div className={s.moneyInputWrap}>
+              <span className={s.moneyPrefix}>{discountMode === "monto" ? "CLP" : "%"}</span>
+              <input
+                className={`${s.input} ${s.inputMono} ${s.moneyInput}`}
+                inputMode="numeric"
+                value={discountInputValue}
+                onChange={(event) => onDraftDiscountChange(event.target.value)}
                 placeholder="0"
               />
             </div>

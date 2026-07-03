@@ -47,6 +47,8 @@ export type CotizacionWorkflowRecord = {
   direccion: string;
   validez: string;
   descuentoPct: number;
+  descuentoTipo?: "porcentaje" | "monto";
+  descuentoMonto?: number;
   observaciones: string;
   estado: EstadoCotizacionWorkflow;
   approvalToken: string | null;
@@ -80,6 +82,8 @@ export type CotizacionWorkflowDraft = {
   direccion: string;
   validez: string;
   descuentoPct: number;
+  descuentoTipo?: "porcentaje" | "monto";
+  descuentoMonto?: number;
   flete: number;
   observaciones: string;
   condicionesDePago?: string;

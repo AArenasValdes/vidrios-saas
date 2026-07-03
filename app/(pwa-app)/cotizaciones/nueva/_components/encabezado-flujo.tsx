@@ -88,7 +88,9 @@ export function EncabezadoFlujo({
             <Link href="/cotizaciones" className={s.backLink}>
               <LuArrowLeft aria-hidden /> Volver
             </Link>
-            <div className={s.pageStepKicker}>Paso {step} de 3</div>
+            <div className={`${s.pageStepKicker} ${step === 3 ? s.pageStepKickerSimple : ""}`}>
+              {step === 3 ? "3 de 3" : `Paso ${step} de 3`}
+            </div>
           </div>
         </div>
         <div className={`${s.headerActions} ${step === 1 ? s.headerActionsStep1 : ""}`}>

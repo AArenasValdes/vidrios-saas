@@ -436,6 +436,36 @@ function NuevaCotizacionPageContent() {
     handleDraftChange("flete", normalizedValue ? Number(normalizedValue) : 0);
   };
 
+  const handleDraftDiscountTypeChange = (value: CotizacionWorkflowDraft["descuentoTipo"]) => {
+    setDraft((current) => ({
+      ...current,
+      descuentoTipo: value,
+      descuentoPct: value === "porcentaje" ? current.descuentoPct : 0,
+      descuentoMonto: value === "monto" ? current.descuentoMonto ?? 0 : 0,
+    }));
+  };
+
+  const handleDraftDiscountChange = (value: string) => {
+    const normalizedValue = normalizeCurrencyInput(value);
+    const numericValue = normalizedValue ? Number(normalizedValue) : 0;
+
+    setDraft((current) => {
+      if ((current.descuentoTipo ?? "porcentaje") === "monto") {
+        return {
+          ...current,
+          descuentoMonto: numericValue,
+          descuentoPct: 0,
+        };
+      }
+
+      return {
+        ...current,
+        descuentoPct: Math.min(100, numericValue),
+        descuentoMonto: 0,
+      };
+    });
+  };
+
   const handleCondicionesPagoChange = (value: string) => {
     handleDraftChange("condicionesDePago", value);
   };
@@ -1946,6 +1976,7 @@ function goNextFromStep1() {
     visibleComponentListState: pasoDosLista.estadoVisibleLista,
     shouldUseStepTwoListScroll: pasoDosLista.usarScrollLista,
     subtotal: CLP(totals.subtotal),
+    descuento: CLP(totals.descuentoValor),
     iva: CLP(totals.iva),
     flete: CLP(totals.flete),
     redondeoComercial: CLP(totals.redondeoComercial ?? 0),
@@ -2026,6 +2057,8 @@ function goNextFromStep1() {
     onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
     onDraftFleteChange: handleDraftFleteChange,
+    onDraftDiscountChange: handleDraftDiscountChange,
+    onDraftDiscountTypeChange: handleDraftDiscountTypeChange,
     onCondicionesPagoChange: handleCondicionesPagoChange,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     onMostrarIvaChange: handleMostrarIvaChange,

@@ -244,7 +244,7 @@ function mapCotizacionToWorkflowRecord(input: {
     totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
     mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
   });
-  const subtotal = input.cotizacion.subtotalNeto ?? workflowTotals.subtotal;
+  const subtotal = workflowTotals.subtotal;
   const neto = input.cotizacion.subtotalNeto ?? workflowTotals.neto;
   const descuentoValor = workflowTotals.descuentoValor;
   const costoTotalFabricacion = input.cotizacion.costoTotal ?? 0;
@@ -271,6 +271,8 @@ function mapCotizacionToWorkflowRecord(input: {
     direccion: input.clientAddress,
     validez: formatValidez(input.cotizacion.validoHasta),
     descuentoPct: input.cotizacion.descuentoPct ?? 0,
+    descuentoTipo: "porcentaje",
+    descuentoMonto: workflowTotals.descuentoValor,
     observaciones: input.cotizacion.notas ?? "",
     estado: input.cotizacion.estado as EstadoCotizacionWorkflow,
     approvalToken: input.cotizacion.approvalToken,
@@ -859,6 +861,8 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         quotePricingMode,
         items: normalizedItems,
       });
+      const descuentoPct =
+        totals.subtotal > 0 ? round(Math.min(100, (totals.descuentoValor / totals.subtotal) * 100), 6) : 0;
       const costoTotal =
         quotePricingMode === "total_global"
           ? 0
@@ -888,7 +892,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         numero: codigo,
         estado: input.estado,
         pricingMode: quotePricingMode,
-        descuentoPct: quotePricingMode === "total_global" ? 0 : input.draft.descuentoPct,
+        descuentoPct,
         notas: input.draft.observaciones,
         validoHasta: resolveValidoHasta(input.draft.validez),
         subtotalNeto: totals.neto,

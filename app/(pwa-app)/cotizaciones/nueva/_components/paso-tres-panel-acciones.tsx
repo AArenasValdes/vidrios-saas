@@ -1,15 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  LuArrowLeft,
-  LuBuilding2,
-  LuDownload,
-  LuFileCheck2,
-  LuPencil,
-  LuPlus,
-  LuSave,
-} from "react-icons/lu";
+import { LuBuilding2, LuDownload, LuFileCheck2, LuPencil, LuPlus, LuSave } from "react-icons/lu";
 
 import { STATUS_COPY } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -47,7 +39,7 @@ export function PasoTresPanelAcciones({
 
   if (isMobileViewport && !savedRecord) {
     return (
-      <aside className={`${s.finalActionCard} ${s.stepThreeActionCardMobile}`}>
+      <aside className={`${s.finalActionCard} ${s.stepThreeActionCardMobile} ${s.stepThreeStickyActionBar}`}>
         {isSaving ? (
           <div className={s.finalLoadingNotice} aria-live="polite">
             <div className={s.inlineLoadingDots} aria-hidden>
@@ -74,31 +66,17 @@ export function PasoTresPanelAcciones({
           disabled={isSaving}
         >
           <LuFileCheck2 aria-hidden />
-          {isSavingQuote ? "Guardando..." : "Guardar y abrir PDF"}
+          {isSavingQuote ? "Guardando..." : "Crear cotización y abrir PDF"}
         </button>
 
-        <p className={s.stepThreeActionHint}>
-          Guarda primero para generar el PDF profesional.
-        </p>
-
-        <div className={s.stepThreeSecondaryActions}>
-          <button
-            className={`${s.btnGhost} ${s.stepThreeSecondaryButton}`}
-            type="button"
-            onClick={onGoToStepTwo}
-            disabled={isSaving}
-          >
-            <LuArrowLeft aria-hidden /> Volver
-          </button>
-          <button
-            className={`${s.btnGhost} ${s.stepThreeSecondaryButton}`}
-            onClick={onSaveDraft}
-            type="button"
-            disabled={isSaving}
-          >
-            <LuSave aria-hidden /> {isSavingDraft ? "Guardando..." : "Guardar borrador"}
-          </button>
-        </div>
+        <button
+          className={s.stepThreeDraftTextButton}
+          onClick={onSaveDraft}
+          type="button"
+          disabled={isSaving}
+        >
+          <LuSave aria-hidden /> {isSavingDraft ? "Guardando..." : "Guardar como borrador"}
+        </button>
       </aside>
     );
   }

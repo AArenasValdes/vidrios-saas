@@ -221,6 +221,47 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(804000);
   });
 
+  it("calcula descuento por monto fijo antes de IVA y flete", () => {
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [
+        createItem({
+          precioUnitario: 200000,
+          precioTotal: 200000,
+        }),
+      ],
+      descuentoPct: 0,
+      descuentoTipo: "monto",
+      descuentoMonto: 50000,
+      flete: 10000,
+      quotePricingMode: "por_item",
+      mostrarIva: true,
+    });
+
+    expect(totals.subtotal).toBe(200000);
+    expect(totals.descuentoValor).toBe(50000);
+    expect(totals.neto).toBe(150000);
+    expect(totals.iva).toBe(28500);
+    expect(totals.flete).toBe(10000);
+    expect(totals.total).toBe(189000);
+  });
+
+  it("calcula descuento porcentual en total global", () => {
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [],
+      descuentoPct: 10,
+      flete: 0,
+      quotePricingMode: "total_global",
+      totalClienteManual: 600000,
+      mostrarIva: true,
+    });
+
+    expect(totals.subtotal).toBe(600000);
+    expect(totals.descuentoValor).toBe(60000);
+    expect(totals.neto).toBe(540000);
+    expect(totals.iva).toBe(102600);
+    expect(totals.total).toBe(643000);
+  });
+
   it("permite item libre descriptivo en cero solo cuando se habilita explicitamente", () => {
     expect(() =>
       calculateFreeValueItem({

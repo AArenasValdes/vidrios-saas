@@ -68,6 +68,7 @@ type UseFlujoNuevaCotizacionParams = {
   visibleComponentListState: VisibleComponentListState;
   shouldUseStepTwoListScroll: boolean;
   subtotal: string;
+  descuento: string;
   iva: string;
   flete: string;
   redondeoComercial: string;
@@ -130,6 +131,8 @@ type UseFlujoNuevaCotizacionParams = {
   editingFormSnapshot: ComponentFormState | null;
   onDuplicateItemFromEditor: () => void;
   onDraftFleteChange: (value: string) => void;
+  onDraftDiscountChange: (value: string) => void;
+  onDraftDiscountTypeChange: (value: CotizacionWorkflowDraft["descuentoTipo"]) => void;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
   formatCurrencyInput: (value: string) => string;
@@ -270,6 +273,7 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
   const propsPasoTres = useMemo(() => ({
     draft: params.draft,
     subtotal: params.subtotal,
+    descuento: params.descuento,
     iva: params.iva,
     flete: params.flete,
     redondeoComercial: params.redondeoComercial,
@@ -286,6 +290,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     isMobileViewport: params.isMobileViewport,
     isSaving: params.isSaving,
     onDraftFleteChange: params.onDraftFleteChange,
+    onDraftDiscountChange: params.onDraftDiscountChange,
+    onDraftDiscountTypeChange: params.onDraftDiscountTypeChange,
     onGlobalTotalClienteChange: params.onGlobalTotalClienteChange,
     onMostrarIvaChange: params.onMostrarIvaChange,
     onValidezChange: params.onValidezChange,

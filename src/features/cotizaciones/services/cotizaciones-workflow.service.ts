@@ -106,6 +106,25 @@ function normalizeNonNegativeNumber(value: number | null | undefined) {
   return Number(value);
 }
 
+function normalizeDiscountPercent(input: {
+  descuentoPct?: number | null;
+  descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"];
+  descuentoMonto?: number | null;
+  subtotal: number;
+}) {
+  if (input.descuentoTipo === "monto") {
+    const amount = round(normalizeNonNegativeNumber(input.descuentoMonto), 2);
+
+    if (input.subtotal <= 0 || amount <= 0) {
+      return 0;
+    }
+
+    return round(Math.min(100, (amount / input.subtotal) * 100), 6);
+  }
+
+  return round(Math.min(100, normalizeNonNegativeNumber(input.descuentoPct)), 6);
+}
+
 function buildCotizacionDateSegment(now: Date) {
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -369,14 +388,20 @@ export function calculateCotizacionWorkflowTotals(
   items: CotizacionWorkflowItem[],
   descuentoPct = 0,
   flete = DEFAULT_FLETE,
-  options: { mostrarIva?: boolean } = {}
+  options: { mostrarIva?: boolean; descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"]; descuentoMonto?: number } = {}
 ) {
   const mostrarIva = options.mostrarIva ?? true;
   const subtotal = round(
     items.reduce((accumulator, item) => accumulator + item.precioTotal, 0),
     2
   );
-  const descuentoValor = round(subtotal * (descuentoPct / 100), 2);
+  const effectiveDiscountPct = normalizeDiscountPercent({
+    descuentoPct,
+    descuentoTipo: options.descuentoTipo,
+    descuentoMonto: options.descuentoMonto,
+    subtotal,
+  });
+  const descuentoValor = round(subtotal * (effectiveDiscountPct / 100), 2);
   const neto = round(subtotal - descuentoValor, 2);
   const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
   const totalSinRedondeo = round(neto + iva + flete, 2);
@@ -401,6 +426,9 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   mostrarIva?: boolean;
   items?: CotizacionWorkflowItem[];
   flete?: number;
+  descuentoPct?: number | null;
+  descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"];
+  descuentoMonto?: number | null;
 }) {
   const costoTotalFabricacion = round(
     normalizeNonNegativeNumber(input.costoTotalFabricacion),
@@ -418,7 +446,15 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
       .reduce((accumulator, item) => accumulator + item.precioTotal, 0),
     2
   );
-  const neto = round(totalBase + extraTotal, 2);
+  const subtotal = round(totalBase + extraTotal, 2);
+  const effectiveDiscountPct = normalizeDiscountPercent({
+    descuentoPct: input.descuentoPct,
+    descuentoTipo: input.descuentoTipo,
+    descuentoMonto: input.descuentoMonto,
+    subtotal,
+  });
+  const descuentoValor = round(subtotal * (effectiveDiscountPct / 100), 2);
+  const neto = round(subtotal - descuentoValor, 2);
   const flete = round(normalizeNonNegativeNumber(input.flete), 2);
   const mostrarIva = input.mostrarIva ?? true;
   const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
@@ -430,8 +466,8 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
     costoTotalFabricacion === 0 ? 0 : round((utilidadTotal / costoTotalFabricacion) * 100, 2);
 
   return {
-    subtotal: neto,
-    descuentoValor: 0,
+    subtotal,
+    descuentoValor,
     neto,
     iva,
     flete,
@@ -449,6 +485,8 @@ export function calculateWorkflowTotalsForPricingMode(
     CotizacionWorkflowDraft,
     | "items"
     | "descuentoPct"
+    | "descuentoTipo"
+    | "descuentoMonto"
     | "flete"
     | "quotePricingMode"
     | "costoTotalFabricacion"
@@ -467,11 +505,16 @@ export function calculateWorkflowTotalsForPricingMode(
       mostrarIva: draft.mostrarIva,
       items: draft.items,
       flete: draft.flete,
+      descuentoPct: draft.descuentoPct,
+      descuentoTipo: draft.descuentoTipo,
+      descuentoMonto: draft.descuentoMonto,
     });
   }
 
   const componentTotals = calculateCotizacionWorkflowTotals(draft.items, draft.descuentoPct, draft.flete, {
     mostrarIva: draft.mostrarIva ?? true,
+    descuentoTipo: draft.descuentoTipo,
+    descuentoMonto: draft.descuentoMonto,
   });
   const mostrarIva = draft.mostrarIva ?? true;
   const hasManualFinalTotal =
@@ -561,6 +604,8 @@ export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
     direccion: "",
     validez: "15 dias",
     descuentoPct: 0,
+    descuentoTipo: "porcentaje",
+    descuentoMonto: 0,
     flete: DEFAULT_FLETE,
     observaciones: "",
     items: [],
@@ -611,7 +656,14 @@ export function createCotizacionRecord(
     }),
     direccion: input.draft.direccion.trim(),
     validez: input.draft.validez,
-    descuentoPct: input.draft.descuentoPct,
+    descuentoPct: normalizeDiscountPercent({
+      descuentoPct: input.draft.descuentoPct,
+      descuentoTipo: input.draft.descuentoTipo,
+      descuentoMonto: input.draft.descuentoMonto,
+      subtotal: totals.subtotal,
+    }),
+    descuentoTipo: input.draft.descuentoTipo ?? "porcentaje",
+    descuentoMonto: input.draft.descuentoMonto ?? 0,
     observaciones: input.draft.observaciones.trim(),
     estado: input.estado,
     approvalToken: null,
@@ -638,6 +690,8 @@ export function cloneCotizacionAsDraft(record: CotizacionWorkflowRecord, now = n
       direccion: record.direccion,
       validez: record.validez,
       descuentoPct: record.descuentoPct,
+      descuentoTipo: record.descuentoTipo ?? "porcentaje",
+      descuentoMonto: record.descuentoMonto ?? 0,
       flete: record.flete,
       observaciones: record.observaciones,
       items: record.items.map((item, index) => ({

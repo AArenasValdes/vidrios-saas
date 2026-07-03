@@ -472,6 +472,11 @@ export function loadPersistedWorkflowState(
         descuentoPct: Number.isFinite(persistedDraft.descuentoPct)
           ? persistedDraft.descuentoPct
           : emptyDraft.descuentoPct,
+        descuentoTipo:
+          persistedDraft.descuentoTipo === "monto" ? "monto" : emptyDraft.descuentoTipo,
+        descuentoMonto: Number.isFinite(persistedDraft.descuentoMonto)
+          ? Number(persistedDraft.descuentoMonto)
+          : emptyDraft.descuentoMonto,
         flete: Number.isFinite(persistedDraft.flete) ? persistedDraft.flete : emptyDraft.flete,
         costoTotalFabricacion: Number.isFinite(persistedDraft.costoTotalFabricacion)
           ? Number(persistedDraft.costoTotalFabricacion)
@@ -1768,6 +1773,8 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     direccion: record.direccion,
     validez: record.validez,
     descuentoPct: record.descuentoPct,
+    descuentoTipo: record.descuentoTipo ?? "porcentaje",
+    descuentoMonto: record.descuentoMonto ?? 0,
     flete: record.flete,
     observaciones: record.observaciones,
     items: reconcileWorkflowItemsPricing(record.items, quotePricingMode),
