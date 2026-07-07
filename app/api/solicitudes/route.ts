@@ -61,6 +61,12 @@ async function parsePatchBody(request: Request) {
   }>(request);
 }
 
+async function parseDeleteBody(request: Request) {
+  return parseJsonObjectBody<{
+    ids?: string[];
+  }>(request);
+}
+
 async function parseLeadRequestBody(request: Request) {
   return parseJsonObjectBody<{
     nombre?: string;
@@ -148,6 +154,56 @@ export async function PATCH(request: Request) {
     console.error("[API] /api/solicitudes PATCH", error);
     return NextResponse.json(
       { error: "No pudimos actualizar la solicitud." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const access = await resolveSolicitudesAccess();
+    const body = await parseDeleteBody(request);
+
+    if (!body) {
+      return NextResponse.json(
+        { error: "La solicitud no tiene un formato valido." },
+        { status: 400 }
+      );
+    }
+
+    if (!access.organizationId) {
+      return NextResponse.json(
+        { error: "No pudimos identificar la organizacion activa." },
+        { status: 403 }
+      );
+    }
+
+    assertAuthenticatedRouteAllowsWrite({
+      subscription: access.subscription,
+    });
+    const deletedCount = await solicitudesContactoService.deleteSolicitudes({
+      ids: Array.isArray(body.ids) ? body.ids : [],
+      organizationId: access.organizationId,
+    });
+
+    return NextResponse.json({ deletedCount });
+  } catch (error) {
+    if (error instanceof AuthRouteAccessError) {
+      const message =
+        error.message === "No tienes permisos para revisar las solicitudes."
+          ? "No tienes permisos para eliminar solicitudes."
+          : error.message;
+
+      return NextResponse.json({ error: message }, { status: error.status });
+    }
+
+    if (error instanceof SolicitudContactoValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.error("[API] /api/solicitudes DELETE", error);
+    return NextResponse.json(
+      { error: "No pudimos eliminar las solicitudes." },
       { status: 500 }
     );
   }

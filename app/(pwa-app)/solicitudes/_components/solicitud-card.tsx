@@ -39,11 +39,14 @@ type SolicitudCardProps = {
   item: SolicitudCardViewModel;
   isUpdating: boolean;
   menuOpen: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
   stateOptions: EstadoSolicitudContacto[];
   filterLabels: Record<EstadoSolicitudContacto, string>;
   stateBadgeClasses: Record<EstadoSolicitudContacto, string>;
   onCreateQuote: (solicitud: SolicitudContacto) => void;
   onToggleMenu: (solicitudId: string) => void;
+  onToggleSelected?: (solicitudId: string) => void;
   onUpdateStatus: (id: string, estado: EstadoSolicitudContacto) => Promise<void>;
   onCopyContact: (value: string) => Promise<void>;
   onCopyMessage: (value: string) => Promise<void>;
@@ -53,17 +56,35 @@ export const SolicitudCard = memo(function SolicitudCard({
   item,
   isUpdating,
   menuOpen,
+  selectionMode = false,
+  isSelected = false,
   stateOptions,
   filterLabels,
   stateBadgeClasses,
   onCreateQuote,
   onToggleMenu,
+  onToggleSelected,
   onUpdateStatus,
   onCopyContact,
   onCopyMessage,
 }: SolicitudCardProps) {
+  const handleSelect = () => {
+    onToggleSelected?.(item.solicitud.id);
+  };
+
   return (
-    <article className={s.card}>
+    <article className={`${s.card}${selectionMode ? ` ${s.cardSelectable}` : ""}${isSelected ? ` ${s.cardSelected}` : ""}`}>
+      {selectionMode ? (
+        <button
+          className={s.cardSelectButton}
+          type="button"
+          onClick={handleSelect}
+          aria-pressed={isSelected}
+          aria-label={`Seleccionar solicitud de ${item.solicitud.nombre}`}
+        >
+          <span className={`${s.selectionCircle} ${isSelected ? s.selectionCircleActive : ""}`} aria-hidden />
+        </button>
+      ) : null}
       <div className={s.cardTop}>
         <div className={s.cardIdentity}>
           <div className={s.avatar}>{item.initials}</div>
@@ -98,7 +119,16 @@ export const SolicitudCard = memo(function SolicitudCard({
       <div className={s.messageBubble}>&ldquo;{item.message}&rdquo;</div>
 
       <div className={s.cardActions}>
-        {item.whatsappUrl ? (
+        {selectionMode ? (
+          <button
+            type="button"
+            className={s.primaryAction}
+            onClick={handleSelect}
+            aria-pressed={isSelected}
+          >
+            {isSelected ? "Seleccionada" : "Seleccionar"}
+          </button>
+        ) : item.whatsappUrl ? (
           <a
             href={item.whatsappUrl}
             target="_blank"
@@ -113,7 +143,7 @@ export const SolicitudCard = memo(function SolicitudCard({
           </a>
         ) : null}
 
-        <button
+        {!selectionMode ? <button
           type="button"
           className={
             item.whatsappUrl
@@ -124,19 +154,19 @@ export const SolicitudCard = memo(function SolicitudCard({
         >
           <LuFilePlus2 aria-hidden />
           Crear cotizacion
-        </button>
+        </button> : null}
 
-        {!item.whatsappUrl && item.contactLabel && item.contactHref ? (
+        {!selectionMode && !item.whatsappUrl && item.contactLabel && item.contactHref ? (
           <a href={item.contactHref} className={s.iconAction}>
             {item.contactIcon === "phone" ? <LuPhone aria-hidden /> : <LuMail aria-hidden />}
           </a>
-        ) : !item.whatsappUrl ? (
+        ) : !selectionMode && !item.whatsappUrl ? (
           <button type="button" className={s.iconAction} disabled>
             <LuPhone aria-hidden />
           </button>
         ) : null}
 
-        <div className={s.menuWrap}>
+        {!selectionMode ? <div className={s.menuWrap}>
           <button
             type="button"
             className={`${s.iconAction} ${s.menuTrigger}`}
@@ -187,7 +217,7 @@ export const SolicitudCard = memo(function SolicitudCard({
               </button>
             </div>
           ) : null}
-        </div>
+        </div> : null}
       </div>
     </article>
   );

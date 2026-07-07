@@ -10,6 +10,7 @@ import {
   LuInbox,
   LuQrCode,
   LuSearch,
+  LuTrash2,
 } from "react-icons/lu";
 
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
@@ -231,6 +232,7 @@ export default function SolicitudesPage() {
     refreshSolicitudes,
     loadMoreSolicitudes,
     updateSolicitudEstado,
+    deleteSolicitudes,
   } = useSolicitudesContacto(canReviewSolicitudes, solicitudesCacheKey, {
     estado: filtroActivo,
     search: busquedaDiferida,
@@ -238,6 +240,10 @@ export default function SolicitudesPage() {
   const [menuSolicitudId, setMenuSolicitudId] = useState<string | null>(null);
   const [updatingSolicitudId, setUpdatingSolicitudId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const publicRequestUrl = useMemo(() => {
     return buildPublicRequestUrl(profile?.solicitudPublicaSlug);
@@ -325,6 +331,23 @@ export default function SolicitudesPage() {
       };
     });
   }, [profile?.empresaNombre, solicitudes]);
+  const visibleSolicitudIds = useMemo(
+    () => visibleSolicitudes.map((item) => item.solicitud.id),
+    [visibleSolicitudes]
+  );
+  const selectedCount = selectedIds.size;
+  const allVisibleSelected =
+    visibleSolicitudIds.length > 0 &&
+    visibleSolicitudIds.every((id) => selectedIds.has(id));
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const visible = new Set(visibleSolicitudIds);
+      const next = new Set(Array.from(current).filter((id) => visible.has(id)));
+
+      return next.size === current.size ? current : next;
+    });
+  }, [visibleSolicitudIds]);
 
   useEffect(() => {
     if (!menuSolicitudId) {
@@ -420,6 +443,41 @@ export default function SolicitudesPage() {
     setMenuSolicitudId((current) => (current === solicitudId ? null : solicitudId));
   }, []);
 
+  const toggleSelectionMode = useCallback(() => {
+    setIsSelectionMode((current) => {
+      if (current) {
+        setSelectedIds(new Set());
+      }
+
+      setMenuSolicitudId(null);
+      return !current;
+    });
+  }, []);
+
+  const toggleSelectedId = useCallback((solicitudId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(solicitudId)) {
+        next.delete(solicitudId);
+      } else {
+        next.add(solicitudId);
+      }
+
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        return new Set();
+      }
+
+      return new Set([...current, ...visibleSolicitudIds]);
+    });
+  }, [allVisibleSelected, visibleSolicitudIds]);
+
   const handleUpdateStatus = useCallback(
     async (id: string, estado: EstadoSolicitudContacto) => {
       try {
@@ -433,6 +491,32 @@ export default function SolicitudesPage() {
     },
     [updateSolicitudEstado]
   );
+
+  const handleConfirmBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+
+    try {
+      const deletedCount = await deleteSolicitudes(ids);
+      setFeedback(`${deletedCount} solicitud(es) eliminada(s).`);
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+      setIsBulkDeleteModalOpen(false);
+    } catch (error) {
+      setFeedback(
+        error instanceof Error
+          ? error.message
+          : "No pudimos eliminar las solicitudes."
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [deleteSolicitudes, selectedIds]);
 
   const handleCreateQuoteFromSolicitud = useCallback(
     (solicitud: SolicitudContacto) => {
@@ -647,17 +731,58 @@ export default function SolicitudesPage() {
         </PremiumPageSection>
       ) : (
         <PremiumPageSection className={s.list}>
+          <div className={s.listToolbar}>
+            <div className={s.listToolbarCopy}>
+              <strong>{visibleSolicitudes.length} solicitudes</strong>
+              <span>{filtroActivo === "all" ? "Bandeja visible" : FILTRO_LABELS[filtroActivo]}</span>
+            </div>
+            <button
+              className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
+              type="button"
+              onClick={toggleSelectionMode}
+              disabled={isBulkDeleting}
+              aria-pressed={isSelectionMode}
+            >
+              {isSelectionMode ? "Cancelar" : "Seleccionar"}
+            </button>
+          </div>
+
+          {isSelectionMode ? (
+            <div className={s.selectionBar}>
+              <div>
+                <strong>{selectedCount} seleccionada(s)</strong>
+                <span>{allVisibleSelected ? "Todas las visibles" : "Toca las solicitudes"}</span>
+              </div>
+              <div className={s.selectionActions}>
+                <button className={s.ghostAction} type="button" onClick={toggleSelectAllVisible}>
+                  {allVisibleSelected ? "Quitar" : "Todas"}
+                </button>
+                <button
+                  className={s.bulkDeleteBtn}
+                  type="button"
+                  onClick={() => setIsBulkDeleteModalOpen(true)}
+                  disabled={selectedCount === 0 || isBulkDeleting}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {visibleSolicitudes.map((item) => (
             <SolicitudCard
               key={item.solicitud.id}
               item={item}
               isUpdating={updatingSolicitudId === item.solicitud.id}
               menuOpen={menuSolicitudId === item.solicitud.id}
+              selectionMode={isSelectionMode}
+              isSelected={selectedIds.has(item.solicitud.id)}
                 stateOptions={SOLICITUD_STATE_OPTIONS}
                 filterLabels={FILTRO_LABELS}
                 stateBadgeClasses={ESTADO_BADGE_CLASS}
                 onCreateQuote={handleCreateQuoteFromSolicitud}
                 onToggleMenu={handleToggleMenu}
+                onToggleSelected={toggleSelectedId}
                 onUpdateStatus={handleUpdateStatus}
               onCopyContact={handleCopyContact}
               onCopyMessage={handleCopyMessage}
@@ -675,6 +800,46 @@ export default function SolicitudesPage() {
           ) : null}
         </PremiumPageSection>
       )}
+
+      {isBulkDeleteModalOpen ? (
+        <div className={s.modalOverlay} role="presentation">
+          <div
+            className={s.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-solicitudes-title"
+            aria-describedby="bulk-delete-solicitudes-description"
+          >
+            <div className={s.modalIconWrap}>
+              <LuTrash2 aria-hidden />
+            </div>
+            <p id="bulk-delete-solicitudes-title" className={s.modalTitle}>
+              Eliminar solicitudes
+            </p>
+            <p id="bulk-delete-solicitudes-description" className={s.modalDescription}>
+              Vas a eliminar <strong>{selectedCount}</strong> solicitud(es) seleccionada(s).
+            </p>
+            <div className={s.modalActions}>
+              <button
+                className={s.ghostAction}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                type="button"
+                disabled={isBulkDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={s.modalDangerBtn}
+                onClick={() => void handleConfirmBulkDelete()}
+                type="button"
+                disabled={isBulkDeleting || selectedCount === 0}
+              >
+                {isBulkDeleting ? "Eliminando..." : "Si, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PremiumPageReveal>
   );
 }

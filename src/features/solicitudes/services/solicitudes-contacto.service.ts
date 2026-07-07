@@ -147,6 +147,10 @@ export interface SolicitudesContactoService {
     estado: EstadoSolicitudContacto;
     organizationId: string | number;
   }): Promise<SolicitudContacto>;
+  deleteSolicitudes(input: {
+    ids: string[];
+    organizationId: string | number;
+  }): Promise<number>;
 }
 
 export function createSolicitudesContactoService(
@@ -399,6 +403,22 @@ export function createSolicitudesContactoService(
       return repository.updateStatusById({
         id,
         estado,
+        organizationId: input.organizationId,
+      });
+    },
+
+    async deleteSolicitudes(input: {
+      ids: string[];
+      organizationId: string | number;
+    }) {
+      const ids = input.ids.map((id) => normalizeText(id)).filter(Boolean);
+
+      if (ids.length === 0) {
+        throw new SolicitudContactoValidationError("Selecciona al menos una solicitud.");
+      }
+
+      return repository.deleteByIds({
+        ids,
         organizationId: input.organizationId,
       });
     },

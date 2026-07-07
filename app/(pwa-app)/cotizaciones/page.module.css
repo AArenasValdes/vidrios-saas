@@ -109,6 +109,12 @@
   color: var(--title);
 }
 
+.btnGhostActionActive {
+  border-color: rgba(79, 125, 212, 0.28);
+  background: #edf3ff;
+  color: var(--accent2);
+}
+
 .kpiRow {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -306,6 +312,36 @@
   justify-content: flex-end;
 }
 
+.resultsActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.inlineSelectButton {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(79, 125, 212, 0.18);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: var(--accent2);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(36, 59, 107, 0.05);
+}
+
+.inlineSelectButtonActive {
+  border-color: rgba(217, 92, 92, 0.24);
+  background: #fff6f5;
+  color: #b63e3e;
+}
+
 .resultsRefreshing {
   font-family: "JetBrains Mono", monospace;
   font-size: 11px;
@@ -483,6 +519,68 @@
   font-size: 14px;
 }
 
+.selectionBar,
+.mobileSelectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(217, 224, 234, 0.72);
+  background: transparent;
+}
+
+.selectionBar > div:first-child,
+.mobileSelectionBar > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.selectionBar strong,
+.mobileSelectionBar strong {
+  color: var(--title);
+  font-size: 14px;
+}
+
+.selectionBar span,
+.mobileSelectionBar span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.selectionActions,
+.mobileSelectionActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulkDeleteBtn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(217, 92, 92, 0.26);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #fff6f5, #ffeceb);
+  color: #b63e3e;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bulkDeleteBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.colSelect {
+  width: 48px;
+}
+
 .colCode {
   width: 12%;
 }
@@ -529,6 +627,10 @@
   text-align: center;
 }
 
+.thSelect {
+  text-align: center;
+}
+
 .tr {
   border-bottom: 1px solid rgba(217, 224, 234, 0.82);
   transition:
@@ -551,12 +653,61 @@
     #ffffff;
 }
 
+.trSelected {
+  background:
+    linear-gradient(90deg, rgba(79, 125, 212, 0.08), rgba(79, 125, 212, 0.02)),
+    #ffffff;
+}
+
 .tdCode,
 .tdCliente,
 .tdResponse,
 .tdResumen,
-.tdAcciones {
+.tdAcciones,
+.tdSelect {
   padding: 18px 14px;
+}
+
+.tdSelect {
+  text-align: center;
+}
+
+.selectionCircleButton,
+.selectionCircle {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(152, 162, 179, 0.55);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #ffffff;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.selectionCircleButton {
+  cursor: pointer;
+}
+
+.selectionCircleButtonActive,
+.selectionCircleActive {
+  border-color: var(--accent2);
+  background: var(--accent2);
+  box-shadow: 0 6px 14px rgba(51, 94, 169, 0.24);
+}
+
+.selectionCircleButtonActive::after,
+.selectionCircleActive::after {
+  content: "";
+  width: 8px;
+  height: 12px;
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .tdCode,
@@ -835,6 +986,31 @@
   display: none;
 }
 
+.feedbackBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(47, 163, 107, 0.18);
+  border-radius: 16px;
+  background: #eefaf3;
+  color: #1a6b45;
+  font-size: 14px;
+}
+
+.feedbackClose {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(47, 163, 107, 0.2);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1a6b45;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .cardList {
   display: none;
   flex-direction: column;
@@ -857,6 +1033,18 @@
   box-shadow: 0 12px 28px rgba(28, 44, 79, 0.05);
 }
 
+.cotCardSelectable {
+  padding-left: 14px;
+}
+
+.cotCardSelected {
+  border-color: rgba(79, 125, 212, 0.38);
+  background: linear-gradient(180deg, #ffffff, #f6f9ff);
+  box-shadow:
+    0 14px 28px rgba(51, 94, 169, 0.1),
+    inset 0 0 0 1px rgba(79, 125, 212, 0.08);
+}
+
 .cotCardWithResponse {
   box-shadow: 0 14px 28px rgba(28, 44, 79, 0.06);
 }
@@ -869,6 +1057,21 @@
   text-decoration: none;
   position: relative;
   border-radius: 14px;
+}
+
+.cotCardSelectButton {
+  width: 100%;
+  border: 0;
+  padding: 0 0 0 36px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cotCardSelectButton .selectionCircle {
+  position: absolute;
+  left: 0;
+  top: 2px;
 }
 
 .cotCardMainLink::after {
@@ -1452,16 +1655,37 @@
   .resultsCompactMobile {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: nowrap;
     font-size: 13px;
     color: var(--muted);
     padding: 0 2px;
   }
 
+  .mobileResultsCopy {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
   .resultsCompactMobile strong {
     color: var(--title);
     font-weight: 700;
+  }
+
+  .mobileSelectionBar {
+    margin-top: -4px;
+    padding: 8px 0 10px;
+    border-bottom: 0;
+  }
+
+  .mobileSelectionActions .btnGhost,
+  .mobileSelectionActions .bulkDeleteBtn {
+    min-height: 40px;
+    border-radius: 13px;
+    padding: 0 13px;
   }
 
   .loadingTableState {
@@ -1547,7 +1771,17 @@
     flex-direction: column-reverse;
   }
 
+  .feedbackBanner,
   .modalActions > * {
+    width: 100%;
+  }
+
+  .feedbackBanner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feedbackClose {
     width: 100%;
   }
 

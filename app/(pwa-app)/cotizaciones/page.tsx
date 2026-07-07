@@ -188,6 +188,11 @@ export default function CotizacionesPage() {
     id: string;
     codigo: string;
   } | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const estadoActivo = useMemo(() => {
     if (atajoEstado === "aprobadas") {
       return "Aprobada";
@@ -365,6 +370,10 @@ export default function CotizacionesPage() {
     [currentPage, totalPages]
   );
   const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const selectedCount = selectedIds.size;
+  const visibleRowIds = useMemo(() => filtradas.map((cotizacion) => cotizacion.id), [filtradas]);
+  const allVisibleSelected =
+    visibleRowIds.length > 0 && visibleRowIds.every((id) => selectedIds.has(id));
 
   useEffect(() => {
     void ensureClientesLoaded();
@@ -384,6 +393,15 @@ export default function CotizacionesPage() {
     }
   }, [currentPage, resumenReady, resumenRefreshing, totalPages]);
 
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const visible = new Set(visibleRowIds);
+      const next = new Set(Array.from(current).filter((id) => visible.has(id)));
+
+      return next.size === current.size ? current : next;
+    });
+  }, [visibleRowIds]);
+
   const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
     setAtajoEstado(key);
     setEstadoFiltro("Todos");
@@ -393,6 +411,40 @@ export default function CotizacionesPage() {
   const handlePrefetchDetail = useCallback((id: string) => {
     void prefetchCotizacionById(id);
   }, [prefetchCotizacionById]);
+
+  const toggleSelectionMode = useCallback(() => {
+    setIsSelectionMode((current) => {
+      if (current) {
+        setSelectedIds(new Set());
+      }
+
+      return !current;
+    });
+  }, []);
+
+  const toggleSelectedId = useCallback((id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        return new Set();
+      }
+
+      return new Set([...current, ...visibleRowIds]);
+    });
+  }, [allVisibleSelected, visibleRowIds]);
 
   const visibleRows = useMemo(
     () =>
@@ -429,9 +481,21 @@ export default function CotizacionesPage() {
           editHref: `/cotizaciones/nueva?edit=${cotizacion.id}`,
           onPrefetchDetail: () => handlePrefetchDetail(cotizacion.id),
           deleteDisabled: isSaving,
+          selectionMode: isSelectionMode,
+          isSelected: selectedIds.has(cotizacion.id),
+          onToggleSelected: () => toggleSelectedId(cotizacion.id),
         };
       }),
-    [filtradas, handlePrefetchDetail, isSaving, responseUpdatingId, sendingId]
+    [
+      filtradas,
+      handlePrefetchDetail,
+      isSaving,
+      isSelectionMode,
+      responseUpdatingId,
+      selectedIds,
+      sendingId,
+      toggleSelectedId,
+    ]
   );
 
   const handleDuplicate = useCallback((id: string) => {
@@ -461,6 +525,7 @@ export default function CotizacionesPage() {
     try {
       await deleteWorkflow(deleteCandidate.id);
       await refreshCotizacionesResumen();
+      setFeedbackMessage(`Cotizacion ${deleteCandidate.codigo} eliminada.`);
       setDeleteCandidate(null);
     } catch (error) {
       window.alert(
@@ -470,6 +535,36 @@ export default function CotizacionesPage() {
       );
     }
   }, [deleteCandidate, deleteWorkflow, refreshCotizacionesResumen]);
+
+  const handleConfirmBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+
+    try {
+      for (const id of ids) {
+        await deleteWorkflow(id);
+      }
+
+      await refreshCotizacionesResumen();
+      setFeedbackMessage(`${ids.length} cotizacion(es) eliminada(s).`);
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+      setIsBulkDeleteModalOpen(false);
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron eliminar las cotizaciones seleccionadas"
+      );
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [deleteWorkflow, refreshCotizacionesResumen, selectedIds]);
 
   const handleManualResponseChange = useCallback(async (
     id: string,
@@ -739,11 +834,24 @@ export default function CotizacionesPage() {
         </div>
 
         <div className={s.resultsMeta}>
-          {isColdBoot ? (
-            <span className={s.skeletonMeta} aria-hidden />
-          ) : (
-            <span>Monto filtrado: {CLP(montoFiltrado)}</span>
-          )}
+          <div className={s.resultsActions}>
+            {isColdBoot ? (
+              <span className={s.skeletonMeta} aria-hidden />
+            ) : (
+              <span>Monto filtrado: {CLP(montoFiltrado)}</span>
+            )}
+            {!isColdBoot ? (
+              <button
+                className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
+                onClick={toggleSelectionMode}
+                type="button"
+                disabled={isSaving || isBulkDeleting}
+                aria-pressed={isSelectionMode}
+              >
+                {isSelectionMode ? "Cancelar seleccion" : "Seleccionar"}
+              </button>
+            ) : null}
+          </div>
           {!isColdBoot && filtrosActivos.length > 0 ? (
             <div className={s.activeFilters}>
               {filtrosActivos.map((filtro) => (
@@ -765,13 +873,32 @@ export default function CotizacionesPage() {
             </>
           ) : (
             <>
-              <strong>{filtradas.length} cotizaciones</strong>
-              <span>&middot;</span>
-              <span>Total {CLP(montoFiltrado)}</span>
+              <span className={s.mobileResultsCopy}>
+                <strong>{filtradas.length} cotizaciones</strong>
+                <span>Total {CLP(montoFiltrado)}</span>
+              </span>
+              <button
+                className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
+                onClick={toggleSelectionMode}
+                type="button"
+                disabled={isSaving || isBulkDeleting}
+                aria-pressed={isSelectionMode}
+              >
+                {isSelectionMode ? "Cancelar" : "Seleccionar"}
+              </button>
             </>
           )}
         </div>
       </PremiumPageSection>
+
+      {feedbackMessage ? (
+        <PremiumPageSection className={s.feedbackBanner}>
+          <span>{feedbackMessage}</span>
+          <button className={s.feedbackClose} onClick={() => setFeedbackMessage(null)} type="button">
+            Cerrar
+          </button>
+        </PremiumPageSection>
+      ) : null}
 
       {isColdBoot ? (
         <PremiumPageSection className={s.loadingTableState}>
@@ -819,8 +946,31 @@ export default function CotizacionesPage() {
       ) : (
         <>
           <PremiumPageSection className={s.tableWrap}>
+            {isSelectionMode ? (
+              <div className={s.selectionBar}>
+                <div>
+                  <strong>{selectedCount} seleccionada(s)</strong>
+                  <span>{allVisibleSelected ? "Todas las visibles" : "Selecciona cotizaciones"}</span>
+                </div>
+                <div className={s.selectionActions}>
+                  <button className={s.btnGhost} type="button" onClick={toggleSelectAllVisible}>
+                    {allVisibleSelected ? "Quitar selección" : "Seleccionar visibles"}
+                  </button>
+                  <button
+                    className={s.bulkDeleteBtn}
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    disabled={selectedCount === 0 || isSaving || isBulkDeleting}
+                  >
+                    <LuTrash2 aria-hidden />
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <table className={s.table}>
               <colgroup>
+                {isSelectionMode ? <col className={s.colSelect} /> : null}
                 <col className={s.colCode} />
                 <col className={s.colClienteResumen} />
                 <col className={s.colRespuesta} />
@@ -829,6 +979,9 @@ export default function CotizacionesPage() {
               </colgroup>
               <thead>
                 <tr>
+                  {isSelectionMode ? (
+                    <th className={`${s.th} ${s.thSelect}`}>Sel.</th>
+                  ) : null}
                   <th className={s.th}>Codigo</th>
                   <th className={s.th}>Cliente y obra</th>
                   <th className={s.th}>Respuesta</th>
@@ -839,7 +992,18 @@ export default function CotizacionesPage() {
               <tbody>
                 {visibleRows.map((row) => {
                   return (
-                    <tr key={row.id} className={row.rowClassName}>
+                    <tr key={row.id} className={`${row.rowClassName}${row.isSelected ? ` ${s.trSelected}` : ""}`}>
+                      {isSelectionMode ? (
+                        <td className={s.tdSelect}>
+                          <button
+                            className={`${s.selectionCircleButton} ${row.isSelected ? s.selectionCircleButtonActive : ""}`}
+                            type="button"
+                            onClick={row.onToggleSelected}
+                            aria-label={`Seleccionar ${row.codigo}`}
+                            aria-pressed={row.isSelected}
+                          />
+                        </td>
+                      ) : null}
                       <td className={s.tdCode}>
                         <span className={s.codeValue}>{row.codigo}</span>
                       </td>
@@ -954,6 +1118,27 @@ export default function CotizacionesPage() {
           </PremiumPageSection>
 
           <PremiumPageSection className={s.cardList}>
+            {isSelectionMode ? (
+              <div className={s.mobileSelectionBar}>
+                <div>
+                  <strong>{selectedCount} seleccionada(s)</strong>
+                  <span>{allVisibleSelected ? "Todas las visibles" : "Toca las tarjetas"}</span>
+                </div>
+                <div className={s.mobileSelectionActions}>
+                  <button className={s.btnGhost} type="button" onClick={toggleSelectAllVisible}>
+                    {allVisibleSelected ? "Quitar" : "Todas"}
+                  </button>
+                  <button
+                    className={s.bulkDeleteBtn}
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    disabled={selectedCount === 0 || isSaving || isBulkDeleting}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {visibleRows.map((row, index) => (
               <CotizacionMobileCard key={row.id} row={row} index={index} />
             ))}
@@ -1034,6 +1219,46 @@ export default function CotizacionesPage() {
                 disabled={isSaving}
               >
                 {isSaving ? "Eliminando..." : "Si, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isBulkDeleteModalOpen ? (
+        <div className={s.modalOverlay} role="presentation">
+          <div
+            className={s.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-quote-title"
+            aria-describedby="bulk-delete-quote-description"
+          >
+            <div className={s.modalIconWrap}>
+              <LuTrash2 aria-hidden />
+            </div>
+            <p id="bulk-delete-quote-title" className={s.modalTitle}>
+              Eliminar cotizaciones
+            </p>
+            <p id="bulk-delete-quote-description" className={s.modalDescription}>
+              Vas a eliminar <strong>{selectedCount}</strong> cotizacion(es) seleccionada(s). Desapareceran del panel operativo.
+            </p>
+            <div className={s.modalActions}>
+              <button
+                className={s.btnGhost}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                type="button"
+                disabled={isBulkDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={s.modalDangerBtn}
+                onClick={() => void handleConfirmBulkDelete()}
+                type="button"
+                disabled={isBulkDeleting || selectedCount === 0}
+              >
+                {isBulkDeleting ? "Eliminando..." : "Si, eliminar"}
               </button>
             </div>
           </div>

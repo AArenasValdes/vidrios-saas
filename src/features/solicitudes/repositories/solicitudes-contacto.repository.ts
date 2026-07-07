@@ -987,6 +987,32 @@ export function createSolicitudesContactoRepository(
         contactada_at: input.estado === "contactada" ? now : null,
       });
     },
+
+    async deleteByIds(input: {
+      ids: string[];
+      organizationId: string | number;
+    }) {
+      const ids = Array.from(
+        new Set(input.ids.map((id) => id.trim()).filter(Boolean))
+      );
+
+      if (ids.length === 0) {
+        return 0;
+      }
+
+      const { data, error } = await supabase
+        .from(TABLE_NAME as never)
+        .delete()
+        .eq("organization_id", input.organizationId as never)
+        .in("id", ids as never[])
+        .select("id");
+
+      if (error) {
+        throw error;
+      }
+
+      return (data as Array<{ id: string }> | null)?.length ?? 0;
+    },
   };
 }
 
@@ -1059,5 +1085,8 @@ export const solicitudesContactoRepository: SolicitudesContactoRepository = {
   },
   updateStatusById(...args) {
     return getDefaultSolicitudesContactoRepository().updateStatusById(...args);
+  },
+  deleteByIds(...args) {
+    return getDefaultSolicitudesContactoRepository().deleteByIds(...args);
   },
 };

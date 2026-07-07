@@ -357,6 +357,74 @@ export function useSolicitudesContacto(
     [hasMore, isProfileReady, page, pageSize, profile, queryKey, totalCount]
   );
 
+  const deleteSolicitudes = useCallback(
+    async (ids: string[]) => {
+      if (!isProfileReady || !profile) {
+        throw new Error("Estamos validando el estado de tu cuenta. Intenta nuevamente.");
+      }
+
+      assertSubscriptionAllowsWrite(profile.subscription);
+      const normalizedIds = Array.from(
+        new Set(ids.map((id) => id.trim()).filter(Boolean))
+      );
+
+      if (normalizedIds.length === 0) {
+        throw new Error("Selecciona al menos una solicitud.");
+      }
+
+      const previous = solicitudesRef.current;
+
+      try {
+        setError(null);
+        setSolicitudes((current) =>
+          current.filter((solicitud) => !normalizedIds.includes(solicitud.id))
+        );
+
+        const response = await fetch("/api/solicitudes", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ids: normalizedIds }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | { deletedCount?: number; error?: string }
+          | null;
+
+        if (!response.ok || typeof payload?.deletedCount !== "number") {
+          throw new Error(payload?.error ?? "No pudimos eliminar las solicitudes.");
+        }
+
+        await loadSolicitudes(1, "replace");
+
+        return payload.deletedCount;
+      } catch (nextError) {
+        setSolicitudes(previous);
+        persistSolicitudesCache(queryKey, {
+          solicitudes: previous,
+          totalCount,
+          hasMore,
+          page,
+          pageSize,
+          summary: summaryRef.current,
+        });
+        setError(getErrorMessage(nextError));
+        throw nextError;
+      }
+    },
+    [
+      hasMore,
+      isProfileReady,
+      loadSolicitudes,
+      page,
+      pageSize,
+      profile,
+      queryKey,
+      totalCount,
+    ]
+  );
+
   useEffect(() => {
     if (!enabled) {
       setSolicitudes([]);
@@ -427,5 +495,6 @@ export function useSolicitudesContacto(
     refreshSolicitudes: () => loadSolicitudes(1, "replace"),
     loadMoreSolicitudes,
     updateSolicitudEstado,
+    deleteSolicitudes,
   };
 }

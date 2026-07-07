@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   LuEllipsis,
   LuEye,
@@ -74,6 +74,10 @@ export default function ClientesPage() {
     id: string;
     nombre: string;
   } | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const busquedaDiferida = useDeferredValue(busqueda);
   const isColdBoot = !isReady && clientes.length === 0;
@@ -185,6 +189,17 @@ export default function ClientesPage() {
   const pageNumbers = buildPageNumbers(visiblePage, totalPages);
   const pageStart = (visiblePage - 1) * PAGE_SIZE;
   const paginatedClientes = filtrados.slice(pageStart, pageStart + PAGE_SIZE);
+  const selectedCount = selectedIds.size;
+  const visibleClienteIds = useMemo(
+    () => paginatedClientes.map((cliente) => String(cliente.id)),
+    [paginatedClientes]
+  );
+  const filteredClienteIds = useMemo(
+    () => filtrados.map((cliente) => String(cliente.id)),
+    [filtrados]
+  );
+  const allVisibleSelected =
+    visibleClienteIds.length > 0 && visibleClienteIds.every((id) => selectedIds.has(id));
   const visibleRows = useMemo(
     () =>
       paginatedClientes.map((cliente) => {
@@ -204,10 +219,20 @@ export default function ClientesPage() {
           editHref: `/clientes/${cliente.id}/editar`,
           metaClassName: s[meta.cls],
           metaLabel: meta.label,
+          isSelected: selectedIds.has(String(cliente.id)),
         };
       }),
-    [paginatedClientes]
+    [paginatedClientes, selectedIds]
   );
+
+  useEffect(() => {
+    setSelectedIds((current) => {
+      const allowed = new Set(filteredClienteIds);
+      const next = new Set(Array.from(current).filter((id) => allowed.has(id)));
+
+      return next.size === current.size ? current : next;
+    });
+  }, [filteredClienteIds]);
 
   const handleBusquedaChange = (value: string) => {
     setBusqueda(value);
@@ -226,6 +251,44 @@ export default function ClientesPage() {
 
   const handleDelete = (id: string, nombre: string) => {
     setDeleteCandidate({ id, nombre });
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode((current) => {
+      if (current) {
+        setSelectedIds(new Set());
+      }
+
+      return !current;
+    });
+  };
+
+  const toggleSelectedId = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        const next = new Set(current);
+        for (const id of visibleClienteIds) {
+          next.delete(id);
+        }
+        return next;
+      }
+
+      return new Set([...current, ...visibleClienteIds]);
+    });
   };
 
   const handlePrefetchDetail = (id: string) => {
@@ -247,6 +310,42 @@ export default function ClientesPage() {
       window.alert(
         error instanceof Error ? error.message : "No se pudo eliminar el cliente"
       );
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+
+    try {
+      let deletedCotizaciones = 0;
+      let deletedProjects = 0;
+
+      for (const id of ids) {
+        const result = await deleteCliente(id);
+        deletedCotizaciones += result.deletedCotizaciones;
+        deletedProjects += result.deletedProjects;
+      }
+
+      setFeedbackMessage(
+        `${ids.length} cliente(s) eliminado(s). Tambien se ocultaron ${deletedCotizaciones} cotizacion(es) y ${deletedProjects} proyecto(s).`
+      );
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+      setIsBulkDeleteModalOpen(false);
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron eliminar los clientes seleccionados"
+      );
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -313,8 +412,19 @@ export default function ClientesPage() {
             </>
           ) : (
             <>
-              <strong>{filtrados.length} clientes</strong>
-              <span>{obrasFiltradas} obras activas</span>
+              <span className={s.mobileResultsCopy}>
+                <strong>{filtrados.length} clientes</strong>
+                <span>{obrasFiltradas} obras activas</span>
+              </span>
+              <button
+                className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
+                onClick={toggleSelectionMode}
+                type="button"
+                disabled={isColdBoot || isSaving || isBulkDeleting}
+                aria-pressed={isSelectionMode}
+              >
+                {isSelectionMode ? "Cancelar" : "Seleccionar"}
+              </button>
             </>
           )}
         </div>
@@ -387,7 +497,18 @@ export default function ClientesPage() {
         </div>
 
         <div className={s.resultsMeta}>
-          <span>{obrasFiltradas} obras asociadas</span>
+          <div className={s.resultsActions}>
+            <span>{obrasFiltradas} obras asociadas</span>
+            <button
+              className={`${s.inlineSelectButton} ${isSelectionMode ? s.inlineSelectButtonActive : ""}`}
+              onClick={toggleSelectionMode}
+              type="button"
+              disabled={isColdBoot || isSaving || isBulkDeleting}
+              aria-pressed={isSelectionMode}
+            >
+              {isSelectionMode ? "Cancelar seleccion" : "Seleccionar"}
+            </button>
+          </div>
           {filtrosActivos.length > 0 ? (
             <div className={s.activeFilters}>
               {filtrosActivos.map((filtro) => (
@@ -475,8 +596,31 @@ export default function ClientesPage() {
       ) : (
         <>
           <PremiumPageSection className={s.tableWrap}>
+            {isSelectionMode ? (
+              <div className={s.selectionBar}>
+                <div>
+                  <strong>{selectedCount} seleccionado(s)</strong>
+                  <span>{allVisibleSelected ? "Todos los visibles" : "Selecciona clientes"}</span>
+                </div>
+                <div className={s.selectionActions}>
+                  <button className={s.btnGhost} type="button" onClick={toggleSelectAllVisible}>
+                    {allVisibleSelected ? "Quitar selección" : "Seleccionar visibles"}
+                  </button>
+                  <button
+                    className={s.bulkDeleteBtn}
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    disabled={selectedCount === 0 || isSaving || isBulkDeleting}
+                  >
+                    <LuTrash2 aria-hidden />
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <table className={s.table}>
               <colgroup>
+                {isSelectionMode ? <col className={s.colSelect} /> : null}
                 <col className={s.colCliente} />
                 <col className={s.colContacto} />
                 <col className={s.colResumen} />
@@ -485,6 +629,9 @@ export default function ClientesPage() {
               </colgroup>
               <thead>
                 <tr>
+                  {isSelectionMode ? (
+                    <th className={`${s.th} ${s.thSelect}`}>Sel.</th>
+                  ) : null}
                   <th className={s.th}>Cliente</th>
                   <th className={s.th}>Contacto</th>
                   <th className={s.th}>Ultima obra</th>
@@ -495,7 +642,18 @@ export default function ClientesPage() {
               <tbody>
                 {visibleRows.map((row) => {
                   return (
-                    <tr key={row.id} className={s.tr}>
+                    <tr key={row.id} className={`${s.tr}${row.isSelected ? ` ${s.trSelected}` : ""}`}>
+                      {isSelectionMode ? (
+                        <td className={s.tdSelect}>
+                          <button
+                            className={`${s.selectionCircleButton} ${row.isSelected ? s.selectionCircleButtonActive : ""}`}
+                            type="button"
+                            onClick={() => toggleSelectedId(row.id)}
+                            aria-label={`Seleccionar ${row.nombre}`}
+                            aria-pressed={row.isSelected}
+                          />
+                        </td>
+                      ) : null}
                       <td className={s.tdPrimary}>
                         <div className={s.clientIdentity}>
                           <span className={s.clientNameValue}>{row.nombre}</span>
@@ -572,9 +730,41 @@ export default function ClientesPage() {
           </PremiumPageSection>
 
           <PremiumPageSection className={s.cardList}>
+            {isSelectionMode ? (
+              <div className={s.mobileSelectionBar}>
+                <div>
+                  <strong>{selectedCount} seleccionado(s)</strong>
+                  <span>{allVisibleSelected ? "Todos los visibles" : "Toca las tarjetas"}</span>
+                </div>
+                <div className={s.mobileSelectionActions}>
+                  <button className={s.btnGhost} type="button" onClick={toggleSelectAllVisible}>
+                    {allVisibleSelected ? "Quitar" : "Todos"}
+                  </button>
+                  <button
+                    className={s.bulkDeleteBtn}
+                    type="button"
+                    onClick={() => setIsBulkDeleteModalOpen(true)}
+                    disabled={selectedCount === 0 || isSaving || isBulkDeleting}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {visibleRows.map((row) => {
               return (
-                <div key={row.id} className={s.clientCard}>
+                <div key={row.id} className={`${s.clientCard}${isSelectionMode ? ` ${s.clientCardSelectable}` : ""}${row.isSelected ? ` ${s.clientCardSelected}` : ""}`}>
+                  {isSelectionMode ? (
+                    <button
+                      className={s.clientCardSelectButton}
+                      type="button"
+                      onClick={() => toggleSelectedId(row.id)}
+                      aria-pressed={row.isSelected}
+                    >
+                      <span className={`${s.selectionCircle} ${row.isSelected ? s.selectionCircleActive : ""}`} aria-hidden />
+                      <span className={s.accionSrOnly}>Seleccionar {row.nombre}</span>
+                    </button>
+                  ) : null}
                   <div className={s.clientCardTop}>
                     <div className={s.clientCardIdentity}>
                       <div className={s.clientCardName}>{row.nombre}</div>
@@ -600,17 +790,28 @@ export default function ClientesPage() {
                   <div className={s.clientCardSince}>Ultima gestion: {row.ultimaGestion}</div>
 
                   <div className={s.clientCardBottom}>
-                    <Link
-                      className={s.clientCardPrimaryAction}
-                      href={row.detailHref}
-                      onPointerEnter={() => handlePrefetchDetail(row.id)}
-                      onFocus={() => handlePrefetchDetail(row.id)}
-                      onTouchStart={() => handlePrefetchDetail(row.id)}
-                    >
-                      <LuEye aria-hidden />
-                      Ver ficha
-                    </Link>
-                    <div className={s.clientCardSecondaryActions}>
+                    {isSelectionMode ? (
+                      <button
+                        className={s.clientCardPrimaryAction}
+                        type="button"
+                        onClick={() => toggleSelectedId(row.id)}
+                        aria-pressed={row.isSelected}
+                      >
+                        {row.isSelected ? "Seleccionado" : "Seleccionar"}
+                      </button>
+                    ) : (
+                      <Link
+                        className={s.clientCardPrimaryAction}
+                        href={row.detailHref}
+                        onPointerEnter={() => handlePrefetchDetail(row.id)}
+                        onFocus={() => handlePrefetchDetail(row.id)}
+                        onTouchStart={() => handlePrefetchDetail(row.id)}
+                      >
+                        <LuEye aria-hidden />
+                        Ver ficha
+                      </Link>
+                    )}
+                    {!isSelectionMode ? <div className={s.clientCardSecondaryActions}>
                       <a
                         className={s.clientCardIconAction}
                         href={row.telefonoHref}
@@ -638,7 +839,7 @@ export default function ClientesPage() {
                           </button>
                         </div>
                       </details>
-                    </div>
+                    </div> : null}
                   </div>
                 </div>
               );
@@ -718,6 +919,46 @@ export default function ClientesPage() {
                 disabled={isSaving}
               >
                 {isSaving ? "Eliminando..." : "Si, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isBulkDeleteModalOpen ? (
+        <div className={s.modalOverlay} role="presentation">
+          <div
+            className={s.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-client-title"
+            aria-describedby="bulk-delete-client-description"
+          >
+            <div className={s.modalIconWrap}>
+              <LuTrash2 aria-hidden />
+            </div>
+            <p id="bulk-delete-client-title" className={s.modalTitle}>
+              Eliminar clientes
+            </p>
+            <p id="bulk-delete-client-description" className={s.modalDescription}>
+              Vas a eliminar <strong>{selectedCount}</strong> cliente(s) seleccionado(s). Tambien se ocultaran sus proyectos y cotizaciones asociadas.
+            </p>
+            <div className={s.modalActions}>
+              <button
+                className={s.btnGhost}
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                type="button"
+                disabled={isBulkDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                className={s.modalDangerBtn}
+                onClick={() => void handleConfirmBulkDelete()}
+                type="button"
+                disabled={isBulkDeleting || selectedCount === 0}
+              >
+                {isBulkDeleting ? "Eliminando..." : "Si, eliminar"}
               </button>
             </div>
           </div>

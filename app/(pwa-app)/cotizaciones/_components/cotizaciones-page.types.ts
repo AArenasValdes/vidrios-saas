@@ -27,5 +27,8 @@ export type CotizacionesMobileRow = {
     cls: string;
     label: string;
   };
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelected?: () => void;
   onPrefetchDetail?: () => void;
 };
