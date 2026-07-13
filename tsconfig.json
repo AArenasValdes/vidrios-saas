@@ -40,6 +40,7 @@
   "exclude": [
     "node_modules",
     ".next/dev",
+    "scripts",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx"

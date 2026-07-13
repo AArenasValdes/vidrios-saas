@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { extractTechnicalPdfCatalog } from "../src/features/cotizaciones/line-templates/services/line-template-pdf-technical.service.ts";
+import { extractTechnicalPdfCatalog } from "../src/features/cotizaciones/line-templates/services/line-template-pdf-technical.service";
 
 async function main() {
   const pdfPath = process.argv[2];
