@@ -321,4 +321,41 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.iva).toBe(117610);
     expect(totals.total).toBe(737000);
   });
+
+  it("ignora total manual desfasado en modo por_item y usa la suma de componentes", () => {
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [
+        createItem({ id: "item-1", precioUnitario: 71634, precioTotal: 71634 }),
+        createItem({ id: "item-2", precioUnitario: 228000, precioTotal: 228000 }),
+        createItem({ id: "item-3", precioUnitario: 192000, precioTotal: 192000 }),
+      ],
+      descuentoPct: 0,
+      flete: 0,
+      quotePricingMode: "por_item",
+      totalClienteManual: 217460,
+      mostrarIva: true,
+    });
+
+    expect(totals.subtotal).toBe(491634);
+    expect(totals.neto).toBe(491634);
+    expect(totals.totalClienteManual).toBeNull();
+  });
+
+  it("mantiene total manual sincronizado con la suma de componentes en modo por_item", () => {
+    const totals = calculateWorkflowTotalsForPricingMode({
+      items: [
+        createItem({ id: "item-1", precioUnitario: 120000, precioTotal: 120000 }),
+        createItem({ id: "item-2", precioUnitario: 97460, precioTotal: 97460 }),
+      ],
+      descuentoPct: 0,
+      flete: 0,
+      quotePricingMode: "por_item",
+      totalClienteManual: 217460,
+      mostrarIva: true,
+    });
+
+    expect(totals.subtotal).toBe(217460);
+    expect(totals.neto).toBe(217460);
+    expect(totals.totalClienteManual).toBe(217460);
+  });
 });

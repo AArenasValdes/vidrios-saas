@@ -385,7 +385,37 @@
 - **Tablas Supabase relacionadas**: `organization_profile`, Storage bucket `organization-assets`
 - **Acciones principales**: Actualizar perfil, subir logo
 - **Archivos a tocar para modificar**: `app/(pwa-app)/configuracion/empresa/page.tsx`, `src/features/organization-profile/hooks/useOrganizationProfile.ts`, `src/features/organization-profile/services/organization-profile.service.ts`, `src/features/organization-profile/repositories/organization-profile.repository.ts`
-- **Riesgos**: No cambiar slug sin actualizar indice unico. No romper upload de logo (requiere bucket `organization-assets`) ni la marca manual de `channel_ready` al copiar link.
+- **Riesgos**: No cambiar slug sin actualizar indice unico. No romper upload de logo (requiere bucket `organization-assets`) ni la marca manual de `channel_ready` al copiar link. El bloque **Catálogo privado** enlaza a `/configuracion/empresa/lineas-precios` e importación XLSX/CSV.
+
+---
+
+## Ruta: /configuracion/empresa/lineas-precios
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Proposito**: CRUD del catálogo privado comercial (líneas, costos, precios, categoría, unidad de cobro, proveedor, vigencia)
+- **Usuario objetivo**: Admin autenticado
+- **Componentes principales**: `LineasPreciosPageClient` en `src/features/cotizaciones/line-templates/components/`
+- **Hooks**: `useCotizacionLineTemplates`
+- **Tablas Supabase relacionadas**: `cotizacion_line_templates`
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas, ir a importación
+- **Archivos a tocar para modificar**: `src/features/cotizaciones/line-templates/**`, `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
+- **Riesgos**: Requiere migración `20260709153000_extend_cotizacion_line_templates_catalog.sql` en el entorno. Sin migración, writes de campos de catálogo fallan con mensaje explícito.
+
+---
+
+## Ruta: /configuracion/empresa/lineas-precios/importar
+
+- **Tipo**: Privada (autenticada)
+- **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/importar/page.tsx`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Proposito**: Importación revisable de catálogo desde CSV/XLSX (archivo → mapeo → preview → confirmar)
+- **Usuario objetivo**: Admin autenticado
+- **Componentes principales**: `LineasPreciosImportClient`, `line-template-import.service.ts`
+- **Hooks**: `useCotizacionLineTemplates.importTemplates`
+- **Tablas Supabase relacionadas**: `cotizacion_line_templates`
+- **Riesgos**: No persiste en silencio; duplicados requieren decisión explícita (ignorar/actualizar/crear).
 
 ---
 

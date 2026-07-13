@@ -15,20 +15,27 @@ type EncabezadoFlujoProps = {
   onGoToStep: (step: StepKey) => void;
   onSaveDraft: () => void;
   onSaveQuote: () => void;
+  isSummaryStepBlocked?: boolean;
+  summaryStepBlockedHint?: string;
 };
 
 function DesktopFlowStepper({
   step,
   onGoToStep,
+  isSummaryStepBlocked = false,
+  summaryStepBlockedHint,
 }: {
   step: StepKey;
   onGoToStep: (step: StepKey) => void;
+  isSummaryStepBlocked?: boolean;
+  summaryStepBlockedHint?: string;
 }) {
   return (
     <div className={s.desktopFlowStepper}>
       {STEP_LABELS.map((item, index) => {
         const isLast = index === STEP_LABELS.length - 1;
         const state = step === item.id ? "active" : step > item.id ? "done" : "idle";
+        const isBlockedSummaryStep = item.id === 3 && isSummaryStepBlocked && step < 3;
 
         return (
           <div key={item.id} className={s.desktopFlowStepperStep}>
@@ -36,6 +43,9 @@ function DesktopFlowStepper({
               type="button"
               className={s.desktopFlowStepperButton}
               onClick={() => onGoToStep(item.id)}
+              disabled={isBlockedSummaryStep}
+              title={isBlockedSummaryStep ? summaryStepBlockedHint : undefined}
+              aria-disabled={isBlockedSummaryStep}
             >
               <span className={`${s.desktopFlowStepperDot} ${s[`desktopFlowStepperDot_${state}`]}`}>
                 {state === "done" ? <LuCheck size={14} aria-hidden /> : item.id}
@@ -65,6 +75,8 @@ export function EncabezadoFlujo({
   onGoToStep,
   onSaveDraft,
   onSaveQuote,
+  isSummaryStepBlocked = false,
+  summaryStepBlockedHint,
 }: EncabezadoFlujoProps) {
   if (!isMobileViewport) {
     return (
@@ -73,7 +85,12 @@ export function EncabezadoFlujo({
           <Link href="/cotizaciones" className={s.desktopFlowHeaderBack}>
             <LuArrowLeft aria-hidden /> Volver
           </Link>
-          <DesktopFlowStepper step={step} onGoToStep={onGoToStep} />
+          <DesktopFlowStepper
+            step={step}
+            onGoToStep={onGoToStep}
+            isSummaryStepBlocked={isSummaryStepBlocked}
+            summaryStepBlockedHint={summaryStepBlockedHint}
+          />
           <div className={s.desktopFlowHeaderSpacer} aria-hidden />
         </div>
       </div>

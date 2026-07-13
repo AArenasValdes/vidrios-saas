@@ -20,6 +20,38 @@
   align-items: center;
 }
 
+.headerActions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.importButton {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #d8e1ed;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1f3766;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 10px 22px rgba(36, 59, 107, 0.06);
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .fieldGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .backButton,
 .addButton,
 .menuButton,

@@ -54,11 +54,11 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: cotizaciones
 
 - **Proposito**: Presupuestos comerciales. Herramienta de cierre, no cotizador tecnico.
-- **Campos importantes**: `id` (bigint PK), `proyecto_id` (FK), `organization_id` (FK), `numero` (COT-DDMMYY-NNN, unique por org), `estado` (sin CHECK), `estado_comercial`, `pricing_mode` (CHECK `por_item|total_global`, default `por_item`), `total` (NOT NULL), `subtotal_neto`, `costo_total`, `margen_pct`, `utilidad_total`, `descuento_pct`, `flete`, `iva`, `notas`, `valido_hasta`, `approval_token` (UNIQUE partial WHERE NOT NULL), `approval_token_expires_at`, `cliente_vio_en`, `cliente_respondio_en`, `cliente_respuesta_canal`, `pdf_descargado_en` (timestamptz, actividad silenciosa al descargar PDF), `eliminado_en`
+- **Campos importantes**: `id` (bigint PK), `proyecto_id` (FK), `organization_id` (FK), `numero` (COT-DDMMYY-NNN, unique por org), `estado` (sin CHECK), `estado_comercial`, `pricing_mode` (CHECK `por_item|total_global`, default `por_item`), `total` (NOT NULL), `subtotal_neto`, `costo_total`, `margen_pct`, `utilidad_total`, snapshots financieros de Quote Studio (`costo_materiales_total`, `costo_mano_obra_total`, `costo_traslado_total`, `costo_otros_total`, `merma_pct`, `merma_total`, `margen_objetivo_pct`, `precio_recomendado_neto`, `iva_pct`, `financial_snapshot_version`, `financial_snapshot_calculado_en`, `cost_basis_status`), `descuento_pct`, `flete`, `iva`, `notas`, `valido_hasta`, `approval_token` (UNIQUE partial WHERE NOT NULL), `approval_token_expires_at`, `cliente_vio_en`, `cliente_respondio_en`, `cliente_respuesta_canal`, `pdf_descargado_en` (timestamptz, actividad silenciosa al descargar PDF), `eliminado_en`
 - **Relaciones**: N:1 organizations, N:1 projects, 1:N cotizacion_items
 - **Usada por**: Cotizaciones, Dashboard, Aprobacion publica, PDF, WhatsApp
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`, `app/api/cotizaciones/resumen/route.ts`, `app/api/cotizaciones/[id]/pdf-descargado/route.ts`
-- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK. `pdf_descargado_en` no debe cambiar `estado` comercial automaticamente. En `pricing_mode='total_global'`, el `total` es total final cliente; `iva` solo desglosa IVA incluido cuando aplica y `costo_total`, `margen_pct`, `utilidad_total` deben quedar en cero/null por compatibilidad y no exponerse.
+- **Riesgos**: No romper generacion de `numero` (usa `reserve_next_cotizacion_code()`). No cambiar logica de `approval_token` sin actualizar aprobacion publica. `estado` no tiene CHECK. `pdf_descargado_en` no debe cambiar `estado` comercial automaticamente. En `pricing_mode='total_global'`, el `total` es total final cliente; `iva` solo desglosa IVA incluido cuando aplica y `costo_total`, `margen_pct`, `utilidad_total` deben quedar en cero/null por compatibilidad y no exponerse. Los snapshots financieros son netos y aditivos: no deben alterar PDF, WhatsApp, aprobacion publica ni la UI movil bajo 1024 px.
 
 ---
 
@@ -83,12 +83,12 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ### Tabla: cotizacion_line_templates
 
-- **Proposito**: Precios rapidos por linea comercial para cotizar por m² sin salir del flujo de cotizacion
-- **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Proposito**: Catálogo privado comercial por organización: líneas, costos, precios, mínimos y reglas de cobro para cotización asistida
+- **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `categoria` (CHECK: aluminio/pvc/vidrio/shower/accesorios/otros), `unidad_cobro` (CHECK: m2/metro_lineal/unidad/valor_manual), `material` (Aluminio/PVC), `costo_base`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `merma_pct`, `margen_objetivo_pct`, `proveedor`, `vigencia_desde`, `vigencia_hasta`, `catalog_metadata` (jsonb), `vidrio_principal_recomendado`, `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
 - **Relaciones**: N:1 organizations
-- **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`
+- **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`, `/configuracion/empresa/lineas-precios`, `/configuracion/empresa/lineas-precios/importar`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
-- **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea`. Multi-tenant estricto y soft delete obligatorio.
+- **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea`. Multi-tenant estricto y soft delete obligatorio. Migración remota aplicada 2026-07-09 (`extend_cotizacion_line_templates_catalog`).
 
 ---
 

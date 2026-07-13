@@ -1287,15 +1287,25 @@ export default function CotizacionPrintPage() {
                       const absoluteIndex = detailStartIndex + itemIndex + 1;
                       const dimensions = item.ancho && item.alto ? formatDimensions(item.ancho, item.alto) : null;
                       const description = item.descripcion?.trim();
-                      const presentationSvg = itemPresentationMap.get(item.id)?.drawingSvg;
-                      const referenceSvg = presentationSvg || resolveTotalGlobalReferenceSvg(item.nombre, description);
+                      const presentationSvg = itemPresentationMap.get(item.id)?.drawingSvg?.trim() ?? "";
+                      const hasDrawing = presentationSvg.length > 0;
 
                       return (
-                        <article key={item.id} className={s.totalGlobalDetailRow}>
-                          <div
-                            className={s.totalGlobalMiniDrawing}
-                            dangerouslySetInnerHTML={{ __html: referenceSvg }}
-                          />
+                        <article
+                          key={item.id}
+                          className={[
+                            s.totalGlobalDetailRow,
+                            hasDrawing ? s.totalGlobalDetailRowWithDrawing : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          {hasDrawing ? (
+                            <div
+                              className={s.totalGlobalMiniDrawing}
+                              dangerouslySetInnerHTML={{ __html: presentationSvg }}
+                            />
+                          ) : null}
                           <div className={s.totalGlobalDetailBody}>
                             <div className={s.totalGlobalDetailMeta}>
                               <span>Detalle {String(absoluteIndex).padStart(2, "0")}</span>

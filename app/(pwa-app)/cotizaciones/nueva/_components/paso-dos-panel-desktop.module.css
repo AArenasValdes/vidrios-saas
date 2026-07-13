@@ -1,3 +1,572 @@
+/* Quote Studio financial card — desktop-only component, styles always active */
+.financialPanel {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  padding: 0 0.72rem 0.65rem;
+}
+
+.financialCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.58rem 0.62rem;
+  border: 1px solid #dce6f2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(20, 39, 70, 0.04);
+}
+
+.financialHeaderCompact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.financialUnavailable {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.5rem 0.56rem;
+  border: 1px dashed #cfdbea;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.financialUnavailable strong {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.financialUnavailable p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.financialSummaryList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.financialSummaryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.42rem 0.54rem;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.financialSummaryRow:last-child {
+  border-bottom: 0;
+}
+
+.financialSummaryLabel {
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.financialSummaryValue {
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.financialSummaryRowPrimary .financialSummaryValue {
+  color: #06162f;
+  font-size: 0.8rem;
+}
+
+.financialSummaryRowHighlight .financialSummaryValue {
+  color: #06162f;
+  font-size: 0.82rem;
+}
+
+.financialSummaryRowMargin .financialSummaryValue {
+  font-size: 0.8rem;
+}
+
+.financialSummaryRowRecommended .financialSummaryLabel {
+  color: #53647d;
+}
+
+.financialSummaryRowRecommended .financialSummaryValue {
+  color: #1c4f9d;
+  font-size: 0.74rem;
+}
+
+.financialDetailToggle {
+  width: 100%;
+  min-height: 1.9rem;
+  padding: 0.28rem 0.42rem;
+  border: 0;
+  border-top: 1px solid #eef2f6;
+  background: transparent;
+  color: #1c4f9d;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.financialDetailToggle:hover,
+.financialDetailToggle:focus-visible {
+  color: #0f55c8;
+  background: #f8fbff;
+}
+
+.financialDetailBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.financialHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.financialHeaderCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.financialEyebrow {
+  color: #64748b;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.financialTitle {
+  margin: 0;
+  color: #06162f;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.financialAdjustButton {
+  flex-shrink: 0;
+  min-height: 1.85rem;
+  padding: 0.34rem 0.62rem;
+  border: 1px solid #cbd8ea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1c4f9d;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.financialAdjustButton:hover,
+.financialAdjustButton:focus-visible,
+.financialAdjustButtonActive {
+  border-color: #1e88ff;
+  color: #0f55c8;
+  background: #f8fbff;
+}
+
+.financialSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.financialSectionHead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.financialSectionTitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.financialSectionHint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.financialEditList {
+  display: flex;
+  flex-direction: column;
+  max-height: 9.5rem;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 139, 190, 0.4) transparent;
+}
+
+.financialReadList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.financialEditRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.4rem, 42%);
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.44rem 0.56rem;
+  border-bottom: 1px solid #eef2f6;
+  cursor: text;
+}
+
+.financialEditRow:last-child {
+  border-bottom: 0;
+}
+
+.financialEditLabel {
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.financialEditControl {
+  display: block;
+  min-width: 0;
+}
+
+.financialAdjustInput {
+  display: block;
+  width: 100%;
+  min-height: 1.9rem;
+  padding: 0.32rem 0.46rem;
+  border: 1px solid #b8c9de;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #102744;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.financialAdjustInput::placeholder {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.financialAdjustInput:hover {
+  border-color: #94a3b8;
+  background: #ffffff;
+}
+
+.financialAdjustInput:focus-visible {
+  outline: 2px solid rgba(30, 136, 255, 0.24);
+  border-color: #1e88ff;
+  background: #ffffff;
+}
+
+.financialReadRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.48rem 0.56rem;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.financialReadRow:last-child {
+  border-bottom: 0;
+}
+
+.financialReadRowEmphasis {
+  background: #f8fbff;
+}
+
+.financialReadLabel {
+  color: #53647d;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.financialReadValue {
+  color: #06162f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.financialReadRowEmphasis .financialReadValue {
+  color: #1c4f9d;
+}
+
+.financialEmptyState {
+  margin: 0;
+  padding: 0.55rem 0.62rem;
+  border: 1px dashed #cfdbea;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #53647d;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.financialEmptyState strong {
+  color: #1c4f9d;
+  font-weight: 800;
+}
+
+.financialInsight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  padding: 0.58rem 0.62rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.financialInsightDanger {
+  border-color: #f4d0d0;
+  background: #fff7f7;
+}
+
+.financialInsightNeutral {
+  border-color: #dce6f2;
+  background: #f8fbff;
+}
+
+.financialInsightMessage {
+  margin: 0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.financialInsightMessage strong {
+  color: #b42318;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.financialInsightMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.financialBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.16rem 0.52rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.64rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.financialBadgeDanger {
+  color: #912018;
+  background: #feeceb;
+  border-color: #f4c7c3;
+}
+
+.financialBadgeWarning {
+  color: #9a6612;
+  background: #fff4df;
+  border-color: #f1d39b;
+}
+
+.financialBadgeGood {
+  color: #18744f;
+  background: #e8f8ef;
+  border-color: #c9ecda;
+}
+
+.financialBadgeMuted {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.financialObjective {
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.financialApplyButton {
+  width: 100%;
+  min-height: 2rem;
+  margin-top: 0.08rem;
+  padding: 0.38rem 0.7rem;
+  border: 0;
+  border-radius: 10px;
+  background: #152744;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(21, 39, 68, 0.12);
+  transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.financialApplyButton:hover:not(:disabled),
+.financialApplyButton:focus-visible:not(:disabled) {
+  background: #1a3158;
+}
+
+.financialApplyButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.financialValueGood {
+  color: #18744f !important;
+}
+
+.financialValueWarning {
+  color: #9a6612 !important;
+}
+
+.financialValueMuted {
+  color: #64748b !important;
+}
+
+.financialValueDanger {
+  color: #b42318 !important;
+}
+
+.financialDetails {
+  border: 1px solid #e7eef7;
+  border-radius: 10px;
+  background: #fafbfc;
+  overflow: hidden;
+}
+
+.financialDetails summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.42rem 0.58rem;
+  color: #475569;
+  font-size: 0.66rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.financialDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.financialDetails summary::after {
+  content: "+";
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.financialDetails[open] summary {
+  border-bottom: 1px solid #e7eef7;
+  background: #f4f7fb;
+}
+
+.financialDetails[open] summary::after {
+  content: "–";
+}
+
+.financialDetails .financialReadList {
+  border: 0;
+  border-radius: 0;
+  background: #fafbfc;
+}
+
+.financialDetails .financialReadRow {
+  padding: 0.4rem 0.56rem;
+}
+
+.financialDetails .financialReadLabel {
+  color: #64748b;
+  font-size: 0.64rem;
+}
+
+.financialDetails .financialReadValue {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #334155;
+}
+
 @media (min-width: 861px) {
   .panel {
     display: flex;
@@ -26,6 +595,8 @@
     padding: 0.72rem 0.78rem 0.68rem;
     border-bottom: 1px solid #dce6f2;
     background: #ffffff;
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .header :global([class*="stepTwoPanelHeaderMain"]) {
@@ -97,6 +668,17 @@
     scrollbar-color: rgba(108, 139, 190, 0.46) rgba(222, 232, 244, 0.72);
   }
 
+  .listRegion {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .panelEditing .listRegion {
+    flex-shrink: 0;
+  }
+
   .scroll::-webkit-scrollbar {
     width: 8px;
   }
@@ -119,6 +701,8 @@
     gap: 0.85rem;
     padding: 0.65rem 0.72rem 0.72rem;
     min-height: min-content;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .pieceSection {
@@ -153,6 +737,220 @@
     transition:
       border-color 140ms ease,
       background-color 140ms ease;
+  }
+
+  .pieceCardRich,
+  .pieceCardCompact {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    column-gap: 0.62rem;
+    row-gap: 0;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 0.68rem 0.7rem;
+  }
+
+  .pieceCardCompact {
+    padding: 0.52rem 0.58rem;
+    column-gap: 0.48rem;
+  }
+
+  .pieceCardThumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.75rem;
+    height: 3.65rem;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #fbfdff 0%, #f1f5fb 100%);
+    overflow: hidden;
+  }
+
+  .pieceCardCompact .pieceCardThumb {
+    width: 3.35rem;
+    height: 2.65rem;
+    border-radius: 8px;
+  }
+
+  .pieceCardThumbSvg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0.18rem;
+  }
+
+  .pieceCardThumbSvg :global(svg) {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .pieceCardThumbFallback {
+    color: #64748b;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pieceCardMain {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .pieceCardCompact .pieceCardMain {
+    gap: 0.1rem;
+  }
+
+  .pieceCardHeadline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .pieceCardIdentity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+    min-width: 0;
+  }
+
+  .pieceCardCompact .pieceCardIdentity {
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.28rem;
+  }
+
+  .pieceCardCode {
+    color: #1c4f9d;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .pieceCardName {
+    min-width: 0;
+    color: #18335f;
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.22;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .pieceCardCompact .pieceCardName {
+    font-size: 0.78rem;
+    -webkit-line-clamp: 1;
+  }
+
+  .pieceCardMeasures,
+  .pieceCardConfig,
+  .pieceCardMetaCompact {
+    margin: 0;
+    min-width: 0;
+    color: #53647d;
+    font-size: 0.7rem;
+    line-height: 1.32;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pieceCardConfig {
+    color: #64748b;
+    font-size: 0.66rem;
+  }
+
+  .pieceCardMetaCompact {
+    font-size: 0.66rem;
+    -webkit-line-clamp: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+  }
+
+  .pieceCardQuantity {
+    color: #334155;
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .pieceCardAmount {
+    flex-shrink: 0;
+    color: #18335f;
+    font-size: 0.8rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .pieceCardRich .pieceCardFooter,
+  .pieceCardCompact .pieceCardFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    width: 100%;
+    margin-top: 0.12rem;
+  }
+
+  .pieceCardFooterMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .pieceCardRich .pieceCardActions,
+  .pieceCardCompact .pieceCardActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.22rem;
+    flex-shrink: 0;
+    margin-left: 0;
+  }
+
+  .pieceCardRich .pieceIconButton,
+  .pieceCardRich .pieceIconButtonDanger,
+  .pieceCardCompact .pieceIconButton,
+  .pieceCardCompact .pieceIconButtonDanger {
+    width: 1.58rem;
+    height: 1.58rem;
+    border-radius: 7px;
+  }
+
+  .listBodyIdle {
+    gap: 0.85rem;
+    padding: 0.65rem 0.72rem 0.72rem;
+  }
+
+  .listBodyEditing {
+    gap: 0.72rem;
+    padding: 0.58rem 0.66rem 0.66rem;
   }
 
   .pieceCardClickable {
@@ -195,17 +993,6 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-  }
-
-  .pieceCardAmount {
-    flex-shrink: 0;
-    color: #18335f;
-    font-size: 0.8rem;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-    text-align: right;
-    white-space: nowrap;
   }
 
   .pieceCardMeta {
@@ -369,6 +1156,9 @@
   .footer {
     margin-top: auto;
     flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     padding: 0.5rem 0.7rem 0.65rem;
     border-top: 1px solid #eef2f6;
     background: #fafbfc;
@@ -423,10 +1213,852 @@
 
   .summaryButton {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     min-height: 2.4rem;
     font-size: 0.88rem;
     border-radius: 13px;
     background: #152744;
     box-shadow: 0 10px 24px rgba(21, 39, 68, 0.18);
+  }
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .panelIdle .scroll {
+    flex: 1 1 auto;
+  }
+
+  .scroll {
+    flex: 1 1 8rem;
+    min-height: 5.5rem;
+  }
+
+  .editingStrip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    padding: 0.34rem 0.72rem 0.4rem;
+    border-bottom: 1px solid #e7eef7;
+    background: #f8fafc;
+    color: #243b6b;
+  }
+
+  .editingStripMain {
+    display: grid;
+    gap: 0.08rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .editingStripHeadline {
+    color: #102744;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .editingStripMeta {
+    color: #5b6f8f;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .editingStripHint {
+    color: #8a96a6;
+    font-size: 0.64rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .editingStripText {
+    display: flex;
+    align-items: center;
+    gap: 0.28rem;
+    min-width: 0;
+    color: #34527f;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .editingStripText strong {
+    flex-shrink: 0;
+    color: #102744;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .editingStripText span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .editingStripButton {
+    flex-shrink: 0;
+    min-height: 1.75rem;
+    padding: 0 0.68rem;
+    border: 1px solid rgba(30, 136, 255, 0.28);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1c4f9d;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .editingStripButton:hover,
+  .editingStripButton:focus-visible {
+    border-color: #1e88ff;
+    color: #0f55c8;
+  }
+
+  .footer {
+    border-top: 1px solid #dce6f2;
+    background: #ffffff;
+    box-shadow: 0 -8px 18px rgba(20, 39, 70, 0.06);
+  }
+
+  .totalsRow {
+    margin-bottom: 0.44rem;
+  }
+
+  .totalItem {
+    padding: 0.46rem 0.54rem;
+    border-color: #e0e9f5;
+    background: #fbfdff;
+  }
+
+  .totalItem span {
+    font-size: 0.58rem;
+  }
+
+  .totalItem strong {
+    font-size: 0.82rem;
+  }
+
+  .summaryButton {
+    min-height: 2.32rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .financialCard {
+    gap: 0.68rem;
+    padding: 0.76rem;
+  }
+
+  .financialTitle {
+    font-size: 0.94rem;
+  }
+
+  .financialReadValue {
+    font-size: 0.76rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .pieceCardThumb {
+    width: 4.9rem;
+    height: 3.75rem;
+  }
+
+  .pieceCardName {
+    font-size: 0.86rem;
+  }
+
+  .financialPanel {
+    padding: 0 0.82rem 0.72rem;
+  }
+
+  .financialCard {
+    padding: 0.82rem;
+  }
+
+  .financialReadValue {
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .panelQuoteStudio {
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(20, 39, 70, 0.05);
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    align-self: start;
+  }
+
+  .panelQuoteStudio.panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .panelShell {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .panelBody {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .panelListScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+
+  .panelSection {
+    flex-shrink: 0;
+    padding: 0.45rem 0.72rem 0.5rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .panelSectionTitle {
+    margin: 0 0 0.32rem;
+    color: #64748b;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .panelSectionHeading {
+    margin: 0;
+    padding: 0;
+  }
+
+  .editingStripInline {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid #f6e3b7;
+    border-radius: 8px;
+    background: #fffaf0;
+  }
+
+  .editingStripBrief {
+    margin: 0;
+    padding: 0.38rem 0.5rem;
+    border: 1px solid #f6e3b7;
+    border-radius: 8px;
+    background: #fffaf0;
+    color: #7a5a18;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .financialPanelEmbedded {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0.65rem 0.85rem 0.72rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .financialEmbedded {
+    display: flex;
+    flex-direction: column;
+    gap: 0.34rem;
+    min-width: 0;
+  }
+
+  .financialApplyButtonGhost {
+    width: 100%;
+    min-height: 1.85rem;
+    margin-top: 0.04rem;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid #cbd8ea;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1c4f9d;
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .financialApplyButtonGhost:hover,
+  .financialApplyButtonGhost:focus-visible {
+    border-color: #1e88ff;
+    background: #f8fbff;
+    color: #0f55c8;
+  }
+
+  .panelQuoteStudio .header :global([class*="stepTwoPanelHeader"]) {
+    padding: 0.58rem 0.72rem 0.52rem;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  .panelQuoteStudio .header :global([class*="stepTwoPanelTitle"]) {
+    font-size: 0.88rem;
+  }
+
+  .panelQuoteStudio .header :global([class*="stepTwoPanelStats"]) {
+    font-size: 0.68rem;
+  }
+
+  .panelQuoteStudio .header :global([class*="stepTwoFilterButton"]) {
+    min-height: 1.72rem;
+    padding: 0.28rem 0.52rem;
+    font-size: 0.66rem;
+  }
+
+  .panelQuoteStudio .listBody,
+  .panelQuoteStudio .listBodyIdle,
+  .panelQuoteStudio .listBodyEditing {
+    gap: 0.52rem;
+    padding: 0.44rem 0.82rem 0.5rem;
+  }
+
+  .panelQuoteStudio .pieceSection {
+    gap: 0.32rem;
+  }
+
+  .panelQuoteStudio .pieceSectionTitle {
+    margin: 0;
+    padding: 0;
+    font-size: 0.62rem;
+  }
+
+  .panelQuoteStudio .pieceCard,
+  .panelQuoteStudio .pieceCardRich,
+  .panelQuoteStudio .pieceCardCompact {
+    min-height: 0;
+    padding: 0.52rem 0.58rem;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .panelQuoteStudio .pieceCardThumb {
+    width: 4rem;
+    height: 3rem;
+    border-radius: 7px;
+  }
+
+  .panelQuoteStudio .pieceCardName {
+    font-size: 0.78rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .panelQuoteStudio .pieceCardMeasures,
+  .panelQuoteStudio .pieceCardConfig,
+  .panelQuoteStudio .pieceCardMetaCompact {
+    font-size: 0.66rem;
+  }
+
+  .panelQuoteStudio .pieceCardAmount {
+    font-size: 0.76rem;
+  }
+
+  .panelQuoteStudio .pieceIconButton,
+  .panelQuoteStudio .pieceIconButtonDanger {
+    width: 1.48rem;
+    height: 1.48rem;
+    border-radius: 6px;
+  }
+
+  .panelQuoteStudio .emptyState {
+    min-height: 6.5rem;
+    margin: 0.42rem 0.72rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+
+  .panelQuoteStudio .financialUnavailable {
+    padding: 0.62rem 0.68rem;
+    border-radius: 10px;
+  }
+
+  .panelQuoteStudio .financialUnavailable strong {
+    font-size: 0.74rem;
+  }
+
+  .panelQuoteStudio .financialUnavailable p {
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .panelQuoteStudio .financialSummaryList {
+    border-radius: 10px;
+  }
+
+  .panelQuoteStudio .financialSummaryRow {
+    padding: 0.5rem 0.62rem;
+  }
+
+  .panelQuoteStudio .financialSummaryRowPrimary .financialSummaryValue,
+  .panelQuoteStudio .financialSummaryRowHighlight .financialSummaryValue,
+  .panelQuoteStudio .financialSummaryRowMargin .financialSummaryValue {
+    font-size: 0.8rem;
+  }
+
+  .panelQuoteStudio .financialDetailToggle {
+    min-height: 1.9rem;
+    padding: 0.34rem 0.2rem;
+    font-size: 0.72rem;
+  }
+
+  .panelQuoteStudio .financialPanelEmbedded {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-top: 0;
+  }
+
+  .panelQuoteStudio .listRegion {
+    flex: 1 1 auto;
+    min-height: 3.5rem;
+  }
+
+  .panelQuoteStudio .financialEditList {
+    max-height: none;
+  }
+
+  .panelQuoteStudio .footer {
+    flex-shrink: 0;
+    margin-top: 0;
+    padding: 0.72rem 0.85rem 0.78rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .panelQuoteStudio .totalsRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0 0 0.58rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .panelQuoteStudio .totalItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.65rem;
+    min-height: 0;
+    padding: 0.52rem 0.68rem;
+    border: 0;
+    border-bottom: 1px solid #eef2f6;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .panelQuoteStudio .totalItem:last-child {
+    border-bottom: 0;
+    background: #f8fafc;
+  }
+
+  .panelQuoteStudio .totalItem span {
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    line-height: 1.35;
+  }
+
+  .panelQuoteStudio .totalItem strong {
+    font-size: 0.84rem;
+  }
+
+  .panelQuoteStudio .totalItemWide strong {
+    font-size: 0.92rem;
+  }
+
+  .panelQuoteStudio .summaryButton {
+    min-height: 2.35rem;
+    font-size: 0.84rem;
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(21, 39, 68, 0.12);
+  }
+
+  .panelQuoteStudio .footerHint {
+    margin: 0.48rem 0 0;
+    color: #8a5b12;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .panelQuoteStudioSummary .panelBody {
+    gap: 0.72rem;
+    padding: 0.72rem 0.85rem 0.65rem;
+  }
+
+  .panelQuoteStudioSummary .financialPanelEmbedded {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .panelBudgetSummary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.62rem;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .panelBudgetSummaryTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .panelBudgetSummaryEmpty {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .panelBudgetSummaryList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .panelBudgetSummaryRow {
+    display: grid;
+    grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.45rem 0.55rem;
+    min-width: 0;
+    padding: 0.58rem 0.68rem;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  .panelBudgetSummaryRow:last-child {
+    border-bottom: 0;
+  }
+
+  .panelBudgetSummaryCode {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .panelBudgetSummaryName {
+    color: #334155;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .panelBudgetSummaryPrice {
+    color: #06162f;
+    font-size: 0.74rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .panelBudgetSummaryAction {
+    align-self: stretch;
+    width: 100%;
+    min-height: 2rem;
+    padding: 0.42rem 0.72rem;
+    border: 1px solid #d9e4f1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1c4f9d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.25;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .panelBudgetSummaryAction:hover,
+  .panelBudgetSummaryAction:focus-visible {
+    border-color: #1e88ff;
+    background: #f8fbff;
+    color: #0f55c8;
+  }
+
+  .budgetPreviewBanner {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    min-width: 0;
+    margin-bottom: 0.55rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #dce6f2;
+    border-radius: 10px;
+    background: #f8fbff;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .budgetPreviewBack {
+    min-height: 1.85rem;
+    padding: 0.28rem 0.62rem;
+    border: 1px solid #cbd8ea;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #1c4f9d;
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .budgetPreviewBack:hover,
+  .budgetPreviewBack:focus-visible {
+    border-color: #1e88ff;
+    background: #f8fbff;
+    color: #0f55c8;
+  }
+
+  .budgetWorkspace {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+    width: 100%;
+    padding: 0.15rem 0 0.35rem;
+  }
+
+  .budgetWorkspaceHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    min-width: 0;
+    padding: 0.2rem 0.1rem 0.35rem;
+    border-bottom: 1px solid #e8edf3;
+  }
+
+  .budgetWorkspaceTitle {
+    margin: 0;
+    color: #06162f;
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .budgetWorkspaceActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .budgetWorkspaceActionPrimary,
+  .budgetWorkspaceActionSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    min-height: 2rem;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .budgetWorkspaceActionPrimary {
+    border: 1px solid #1e88ff;
+    background: #1e88ff;
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(30, 136, 255, 0.2);
+  }
+
+  .budgetWorkspaceActionPrimary:hover {
+    border-color: #1a7ae6;
+    background: #1a7ae6;
+  }
+
+  .budgetWorkspaceActionSecondary {
+    border: 1px solid #d9e4f1;
+    background: #ffffff;
+    color: #243b6b;
+  }
+
+  .budgetWorkspaceActionSecondary:hover {
+    border-color: #1e88ff;
+    background: #f8fbff;
+    color: #1c4f9d;
+  }
+
+  .budgetWorkspaceList {
+    min-width: 0;
+  }
+
+  .listBodyWorkspace {
+    gap: 0.72rem;
+    padding: 0.2rem 0.1rem 0.5rem;
+  }
+
+  .listBodyWorkspace .pieceCardRich {
+    padding: 0.82rem 0.9rem;
+    column-gap: 0.85rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(20, 39, 70, 0.04);
+  }
+
+  .listBodyWorkspace .pieceCardThumb {
+    width: 6.25rem;
+    height: 4.75rem;
+    border-radius: 11px;
+  }
+
+  .listBodyWorkspace .pieceCardName {
+    font-size: 0.92rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .listBodyWorkspace .pieceCardMeasures,
+  .listBodyWorkspace .pieceCardConfig {
+    font-size: 0.76rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+
+  .listBodyWorkspace .pieceCardAmount {
+    font-size: 0.9rem;
+  }
+
+  .listBodyWorkspace .pieceSectionTitle {
+    display: none;
+  }
+
+  .emptyStateWorkspace {
+    min-height: 8rem;
+    padding: 1.5rem 1rem;
+    border-style: dashed;
+    background: #fafbfd;
+  }
+
+  .editingPiecesRail {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .editingPiecesRailToggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.58rem 0.75rem;
+    border: 0;
+    background: #f8fafc;
+    color: #334155;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .editingPiecesRailToggle:hover {
+    background: #f1f5f9;
+  }
+
+  .editingPiecesRailTitle {
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .editingPiecesRailBody {
+    min-width: 0;
+    padding: 0.35rem 0.55rem 0.55rem;
+    border-top: 1px solid #eef2f6;
+    background: #ffffff;
+  }
+
+  .listBodyBelowEditor {
+    gap: 0.45rem;
+    padding: 0;
+  }
+
+  .listBodyBelowEditor .pieceSectionTitle {
+    display: none;
+  }
+
+  .listBodyBelowEditor .pieceCardRich,
+  .listBodyBelowEditor .pieceCardCompact {
+    padding: 0.5rem 0.58rem;
+    column-gap: 0.55rem;
+  }
+
+  .listBodyBelowEditor .pieceCardThumb {
+    width: 3.75rem;
+    height: 2.85rem;
+  }
+
+  .listBodyBelowEditor .pieceCardName,
+  .listBodyBelowEditor .pieceCardMeasures,
+  .listBodyBelowEditor .pieceCardConfig,
+  .listBodyBelowEditor .pieceCardMetaCompact {
+    overflow: visible;
+    text-overflow: unset;
+    white-space: normal;
+    display: block;
+    -webkit-line-clamp: unset;
   }
 }

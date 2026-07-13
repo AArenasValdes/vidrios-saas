@@ -14,6 +14,8 @@ import {
   type QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import type { QuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -30,6 +32,15 @@ import type {
 type UsePasoDosPresentacionParams = {
   isMobileViewport: boolean;
   isSaving: boolean;
+  isDesktopQuoteStudio: boolean;
+  financialSummary: QuoteStudioFinancialSummary;
+  quoteStudioFinancial: QuoteStudioFinancialDraft;
+  onQuoteStudioFinancialChange: (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => void;
+  onApplyQuoteStudioRecommendedPrice: () => void;
+  formatCurrencyInput: (value: string) => string;
   items: CotizacionWorkflowItem[];
   editingItemId: string | null;
   componentForm: ComponentFormState;
@@ -99,7 +110,6 @@ type UsePasoDosPresentacionParams = {
   onRecalculateTemplatePrice: (itemId: string) => void;
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
-  isDesktopQuoteStudio: boolean;
   editingFormSnapshot: ComponentFormState | null;
   onDuplicateItemFromEditor: () => void;
 };
@@ -313,6 +323,12 @@ export function usePasoDosPresentacion(
       effectiveShowOnlyPendingItems: params.effectiveShowOnlyPendingItems,
       showFilterToggle: params.items.length > 6 && params.pendingItemsCount > 0,
       isMobileViewport: params.isMobileViewport,
+      isDesktopQuoteStudio: params.isDesktopQuoteStudio,
+      financialSummary: params.financialSummary,
+      quoteStudioFinancial: params.quoteStudioFinancial,
+      onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
+      onApplyQuoteStudioRecommendedPrice: params.onApplyQuoteStudioRecommendedPrice,
+      formatCurrencyInput: params.formatCurrencyInput,
       selectedQuickEditItem: params.selectedQuickEditItem,
       selectedQuickEditViewItem: params.selectedQuickEditViewItem,
       selectedQuickEditDraft: params.selectedQuickEditDraft,

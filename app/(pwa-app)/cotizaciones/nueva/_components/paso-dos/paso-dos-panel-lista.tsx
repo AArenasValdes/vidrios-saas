@@ -15,6 +15,7 @@ type Props = Pick<
   | "items"
   | "quotePricingMode"
   | "isMobileViewport"
+  | "isDesktopQuoteStudio"
   | "selectedQuickEditItem"
   | "selectedQuickEditViewItem"
   | "selectedQuickEditDraft"
@@ -48,14 +49,19 @@ type Props = Pick<
   | "onSaveQuickPriceTemplateFromItem"
   | "isSavingQuickPriceTemplate"
   | "isAddGroupWizardOpen"
+  | "isTotalGlobalCuadernoOpen"
   | "activeDraftCard"
   | "onContinueActiveDraft"
->;
+> & {
+  isPieceInEdition?: boolean;
+  listSurface?: "panel" | "workspace" | "belowEditor";
+};
 
 export function PasoDosPanelLista({
   items,
   quotePricingMode,
   isMobileViewport,
+  isDesktopQuoteStudio,
   selectedQuickEditItem,
   selectedQuickEditViewItem,
   selectedQuickEditDraft,
@@ -89,15 +95,23 @@ export function PasoDosPanelLista({
   onSaveQuickPriceTemplateFromItem,
   isSavingQuickPriceTemplate,
   isAddGroupWizardOpen = false,
+  isTotalGlobalCuadernoOpen = false,
   activeDraftCard = null,
   onContinueActiveDraft,
+  isPieceInEdition = false,
+  listSurface = "panel",
 }: Props) {
+  const showPanelContinueAction = Boolean(onContinueActiveDraft) && !isPieceInEdition;
+  const isWorkspaceList = listSurface === "workspace";
+  const isBelowEditorList = listSurface === "belowEditor";
   if (!isMobileViewport) {
     const allCards = visibleComponentListState.cards;
     const incompleteCards = allCards.filter((item) => !item.isComplete);
     const completeCards = allCards.filter((item) => item.isComplete);
-    const hasEditingSection = Boolean(activeDraftCard) || incompleteCards.length > 0;
-    const isEmpty = items.length === 0 && !activeDraftCard;
+    const shouldUseCompactDraftSignal = isDesktopQuoteStudio;
+    const hasEditingSection =
+      (!shouldUseCompactDraftSignal && Boolean(activeDraftCard)) || incompleteCards.length > 0;
+    const isEmpty = items.length === 0 && (!activeDraftCard || shouldUseCompactDraftSignal);
 
     const renderDesktopCard = (item: ComponentListCardViewModel) => {
       const isQuickEditSelected = expandedQuickEditItemId === item.id;
@@ -177,38 +191,198 @@ export function PasoDosPanelLista({
       );
     };
 
+    const renderQuoteStudioDesktopCard = (item: ComponentListCardViewModel) => {
+      const isQuickEditSelected = expandedQuickEditItemId === item.id;
+      const isEditing = editingItemId === item.id;
+      const isCompact = isPieceInEdition && listSurface !== "belowEditor";
+      const listCode = item.listCode ?? item.title.split(" · ")[0] ?? item.title;
+      const listName =
+        item.listName ?? item.title.split(" · ").slice(1).join(" · ") ?? item.title;
+      const listMeasures = item.listMeasures ?? item.metaPrimary ?? item.compactMeta;
+      const listConfiguration = item.listConfiguration ?? item.metaSecondary ?? "";
+      const listQuantity = item.listQuantity ?? "";
+      const cardClassName = [
+        panelDesktop.pieceCard,
+        panelDesktop.pieceCardClickable,
+        isCompact ? panelDesktop.pieceCardCompact : panelDesktop.pieceCardRich,
+        !item.isComplete ? panelDesktop.pieceCardEditing : "",
+        isQuickEditSelected || isEditing ? panelDesktop.pieceCardSelected : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return (
+        <article
+          key={item.id}
+          data-step-two-item-id={item.id}
+          className={cardClassName}
+          onClick={() => onEditItem(item.source)}
+        >
+          <div className={panelDesktop.pieceCardThumb} aria-hidden>
+            {item.svgMarkup ? (
+              <div
+                className={panelDesktop.pieceCardThumbSvg}
+                dangerouslySetInnerHTML={{ __html: item.svgMarkup }}
+              />
+            ) : (
+              <div className={panelDesktop.pieceCardThumbFallback}>Libre</div>
+            )}
+          </div>
+
+          <div className={panelDesktop.pieceCardMain}>
+            <div className={panelDesktop.pieceCardHeadline}>
+              <div className={panelDesktop.pieceCardIdentity}>
+                <span className={panelDesktop.pieceCardCode}>{listCode}</span>
+                <span className={panelDesktop.pieceCardName}>{listName}</span>
+              </div>
+              {quotePricingMode === "por_item" ? (
+                <strong className={panelDesktop.pieceCardAmount}>{item.price}</strong>
+              ) : null}
+            </div>
+
+            {isCompact ? (
+              <p className={panelDesktop.pieceCardMetaCompact}>
+                {listMeasures}
+                {listConfiguration ? ` · ${listConfiguration}` : ""}
+              </p>
+            ) : (
+              <>
+                <p className={panelDesktop.pieceCardMeasures}>{listMeasures}</p>
+                {listConfiguration ? (
+                  <p className={panelDesktop.pieceCardConfig}>{listConfiguration}</p>
+                ) : null}
+              </>
+            )}
+
+            <div className={panelDesktop.pieceCardFooter}>
+              <div className={panelDesktop.pieceCardFooterMeta}>
+                {listQuantity ? (
+                  <span className={panelDesktop.pieceCardQuantity}>{listQuantity}</span>
+                ) : null}
+                <span
+                  className={`${panelDesktop.pieceBadge} ${
+                    item.isComplete ? panelDesktop.pieceBadgeComplete : panelDesktop.pieceBadgePending
+                  }`}
+                >
+                  {item.isComplete ? <LuCheck size={11} aria-hidden /> : null}
+                  {item.isComplete ? "Completo" : "Pendiente"}
+                </span>
+              </div>
+              <div className={panelDesktop.pieceCardActions}>
+                <button
+                  className={panelDesktop.pieceIconButton}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEditItem(item.source);
+                  }}
+                  type="button"
+                  title="Editar"
+                  aria-label={`Editar ${item.title}`}
+                >
+                  <LuPencil size={13} aria-hidden />
+                </button>
+                <button
+                  className={panelDesktop.pieceIconButton}
+                  type="button"
+                  title="Duplicar"
+                  aria-label={`Duplicar ${item.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDuplicateItem(item.source);
+                  }}
+                >
+                  <LuCopy size={13} aria-hidden />
+                </button>
+                <button
+                  className={panelDesktop.pieceIconButtonDanger}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRemoveItem(item.id);
+                  }}
+                  type="button"
+                  title="Eliminar"
+                  aria-label={`Eliminar ${item.title}`}
+                >
+                  <LuTrash2 size={13} aria-hidden />
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+      );
+    };
+
+    const renderCard = isDesktopQuoteStudio ? renderQuoteStudioDesktopCard : renderDesktopCard;
+
     return (
       <>
         {fieldErrorItems ? <div className={s.inlineError}>{fieldErrorItems}</div> : null}
 
         {isEmpty ? (
-          <div className={panelDesktop.emptyState}>
+          <div
+            className={`${panelDesktop.emptyState} ${
+              isWorkspaceList ? panelDesktop.emptyStateWorkspace : ""
+            }`}
+          >
             <LuFolderOpen size={28} aria-hidden />
-            <strong>Aun no agregas componentes</strong>
+            <strong>
+              {isWorkspaceList
+                ? "Aún no agregas piezas"
+                : isTotalGlobalCuadernoOpen
+                  ? "Trabajo en preparación"
+                  : "Aun no agregas componentes"}
+            </strong>
             <span>
-              {isAddGroupWizardOpen
-                ? "Termina el asistente de la izquierda."
-                : "Agrega el primer componente desde la izquierda."}
+              {isWorkspaceList
+                ? "Usa Agregar componente o Trabajo libre para comenzar."
+                : isTotalGlobalCuadernoOpen
+                  ? "Los componentes de este trabajo se arman en el cuaderno del centro."
+                  : isAddGroupWizardOpen
+                    ? "Termina el asistente de la izquierda."
+                    : isBelowEditorList
+                      ? "Las piezas del presupuesto aparecerán aquí."
+                      : "Agrega el primer componente desde la izquierda."}
             </span>
           </div>
         ) : (
-          <div className={panelDesktop.listBody}>
-            {hasEditingSection ? (
-              <section className={panelDesktop.pieceSection} aria-label="Piezas en edición">
-                <h4 className={panelDesktop.pieceSectionTitle}>En edición</h4>
+          <div
+            className={`${panelDesktop.listBody} ${
+              isWorkspaceList ? panelDesktop.listBodyWorkspace : ""
+            } ${isBelowEditorList ? panelDesktop.listBodyBelowEditor : ""} ${
+              isDesktopQuoteStudio && !isPieceInEdition && !isWorkspaceList && !isBelowEditorList
+                ? panelDesktop.listBodyIdle
+                : ""
+            } ${isDesktopQuoteStudio && isPieceInEdition && !isBelowEditorList ? panelDesktop.listBodyEditing : ""}`}
+          >
+            {isWorkspaceList || isBelowEditorList ? (
+              <section className={panelDesktop.pieceSection} aria-label="Piezas del presupuesto">
+                {!isBelowEditorList ? (
+                  <h4 className={panelDesktop.pieceSectionTitle}>Piezas · {allCards.length}</h4>
+                ) : null}
+                {allCards.map(renderCard)}
+              </section>
+            ) : null}
 
-                {activeDraftCard ? (
+            {!isWorkspaceList && !isBelowEditorList && hasEditingSection ? (
+              <section className={panelDesktop.pieceSection} aria-label="Piezas en edición">
+                <h4 className={panelDesktop.pieceSectionTitle}>
+                  {shouldUseCompactDraftSignal
+                    ? `Pendientes · ${incompleteCards.length}`
+                    : "En edición"}
+                </h4>
+
+                {!shouldUseCompactDraftSignal && activeDraftCard ? (
                   <article className={`${panelDesktop.pieceCard} ${panelDesktop.pieceCardEditing}`}>
                     <div className={panelDesktop.pieceCardRowTop}>
                       <span className={panelDesktop.pieceCardTitle}>
-                        {activeDraftCard.code} · {activeDraftCard.title}
+                        {activeDraftCard.headline} · {activeDraftCard.componentType}
                       </span>
                     </div>
                     <span className={`${panelDesktop.pieceBadge} ${panelDesktop.pieceBadgeEditing}`}>
                       En edición · {activeDraftCard.stepLabel}
                     </span>
                     <p className={panelDesktop.pieceCardMeta}>{activeDraftCard.missingLabel}</p>
-                    {onContinueActiveDraft ? (
+                    {showPanelContinueAction ? (
                       <button
                         type="button"
                         className={panelDesktop.pieceContinueButton}
@@ -220,14 +394,23 @@ export function PasoDosPanelLista({
                   </article>
                 ) : null}
 
-                {incompleteCards.map(renderDesktopCard)}
+                {incompleteCards.map(renderCard)}
               </section>
             ) : null}
 
-            {completeCards.length > 0 ? (
-              <section className={panelDesktop.pieceSection} aria-label="Piezas completas">
-                <h4 className={panelDesktop.pieceSectionTitle}>Completas · {completeCards.length}</h4>
-                {completeCards.map(renderDesktopCard)}
+            {!isWorkspaceList && !isBelowEditorList && completeCards.length > 0 ? (
+              <section
+                className={panelDesktop.pieceSection}
+                aria-label={isWorkspaceList ? "Piezas del presupuesto" : "Piezas completas"}
+              >
+                <h4 className={panelDesktop.pieceSectionTitle}>
+                  {isWorkspaceList
+                    ? `Piezas · ${completeCards.length}`
+                    : shouldUseCompactDraftSignal
+                      ? `Piezas agregadas · ${completeCards.length}`
+                      : `Completas · ${completeCards.length}`}
+                </h4>
+                {completeCards.map(renderCard)}
               </section>
             ) : null}
           </div>
@@ -311,7 +494,7 @@ export function PasoDosPanelLista({
                   <div className={s.stepTwoListTop}>
                     <div className={s.stepTwoListHeading}>
                       <div className={s.stepTwoListName}>
-                        {activeDraftCard.code} · {activeDraftCard.title}
+                        {activeDraftCard.headline} · {activeDraftCard.componentType}
                       </div>
                       <div className={s.stepTwoStatusGroup}>
                         <span className={`${s.stepTwoStatusPill} ${s.stepTwoStatusPillPending}`}>
@@ -321,7 +504,7 @@ export function PasoDosPanelLista({
                     </div>
                   </div>
                   <div className={s.stepTwoMetaLine}>{activeDraftCard.missingLabel}</div>
-                  {onContinueActiveDraft ? (
+                  {showPanelContinueAction ? (
                     <button
                       type="button"
                       className={panelDesktop.pieceContinueButton}

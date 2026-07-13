@@ -3,9 +3,16 @@ import {
   type CotizacionLineTemplatesRepository,
 } from "@/features/cotizaciones/line-templates/repositories/cotizacion-line-templates.repository";
 import {
+  LINE_TEMPLATE_CATEGORIAS,
   LINE_TEMPLATE_MATERIALS,
+  LINE_TEMPLATE_UNIDADES_COBRO,
+  type CotizacionLineTemplate,
+  type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateMaterial,
+  type CotizacionLineTemplateUnidadCobro,
   type CreateCotizacionLineTemplateInput,
+  type LineTemplateImportDuplicateMode,
+  type LineTemplateImportResult,
   type UpdateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { EntityId } from "@/types/common";
@@ -26,6 +33,28 @@ function normalizeMoney(value: number | null | undefined, fallback = 0) {
   }
 
   return Math.round(nextValue);
+}
+
+function normalizePercent(value: number | null | undefined, fallback = 0) {
+  const nextValue = Number(value ?? fallback);
+
+  if (!Number.isFinite(nextValue) || nextValue < 0) {
+    throw new Error("Los porcentajes deben ser cero o mayores.");
+  }
+
+  if (nextValue >= 100) {
+    throw new Error("El margen objetivo debe ser menor a 100%.");
+  }
+
+  return Math.round(nextValue * 100) / 100;
+}
+
+function normalizeOptionalPercent(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return normalizePercent(value, 0);
 }
 
 function normalizeRound(value: number | null | undefined) {
@@ -53,7 +82,76 @@ function normalizeTemplateMaterial(value: string | null | undefined): Cotizacion
   throw new Error("Debes elegir si la linea es de Aluminio o PVC.");
 }
 
+function normalizeTemplateCategoria(value: string | null | undefined): CotizacionLineTemplateCategoria {
+  const normalized = (value ?? "").trim().toLowerCase();
+
+  if ((LINE_TEMPLATE_CATEGORIAS as readonly string[]).includes(normalized)) {
+    return normalized as CotizacionLineTemplateCategoria;
+  }
+
+  if (normalized === "aluminio" || normalized === "aluminium") {
+    return "aluminio";
+  }
+
+  throw new Error("La categoria del catalogo no es valida.");
+}
+
+function normalizeUnidadCobro(value: string | null | undefined): CotizacionLineTemplateUnidadCobro {
+  const normalized = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace("m²", "m2")
+    .replace("metro_lineal", "metro_lineal")
+    .replace("ml", "metro_lineal");
+
+  if (normalized === "m2" || normalized === "m²") {
+    return "m2";
+  }
+
+  if (
+    normalized === "metro_lineal" ||
+    normalized === "unidad" ||
+    normalized === "ud" ||
+    normalized === "valor_manual" ||
+    normalized === "manual"
+  ) {
+    if (normalized === "ud") return "unidad";
+    if (normalized === "manual") return "valor_manual";
+    return normalized as CotizacionLineTemplateUnidadCobro;
+  }
+
+  return "m2";
+}
+
+function materialFromCategoria(categoria: CotizacionLineTemplateCategoria): CotizacionLineTemplateMaterial {
+  return categoria === "pvc" ? "PVC" : "Aluminio";
+}
+
 function normalizeRecommendedGlass(value: string | null | undefined) {
+  const normalized = normalizeText(value ?? "");
+  return normalized ? normalized.slice(0, 120) : null;
+}
+
+function normalizeOptionalDate(value: string | null | undefined) {
+  const normalized = normalizeText(value ?? "");
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return normalized;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("La vigencia debe tener formato de fecha valido.");
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeProveedor(value: string | null | undefined) {
   const normalized = normalizeText(value ?? "");
   return normalized ? normalized.slice(0, 120) : null;
 }
@@ -61,13 +159,25 @@ function normalizeRecommendedGlass(value: string | null | undefined) {
 function normalizeCreateInput(
   input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
 ) {
+  const categoria = normalizeTemplateCategoria(input.categoria ?? input.material.toLowerCase());
+  const material = input.material ?? materialFromCategoria(categoria);
+
   return {
     nombre: normalizeTemplateName(input.nombre),
-    material: normalizeTemplateMaterial(input.material),
+    categoria,
+    unidadCobro: normalizeUnidadCobro(input.unidadCobro ?? "m2"),
+    material: normalizeTemplateMaterial(material),
     vidrioPrincipalRecomendado: normalizeRecommendedGlass(input.vidrioPrincipalRecomendado),
+    costoBase: normalizeMoney(input.costoBase ?? 0),
     precioM2Sugerido: normalizeMoney(input.precioM2Sugerido),
     minimoCobrable: normalizeMoney(input.minimoCobrable ?? 0),
     redondeoPrecio: normalizeRound(input.redondeoPrecio),
+    mermaPct: normalizePercent(input.mermaPct ?? 0),
+    margenObjetivoPct: normalizeOptionalPercent(input.margenObjetivoPct),
+    proveedor: normalizeProveedor(input.proveedor),
+    vigenciaDesde: normalizeOptionalDate(input.vigenciaDesde),
+    vigenciaHasta: normalizeOptionalDate(input.vigenciaHasta),
+    catalogMetadata: input.catalogMetadata ?? {},
     isActive: input.isActive ?? true,
     sortOrder: Math.max(0, Math.trunc(Number(input.sortOrder ?? 0) || 0)),
   };
@@ -78,6 +188,12 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
 
   if (input.nombre !== undefined) {
     payload.nombre = normalizeTemplateName(input.nombre);
+  }
+  if (input.categoria !== undefined) {
+    payload.categoria = normalizeTemplateCategoria(input.categoria);
+  }
+  if (input.unidadCobro !== undefined) {
+    payload.unidadCobro = normalizeUnidadCobro(input.unidadCobro);
   }
   if (input.precioM2Sugerido !== undefined) {
     payload.precioM2Sugerido = normalizeMoney(input.precioM2Sugerido);
@@ -90,11 +206,32 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
       input.vidrioPrincipalRecomendado
     );
   }
+  if (input.costoBase !== undefined) {
+    payload.costoBase = normalizeMoney(input.costoBase);
+  }
   if (input.minimoCobrable !== undefined) {
     payload.minimoCobrable = normalizeMoney(input.minimoCobrable);
   }
   if (input.redondeoPrecio !== undefined) {
     payload.redondeoPrecio = normalizeRound(input.redondeoPrecio);
+  }
+  if (input.mermaPct !== undefined) {
+    payload.mermaPct = normalizePercent(input.mermaPct);
+  }
+  if (input.margenObjetivoPct !== undefined) {
+    payload.margenObjetivoPct = normalizeOptionalPercent(input.margenObjetivoPct);
+  }
+  if (input.proveedor !== undefined) {
+    payload.proveedor = normalizeProveedor(input.proveedor);
+  }
+  if (input.vigenciaDesde !== undefined) {
+    payload.vigenciaDesde = normalizeOptionalDate(input.vigenciaDesde);
+  }
+  if (input.vigenciaHasta !== undefined) {
+    payload.vigenciaHasta = normalizeOptionalDate(input.vigenciaHasta);
+  }
+  if (input.catalogMetadata !== undefined) {
+    payload.catalogMetadata = input.catalogMetadata;
   }
   if (input.isActive !== undefined) {
     payload.isActive = Boolean(input.isActive);
@@ -104,6 +241,13 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
   }
 
   return payload;
+}
+
+function findTemplateByName(templates: CotizacionLineTemplate[], nombre: string) {
+  const normalized = nombre.trim().toLowerCase();
+  return (
+    templates.find((item) => item.nombre.trim().toLowerCase() === normalized) ?? null
+  );
 }
 
 export function createCotizacionLineTemplatesService(
@@ -167,11 +311,20 @@ export function createCotizacionLineTemplatesService(
       return repository.create({
         organizationId,
         nombre: duplicateName,
+        categoria: source.categoria,
+        unidadCobro: source.unidadCobro,
         precioM2Sugerido: source.precioM2Sugerido,
         material: source.material,
         vidrioPrincipalRecomendado: source.vidrioPrincipalRecomendado,
+        costoBase: source.costoBase,
         minimoCobrable: source.minimoCobrable,
         redondeoPrecio: source.redondeoPrecio,
+        mermaPct: source.mermaPct,
+        margenObjetivoPct: source.margenObjetivoPct,
+        proveedor: source.proveedor,
+        vigenciaDesde: source.vigenciaDesde,
+        vigenciaHasta: source.vigenciaHasta,
+        catalogMetadata: source.catalogMetadata,
         isActive: source.isActive,
         sortOrder: source.sortOrder + 1,
       });
@@ -179,6 +332,61 @@ export function createCotizacionLineTemplatesService(
 
     async deleteTemplate(id: EntityId, organizationId: EntityId) {
       return repository.softDelete(id, organizationId);
+    },
+
+    async importTemplates(
+      organizationId: EntityId,
+      rows: Array<Omit<CreateCotizacionLineTemplateInput, "organizationId">>,
+      options: { duplicateMode: LineTemplateImportDuplicateMode }
+    ): Promise<LineTemplateImportResult> {
+      const current = await repository.listByOrganizationId(organizationId);
+      const result: LineTemplateImportResult = {
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        errors: [],
+      };
+
+      for (const [index, row] of rows.entries()) {
+        try {
+          const normalized = normalizeCreateInput(row);
+          const duplicate = findTemplateByName(current, normalized.nombre);
+
+          if (duplicate && options.duplicateMode === "skip") {
+            result.skipped += 1;
+            continue;
+          }
+
+          if (duplicate && options.duplicateMode === "update") {
+            const updated = await repository.update(duplicate.id, organizationId, normalized);
+            const currentIndex = current.findIndex((item) => item.id === duplicate.id);
+            if (currentIndex >= 0) {
+              current[currentIndex] = updated;
+            }
+            result.updated += 1;
+            continue;
+          }
+
+          const created = await repository.create({
+            organizationId,
+            ...normalized,
+            sortOrder:
+              current.length > 0 ? Math.max(...current.map((item) => item.sortOrder)) + 1 : 0,
+          });
+          current.push(created);
+          result.created += 1;
+        } catch (error) {
+          result.failed += 1;
+          result.errors.push(
+            `Fila ${index + 1}: ${
+              error instanceof Error ? error.message : "No se pudo importar la linea."
+            }`
+          );
+        }
+      }
+
+      return result;
     },
 
     buildTemplateFromSuggestedPrice(input: {

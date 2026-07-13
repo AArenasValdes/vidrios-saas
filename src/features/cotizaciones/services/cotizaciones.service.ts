@@ -30,11 +30,13 @@ import type {
   CotizacionWorkflowRecord,
   EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -194,9 +196,8 @@ function mapDatabaseItemToWorkflowItem(
   const nombre = item.nombre?.trim() || `Componente ${index + 1}`;
   const descripcion = item.descripcion?.trim() || nombre;
   const costoProveedorUnitario = item.costoUnitario ?? 0;
-  const margenPct = item.margenPct ?? 0;
-
-  return calculateComponentItem({
+  const margenPct = Math.max(0, item.margenPct ?? 0);
+  const calculatedItem = calculateComponentItem({
     id: String(item.id),
     codigo,
     tipo,
@@ -219,6 +220,30 @@ function mapDatabaseItemToWorkflowItem(
     observaciones: item.observaciones ?? "",
     tipoItem,
   });
+  const storedPrecioUnitario =
+    item.precioUnitario !== null && item.precioUnitario !== undefined
+      ? Number(item.precioUnitario)
+      : null;
+  const storedSubtotal =
+    item.subtotal !== null && item.subtotal !== undefined ? Number(item.subtotal) : null;
+
+  if (
+    presentation.precioAjustadoManual &&
+    storedPrecioUnitario !== null &&
+    Number.isFinite(storedPrecioUnitario) &&
+    storedSubtotal !== null &&
+    Number.isFinite(storedSubtotal)
+  ) {
+    return {
+      ...calculatedItem,
+      precioUnitario: round(storedPrecioUnitario, 2),
+      precioTotal: round(storedSubtotal, 2),
+      precioAjustadoManual: true,
+      origenPrecio: presentation.origenPrecio ?? "manual",
+    };
+  }
+
+  return calculatedItem;
 }
 
 function mapCotizacionToWorkflowRecord(input: {
@@ -299,7 +324,14 @@ function mapCotizacionToWorkflowRecord(input: {
     margenGlobalPct,
     utilidadTotal,
     totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
-    mostrarIva: input.cotizacion.iva ? (input.cotizacion.iva > 0) : true,
+    mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
+    quoteStudioFinancial: createQuoteStudioFinancialDraft({
+      manoObra: input.cotizacion.costoManoObraTotal ?? 0,
+      traslado: input.cotizacion.costoTrasladoTotal ?? 0,
+      otrosCostos: input.cotizacion.costoOtrosTotal ?? 0,
+      mermaPct: input.cotizacion.mermaPct ?? 0,
+      margenObjetivoRealPct: input.cotizacion.margenObjetivoPct ?? 30,
+    }),
   };
 }
 
@@ -863,24 +895,24 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       });
       const descuentoPct =
         totals.subtotal > 0 ? round(Math.min(100, (totals.descuentoValor / totals.subtotal) * 100), 6) : 0;
-      const costoTotal =
-        quotePricingMode === "total_global"
-          ? 0
-          : round(
-              normalizedItems.reduce(
-                (accumulator, item) => accumulator + item.costoProveedorTotal,
-                0
-              ),
-              2
-            );
-      const utilidadTotal =
-        quotePricingMode === "total_global" ? 0 : round(totals.neto - costoTotal, 2);
-      const margenPct =
-        quotePricingMode === "total_global"
-          ? 0
-          : costoTotal === 0
-            ? 0
-            : round((utilidadTotal / costoTotal) * 100, 2);
+      const financialDraft = createQuoteStudioFinancialDraft(input.draft.quoteStudioFinancial);
+      const financialSummary = buildQuoteStudioFinancialSummary({
+        items: normalizedItems,
+        quotePricingMode,
+        neto: totals.neto,
+        total: totals.total,
+        costoTotalFabricacion: totals.costoTotalFabricacion,
+        manoObra: financialDraft.manoObra,
+        traslado: financialDraft.traslado,
+        otrosCostos: financialDraft.otrosCostos,
+        mermaPct: financialDraft.mermaPct,
+        margenObjetivoRealPct: financialDraft.margenObjetivoRealPct,
+      });
+      const costoTotal = financialSummary.costoTotal;
+      const utilidadTotal = financialSummary.utilidadEstimada;
+      const margenPct = financialSummary.margenRealPct;
+      const ivaPct = totals.neto > 0 ? round((totals.iva / totals.neto) * 100, 4) : 0;
+      const financialSnapshotCalculatedAt = new Date().toISOString();
       const codigo =
         input.existingCode ??
         (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
@@ -899,6 +931,25 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         costoTotal,
         margenPct,
         utilidadTotal,
+        costoMaterialesTotal: financialSummary.costoMateriales,
+        costoManoObraTotal: financialSummary.manoObra,
+        costoTrasladoTotal: financialSummary.traslado,
+        costoOtrosTotal: financialSummary.otrosCostos,
+        mermaPct: financialDraft.mermaPct,
+        mermaTotal: financialSummary.merma,
+        margenObjetivoPct: financialSummary.margenObjetivoRealPct,
+        precioRecomendadoNeto: financialSummary.precioRecomendadoNeto,
+        ivaPct,
+        financialSnapshotVersion: 1,
+        financialSnapshotCalculadoEn: financialSnapshotCalculatedAt,
+        costBasisStatus: financialSummary.hasCostBasis
+          ? financialDraft.manoObra > 0 ||
+            financialDraft.traslado > 0 ||
+            financialDraft.otrosCostos > 0 ||
+            financialDraft.mermaPct > 0
+            ? "manual"
+            : "estimado"
+          : "sin_costos",
         approvalToken: existingCotizacion?.approvalToken ?? createApprovalToken(),
         approvalTokenExpiresAt: existingCotizacion?.approvalTokenExpiresAt ?? null,
         clienteVioEn: existingCotizacion?.clienteVioEn ?? null,

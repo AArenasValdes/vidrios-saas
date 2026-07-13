@@ -7,6 +7,7 @@ import {
   type ComponentListCardViewModel,
   type QuickEditDraftState,
   isWorkflowItemEffectivelyComplete,
+  resolveWorkflowItemDisplayName,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
@@ -17,9 +18,41 @@ type UsePasoDosTarjetasComponentesParams = {
   items: CotizacionWorkflowItem[];
   borradoresRapidos: Record<string, QuickEditDraftState>;
   quotePricingMode: QuotePricingMode;
+  isDesktopQuoteStudio?: boolean;
 };
 
+function buildDesktopListMeasures(item: CotizacionWorkflowItem) {
+  if (item.ancho && item.alto) {
+    return `${String(item.ancho).replace(/\.0+$/, "")} x ${String(item.alto).replace(/\.0+$/, "")} mm`;
+  }
+
+  return "Sin medidas";
+}
+
+function buildDesktopListConfiguration(input: {
+  configuracion?: string;
+  sistema?: string;
+  referencia?: string;
+  lineaComercial?: string;
+  descripcion?: string;
+}) {
+  const parts = [
+    input.configuracion?.trim(),
+    input.sistema?.trim(),
+    input.referencia?.trim() || input.lineaComercial?.trim(),
+  ].filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" · ");
+  }
+
+  return input.descripcion?.trim() || "Sin configuración";
+}
+
 export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponentesParams) {
+  const desktopSvgWidth = params.isDesktopQuoteStudio ? 76 : 46;
+  const desktopSvgHeight = params.isDesktopQuoteStudio ? 58 : 46;
+
   return useMemo<ComponentListCardViewModel[]>(
     () =>
       params.items.map((item) => {
@@ -61,8 +94,22 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
             quickEditPriceLabel: "Valor",
             isComplete: true,
             svgMarkup: "",
+            listCode: item.codigo,
+            listName: item.nombre,
+            listMeasures: "Trabajo libre",
+            listConfiguration: item.descripcion?.trim() || "Sin detalle",
+            listQuantity: `${item.cantidad} ${item.cantidad === 1 ? "ud." : "uds."}`,
           };
         }
+
+        const listMeasures = buildDesktopListMeasures(effectiveItem);
+        const listConfiguration = buildDesktopListConfiguration({
+          configuracion,
+          sistema,
+          referencia,
+          lineaComercial: effectiveItem.lineaComercial,
+          descripcion: effectiveItem.descripcion,
+        });
 
         return {
           id: item.id,
@@ -120,15 +167,24 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
                   ancho: effectiveItem.ancho,
                   alto: effectiveItem.alto,
                   colorHex,
-                  maxW: 46,
-                  maxH: 46,
+                  maxW: desktopSvgWidth,
+                  maxH: desktopSvgHeight,
                   mirrorFormat,
                   mirrorPaneCount,
                   mirrorPaneDirection,
                   mirrorInteriorLine,
                 }),
+          listCode: effectiveItem.codigo,
+          listName: resolveWorkflowItemDisplayName({
+            tipo: effectiveItem.tipo,
+            nombre: effectiveItem.nombre,
+            codigo: effectiveItem.codigo,
+          }),
+          listMeasures,
+          listConfiguration,
+          listQuantity: `${effectiveItem.cantidad} ${effectiveItem.cantidad === 1 ? "ud." : "uds."}`,
         };
       }),
-    [params.borradoresRapidos, params.items, params.quotePricingMode]
+    [params.borradoresRapidos, params.isDesktopQuoteStudio, params.items, params.quotePricingMode]
   );
 }

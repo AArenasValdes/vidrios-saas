@@ -14,6 +14,7 @@ import {
   resolveMaterialColorHex,
   resolveGrupoDraftReferentialUnitPrice,
   resolveGrupoDraftSubtotal,
+  resolveTotalGlobalNestedDetailItems,
   shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
 } from "../use-paso-dos-agregar-grupo";
@@ -312,6 +313,43 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(patch.configuracion).toBe("Frontal");
     expect(patch.material).toBe("Aluminio");
     expect(patch.vidrio).toContain("Templado");
+  });
+
+  it("debe resolver items anidados del presupuesto por total", () => {
+    const lead = {
+      id: "lead",
+      codigo: "L1",
+      tipoItem: "item_libre_con_valor" as const,
+      nombre: "Mantencion",
+      descripcion: "",
+      tipo: "Trabajo libre / Mantencion",
+      cantidad: 1,
+      precioUnitario: 0,
+      precioTotal: 0,
+      observaciones: "",
+    };
+    const ventana = {
+      id: "ventana",
+      codigo: "V1",
+      tipoItem: "componente" as const,
+      nombre: "Ventana corredera",
+      descripcion: "Ventana de aluminio",
+      tipo: "Ventana",
+      cantidad: 1,
+      ancho: 1200,
+      alto: 1500,
+      precioUnitario: 0,
+      precioTotal: 0,
+      observaciones: "",
+    };
+
+    expect(
+      resolveTotalGlobalNestedDetailItems([lead, ventana], ["ventana"]).map((item) => item.id)
+    ).toEqual(["ventana"]);
+    expect(resolveTotalGlobalNestedDetailItems([lead, ventana]).map((item) => item.id)).toEqual([
+      "ventana",
+    ]);
+    expect(resolveTotalGlobalNestedDetailItems([ventana]).map((item) => item.id)).toEqual([]);
   });
 
   it("debe convertir detalle estructurado en item reutilizable para PDF", () => {

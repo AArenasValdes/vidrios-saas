@@ -86,4 +86,27 @@ describe("PasoDosPanelLista desktop", () => {
     expect(props.onDuplicateItem).toHaveBeenCalledWith(sourceItem);
     expect(props.onEditItem).not.toHaveBeenCalled();
   });
+
+  it("prioriza codigo, medidas y configuracion en Quote Studio", () => {
+    const props = buildProps();
+    props.isDesktopQuoteStudio = true;
+    props.visibleComponentListState.cards[0] = {
+      ...props.visibleComponentListState.cards[0],
+      listCode: "V1",
+      listName: "Ventana corredera living",
+      listMeasures: "1200 x 1500 mm",
+      listConfiguration: "Linea base · Corredera 2 hojas",
+      listQuantity: "2 uds.",
+      svgMarkup: "<svg data-testid='piece-drawing'></svg>",
+    };
+
+    render(<PasoDosPanelLista {...props} />);
+
+    expect(screen.getByText("V1")).toBeInTheDocument();
+    expect(screen.getByText("Ventana corredera living")).toBeInTheDocument();
+    expect(screen.getByText("1200 x 1500 mm")).toBeInTheDocument();
+    expect(screen.getByText("Linea base · Corredera 2 hojas")).toBeInTheDocument();
+    expect(screen.getByText("2 uds.")).toBeInTheDocument();
+    expect(document.querySelector("[data-testid='piece-drawing']")).not.toBeNull();
+  });
 });

@@ -129,6 +129,18 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `costo_total` | numeric | |
 | `margen_pct` | numeric | |
 | `utilidad_total` | numeric | |
+| `costo_materiales_total` | numeric(12,2) | Snapshot Quote Studio: costo neto de materiales |
+| `costo_mano_obra_total` | numeric(12,2) | Snapshot Quote Studio: costo neto de mano de obra |
+| `costo_traslado_total` | numeric(12,2) | Snapshot Quote Studio: costo neto de traslado |
+| `costo_otros_total` | numeric(12,2) | Snapshot Quote Studio: otros costos netos |
+| `merma_pct` | numeric(7,4) | Snapshot Quote Studio: porcentaje de merma |
+| `merma_total` | numeric(12,2) | Snapshot Quote Studio: monto neto de merma |
+| `margen_objetivo_pct` | numeric(7,4) | Snapshot Quote Studio: margen real objetivo, no markup |
+| `precio_recomendado_neto` | numeric(12,2) | Snapshot Quote Studio: precio sugerido neto, sin IVA |
+| `iva_pct` | numeric(7,4) | Snapshot Quote Studio: porcentaje de IVA como capa tributaria |
+| `financial_snapshot_version` | integer | Version del algoritmo de snapshot financiero |
+| `financial_snapshot_calculado_en` | timestamptz | Fecha de calculo del snapshot financiero |
+| `cost_basis_status` | text | Estado de base de costo: `sin_costos`, `estimado` o `manual` |
 | `descuento_pct` | numeric | |
 | `flete` | numeric | |
 | `iva` | numeric | |
@@ -150,6 +162,8 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 **FK salientes:**
 - `proyecto_id` → `projects.id`
 - `organization_id` → `organizations.id`
+
+**Addendum 2026-07-08 - Quote Studio financial snapshots (aplicado local y remoto):** la migracion `20260708033856_add_quote_studio_financial_snapshot.sql` fue aplicada y verificada en Postgres local y en el proyecto remoto Supabase `yrtrwgkaopfumpidjthk` el 2026-07-08. Agrega 12 columnas aditivas sobre `cotizaciones`, sin crear tablas nuevas. Los campos de costo, utilidad, margen real y precio recomendado se interpretan como valores netos; `iva`/`iva_pct` quedan como capa tributaria separada. Constraints: `cotizaciones_financial_costs_nonnegative`, `cotizaciones_cost_basis_status_check`. Backfill historico seguro: deriva `iva_pct` y `cost_basis_status` sin inventar desglose de costos ni setear `financial_snapshot_version` en cotizaciones historicas. RLS y grants existentes de `cotizaciones` siguen aplicando por `organization_id = get_org_id()` sin policies nuevas.
 
 ---
 
@@ -806,6 +820,15 @@ auth.users (1) ──── (N) users
 | `minimo_cobrable` | numeric(12,2) | Default 0 |
 | `redondeo_precio` | numeric(12,2) | Default 1000 |
 | `material` | text NOT NULL | CHECK: `Aluminio`, `PVC` |
+| `categoria` | text NOT NULL | CHECK: `aluminio`, `pvc`, `vidrio`, `shower`, `accesorios`, `otros` |
+| `unidad_cobro` | text NOT NULL | CHECK: `m2`, `metro_lineal`, `unidad`, `valor_manual` |
+| `costo_base` | numeric(12,2) | Default 0 |
+| `merma_pct` | numeric(7,4) | Default 0 |
+| `margen_objetivo_pct` | numeric(7,4) | Nullable |
+| `proveedor` | text | Nullable |
+| `vigencia_desde` | date | Nullable |
+| `vigencia_hasta` | date | Nullable |
+| `catalog_metadata` | jsonb | Default `{}` |
 | `vidrio_principal_recomendado` | text | Sugerencia visual/comercial |
 | `is_active` | boolean | Default true |
 | `sort_order` | integer | Default 0 |
@@ -814,6 +837,7 @@ auth.users (1) ──── (N) users
 **Índices:** `(organization_id, sort_order, nombre)` WHERE `eliminado_en IS NULL`.
 **RLS:** SELECT/INSERT/UPDATE por `organization_id = get_org_id()`.
 **Nota:** No tiene FK formal a `organizations`; relación inferida por tenant key.
+**Migración remota:** `extend_cotizacion_line_templates_catalog` aplicada 2026-07-09 (Fase 2A).
 
 ### `public_landing_testimonials`
 

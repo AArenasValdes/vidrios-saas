@@ -233,6 +233,13 @@
 - **Usado en**: `PasoDosSeccion`.
 - **Props importantes**: `onSelectMode: (mode: QuotePricingMode) => void`
 
+### Componente: QuoteStudioFinancialPanel
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/quote-studio-financial-panel.tsx`
+- **Proposito**: Panel financiero compacto de Fase 1 dentro del panel sticky desktop de Paso 2. Muestra costo total, precio sugerido neto, precio final cliente, margen real, breakdown de costos y markup equivalente.
+- **Usado en**: `PasoDosPanelComponentes`, solo cuando `isDesktopQuoteStudio` es verdadero (`min-width: 1024px`).
+- **Riesgos**: No renderizar bajo 1024 px. No exponer en mobile 390/430 ni cambiar resumen mobile.
+
 ### Componente: PasoDosItemLibreForm
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx`

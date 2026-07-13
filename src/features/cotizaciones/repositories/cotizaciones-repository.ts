@@ -30,6 +30,18 @@ type CotizacionRow = {
   costo_total: number | string | null;
   margen_pct: number | string | null;
   utilidad_total: number | string | null;
+  costo_materiales_total: number | string | null;
+  costo_mano_obra_total: number | string | null;
+  costo_traslado_total: number | string | null;
+  costo_otros_total: number | string | null;
+  merma_pct: number | string | null;
+  merma_total: number | string | null;
+  margen_objetivo_pct: number | string | null;
+  precio_recomendado_neto: number | string | null;
+  iva_pct: number | string | null;
+  financial_snapshot_version: number | string | null;
+  financial_snapshot_calculado_en: string | null;
+  cost_basis_status: string | null;
   pricing_mode?: string | null;
   estado_comercial: string | null;
   approval_token: string | null;
@@ -92,7 +104,7 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
@@ -225,7 +237,19 @@ function isMissingApprovalFieldsError(error: unknown) {
       haystack.includes("cliente_vio_en") ||
       haystack.includes("cliente_respondio_en") ||
       haystack.includes("cliente_respuesta_canal") ||
-      haystack.includes("pdf_descargado_en")) &&
+      haystack.includes("pdf_descargado_en") ||
+      haystack.includes("costo_materiales_total") ||
+      haystack.includes("costo_mano_obra_total") ||
+      haystack.includes("costo_traslado_total") ||
+      haystack.includes("costo_otros_total") ||
+      haystack.includes("merma_pct") ||
+      haystack.includes("merma_total") ||
+      haystack.includes("margen_objetivo_pct") ||
+      haystack.includes("precio_recomendado_neto") ||
+      haystack.includes("iva_pct") ||
+      haystack.includes("financial_snapshot_version") ||
+      haystack.includes("financial_snapshot_calculado_en") ||
+      haystack.includes("cost_basis_status")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -337,6 +361,18 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     costoTotal: toNumber(row.costo_total ?? null),
     margenPct: toNumber(row.margen_pct ?? null),
     utilidadTotal: toNumber(row.utilidad_total ?? null),
+    costoMaterialesTotal: toNumber(row.costo_materiales_total ?? null),
+    costoManoObraTotal: toNumber(row.costo_mano_obra_total ?? null),
+    costoTrasladoTotal: toNumber(row.costo_traslado_total ?? null),
+    costoOtrosTotal: toNumber(row.costo_otros_total ?? null),
+    mermaPct: toNumber(row.merma_pct ?? null),
+    mermaTotal: toNumber(row.merma_total ?? null),
+    margenObjetivoPct: toNumber(row.margen_objetivo_pct ?? null),
+    precioRecomendadoNeto: toNumber(row.precio_recomendado_neto ?? null),
+    ivaPct: toNumber(row.iva_pct ?? null),
+    financialSnapshotVersion: toNumber(row.financial_snapshot_version ?? null),
+    financialSnapshotCalculadoEn: row.financial_snapshot_calculado_en ?? null,
+    costBasisStatus: row.cost_basis_status ?? null,
     pricingMode: normalizeQuotePricingMode(row.pricing_mode),
     estadoComercial: row.estado_comercial ?? null,
     approvalToken: row.approval_token ?? null,
@@ -550,6 +586,18 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     costo_total: input.costoTotal ?? null,
     margen_pct: input.margenPct ?? null,
     utilidad_total: input.utilidadTotal ?? null,
+    costo_materiales_total: input.costoMaterialesTotal ?? null,
+    costo_mano_obra_total: input.costoManoObraTotal ?? null,
+    costo_traslado_total: input.costoTrasladoTotal ?? null,
+    costo_otros_total: input.costoOtrosTotal ?? null,
+    merma_pct: input.mermaPct ?? null,
+    merma_total: input.mermaTotal ?? null,
+    margen_objetivo_pct: input.margenObjetivoPct ?? null,
+    precio_recomendado_neto: input.precioRecomendadoNeto ?? null,
+    iva_pct: input.ivaPct ?? null,
+    financial_snapshot_version: input.financialSnapshotVersion ?? null,
+    financial_snapshot_calculado_en: input.financialSnapshotCalculadoEn ?? null,
+    cost_basis_status: input.costBasisStatus ?? null,
     pricing_mode: input.pricingMode ?? "por_item",
     estado_comercial: input.estadoComercial ?? null,
     approval_token: input.approvalToken ?? null,
@@ -566,6 +614,53 @@ function buildCotizacionInsertPayload(input: CrearCotizacionInput) {
   const { actualizado_en: updatedAt, ...payload } = buildCotizacionUpdatePayload(input);
   void updatedAt;
   return payload;
+}
+
+type CotizacionWritePayload =
+  | ReturnType<typeof buildCotizacionUpdatePayload>
+  | ReturnType<typeof buildCotizacionInsertPayload>;
+
+function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
+  const {
+    approval_token: approvalToken,
+    approval_token_expires_at: approvalTokenExpiresAt,
+    cliente_vio_en: clienteVioEn,
+    cliente_respondio_en: clienteRespondioEn,
+    cliente_respuesta_canal: clienteRespuestaCanal,
+    costo_materiales_total: costoMaterialesTotal,
+    costo_mano_obra_total: costoManoObraTotal,
+    costo_traslado_total: costoTrasladoTotal,
+    costo_otros_total: costoOtrosTotal,
+    merma_pct: mermaPct,
+    merma_total: mermaTotal,
+    margen_objetivo_pct: margenObjetivoPct,
+    precio_recomendado_neto: precioRecomendadoNeto,
+    iva_pct: ivaPct,
+    financial_snapshot_version: financialSnapshotVersion,
+    financial_snapshot_calculado_en: financialSnapshotCalculadoEn,
+    cost_basis_status: costBasisStatus,
+    ...legacyPayload
+  } = payload;
+
+  void approvalToken;
+  void approvalTokenExpiresAt;
+  void clienteVioEn;
+  void clienteRespondioEn;
+  void clienteRespuestaCanal;
+  void costoMaterialesTotal;
+  void costoManoObraTotal;
+  void costoTrasladoTotal;
+  void costoOtrosTotal;
+  void mermaPct;
+  void mermaTotal;
+  void margenObjetivoPct;
+  void precioRecomendadoNeto;
+  void ivaPct;
+  void financialSnapshotVersion;
+  void financialSnapshotCalculadoEn;
+  void costBasisStatus;
+
+  return legacyPayload;
 }
 
 function mapSnapshotItemToCreateInput(item: CotizacionItem): CrearCotizacionItemInput {
@@ -671,6 +766,18 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       costoTotal: snapshot.costoTotal,
       margenPct: snapshot.margenPct,
       utilidadTotal: snapshot.utilidadTotal,
+      costoMaterialesTotal: snapshot.costoMaterialesTotal,
+      costoManoObraTotal: snapshot.costoManoObraTotal,
+      costoTrasladoTotal: snapshot.costoTrasladoTotal,
+      costoOtrosTotal: snapshot.costoOtrosTotal,
+      mermaPct: snapshot.mermaPct,
+      mermaTotal: snapshot.mermaTotal,
+      margenObjetivoPct: snapshot.margenObjetivoPct,
+      precioRecomendadoNeto: snapshot.precioRecomendadoNeto,
+      ivaPct: snapshot.ivaPct,
+      financialSnapshotVersion: snapshot.financialSnapshotVersion,
+      financialSnapshotCalculadoEn: snapshot.financialSnapshotCalculadoEn,
+      costBasisStatus: snapshot.costBasisStatus,
       pricingMode: snapshot.pricingMode,
       estadoComercial: snapshot.estadoComercial,
       approvalToken: snapshot.approvalToken,
@@ -691,19 +798,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       .eq("organization_id", snapshot.organizationId);
 
     if (error && isMissingApprovalFieldsError(error)) {
-      const {
-        approval_token: approvalToken,
-        approval_token_expires_at: approvalTokenExpiresAt,
-        cliente_vio_en: clienteVioEn,
-        cliente_respondio_en: clienteRespondioEn,
-        cliente_respuesta_canal: clienteRespuestaCanal,
-        ...legacyUpdatePayload
-      } = updatePayload;
-      void approvalToken;
-      void approvalTokenExpiresAt;
-      void clienteVioEn;
-      void clienteRespondioEn;
-      void clienteRespuestaCanal;
+      const legacyUpdatePayload = stripLegacyCotizacionExtensionFields(updatePayload);
 
       const { error: legacyError } = await supabase
         .from("cotizaciones")
@@ -1400,19 +1495,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
           if (!error) {
             data = createdData as CotizacionRow;
           } else if (isMissingApprovalFieldsError(error)) {
-            const {
-              approval_token: approvalToken,
-              approval_token_expires_at: approvalTokenExpiresAt,
-              cliente_vio_en: clienteVioEn,
-              cliente_respondio_en: clienteRespondioEn,
-              cliente_respuesta_canal: clienteRespuestaCanal,
-              ...legacyInsertPayload
-            } = insertPayload;
-            void approvalToken;
-            void approvalTokenExpiresAt;
-            void clienteVioEn;
-            void clienteRespondioEn;
-            void clienteRespuestaCanal;
+            const legacyInsertPayload = stripLegacyCotizacionExtensionFields(insertPayload);
 
             const { data: legacyData, error: legacyError } = await supabase
               .from("cotizaciones")
@@ -1495,19 +1578,7 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
           if (!error) {
             data = updatedData as CotizacionRow;
           } else if (isMissingApprovalFieldsError(error)) {
-            const {
-              approval_token: approvalToken,
-              approval_token_expires_at: approvalTokenExpiresAt,
-              cliente_vio_en: clienteVioEn,
-              cliente_respondio_en: clienteRespondioEn,
-              cliente_respuesta_canal: clienteRespuestaCanal,
-              ...legacyUpdatePayload
-            } = updatePayload;
-            void approvalToken;
-            void approvalTokenExpiresAt;
-            void clienteVioEn;
-            void clienteRespondioEn;
-            void clienteRespuestaCanal;
+            const legacyUpdatePayload = stripLegacyCotizacionExtensionFields(updatePayload);
 
             const { data: legacyData, error: legacyError } = await supabase
               .from("cotizaciones")

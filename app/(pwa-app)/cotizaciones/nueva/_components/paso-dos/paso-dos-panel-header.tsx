@@ -10,6 +10,7 @@ type Props = Pick<
   PasoDosPanelComponentesProps,
   | "items"
   | "isMobileViewport"
+  | "isDesktopQuoteStudio"
   | "pendingItemsCount"
   | "completedItemsCount"
   | "quotePricingMode"
@@ -24,6 +25,7 @@ type Props = Pick<
 export function PasoDosPanelHeader({
   items,
   isMobileViewport,
+  isDesktopQuoteStudio,
   pendingItemsCount,
   completedItemsCount,
   quotePricingMode,
@@ -41,6 +43,7 @@ export function PasoDosPanelHeader({
       ? `${items.length} ${items.length === 1 ? "detalle" : "detalles"}`
       : `${items.length} ${items.length === 1 ? "pieza" : "piezas"}`;
     const editingCount = pendingItemsCount + (draftInEdition ? 1 : 0);
+    const hideEditingCount = Boolean(isDesktopQuoteStudio);
 
     return (
       <div className={s.stepTwoPanelHeader}>
@@ -50,7 +53,7 @@ export function PasoDosPanelHeader({
           </div>
           <div className={s.stepTwoPanelStats}>
             <span>{piecesLabel}</span>
-            {editingCount > 0 ? (
+            {!hideEditingCount && editingCount > 0 ? (
               <>
                 <span className={s.stepTwoPanelStatDivider} aria-hidden />
                 <span className={s.stepTwoPanelStatPending}>
@@ -67,15 +70,20 @@ export function PasoDosPanelHeader({
                 <LuPlus aria-hidden />
                 Componente
               </button>
-              <button className={s.stepTwoFilterButton} type="button" onClick={onOpenFreeValueItemForm}>
+              <button
+                className={s.stepTwoFilterButton}
+                type="button"
+                onClick={onOpenFreeValueItemForm}
+                aria-label="Agregar ítem libre"
+              >
                 <LuFilePlus2 aria-hidden />
-                Ítem libre
+                Libre
               </button>
             </>
           ) : (
             <button className={s.stepTwoFilterButton} type="button" onClick={onOpenComponentCreator}>
               <LuPlus aria-hidden />
-              + Agregar detalle
+              + Agregar componente
             </button>
           )}
         </div>

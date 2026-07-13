@@ -4,6 +4,182 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-09 - Fase 2B: importacion PDF catalogo tecnico (piloto Arquetipo)
+
+### Resumen
+
+El wizard de importacion detecta PDFs tecnicos de fabricante (piloto Arquetipo) y extrae lineas comerciales con perfiles asociados sin inventar precios. Las lineas quedan en `cotizacion_line_templates` con `catalog_metadata` tecnico (`technicalLineCode`, `technicalProfileCodes`, `needsCommercialPrice`) para completar costos despues o cruzar con Excel.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `line-template-pdf-technical.service.ts` | Indice de lineas + perfiles por pagina |
+| `line-template-technical-import.service.ts` | Preview/import sin precio obligatorio |
+| `line-template-pdf-text.service.ts` | Carga compartida de texto PDF |
+| `lineas-precios-import-client.tsx` | Modo tecnico con auto-deteccion |
+
+---
+
+## 2026-07-09 - Fase 2B inicio: importacion PDF asistida en catalogo privado
+
+### Resumen
+
+El wizard `/configuracion/empresa/lineas-precios/importar` ahora acepta PDF con tabla de texto seleccionable. Se extraen candidatos por pagina con `pdfjs-dist`, se muestra confianza, avisos y selector de paginas antes del mapeo y la vista previa revisable. PDF escaneado o solo dibujos no se convierten automaticamente.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/cotizaciones/line-templates/services/line-template-pdf-table.service.ts` | Clustering texto PDF → filas/columnas |
+| `src/features/cotizaciones/line-templates/services/line-template-pdf-import.service.ts` | Extraccion por pagina + merge |
+| `src/features/cotizaciones/line-templates/components/lineas-precios-import-client.tsx` | UI PDF: paginas, confianza, avisos |
+| `package.json` | Dependencia `pdfjs-dist` |
+
+---
+
+## 2026-07-09 - Fase 2A remoto + limpieza sidebar
+
+### Resumen
+
+Migración `extend_cotizacion_line_templates_catalog` aplicada en Supabase remoto (`yrtrwgkaopfumpidjthk`). Se documentan rutas de catálogo/importación y se elimina el bloque **Materiales · Pronto** del sidebar desktop.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260709153000_extend_cotizacion_line_templates_catalog.sql` | Aplicada en remoto |
+| `docs/agent-map/ROUTES_MAP.md` | Rutas `lineas-precios` e `importar` |
+| `docs/agent-map/DATA_MODEL_MAP.md` | Campos de catálogo privado |
+| `src/components/layout/app-shell.tsx` | Sin sección Siguiente/Pronto |
+
+---
+
+## 2026-07-09 - Fase 2A inicio: catalogo privado + importacion XLSX/CSV
+
+### Resumen
+
+Se extiende `cotizacion_line_templates` de forma aditiva con categoria, unidad de cobro, costo base, merma, margen objetivo, proveedor y vigencia. La UI de `/configuracion/empresa/lineas-precios` pasa a **Catalogo privado** con campos comerciales ampliados y nueva ruta `/configuracion/empresa/lineas-precios/importar` con wizard revisable (archivo → columnas → preview → confirmar).
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260709153000_extend_cotizacion_line_templates_catalog.sql` | Columnas de catalogo privado |
+| `src/features/cotizaciones/line-templates/` | Types, repository, service, import service, UI |
+| `app/(pwa-app)/configuracion/empresa/lineas-precios/importar/page.tsx` | Ruta de importacion |
+
+---
+
+## 2026-07-09 - Fase 1 cerrada: Quote Studio desktop + snapshots financieros
+
+### Resumen
+
+Se cierra Fase 1 con QA manual aprobado en desktop. Quote Studio por total queda con cuaderno comercial, componentes anidados dentro del trabajo, panel financiero con ajustes editables, persistencia de snapshot en `cotizaciones`, PDF por total con dibujos tecnicos reales y limpieza de instrumentacion de debug.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `app/(pwa-app)/cotizaciones/nueva/page.tsx` | Jerarquia cuaderno/panel por total, sin logs de debug |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` | Lista anidada de componentes en cuaderno |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/quote-studio-financial-panel.tsx` | Panel financiero sin probes de debug |
+| `app/print/cotizaciones/[id]/page.tsx` | PDF por total con dibujos tecnicos |
+| `supabase/migrations/20260708033856_add_quote_studio_financial_snapshot.sql` | Columnas snapshot financiero |
+
+### Criterio de salida cumplido
+
+- Desktop >=1024: cotizar por items y por total con panel financiero.
+- Mobile, PDF, WhatsApp y aprobacion publica sin regresiones intencionales.
+- `npm run lint`, `npm test` y `npm run build` pasando en workspace principal.
+
+---
+
+## 2026-07-08 - Fase 1 Submilestone 1.3: panel editable de costos y margen
+
+### Resumen
+
+Se habilita en Quote Studio desktop (>=1024px) el bloque expandible **Ajustar costos y margen** con inputs de mano de obra, traslado, otros costos, merma % y margen objetivo real %. Los valores fluyen por draft → `saveWorkflow` → columnas snapshot en `cotizaciones` con `cost_basis_status: manual` cuando hay ajustes. Mobile, PDF y WhatsApp sin cambios.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `quote-studio-financial-panel.tsx` | Toggle expandible + inputs editables |
+| `cotizacion-workflow.ts` | Tipo `QuoteStudioFinancialDraft` en draft/record |
+| `cotizaciones.service.ts` | Hidratacion desde DB + `costBasisStatus` manual/estimado |
+| `workflow-ui.ts` | Merge de `quoteStudioFinancial` al cargar borrador |
+| `use-paso-dos-presentacion.ts` | Wiring de props al panel desktop |
+| `cotizaciones.service.test.ts` | Test de persistencia con ajustes manuales |
+
+---
+
+## 2026-07-07 - Fase 1 primer corte: panel financiero desktop
+
+### Resumen
+
+Se inicia Fase 1 con un corte vertical desktop-only: calculo financiero puro para Quote Studio, panel compacto dentro de Paso 2 desktop y snapshot financiero persistido en campos existentes de `cotizaciones`. No se crean migraciones, tablas ni rutas.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/cotizaciones/services/quote-studio-financial.service.ts` | Calculo de costo total, margen real, markup equivalente y precio recomendado neto |
+| `src/features/cotizaciones/services/cotizaciones.service.ts` | Guardado del snapshot financiero en `costo_total`, `margen_pct` y `utilidad_total` usando la misma formula del panel |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/quote-studio-financial-panel.tsx` | Panel financiero visible solo en Quote Studio desktop |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-panel-componentes.tsx` | Render del panel financiero solo con `isDesktopQuoteStudio` |
+| `src/features/cotizaciones/services/__tests__/quote-studio-financial.service.test.ts` | Cobertura de formula de margen real y modo total global |
+| `src/services/__tests__/cotizaciones.service.test.ts` | Cobertura de persistencia del snapshot financiero sin migraciones |
+
+### Alcance
+
+- Desktop >=1024 muestra el primer panel financiero de Quote Studio.
+- Mobile 390/430 no recibe panel financiero ni campos nuevos.
+- Los datos son derivados del estado actual y se persisten como snapshot quote-level en columnas existentes.
+- Sin base de costo validada, el snapshot no infiere utilidad ni margen.
+
+---
+
+## 2026-07-07 - Restriccion Fase 1 desktop-only
+
+### Resumen
+
+Se registra que Fase 1 Quote Studio Desktop + snapshots financieros es una ampliacion exclusiva para escritorio desde `min-width: 1024px`, no un rediseño responsive general.
+
+### Reglas incorporadas
+
+- Mobile 390 px y 430 px debe conservar layout, orden de pasos, controles, resumen, CTA, PDF, WhatsApp, copy, tipografia, espaciados, cards y navegacion existentes.
+- Bajo 1024 px no se muestra panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado.
+- Los snapshots financieros pueden agregarse como datos internos/aditivos, pero no se exponen en UI mobile durante Fase 1.
+- Cualquier diferencia visual mobile intencional es regresion bloqueante salvo correccion estrictamente necesaria para un bug reproducible.
+
+### Documentacion actualizada
+
+| Archivo | Cambio |
+|---|---|
+| `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` | Restriccion critica desktop-only dentro de Fase 1 |
+| `docs/agent-map/AGENT_TASK_GUIDE.md` | Reglas operativas para tareas Quote Studio desktop |
+| `docs/agent-map/FEATURES_MAP.md` | Riesgo y criterio mobile dentro de Cotizaciones |
+| `docs/EXECUTION_NOW.md` | Regla corta para ejecucion actual |
+
+---
+
+## 2026-07-05 - Decision producto: catalogo privado antes de cubicacion
+
+### Resumen
+
+Se registra la decision: “05-07-2026: se incorpora Catálogo privado + importación XLSX/CSV antes de cubicación asistida, debido a demanda comercial de empresas pequeñas y medianas que necesitan definir líneas de trabajo, costos y precios.”
+
+El roadmap Desktop Taller queda reordenado: Fase 0 Gate de estabilidad, Fase 1 Quote Studio Desktop + snapshots financieros, Fase 2A Catálogo privado + importación XLSX/CSV, Fase 2B Importación PDF asistida y revisable, Fase 3 Constructor visual guiado V1, Fase 4 Cubicación asistida, Fase 5 Dashboard Desktop comercial real.
+
+### Alcance de esta ejecucion
+
+- Solo documentacion trazable y regresion tecnica minima.
+- No se crean migraciones, tablas ni funcionalidades nuevas.
+- `cotizacion_line_templates` queda documentada como base futura del catalogo privado, extensible solo aditivamente en Fase 2A.
+
+---
+
 ## 2026-06-30 - Sincronizacion documental Desktop Taller
 
 ### Resumen

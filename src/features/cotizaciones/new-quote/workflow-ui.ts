@@ -15,6 +15,7 @@ import type {
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import {
   buildCotizacionMirrorPaneMeasure,
   decodeCotizacionItemPresentationMeta,
@@ -157,6 +158,11 @@ export type ComponentListCardViewModel = {
   quickEditPriceLabel: string;
   svgMarkup: string;
   isComplete: boolean;
+  listCode?: string;
+  listName?: string;
+  listMeasures?: string;
+  listConfiguration?: string;
+  listQuantity?: string;
 };
 
 export type ComponentFormLinePricingSummary = ReturnType<
@@ -493,6 +499,7 @@ export function loadPersistedWorkflowState(
           Number.isFinite(persistedDraft.totalClienteManual)
             ? Number(persistedDraft.totalClienteManual)
             : null,
+        quoteStudioFinancial: createQuoteStudioFinancialDraft(persistedDraft.quoteStudioFinancial),
         items: reconcileWorkflowItemsPricing(
           persistedDraft.items ?? emptyDraft.items,
           normalizeQuotePricingMode(persistedDraft.quotePricingMode)
@@ -1313,6 +1320,11 @@ export function applyQuickEditDraftStatesToItems(
       return item;
     }
 
+    const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+    if (item.precioAjustadoManual || presentation.precioAjustadoManual) {
+      return item;
+    }
+
     const draftState = quickEditDrafts[item.id];
 
     if (!draftState) {
@@ -1742,6 +1754,11 @@ export function reconcileWorkflowItemPricing(
     });
   }
 
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  if (item.precioAjustadoManual || presentation.precioAjustadoManual) {
+    return item;
+  }
+
   try {
     const form = mapItemToForm(item);
     return buildItemFromForm(form, items, item.id, { quotePricingMode });
@@ -1783,6 +1800,7 @@ export function mapRecordToDraft(record: CotizacionWorkflowRecord): CotizacionWo
     margenGlobalPct: record.margenGlobalPct ?? 100,
     utilidadTotal: record.utilidadTotal ?? 0,
     totalClienteManual: record.totalClienteManual ?? null,
+    quoteStudioFinancial: createQuoteStudioFinancialDraft(record.quoteStudioFinancial),
   };
 }
 

@@ -53,6 +53,8 @@ Riesgo residual:
 | `cotizaciones_insert` | INSERT | — | `organization_id = get_org_id()` |
 | `cotizaciones_update` | UPDATE | `organization_id = get_org_id()` | — |
 
+**Verificacion 2026-07-08 (Quote Studio financial snapshots, aplicado remoto):** la migracion `add_quote_studio_financial_snapshot` se aplico en el proyecto remoto `yrtrwgkaopfumpidjthk`. Agrega solo columnas nullable en `cotizaciones`. No requiere policies nuevas: `cotizaciones_select`, `cotizaciones_insert` y `cotizaciones_update` siguen aislando por `organization_id = get_org_id()` para lectura y escritura de los campos snapshot.
+
 ### 3. `cotizacion_items`
 
 | Policy | Operación | USING | WITH CHECK |

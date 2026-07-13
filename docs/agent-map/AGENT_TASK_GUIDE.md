@@ -72,7 +72,12 @@ Reglas:
 Reglas:
 
 - primero estabilizar desktop actual; despues pulir Quote Studio;
-- mobile no se toca salvo regresion compartida;
+- Fase 1 Quote Studio es desktop-only desde `min-width: 1024px`;
+- bajo 1024 px mobile no se toca salvo regresion bloqueante reproducible;
+- en 390 px y 430 px no agregar panel financiero, campos de costo/margen/traslado/merma/precio recomendado, tabs desktop, acordeones nuevos, sticky panels ni cambios de resumen/CTA/PDF/WhatsApp;
+- mantener el flujo mobile actual como fallback integro: mismo orden de pasos, controles, jerarquia visual, copy, espaciados y navegacion;
+- los snapshots financieros pueden existir como datos internos/aditivos, pero no se exponen en UI mobile durante Fase 1;
+- no crear segunda persistencia, entidades duplicadas ni rutas paralelas para desktop;
 - no romper PDF, WhatsApp, aprobacion publica ni contratos actuales;
 - normalizacion `861px -> 1024px` solo dentro de trabajo controlado de estabilizacion.
 

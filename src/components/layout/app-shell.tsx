@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import {
   LuBell,
   LuBadgeCheck,
-  LuBoxes,
   LuChevronRight,
   LuCircleSlash2,
   LuClock3,
@@ -144,10 +143,6 @@ const NAV_ITEMS: NavItem[] = [
     mobileLabel: "Pagina",
     description: "Configura tu mini landing publica",
   },
-];
-
-const FUTURE_ITEMS = [
-  { label: "Materiales", icon: LuBoxes },
 ];
 
 const SPECIAL_SCREENS: ContextItem[] = [
@@ -1241,23 +1236,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-
-        <div className={s.sidebarFuture}>
-          <div className={s.navLabel}>Siguiente</div>
-          {FUTURE_ITEMS.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div key={item.label} className={s.futureItem}>
-                <span className={s.futureIconWrap}>
-                  <Icon className={s.futureIcon} aria-hidden />
-                </span>
-                <span>{item.label}</span>
-                <span className={s.futurePill}>Pronto</span>
-              </div>
-            );
-          })}
-        </div>
 
         <div className={s.profileMenuWrap}>
           <button

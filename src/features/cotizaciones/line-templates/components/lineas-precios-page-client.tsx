@@ -11,6 +11,7 @@ import {
   LuPlus,
   LuSearch,
   LuTrash2,
+  LuUpload,
   LuX,
 } from "react-icons/lu";
 
@@ -22,19 +23,34 @@ import {
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type {
   CotizacionLineTemplate,
+  CotizacionLineTemplateCategoria,
   CotizacionLineTemplateMaterial,
+  CotizacionLineTemplateUnidadCobro,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  formatLineTemplatePriceLabel,
+  LINE_TEMPLATE_CATEGORIA_LABELS,
+  LINE_TEMPLATE_UNIDAD_LABELS,
+} from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 import s from "./lineas-precios-page-client.module.css";
 
 type LineTemplateFormDraft = {
   nombre: string;
+  categoria: CotizacionLineTemplateCategoria | "";
+  unidadCobro: CotizacionLineTemplateUnidadCobro | "";
   material: CotizacionLineTemplateMaterial | "";
   vidrioPrincipalRecomendado: string;
+  costoBase: string;
   precioM2Sugerido: string;
   minimoCobrable: string;
   redondeoPrecio: string;
+  mermaPct: string;
+  margenObjetivoPct: string;
+  proveedor: string;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
   isActive: boolean;
 };
 
@@ -58,13 +74,24 @@ const GLASS_SELECT_OPTIONS = GLASS_OPTIONS.flatMap((group) =>
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
   return {
     nombre: template?.nombre ?? "",
+    categoria: template?.categoria ?? "aluminio",
+    unidadCobro: template?.unidadCobro ?? "m2",
     material: template?.material ?? "",
     vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
+    costoBase: template && template.costoBase > 0 ? String(template.costoBase) : "",
     precioM2Sugerido:
       template && template.precioM2Sugerido > 0 ? String(template.precioM2Sugerido) : "",
     minimoCobrable:
       template && template.minimoCobrable > 0 ? String(template.minimoCobrable) : "",
     redondeoPrecio: String(template?.redondeoPrecio ?? 1000),
+    mermaPct: template && template.mermaPct > 0 ? String(template.mermaPct) : "",
+    margenObjetivoPct:
+      template?.margenObjetivoPct && template.margenObjetivoPct > 0
+        ? String(template.margenObjetivoPct)
+        : "",
+    proveedor: template?.proveedor ?? "",
+    vigenciaDesde: template?.vigenciaDesde ?? "",
+    vigenciaHasta: template?.vigenciaHasta ?? "",
     isActive: template?.isActive ?? true,
   };
 }
@@ -151,7 +178,10 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
   const pricePerM2 = parseMoney(draft.precioM2Sugerido);
   const minimum = parseMoney(draft.minimoCobrable);
-  const saveDisabled = !draft.nombre.trim() || !draft.material || pricePerM2 <= 0;
+  const costoBase = parseMoney(draft.costoBase);
+  const unidadCobro = (draft.unidadCobro || "m2") as CotizacionLineTemplateUnidadCobro;
+  const saveDisabled =
+    !draft.nombre.trim() || !draft.material || !draft.categoria || !draft.unidadCobro || pricePerM2 <= 0;
   const sheetTitle = sheetMode === "edit" ? "Editar línea" : "Nueva línea";
 
   const resetQueryFlag = () => {
@@ -194,11 +224,21 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
     const payload = {
       nombre: draft.nombre,
+      categoria: draft.categoria as CotizacionLineTemplateCategoria,
+      unidadCobro,
       material: draft.material,
       vidrioPrincipalRecomendado: draft.vidrioPrincipalRecomendado || null,
+      costoBase,
       precioM2Sugerido: pricePerM2,
       minimoCobrable: minimum,
       redondeoPrecio: Number(draft.redondeoPrecio || "1000") || 1000,
+      mermaPct: draft.mermaPct ? Number(draft.mermaPct.replace(",", ".")) : 0,
+      margenObjetivoPct: draft.margenObjetivoPct
+        ? Number(draft.margenObjetivoPct.replace(",", "."))
+        : null,
+      proveedor: draft.proveedor || null,
+      vigenciaDesde: draft.vigenciaDesde || null,
+      vigenciaHasta: draft.vigenciaHasta || null,
       isActive: draft.isActive,
     };
 
@@ -285,15 +325,24 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </Link>
 
         <div className={s.headerCopy}>
-          <h1>Líneas y precios</h1>
+          <h1>Catálogo privado</h1>
           <p>
-            {templates.length} guardadas · {activeCount} activas
+            {templates.length} líneas guardadas · {activeCount} activas
           </p>
         </div>
 
-        <button type="button" className={s.addButton} onClick={openNewSheet} aria-label="Nueva línea">
-          <LuPlus aria-hidden />
-        </button>
+        <div className={s.headerActions}>
+          <Link
+            href="/configuracion/empresa/lineas-precios/importar"
+            className={s.importButton}
+            aria-label="Importar catálogo"
+          >
+            <LuUpload aria-hidden />
+          </Link>
+          <button type="button" className={s.addButton} onClick={openNewSheet} aria-label="Nueva línea">
+            <LuPlus aria-hidden />
+          </button>
+        </div>
       </header>
 
       <section className={s.toolbar}>
@@ -404,7 +453,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                     <div className={s.cardTitleText}>
                       <strong>{template.nombre}</strong>
                       <span className={s.materialPill} data-material={template.material}>
-                        {template.material}
+                        {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
                       </span>
                     </div>
                     <span className={s.cardTapHint}>
@@ -451,8 +500,16 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </div>
 
                 <div className={s.priceRow}>
-                  <strong>{formatCurrency(template.precioM2Sugerido)}/m²</strong>
+                  <strong>
+                    {formatLineTemplatePriceLabel(
+                      template.unidadCobro,
+                      template.precioM2Sugerido,
+                      formatCurrency
+                    )}
+                  </strong>
                   <span>
+                    {template.costoBase > 0 ? `Costo ${formatCurrency(template.costoBase)}` : "Sin costo"}
+                    {" · "}
                     Mín.{" "}
                     {template.minimoCobrable > 0
                       ? formatCurrency(template.minimoCobrable)
@@ -530,6 +587,46 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
               </label>
 
               <label className={s.fieldBlock}>
+                <span className={s.fieldLabel}>Categoría del catálogo</span>
+                <select
+                  className={s.selectInput}
+                  value={draft.categoria}
+                  onChange={(event) =>
+                    handleDraftChange(
+                      "categoria",
+                      event.target.value as CotizacionLineTemplateCategoria
+                    )
+                  }
+                >
+                  {Object.entries(LINE_TEMPLATE_CATEGORIA_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={s.fieldBlock}>
+                <span className={s.fieldLabel}>Unidad de cobro</span>
+                <select
+                  className={s.selectInput}
+                  value={draft.unidadCobro}
+                  onChange={(event) =>
+                    handleDraftChange(
+                      "unidadCobro",
+                      event.target.value as CotizacionLineTemplateUnidadCobro
+                    )
+                  }
+                >
+                  {Object.entries(LINE_TEMPLATE_UNIDAD_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={s.fieldBlock}>
                 <span className={s.fieldLabel}>Material</span>
                 <div className={s.materialSelect}>
                   {(["Aluminio", "PVC"] as const).map((option) => (
@@ -550,7 +647,25 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
               </label>
 
               <label className={s.fieldBlock}>
-                <span className={s.fieldLabel}>Precio base / m²</span>
+                <span className={s.fieldLabel}>Costo base · opcional</span>
+                <div className={s.moneyWrap}>
+                  <span className={s.moneyPrefix}>$</span>
+                  <input
+                    className={s.moneyInput}
+                    inputMode="numeric"
+                    value={formatMoneyDigits(draft.costoBase)}
+                    onChange={(event) =>
+                      handleDraftChange("costoBase", getDigits(event.target.value))
+                    }
+                    placeholder="90.000"
+                  />
+                </div>
+              </label>
+
+              <label className={s.fieldBlock}>
+                <span className={s.fieldLabel}>
+                  Precio de venta · {LINE_TEMPLATE_UNIDAD_LABELS[unidadCobro]}
+                </span>
                 <div className={s.moneyWrap}>
                   <span className={s.moneyPrefix}>$</span>
                   <input
@@ -599,6 +714,64 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </select>
               </label>
 
+              <div className={s.fieldGrid}>
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Merma % · opcional</span>
+                  <input
+                    className={s.textInput}
+                    inputMode="decimal"
+                    value={draft.mermaPct}
+                    onChange={(event) => handleDraftChange("mermaPct", event.target.value)}
+                    placeholder="5"
+                  />
+                </label>
+
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Margen objetivo % · opcional</span>
+                  <input
+                    className={s.textInput}
+                    inputMode="decimal"
+                    value={draft.margenObjetivoPct}
+                    onChange={(event) =>
+                      handleDraftChange("margenObjetivoPct", event.target.value)
+                    }
+                    placeholder="35"
+                  />
+                </label>
+              </div>
+
+              <label className={s.fieldBlock}>
+                <span className={s.fieldLabel}>Proveedor · opcional</span>
+                <input
+                  className={s.textInput}
+                  value={draft.proveedor}
+                  onChange={(event) => handleDraftChange("proveedor", event.target.value)}
+                  placeholder="Ej: Proveedor local"
+                />
+              </label>
+
+              <div className={s.fieldGrid}>
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Vigencia desde</span>
+                  <input
+                    className={s.textInput}
+                    type="date"
+                    value={draft.vigenciaDesde}
+                    onChange={(event) => handleDraftChange("vigenciaDesde", event.target.value)}
+                  />
+                </label>
+
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Vigencia hasta</span>
+                  <input
+                    className={s.textInput}
+                    type="date"
+                    value={draft.vigenciaHasta}
+                    onChange={(event) => handleDraftChange("vigenciaHasta", event.target.value)}
+                  />
+                </label>
+              </div>
+
               <label className={s.fieldBlock}>
                 <span className={s.fieldLabel}>Vidrio usado normalmente</span>
                 <select
@@ -644,11 +817,15 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                   </p>
                 ) : (
                   <div className={s.previewValues}>
-                    <span>1 m² se cotizará en {formatCurrency(pricePerM2)}</span>
+                    <span>
+                      1 unidad se cotizará en{" "}
+                      {formatLineTemplatePriceLabel(unidadCobro, pricePerM2, formatCurrency)}
+                    </span>
                     <span>
                       Mínimo cobrable:{" "}
                       {minimum > 0 ? formatCurrency(minimum) : "Sin mínimo"}
                     </span>
+                    {costoBase > 0 ? <span>Costo base: {formatCurrency(costoBase)}</span> : null}
                   </div>
                 )}
               </div>

@@ -899,9 +899,9 @@ export default function ConfiguracionEmpresaPage() {
             <div className={s.triggerMain}>
               <div className={s.triggerIcon}><LuQrCode aria-hidden /></div>
               <div className={s.triggerCopy}>
-                <span className={s.cardEyebrow}>Configuracion de catalogo</span>
-                <strong>Lineas y precios base</strong>
-                <p>{isLoadingLineTemplates ? "Cargando lineas..." : `${lineTemplates.length} guardadas · ${activeLineTemplatesCount} activas`}</p>
+                <span className={s.cardEyebrow}>Catálogo privado</span>
+                <strong>Líneas, costos y precios</strong>
+                <p>{isLoadingLineTemplates ? "Cargando líneas..." : `${lineTemplates.length} guardadas · ${activeLineTemplatesCount} activas`}</p>
               </div>
             </div>
             <div className={s.triggerMeta}>
@@ -919,9 +919,9 @@ export default function ConfiguracionEmpresaPage() {
                   <LuQrCode aria-hidden />
                 </div>
                 <div className={s.triggerCopy}>
-                  <span className={s.cardEyebrow}>Lineas y precios base</span>
-                  <strong>Lineas y precios base</strong>
-                  <p>Guarda tus precios por m² para cotizar mas rapido.</p>
+                  <span className={s.cardEyebrow}>Catálogo privado</span>
+                  <strong>Líneas, costos y precios</strong>
+                  <p>Define tus líneas comerciales, costos base y reglas de cobro propias.</p>
                 </div>
               </div>
 
@@ -942,12 +942,19 @@ export default function ConfiguracionEmpresaPage() {
                 Administrar
               </Link>
               <Link
+                href="/configuracion/empresa/lineas-precios/importar"
+                scroll
+                className={s.secondaryLink}
+              >
+                Importar
+              </Link>
+              <Link
                 href="/configuracion/empresa/lineas-precios?nueva=1"
                 scroll
                 className={s.primaryLink}
               >
                 <LuPlus aria-hidden />
-                Nueva linea
+                Nueva línea
               </Link>
             </div>
           </article>

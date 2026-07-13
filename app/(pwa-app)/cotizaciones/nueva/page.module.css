@@ -972,46 +972,81 @@
 }
 
 .rtTableWrap {
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .rtTable {
   width: 100%;
-  min-width: 820px;
+  table-layout: fixed;
   border-collapse: collapse;
   color: #0f172a;
   font-size: 0.875rem;
 }
 
 .rtTable th {
-  padding: 0.62rem 0.8rem;
+  padding: 0.5rem 0.45rem;
   border-bottom: 1px solid #edf2f8;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: bottom;
   color: #475569;
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.rtTable th.rtThCompact {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.rtTable th.rtThNameConfig,
+.rtTable th.rtThActions {
   white-space: nowrap;
 }
 
+.rtColCode {
+  width: 3.35rem;
+}
+
+.rtColName {
+  width: auto;
+}
+
+.rtColMeasure {
+  width: 6.1rem;
+}
+
+.rtColQty {
+  width: 4.35rem;
+}
+
+.rtColValue {
+  width: 6.85rem;
+}
+
+.rtColActions {
+  width: 5.85rem;
+}
+
+.rtThCode { text-align: left; }
+.rtThNameConfig { text-align: left; }
+.rtThMeasure { text-align: left; }
+.rtThQty { text-align: center; }
+.rtThValue { text-align: right; }
+.rtThActions { text-align: right; }
+
 .rtTable td {
-  padding: 0.72rem 0.8rem;
+  padding: 0.5rem 0.45rem;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
 
 .rtRow {
-  height: 74px;
+  height: auto;
+  min-height: 3.35rem;
 }
-
-.rtThCode { width: 8%; }
-.rtThNameConfig { width: 42%; }
-.rtThMeasure { width: 13%; }
-.rtThQty { width: 8%; text-align: center; }
-.rtThValue { width: 14%; text-align: right; }
-.rtThActions { width: 15%; text-align: right; }
 
 .rtCode {
   color: #0f172a;
@@ -1022,8 +1057,8 @@
 
 .rtNameConfig {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -1040,9 +1075,12 @@
   font-size: 0.9375rem;
   font-weight: 620;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rtItemConfig {
@@ -1050,9 +1088,12 @@
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rtExpandChevron {
@@ -1060,8 +1101,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  margin-top: 0.1rem;
   color: #94a3b8;
   transition: transform 0.2s, color 0.15s;
 }
@@ -1116,7 +1158,9 @@
   font-variant-numeric: tabular-nums;
   color: #334155;
   font-size: 0.8125rem;
-  white-space: nowrap;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .rtQty {
@@ -1138,22 +1182,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.25rem;
+  gap: 0.15rem;
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 .rtIconBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
   color: #64748b;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.rtIconBtn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .rtIconBtn:hover {
@@ -2570,6 +2621,15 @@
 }
 .desktopFlowStepperButton:hover {
   opacity: 0.85;
+}
+
+.desktopFlowStepperButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.desktopFlowStepperButton:disabled:hover {
+  opacity: 0.48;
 }
 
 .desktopFlowStepperDot {
@@ -5482,6 +5542,63 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0.45rem;
   margin-bottom: 0.4rem;
+}
+
+.cuadernoNestedList {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cuadernoNestedEmpty {
+  margin: 0 0 10px;
+  color: #60718b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cuadernoNestedCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid #d8e3f0;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.cuadernoNestedCardMain {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cuadernoNestedCode {
+  color: #60718b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cuadernoNestedTitle {
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.cuadernoNestedMeta {
+  margin: 0;
+  color: #60718b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.cuadernoNestedActions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
 }
 
 /* --- Free value preview card --- */
@@ -12560,6 +12677,34 @@
     overflow: hidden;
   }
 
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioIdle,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle,
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioEditing,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+    align-items: start;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    gap: 1rem;
+  }
+
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface,
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioEditing > .stepTwoPrimarySurface,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPrimarySurface {
+    min-width: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel,
+  .rootStepTwoDesktop .stepTwoLayoutQuoteStudioEditing > .stepTwoPanel,
+  .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPanel {
+    min-width: 0;
+  }
+
   .rootStepTwoDesktop .stepTwoPrimarySurface {
     height: 100%;
     max-height: 100%;
@@ -13077,6 +13222,10 @@
     height: var(--step2-main-height);
     max-height: calc(100dvh - 16rem);
     max-height: var(--step2-main-height);
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .stepTwoPanelDesktop .stepTwoPanelHeader {
@@ -15612,6 +15761,143 @@
     top: auto;
     align-self: stretch;
     min-height: 0;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .rootStepTwoDesktop .layoutStepTwo {
+    padding-inline: 1rem;
+  }
+
+  .rootStepTwoDesktop .stepTwoLayout,
+  .stepTwoDesktopShell .stepTwoLayout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.74fr);
+    gap: 0.9rem;
+  }
+
+  .desktopEmptyPieceSurface {
+    gap: 0.65rem;
+    padding: 2rem 0.8rem 1.8rem;
+  }
+
+  .desktopEmptyPieceSurface h2 {
+    max-width: 18rem;
+    font-size: 0.94rem;
+    line-height: 1.22;
+  }
+
+  .desktopEmptyPieceSurface p {
+    max-width: 17rem;
+    font-size: 0.72rem;
+  }
+
+  .desktopEmptyPieceSurface div {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .desktopEmptyPieceSurface .btnPrimary,
+  .desktopEmptyPieceSurface .btnGhost {
+    min-height: 2.35rem;
+    padding-inline: 0.82rem;
+    font-size: 0.82rem;
+  }
+
+  .desktopPieceInlineModeSwitch {
+    max-width: 9.6rem;
+    font-size: 0.64rem;
+  }
+}
+
+/* Quote Studio: 2 columnas fijas, scroll único. */
+@media (min-width: 1024px) {
+  .rootStepTwoDesktop .layoutStepTwo:has([class*="stepTwoLayoutQuoteStudio"]) {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 1rem;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPrimarySurface {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPanel {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    align-self: start;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .desktopPieceEditor,
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] #component-form {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .desktopPieceBody {
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .stepTwoPrimarySurface > .stepTwoFormCard {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .stepTwoPrimarySurface > .stepTwoFormCard .formFields {
+    overflow: visible;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPanel.stepTwoPanelModeDesktop {
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+    grid-template-columns: minmax(0, 1fr) clamp(290px, 22vw, 310px);
+    gap: 1rem;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPrimarySurface {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPanel {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: clamp(290px, 22vw, 310px);
   }
 }
 

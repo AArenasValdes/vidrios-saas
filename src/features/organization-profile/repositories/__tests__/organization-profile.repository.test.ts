@@ -12,6 +12,10 @@ function createSingleQuery(response: { data: unknown; error: unknown }) {
 }
 
 describe("organization-profile.repository", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("debe mapear el perfil completo con campos publicos de solicitud", async () => {
     const query = createSingleQuery({
       data: {
@@ -75,6 +79,8 @@ describe("organization-profile.repository", () => {
   });
 
   it("repara localmente el estado de trial si la organizacion es nueva", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
+
     const profileQuery = createSingleQuery({
       data: {
         organization_id: 3,

@@ -14,7 +14,13 @@ import {
   type Step1FieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { CotizacionWorkflowDraft, CotizacionWorkflowItem, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import type {
+  CotizacionWorkflowDraft,
+  CotizacionWorkflowItem,
+  CotizacionWorkflowRecord,
+  QuoteStudioFinancialDraft,
+} from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { VisibleComponentListState } from "../_types/paso-dos";
 import { usePasoDosPresentacion } from "./use-paso-dos-presentacion";
@@ -26,6 +32,13 @@ type UseFlujoNuevaCotizacionParams = {
   isMobileViewport: boolean;
   isSaving: boolean;
   draft: CotizacionWorkflowDraft;
+  financialSummary: QuoteStudioFinancialSummary;
+  quoteStudioFinancial: QuoteStudioFinancialDraft;
+  onQuoteStudioFinancialChange: (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => void;
+  onApplyQuoteStudioRecommendedPrice: () => void;
   fieldErrors: FieldErrors;
   clientQuery: string;
   estadoBusquedaCliente: string;
@@ -165,6 +178,12 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
   const pasoDosPresentacion = usePasoDosPresentacion({
     isMobileViewport: params.isMobileViewport,
     isSaving: params.isSaving,
+    isDesktopQuoteStudio: params.isDesktopQuoteStudio,
+    financialSummary: params.financialSummary,
+    quoteStudioFinancial: params.quoteStudioFinancial,
+    onQuoteStudioFinancialChange: params.onQuoteStudioFinancialChange,
+    onApplyQuoteStudioRecommendedPrice: params.onApplyQuoteStudioRecommendedPrice,
+    formatCurrencyInput: params.formatCurrencyInput,
     items: params.items,
     editingItemId: params.editingItemId,
     componentForm: params.componentForm,
@@ -230,7 +249,6 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
-    isDesktopQuoteStudio: params.isDesktopQuoteStudio,
     editingFormSnapshot: params.editingFormSnapshot,
     onDuplicateItemFromEditor: params.onDuplicateItemFromEditor,
   });

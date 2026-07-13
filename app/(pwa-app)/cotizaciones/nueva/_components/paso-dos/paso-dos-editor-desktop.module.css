@@ -361,3 +361,19 @@
     flex-shrink: 0;
   }
 }
+
+/* Quote Studio: flujo con scroll principal externo (sin trampa en tabs). */
+@media (min-width: 1024px) {
+  :global(.rootStepTwoDesktop) :global([class*="stepTwoLayoutQuoteStudio"]) .root {
+    max-height: none;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  :global(.rootStepTwoDesktop) :global([class*="stepTwoLayoutQuoteStudio"]) .tabBody {
+    flex: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+}

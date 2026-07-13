@@ -21,13 +21,13 @@ jest.mock("../paso-dos-panel-componentes", () => ({
     activeDraftCard,
   }: {
     items: unknown[];
-    activeDraftCard?: { code: string; title: string } | null;
+    activeDraftCard?: { headline: string; componentType: string } | null;
   }) => (
     <aside data-testid="components-panel">
       Panel {items.length}
       {activeDraftCard ? (
         <span data-testid="active-draft-card">
-          {activeDraftCard.code} · {activeDraftCard.title}
+          {activeDraftCard.headline} · {activeDraftCard.componentType}
         </span>
       ) : null}
     </aside>
@@ -43,15 +43,19 @@ jest.mock("../paso-dos/paso-dos-agregar-grupo-sheet", () => {
       isOpen,
       onClose,
       variant,
-      pieceCode,
+      pieceEditionHeadline,
     }: {
       isOpen: boolean;
       onClose: () => void;
       variant?: string;
-      pieceCode?: string;
+      pieceEditionHeadline?: string;
     }) =>
       isOpen ? (
-        <section data-testid="group-wizard" data-variant={variant} data-piece-code={pieceCode}>
+        <section
+          data-testid="group-wizard"
+          data-variant={variant}
+          data-piece-edition-headline={pieceEditionHeadline}
+        >
           <button type="button" onClick={onClose}>
             Cerrar flujo de grupo
           </button>
@@ -115,7 +119,7 @@ describe("PasoDosSeccion desktop", () => {
     expect(screen.getByTestId("components-panel")).toBeInTheDocument();
   });
 
-  it("marca el borrador como temporal y no le asigna codigo definitivo", () => {
+  it("marca la pieza nueva como temporal y no le asigna codigo definitivo", () => {
     render(
       <PasoDosSeccion
         {...buildProps({
@@ -141,8 +145,36 @@ describe("PasoDosSeccion desktop", () => {
       />
     );
 
-    expect(screen.getByTestId("group-wizard")).toHaveAttribute("data-piece-code", "Borrador");
-    expect(screen.getByTestId("active-draft-card")).toHaveTextContent(/Borrador/);
+    expect(screen.getByTestId("group-wizard")).toHaveAttribute(
+      "data-piece-edition-headline",
+      "Nueva pieza"
+    );
+    expect(screen.getByTestId("active-draft-card")).toHaveTextContent(/Nueva pieza · Ventana/);
+  });
+
+  it("muestra copia de pieza cuando se duplica desde el panel", () => {
+    render(
+      <PasoDosSeccion
+        {...buildProps({
+          duplicateSourceCode: "V1",
+          addGroupSheetProps: {
+            isOpen: true,
+            paso: 1,
+            entryMode: "component",
+            draft: {
+              subtipo: "Ventana",
+            },
+            onClose: jest.fn(),
+          } as unknown as PasoDosSeccionProps["addGroupSheetProps"],
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("group-wizard")).toHaveAttribute(
+      "data-piece-edition-headline",
+      "Copia de V1"
+    );
+    expect(screen.getByTestId("active-draft-card")).toHaveTextContent(/Copia de V1 · Ventana/);
   });
 
   it("muestra la superficie comercial cuando el wizard esta cerrado", () => {

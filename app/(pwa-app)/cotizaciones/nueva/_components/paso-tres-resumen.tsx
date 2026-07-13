@@ -238,13 +238,25 @@ export function PasoTresResumen({
               <div className={s.rtSectionTitle}>Detalle del presupuesto</div>
               <div className={s.rtTableWrap}>
                 <table className={s.rtTable}>
+                  <colgroup>
+                    <col className={s.rtColCode} />
+                    <col className={s.rtColName} />
+                    <col className={s.rtColMeasure} />
+                    <col className={s.rtColQty} />
+                    <col className={s.rtColValue} />
+                    <col className={s.rtColActions} />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th className={s.rtThCode}>C&oacute;digo</th>
+                      <th className={`${s.rtThCode} ${s.rtThCompact}`} title="C&oacute;digo">
+                        C&oacute;d.
+                      </th>
                       <th className={s.rtThNameConfig}>Pieza y configuraci&oacute;n</th>
-                      <th className={s.rtThMeasure}>Medidas</th>
-                      <th className={s.rtThQty}>Cantidad</th>
-                      <th className={s.rtThValue}>Valor</th>
+                      <th className={`${s.rtThMeasure} ${s.rtThCompact}`}>Medidas</th>
+                      <th className={`${s.rtThQty} ${s.rtThCompact}`} title="Cantidad">
+                        Cant.
+                      </th>
+                      <th className={`${s.rtThValue} ${s.rtThCompact}`}>Valor</th>
                       <th className={s.rtThActions}>Acciones</th>
                     </tr>
                   </thead>

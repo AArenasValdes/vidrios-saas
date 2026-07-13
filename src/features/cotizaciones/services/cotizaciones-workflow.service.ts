@@ -1,9 +1,10 @@
 import { impuestos } from "@/constants/impuestos";
-import type {
-  CotizacionWorkflowDraft,
-  CotizacionWorkflowItem,
-  CotizacionWorkflowRecord,
-  EstadoCotizacionWorkflow,
+import {
+  createQuoteStudioFinancialDraft,
+  type CotizacionWorkflowDraft,
+  type CotizacionWorkflowItem,
+  type CotizacionWorkflowRecord,
+  type EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
 import {
   normalizeQuotePricingMode,
@@ -480,6 +481,38 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   };
 }
 
+export function resolvePorItemComponentSubtotal(items: CotizacionWorkflowItem[]) {
+  return round(
+    items.reduce((accumulator, item) => accumulator + normalizeNonNegativeNumber(item.precioTotal), 0),
+    2
+  );
+}
+
+const POR_ITEM_MANUAL_TOTAL_SYNC_TOLERANCE_CLP = 2;
+
+export function resolveSyncedPorItemTotalClienteManual(
+  items: CotizacionWorkflowItem[],
+  totalClienteManual?: number | null
+) {
+  if (
+    totalClienteManual === null ||
+    totalClienteManual === undefined ||
+    !Number.isFinite(totalClienteManual) ||
+    totalClienteManual <= 0
+  ) {
+    return null;
+  }
+
+  const manualAmount = round(Number(totalClienteManual), 2);
+  const componentSubtotal = resolvePorItemComponentSubtotal(items);
+
+  if (Math.abs(componentSubtotal - manualAmount) > POR_ITEM_MANUAL_TOTAL_SYNC_TOLERANCE_CLP) {
+    return null;
+  }
+
+  return manualAmount;
+}
+
 export function calculateWorkflowTotalsForPricingMode(
   draft: Pick<
     CotizacionWorkflowDraft,
@@ -517,11 +550,11 @@ export function calculateWorkflowTotalsForPricingMode(
     descuentoMonto: draft.descuentoMonto,
   });
   const mostrarIva = draft.mostrarIva ?? true;
-  const hasManualFinalTotal =
-    draft.totalClienteManual !== null &&
-    draft.totalClienteManual !== undefined &&
-    Number.isFinite(draft.totalClienteManual) &&
-    draft.totalClienteManual > 0;
+  const syncedTotalClienteManual = resolveSyncedPorItemTotalClienteManual(
+    draft.items,
+    draft.totalClienteManual
+  );
+  const hasManualFinalTotal = syncedTotalClienteManual !== null && syncedTotalClienteManual > 0;
 
   if (!hasManualFinalTotal) {
     return {
@@ -537,7 +570,7 @@ export function calculateWorkflowTotalsForPricingMode(
     };
   }
 
-  const manualAmount = round(Number(draft.totalClienteManual), 2);
+  const manualAmount = round(Number(syncedTotalClienteManual), 2);
   const fleteAmount = round(draft.flete ?? 0, 2);
   const rawComponentSum = round(
     componentTotals.neto + componentTotals.iva + componentTotals.flete + componentTotals.redondeoComercial,
@@ -615,6 +648,7 @@ export function createCotizacionWorkflowDraft(): CotizacionWorkflowDraft {
     utilidadTotal: 0,
     totalClienteManual: null,
     mostrarIva: true,
+    quoteStudioFinancial: createQuoteStudioFinancialDraft(),
   };
 }
 

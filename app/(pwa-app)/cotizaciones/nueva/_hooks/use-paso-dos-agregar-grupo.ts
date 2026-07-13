@@ -50,6 +50,7 @@ import {
   type ComponentCategoryTitle,
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { mergeGlassOptions } from "@/features/cotizaciones/new-quote/custom-glass-options";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
@@ -167,12 +168,54 @@ export function resolveFreeTotalNotebookEditScope(
     throw new Error("No se encontro el trabajo libre a editar");
   }
 
+  const componentItems = items.filter(
+    (item) => item.id !== mainItem.id && item.tipoItem !== "item_libre_con_valor"
+  );
+  const detailItems = [
+    ...freeItems.filter((item) => item.id !== mainItem.id),
+    ...componentItems,
+  ];
+
   return {
     mainItem,
     mainItemId: mainItem.id,
-    detailItems: freeItems.filter((item) => item.id !== mainItem.id),
-    editingItemIds: freeItems.map((item) => item.id),
+    detailItems,
+    editingItemIds: [mainItem.id, ...detailItems.map((item) => item.id)],
   };
+}
+
+export function resolveTotalGlobalLeadItem(
+  items: CotizacionWorkflowItem[]
+): CotizacionWorkflowItem | null {
+  const leadCandidates = items.filter((item) => {
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    return item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+  });
+
+  if (leadCandidates.length === 0) {
+    return null;
+  }
+
+  return [...leadCandidates].sort((left, right) =>
+    left.codigo.localeCompare(right.codigo, undefined, { numeric: true })
+  )[0];
+}
+
+export function resolveTotalGlobalNestedDetailItems(
+  items: CotizacionWorkflowItem[],
+  nestedItemIds?: string[] | null
+): CotizacionWorkflowItem[] {
+  if (nestedItemIds && nestedItemIds.length > 0) {
+    const nestedSet = new Set(nestedItemIds);
+    return items.filter((item) => nestedSet.has(item.id));
+  }
+
+  const lead = resolveTotalGlobalLeadItem(items);
+  if (!lead) {
+    return [];
+  }
+
+  return items.filter((item) => item.id !== lead.id);
 }
 
 export function buildFreeTotalNotebookDraftFromWorkflow(
@@ -887,12 +930,22 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   const [entryMode, setEntryMode] = useState<PasoDosGrupoEntryMode>("normal");
   const [editingFreeTotalMainItemId, setEditingFreeTotalMainItemId] = useState<string | null>(null);
   const [editingFreeTotalItemIds, setEditingFreeTotalItemIds] = useState<string[] | null>(null);
+  const [freeTotalNotebookNestedItemIds, setFreeTotalNotebookNestedItemIds] = useState<string[]>(
+    []
+  );
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() => createInitialPasoDosGrupoDraft(params));
   const lockBodyScroll = params.lockBodyScroll !== false;
 
   const resetFreeTotalEditState = () => {
     setEditingFreeTotalMainItemId(null);
     setEditingFreeTotalItemIds(null);
+    setFreeTotalNotebookNestedItemIds([]);
+  };
+
+  const registerFreeTotalNestedDetailItem = (itemId: string) => {
+    setFreeTotalNotebookNestedItemIds((current) =>
+      current.includes(itemId) ? current : [...current, itemId]
+    );
   };
 
   useEffect(() => {
@@ -972,8 +1025,25 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft(nextDraft);
     setEditingFreeTotalMainItemId(mainItemId);
     setEditingFreeTotalItemIds(itemIds);
+    setFreeTotalNotebookNestedItemIds(itemIds.filter((itemId) => itemId !== mainItemId));
     setEntryMode("free_total_single");
     setPaso(4);
+    setIsOpen(true);
+  };
+
+  const restoreFreeTotalNotebook = (input: {
+    draft: PasoDosGrupoDraft;
+    paso?: PasoDosGrupoPaso;
+    editingFreeTotalMainItemId?: string | null;
+    editingFreeTotalItemIds?: string[] | null;
+    freeTotalNotebookNestedItemIds?: string[];
+  }) => {
+    setDraft(input.draft);
+    setEditingFreeTotalMainItemId(input.editingFreeTotalMainItemId ?? null);
+    setEditingFreeTotalItemIds(input.editingFreeTotalItemIds ?? null);
+    setFreeTotalNotebookNestedItemIds(input.freeTotalNotebookNestedItemIds ?? []);
+    setEntryMode("free_total_single");
+    setPaso(input.paso ?? 4);
     setIsOpen(true);
   };
 
@@ -1610,8 +1680,11 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     openSheet,
     openFreeTotalNotebook,
     openFreeTotalNotebookForEdit,
+    restoreFreeTotalNotebook,
     editingFreeTotalMainItemId,
     editingFreeTotalItemIds,
+    freeTotalNotebookNestedItemIds,
+    registerFreeTotalNestedDetailItem,
     restart,
     closeSheet,
     selectCategoria,

@@ -22,12 +22,19 @@ import { useOrganizationProfile } from "@/features/organization-profile/hooks/us
 import {
   calculateWorkflowTotalsForPricingMode,
   createCotizacionWorkflowDraft,
+  resolveSyncedPorItemTotalClienteManual,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import {
+  applyQuoteStudioRecommendedPrice,
+  buildQuoteStudioFinancialSummary,
+} from "@/features/cotizaciones/services/quote-studio-financial.service";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
   CotizacionWorkflowRecord,
+  QuoteStudioFinancialDraft,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   DEFAULT_MARGIN_PCT,
@@ -108,8 +115,11 @@ import {
   buildStructuredAlcanceDetalleItem,
   buildPasoDosGrupoComponentForm,
   resolveFreeTotalNotebookEditScope,
+  resolveTotalGlobalNestedDetailItems,
   resolveMaterialColorHex,
   usePasoDosAgregarGrupo,
+  type PasoDosGrupoDraft,
+  type PasoDosGrupoPaso,
 } from "./_hooks/use-paso-dos-agregar-grupo";
 import { usePasoDosAgregarGrupoMovil } from "./_hooks/use-paso-dos-agregar-grupo-movil";
 import { usePasoUnoCliente } from "./_hooks/use-paso-uno-cliente";
@@ -336,10 +346,56 @@ function NuevaCotizacionPageContent() {
       }),
     [draft, effectiveWorkflowItems]
   );
+  const quoteStudioFinancial = useMemo(
+    () => createQuoteStudioFinancialDraft(draft.quoteStudioFinancial),
+    [draft.quoteStudioFinancial]
+  );
+  const quoteStudioFinancialSummary = useMemo(
+    () =>
+      buildQuoteStudioFinancialSummary({
+        items: effectiveWorkflowItems,
+        quotePricingMode,
+        neto: totals.neto,
+        total: totals.total,
+        costoTotalFabricacion: totals.costoTotalFabricacion,
+        manoObra: quoteStudioFinancial.manoObra,
+        traslado: quoteStudioFinancial.traslado,
+        otrosCostos: quoteStudioFinancial.otrosCostos,
+        mermaPct: quoteStudioFinancial.mermaPct,
+        margenObjetivoRealPct: quoteStudioFinancial.margenObjetivoRealPct,
+      }),
+    [
+      effectiveWorkflowItems,
+      quotePricingMode,
+      quoteStudioFinancial,
+      totals.costoTotalFabricacion,
+      totals.neto,
+      totals.total,
+    ]
+  );
+
+  useEffect(() => {
+    if (quotePricingMode !== "por_item") {
+      return;
+    }
+
+    if (
+      draft.totalClienteManual !== null &&
+      draft.totalClienteManual !== undefined &&
+      resolveSyncedPorItemTotalClienteManual(draft.items, draft.totalClienteManual) === null
+    ) {
+      setDraft((current) => ({
+        ...current,
+        totalClienteManual: null,
+      }));
+    }
+  }, [draft.items, draft.totalClienteManual, quotePricingMode]);
+
   const componentListCards = usePasoDosTarjetasComponentes({
     items: effectiveWorkflowItems,
     borradoresRapidos: syncedQuickEditDrafts,
     quotePricingMode,
+    isDesktopQuoteStudio,
   });
   const completedItemsCount = pasoDosEdicionRapida.cantidadCompletos;
   const pendingItemsCount = pasoDosEdicionRapida.cantidadPendientes;
@@ -368,21 +424,15 @@ function NuevaCotizacionPageContent() {
     cantidadItemsTotales: draft.items.length,
     itemSeleccionadoId: selectedQuickEditItem?.id ?? null,
   });
-  const handleAddGroupSheetClosed = (itemCount: number) => {
-    setDuplicateSourceCode("");
-    if (itemCount > 0) {
-      const shouldOpenNext = pendingNextDraftRef.current;
-      pendingNextDraftRef.current = false;
-      if (shouldOpenNext) {
-        handleOpenAddGroupSheet();
-      }
-      return;
-    }
-
-    if (isMobileViewport) {
-      setQuoteModeChosen(false);
-    }
+  type SuspendedFreeTotalNotebookSession = {
+    draft: PasoDosGrupoDraft;
+    paso: PasoDosGrupoPaso;
+    editingFreeTotalMainItemId: string | null;
+    editingFreeTotalItemIds: string[] | null;
+    freeTotalNotebookNestedItemIds: string[];
   };
+  const suspendedNotebookRef = useRef<SuspendedFreeTotalNotebookSession | null>(null);
+  const onAddGroupSheetClosedRef = useRef<(itemCount: number) => void>(() => {});
 
   const pasoDosAgregarGrupo = usePasoDosAgregarGrupo({
     items: draft.items,
@@ -392,7 +442,7 @@ function NuevaCotizacionPageContent() {
     seedForm: componentForm,
     customGlassOptions,
     activeLineTemplates,
-    onSheetClosed: handleAddGroupSheetClosed,
+    onSheetClosed: (itemCount) => onAddGroupSheetClosedRef.current(itemCount),
     lockBodyScroll: false,
   });
   const pasoDosAgregarGrupoMovil = usePasoDosAgregarGrupoMovil({
@@ -402,7 +452,7 @@ function NuevaCotizacionPageContent() {
     activeLineTemplates,
     seedForm: componentForm,
     customGlassOptions,
-    onSheetClosed: handleAddGroupSheetClosed,
+    onSheetClosed: (itemCount) => onAddGroupSheetClosedRef.current(itemCount),
   });
 
   const handleDraftChange = <K extends keyof CotizacionWorkflowDraft>(
@@ -434,6 +484,80 @@ function NuevaCotizacionPageContent() {
     const normalizedValue = normalizeCurrencyInput(value);
 
     handleDraftChange("flete", normalizedValue ? Number(normalizedValue) : 0);
+  };
+
+  const handleQuoteStudioFinancialChange = (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => {
+    setDraft((current) => {
+      const currentFinancial = createQuoteStudioFinancialDraft(current.quoteStudioFinancial);
+
+      if (field === "mermaPct" || field === "margenObjetivoRealPct") {
+        const parsed = Number(value.replace(",", "."));
+        const normalized = Number.isFinite(parsed) ? parsed : 0;
+        const bounded =
+          field === "margenObjetivoRealPct"
+            ? Math.min(95, Math.max(0, normalized))
+            : Math.min(100, Math.max(0, normalized));
+
+        return {
+          ...current,
+          quoteStudioFinancial: {
+            ...currentFinancial,
+            [field]: bounded,
+          },
+        };
+      }
+
+      const normalizedValue = normalizeCurrencyInput(value);
+
+      return {
+        ...current,
+        quoteStudioFinancial: {
+          ...currentFinancial,
+          [field]: normalizedValue ? Number(normalizedValue) : 0,
+        },
+      };
+    });
+  };
+
+  const handleApplyQuoteStudioRecommendedPrice = () => {
+    const targetNeto = quoteStudioFinancialSummary.precioRecomendadoNeto;
+    const targetSubtotal =
+      totals.neto > 0
+        ? Math.round((targetNeto / totals.neto) * totals.subtotal * 100) / 100
+        : targetNeto;
+
+    const result = applyQuoteStudioRecommendedPrice({
+      items: effectiveWorkflowItems,
+      quotePricingMode,
+      precioRecomendadoNeto: targetNeto,
+      currentNeto: totals.neto,
+      targetSubtotal,
+      totalClienteManual: draft.totalClienteManual,
+    });
+
+    const nextTotalClienteManual = result.totalClienteManual;
+
+    if (!result.applied) {
+      setToastMessage("No se pudo aplicar el precio recomendado.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    pasoDosEdicionRapida.limpiarBorradoresRapidos();
+
+    const nextItemsById = new Map(result.items.map((item) => [item.id, item]));
+
+    setDraft((current) => ({
+      ...current,
+      items: current.items.map((item) => nextItemsById.get(item.id) ?? item),
+      totalClienteManual: nextTotalClienteManual,
+    }));
+
+    setToastMessage(`Precio recomendado aplicado: ${CLP(targetNeto)} netos`);
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleDraftDiscountTypeChange = (value: CotizacionWorkflowDraft["descuentoTipo"]) => {
@@ -1247,7 +1371,49 @@ function NuevaCotizacionPageContent() {
     }
   };
 
+  const handleOpenTotalGlobalComponentCreator = () => {
+    setQuoteModeChosen(true);
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
+
+    if (isMobileViewport) {
+      pasoDosAgregarGrupoMovil.openSheet(componentForm);
+      return;
+    }
+
+    if (pasoDosAgregarGrupo.isOpen && pasoDosAgregarGrupo.entryMode === "free_total_single") {
+      suspendedNotebookRef.current = {
+        draft: pasoDosAgregarGrupo.draft,
+        paso: pasoDosAgregarGrupo.paso,
+        editingFreeTotalMainItemId: pasoDosAgregarGrupo.editingFreeTotalMainItemId,
+        editingFreeTotalItemIds: pasoDosAgregarGrupo.editingFreeTotalItemIds,
+        freeTotalNotebookNestedItemIds: pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds,
+      };
+    }
+
+    const cleanForm = createEmptyComponentForm(
+      draft.items,
+      suggestionProvider,
+      componentForm.pricingMode,
+      organizationProfile?.margenDefecto
+    );
+
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    setEditingItemId(null);
+    setComponentForm(cleanForm);
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setFieldErrors({});
+    setGlobalError(null);
+    pasoDosAgregarGrupo.openSheet(cleanForm);
+  };
+
   const handleOpenAddGroupSheet = () => {
+    if (quotePricingMode === "total_global") {
+      handleOpenTotalGlobalComponentCreator();
+      return;
+    }
+
     setQuoteModeChosen(true);
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
@@ -1340,6 +1506,20 @@ function NuevaCotizacionPageContent() {
       }
 
       nextItems.push(nextItem);
+
+      if (
+        !isFreeValue &&
+        quotePricingMode === "total_global" &&
+        suspendedNotebookRef.current
+      ) {
+        suspendedNotebookRef.current = {
+          ...suspendedNotebookRef.current,
+          freeTotalNotebookNestedItemIds: [
+            ...suspendedNotebookRef.current.freeTotalNotebookNestedItemIds,
+            nextItem.id,
+          ],
+        };
+      }
 
       if (isFreeValue && quotePricingMode === "total_global" && groupDraft.alcanceDetalles.length > 0) {
         for (const detalle of groupDraft.alcanceDetalles) {
@@ -1609,6 +1789,56 @@ function NuevaCotizacionPageContent() {
     if (!isMobileViewport) {
       scrollToSection("component-form");
     }
+  };
+
+  const hasQuoteStudioUnfinishedPiece = () =>
+    Boolean(
+      !isMobileViewport &&
+        isDesktopQuoteStudio &&
+        quotePricingMode === "por_item" &&
+        (editingItemId || pasoDosAgregarGrupo.isOpen || isFreeValueItemFormOpen)
+    );
+
+  const discardUnfinishedQuoteStudioPiece = () => {
+    let discarded = false;
+
+    if (pasoDosAgregarGrupo.isOpen) {
+      pasoDosAgregarGrupo.closeSheet({ itemCountOverride: draft.items.length });
+      discarded = true;
+    }
+
+    if (editingItemId) {
+      pasoDosVariaciones.restorePendingForcedFullEditIfNeeded(editingItemId);
+      setEditingItemId(null);
+      setEditingFormSnapshot(null);
+      pasoDosVariaciones.setVariationQuickEditDraft(null);
+      setComponentForm(
+        createEmptyComponentForm(
+          draft.items,
+          suggestionProvider,
+          componentForm.pricingMode,
+          organizationProfile?.margenDefecto
+        )
+      );
+      setIsGlassPanelOpen(false);
+      setGlassQuery("");
+      discarded = true;
+    }
+
+    if (isFreeValueItemFormOpen) {
+      setIsFreeValueItemFormOpen(false);
+      setEditingFreeValueItemId(null);
+      setFreeValueItemForm(createEmptyFreeValueItemForm());
+      discarded = true;
+    }
+
+    if (discarded) {
+      setDuplicateSourceCode("");
+      setFieldErrors((current) => ({ ...current, items: undefined }));
+      setGlobalError(null);
+    }
+
+    return discarded;
   };
   const commitQuickEditDraft = pasoDosEdicionRapida.confirmarBorradorRapido;
   const handleQuickItemFieldChange = pasoDosEdicionRapida.actualizarCampoBorradorRapido;
@@ -1896,6 +2126,47 @@ function goNextFromStep1() {
       setStep(2);
       return;
     }
+    if (target === 3 && step === 2 && !isMobileViewport && isDesktopQuoteStudio && quotePricingMode === "por_item") {
+      const hadUnfinishedPiece = hasQuoteStudioUnfinishedPiece();
+
+      if (completedItemsCount === 0) {
+        setFieldErrors((cur) => ({
+          ...cur,
+          items: "Agrega al menos una pieza terminada para ir al resumen.",
+        }));
+        setStep(2);
+        return;
+      }
+
+      const discardedUnfinishedPiece =
+        hadUnfinishedPiece && discardUnfinishedQuoteStudioPiece();
+
+      const pendingCount = itemsForNextStep.filter(
+        (item) =>
+          !isWorkflowItemComplete(item, quotePricingMode) ||
+          Number(item.precioTotal ?? 0) <= 0
+      ).length;
+
+      if (pendingCount > 0) {
+        setFieldErrors((cur) => ({
+          ...cur,
+          items: `Completa ${pendingCount} ${
+            pendingCount === 1 ? "pieza pendiente" : "piezas pendientes"
+          } para continuar.`,
+        }));
+        setStep(2);
+        return;
+      }
+
+      if (discardedUnfinishedPiece) {
+        setToastMessage("La pieza sin finalizar no fue agregada.");
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+
+      setStep(target);
+      scrollPageToTop();
+      return;
+    }
     if (target === 3 && step === 2 && !isMobileViewport) {
       if (pasoDosAgregarGrupo.isOpen) {
         pasoDosAgregarGrupo.closeSheet();
@@ -1932,11 +2203,72 @@ function goNextFromStep1() {
     }
   };
 
+  onAddGroupSheetClosedRef.current = (itemCount: number) => {
+    setDuplicateSourceCode("");
+
+    const suspended = suspendedNotebookRef.current;
+    if (suspended) {
+      suspendedNotebookRef.current = null;
+      pasoDosAgregarGrupo.restoreFreeTotalNotebook(suspended);
+      pendingNextDraftRef.current = false;
+      return;
+    }
+
+    if (!isMobileViewport && quotePricingMode === "total_global") {
+      pasoDosAgregarGrupo.openFreeTotalNotebook(componentForm);
+      pendingNextDraftRef.current = false;
+      return;
+    }
+
+    if (itemCount > 0) {
+      const shouldOpenNext = pendingNextDraftRef.current;
+      pendingNextDraftRef.current = false;
+      if (shouldOpenNext) {
+        handleOpenAddGroupSheet();
+      }
+      return;
+    }
+
+    if (isMobileViewport) {
+      setQuoteModeChosen(false);
+    }
+  };
+
+  const isTotalGlobalCuadernoOpen =
+    !isMobileViewport &&
+    quotePricingMode === "total_global" &&
+    pasoDosAgregarGrupo.isOpen &&
+    pasoDosAgregarGrupo.entryMode === "free_total_single";
+
+  const totalGlobalNestedDetailItems = useMemo(
+    () =>
+      isTotalGlobalCuadernoOpen
+        ? resolveTotalGlobalNestedDetailItems(
+            draft.items,
+            pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds
+          )
+        : [],
+    [draft.items, isTotalGlobalCuadernoOpen, pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds]
+  );
+
+  const panelItemsForStepTwo = useMemo(() => {
+    if (!isTotalGlobalCuadernoOpen) {
+      return draft.items;
+    }
+
+    const nestedIds = new Set(pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds);
+    return draft.items.filter((item) => !nestedIds.has(item.id));
+  }, [draft.items, isTotalGlobalCuadernoOpen, pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds]);
+
   const flujo = useFlujoNuevaCotizacion({
     step,
     isMobileViewport,
     isSaving,
     draft,
+    financialSummary: quoteStudioFinancialSummary,
+    quoteStudioFinancial,
+    onQuoteStudioFinancialChange: handleQuoteStudioFinancialChange,
+    onApplyQuoteStudioRecommendedPrice: handleApplyQuoteStudioRecommendedPrice,
     fieldErrors,
     clientQuery,
     estadoBusquedaCliente: pasoUnoCliente.estadoBusquedaCliente,
@@ -2229,13 +2561,22 @@ function goNextFromStep1() {
             onGoToStep: goToStep,
             onSaveDraft: flujo.propsResumenDesktop.onSaveDraft,
             onSaveQuote: flujo.propsResumenDesktop.onSaveQuote,
+            isSummaryStepBlocked:
+              flujo.paso === 2 &&
+              isDesktopQuoteStudio &&
+              quotePricingMode === "por_item" &&
+              completedItemsCount === 0,
+            summaryStepBlockedHint:
+              "Agrega al menos una pieza terminada para ir al resumen.",
           }}
           stepOneProps={flujo.propsPasoUno}
           stepTwoSectionProps={{
             formulario: flujo.propsPasoDosFormulario,
             panel: {
               ...flujo.propsPasoDosPanel,
+              items: panelItemsForStepTwo,
               isAddGroupWizardOpen: pasoDosAgregarGrupo.isOpen,
+              isTotalGlobalCuadernoOpen,
             },
             itemLibreForm: {
               isOpen: isFreeValueItemFormOpen,
@@ -2323,6 +2664,15 @@ function goNextFromStep1() {
             onAddAlcanceDetalle: pasoDosAgregarGrupo.addAlcanceDetalle,
             onUpdateAlcanceDetalle: pasoDosAgregarGrupo.updateAlcanceDetalle,
             onRemoveAlcanceDetalle: pasoDosAgregarGrupo.removeAlcanceDetalle,
+            nestedDetailItems: totalGlobalNestedDetailItems,
+            onEditNestedDetailItem: (itemId) => {
+              const item = draft.items.find((entry) => entry.id === itemId);
+              if (item) {
+                handleEditItem(item);
+              }
+            },
+            onRemoveNestedDetailItem: handleRemoveItem,
+            onOpenComponentCreator: handleOpenTotalGlobalComponentCreator,
             quotePricingMode,
             totalClienteManual: totals.totalClienteManual,
             mostrarIva: draft.mostrarIva ?? true,

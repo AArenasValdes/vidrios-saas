@@ -294,6 +294,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-configuracion.tsx` (material condicional desktop)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-vidrio.tsx` (bloque vidrio/espejos desktop)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-ajustes.tsx` (color avanzado solo con perfileria)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/quote-studio-financial-panel.tsx` (Fase 1 desktop-only >=1024; panel financiero derivado de datos actuales)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-lista-movil.tsx` (oculta chips material/color en espejo/cubierta)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-footer-movil.tsx` (footer dinamico: "Agregar item" / "Agregar componente")
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil-shell.tsx` (orquestador mobile, stages dinamicos)
@@ -309,6 +310,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/services/cotizacion-alerts.service.ts`
   - `src/features/cotizaciones/services/cotizacion-display-state.service.ts`
   - `src/features/cotizaciones/services/cotizacion-line-pricing.service.ts`
+  - `src/features/cotizaciones/services/quote-studio-financial.service.ts` (calculo Fase 1: margen real, markup equivalente, precio recomendado neto y snapshot seguro sin base de costo)
   - `src/features/cotizaciones/services/component-catalog.service.ts` (catalogo con categoria `"Proyecto libre y Mantencion"`, flag `esItemLibre`, helper `isFreeValueComponentType()`)
   - `src/features/cotizaciones/services/component-suggestions.service.ts`
   - `src/features/cotizaciones/services/glass-recommendations.service.ts`
@@ -340,6 +342,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Flujo de datos**:
   - Listado: Page -> `useCotizacionesStore` -> API `/api/cotizaciones/resumen` -> server service -> repositories
   - Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
+  - Snapshot financiero Fase 1: `cotizacionesAppService.saveWorkflow()` -> `buildQuoteStudioFinancialSummary()` -> campos existentes `cotizaciones.costo_total`, `cotizaciones.margen_pct`, `cotizaciones.utilidad_total`
   - Item libre: wizard/sheet -> categoria "Proyecto libre y Mantencion" -> subtipo -> formulario simplificado (nombre, descripcion, valor, IVA) -> `buildFreeValueItemFromForm` -> `calculateFreeValueItem` -> `item_libre_con_valor`
   - Detalle: Page -> `useCotizacionesStore.getById()` -> repository
   - PDF descargado: `/print/cotizaciones/[id]` -> `recordPdfDownload()` -> API `/api/cotizaciones/[id]/pdf-descargado` -> `markWorkflowPdfDownloaded()` -> `cotizaciones.pdf_descargado_en`
@@ -348,11 +351,11 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Prioridad de roadmap**:
   - Milestone 0: estabilizar cotizacion desktop actual.
-  - Milestone 2: dejar Quote Studio desktop impecable y vendible.
+  - Fase 1: dejar Quote Studio desktop impecable y vendible, exclusivamente desde `min-width: 1024px`.
   - Milestone 3: validar constructor visual guiado sobre esta base, no antes.
 - **Futuro documentado, no activo**: configuracion visual versionada por item y catalogo privado/cubicacion como piloto posterior.
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`): no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`): no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
 - **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
 
 ---

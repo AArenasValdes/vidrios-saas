@@ -249,6 +249,10 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     return siguientesItems;
   }, [aplicarBorradoresRapidosAItems, params]);
 
+  const limpiarBorradoresRapidos = useCallback(() => {
+    setBorradoresRapidos({});
+  }, []);
+
   const confirmarBorradorRapido = useCallback(
     (itemId: string, draftOverride?: QuickEditDraftState) => {
       const draftResuelto = draftOverride ?? borradoresRapidosSincronizados[itemId];
@@ -505,6 +509,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     confirmarBorradorRapido,
     aplicarBorradoresRapidosAItems,
     flushBorradoresRapidos,
+    limpiarBorradoresRapidos,
     iniciarSeleccionLote,
     alternarTargetSeleccionLote,
     cancelarSeleccionLote,

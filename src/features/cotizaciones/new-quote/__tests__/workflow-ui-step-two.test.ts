@@ -27,6 +27,7 @@ import {
 } from "../workflow-ui";
 import { getSystemOptionsForComponent } from "../../services/component-catalog.service";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
+import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function createLinePricingForm(
@@ -424,6 +425,77 @@ describe("workflow-ui paso 2", () => {
     expect(
       reconcileWorkflowItemsPricing([staleItem], "por_item")[0].precioTotal
     ).toBe(156000);
+  });
+
+  it("conserva precio manual al reconciliar items con precio ajustado", () => {
+    const manualItem: CotizacionWorkflowItem = {
+      ...createBaseItem(),
+      id: "item-manual",
+      precioUnitario: 1520000,
+      precioTotal: 1520000,
+      costoProveedorUnitario: 760000,
+      costoProveedorTotal: 760000,
+      margenPct: 50,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#a8a8a8",
+        material: "Aluminio",
+        referencia: "L5000",
+        sistema: "Corredera",
+        pricingMode: "precio_directo",
+        precioPorM2: 65000,
+        precioAjustadoManual: true,
+        origenPrecio: "manual",
+        raw: "",
+      }),
+    };
+
+    const [reconciled] = reconcileWorkflowItemsPricing([manualItem], "por_item");
+
+    expect(reconciled.precioUnitario).toBe(1520000);
+    expect(reconciled.precioTotal).toBe(1520000);
+    expect(reconciled.precioAjustadoManual).toBe(true);
+  });
+
+  it("conserva precio manual al aplicar borradores rapidos sincronizados", () => {
+    const manualItem: CotizacionWorkflowItem = {
+      ...createBaseItem(),
+      id: "item-manual",
+      precioUnitario: 171429,
+      precioTotal: 171429,
+      costoProveedorUnitario: 120000,
+      costoProveedorTotal: 120000,
+      margenPct: 30,
+      precioAjustadoManual: true,
+      origenPrecio: "manual",
+      observaciones: encodeCotizacionItemPresentationMeta({
+        colorHex: "#a8a8a8",
+        material: "Aluminio",
+        referencia: "L5000",
+        sistema: "Corredera",
+        pricingMode: "precio_directo",
+        precioPorM2: 65000,
+        precioAjustadoManual: true,
+        origenPrecio: "manual",
+        raw: "",
+      }),
+    };
+
+    const [actualizado] = applyQuickEditDraftStatesToItems(
+      [manualItem],
+      {
+        [manualItem.id]: {
+          ancho: "1222",
+          alto: "1222",
+          costoProveedorUnitario: "120000",
+        },
+      },
+      "por_item"
+    );
+
+    expect(actualizado.precioUnitario).toBe(171429);
+    expect(actualizado.precioTotal).toBe(171429);
   });
 
   it("debe aplicar borradores rapidos y recalcular el item editado", () => {

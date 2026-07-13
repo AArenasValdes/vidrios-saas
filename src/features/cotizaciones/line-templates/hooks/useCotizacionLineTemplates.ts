@@ -7,6 +7,8 @@ import { cotizacionLineTemplatesService } from "@/features/cotizaciones/line-tem
 import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
+  LineTemplateImportDuplicateMode,
+  LineTemplateImportResult,
   UpdateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
@@ -165,6 +167,36 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
     [organizacionId]
   );
 
+  const importTemplates = useCallback(
+    async (
+      rows: Array<Omit<CreateCotizacionLineTemplateInput, "organizationId">>,
+      duplicateMode: LineTemplateImportDuplicateMode
+    ): Promise<LineTemplateImportResult> => {
+      if (!organizacionId) {
+        throw new Error("No hay organizacion activa");
+      }
+
+      setIsSaving(true);
+      setError(null);
+
+      try {
+        const result = await cotizacionLineTemplatesService.importTemplates(
+          organizacionId,
+          rows,
+          { duplicateMode }
+        );
+        await loadTemplates();
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo importar el catalogo.");
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [loadTemplates, organizacionId]
+  );
+
   return {
     templates,
     activeTemplates: templates.filter((item) => item.isActive),
@@ -176,5 +208,6 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
     updateTemplate,
     duplicateTemplate,
     deleteTemplate,
+    importTemplates,
   };
 }

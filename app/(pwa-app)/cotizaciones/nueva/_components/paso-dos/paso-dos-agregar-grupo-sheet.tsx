@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { LuArrowRight, LuCheck, LuChevronDown, LuChevronLeft, LuCopy, LuPlus, LuSearch, LuX } from "react-icons/lu";
+import { LuArrowRight, LuCheck, LuChevronDown, LuChevronLeft, LuCopy, LuPencil, LuPlus, LuSearch, LuTrash2, LuX } from "react-icons/lu";
 
 import {
   buildGlassValue,
@@ -26,6 +26,7 @@ import {
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   getComponentDescripcion,
   isFreeValueComponentType,
@@ -34,6 +35,7 @@ import {
   hasGlassOption,
   normalizeCustomGlassValue,
 } from "@/features/cotizaciones/new-quote/custom-glass-options";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -87,8 +89,10 @@ type Props = {
   onDuplicatePiece?: () => void;
   onDiscardDraft?: () => void;
   onRequestSwitchMode?: () => void;
+  onOpenComponentCreator?: () => void;
   detailOnlyMode?: boolean;
   pieceCode?: string;
+  pieceEditionHeadline?: string;
   onSelectCategoria: (categoria: PasoDosGrupoDraft["categoria"]) => void;
   onSelectSubtipo: (subtipo: string) => void;
   onSelectCantidad: (cantidad: number) => void;
@@ -127,6 +131,9 @@ type Props = {
     value: string
   ) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
+  nestedDetailItems?: CotizacionWorkflowItem[];
+  onEditNestedDetailItem?: (itemId: string) => void;
+  onRemoveNestedDetailItem?: (itemId: string) => void;
   quotePricingMode: QuotePricingMode;
   totalClienteManual: number | null;
   mostrarIva: boolean;
@@ -325,8 +332,10 @@ export function PasoDosAgregarGrupoSheet({
   onDuplicatePiece,
   onDiscardDraft,
   onRequestSwitchMode,
+  onOpenComponentCreator,
   detailOnlyMode = false,
   pieceCode = "P1",
+  pieceEditionHeadline = "",
   onSelectCategoria,
   onSelectSubtipo,
   onSelectCantidad,
@@ -359,6 +368,9 @@ export function PasoDosAgregarGrupoSheet({
   onAddAlcanceDetalle,
   onUpdateAlcanceDetalle,
   onRemoveAlcanceDetalle,
+  nestedDetailItems = [],
+  onEditNestedDetailItem,
+  onRemoveNestedDetailItem,
   quotePricingMode,
   totalClienteManual,
   internalObservation,
@@ -591,6 +603,8 @@ export function PasoDosAgregarGrupoSheet({
     const typeOptions = visibleTypeGroups.flatMap((group) =>
       group.items.map((item) => ({ categoria: group.title, label: item }))
     );
+    const editionHeadline = pieceEditionHeadline.trim();
+    const usesCompactEditionHeader = editionHeadline.length > 0;
     const pCode = pieceCode;
     const isFreeType = isFreeValue;
 
@@ -624,14 +638,24 @@ export function PasoDosAgregarGrupoSheet({
         <section className={s.desktopPieceEditor} aria-label="Editor de item libre">
           <header className={d.headerStrip}>
             <div className={d.headerCopy}>
-              <h2 className={d.headerTitle}>
-                {pCode} · {hasFreeTypeSelected ? draft.subtipo : "Trabajo libre / Mantencion"}
-              </h2>
-              <p className={d.headerMeta}>
-                {hasAvanzadoTipo
-                  ? "Completa el detalle y el valor del trabajo."
-                  : "Completa el detalle y el valor del trabajo."}
-              </p>
+              {usesCompactEditionHeader ? (
+                <>
+                  <h2 className={d.headerTitle}>{editionHeadline}</h2>
+                  <p className={d.headerMeta}>
+                    {hasFreeTypeSelected ? draft.subtipo : "Trabajo libre / Mantención"} · Paso{" "}
+                    {freeStepVal} de 2
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className={d.headerTitle}>
+                    {`${pCode} · ${
+                      hasFreeTypeSelected ? draft.subtipo : "Trabajo libre / Mantencion"
+                    }`}
+                  </h2>
+                  <p className={d.headerMeta}>Completa el detalle y el valor del trabajo.</p>
+                </>
+              )}
             </div>
             <div className={d.headerActions}>
               {onRequestSwitchMode ? (
@@ -845,7 +869,6 @@ export function PasoDosAgregarGrupoSheet({
     }
 
     const desktopStep = Math.min(paso, maxDesktopStep) as 1 | 2 | 3 | 4;
-    const code = pieceCode;
     const pieceTitle = getDesktopPieceTitle(draft);
     const subtitle = draft.sistema.trim()
       ? [
@@ -981,7 +1004,7 @@ export function PasoDosAgregarGrupoSheet({
     });
     const typePreviewSvg = hasType ? getDesktopTypePreview(draft, 128, 64) : "";
     const typeStepHint = hasType ? getDesktopTypeStepHint(draft.subtipo) : "";
-    const desktopGlassDatalistId = `desktop-glass-options-${String(pieceCode).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+    const desktopGlassDatalistId = `desktop-glass-options-${usesCompactEditionHeader ? "active-piece" : String(pieceCode).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
     const useVisualComposition =
       (isCorredera && sheetVariantOptions.length > 0) ||
       (isBowWindow && sheetSchemeOptions.length > 0) ||
@@ -1175,10 +1198,21 @@ export function PasoDosAgregarGrupoSheet({
       <section className={s.desktopPieceEditor} aria-label="Editor de pieza activa">
         <header className={d.headerStrip}>
           <div className={d.headerCopy}>
-            <h2 className={d.headerTitle}>
-              {code} · {pieceTitle}
-            </h2>
-            <p className={d.headerMeta}>{subtitle || "Completa la informacion comercial de esta pieza."}</p>
+            {usesCompactEditionHeader ? (
+              <>
+                <h2 className={d.headerTitle}>{editionHeadline}</h2>
+                <p className={d.headerMeta}>
+                  {pieceTitle} · Paso {desktopStep} de {totalGlobalDetailMode ? 3 : 4}
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className={d.headerTitle}>{`${pieceCode} · ${pieceTitle}`}</h2>
+                <p className={d.headerMeta}>
+                  {subtitle || "Completa la informacion comercial de esta pieza."}
+                </p>
+              </>
+            )}
           </div>
           <div className={d.headerActions}>
             {onRequestSwitchMode ? (
@@ -2200,6 +2234,15 @@ export function PasoDosAgregarGrupoSheet({
 
         <header className={s.groupSheetHeader}>
           <div className={s.groupSheetHeaderCopy}>
+            {!isOverlay && isSingleStepFreeTotal && onRequestSwitchMode ? (
+              <button
+                type="button"
+                className={s.desktopPieceInlineModeSwitch}
+                onClick={onRequestSwitchMode}
+              >
+                {quotePricingMode === "total_global" ? "Por total" : "Por componentes"} · Cambiar
+              </button>
+            ) : null}
             {isOverlay ? <span className={s.cardLabel}>{stepCopy.eyebrow}</span> : null}
             <h2 className={s.groupSheetTitle} id="paso-dos-grupo-title">
               {sheetTitle}
@@ -2378,10 +2421,16 @@ export function PasoDosAgregarGrupoSheet({
                 <>
                   <section className={s.formSection}>
                     <div className={s.formSectionHead}>
-                      <span className={s.formSectionEyebrow}>Item libre con valor</span>
+                      <span className={s.formSectionEyebrow}>
+                        {quotePricingMode === "total_global" && isSingleStepFreeTotal
+                          ? "Trabajo principal"
+                          : "Item libre con valor"}
+                      </span>
                       <strong>
                         {quotePricingMode === "total_global"
-                          ? "Redacta trabajo principal, detalles incluidos y precio final"
+                          ? isSingleStepFreeTotal
+                            ? "Define el alcance general y el precio final del trabajo"
+                            : "Redacta trabajo principal, detalles incluidos y precio final"
                           : "Redacta el trabajo y define el valor"}
                       </strong>
                     </div>
@@ -2467,7 +2516,133 @@ export function PasoDosAgregarGrupoSheet({
                       </>
                     ) : null}
 
-                    {quotePricingMode === "total_global" ? (
+                    {quotePricingMode === "total_global" && isSingleStepFreeTotal ? (
+                      <section className={s.formSection}>
+                        <div className={s.formSectionHead}>
+                          <span className={s.formSectionEyebrow}>Detalles incluidos</span>
+                          <strong>Componentes y notas que quedan dentro de este trabajo.</strong>
+                        </div>
+
+                        {nestedDetailItems.length > 0 ? (
+                          <div className={s.cuadernoNestedList}>
+                            {nestedDetailItems.map((item) => {
+                              const measures =
+                                item.ancho && item.alto
+                                  ? `${Math.round(item.ancho)} × ${Math.round(item.alto)} mm`
+                                  : null;
+                              const material = decodeCotizacionItemPresentationMeta(
+                                item.observaciones
+                              ).material;
+
+                              return (
+                                <article key={item.id} className={s.cuadernoNestedCard}>
+                                  <div className={s.cuadernoNestedCardMain}>
+                                    <span className={s.cuadernoNestedCode}>{item.codigo}</span>
+                                    <strong className={s.cuadernoNestedTitle}>
+                                      {item.nombre || item.tipo}
+                                    </strong>
+                                    <p className={s.cuadernoNestedMeta}>
+                                      {[item.tipo, material, measures, item.cantidad > 1 ? `×${item.cantidad}` : null]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </p>
+                                  </div>
+                                  <div className={s.cuadernoNestedActions}>
+                                    {onEditNestedDetailItem ? (
+                                      <button
+                                        type="button"
+                                        className={s.iconButton}
+                                        aria-label={`Editar ${item.codigo}`}
+                                        onClick={() => onEditNestedDetailItem(item.id)}
+                                      >
+                                        <LuPencil aria-hidden size={14} />
+                                      </button>
+                                    ) : null}
+                                    {onRemoveNestedDetailItem ? (
+                                      <button
+                                        type="button"
+                                        className={s.iconButton}
+                                        aria-label={`Eliminar ${item.codigo}`}
+                                        onClick={() => onRemoveNestedDetailItem(item.id)}
+                                      >
+                                        <LuTrash2 aria-hidden size={14} />
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className={s.cuadernoNestedEmpty}>
+                            Aun no hay componentes dentro de este trabajo.
+                          </p>
+                        )}
+
+                        {draft.alcanceDetalles.map((detalle) => (
+                          <div key={detalle.id} className={s.alcanceDetalleCard}>
+                            <div className={s.alcanceDetalleHeader}>
+                              <span className={s.alcanceDetalleIndex}>
+                                {detalle.nombre.trim() || "Detalle"}
+                              </span>
+                              <button
+                                type="button"
+                                className={s.iconButton}
+                                onClick={() => onRemoveAlcanceDetalle(detalle.id)}
+                                aria-label="Eliminar detalle"
+                              >
+                                <LuX aria-hidden size={14} />
+                              </button>
+                            </div>
+                            <label className={s.field}>
+                              <span className={s.label}>Nombre</span>
+                              <input
+                                className={s.input}
+                                placeholder="Ej: Sellado perimetral"
+                                value={detalle.nombre}
+                                onChange={(e) =>
+                                  onUpdateAlcanceDetalle(detalle.id, "nombre", e.target.value)
+                                }
+                              />
+                            </label>
+                            <label className={s.field}>
+                              <span className={s.label}>Descripcion</span>
+                              <input
+                                className={s.input}
+                                placeholder="Ej: Sellado interior y exterior"
+                                value={detalle.descripcion}
+                                onChange={(e) =>
+                                  onUpdateAlcanceDetalle(
+                                    detalle.id,
+                                    "descripcion",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+                        ))}
+
+                        <div className={s.formGrid2}>
+                          <button
+                            type="button"
+                            className={s.btnGhost}
+                            onClick={() => onAddAlcanceDetalle()}
+                          >
+                            + Agregar detalle
+                          </button>
+                          {onOpenComponentCreator ? (
+                            <button
+                              type="button"
+                              className={s.btnPrimary}
+                              onClick={onOpenComponentCreator}
+                            >
+                              + Agregar componentes
+                            </button>
+                          ) : null}
+                        </div>
+                      </section>
+                    ) : quotePricingMode === "total_global" ? (
                       <section className={s.formSection}>
                         <div className={s.formSectionHead}>
                           <span className={s.formSectionEyebrow}>Detalles incluidos</span>

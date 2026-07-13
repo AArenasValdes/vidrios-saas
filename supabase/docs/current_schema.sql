@@ -287,6 +287,18 @@ CREATE TABLE IF NOT EXISTS "public"."cotizaciones" (
     "costo_total" numeric,
     "margen_pct" numeric,
     "utilidad_total" numeric,
+    "costo_materiales_total" numeric(12,2),
+    "costo_mano_obra_total" numeric(12,2),
+    "costo_traslado_total" numeric(12,2),
+    "costo_otros_total" numeric(12,2),
+    "merma_pct" numeric(7,4),
+    "merma_total" numeric(12,2),
+    "margen_objetivo_pct" numeric(7,4),
+    "precio_recomendado_neto" numeric(12,2),
+    "iva_pct" numeric(7,4),
+    "financial_snapshot_version" integer,
+    "financial_snapshot_calculado_en" timestamp with time zone,
+    "cost_basis_status" text,
     "pricing_mode" "text" DEFAULT 'por_item'::"text" NOT NULL,
     "estado_comercial" "text",
     "approval_token" "text",
@@ -297,6 +309,23 @@ CREATE TABLE IF NOT EXISTS "public"."cotizaciones" (
 );
 
 ALTER TABLE "public"."cotizaciones" ADD CONSTRAINT "cotizaciones_pricing_mode_check" CHECK (("pricing_mode" = ANY (ARRAY['por_item'::"text", 'total_global'::"text"]))) NOT VALID;
+
+ALTER TABLE "public"."cotizaciones" ADD CONSTRAINT "cotizaciones_financial_costs_nonnegative" CHECK (
+    (("costo_materiales_total" IS NULL) OR ("costo_materiales_total" >= (0)::numeric)) AND
+    (("costo_mano_obra_total" IS NULL) OR ("costo_mano_obra_total" >= (0)::numeric)) AND
+    (("costo_traslado_total" IS NULL) OR ("costo_traslado_total" >= (0)::numeric)) AND
+    (("costo_otros_total" IS NULL) OR ("costo_otros_total" >= (0)::numeric)) AND
+    (("merma_pct" IS NULL) OR ("merma_pct" >= (0)::numeric)) AND
+    (("merma_total" IS NULL) OR ("merma_total" >= (0)::numeric)) AND
+    (("margen_objetivo_pct" IS NULL) OR (("margen_objetivo_pct" >= (0)::numeric) AND ("margen_objetivo_pct" < (100)::numeric))) AND
+    (("precio_recomendado_neto" IS NULL) OR ("precio_recomendado_neto" >= (0)::numeric)) AND
+    (("iva_pct" IS NULL) OR ("iva_pct" >= (0)::numeric)) AND
+    (("financial_snapshot_version" IS NULL) OR ("financial_snapshot_version" > 0))
+) NOT VALID;
+
+ALTER TABLE "public"."cotizaciones" ADD CONSTRAINT "cotizaciones_cost_basis_status_check" CHECK (
+    ("cost_basis_status" IS NULL) OR ("cost_basis_status" = ANY (ARRAY['sin_costos'::"text", 'estimado'::"text", 'manual'::"text"]))
+) NOT VALID;
 
 
 ALTER TABLE "public"."cotizaciones" OWNER TO "postgres";

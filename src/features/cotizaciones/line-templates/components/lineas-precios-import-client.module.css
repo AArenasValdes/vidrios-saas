@@ -1,0 +1,390 @@
+.page {
+  min-height: 100%;
+  display: grid;
+  gap: 14px;
+  padding: 10px 0 calc(var(--tabbar-h, 72px) + 26px);
+  background:
+    radial-gradient(circle at top right, rgba(101, 145, 223, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(243, 247, 252, 0.98));
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.backButton {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #d8e1ed;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1f3766;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.headerCopy h1 {
+  margin: 0;
+  color: #15294c;
+  font-size: clamp(24px, 5vw, 32px);
+}
+
+.headerCopy p {
+  margin: 4px 0 0;
+  color: #63738f;
+  font-size: 13px;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #d8e1ed;
+  color: #63738f;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.stepActive {
+  border-color: #4f7dd4;
+  color: #1f3766;
+  background: #edf3ff;
+}
+
+.stepDone {
+  border-color: #b9c9e5;
+}
+
+.panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #d8e1ed;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.panelHead {
+  display: grid;
+  gap: 2px;
+}
+
+.panelHead span {
+  color: #63738f;
+  font-size: 12px;
+}
+
+.uploadBox {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+  padding: 28px 16px;
+  border: 1px dashed #b7c6df;
+  border-radius: 16px;
+  color: #1f3766;
+}
+
+.uploadBox p {
+  margin: 0;
+  color: #63738f;
+  font-size: 13px;
+}
+
+.uploadHint {
+  max-width: 42ch;
+  line-height: 1.45;
+}
+
+.uploadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #5d8ce0, #4f7dd4);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.mappingGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #1f3766;
+}
+
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d8e1ed;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #1f3766;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.duplicateMode {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.duplicateMode legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f3766;
+}
+
+.duplicateMode label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.previewTableWrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.previewTable th,
+.previewTable td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #edf2f7;
+  text-align: left;
+  vertical-align: top;
+}
+
+.previewTable th {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badgeReady {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badgeDuplicate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badgeInvalid {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badgeTechnical {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.pdfModeSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modeButton {
+  padding: 8px 12px;
+  border: 1px solid #d8e1ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #1f3766;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modeButtonActive {
+  border-color: #4f7dd4;
+  background: #edf3ff;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: linear-gradient(180deg, #5d8ce0, #4f7dd4);
+  color: #fff;
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  border: 1px solid #d8e1ed;
+  background: #fff;
+  color: #1f3766;
+}
+
+.feedback {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.feedbackError {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.resultGrid {
+  display: grid;
+  gap: 6px;
+  color: #1f3766;
+  font-size: 14px;
+}
+
+.pdfPanel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe4f2;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.pdfPanelHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pdfPanelCopy {
+  margin: 0;
+  color: #63738f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.warningList {
+  margin: 0;
+  padding-left: 18px;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pdfPageList {
+  display: grid;
+  gap: 8px;
+}
+
+.pdfPageOption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: #1f3766;
+}
+
+.confidenceBadge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.confidenceHigh {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.confidenceMedium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.confidenceLow {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pdfPreviewBanner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+}

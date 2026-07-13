@@ -40,6 +40,22 @@ describe("cotizacion-line-pricing.service", () => {
     expect(summary.totalSugerido).toBe(95000);
   });
 
+  it("debe calcular area aunque no exista precio por m2", () => {
+    const summary = calculateLineTemplatePricing({
+      ancho: 1222,
+      alto: 1222,
+      cantidad: 1,
+      precioM2Sugerido: null,
+      minimoCobrable: 0,
+      redondeoPrecio: 1000,
+    });
+
+    expect(summary.areaM2).toBe(1.49);
+    expect(summary.areaTotalM2).toBe(1.49);
+    expect(summary.precioUnitarioSugerido).toBeNull();
+    expect(summary.motivoNoCalculado).toBe("La línea no tiene un precio por m² válido.");
+  });
+
   it("debe redondear siempre hacia arriba y respetar sin redondeo", () => {
     expect(roundToPriceIncrement(261240, 1000)).toBe(262000);
     expect(roundToPriceIncrement(261760, 1000)).toBe(262000);

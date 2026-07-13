@@ -58,14 +58,19 @@ function EditorHeader({
   onEditarPrecio,
   onCerrar,
   hasChanges,
+  isDesktopQuoteStudio,
+  activeStepLabel,
 }: {
   componentForm: Props["componentForm"];
   precio: FormPriceDisplay;
   onEditarPrecio: () => void;
   onCerrar: () => void;
   hasChanges: boolean;
+  isDesktopQuoteStudio?: boolean;
+  activeStepLabel?: string;
 }) {
   const subtitle = useMemo(() => buildEditorSubtitle(componentForm), [componentForm]);
+  const pieceType = componentForm.tipo || "Componente";
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -77,14 +82,26 @@ function EditorHeader({
   return (
     <header className={editor.header}>
       <div className={editor.headerLeft}>
-        <h2 className={editor.headerTitle}>
-          {componentForm.codigo} · {componentForm.tipo || "Componente"}
-        </h2>
-        <p className={editor.headerSubtitle}>{subtitle}</p>
+        {isDesktopQuoteStudio ? (
+          <>
+            <h2 className={editor.headerTitle}>Editando {componentForm.codigo}</h2>
+            <p className={editor.headerSubtitle}>
+              {pieceType}
+              {activeStepLabel ? ` · ${activeStepLabel}` : ""}
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className={editor.headerTitle}>
+              {componentForm.codigo} · {pieceType}
+            </h2>
+            <p className={editor.headerSubtitle}>{subtitle}</p>
+          </>
+        )}
         <div className={editor.headerPrice}>
           <span className={editor.headerPriceLabel}>Total actual:</span>
           <strong className={editor.headerPriceValue}>
-            ${CLP(precio.precioTotal)}
+            {CLP(precio.precioTotal)}
           </strong>
           <button
             type="button"
@@ -166,7 +183,7 @@ function EditorFooter({
   return (
     <footer className={editor.footer}>
       <span className={editor.footerLeft}>
-        {codigo} · {totalLabel}: ${CLP(precio.precioTotal)}
+        {codigo} · {totalLabel}: {CLP(precio.precioTotal)}
       </span>
       <div className={editor.footerActions}>
         <button type="button" className={s.btnGhost} onClick={handleCancel}>
@@ -736,7 +753,7 @@ function TabMedidas({
             <span className={editor.areaValue}>{linePricingSummary.areaM2} m²</span>
             {linePricingSummary.precioUnitarioSugerido !== null ? (
               <span className={editor.areaHint}>
-                Precio sugerido: ${CLP(linePricingSummary.precioUnitarioSugerido)} / unidad
+                Precio sugerido: {CLP(linePricingSummary.precioUnitarioSugerido)} / unidad
               </span>
             ) : null}
           </div>
@@ -1006,7 +1023,7 @@ function TabPrecio({
             </div>
             {precioDisplay.precioUnitario > 0 ? (
               <div className={editor.precioSugerido}>
-                <span>Precio sugerido: ${CLP(precioDisplay.precioUnitario)} / unidad</span>
+                <span>Precio sugerido: {CLP(precioDisplay.precioUnitario)} / unidad</span>
               </div>
             ) : null}
           </div>
@@ -1044,12 +1061,12 @@ function TabPrecio({
           </div>
           <div className={editor.resumenItem}>
             <span className={editor.resumenLabel}>Precio unitario</span>
-            <strong className={editor.resumenValue}>${CLP(precioDisplay.precioUnitario)}</strong>
+            <strong className={editor.resumenValue}>{CLP(precioDisplay.precioUnitario)}</strong>
           </div>
           <div className={editor.resumenItem}>
             <span className={editor.resumenLabel}>Total de esta pieza</span>
             <strong className={`${editor.resumenValue} ${editor.resumenTotal}`}>
-              ${CLP(precioDisplay.precioTotal)}
+              {CLP(precioDisplay.precioTotal)}
             </strong>
           </div>
         </div>
@@ -1181,6 +1198,8 @@ export function PasoDosEditorDesktop(props: Props) {
         { key: "precio", label: "Precio", done: precioDisplay.precioTotal > 0 },
       ];
 
+  const activeStepLabel = tabs.find((tab) => tab.key === effectiveTab)?.label;
+
   return (
     <section className={editor.root} id="component-form">
       <EditorHeader
@@ -1189,6 +1208,8 @@ export function PasoDosEditorDesktop(props: Props) {
         onEditarPrecio={handleEditarPrecio}
         onCerrar={handleCerrar}
         hasChanges={hasChanges}
+        isDesktopQuoteStudio={props.isDesktopQuoteStudio}
+        activeStepLabel={activeStepLabel}
       />
 
       <EditorTabs

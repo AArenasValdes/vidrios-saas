@@ -298,6 +298,86 @@ describe("cotizaciones.service", () => {
     expect(record?.items).toHaveLength(1);
   });
 
+  it("debe hidratar items con margen negativo legacy sin lanzar error", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    cotizacionesRepository.getById.mockResolvedValue({
+      id: 100,
+      proyectoId: 10,
+      organizationId: 77,
+      numero: "COT-123456",
+      estado: "creada",
+      descuentoPct: 0,
+      flete: 0,
+      iva: 144611,
+      notas: "",
+      validoHasta: "2026-03-29",
+      subtotalNeto: 761110,
+      costoTotal: 300000,
+      margenPct: 30,
+      utilidadTotal: 200000,
+      estadoComercial: null,
+      approvalToken: "approval-token-1",
+      approvalTokenExpiresAt: null,
+      clienteVioEn: null,
+      clienteRespondioEn: null,
+      clienteRespuestaCanal: null,
+      creadoEn: "2026-03-14T10:00:00.000Z",
+      actualizadoEn: "2026-03-14T10:00:00.000Z",
+      eliminadoEn: null,
+      pricingMode: "por_item",
+      items: [
+        {
+          id: 201,
+          cotizacionId: 100,
+          organizationId: 77,
+          cantidad: 1,
+          precioUnitario: 352972,
+          subtotal: 352972,
+          ancho: 1500,
+          alto: 1900,
+          areaM2: 2.85,
+          linea: "Serie prueba",
+          color: "Ventana",
+          vidrio: "Incoloro 4mm",
+          nombre: "Ventana corredera 2 hojas, 2 móviles",
+          actualizadoEn: null,
+          eliminadoEn: null,
+          descripcion: "Ventana corredera 2 hojas, 2 móviles",
+          unidad: "unidad",
+          observaciones:
+            "[pm:precio_directo][man:1][po:manual][ref:Serie prueba][mat:Aluminio]",
+          tipoItem: "componente",
+          creadoEn: null,
+          productTypeId: null,
+          systemLineId: null,
+          configurationId: null,
+          costoUnitario: 400000,
+          costoTotal: 400000,
+          margenPct: -12.5,
+          utilidad: -47028,
+          codigo: "V2",
+          tipoComponente: "Ventana",
+          orden: 1,
+          breakdown: [],
+        },
+      ],
+      total: 906000,
+    });
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    const record = await service.getWorkflowById(100, 77, { ensureApprovalToken: false });
+
+    expect(record).not.toBeNull();
+    expect(record?.items[0]?.margenPct).toBe(0);
+    expect(record?.items[0]?.precioTotal).toBe(352972);
+  });
+
   it("debe guardar una cotizacion de componentes resolviendo cliente y proyecto", async () => {
     const clientesRepository = createClientesRepositoryMock();
     const projectsRepository = createProjectsRepositoryMock();
@@ -359,6 +439,9 @@ describe("cotizaciones.service", () => {
         proyectoId: 10,
         numero: "COT-210326-001",
         estado: "creada",
+        costoTotal: 300000,
+        utilidadTotal: 300000,
+        margenPct: 50,
         total: 714000,
         approvalToken: expect.any(String),
         items: [
@@ -375,6 +458,131 @@ describe("cotizaciones.service", () => {
     expect(record.obra).toBe("Casa Coquimbo");
     expect(record.items[0].codigo).toBe("V1");
     expect(record.items[0].vidrio).toBe("Incoloro monolitico 5mm");
+  });
+
+  it("debe guardar snapshot financiero en presupuesto por total con costo de fabricacion", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    await service.saveWorkflow({
+      organizationId: 77,
+      estado: "creada",
+      draft: {
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "Casa Coquimbo",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "total_global",
+        totalClienteManual: 600000,
+        costoTotalFabricacion: 360000,
+        mostrarIva: true,
+        items: [],
+      },
+    });
+
+    expect(cotizacionesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pricingMode: "total_global",
+        subtotalNeto: 600000,
+        costoTotal: 360000,
+        utilidadTotal: 240000,
+        margenPct: 40,
+        total: 714000,
+        costoMaterialesTotal: 0,
+        costoManoObraTotal: 0,
+        costoTrasladoTotal: 0,
+        costoOtrosTotal: 360000,
+        mermaPct: 0,
+        mermaTotal: 0,
+        margenObjetivoPct: 30,
+        precioRecomendadoNeto: 514285.71,
+        ivaPct: 19,
+        financialSnapshotVersion: 1,
+        financialSnapshotCalculadoEn: expect.any(String),
+        costBasisStatus: "estimado",
+        items: [],
+      })
+    );
+  });
+
+  it("debe persistir ajustes financieros manuales del Quote Studio desktop", async () => {
+    const clientesRepository = createClientesRepositoryMock();
+    const projectsRepository = createProjectsRepositoryMock();
+    const cotizacionesRepository = createCotizacionesRepositoryMock();
+    const service = createCotizacionesAppService({
+      clientesRepository,
+      projectsRepository,
+      cotizacionesRepository,
+    });
+
+    await service.saveWorkflow({
+      organizationId: 77,
+      estado: "creada",
+      draft: {
+        clienteNombre: "Roberto Fuentes",
+        clienteTelefono: "+56 9 8234 5678",
+        obra: "Casa Coquimbo",
+        direccion: "Los Pescadores 221",
+        validez: "15 dias",
+        descuentoPct: 0,
+        flete: 0,
+        observaciones: "",
+        quotePricingMode: "por_item",
+        mostrarIva: true,
+        quoteStudioFinancial: {
+          manoObra: 50000,
+          traslado: 25000,
+          otrosCostos: 10000,
+          mermaPct: 5,
+          margenObjetivoRealPct: 35,
+        },
+        items: [
+          {
+            id: "item-1",
+            codigo: "V1",
+            tipo: "Ventana",
+            nombre: "Ventana living",
+            descripcion: "Ventana corredera",
+            ancho: 1200,
+            alto: 1500,
+            cantidad: 1,
+            unidad: "unidad",
+            areaM2: 1.8,
+            costoProveedorUnitario: 300000,
+            costoProveedorTotal: 300000,
+            margenPct: 100,
+            precioUnitario: 600000,
+            precioTotal: 600000,
+            vidrio: "Incoloro monolitico 5mm",
+            observaciones: "",
+          },
+        ],
+      },
+    });
+
+    expect(cotizacionesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        costoMaterialesTotal: 300000,
+        costoManoObraTotal: 50000,
+        costoTrasladoTotal: 25000,
+        costoOtrosTotal: 10000,
+        mermaPct: 5,
+        mermaTotal: 15000,
+        margenObjetivoPct: 35,
+        costBasisStatus: "manual",
+        financialSnapshotVersion: 1,
+      })
+    );
   });
 
   it("debe guardar una cotizacion con total global sin precios por item", async () => {

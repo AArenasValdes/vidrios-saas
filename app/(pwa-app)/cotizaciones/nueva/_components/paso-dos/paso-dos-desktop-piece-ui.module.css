@@ -74,6 +74,22 @@
     margin-top: 0.25rem;
   }
 }
+@media (min-width: 1024px) {
+  .headerStrip:has(.headerEditionEyebrow) {
+    min-height: 48px;
+    max-height: 54px;
+    padding: 0.45rem 1rem;
+  }
+
+  .headerStrip:has(.headerEditionEyebrow) .headerTitle {
+    font-size: 0.98rem;
+  }
+
+  .headerStrip:has(.headerEditionEyebrow) .headerMeta {
+    font-size: 0.72rem;
+  }
+}
+
 @media (min-width: 861px) {
   .headerStrip {
     display: grid;
@@ -92,6 +108,15 @@
     display: grid;
     gap: 0.05rem;
     min-width: 0;
+  }
+
+  .headerEditionEyebrow {
+    color: #6b7f99;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    text-transform: none;
   }
 
   .headerTitle {

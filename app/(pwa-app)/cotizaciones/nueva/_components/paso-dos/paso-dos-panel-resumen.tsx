@@ -8,6 +8,7 @@ import s from "../../page.module.css";
 
 export type PasoDosPanelDesktopClasses = {
   footer: string;
+  footerHint: string;
   totalsRow: string;
   totalItem: string;
   totalItemWide: string;
@@ -26,9 +27,14 @@ type Props = Pick<
   | "onGoToSummary"
   | "mostrarIva"
   | "pendingItemsCount"
+  | "completedItemsCount"
+  | "isDesktopQuoteStudio"
 > & {
   layout?: "mobile" | "desktop";
   desktopClasses?: PasoDosPanelDesktopClasses;
+  isPieceInEdition?: boolean;
+  pieceInEditionHint?: string;
+  summaryNavigateHint?: string;
 };
 
 export function PasoDosPanelResumen({
@@ -40,12 +46,21 @@ export function PasoDosPanelResumen({
   total,
   mostrarIva,
   pendingItemsCount,
+  completedItemsCount,
+  isDesktopQuoteStudio,
   stepTwoSummaryRef,
   onGoToSummary,
   layout = "mobile",
   desktopClasses,
+  isPieceInEdition = false,
+  pieceInEditionHint = "Finaliza la pieza para continuar con la revisión",
+  summaryNavigateHint,
 }: Props) {
   const isDesktopLayout = layout === "desktop" && desktopClasses;
+  const isQuoteStudioFinancialLayout = Boolean(isDesktopLayout && isDesktopQuoteStudio);
+  const isQuoteStudioEditingNavigate = Boolean(isQuoteStudioFinancialLayout && isPieceInEdition);
+  const hasCompletedPieces = completedItemsCount > 0;
+  const shouldHideReviewAction = false;
   const isTotalMode = quotePricingMode === "total_global";
   const hasZeroValueItem = items.some((item) => Number(item.precioTotal ?? 0) <= 0);
   const totalValor = Number(String(total ?? "0").replace(/[^0-9]/g, ""));
@@ -60,7 +75,22 @@ export function PasoDosPanelResumen({
         : hasZeroValueItem
           ? "Define precio mayor a $0 en cada pieza."
           : "";
-  const isSummaryBlocked = isDesktopLayout && Boolean(blockedReason);
+  const isSummaryBlocked =
+    isQuoteStudioEditingNavigate && !hasCompletedPieces
+      ? true
+      : isDesktopLayout && Boolean(blockedReason);
+  const reviewButtonLabel = isQuoteStudioEditingNavigate
+    ? "Ir al resumen"
+    : isDesktopLayout
+      ? "Continuar a revisar"
+      : "Ir al resumen";
+  const footerHint =
+    summaryNavigateHint ??
+    (isQuoteStudioEditingNavigate && !hasCompletedPieces
+      ? pieceInEditionHint
+      : isDesktopLayout && blockedReason
+        ? blockedReason
+        : "");
 
   return (
     <>
@@ -70,7 +100,13 @@ export function PasoDosPanelResumen({
       >
         <div className={isDesktopLayout ? desktopClasses.totalsRow : s.stepTwoTotalsGrid}>
           <div className={isDesktopLayout ? desktopClasses.totalItem : s.stepTwoTotalCell}>
-            <span>{mostrarIva ? "Subtotal neto" : "Precios finales"}</span>
+            <span>
+              {isQuoteStudioFinancialLayout
+                ? "Subtotal neto"
+                : mostrarIva
+                  ? "Subtotal neto"
+                  : "Precios finales"}
+            </span>
             <strong>{subtotal}</strong>
           </div>
           {mostrarIva ? (
@@ -86,7 +122,7 @@ export function PasoDosPanelResumen({
                 : `${s.stepTwoTotalCell} ${s.stepTwoTotalCellWide}`
             }
           >
-            <span>Total final</span>
+            <span>{isQuoteStudioFinancialLayout ? "Total a cobrar con IVA" : "Total final"}</span>
             <strong>{total}</strong>
           </div>
         </div>
@@ -95,11 +131,12 @@ export function PasoDosPanelResumen({
           type="button"
           onClick={onGoToSummary}
           disabled={isSummaryBlocked}
+          hidden={shouldHideReviewAction}
         >
-          {isDesktopLayout ? "Continuar a revisar" : "Ir al resumen"} <LuChevronRight aria-hidden />
+          {reviewButtonLabel} <LuChevronRight aria-hidden />
         </button>
-        {isDesktopLayout && blockedReason ? (
-          <p className={s.desktopSummaryBlockReason}>{blockedReason}</p>
+        {footerHint ? (
+          <p className={desktopClasses?.footerHint ?? s.desktopSummaryBlockReason}>{footerHint}</p>
         ) : null}
       </div>
       {isMobileViewport && items.length > 0 ? (

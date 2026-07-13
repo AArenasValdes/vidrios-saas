@@ -8,6 +8,27 @@ export type EstadoCotizacionWorkflow =
   | "rechazada"
   | "terminada";
 
+export type QuoteStudioFinancialDraft = {
+  manoObra: number;
+  traslado: number;
+  otrosCostos: number;
+  mermaPct: number;
+  margenObjetivoRealPct: number;
+};
+
+export function createQuoteStudioFinancialDraft(
+  overrides: Partial<QuoteStudioFinancialDraft> = {}
+): QuoteStudioFinancialDraft {
+  return {
+    manoObra: 0,
+    traslado: 0,
+    otrosCostos: 0,
+    mermaPct: 0,
+    margenObjetivoRealPct: 30,
+    ...overrides,
+  };
+}
+
 export type CotizacionWorkflowItem = {
   id: string;
   tipoItem?: "componente" | "item_libre_con_valor";
@@ -73,6 +94,7 @@ export type CotizacionWorkflowRecord = {
   utilidadTotal?: number;
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
+  quoteStudioFinancial?: QuoteStudioFinancialDraft;
 };
 
 export type CotizacionWorkflowDraft = {
@@ -94,4 +116,5 @@ export type CotizacionWorkflowDraft = {
   utilidadTotal?: number;
   totalClienteManual?: number | null;
   mostrarIva?: boolean;
+  quoteStudioFinancial?: QuoteStudioFinancialDraft;
 };

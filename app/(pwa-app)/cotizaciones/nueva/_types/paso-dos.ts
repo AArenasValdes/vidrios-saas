@@ -12,6 +12,10 @@ import type {
   QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import type {
+  QuoteStudioFinancialDraft,
+} from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 
@@ -78,6 +82,15 @@ export type PasoDosPanelComponentesProps = {
   effectiveShowOnlyPendingItems: boolean;
   showFilterToggle: boolean;
   isMobileViewport: boolean;
+  isDesktopQuoteStudio: boolean;
+  financialSummary: QuoteStudioFinancialSummary;
+  quoteStudioFinancial: QuoteStudioFinancialDraft;
+  onQuoteStudioFinancialChange: (
+    field: keyof QuoteStudioFinancialDraft,
+    value: string
+  ) => void;
+  onApplyQuoteStudioRecommendedPrice: () => void;
+  formatCurrencyInput: (value: string) => string;
   selectedQuickEditItem: CotizacionWorkflowItem | null;
   selectedQuickEditViewItem: CotizacionWorkflowItem | null;
   selectedQuickEditDraft: QuickEditDraftState | null;
@@ -124,13 +137,16 @@ export type PasoDosPanelComponentesProps = {
   isSavingQuickPriceTemplate: boolean;
   onGoToSummary: () => void;
   isAddGroupWizardOpen?: boolean;
+  isTotalGlobalCuadernoOpen?: boolean;
   activeDraftCard?: {
-    code: string;
-    title: string;
+    headline: string;
+    componentType: string;
     stepLabel: string;
     missingLabel: string;
   } | null;
   onContinueActiveDraft?: () => void;
+  quoteStudioPanelMode?: "summary" | "full";
+  onViewFullBudget?: () => void;
 };
 
 export type PasoDosItemLibreFormProps = {
