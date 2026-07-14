@@ -202,6 +202,52 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(screen.queryByRole("button", { name: "PVC" })).not.toBeInTheDocument();
   });
 
+  it("debe usar el producto de cristal seleccionado como tipo de vidrio visible", () => {
+    render(
+      <PasoDosWizardConfiguracionMovil
+        {...baseProps}
+        draft={{
+          ...baseProps.draft,
+          categoria: "Vidrios y cristales",
+          subtipo: "Vidrio / Cristal",
+          material: "Cristal",
+          catalogCategoria: "vidrio",
+          catalogEspesor: "10 mm",
+          catalogTerminacion: "templado",
+          lineTemplateId: "cr-1",
+          referencia: "Cristal templado 10 mm",
+          vidrio: "Cristal templado 10 mm",
+          sistema: "Sin perfileria",
+          configuracion: "Vidrio suelto",
+        }}
+        lineTemplateOptions={[
+          {
+            id: "cr-1",
+            organizationId: "org-1",
+            nombre: "Cristal templado 10 mm",
+            material: "Cristal",
+            categoria: "vidrio",
+            unidadCobro: "m2",
+            precioM2Sugerido: 150000,
+            minimoCobrable: 95000,
+            redondeoPrecio: 1000,
+            vidrioPrincipalRecomendado: null,
+            catalogMetadata: { espesor: "10 mm", terminacion: "templado" },
+            isActive: true,
+            creadoEn: "2026-07-14T00:00:00.000Z",
+            actualizadoEn: "2026-07-14T00:00:00.000Z",
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText("Producto / tipo de vidrio")).toBeInTheDocument();
+    expect(screen.getAllByText("Cristal templado 10 mm").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("10 mm · templado")).toBeInTheDocument();
+    expect(screen.queryByText("Cristal / Vidrio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Incoloro monolitico 5mm/i })).not.toBeInTheDocument();
+  });
+
   it("debe mostrar formato del espejo solo para espejos", () => {
     const { rerender } = render(<PasoDosWizardConfiguracionMovil {...baseProps} />);
 

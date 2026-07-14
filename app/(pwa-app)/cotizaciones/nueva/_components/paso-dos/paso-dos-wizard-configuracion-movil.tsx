@@ -1888,20 +1888,49 @@ export function PasoDosWizardConfiguracionMovil({
         />
       ) : null}
 
-      <PasoDosWizardVidrioMovil
-        canCreateCustomGlass={canCreateCustomGlass}
-        currentGlass={draft.vidrio}
-        glassCatalogGroups={glassCatalogGroups}
-        isRecommendedGlass={isRecommendedGlass}
-        onCreateCustomGlass={onCreateCustomGlass}
-        onSetVidSearch={onSetVidSearch}
-        onVidrioChange={onVidrioChange}
-        recommendedReason={recommendedReason}
-        recommendedVidrios={recommendedVidrios}
-        searchResults={searchResults}
-        subtipo={draft.subtipo}
-        vidSearch={vidSearch}
-      />
+      {isGlassProduct && draft.lineTemplateId ? (
+        <div className={s.stepTwoMobileBlockSecundario}>
+          <div className={s.stepTwoMobileBlockHeaderInline}>
+            <div>
+              <div className={s.stepTwoMobileBlockLabel}>Producto / tipo de vidrio</div>
+              <span className={s.stepTwoMobileBlockHelp}>
+                Este nombre se guarda en la cotizacion y se muestra en el PDF.
+              </span>
+            </div>
+            <button
+              className={s.stepTwoMobileSecondaryLink}
+              onClick={openLineSelector}
+              type="button"
+            >
+              Cambiar
+            </button>
+          </div>
+          <div className={s.quickPreviewCard}>
+            <div className={s.quickPreviewBody}>
+              <strong>{draft.vidrio || selectedLineLabel}</strong>
+              <span>
+                {[draft.catalogEspesor, draft.catalogTerminacion].filter(Boolean).join(" · ") ||
+                  "Producto de cristal seleccionado"}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <PasoDosWizardVidrioMovil
+          canCreateCustomGlass={canCreateCustomGlass}
+          currentGlass={draft.vidrio}
+          glassCatalogGroups={glassCatalogGroups}
+          isRecommendedGlass={isRecommendedGlass}
+          onCreateCustomGlass={onCreateCustomGlass}
+          onSetVidSearch={onSetVidSearch}
+          onVidrioChange={onVidrioChange}
+          recommendedReason={recommendedReason}
+          recommendedVidrios={recommendedVidrios}
+          searchResults={searchResults}
+          subtipo={draft.subtipo}
+          vidSearch={vidSearch}
+        />
+      )}
     </div>
   );
 }
