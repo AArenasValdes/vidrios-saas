@@ -18,6 +18,7 @@ import {
   isBowWindowConfiguration,
   isCorrederaSheetConfiguration,
   isDesktopPieceSystemStepComplete,
+  isGlassCatalogSelection,
   isGuillotinaOrCelosiaConfiguration,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
@@ -406,7 +407,13 @@ export function PasoDosAgregarGrupoSheet({
     sistema: draft.sistema,
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
-  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(draft.subtipo);
+  const isGlassCatalogItem = isGlassCatalogSelection(draft);
+  const requiresProfileMaterial =
+    shouldRequireProfileMaterialForComponent(draft.subtipo) && !isGlassCatalogItem;
+  const catalogLabel = isGlassCatalogItem ? "Producto de cristal" : "Linea comercial";
+  const catalogAriaLabel = isGlassCatalogItem
+    ? "Seleccionar producto de cristal"
+    : "Seleccionar linea comercial";
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const canAutoAdvanceFree = false;
@@ -716,7 +723,7 @@ export function PasoDosAgregarGrupoSheet({
 
           {freeStepVal === 1 ? (
             <div className={s.desktopPieceBody}>
-              <h3 className={s.desktopPieceStepHeading}>¿Qué estás cotizando?</h3>
+              <h3 className={s.desktopPieceStepHeading}>{"\u00bfQu\u00e9 est\u00e1s cotizando?"}</h3>
               <div className={d.typeSection}>
                 {frequentTypeOptions.length > 0 ? (
                   <div>
@@ -991,7 +998,7 @@ export function PasoDosAgregarGrupoSheet({
       }]),
     ];
     const stepHeadings: Record<1 | 2 | 3 | 4, string> = {
-      1: "¿Qué estás cotizando?",
+      1: "\u00bfQu\u00e9 est\u00e1s cotizando?",
       2: "Elige el sistema",
       3: "Medidas y detalles",
       4: totalGlobalDetailMode ? "Configuracion" : "Define el precio",
@@ -1625,28 +1632,35 @@ export function PasoDosAgregarGrupoSheet({
 
                 <section className={d.measuresFormGroup}>
                   <p className={d.measuresSectionTitle}>Terminaciones</p>
-                  {requiresProfileMaterial ? (
+                  {requiresProfileMaterial || isGlassCatalogItem ? (
                     <div className={d.measuresTerminationsRow}>
                       <label className={`${d.measureField} ${d.measureFieldLineCommercial}`}>
-                        <span className={d.measureFieldLabel}>Linea comercial</span>
+                        <span className={d.measureFieldLabel}>{catalogLabel}</span>
                         <select
                           className={`${d.measureInput} ${d.measureSelect}`}
                           value={draft.lineTemplateId}
                           onChange={(event) => onSelectLineTemplate?.(event.target.value)}
-                          aria-label="Seleccionar linea comercial"
+                          aria-label={catalogAriaLabel}
                         >
-                          <option value="">Precio manual o sin linea</option>
+                          <option value="">{isGlassCatalogItem ? "Precio manual o sin cristal" : "Precio manual o sin linea"}</option>
                           {visibleLineTemplates.map((template) => (
                             <option key={template.id} value={String(template.id)}>
-                              {`${template.nombre} · ${template.material} · ${CLP(template.precioM2Sugerido)}/m² · Mín. ${
-                                template.minimoCobrable > 0 ? CLP(template.minimoCobrable) : "Sin mínimo"
-                              } · Redondeo ${
-                                template.redondeoPrecio > 0 ? CLP(template.redondeoPrecio) : "Sin redondeo"
-                              }`}
+                              {[
+                                template.nombre,
+                                isGlassCatalogItem ? "Cristal" : template.material,
+                                `${CLP(template.precioM2Sugerido)}/m2`,
+                                template.minimoCobrable > 0
+                                  ? `Min. ${CLP(template.minimoCobrable)}`
+                                  : "Sin minimo",
+                                template.redondeoPrecio > 0
+                                  ? `Redondeo ${CLP(template.redondeoPrecio)}`
+                                  : "Sin redondeo",
+                              ].join(" - ")}
                             </option>
                           ))}
                         </select>
                       </label>
+                      {requiresProfileMaterial ? (
                       <div className={d.colorField}>
                         <span className={d.measureFieldLabel}>Color</span>
                         <div className={d.colorSelectRow}>
@@ -1671,6 +1685,7 @@ export function PasoDosAgregarGrupoSheet({
                           </select>
                         </div>
                       </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className={d.measuresTerminationsRowSingle}>

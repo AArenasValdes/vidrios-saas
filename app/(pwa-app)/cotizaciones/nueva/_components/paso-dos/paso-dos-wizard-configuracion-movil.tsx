@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
@@ -237,6 +237,8 @@ export function PasoDosWizardConfiguracionMovil({
   });
   const showSystemSelection = shouldShowSystemSelectionForComponent(draft.subtipo);
   const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(draft.subtipo);
+  const isGlassProduct =
+    !requiresProfileMaterial || draft.catalogCategoria === "vidrio" || draft.material === "Cristal";
   const isTrabajoPersonalizado = draft.subtipo === "Trabajo personalizado";
   const isFreeValue = isFreeValueComponentType(draft.subtipo);
   const freeValueGuidance = getComponentDescripcion(draft.subtipo);
@@ -285,15 +287,15 @@ export function PasoDosWizardConfiguracionMovil({
   const visibleColorOptions = showAllColors ? colorOptions : primaryColorOptions;
   const selectedLineLabel = useMemo(() => {
     if (!draft.lineTemplateId) {
-      return "Precio manual o sin línea";
+      return isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea";
     }
 
     return (
       availableLineTemplates.find((template) => String(template.id) === draft.lineTemplateId)?.nombre ??
       referencia ??
-      "Precio manual o sin línea"
+      (isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea")
     );
-  }, [availableLineTemplates, draft.lineTemplateId, referencia]);
+  }, [availableLineTemplates, draft.lineTemplateId, isGlassProduct, referencia]);
 
   const filteredLineTemplates = useMemo(() => {
     const normalizedQuery = lineSelectorQuery.trim().toLowerCase();
@@ -347,15 +349,28 @@ export function PasoDosWizardConfiguracionMovil({
     const precioM2Sugerido = Number(quickLineForm.precioM2Sugerido || 0);
 
     if (!nombre || precioM2Sugerido <= 0) {
-      setQuickLineError("Completa el nombre comercial y un precio base por m² válido.");
+      setQuickLineError("Completa el nombre comercial y un precio base por m2 válido.");
       return;
     }
 
     try {
       const created = await onCreateLineTemplate({
         nombre,
-        material: draft.material,
-        vidrioPrincipalRecomendado: quickLineForm.vidrioPrincipalRecomendado.trim() || null,
+        categoria: isGlassProduct ? "vidrio" : undefined,
+        unidadCobro: "m2",
+        material: isGlassProduct ? "Cristal" : draft.material,
+        vidrioPrincipalRecomendado: isGlassProduct
+          ? null
+          : quickLineForm.vidrioPrincipalRecomendado.trim() || null,
+        catalogMetadata: isGlassProduct
+          ? {
+              espesor: draft.catalogEspesor || null,
+              terminacion:
+                quickLineForm.vidrioPrincipalRecomendado.trim() ||
+                draft.catalogTerminacion ||
+                null,
+            }
+          : undefined,
         precioM2Sugerido,
         minimoCobrable: Number(quickLineForm.minimoCobrable || 0),
         redondeoPrecio: Number(quickLineForm.redondeoPrecio || 1000),
@@ -370,7 +385,7 @@ export function PasoDosWizardConfiguracionMovil({
       setQuickLineError(null);
     } catch (error) {
       setQuickLineError(
-        error instanceof Error ? error.message : "No pudimos guardar la línea en este momento."
+        error instanceof Error ? error.message : "No pudimos guardar la linea en este momento."
       );
     }
   };
@@ -867,12 +882,12 @@ export function PasoDosWizardConfiguracionMovil({
                   className={s.stepTwoMobileSecondaryLink}
                   onClick={() => setIsInternalObservationOpen(true)}
                 >
-                  + Agregar observación interna
+                  + Agregar observacion interna
                 </button>
               ) : (
                 <label className={s.stepTwoMobileInlineField}>
                   <div className={s.stepTwoMobileBlockHeaderInline}>
-                    <span className={s.label}>Observación interna</span>
+                    <span className={s.label}>Observacion interna</span>
                     <button
                       type="button"
                       className={s.stepTwoMobileSecondaryLink}
@@ -959,7 +974,7 @@ export function PasoDosWizardConfiguracionMovil({
             onClick={() => onSetShowAllSystems(!showAllSystems)}
             type="button"
           >
-            {showAllSystems ? "Mostrar menos" : "Ver más sistemas"}
+            {showAllSystems ? "Mostrar menos" : "Ver mas sistemas"}
           </button>
         ) : null}
       </div>
@@ -993,7 +1008,7 @@ export function PasoDosWizardConfiguracionMovil({
               onClick={() => onSetShowAllConfigurations(!showAllConfigurations)}
               type="button"
             >
-              {showAllConfigurations ? "Mostrar menos" : "Ver más opciones"}
+              {showAllConfigurations ? "Mostrar menos" : "Ver mas opciones"}
             </button>
           ) : null}
         </div>
@@ -1092,7 +1107,7 @@ export function PasoDosWizardConfiguracionMovil({
                 </button>
               </div>
 
-              <div className={s.stepTwoMobileBlockHelp}>Línea interior</div>
+              <div className={s.stepTwoMobileBlockHelp}>Linea interior</div>
               <div className={s.stepTwoMobileChoiceChips}>
                 <button
                   className={`${s.stepTwoMobileChoiceChip} ${
@@ -1101,7 +1116,7 @@ export function PasoDosWizardConfiguracionMovil({
                   onClick={() => onMirrorInteriorLineChange("fine")}
                   type="button"
                 >
-                  Línea fina
+                  Linea fina
                 </button>
                 <button
                   className={`${s.stepTwoMobileChoiceChip} ${
@@ -1234,9 +1249,13 @@ export function PasoDosWizardConfiguracionMovil({
 
       <div className={s.stepTwoMobileBlockSecundario}>
         <div className={s.stepTwoMobileBlockHeaderInline}>
-          <div className={s.stepTwoMobileBlockLabel}>Línea comercial</div>
+          <div className={s.stepTwoMobileBlockLabel}>
+            {isGlassProduct ? "Catalogo de cristales" : "Linea comercial"}
+          </div>
           <button className={s.stepTwoMobileSecondaryLink} onClick={openLineSelector} type="button">
-            {availableLineTemplates.length > 0 ? "Ver líneas" : "Nueva línea"}
+            {availableLineTemplates.length > 0
+              ? isGlassProduct ? "Ver cristales" : "Ver lineas"
+              : isGlassProduct ? "Nuevo cristal" : "Nueva linea"}
           </button>
         </div>
         <button
@@ -1255,7 +1274,7 @@ export function PasoDosWizardConfiguracionMovil({
             <strong>
               {linePricingSummary.precioUnitarioSugerido !== null
                 ? `Sugerido: $${linePricingSummary.precioUnitarioSugerido.toLocaleString("es-CL")}`
-                : `Base: $${Number(precioPorM2 || 0).toLocaleString("es-CL")}/m²`}
+                : `Base: $${Number(precioPorM2 || 0).toLocaleString("es-CL")}/m2`}
             </strong>
           </div>
         ) : null}
@@ -1277,20 +1296,28 @@ export function PasoDosWizardConfiguracionMovil({
             <div className={s.stepTwoMobileLineSheetHandle} />
             <div className={s.stepTwoMobileLineSheetHeader}>
               <div className={s.stepTwoMobileLineSheetHeading}>
-                <div className={s.stepTwoMobileBlockLabel}>Línea comercial</div>
+                <div className={s.stepTwoMobileBlockLabel}>
+                  {isGlassProduct ? "Catalogo de cristales" : "Linea comercial"}
+                </div>
                 <strong className={s.stepTwoMobileLineSheetTitle}>
                   {lineSheetView === "create"
-                    ? requiresProfileMaterial
-                      ? `Nueva línea ${draft.material}`
-                      : "Nueva línea"
-                    : "Elegir línea"}
+                    ? isGlassProduct
+                      ? "Nuevo producto de cristal"
+                      : requiresProfileMaterial
+                        ? `Nueva linea ${draft.material}`
+                        : "Nueva linea"
+                    : isGlassProduct ? "Elegir cristal" : "Elegir linea"}
                 </strong>
                 <span className={s.stepTwoMobileLineSheetSubtitle}>
                   {lineSheetView === "create"
-                    ? "Guárdala para usarla ahora y reutilizarla en futuras cotizaciones."
-                    : requiresProfileMaterial
-                      ? `Mostrando líneas de ${draft.material}. Usa una guardada o cotiza con precio manual.`
-                      : "Usa una línea guardada o cotiza con precio manual."}
+                    ? isGlassProduct
+                      ? "Guardalo para usarlo ahora y reutilizarlo en futuras cotizaciones."
+                      : "Guardala para usarla ahora y reutilizarla en futuras cotizaciones."
+                    : isGlassProduct
+                      ? "Mostrando productos de cristal guardados. Usa uno o cotiza con precio manual."
+                      : requiresProfileMaterial
+                        ? `Mostrando lineas de ${draft.material}. Usa una guardada o cotiza con precio manual.`
+                        : "Usa una linea guardada o cotiza con precio manual."}
                 </span>
               </div>
               <button className={s.stepTwoMobileLineSheetClose} onClick={closeLineSelector} type="button">
@@ -1305,7 +1332,7 @@ export function PasoDosWizardConfiguracionMovil({
                     <LuSearch className={s.stepTwoMobileLineSearchIcon} aria-hidden />
                     <input
                       className={s.stepTwoMobileLineSearchInput}
-                      placeholder="Buscar líneas..."
+                      placeholder={isGlassProduct ? "Buscar cristales..." : "Buscar lineas..."}
                       type="text"
                       value={lineSelectorQuery}
                       onChange={(event) => setLineSelectorQuery(event.target.value)}
@@ -1323,7 +1350,7 @@ export function PasoDosWizardConfiguracionMovil({
                         {draft.material}
                       </span>
                       <span className={s.stepTwoMobileLineFilterText}>
-                        {filteredLineTemplates.length} línea
+                        {filteredLineTemplates.length} linea
                         {filteredLineTemplates.length === 1 ? "" : "s"} disponibles
                       </span>
                     </div>
@@ -1338,8 +1365,8 @@ export function PasoDosWizardConfiguracionMovil({
                       type="button"
                     >
                       <div className={s.stepTwoMobileLineOptionBody}>
-                        <span>Precio manual o sin línea</span>
-                        <small>Ingresa el valor directo sin aplicar una línea guardada.</small>
+                        <span>{isGlassProduct ? "Precio manual o sin cristal" : "Precio manual o sin linea"}</span>
+                        <small>{isGlassProduct ? "Ingresa el valor directo sin aplicar un cristal guardado." : "Ingresa el valor directo sin aplicar una linea guardada."}</small>
                       </div>
                       {!draft.lineTemplateId ? (
                         <span className={s.stepTwoMobileLineOptionState}>Actual</span>
@@ -1369,10 +1396,10 @@ export function PasoDosWizardConfiguracionMovil({
                             </span>
                           </div>
                           <small>
-                            ${Math.round(template.precioM2Sugerido).toLocaleString("es-CL")}/m² ·{" "}
+                            ${Math.round(template.precioM2Sugerido).toLocaleString("es-CL")}/m2 ·{" "}
                             {template.minimoCobrable > 0
-                              ? `Mín. $${Math.round(template.minimoCobrable).toLocaleString("es-CL")}`
-                              : "Sin mínimo"}{" "}
+                              ? `Min. $${Math.round(template.minimoCobrable).toLocaleString("es-CL")}`
+                              : "Sin minimo"}{" "}
                             ·{" "}
                             {template.redondeoPrecio > 0
                               ? `Redondeo $${Math.round(template.redondeoPrecio).toLocaleString("es-CL")}`
@@ -1386,7 +1413,7 @@ export function PasoDosWizardConfiguracionMovil({
                     ))}
                     {filteredLineTemplates.length === 0 ? (
                       <div className={s.stepTwoMobileLineEmptyState}>
-                        No encontramos líneas con ese filtro.
+                        {isGlassProduct ? "No encontramos cristales con ese filtro." : "No encontramos lineas con ese filtro."}
                       </div>
                     ) : null}
                   </div>
@@ -1410,7 +1437,7 @@ export function PasoDosWizardConfiguracionMovil({
                     <input
                       className={s.stepTwoMobileQuickLineInput}
                       maxLength={80}
-                      placeholder="Ej: Línea 5000"
+                      placeholder={isGlassProduct ? "Ej: Cristal templado 10 mm" : "Ej: Linea 5000"}
                       type="text"
                       value={quickLineForm.nombre}
                       onChange={(event) => handleQuickLineChange("nombre", event.target.value)}
@@ -1418,7 +1445,7 @@ export function PasoDosWizardConfiguracionMovil({
                   </label>
 
                   <label className={s.field}>
-                    <span className={s.stepTwoMobileQuickLineLabel}>Precio base / m²</span>
+                    <span className={s.stepTwoMobileQuickLineLabel}>Precio base / m2</span>
                     <input
                       className={s.stepTwoMobileQuickLineInput}
                       inputMode="numeric"
@@ -1435,10 +1462,12 @@ export function PasoDosWizardConfiguracionMovil({
                   </label>
 
                   <label className={s.field}>
-                    <span className={s.stepTwoMobileQuickLineLabel}>Vidrio usado normalmente</span>
+                    <span className={s.stepTwoMobileQuickLineLabel}>
+                      {isGlassProduct ? "Terminacion o descripcion opcional" : "Vidrio usado normalmente"}
+                    </span>
                     <input
                       className={s.stepTwoMobileQuickLineInput}
-                      placeholder="Ej: Termopanel 4/10/4"
+                      placeholder={isGlassProduct ? "Ej: templado, laminado, espejo" : "Ej: Termopanel 4/10/4"}
                       type="text"
                       value={quickLineForm.vidrioPrincipalRecomendado}
                       onChange={(event) =>
@@ -1446,7 +1475,9 @@ export function PasoDosWizardConfiguracionMovil({
                       }
                     />
                     <span className={s.stepTwoMobileQuickLineHelper}>
-                      Este vidrio aparecerá primero al cotizar con esta línea.
+                      {isGlassProduct
+                        ? "Se guardara como detalle del producto de cristal."
+                        : "Este vidrio aparecera primero al cotizar con esta linea."}
                     </span>
                   </label>
 
@@ -1466,7 +1497,7 @@ export function PasoDosWizardConfiguracionMovil({
                       }
                     />
                     <span className={s.stepTwoMobileQuickLineHelper}>
-                      Se aplicará cuando el cálculo sea menor a este monto.
+                      Se aplicara cuando el calculo sea menor a este monto.
                     </span>
                   </label>
 
@@ -1476,7 +1507,7 @@ export function PasoDosWizardConfiguracionMovil({
                       onClick={() => setIsQuickOptionsOpen((current) => !current)}
                       type="button"
                     >
-                      {isQuickOptionsOpen ? "Ocultar más opciones" : "Más opciones"}
+                      {isQuickOptionsOpen ? "Ocultar mas opciones" : "Mas opciones"}
                     </button>
 
                     {isQuickOptionsOpen ? (
@@ -1703,12 +1734,12 @@ export function PasoDosWizardConfiguracionMovil({
                   className={s.stepTwoMobileSecondaryLink}
                   onClick={() => setIsInternalObservationOpen(true)}
                 >
-                  + Agregar observación interna
+                  + Agregar observacion interna
                 </button>
               ) : (
                 <label className={s.stepTwoMobileInlineField}>
                   <div className={s.stepTwoMobileBlockHeaderInline}>
-                    <span className={s.label}>Observación interna</span>
+                    <span className={s.label}>Observacion interna</span>
                     <button
                       type="button"
                       className={s.stepTwoMobileSecondaryLink}
@@ -1741,7 +1772,7 @@ export function PasoDosWizardConfiguracionMovil({
                   onClick={openQuickLineForm}
                   type="button"
                 >
-                  Nueva línea
+                  {isGlassProduct ? "Nuevo cristal" : "Nueva linea"}
                 </button>
               ) : (
                 <>
@@ -1780,7 +1811,7 @@ export function PasoDosWizardConfiguracionMovil({
                 onClick={() => setShowAllColors((current) => !current)}
                 type="button"
               >
-                {showAllColors ? "Menos opciones" : "Más opciones"}
+                {showAllColors ? "Menos opciones" : "Mas opciones"}
               </button>
             ) : null}
           </div>

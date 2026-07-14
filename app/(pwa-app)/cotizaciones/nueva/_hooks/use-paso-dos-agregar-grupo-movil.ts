@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   normalizeCurrencyInput,
   buildComponentFormLinePricingSummary,
+  filterLineTemplatesForComponent,
   getSheetSchemeOptions,
   shouldAutoSelectFirstSheetScheme,
-  shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   type ComponentFormState,
   type PreferredProvider,
@@ -101,10 +101,12 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   );
   const visibleLineTemplates = useMemo(
     () =>
-      shouldRequireProfileMaterialForComponent(draft.subtipo)
-        ? activeLineTemplates.filter((template) => template.material === draft.material)
-        : activeLineTemplates,
-    [activeLineTemplates, draft.material, draft.subtipo]
+      filterLineTemplatesForComponent(activeLineTemplates, {
+        tipo: draft.subtipo,
+        material: draft.material,
+        catalogCategoria: draft.catalogCategoria,
+      }),
+    [activeLineTemplates, draft.catalogCategoria, draft.material, draft.subtipo]
   );
   const linePricingSummary = useMemo(
     () =>

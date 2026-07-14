@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -21,7 +21,9 @@ import {
   GLASS_OPTIONS,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
-import type {
+import {
+  getLineTemplateGlassMetadata,
+  mergeLineTemplateGlassMetadata,
   CotizacionLineTemplate,
   CotizacionLineTemplateCategoria,
   CotizacionLineTemplateMaterial,
@@ -41,6 +43,8 @@ type LineTemplateFormDraft = {
   categoria: CotizacionLineTemplateCategoria | "";
   unidadCobro: CotizacionLineTemplateUnidadCobro | "";
   material: CotizacionLineTemplateMaterial | "";
+  espesor: string;
+  terminacion: string;
   vidrioPrincipalRecomendado: string;
   costoBase: string;
   precioM2Sugerido: string;
@@ -55,7 +59,7 @@ type LineTemplateFormDraft = {
 };
 
 type StatusFilterValue = "todas" | "activas" | "inactivas";
-type MaterialFilterValue = "Todo" | CotizacionLineTemplateMaterial;
+type CategoryFilterValue = "Todo" | "aluminio" | "pvc" | "vidrio";
 
 type Props = {
   openNewByDefault?: boolean;
@@ -72,11 +76,14 @@ const GLASS_SELECT_OPTIONS = GLASS_OPTIONS.flatMap((group) =>
 );
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
+  const glassMetadata = getLineTemplateGlassMetadata(template?.catalogMetadata);
   return {
     nombre: template?.nombre ?? "",
     categoria: template?.categoria ?? "aluminio",
     unidadCobro: template?.unidadCobro ?? "m2",
     material: template?.material ?? "",
+    espesor: glassMetadata.espesor ?? "",
+    terminacion: glassMetadata.terminacion ?? "",
     vidrioPrincipalRecomendado: template?.vidrioPrincipalRecomendado ?? "",
     costoBase: template && template.costoBase > 0 ? String(template.costoBase) : "",
     precioM2Sugerido:
@@ -129,7 +136,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   } = useCotizacionLineTemplates();
 
   const [query, setQuery] = useState("");
-  const [materialFilter, setMaterialFilter] = useState<MaterialFilterValue>("Todo");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("Todo");
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("todas");
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [sheetMode, setSheetMode] = useState<"new" | "edit" | null>(() =>
@@ -160,8 +167,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     const normalizedQuery = query.trim().toLowerCase();
 
     return templates.filter((template) => {
-      const matchesMaterial =
-        materialFilter === "Todo" ? true : template.material === materialFilter;
+      const matchesCategory =
+        categoryFilter === "Todo" ? true : template.categoria === categoryFilter;
       const matchesStatus =
         statusFilter === "todas"
           ? true
@@ -172,17 +179,29 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         ? template.nombre.toLowerCase().includes(normalizedQuery)
         : true;
 
-      return matchesMaterial && matchesStatus && matchesQuery;
+      return matchesCategory && matchesStatus && matchesQuery;
     });
-  }, [materialFilter, query, statusFilter, templates]);
+  }, [categoryFilter, query, statusFilter, templates]);
 
   const pricePerM2 = parseMoney(draft.precioM2Sugerido);
   const minimum = parseMoney(draft.minimoCobrable);
   const costoBase = parseMoney(draft.costoBase);
   const unidadCobro = (draft.unidadCobro || "m2") as CotizacionLineTemplateUnidadCobro;
+  const isGlassDraft = draft.categoria === "vidrio";
   const saveDisabled =
-    !draft.nombre.trim() || !draft.material || !draft.categoria || !draft.unidadCobro || pricePerM2 <= 0;
-  const sheetTitle = sheetMode === "edit" ? "Editar línea" : "Nueva línea";
+    !draft.nombre.trim() ||
+    !draft.categoria ||
+    !draft.unidadCobro ||
+    (!isGlassDraft && !draft.material) ||
+    pricePerM2 <= 0;
+  const sheetTitle =
+    sheetMode === "edit"
+      ? isGlassDraft
+        ? "Editar producto de cristal"
+        : "Editar línea"
+      : isGlassDraft
+        ? "Nuevo producto de cristal"
+        : "Nueva línea";
 
   const resetQueryFlag = () => {
     if (!searchParams.get("nueva")) return;
@@ -216,18 +235,42 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     key: K,
     value: LineTemplateFormDraft[K]
   ) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => {
+      if (key === "categoria") {
+        const categoria = value as CotizacionLineTemplateCategoria;
+        if (categoria === "vidrio") {
+          return {
+            ...current,
+            categoria,
+            material: "Cristal",
+            unidadCobro: "m2",
+            vidrioPrincipalRecomendado: "",
+          };
+        }
+
+        return {
+          ...current,
+          categoria,
+          material: categoria === "pvc" ? "PVC" : "Aluminio",
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
   };
 
   const handleSave = async () => {
-    if (saveDisabled || !draft.material) return;
+    if (saveDisabled) return;
+
+    const material = isGlassDraft ? "Cristal" : draft.material;
+    if (!material) return;
 
     const payload = {
       nombre: draft.nombre,
       categoria: draft.categoria as CotizacionLineTemplateCategoria,
-      unidadCobro,
-      material: draft.material,
-      vidrioPrincipalRecomendado: draft.vidrioPrincipalRecomendado || null,
+      unidadCobro: isGlassDraft ? "m2" : unidadCobro,
+      material,
+      vidrioPrincipalRecomendado: isGlassDraft ? null : draft.vidrioPrincipalRecomendado || null,
       costoBase,
       precioM2Sugerido: pricePerM2,
       minimoCobrable: minimum,
@@ -239,16 +282,31 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       proveedor: draft.proveedor || null,
       vigenciaDesde: draft.vigenciaDesde || null,
       vigenciaHasta: draft.vigenciaHasta || null,
+      catalogMetadata: mergeLineTemplateGlassMetadata(
+        undefined,
+        isGlassDraft
+          ? {
+              espesor: draft.espesor,
+              terminacion: draft.terminacion,
+            }
+          : {}
+      ),
       isActive: draft.isActive,
     };
 
     try {
       if (sheetMode === "edit" && editingTemplateId !== null) {
         await updateTemplate(editingTemplateId, payload);
-        setFeedback({ kind: "success", message: "Línea actualizada." });
+        setFeedback({
+          kind: "success",
+          message: isGlassDraft ? "Producto de cristal actualizado." : "Línea actualizada.",
+        });
       } else {
         await createTemplate(payload);
-        setFeedback({ kind: "success", message: "Línea guardada." });
+        setFeedback({
+          kind: "success",
+          message: isGlassDraft ? "Producto de cristal guardado." : "Línea guardada.",
+        });
       }
 
       closeSheet();
@@ -256,7 +314,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       setFeedback({
         kind: "error",
         message:
-          saveError instanceof Error ? saveError.message : "No pudimos guardar esta línea.",
+          saveError instanceof Error ? saveError.message : "No pudimos guardar este producto.",
       });
     }
   };
@@ -358,18 +416,24 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </label>
 
         <div className={s.filterStack}>
-          <div className={s.materialSegment} role="tablist" aria-label="Filtrar por material">
-            {(["Todo", "Aluminio", "PVC"] as const).map((option) => (
+          <div className={s.materialSegment} role="tablist" aria-label="Filtrar por categoría">
+            {[
+              { value: "Todo" as const, label: "Todo" },
+              { value: "aluminio" as const, label: "Aluminio" },
+              { value: "pvc" as const, label: "PVC" },
+              { value: "vidrio" as const, label: "Cristales" },
+            ].map((option) => (
               <button
-                key={option}
+                key={option.value}
                 type="button"
                 className={`${s.materialSegmentButton} ${
-                  materialFilter === option ? s.materialSegmentButtonActive : ""
+                  categoryFilter === option.value ? s.materialSegmentButtonActive : ""
                 }`}
-                onClick={() => setMaterialFilter(option)}
-                aria-pressed={materialFilter === option}
+                data-material={option.value === "vidrio" ? "Cristal" : option.label}
+                onClick={() => setCategoryFilter(option.value)}
+                aria-pressed={categoryFilter === option.value}
               >
-                {option}
+                {option.label}
               </button>
             ))}
           </div>
@@ -410,18 +474,18 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       {isEmpty ? (
         <section className={s.emptyState}>
-          <strong>Aún no tienes líneas guardadas</strong>
-          <p>Crea tu primera línea para cotizar más rápido por m².</p>
+          <strong>Aún no tienes productos guardados</strong>
+          <p>Aún no tienes cristales guardados. Agrega uno para reutilizarlo en tus cotizaciones.</p>
           <button type="button" className={s.primaryButton} onClick={openNewSheet}>
             <LuPlus aria-hidden />
-            Crear línea
+            Crear producto
           </button>
         </section>
       ) : null}
 
       {hasNoResults ? (
         <section className={s.emptyState}>
-          <strong>No encontramos líneas</strong>
+          <strong>No encontramos productos</strong>
           <p>Prueba con otro nombre o cambia los filtros.</p>
         </section>
       ) : null}
@@ -430,6 +494,10 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         <section className={s.list}>
           {filteredTemplates.map((template) => {
             const isMenuOpen = openMenuId === template.id;
+            const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+            const glassDescription = [glassMetadata.espesor, glassMetadata.terminacion]
+              .filter(Boolean)
+              .join(" · ");
 
             return (
               <article
@@ -519,7 +587,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
                 <div className={s.cardDivider} />
 
-                {template.vidrioPrincipalRecomendado ? (
+                {template.categoria === "vidrio" && glassDescription ? (
+                  <span className={s.roundingMeta}>{glassDescription}</span>
+                ) : template.vidrioPrincipalRecomendado ? (
                   <span className={s.roundingMeta}>
                     Vidrio habitual: {template.vidrioPrincipalRecomendado}
                   </span>
@@ -626,25 +696,49 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </select>
               </label>
 
-              <label className={s.fieldBlock}>
-                <span className={s.fieldLabel}>Material</span>
-                <div className={s.materialSelect}>
-                  {(["Aluminio", "PVC"] as const).map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      className={`${s.materialSelectButton} ${
-                        draft.material === option ? s.materialSelectButtonActive : ""
-                      }`}
-                      data-material={option}
-                      aria-pressed={draft.material === option}
-                      onClick={() => handleDraftChange("material", option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
+              {isGlassDraft ? (
+                <div className={s.fieldGrid}>
+                  <label className={s.fieldBlock}>
+                    <span className={s.fieldLabel}>Espesor opcional</span>
+                    <input
+                      className={s.textInput}
+                      value={draft.espesor}
+                      onChange={(event) => handleDraftChange("espesor", event.target.value)}
+                      placeholder="Ej: 10 mm, 5+5, 4-10-4"
+                    />
+                  </label>
+
+                  <label className={s.fieldBlock}>
+                    <span className={s.fieldLabel}>Terminación opcional</span>
+                    <input
+                      className={s.textInput}
+                      value={draft.terminacion}
+                      onChange={(event) => handleDraftChange("terminacion", event.target.value)}
+                      placeholder="Ej: templado, laminado, espejo"
+                    />
+                  </label>
                 </div>
-              </label>
+              ) : (
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Material</span>
+                  <div className={s.materialSelect}>
+                    {(["Aluminio", "PVC"] as const).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`${s.materialSelectButton} ${
+                          draft.material === option ? s.materialSelectButtonActive : ""
+                        }`}
+                        data-material={option}
+                        aria-pressed={draft.material === option}
+                        onClick={() => handleDraftChange("material", option)}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </label>
+              )}
 
               <label className={s.fieldBlock}>
                 <span className={s.fieldLabel}>Costo base · opcional</span>
@@ -772,26 +866,28 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </label>
               </div>
 
-              <label className={s.fieldBlock}>
-                <span className={s.fieldLabel}>Vidrio usado normalmente</span>
-                <select
-                  className={s.selectInput}
-                  value={draft.vidrioPrincipalRecomendado}
-                  onChange={(event) =>
-                    handleDraftChange("vidrioPrincipalRecomendado", event.target.value)
-                  }
-                >
-                  <option value="">Sin sugerencia fija</option>
-                  {GLASS_SELECT_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <p className={s.fieldHint}>
-                  Este vidrio aparecera primero al cotizar con esta linea.
-                </p>
-              </label>
+              {!isGlassDraft ? (
+                <label className={s.fieldBlock}>
+                  <span className={s.fieldLabel}>Vidrio usado normalmente</span>
+                  <select
+                    className={s.selectInput}
+                    value={draft.vidrioPrincipalRecomendado}
+                    onChange={(event) =>
+                      handleDraftChange("vidrioPrincipalRecomendado", event.target.value)
+                    }
+                  >
+                    <option value="">Sin sugerencia fija</option>
+                    {GLASS_SELECT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <p className={s.fieldHint}>
+                    Este vidrio aparecerá primero al cotizar con esta línea.
+                  </p>
+                </label>
+              ) : null}
 
               <div className={s.activeCard}>
                 <div className={s.activeCardCopy}>
@@ -838,7 +934,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 onClick={() => void handleSave()}
                 disabled={saveDisabled || isSaving}
               >
-                {isSaving ? "Guardando..." : "Guardar línea"}
+                {isSaving ? "Guardando..." : isGlassDraft ? "Guardar producto" : "Guardar línea"}
               </button>
             </footer>
           </section>

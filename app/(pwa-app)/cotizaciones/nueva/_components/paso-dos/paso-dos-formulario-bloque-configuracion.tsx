@@ -12,6 +12,7 @@ import {
 import {
   CLP,
   COMPONENT_TYPE_GROUPS,
+  filterLineTemplatesForComponent,
   getCompositionSectionLabel,
   getSheetSchemeOptions,
   getSheetVariantOptions,
@@ -19,6 +20,7 @@ import {
   MATERIAL_OPTIONS,
   MAX_COMPONENTS_PER_QUOTE,
   requiresCustomSheetDescription,
+  isGlassCatalogSelection,
   shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
@@ -83,10 +85,10 @@ export function PasoDosFormularioBloqueConfiguracion({
   desktopAssistantStage = null,
 }: Props) {
   const isMobilePointEdit = variant === "mobilePointEdit";
-  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(componentForm.tipo);
-  const visibleLineTemplates = requiresProfileMaterial
-    ? activeLineTemplates.filter((template) => template.material === componentForm.material)
-    : activeLineTemplates;
+  const isGlassCatalogItem = isGlassCatalogSelection(componentForm);
+  const requiresProfileMaterial =
+    shouldRequireProfileMaterialForComponent(componentForm.tipo) && !isGlassCatalogItem;
+  const visibleLineTemplates = filterLineTemplatesForComponent(activeLineTemplates, componentForm);
   const showSheetScheme = shouldShowSheetSchemeForComponent({
     tipo: componentForm.tipo,
     sistema: componentForm.sistema,

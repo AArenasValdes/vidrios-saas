@@ -7,9 +7,9 @@ import {
   parseLineTemplateSpreadsheetUpload,
   suggestLineTemplateColumnMapping,
   type LineTemplateColumnMapping,
-  type LineTemplateImportPreviewRow,
   type LineTemplateSpreadsheetRow,
 } from "../line-template-import.service";
+import * as XLSX from "xlsx";
 
 describe("line-template-import.service", () => {
   it("debe parsear CSV con encabezados en espanol", () => {
@@ -45,7 +45,41 @@ describe("line-template-import.service", () => {
     expect(mapping.precioVenta).toBe("precio venta");
     expect(preview[0]?.status).toBe("ready");
     expect(preview[0]?.payload?.categoria).toBe("vidrio");
+    expect(preview[0]?.payload?.material).toBe("Cristal");
     expect(preview[0]?.payload?.precioM2Sugerido).toBe(120000);
+  });
+
+  it("debe importar cristales con espesor y terminacion", () => {
+    const rows = parseLineTemplateSpreadsheetUpload({
+      fileName: "cristales.csv",
+      text:
+        "cristal;categoria;precio m2;minimo;redondeo;espesor;terminacion\n" +
+        "Cristal templado 10 mm;cristal;85000;50000;1000;10 mm;Templado\n",
+    });
+
+    const mapping = suggestLineTemplateColumnMapping(extractSpreadsheetHeaders(rows));
+    const preview = buildLineTemplateImportPreview({
+      rows,
+      mapping,
+      existingTemplates: [],
+    });
+
+    expect(preview[0]?.status).toBe("ready");
+    expect(preview[0]?.payload).toEqual(
+      expect.objectContaining({
+        nombre: "Cristal templado 10 mm",
+        categoria: "vidrio",
+        material: "Cristal",
+        unidadCobro: "m2",
+        precioM2Sugerido: 85000,
+        minimoCobrable: 50000,
+        redondeoPrecio: 1000,
+        catalogMetadata: {
+          espesor: "10 mm",
+          terminacion: "Templado",
+        },
+      })
+    );
   });
 
   it("debe detectar duplicados e invalidos en el preview", () => {
@@ -98,7 +132,6 @@ describe("line-template-import.service", () => {
   });
 
   it("debe listar hojas de un workbook xlsx", () => {
-    const XLSX = require("xlsx") as typeof import("xlsx");
     const workbook = XLSX.utils.book_new();
     const sheet = XLSX.utils.aoa_to_sheet([
       ["nombre", "precio venta"],

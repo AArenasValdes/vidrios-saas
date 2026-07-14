@@ -4,6 +4,45 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-14 - Vidrio / Cristal en Paso 2 de cotizacion
+
+### Resumen
+
+El Paso 2 de cotizacion ahora expone la categoria **Vidrios y cristales** con el tipo general **Vidrio / Cristal** para cotizar vidrios, cristales, termopaneles o reposiciones sin perfileria. El tipo no muestra selector de sistema, no pide Aluminio/PVC ni color de perfil, reutiliza las reglas existentes de componentes solo vidrio y tiene croquis propio de paño de vidrio.
+
+Actualizacion: los componentes solo vidrio (`Espejo`, `Cubierta de mesa`, `Vidrio / Cristal`) ahora nacen por defecto con `material='Cristal'` y `catalogCategoria='vidrio'`. Los selectores de precios filtran solo productos de cristal para esos casos y mantienen Aluminio/PVC separados para componentes con perfileria. La configuracion de `Vidrio / Cristal` agrega opciones practicas para maestros: vidrio suelto, reposicion, termopanel, espejo y personalizado.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/cotizaciones/services/component-catalog.service.ts` | Nueva categoria `Vidrios y cristales`, tipo `Vidrio / Cristal` y alias de busqueda para vidrio/cristal |
+| `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-movil-shell.tsx` | Selector mobile muestra la categoria nueva |
+| `src/features/cotizaciones/new-quote/workflow-ui.ts` | `Vidrio / Cristal` queda como componente solo vidrio sin sistema ni perfileria |
+| `src/utils/window-drawings.ts` | Croquis simple para cristales/vidrios |
+| `src/features/cotizaciones/new-quote/__tests__/profile-material-regression.test.ts` | Regresion ampliada para `Vidrio / Cristal` |
+
+---
+
+## 2026-07-13 - Cristales en catalogo de precios
+
+### Resumen
+
+El catalogo reutilizable `cotizacion_line_templates` ahora soporta productos de Cristal como tercera categoria operativa junto con Aluminio y PVC. La UI muestra **Cristales**, el valor interno canonico es `categoria='vidrio'`, `material='Cristal'` y los datos `espesor`/`terminacion` se guardan en `catalog_metadata`. En cotizaciones, los cristales usan el mismo calculo por m2 con minimo/redondeo/cantidad, pueden crearse rapido desde el flujo y se presentan en detalle, PDF y presupuesto publico sin etiquetas de perfileria.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `supabase/migrations/20260713161814_allow_cristal_line_template_material.sql` | Expande CHECK de `material` a `Cristal` |
+| `src/features/cotizaciones/line-templates/` | Tipos, servicio, importacion y UI de catalogo con Cristales |
+| `src/features/cotizaciones/new-quote/workflow-ui.ts` | Snapshot y aplicacion de template de cristal |
+| `app/(pwa-app)/cotizaciones/nueva/` | Selector/reutilizacion/quick-create de Cristales en mobile y desktop |
+| `app/print/cotizaciones/[id]/_utils/item-print-specs.ts` | Specs de PDF sin Material/Color/Linea para Cristales |
+| `app/presupuesto/[token]/` | Presupuesto publico usa specs contextuales para Cristales |
+
+---
+
 ## 2026-07-09 - Fase 2B: importacion PDF catalogo tecnico (piloto Arquetipo)
 
 ### Resumen

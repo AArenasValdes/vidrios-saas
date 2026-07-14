@@ -120,6 +120,9 @@ type ItemPresentation = {
   colorHex: string;
   material: string;
   referencia: string;
+  catalogCategoria: string;
+  catalogEspesor: string;
+  catalogTerminacion: string;
   sistema: string;
   configuracion: string;
   hojasBase: 1 | 2 | null;
@@ -759,6 +762,9 @@ export default function CotizacionPrintPage() {
         colorHex,
         material,
         referencia,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
         sistema,
         configuracion,
         hojasBase,
@@ -810,6 +816,9 @@ export default function CotizacionPrintPage() {
         surfaceLabel: surface,
         vidrio: item.vidrio || "-",
         material,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
         colorName,
         systemLabel,
         lineLabel,
@@ -828,6 +837,9 @@ export default function CotizacionPrintPage() {
         colorHex,
         material,
         referencia,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
         sistema: resolvedSystem,
         configuracion: resolvedConfiguration,
         hojasBase,
@@ -1524,6 +1536,9 @@ export default function CotizacionPrintPage() {
                 const material = presentation?.material ?? "Material a definir";
                 const colorName = presentation?.colorName ?? "Color a definir";
                 const surface = presentation?.surface ?? "-";
+                const fallbackMeta = presentation
+                  ? null
+                  : decodeCotizacionItemPresentationMeta(item.observaciones);
                 const specs =
                   presentation?.specs ??
                   buildCotizacionItemPrintSpecs({
@@ -1532,6 +1547,9 @@ export default function CotizacionPrintPage() {
                     surfaceLabel: surface,
                     vidrio: item.vidrio || "-",
                     material,
+                    catalogCategoria: fallbackMeta?.catalogCategoria,
+                    catalogEspesor: fallbackMeta?.catalogEspesor,
+                    catalogTerminacion: fallbackMeta?.catalogTerminacion,
                     colorName,
                     systemLabel: "-",
                     lineLabel: "-",
@@ -1539,11 +1557,12 @@ export default function CotizacionPrintPage() {
                 const drawingSvg =
                   presentation?.drawingSvg ??
                   (() => {
-                    const fallbackMeta = decodeCotizacionItemPresentationMeta(item.observaciones);
+                    const fallbackDrawingMeta =
+                      fallbackMeta ?? decodeCotizacionItemPresentationMeta(item.observaciones);
                     return generateComponentSVG({
                     tipo: item.tipo,
-                    sistema: fallbackMeta.sistema || presentation?.sistema,
-                    configuracion: fallbackMeta.configuracion || presentation?.configuracion,
+                    sistema: fallbackDrawingMeta.sistema || presentation?.sistema,
+                    configuracion: fallbackDrawingMeta.configuracion || presentation?.configuracion,
                     hojasBase: presentation?.hojasBase,
                     sheetScheme: presentation?.sheetScheme,
                     sheetVariant: presentation?.sheetVariant,
@@ -1556,12 +1575,12 @@ export default function CotizacionPrintPage() {
                     maxW: 470,
                     maxH: 210,
                     variant: "pdf",
-                    palilloEnabled: fallbackMeta.palilloEnabled,
-                    palilloType: fallbackMeta.palilloType || undefined,
-                    mirrorFormat: fallbackMeta.mirrorFormat,
-                    mirrorPaneCount: fallbackMeta.mirrorPaneCount,
-                    mirrorPaneDirection: fallbackMeta.mirrorPaneDirection,
-                    mirrorInteriorLine: fallbackMeta.mirrorInteriorLine,
+                    palilloEnabled: fallbackDrawingMeta.palilloEnabled,
+                    palilloType: fallbackDrawingMeta.palilloType || undefined,
+                    mirrorFormat: fallbackDrawingMeta.mirrorFormat,
+                    mirrorPaneCount: fallbackDrawingMeta.mirrorPaneCount,
+                    mirrorPaneDirection: fallbackDrawingMeta.mirrorPaneDirection,
+                    mirrorInteriorLine: fallbackDrawingMeta.mirrorInteriorLine,
                   });
                   })();
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;

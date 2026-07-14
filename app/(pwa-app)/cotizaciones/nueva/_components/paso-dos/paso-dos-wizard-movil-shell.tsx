@@ -178,6 +178,11 @@ const CATEGORY_OPTIONS: Array<{
     countLabel: `${getSubtypeOptionsForCategory("Cierres y exteriores").length} tipos`,
   },
   {
+    title: "Vidrios y cristales",
+    subtitle: "Vidrios, cristales y termopaneles",
+    countLabel: `${getSubtypeOptionsForCategory("Vidrios y cristales").length} tipo`,
+  },
+  {
     title: "Interiores y decoracion",
     subtitle: "Espejos y cubiertas",
     countLabel: `${getSubtypeOptionsForCategory("Interiores y decoracion").length} tipos`,
@@ -244,7 +249,7 @@ export function PasoDosWizardMovil({
   const normalizedCategoryOptions = useMemo(() => {
     const base = CATEGORY_OPTIONS.map((option) => ({
       ...option,
-      subtitle: option.subtitle.replace("paÃ±os", "paños"),
+      subtitle: option.subtitle,
     }));
 
     if (shouldHideFreeNotebookCategoryInWizard(quotePricingMode, wizard.entryMode)) {

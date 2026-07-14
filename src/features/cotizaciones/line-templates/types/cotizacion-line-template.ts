@@ -1,6 +1,6 @@
 import type { EntityId } from "@/types/common";
 
-export const LINE_TEMPLATE_MATERIALS = ["Aluminio", "PVC"] as const;
+export const LINE_TEMPLATE_MATERIALS = ["Aluminio", "PVC", "Cristal"] as const;
 export type CotizacionLineTemplateMaterial = (typeof LINE_TEMPLATE_MATERIALS)[number];
 
 export const LINE_TEMPLATE_CATEGORIAS = [
@@ -45,6 +45,52 @@ export type CotizacionLineTemplate = {
   actualizadoEn: string | null;
   eliminadoEn: string | null;
 };
+
+export type CotizacionLineTemplateCatalogMetadata = Record<
+  string,
+  string | number | boolean | null
+>;
+
+export type CotizacionGlassProductMetadata = {
+  espesor: string | null;
+  terminacion: string | null;
+};
+
+function normalizeMetadataText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export function getLineTemplateGlassMetadata(
+  metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
+): CotizacionGlassProductMetadata {
+  return {
+    espesor: normalizeMetadataText(metadata?.espesor),
+    terminacion:
+      normalizeMetadataText(metadata?.terminacion) ??
+      normalizeMetadataText(metadata?.descripcion),
+  };
+}
+
+export function mergeLineTemplateGlassMetadata(
+  metadata: CotizacionLineTemplateCatalogMetadata | null | undefined,
+  input: Partial<CotizacionGlassProductMetadata>
+): CotizacionLineTemplateCatalogMetadata {
+  const next: CotizacionLineTemplateCatalogMetadata = { ...(metadata ?? {}) };
+
+  if (input.espesor !== undefined) {
+    const value = input.espesor?.trim() ?? "";
+    if (value) next.espesor = value.slice(0, 40);
+    else delete next.espesor;
+  }
+
+  if (input.terminacion !== undefined) {
+    const value = input.terminacion?.trim() ?? "";
+    if (value) next.terminacion = value.slice(0, 160);
+    else delete next.terminacion;
+  }
+
+  return next;
+}
 
 export type CreateCotizacionLineTemplateInput = {
   organizationId: EntityId;

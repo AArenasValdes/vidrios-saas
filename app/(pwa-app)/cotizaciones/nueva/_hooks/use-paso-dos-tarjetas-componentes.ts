@@ -185,6 +185,12 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           listQuantity: `${effectiveItem.cantidad} ${effectiveItem.cantidad === 1 ? "ud." : "uds."}`,
         };
       }),
-    [params.borradoresRapidos, params.isDesktopQuoteStudio, params.items, params.quotePricingMode]
+    [
+      desktopSvgHeight,
+      desktopSvgWidth,
+      params.borradoresRapidos,
+      params.items,
+      params.quotePricingMode,
+    ]
   );
 }

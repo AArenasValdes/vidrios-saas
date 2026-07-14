@@ -1112,7 +1112,16 @@ function NuevaCotizacionPageContent() {
     try {
       const created = await createLineTemplate({
         nombre: lineName,
+        categoria: componentForm.catalogCategoria === "vidrio" ? "vidrio" : undefined,
+        unidadCobro: "m2",
         material: componentForm.material,
+        catalogMetadata:
+          componentForm.catalogCategoria === "vidrio"
+            ? {
+                espesor: componentForm.catalogEspesor || null,
+                terminacion: componentForm.catalogTerminacion || null,
+              }
+            : undefined,
         precioM2Sugerido: pricePerSquareMeter,
         minimoCobrable: Number(componentForm.minimoCobrable || 0),
         redondeoPrecio: Number(componentForm.redondeoPrecio || 1000),
@@ -1160,7 +1169,16 @@ function NuevaCotizacionPageContent() {
     try {
       await createLineTemplate({
         nombre: lineName,
+        categoria: itemForm.catalogCategoria === "vidrio" ? "vidrio" : undefined,
+        unidadCobro: "m2",
         material: itemForm.material,
+        catalogMetadata:
+          itemForm.catalogCategoria === "vidrio"
+            ? {
+                espesor: itemForm.catalogEspesor || null,
+                terminacion: itemForm.catalogTerminacion || null,
+              }
+            : undefined,
         precioM2Sugerido,
         minimoCobrable: Number(itemForm.minimoCobrable || sourceItem.precioUnitario || 0),
         redondeoPrecio: Number(itemForm.redondeoPrecio || 1000),

@@ -116,6 +116,7 @@ function normalizeType(tipo: string): string {
   const t = tipo.trim().toLowerCase();
   if (t.startsWith("vent")) return "Ventana";
   if (t.startsWith("puert")) return "Puerta";
+  if (t.includes("vidrio") || t.includes("cristal")) return "Cristal";
   if (t.includes("fijo") || (t.startsWith("pa") && !t.startsWith("par")))
     return "PanoFijo";
   if (t.startsWith("show") || t.includes("ducha")) return "Shower";
@@ -1700,6 +1701,22 @@ function drawPanoFijo(x: number, y: number, w: number, h: number, v: string, p: 
   ].join("");
 }
 
+function drawCristalSimple(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
+  const GW = gsw(v);
+  const edge = clamp(Math.min(w, h) * 0.018, 2.2, 4.5);
+  const gX = x + edge;
+  const gY = y + edge;
+  const gW = w - edge * 2;
+  const gH = h - edge * 2;
+  const corner = clamp(Math.min(w, h) * 0.025, 3, 8);
+
+  return [
+    `<rect x="${px(gX)}" y="${px(gY)}" width="${px(gW)}" height="${px(gH)}" rx="${px(corner)}" fill="${G_FILL}" stroke="${G_STROKE}" stroke-width="${px(Math.max(GW, 1.4))}"/>`,
+    `<line x1="${px(gX + gW * 0.12)}" y1="${px(gY + gH * 0.18)}" x2="${px(gX + gW * 0.34)}" y2="${px(gY + gH * 0.18)}" stroke="${p.label}" stroke-width="${px(det(v))}" stroke-linecap="round" opacity="0.48"/>`,
+    `<line x1="${px(gX + gW * 0.66)}" y1="${px(gY + gH * 0.82)}" x2="${px(gX + gW * 0.88)}" y2="${px(gY + gH * 0.82)}" stroke="${p.label}" stroke-width="${px(det(v))}" stroke-linecap="round" opacity="0.36"/>`,
+  ].join("");
+}
+
 // ─── Componentes: Shower door ─────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -2511,6 +2528,9 @@ function routeDrawing(
     case "PanoFijo":
       return drawPanoFijo(x, y, w, h, v, p);
 
+    case "Cristal":
+      return drawCristalSimple(x, y, w, h, v, p);
+
     case "Shower":
       return drawShowerDoor(x, y, w, h, v, p, sistemaNorm, doorConfig, bowComposition);
 
@@ -2573,6 +2593,7 @@ function baseSizeFor(tipoNorm: string): { w: number; h: number } {
     Ventana:    { w: 180, h: 145 },
     Puerta:     { w:  95, h: 175 },
     PanoFijo:   { w: 165, h: 175 },
+    Cristal:    { w: 145, h: 175 },
     Shower:     { w:  90, h: 175 },
     Cierre:     { w: 210, h: 115 },
     Baranda:    { w: 210, h:  80 },
@@ -2592,6 +2613,7 @@ function fitBoxFor(tipoNorm: string): { maxW: number; maxH: number } {
     Ventana:   { maxW: 230, maxH: 210 },
     Puerta:    { maxW: 140, maxH: 214 },
     PanoFijo:  { maxW: 210, maxH: 214 },
+    Cristal:   { maxW: 210, maxH: 214 },
     Shower:    { maxW: 132, maxH: 214 },
     Cierre:    { maxW: 240, maxH: 148 },
     Baranda:   { maxW: 240, maxH: 118 },

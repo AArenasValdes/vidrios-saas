@@ -5,7 +5,6 @@ import {
 import {
   LINE_TEMPLATE_CATEGORIAS,
   LINE_TEMPLATE_MATERIALS,
-  LINE_TEMPLATE_UNIDADES_COBRO,
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateMaterial,
@@ -66,7 +65,7 @@ function normalizeTemplateName(value: string) {
   const nombre = normalizeText(value);
 
   if (!nombre) {
-    throw new Error("El nombre comercial de la linea es obligatorio.");
+    throw new Error("El nombre comercial es obligatorio.");
   }
 
   return nombre.slice(0, 80);
@@ -79,7 +78,7 @@ function normalizeTemplateMaterial(value: string | null | undefined): Cotizacion
     return normalized as CotizacionLineTemplateMaterial;
   }
 
-  throw new Error("Debes elegir si la linea es de Aluminio o PVC.");
+  throw new Error("Debes elegir si el producto es de Aluminio, PVC o Cristal.");
 }
 
 function normalizeTemplateCategoria(value: string | null | undefined): CotizacionLineTemplateCategoria {
@@ -125,7 +124,51 @@ function normalizeUnidadCobro(value: string | null | undefined): CotizacionLineT
 }
 
 function materialFromCategoria(categoria: CotizacionLineTemplateCategoria): CotizacionLineTemplateMaterial {
-  return categoria === "pvc" ? "PVC" : "Aluminio";
+  if (categoria === "pvc") return "PVC";
+  if (categoria === "vidrio") return "Cristal";
+  return "Aluminio";
+}
+
+function normalizeMaterialForCategoria(
+  categoria: CotizacionLineTemplateCategoria,
+  material: string | null | undefined
+): CotizacionLineTemplateMaterial {
+  if (categoria === "vidrio") {
+    return "Cristal";
+  }
+
+  return normalizeTemplateMaterial(material ?? materialFromCategoria(categoria));
+}
+
+function normalizeUnitForCategoria(
+  categoria: CotizacionLineTemplateCategoria,
+  unidadCobro: string | null | undefined
+): CotizacionLineTemplateUnidadCobro {
+  if (categoria === "vidrio") {
+    return "m2";
+  }
+
+  return normalizeUnidadCobro(unidadCobro ?? "m2");
+}
+
+function normalizeGlassMetadata(
+  categoria: CotizacionLineTemplateCategoria,
+  metadata: Record<string, string | number | boolean | null> | undefined
+) {
+  if (categoria !== "vidrio") {
+    return metadata ?? {};
+  }
+
+  const next = { ...(metadata ?? {}) };
+  for (const key of ["espesor", "terminacion", "descripcion"] as const) {
+    if (typeof next[key] === "string") {
+      const trimmed = next[key].trim();
+      if (trimmed) next[key] = trimmed.slice(0, key === "espesor" ? 40 : 160);
+      else delete next[key];
+    }
+  }
+
+  return next;
 }
 
 function normalizeRecommendedGlass(value: string | null | undefined) {
@@ -159,17 +202,22 @@ function normalizeProveedor(value: string | null | undefined) {
 function normalizeCreateInput(
   input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
 ) {
-  const categoria = normalizeTemplateCategoria(input.categoria ?? input.material.toLowerCase());
-  const material = input.material ?? materialFromCategoria(categoria);
+  const categoria = normalizeTemplateCategoria(input.categoria ?? input.material?.toLowerCase());
+  const material = normalizeMaterialForCategoria(categoria, input.material);
+  const precioM2Sugerido = normalizeMoney(input.precioM2Sugerido);
+
+  if (categoria === "vidrio" && precioM2Sugerido <= 0) {
+    throw new Error("El precio por m2 del cristal debe ser mayor a cero.");
+  }
 
   return {
     nombre: normalizeTemplateName(input.nombre),
     categoria,
-    unidadCobro: normalizeUnidadCobro(input.unidadCobro ?? "m2"),
-    material: normalizeTemplateMaterial(material),
+    unidadCobro: normalizeUnitForCategoria(categoria, input.unidadCobro),
+    material,
     vidrioPrincipalRecomendado: normalizeRecommendedGlass(input.vidrioPrincipalRecomendado),
     costoBase: normalizeMoney(input.costoBase ?? 0),
-    precioM2Sugerido: normalizeMoney(input.precioM2Sugerido),
+    precioM2Sugerido,
     minimoCobrable: normalizeMoney(input.minimoCobrable ?? 0),
     redondeoPrecio: normalizeRound(input.redondeoPrecio),
     mermaPct: normalizePercent(input.mermaPct ?? 0),
@@ -177,7 +225,7 @@ function normalizeCreateInput(
     proveedor: normalizeProveedor(input.proveedor),
     vigenciaDesde: normalizeOptionalDate(input.vigenciaDesde),
     vigenciaHasta: normalizeOptionalDate(input.vigenciaHasta),
-    catalogMetadata: input.catalogMetadata ?? {},
+    catalogMetadata: normalizeGlassMetadata(categoria, input.catalogMetadata),
     isActive: input.isActive ?? true,
     sortOrder: Math.max(0, Math.trunc(Number(input.sortOrder ?? 0) || 0)),
   };
@@ -193,13 +241,16 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
     payload.categoria = normalizeTemplateCategoria(input.categoria);
   }
   if (input.unidadCobro !== undefined) {
-    payload.unidadCobro = normalizeUnidadCobro(input.unidadCobro);
+    payload.unidadCobro = normalizeUnitForCategoria(
+      payload.categoria ?? "aluminio",
+      input.unidadCobro
+    );
   }
   if (input.precioM2Sugerido !== undefined) {
     payload.precioM2Sugerido = normalizeMoney(input.precioM2Sugerido);
   }
   if (input.material !== undefined) {
-    payload.material = normalizeTemplateMaterial(input.material);
+    payload.material = normalizeMaterialForCategoria(payload.categoria ?? "aluminio", input.material);
   }
   if (input.vidrioPrincipalRecomendado !== undefined) {
     payload.vidrioPrincipalRecomendado = normalizeRecommendedGlass(
@@ -231,13 +282,28 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
     payload.vigenciaHasta = normalizeOptionalDate(input.vigenciaHasta);
   }
   if (input.catalogMetadata !== undefined) {
-    payload.catalogMetadata = input.catalogMetadata;
+    payload.catalogMetadata = normalizeGlassMetadata(
+      payload.categoria ?? "aluminio",
+      input.catalogMetadata
+    );
   }
   if (input.isActive !== undefined) {
     payload.isActive = Boolean(input.isActive);
   }
   if (input.sortOrder !== undefined) {
     payload.sortOrder = Math.max(0, Math.trunc(Number(input.sortOrder) || 0));
+  }
+
+  if (payload.categoria === "vidrio") {
+    payload.material = "Cristal";
+    payload.unidadCobro = "m2";
+    payload.catalogMetadata = normalizeGlassMetadata(
+      "vidrio",
+      payload.catalogMetadata ?? input.catalogMetadata
+    );
+    if (payload.precioM2Sugerido !== undefined && payload.precioM2Sugerido <= 0) {
+      throw new Error("El precio por m2 del cristal debe ser mayor a cero.");
+    }
   }
 
   return payload;

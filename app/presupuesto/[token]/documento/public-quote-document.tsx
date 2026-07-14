@@ -30,6 +30,7 @@ import {
 import { generateComponentSVG } from "@/utils/window-drawings";
 
 import printStyles from "../../../print/cotizaciones/[id]/page.module.css";
+import { buildCotizacionItemPrintSpecs } from "../../../print/cotizaciones/[id]/_utils/item-print-specs";
 import s from "./page.module.css";
 
 const FIRST_PAGE_COMPONENTS = 3;
@@ -487,6 +488,9 @@ export function PublicQuoteDocument({
         colorHex,
         material,
         referencia,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
         sistema,
         configuracion,
         hojasBase,
@@ -526,6 +530,25 @@ export function PublicQuoteDocument({
         { key: "Superficie", value: surface },
       ];
 
+      const glassSpecs = buildCotizacionItemPrintSpecs({
+        tipo: item.tipo,
+        dimensionsLabel: formatDimensions(item.ancho, item.alto),
+        surfaceLabel: surface,
+        vidrio: item.vidrio || "-",
+        material,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
+        colorName,
+        systemLabel,
+        lineLabel,
+        configuracion: configuracion || undefined,
+        sheetSchemeLabel,
+        shouldShowSheetSchemeSpec,
+      });
+      const itemSpecs =
+        catalogCategoria === "vidrio" || material === "Cristal" ? glassSpecs : specs;
+
       map.set(item.id, {
         colorHex,
         material,
@@ -537,7 +560,7 @@ export function PublicQuoteDocument({
         isCustomScheme,
         colorName,
         surface,
-        specs,
+        specs: itemSpecs,
         drawingSvg: generateComponentSVG({
           tipo: item.tipo,
           sistema: resolvedSystem,
@@ -767,8 +790,21 @@ export function PublicQuoteDocument({
                       const material = presentation?.material ?? "Material a definir";
                       const colorName = presentation?.colorName ?? "Color a definir";
                       const surface = presentation?.surface ?? "-";
+                      const fallbackSpecs = buildCotizacionItemPrintSpecs({
+                        tipo: item.tipo,
+                        dimensionsLabel: formatDimensions(item.ancho, item.alto),
+                        surfaceLabel: surface,
+                        vidrio: item.vidrio || "-",
+                        material,
+                        catalogCategoria: itemMeta.catalogCategoria,
+                        catalogEspesor: itemMeta.catalogEspesor,
+                        catalogTerminacion: itemMeta.catalogTerminacion,
+                        colorName,
+                        systemLabel: "-",
+                        lineLabel: "-",
+                      });
                       const specs =
-                        presentation?.specs ?? [
+                        presentation?.specs ?? fallbackSpecs ?? [
                           { key: "Dimensiones", value: formatDimensions(item.ancho, item.alto) },
                           { key: "Material", value: material },
                           { key: "Color", value: colorName },

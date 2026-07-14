@@ -1,6 +1,7 @@
-export type ComponentCategoryTitle =
+﻿export type ComponentCategoryTitle =
   | "Aberturas"
   | "Cierres y exteriores"
+  | "Vidrios y cristales"
   | "Interiores y decoracion"
   | "Especiales"
   | "Proyecto libre y Mantencion";
@@ -161,6 +162,23 @@ export const COMPONENT_CATALOG = [
     ],
   },
   {
+    title: "Vidrios y cristales",
+    items: [
+      {
+        tipo: "Vidrio / Cristal",
+        descripcion: "Vidrios, cristales, termopaneles o reposiciones sin perfileria.",
+        sistemas: ["Sin perfileria"],
+        configuraciones: [
+          "Vidrio suelto",
+          "Reposicion",
+          "Termopanel",
+          "Espejo",
+          "Personalizado",
+        ],
+      },
+    ],
+  },
+  {
     title: "Interiores y decoracion",
     items: [
       {
@@ -243,7 +261,7 @@ function normalizeCatalogText(value: string) {
 }
 
 const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
-  [normalizeCatalogText("Pa\u00c3\u00b1o Fijo")]: normalizeCatalogText("Paño fijo"),
+  [normalizeCatalogText("Paño Fijo")]: normalizeCatalogText("Paño fijo"),
   [normalizeCatalogText("Fijo")]: normalizeCatalogText("Paño fijo"),
   [normalizeCatalogText("Ventana 1 hoja")]: normalizeCatalogText("Paño fijo"),
   [normalizeCatalogText("Ventana fija")]: normalizeCatalogText("Paño fijo"),
@@ -254,9 +272,16 @@ const LEGACY_COMPONENT_ALIASES: Record<string, string> = {
   "otro trabajo especial": "trabajo personalizado",
   otro: "trabajo personalizado",
   "tapa de mesa": "cubierta de mesa",
-  // Legacy: old "Proyecto libre y Mantencion" subtypes → canonical single type
+  vidrio: "vidrio cristal",
+  cristal: "vidrio cristal",
+  "vidrio cristal": "vidrio cristal",
+  "cristal vidrio": "vidrio cristal",
+  "vidrio suelto": "vidrio cristal",
+  "cristal suelto": "vidrio cristal",
+  "cambio de vidrio": "vidrio cristal",
+  // Legacy: old "Proyecto libre y Mantencion" subtypes â†’ canonical single type
   [normalizeCatalogText("Item libre con valor")]: normalizeCatalogText("Trabajo libre / Mantencion"),
-  [normalizeCatalogText("Cambio de vidrio")]: normalizeCatalogText("Trabajo libre / Mantencion"),
+  [normalizeCatalogText("Cambio de vidrio")]: normalizeCatalogText("Vidrio / Cristal"),
   [normalizeCatalogText("Mantencion de ventanas")]: normalizeCatalogText("Trabajo libre / Mantencion"),
   [normalizeCatalogText("Cambio de rodamientos / carros")]: normalizeCatalogText("Trabajo libre / Mantencion"),
   [normalizeCatalogText("Cambio de pestillos / cierres")]: normalizeCatalogText("Trabajo libre / Mantencion"),

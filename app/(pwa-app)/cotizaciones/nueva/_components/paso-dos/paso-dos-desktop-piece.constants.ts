@@ -20,6 +20,7 @@ export const DESKTOP_FREQUENT_TYPES = [
 ] as const;
 
 export const DESKTOP_OTHER_TYPES_PRIMARY = [
+  "Vidrio / Cristal",
   "Espejo",
   "Cubierta de mesa",
   "Trabajo libre / Mantencion",
@@ -44,6 +45,7 @@ export const DESKTOP_TYPE_ICONS: Partial<Record<string, IconType>> = {
   "Shower door": LuDroplets,
   "Cierre terraza/logia": LuFence,
   "Paño fijo": LuSquare,
+  "Vidrio / Cristal": LuSquare,
   Baranda: LuColumns3,
 };
 
@@ -62,7 +64,7 @@ export function shortenCompositionLabel(label: string, max = 42): string {
     return label;
   }
 
-  return `${label.slice(0, max - 1).trim()}…`;
+  return `${label.slice(0, max - 3).trim()}...`;
 }
 
 export function buildDesktopConfigSummary(input: {

@@ -200,6 +200,13 @@
   color: #355f49;
 }
 
+.materialSegmentButtonActive[data-material="Cristal"],
+.materialSelectButtonActive[data-material="Cristal"] {
+  background: linear-gradient(180deg, #eef8ff, #dff0fb);
+  border-color: rgba(14, 116, 144, 0.2);
+  color: #0f5f75;
+}
+
 .statusChips {
   display: flex;
   gap: 8px;
@@ -318,6 +325,10 @@
   background: radial-gradient(circle at top right, rgba(126, 108, 188, 0.12), transparent 42%);
 }
 
+.card[data-material="Cristal"]::after {
+  background: radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 42%);
+}
+
 .cardInactive {
   background: linear-gradient(180deg, rgba(250, 252, 254, 0.94), rgba(245, 248, 251, 0.94));
   box-shadow: 0 10px 20px rgba(36, 59, 107, 0.035);
@@ -394,6 +405,12 @@
   background: #e5f4ea;
   color: #416854;
   border-color: rgba(79, 122, 98, 0.16);
+}
+
+.materialPill[data-material="Cristal"] {
+  background: #e4f4fb;
+  color: #0f5f75;
+  border-color: rgba(14, 116, 144, 0.16);
 }
 
 .menuWrap {

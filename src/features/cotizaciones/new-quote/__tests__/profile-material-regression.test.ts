@@ -6,7 +6,7 @@ const ALL_COMPONENT_TYPES = COMPONENT_CATALOG.flatMap((group) =>
   group.items.map((item) => item.tipo)
 );
 
-const GLASS_ONLY_TYPES = ["Espejo", "Cubierta de mesa"] as const;
+const GLASS_ONLY_TYPES = ["Espejo", "Cubierta de mesa", "Vidrio / Cristal"] as const;
 
 const PROFILE_TYPES = ALL_COMPONENT_TYPES.filter(
   (tipo) => !GLASS_ONLY_TYPES.includes(tipo as (typeof GLASS_ONLY_TYPES)[number])
@@ -24,7 +24,7 @@ const printSpecBase = {
 };
 
 describe("regresion material de perfil", () => {
-  it("solo Espejo y Cubierta de mesa omiten material de perfil", () => {
+  it("componentes solo vidrio omiten material de perfil", () => {
     for (const tipo of GLASS_ONLY_TYPES) {
       expect(shouldRequireProfileMaterialForComponent(tipo)).toBe(false);
     }
@@ -46,7 +46,7 @@ describe("regresion material de perfil", () => {
     }
   });
 
-  it("el PDF omite material y color solo para espejo y cubierta de mesa", () => {
+  it("el PDF omite material y color para componentes solo vidrio", () => {
     for (const tipo of GLASS_ONLY_TYPES) {
       const keys = buildCotizacionItemPrintSpecs({
         ...printSpecBase,

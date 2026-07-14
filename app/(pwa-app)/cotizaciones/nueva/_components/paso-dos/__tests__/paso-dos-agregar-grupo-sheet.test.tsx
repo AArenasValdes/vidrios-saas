@@ -176,7 +176,8 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     expect(screen.getByText("Frecuentes")).toBeInTheDocument();
     expect(screen.getByText("Otros trabajos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ver todos los trabajos/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Qué estás cotizando/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /\u00bfQu\u00e9 est\u00e1s cotizando/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Vidrio \/ Cristal/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continuar a sistema/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Finalizar pieza/i })).not.toBeInTheDocument();
   });
@@ -269,5 +270,60 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     } finally {
       rectSpy.mockRestore();
     }
+  });
+
+  it("muestra catalogo de cristales en desktop para componentes solo vidrio", () => {
+    const onSelectLineTemplate = jest.fn();
+
+    render(
+      <PasoDosAgregarGrupoSheet
+        {...baseProps}
+        quotePricingMode="por_item"
+        entryMode="normal"
+        paso={3}
+        draft={{
+          ...draft,
+          categoria: "Vidrios y cristales",
+          subtipo: "Vidrio / Cristal",
+          material: "Cristal",
+          catalogCategoria: "vidrio",
+          sistema: "Sin perfileria",
+          configuracion: "Vidrio suelto",
+          ancho: "1200",
+          alto: "1500",
+          vidrio: "Cristal templado 10 mm",
+          precio: "",
+        }}
+        visibleLineTemplates={[
+          {
+            id: "cr-1",
+            organizationId: "org-1",
+            nombre: "Cristal templado 10 mm",
+            material: "Cristal",
+            categoria: "vidrio",
+            unidadCobro: "m2",
+            precioM2Sugerido: 150000,
+            minimoCobrable: 95000,
+            redondeoPrecio: 1000,
+            vidrioPrincipalRecomendado: null,
+            catalogMetadata: {},
+            isActive: true,
+            creadoEn: "2026-07-14T00:00:00.000Z",
+            actualizadoEn: "2026-07-14T00:00:00.000Z",
+          },
+        ]}
+        onSelectLineTemplate={onSelectLineTemplate}
+      />
+    );
+
+    expect(screen.getByText("Producto de cristal")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Seleccionar linea comercial")).not.toBeInTheDocument();
+
+    const selector = screen.getByLabelText("Seleccionar producto de cristal");
+    expect(selector).toHaveValue("");
+    expect(screen.getByText(/Cristal templado 10 mm - Cristal/)).toBeInTheDocument();
+
+    fireEvent.change(selector, { target: { value: "cr-1" } });
+    expect(onSelectLineTemplate).toHaveBeenCalledWith("cr-1");
   });
 });

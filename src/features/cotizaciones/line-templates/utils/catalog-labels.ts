@@ -6,7 +6,7 @@ import type {
 export const LINE_TEMPLATE_CATEGORIA_LABELS: Record<CotizacionLineTemplateCategoria, string> = {
   aluminio: "Aluminio",
   pvc: "PVC",
-  vidrio: "Vidrio",
+  vidrio: "Cristales",
   shower: "Shower / mampara",
   accesorios: "Accesorios",
   otros: "Otros",

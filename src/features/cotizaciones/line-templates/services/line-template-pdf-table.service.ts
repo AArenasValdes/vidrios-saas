@@ -21,7 +21,7 @@ export function groupPdfTextItemsIntoRows(items: PdfTextItem[], yTolerance = 4) 
 
   for (const item of sorted) {
     const existingRow = rows.find(
-      (row) => Math.abs(row[0]?.y ?? item.y) <= yTolerance
+      (row) => Math.abs((row[0]?.y ?? item.y) - item.y) <= yTolerance
     );
 
     if (existingRow) {
@@ -138,7 +138,7 @@ function isLikelyDataRow(cells: string[]) {
   const hasPrice = cells.some((cell) => PRICE_LIKE_PATTERN.test(cell));
   const hasName = cells.some((cell) => cell.trim().length >= 3);
 
-  return hasPrice || (hasName && cells.length >= 2);
+  return hasPrice && hasName;
 }
 
 export function matrixToSpreadsheetRows(matrix: string[][], headerRowIndex: number) {

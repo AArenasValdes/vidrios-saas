@@ -26,7 +26,9 @@ export type LineTemplateImportField =
   | "proveedor"
   | "vigenciaDesde"
   | "vigenciaHasta"
-  | "vidrioPrincipalRecomendado";
+  | "vidrioPrincipalRecomendado"
+  | "espesor"
+  | "terminacion";
 
 export type LineTemplateColumnMapping = Partial<Record<LineTemplateImportField, string>>;
 
@@ -45,9 +47,9 @@ export const LINE_TEMPLATE_IMPORT_FIELDS: Array<{
   label: string;
   required?: boolean;
 }> = [
-  { key: "nombre", label: "Nombre de linea", required: true },
+  { key: "nombre", label: "Nombre de producto", required: true },
   { key: "categoria", label: "Categoria" },
-  { key: "material", label: "Material (Aluminio/PVC)" },
+  { key: "material", label: "Material (Aluminio/PVC/Cristal)" },
   { key: "unidadCobro", label: "Unidad de cobro" },
   { key: "costoBase", label: "Costo base" },
   { key: "precioVenta", label: "Precio de venta" },
@@ -59,11 +61,13 @@ export const LINE_TEMPLATE_IMPORT_FIELDS: Array<{
   { key: "vigenciaDesde", label: "Vigencia desde" },
   { key: "vigenciaHasta", label: "Vigencia hasta" },
   { key: "vidrioPrincipalRecomendado", label: "Vidrio recomendado" },
+  { key: "espesor", label: "Espesor" },
+  { key: "terminacion", label: "Terminacion / descripcion" },
 ];
 
 const HEADER_ALIASES: Record<LineTemplateImportField, string[]> = {
-  nombre: ["nombre", "linea", "línea", "producto", "descripcion", "descripción", "item"],
-  categoria: ["categoria", "categoría", "rubro", "familia", "tipo"],
+  nombre: ["nombre", "linea", "linea", "producto", "cristal", "vidrio", "descripcion", "descripcion", "item"],
+  categoria: ["categoria", "categoria", "rubro", "familia", "tipo"],
   material: ["material", "aluminio pvc", "perfil"],
   unidadCobro: ["unidad", "unidad cobro", "unidad de cobro", "medida", "uom"],
   costoBase: ["costo", "costo base", "costo unitario", "costo proveedor"],
@@ -77,14 +81,16 @@ const HEADER_ALIASES: Record<LineTemplateImportField, string[]> = {
     "precio por m²",
     "venta",
   ],
-  minimoCobrable: ["minimo", "mínimo", "minimo cobrable", "minimo comercial"],
+  minimoCobrable: ["minimo", "minimo", "minimo cobrable", "minimo comercial"],
   redondeoPrecio: ["redondeo", "redondear", "incremento"],
   mermaPct: ["merma", "merma %", "merma pct", "desperdicio"],
   margenObjetivoPct: ["margen", "margen objetivo", "margen %", "markup"],
   proveedor: ["proveedor", "supplier", "marca"],
-  vigenciaDesde: ["vigencia desde", "desde", "valido desde", "válido desde"],
-  vigenciaHasta: ["vigencia hasta", "hasta", "valido hasta", "válido hasta"],
-  vidrioPrincipalRecomendado: ["vidrio", "vidrio recomendado", "cristal"],
+  vigenciaDesde: ["vigencia desde", "desde", "valido desde", "valido desde"],
+  vigenciaHasta: ["vigencia hasta", "hasta", "valido hasta", "valido hasta"],
+  vidrioPrincipalRecomendado: ["vidrio recomendado"],
+  espesor: ["espesor", "grosor", "mm"],
+  terminacion: ["terminacion", "terminacion", "descripcion", "descripcion", "acabado"],
 };
 
 export const SUPPORTED_LINE_TEMPLATE_IMPORT_EXTENSIONS = [
@@ -381,6 +387,10 @@ function normalizeMaterialValue(
   value: string,
   categoria: CotizacionLineTemplateCategoria
 ): CotizacionLineTemplateMaterial {
+  if (categoria === "vidrio") {
+    return "Cristal";
+  }
+
   const normalized = value.trim().toLowerCase();
   if (normalized === "pvc") {
     return "PVC";
@@ -431,7 +441,7 @@ export function buildLineTemplateImportPreview(input: {
     const nombre = cellValue(row, input.mapping.nombre);
 
     if (!nombre) {
-      errors.push("Falta el nombre de la linea.");
+      errors.push("Falta el nombre del producto.");
     }
 
     const categoria =
@@ -445,10 +455,19 @@ export function buildLineTemplateImportPreview(input: {
       errors.push("El precio de venta debe ser mayor a cero.");
     }
 
+    const espesor = cellValue(row, input.mapping.espesor);
+    const terminacion = cellValue(row, input.mapping.terminacion);
+    const catalogMetadata: Record<string, string | number | boolean | null> = {};
+    if (espesor) catalogMetadata.espesor = espesor;
+    if (terminacion) catalogMetadata.terminacion = terminacion;
+
     const payload: Omit<CreateCotizacionLineTemplateInput, "organizationId"> = {
       nombre,
       categoria,
-      unidadCobro: normalizeUnidadValue(cellValue(row, input.mapping.unidadCobro)),
+      unidadCobro:
+        categoria === "vidrio"
+          ? "m2"
+          : normalizeUnidadValue(cellValue(row, input.mapping.unidadCobro)),
       material,
       costoBase: parseMoney(cellValue(row, input.mapping.costoBase)),
       precioM2Sugerido: precioVenta,
@@ -463,7 +482,10 @@ export function buildLineTemplateImportPreview(input: {
       vigenciaDesde: cellValue(row, input.mapping.vigenciaDesde) || null,
       vigenciaHasta: cellValue(row, input.mapping.vigenciaHasta) || null,
       vidrioPrincipalRecomendado:
-        cellValue(row, input.mapping.vidrioPrincipalRecomendado) || null,
+        categoria === "vidrio"
+          ? null
+          : cellValue(row, input.mapping.vidrioPrincipalRecomendado) || null,
+      catalogMetadata,
       isActive: true,
     };
 

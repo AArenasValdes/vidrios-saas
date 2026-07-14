@@ -53,6 +53,9 @@ describe("cotizacion-item-presentation", () => {
     expect(encoded).toContain("[po:manual]");
 
     expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual({
+      catalogCategoria: "aluminio",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       colorHex: "#2a2a2a",
       material: "Aluminio",
       referencia: "Serie 25",
@@ -92,6 +95,9 @@ describe("cotizacion-item-presentation", () => {
     expect(
       decodeCotizacionItemPresentationMeta("[c:#ffffff][l:S60][m:PVC] Cierre de terraza")
     ).toEqual({
+      catalogCategoria: "pvc",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       colorHex: "#ffffff",
       material: "PVC",
       referencia: "S60",
@@ -125,6 +131,32 @@ describe("cotizacion-item-presentation", () => {
       mirrorInteriorLine: "fine",
       raw: "Cierre de terraza",
     });
+  });
+
+  it("debe codificar y decodificar metadata de producto de cristal", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      material: "Cristal",
+      referencia: "Cristal templado 10 mm",
+      catalogCategoria: "vidrio",
+      catalogEspesor: "10 mm",
+      catalogTerminacion: "Templado",
+      raw: "Cristal templado para vano fijo",
+    });
+
+    expect(encoded).toContain("[m:Cristal]");
+    expect(encoded).toContain("[cat:vidrio]");
+    expect(encoded).toContain("[ce:10 mm]");
+    expect(encoded).toContain("[ct:Templado]");
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        material: "Cristal",
+        referencia: "Cristal templado 10 mm",
+        catalogCategoria: "vidrio",
+        catalogEspesor: "10 mm",
+        catalogTerminacion: "Templado",
+        raw: "Cristal templado para vano fijo",
+      })
+    );
   });
 
   it("debe preservar sistema, configuracion y composicion de shower door sin variante", () => {
@@ -257,6 +289,9 @@ describe("cotizacion-item-presentation", () => {
 
   it("debe usar colores por defecto cuando la metadata viene incompleta", () => {
     expect(decodeCotizacionItemPresentationMeta("[m:PVC]")).toEqual({
+      catalogCategoria: "pvc",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       colorHex: "#f0eeeb",
       material: "PVC",
       referencia: "",
@@ -296,6 +331,9 @@ describe("cotizacion-item-presentation", () => {
     expect(
       decodeCotizacionItemPresentationMeta("[c:#b87333][m:Aluminio] Ventana corredera")
     ).toEqual({
+      catalogCategoria: "aluminio",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       colorHex: "#8b5e3c",
       material: "Aluminio",
       referencia: "",

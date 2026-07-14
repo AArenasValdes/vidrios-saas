@@ -9,6 +9,7 @@ import {
   buildCommercialComponentDisplayName,
   buildSheetSchemeLabel,
   buildSuggestedComponentForm,
+  filterLineTemplatesForComponent,
   GLASS_OPTIONS,
   getSheetSchemeOptions,
   getComponentTypeLabelForBatch,
@@ -26,7 +27,10 @@ import {
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  getLineTemplateGlassMetadata,
+  type CotizacionLineTemplate,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
@@ -93,6 +97,9 @@ export type PasoDosGrupoDraft = {
   pricingMode: PricingMode;
   priceInputMode: PasoDosGrupoPriceInputMode;
   material: (typeof MATERIAL_OPTIONS)[number];
+  catalogCategoria: ComponentFormState["catalogCategoria"];
+  catalogEspesor: string;
+  catalogTerminacion: string;
   colorHex: string;
   sistema: string;
   configuracion: string;
@@ -330,6 +337,9 @@ export function buildStructuredAlcanceDetalleForm(input: {
     current: {
       tipo: subtipo,
       material: "Aluminio",
+      catalogCategoria: "aluminio",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       referencia: "",
       sistema: "",
       configuracion: "",
@@ -534,19 +544,29 @@ export function applyLineTemplateToGrupoDraft(
     CotizacionLineTemplate,
     | "id"
     | "nombre"
+    | "categoria"
     | "material"
+    | "catalogMetadata"
     | "vidrioPrincipalRecomendado"
     | "precioM2Sugerido"
     | "minimoCobrable"
     | "redondeoPrecio"
   >
 ): PasoDosGrupoDraft {
+  const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
+
   return syncDraftTemplatePricing({
     ...draft,
     material: template.material,
+    catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
+    catalogEspesor: glassMetadata.espesor ?? "",
+    catalogTerminacion: glassMetadata.terminacion ?? "",
     lineTemplateId: String(template.id),
     referencia: template.nombre,
-    vidrio: template.vidrioPrincipalRecomendado?.trim() || draft.vidrio,
+    vidrio:
+      template.categoria === "vidrio"
+        ? template.nombre
+        : template.vidrioPrincipalRecomendado?.trim() || draft.vidrio,
     pricingMode: "precio_directo",
     priceInputMode: "line_m2",
     precioPorM2: String(Math.round(template.precioM2Sugerido)),
@@ -722,6 +742,9 @@ export function createInitialPasoDosGrupoDraft({
       lineTemplateId: seedForm?.lineTemplateId,
     }),
     material: suggestedForm.material,
+    catalogCategoria: suggestedForm.catalogCategoria,
+    catalogEspesor: suggestedForm.catalogEspesor,
+    catalogTerminacion: suggestedForm.catalogTerminacion,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
     sistema: seedForm?.sistema?.trim() || referenceParts.sistema || systemOptions[0] || "",
     configuracion: seedForm?.configuracion?.trim() || referenceParts.configuracion,
@@ -767,6 +790,9 @@ export function buildPasoDosGrupoComponentForm({
       tipo: draft.subtipo,
       hojasBase: draft.hojasBase,
       material: draft.material,
+      catalogCategoria: draft.catalogCategoria,
+      catalogEspesor: draft.catalogEspesor,
+      catalogTerminacion: draft.catalogTerminacion,
       colorHex: draft.colorHex,
       referencia: composeComponentReference(draft.sistema, draft.configuracion),
       sistema: draft.sistema,
@@ -798,6 +824,9 @@ export function buildPasoDosGrupoComponentForm({
     ...baseForm,
     hojasBase: draft.hojasBase,
     material: draft.material,
+    catalogCategoria: draft.catalogCategoria,
+    catalogEspesor: draft.catalogEspesor,
+    catalogTerminacion: draft.catalogTerminacion,
     colorHex: draft.colorHex,
     referencia:
       safeTrim(draft.referencia) ||
@@ -863,6 +892,9 @@ export function buildPasoDosGrupoSelectionPatch({
     | "cantidadPersonalizada"
     | "pricingMode"
     | "material"
+    | "catalogCategoria"
+    | "catalogEspesor"
+    | "catalogTerminacion"
     | "colorHex"
     | "sistema"
     | "configuracion"
@@ -891,6 +923,9 @@ export function buildPasoDosGrupoSelectionPatch({
     cantidadPersonalizada: "",
     pricingMode: normalizePricingMode(current.pricingMode),
     material: suggestedForm.material,
+    catalogCategoria: suggestedForm.catalogCategoria,
+    catalogEspesor: suggestedForm.catalogEspesor,
+    catalogTerminacion: suggestedForm.catalogTerminacion,
     colorHex: resolveMaterialColorHex(suggestedForm.material, suggestedForm.colorHex),
     sistema: defaultSistema,
     configuracion: configurationOptions[0] || "",
@@ -979,10 +1014,12 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   );
   const visibleLineTemplates = useMemo(
     () =>
-      shouldRequireProfileMaterialForComponent(draft.subtipo)
-        ? activeLineTemplates.filter((template) => template.material === draft.material)
-        : activeLineTemplates,
-    [activeLineTemplates, draft.material, draft.subtipo]
+      filterLineTemplatesForComponent(activeLineTemplates, {
+        tipo: draft.subtipo,
+        material: draft.material,
+        catalogCategoria: draft.catalogCategoria,
+      }),
+    [activeLineTemplates, draft.catalogCategoria, draft.material, draft.subtipo]
   );
   const summary = useMemo(() => buildPasoDosGrupoSummary(draft), [draft]);
 
@@ -1188,6 +1225,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({
       ...current,
       material,
+      catalogCategoria: material === "PVC" ? "pvc" : material === "Cristal" ? "vidrio" : "aluminio",
+      catalogEspesor: "",
+      catalogTerminacion: "",
       lineTemplateId: "",
       referencia: "",
       precioPorM2: "",
@@ -1202,6 +1242,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
       setDraft((current) => ({
         ...current,
         lineTemplateId: "",
+        catalogCategoria: current.material === "PVC" ? "pvc" : current.material === "Cristal" ? "vidrio" : "aluminio",
+        catalogEspesor: "",
+        catalogTerminacion: "",
         referencia: "",
         precioPorM2: "",
         minimoCobrable: "",

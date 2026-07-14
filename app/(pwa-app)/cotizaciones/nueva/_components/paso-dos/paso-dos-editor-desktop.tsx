@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useMemo, useState } from "react";
 import { LuX, LuCheck, LuPencil, LuSearch } from "react-icons/lu";
@@ -14,12 +14,14 @@ import {
   CLP,
   COLOR_OPTIONS,
   COMPONENT_TYPE_GROUPS,
+  filterLineTemplatesForComponent,
   getCompositionSectionLabel,
   getSheetSchemeOptions,
   getSheetVariantOptions,
   MARGIN_SELECT_OPTIONS,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
+  isGlassCatalogSelection,
   shouldRequireProfileMaterialForComponent,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
@@ -202,7 +204,7 @@ function EditorFooter({
   );
 }
 
-/* ─── Tab 1: Configuración ─── */
+/* â”€â”€â”€ Tab 1: Configuración â”€â”€â”€ */
 
 function TabConfiguracion({
   componentForm,
@@ -477,7 +479,7 @@ function TabConfiguracion({
   );
 }
 
-/* ─── Tab 2: Medidas y terminaciones ─── */
+/* â”€â”€â”€ Tab 2: Medidas y terminaciones â”€â”€â”€ */
 
 function TabMedidas({
   componentForm,
@@ -750,7 +752,7 @@ function TabMedidas({
             <strong>Area</strong>
           </div>
           <div className={editor.areaDisplay}>
-            <span className={editor.areaValue}>{linePricingSummary.areaM2} m²</span>
+            <span className={editor.areaValue}>{linePricingSummary.areaM2} m2</span>
             {linePricingSummary.precioUnitarioSugerido !== null ? (
               <span className={editor.areaHint}>
                 Precio sugerido: {CLP(linePricingSummary.precioUnitarioSugerido)} / unidad
@@ -806,7 +808,7 @@ function TabMedidas({
   );
 }
 
-/* ─── Tab 3: Precio ─── */
+/* â”€â”€â”€ Tab 3: Precio â”€â”€â”€ */
 
 function TabPrecio({
   componentForm,
@@ -835,45 +837,53 @@ function TabPrecio({
 > & {
   precioDisplay: FormPriceDisplay;
 }) {
-  const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(componentForm.tipo);
-  const visibleLineTemplates = requiresProfileMaterial
-    ? activeLineTemplates.filter((template) => template.material === componentForm.material)
-    : activeLineTemplates;
+  const isGlassCatalogItem = isGlassCatalogSelection(componentForm);
+  const visibleLineTemplates = filterLineTemplatesForComponent(activeLineTemplates, componentForm);
+  const catalogLabel = isGlassCatalogItem ? "Producto de cristal" : "Linea comercial";
+  const catalogLabelLower = isGlassCatalogItem ? "producto de cristal" : "linea";
   const cantidad = Number(componentForm.cantidad) > 0 ? Number(componentForm.cantidad) : 1;
 
   return (
     <div className={editor.tabContent}>
       <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
         <div className={s.formSectionHead}>
-          <span className={s.formSectionEyebrow}>Linea comercial</span>
-          <strong>Linea y referencia</strong>
-          <p>Elige una linea comercial si quieres calcular por m².</p>
+          <span className={s.formSectionEyebrow}>{catalogLabel}</span>
+          <strong>{isGlassCatalogItem ? "Cristal y referencia" : "Linea y referencia"}</strong>
+          <p>
+            {isGlassCatalogItem
+              ? "Elige un producto de cristal guardado si quieres calcular por m2."
+              : "Elige una linea comercial si quieres calcular por m2."}
+          </p>
         </div>
         <div className={`${s.field} ${s.fieldFull}`}>
-          <span className={s.label}>Linea comercial</span>
+          <span className={s.label}>{catalogLabel}</span>
           <div className={s.formGrid2}>
             <div className={s.selectWrap}>
               <select
                 className={s.input}
                 value={componentForm.lineTemplateId}
                 onChange={(event) => onSelectLineTemplate(event.target.value)}
-                aria-label="Seleccionar linea comercial"
+                aria-label={`Seleccionar ${catalogLabelLower}`}
               >
-                <option value="">Precio manual o sin linea</option>
+                <option value="">
+                  {isGlassCatalogItem ? "Precio manual o sin cristal" : "Precio manual o sin linea"}
+                </option>
                 {visibleLineTemplates.map((template) => (
                   <option key={template.id} value={String(template.id)}>
-                    {`${template.nombre} · ${template.material} · ${CLP(template.precioM2Sugerido)}/m²`}
+                    {`${template.nombre} · ${template.material} · ${CLP(template.precioM2Sugerido)}/m2`}
                   </option>
                 ))}
               </select>
             </div>
             <label className={s.field}>
-              <span className={s.label}>Nombre visible de la linea</span>
+              <span className={s.label}>
+                {isGlassCatalogItem ? "Nombre visible del cristal" : "Nombre visible de la linea"}
+              </span>
               <input
                 className={s.input}
                 value={componentForm.referencia}
                 onChange={(event) => onComponentChange("referencia", event.target.value)}
-                placeholder="Ej: S60, Serie 25, Linea premium"
+                placeholder={isGlassCatalogItem ? "Ej: Cristal templado 10 mm" : "Ej: S60, Serie 25, Linea premium"}
               />
             </label>
           </div>
@@ -901,7 +911,7 @@ function TabPrecio({
                 }}
               />
               <span className={s.segmentedChoiceTitle}>Precio por linea</span>
-              <span className={s.segmentedChoiceHint}>Calculado automaticamente desde m², minimo y redondeo.</span>
+              <span className={s.segmentedChoiceHint}>Calculado automaticamente desde m2, minimo y redondeo.</span>
             </label>
             <label className={`${s.segmentedChoice} ${componentForm.pricingMode === "margen" ? s.segmentedChoiceActive : ""}`}>
               <input
@@ -943,7 +953,7 @@ function TabPrecio({
             </div>
             <div className={s.lineTemplateSummaryGrid}>
               <div>
-                <span className={s.lineTemplateSummaryLabel}>Precio por m²</span>
+                <span className={s.lineTemplateSummaryLabel}>Precio por m2</span>
                 <strong>{CLP(Number(componentForm.precioPorM2 || 0))}</strong>
               </div>
               <div>
@@ -1075,7 +1085,7 @@ function TabPrecio({
   );
 }
 
-/* ─── Tab detalles (Trabajo libre) ─── */
+/* â”€â”€â”€ Tab detalles (Trabajo libre) â”€â”€â”€ */
 
 function TabDetallesLibre({
   componentForm,
@@ -1123,7 +1133,7 @@ function TabDetallesLibre({
   );
 }
 
-/* ─── Editor principal ─── */
+/* â”€â”€â”€ Editor principal â”€â”€â”€ */
 
 export function PasoDosEditorDesktop(props: Props) {
   const {

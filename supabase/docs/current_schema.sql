@@ -5,6 +5,10 @@
 -- `public_landing_testimonials`. Regenerar con:
 --   pnpm exec supabase db dump --linked --schema public
 -- cuando `SUPABASE_DB_PASSWORD` este configurado.
+-- NOTE 2026-07-13:
+-- `cotizacion_line_templates.material` fue expandido por migracion aditiva
+-- para aceptar `Cristal` ademas de `Aluminio` y `PVC`. Este dump no incluye
+-- esa tabla porque sigue pendiente de regeneracion.
 
 
 

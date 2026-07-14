@@ -84,11 +84,11 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: cotizacion_line_templates
 
 - **Proposito**: Catálogo privado comercial por organización: líneas, costos, precios, mínimos y reglas de cobro para cotización asistida
-- **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `categoria` (CHECK: aluminio/pvc/vidrio/shower/accesorios/otros), `unidad_cobro` (CHECK: m2/metro_lineal/unidad/valor_manual), `material` (Aluminio/PVC), `costo_base`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `merma_pct`, `margen_objetivo_pct`, `proveedor`, `vigencia_desde`, `vigencia_hasta`, `catalog_metadata` (jsonb), `vidrio_principal_recomendado`, `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `categoria` (CHECK: aluminio/pvc/vidrio/shower/accesorios/otros), `unidad_cobro` (CHECK: m2/metro_lineal/unidad/valor_manual), `material` (Aluminio/PVC/Cristal), `costo_base`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `merma_pct`, `margen_objetivo_pct`, `proveedor`, `vigencia_desde`, `vigencia_hasta`, `catalog_metadata` (jsonb; para `categoria='vidrio'` guarda `espesor` y `terminacion`), `vidrio_principal_recomendado`, `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
 - **Relaciones**: N:1 organizations
 - **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`, `/configuracion/empresa/lineas-precios`, `/configuracion/empresa/lineas-precios/importar`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
-- **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea`. Multi-tenant estricto y soft delete obligatorio. Migración remota aplicada 2026-07-09 (`extend_cotizacion_line_templates_catalog`).
+- **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea` y metadata codificada en `observaciones` para que cotizaciones antiguas no cambien. Multi-tenant estricto y soft delete obligatorio. Migración remota aplicada 2026-07-09 (`extend_cotizacion_line_templates_catalog`) y migración aditiva 2026-07-13 expande `material` a `Cristal`.
 
 ---
 

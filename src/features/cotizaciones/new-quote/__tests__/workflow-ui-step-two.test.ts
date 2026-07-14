@@ -7,6 +7,7 @@ import {
   buildUpcomingComponentCodes,
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
+  filterLineTemplatesForComponent,
   mapRecordToDraft,
   reconcileWorkflowItemsPricing,
   getSheetSchemeOptions,
@@ -27,6 +28,7 @@ import {
 } from "../workflow-ui";
 import { getSystemOptionsForComponent } from "../../services/component-catalog.service";
 import { calculateComponentItem } from "../../services/cotizaciones-workflow.service";
+import type { CotizacionLineTemplate } from "../../line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -1001,9 +1003,14 @@ describe("workflow-ui paso 2", () => {
     expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
   });
 
-  it("no debe exigir material de perfil para espejos ni cubiertas de mesa", () => {
+  it("no debe mostrar selector de sistema para vidrio o cristal", () => {
+    expect(shouldShowSystemSelectionForComponent("Vidrio / Cristal")).toBe(false);
+  });
+
+  it("no debe exigir material de perfil para componentes solo vidrio", () => {
     expect(shouldRequireProfileMaterialForComponent("Espejo")).toBe(false);
     expect(shouldRequireProfileMaterialForComponent("Cubierta de mesa")).toBe(false);
+    expect(shouldRequireProfileMaterialForComponent("Vidrio / Cristal")).toBe(false);
     expect(shouldRequireProfileMaterialForComponent("Ventana")).toBe(true);
 
     const errors = validateComponentForm(
@@ -1019,6 +1026,45 @@ describe("workflow-ui paso 2", () => {
     );
 
     expect(errors.material).toBeUndefined();
+  });
+
+  it("predetermina catalogo de cristal y filtra productos de cristal para componentes solo vidrio", () => {
+    const form = buildSuggestedComponentForm({ tipo: "Vidrio / Cristal" });
+
+    expect(form.material).toBe("Cristal");
+    expect(form.catalogCategoria).toBe("vidrio");
+
+    const templates = [
+      {
+        id: "al-1",
+        nombre: "Serie 5 mil",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 80000,
+      },
+      {
+        id: "pvc-1",
+        nombre: "Serie 26",
+        material: "PVC",
+        categoria: "pvc",
+        precioM2Sugerido: 100000,
+      },
+      {
+        id: "cr-1",
+        nombre: "Cristal templado 10 mm",
+        material: "Cristal",
+        categoria: "vidrio",
+        precioM2Sugerido: 150000,
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(
+      filterLineTemplatesForComponent(templates, {
+        tipo: "Vidrio / Cristal",
+        material: form.material,
+        catalogCategoria: form.catalogCategoria,
+      }).map((template) => template.nombre)
+    ).toEqual(["Cristal templado 10 mm"]);
   });
 
   it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {

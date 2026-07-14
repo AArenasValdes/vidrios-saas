@@ -59,4 +59,25 @@ describe("buildCotizacionItemPrintSpecs", () => {
       "Superficie",
     ]);
   });
+
+  it("debe mostrar producto de cristal sin campos de perfileria", () => {
+    const specs = buildCotizacionItemPrintSpecs({
+      ...baseInput,
+      tipo: "Paño fijo",
+      vidrio: "Cristal templado 10 mm",
+      material: "Cristal",
+      catalogCategoria: "vidrio",
+      catalogEspesor: "10 mm",
+      catalogTerminacion: "Templado",
+      lineLabel: "Cristal templado 10 mm",
+    });
+
+    expect(specs).toEqual([
+      { key: "Dimensiones", value: "800 x 1800 mm" },
+      { key: "Producto de cristal", value: "Cristal templado 10 mm" },
+      { key: "Espesor", value: "10 mm" },
+      { key: "Terminación", value: "Templado" },
+      { key: "Superficie", value: "1.44 m2 aprox." },
+    ]);
+  });
 });

@@ -124,7 +124,16 @@ function buildItemMeta(item: CotizacionWorkflowItem) {
       })?.label ?? null
     : null;
   const referenceLabel = referencia.trim() ? `Línea ${referencia.trim()}` : null;
-  const lineLabel = [mirrorFormatLabel, mirrorPaneMeasure, referenceLabel]
+  const isGlassProduct = meta.catalogCategoria === "vidrio" || meta.material === "Cristal";
+  const glassLabel = [referencia.trim(), meta.catalogEspesor, meta.catalogTerminacion]
+    .filter(Boolean)
+    .join(" · ");
+  const displayReferenceLabel = isGlassProduct
+    ? glassLabel
+      ? `Producto de cristal ${glassLabel}`
+      : "Producto de cristal"
+    : referenceLabel;
+  const lineLabel = [mirrorFormatLabel, mirrorPaneMeasure, displayReferenceLabel]
     .filter(Boolean)
     .join(" · ");
 

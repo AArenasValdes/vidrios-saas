@@ -1,6 +1,7 @@
 import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
 
-export type ComponentMaterial = "Aluminio" | "PVC";
+export type ComponentMaterial = "Aluminio" | "PVC" | "Cristal";
+export type CotizacionItemCatalogCategoria = "aluminio" | "pvc" | "vidrio" | "otros";
 export type CotizacionItemPriceOrigin = "margen" | "plantilla" | "manual";
 export type CotizacionItemFreeValueIvaMode = "total_incluye_iva" | "neto_mas_iva";
 export type CotizacionItemDisplayMode = "componente" | "item_libre";
@@ -11,6 +12,9 @@ export type CotizacionMirrorInteriorLine = "fine" | "marked";
 export type CotizacionItemPresentationMeta = {
   colorHex: string;
   material: ComponentMaterial;
+  catalogCategoria: CotizacionItemCatalogCategoria;
+  catalogEspesor: string;
+  catalogTerminacion: string;
   referencia: string;
   sistema: string;
   configuracion: string;
@@ -51,13 +55,28 @@ type SheetSchemeInput = Pick<
 const DEFAULT_COLOR_BY_MATERIAL: Record<ComponentMaterial, string> = {
   Aluminio: "#a8a8a8",
   PVC: "#f0eeeb",
+  Cristal: "#dbeafe",
 };
 
 const LEGACY_COLOR_HEX = "#b87333";
 const WOOD_COLOR = "#8b5e3c";
 
 function normalizeMaterial(value: string | null | undefined): ComponentMaterial {
+  if (value === "Cristal") {
+    return "Cristal";
+  }
+
   return value === "PVC" ? "PVC" : "Aluminio";
+}
+
+function normalizeCatalogCategoria(
+  value: string | null | undefined,
+  material: ComponentMaterial
+): CotizacionItemCatalogCategoria {
+  if (value === "vidrio" || material === "Cristal") return "vidrio";
+  if (value === "pvc" || material === "PVC") return "pvc";
+  if (value === "aluminio" || material === "Aluminio") return "aluminio";
+  return "otros";
 }
 
 function normalizeColor(colorHex: string | null | undefined, material: ComponentMaterial) {
@@ -151,6 +170,9 @@ function normalizeMirrorInteriorLine(
 export function encodeCotizacionItemPresentationMeta(input: {
   colorHex: string;
   material: ComponentMaterial;
+  catalogCategoria?: CotizacionItemCatalogCategoria;
+  catalogEspesor?: string | null;
+  catalogTerminacion?: string | null;
   referencia?: string;
   sistema?: string;
   configuracion?: string;
@@ -183,7 +205,13 @@ export function encodeCotizacionItemPresentationMeta(input: {
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
+  const catalogCategoria = normalizeCatalogCategoria(input.catalogCategoria, material);
   const colorHex = normalizeColor(input.colorHex, material);
+  const catalogEspesor = (input.catalogEspesor ?? "").trim().replace(/\]/g, "").slice(0, 40);
+  const catalogTerminacion = (input.catalogTerminacion ?? "")
+    .trim()
+    .replace(/\]/g, "")
+    .slice(0, 160);
   const referencia = (input.referencia ?? "").trim().replace(/\]/g, "");
   const sistema = (input.sistema ?? "").trim().replace(/\]/g, "");
   const configuracion = (input.configuracion ?? "").trim().replace(/\]/g, "");
@@ -252,6 +280,9 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[sc:${customSchemeDescription}]` +
     `[isc:${isCustomScheme}]` +
     `[m:${material}]` +
+    `[cat:${catalogCategoria}]` +
+    `[ce:${catalogEspesor}]` +
+    `[ct:${catalogTerminacion}]` +
     `[pm:${pricingMode}]` +
     `[lti:${lineTemplateId}]` +
     `[pm2:${precioPorM2}]` +
@@ -282,7 +313,13 @@ export function decodeCotizacionItemPresentationMeta(
 ): CotizacionItemPresentationMeta {
   const source = observaciones ?? "";
   const material = normalizeMaterial(source.match(/\[m:([^\]]*)\]/)?.[1]);
+  const catalogCategoria = normalizeCatalogCategoria(
+    source.match(/\[cat:([^\]]*)\]/)?.[1],
+    material
+  );
   const colorHex = normalizeColor(source.match(/\[c:(#[0-9a-fA-F]{3,8})\]/)?.[1], material);
+  const catalogEspesor = source.match(/\[ce:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const catalogTerminacion = source.match(/\[ct:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const sistema = source.match(/\[sys:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const configuracion = source.match(/\[cfg:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const hojasBase = normalizeLeafCount(source.match(/\[hb:([^\]]*)\]/)?.[1]);
@@ -332,6 +369,9 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[sc:[^\]]*\]/g, "")
     .replace(/\[isc:[^\]]*\]/g, "")
     .replace(/\[m:[^\]]*\]/g, "")
+    .replace(/\[cat:[^\]]*\]/g, "")
+    .replace(/\[ce:[^\]]*\]/g, "")
+    .replace(/\[ct:[^\]]*\]/g, "")
     .replace(/\[pm:[^\]]*\]/g, "")
     .replace(/\[lti:[^\]]*\]/g, "")
     .replace(/\[pm2:[^\]]*\]/g, "")
@@ -358,6 +398,9 @@ export function decodeCotizacionItemPresentationMeta(
   return {
     colorHex,
     material,
+    catalogCategoria,
+    catalogEspesor,
+    catalogTerminacion,
     referencia,
     sistema,
     configuracion,

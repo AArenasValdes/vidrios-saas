@@ -246,6 +246,14 @@ export function PublicQuoteMobile({
                 const isFreeValueItem =
                   item.tipoItem === "item_libre_con_valor" ||
                   itemMeta.displayMode === "item_libre";
+                const isGlassProduct =
+                  itemMeta.catalogCategoria === "vidrio" || itemMeta.material === "Cristal";
+                const glassProductLabel = [
+                  itemMeta.referencia || item.vidrio || "Producto de cristal",
+                  itemMeta.catalogEspesor,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
 
                 return (
                   <div key={item.id} className={s.itemRow}>
@@ -260,7 +268,11 @@ export function PublicQuoteMobile({
                     </p>
                     <div className={s.itemFoot}>
                       <span className={s.itemChip}>
-                        {isFreeValueItem ? "Item libre" : item.vidrio || "Vidrio por definir"}
+                        {isFreeValueItem
+                          ? "Item libre"
+                          : isGlassProduct
+                            ? glassProductLabel
+                            : item.vidrio || "Vidrio por definir"}
                       </span>
                       {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
                         <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>

@@ -222,7 +222,11 @@ export function PasoDosSeccion({
 
   useEffect(() => {
     if (!showQuoteStudioEditingLayout) {
-      setIsFullBudgetPreviewOpen(false);
+      const timeoutId = window.setTimeout(() => {
+        setIsFullBudgetPreviewOpen(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
   }, [showQuoteStudioEditingLayout]);
 

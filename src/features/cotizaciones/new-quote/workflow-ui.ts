@@ -1,4 +1,4 @@
-import {
+﻿import {
   getComponentSuggestion,
   type PreferredProvider,
 } from "@/features/cotizaciones/services/component-suggestions.service";
@@ -9,7 +9,10 @@ import {
   resolveWorkflowObraTitle,
 } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  getLineTemplateGlassMetadata,
+  type CotizacionLineTemplate,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
@@ -50,7 +53,10 @@ export type ComponentFormState = {
   codigo: string;
   tipo: string;
   hojasBase?: 1 | 2 | null;
-  material: "Aluminio" | "PVC";
+  material: "Aluminio" | "PVC" | "Cristal";
+  catalogCategoria: "aluminio" | "pvc" | "vidrio" | "otros";
+  catalogEspesor: string;
+  catalogTerminacion: string;
   referencia: string;
   sistema?: string;
   configuracion?: string;
@@ -172,7 +178,7 @@ export type ComponentFormLinePricingSummary = ReturnType<
 export const COMPONENT_TYPE_GROUPS = CATALOG_COMPONENT_TYPE_GROUPS;
 
 export const VALIDEZ_OPTIONS = ["7 dias", "15 dias", "30 dias"];
-export const MATERIAL_OPTIONS = ["Aluminio", "PVC"] as const;
+export const MATERIAL_OPTIONS = ["Aluminio", "PVC", "Cristal"] as const;
 export const MARGIN_SELECT_OPTIONS = [0, 20, 30, 40, 50, 60, 80, 100];
 
 export const SHEET_SCHEME_OPTIONS = ["2 hojas", "3 hojas", "4 hojas", "Personalizado"] as const;
@@ -843,16 +849,49 @@ export function shouldAutoSelectFirstSheetScheme(input: {
 export function shouldShowSystemSelectionForComponent(tipo: string) {
   const normalizedTipo = normalizeSearchValue(tipo);
 
-  return normalizedTipo !== "pano fijo" && normalizedTipo !== "paño fijo";
+  return (
+    normalizedTipo !== "pano fijo" &&
+    normalizedTipo !== normalizeSearchValue("Paño fijo") &&
+    normalizedTipo !== normalizeSearchValue("Vidrio / Cristal")
+  );
 }
 
 const GLASS_ONLY_COMPONENT_TYPES = new Set([
   normalizeSearchValue("Espejo"),
   normalizeSearchValue("Cubierta de mesa"),
+  normalizeSearchValue("Vidrio / Cristal"),
 ]);
 
+export function isGlassOnlyComponentType(tipo: string) {
+  return GLASS_ONLY_COMPONENT_TYPES.has(normalizeSearchValue(tipo));
+}
+
 export function shouldRequireProfileMaterialForComponent(tipo: string) {
-  return !GLASS_ONLY_COMPONENT_TYPES.has(normalizeSearchValue(tipo));
+  return !isGlassOnlyComponentType(tipo);
+}
+
+export function isGlassCatalogSelection(input: {
+  material?: string | null;
+  catalogCategoria?: string | null;
+}) {
+  return input.material === "Cristal" || input.catalogCategoria === "vidrio";
+}
+
+export function filterLineTemplatesForComponent(
+  templates: readonly CotizacionLineTemplate[],
+  input: {
+    tipo: string;
+    material?: string | null;
+    catalogCategoria?: string | null;
+  }
+) {
+  if (isGlassOnlyComponentType(input.tipo) || isGlassCatalogSelection(input)) {
+    return templates.filter(
+      (template) => template.material === "Cristal" || template.categoria === "vidrio"
+    );
+  }
+
+  return templates.filter((template) => template.material === input.material);
 }
 
 export function getSheetSchemeOptions(input: {
@@ -1589,7 +1628,9 @@ export function applyLineTemplateToComponentForm(
     CotizacionLineTemplate,
     | "id"
     | "nombre"
+    | "categoria"
     | "material"
+    | "catalogMetadata"
     | "vidrioPrincipalRecomendado"
     | "precioM2Sugerido"
     | "minimoCobrable"
@@ -1597,14 +1638,21 @@ export function applyLineTemplateToComponentForm(
   >
 ) {
   const preserveManualPrice = form.precioAjustadoManual;
+  const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
 
   return syncTemplatePricingInComponentForm(
     {
       ...form,
       material: template.material,
+      catalogCategoria: template.categoria === "vidrio" ? "vidrio" : template.categoria === "pvc" ? "pvc" : "aluminio",
+      catalogEspesor: glassMetadata.espesor ?? "",
+      catalogTerminacion: glassMetadata.terminacion ?? "",
       referencia: template.nombre,
       lineTemplateId: String(template.id),
-      vidrio: template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
+      vidrio:
+        template.categoria === "vidrio"
+          ? template.nombre
+          : template.vidrioPrincipalRecomendado?.trim() || form.vidrio,
       pricingMode: "precio_directo",
       margenPct: "0",
       precioPorM2: String(Math.round(template.precioM2Sugerido)),
@@ -1659,15 +1707,21 @@ export function buildSuggestedComponentForm(
     provider: input.provider,
   });
   const current = input.current ?? {};
+  const isGlassOnly = isGlassOnlyComponentType(tipo);
+  const suggestedMaterial = isGlassOnly
+    ? "Cristal"
+    : current.material === "PVC" || current.material === "Aluminio" || current.material === "Cristal"
+      ? current.material
+      : suggestion.material;
 
   return {
     codigo: pickSuggestedString(current.codigo, buildNextComponentCode(items, tipo)),
     tipo,
     hojasBase: current.hojasBase ?? getBaseLeafCountForComponent(tipo),
-    material:
-      current.material === "PVC" || current.material === "Aluminio"
-        ? current.material
-        : suggestion.material,
+    material: suggestedMaterial,
+    catalogCategoria: isGlassOnly ? "vidrio" : current.catalogCategoria ?? "aluminio",
+    catalogEspesor: current.catalogEspesor ?? "",
+    catalogTerminacion: current.catalogTerminacion ?? "",
     referencia: pickSuggestedString(current.referencia, suggestion.referencia),
     sistema: pickSuggestedString(
       current.sistema,
@@ -1837,6 +1891,9 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     customSchemeDescription,
     isCustomScheme,
     material,
+    catalogCategoria,
+    catalogEspesor,
+    catalogTerminacion,
     pricingMode,
     raw,
     lineTemplateId,
@@ -1866,6 +1923,9 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     tipo: canonicalTipo,
     hojasBase: hojasBase ?? resolveLegacyWindowLeafCount(item.tipo, resolvedSystem),
     material,
+    catalogCategoria,
+    catalogEspesor,
+    catalogTerminacion,
     referencia: referencia || item.lineaComercial || "",
     sistema: resolvedSystem,
     configuracion: configuracion || referenceParts.configuracion,
@@ -2074,6 +2134,9 @@ export function buildItemFromForm(
       customSchemeDescription,
       isCustomScheme,
       material: syncedForm.material,
+      catalogCategoria: syncedForm.catalogCategoria,
+      catalogEspesor: syncedForm.catalogEspesor,
+      catalogTerminacion: syncedForm.catalogTerminacion,
       pricingMode,
       lineTemplateId: syncedForm.lineTemplateId,
       precioPorM2: syncedForm.precioPorM2 ? Number(syncedForm.precioPorM2) : null,
@@ -2123,6 +2186,9 @@ export function applyQuotePricingToItems(
       customSchemeDescription,
       isCustomScheme,
       material,
+      catalogCategoria,
+      catalogEspesor,
+      catalogTerminacion,
       raw,
       lineTemplateId,
       precioPorM2,
@@ -2169,6 +2235,9 @@ export function applyQuotePricingToItems(
         customSchemeDescription,
         isCustomScheme,
         material,
+        catalogCategoria,
+        catalogEspesor,
+        catalogTerminacion,
         pricingMode,
         lineTemplateId,
         precioPorM2: precioPorM2 ?? item.precioPorM2,
@@ -2213,7 +2282,11 @@ export function validateComponentForm(
     errors.codigo = "Ese codigo ya existe en esta cotizacion";
   }
   if (!form.tipo.trim()) errors.tipo = "Selecciona un tipo";
-  if (shouldRequireProfileMaterialForComponent(form.tipo) && !form.material.trim()) {
+  if (
+    shouldRequireProfileMaterialForComponent(form.tipo) &&
+    !isGlassCatalogSelection(form) &&
+    !form.material.trim()
+  ) {
     errors.material = "Selecciona material";
   }
   const qty = Number(form.cantidad);

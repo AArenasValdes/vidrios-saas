@@ -819,7 +819,7 @@ auth.users (1) ──── (N) users
 | `precio_m2_sugerido` | numeric(12,2) | Default 0 |
 | `minimo_cobrable` | numeric(12,2) | Default 0 |
 | `redondeo_precio` | numeric(12,2) | Default 1000 |
-| `material` | text NOT NULL | CHECK: `Aluminio`, `PVC` |
+| `material` | text NOT NULL | CHECK: `Aluminio`, `PVC`, `Cristal` |
 | `categoria` | text NOT NULL | CHECK: `aluminio`, `pvc`, `vidrio`, `shower`, `accesorios`, `otros` |
 | `unidad_cobro` | text NOT NULL | CHECK: `m2`, `metro_lineal`, `unidad`, `valor_manual` |
 | `costo_base` | numeric(12,2) | Default 0 |
@@ -828,7 +828,7 @@ auth.users (1) ──── (N) users
 | `proveedor` | text | Nullable |
 | `vigencia_desde` | date | Nullable |
 | `vigencia_hasta` | date | Nullable |
-| `catalog_metadata` | jsonb | Default `{}` |
+| `catalog_metadata` | jsonb | Default `{}`. Para `categoria='vidrio'` guarda `espesor` y `terminacion` |
 | `vidrio_principal_recomendado` | text | Sugerencia visual/comercial |
 | `is_active` | boolean | Default true |
 | `sort_order` | integer | Default 0 |
@@ -837,7 +837,7 @@ auth.users (1) ──── (N) users
 **Índices:** `(organization_id, sort_order, nombre)` WHERE `eliminado_en IS NULL`.
 **RLS:** SELECT/INSERT/UPDATE por `organization_id = get_org_id()`.
 **Nota:** No tiene FK formal a `organizations`; relación inferida por tenant key.
-**Migración remota:** `extend_cotizacion_line_templates_catalog` aplicada 2026-07-09 (Fase 2A).
+**Migración remota:** `extend_cotizacion_line_templates_catalog` aplicada 2026-07-09 (Fase 2A). Migración aditiva 2026-07-13 expande `material` a `Cristal`.
 
 ### `public_landing_testimonials`
 

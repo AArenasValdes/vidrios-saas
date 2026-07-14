@@ -158,7 +158,12 @@ function mapRow(row: CotizacionLineTemplateRow): CotizacionLineTemplate {
     nombre: row.nombre,
     categoria: normalizeCategoriaFromRow(row),
     unidadCobro: normalizeUnidadCobroFromRow(row),
-    material: row.material === "PVC" ? "PVC" : "Aluminio",
+    material:
+      row.material === "PVC"
+        ? "PVC"
+        : row.material === "Cristal" || row.categoria === "vidrio"
+          ? "Cristal"
+          : "Aluminio",
     vidrioPrincipalRecomendado: row.vidrio_principal_recomendado?.trim() || null,
     costoBase: Number(row.costo_base ?? 0),
     precioM2Sugerido: Number(row.precio_m2_sugerido),

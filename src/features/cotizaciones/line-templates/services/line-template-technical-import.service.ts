@@ -39,7 +39,12 @@ export function buildTechnicalLineTemplateImportPreview(input: {
       nombre: line.nombre,
       categoria: line.categoria,
       unidadCobro: "m2",
-      material: line.categoria === "pvc" ? "PVC" : "Aluminio",
+      material:
+        line.categoria === "pvc"
+          ? "PVC"
+          : line.categoria === "vidrio"
+            ? "Cristal"
+            : "Aluminio",
       costoBase: 0,
       precioM2Sugerido: 0,
       minimoCobrable: 0,
