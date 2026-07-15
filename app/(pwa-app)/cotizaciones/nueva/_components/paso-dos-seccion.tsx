@@ -303,7 +303,12 @@ export function PasoDosSeccion({
             variant="desktop"
             contextCliente={budgetContext?.clienteNombre}
             contextObra={budgetContext?.obra}
-            onSelectMode={onSelectMode}
+            onSelectMode={(mode) => {
+              onSelectMode(mode);
+              if (mode === "por_item") {
+                onOpenCreator();
+              }
+            }}
             onSelectFreeTotalMode={() => {
               onSelectMode("total_global");
               onOpenFreeTotalNotebook();

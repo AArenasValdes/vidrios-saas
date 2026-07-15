@@ -246,7 +246,7 @@ describe("PasoDosSeccion desktop", () => {
     expect(onReturnToModeSelector).toHaveBeenCalledTimes(1);
   });
 
-  it("no abre el wizard automaticamente al elegir por items en desktop", () => {
+  it("abre el wizard automaticamente al elegir por items en desktop", () => {
     const onOpenCreator = jest.fn();
     const onSelectMode = jest.fn();
 
@@ -263,7 +263,7 @@ describe("PasoDosSeccion desktop", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cotizar por ítems/i }));
 
     expect(onSelectMode).toHaveBeenCalledWith("por_item");
-    expect(onOpenCreator).not.toHaveBeenCalled();
+    expect(onOpenCreator).toHaveBeenCalledTimes(1);
   });
 
   it("oculta el panel de componentes mientras no se elige modalidad", () => {

@@ -1484,6 +1484,36 @@ function NuevaCotizacionPageContent() {
     pasoDosAgregarGrupo.openSheet(cleanForm);
   };
 
+  const handleOpenPorItemComponentCreator = () => {
+    returnToTotalNotebookAfterSheetCloseRef.current = false;
+    setQuoteModeChosen(true);
+    setDraft((current) => ({ ...current, quotePricingMode: "por_item" }));
+    setIsFreeValueItemFormOpen(false);
+    setEditingFreeValueItemId(null);
+
+    const cleanForm = createEmptyComponentForm(
+      draft.items,
+      suggestionProvider,
+      componentForm.pricingMode,
+      organizationProfile?.margenDefecto
+    );
+
+    pasoDosVariaciones.setVariationQuickEditDraft(null);
+    setEditingItemId(null);
+    setComponentForm(cleanForm);
+    setIsGlassPanelOpen(false);
+    setGlassQuery("");
+    setFieldErrors({});
+    setGlobalError(null);
+
+    if (isMobileViewport) {
+      pasoDosAgregarGrupoMovil.openSheet(cleanForm);
+      return;
+    }
+
+    pasoDosAgregarGrupo.openSheet(cleanForm);
+  };
+
   const handleOpenFreeTotalNotebook = () => {
     setQuoteModeChosen(true);
     setIsFreeValueItemFormOpen(false);
@@ -2774,7 +2804,9 @@ function goNextFromStep1() {
               clienteNombre: draft.clienteNombre,
               obra: draft.obra,
             },
-            onOpenCreator: handleOpenAddGroupSheet,
+            onOpenCreator: quoteModeChosen
+              ? handleOpenAddGroupSheet
+              : handleOpenPorItemComponentCreator,
             onOpenFreeTotalNotebook: handleOpenFreeTotalNotebook,
             onSelectMode: handleQuotePricingModeChange,
             onReturnToModeSelector: returnToModeSelector,
