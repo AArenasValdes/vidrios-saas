@@ -44,7 +44,9 @@ export function PasoDosWizardFooterMovil({
     return /iphone|ipod/i.test(window.navigator.userAgent);
   });
   const agregarLabel = isTotalGlobal
-    ? "Continuar al resumen"
+    ? isSingleStepFreeTotal
+      ? "Continuar al resumen"
+      : "Agregar"
     : isFreeValueItem
       ? precioFormateado
         ? `Agregar item por $${precioFormateado}`
@@ -83,12 +85,14 @@ export function PasoDosWizardFooterMovil({
 
       {wizardStep === 3 ? (
         <button
-          className={`${s.btnPrimary} ${isTotalGlobal ? "" : s.stepTwoMobileCtaAgregar}`}
+          className={`${s.btnPrimary} ${
+            isTotalGlobal && isSingleStepFreeTotal ? "" : s.stepTwoMobileCtaAgregar
+          }`}
           disabled={!canSubmitGroup}
           onClick={onConfirm}
           type="button"
         >
-          {isTotalGlobal ? null : <LuPlus aria-hidden />}
+          {isTotalGlobal && isSingleStepFreeTotal ? null : <LuPlus aria-hidden />}
           {agregarLabel}
         </button>
       ) : null}

@@ -121,7 +121,10 @@ import {
   type PasoDosGrupoDraft,
   type PasoDosGrupoPaso,
 } from "./_hooks/use-paso-dos-agregar-grupo";
-import { usePasoDosAgregarGrupoMovil } from "./_hooks/use-paso-dos-agregar-grupo-movil";
+import {
+  usePasoDosAgregarGrupoMovil,
+  type PasoDosGrupoPasoMovil,
+} from "./_hooks/use-paso-dos-agregar-grupo-movil";
 import { usePasoUnoCliente } from "./_hooks/use-paso-uno-cliente";
 import { usePasoDosEdicionRapida } from "./_hooks/use-paso-dos-edicion-rapida";
 import { usePasoDosListaComponentes } from "./_hooks/use-paso-dos-lista-componentes";
@@ -426,12 +429,14 @@ function NuevaCotizacionPageContent() {
   });
   type SuspendedFreeTotalNotebookSession = {
     draft: PasoDosGrupoDraft;
-    paso: PasoDosGrupoPaso;
+    paso: PasoDosGrupoPaso | PasoDosGrupoPasoMovil;
     editingFreeTotalMainItemId: string | null;
     editingFreeTotalItemIds: string[] | null;
     freeTotalNotebookNestedItemIds: string[];
   };
   const suspendedNotebookRef = useRef<SuspendedFreeTotalNotebookSession | null>(null);
+  const returnToTotalNotebookAfterSheetCloseRef = useRef(false);
+  const returnToModeSelectorAfterSheetCloseRef = useRef(false);
   const onAddGroupSheetClosedRef = useRef<(itemCount: number) => void>(() => {});
 
   const pasoDosAgregarGrupo = usePasoDosAgregarGrupo({
@@ -1391,11 +1396,39 @@ function NuevaCotizacionPageContent() {
 
   const handleOpenTotalGlobalComponentCreator = () => {
     setQuoteModeChosen(true);
+    returnToTotalNotebookAfterSheetCloseRef.current = true;
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
 
+    const cleanForm = createEmptyComponentForm(
+      draft.items,
+      suggestionProvider,
+      componentForm.pricingMode,
+      organizationProfile?.margenDefecto
+    );
+
     if (isMobileViewport) {
-      pasoDosAgregarGrupoMovil.openSheet(componentForm);
+      if (
+        pasoDosAgregarGrupoMovil.isOpen &&
+        pasoDosAgregarGrupoMovil.entryMode === "free_total_single"
+      ) {
+        suspendedNotebookRef.current = {
+          draft: pasoDosAgregarGrupoMovil.draft,
+          paso: pasoDosAgregarGrupoMovil.paso,
+          editingFreeTotalMainItemId: pasoDosAgregarGrupoMovil.editingFreeTotalMainItemId,
+          editingFreeTotalItemIds: pasoDosAgregarGrupoMovil.editingFreeTotalItemIds,
+          freeTotalNotebookNestedItemIds: pasoDosAgregarGrupoMovil.freeTotalNotebookNestedItemIds,
+        };
+      }
+
+      pasoDosVariaciones.setVariationQuickEditDraft(null);
+      setEditingItemId(null);
+      setComponentForm(cleanForm);
+      setIsGlassPanelOpen(false);
+      setGlassQuery("");
+      setFieldErrors({});
+      setGlobalError(null);
+      pasoDosAgregarGrupoMovil.openSheet(cleanForm);
       return;
     }
 
@@ -1408,13 +1441,6 @@ function NuevaCotizacionPageContent() {
         freeTotalNotebookNestedItemIds: pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds,
       };
     }
-
-    const cleanForm = createEmptyComponentForm(
-      draft.items,
-      suggestionProvider,
-      componentForm.pricingMode,
-      organizationProfile?.margenDefecto
-    );
 
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     setEditingItemId(null);
@@ -1432,6 +1458,7 @@ function NuevaCotizacionPageContent() {
       return;
     }
 
+    returnToTotalNotebookAfterSheetCloseRef.current = false;
     setQuoteModeChosen(true);
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
@@ -1470,6 +1497,9 @@ function NuevaCotizacionPageContent() {
   };
 
   const returnToModeSelector = () => {
+    returnToModeSelectorAfterSheetCloseRef.current = true;
+    returnToTotalNotebookAfterSheetCloseRef.current = false;
+    suspendedNotebookRef.current = null;
     pasoDosAgregarGrupo.closeSheet();
     setEditingItemId(null);
     setIsFreeValueItemFormOpen(false);
@@ -1661,6 +1691,30 @@ function NuevaCotizacionPageContent() {
     pasoDosVariaciones.setVariationQuickEditDraft(null);
     pasoDosAgregarGrupo.closeSheet();
     pasoDosAgregarGrupoMovil.closeSheet();
+
+    if (!isMobileViewport) {
+      const sourceIndex = draft.items.findIndex((current) => current.id === item.id);
+      if (sourceIndex === -1) return;
+
+      const nextCode = buildNextComponentCode(draft.items, item.tipo);
+      const clone: CotizacionWorkflowItem = {
+        ...item,
+        id: `item-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
+        codigo: nextCode,
+      };
+      const nextItems = [...draft.items];
+      nextItems.splice(sourceIndex + 1, 0, clone);
+
+      setDraft((current) => ({ ...current, items: nextItems }));
+      setEditingItemId(null);
+      setEditingFreeValueItemId(null);
+      setIsFreeValueItemFormOpen(false);
+      setFieldErrors({});
+      setGlobalError(null);
+      setToastMessage(`${nextCode} duplicada correctamente`);
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
 
     if (item.tipoItem === "item_libre_con_valor") {
       setFreeValueItemForm({
@@ -2224,16 +2278,74 @@ function goNextFromStep1() {
   onAddGroupSheetClosedRef.current = (itemCount: number) => {
     setDuplicateSourceCode("");
 
-    const suspended = suspendedNotebookRef.current;
-    if (suspended) {
+    if (returnToModeSelectorAfterSheetCloseRef.current) {
+      returnToModeSelectorAfterSheetCloseRef.current = false;
+      returnToTotalNotebookAfterSheetCloseRef.current = false;
       suspendedNotebookRef.current = null;
-      pasoDosAgregarGrupo.restoreFreeTotalNotebook(suspended);
+      pendingNextDraftRef.current = false;
+      setQuoteModeChosen(false);
+      setEditingItemId(null);
+      setEditingFreeValueItemId(null);
+      setIsFreeValueItemFormOpen(false);
+      setFieldErrors({});
+      setGlobalError(null);
+      return;
+    }
+
+    const shouldReturnToTotalNotebook =
+      returnToTotalNotebookAfterSheetCloseRef.current ||
+      (!isMobileViewport && quotePricingMode === "total_global");
+
+    if (shouldReturnToTotalNotebook) {
+      const suspended = suspendedNotebookRef.current;
+      suspendedNotebookRef.current = null;
+      returnToTotalNotebookAfterSheetCloseRef.current = false;
+      setQuoteModeChosen(true);
+      setEditingItemId(null);
+      setEditingFreeValueItemId(null);
+      setIsFreeValueItemFormOpen(false);
+      setFieldErrors({});
+      setGlobalError(null);
+      if (suspended) {
+        if (isMobileViewport) {
+          pasoDosAgregarGrupoMovil.restoreFreeTotalNotebook({
+            ...suspended,
+            paso: suspended.paso === 1 || suspended.paso === 2 || suspended.paso === 3
+              ? suspended.paso
+              : 3,
+          });
+        } else {
+          pasoDosAgregarGrupo.restoreFreeTotalNotebook({
+            ...suspended,
+            paso: suspended.paso === 4 || suspended.paso === 5 ? suspended.paso : 4,
+          });
+        }
+      } else if (isMobileViewport) {
+        pasoDosAgregarGrupoMovil.openFreeTotalNotebook(componentForm);
+      } else {
+        pasoDosAgregarGrupo.openFreeTotalNotebook(componentForm);
+      }
       pendingNextDraftRef.current = false;
       return;
     }
 
-    if (!isMobileViewport && quotePricingMode === "total_global") {
-      pasoDosAgregarGrupo.openFreeTotalNotebook(componentForm);
+    const suspended = suspendedNotebookRef.current;
+    if (suspended) {
+      suspendedNotebookRef.current = null;
+      returnToTotalNotebookAfterSheetCloseRef.current = false;
+      if (isMobileViewport) {
+        pasoDosAgregarGrupoMovil.restoreFreeTotalNotebook({
+          ...suspended,
+          paso: suspended.paso === 1 || suspended.paso === 2 || suspended.paso === 3
+            ? suspended.paso
+            : 3,
+        });
+      } else {
+        pasoDosAgregarGrupo.restoreFreeTotalNotebook({
+          ...suspended,
+          paso: suspended.paso === 4 || suspended.paso === 5 ? suspended.paso : 4,
+        });
+      }
       pendingNextDraftRef.current = false;
       return;
     }
@@ -2252,21 +2364,67 @@ function goNextFromStep1() {
     }
   };
 
+  const handleCloseAddGroupSheetDesktop = () => {
+    if (!isMobileViewport && pasoDosAgregarGrupo.entryMode === "free_total_single") {
+      returnToModeSelector();
+      return;
+    }
+
+    if (!isMobileViewport && quotePricingMode === "total_global") {
+      returnToTotalNotebookAfterSheetCloseRef.current = true;
+      pasoDosAgregarGrupo.closeSheet({ itemCountOverride: draft.items.length });
+      return;
+    }
+
+    returnToTotalNotebookAfterSheetCloseRef.current = false;
+    pasoDosAgregarGrupo.closeSheet();
+  };
+
+  const handleBackAddGroupSheetDesktop = () => {
+    if (!isMobileViewport && pasoDosAgregarGrupo.entryMode === "free_total_single") {
+      returnToModeSelector();
+      return;
+    }
+
+    pasoDosAgregarGrupo.goBack();
+  };
+
   const isTotalGlobalCuadernoOpen =
     !isMobileViewport &&
     quotePricingMode === "total_global" &&
     pasoDosAgregarGrupo.isOpen &&
     pasoDosAgregarGrupo.entryMode === "free_total_single";
+  const isMobileTotalGlobalCuadernoOpen =
+    isMobileViewport &&
+    quotePricingMode === "total_global" &&
+    pasoDosAgregarGrupoMovil.isOpen &&
+    pasoDosAgregarGrupoMovil.entryMode === "free_total_single";
 
   const totalGlobalNestedDetailItems = useMemo(
-    () =>
-      isTotalGlobalCuadernoOpen
-        ? resolveTotalGlobalNestedDetailItems(
-            draft.items,
-            pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds
-          )
-        : [],
-    [draft.items, isTotalGlobalCuadernoOpen, pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds]
+    () => {
+      if (isTotalGlobalCuadernoOpen) {
+        return resolveTotalGlobalNestedDetailItems(
+          draft.items,
+          pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds
+        );
+      }
+
+      if (isMobileTotalGlobalCuadernoOpen) {
+        return resolveTotalGlobalNestedDetailItems(
+          draft.items,
+          pasoDosAgregarGrupoMovil.freeTotalNotebookNestedItemIds
+        );
+      }
+
+      return [];
+    },
+    [
+      draft.items,
+      isMobileTotalGlobalCuadernoOpen,
+      isTotalGlobalCuadernoOpen,
+      pasoDosAgregarGrupo.freeTotalNotebookNestedItemIds,
+      pasoDosAgregarGrupoMovil.freeTotalNotebookNestedItemIds,
+    ]
   );
 
   const panelItemsForStepTwo = useMemo(() => {
@@ -2511,6 +2669,8 @@ function goNextFromStep1() {
               isSavingLineTemplate: isSavingQuickPriceTemplate,
               onOpen: handleOpenAddGroupSheet,
               onOpenFreeTotalNotebook: handleOpenFreeTotalNotebook,
+              onOpenComponentCreator: handleOpenTotalGlobalComponentCreator,
+              nestedDetailItems: totalGlobalNestedDetailItems,
               onClose: pasoDosAgregarGrupoMovil.closeSheet,
               onGoToStep: pasoDosAgregarGrupoMovil.goToStep,
               onBack: pasoDosAgregarGrupoMovil.goBack,
@@ -2632,8 +2792,8 @@ function goNextFromStep1() {
             glassOptions: pasoDosAgregarGrupo.glassOptions,
             visibleLineTemplates: pasoDosAgregarGrupo.visibleLineTemplates,
             summary: pasoDosAgregarGrupo.summary,
-            onClose: pasoDosAgregarGrupo.closeSheet,
-            onBack: pasoDosAgregarGrupo.goBack,
+            onClose: handleCloseAddGroupSheetDesktop,
+            onBack: handleBackAddGroupSheetDesktop,
             onNext: pasoDosAgregarGrupo.goNext,
             onGoToStep: pasoDosAgregarGrupo.goToStep,
             onConfirm: handleConfirmAddGroupDesktop,

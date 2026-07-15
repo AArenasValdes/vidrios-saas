@@ -74,6 +74,8 @@ export type WizardActions = {
   isSavingLineTemplate: boolean;
   onOpen: () => void;
   onOpenFreeTotalNotebook: () => void;
+  onOpenComponentCreator: () => void;
+  nestedDetailItems?: readonly CotizacionWorkflowItem[];
   onClose: () => void;
   onGoToStep: (paso: PasoDosGrupoPasoMovil) => void;
   onBack: () => void;
@@ -346,7 +348,7 @@ export function PasoDosWizardMovil({
     quotePricingMode,
   });
   const effectiveCanSubmitGroup =
-    quotePricingMode === "total_global"
+    quotePricingMode === "total_global" && isSingleStepFreeTotal
       ? canSubmitGroup && (totalClienteManual ?? 0) > 0
       : canSubmitGroup;
   const formattedPriceValue = formatCurrencyInput(wizard.draft.precio);
@@ -623,6 +625,8 @@ export function PasoDosWizardMovil({
                   onAddAlcanceDetalle={wizard.onAddAlcanceDetalle}
                   onUpdateAlcanceDetalle={wizard.onUpdateAlcanceDetalle}
                   onRemoveAlcanceDetalle={wizard.onRemoveAlcanceDetalle}
+                  onOpenComponentCreator={wizard.onOpenComponentCreator}
+                  nestedDetailItems={wizard.nestedDetailItems}
                   quotePricingMode={quotePricingMode}
                   totalClienteManual={totalClienteManual}
                   mostrarIva={mostrarIva}

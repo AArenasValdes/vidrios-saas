@@ -5,6 +5,7 @@ import { LuChevronLeft, LuSearch, LuX } from "react-icons/lu";
 
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type {
   CotizacionLineTemplate,
   CreateCotizacionLineTemplateInput,
@@ -120,6 +121,8 @@ type Props = {
     value: string
   ) => void;
   onRemoveAlcanceDetalle: (detalleId: string) => void;
+  onOpenComponentCreator?: () => void;
+  nestedDetailItems?: readonly CotizacionWorkflowItem[];
   quotePricingMode: QuotePricingMode;
   totalClienteManual: number | null;
   mostrarIva: boolean;
@@ -186,6 +189,8 @@ export function PasoDosWizardConfiguracionMovil({
   onAddAlcanceDetalle,
   onUpdateAlcanceDetalle,
   onRemoveAlcanceDetalle,
+  onOpenComponentCreator,
+  nestedDetailItems = [],
   quotePricingMode = "por_item",
   totalClienteManual,
   internalObservation,
@@ -226,7 +231,6 @@ export function PasoDosWizardConfiguracionMovil({
     Boolean(internalObservation.trim())
   );
   const [showPlantillas, setShowPlantillas] = useState(false);
-  const [quickDetalleInput, setQuickDetalleInput] = useState("");
   const availableLineTemplates = lineTemplateOptions;
   const referencia = draft.referencia?.trim() ?? "";
   const precioPorM2 = draft.precioPorM2?.trim() ?? "";
@@ -390,28 +394,8 @@ export function PasoDosWizardConfiguracionMovil({
     }
   };
 
-  const getDetalleResumen = (detalle: PasoDosGrupoDraft["alcanceDetalles"][number]) => {
-    if (detalle.tipo === "estructurado") {
-      const medida =
-        detalle.ancho.trim() && detalle.alto.trim()
-          ? ` ${detalle.ancho.trim()} x ${detalle.alto.trim()}`
-          : "";
-      const cantidad = detalle.cantidad.trim() || "1";
-      const subtipo = detalle.subtipo?.trim() || "Componente";
-
-      return detalle.nombre.trim() || `${cantidad} ${subtipo.toLowerCase()}${medida}`;
-    }
-
-    return detalle.nombre.trim() || detalle.descripcion.trim() || "Detalle sin nombre";
-  };
-
   if (isFreeValue && quotePricingMode === "total_global") {
-    const handleQuickAddDetalle = () => {
-      const trimmed = quickDetalleInput.trim();
-      if (!trimmed) return;
-      onAddAlcanceDetalle(trimmed);
-      setQuickDetalleInput("");
-    };
+    const includedCount = nestedDetailItems.length;
 
     return (
       <div className={`${s.stepTwoMobileCreatorStack} ${s.stepTwoNotebookStack}`}>
@@ -476,64 +460,56 @@ export function PasoDosWizardConfiguracionMovil({
           />
         </label>
 
-        <section className={s.stepTwoNotebookSection} aria-labelledby="componentes-libres-title">
-          <h3 id="componentes-libres-title" className={s.stepTwoNotebookSectionTitle}>
-            AGREGAR COMPONENTES LIBRES
-          </h3>
-          <span className={s.stepTwoNotebookSectionHelp}>
-            Se listan en el PDF sin precio individual.
-          </span>
-
-          <div className={s.stepTwoNotebookQuickInputRow}>
-            <input
-              className={s.stepTwoNotebookQuickInput}
-              maxLength={120}
-              placeholder="Ej: Colocar ventana"
-              type="text"
-              value={quickDetalleInput}
-              onChange={(event) => setQuickDetalleInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleQuickAddDetalle();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className={s.stepTwoNotebookQuickAdd}
-              onClick={handleQuickAddDetalle}
-              disabled={!quickDetalleInput.trim()}
-              aria-label="Agregar componente libre"
-            >
-              +
-            </button>
+        <section
+          className={s.stepTwoNotebookSection}
+          aria-labelledby="componentes-libres-title"
+        >
+          <div className={s.stepTwoNotebookSectionTop}>
+            <div>
+              <h3 id="componentes-libres-title" className={s.stepTwoNotebookSectionTitle}>
+                Componentes incluidos
+              </h3>
+              <span className={s.stepTwoNotebookSectionHelp}>
+                Se listan en el PDF sin precio individual.
+              </span>
+            </div>
+            <span className={s.stepTwoNotebookSectionCount}>
+              {includedCount} {includedCount === 1 ? "incluido" : "incluidos"}
+            </span>
           </div>
 
-          {draft.alcanceDetalles.length > 0 ? (
-            <div className={s.stepTwoNotebookDetailList}>
-              {draft.alcanceDetalles.map((detalle) => (
-                <div key={detalle.id} className={s.stepTwoNotebookDetailItem}>
-                  <input
-                    className={s.stepTwoNotebookDetailItemInput}
-                    maxLength={120}
-                    placeholder="Nombre del componente"
-                    type="text"
-                    value={detalle.nombre.trim() ? detalle.nombre : getDetalleResumen(detalle)}
-                    onChange={(event) =>
-                      onUpdateAlcanceDetalle(detalle.id, "nombre", event.target.value)
-                    }
-                  />
-                  <button
-                    type="button"
-                    className={s.stepTwoNotebookDetailItemRemove}
-                    onClick={() => onRemoveAlcanceDetalle(detalle.id)}
-                    aria-label="Eliminar componente"
-                  >
-                    <LuX aria-hidden size={14} />
-                  </button>
-                </div>
-              ))}
+          {onOpenComponentCreator ? (
+            <button
+              type="button"
+              className={s.stepTwoNotebookComponentButton}
+              onClick={onOpenComponentCreator}
+            >
+              + Agregar componente completo
+            </button>
+          ) : null}
+
+          {nestedDetailItems.length > 0 ? (
+            <div className={s.stepTwoNotebookNestedList}>
+              {nestedDetailItems.map((item) => {
+                const measures =
+                  item.ancho && item.alto
+                    ? `${Math.round(item.ancho)} x ${Math.round(item.alto)} mm`
+                    : "Sin medidas";
+                const quantity = item.cantidad > 1 ? `${item.cantidad} uds.` : "1 ud.";
+
+                return (
+                  <article key={item.id} className={s.stepTwoNotebookNestedItem}>
+                    <span className={s.stepTwoNotebookNestedCode}>{item.codigo}</span>
+                    <div className={s.stepTwoNotebookNestedBody}>
+                      <strong>{item.nombre || item.tipo}</strong>
+                      <small>
+                        {[item.tipo, measures, quantity].filter(Boolean).join(" - ")}
+                      </small>
+                    </div>
+                    <span className={s.stepTwoNotebookNestedBadge}>Incluido</span>
+                  </article>
+                );
+              })}
             </div>
           ) : null}
         </section>

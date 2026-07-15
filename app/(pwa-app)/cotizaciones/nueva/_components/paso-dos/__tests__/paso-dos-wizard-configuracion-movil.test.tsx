@@ -455,12 +455,43 @@ describe("PasoDosWizardConfiguracionMovil", () => {
   });
 
   it("debe mostrar precio final y observacion colapsada en presupuesto por total", () => {
+    const onOpenComponentCreator = jest.fn();
+
     render(
       <PasoDosWizardConfiguracionMovil
         {...baseProps}
         quotePricingMode="total_global"
         totalClienteManual={600000}
         mostrarIva
+        onOpenComponentCreator={onOpenComponentCreator}
+        nestedDetailItems={[
+          {
+            id: "item-nested-1",
+            codigo: "V1",
+            tipo: "Ventana",
+            lineaComercial: "Serie 20",
+            vidrio: "Incoloro monolitico 5mm",
+            nombre: "Ventana corredera",
+            descripcion: "",
+            ancho: 1500,
+            alto: 1200,
+            cantidad: 1,
+            unidad: "unidad",
+            areaM2: 1.8,
+            costoProveedorUnitario: 0,
+            costoProveedorTotal: 0,
+            margenPct: 0,
+            precioUnitario: 0,
+            precioTotal: 0,
+            precioPorM2: null,
+            minimoCobrable: null,
+            redondeoPrecio: null,
+            precioPlantillaSugerido: null,
+            precioAjustadoManual: false,
+            origenPrecio: "manual",
+            observaciones: "",
+          },
+        ]}
         draft={{
           ...baseProps.draft,
           subtipo: "Trabajo libre / Mantencion",
@@ -492,9 +523,14 @@ describe("PasoDosWizardConfiguracionMovil", () => {
     expect(screen.queryByText("Cobrar este item por separado")).not.toBeInTheDocument();
     expect(screen.getByText("NOMBRE DEL TRABAJO")).toBeInTheDocument();
     expect(screen.getByText("DESCRIPCION PARA CLIENTE")).toBeInTheDocument();
-    expect(screen.getByText("AGREGAR COMPONENTES LIBRES")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("3 ventanas correderas 1500 x 2000")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Ej: Colocar ventana")).toBeInTheDocument();
+    expect(screen.getByText("Componentes incluidos")).toBeInTheDocument();
+    expect(screen.getByText("1 incluido")).toBeInTheDocument();
+    expect(screen.getByText("Ventana corredera")).toBeInTheDocument();
+    expect(screen.getByText("Ventana - 1500 x 1200 mm - 1 ud.")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("3 ventanas correderas 1500 x 2000")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Ej: Colocar ventana")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "+ Agregar componente completo" }));
+    expect(onOpenComponentCreator).toHaveBeenCalledTimes(1);
     expect(screen.getByText("PRECIO FINAL")).toBeInTheDocument();
     expect(screen.getByDisplayValue("600.000")).toBeInTheDocument();
     expect(screen.queryByText("Incluye IVA")).not.toBeInTheDocument();

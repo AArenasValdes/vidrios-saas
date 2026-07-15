@@ -10,6 +10,7 @@ import {
   getSystemOptionsForComponent,
   hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
+import { generateComponentSVG } from "@/utils/window-drawings";
 import {
   CLP,
   COLOR_OPTIONS,
@@ -252,6 +253,37 @@ function TabConfiguracion({
     sheetScheme: componentForm.sheetScheme,
     sheetVariant: componentForm.sheetVariant,
   });
+  const configPreviewSvg = useMemo(
+    () =>
+      generateComponentSVG({
+        tipo: componentForm.tipo,
+        sistema: componentForm.sistema,
+        configuracion: componentForm.configuracion,
+        sheetScheme: componentForm.sheetScheme,
+        sheetVariant: componentForm.sheetVariant,
+        customSchemeDescription: componentForm.customSchemeDescription,
+        isCustomScheme: componentForm.isCustomScheme,
+        referencia: componentForm.referencia,
+        ancho: componentForm.ancho ? Number(componentForm.ancho) : null,
+        alto: componentForm.alto ? Number(componentForm.alto) : null,
+        colorHex: componentForm.colorHex,
+        maxW: 176,
+        maxH: 118,
+        mirrorFormat: componentForm.mirrorFormat,
+        mirrorPaneCount: componentForm.mirrorPaneCount,
+        mirrorPaneDirection: componentForm.mirrorPaneDirection,
+        mirrorInteriorLine: componentForm.mirrorInteriorLine,
+      }),
+    [componentForm]
+  );
+  const configPreviewSummary = [
+    componentForm.sistema,
+    componentForm.configuracion,
+    componentForm.sheetScheme,
+    componentForm.sheetVariant,
+  ]
+    .filter((part) => part?.trim())
+    .join(" · ");
 
   return (
     <div className={editor.tabContent}>
@@ -414,12 +446,12 @@ function TabConfiguracion({
           </div>
           <div className={`${s.field} ${s.fieldFull}`}>
             <span className={s.label}>{compositionSectionLabel}</span>
-            <div className={s.batchCountRow} role="group" aria-label={compositionSectionLabel}>
+            <div className={editor.compositionGrid} role="group" aria-label={compositionSectionLabel}>
               {sheetSchemeOptions.map((option) => (
                 <button
                   key={option}
-                  className={`${s.batchCountButton} ${
-                    componentForm.sheetScheme === option ? s.batchCountButtonActive : ""
+                  className={`${editor.compositionChip} ${
+                    componentForm.sheetScheme === option ? editor.compositionChipActive : ""
                   }`}
                   onClick={() => onComponentChange("sheetScheme", option)}
                   type="button"
@@ -429,12 +461,12 @@ function TabConfiguracion({
               ))}
             </div>
             {sheetVariantOptions.length > 0 ? (
-              <div className={s.typeGroupGrid} role="group" aria-label="Variante del esquema">
+              <div className={editor.compositionVariantGrid} role="group" aria-label="Variante del esquema">
                 {sheetVariantOptions.map((option) => (
                   <button
                     key={option}
-                    className={`${s.typeChip} ${
-                      componentForm.sheetVariant === option ? s.typeChipActive : ""
+                    className={`${editor.compositionChip} ${
+                      componentForm.sheetVariant === option ? editor.compositionChipActive : ""
                     }`}
                     onClick={() => onComponentChange("sheetVariant", option)}
                     type="button"
@@ -462,16 +494,18 @@ function TabConfiguracion({
         </section>
       ) : null}
 
-      {currentComponentPreviewSvg ? (
-        <div className={`${s.quickPreviewCard} ${s.stepTwoPreviewCard}`}>
-          <div className={s.quickPreviewThumb}>
+      {configPreviewSvg || currentComponentPreviewSvg ? (
+        <div className={editor.configPreviewCard}>
+          <div className={editor.configPreviewThumb}>
             <div
-              className={s.quickPreviewThumbSvg}
-              dangerouslySetInnerHTML={{ __html: currentComponentPreviewSvg }}
+              className={editor.configPreviewSvg}
+              dangerouslySetInnerHTML={{ __html: configPreviewSvg || currentComponentPreviewSvg }}
             />
           </div>
-          <div className={s.quickPreviewBody}>
+          <div className={editor.configPreviewCopy}>
+            <span>Vista de la pieza</span>
             <strong>{componentForm.tipo}</strong>
+            {configPreviewSummary ? <p>{configPreviewSummary}</p> : null}
           </div>
         </div>
       ) : null}

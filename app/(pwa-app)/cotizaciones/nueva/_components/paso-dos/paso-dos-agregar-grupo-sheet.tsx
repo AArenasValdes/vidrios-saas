@@ -1243,6 +1243,10 @@ export function PasoDosAgregarGrupoSheet({
               aria-label="Cerrar editor"
               title="Cerrar editor"
               onClick={() => {
+                if (quotePricingMode === "total_global") {
+                  onClose();
+                  return;
+                }
                 const hasDraftData =
                   draft.subtipo.trim() !== "" ||
                   draft.nombre.trim() !== "" ||
@@ -2225,7 +2229,7 @@ export function PasoDosAgregarGrupoSheet({
                     }
                   }}
                 >
-                  Descartar y cambiar modalidad
+                  Descartar pieza
                 </button>
               </div>
             </section>
@@ -3210,7 +3214,7 @@ export function PasoDosAgregarGrupoSheet({
                     }
                   }}
                 >
-                  Descartar y cambiar modalidad
+                  Descartar presupuesto
                 </button>
               </div>
             </section>

@@ -61,6 +61,9 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const [entryMode, setEntryMode] = useState<PasoDosGrupoEntryMode>("normal");
   const [editingFreeTotalMainItemId, setEditingFreeTotalMainItemId] = useState<string | null>(null);
   const [editingFreeTotalItemIds, setEditingFreeTotalItemIds] = useState<string[] | null>(null);
+  const [freeTotalNotebookNestedItemIds, setFreeTotalNotebookNestedItemIds] = useState<string[]>(
+    []
+  );
   const [draft, setDraft] = useState<PasoDosGrupoDraft>(() =>
     createInitialPasoDosGrupoDraft(params)
   );
@@ -68,6 +71,7 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
   const resetFreeTotalEditState = () => {
     setEditingFreeTotalMainItemId(null);
     setEditingFreeTotalItemIds(null);
+    setFreeTotalNotebookNestedItemIds([]);
   };
 
   useEffect(() => {
@@ -160,8 +164,25 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     setDraft(nextDraft);
     setEditingFreeTotalMainItemId(mainItemId);
     setEditingFreeTotalItemIds(itemIds);
+    setFreeTotalNotebookNestedItemIds(itemIds.filter((itemId) => itemId !== mainItemId));
     setEntryMode("free_total_single");
     setPaso(3);
+    setIsOpen(true);
+  };
+
+  const restoreFreeTotalNotebook = (input: {
+    draft: PasoDosGrupoDraft;
+    paso?: PasoDosGrupoPasoMovil;
+    editingFreeTotalMainItemId?: string | null;
+    editingFreeTotalItemIds?: string[] | null;
+    freeTotalNotebookNestedItemIds?: string[];
+  }) => {
+    setDraft(input.draft);
+    setEditingFreeTotalMainItemId(input.editingFreeTotalMainItemId ?? null);
+    setEditingFreeTotalItemIds(input.editingFreeTotalItemIds ?? null);
+    setFreeTotalNotebookNestedItemIds(input.freeTotalNotebookNestedItemIds ?? []);
+    setEntryMode("free_total_single");
+    setPaso(input.paso ?? 3);
     setIsOpen(true);
   };
 
@@ -585,8 +606,10 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     openSheet,
     openFreeTotalNotebook,
     openFreeTotalNotebookForEdit,
+    restoreFreeTotalNotebook,
     editingFreeTotalMainItemId,
     editingFreeTotalItemIds,
+    freeTotalNotebookNestedItemIds,
     closeSheet,
     goToStep,
     selectCategoria,

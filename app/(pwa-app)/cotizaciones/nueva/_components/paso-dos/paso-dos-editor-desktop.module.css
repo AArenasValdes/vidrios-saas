@@ -200,6 +200,118 @@
     gap: 0.72rem;
   }
 
+  .compositionGrid,
+  .compositionVariantGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .compositionVariantGrid {
+    margin-top: 0.5rem;
+  }
+
+  .compositionChip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.58rem 0.7rem;
+    border: 1px solid #d5e0ef;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #18335f;
+    font-size: 0.82rem;
+    font-weight: 750;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .compositionChip:hover {
+    border-color: #9fc8ff;
+    background: #f8fbff;
+  }
+
+  .compositionChipActive {
+    border-color: #1e88ff;
+    background: #eaf4ff;
+    color: #0f4fa8;
+    box-shadow: 0 0 0 2px rgba(30, 136, 255, 0.12);
+  }
+
+  .configPreviewCard {
+    display: grid;
+    grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: center;
+    min-height: 9rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid #dbe6f3;
+    border-radius: 14px;
+    background: #f8fbff;
+  }
+
+  .configPreviewThumb {
+    display: grid;
+    place-items: center;
+    min-height: 7.25rem;
+    overflow: hidden;
+    border: 1px solid #dbe6f3;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .configPreviewSvg {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .configPreviewSvg svg {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 7.1rem;
+  }
+
+  .configPreviewCopy {
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .configPreviewCopy span {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .configPreviewCopy strong {
+    color: #06162f;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .configPreviewCopy p {
+    margin: 0;
+    color: #52637d;
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
   /* ─── Área display ─── */
 
   .areaDisplay {

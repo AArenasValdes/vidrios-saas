@@ -238,4 +238,24 @@ describe("PasoDosWizardMovil", () => {
     fireEvent.click(screen.getByText("Agregar componente"));
     expect(wizard.onConfirm).toHaveBeenCalled();
   });
+
+  it("debe permitir agregar un componente dentro de cotizacion por total sin precio final", () => {
+    const wizard = createWizard({ paso: 3, entryMode: "normal" });
+
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quotePricingMode="total_global"
+        totalClienteManual={null}
+        wizard={wizard}
+      />
+    );
+
+    const addButton = screen.getByRole("button", { name: /agregar/i });
+    expect(addButton).toBeEnabled();
+    expect(screen.queryByText("Continuar al resumen")).not.toBeInTheDocument();
+
+    fireEvent.click(addButton);
+    expect(wizard.onConfirm).toHaveBeenCalled();
+  });
 });

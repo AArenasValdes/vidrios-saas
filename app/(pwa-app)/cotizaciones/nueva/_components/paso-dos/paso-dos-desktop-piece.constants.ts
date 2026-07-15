@@ -12,6 +12,7 @@ import { getComponentDescripcion } from "@/features/cotizaciones/services/compon
 
 export const DESKTOP_FREQUENT_TYPES = [
   "Ventana",
+  "Vidrio / Cristal",
   "Puerta",
   "Paño fijo",
   "Shower door",
@@ -20,7 +21,6 @@ export const DESKTOP_FREQUENT_TYPES = [
 ] as const;
 
 export const DESKTOP_OTHER_TYPES_PRIMARY = [
-  "Vidrio / Cristal",
   "Espejo",
   "Cubierta de mesa",
   "Trabajo libre / Mantencion",

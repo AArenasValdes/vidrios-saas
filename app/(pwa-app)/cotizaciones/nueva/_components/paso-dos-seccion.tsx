@@ -284,6 +284,16 @@ export function PasoDosSeccion({
     onContinueActiveDraft: () =>
       primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
   };
+  const fullBudgetPanelListaProps = {
+    ...panelListaProps,
+    onEditItem: (item: Parameters<typeof panel.onEditItem>[0]) => {
+      setIsFullBudgetPreviewOpen(false);
+      panel.onEditItem(item);
+      window.requestAnimationFrame(() => {
+        primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    },
+  };
 
   return (
     <div className={!isMobileViewport ? s.stepTwoDesktopShell : undefined}>
@@ -322,7 +332,7 @@ export function PasoDosSeccion({
                   <span>Vista completa del presupuesto</span>
                 </div>
                 <QuoteStudioBudgetWorkspace
-                  {...panelListaProps}
+                  {...fullBudgetPanelListaProps}
                   onOpenComponentCreator={panel.onOpenComponentCreator}
                   onOpenFreeValueItemForm={panel.onOpenFreeValueItemForm}
                 />

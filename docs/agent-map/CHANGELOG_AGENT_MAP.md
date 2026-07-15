@@ -12,6 +12,8 @@ El Paso 2 de cotizacion ahora expone la categoria **Vidrios y cristales** con el
 
 Actualizacion: los componentes solo vidrio (`Espejo`, `Cubierta de mesa`, `Vidrio / Cristal`) ahora nacen por defecto con `material='Cristal'` y `catalogCategoria='vidrio'`. Los selectores de precios filtran solo productos de cristal para esos casos y mantienen Aluminio/PVC separados para componentes con perfileria. La configuracion de `Vidrio / Cristal` agrega opciones practicas para maestros: vidrio suelto, reposicion, termopanel, espejo y personalizado.
 
+Actualizacion UX: al seleccionar o crear un producto de cristal guardado, el nombre comercial del producto queda tambien como `vidrio` visible del item. Mobile deja de mostrar sugeridos genericos de vidrio cuando ya hay producto de cristal seleccionado y muestra el bloque **Producto / tipo de vidrio** con espesor/terminacion. Ese snapshot alimenta resumen, PDF y presupuesto publico.
+
 ### Archivos principales
 
 | Archivo | Cambio |
