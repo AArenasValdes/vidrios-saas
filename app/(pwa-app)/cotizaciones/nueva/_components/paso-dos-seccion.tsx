@@ -139,6 +139,12 @@ export function PasoDosSeccion({
   };
 
   const leftSurface = (() => {
+    // Item libre tiene prioridad: si el sheet de componente sigue abierto,
+    // no debe tapar el formulario de trabajo libre.
+    if (itemLibreForm.isOpen) {
+      return <PasoDosItemLibreForm {...itemLibreForm} />;
+    }
+
     if (addGroupSheetProps.isOpen) {
       return (
         <PasoDosAgregarGrupoSheet
@@ -149,10 +155,6 @@ export function PasoDosSeccion({
           onRequestSwitchMode={handleRequestSwitchMode}
         />
       );
-    }
-
-    if (itemLibreForm.isOpen) {
-      return <PasoDosItemLibreForm {...itemLibreForm} />;
     }
 
     if (
@@ -284,10 +286,30 @@ export function PasoDosSeccion({
     onContinueActiveDraft: () =>
       primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
   };
+  const closeFullBudgetPreview = () => {
+    setIsFullBudgetPreviewOpen(false);
+  };
+
+  const openComponentCreatorFromBudget = () => {
+    closeFullBudgetPreview();
+    panel.onOpenComponentCreator();
+    window.requestAnimationFrame(() => {
+      primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
+  const openFreeValueItemFormFromBudget = () => {
+    closeFullBudgetPreview();
+    panel.onOpenFreeValueItemForm();
+    window.requestAnimationFrame(() => {
+      primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  };
+
   const fullBudgetPanelListaProps = {
     ...panelListaProps,
     onEditItem: (item: Parameters<typeof panel.onEditItem>[0]) => {
-      setIsFullBudgetPreviewOpen(false);
+      closeFullBudgetPreview();
       panel.onEditItem(item);
       window.requestAnimationFrame(() => {
         primarySurfaceRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -321,16 +343,16 @@ export function PasoDosSeccion({
             {showQuoteStudioBudgetIdle ? (
               <QuoteStudioBudgetWorkspace
                 {...panelListaProps}
-                onOpenComponentCreator={panel.onOpenComponentCreator}
-                onOpenFreeValueItemForm={panel.onOpenFreeValueItemForm}
+                onOpenComponentCreator={openComponentCreatorFromBudget}
+                onOpenFreeValueItemForm={openFreeValueItemFormFromBudget}
               />
-            ) : isFullBudgetPreviewOpen ? (
+            ) : isFullBudgetPreviewOpen && !itemLibreForm.isOpen ? (
               <>
                 <div className={d.budgetPreviewBanner}>
                   <button
                     type="button"
                     className={d.budgetPreviewBack}
-                    onClick={() => setIsFullBudgetPreviewOpen(false)}
+                    onClick={closeFullBudgetPreview}
                   >
                     Volver al editor
                   </button>
@@ -338,8 +360,8 @@ export function PasoDosSeccion({
                 </div>
                 <QuoteStudioBudgetWorkspace
                   {...fullBudgetPanelListaProps}
-                  onOpenComponentCreator={panel.onOpenComponentCreator}
-                  onOpenFreeValueItemForm={panel.onOpenFreeValueItemForm}
+                  onOpenComponentCreator={openComponentCreatorFromBudget}
+                  onOpenFreeValueItemForm={openFreeValueItemFormFromBudget}
                 />
               </>
             ) : (

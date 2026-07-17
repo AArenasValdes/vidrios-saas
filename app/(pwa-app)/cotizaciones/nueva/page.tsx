@@ -1347,6 +1347,8 @@ function NuevaCotizacionPageContent() {
     setFreeValueItemForm(createEmptyFreeValueItemForm());
     setEditingFreeValueItemId(null);
     setEditingItemId(null);
+    pasoDosAgregarGrupo.closeSheet();
+    pasoDosAgregarGrupoMovil.closeSheet();
     setIsFreeValueItemFormOpen(true);
     setFieldErrors({});
     setGlobalError(null);
