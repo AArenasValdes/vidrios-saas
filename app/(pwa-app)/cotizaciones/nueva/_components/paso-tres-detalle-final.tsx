@@ -6,6 +6,7 @@ import { LuBadgePercent, LuChevronDown, LuTruck } from "react-icons/lu";
 import type { CotizacionWorkflowDraft, CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { resolveWorkflowItemDisplayName } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 import s from "../page.module.css";
 
@@ -74,6 +75,14 @@ export function PasoTresDetalleFinal({
   };
 
   const buildItemMeta = (item: CotizacionWorkflowDraft["items"][number]) => {
+    const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+    const isFreeValueItem =
+      item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+
+    if (isFreeValueItem) {
+      return item.descripcion?.trim() || "Sin medidas";
+    }
+
     const width = item.ancho ? String(item.ancho).replace(/\.0+$/, "") : "-";
     const height = item.alto ? String(item.alto).replace(/\.0+$/, "") : "-";
     const unit = item.unidad?.trim() || "u";

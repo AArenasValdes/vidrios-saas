@@ -52,6 +52,14 @@ type PasoTresResumenProps = {
 };
 
 function formatStepThreeMeasure(item: CotizacionWorkflowItem) {
+  const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const isFreeValueItem =
+    item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+
+  if (isFreeValueItem) {
+    return "Sin medidas";
+  }
+
   const width = item.ancho ? `${String(item.ancho).replace(/\.0+$/, "")}` : "-";
   const height = item.alto ? `${String(item.alto).replace(/\.0+$/, "")}` : "-";
   return `${width} x ${height} mm`;
@@ -67,6 +75,13 @@ function formatStepThreeCurrency(value: number) {
 
 function getStepThreeItemConfiguration(item: CotizacionWorkflowItem) {
   const meta = decodeCotizacionItemPresentationMeta(item.observaciones);
+  const isFreeValueItem =
+    item.tipoItem === "item_libre_con_valor" || meta.displayMode === "item_libre";
+
+  if (isFreeValueItem) {
+    return item.descripcion?.trim() || "Trabajo libre";
+  }
+
   const parts = [
     meta.material,
     item.lineaComercial,
@@ -99,6 +114,31 @@ function buildItemDetailLines(item: CotizacionWorkflowItem) {
     lines.push(`Nota: ${item.descripcion.trim()}`);
   }
   return lines;
+}
+
+function formatStepThreeItemValue(input: {
+  item: CotizacionWorkflowItem;
+  isGlobal: boolean;
+  totalClienteManual: number | null;
+  itemCount: number;
+}) {
+  if (!input.isGlobal) {
+    return formatStepThreeCurrency(input.item.precioTotal);
+  }
+
+  if (
+    input.itemCount === 1 &&
+    input.totalClienteManual !== null &&
+    input.totalClienteManual !== undefined &&
+    Number.isFinite(input.totalClienteManual) &&
+    input.totalClienteManual > 0
+  ) {
+    return formatStepThreeCurrency(input.totalClienteManual);
+  }
+
+  return input.item.precioTotal > 0
+    ? formatStepThreeCurrency(input.item.precioTotal)
+    : "Incluido en total";
 }
 
 export function PasoTresResumen({
@@ -292,7 +332,12 @@ export function PasoTresResumen({
                           <td className={s.rtMeasure}>{formatStepThreeMeasure(item)}</td>
                           <td className={s.rtQty}>{item.cantidad}</td>
                           <td className={s.rtValue}>
-                            {formatStepThreeCurrency(item.precioTotal)}
+                            {formatStepThreeItemValue({
+                              item,
+                              isGlobal: quotePricingMode === "total_global",
+                              totalClienteManual,
+                              itemCount: draft.items.length,
+                            })}
                           </td>
                           <td>
                             <div className={s.rtRowActions}>
