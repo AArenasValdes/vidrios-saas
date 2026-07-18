@@ -29,13 +29,15 @@ export function ResumenDesktopLateral({
   totalItems,
   total,
   isSaving,
+  onSaveDraft,
   onContinue,
 }: ResumenDesktopLateralProps) {
   const clienteNombre = draft.clienteNombre.trim();
   const obra = draft.obra.trim();
   const hasClient = clienteNombre.length > 0;
   const hasWork = obra.length > 0;
-  const canContinue = hasClient && hasWork && !isSaving;
+  const canContinue = !isSaving;
+  const canSaveDraft = !isSaving;
   const totalLabel = totalItems > 0 ? total : "Por definir";
 
   return (
@@ -47,13 +49,13 @@ export function ResumenDesktopLateral({
           <div className={s.desktopSideSummaryRow}>
             <span>Cliente</span>
             <strong className={!hasClient ? s.desktopSideSummaryMuted : undefined}>
-              {hasClient ? clienteNombre : "Sin seleccionar"}
+              {hasClient ? clienteNombre : "Cotización rápida"}
             </strong>
           </div>
           <div className={s.desktopSideSummaryRow}>
             <span>Trabajo</span>
             <strong className={!hasWork ? s.desktopSideSummaryMuted : undefined}>
-              {hasWork ? obra : "Sin definir"}
+              {hasWork ? obra : "Se completa al continuar"}
             </strong>
           </div>
           <div className={s.desktopSideSummaryRow}>
@@ -72,18 +74,29 @@ export function ResumenDesktopLateral({
           </div>
         </div>
 
-        <button
-          className={s.desktopSideSummaryButton}
-          onClick={onContinue}
-          type="button"
-          disabled={!canContinue}
-        >
-          Continuar al presupuesto <LuArrowRight aria-hidden />
-        </button>
+        <div className={s.desktopSideSummaryActions}>
+          <button
+            className={s.desktopSideSummaryButton}
+            onClick={onContinue}
+            type="button"
+            disabled={!canContinue}
+          >
+            Continuar al presupuesto <LuArrowRight aria-hidden />
+          </button>
+          <button
+            className={s.desktopSideSummaryButtonGhost}
+            onClick={onSaveDraft}
+            type="button"
+            disabled={!canSaveDraft}
+          >
+            {isSaving ? "Guardando..." : "Guardar borrador"}
+          </button>
+        </div>
 
-        {!canContinue ? (
+        {!hasClient || !hasWork ? (
           <p className={s.desktopSideSummaryHelp}>
-            Selecciona un cliente y define el trabajo para continuar.
+            Puedes cotizar sin cliente. Si no defines nombre o trabajo, se completan al
+            continuar.
           </p>
         ) : null}
       </section>

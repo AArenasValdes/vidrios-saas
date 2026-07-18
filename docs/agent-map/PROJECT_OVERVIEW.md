@@ -70,7 +70,7 @@ pagina/componente -> hook -> service -> repository -> Supabase
   1. estabilizar cotizacion desktop;
   2. dashboard comercial con datos reales;
   3. Quote Studio desktop impecable;
-  4. validar constructor visual guiado;
+  4. constructor visual guiado V2 usable (smoke PDF OK 2026-07-18);
   5. catalogo privado y cubicacion como piloto posterior.
 - Desktop no esta abriendo pipeline CRM, oportunidades, cobros ni multiusuario en esta etapa.
 

@@ -4,6 +4,304 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-18 - Fase 5: brief dashboard (Por enviar, sin seguimiento hero)
+
+### Resumen
+
+Se cierra la dirección de producto del dashboard Fase 5 antes del rediseño visual (exploración externa):
+
+1. Flujo a empujar: cotizar → PDF → WhatsApp.
+2. Cola principal: **Por enviar**; seguimiento no es bloque hero (pocos maestros lo usan).
+3. KPI hero: valor cotizado. Sin CRM/Kanban. UI solo tras brief aprobado.
+4. Brief + prompt de diseño en `docs/design/FASE_5_DASHBOARD_BRIEF.md`.
+
+### Archivos
+
+`docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`, `docs/design/FASE_5_DASHBOARD_BRIEF.md`, `FEATURES_MAP.md`, `ROUTES_MAP.md`, `AGENT_TASK_GUIDE.md`, `AGENTS.md`
+
+---
+
+## 2026-07-18 - Quote Studio: cierre desktop Paso 1 / Paso 3
+
+### Resumen
+
+Pulido del cierre comercial desktop (sin tocar PDF/WhatsApp contracts ni mobile):
+
+1. Paso 1 aside: **Continuar** y **Guardar borrador** sin exigir cliente ni obra (cotización rápida).
+2. Si faltan, `resolveStep1Draft` completa con “Cliente” / “Cotización”.
+3. Paso 3 aside: badge **Borrador guardado** + hint si falta teléfono para WhatsApp.
+
+### Archivos
+
+`resumen-desktop-lateral.tsx`, `paso-tres-resumen.tsx`, `page.module.css`, test del aside Paso 1
+
+---
+
+## 2026-07-18 - Quote Studio: panel financiero compacto + scroll
+
+### Resumen
+
+Corrige overflow visual del panel derecho (footer tapaba Merma %):
+
+1. Empty compacto: chip **Sin costos** + CTA **Agregar costos** (sin bloque largo).
+2. Detalle colapsado por defecto; hint corto solo al abrir.
+3. Panel summary con `panelBody` scrolleable y footer fijo.
+
+También: margen con objetivo, delta recomendado y CTA anclado.
+
+### Archivos
+
+`quote-studio-financial-panel.tsx`, `paso-dos-panel-desktop.module.css`, test del panel
+
+---
+
+## 2026-07-18 - Quote Studio: pulido lista + preview presupuesto
+
+### Resumen
+
+Desktop lista/workspace (sin mobile ni financiero):
+
+1. CTA/empty unificados: **Agregar pieza** + “Usa Agregar pieza o Trabajo libre…”.
+2. Thumb sin croquis: **Trabajo libre** / **Sin croquis** (nunca “Libre”).
+3. Badge solo si incompleto (“Incompleto”); preview lateral muestra medidas bajo el nombre.
+
+### Archivos
+
+`quote-studio-budget-workspace.tsx`, `paso-dos-panel-lista.tsx`, `quote-studio-panel-budget-summary.tsx`, `paso-dos-panel-desktop.module.css`
+
+---
+
+## 2026-07-18 - Quote Studio: pulido flujo pieza (paso Sistema/Personalizado)
+
+### Resumen
+
+Pulido desktop del wizard Agregar pieza (sin tocar mobile ni cubicación):
+
+1. Paso 2 renombrado a **Sistema y composición**; CTA tipo → “Continuar a composición”.
+2. **Personalizado** ya no deja avanzar sin `guidedVisualConfig` ni descripción.
+3. Footer de cierre alineado: “Listo para finalizar la pieza” (modo `por_item`).
+4. Hint explícito cuando falta armar la composición personalizada.
+
+### Archivos
+
+| Área | Archivos |
+|---|---|
+| Gate | `workflow-ui.ts` (`isDesktopPieceSystemStepComplete`) |
+| UI | `paso-dos-agregar-grupo-sheet.tsx` |
+| Tests | `workflow-ui-step-two.test.ts`, `paso-dos-agregar-grupo-sheet.test.tsx` |
+
+---
+
+## 2026-07-18 - Hydrate formal prioritario de cotizacion_item_visual_configs
+
+### Resumen
+
+Al leer cotizaciones, `config_json` de `cotizacion_item_visual_configs` tiene prioridad sobre el bridge `[gvc:]` en `observaciones` (solo en memoria; no reescribe DB).
+
+1. `getWorkflowById` hidrata items antes de mapear al workflow (PDF, edicion, detalle).
+2. Presupuesto publico hidrata con admin client y renderiza guided SVG (preview + documento).
+3. Sync al guardar se mantiene; bridge sigue como fallback si falla la tabla o no hay fila formal.
+
+### Como probar
+
+1. Guardar pieza personalizada → confirmar fila en `cotizacion_item_visual_configs`.
+2. Reabrir `/cotizaciones/nueva?id=...` o `/print/...`: croquis igual.
+3. Opcional: corromper/quitar `[gvc:]` en observaciones y verificar que el croquis sigue saliendo de la tabla.
+
+### Archivos
+
+| Área | Archivos |
+|---|---|
+| Merge / service | `cotizacion-item-presentation.ts`, `cotizacion-item-visual-configs.service.ts` |
+| Lectura auth | `cotizaciones.service.ts` (`getWorkflowById`) |
+| Lectura publica | `public-cotizacion-approval.service.ts`, `public-quote-preview.tsx`, `public-quote-document.tsx` |
+| Draw helper | `resolve-item-drawing-svg.ts` |
+
+---
+
+## 2026-07-18 - Constructor visual: UX maestro + entrada Personalizado + fix finalizar
+
+### Resumen
+
+Cierre operativo de la entrada del constructor en Quote Studio desktop (QA manual OK):
+
+1. **Finalizar pieza** con composición guiada ya no falla: serialización `[gvc:]` usa `base64` + conversión a base64url (el polyfill browser no soporta encoding `"base64url"`).
+2. **Entrada UX**: el CTA del constructor ya no aparece suelto entre sistema y configuración. Se muestra solo tras elegir **Personalizado** (sistema en Ventana; config/esquema en Puerta y demás con perfilería), o si ya hay `guidedVisualConfig`.
+3. **Ventana** agrega sistema **Personalizado** en el grid de sistemas (salida clara cuando el preset no alcanza).
+4. **UI del modal** rediseñada para maestros: pasos 1-2-3, croquis protagonista, “Partir al lado / arriba-abajo”, panel “¿Qué es este módulo?”, CTA “Usar esta composición”.
+5. Sync de estado: cambiar sistema/config/esquema mantiene o limpia guided de forma coherente; gate `isDesktopPieceSystemStepComplete` acepta guided; errores de `confirmAddGroup` visibles en el wizard.
+
+### Como probar (desktop ≥1024)
+
+1. Preferir `pnpm build` + `pnpm start` y hard refresh.
+2. `/cotizaciones/nueva` → Paso 2 → Agregar componente → **Ventana** → sistema **Personalizado** → **Abrir constructor** → aplicar → medidas → precio → **Finalizar pieza**.
+3. Alternativa Puerta: sistema → config **Personalizado** → constructor.
+4. Alternativa Ventana Corredera: hojas/esquema **Personalizado** → constructor.
+5. Esperado: pieza en presupuesto con croquis; sin error `Unknown encoding: base64url`.
+
+### Archivos principales
+
+| Área | Archivos |
+|---|---|
+| Serialize | `visual-composer/types/guided-visual-config.ts` |
+| Entrada / gates | `workflow-ui.ts`, `component-catalog.service.ts`, `use-paso-dos-agregar-grupo.ts` |
+| Wizard | `paso-dos-agregar-grupo-sheet.tsx`, `page.tsx` (`globalError`) |
+| Editor | `paso-dos-editor-desktop.tsx` |
+| UI modal | `guided-visual-composer.tsx` + `.module.css` |
+
+### QA cierre (2026-07-18)
+
+- Smoke PDF editor↔print con pieza personalizada: **OK** (validación manual del usuario).
+- Fase 3 V2 queda operable para uso comercial; no abrir Fase 4 (cubicación) ni CAD libre como siguiente paso inmediato.
+
+### Siguiente slice sugerido
+
+- Pulir Quote Studio / dashboard comercial (Fase 5) o estabilización desktop, según prioridad de venta.
+- No abrir Fase 4 (cubicación) ni CAD libre sin necesidad de negocio.
+
+---
+
+## 2026-07-17 - Palillos V2: árbol de celdas subdivisibles
+
+### Resumen
+
+Los palillos dejan de ser solo una lista plana. Cada módulo puede guardar `palilloLayout` (árbol `cell|split`) para formas en T, parciales y retículas mixtas. Hay modo **Editar palillos** en el modal desktop, presets visuales, drag/mm, y el renderer dibuja el mismo árbol en editor/thumbnail/PDF. Compat: `palillos[]` plano se migra al abrir. Sin impacto en pricing ni módulos reales.
+
+### Archivos
+
+| Área | Archivos |
+|---|---|
+| Modelo | `visual-composer/types/guided-palillo-layout.ts` + integración en `guided-visual-config.ts` |
+| Renderer | `guided-visual-renderer.service.ts` (`palilloSegments` / celdas ámbar) |
+| UI | `guided-visual-composer.tsx` + CSS (modo palillos) |
+
+---
+
+## 2026-07-17 - Constructor visual V2: árbol de regiones
+
+### Resumen
+
+El constructor deja el modelo plano (eje global + lista) y pasa a `schemaVersion: 2` con árbol `module|split`, subdivisiones por región, palillos, medidas exactas, drag de separadores, pictogramas, undo/redo, renderer único (`editor|thumbnail|summary|pdf`), PDF con el mismo SVG, y sync a `cotizacion_item_visual_configs` al guardar (bridge `[gvc:]` se mantiene). V1 se migra en memoria al abrir.
+
+### Archivos principales
+
+| Área | Archivos |
+|---|---|
+| Modelo | `visual-composer/types/guided-visual-config.ts` |
+| Renderer | `visual-composer/services/guided-visual-renderer.service.ts` |
+| UI | `guided-visual-composer.tsx` + CSS + history hook |
+| Persistencia | `cotizacion-item-visual-configs.repository/service` + sync en `cotizaciones.service` |
+| PDF | `app/print/cotizaciones/[id]/page.tsx` |
+
+QA: desktop ≥1024 → Agregar componente → ¿No encuentras la composición? → Armar una personalizada.
+
+---
+
+## 2026-07-17 - Constructor visual: modal no montaba en wizard desktop
+
+### Resumen
+
+Al pulsar **Abrir constructor** en Quote Studio desktop no pasaba nada: el flujo embebido hace return temprano y no montaba `GuidedVisualComposer`. Se monta en ese return y el modal se renderiza por portal a `document.body` (z-index alto).
+
+---
+
+## 2026-07-17 - Constructor visual: entrada visible en wizard desktop
+
+### Resumen
+
+El constructor no estaba reachable en el flujo real de "Agregar componente" (wizard embebido). Se cablea en Paso 2 desktop del sheet (`Composición guiada` / `Abrir constructor`) y se pasa `updateGuidedVisualConfig` desde `page.tsx`. Al editar una pieza existente, el tab por defecto del editor desktop es **Configuración** (donde vive el mismo bloque).
+
+### Como probar en localhost (desktop ≥1024)
+
+1. Usar `npm run build` + `npm run start` (o `pnpm`). Si ya tenías `start` corriendo, **hay que rebuild + reiniciar**: `next start` no toma cambios de código hasta un build nuevo.
+2. Hard refresh del navegador (`Ctrl+Shift+R`).
+3. Ir a `/cotizaciones/nueva` → Paso 2 → **Agregar componente**.
+4. Elegir tipo con perfilería (ej. Ventana o Puerta; no Espejo / Cubierta / Vidrio / trabajo libre).
+5. En el subpaso **Sistema** (paso 2 de 4): justo debajo de **Elige el sistema**, bloque **Composición guiada** → botón **Abrir constructor**.
+6. Alternativa: editar una pieza ya agregada → tab **Configuración** → mismo bloque.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `paso-dos-agregar-grupo-sheet.tsx` | UI + overlay `GuidedVisualComposer` |
+| `page.tsx` | `onGuidedVisualConfigChange` |
+| `paso-dos-editor-desktop.tsx` | Tab inicial `configuracion` |
+
+Pendiente siguiente slice: persistir en `cotizacion_item_visual_configs` al guardar y unificar SVG en PDF.
+
+---
+
+## 2026-07-17 - Fase 3 inicio: constructor visual guiado V1
+
+### Resumen
+
+Arranca el constructor visual guiado en Quote Studio desktop: tipos `GuidedVisualConfig`, renderer SVG unico, editor de modulos (divisiones verticales/horizontales + tipos fijo/corredera/abatible/etc.) y persistencia intermedia en metadata de item (`[gvc:...]`). Tabla remota `cotizacion_item_visual_configs` creada con RLS (persistencia por item en guardado queda para el siguiente slice). Mobile intacto.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `visual-composer/` | Tipos, renderer, editor desktop |
+| `paso-dos-agregar-grupo-sheet.tsx` | Entrada principal en wizard "Agregar componente" |
+| `paso-dos-editor-desktop.tsx` | Entrada al editar pieza (tab Configuración) |
+| `cotizacion-item-presentation.ts` | Encode/decode `guidedVisualConfig` |
+| `20260717120000_cotizacion_item_visual_configs.sql` | Tabla + RLS |
+
+---
+
+## 2026-07-17 - Cierre Fase 2B: cruce Excel ↔ lineas tecnicas
+
+### Resumen
+
+El import comercial (Excel/CSV/PDF de precios) detecta filas que completan precio de lineas tecnicas ya importadas (match por nombre exacto, codigo `Linea N` / `N`, o fuzzy). Esas filas aparecen como **Precio tecnico**, preservan metadata del PDF y se actualizan aunque el modo de duplicados sea “ignorar”. Las lineas sin precio siguen fuera de cotizacion hasta completar precio.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `line-template-import-match.service.ts` | Matching y merge de metadata |
+| `line-template-import.service.ts` | Status `price_match` en preview |
+| `cotizacion-line-templates.service.ts` | Update forzado + merge en import |
+| `lineas-precios-import-client.tsx` | Badge y aviso de cruce |
+
+Criterio de salida 2B: candidatos con fuente/confianza, revision humana, y nada usable en cotizacion sin precio comercial aprobado.
+
+---
+
+## 2026-07-17 - Catalogo: lineas tecnicas listas para cotizar
+
+### Resumen
+
+Las lineas importadas sin precio comercial (`needsCommercialPrice` / precio 0) ya no aparecen en selectores de cotizacion. En catálogo se marcan como **Sin precio**. Al completar el precio se preserva la metadata tecnica del PDF y se limpia el flag.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `workflow-ui.ts` | `filterLineTemplatesForComponent` exige precio > 0 |
+| `lineas-precios-page-client.tsx` | Badge + preserve metadata al guardar |
+| `cotizacion-line-templates.service.ts` | Limpia `needsCommercialPrice` al fijar precio |
+| `cotizacion-line-template.ts` | Helpers de readiness comercial |
+
+---
+
+## 2026-07-17 - Fix import catalogo tecnico (precio 0)
+
+### Resumen
+
+Al confirmar importacion PDF tecnico, las lineas con `needsCommercialPrice` y precio 0 ya no fallan (incluye categoria `vidrio`). En modo actualizar, un duplicado tecnico no pisa un precio comercial ya cargado. El resultado de importacion muestra el detalle de filas fallidas.
+
+### Archivos principales
+
+| Archivo | Cambio |
+|---|---|
+| `cotizacion-line-templates.service.ts` | Permite precio 0 con `needsCommercialPrice`; preserva precio en update tecnico |
+| `lineas-precios-import-client.tsx` | Lista errores de filas fallidas al terminar |
+| `cotizacion-line-templates-import.service.test.ts` | Cobertura de import tecnico y rechazo de cristal comercial sin precio |
+
+---
+
 ## 2026-07-14 - Vidrio / Cristal en Paso 2 de cotizacion
 
 ### Resumen

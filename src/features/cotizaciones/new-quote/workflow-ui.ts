@@ -29,6 +29,7 @@ import {
   type CotizacionMirrorPaneDirection,
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
+import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   normalizePricingMode,
   DEFAULT_MARGIN_PCT,
@@ -91,6 +92,7 @@ export type ComponentFormState = {
   mirrorPaneDirection?: CotizacionMirrorPaneDirection;
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   mirrorCustomPaneCount?: string;
+  guidedVisualConfig?: GuidedVisualConfig | null;
 };
 
 export type FieldErrors = Partial<
@@ -185,10 +187,12 @@ export const SHEET_SCHEME_OPTIONS = ["2 hojas", "3 hojas", "4 hojas", "Personali
 export const GUILLOTINA_CONFIGURATION_OPTIONS = [
   "Guillotina simple",
   "Guillotina doble",
+  "Personalizado",
 ] as const;
 export const CELOSIA_CONFIGURATION_OPTIONS = [
   "Celosía completa",
   "Celosía con paño fijo inferior",
+  "Personalizado",
 ] as const;
 
 export const SHEET_VARIANT_OPTIONS: Record<string, readonly string[]> = {
@@ -745,6 +749,7 @@ export function isDesktopPieceSystemStepComplete(input: {
   customSchemeDescription: string;
   isCustomScheme: boolean;
   configurationOptionsCount: number;
+  guidedVisualConfig?: GuidedVisualConfig | null;
 }) {
   const showSystemSelection = shouldShowSystemSelectionForComponent(input.subtipo);
   if (showSystemSelection && !input.sistema.trim()) {
@@ -753,6 +758,22 @@ export function isDesktopPieceSystemStepComplete(input: {
 
   if (input.configurationOptionsCount > 0 && !input.configuracion.trim()) {
     return false;
+  }
+
+  // Composición del constructor visual guiado completa el paso.
+  if (input.guidedVisualConfig) {
+    return true;
+  }
+
+  // Personalizado exige constructor o descripción: no basta marcar el chip.
+  if (
+    isPersonalizadoCompositionSelected({
+      sistema: input.sistema,
+      sheetScheme: input.sheetScheme,
+      configuracion: input.configuracion,
+    })
+  ) {
+    return input.customSchemeDescription.trim() !== "";
   }
 
   const showSheetScheme = shouldShowSheetSchemeForComponent({
@@ -784,14 +805,10 @@ export function isDesktopPieceSystemStepComplete(input: {
       sheetVariant: input.sheetVariant,
     })
   ) {
-    return input.customSchemeDescription.trim() !== "" || input.isCustomScheme;
+    return input.customSchemeDescription.trim() !== "";
   }
 
   if (isCorrederaSheetConfiguration({ tipo: input.subtipo, sistema: input.sistema })) {
-    if (input.sheetScheme === "Personalizado") {
-      return true;
-    }
-
     const variants = getSheetVariantOptions(input.sheetScheme, {
       tipo: input.subtipo,
       sistema: input.sistema,
@@ -877,6 +894,47 @@ export function isGlassCatalogSelection(input: {
   return input.material === "Cristal" || input.catalogCategoria === "vidrio";
 }
 
+/** True cuando el usuario eligió Personalizado (sistema, config o esquema). */
+export function isPersonalizadoCompositionSelected(input: {
+  sistema?: string | null;
+  sheetScheme?: string | null;
+  configuracion?: string | null;
+}) {
+  return (
+    (input.sistema ?? "").trim() === "Personalizado" ||
+    (input.sheetScheme ?? "").trim() === "Personalizado" ||
+    (input.configuracion ?? "").trim() === "Personalizado"
+  );
+}
+
+/**
+ * Entrada del constructor visual: tras elegir Personalizado (sistema en ventanas,
+ * config/esquema en puertas y demás), o para editar una composición ya aplicada.
+ */
+export function shouldShowGuidedComposerEntry(input: {
+  tipo: string;
+  material?: string | null;
+  catalogCategoria?: string | null;
+  sistema?: string | null;
+  sheetScheme?: string | null;
+  configuracion?: string | null;
+  guidedVisualConfig?: GuidedVisualConfig | null;
+}) {
+  if (!shouldRequireProfileMaterialForComponent(input.tipo)) {
+    return false;
+  }
+
+  if (isGlassCatalogSelection(input)) {
+    return false;
+  }
+
+  if (input.guidedVisualConfig) {
+    return true;
+  }
+
+  return isPersonalizadoCompositionSelected(input);
+}
+
 export function filterLineTemplatesForComponent(
   templates: readonly CotizacionLineTemplate[],
   input: {
@@ -885,13 +943,17 @@ export function filterLineTemplatesForComponent(
     catalogCategoria?: string | null;
   }
 ) {
+  const withSalePrice = templates.filter(
+    (template) => Number(template.precioM2Sugerido) > 0
+  );
+
   if (isGlassOnlyComponentType(input.tipo) || isGlassCatalogSelection(input)) {
-    return templates.filter(
+    return withSalePrice.filter(
       (template) => template.material === "Cristal" || template.categoria === "vidrio"
     );
   }
 
-  return templates.filter((template) => template.material === input.material);
+  return withSalePrice.filter((template) => template.material === input.material);
 }
 
 export function getSheetSchemeOptions(input: {
@@ -1032,6 +1094,12 @@ export function buildCommercialComponentDisplayName(
     normalizedTipo === "ventana" &&
     Boolean(normalizedSistema) &&
     normalizedScheme.startsWith(normalizedSistema);
+
+  if (normalizedTipo === "ventana" && normalizedSistema === "personalizado") {
+    const guidedLabel = form.customSchemeDescription.trim();
+    return guidedLabel ? `Ventana personalizada · ${guidedLabel}` : "Ventana personalizada";
+  }
+
   const baseSistema =
     sistema && !shouldAvoidDuplicatedSystem && shouldShowSystemSelectionForComponent(tipo)
       ? `${tipo} ${sistema.toLowerCase()}`
@@ -1768,6 +1836,7 @@ export function buildSuggestedComponentForm(
     mirrorPaneDirection: current.mirrorPaneDirection ?? "vertical",
     mirrorInteriorLine: current.mirrorInteriorLine ?? "fine",
     mirrorCustomPaneCount: current.mirrorCustomPaneCount ?? "",
+    guidedVisualConfig: current.guidedVisualConfig ?? null,
   };
 }
 
@@ -1909,6 +1978,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorPaneCount,
     mirrorPaneDirection,
     mirrorInteriorLine,
+    guidedVisualConfig,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -1990,6 +2060,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorPaneDirection,
     mirrorInteriorLine,
     mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
+    guidedVisualConfig,
   };
 }
 
@@ -2155,6 +2226,7 @@ export function buildItemFromForm(
       mirrorPaneCount: syncedForm.mirrorPaneCount,
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
+      guidedVisualConfig: syncedForm.guidedVisualConfig ?? null,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",
@@ -2199,6 +2271,7 @@ export function applyQuotePricingToItems(
       mirrorPaneCount,
       mirrorPaneDirection,
       mirrorInteriorLine,
+      guidedVisualConfig,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return calculateComponentItem({
@@ -2253,6 +2326,7 @@ export function applyQuotePricingToItems(
         mirrorPaneCount,
         mirrorPaneDirection,
         mirrorInteriorLine,
+        guidedVisualConfig,
         raw,
       }),
     });
@@ -2325,6 +2399,21 @@ export function validateComponentForm(
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function validateStep1(_draft: CotizacionWorkflowDraft): FieldErrors {
   return {};
+}
+
+/** Completa cliente/obra vacíos para cotización rápida (anonimo comercial). */
+export function withResolvedStep1QuickQuoteDefaults(
+  draft: CotizacionWorkflowDraft
+): CotizacionWorkflowDraft {
+  if (draft.clienteNombre.trim()) {
+    return withResolvedWorkflowObra(draft);
+  }
+
+  return withResolvedWorkflowObra({
+    ...draft,
+    clienteNombre: "Cliente",
+    obra: draft.obra.trim() || "Cotización",
+  });
 }
 
 export function withResolvedWorkflowObra(

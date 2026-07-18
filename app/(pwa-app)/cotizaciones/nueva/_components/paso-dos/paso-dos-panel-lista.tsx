@@ -225,7 +225,12 @@ export function PasoDosPanelLista({
                 dangerouslySetInnerHTML={{ __html: item.svgMarkup }}
               />
             ) : (
-              <div className={panelDesktop.pieceCardThumbFallback}>Libre</div>
+              <div className={panelDesktop.pieceCardThumbFallback}>
+                {item.source.tipoItem === "item_libre_con_valor" ||
+                item.listMeasures === "Trabajo libre"
+                  ? "Trabajo libre"
+                  : "Sin croquis"}
+              </div>
             )}
           </div>
 
@@ -259,14 +264,13 @@ export function PasoDosPanelLista({
                 {listQuantity ? (
                   <span className={panelDesktop.pieceCardQuantity}>{listQuantity}</span>
                 ) : null}
-                <span
-                  className={`${panelDesktop.pieceBadge} ${
-                    item.isComplete ? panelDesktop.pieceBadgeComplete : panelDesktop.pieceBadgePending
-                  }`}
-                >
-                  {item.isComplete ? <LuCheck size={11} aria-hidden /> : null}
-                  {item.isComplete ? "Completo" : "Pendiente"}
-                </span>
+                {!item.isComplete ? (
+                  <span
+                    className={`${panelDesktop.pieceBadge} ${panelDesktop.pieceBadgePending}`}
+                  >
+                    Incompleto
+                  </span>
+                ) : null}
               </div>
               <div className={panelDesktop.pieceCardActions}>
                 <button
@@ -330,18 +334,18 @@ export function PasoDosPanelLista({
                 ? "Aún no agregas piezas"
                 : isTotalGlobalCuadernoOpen
                   ? "Trabajo en preparación"
-                  : "Aun no agregas componentes"}
+                  : "Aún no agregas piezas"}
             </strong>
             <span>
               {isWorkspaceList
-                ? "Usa Agregar componente o Trabajo libre para comenzar."
+                ? "Usa Agregar pieza o Trabajo libre para comenzar."
                 : isTotalGlobalCuadernoOpen
                   ? "Los componentes de este trabajo se arman en el cuaderno del centro."
                   : isAddGroupWizardOpen
                     ? "Termina el asistente de la izquierda."
                     : isBelowEditorList
                       ? "Las piezas del presupuesto aparecerán aquí."
-                      : "Agrega el primer componente desde la izquierda."}
+                      : "Agrega la primera pieza desde la izquierda."}
             </span>
           </div>
         ) : (

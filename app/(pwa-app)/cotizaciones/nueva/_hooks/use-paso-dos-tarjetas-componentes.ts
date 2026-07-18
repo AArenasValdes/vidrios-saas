@@ -13,6 +13,8 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 type UsePasoDosTarjetasComponentesParams = {
   items: CotizacionWorkflowItem[];
@@ -72,6 +74,7 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           mirrorPaneCount,
           mirrorPaneDirection,
           mirrorInteriorLine,
+          guidedVisualConfig,
         } =
           decodeCotizacionItemPresentationMeta(item.observaciones);
         const effectiveDraft = params.borradoresRapidos[item.id];
@@ -103,33 +106,47 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
         }
 
         const listMeasures = buildDesktopListMeasures(effectiveItem);
-        const listConfiguration = buildDesktopListConfiguration({
-          configuracion,
-          sistema,
-          referencia,
-          lineaComercial: effectiveItem.lineaComercial,
-          descripcion: effectiveItem.descripcion,
-        });
+        const listConfiguration = guidedVisualConfig
+          ? describeGuidedVisualConfig(guidedVisualConfig)
+          : buildDesktopListConfiguration({
+              configuracion,
+              sistema,
+              referencia,
+              lineaComercial: effectiveItem.lineaComercial,
+              descripcion: effectiveItem.descripcion,
+            });
+        const measuresLabel =
+          effectiveItem.ancho && effectiveItem.alto
+            ? `${effectiveItem.ancho} × ${effectiveItem.alto} mm`
+            : "Sin medidas";
 
         return {
           id: item.id,
           source: item,
           colorHex,
-          title: `${item.codigo} · ${item.tipo}`,
+          title: guidedVisualConfig
+            ? `${item.codigo} · ${item.tipo} personalizada`
+            : `${item.codigo} · ${item.tipo}`,
           price:
             pricingMode === "precio_directo"
               ? CLP(effectiveItem.precioTotal)
               : CLP(effectiveItem.costoProveedorTotal),
           priceLabel: pricingMode === "precio_directo" ? "Valor" : "Costo",
-          compactMeta: `${material} · ${
+          compactMeta: guidedVisualConfig
+            ? `${measuresLabel} · Personalizada`
+            : `${material} · ${
             effectiveItem.ancho && effectiveItem.alto
               ? `${effectiveItem.ancho}x${effectiveItem.alto} mm`
               : "Sin medidas"
           }`,
-          metaPrimary: `${material} · ${effectiveItem.cantidad} ${
+          metaPrimary: guidedVisualConfig
+            ? `${measuresLabel}${referencia ? ` · ${referencia}` : ""}`
+            : `${material} · ${effectiveItem.cantidad} ${
             effectiveItem.cantidad === 1 ? "ud." : "uds."
           }`,
-          metaSecondary: `${
+          metaSecondary: guidedVisualConfig
+            ? `${listConfiguration} · ${effectiveItem.vidrio || "Sin vidrio"}`
+            : `${
             effectiveItem.ancho && effectiveItem.alto
               ? `${effectiveItem.ancho}x${effectiveItem.alto} mm`
               : "Sin medidas"
@@ -155,7 +172,17 @@ export function usePasoDosTarjetasComponentes(params: UsePasoDosTarjetasComponen
           svgMarkup:
             effectiveItem.tipo === "Trabajo personalizado"
               ? ""
-              : generateComponentSVG({
+              : guidedVisualConfig
+                ? renderGuidedVisualSvg(guidedVisualConfig, {
+                    maxW: desktopSvgWidth,
+                    maxH: desktopSvgHeight,
+                    colorHex,
+                    variant: "thumbnail",
+                    showSelection: false,
+                    showLabels: false,
+                    showDimensions: false,
+                  })
+                : generateComponentSVG({
                   tipo: effectiveItem.tipo,
                   sistema,
                   configuracion,

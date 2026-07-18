@@ -108,5 +108,47 @@ describe("PasoDosPanelLista desktop", () => {
     expect(screen.getByText("Linea base · Corredera 2 hojas")).toBeInTheDocument();
     expect(screen.getByText("2 uds.")).toBeInTheDocument();
     expect(document.querySelector("[data-testid='piece-drawing']")).not.toBeNull();
+    expect(screen.queryByText("Completo")).not.toBeInTheDocument();
+  });
+
+  it("usa fallback de thumb claro y copy de empty en workspace", () => {
+    const props = buildProps();
+    props.isDesktopQuoteStudio = true;
+    props.listSurface = "workspace";
+    props.items = [];
+    props.visibleComponentListState = {
+      cards: [],
+      paddingTop: 0,
+      paddingBottom: 0,
+    };
+
+    const { rerender } = render(<PasoDosPanelLista {...props} />);
+
+    expect(screen.getByText("Aún no agregas piezas")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Usa Agregar pieza o Trabajo libre para comenzar/i)
+    ).toBeInTheDocument();
+
+    props.items = [sourceItem];
+    props.visibleComponentListState = {
+      cards: [
+        {
+          ...buildProps().visibleComponentListState.cards[0],
+          listCode: "V1",
+          listName: "Ventana",
+          listMeasures: "1200 x 1000 mm",
+          svgMarkup: "",
+          isComplete: false,
+        },
+      ],
+      paddingTop: 0,
+      paddingBottom: 0,
+    };
+
+    rerender(<PasoDosPanelLista {...props} />);
+
+    expect(screen.getByText("Sin croquis")).toBeInTheDocument();
+    expect(screen.getByText("Incompleto")).toBeInTheDocument();
+    expect(screen.queryByText("Libre")).not.toBeInTheDocument();
   });
 });

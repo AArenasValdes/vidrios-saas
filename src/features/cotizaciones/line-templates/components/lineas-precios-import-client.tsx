@@ -31,7 +31,10 @@ import {
   type TechnicalCatalogExtractionResult,
 } from "@/features/cotizaciones/line-templates/services/line-template-pdf-technical.service";
 import { buildTechnicalLineTemplateImportPreview } from "@/features/cotizaciones/line-templates/services/line-template-technical-import.service";
-import type { LineTemplateImportDuplicateMode } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type {
+  LineTemplateImportDuplicateMode,
+  LineTemplateImportResult,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 import s from "./lineas-precios-import-client.module.css";
@@ -61,12 +64,7 @@ export function LineasPreciosImportClient() {
   const [duplicateMode, setDuplicateMode] =
     useState<LineTemplateImportDuplicateMode>("skip");
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [importSummary, setImportSummary] = useState<{
-    created: number;
-    updated: number;
-    skipped: number;
-    failed: number;
-  } | null>(null);
+  const [importSummary, setImportSummary] = useState<LineTemplateImportResult | null>(null);
   const [isExtractingPdf, setIsExtractingPdf] = useState(false);
   const [pdfImportMode, setPdfImportMode] = useState<PdfImportMode>("commercial");
   const [pdfPages, setPdfPages] = useState<PdfCatalogPageExtraction[]>([]);
@@ -109,7 +107,10 @@ export function LineasPreciosImportClient() {
       previewRows.filter(
         (row) =>
           row.payload &&
-          (row.status === "ready" || row.status === "duplicate" || row.status === "technical")
+          (row.status === "ready" ||
+            row.status === "duplicate" ||
+            row.status === "technical" ||
+            row.status === "price_match")
       ),
     [previewRows]
   );
@@ -328,6 +329,9 @@ export function LineasPreciosImportClient() {
     if (row.status === "technical") {
       return <span className={`${s.badge} ${s.badgeTechnical}`}>Tecnica</span>;
     }
+    if (row.status === "price_match") {
+      return <span className={`${s.badge} ${s.badgePriceMatch}`}>Precio tecnico</span>;
+    }
     if (row.status === "duplicate") {
       return <span className={`${s.badge} ${s.badgeDuplicate}`}>Duplicada</span>;
     }
@@ -514,7 +518,19 @@ export function LineasPreciosImportClient() {
               type="button"
               className={s.primaryButton}
               disabled={!mapping.nombre || rows.length === 0}
-              onClick={() => setStep("preview")}
+              onClick={() => {
+                const summary = countImportPreviewSummary(
+                  buildLineTemplateImportPreview({
+                    rows,
+                    mapping,
+                    existingTemplates: templates,
+                  })
+                );
+                if (summary.priceMatch > 0) {
+                  setDuplicateMode("update");
+                }
+                setStep("preview");
+              }}
             >
               Ver vista previa
             </button>
@@ -581,9 +597,19 @@ export function LineasPreciosImportClient() {
             ) : (
               <span>{previewSummary.ready} listas</span>
             )}
+            {previewSummary.priceMatch > 0 ? (
+              <span>{previewSummary.priceMatch} precio tecnico</span>
+            ) : null}
             <span>{previewSummary.duplicate} duplicadas</span>
             <span>{previewSummary.invalid} invalidas</span>
           </div>
+
+          {previewSummary.priceMatch > 0 ? (
+            <p className={s.pdfPanelCopy}>
+              Detectamos {previewSummary.priceMatch} fila(s) que completan precio de lineas
+              tecnicas ya importadas. Se actualizan aunque elijas ignorar duplicadas.
+            </p>
+          ) : null}
 
           <fieldset className={s.duplicateMode}>
             <legend>Si el nombre ya existe</legend>
@@ -644,7 +670,12 @@ export function LineasPreciosImportClient() {
                           : formatCurrency(row.payload.precioM2Sugerido)
                         : "—"}
                     </td>
-                    <td>{row.errors.join(" ") || "—"}</td>
+                    <td>
+                      {row.errors.join(" ") ||
+                        (row.status === "price_match" && row.matchedTemplateNombre
+                          ? `Actualiza: ${row.matchedTemplateNombre}`
+                          : "—")}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -686,6 +717,13 @@ export function LineasPreciosImportClient() {
             <span>Ignoradas: {importSummary.skipped}</span>
             <span>Fallidas: {importSummary.failed}</span>
           </div>
+          {importSummary.errors.length > 0 ? (
+            <ul className={s.pdfPanelCopy}>
+              {importSummary.errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          ) : null}
           <div className={s.actions}>
             <Link href="/configuracion/empresa/lineas-precios" className={s.primaryButton}>
               Volver al catalogo

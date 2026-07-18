@@ -1,3 +1,17 @@
+jest.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: jest.fn(() => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          in: () => ({
+            is: async () => ({ data: [], error: null }),
+          }),
+        }),
+      }),
+    }),
+  })),
+}));
+
 import {
   createPublicCotizacionApprovalService,
 } from "../public-cotizacion-approval.service";

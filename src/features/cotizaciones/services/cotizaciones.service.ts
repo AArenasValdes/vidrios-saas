@@ -11,6 +11,8 @@ import {
   type ProjectsRepository,
 } from "@/features/projects/repositories/projects.repository";
 import { reconcileWorkflowItemsPricing } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { createClient } from "@/lib/supabase/client";
+import { createCotizacionItemVisualConfigsService } from "@/features/cotizaciones/visual-composer/services/cotizacion-item-visual-configs.service";
 import {
   buildCotizacionCode,
   buildLegacyCotizacionCode,
@@ -739,6 +741,31 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
     return clientesRepo.listByOrganizationId(organizationId);
   }
 
+  async function hydrateCotizacionVisualConfigs(
+    cotizacion: Cotizacion,
+    organizationId: EntityId
+  ): Promise<Cotizacion> {
+    if (!cotizacion.items.length) {
+      return cotizacion;
+    }
+
+    try {
+      const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
+      const items = await visualConfigsService.hydrateItemsObservaciones({
+        organizationId,
+        items: cotizacion.items,
+      });
+
+      return { ...cotizacion, items };
+    } catch (visualError) {
+      console.error(
+        "No se pudo hidratar cotizacion_item_visual_configs (se usa bridge [gvc:] si existe).",
+        visualError
+      );
+      return cotizacion;
+    }
+  }
+
   async function getWorkflowById(
     id: EntityId,
     organizationId: EntityId,
@@ -761,6 +788,8 @@ async function rollbackEntities(rollbacks: Array<(() => Promise<void>) | undefin
         clienteRespuestaCanal: cotizacion.clienteRespuestaCanal,
       });
     }
+
+    cotizacion = await hydrateCotizacionVisualConfigs(cotizacion, organizationId);
 
     if (options.seed) {
       return mapCotizacionToWorkflowRecordFromSeed(cotizacion, options.seed);
@@ -969,6 +998,23 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
             "actualizar cotización"
           )
         : await withTimeout(cotizacionesRepo.create(cotizacionInput), "crear cotización");
+
+      try {
+        const visualConfigsService = createCotizacionItemVisualConfigsService(createClient());
+        await visualConfigsService.syncFromPersistedItems({
+          organizationId: input.organizationId,
+          items: (persisted.items ?? []).map((item) => ({
+            id: item.id,
+            observaciones: item.observaciones,
+            color: item.color,
+          })),
+        });
+      } catch (visualError) {
+        console.error(
+          "No se pudo sincronizar cotizacion_item_visual_configs (el guardado comercial sí ocurrió).",
+          visualError
+        );
+      }
 
       const workflowRecord = await withTimeout(
         getWorkflowById(persisted.id, input.organizationId),

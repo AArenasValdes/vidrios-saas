@@ -264,6 +264,12 @@ export function PasoTresResumen({
     const clienteNombre = draft.clienteNombre.trim() || "Cliente sin nombre";
     const obra = draft.obra.trim() || "Sin proyecto";
     const itemCount = `${draft.items.length} ${draft.items.length === 1 ? "componente" : "componentes"}`;
+    const hasClientPhone = draft.clienteTelefono.trim().length > 0;
+    const readyBadgeLabel = isDraftSaved
+      ? hasUnsavedDraftChanges
+        ? "Borrador guardado · hay cambios sin guardar"
+        : "Borrador guardado"
+      : "Todo listo para guardar";
 
     return (
       <section className={s.rtShell}>
@@ -703,17 +709,27 @@ export function PasoTresResumen({
                 <span>Total final</span>
                 <strong>{total}</strong>
               </div>
-              <div className={s.rtReadyBadge}>
+              <div
+                className={`${s.rtReadyBadge} ${
+                  isDraftSaved ? s.rtReadyBadgeSaved : ""
+                }`}
+              >
                 <LuCircleCheck size={15} aria-hidden />
-                <span>Todo listo para guardar</span>
+                <span>{readyBadgeLabel}</span>
               </div>
+              {!hasClientPhone ? (
+                <p className={s.rtPhoneHint}>
+                  WhatsApp necesita el teléfono del cliente. Puedes guardar igual y
+                  completarlo después.
+                </p>
+              ) : null}
               {globalError ? <div className={s.inlineError}>{globalError}</div> : null}
               <div className={s.rtActions}>
                 <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
                   <LuSave aria-hidden size={16} />
                   {isSavingQuote ? "Guardando..." : "Guardar presupuesto"}
                 </button>
-                <button className={s.rtBtnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
+                <button className={s.rtBtnGhost} onClick={handleSaveDraft} type="button" disabled={isSaving}>
                   {isSavingDraft ? "Guardando borrador..." : "Guardar borrador"}
                 </button>
                 <button className={s.rtBtnTertiary} type="button" onClick={onGoToStepTwo}>

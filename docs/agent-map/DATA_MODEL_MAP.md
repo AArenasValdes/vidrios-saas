@@ -92,20 +92,21 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ---
 
+### Tabla: cotizacion_item_visual_configs
+
+- **Estado**: Activa (migracion `20260717120000_cotizacion_item_visual_configs`). Sync al guardar + hydrate prioritario en lecturas (`getWorkflowById`, presupuesto publico). Bridge `[gvc:...]` en `observaciones` como fallback.
+- **Proposito**: Persistencia aditiva de configuracion visual guiada y SVG cache por item.
+- **Campos**: `id`, `organization_id`, `cotizacion_item_id`, `schema_version`, `config_json`, `svg_markup`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **RLS**: select/insert/update por `organization_id = get_org_id()` para `authenticated`
+- **Reglas**: unique parcial 1 config activa por `cotizacion_item_id`; soft delete; `config_json` fuente de verdad en lectura (prioriza sobre bridge).
+- **Entrada UI (QA)**: desktop `/cotizaciones/nueva` → Agregar componente → Ventana/Puerta → **Personalizado** → Abrir constructor.
+- **Archivos donde aparece**: `src/features/cotizaciones/visual-composer/`, `cotizaciones.service.ts`, `public-cotizacion-approval.service.ts`, `paso-dos-agregar-grupo-sheet.tsx`, `paso-dos-editor-desktop.tsx`, `cotizacion-item-presentation.ts`
+
+---
+
 ## Tablas propuestas no implementadas (solo documental)
 
 Estas tablas no estan aprobadas para implementacion inmediata. Sirven solo como referencia del roadmap Desktop Taller.
-
-### Tabla candidata: cotizacion_item_visual_configs
-
-- **Estado**: Propuesta futura, no implementada.
-- **Proposito**: Persistir configuracion visual guiada y SVG reutilizable por item de cotizacion sin sobrecargar `cotizacion_items.observaciones`.
-- **Campos esperados**: `id`, `organization_id`, `cotizacion_item_id`, `schema_version`, `config_json`, `svg_markup`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Reglas**:
-  - debe respetar `organization_id` y soft delete;
-  - `config_json` seria la fuente de render;
-  - `svg_markup` seria cache regenerable;
-  - no se debe mezclar con tablas legacy tecnicas.
 
 ### Tablas no aprobadas en esta etapa
 

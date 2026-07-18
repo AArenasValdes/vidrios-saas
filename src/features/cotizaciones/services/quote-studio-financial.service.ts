@@ -120,6 +120,7 @@ function scaleItemPrice(
       mirrorPaneCount: presentation.mirrorPaneCount,
       mirrorPaneDirection: presentation.mirrorPaneDirection,
       mirrorInteriorLine: presentation.mirrorInteriorLine,
+      guidedVisualConfig: presentation.guidedVisualConfig,
       raw: presentation.raw,
     }),
   };

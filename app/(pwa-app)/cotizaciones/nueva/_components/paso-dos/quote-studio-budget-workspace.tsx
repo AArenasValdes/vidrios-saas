@@ -69,7 +69,7 @@ export function QuoteStudioBudgetWorkspace({
             onClick={onOpenComponentCreator}
           >
             <LuPlus aria-hidden />
-            Agregar componente
+            Agregar pieza
           </button>
           <button
             type="button"

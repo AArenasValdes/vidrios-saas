@@ -501,6 +501,12 @@
     font-size: 0.92rem !important;
   }
 
+  .desktopSideSummaryActions {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.1rem;
+  }
+
   .desktopSideSummaryButton {
     display: inline-flex;
     align-items: center;
@@ -508,7 +514,6 @@
     gap: 0.45rem;
     width: 100%;
     min-height: 46px;
-    margin-top: 0.1rem;
     padding: 0 1rem;
     border: 0;
     border-radius: 10px;
@@ -520,6 +525,34 @@
   }
 
   .desktopSideSummaryButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .desktopSideSummaryButtonGhost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 1rem;
+    border: 1px solid #d9e4f1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 650;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .desktopSideSummaryButtonGhost:hover:not(:disabled),
+  .desktopSideSummaryButtonGhost:focus-visible:not(:disabled) {
+    border-color: #1e88ff;
+    background: #f8fbff;
+    color: #0f55c8;
+  }
+
+  .desktopSideSummaryButtonGhost:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
@@ -1766,6 +1799,19 @@
   color: #065f46;
   font-size: 0.75rem;
   font-weight: 650;
+}
+
+.rtReadyBadgeSaved {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.rtPhoneHint {
+  margin: 0;
+  color: #7a5a18;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .rtActions {
@@ -15871,7 +15917,7 @@
   }
 }
 
-/* Quote Studio: 2 columnas fijas, scroll único. */
+/* Quote Studio: idle puede crecer; editing mantiene editor acotado con footer visible. */
 @media (min-width: 1024px) {
   .rootStepTwoDesktop .layoutStepTwo:has([class*="stepTwoLayoutQuoteStudio"]) {
     overflow-x: hidden;
@@ -15880,8 +15926,7 @@
     scrollbar-gutter: stable;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle,
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 1rem;
@@ -15891,7 +15936,17 @@
     overflow: visible;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPrimarySurface {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 1rem;
+    height: var(--step2-main-height, calc(100vh - 7.5rem));
+    max-height: var(--step2-main-height, calc(100vh - 7.5rem));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -15900,7 +15955,17 @@
     overflow: visible;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPanel {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPrimarySurface {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel {
     grid-column: 1;
     grid-row: 2;
     min-width: 0;
@@ -15909,8 +15974,29 @@
     max-width: 100%;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .desktopPieceEditor,
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] #component-form {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPanel {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing .desktopPieceEditor,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing #component-form {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle .desktopPieceEditor,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle #component-form {
     width: 100%;
     max-width: 100%;
     height: auto;
@@ -15919,7 +16005,14 @@
     overflow: visible;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] .desktopPieceBody {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing .desktopPieceBody {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    min-height: 0;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle .desktopPieceBody {
     overflow: visible;
     overscroll-behavior: auto;
   }
@@ -15933,7 +16026,15 @@
     overflow: visible;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPanel.stepTwoPanelModeDesktop {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPanel.stepTwoPanelModeDesktop {
+    height: auto;
+    max-height: 100%;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel.stepTwoPanelModeDesktop {
     height: auto;
     max-height: none;
     min-width: 0;
@@ -15949,6 +16050,10 @@
     gap: 1rem;
   }
 
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing {
+    align-items: stretch;
+  }
+
   .rootStepTwoDesktop .stepTwoDesktopShell [class*="stepTwoLayoutQuoteStudio"] > .stepTwoPrimarySurface {
     grid-column: 1;
     grid-row: 1;
@@ -15959,6 +16064,12 @@
     grid-row: 1;
     width: 100%;
     max-width: clamp(290px, 22vw, 310px);
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioEditing > .stepTwoPanel {
+    align-self: stretch;
+    max-height: 100%;
+    overflow: auto;
   }
 }
 

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { FREE_TOTAL_NOTEBOOK_CATEGORIA, FREE_TOTAL_NOTEBOOK_SUBTIPO } from "../../../_hooks/use-paso-dos-agregar-grupo";
 import type { PasoDosGrupoDraft } from "../../../_hooks/use-paso-dos-agregar-grupo";
+import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { PasoDosAgregarGrupoSheet } from "../paso-dos-agregar-grupo-sheet";
 
 const draft: PasoDosGrupoDraft = {
@@ -21,6 +22,9 @@ const draft: PasoDosGrupoDraft = {
   pricingMode: "margen",
   priceInputMode: "unit_direct",
   material: "Aluminio",
+  catalogCategoria: null,
+  catalogEspesor: "",
+  catalogTerminacion: "",
   colorHex: "#a8a8a8",
   sistema: "",
   configuracion: "",
@@ -33,6 +37,7 @@ const draft: PasoDosGrupoDraft = {
   mirrorPaneDirection: "vertical",
   mirrorInteriorLine: "fine",
   mirrorCustomPaneCount: "",
+  guidedVisualConfig: null,
   vidrio: "",
   lineTemplateId: "",
   referencia: "",
@@ -147,7 +152,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     const progress = screen.getByRole("list", { name: /Pasos de la pieza/i });
 
     expect(within(progress).getByText("Tipo")).toBeInTheDocument();
-    expect(within(progress).getByText("Sistema")).toBeInTheDocument();
+    expect(within(progress).getByText("Sistema y composición")).toBeInTheDocument();
     expect(within(progress).getByText("Medidas y detalles")).toBeInTheDocument();
     expect(within(progress).getByText("Precio")).toBeInTheDocument();
     expect(screen.queryByText("Paso 2 de 5")).not.toBeInTheDocument();
@@ -178,8 +183,66 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     expect(screen.getByRole("button", { name: /Ver todos los trabajos/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /\u00bfQu\u00e9 est\u00e1s cotizando/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Vidrio \/ Cristal/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Continuar a sistema/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continuar a composición/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Finalizar pieza/i })).not.toBeInTheDocument();
+  });
+
+  it("bloquea avance en Personalizado sin composición y alinea copy de cierre", () => {
+    const { rerender } = render(
+      <PasoDosAgregarGrupoSheet
+        {...baseProps}
+        quotePricingMode="por_item"
+        entryMode="normal"
+        paso={2}
+        draft={{
+          ...draft,
+          categoria: "Ventanas",
+          subtipo: "Ventana",
+          sistema: "Personalizado",
+          isCustomScheme: true,
+          sheetScheme: "",
+          customSchemeDescription: "",
+          guidedVisualConfig: null,
+          ancho: "",
+          alto: "",
+          precio: "",
+        }}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Continuar a medidas/i })
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/Abre el constructor o describe la composición personalizada/i)
+    ).toBeInTheDocument();
+
+    rerender(
+      <PasoDosAgregarGrupoSheet
+        {...baseProps}
+        quotePricingMode="por_item"
+        entryMode="normal"
+        paso={4}
+        draft={{
+          ...draft,
+          categoria: "Ventanas",
+          subtipo: "Ventana",
+          sistema: "Corredera",
+          sheetScheme: "2 hojas",
+          sheetVariant: "1 fija + 1 móvil",
+          ancho: "1200",
+          alto: "1000",
+          precio: "90000",
+          precioPorM2: "75000",
+          minimoCobrable: "45000",
+          redondeoPrecio: "1000",
+          priceInputMode: "line_m2",
+        }}
+      />
+    );
+
+    expect(screen.getByText(/Listo para finalizar la pieza/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Finalizar pieza/i })).toBeEnabled();
   });
 
   it("permite elegir recomendados y guardar un vidrio escrito en desktop", () => {
@@ -325,5 +388,76 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
 
     fireEvent.change(selector, { target: { value: "cr-1" } });
     expect(onSelectLineTemplate).toHaveBeenCalledWith("cr-1");
+  });
+
+  it("muestra globalError en el footer desktop del wizard", () => {
+    render(
+      <PasoDosAgregarGrupoSheet
+        {...baseProps}
+        quotePricingMode="por_item"
+        entryMode="normal"
+        paso={4}
+        globalError="No se pudo agregar el grupo"
+        draft={{
+          ...draft,
+          categoria: "Ventanas",
+          subtipo: "Ventana",
+          sistema: "Corredera",
+          sheetScheme: "Personalizado",
+          isCustomScheme: true,
+          guidedVisualConfig: createDefaultGuidedVisualConfig({
+            widthMm: 1200,
+            heightMm: 1000,
+          }),
+          ancho: "1200",
+          alto: "1000",
+          precio: "90000",
+          precioPorM2: "75000",
+          minimoCobrable: "45000",
+          redondeoPrecio: "1000",
+          priceInputMode: "line_m2",
+        }}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("No se pudo agregar el grupo");
+  });
+
+  it("permite finalizar pieza con composición personalizada guiada y precio m²", () => {
+    const onConfirm = jest.fn();
+
+    render(
+      <PasoDosAgregarGrupoSheet
+        {...baseProps}
+        quotePricingMode="por_item"
+        entryMode="normal"
+        paso={4}
+        onConfirm={onConfirm}
+        draft={{
+          ...draft,
+          categoria: "Ventanas",
+          subtipo: "Ventana",
+          sistema: "Corredera",
+          sheetScheme: "Personalizado",
+          isCustomScheme: true,
+          guidedVisualConfig: createDefaultGuidedVisualConfig({
+            widthMm: 1200,
+            heightMm: 1000,
+          }),
+          ancho: "1200",
+          alto: "1000",
+          precio: "90000",
+          precioPorM2: "75000",
+          minimoCobrable: "45000",
+          redondeoPrecio: "1000",
+          priceInputMode: "line_m2",
+        }}
+      />
+    );
+
+    const finishButton = screen.getByRole("button", { name: /Finalizar pieza/i });
+    expect(finishButton).toBeEnabled();
+    fireEvent.click(finishButton);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 });

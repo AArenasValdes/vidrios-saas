@@ -10,6 +10,12 @@ import {
   type CreateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
+import {
+  findExistingTemplateForImport,
+  isTechnicalPriceFillCandidate,
+  mergeCatalogMetadataForCommercialUpdate,
+} from "./line-template-import-match.service";
+
 export type LineTemplateSpreadsheetRow = Record<string, string>;
 
 export type LineTemplateImportField =
@@ -34,12 +40,14 @@ export type LineTemplateColumnMapping = Partial<Record<LineTemplateImportField, 
 
 export type LineTemplateImportPreviewRow = {
   rowNumber: number;
-  status: "ready" | "invalid" | "duplicate" | "technical";
+  status: "ready" | "invalid" | "duplicate" | "technical" | "price_match";
   errors: string[];
   nombre: string;
   payload: Omit<CreateCotizacionLineTemplateInput, "organizationId"> | null;
   technicalProfileCount?: number;
   technicalTipo?: string;
+  matchKind?: "exact_name" | "line_code" | "fuzzy_name";
+  matchedTemplateNombre?: string;
 };
 
 export const LINE_TEMPLATE_IMPORT_FIELDS: Array<{
@@ -432,10 +440,6 @@ export function buildLineTemplateImportPreview(input: {
   mapping: LineTemplateColumnMapping;
   existingTemplates: CotizacionLineTemplate[];
 }): LineTemplateImportPreviewRow[] {
-  const existingNames = new Set(
-    input.existingTemplates.map((item) => item.nombre.trim().toLowerCase())
-  );
-
   return input.rows.map((row, index) => {
     const errors: string[] = [];
     const nombre = cellValue(row, input.mapping.nombre);
@@ -457,18 +461,38 @@ export function buildLineTemplateImportPreview(input: {
 
     const espesor = cellValue(row, input.mapping.espesor);
     const terminacion = cellValue(row, input.mapping.terminacion);
-    const catalogMetadata: Record<string, string | number | boolean | null> = {};
-    if (espesor) catalogMetadata.espesor = espesor;
-    if (terminacion) catalogMetadata.terminacion = terminacion;
+    const commercialMetadata: Record<string, string | number | boolean | null> = {};
+    if (espesor) commercialMetadata.espesor = espesor;
+    if (terminacion) commercialMetadata.terminacion = terminacion;
+
+    const match = nombre
+      ? findExistingTemplateForImport(input.existingTemplates, nombre)
+      : null;
+    const isPriceMatch =
+      Boolean(match) &&
+      isTechnicalPriceFillCandidate(match!.template, precioVenta);
+
+    const resolvedNombre = isPriceMatch && match ? match.template.nombre : nombre;
+    const catalogMetadata =
+      isPriceMatch && match
+        ? mergeCatalogMetadataForCommercialUpdate(
+            match.template.catalogMetadata,
+            commercialMetadata,
+            precioVenta
+          )
+        : commercialMetadata;
 
     const payload: Omit<CreateCotizacionLineTemplateInput, "organizationId"> = {
-      nombre,
-      categoria,
+      nombre: resolvedNombre,
+      categoria:
+        isPriceMatch && match ? match.template.categoria : categoria,
       unidadCobro:
-        categoria === "vidrio"
-          ? "m2"
-          : normalizeUnidadValue(cellValue(row, input.mapping.unidadCobro)),
-      material,
+        isPriceMatch && match
+          ? match.template.unidadCobro
+          : categoria === "vidrio"
+            ? "m2"
+            : normalizeUnidadValue(cellValue(row, input.mapping.unidadCobro)),
+      material: isPriceMatch && match ? match.template.material : material,
       costoBase: parseMoney(cellValue(row, input.mapping.costoBase)),
       precioM2Sugerido: precioVenta,
       minimoCobrable: parseMoney(cellValue(row, input.mapping.minimoCobrable)),
@@ -482,19 +506,22 @@ export function buildLineTemplateImportPreview(input: {
       vigenciaDesde: cellValue(row, input.mapping.vigenciaDesde) || null,
       vigenciaHasta: cellValue(row, input.mapping.vigenciaHasta) || null,
       vidrioPrincipalRecomendado:
-        categoria === "vidrio"
-          ? null
-          : cellValue(row, input.mapping.vidrioPrincipalRecomendado) || null,
+        isPriceMatch && match
+          ? match.template.vidrioPrincipalRecomendado
+          : categoria === "vidrio"
+            ? null
+            : cellValue(row, input.mapping.vidrioPrincipalRecomendado) || null,
       catalogMetadata,
       isActive: true,
     };
 
-    const isDuplicate = nombre ? existingNames.has(nombre.trim().toLowerCase()) : false;
     const status: LineTemplateImportPreviewRow["status"] = errors.length
       ? "invalid"
-      : isDuplicate
-        ? "duplicate"
-        : "ready";
+      : isPriceMatch
+        ? "price_match"
+        : match
+          ? "duplicate"
+          : "ready";
 
     return {
       rowNumber: index + 1,
@@ -502,6 +529,9 @@ export function buildLineTemplateImportPreview(input: {
       errors,
       nombre: nombre || `Fila ${index + 1}`,
       payload: errors.length ? null : payload,
+      matchKind: match?.kind,
+      matchedTemplateNombre:
+        isPriceMatch || match ? match?.template.nombre : undefined,
     };
   });
 }
@@ -513,6 +543,8 @@ export function countImportPreviewSummary(rows: LineTemplateImportPreviewRow[]) 
         accumulator.ready += 1;
       } else if (row.status === "technical") {
         accumulator.technical += 1;
+      } else if (row.status === "price_match") {
+        accumulator.priceMatch += 1;
       } else if (row.status === "duplicate") {
         accumulator.duplicate += 1;
       } else {
@@ -520,6 +552,6 @@ export function countImportPreviewSummary(rows: LineTemplateImportPreviewRow[]) 
       }
       return accumulator;
     },
-    { ready: 0, technical: 0, duplicate: 0, invalid: 0 }
+    { ready: 0, technical: 0, priceMatch: 0, duplicate: 0, invalid: 0 }
   );
 }

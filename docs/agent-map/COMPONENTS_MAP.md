@@ -223,8 +223,15 @@
 ### Componente: PasoDosAgregarGrupoSheet
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`
-- **Proposito**: Nucleo actual del Quote Studio desktop. En desktop embebido renderiza el editor comercial de pieza activa en 4 pasos (`Tipo`, `Sistema`, `Medidas y detalles`, `Precio`) y mantiene el cuaderno comercial para modo `total_global`. En overlay/legacy conserva el flujo anterior.
+- **Proposito**: Nucleo actual del Quote Studio desktop. En desktop embebido renderiza el editor comercial de pieza activa en 4 pasos (`Tipo`, `Sistema`, `Medidas y detalles`, `Precio`) y mantiene el cuaderno comercial para modo `total_global`. En overlay/legacy conserva el flujo anterior. En subpaso **Sistema**, tras elegir **Personalizado**, expone **Abrir constructor** → `GuidedVisualComposer`.
 - **Usado en**: `PasoDosSeccion` (desktop) y orquestacion de `page.tsx`.
+
+### Componente: GuidedVisualComposer
+
+- **Archivo**: `src/features/cotizaciones/visual-composer/components/guided-visual-composer.tsx`
+- **Proposito**: Overlay desktop del constructor visual guiado V2 (croquis protagonista, partir módulos, tipos, palillos, undo/redo). UX orientada a maestros.
+- **Usado en**: `PasoDosAgregarGrupoSheet` (agregar pieza), `PasoDosEditorDesktop` (editar pieza, tab Configuración).
+- **Riesgos**: Solo desktop ≥1024; no montar en mobile. Persistencia: sync al guardar + hydrate formal en lecturas + bridge `[gvc:]` fallback; smoke PDF OK (2026-07-18).
 
 ### Componente: PasoDosPanelComponentes
 

@@ -32,11 +32,17 @@ export function QuoteStudioPanelBudgetSummary({
             const code = card.listCode ?? card.title.split(" · ")[0] ?? card.title;
             const name =
               card.listName ?? card.title.split(" · ").slice(1).join(" · ") ?? card.title;
+            const measures = card.listMeasures?.trim() || "";
 
             return (
               <li key={card.id} className={d.panelBudgetSummaryRow}>
                 <span className={d.panelBudgetSummaryCode}>{code}</span>
-                <span className={d.panelBudgetSummaryName}>{name}</span>
+                <div className={d.panelBudgetSummaryIdentity}>
+                  <span className={d.panelBudgetSummaryName}>{name}</span>
+                  {measures ? (
+                    <span className={d.panelBudgetSummaryMeasures}>{measures}</span>
+                  ) : null}
+                </div>
                 {quotePricingMode === "por_item" ? (
                   <strong className={d.panelBudgetSummaryPrice}>{card.price}</strong>
                 ) : null}

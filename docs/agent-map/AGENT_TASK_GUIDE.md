@@ -14,20 +14,23 @@ Antes de tocar desktop comercial, cotizaciones, dashboard, visual o catalogos, l
 
 ## Si la tarea es sobre dashboard comercial desktop, revisar primero:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 1
-2. `docs/agent-map/FEATURES_MAP.md` - Seccion "Dashboard"
-3. `docs/agent-map/ROUTES_MAP.md` - Ruta `/dashboard`
-4. `src/features/dashboard/services/dashboard-summary-server.service.ts`
-5. `app/api/dashboard/summary/route.ts`
-6. `app/(pwa-app)/dashboard/_components/desktop/dashboard-desktop.tsx`
-7. `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Fase 5
+2. `docs/design/FASE_5_DASHBOARD_BRIEF.md` - decisiones + brief de diseño
+3. `docs/agent-map/FEATURES_MAP.md` - Seccion "Dashboard"
+4. `docs/agent-map/ROUTES_MAP.md` - Ruta `/dashboard`
+5. `src/features/dashboard/services/dashboard-summary-server.service.ts`
+6. `app/api/dashboard/summary/route.ts`
+7. `app/(pwa-app)/dashboard/_components/desktop/dashboard-desktop.tsx`
+8. `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`
 
 Reglas:
 
 - usar solo datos reales existentes;
 - no inventar KPIs;
+- KPI hero = valor cotizado; cola principal = **Por enviar** (no seguimiento como foco);
 - no abrir CRM, oportunidades ni cobros;
-- no romper contrato actual consumido por mobile.
+- no romper contrato actual consumido por mobile;
+- no implementar rediseño UI hasta aprobar dirección visual del brief.
 
 ---
 
@@ -87,17 +90,29 @@ Reglas:
 
 1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 3
 2. `docs/COTIZACION_FLOW_CONTEXT.md`
-3. `src/utils/window-drawings.ts`
-4. `src/utils/cotizacion-item-presentation.ts`
-5. `src/features/cotizaciones/new-quote/workflow-ui.ts`
-6. `docs/agent-map/DATA_MODEL_MAP.md`
+3. `docs/agent-map/CHANGELOG_AGENT_MAP.md` - entrada QA "Constructor visual: UX maestro + entrada Personalizado"
+4. `src/features/cotizaciones/visual-composer/` (tipos, renderer, `GuidedVisualComposer`)
+5. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (entrada principal al agregar)
+6. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx` (al editar pieza)
+7. `src/utils/cotizacion-item-presentation.ts` (puente `[gvc:...]`)
+8. `src/utils/window-drawings.ts` (croquis legacy; no reemplazar a ciegas)
+9. `docs/agent-map/DATA_MODEL_MAP.md` - `cotizacion_item_visual_configs`
 
 Reglas:
 
 - no construir CAD libre;
+- entrada solo desktop ≥1024; no exponer en mobile;
+- el constructor se ofrece tras elegir **Personalizado** (sistema Ventana, o config/esquema en Puerta/otros), no como CTA suelto en medio del paso Sistema;
 - no tocar PDF ni renderer publico sin revisar compatibilidad;
-- no crear migraciones ni tablas nuevas sin aprobacion;
+- tabla visual + sync al guardar + hydrate formal en lecturas (`getWorkflowById` / presupuesto publico); bridge `[gvc:]` como fallback;
 - no agregar cubicacion automatica en esta fase.
+
+### Como probar (QA local)
+
+1. Desktop ≥1024; preferir `npm run build` + `npm run start` (o `pnpm`).
+2. `/cotizaciones/nueva` → Paso 2 → Agregar componente → **Ventana** → sistema **Personalizado** → **Abrir constructor**.
+3. Alternativa: **Puerta** → config **Personalizado** → constructor; o Ventana Corredera → esquema **Personalizado**.
+4. Aplicar → medidas → precio → **Finalizar pieza** (sin error `base64url`).
 
 ### Para PDF especificamente:
 1. `src/utils/cotizacion-pdf.ts`

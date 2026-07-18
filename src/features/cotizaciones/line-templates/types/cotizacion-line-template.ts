@@ -92,6 +92,32 @@ export function mergeLineTemplateGlassMetadata(
   return next;
 }
 
+export function lineTemplateNeedsCommercialPrice(
+  template: Pick<CotizacionLineTemplate, "precioM2Sugerido" | "catalogMetadata">
+) {
+  return (
+    template.catalogMetadata?.needsCommercialPrice === true ||
+    Number(template.precioM2Sugerido) <= 0
+  );
+}
+
+export function isLineTemplateReadyForQuote(
+  template: Pick<CotizacionLineTemplate, "isActive" | "precioM2Sugerido">
+) {
+  return Boolean(template.isActive) && Number(template.precioM2Sugerido) > 0;
+}
+
+export function clearNeedsCommercialPriceFlag(
+  metadata: CotizacionLineTemplateCatalogMetadata | null | undefined,
+  precioM2Sugerido: number
+): CotizacionLineTemplateCatalogMetadata {
+  const next: CotizacionLineTemplateCatalogMetadata = { ...(metadata ?? {}) };
+  if (precioM2Sugerido > 0) {
+    delete next.needsCommercialPrice;
+  }
+  return next;
+}
+
 export type CreateCotizacionLineTemplateInput = {
   organizationId: EntityId;
   nombre: string;

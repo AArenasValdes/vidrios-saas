@@ -10,6 +10,7 @@ import {
   getConfigurationOptionsForSubtype,
   getSubtypeOptionsForCategory,
   getSystemOptionsForSubtype,
+  resolveCompositionPatchAfterSystemChange,
   resolveFreeTotalNotebookEditScope,
   resolveMaterialColorHex,
   resolveGrupoDraftReferentialUnitPrice,
@@ -17,8 +18,10 @@ import {
   resolveTotalGlobalNestedDetailItems,
   shouldSkipCantidadForGrupoDraft,
   syncDraftTemplatePricing,
+  type PasoDosGrupoDraft,
 } from "../use-paso-dos-agregar-grupo";
 import { buildItemFromForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function createDraft(overrides: Record<string, unknown> = {}) {
@@ -550,5 +553,95 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
     expect(draft.alcanceDetalles).toHaveLength(1);
     expect(draft.alcanceDetalles[0]?.nombre).toBe("Creacion logo");
     expect(draft.alcanceDetalles[0]?.descripcion).toBe("Logo corporativo");
+  });
+
+  it("reaplica Personalizado al cambiar sistema si hay composición guiada válida", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+    const draft = createDraft({
+      sistema: "Abatible",
+      sheetScheme: "",
+      isCustomScheme: false,
+      guidedVisualConfig: guided,
+    }) as PasoDosGrupoDraft;
+
+    const patch = resolveCompositionPatchAfterSystemChange({
+      draft,
+      sistema: "Corredera",
+      configuracion: "",
+    });
+
+    expect(patch.guidedVisualConfig).toBe(guided);
+    expect(patch.sheetScheme).toBe("Personalizado");
+    expect(patch.isCustomScheme).toBe(true);
+    expect(patch.customSchemeDescription.trim().length).toBeGreaterThan(0);
+  });
+
+  it("mantiene composición guiada al cambiar a Guillotina (también tiene Personalizado)", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+    const draft = createDraft({
+      sistema: "Corredera",
+      sheetScheme: "Personalizado",
+      isCustomScheme: true,
+      guidedVisualConfig: guided,
+    }) as PasoDosGrupoDraft;
+
+    const patch = resolveCompositionPatchAfterSystemChange({
+      draft,
+      sistema: "Guillotina",
+      configuracion: "",
+    });
+
+    expect(patch.guidedVisualConfig).toBe(guided);
+    expect(patch.sheetScheme).toBe("Personalizado");
+    expect(patch.isCustomScheme).toBe(true);
+  });
+
+  it("limpia composición guiada al cambiar a un tipo/sistema sin Personalizado en opciones", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+    const draft = createDraft({
+      subtipo: "Shower door",
+      sistema: "Corredera",
+      sheetScheme: "2 hojas correderas",
+      isCustomScheme: false,
+      guidedVisualConfig: guided,
+    }) as PasoDosGrupoDraft;
+
+    const patch = resolveCompositionPatchAfterSystemChange({
+      draft,
+      sistema: "Corredera",
+      configuracion: "Frontal",
+    });
+
+    // Shower door compositions no incluyen "Personalizado"
+    expect(patch.guidedVisualConfig).toBeNull();
+    expect(patch.isCustomScheme).toBe(false);
+  });
+
+  it("sincroniza precio unitario desde m² al construir el form del grupo", () => {
+    const form = buildPasoDosGrupoComponentForm({
+      items: [],
+      pricingMode: "precio_directo",
+      provider: "",
+      draft: createDraft({
+        priceInputMode: "line_m2",
+        precio: "",
+        precioPorM2: "75000",
+        minimoCobrable: "45000",
+        redondeoPrecio: "1000",
+        ancho: "1200",
+        alto: "1000",
+        sheetScheme: "Personalizado",
+        isCustomScheme: true,
+        guidedVisualConfig: createDefaultGuidedVisualConfig({
+          widthMm: 1200,
+          heightMm: 1000,
+        }),
+      }) as PasoDosGrupoDraft,
+    });
+
+    expect(Number(form.costoProveedorUnitario)).toBeGreaterThan(0);
+    const item = buildItemFromForm(form, [], null, { quotePricingMode: "por_item" });
+    expect(item.precioUnitario).toBeGreaterThan(0);
+    expect(decodeCotizacionItemPresentationMeta(item.observaciones).guidedVisualConfig).not.toBeNull();
   });
 });

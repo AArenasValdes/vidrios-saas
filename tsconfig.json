@@ -41,6 +41,7 @@
     "node_modules",
     ".next/dev",
     "scripts",
+    "tmp",
     "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx"

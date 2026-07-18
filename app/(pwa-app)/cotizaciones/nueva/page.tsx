@@ -79,7 +79,7 @@ import {
   syncTemplatePricingInComponentForm,
   mapFreeValueItemToForm,
   validateFreeValueItemForm,
-  withResolvedWorkflowObra,
+  withResolvedStep1QuickQuoteDefaults,
   type FreeValueItemFormState,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import {
@@ -686,16 +686,7 @@ function NuevaCotizacionPageContent() {
   }
 
   function resolveStep1Draft(currentDraft: CotizacionWorkflowDraft) {
-    let nextDraft = { ...currentDraft };
-
-    if (!nextDraft.clienteNombre.trim()) {
-      nextDraft.clienteNombre = "Cliente";
-      if (!nextDraft.obra.trim()) {
-        nextDraft.obra = "Cotización";
-      }
-    }
-
-    nextDraft = withResolvedWorkflowObra(nextDraft);
+    const nextDraft = withResolvedStep1QuickQuoteDefaults(currentDraft);
 
     if (nextDraft !== currentDraft) {
       setDraft(nextDraft);
@@ -2826,6 +2817,7 @@ function goNextFromStep1() {
             glassOptions: pasoDosAgregarGrupo.glassOptions,
             visibleLineTemplates: pasoDosAgregarGrupo.visibleLineTemplates,
             summary: pasoDosAgregarGrupo.summary,
+            globalError,
             onClose: handleCloseAddGroupSheetDesktop,
             onBack: handleBackAddGroupSheetDesktop,
             onNext: pasoDosAgregarGrupo.goNext,
@@ -2849,6 +2841,7 @@ function goNextFromStep1() {
             onSheetSchemeChange: pasoDosAgregarGrupo.updateSheetScheme,
             onSheetVariantChange: pasoDosAgregarGrupo.updateSheetVariant,
             onCustomSchemeDescriptionChange: pasoDosAgregarGrupo.updateCustomSchemeDescription,
+            onGuidedVisualConfigChange: pasoDosAgregarGrupo.updateGuidedVisualConfig,
             onVidrioChange: pasoDosAgregarGrupo.updateVidrio,
             onCreateCustomGlass: (value) => {
               const savedValue = normalizeCustomGlassValue(value);

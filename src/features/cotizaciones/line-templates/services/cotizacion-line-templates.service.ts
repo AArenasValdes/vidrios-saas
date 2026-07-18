@@ -5,6 +5,7 @@ import {
 import {
   LINE_TEMPLATE_CATEGORIAS,
   LINE_TEMPLATE_MATERIALS,
+  clearNeedsCommercialPriceFlag,
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateMaterial,
@@ -14,6 +15,11 @@ import {
   type LineTemplateImportResult,
   type UpdateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  findExistingTemplateForImport,
+  isTechnicalPriceFillCandidate,
+  mergeCatalogMetadataForCommercialUpdate,
+} from "@/features/cotizaciones/line-templates/services/line-template-import-match.service";
 import type { EntityId } from "@/types/common";
 
 type CotizacionLineTemplatesServiceDeps = {
@@ -81,6 +87,12 @@ function normalizeTemplateMaterial(value: string | null | undefined): Cotizacion
   throw new Error("Debes elegir si el producto es de Aluminio, PVC o Cristal.");
 }
 
+function allowsZeroSalePrice(
+  metadata: Record<string, string | number | boolean | null> | undefined
+) {
+  return metadata?.needsCommercialPrice === true;
+}
+
 function normalizeTemplateCategoria(value: string | null | undefined): CotizacionLineTemplateCategoria {
   const normalized = (value ?? "").trim().toLowerCase();
 
@@ -90,6 +102,14 @@ function normalizeTemplateCategoria(value: string | null | undefined): Cotizacio
 
   if (normalized === "aluminio" || normalized === "aluminium") {
     return "aluminio";
+  }
+
+  if (normalized === "cristal" || normalized === "glass") {
+    return "vidrio";
+  }
+
+  if (normalized === "pvc") {
+    return "pvc";
   }
 
   throw new Error("La categoria del catalogo no es valida.");
@@ -206,8 +226,17 @@ function normalizeCreateInput(
   const material = normalizeMaterialForCategoria(categoria, input.material);
   const precioM2Sugerido = normalizeMoney(input.precioM2Sugerido);
 
-  if (categoria === "vidrio" && precioM2Sugerido <= 0) {
+  if (
+    categoria === "vidrio" &&
+    precioM2Sugerido <= 0 &&
+    !allowsZeroSalePrice(input.catalogMetadata)
+  ) {
     throw new Error("El precio por m2 del cristal debe ser mayor a cero.");
+  }
+
+  const catalogMetadata = normalizeGlassMetadata(categoria, input.catalogMetadata);
+  if (precioM2Sugerido > 0) {
+    delete catalogMetadata.needsCommercialPrice;
   }
 
   return {
@@ -225,7 +254,7 @@ function normalizeCreateInput(
     proveedor: normalizeProveedor(input.proveedor),
     vigenciaDesde: normalizeOptionalDate(input.vigenciaDesde),
     vigenciaHasta: normalizeOptionalDate(input.vigenciaHasta),
-    catalogMetadata: normalizeGlassMetadata(categoria, input.catalogMetadata),
+    catalogMetadata,
     isActive: input.isActive ?? true,
     sortOrder: Math.max(0, Math.trunc(Number(input.sortOrder ?? 0) || 0)),
   };
@@ -301,19 +330,28 @@ function normalizeUpdateInput(input: UpdateCotizacionLineTemplateInput) {
       "vidrio",
       payload.catalogMetadata ?? input.catalogMetadata
     );
-    if (payload.precioM2Sugerido !== undefined && payload.precioM2Sugerido <= 0) {
+    if (
+      payload.precioM2Sugerido !== undefined &&
+      payload.precioM2Sugerido <= 0 &&
+      !allowsZeroSalePrice(payload.catalogMetadata ?? input.catalogMetadata)
+    ) {
       throw new Error("El precio por m2 del cristal debe ser mayor a cero.");
     }
   }
 
-  return payload;
-}
+  if (
+    payload.precioM2Sugerido !== undefined &&
+    payload.precioM2Sugerido > 0 &&
+    (payload.catalogMetadata !== undefined || input.catalogMetadata !== undefined)
+  ) {
+    const nextMetadata = {
+      ...(payload.catalogMetadata ?? input.catalogMetadata ?? {}),
+    };
+    delete nextMetadata.needsCommercialPrice;
+    payload.catalogMetadata = nextMetadata;
+  }
 
-function findTemplateByName(templates: CotizacionLineTemplate[], nombre: string) {
-  const normalized = nombre.trim().toLowerCase();
-  return (
-    templates.find((item) => item.nombre.trim().toLowerCase() === normalized) ?? null
-  );
+  return payload;
 }
 
 export function createCotizacionLineTemplatesService(
@@ -350,7 +388,19 @@ export function createCotizacionLineTemplatesService(
       organizationId: EntityId,
       input: UpdateCotizacionLineTemplateInput
     ) {
-      return repository.update(id, organizationId, normalizeUpdateInput(input));
+      const normalized = normalizeUpdateInput(input);
+
+      if (normalized.precioM2Sugerido !== undefined && normalized.precioM2Sugerido > 0) {
+        const current = await repository.getById(id, organizationId);
+        if (current?.catalogMetadata?.needsCommercialPrice === true) {
+          normalized.catalogMetadata = clearNeedsCommercialPriceFlag(
+            normalized.catalogMetadata ?? current.catalogMetadata,
+            normalized.precioM2Sugerido
+          );
+        }
+      }
+
+      return repository.update(id, organizationId, normalized);
     },
 
     async duplicateTemplate(id: EntityId, organizationId: EntityId) {
@@ -417,15 +467,64 @@ export function createCotizacionLineTemplatesService(
       for (const [index, row] of rows.entries()) {
         try {
           const normalized = normalizeCreateInput(row);
-          const duplicate = findTemplateByName(current, normalized.nombre);
+          const match =
+            findExistingTemplateForImport(current, row.nombre) ??
+            findExistingTemplateForImport(current, normalized.nombre);
+          const duplicate = match?.template ?? null;
+          const technicalPriceFill = Boolean(
+            duplicate && isTechnicalPriceFillCandidate(duplicate, normalized.precioM2Sugerido)
+          );
 
-          if (duplicate && options.duplicateMode === "skip") {
+          if (duplicate && options.duplicateMode === "skip" && !technicalPriceFill) {
             result.skipped += 1;
             continue;
           }
 
-          if (duplicate && options.duplicateMode === "update") {
-            const updated = await repository.update(duplicate.id, organizationId, normalized);
+          if (duplicate && (options.duplicateMode === "update" || technicalPriceFill)) {
+            const shouldPreserveCommercialPrice =
+              allowsZeroSalePrice(row.catalogMetadata) &&
+              normalized.precioM2Sugerido <= 0 &&
+              duplicate.precioM2Sugerido > 0;
+
+            const updatePayload = shouldPreserveCommercialPrice
+              ? {
+                  ...normalized,
+                  nombre: duplicate.nombre,
+                  precioM2Sugerido: duplicate.precioM2Sugerido,
+                  costoBase: duplicate.costoBase > 0 ? duplicate.costoBase : normalized.costoBase,
+                  minimoCobrable:
+                    duplicate.minimoCobrable > 0
+                      ? duplicate.minimoCobrable
+                      : normalized.minimoCobrable,
+                  catalogMetadata: mergeCatalogMetadataForCommercialUpdate(
+                    duplicate.catalogMetadata,
+                    normalized.catalogMetadata,
+                    duplicate.precioM2Sugerido
+                  ),
+                }
+              : {
+                  ...normalized,
+                  nombre: technicalPriceFill ? duplicate.nombre : normalized.nombre,
+                  categoria: technicalPriceFill ? duplicate.categoria : normalized.categoria,
+                  material: technicalPriceFill ? duplicate.material : normalized.material,
+                  unidadCobro: technicalPriceFill
+                    ? duplicate.unidadCobro
+                    : normalized.unidadCobro,
+                  vidrioPrincipalRecomendado:
+                    normalized.vidrioPrincipalRecomendado ??
+                    duplicate.vidrioPrincipalRecomendado,
+                  catalogMetadata: mergeCatalogMetadataForCommercialUpdate(
+                    duplicate.catalogMetadata,
+                    normalized.catalogMetadata,
+                    normalized.precioM2Sugerido
+                  ),
+                };
+
+            const updated = await repository.update(
+              duplicate.id,
+              organizationId,
+              updatePayload
+            );
             const currentIndex = current.findIndex((item) => item.id === duplicate.id);
             if (currentIndex >= 0) {
               current[currentIndex] = updated;

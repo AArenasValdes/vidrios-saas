@@ -1,4 +1,9 @@
 import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
+import {
+  parseGuidedVisualConfig,
+  serializeGuidedVisualConfig,
+  type GuidedVisualConfig,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 export type ComponentMaterial = "Aluminio" | "PVC" | "Cristal";
 export type CotizacionItemCatalogCategoria = "aluminio" | "pvc" | "vidrio" | "otros";
@@ -44,6 +49,7 @@ export type CotizacionItemPresentationMeta = {
   mirrorPaneCount: number | null;
   mirrorPaneDirection: CotizacionMirrorPaneDirection;
   mirrorInteriorLine: CotizacionMirrorInteriorLine;
+  guidedVisualConfig: GuidedVisualConfig | null;
   raw: string;
 };
 
@@ -202,6 +208,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   mirrorPaneCount?: number | null;
   mirrorPaneDirection?: CotizacionMirrorPaneDirection;
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
+  guidedVisualConfig?: GuidedVisualConfig | null;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -268,6 +275,9 @@ export function encodeCotizacionItemPresentationMeta(input: {
     mirrorFormat === "divided" ? normalizeMirrorPaneCount(input.mirrorPaneCount) : null;
   const mirrorPaneDirection = normalizeMirrorPaneDirection(input.mirrorPaneDirection);
   const mirrorInteriorLine = normalizeMirrorInteriorLine(input.mirrorInteriorLine);
+  const guidedVisualConfig = input.guidedVisualConfig
+    ? serializeGuidedVisualConfig(input.guidedVisualConfig).replace(/\]/g, "")
+    : "";
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +
@@ -303,9 +313,31 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[mf:${mirrorFormat}]` +
     `[mpc:${mirrorPaneCount ?? ""}]` +
     `[mpd:${mirrorPaneDirection}]` +
-    `[mil:${mirrorInteriorLine}]`;
+    `[mil:${mirrorInteriorLine}]` +
+    `[gvc:${guidedVisualConfig}]`;
 
   return raw ? `${meta} ${raw}` : meta;
+}
+
+/**
+ * Prioriza `config_json` formal sobre el bridge `[gvc:]` al leer.
+ * Solo reescribe metadata en memoria; no persiste.
+ */
+export function mergeFormalGuidedVisualConfigIntoObservaciones(
+  observaciones: string | null | undefined,
+  formalConfig: GuidedVisualConfig | null | undefined
+): string {
+  if (!formalConfig) {
+    return observaciones ?? "";
+  }
+
+  const meta = decodeCotizacionItemPresentationMeta(observaciones);
+
+  return encodeCotizacionItemPresentationMeta({
+    ...meta,
+    guidedVisualConfig: formalConfig,
+    raw: meta.raw,
+  });
 }
 
 export function decodeCotizacionItemPresentationMeta(
@@ -354,6 +386,9 @@ export function decodeCotizacionItemPresentationMeta(
   const mirrorInteriorLine = normalizeMirrorInteriorLine(
     source.match(/\[mil:([^\]]*)\]/)?.[1]
   );
+  const guidedVisualConfig = parseGuidedVisualConfig(
+    source.match(/\[gvc:([^\]]*)\]/)?.[1]
+  );
   const referencia =
     source.match(/\[r:([^\]]*)\]/)?.[1]?.trim() ??
     source.match(/\[l:([^\]]*)\]/)?.[1]?.trim() ??
@@ -393,6 +428,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[mpc:[^\]]*\]/g, "")
     .replace(/\[mpd:[^\]]*\]/g, "")
     .replace(/\[mil:[^\]]*\]/g, "")
+    .replace(/\[gvc:[^\]]*\]/g, "")
     .trim();
 
   return {
@@ -430,6 +466,7 @@ export function decodeCotizacionItemPresentationMeta(
     mirrorPaneCount,
     mirrorPaneDirection,
     mirrorInteriorLine,
+    guidedVisualConfig,
     raw,
   };
 }

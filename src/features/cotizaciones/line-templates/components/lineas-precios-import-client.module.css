@@ -233,6 +233,11 @@
   color: #1d4ed8;
 }
 
+.badgePriceMatch {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
 .pdfModeSwitch {
   display: flex;
   flex-wrap: wrap;

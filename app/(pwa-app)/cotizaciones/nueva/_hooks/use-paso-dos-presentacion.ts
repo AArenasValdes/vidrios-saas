@@ -20,6 +20,7 @@ import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
 import { hasGlassOption, normalizeCustomGlassValue } from "@/features/cotizaciones/new-quote/custom-glass-options";
 
@@ -187,28 +188,39 @@ export function usePasoDosPresentacion(
     [params.componentForm]
   );
 
-  const currentComponentPreviewSvg = useMemo(
-    () =>
-      generateComponentSVG({
-        tipo: params.componentForm.tipo,
-        sistema: params.componentForm.sistema,
-        configuracion: params.componentForm.configuracion,
-        sheetScheme: params.componentForm.sheetScheme,
-        sheetVariant: params.componentForm.sheetVariant,
-        customSchemeDescription: params.componentForm.customSchemeDescription,
-        isCustomScheme: params.componentForm.isCustomScheme,
-        referencia: params.componentForm.referencia,
-        ancho: params.componentForm.ancho ? Number(params.componentForm.ancho) : null,
-        alto: params.componentForm.alto ? Number(params.componentForm.alto) : null,
-        colorHex: params.componentForm.colorHex,
+  const currentComponentPreviewSvg = useMemo(() => {
+    if (params.componentForm.guidedVisualConfig) {
+      return renderGuidedVisualSvg(params.componentForm.guidedVisualConfig, {
         maxW: 92,
         maxH: 72,
-        mirrorFormat: params.componentForm.mirrorFormat,
-        mirrorPaneCount: params.componentForm.mirrorPaneCount,
-        mirrorPaneDirection: params.componentForm.mirrorPaneDirection,
-        mirrorInteriorLine: params.componentForm.mirrorInteriorLine,
-      }),
-    [
+        colorHex: params.componentForm.colorHex,
+        variant: "thumbnail",
+        showSelection: false,
+        showLabels: false,
+        showDimensions: false,
+      });
+    }
+
+    return generateComponentSVG({
+      tipo: params.componentForm.tipo,
+      sistema: params.componentForm.sistema,
+      configuracion: params.componentForm.configuracion,
+      sheetScheme: params.componentForm.sheetScheme,
+      sheetVariant: params.componentForm.sheetVariant,
+      customSchemeDescription: params.componentForm.customSchemeDescription,
+      isCustomScheme: params.componentForm.isCustomScheme,
+      referencia: params.componentForm.referencia,
+      ancho: params.componentForm.ancho ? Number(params.componentForm.ancho) : null,
+      alto: params.componentForm.alto ? Number(params.componentForm.alto) : null,
+      colorHex: params.componentForm.colorHex,
+      maxW: 92,
+      maxH: 72,
+      mirrorFormat: params.componentForm.mirrorFormat,
+      mirrorPaneCount: params.componentForm.mirrorPaneCount,
+      mirrorPaneDirection: params.componentForm.mirrorPaneDirection,
+      mirrorInteriorLine: params.componentForm.mirrorInteriorLine,
+    });
+  }, [
       params.componentForm.alto,
       params.componentForm.ancho,
       params.componentForm.colorHex,
@@ -224,8 +236,8 @@ export function usePasoDosPresentacion(
       params.componentForm.mirrorInteriorLine,
       params.componentForm.mirrorPaneCount,
       params.componentForm.mirrorPaneDirection,
-    ]
-  );
+      params.componentForm.guidedVisualConfig,
+    ]);
 
   const batchPreviewCodes = useMemo(() => {
     if (params.editingItemId) {

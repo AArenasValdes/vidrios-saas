@@ -6,7 +6,7 @@ import {
   isConnectivityError,
   scrollPageToTop,
   validateStep1,
-  withResolvedWorkflowObra,
+  withResolvedStep1QuickQuoteDefaults,
   type ComponentFormState,
   type FieldErrors,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -93,7 +93,7 @@ export function preparePasoTresGuardado({
   applyQuickEditDraftsToItems,
 }: PreparePasoTresGuardadoParams): PreparePasoTresGuardadoResult {
   const nextItems = applyQuickEditDraftsToItems(draft.items);
-  const draftToSave = withResolvedWorkflowObra({
+  const draftToSave = withResolvedStep1QuickQuoteDefaults({
     ...draft,
     items: nextItems,
   });

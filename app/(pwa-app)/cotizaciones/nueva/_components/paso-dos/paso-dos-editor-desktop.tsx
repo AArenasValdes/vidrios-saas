@@ -12,6 +12,15 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
+  GuidedVisualComposer,
+  ensureGuidedVisualDraft,
+} from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import {
+  describeGuidedVisualConfig,
+  type GuidedVisualConfig,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
   CLP,
   COLOR_OPTIONS,
   COMPONENT_TYPE_GROUPS,
@@ -24,6 +33,7 @@ import {
   requiresCustomSheetDescription,
   isGlassCatalogSelection,
   shouldRequireProfileMaterialForComponent,
+  shouldShowGuidedComposerEntry,
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
   buildGlassValue,
@@ -216,8 +226,21 @@ function TabConfiguracion({
   Props,
   "componentForm" | "fieldErrors" | "currentComponentPreviewSvg" | "onComponentChange"
 >) {
+  const [isGuidedComposerOpen, setIsGuidedComposerOpen] = useState(false);
+  const [guidedDraft, setGuidedDraft] = useState<GuidedVisualConfig | null>(null);
   const requiresProfileMaterial = shouldRequireProfileMaterialForComponent(componentForm.tipo);
   const showSystemSelection = shouldShowSystemSelectionForComponent(componentForm.tipo);
+  const canUseGuidedComposer =
+    !isFreeValueComponentType(componentForm.tipo) &&
+    shouldShowGuidedComposerEntry({
+      tipo: componentForm.tipo,
+      material: componentForm.material,
+      catalogCategoria: componentForm.catalogCategoria,
+      sistema: componentForm.sistema,
+      sheetScheme: componentForm.sheetScheme,
+      configuracion: componentForm.configuracion,
+      guidedVisualConfig: componentForm.guidedVisualConfig,
+    });
   const systemOptions = getSystemOptionsForComponent(componentForm.tipo);
   const commonDesktopSystemOptions = ["Corredera", "Proyectante", "Abatible", "Oscilobatiente"].filter((option) =>
     systemOptions.includes(option)
@@ -253,37 +276,102 @@ function TabConfiguracion({
     sheetScheme: componentForm.sheetScheme,
     sheetVariant: componentForm.sheetVariant,
   });
-  const configPreviewSvg = useMemo(
-    () =>
-      generateComponentSVG({
-        tipo: componentForm.tipo,
-        sistema: componentForm.sistema,
-        configuracion: componentForm.configuracion,
-        sheetScheme: componentForm.sheetScheme,
-        sheetVariant: componentForm.sheetVariant,
-        customSchemeDescription: componentForm.customSchemeDescription,
-        isCustomScheme: componentForm.isCustomScheme,
-        referencia: componentForm.referencia,
-        ancho: componentForm.ancho ? Number(componentForm.ancho) : null,
-        alto: componentForm.alto ? Number(componentForm.alto) : null,
-        colorHex: componentForm.colorHex,
+  const configPreviewSvg = useMemo(() => {
+    if (componentForm.guidedVisualConfig) {
+      return renderGuidedVisualSvg(componentForm.guidedVisualConfig, {
         maxW: 176,
         maxH: 118,
-        mirrorFormat: componentForm.mirrorFormat,
-        mirrorPaneCount: componentForm.mirrorPaneCount,
-        mirrorPaneDirection: componentForm.mirrorPaneDirection,
-        mirrorInteriorLine: componentForm.mirrorInteriorLine,
-      }),
-    [componentForm]
-  );
-  const configPreviewSummary = [
-    componentForm.sistema,
-    componentForm.configuracion,
-    componentForm.sheetScheme,
-    componentForm.sheetVariant,
-  ]
-    .filter((part) => part?.trim())
-    .join(" · ");
+        colorHex: componentForm.colorHex,
+        variant: "summary",
+        showSelection: false,
+        showLabels: false,
+        showDimensions: false,
+      });
+    }
+
+    return generateComponentSVG({
+      tipo: componentForm.tipo,
+      sistema: componentForm.sistema,
+      configuracion: componentForm.configuracion,
+      sheetScheme: componentForm.sheetScheme,
+      sheetVariant: componentForm.sheetVariant,
+      customSchemeDescription: componentForm.customSchemeDescription,
+      isCustomScheme: componentForm.isCustomScheme,
+      referencia: componentForm.referencia,
+      ancho: componentForm.ancho ? Number(componentForm.ancho) : null,
+      alto: componentForm.alto ? Number(componentForm.alto) : null,
+      colorHex: componentForm.colorHex,
+      maxW: 176,
+      maxH: 118,
+      mirrorFormat: componentForm.mirrorFormat,
+      mirrorPaneCount: componentForm.mirrorPaneCount,
+      mirrorPaneDirection: componentForm.mirrorPaneDirection,
+      mirrorInteriorLine: componentForm.mirrorInteriorLine,
+    });
+  }, [componentForm]);
+  const configPreviewSummary = componentForm.guidedVisualConfig
+    ? describeGuidedVisualConfig(componentForm.guidedVisualConfig)
+    : [componentForm.sistema, componentForm.configuracion, componentForm.sheetScheme, componentForm.sheetVariant]
+        .filter((part) => part?.trim())
+        .join(" · ");
+
+  const openGuidedComposer = () => {
+    setGuidedDraft(
+      ensureGuidedVisualDraft({
+        current: componentForm.guidedVisualConfig ?? null,
+        widthMm: componentForm.ancho ? Number(componentForm.ancho) : null,
+        heightMm: componentForm.alto ? Number(componentForm.alto) : null,
+      })
+    );
+    setIsGuidedComposerOpen(true);
+  };
+
+  const applyGuidedComposer = (next: GuidedVisualConfig) => {
+    setGuidedDraft(next);
+    onComponentChange("guidedVisualConfig", next);
+    onComponentChange("ancho", String(next.widthMm));
+    onComponentChange("alto", String(next.heightMm));
+    onComponentChange("isCustomScheme", true);
+    if (sheetSchemeOptions.includes("Personalizado")) {
+      onComponentChange("sheetScheme", "Personalizado");
+    }
+    if (configurationOptions.includes("Personalizado")) {
+      onComponentChange("configuracion", "Personalizado");
+    }
+    onComponentChange("customSchemeDescription", describeGuidedVisualConfig(next));
+    setIsGuidedComposerOpen(false);
+  };
+
+  const clearGuidedComposer = () => {
+    onComponentChange("guidedVisualConfig", null);
+    onComponentChange("customSchemeDescription", "");
+    const keepsPersonalizado =
+      componentForm.sheetScheme === "Personalizado" ||
+      componentForm.configuracion === "Personalizado";
+    onComponentChange("isCustomScheme", keepsPersonalizado);
+    setIsGuidedComposerOpen(false);
+  };
+
+  const selectConfiguracion = (option: string) => {
+    if (
+      componentForm.guidedVisualConfig &&
+      componentForm.configuracion === "Personalizado" &&
+      option !== "Personalizado"
+    ) {
+      onComponentChange("guidedVisualConfig", null);
+      onComponentChange("customSchemeDescription", "");
+    }
+    onComponentChange("configuracion", option);
+  };
+
+  const selectSheetScheme = (option: string) => {
+    if (componentForm.guidedVisualConfig && option !== "Personalizado") {
+      onComponentChange("guidedVisualConfig", null);
+      onComponentChange("customSchemeDescription", "");
+    }
+    onComponentChange("sheetScheme", option);
+    onComponentChange("isCustomScheme", option === "Personalizado");
+  };
 
   return (
     <div className={editor.tabContent}>
@@ -428,7 +516,7 @@ function TabConfiguracion({
                   className={`${s.typeChip} ${
                     componentForm.configuracion === option ? s.typeChipActive : ""
                   }`}
-                  onClick={() => onComponentChange("configuracion", option)}
+                  onClick={() => selectConfiguracion(option)}
                 >
                   {option}
                 </button>
@@ -453,7 +541,7 @@ function TabConfiguracion({
                   className={`${editor.compositionChip} ${
                     componentForm.sheetScheme === option ? editor.compositionChipActive : ""
                   }`}
-                  onClick={() => onComponentChange("sheetScheme", option)}
+                  onClick={() => selectSheetScheme(option)}
                   type="button"
                 >
                   {option}
@@ -476,7 +564,7 @@ function TabConfiguracion({
                 ))}
               </div>
             ) : null}
-            {showCustomSchemeDescription ? (
+            {showCustomSchemeDescription && !componentForm.guidedVisualConfig ? (
               <label className={s.field}>
                 <span className={s.label}>Describe la composición</span>
                 <input
@@ -489,6 +577,40 @@ function TabConfiguracion({
                   }
                 />
               </label>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {canUseGuidedComposer ? (
+        <section className={`${s.formSection} ${s.stepTwoSectionSoft}`}>
+          <div className={s.formSectionHead}>
+            <span className={s.formSectionEyebrow}>Composición personalizada</span>
+            <strong>
+              {componentForm.guidedVisualConfig
+                ? "Editar módulos"
+                : "Abrir constructor visual"}
+            </strong>
+            <p>Divide el marco y asigna el tipo de cada módulo.</p>
+          </div>
+          <div className={editor.compositionGrid}>
+            <button
+              type="button"
+              className={`${editor.compositionChip} ${
+                componentForm.guidedVisualConfig ? editor.compositionChipActive : ""
+              }`}
+              onClick={openGuidedComposer}
+            >
+              {componentForm.guidedVisualConfig ? "Editar composición" : "Abrir constructor"}
+            </button>
+            {componentForm.guidedVisualConfig ? (
+              <button
+                type="button"
+                className={editor.compositionChip}
+                onClick={clearGuidedComposer}
+              >
+                Quitar dibujo
+              </button>
             ) : null}
           </div>
         </section>
@@ -508,6 +630,21 @@ function TabConfiguracion({
             {configPreviewSummary ? <p>{configPreviewSummary}</p> : null}
           </div>
         </div>
+      ) : null}
+
+      {guidedDraft ? (
+        <GuidedVisualComposer
+          open={isGuidedComposerOpen}
+          config={guidedDraft}
+          colorHex={componentForm.colorHex}
+          pieceTitle={
+            [componentForm.tipo, componentForm.sistema].filter(Boolean).join(" ") || "Pieza"
+          }
+          onChange={setGuidedDraft}
+          onApply={applyGuidedComposer}
+          onClose={() => setIsGuidedComposerOpen(false)}
+          onClear={componentForm.guidedVisualConfig ? clearGuidedComposer : undefined}
+        />
       ) : null}
     </div>
   );
@@ -1188,7 +1325,7 @@ export function PasoDosEditorDesktop(props: Props) {
 
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (isFreeValue) return "detalles";
-    return "medidas";
+    return "configuracion";
   });
 
   const effectiveTab = useMemo(() => {

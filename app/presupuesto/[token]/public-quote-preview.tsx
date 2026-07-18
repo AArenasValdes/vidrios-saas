@@ -14,12 +14,12 @@ import {
   resolveDocumentConditionsText,
   resolveDocumentPaymentTerms,
 } from "@/utils/cotizacion-document";
+import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
   shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
-import { generateComponentSVG } from "@/utils/window-drawings";
 
 import printStyles from "../../print/cotizaciones/[id]/page.module.css";
 import { buildCotizacionItemPrintSpecs } from "../../print/cotizaciones/[id]/_utils/item-print-specs";
@@ -305,6 +305,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         sheetVariant,
         customSchemeDescription,
         isCustomScheme,
+        guidedVisualConfig,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -368,7 +369,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
         colorName,
         surface,
         specs: itemSpecs,
-        drawingSvg: generateComponentSVG({
+        drawingSvg: resolveCotizacionItemDrawingSvg({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
@@ -381,6 +382,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
           ancho: item.ancho,
           alto: item.alto,
           colorHex,
+          guidedVisualConfig,
           maxW: 470,
           maxH: 210,
           variant: "pdf",
@@ -647,7 +649,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             ];
                         const drawingSvg =
                           presentation?.drawingSvg ??
-                          generateComponentSVG({
+                          resolveCotizacionItemDrawingSvg({
                             tipo: item.tipo,
                             hojasBase: presentation?.hojasBase,
                             sheetScheme: presentation?.sheetScheme,
@@ -658,6 +660,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             ancho: item.ancho,
                             alto: item.alto,
                             colorHex,
+                            guidedVisualConfig: itemMeta.guidedVisualConfig,
                             maxW: 470,
                             maxH: 210,
                             variant: "pdf",

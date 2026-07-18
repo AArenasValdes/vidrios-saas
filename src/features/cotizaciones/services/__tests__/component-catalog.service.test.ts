@@ -71,6 +71,7 @@ describe("component-catalog service", () => {
       "Bow Window",
       "Guillotina",
       "Celosía",
+      "Personalizado",
     ]);
     expect(getConfigurationOptionsForComponentSistema("Ventana", "Bow Window")).toEqual([
       "Corredera",

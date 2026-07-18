@@ -6,7 +6,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Autenticacion
 
-- **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol. Revalida sesion al volver a foco/rehidratar pestaña o PWA para evitar estado viejo.
+- **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol. Revalida sesion al volver a foco/rehidratar pesta?a o PWA para evitar estado viejo.
 - **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`, `/cuenta-vencida`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
@@ -87,7 +87,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar logica**: `src/features/subscriptions/services/`, `src/features/billing/`
 - **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`, `supabase/migrations/20260602062145_billing_flow_provider.sql`
 - **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 3 dias o menos, el shell debe usar avisos progresivos y compactos; no una card grande permanente. `/cuenta-vencida` vende principalmente anuales: `Founder Full Anual` `$79.990` como recomendado y `Solo Cotizacion Anual` `$59.990` como opcion simple. El mensual `$8.990` queda como opcion manual secundaria por WhatsApp. Si la cuenta ya esta activa con `subscription_ends_at > now()`, la UI no debe permitir crear otro pago accidental y debe mostrar `Tu cuenta ya tiene una suscripcion activa.`.
-- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Flow depende de `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_ENVIRONMENT`, `FLOW_PAYMENT_METHOD` opcional y `NEXT_PUBLIC_APP_URL`; Webpay legacy depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL`. No exponer `provider_response` completo en logs/respuestas. No introducir Oneclick, PatPass ni recurrencia automatica sin rediseñar negocio, schema y operaciones.
+- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Flow depende de `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_ENVIRONMENT`, `FLOW_PAYMENT_METHOD` opcional y `NEXT_PUBLIC_APP_URL`; Webpay legacy depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL`. No exponer `provider_response` completo en logs/respuestas. No introducir Oneclick, PatPass ni recurrencia automatica sin redise?ar negocio, schema y operaciones.
 
 ### Addendum cuentas internas gratis permanentes
 
@@ -100,8 +100,9 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Dashboard
 
-- **Que hace**: Tablero comercial real del producto actual. Resume valor cotizado, cotizaciones creadas, PDF generados, aprobadas registradas, actividad reciente y, cuando se implemente sin migraciones nuevas, embudo real de solicitudes y obras activas.
+- **Que hace**: Tablero comercial real del producto actual (Fase 5). Empuja el flujo maestro **cotizar → PDF → WhatsApp**: valor cotizado, cola **Por enviar**, PDF/aprobadas, recientes. No es CRM ni seguimiento.
 - **Rutas involucradas**: `/dashboard`
+- **Brief de diseño / Fase 5**: `docs/design/FASE_5_DASHBOARD_BRIEF.md` + roadmap § Fase 5
 - **Archivos principales**:
   - `app/(pwa-app)/dashboard/page.tsx`
   - `app/(pwa-app)/dashboard/_components/mobile/dashboard-mobile.tsx`
@@ -116,12 +117,12 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Hooks/servicios/actions**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Tablas Supabase**: `cotizaciones`, `clients`, `projects`, `solicitudes_contacto`
 - **Flujo de datos**: Page -> `useDashboardViewModel` -> `useDashboardSummary` -> API `/api/dashboard/summary` -> `dashboardSummaryServerService` -> repositories directos
-- **Estados importantes**: isLoading, isReady, isEmpty; KPIs `quotedTotal`, `pdfGeneratedCount`, `approvedCount`, `totalCount`, `monthCount`, `approvedTodayCount`
-- **Donde editar UI**: `app/(pwa-app)/dashboard/_components/`
+- **Estados importantes**: isLoading, isReady, isEmpty; KPIs `quotedTotal`, `pdfGeneratedCount`, `approvedCount`, `totalCount`, `monthCount`, `approvedTodayCount`. Fase 5 V1 agrega cola **Por enviar** (Creada/PDF generado sin cierre de envío/aprobación) sin métrica hero de seguimiento.
+- **Donde editar UI**: `app/(pwa-app)/dashboard/_components/` (rediseño desktop tras aprobar brief visual)
 - **Donde editar logica**: `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`
 - **Donde editar persistencia**: `app/api/dashboard/summary/route.ts` (usa repositories directamente)
-- **Consideraciones UX**: Breakpoint 1024px desktop/mobile. KPI principal = **Valor cotizado** (`sum(total)`), no "pendientes". Alertas de respuesta publica (aprobada/rechazada/seguimiento) solo si existen; no usar pendientes como alerta dominante. Cards recientes usan estados neutrales via `cotizacion-display-state.service.ts`. No convertir esta vista en CRM ni tablero de cobros.
-- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" como metrica principal. No agregar KPIs mock o de fuentes mezcladas.
+- **Consideraciones UX**: Breakpoint 1024px. KPI hero = **Valor cotizado**. Cola accionable = **Por enviar** (no “seguimiento”). Alertas de respuesta publica solo si existen. Estados neutrales via `cotizacion-display-state.service.ts`. Premium sobrio; no forzar dark de marketing. No CRM ni cobros. UI nueva solo tras brief aprobado.
+- **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" ni seguimiento como alerta dominante. No agregar KPIs mock. No romper contrato mobile del summary.
 
 ---
 
@@ -290,7 +291,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-item-libre-form.tsx` (formulario standalone de item libre con preview)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (desktop embebido: editor comercial de pieza en 4 pasos Tipo/Sistema/Medidas/Precio; modo total usa cuaderno comercial)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-configuracion-movil.tsx` (configuracion mobile; oculta Material/Color perfil para `Espejo` y `Cubierta de mesa`)
-  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx` (seccion **Espejos** con espesores recomendados 3–6 mm)
+  - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx` (seccion **Espejos** con espesores recomendados 3?6 mm)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-configuracion.tsx` (material condicional desktop)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-vidrio.tsx` (bloque vidrio/espejos desktop)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-formulario-bloque-ajustes.tsx` (color avanzado solo con perfileria)
@@ -352,10 +353,11 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Prioridad de roadmap**:
   - Milestone 0: estabilizar cotizacion desktop actual.
   - Fase 1: dejar Quote Studio desktop impecable y vendible, exclusivamente desde `min-width: 1024px`.
-  - Milestone 3: validar constructor visual guiado sobre esta base, no antes.
-- **Futuro documentado, no activo**: configuracion visual versionada por item y catalogo privado/cubicacion como piloto posterior.
+  - Fase 3 V2 (activo, QA UX + smoke PDF + hydrate formal OK 2026-07-18): constructor visual guiado en wizard desktop Paso 2 tras **Personalizado** (Ventana: sistema; Puerta/otros: config o esquema) y al editar pieza (tab Configuración). Lecturas priorizan `cotizacion_item_visual_configs`. QA: `CHANGELOG_AGENT_MAP.md`.
+- **Activo**: catalogo privado (`cotizacion_line_templates`) con import Excel/CSV/PDF tecnico y cruce de precios sobre lineas tecnicas; sin precio no entra a cotizacion. Constructor visual guiado **V2** (árbol de regiones, `palilloLayout`, drag, UI maestro, PDF unificado, sync `cotizacion_item_visual_configs`; bridge `[gvc:]` base64url-safe; finalizar pieza con guided OK).
+- **Futuro documentado, no activo**: cubicacion asistida (Fase 4).
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio, incluyendo productos de cristal por m2 desde `cotizacion_line_templates`) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`) y productos de cat�logo `categoria='vidrio'`: no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3–6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio, incluyendo productos de cristal por m2 desde `cotizacion_line_templates`) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`) y productos de cat?logo `categoria='vidrio'`: no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3?6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
 - **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial; para Cristales tambien se codifica categoria/espesor/terminacion en `observaciones`. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
 
 ---

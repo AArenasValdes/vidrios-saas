@@ -44,6 +44,44 @@ export function canApplyQuoteStudioRecommendedPrice(summary: QuoteStudioFinancia
   return summary.hasCostBasis && summary.precioRecomendadoNeto > 0;
 }
 
+/** Delta venta actual vs precio recomendado (solo display). */
+export function buildQuoteStudioRecommendedDeltaLabel(
+  summary: QuoteStudioFinancialSummary
+): string | null {
+  if (!canApplyQuoteStudioRecommendedPrice(summary)) {
+    return null;
+  }
+
+  const delta = Math.round(summary.precioRecomendadoNeto - summary.precioFinalNeto);
+
+  if (delta === 0) {
+    return "La venta ya está en el precio recomendado.";
+  }
+
+  if (delta > 0) {
+    return `Faltan ${formatCurrency(delta)} para el recomendado.`;
+  }
+
+  return `Sobran ${formatCurrency(Math.abs(delta))} sobre el recomendado.`;
+}
+
+export function buildQuoteStudioApplyRecommendedLabel(
+  summary: QuoteStudioFinancialSummary
+): string {
+  if (!canApplyQuoteStudioRecommendedPrice(summary)) {
+    return "Usar precio recomendado";
+  }
+
+  const delta = Math.round(summary.precioRecomendadoNeto - summary.precioFinalNeto);
+
+  if (delta === 0) {
+    return "Usar precio recomendado";
+  }
+
+  const signed = delta > 0 ? `+${formatCurrency(delta)}` : formatCurrency(delta);
+  return `Usar precio recomendado · ${signed}`;
+}
+
 export function resolveQuoteStudioMarginValueClass(
   summary: QuoteStudioFinancialSummary,
   classes: {
@@ -142,6 +180,8 @@ export function QuoteStudioFinancialPanel({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const hasCostBasis = summary.hasCostBasis;
   const canApplyRecommended = canApplyQuoteStudioRecommendedPrice(summary);
+  const recommendedDeltaLabel = buildQuoteStudioRecommendedDeltaLabel(summary);
+  const applyRecommendedLabel = buildQuoteStudioApplyRecommendedLabel(summary);
   const marginValueClass = resolveQuoteStudioMarginValueClass(summary, {
     muted: d.financialValueMuted,
     danger: d.financialValueDanger,
@@ -152,6 +192,14 @@ export function QuoteStudioFinancialPanel({
     danger: d.financialValueDanger,
     good: d.financialValueGood,
   });
+  const marginDisplayValue = hasCostBasis
+    ? `${formatPct(summary.margenRealPct)} · obj. ${formatPct(summary.margenObjetivoRealPct)}`
+    : formatPct(summary.margenRealPct);
+  const detailToggleLabel = isDetailOpen
+    ? "Ocultar costos"
+    : hasCostBasis
+      ? "Ajustar costos y margen"
+      : "Agregar costos";
 
   return (
     <section
@@ -160,15 +208,15 @@ export function QuoteStudioFinancialPanel({
     >
       <div className={embedded ? d.financialEmbedded : d.financialCard}>
         <header className={embedded ? d.panelSectionHeading : d.financialHeaderCompact}>
-          <h3 className={embedded ? d.panelSectionTitle : d.financialTitle}>Rentabilidad</h3>
+          <div className={d.financialHeaderRow}>
+            <h3 className={embedded ? d.panelSectionTitle : d.financialTitle}>Rentabilidad</h3>
+            {!hasCostBasis ? (
+              <span className={d.financialStatusChip}>Sin costos</span>
+            ) : null}
+          </div>
         </header>
 
-        {!hasCostBasis ? (
-          <div className={d.financialUnavailable} role="status">
-            <strong>Rentabilidad no disponible</strong>
-            <p>Agrega costos para calcular margen y utilidad</p>
-          </div>
-        ) : (
+        {hasCostBasis ? (
           <div className={d.financialSummaryList} aria-label="Resumen de rentabilidad">
             <FinancialSummaryRow
               label="Precio de venta"
@@ -187,7 +235,7 @@ export function QuoteStudioFinancialPanel({
             />
             <FinancialSummaryRow
               label="Margen real"
-              value={formatPct(summary.margenRealPct)}
+              value={marginDisplayValue}
               tone="margin"
               valueClassName={marginValueClass}
             />
@@ -196,20 +244,45 @@ export function QuoteStudioFinancialPanel({
               value={formatCurrency(summary.precioRecomendadoNeto)}
               tone="recommended"
             />
+            {canApplyRecommended ? (
+              <div className={d.financialRecommendedAction}>
+                {recommendedDeltaLabel ? (
+                  <p className={d.financialDeltaHint}>{recommendedDeltaLabel}</p>
+                ) : null}
+                <button
+                  type="button"
+                  className={
+                    embedded ? d.financialApplyButtonGhost : d.financialApplyButton
+                  }
+                  onClick={onApplyRecommendedPrice}
+                >
+                  {applyRecommendedLabel}
+                </button>
+              </div>
+            ) : null}
           </div>
-        )}
+        ) : null}
 
         <button
           type="button"
-          className={d.financialDetailToggle}
+          className={`${d.financialDetailToggle} ${
+            !hasCostBasis && !isDetailOpen ? d.financialDetailToggleAccent : ""
+          }`}
           aria-expanded={isDetailOpen}
           onClick={() => setIsDetailOpen((current) => !current)}
         >
-          {isDetailOpen ? "Ocultar detalle de costos" : "Ver detalle de costos"}
+          {detailToggleLabel}
         </button>
 
         {isDetailOpen ? (
           <section className={d.financialDetailBlock} aria-label="Detalle de costos">
+            {!hasCostBasis ? (
+              <p className={d.financialDetailIntro}>
+                Ingresa mano de obra, traslado u otros. Materiales salen del costo
+                proveedor en piezas con margen.
+              </p>
+            ) : null}
+
             <div className={d.financialReadList}>
               <div className={d.financialReadRow}>
                 <span className={d.financialReadLabel}>Materiales</span>
@@ -273,16 +346,6 @@ export function QuoteStudioFinancialPanel({
               </FinancialEditRow>
             </div>
           </section>
-        ) : null}
-
-        {canApplyRecommended ? (
-          <button
-            type="button"
-            className={embedded ? d.financialApplyButtonGhost : d.financialApplyButton}
-            onClick={onApplyRecommendedPrice}
-          >
-            Usar precio recomendado
-          </button>
         ) : null}
       </div>
     </section>

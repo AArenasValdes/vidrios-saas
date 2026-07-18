@@ -18,12 +18,14 @@ import {
   isBowWindowConfiguration,
   isCorrederaSheetConfiguration,
   isDesktopPieceSystemStepComplete,
+  isPersonalizadoCompositionSelected,
   isGlassCatalogSelection,
   isGuillotinaOrCelosiaConfiguration,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
   SHEET_SCHEME_OPTIONS,
   shouldRequireProfileMaterialForComponent,
+  shouldShowGuidedComposerEntry,
   shouldShowSystemSelectionForComponent,
   shouldShowSheetSchemeForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
@@ -42,6 +44,15 @@ import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import {
+  GuidedVisualComposer,
+  ensureGuidedVisualDraft,
+} from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import {
+  describeGuidedVisualConfig,
+  type GuidedVisualConfig,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   ALCANCE_ESTRUCTURADO_SUBTYPE_OPTIONS,
 } from "../../_hooks/use-paso-dos-agregar-grupo";
@@ -87,6 +98,7 @@ type Props = {
   onNext: () => void;
   onGoToStep: (paso: PasoDosGrupoPaso) => void;
   onConfirm: () => void;
+  globalError?: string | null;
   onDuplicatePiece?: () => void;
   onDiscardDraft?: () => void;
   onRequestSwitchMode?: () => void;
@@ -112,6 +124,7 @@ type Props = {
   onSheetSchemeChange: (value: string) => void;
   onSheetVariantChange: (value: string) => void;
   onCustomSchemeDescriptionChange: (value: string) => void;
+  onGuidedVisualConfigChange?: (value: GuidedVisualConfig | null) => void;
   onVidrioChange: (value: string) => void;
   onCreateCustomGlass: (value: string) => void;
   onAnchoChange: (value: string) => void;
@@ -272,6 +285,18 @@ function getDesktopTypePreview(draft: PasoDosGrupoDraft, maxW = 128, maxH = 64) 
 }
 
 function getDesktopPiecePreview(draft: PasoDosGrupoDraft, maxW = 170, maxH = 92) {
+  if (draft.guidedVisualConfig) {
+    return renderGuidedVisualSvg(draft.guidedVisualConfig, {
+      maxW,
+      maxH,
+      colorHex: draft.colorHex,
+      variant: "thumbnail",
+      showSelection: false,
+      showLabels: false,
+      showDimensions: false,
+    });
+  }
+
   return generateComponentSVG({
     tipo: draft.subtipo,
     sistema: draft.sistema,
@@ -330,6 +355,7 @@ export function PasoDosAgregarGrupoSheet({
   onNext,
   onGoToStep,
   onConfirm,
+  globalError = null,
   onDuplicatePiece,
   onDiscardDraft,
   onRequestSwitchMode,
@@ -355,6 +381,7 @@ export function PasoDosAgregarGrupoSheet({
   onSheetSchemeChange,
   onSheetVariantChange,
   onCustomSchemeDescriptionChange,
+  onGuidedVisualConfigChange,
   onVidrioChange,
   onCreateCustomGlass,
   onAnchoChange,
@@ -395,6 +422,8 @@ export function PasoDosAgregarGrupoSheet({
     maxHeight: 440,
   });
   const [isDesktopGlassPopoverReady, setIsDesktopGlassPopoverReady] = useState(false);
+  const [isGuidedComposerOpen, setIsGuidedComposerOpen] = useState(false);
+  const [guidedDraft, setGuidedDraft] = useState<GuidedVisualConfig | null>(null);
   const desktopGlassTriggerRef = useRef<HTMLButtonElement | null>(null);
   const desktopGlassPopoverRef = useRef<HTMLDivElement | null>(null);
   const isOverlay = variant === "overlay";
@@ -914,7 +943,16 @@ export function PasoDosAgregarGrupoSheet({
       customSchemeDescription: draft.customSchemeDescription,
       isCustomScheme: draft.isCustomScheme,
       configurationOptionsCount: configurationOptions.length,
+      guidedVisualConfig: draft.guidedVisualConfig,
     });
+    const personalizadoPending =
+      isPersonalizadoCompositionSelected({
+        sistema: draft.sistema,
+        sheetScheme: draft.sheetScheme,
+        configuracion: draft.configuracion,
+      }) &&
+      !draft.guidedVisualConfig &&
+      draft.customSchemeDescription.trim() === "";
     const hasMeasurements =
       !isFreeValue &&
       Number(draft.ancho) > 0 &&
@@ -924,6 +962,19 @@ export function PasoDosAgregarGrupoSheet({
     const canFinishPiece = totalGlobalDetailMode
       ? hasType && hasSystem && hasMeasurements
       : hasType && hasSystem && hasMeasurements && isGrupoDraftPriceStepValid(draft);
+    const finishBlockedHint = !hasType
+      ? "Elige el tipo de pieza para continuar."
+      : personalizadoPending
+        ? "Abre el constructor o describe la composición personalizada."
+        : !hasSystem
+          ? "Completa sistema y composición para continuar."
+          : !hasMeasurements
+            ? totalGlobalDetailMode
+              ? "Completa medidas para finalizar el detalle."
+              : "Completa medidas para continuar."
+            : !totalGlobalDetailMode && !isGrupoDraftPriceStepValid(draft)
+              ? "Define un precio válido para finalizar la pieza."
+              : "Completa los datos pendientes para finalizar.";
     const isLineM2Pricing = draft.priceInputMode === "line_m2";
     const isUnitDirectPricing = draft.priceInputMode === "unit_direct";
     const isPieceTotalPricing = draft.priceInputMode === "piece_total";
@@ -934,20 +985,22 @@ export function PasoDosAgregarGrupoSheet({
     const quantityForPrice = Math.max(1, draft.cantidad);
     const showCustomizeUnitPrice = isLineM2Pricing && draft.precioAjustadoManual;
     const desktopStepCta: Record<1 | 2 | 3 | 4, string> = {
-      1: isFreeType ? "Continuar a detalle y valor" : "Continuar a sistema",
+      1: isFreeType ? "Continuar a detalle y valor" : "Continuar a composición",
       2: "Continuar a medidas",
       3: totalGlobalDetailMode ? "Agregar detalle al presupuesto" : "Continuar a precio",
       4: totalGlobalDetailMode ? "Agregar detalle al presupuesto" : "Finalizar pieza",
     };
     const desktopStepFooterHint: Record<1 | 2 | 3 | 4, string> = {
       1: "Elige el tipo de pieza para comenzar.",
-      2: isCorredera
-        ? "Define sistema, cantidad de hojas y composición."
-        : isBowWindow
-          ? "Elige apertura y composición del bow window."
-          : isGuillotinaOrCelosia
-            ? "Selecciona la configuración del sistema."
-            : "Confirma el sistema y su configuración.",
+      2: personalizadoPending
+        ? "Abre el constructor o describe la composición personalizada."
+        : isCorredera
+          ? "Define sistema, cantidad de hojas y composición."
+          : isBowWindow
+            ? "Elige apertura y composición del bow window."
+            : isGuillotinaOrCelosia
+              ? "Selecciona la configuración del sistema."
+              : "Confirma el sistema y su composición.",
       3: "Ingresa medidas, cantidad y terminaciones.",
       4: totalGlobalDetailMode
         ? "Revisa la configuracion antes de agregar el detalle."
@@ -977,7 +1030,7 @@ export function PasoDosAgregarGrupoSheet({
       },
       {
         id: 2,
-        label: "Sistema",
+        label: "Sistema y composición",
         instruction: desktopStepFooterHint[2],
         complete: hasSystem,
         locked: isFreeType || !hasType,
@@ -999,7 +1052,7 @@ export function PasoDosAgregarGrupoSheet({
     ];
     const stepHeadings: Record<1 | 2 | 3 | 4, string> = {
       1: "\u00bfQu\u00e9 est\u00e1s cotizando?",
-      2: "Elige el sistema",
+      2: "Sistema y composición",
       3: "Medidas y detalles",
       4: totalGlobalDetailMode ? "Configuracion" : "Define el precio",
     };
@@ -1419,45 +1472,20 @@ export function PasoDosAgregarGrupoSheet({
 
           {desktopStep === 2 ? (
             <div className={d.systemLayout}>
-              {showSystemSelection ? (
-                <div className={s.desktopPieceConfigBlock}>
-                  <span className={s.stepOneFieldLabel}>Elige el sistema</span>
-                  <div className={s.desktopChipGrid}>
-                    {systemOptions.map((option) => {
-                      const isActive = draft.sistema === option;
-
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
-                          onClick={() => onSistemaChange(option)}
-                        >
-                          {isActive ? <LuCheck aria-hidden /> : null}
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className={isBowWindow && configurationOptions.length > 0 ? d.systemTwoCol : undefined}>
-                {configurationOptions.length > 0 ? (
+              <div className={d.systemControls}>
+                {showSystemSelection ? (
                   <div className={s.desktopPieceConfigBlock}>
-                    <span className={s.stepOneFieldLabel}>
-                      {isBowWindow ? "Configuracion principal" : "Configuracion"}
-                    </span>
-                    <div className={s.desktopChipGrid}>
-                      {configurationOptions.map((option) => {
-                        const isActive = draft.configuracion === option;
+                    <span className={s.stepOneFieldLabel}>Sistema</span>
+                    <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
+                      {systemOptions.map((option) => {
+                        const isActive = draft.sistema === option;
 
                         return (
                           <button
                             key={option}
                             type="button"
                             className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
-                            onClick={() => onConfiguracionChange?.(option)}
+                            onClick={() => onSistemaChange(option)}
                           >
                             {isActive ? <LuCheck aria-hidden /> : null}
                             {option}
@@ -1468,131 +1496,243 @@ export function PasoDosAgregarGrupoSheet({
                   </div>
                 ) : null}
 
-                {isCorredera && draft.sistema ? (
-                  <div className={s.desktopPieceConfigBlock}>
-                    <span className={s.stepOneFieldLabel}>Cantidad de hojas</span>
-                    <div className={s.desktopChipGrid}>
-                      {SHEET_SCHEME_OPTIONS.map((option) => {
-                        const isActive = draft.sheetScheme === option;
+                <div
+                  className={
+                    isBowWindow && configurationOptions.length > 0
+                      ? d.systemTwoCol
+                      : undefined
+                  }
+                >
+                  {configurationOptions.length > 0 ? (
+                    <div className={s.desktopPieceConfigBlock}>
+                      <span className={s.stepOneFieldLabel}>
+                        {isBowWindow ? "Configuracion principal" : "Configuracion"}
+                      </span>
+                      <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
+                        {configurationOptions.map((option) => {
+                          const isActive = draft.configuracion === option;
 
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
-                            onClick={() => onSheetSchemeChange(option)}
-                          >
-                            {isActive ? <LuCheck aria-hidden /> : null}
-                            {option}
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
+                              onClick={() => onConfiguracionChange?.(option)}
+                            >
+                              {isActive ? <LuCheck aria-hidden /> : null}
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
+                  ) : null}
 
-              {isCorredera &&
-              draft.sheetScheme &&
-              draft.sheetScheme !== "Personalizado" &&
-              sheetVariantOptions.length > 0 ? (
-                <div className={s.desktopPieceConfigBlock}>
-                  <span className={s.stepOneFieldLabel}>Composicion</span>
-                  <div className={d.compositionCardGrid}>
-                    {sheetVariantOptions.map((option) => {
-                      const isActive = draft.sheetVariant === option;
+                  {isCorredera && draft.sistema ? (
+                    <div className={s.desktopPieceConfigBlock}>
+                      <span className={s.stepOneFieldLabel}>Cantidad de hojas</span>
+                      <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
+                        {SHEET_SCHEME_OPTIONS.map((option) => {
+                          const isActive = draft.sheetScheme === option;
 
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          className={`${d.compositionCard} ${isActive ? d.compositionCardActive : ""}`}
-                          onClick={() => onSheetVariantChange(option)}
-                        >
-                          <div
-                            className={d.compositionCardPreview}
-                            aria-hidden
-                            dangerouslySetInnerHTML={{
-                              __html: getCompositionPreviewSvg(draft, option, "variant"),
-                            }}
-                          />
-                          <p className={d.compositionCardLabel}>{shortenCompositionLabel(option, 36)}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
+                              onClick={() => onSheetSchemeChange(option)}
+                            >
+                              {isActive ? <LuCheck aria-hidden /> : null}
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
 
-              {!isCorredera && showSheetScheme && sheetSchemeOptions.length > 0 ? (
-                <div className={s.desktopPieceConfigBlock}>
-                  <span className={s.stepOneFieldLabel}>
-                    {isBowWindow ? "Composicion" : compositionSectionLabel}
-                  </span>
-                  {useVisualComposition ? (
+                {isCorredera &&
+                draft.sheetScheme &&
+                draft.sheetScheme !== "Personalizado" &&
+                sheetVariantOptions.length > 0 ? (
+                  <div className={s.desktopPieceConfigBlock}>
+                    <span className={s.stepOneFieldLabel}>Composicion</span>
                     <div className={d.compositionCardGrid}>
-                      {sheetSchemeOptions.map((option) => {
-                        const isActive = draft.sheetScheme === option;
+                      {sheetVariantOptions.map((option) => {
+                        const isActive = draft.sheetVariant === option;
 
                         return (
                           <button
                             key={option}
                             type="button"
                             className={`${d.compositionCard} ${isActive ? d.compositionCardActive : ""}`}
-                            onClick={() => onSheetSchemeChange(option)}
+                            onClick={() => onSheetVariantChange(option)}
                           >
                             <div
                               className={d.compositionCardPreview}
                               aria-hidden
                               dangerouslySetInnerHTML={{
-                                __html: getCompositionPreviewSvg(draft, option, "scheme"),
+                                __html: getCompositionPreviewSvg(draft, option, "variant"),
                               }}
                             />
-                            <p className={d.compositionCardLabel}>{shortenCompositionLabel(option, 40)}</p>
+                            <p className={d.compositionCardLabel}>
+                              {shortenCompositionLabel(option, 36)}
+                            </p>
                           </button>
                         );
                       })}
                     </div>
-                  ) : (
-                    <div className={s.desktopChipGrid}>
-                      {sheetSchemeOptions.map((option) => {
-                        const isActive = draft.sheetScheme === option;
+                  </div>
+                ) : null}
 
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
-                            onClick={() => onSheetSchemeChange(option)}
-                          >
-                            {isActive ? <LuCheck aria-hidden /> : null}
-                            {option}
-                          </button>
-                        );
-                      })}
+                {!isCorredera && showSheetScheme && sheetSchemeOptions.length > 0 ? (
+                  <div className={s.desktopPieceConfigBlock}>
+                    <span className={s.stepOneFieldLabel}>
+                      {isBowWindow ? "Composicion" : compositionSectionLabel}
+                    </span>
+                    {useVisualComposition ? (
+                      <div className={d.compositionCardGrid}>
+                        {sheetSchemeOptions.map((option) => {
+                          const isActive = draft.sheetScheme === option;
+
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`${d.compositionCard} ${isActive ? d.compositionCardActive : ""}`}
+                              onClick={() => onSheetSchemeChange(option)}
+                            >
+                              <div
+                                className={d.compositionCardPreview}
+                                aria-hidden
+                                dangerouslySetInnerHTML={{
+                                  __html: getCompositionPreviewSvg(draft, option, "scheme"),
+                                }}
+                              />
+                              <p className={d.compositionCardLabel}>
+                                {shortenCompositionLabel(option, 40)}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
+                        {sheetSchemeOptions.map((option) => {
+                          const isActive = draft.sheetScheme === option;
+
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`${s.desktopChoiceChip} ${isActive ? s.desktopChoiceChipActive : ""}`}
+                              onClick={() => onSheetSchemeChange(option)}
+                            >
+                              {isActive ? <LuCheck aria-hidden /> : null}
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {onGuidedVisualConfigChange &&
+                !isFreeValueComponentType(draft.subtipo) &&
+                shouldShowGuidedComposerEntry({
+                  tipo: draft.subtipo,
+                  material: draft.material,
+                  catalogCategoria: draft.catalogCategoria,
+                  sistema: draft.sistema,
+                  sheetScheme: draft.sheetScheme,
+                  configuracion: draft.configuracion,
+                  guidedVisualConfig: draft.guidedVisualConfig,
+                }) ? (
+                  <div className={s.desktopPieceConfigBlock}>
+                    <span className={s.stepOneFieldLabel}>Composición personalizada</span>
+                    <p className={d.systemHelperText}>
+                      {draft.sistema === "Personalizado"
+                        ? "Arma la ventana dividiendo módulos sobre el marco."
+                        : "Divide el marco y asigna el tipo de cada módulo."}
+                    </p>
+                    <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
+                      <button
+                        type="button"
+                        className={`${s.desktopChoiceChip} ${
+                          draft.guidedVisualConfig ? s.desktopChoiceChipActive : ""
+                        }`}
+                        onClick={() => {
+                          setGuidedDraft(
+                            ensureGuidedVisualDraft({
+                              current: draft.guidedVisualConfig,
+                              widthMm: draft.ancho ? Number(draft.ancho) : null,
+                              heightMm: draft.alto ? Number(draft.alto) : null,
+                            })
+                          );
+                          setIsGuidedComposerOpen(true);
+                        }}
+                      >
+                        {draft.guidedVisualConfig ? <LuCheck aria-hidden /> : null}
+                        {draft.guidedVisualConfig
+                          ? "Editar composición"
+                          : "Abrir constructor"}
+                      </button>
+                      {draft.guidedVisualConfig ? (
+                        <button
+                          type="button"
+                          className={s.desktopChoiceChip}
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              "Se quitará el dibujo del constructor. Puedes volver a abrirlo o elegir otro preset."
+                            );
+                            if (confirmed) {
+                              onGuidedVisualConfigChange(null);
+                            }
+                          }}
+                        >
+                          Quitar dibujo
+                        </button>
+                      ) : null}
                     </div>
-                  )}
-                </div>
-              ) : null}
+                    {draft.guidedVisualConfig ? (
+                      <p className={d.systemHelperText}>
+                        Composición aplicada ·{" "}
+                        {describeGuidedVisualConfig(draft.guidedVisualConfig)}
+                      </p>
+                    ) : personalizadoPending ? (
+                      <p className={d.systemHelperText}>
+                        Para continuar: abre el constructor o describe la composición abajo.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              {showCustomSchemeDescription ? (
-                <label className={`${s.field} ${s.desktopPieceConfigBlock}`}>
-                  <span className={s.stepOneFieldLabel}>Describe la composicion</span>
-                  <textarea
-                    className={s.textarea}
-                    rows={2}
-                    maxLength={FIELD_LIMITS.observaciones}
-                    value={draft.customSchemeDescription}
-                    onChange={(event) => onCustomSchemeDescriptionChange(event.target.value)}
-                    placeholder="Ej. 2 fijas laterales + 2 moviles centrales"
-                  />
-                </label>
-              ) : null}
+                {(showCustomSchemeDescription || personalizadoPending) &&
+                !draft.guidedVisualConfig ? (
+                  <label className={`${s.field} ${s.desktopPieceConfigBlock}`}>
+                    <span className={s.stepOneFieldLabel}>Describe la composición</span>
+                    <textarea
+                      className={`${s.textarea} ${d.systemDescribeInput}`}
+                      rows={2}
+                      maxLength={FIELD_LIMITS.observaciones}
+                      value={draft.customSchemeDescription}
+                      onChange={(event) =>
+                        onCustomSchemeDescriptionChange(event.target.value)
+                      }
+                      placeholder="Ej. 2 fijas laterales + 2 moviles centrales"
+                    />
+                  </label>
+                ) : null}
+              </div>
 
               {draft.sistema || draft.subtipo ? (
-                <div className={d.previewCompact} aria-hidden>
-                  <div dangerouslySetInnerHTML={{ __html: largePreviewSvg }} />
-                </div>
+                <aside className={d.systemPreviewPane} aria-hidden>
+                  <div className={d.previewCompact}>
+                    <div dangerouslySetInnerHTML={{ __html: largePreviewSvg }} />
+                  </div>
+                </aside>
               ) : null}
             </div>
           ) : null}
@@ -2152,20 +2292,31 @@ export function PasoDosAgregarGrupoSheet({
         </div>
 
         <footer className={s.desktopPieceFooter}>
-          {desktopStep === 1 ? (
-            <div className={d.footerStatusStack}>
-              <strong className={d.footerStatusStep}>Paso 1 de {totalGlobalDetailMode ? 3 : 4}</strong>
-              <span className={d.footerStatusHint}>{desktopStepFooterHint[1]}</span>
-            </div>
-          ) : (
-            <span className={s.desktopPieceFooterStatus}>
-              {desktopStep < maxDesktopStep
-                ? `Paso ${desktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${desktopStepFooterHint[desktopStep]}`
-                : canFinishPiece
-                  ? `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · Listo para agregar el detalle al presupuesto.`
-                  : `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · Completa medidas para finalizar el detalle.`}
-            </span>
-          )}
+          <div className={d.footerStatusStack}>
+            {desktopStep === 1 ? (
+              <>
+                <strong className={d.footerStatusStep}>Paso 1 de {totalGlobalDetailMode ? 3 : 4}</strong>
+                <span className={d.footerStatusHint}>{desktopStepFooterHint[1]}</span>
+              </>
+            ) : (
+              <span className={s.desktopPieceFooterStatus}>
+                {desktopStep < maxDesktopStep
+                  ? `Paso ${desktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${desktopStepFooterHint[desktopStep]}`
+                  : canFinishPiece
+                    ? `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${
+                        totalGlobalDetailMode
+                          ? "Listo para agregar el detalle al presupuesto."
+                          : "Listo para finalizar la pieza."
+                      }`
+                    : `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${finishBlockedHint}`}
+              </span>
+            )}
+            {globalError ? (
+              <div className={s.inlineError} role="alert">
+                {globalError}
+              </div>
+            ) : null}
+          </div>
           <div className={s.desktopPieceFooterActions}>
             {desktopStep > 1 ? (
               <button type="button" className={s.btnGhost} onClick={() => onGoToStep((desktopStep - 1) as PasoDosGrupoPaso)}>
@@ -2237,6 +2388,29 @@ export function PasoDosAgregarGrupoSheet({
         ) : null}
       </section>
       {desktopGlassPopover}
+      {guidedDraft && onGuidedVisualConfigChange ? (
+        <GuidedVisualComposer
+          open={isGuidedComposerOpen}
+          config={guidedDraft}
+          colorHex={draft.colorHex}
+          pieceTitle={draft.subtipo || draft.nombre || "Pieza"}
+          onChange={setGuidedDraft}
+          onApply={(next) => {
+            onGuidedVisualConfigChange(next);
+            setGuidedDraft(next);
+            setIsGuidedComposerOpen(false);
+          }}
+          onClose={() => setIsGuidedComposerOpen(false)}
+          onClear={
+            draft.guidedVisualConfig
+              ? () => {
+                  onGuidedVisualConfigChange(null);
+                  setIsGuidedComposerOpen(false);
+                }
+              : undefined
+          }
+        />
+      ) : null}
       </>
     );
   }
@@ -3170,10 +3344,36 @@ export function PasoDosAgregarGrupoSheet({
       </section>
   );
 
+  const guidedComposer =
+    guidedDraft && onGuidedVisualConfigChange ? (
+      <GuidedVisualComposer
+        open={isGuidedComposerOpen}
+        config={guidedDraft}
+        colorHex={draft.colorHex}
+        pieceTitle={[draft.subtipo, draft.sistema].filter(Boolean).join(" ") || "Pieza"}
+        onChange={setGuidedDraft}
+        onApply={(next) => {
+          onGuidedVisualConfigChange(next);
+          setGuidedDraft(next);
+          setIsGuidedComposerOpen(false);
+        }}
+        onClose={() => setIsGuidedComposerOpen(false)}
+        onClear={
+          draft.guidedVisualConfig
+            ? () => {
+                onGuidedVisualConfigChange(null);
+                setIsGuidedComposerOpen(false);
+              }
+            : undefined
+        }
+      />
+    ) : null;
+
   if (!isOverlay) {
     return (
       <>
         {sheet}
+        {guidedComposer}
         {isDiscardModalOpen ? (
           <div
             className={s.stepTwoConfirmOverlay}
@@ -3227,6 +3427,7 @@ export function PasoDosAgregarGrupoSheet({
   return (
     <div className={s.groupSheetOverlay} role="presentation" onClick={onClose}>
       {sheet}
+      {guidedComposer}
     </div>
   );
 }

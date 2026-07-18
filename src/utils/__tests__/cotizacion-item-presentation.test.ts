@@ -4,6 +4,10 @@ import {
   encodeCotizacionItemPresentationMeta,
   shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
+import {
+  createDefaultGuidedVisualConfig,
+  countLeafModules,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 describe("cotizacion-item-presentation", () => {
   it("debe codificar y decodificar la metadata visual del componente", () => {
@@ -82,6 +86,7 @@ describe("cotizacion-item-presentation", () => {
       palilloEnabled: false,
       palilloType: "",
       encodedMargenPct: null,
+      guidedVisualConfig: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -124,6 +129,7 @@ describe("cotizacion-item-presentation", () => {
       palilloEnabled: false,
       palilloType: "",
       encodedMargenPct: null,
+      guidedVisualConfig: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -318,6 +324,7 @@ describe("cotizacion-item-presentation", () => {
       palilloEnabled: false,
       palilloType: "",
       encodedMargenPct: null,
+      guidedVisualConfig: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -360,6 +367,7 @@ describe("cotizacion-item-presentation", () => {
       palilloEnabled: false,
       palilloType: "",
       encodedMargenPct: null,
+      guidedVisualConfig: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -392,5 +400,25 @@ describe("cotizacion-item-presentation", () => {
         raw: "Mantencion de ventanas",
       })
     );
+  });
+
+  it("debe codificar y decodificar guidedVisualConfig V2 en el bridge gvc", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1200 });
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      sistema: "Corredera",
+      sheetScheme: "Personalizado",
+      isCustomScheme: true,
+      pricingMode: "precio_directo",
+      guidedVisualConfig: guided,
+    });
+
+    expect(encoded).toContain("[gvc:2|");
+    const decoded = decodeCotizacionItemPresentationMeta(encoded);
+    expect(decoded.guidedVisualConfig).not.toBeNull();
+    expect(decoded.guidedVisualConfig?.widthMm).toBe(1500);
+    expect(decoded.guidedVisualConfig?.heightMm).toBe(1200);
+    expect(decoded.guidedVisualConfig && countLeafModules(decoded.guidedVisualConfig.root)).toBe(1);
   });
 });

@@ -27,6 +27,8 @@ import {
   type PreferredProvider,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { describeGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import {
   getLineTemplateGlassMetadata,
   type CotizacionLineTemplate,
@@ -112,6 +114,7 @@ export type PasoDosGrupoDraft = {
   mirrorPaneDirection: NonNullable<ComponentFormState["mirrorPaneDirection"]>;
   mirrorInteriorLine: NonNullable<ComponentFormState["mirrorInteriorLine"]>;
   mirrorCustomPaneCount: string;
+  guidedVisualConfig: GuidedVisualConfig | null;
   vidrio: string;
   lineTemplateId: string;
   referencia: string;
@@ -635,6 +638,102 @@ export function getConfigurationOptionsForSubtype(subtipo: string, sistema?: str
   return getConfigurationOptionsForComponent(subtipo);
 }
 
+/**
+ * Tras cambiar sistema/configuración: si hay guided visual y el tipo sigue admitiendo
+ * composición personalizada, reaplica flags Personalizado; si no, limpia guided + esquema.
+ */
+export function resolveCompositionPatchAfterSystemChange(input: {
+  draft: Pick<
+    PasoDosGrupoDraft,
+    | "subtipo"
+    | "sheetScheme"
+    | "sheetVariant"
+    | "customSchemeDescription"
+    | "isCustomScheme"
+    | "guidedVisualConfig"
+  >;
+  sistema: string;
+  configuracion: string;
+}): Pick<
+  PasoDosGrupoDraft,
+  | "sheetScheme"
+  | "sheetVariant"
+  | "customSchemeDescription"
+  | "isCustomScheme"
+  | "guidedVisualConfig"
+> {
+  const { draft, sistema, configuracion } = input;
+  const showSheetScheme = shouldShowSheetSchemeForComponent({
+    tipo: draft.subtipo,
+    sistema,
+  });
+  const sheetSchemeOptions = getSheetSchemeOptions({
+    tipo: draft.subtipo,
+    sistema,
+    configuracion,
+  });
+  const guided = draft.guidedVisualConfig;
+  const keepsProfileMaterial = shouldRequireProfileMaterialForComponent(draft.subtipo);
+
+  if (guided && keepsProfileMaterial) {
+    const personalizadoAllowed =
+      !showSheetScheme ||
+      sheetSchemeOptions.length === 0 ||
+      sheetSchemeOptions.includes("Personalizado");
+
+    if (personalizadoAllowed) {
+      return {
+        guidedVisualConfig: guided,
+        sheetScheme: showSheetScheme && sheetSchemeOptions.includes("Personalizado")
+          ? "Personalizado"
+          : draft.sheetScheme,
+        sheetVariant: "",
+        customSchemeDescription: describeGuidedVisualConfig(guided),
+        isCustomScheme: true,
+      };
+    }
+
+    return {
+      guidedVisualConfig: null,
+      sheetScheme: shouldAutoSelectFirstSheetScheme({
+        tipo: draft.subtipo,
+        sistema,
+      })
+        ? sheetSchemeOptions[0] ?? ""
+        : "",
+      sheetVariant: "",
+      customSchemeDescription: "",
+      isCustomScheme: false,
+    };
+  }
+
+  const shouldKeepComposition =
+    showSheetScheme && sheetSchemeOptions.includes(draft.sheetScheme);
+
+  if (shouldKeepComposition) {
+    return {
+      guidedVisualConfig: null,
+      sheetScheme: draft.sheetScheme,
+      sheetVariant: draft.sheetVariant,
+      customSchemeDescription: draft.customSchemeDescription,
+      isCustomScheme: draft.isCustomScheme,
+    };
+  }
+
+  return {
+    guidedVisualConfig: null,
+    sheetScheme: shouldAutoSelectFirstSheetScheme({
+      tipo: draft.subtipo,
+      sistema,
+    })
+      ? sheetSchemeOptions[0] ?? ""
+      : "",
+    sheetVariant: "",
+    customSchemeDescription: "",
+    isCustomScheme: false,
+  };
+}
+
 export function getGlassOptionsForSubtype(
   subtipo: string,
   customGlassOptions: readonly string[] = []
@@ -757,6 +856,7 @@ export function createInitialPasoDosGrupoDraft({
     mirrorPaneDirection: seedForm?.mirrorPaneDirection ?? "vertical",
     mirrorInteriorLine: seedForm?.mirrorInteriorLine ?? "fine",
     mirrorCustomPaneCount: seedForm?.mirrorCustomPaneCount ?? "",
+    guidedVisualConfig: seedForm?.guidedVisualConfig ?? null,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     referencia,
@@ -781,88 +881,99 @@ export function buildPasoDosGrupoComponentForm({
   provider,
   draft,
 }: BuildGroupComponentFormParams) {
+  const syncedDraft = syncDraftTemplatePricing(draft);
+  const resolvedUnitCost =
+    syncedDraft.priceInputMode === "piece_total"
+      ? syncedDraft.precio
+      : (() => {
+          const unitPrice = resolveGrupoDraftUnitPrice(syncedDraft);
+          return unitPrice > 0 ? String(unitPrice) : syncedDraft.precio;
+        })();
+
   const baseForm = buildSuggestedComponentForm({
     items,
-    tipo: draft.subtipo,
+    tipo: syncedDraft.subtipo,
     provider,
     pricingMode,
     current: {
-      tipo: draft.subtipo,
-      hojasBase: draft.hojasBase,
-      material: draft.material,
-      catalogCategoria: draft.catalogCategoria,
-      catalogEspesor: draft.catalogEspesor,
-      catalogTerminacion: draft.catalogTerminacion,
-      colorHex: draft.colorHex,
-      referencia: composeComponentReference(draft.sistema, draft.configuracion),
-      sistema: draft.sistema,
-      configuracion: draft.configuracion,
-      sheetScheme: draft.sheetScheme,
-      sheetVariant: draft.sheetVariant,
-      customSchemeDescription: draft.customSchemeDescription,
-      isCustomScheme: draft.isCustomScheme,
-      mirrorFormat: draft.mirrorFormat,
-      mirrorPaneCount: draft.mirrorPaneCount,
-      mirrorPaneDirection: draft.mirrorPaneDirection,
-      mirrorInteriorLine: draft.mirrorInteriorLine,
-      mirrorCustomPaneCount: draft.mirrorCustomPaneCount,
-      nombre: draft.nombre ?? "",
-      descripcion: draft.descripcion ?? "",
-      pricingMode: draft.pricingMode,
-      vidrio: draft.vidrio,
-      ancho: draft.ancho,
-      alto: draft.alto,
-      cantidad: String(Math.max(1, draft.cantidad)),
-      costoProveedorUnitario: draft.precio,
-      margenPct: draft.pricingMode === "precio_directo" ? "0" : draft.margenPct || "0",
-      precioAjustadoManual: draft.precioAjustadoManual,
+      tipo: syncedDraft.subtipo,
+      hojasBase: syncedDraft.hojasBase,
+      material: syncedDraft.material,
+      catalogCategoria: syncedDraft.catalogCategoria,
+      catalogEspesor: syncedDraft.catalogEspesor,
+      catalogTerminacion: syncedDraft.catalogTerminacion,
+      colorHex: syncedDraft.colorHex,
+      referencia: composeComponentReference(syncedDraft.sistema, syncedDraft.configuracion),
+      sistema: syncedDraft.sistema,
+      configuracion: syncedDraft.configuracion,
+      sheetScheme: syncedDraft.sheetScheme,
+      sheetVariant: syncedDraft.sheetVariant,
+      customSchemeDescription: syncedDraft.customSchemeDescription,
+      isCustomScheme: syncedDraft.isCustomScheme,
+      mirrorFormat: syncedDraft.mirrorFormat,
+      mirrorPaneCount: syncedDraft.mirrorPaneCount,
+      mirrorPaneDirection: syncedDraft.mirrorPaneDirection,
+      mirrorInteriorLine: syncedDraft.mirrorInteriorLine,
+      mirrorCustomPaneCount: syncedDraft.mirrorCustomPaneCount,
+      guidedVisualConfig: syncedDraft.guidedVisualConfig,
+      nombre: syncedDraft.nombre ?? "",
+      descripcion: syncedDraft.descripcion ?? "",
+      pricingMode: syncedDraft.pricingMode,
+      vidrio: syncedDraft.vidrio,
+      ancho: syncedDraft.ancho,
+      alto: syncedDraft.alto,
+      cantidad: String(Math.max(1, syncedDraft.cantidad)),
+      costoProveedorUnitario: resolvedUnitCost,
+      margenPct: syncedDraft.pricingMode === "precio_directo" ? "0" : syncedDraft.margenPct || "0",
+      precioAjustadoManual: syncedDraft.precioAjustadoManual,
       loteCantidad: "1",
     },
   });
 
   return syncTemplatePricingInComponentForm({
     ...baseForm,
-    hojasBase: draft.hojasBase,
-    material: draft.material,
-    catalogCategoria: draft.catalogCategoria,
-    catalogEspesor: draft.catalogEspesor,
-    catalogTerminacion: draft.catalogTerminacion,
-    colorHex: draft.colorHex,
+    hojasBase: syncedDraft.hojasBase,
+    material: syncedDraft.material,
+    catalogCategoria: syncedDraft.catalogCategoria,
+    catalogEspesor: syncedDraft.catalogEspesor,
+    catalogTerminacion: syncedDraft.catalogTerminacion,
+    colorHex: syncedDraft.colorHex,
     referencia:
-      safeTrim(draft.referencia) ||
-      composeComponentReference(draft.sistema, draft.configuracion),
-    sistema: draft.sistema,
-    configuracion: draft.configuracion,
-    sheetScheme: draft.sheetScheme,
-    sheetVariant: draft.sheetVariant,
-    customSchemeDescription: draft.customSchemeDescription,
-    isCustomScheme: draft.isCustomScheme,
-    mirrorFormat: draft.mirrorFormat,
-    mirrorPaneCount: draft.mirrorPaneCount,
-    mirrorPaneDirection: draft.mirrorPaneDirection,
-    mirrorInteriorLine: draft.mirrorInteriorLine,
-    mirrorCustomPaneCount: draft.mirrorCustomPaneCount,
-    nombre: draft.nombre ?? "",
-    descripcion: draft.descripcion ?? "",
-    lineTemplateId: draft.lineTemplateId,
-    pricingMode: draft.pricingMode,
-    vidrio: draft.vidrio,
-    ancho: draft.ancho,
-    alto: draft.alto,
-    cantidad: String(Math.max(1, draft.cantidad)),
-    costoProveedorUnitario: draft.precio,
-    margenPct: draft.pricingMode === "precio_directo" ? "0" : draft.margenPct || "0",
-    precioPorM2: draft.precioPorM2,
-    minimoCobrable: draft.minimoCobrable,
-    redondeoPrecio: draft.redondeoPrecio || "1000",
+      safeTrim(syncedDraft.referencia) ||
+      composeComponentReference(syncedDraft.sistema, syncedDraft.configuracion),
+    sistema: syncedDraft.sistema,
+    configuracion: syncedDraft.configuracion,
+    sheetScheme: syncedDraft.sheetScheme,
+    sheetVariant: syncedDraft.sheetVariant,
+    customSchemeDescription: syncedDraft.customSchemeDescription,
+    isCustomScheme: syncedDraft.isCustomScheme,
+    mirrorFormat: syncedDraft.mirrorFormat,
+    mirrorPaneCount: syncedDraft.mirrorPaneCount,
+    mirrorPaneDirection: syncedDraft.mirrorPaneDirection,
+    mirrorInteriorLine: syncedDraft.mirrorInteriorLine,
+    mirrorCustomPaneCount: syncedDraft.mirrorCustomPaneCount,
+    guidedVisualConfig: syncedDraft.guidedVisualConfig,
+    nombre: syncedDraft.nombre ?? "",
+    descripcion: syncedDraft.descripcion ?? "",
+    lineTemplateId: syncedDraft.lineTemplateId,
+    pricingMode: syncedDraft.pricingMode,
+    vidrio: syncedDraft.vidrio,
+    ancho: syncedDraft.ancho,
+    alto: syncedDraft.alto,
+    cantidad: String(Math.max(1, syncedDraft.cantidad)),
+    costoProveedorUnitario: resolvedUnitCost,
+    margenPct: syncedDraft.pricingMode === "precio_directo" ? "0" : syncedDraft.margenPct || "0",
+    precioPorM2: syncedDraft.precioPorM2,
+    minimoCobrable: syncedDraft.minimoCobrable,
+    redondeoPrecio: syncedDraft.redondeoPrecio || "1000",
     precioAjustadoManual:
-      draft.priceInputMode === "unit_direct" || draft.priceInputMode === "piece_total"
+      syncedDraft.priceInputMode === "unit_direct" || syncedDraft.priceInputMode === "piece_total"
         ? true
-        : draft.precioAjustadoManual,
+        : syncedDraft.precioAjustadoManual,
     loteCantidad: "1",
-    palilloEnabled: draft.palilloEnabled,
-    palilloType: draft.palilloType,
-    costInputScope: draft.priceInputMode === "piece_total" ? "group_total" : "unit",
+    palilloEnabled: syncedDraft.palilloEnabled,
+    palilloType: syncedDraft.palilloType,
+    costInputScope: syncedDraft.priceInputMode === "piece_total" ? "group_total" : "unit",
   });
 }
 
@@ -1143,22 +1254,35 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const selectSubtipo = (subtipo: string) => {
-    setDraft((current) => ({
-      ...current,
-      ...buildPasoDosGrupoSelectionPatch({
+    setDraft((current) => {
+      const nextPatch = buildPasoDosGrupoSelectionPatch({
         current,
         items: params.items,
         pricingMode: params.pricingMode,
         provider: params.provider,
         subtipo,
-      }),
-      sistema: "",
-      configuracion: "",
-      sheetScheme: "",
-      sheetVariant: "",
-      customSchemeDescription: "",
-      isCustomScheme: false,
-    }));
+      });
+      const keepsProfileMaterial = shouldRequireProfileMaterialForComponent(subtipo);
+
+      return {
+        ...current,
+        ...nextPatch,
+        sistema: "",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        guidedVisualConfig: keepsProfileMaterial ? current.guidedVisualConfig : null,
+        ...(keepsProfileMaterial && current.guidedVisualConfig
+          ? {
+              sheetScheme: "Personalizado",
+              isCustomScheme: true,
+              customSchemeDescription: describeGuidedVisualConfig(current.guidedVisualConfig),
+            }
+          : {}),
+      };
+    });
   };
 
   const selectCantidad = (cantidad: number) => {
@@ -1272,63 +1396,52 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => {
       const nextConfigOptions = getConfigurationOptionsForSubtype(current.subtipo, sistema);
       const nextConfig = nextConfigOptions[0] || "";
-      const sheetSchemeOptions = getSheetSchemeOptions({
-        tipo: current.subtipo,
+      const compositionPatch = resolveCompositionPatchAfterSystemChange({
+        draft: current,
         sistema,
         configuracion: nextConfig,
       });
-      const shouldKeepComposition =
-        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema }) &&
-        sheetSchemeOptions.includes(current.sheetScheme);
+      const isPersonalizadoSistema = sistema === "Personalizado";
 
       return {
         ...current,
         sistema,
         configuracion: nextConfig,
-        ...(shouldKeepComposition
-          ? {}
-          : {
-              sheetScheme: shouldAutoSelectFirstSheetScheme({
-                tipo: current.subtipo,
-                sistema,
-              })
-                ? sheetSchemeOptions[0] ?? ""
-                : "",
-              sheetVariant: "",
-              customSchemeDescription: "",
-              isCustomScheme: false,
-            }),
+        ...compositionPatch,
+        ...(isPersonalizadoSistema
+          ? {
+              isCustomScheme: true,
+              sheetScheme: compositionPatch.sheetScheme || current.sheetScheme || "",
+              customSchemeDescription:
+                compositionPatch.customSchemeDescription ||
+                current.customSchemeDescription ||
+                "",
+            }
+          : {}),
       };
     });
   };
 
   const updateConfiguracion = (configuracion: string) => {
     setDraft((current) => {
-      const sheetSchemeOptions = getSheetSchemeOptions({
-        tipo: current.subtipo,
+      const leavingGuidedPersonalizado =
+        Boolean(current.guidedVisualConfig) &&
+        current.configuracion === "Personalizado" &&
+        configuracion !== "Personalizado";
+      const draftForPatch = leavingGuidedPersonalizado
+        ? { ...current, guidedVisualConfig: null }
+        : current;
+      const compositionPatch = resolveCompositionPatchAfterSystemChange({
+        draft: draftForPatch,
         sistema: current.sistema,
         configuracion,
       });
-      const shouldKeepComposition =
-        shouldShowSheetSchemeForComponent({ tipo: current.subtipo, sistema: current.sistema }) &&
-        sheetSchemeOptions.includes(current.sheetScheme);
 
       return {
         ...current,
         configuracion,
-        ...(shouldKeepComposition
-          ? {}
-          : {
-              sheetScheme: shouldAutoSelectFirstSheetScheme({
-                tipo: current.subtipo,
-                sistema: current.sistema,
-              })
-                ? sheetSchemeOptions[0] ?? ""
-                : "",
-              sheetVariant: "",
-              customSchemeDescription: "",
-              isCustomScheme: false,
-            }),
+        ...compositionPatch,
+        ...(leavingGuidedPersonalizado ? { guidedVisualConfig: null } : {}),
       };
     });
   };
@@ -1350,13 +1463,24 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
   };
 
   const updateSheetScheme = (sheetScheme: string) => {
-    setDraft((current) => ({
-      ...current,
-      sheetScheme,
-      sheetVariant: "",
-      customSchemeDescription: sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
-      isCustomScheme: sheetScheme === "Personalizado",
-    }));
+    setDraft((current) => {
+      const leavingGuided =
+        Boolean(current.guidedVisualConfig) && sheetScheme !== "Personalizado";
+
+      return {
+        ...current,
+        sheetScheme,
+        sheetVariant: "",
+        customSchemeDescription:
+          sheetScheme === "Personalizado" ? current.customSchemeDescription : "",
+        isCustomScheme: sheetScheme === "Personalizado",
+        ...(leavingGuided
+          ? {
+              guidedVisualConfig: null,
+            }
+          : {}),
+      };
+    });
   };
 
   const updateSheetVariant = (sheetVariant: string) => {
@@ -1370,6 +1494,53 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
 
   const updateCustomSchemeDescription = (customSchemeDescription: string) => {
     setDraft((current) => ({ ...current, customSchemeDescription }));
+  };
+
+  const updateGuidedVisualConfig = (
+    guidedVisualConfig: PasoDosGrupoDraft["guidedVisualConfig"]
+  ) => {
+    setDraft((current) => {
+      if (!guidedVisualConfig) {
+        const keepsPersonalizadoChoice =
+          current.sheetScheme === "Personalizado" ||
+          current.configuracion === "Personalizado";
+
+        return {
+          ...current,
+          guidedVisualConfig: null,
+          customSchemeDescription: keepsPersonalizadoChoice
+            ? ""
+            : current.customSchemeDescription,
+          isCustomScheme: keepsPersonalizadoChoice,
+        };
+      }
+
+      const sheetSchemeOptions = getSheetSchemeOptions({
+        tipo: current.subtipo,
+        sistema: current.sistema,
+        configuracion: current.configuracion,
+      });
+      const configOptions = getConfigurationOptionsForSubtype(
+        current.subtipo,
+        current.sistema
+      );
+
+      return {
+        ...current,
+        guidedVisualConfig,
+        ancho: String(guidedVisualConfig.widthMm),
+        alto: String(guidedVisualConfig.heightMm),
+        isCustomScheme: true,
+        sheetScheme: sheetSchemeOptions.includes("Personalizado")
+          ? "Personalizado"
+          : current.sheetScheme,
+        configuracion: configOptions.includes("Personalizado")
+          ? "Personalizado"
+          : current.configuracion,
+        sheetVariant: "",
+        customSchemeDescription: describeGuidedVisualConfig(guidedVisualConfig),
+      };
+    });
   };
 
   const updateMirrorFormat = (mirrorFormat: PasoDosGrupoDraft["mirrorFormat"]) => {
@@ -1748,6 +1919,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateSheetScheme,
     updateSheetVariant,
     updateCustomSchemeDescription,
+    updateGuidedVisualConfig,
     updateMirrorFormat,
     updateMirrorPaneCount,
     updateMirrorCustomPaneCount,

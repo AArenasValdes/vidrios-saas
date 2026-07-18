@@ -24,6 +24,8 @@ import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templat
 import {
   getLineTemplateGlassMetadata,
   mergeLineTemplateGlassMetadata,
+  clearNeedsCommercialPriceFlag,
+  lineTemplateNeedsCommercialPrice,
   CotizacionLineTemplate,
   CotizacionLineTemplateCategoria,
   CotizacionLineTemplateMaterial,
@@ -265,6 +267,24 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     const material = isGlassDraft ? "Cristal" : draft.material;
     if (!material) return;
 
+    const editingTemplate =
+      sheetMode === "edit" && editingTemplateId !== null
+        ? templates.find((template) => template.id === editingTemplateId)
+        : undefined;
+
+    const catalogMetadata = clearNeedsCommercialPriceFlag(
+      mergeLineTemplateGlassMetadata(
+        editingTemplate?.catalogMetadata,
+        isGlassDraft
+          ? {
+              espesor: draft.espesor,
+              terminacion: draft.terminacion,
+            }
+          : {}
+      ),
+      pricePerM2
+    );
+
     const payload = {
       nombre: draft.nombre,
       categoria: draft.categoria as CotizacionLineTemplateCategoria,
@@ -282,15 +302,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       proveedor: draft.proveedor || null,
       vigenciaDesde: draft.vigenciaDesde || null,
       vigenciaHasta: draft.vigenciaHasta || null,
-      catalogMetadata: mergeLineTemplateGlassMetadata(
-        undefined,
-        isGlassDraft
-          ? {
-              espesor: draft.espesor,
-              terminacion: draft.terminacion,
-            }
-          : {}
-      ),
+      catalogMetadata,
       isActive: draft.isActive,
     };
 
@@ -498,6 +510,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             const glassDescription = [glassMetadata.espesor, glassMetadata.terminacion]
               .filter(Boolean)
               .join(" · ");
+            const needsPrice = lineTemplateNeedsCommercialPrice(template);
 
             return (
               <article
@@ -523,6 +536,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       <span className={s.materialPill} data-material={template.material}>
                         {LINE_TEMPLATE_CATEGORIA_LABELS[template.categoria]}
                       </span>
+                      {needsPrice ? (
+                        <span className={s.pendingPricePill}>Sin precio</span>
+                      ) : null}
                     </div>
                     <span className={s.cardTapHint}>
                       Editar
@@ -569,11 +585,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
                 <div className={s.priceRow}>
                   <strong>
-                    {formatLineTemplatePriceLabel(
-                      template.unidadCobro,
-                      template.precioM2Sugerido,
-                      formatCurrency
-                    )}
+                    {needsPrice
+                      ? "Completar precio"
+                      : formatLineTemplatePriceLabel(
+                          template.unidadCobro,
+                          template.precioM2Sugerido,
+                          formatCurrency
+                        )}
                   </strong>
                   <span>
                     {template.costoBase > 0 ? `Costo ${formatCurrency(template.costoBase)}` : "Sin costo"}

@@ -21,6 +21,7 @@ import {
   shouldShowSystemSelectionForComponent,
   isDesktopPieceSystemStepComplete,
   isWorkflowItemEffectivelyComplete,
+  shouldShowGuidedComposerEntry,
   syncTemplatePricingInComponentForm,
   validateComponentForm,
   validateFreeValueItemForm,
@@ -31,6 +32,7 @@ import { calculateComponentItem } from "../../services/cotizaciones-workflow.ser
 import type { CotizacionLineTemplate } from "../../line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 function createLinePricingForm(
   overrides: Partial<ComponentFormState> = {}
@@ -896,14 +898,17 @@ describe("workflow-ui paso 2", () => {
       "Bow Window",
       "Guillotina",
       "Celosía",
+      "Personalizado",
     ]);
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Guillotina" })).toEqual([
       "Guillotina simple",
       "Guillotina doble",
+      "Personalizado",
     ]);
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Celosía" })).toEqual([
       "Celosía completa",
       "Celosía con paño fijo inferior",
+      "Personalizado",
     ]);
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Guillotina" })).not.toContain("2 hojas");
     expect(getSheetSchemeOptions({ tipo: "Ventana", sistema: "Celosía" })).not.toContain("3 hojas");
@@ -1003,6 +1008,140 @@ describe("workflow-ui paso 2", () => {
     expect(shouldShowSystemSelectionForComponent("Paño fijo")).toBe(false);
   });
 
+  it("considera completa la composición cuando hay guidedVisualConfig aunque sheetScheme esté vacío", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Ventana",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        configurationOptionsCount: 0,
+        guidedVisualConfig: guided,
+      })
+    ).toBe(true);
+
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Ventana",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: false,
+        configurationOptionsCount: 0,
+        guidedVisualConfig: null,
+      })
+    ).toBe(false);
+  });
+
+  it("muestra el constructor solo tras Personalizado o si ya hay composición guiada", () => {
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Puerta",
+        material: "Aluminio",
+        configuracion: "1 hoja vaiven",
+        sheetScheme: "",
+        guidedVisualConfig: null,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Puerta",
+        material: "Aluminio",
+        configuracion: "Personalizado",
+        sheetScheme: "",
+        guidedVisualConfig: null,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Ventana",
+        material: "Aluminio",
+        sistema: "Personalizado",
+        configuracion: "",
+        sheetScheme: "",
+        guidedVisualConfig: null,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Ventana",
+        material: "Aluminio",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "Personalizado",
+        guidedVisualConfig: null,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Espejo",
+        material: "Cristal",
+        catalogCategoria: "vidrio",
+        configuracion: "Personalizado",
+        sheetScheme: "",
+        guidedVisualConfig: null,
+      })
+    ).toBe(false);
+  });
+
+  it("no completa el paso sistema con Personalizado sin composición ni descripción", () => {
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Ventana",
+        sistema: "Personalizado",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: true,
+        configurationOptionsCount: 0,
+      })
+    ).toBe(false);
+  });
+
+  it("completa Personalizado con descripción o con guidedVisualConfig", () => {
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Ventana",
+        sistema: "Personalizado",
+        configuracion: "",
+        sheetScheme: "",
+        sheetVariant: "",
+        customSchemeDescription: "2 fijas + 1 corredera",
+        isCustomScheme: true,
+        configurationOptionsCount: 0,
+      })
+    ).toBe(true);
+
+    expect(
+      isDesktopPieceSystemStepComplete({
+        subtipo: "Ventana",
+        sistema: "Corredera",
+        configuracion: "",
+        sheetScheme: "Personalizado",
+        sheetVariant: "",
+        customSchemeDescription: "",
+        isCustomScheme: true,
+        configurationOptionsCount: 0,
+        guidedVisualConfig: createDefaultGuidedVisualConfig({
+          widthMm: 1200,
+          heightMm: 1000,
+        }),
+      })
+    ).toBe(true);
+  });
+
   it("no debe mostrar selector de sistema para vidrio o cristal", () => {
     expect(shouldShowSystemSelectionForComponent("Vidrio / Cristal")).toBe(false);
   });
@@ -1065,6 +1204,33 @@ describe("workflow-ui paso 2", () => {
         catalogCategoria: form.catalogCategoria,
       }).map((template) => template.nombre)
     ).toEqual(["Cristal templado 10 mm"]);
+  });
+
+  it("debe ocultar lineas sin precio comercial en selectores de cotizacion", () => {
+    const templates = [
+      {
+        id: "al-1",
+        nombre: "Serie con precio",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 80000,
+      },
+      {
+        id: "al-2",
+        nombre: "Serie tecnica sin precio",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 0,
+        catalogMetadata: { needsCommercialPrice: true },
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(
+      filterLineTemplatesForComponent(templates, {
+        tipo: "Ventana",
+        material: "Aluminio",
+      }).map((template) => template.nombre)
+    ).toEqual(["Serie con precio"]);
   });
 
   it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {

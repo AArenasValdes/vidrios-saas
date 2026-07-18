@@ -12,6 +12,8 @@ Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones a
 
 Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.
 
+Si la tarea es rediseño del dashboard Fase 5, leer tambien `docs/design/FASE_5_DASHBOARD_BRIEF.md` (no implementar UI hasta aprobar direccion visual).
+
 ## Orden recomendado de lectura
 
 1. **`../VENTORA_DESKTOP_TALLER_ROADMAP.md`** - Documento rector de desktop taller y orden de milestones
@@ -24,12 +26,13 @@ Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visua
 8. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
 9. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
 10. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
+11. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
 
 ## Foco actual
 
 - Desktop taller, no CRM generico.
-- Prioridad: estabilizar cotizacion desktop, tablero comercial real, Quote Studio desktop, luego constructor visual guiado.
-- Catalogo privado y cubicacion quedan fuera del alcance inmediato.
+- Quote Studio + constructor V2 cerrados para demo (2026-07-18).
+- Siguiente: Fase 5 dashboard — valor cotizado + cola **Por enviar**; brief en `docs/design/FASE_5_DASHBOARD_BRIEF.md`; UI tras aprobar diseño externo. Cubicacion fuera del alcance inmediato.
 
 ## Advertencia critica
 

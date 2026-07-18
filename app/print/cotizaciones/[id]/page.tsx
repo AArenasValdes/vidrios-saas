@@ -38,6 +38,8 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { ensureGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
 import { splitDescriptionChecklistItems } from "./_utils/description-checklist";
@@ -778,6 +780,7 @@ export default function CotizacionPrintPage() {
         mirrorPaneCount,
         mirrorPaneDirection,
         mirrorInteriorLine,
+        guidedVisualConfig,
       } = decodeCotizacionItemPresentationMeta(item.observaciones);
       const colorName = getColorName(colorHex);
       const surface = formatSurface(item.ancho, item.alto, item.cantidad);
@@ -856,7 +859,26 @@ export default function CotizacionPrintPage() {
         specs,
         drawingSvg: isFreePrintItem(item)
           ? ""
-          : generateComponentSVG({
+          : (() => {
+              try {
+                if (guidedVisualConfig) {
+                  return renderGuidedVisualSvg(
+                    ensureGuidedVisualConfig(guidedVisualConfig),
+                    {
+                      maxW: 470,
+                      maxH: 210,
+                      variant: "pdf",
+                      colorHex,
+                      showSelection: false,
+                      showLabels: false,
+                      showDimensions: true,
+                    }
+                  );
+                }
+              } catch {
+                // fallback legacy abajo
+              }
+              return generateComponentSVG({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
@@ -878,7 +900,8 @@ export default function CotizacionPrintPage() {
           mirrorPaneCount,
           mirrorPaneDirection,
           mirrorInteriorLine,
-        }),
+        });
+            })(),
       });
     }
 
@@ -1559,6 +1582,24 @@ export default function CotizacionPrintPage() {
                   (() => {
                     const fallbackDrawingMeta =
                       fallbackMeta ?? decodeCotizacionItemPresentationMeta(item.observaciones);
+                    try {
+                      if (fallbackDrawingMeta.guidedVisualConfig) {
+                        return renderGuidedVisualSvg(
+                          ensureGuidedVisualConfig(fallbackDrawingMeta.guidedVisualConfig),
+                          {
+                            maxW: 470,
+                            maxH: 210,
+                            variant: "pdf",
+                            colorHex,
+                            showSelection: false,
+                            showLabels: false,
+                            showDimensions: true,
+                          }
+                        );
+                      }
+                    } catch {
+                      // legacy abajo
+                    }
                     return generateComponentSVG({
                     tipo: item.tipo,
                     sistema: fallbackDrawingMeta.sistema || presentation?.sistema,

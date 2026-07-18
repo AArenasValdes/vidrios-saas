@@ -37,6 +37,7 @@ export const COMPONENT_CATALOG = [
           "Bow Window",
           "Guillotina",
           "Celosía",
+          "Personalizado",
         ],
         configuracionesPorSistema: {
           "Bow Window": [
@@ -476,6 +477,7 @@ export function getExtendedSystemOptionsForComponent(tipo: string): readonly str
 
 export function getSystemDisplayLabel(sistema: string): string {
   const labels: Record<string, string> = {
+    Personalizado: "Personalizado",
     Abatible: "Abatir",
     "Bow Window": "Bow window",
     Vaiven: "Vaivén",

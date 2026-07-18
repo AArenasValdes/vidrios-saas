@@ -82,6 +82,62 @@ describe("line-template-import.service", () => {
     );
   });
 
+  it("debe detectar cruce de precio con linea tecnica existente", () => {
+    const rows: LineTemplateSpreadsheetRow[] = [
+      { nombre: "15", "precio venta": "145000", material: "Aluminio" },
+    ];
+
+    const mapping: LineTemplateColumnMapping = {
+      nombre: "nombre",
+      precioVenta: "precio venta",
+      material: "material",
+    };
+
+    const preview = buildLineTemplateImportPreview({
+      rows,
+      mapping,
+      existingTemplates: [
+        {
+          id: 7,
+          organizationId: 1,
+          nombre: "Linea 15 - Ventana corredera",
+          categoria: "aluminio",
+          unidadCobro: "m2",
+          material: "Aluminio",
+          vidrioPrincipalRecomendado: null,
+          costoBase: 0,
+          precioM2Sugerido: 0,
+          minimoCobrable: 0,
+          redondeoPrecio: 1000,
+          mermaPct: 0,
+          margenObjetivoPct: null,
+          proveedor: "Arquetipo",
+          vigenciaDesde: null,
+          vigenciaHasta: null,
+          catalogMetadata: {
+            catalogSource: "pdf_technical",
+            technicalLineCode: "15",
+            needsCommercialPrice: true,
+            technicalProfileCodes: "1501:RIEL",
+          },
+          isActive: true,
+          sortOrder: 0,
+          creadoEn: null,
+          actualizadoEn: null,
+          eliminadoEn: null,
+        },
+      ],
+    });
+
+    const summary = countImportPreviewSummary(preview);
+    expect(preview[0]?.status).toBe("price_match");
+    expect(preview[0]?.payload?.nombre).toBe("Linea 15 - Ventana corredera");
+    expect(preview[0]?.payload?.precioM2Sugerido).toBe(145000);
+    expect(preview[0]?.payload?.catalogMetadata.technicalLineCode).toBe("15");
+    expect(preview[0]?.payload?.catalogMetadata.needsCommercialPrice).toBeUndefined();
+    expect(summary.priceMatch).toBe(1);
+  });
+
   it("debe detectar duplicados e invalidos en el preview", () => {
     const rows: LineTemplateSpreadsheetRow[] = [
       { nombre: "Existente", "precio venta": "100000" },

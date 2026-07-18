@@ -6,11 +6,13 @@ import {
   publicCotizacionApprovalRepository,
   type PublicCotizacionApprovalRepository,
 } from "@/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository";
+import { createCotizacionItemVisualConfigsService } from "@/features/cotizaciones/visual-composer/services/cotizacion-item-visual-configs.service";
 import { resolveOrganizationProfile } from "@/features/organization-profile/services/organization-profile.service";
 import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type PublicCotizacionApprovalServiceDeps = {
   repository?: PublicCotizacionApprovalRepository;
@@ -144,7 +146,7 @@ async function buildPublicApprovalQuoteView(
     return null;
   }
 
-  const items = payload.items.map((item, index) => ({
+  const mappedItems = payload.items.map((item, index) => ({
     id: String(item.id),
     codigo: item.codigo?.trim() || `I${index + 1}`,
     tipoItem: item.tipo_item ?? null,
@@ -160,6 +162,21 @@ async function buildPublicApprovalQuoteView(
     precioUnitario: Number(item.precio_unitario),
     precioTotal: Number(item.subtotal),
   }));
+
+  let items = mappedItems;
+  try {
+    const visualConfigsService = createCotizacionItemVisualConfigsService(createAdminClient());
+    items = await visualConfigsService.hydrateItemsObservaciones({
+      organizationId: payload.cotizacion.organization_id,
+      items: mappedItems,
+    });
+  } catch (visualError) {
+    console.error(
+      "No se pudo hidratar visual configs en presupuesto publico (bridge [gvc:] si existe).",
+      visualError
+    );
+  }
+
   const pricingMode = normalizeQuotePricingMode(payload.cotizacion.pricing_mode);
   const subtotal =
     pricingMode === "total_global"

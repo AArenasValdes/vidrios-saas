@@ -83,11 +83,11 @@ Ultima actualizacion operativa: 2026-06-30
   - `solicitudes` navega a `canales`
   - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
 - **Objetivo inmediato**:
-  1. estabilizar cotizacion desktop;
-  2. dejar dashboard comercial con datos reales;
-  3. dejar Quote Studio desktop impecable y vendible;
-  4. luego validar constructor visual guiado;
-  5. catalogos privados y cubicacion quedan como piloto posterior.
+ 1. Quote Studio desktop + constructor V2 cerrados para demo (2026-07-18);
+ 2. **Fase 5 dashboard**: brief cerrado (`docs/design/FASE_5_DASHBOARD_BRIEF.md`) — valor cotizado + cola **Por enviar**; sin seguimiento hero; rediseño UI tras aprobar dirección visual externa;
+ 3. no abrir cubicacion (Fase 4) ni CRM/seguimiento como foco;
+ 4. catalogos privados ya activos.
+ 5. (reserva) elevar shell desktop solo si el brief de diseño lo incluye.
 - **Nueva pasada cerrada en cotizaciones**:
   - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
   - nueva tabla activa `cotizacion_line_templates`
