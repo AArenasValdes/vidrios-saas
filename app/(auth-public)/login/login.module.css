@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
-
 .root {
   --login-bg: #0b0f17;
   --login-bg-strong: #050505;
@@ -46,7 +44,7 @@
   max-width: 500px;
   display: grid;
   gap: 30px;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
 }
 
 .brand {
@@ -54,7 +52,7 @@
   align-items: center;
   width: fit-content;
   color: var(--login-text);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
 }
 
 .brandLogo {
@@ -83,7 +81,7 @@
 .formTitle {
   margin: 0;
   color: var(--login-text);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: clamp(2.35rem, 3.4vw, 3.15rem);
   line-height: 0.96;
   font-weight: 800;
@@ -93,7 +91,7 @@
 .formSubtitle {
   margin: 0;
   color: var(--login-muted);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 1rem;
   line-height: 1.7;
   max-width: 32ch;
@@ -119,7 +117,7 @@
 
 .fieldLabel {
   color: var(--login-muted-strong);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -144,7 +142,7 @@
   border: 1px solid var(--login-border);
   background: var(--login-surface-strong);
   color: var(--login-text);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 1rem;
   font-weight: 500;
   outline: none;
@@ -217,7 +215,7 @@
   align-items: center;
   gap: 10px;
   color: var(--login-muted-strong);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.94rem;
   cursor: pointer;
   user-select: none;
@@ -268,7 +266,7 @@
 
 .textLink {
   color: #93beff;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.94rem;
   font-weight: 600;
   text-decoration: none;
@@ -292,7 +290,7 @@
   border: 1px solid rgba(217, 92, 92, 0.36);
   background: rgba(217, 92, 92, 0.12);
   color: #ffd4d4;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.92rem;
   line-height: 1.5;
 }
@@ -339,7 +337,7 @@
   border: 1px solid rgba(73, 163, 120, 0.34);
   background: rgba(73, 163, 120, 0.12);
   color: #d5ffe8;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.92rem;
   line-height: 1.5;
 }
@@ -368,7 +366,7 @@
 .successState h2 {
   margin: 0 0 8px;
   color: #f1fff7;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 1.35rem;
   line-height: 1.1;
   letter-spacing: -0.03em;
@@ -377,7 +375,7 @@
 .successState p {
   margin: 0;
   color: #bfebd1;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.95rem;
   line-height: 1.55;
 }
@@ -398,7 +396,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
@@ -523,7 +521,7 @@
 .helperText {
   margin: -4px 0 0;
   color: #8ea2bf;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.84rem;
   line-height: 1.55;
 }
@@ -543,7 +541,7 @@
 .recoveryText,
 .recoveryHint {
   margin: 0;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   line-height: 1.5;
 }
 
@@ -569,7 +567,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
@@ -601,7 +599,7 @@
 .installHelpTitle,
 .installHelpText {
   margin: 0;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   line-height: 1.45;
 }
 
@@ -632,7 +630,7 @@
   gap: 7px;
   background: rgba(11, 15, 23, 0.68);
   color: #edf4ff;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
@@ -645,7 +643,7 @@
 .signupText {
   margin: 0;
   color: var(--login-muted);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 0.95rem;
   text-align: center;
 }
@@ -697,7 +695,7 @@
 .visualTitle {
   margin: 0;
   color: #e6e8eb;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: clamp(1.85rem, 2.4vw, 2.7rem);
   line-height: 1.08;
   font-weight: 700;
@@ -708,7 +706,7 @@
 .visualDescription {
   margin: 0;
   color: rgba(230, 232, 235, 0.76);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   font-size: 1rem;
   line-height: 1.72;
 }

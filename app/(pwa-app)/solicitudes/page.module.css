@@ -4,6 +4,10 @@
   padding-bottom: 20px;
 }
 
+.desktopHeader {
+  display: none;
+}
+
 .heroCard,
 .filterCard,
 .alertCard,
@@ -974,5 +978,581 @@
   .listToolbar,
   .selectionBar {
     grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .root {
+    gap: 14px;
+    padding-bottom: 32px;
+    color: #091426;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .desktopHeader {
+    min-height: 76px;
+    padding: 0 2px;
+    border-bottom: 1px solid #dce3ec;
+    display: flex;
+    align-items: center;
+  }
+
+  .desktopTitle {
+    margin: 0;
+    color: #091426;
+    font-size: 20px;
+    font-weight: 740;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .desktopSubtitle {
+    margin: 4px 0 0;
+    color: #647184;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .heroCard,
+  .filterCard,
+  .card,
+  .emptyState,
+  .errorBanner,
+  .feedbackBanner {
+    border-color: #dce3ec;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(9, 20, 38, 0.04);
+  }
+
+  .heroCard {
+    grid-template-columns: minmax(250px, 1fr) auto;
+    align-items: center;
+    gap: 20px;
+    padding: 13px 14px;
+    border-radius: 12px;
+  }
+
+  .heroTop {
+    align-items: center;
+  }
+
+  .heroEyebrow {
+    color: #647184;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.055em;
+  }
+
+  .heroTotal {
+    margin-top: 3px;
+    color: #091426;
+    font-family: inherit;
+    font-size: 24px;
+    font-weight: 760;
+    letter-spacing: -0.035em;
+  }
+
+  .heroTotal span {
+    font-size: 0.7em;
+    font-weight: 720;
+  }
+
+  .heroSub {
+    margin-top: 3px;
+    color: #647184;
+    font-size: 11.5px;
+  }
+
+  .todayBadge {
+    min-height: 24px;
+    border: 1px solid rgba(22, 155, 98, 0.18);
+    border-radius: 7px;
+    background: #f1faf6;
+    color: #11794d;
+    font-family: inherit;
+    font-size: 10px;
+  }
+
+  .heroActions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .heroActionPrimary,
+  .heroActionSecondary {
+    min-height: 36px;
+    padding: 0 11px;
+    border-radius: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+
+  .heroActionPrimary {
+    grid-column: auto;
+    background: #1e88ff;
+  }
+
+  .heroActionPrimary:hover {
+    background: #1565c0;
+  }
+
+  .heroActionSecondary {
+    border-color: #dce3ec;
+    background: #ffffff;
+    color: #526174;
+  }
+
+  .filtersSection {
+    grid-template-columns: minmax(260px, 1.3fr) minmax(90px, 0.3fr) minmax(440px, 1.8fr);
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    padding: 10px 12px;
+    border: 1px solid #dce3ec;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(9, 20, 38, 0.035);
+  }
+
+  .searchBar {
+    min-height: 42px;
+    padding: 0 11px;
+    border-color: #dce3ec;
+    border-radius: 8px;
+    background: #f7f9fc;
+    box-shadow: none;
+  }
+
+  .searchIcon {
+    width: 15px;
+    height: 15px;
+    color: #7c899b;
+  }
+
+  .searchInput {
+    color: #091426;
+    font-size: 12px;
+  }
+
+  .searchBar:focus-within {
+    border-color: rgba(30, 136, 255, 0.46);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.1);
+  }
+
+  .filterGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .filterCard {
+    min-height: 42px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #526174;
+    box-shadow: none;
+  }
+
+  .filterCardAll {
+    background: #f7f9fc;
+  }
+
+  .filterBlue,
+  .filterGreen,
+  .filterGold,
+  .filterGray {
+    background: #f7f9fc;
+  }
+
+  .filterBlue .filterInlineCount,
+  .filterBlue .filterInlineLabel,
+  .filterGreen .filterInlineCount,
+  .filterGreen .filterInlineLabel,
+  .filterGold .filterInlineCount,
+  .filterGold .filterInlineLabel,
+  .filterGray .filterInlineCount,
+  .filterGray .filterInlineLabel {
+    color: #526174;
+  }
+
+  .filterInline {
+    gap: 6px;
+  }
+
+  .filterInlineCount {
+    min-width: auto;
+    height: auto;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #091426;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 740;
+  }
+
+  .filterInlineLabel {
+    color: #526174;
+    font-size: 10.5px;
+    font-weight: 650;
+  }
+
+  .filterActive {
+    border-color: rgba(30, 136, 255, 0.4);
+    background: #f1f7fe;
+    box-shadow: inset 0 0 0 1px rgba(30, 136, 255, 0.08);
+    transform: none;
+  }
+
+  .filterActive .filterInlineCount,
+  .filterActive .filterInlineLabel {
+    color: #1565c0;
+  }
+
+  .filterCheck {
+    width: 16px;
+    height: 16px;
+    background: #1e88ff;
+  }
+
+  .feedbackBanner,
+  .errorBanner {
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .listToolbar {
+    min-height: 52px;
+    padding: 8px 12px;
+    border: 1px solid #dce3ec;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .listToolbarCopy strong,
+  .selectionBar strong {
+    color: #091426;
+    font-size: 13px;
+  }
+
+  .listToolbarCopy span,
+  .selectionBar span {
+    color: #647184;
+    font-size: 11px;
+  }
+
+  .inlineSelectButton,
+  .ghostAction {
+    min-height: 32px;
+    padding: 0 10px;
+    border-color: #dce3ec;
+    border-radius: 8px;
+    color: #1565c0;
+    font-size: 11px;
+    font-weight: 650;
+    box-shadow: none;
+  }
+
+  .selectionBar {
+    padding: 8px 12px;
+    border: 1px solid #dce3ec;
+    border-radius: 10px;
+    background: #f7f9fc;
+  }
+
+  .bulkDeleteBtn {
+    min-height: 32px;
+    border-radius: 8px;
+    background: #fff7f7;
+    font-size: 11px;
+    box-shadow: none;
+  }
+
+  .card {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .cardSelectable {
+    padding-left: 48px;
+  }
+
+  .cardSelectButton {
+    left: 12px;
+    top: 14px;
+  }
+
+  .cardTop {
+    gap: 12px;
+  }
+
+  .cardIdentity {
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(30, 136, 255, 0.12);
+    border-radius: 9px;
+    background: #f1f7fe;
+    color: #1565c0;
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  .name {
+    color: #091426;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 720;
+    letter-spacing: -0.02em;
+  }
+
+  .workText {
+    margin-top: 2px;
+    color: #647184;
+    font-size: 12px;
+  }
+
+  .statusPill {
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font-size: 9.5px;
+    font-weight: 650;
+  }
+
+  .statusBlue {
+    border-color: rgba(30, 136, 255, 0.16);
+    background: #f1f7fe;
+    color: #1565c0;
+  }
+
+  .statusGreen {
+    border-color: rgba(22, 155, 98, 0.18);
+    background: #f1faf6;
+    color: #11794d;
+  }
+
+  .statusGold {
+    border-color: rgba(166, 106, 18, 0.18);
+    background: #fff9ed;
+    color: #89570e;
+  }
+
+  .statusGray {
+    border-color: #e1e6ed;
+    background: #f7f9fc;
+    color: #647184;
+  }
+
+  .dateText {
+    color: #647184;
+    font-size: 10px;
+  }
+
+  .infoRows {
+    gap: 4px;
+  }
+
+  .infoRow {
+    gap: 7px;
+    color: #526174;
+    font-size: 11.5px;
+  }
+
+  .infoRow svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .messageBubble {
+    min-height: 48px;
+    padding: 9px 10px;
+    border: 1px solid #e4eaf1;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #526174;
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  .cardActions {
+    flex-wrap: nowrap;
+    gap: 7px;
+  }
+
+  .cardActions > .primaryAction,
+  .cardActions > .secondaryAction,
+  .cardActions > .whatsappAction {
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .cardActions > .iconAction {
+    flex: 0 0 36px;
+  }
+
+  .primaryAction,
+  .secondaryAction,
+  .iconAction {
+    min-height: 36px;
+    border-radius: 8px;
+    font-size: 11px;
+    box-shadow: none;
+  }
+
+  .primaryWhatsappAction {
+    background: #169b62;
+    box-shadow: none;
+  }
+
+  .secondaryBlueAction {
+    border-color: #dce3ec;
+    background: #ffffff;
+    color: #1565c0;
+    box-shadow: none;
+  }
+
+  .iconAction {
+    border-color: #dce3ec;
+    background: #ffffff;
+    color: #647184;
+  }
+
+  .menuTrigger {
+    min-width: 36px;
+  }
+
+  .menuPanel {
+    width: 184px;
+    padding: 5px;
+    border-color: #dce3ec;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(9, 20, 38, 0.14);
+  }
+
+  .menuSectionLabel {
+    font-family: inherit;
+    font-size: 9.5px;
+  }
+
+  .menuAction {
+    min-height: 34px;
+    padding: 0 9px;
+    border-radius: 7px;
+    background: transparent;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  .menuAction:hover {
+    background: #f6faff;
+  }
+
+  .menuActionActive {
+    background: #f1f7fe;
+    color: #1565c0;
+  }
+
+  .loadMoreBtn {
+    grid-column: 1 / -1;
+    min-height: 40px;
+    border-color: #dce3ec;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #1565c0;
+    font-size: 12px;
+    box-shadow: none;
+  }
+
+  .loadingCard,
+  .emptyState {
+    border-color: #dce3ec;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(9, 20, 38, 0.04);
+  }
+
+  .emptyTitle {
+    color: #091426;
+    font-family: inherit;
+    font-size: 20px;
+  }
+
+  .modalOverlay {
+    background: rgba(9, 20, 38, 0.42);
+    backdrop-filter: none;
+  }
+
+  .modalCard {
+    padding: 24px;
+    border-color: #dce3ec;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 20px 48px rgba(9, 20, 38, 0.18);
+  }
+
+  .modalIconWrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+
+  .modalTitle {
+    font-family: inherit;
+    font-size: 21px;
+    letter-spacing: -0.025em;
+  }
+
+  .modalDescription {
+    font-size: 13px;
+    line-height: 1.65;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .heroCard {
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .heroActions {
+    justify-content: flex-end;
+  }
+
+  .heroActionPrimary,
+  .heroActionSecondary {
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .filtersSection {
+    grid-template-columns: minmax(220px, 1fr) 86px minmax(390px, 1.7fr);
+  }
+
+  .filterInlineLabel {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filterCard,
+  .selectionCircle {
+    transition: none;
   }
 }

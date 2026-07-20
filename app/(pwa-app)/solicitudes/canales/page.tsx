@@ -18,23 +18,40 @@ export default function LeadChannelsPage() {
 
   return (
     <PremiumPageReveal className={s.root}>
-      <PremiumPageSection className={s.heroCard} data-onboarding-target="canales-hero">
-        <div className={s.heroCopy}>
-          <span className={s.heroEyebrow}>Área operativa / Solicitudes</span>
-          <h1 className={s.heroTitle}>Comparte tu página y recibe solicitudes por el canal correcto</h1>
-          <p className={s.heroText}>
-            Elige dónde la vas a publicar y copia lo que necesitas sin enredos.
-          </p>
-        </div>
-
-        <div className={s.heroActions}>
-          <Link href="/solicitudes" className={s.heroActionSecondary} prefetch={false}>
+      <PremiumPageSection className={s.desktopHeader} data-onboarding-target="canales-hero">
+        <div className={s.desktopHeaderActions}>
+          <Link href="/solicitudes" className={s.headerSecondary} prefetch={false}>
             <LuArrowLeft aria-hidden />
             Volver
           </Link>
           <Link
-            href="/configuracion/empresa"
-            className={s.heroActionSecondary}
+            href="/configuracion/pagina-venta"
+            className={s.headerPrimary}
+            prefetch={false}
+          >
+            <LuArrowUpRight aria-hidden />
+            Editar página
+          </Link>
+        </div>
+      </PremiumPageSection>
+
+      <PremiumPageSection className={s.mobileHero}>
+        <div className={s.mobileHeroCopy}>
+          <span className={s.mobileEyebrow}>Solicitudes</span>
+          <h1 className={s.mobileTitle}>Comparte tu página por canal</h1>
+          <p className={s.mobileText}>
+            Copia el link correcto y sigue de dónde llegan las solicitudes.
+          </p>
+        </div>
+
+        <div className={s.mobileHeroActions}>
+          <Link href="/solicitudes" className={s.headerSecondary} prefetch={false}>
+            <LuArrowLeft aria-hidden />
+            Volver
+          </Link>
+          <Link
+            href="/configuracion/pagina-venta"
+            className={s.headerPrimary}
             prefetch={false}
           >
             <LuArrowUpRight aria-hidden />

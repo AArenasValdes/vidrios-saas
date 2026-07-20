@@ -335,19 +335,14 @@ export default function SolicitudesPage() {
     () => visibleSolicitudes.map((item) => item.solicitud.id),
     [visibleSolicitudes]
   );
-  const selectedCount = selectedIds.size;
+  const selectedVisibleIds = useMemo(
+    () => visibleSolicitudIds.filter((id) => selectedIds.has(id)),
+    [selectedIds, visibleSolicitudIds]
+  );
+  const selectedCount = selectedVisibleIds.length;
   const allVisibleSelected =
     visibleSolicitudIds.length > 0 &&
     visibleSolicitudIds.every((id) => selectedIds.has(id));
-
-  useEffect(() => {
-    setSelectedIds((current) => {
-      const visible = new Set(visibleSolicitudIds);
-      const next = new Set(Array.from(current).filter((id) => visible.has(id)));
-
-      return next.size === current.size ? current : next;
-    });
-  }, [visibleSolicitudIds]);
 
   useEffect(() => {
     if (!menuSolicitudId) {
@@ -493,7 +488,7 @@ export default function SolicitudesPage() {
   );
 
   const handleConfirmBulkDelete = useCallback(async () => {
-    const ids = Array.from(selectedIds);
+    const ids = selectedVisibleIds;
 
     if (ids.length === 0) {
       return;
@@ -516,7 +511,7 @@ export default function SolicitudesPage() {
     } finally {
       setIsBulkDeleting(false);
     }
-  }, [deleteSolicitudes, selectedIds]);
+  }, [deleteSolicitudes, selectedVisibleIds]);
 
   const handleCreateQuoteFromSolicitud = useCallback(
     (solicitud: SolicitudContacto) => {
@@ -570,6 +565,15 @@ export default function SolicitudesPage() {
 
   return (
     <PremiumPageReveal className={s.root}>
+      <PremiumPageSection className={s.desktopHeader}>
+        <div>
+          <h1 className={s.desktopTitle}>Solicitudes</h1>
+          <p className={s.desktopSubtitle}>
+            Centraliza los contactos que llegan desde tu página pública.
+          </p>
+        </div>
+      </PremiumPageSection>
+
       <PremiumPageSection className={s.heroCard}>
         <div className={s.heroTop}>
           <div>

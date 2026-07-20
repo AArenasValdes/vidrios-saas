@@ -58,6 +58,19 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
     void loadTemplates();
   }, [loadTemplates]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleFocus = () => {
+      void loadTemplates();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [loadTemplates]);
+
   const createTemplate = useCallback(
     async (input: Omit<CreateCotizacionLineTemplateInput, "organizationId">) => {
       if (!organizacionId) {

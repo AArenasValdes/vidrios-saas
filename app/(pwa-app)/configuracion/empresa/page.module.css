@@ -196,6 +196,26 @@
   letter-spacing: -0.04em;
 }
 
+.desktopPreviewStack {
+  display: contents;
+}
+
+.desktopHeader {
+  display: none;
+}
+
+.desktopReadinessCard {
+  display: none;
+}
+
+.desktopUtilityCard {
+  display: none;
+}
+
+.quoteBrandStrip {
+  display: none;
+}
+
 .publicUrl,
 .triggerCopy p,
 .modeCard span,
@@ -401,6 +421,24 @@
   padding: 14px 16px;
   display: grid;
   gap: 10px;
+}
+
+.utilityCard.desktopUtilityCard {
+  display: none;
+}
+
+.utilityCardHeader {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.utilityCardHint {
+  margin: 0;
+  color: #667085;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .utilityActions {
@@ -1063,5 +1101,787 @@
 
   .commercialInfoGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .root {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0;
+    gap: 14px;
+    padding: 0 0 32px;
+    color: #091426;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", sans-serif;
+  }
+
+  .desktopHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 76px;
+    min-width: 0;
+    padding: 0 2px;
+    border-bottom: 1px solid #dce3ec;
+  }
+
+  .desktopHeader > div {
+    display: grid;
+    min-width: 0;
+  }
+
+  .desktopHeader h1 {
+    margin: 0;
+    color: #091426;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 740;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+
+  .desktopHeader p {
+    margin: 4px 0 0;
+    max-width: 64ch;
+    color: #647184;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .publicCard,
+  .accordion,
+  .scheduleNote,
+  .utilityCard,
+  .desktopReadinessCard {
+    border-color: rgba(213, 221, 231, 0.92);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow:
+      0 1px 2px rgba(9, 20, 38, 0.04),
+      0 18px 40px rgba(15, 23, 42, 0.035);
+  }
+
+  .publicCard {
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .cardEyebrow {
+    color: #647184;
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.065em;
+  }
+
+  .previewModePill,
+  .publishPill,
+  .statePill,
+  .savedPill {
+    min-height: 23px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 9.5px;
+    font-weight: 650;
+  }
+
+  .previewModePill,
+  .savedPill {
+    border-color: rgba(30, 136, 255, 0.14);
+    background: #f1f7fe;
+    color: #1565c0;
+  }
+
+  .statePill {
+    border-color: #e1e6ed;
+    background: #f7f9fc;
+    color: #647184;
+  }
+
+  .statePill[data-complete="true"] {
+    border-color: rgba(22, 155, 98, 0.17);
+    background: #f1faf6;
+    color: #11794d;
+  }
+
+  .quotePreviewBox {
+    position: relative;
+    gap: 14px;
+    padding: 15px;
+    border-color: rgba(213, 221, 231, 0.96);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.98)),
+      #f7f9fc;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .quoteBrandStrip {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--brand);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 8px 18px color-mix(in srgb, var(--brand) 22%, transparent);
+  }
+
+  .quoteDocBar {
+    padding-bottom: 8px;
+    border-bottom-color: #dce3ec;
+  }
+
+  .quoteDocBar span {
+    color: #647184;
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  .quoteAvailability {
+    min-height: 28px;
+    padding: 0 9px;
+    border: 1px solid rgba(22, 155, 98, 0.14);
+    border-radius: 7px;
+    background: #f1faf6;
+    color: #11794d;
+    font-size: 10.5px;
+    font-weight: 650;
+  }
+
+  .quoteDot {
+    width: 7px;
+    height: 7px;
+    background: #169b62;
+    box-shadow: 0 0 0 3px rgba(22, 155, 98, 0.1);
+  }
+
+  .quoteIdentity {
+    gap: 14px;
+    align-items: center;
+  }
+
+  .quoteLogoFrame {
+    width: 90px;
+    min-width: 90px;
+    padding: 7px;
+    border-color: #dce3ec;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .quoteLogoFrame .publicLogo {
+    width: 74px;
+    height: 74px;
+    border-radius: 8px;
+  }
+
+  .publicLogo {
+    font-family: inherit;
+  }
+
+  .quoteIdentityCopy {
+    gap: 6px;
+  }
+
+  .quoteIdentityCopy strong {
+    color: #091426;
+    font-size: clamp(20px, 1.8vw, 25px);
+    font-weight: 760;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
+
+  .quoteMetaList {
+    gap: 6px;
+  }
+
+  .quoteMetaList > span {
+    gap: 7px;
+    color: #526174;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .quoteMetaList svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .quoteSupportCopy {
+    color: #647184;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .quotePaymentCard {
+    padding: 11px 12px;
+    border-color: rgba(213, 221, 231, 0.96);
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .quotePaymentCard strong {
+    color: #334155;
+    font-size: 11px;
+  }
+
+  .quotePaymentCard span {
+    color: #647184;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .accordionList {
+    gap: 10px;
+  }
+
+  .accordion {
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  .accordionOpen {
+    border-color: rgba(30, 136, 255, 0.28);
+    box-shadow:
+      0 1px 2px rgba(9, 20, 38, 0.04),
+      0 18px 40px rgba(15, 23, 42, 0.045);
+  }
+
+  .accordionTrigger {
+    min-height: 74px;
+    padding: 13px 15px;
+    gap: 14px;
+  }
+
+  .accordionTrigger:hover {
+    background: linear-gradient(180deg, rgba(249, 251, 253, 0.96), rgba(255, 255, 255, 0.96));
+  }
+
+  .accordionTrigger:focus-visible {
+    outline: 3px solid rgba(30, 136, 255, 0.14);
+    outline-offset: -3px;
+  }
+
+  .triggerMain {
+    gap: 10px;
+    align-items: center;
+  }
+
+  .triggerIcon {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e1e8f0;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #526174;
+  }
+
+  .triggerIcon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .accordionOpen .triggerIcon {
+    border-color: rgba(30, 136, 255, 0.16);
+    background: #f1f7fe;
+    color: #1565c0;
+  }
+
+  .triggerCopy {
+    gap: 2px;
+  }
+
+  .triggerCopy strong {
+    color: #091426;
+    font-size: 13.5px;
+    font-weight: 720;
+  }
+
+  .triggerCopy p {
+    max-width: 72ch;
+    color: #647184;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .triggerMeta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .chevron {
+    width: 15px;
+    height: 15px;
+  }
+
+  .accordionInner {
+    gap: 12px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .accordionOpen .accordionInner {
+    padding: 2px 15px 15px;
+  }
+
+  .fieldGrid {
+    gap: 11px 12px;
+  }
+
+  .field,
+  .notificationsCopy,
+  .scheduleNote {
+    gap: 5px;
+  }
+
+  .label {
+    color: #647184;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.055em;
+  }
+
+  .input,
+  .textarea {
+    min-height: 40px;
+    padding: 0 11px;
+    border-color: #dce3ec;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #091426;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .textarea {
+    min-height: 82px;
+    padding: 10px 11px;
+  }
+
+  .input:focus,
+  .textarea:focus {
+    border-color: rgba(30, 136, 255, 0.52);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.1);
+  }
+
+  .inlineInfo,
+  .logoUploadBody span,
+  .customColorLabel,
+  .error,
+  .success {
+    color: #647184;
+    font-size: 10.5px;
+    line-height: 1.4;
+  }
+
+  .logoUpload {
+    min-height: 66px;
+    padding: 9px 11px;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px;
+    border-color: #dce3ec;
+    border-radius: 9px;
+    background: #f7f9fc;
+  }
+
+  .logoUploadIcon {
+    width: 40px;
+    height: 40px;
+    border-color: #dce3ec;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .logoUploadBody strong {
+    color: #091426;
+    font-size: 12px;
+  }
+
+  .primaryLink,
+  .secondaryLink,
+  .saveButton,
+  .secondaryAction {
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 680;
+    box-shadow: none;
+  }
+
+  .primaryLink,
+  .saveButton {
+    background: #1e88ff;
+    color: #ffffff;
+  }
+
+  .primaryLink:hover,
+  .saveButton:hover {
+    background: #1565c0;
+  }
+
+  .secondaryLink,
+  .secondaryAction {
+    border-color: #dce3ec;
+    color: #526174;
+  }
+
+  .secondaryLink:hover,
+  .secondaryAction:hover {
+    border-color: #c9d3e1;
+    background: #f8fafc;
+    color: #243b6b;
+  }
+
+  .sectionActions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .sectionActions > * {
+    min-width: 148px;
+  }
+
+  .swatchRow {
+    grid-template-columns: repeat(8, minmax(40px, 1fr));
+    gap: 8px;
+  }
+
+  .colorSwatch,
+  .customColor {
+    min-height: 38px;
+    border-radius: 8px;
+  }
+
+  .customColorPreview {
+    border-radius: 6px;
+  }
+
+  .catalogSummaryCard {
+    gap: 11px;
+    padding: 12px;
+    border-color: #dce3ec;
+    border-radius: 9px;
+    background: #f7f9fc;
+    box-shadow: none;
+  }
+
+  .catalogSummaryPill,
+  .catalogSummaryPillMuted {
+    min-height: 25px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  .catalogSummaryPill {
+    background: #f1f7fe;
+    color: #1565c0;
+  }
+
+  .catalogSummaryActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+
+  .commercialInfoGrid {
+    gap: 8px;
+  }
+
+  .commercialInfoCard {
+    padding: 11px;
+    border-color: #dce3ec;
+    border-radius: 8px;
+    background: #f7f9fc;
+    box-shadow: none;
+  }
+
+  .commercialInfoCard strong {
+    color: #334155;
+    font-size: 11.5px;
+  }
+
+  .commercialInfoCard p {
+    color: #647184;
+    font-size: 10.5px;
+    line-height: 1.4;
+  }
+
+  .notificationsCopy strong {
+    color: #091426;
+    font-size: 12.5px;
+  }
+
+  .notificationsCopy p {
+    color: #647184;
+    font-size: 11px;
+  }
+
+  .switch {
+    width: 44px;
+    height: 25px;
+    padding: 2px;
+  }
+
+  .switchThumb {
+    width: 19px;
+    height: 19px;
+  }
+
+  .switchOn {
+    border-color: #1e88ff;
+    background: #1e88ff;
+  }
+
+  .switchOn .switchThumb {
+    transform: translateX(19px);
+  }
+
+  .utilityCard {
+    gap: 9px;
+    padding: 14px 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.96)),
+      #ffffff;
+  }
+
+  .utilityCard.desktopUtilityCard {
+    display: grid;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .mobileUtilityCard {
+    display: none;
+  }
+
+  .utilityCardHeader {
+    gap: 5px;
+  }
+
+  .utilityCardHint {
+    color: #647184;
+    font-size: 11.5px;
+  }
+
+  .utilityActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .utilityActions > * {
+    flex: 1 1 160px;
+  }
+
+  .loadingState {
+    padding: 20px;
+    border: 1px solid #dce3ec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #647184;
+  }
+
+  .desktopReadinessCard {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .readinessHeader {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .readinessHeader > div {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .readinessHeader strong {
+    color: #091426;
+    font-size: 17px;
+    font-weight: 760;
+    line-height: 1.12;
+    letter-spacing: 0;
+  }
+
+  .readinessScore {
+    min-width: 52px;
+    min-height: 32px;
+    border: 1px solid rgba(30, 136, 255, 0.14);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f7fe;
+    color: #1565c0;
+    font-size: 13px;
+    font-weight: 760;
+  }
+
+  .readinessBar {
+    height: 7px;
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, #1e88ff var(--progress, 0%), #e8edf4 var(--progress, 0%));
+    overflow: hidden;
+  }
+
+  .readinessSteps {
+    display: grid;
+    gap: 8px;
+  }
+
+  .readinessStep {
+    min-width: 0;
+    min-height: 54px;
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid #e1e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .readinessStep:hover {
+    border-color: #c9d3e1;
+    background: #ffffff;
+  }
+
+  .readinessStep > span {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dce3ec;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    background: #ffffff;
+    color: #98a2b3;
+  }
+
+  .readinessStep[data-complete="true"] > span {
+    border-color: rgba(22, 155, 98, 0.18);
+    background: #f1faf6;
+    color: #11794d;
+  }
+
+  .readinessStep > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .readinessStep strong {
+    color: #091426;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .readinessStep small {
+    color: #647184;
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .readinessAction {
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: #091426;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 720;
+    cursor: pointer;
+  }
+
+  .readinessAction:hover {
+    background: #182337;
+  }
+}
+
+@media (min-width: 1280px) {
+  .root {
+    grid-template-columns: minmax(360px, 0.78fr) minmax(0, 1.22fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  .desktopHeader {
+    grid-column: 1 / -1;
+  }
+
+  .desktopPreviewStack {
+    display: grid;
+    gap: 12px;
+    position: sticky;
+    top: 18px;
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .accordionList {
+    display: grid;
+    gap: 10px;
+    grid-column: 2;
+    grid-row: 2;
+    align-content: start;
+  }
+
+  .accordionList > .utilityCard.desktopUtilityCard {
+    margin-top: 6px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .root {
+    grid-template-columns: minmax(440px, 0.74fr) minmax(0, 1.26fr);
+    gap: 18px;
+  }
+
+  .publicCard,
+  .desktopReadinessCard,
+  .utilityCard {
+    padding: 18px;
+  }
+
+  .quotePreviewBox {
+    padding: 18px;
+  }
+
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .root {
+    max-width: 1000px;
+    margin-inline: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accordion,
+  .accordionPanel,
+  .chevron,
+  .switchThumb {
+    transition: none;
   }
 }

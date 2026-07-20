@@ -201,10 +201,10 @@ export const COMPONENT_CATALOG = [
     items: [
       {
         tipo: "Trabajo personalizado",
-        descripcion: "Trabajo libre para alcances especiales o fabricacion a medida.",
+        descripcion:
+          "Fabricacion a medida: arma la composición en el constructor o descríbela.",
         sistemas: ["A medida", "Manual", "Por definir"],
         configuraciones: ["Libre", "Por definir"],
-        esItemLibre: true,
       },
       {
         tipo: "Fachada vidriada",

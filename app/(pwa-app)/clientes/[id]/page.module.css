@@ -56,3 +56,18 @@
     transform: rotate(360deg);
   }
 }
+
+@media (min-width: 1024px) {
+  .stateRootDesktop {
+    width: 100%;
+    max-width: 1664px;
+    margin: 0 auto;
+    padding: 0 0 24px;
+  }
+
+  .stateCardDesktop {
+    border-color: #dce3ec;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(9, 20, 38, 0.04);
+  }
+}

@@ -10,6 +10,8 @@ import {
   getSystemOptionsForComponent,
   hasPerSystemConfigurations,
 } from "@/features/cotizaciones/services/component-catalog.service";
+import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import { PautaCubicacionPanel } from "./pauta-cubicacion-panel";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
   GuidedVisualComposer,
@@ -32,6 +34,8 @@ import {
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
   isGlassCatalogSelection,
+  isPersonalizadoCompositionSelected,
+  isTrabajoPersonalizadoComponentType,
   shouldRequireProfileMaterialForComponent,
   shouldShowGuidedComposerEntry,
   shouldShowSheetSchemeForComponent,
@@ -214,8 +218,6 @@ function EditorFooter({
     </footer>
   );
 }
-
-/* â”€â”€â”€ Tab 1: Configuración â”€â”€â”€ */
 
 function TabConfiguracion({
   componentForm,
@@ -650,7 +652,7 @@ function TabConfiguracion({
   );
 }
 
-/* â”€â”€â”€ Tab 2: Medidas y terminaciones â”€â”€â”€ */
+/* ─── Tab 2: Medidas y terminaciones ─── */
 
 function TabMedidas({
   componentForm,
@@ -979,7 +981,69 @@ function TabMedidas({
   );
 }
 
-/* â”€â”€â”€ Tab 3: Precio â”€â”€â”€ */
+/* ─── Tab 3: Despiece ─── */
+
+function TabDespiece({
+  componentForm,
+  activeLineTemplates,
+  savedCubicationSnapshot,
+  onSaveCubicationLineAdjustment,
+  isSavingCubicationLineAdjustment,
+  onComponentChange,
+}: Pick<
+  Props,
+  | "componentForm"
+  | "activeLineTemplates"
+  | "savedCubicationSnapshot"
+  | "onSaveCubicationLineAdjustment"
+  | "isSavingCubicationLineAdjustment"
+  | "onComponentChange"
+>) {
+  const selectedLineTemplate =
+    activeLineTemplates.find(
+      (template) => String(template.id) === componentForm.lineTemplateId
+    ) ?? null;
+  const personalizadoAssistMode =
+    Boolean(componentForm.guidedVisualConfig) ||
+    isTrabajoPersonalizadoComponentType(componentForm.tipo) ||
+    isPersonalizadoCompositionSelected({
+      sistema: componentForm.sistema,
+      sheetScheme: componentForm.sheetScheme,
+      configuracion: componentForm.configuracion,
+    });
+
+  if (isFreeValueComponentType(componentForm.tipo)) {
+    return null;
+  }
+
+  return (
+    <div className={editor.tabContent}>
+      <section className={`${s.formSection} ${s.stepTwoSectionStrong}`}>
+        <div className={s.formSectionHead}>
+          <span className={s.formSectionEyebrow}>Despiece</span>
+          <strong>Cubicación y pauta de cortes</strong>
+          <p>Revisa el despiece estimado según medidas, línea y partida configurada.</p>
+        </div>
+        <PautaCubicacionPanel
+          componentForm={componentForm}
+          selectedTemplate={selectedLineTemplate}
+          savedCubicationSnapshot={savedCubicationSnapshot}
+          onCubicationSnapshotChange={(value) =>
+            onComponentChange("cubicationSnapshot", value)
+          }
+          onSaveCubicationLineAdjustment={onSaveCubicationLineAdjustment}
+          isSavingCubicationLineAdjustment={isSavingCubicationLineAdjustment}
+          lineSelectionHint="precio"
+          showBarUsageInline
+          personalizadoAssistMode={personalizadoAssistMode}
+          layout="workspace"
+        />
+      </section>
+    </div>
+  );
+}
+
+/* ─── Tab 4: Precio ─── */
 
 function TabPrecio({
   componentForm,
@@ -1029,23 +1093,13 @@ function TabPrecio({
         <div className={`${s.field} ${s.fieldFull}`}>
           <span className={s.label}>{catalogLabel}</span>
           <div className={s.formGrid2}>
-            <div className={s.selectWrap}>
-              <select
-                className={s.input}
-                value={componentForm.lineTemplateId}
-                onChange={(event) => onSelectLineTemplate(event.target.value)}
-                aria-label={`Seleccionar ${catalogLabelLower}`}
-              >
-                <option value="">
-                  {isGlassCatalogItem ? "Precio manual o sin cristal" : "Precio manual o sin linea"}
-                </option>
-                {visibleLineTemplates.map((template) => (
-                  <option key={template.id} value={String(template.id)}>
-                    {`${template.nombre} · ${template.material} · ${CLP(template.precioM2Sugerido)}/m2`}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LineTemplatePicker
+              templates={visibleLineTemplates}
+              value={componentForm.lineTemplateId}
+              onChange={onSelectLineTemplate}
+              mode={isGlassCatalogItem ? "glass" : "profile"}
+              ariaLabel={`Seleccionar ${catalogLabelLower}`}
+            />
             <label className={s.field}>
               <span className={s.label}>
                 {isGlassCatalogItem ? "Nombre visible del cristal" : "Nombre visible de la linea"}
@@ -1373,8 +1427,13 @@ export function PasoDosEditorDesktop(props: Props) {
         },
         {
           key: "medidas",
-          label: "Medidas y terminaciones",
+          label: "Medidas",
           done: Boolean(componentForm.ancho || componentForm.alto || componentForm.vidrio),
+        },
+        {
+          key: "despiece",
+          label: "Despiece",
+          done: Boolean(componentForm.ancho && componentForm.alto),
         },
         { key: "precio", label: "Precio", done: precioDisplay.precioTotal > 0 },
       ];
@@ -1426,6 +1485,15 @@ export function PasoDosEditorDesktop(props: Props) {
             onGlassSelect={props.onGlassSelect}
             onCreateCustomGlass={props.onCreateCustomGlass}
             onEditarPrecio={handleEditarPrecio}
+          />
+        ) : !isFreeValue && effectiveTab === "despiece" ? (
+          <TabDespiece
+            componentForm={componentForm}
+            activeLineTemplates={props.activeLineTemplates}
+            savedCubicationSnapshot={props.savedCubicationSnapshot}
+            onSaveCubicationLineAdjustment={props.onSaveCubicationLineAdjustment}
+            isSavingCubicationLineAdjustment={props.isSavingCubicationLineAdjustment}
+            onComponentChange={props.onComponentChange}
           />
         ) : isFreeValue && effectiveTab === "detalles" ? (
           <TabDetallesLibre

@@ -12,6 +12,7 @@ import type {
   QuickEditFieldKey,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { QuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import type {
   QuoteStudioFinancialDraft,
@@ -23,6 +24,12 @@ export type VisibleComponentListState = {
   cards: ComponentListCardViewModel[];
   paddingTop: number;
   paddingBottom: number;
+};
+
+/** Payload al guardar ajuste de pauta en la línea (evita carrera con setState). */
+export type SaveCubicationLineAdjustmentInput = {
+  itemId?: string;
+  snapshot?: CotizacionItemCubicationSnapshot | null;
 };
 
 export type PasoDosFormularioComponenteProps = {
@@ -72,6 +79,13 @@ export type PasoDosFormularioComponenteProps = {
   isDesktopQuoteStudio?: boolean;
   originalFormSnapshot?: ComponentFormState | null;
   onDuplicateItemFromEditor?: () => void;
+  /** Snapshot de cubicación persistido del ítem en edición (si existe). */
+  savedCubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
+  /** Persiste ajuste manual de pauta en la línea del catálogo (con confirmación). */
+  onSaveCubicationLineAdjustment?: (
+    input?: SaveCubicationLineAdjustmentInput
+  ) => Promise<void> | void;
+  isSavingCubicationLineAdjustment?: boolean;
 };
 
 export type PasoDosPanelComponentesProps = {

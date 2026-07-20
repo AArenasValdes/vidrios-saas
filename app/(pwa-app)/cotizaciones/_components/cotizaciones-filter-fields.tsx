@@ -23,6 +23,7 @@ type CotizacionesFilterFieldsProps = {
   onPeriodoChange: (value: string) => void;
   onOrdenChange: (value: string) => void;
   onLimpiar: () => void;
+  canClear?: boolean;
 };
 
 export function CotizacionesFilterFields({
@@ -39,6 +40,7 @@ export function CotizacionesFilterFields({
   onPeriodoChange,
   onOrdenChange,
   onLimpiar,
+  canClear = true,
 }: CotizacionesFilterFieldsProps) {
   return (
     <>
@@ -98,7 +100,13 @@ export function CotizacionesFilterFields({
         </select>
       </div>
 
-      <button className={s.btnGhost} onClick={onLimpiar} type="button">
+      <button
+        className={s.btnGhost}
+        onClick={onLimpiar}
+        type="button"
+        aria-disabled={!canClear}
+        data-active={canClear}
+      >
         <LuFilterX aria-hidden />
         Limpiar
       </button>

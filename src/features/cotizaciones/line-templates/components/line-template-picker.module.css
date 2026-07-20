@@ -1,0 +1,559 @@
+.root {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 3.35rem;
+  padding: 0.55rem 0.75rem 0.55rem 0.85rem;
+  border: 1px solid #d5e0ee;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #06162f;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.trigger:hover {
+  border-color: #b8c9de;
+  background: #fbfcfe;
+}
+
+.triggerOpen,
+.trigger:focus-visible {
+  border-color: #1e88ff;
+  box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.16);
+  outline: none;
+}
+
+.triggerSelected {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 70%);
+}
+
+.triggerBody {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.triggerTitleRow {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.triggerTitle,
+.triggerTitleMuted {
+  overflow: hidden;
+  color: #06162f;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerTitleMuted {
+  color: #3d5270;
+  font-weight: 750;
+}
+
+.triggerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.triggerMeta em {
+  color: #0b4f9c;
+  font-style: normal;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.triggerCaret {
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #7b8da6;
+  transition: transform 140ms ease;
+}
+
+.triggerOpen .triggerCaret {
+  transform: rotate(180deg);
+  color: #1e88ff;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(8, 18, 36, 0.46);
+  cursor: pointer;
+}
+
+.dialog {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.75rem;
+  width: min(920px, calc(100vw - 2rem));
+  max-height: min(820px, calc(100vh - 2.5rem));
+  padding: 1rem 1.05rem 1.05rem;
+  border: 1px solid #d6e0ee;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 28px 64px rgba(10, 24, 48, 0.22),
+    0 4px 14px rgba(10, 24, 48, 0.08);
+}
+
+.dialogHeader {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dialogHeaderCopy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.dialogEyebrow {
+  margin: 0;
+  color: #1e88ff;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dialogHeaderCopy h2 {
+  margin: 0;
+  color: #06162f;
+  font-size: 1.2rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.dialogHeaderCopy p:last-child {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.closeButton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid #d7e1ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #52637d;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: #b8c9de;
+  color: #06162f;
+}
+
+.toolbar {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.searchRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.8rem;
+  width: 1rem;
+  height: 1rem;
+  color: #8a96a6;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  min-height: 2.55rem;
+  padding: 0.5rem 0.8rem 0.5rem 2.35rem;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #f7fafc;
+  color: #06162f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+  font-weight: 550;
+}
+
+.searchInput:focus {
+  border-color: #1e88ff;
+  background: #ffffff;
+  outline: 2px solid rgba(30, 136, 255, 0.18);
+}
+
+.filtersBlock {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.filterGroup {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filterLabel {
+  color: #7b8da6;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filterChip {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: 1.95rem;
+  padding: 0.3rem 0.72rem;
+  border: 1px solid #d7e1ee;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #52637d;
+  font-size: 0.74rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.filterChip em {
+  color: #94a3b8;
+  font-style: normal;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.filterChip:hover {
+  border-color: #b8c9de;
+  color: #18335f;
+}
+
+.filterChipActive {
+  border-color: rgba(30, 136, 255, 0.45);
+  background: #eef6ff;
+  color: #0b4f9c;
+}
+
+.filterChipActive em {
+  color: #1e88ff;
+}
+
+.filterChipProvider {
+  max-width: 100%;
+}
+
+.resultMeta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  color: #7b8da6;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.clearFilters {
+  border: 0;
+  background: transparent;
+  color: #1e88ff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.clearFilters:hover {
+  color: #0b4f9c;
+}
+
+.list {
+  display: grid;
+  gap: 0.7rem;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.providerGroup {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.providerGroupHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0.1rem 0.05rem;
+  border-bottom: 1px solid #e8eef6;
+}
+
+.providerGroupHeader strong {
+  color: #0b0f17;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.providerGroupHeader span {
+  color: #7b8da6;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.optionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.option {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 4.1rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid #e4ecf5;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #06162f;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.option:hover {
+  border-color: #c9d9ec;
+  background: #f8fbff;
+  box-shadow: 0 4px 14px rgba(15, 40, 70, 0.05);
+}
+
+.optionActive {
+  border-color: rgba(30, 136, 255, 0.35);
+  background: #eef6ff;
+  box-shadow: 0 0 0 1px rgba(30, 136, 255, 0.12);
+}
+
+.optionManual {
+  grid-column: 1 / -1;
+  min-height: 3.2rem;
+  background: #f8fafc;
+}
+
+.optionMain {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.optionTitleRow {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.optionMain strong {
+  overflow: hidden;
+  color: #06162f;
+  font-size: 0.94rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionMain small {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.providerLabel,
+.providerLabelMuted {
+  overflow: hidden;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.providerLabel {
+  color: #334155;
+}
+
+.providerLabelMuted {
+  color: #94a3b8;
+}
+
+.optionContext {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  align-items: center;
+  min-width: 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.systemLabel {
+  color: #475569;
+  font-weight: 700;
+}
+
+.optionPriceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  align-items: baseline;
+  margin-top: 0.1rem;
+}
+
+.optionPriceRow em {
+  color: #0b4f9c;
+  font-size: 0.9rem;
+  font-style: normal;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionSecondary {
+  color: #7b8da6;
+  font-size: 0.72rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionCheck {
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.15rem;
+  color: #1e88ff;
+}
+
+.materialChip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.materialChipAluminio {
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.materialChipPvc {
+  border: 1px solid rgba(14, 116, 144, 0.22);
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.materialChipGlass {
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.empty {
+  padding: 1.1rem 0.8rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .overlay {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: min(92vh, 900px);
+    border-radius: 18px 18px 0 0;
+    padding: 0.9rem 0.85rem 1rem;
+  }
+
+  .optionGrid {
+    grid-template-columns: 1fr;
+  }
+}

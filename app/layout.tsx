@@ -3,15 +3,15 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Geist } from "next/font/google";
 import { GoogleTagProvider } from "@/features/analytics/components/google-tag-provider";
 import { OAuthReturnTracker } from "@/features/auth/components/oauth-return-tracker";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { DynamicPwaComponents } from "@/components/pwa/dynamic-pwa-components";
+import { WebVitalsDebugProbe } from "@/components/debug/web-vitals-debug-probe";
+import { geistSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
 const gtmContainerId = googleTagService.getGtmContainerId();
 
@@ -62,7 +62,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn("font-sans", geist.variable)}>
+    <html lang="es" className={cn("font-sans", geistSans.variable)}>
       <body className="antialiased">
         {gtmContainerId ? (
           <Suspense fallback={null}>
@@ -85,6 +85,9 @@ export default function RootLayout({
           </noscript>
         ) : null}
         <DynamicPwaComponents />
+        {/* #region agent log */}
+        <WebVitalsDebugProbe />
+        {/* #endregion */}
         {children}
         {shouldRenderVercelInsights ? <Analytics /> : null}
         {shouldRenderVercelInsights ? <SpeedInsights /> : null}

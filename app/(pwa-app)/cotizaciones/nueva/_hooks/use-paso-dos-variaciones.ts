@@ -9,6 +9,7 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { type PricingMode } from "@/features/cotizaciones/types/pricing-mode";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
   buildItemFromForm,
   formatCurrencyInput,
@@ -68,6 +69,7 @@ type PendingForcedFullEdit = {
 
 type Params = {
   items: CotizacionWorkflowItem[];
+  activeLineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
   setItems: (nextItems: CotizacionWorkflowItem[]) => void;
   openItemForEditing: (
     item: CotizacionWorkflowItem,
@@ -84,6 +86,7 @@ const buildVariationMemberCode = (baseCode: string, index: number) =>
 
 export function usePasoDosVariaciones({
   items,
+  activeLineTemplates,
   setItems,
   openItemForEditing,
   clearEditingState,
@@ -267,7 +270,9 @@ export function usePasoDosVariaciones({
           variationQuickEditDraft.configuracion
         ),
       };
-      const groupedItem = buildItemFromForm(groupedForm, itemsWithoutSource, null);
+      const groupedItem = buildItemFromForm(groupedForm, itemsWithoutSource, null, {
+        lineTemplates: activeLineTemplates,
+      });
       itemsWithoutSource.push(groupedItem);
       builtItems.push(groupedItem);
     }
@@ -293,7 +298,9 @@ export function usePasoDosVariaciones({
           variationQuickEditDraft.configuracion
         ),
       };
-      const nextItem = buildItemFromForm(nextForm, itemsWithoutSource, null);
+      const nextItem = buildItemFromForm(nextForm, itemsWithoutSource, null, {
+        lineTemplates: activeLineTemplates,
+      });
       itemsWithoutSource.push(nextItem);
       builtItemsByDraftId.set(itemDraft.id, nextItem);
       builtItems.push(nextItem);

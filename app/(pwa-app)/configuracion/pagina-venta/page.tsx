@@ -229,10 +229,15 @@ export default function PaginaVentaPage() {
 
   useEffect(() => {
     if (!profile) return;
-    const nextForm = buildPaginaVentaProfileInput(profile);
-    setForm(nextForm);
-    lastSavedSnapshotRef.current = serializeFormState(nextForm);
-    hasHydratedRef.current = true;
+
+    const hydrationTimeoutId = window.setTimeout(() => {
+      const nextForm = buildPaginaVentaProfileInput(profile);
+      setForm(nextForm);
+      lastSavedSnapshotRef.current = serializeFormState(nextForm);
+      hasHydratedRef.current = true;
+    }, 0);
+
+    return () => window.clearTimeout(hydrationTimeoutId);
   }, [profile]);
 
   useEffect(() => {
@@ -255,16 +260,20 @@ export default function PaginaVentaPage() {
   }, [heroPreviewUrl]);
 
   useEffect(() => {
-    setGalleryDrafts((current) => {
-      const nextDrafts: Record<string, string> = {};
+    const draftSyncTimeoutId = window.setTimeout(() => {
+      setGalleryDrafts((current) => {
+        const nextDrafts: Record<string, string> = {};
 
-      gallery.forEach((item) => {
-        const key = String(item.id);
-        nextDrafts[key] = current[key] ?? item.workTitle;
+        gallery.forEach((item) => {
+          const key = String(item.id);
+          nextDrafts[key] = current[key] ?? item.workTitle;
+        });
+
+        return nextDrafts;
       });
+    }, 0);
 
-      return nextDrafts;
-    });
+    return () => window.clearTimeout(draftSyncTimeoutId);
   }, [gallery]);
 
   useEffect(() => {
@@ -704,9 +713,10 @@ export default function PaginaVentaPage() {
         })}
       </nav>
 
-      <form id="pagina-venta-form" className={s.content} onSubmit={handleSubmit}>
-        {activeSection === "hero" ? (
-          <section className={s.section}>
+      <div className={s.desktopWorkspace}>
+        <form id="pagina-venta-form" className={s.content} onSubmit={handleSubmit}>
+          {activeSection === "hero" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuImage aria-hidden />
               <span>Portada principal</span>
@@ -806,11 +816,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "servicios" ? (
-          <section className={s.section}>
+          {activeSection === "servicios" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuBlocks aria-hidden />
               <span>Servicios y cobertura</span>
@@ -870,11 +880,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "galeria" ? (
-          <section className={s.section}>
+          {activeSection === "galeria" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuImagePlus aria-hidden />
               <span>Trabajos recientes</span>
@@ -1004,11 +1014,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "formulario" ? (
-          <section className={s.section}>
+          {activeSection === "formulario" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuMessageSquare aria-hidden />
               <span>Solicitud rapida</span>
@@ -1055,11 +1065,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "redes" ? (
-          <section className={s.section}>
+          {activeSection === "redes" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuPhone aria-hidden />
               <span>Redes y footer</span>
@@ -1102,11 +1112,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "valoraciones" ? (
-          <section className={s.section}>
+          {activeSection === "valoraciones" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuStar aria-hidden />
               <span>Valoraciones publicas</span>
@@ -1212,11 +1222,11 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
+            </section>
+          ) : null}
 
-        {activeSection === "publicacion" ? (
-          <section className={s.section}>
+          {activeSection === "publicacion" ? (
+            <section className={s.section}>
             <div className={s.sectionTitle}>
               <LuToggleLeft aria-hidden />
               <span>Salida al aire</span>
@@ -1408,9 +1418,77 @@ export default function PaginaVentaPage() {
                 </button>
               </div>
             </div>
-          </section>
-        ) : null}
-      </form>
+            </section>
+          ) : null}
+        </form>
+
+        <aside className={s.desktopSidePanel} aria-label="Resumen de pagina publica">
+          <div className={s.desktopSideCard}>
+            <div className={s.desktopSideHeader}>
+              <span className={s.label}>Estado publico</span>
+              <span className={s.statusBadge} data-published={form.isPublished}>
+                {form.isPublished ? "Publicada" : "Borrador"}
+              </span>
+            </div>
+
+            <div className={s.desktopSidePreview}>
+              <div
+                className={s.desktopHeroThumb}
+                style={
+                  heroPreview
+                    ? { backgroundImage: `url(${heroPreview})` }
+                    : { backgroundColor: form.brandColor || "#143d7a" }
+                }
+                aria-hidden
+              />
+              <div className={s.desktopSideCopy}>
+                <strong>{form.heroTitle || DEFAULT_HERO_TITLE}</strong>
+                <span>{form.publicZone || "Zona de cobertura sin definir"}</span>
+              </div>
+            </div>
+
+            <div className={s.desktopSideList}>
+              <div>
+                <span>Servicios</span>
+                <strong>{form.publicServices.length || 0}</strong>
+              </div>
+              <div>
+                <span>Trabajos</span>
+                <strong>{form.showGallery ? "Visible" : "Oculto"}</strong>
+              </div>
+              <div>
+                <span>Horario</span>
+                <strong>{form.showSchedule ? "Visible" : "Oculto"}</strong>
+              </div>
+            </div>
+
+            <div className={s.publicLinkBox}>
+              <span className={s.label}>Link actual</span>
+              <strong>{publicRequestUrl}</strong>
+            </div>
+
+            <div className={s.desktopSideActions}>
+              <button
+                type="button"
+                className={s.secondaryAction}
+                onClick={() => void handleCopyPublicLink()}
+              >
+                <LuCopy aria-hidden />
+                Copiar link
+              </button>
+              <a
+                className={s.secondaryAction}
+                href={previewPublicRequestUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <LuExternalLink aria-hidden />
+                Ver pagina
+              </a>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

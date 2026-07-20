@@ -7,6 +7,7 @@ import { LuArrowLeft } from "react-icons/lu";
 
 import { useClientes } from "@/features/clientes/hooks/useClientes";
 
+import { ClienteDetalleDesktopView } from "./_components/cliente-detalle-desktop-view";
 import { ClienteDetalleMobileView } from "./_components/cliente-detalle-mobile-view";
 import { buildClienteDetalleMobileViewModel } from "./_components/cliente-detalle-mobile-view-model";
 
@@ -18,6 +19,26 @@ export default function ClienteDetallePage() {
   const { getClienteDetalleById, loadClienteDetalleById, isReady } = useClientes();
   const detalle = getClienteDetalleById(params.id);
   const [loadAttempted, setLoadAttempted] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktopViewport(media.matches);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => media.removeEventListener("change", sync);
+    }
+
+    media.addListener(sync);
+    return () => media.removeListener(sync);
+  }, []);
 
   useEffect(() => {
     if (!params.id || detalle) {
@@ -47,8 +68,8 @@ export default function ClienteDetallePage() {
 
   if (!detalle) {
     return (
-      <div className={s.stateRoot}>
-        <div className={s.stateCard}>
+      <div className={`${s.stateRoot}${isDesktopViewport ? ` ${s.stateRootDesktop}` : ""}`}>
+        <div className={`${s.stateCard}${isDesktopViewport ? ` ${s.stateCardDesktop}` : ""}`}>
           {isReady && loadAttempted ? (
             <>
               <Link href="/clientes" className={s.backLink}>
@@ -74,5 +95,9 @@ export default function ClienteDetallePage() {
 
   const model = buildClienteDetalleMobileViewModel(detalle);
 
-  return <ClienteDetalleMobileView model={model} />;
+  return isDesktopViewport ? (
+    <ClienteDetalleDesktopView model={model} />
+  ) : (
+    <ClienteDetalleMobileView model={model} />
+  );
 }

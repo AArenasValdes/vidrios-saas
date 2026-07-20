@@ -505,6 +505,18 @@ export default function LandingPage() {
       ) : null}
 
       <section id="top" className={s.heroSection}>
+        <div className={s.heroBackgroundMedia} aria-hidden>
+          <Image
+            src="/brand/landing-cotizar-bg.webp"
+            alt=""
+            fill
+            priority
+            fetchPriority="high"
+            sizes="(max-width: 900px) 100vw, 1400px"
+            quality={70}
+            className={s.heroBackgroundImage}
+          />
+        </div>
         <div className={s.heroHalo} aria-hidden />
         <div className={s.container}>
           <div className={s.heroLayout}>

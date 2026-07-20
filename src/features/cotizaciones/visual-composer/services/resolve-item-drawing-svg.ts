@@ -35,7 +35,7 @@ export function resolveCotizacionItemDrawingSvg(
   input: ResolveItemDrawingSvgInput
 ): string {
   const maxW = input.maxW ?? 470;
-  const maxH = input.maxH ?? 210;
+  const maxH = input.maxH ?? 260;
   const variant = input.variant ?? "pdf";
   const guidedVariant = variant === "pdf" ? "pdf" : "thumbnail";
 

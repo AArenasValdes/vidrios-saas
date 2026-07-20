@@ -57,6 +57,7 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { mergeGlassOptions } from "@/features/cotizaciones/new-quote/custom-glass-options";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
@@ -117,6 +118,7 @@ export type PasoDosGrupoDraft = {
   guidedVisualConfig: GuidedVisualConfig | null;
   vidrio: string;
   lineTemplateId: string;
+  cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
   referencia: string;
   ancho: string;
   alto: string;
@@ -565,6 +567,7 @@ export function applyLineTemplateToGrupoDraft(
     catalogEspesor: glassMetadata.espesor ?? "",
     catalogTerminacion: glassMetadata.terminacion ?? "",
     lineTemplateId: String(template.id),
+    cubicationSnapshot: null,
     referencia: template.nombre,
     vidrio:
       template.categoria === "vidrio"
@@ -859,6 +862,7 @@ export function createInitialPasoDosGrupoDraft({
     guidedVisualConfig: seedForm?.guidedVisualConfig ?? null,
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
+    cubicationSnapshot: seedForm?.cubicationSnapshot ?? null,
     referencia,
     ancho: sanitizeDigits(seedForm?.ancho ?? ""),
     alto: sanitizeDigits(seedForm?.alto ?? ""),
@@ -956,6 +960,7 @@ export function buildPasoDosGrupoComponentForm({
     nombre: syncedDraft.nombre ?? "",
     descripcion: syncedDraft.descripcion ?? "",
     lineTemplateId: syncedDraft.lineTemplateId,
+    cubicationSnapshot: syncedDraft.cubicationSnapshot,
     pricingMode: syncedDraft.pricingMode,
     vidrio: syncedDraft.vidrio,
     ancho: syncedDraft.ancho,
@@ -1608,12 +1613,30 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, vidrio }));
   };
 
+  const updateCubicationSnapshot = (
+    cubicationSnapshot: CotizacionItemCubicationSnapshot | null
+  ) => {
+    setDraft((current) => ({ ...current, cubicationSnapshot }));
+  };
+
   const updateAncho = (value: string) => {
-    setDraft((current) => syncDraftTemplatePricing({ ...current, ancho: sanitizeDigits(value) }));
+    setDraft((current) =>
+      syncDraftTemplatePricing({
+        ...current,
+        ancho: sanitizeDigits(value),
+        cubicationSnapshot: null,
+      })
+    );
   };
 
   const updateAlto = (value: string) => {
-    setDraft((current) => syncDraftTemplatePricing({ ...current, alto: sanitizeDigits(value) }));
+    setDraft((current) =>
+      syncDraftTemplatePricing({
+        ...current,
+        alto: sanitizeDigits(value),
+        cubicationSnapshot: null,
+      })
+    );
   };
 
   const updatePrecio = (value: string) => {
@@ -1930,6 +1953,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateIvaMode,
     updateCobraPrecioSeparado,
     updateVidrio,
+    updateCubicationSnapshot,
     updateAncho,
     updateAlto,
     updatePrecio,

@@ -7,7 +7,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   LuCopy,
   LuDownload,
+  LuEllipsis,
   LuEye,
+  LuFileText,
   LuFilePlus2,
   LuFilterX,
   LuPlus,
@@ -126,7 +128,22 @@ function getManualResponseValue(estado: string): ManualResponseStatus {
   return "pendiente";
 }
 
-const PAGE_SIZE = 8;
+const DEFAULT_PAGE_SIZE = 8;
+const PAGE_SIZE_OPTIONS = [8, 16, 24] as const;
+
+function responseSelectToneClass(status: ManualResponseStatus): string {
+  if (status === "aprobada") return s.responseSelectApproved;
+  if (status === "rechazada") return s.responseSelectRejected;
+  if (status === "terminada") return s.responseSelectFinished;
+  return s.responseSelectNeutral;
+}
+
+function isInteractiveRowTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("a, button, input, select, textarea, label, [role='menu']"))
+  );
+}
 
 function buildPageNumbers(currentPage: number, totalPages: number) {
   const start = Math.max(1, currentPage - 1);
@@ -182,8 +199,10 @@ export default function CotizacionesPage() {
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [responseUpdatingId, setResponseUpdatingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<{
     id: string;
     codigo: string;
@@ -217,7 +236,7 @@ export default function CotizacionesPage() {
     refreshCotizacionesResumen,
   } = useCotizacionesResumenPage({
     page: currentPage,
-    pageSize: PAGE_SIZE,
+    pageSize,
     estado: estadoActivo,
     cliente: clienteFiltro,
     period: periodoFiltro,
@@ -288,7 +307,7 @@ export default function CotizacionesPage() {
           : null,
         estadoFiltro !== "Todos" ? `Estado: ${estadoFiltro}` : null,
         clienteFiltro !== "Todos" ? `Cliente: ${clienteFiltro}` : null,
-        periodoFiltro !== "this_month"
+        periodoFiltro !== "all"
           ? `Periodo: ${
               PERIODOS.find((item) => item.value === periodoFiltro)?.label ?? ""
             }`
@@ -315,18 +334,18 @@ export default function CotizacionesPage() {
           tone: "blue",
         },
         {
+          label: "Aprobadas",
+          value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.aprobada),
+          sub: "registradas",
+          tone: "green",
+        },
+        {
           label: "PDF generados",
           value: shouldShowSummaryPlaceholder
             ? "..."
             : String(summary.pdfGeneratedCount ?? 0),
           sub: "descargas registradas",
           tone: "amber",
-        },
-        {
-          label: "Aprobadas",
-          value: shouldShowSummaryPlaceholder ? "..." : String(summary.counts.aprobada),
-          sub: "registradas",
-          tone: "green",
         },
         {
           label: "Terminadas",
@@ -364,13 +383,18 @@ export default function CotizacionesPage() {
     setCurrentPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pageNumbers = useMemo(
     () => buildPageNumbers(currentPage, totalPages),
     [currentPage, totalPages]
   );
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageStart = (currentPage - 1) * pageSize;
   const selectedCount = selectedIds.size;
+  const hasActiveFilters = filtrosActivos.length > 0;
+  const activePeriodLabel =
+    periodoFiltro !== "all"
+      ? PERIODOS.find((item) => item.value === periodoFiltro)?.label ?? null
+      : null;
   const visibleRowIds = useMemo(() => filtradas.map((cotizacion) => cotizacion.id), [filtradas]);
   const allVisibleSelected =
     visibleRowIds.length > 0 && visibleRowIds.every((id) => selectedIds.has(id));
@@ -401,6 +425,34 @@ export default function CotizacionesPage() {
       return next.size === current.size ? current : next;
     });
   }, [visibleRowIds]);
+
+  useEffect(() => {
+    if (!openRowMenuId) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-row-menu-root]")
+      ) {
+        return;
+      }
+
+      setOpenRowMenuId(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenRowMenuId(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openRowMenuId]);
 
   const handleAtajoEstadoSelect = useCallback((key: CotizacionesMobileSummaryKey) => {
     setAtajoEstado(key);
@@ -472,9 +524,14 @@ export default function CotizacionesPage() {
           manualResponse,
           meta,
           responseMeta,
+          responseSelectClassName: responseSelectToneClass(manualResponse),
           isUpdatingResponse,
           hasWhatsappPhone,
           isSending,
+          primaryAction:
+            cotizacion.pdfDescargadoEn && hasWhatsappPhone ? ("whatsapp" as const) : ("pdf" as const),
+          pdfHref: `/print/cotizaciones/${cotizacion.id}`,
+          pdfLabel: cotizacion.pdfDescargadoEn ? "Ver PDF" : "Generar PDF",
           rowClassName: `${s.tr}${manualResponse !== "pendiente" ? ` ${s.trWithResponse}` : ""}`,
           cardClassName: `${s.cotCard}${manualResponse !== "pendiente" ? ` ${s.cotCardWithResponse}` : ""}`,
           detailHref: `/cotizaciones/${cotizacion.id}`,
@@ -636,7 +693,7 @@ export default function CotizacionesPage() {
         <div>
           <h1 className={s.title}>Cotizaciones</h1>
           <p className={s.subtitle}>
-            Gestiona presupuestos, corrige borradores y vuelve a editar cualquier cotizacion terminada si el maestro se equivoco.
+            Gestiona, edita y comparte tus cotizaciones desde un solo lugar.
           </p>
         </div>
 
@@ -765,6 +822,7 @@ export default function CotizacionesPage() {
             }
           }
           onLimpiar={limpiar}
+          canClear={hasActiveFilters}
         />
       </PremiumPageSection>
 
@@ -810,6 +868,7 @@ export default function CotizacionesPage() {
                 }
               }
               onLimpiar={limpiar}
+              canClear={hasActiveFilters}
             />
           </motion.div>
         ) : null}
@@ -852,16 +911,8 @@ export default function CotizacionesPage() {
               </button>
             ) : null}
           </div>
-          {!isColdBoot && filtrosActivos.length > 0 ? (
-            <div className={s.activeFilters}>
-              {filtrosActivos.map((filtro) => (
-                <span key={filtro} className={s.filterPill}>
-                  {filtro}
-                </span>
-              ))}
-            </div>
-          ) : !isColdBoot ? (
-            <span className={s.resultsHint}>Sin filtros activos</span>
+          {!isColdBoot && activePeriodLabel ? (
+            <span className={s.resultsPeriod}>Periodo: {activePeriodLabel}</span>
           ) : null}
         </div>
         <div className={s.resultsCompactMobile}>
@@ -922,16 +973,30 @@ export default function CotizacionesPage() {
             <LuFilePlus2 aria-hidden />
           </div>
           <p className={s.emptyTitle}>
-            {cotizaciones.length === 0
-              ? "Todavia no tienes cotizaciones"
-              : "Sin cotizaciones para mostrar"}
+            <span className={s.desktopEmptyCopy}>
+              {hasActiveFilters
+                ? "No encontramos cotizaciones con estos filtros."
+                : "Aun no tienes cotizaciones"}
+            </span>
+            <span className={s.mobileEmptyCopy}>
+              {cotizaciones.length === 0
+                ? "Todavia no tienes cotizaciones"
+                : "Sin cotizaciones para mostrar"}
+            </span>
           </p>
           <p className={s.emptySub}>
-            {cotizaciones.length === 0
-              ? "Crea tu primer presupuesto para empezar a generar PDF y compartirlo por WhatsApp."
-              : "No encontramos resultados con los filtros actuales. Ajusta la busqueda o limpia los filtros para volver a ver todas las cotizaciones."}
+            <span className={s.desktopEmptyCopy}>
+              {hasActiveFilters
+                ? "Prueba con otros criterios o limpia los filtros para volver a ver todas las cotizaciones."
+                : "Crea tu primera cotizacion para generar un PDF profesional y compartirlo con tu cliente."}
+            </span>
+            <span className={s.mobileEmptyCopy}>
+              {cotizaciones.length === 0
+                ? "Crea tu primer presupuesto para empezar a generar PDF y compartirlo por WhatsApp."
+                : "No encontramos resultados con los filtros actuales. Ajusta la busqueda o limpia los filtros para volver a ver todas las cotizaciones."}
+            </span>
           </p>
-          {filtrosActivos.length > 0 ? (
+          {hasActiveFilters ? (
             <button className={s.btnPrimary} onClick={limpiar} type="button">
               <LuFilterX aria-hidden />
               Limpiar filtros
@@ -939,7 +1004,8 @@ export default function CotizacionesPage() {
           ) : (
             <Link className={s.btnPrimary} href="/cotizaciones/nueva">
               <LuFilePlus2 aria-hidden />
-              Nueva cotizacion
+              <span className={s.desktopEmptyCopy}>Crear primera cotizacion</span>
+              <span className={s.mobileEmptyCopy}>Nueva cotizacion</span>
             </Link>
           )}
         </PremiumPageSection>
@@ -975,6 +1041,7 @@ export default function CotizacionesPage() {
                 <col className={s.colClienteResumen} />
                 <col className={s.colRespuesta} />
                 <col className={s.colResumen} />
+                <col className={s.colFecha} />
                 <col className={s.colAcciones} />
               </colgroup>
               <thead>
@@ -986,13 +1053,37 @@ export default function CotizacionesPage() {
                   <th className={s.th}>Cliente y obra</th>
                   <th className={s.th}>Respuesta</th>
                   <th className={s.th}>Resumen</th>
+                  <th className={s.th}>Ultima edicion</th>
                   <th className={`${s.th} ${s.thC}`}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRows.map((row) => {
                   return (
-                    <tr key={row.id} className={`${row.rowClassName}${row.isSelected ? ` ${s.trSelected}` : ""}`}>
+                    <tr
+                      key={row.id}
+                      className={`${row.rowClassName}${
+                        !isSelectionMode ? ` ${s.trNavigable}` : ""
+                      }${row.isSelected ? ` ${s.trSelected}` : ""}`}
+                      tabIndex={isSelectionMode ? -1 : 0}
+                      aria-label={`Abrir detalle de ${row.codigo}`}
+                      onPointerEnter={row.onPrefetchDetail}
+                      onClick={(event) => {
+                        if (!isSelectionMode && !isInteractiveRowTarget(event.target)) {
+                          router.push(row.detailHref);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          !isSelectionMode &&
+                          event.currentTarget === event.target &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          router.push(row.detailHref);
+                        }
+                      }}
+                    >
                       {isSelectionMode ? (
                         <td className={s.tdSelect}>
                           <button
@@ -1015,7 +1106,9 @@ export default function CotizacionesPage() {
                       </td>
                       <td className={s.tdResponse}>
                         <select
-                          className={`${s.responseSelect}${row.isUpdatingResponse ? ` ${s.responseSelectUpdating}` : ""}`}
+                          className={`${s.responseSelect} ${row.responseSelectClassName}${
+                            row.isUpdatingResponse ? ` ${s.responseSelectUpdating}` : ""
+                          }`}
                           value={row.manualResponse}
                           onChange={(event) =>
                             void handleManualResponseChange(
@@ -1033,13 +1126,15 @@ export default function CotizacionesPage() {
                       </td>
                       <td className={s.tdResumen}>
                         <div className={s.resumenBlock}>
-                          <span className={s.resumenFecha}>{row.fecha}</span>
                           <span className={s.resumenTotal}>{row.total}</span>
                           <span className={`${s.badge} ${s[row.meta.cls]}`}>{row.meta.label}</span>
                         </div>
                       </td>
+                      <td className={s.tdFecha}>
+                        <span className={s.resumenFecha}>{row.fecha}</span>
+                      </td>
                       <td className={s.tdAcciones}>
-                        <div className={s.accionesRow}>
+                        <div className={s.accionesRow} data-row-menu-root>
                           <div className={`${s.acciones} ${s.accionesDock}`}>
                             <Link
                               className={s.accionBtn}
@@ -1058,9 +1153,9 @@ export default function CotizacionesPage() {
                               <span className={s.accionSrOnly}>Editar</span>
                               <LuPencil aria-hidden />
                             </Link>
-                            {row.hasWhatsappPhone ? (
+                            {row.primaryAction === "whatsapp" ? (
                               <button
-                                className={s.accionBtn}
+                                className={s.accionPrimaryBtn}
                                 onClick={() => void handleSendQuote(row.id)}
                                 title="Enviar link por WhatsApp"
                                 aria-label="Enviar link por WhatsApp"
@@ -1068,46 +1163,72 @@ export default function CotizacionesPage() {
                                 type="button"
                                 disabled={row.isSending}
                               >
-                                <span className={s.accionSrOnly}>Enviar link por WhatsApp</span>
                                 <LuSend aria-hidden />
+                                <span className={s.accionPrimaryLabel}>
+                                  {row.isSending ? "Preparando..." : "Enviar"}
+                                </span>
                               </button>
                             ) : (
-                              <button
-                                className={`${s.accionBtn} ${s.accionBtnDisabled}`}
-                                title="Sin telefono para enviar"
-                                aria-label="Sin telefono para enviar"
-                                data-tooltip="Sin telefono para enviar"
-                                type="button"
-                                disabled
+                              <Link
+                                className={s.accionPrimaryBtn}
+                                href={row.pdfHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={row.pdfLabel}
+                                aria-label={row.pdfLabel}
+                                data-tooltip={row.pdfLabel}
                               >
-                                <span className={s.accionSrOnly}>Sin telefono para enviar</span>
-                                <LuSend aria-hidden />
-                              </button>
+                                <LuFileText aria-hidden />
+                                <span className={s.accionPrimaryLabel}>{row.pdfLabel}</span>
+                              </Link>
                             )}
                             <button
                               className={s.accionBtn}
-                              onClick={() => handleDuplicate(row.id)}
-                              title="Duplicar"
-                              aria-label="Duplicar"
-                              data-tooltip="Duplicar"
+                              onClick={() =>
+                                setOpenRowMenuId((current) =>
+                                  current === row.id ? null : row.id
+                                )
+                              }
+                              title="Mas acciones"
+                              aria-label="Mas acciones"
+                              aria-haspopup="menu"
+                              aria-expanded={openRowMenuId === row.id}
+                              data-tooltip="Mas acciones"
                               type="button"
                             >
-                                <span className={s.accionSrOnly}>Duplicar</span>
-                                <LuCopy aria-hidden />
+                              <span className={s.accionSrOnly}>Mas acciones</span>
+                              <LuEllipsis aria-hidden />
                             </button>
                           </div>
-                          <button
-                            className={`${s.accionBtn} ${s.accionBtnDanger} ${s.accionBtnDelete}`}
-                            onClick={() => handleDelete(row.id, row.codigo)}
-                            title="Eliminar"
-                            aria-label="Eliminar"
-                            data-tooltip="Eliminar"
-                            type="button"
-                            disabled={row.deleteDisabled}
-                          >
-                            <span className={s.accionSrOnly}>Eliminar</span>
-                            <LuTrash2 aria-hidden />
-                          </button>
+                          {openRowMenuId === row.id ? (
+                            <div className={s.rowMenu} role="menu">
+                              <button
+                                className={s.rowMenuItem}
+                                onClick={() => {
+                                  setOpenRowMenuId(null);
+                                  handleDuplicate(row.id);
+                                }}
+                                role="menuitem"
+                                type="button"
+                              >
+                                <LuCopy aria-hidden />
+                                Duplicar
+                              </button>
+                              <button
+                                className={`${s.rowMenuItem} ${s.rowMenuItemDanger}`}
+                                onClick={() => {
+                                  setOpenRowMenuId(null);
+                                  handleDelete(row.id, row.codigo);
+                                }}
+                                role="menuitem"
+                                type="button"
+                                disabled={row.deleteDisabled}
+                              >
+                                <LuTrash2 aria-hidden />
+                                Eliminar
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1146,18 +1267,38 @@ export default function CotizacionesPage() {
 
           {totalPages > 1 ? (
             <PremiumPageSection className={s.pagination}>
-              <span className={s.pagInfo}>
-                Mostrando {pageStart + 1} - {pageStart + filtradas.length} de{" "}
-                {totalCount} cotizaciones
-              </span>
+              <div className={s.paginationSummary}>
+                <span className={s.pagInfo}>
+                  Mostrando {pageStart + 1}–{pageStart + filtradas.length} de{" "}
+                  {totalCount} cotizaciones
+                </span>
+                <label className={s.pageSizeControl}>
+                  <span>Filas por pagina</span>
+                  <select
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(Number(event.target.value));
+                      setCurrentPage(1);
+                    }}
+                    aria-label="Filas por pagina"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <div className={s.pagBtns}>
                 <button
                   className={s.pagBtn}
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                   disabled={currentPage === 1 || resumenRefreshing}
+                  aria-label="Pagina anterior"
                 >
-                  {"<"}
+                  {"‹"}
                 </button>
                 {pageNumbers.map((page) => (
                   <button
@@ -1176,8 +1317,9 @@ export default function CotizacionesPage() {
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                   disabled={currentPage === totalPages || resumenRefreshing}
+                  aria-label="Pagina siguiente"
                 >
-                  {">"}
+                  {"›"}
                 </button>
               </div>
             </PremiumPageSection>

@@ -1,11 +1,16 @@
 /** @jest-environment jsdom */
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import ClientesPage from "../page";
 
 const mockUseClientes = jest.fn();
+const push = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
 
 jest.mock("next/link", () => {
   return function MockLink({
@@ -86,5 +91,40 @@ describe("ClientesPage", () => {
     expect(screen.queryByText("Cargando clientes")).not.toBeInTheDocument();
     expect(screen.getByText("Nuevo cliente")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Buscar cliente")).toBeInTheDocument();
+  });
+
+  it("abre la ficha desde la fila y mantiene eliminar dentro del menu secundario", () => {
+    mockUseClientes.mockReturnValue({
+      clientes: [
+        {
+          id: "cliente-1",
+          nombre: "Cristaleria Norte",
+          referencia: "Proyecto local",
+          telefono: "+56912345678",
+          direccion: "La Serena",
+          obras: 3,
+          ultimaGestion: "18 jul 2026",
+          estado: "activo",
+        },
+      ],
+      isReady: true,
+      isSaving: false,
+      deleteCliente: jest.fn(),
+      loadClienteDetalleById: jest.fn(),
+    });
+
+    render(<ClientesPage />);
+
+    const row = screen.getByRole("row", {
+      name: "Abrir ficha de Cristaleria Norte",
+    });
+    fireEvent.click(row);
+
+    expect(push).toHaveBeenCalledWith("/clientes/cliente-1");
+
+    fireEvent.click(within(row).getByLabelText("Mas acciones"));
+    expect(
+      within(row).getByRole("menuitem", { name: "Eliminar cliente" })
+    ).toBeInTheDocument();
   });
 });

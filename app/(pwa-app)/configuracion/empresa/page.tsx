@@ -183,17 +183,27 @@ export default function ConfiguracionEmpresaPage() {
 
   useEffect(() => {
     if (!profile) return;
-    setForm(buildEmpresaProfileInput(profile));
+
+    const profileHydrationTimeoutId = window.setTimeout(() => {
+      setForm(buildEmpresaProfileInput(profile));
+    }, 0);
+
+    return () => window.clearTimeout(profileHydrationTimeoutId);
   }, [profile]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const value = new URLSearchParams(window.location.search).get("inicio");
-    const shouldUseInicioMode = value === "1" || value === "true" || value === "si";
-    setIsInicioMode(shouldUseInicioMode);
-    if (shouldUseInicioMode) {
-      setOpenSection("empresa");
-    }
+
+    const inicioModeTimeoutId = window.setTimeout(() => {
+      const value = new URLSearchParams(window.location.search).get("inicio");
+      const shouldUseInicioMode = value === "1" || value === "true" || value === "si";
+      setIsInicioMode(shouldUseInicioMode);
+      if (shouldUseInicioMode) {
+        setOpenSection("empresa");
+      }
+    }, 0);
+
+    return () => window.clearTimeout(inicioModeTimeoutId);
   }, []);
 
   useEffect(() => {
@@ -269,7 +279,11 @@ export default function ConfiguracionEmpresaPage() {
   }, []);
 
   useEffect(() => {
-    void syncDeviceAlertsState();
+    const alertsSyncTimeoutId = window.setTimeout(() => {
+      void syncDeviceAlertsState();
+    }, 0);
+
+    return () => window.clearTimeout(alertsSyncTimeoutId);
   }, [syncDeviceAlertsState]);
 
   const canToggleNotifications =
@@ -544,6 +558,44 @@ export default function ConfiguracionEmpresaPage() {
   );
   const commercialComplete = Boolean(form.formaPago.trim());
   const notificationsComplete = notificationsEnabled;
+  const activeLineTemplatesCount = lineTemplates.filter((item) => item.isActive).length;
+  const setupSteps: Array<{
+    id: SectionId;
+    label: string;
+    detail: string;
+    isComplete: boolean;
+  }> = [
+    {
+      id: "empresa",
+      label: "Datos",
+      detail: companyComplete ? "Contacto listo" : "Completa contacto y rubro",
+      isComplete: companyComplete,
+    },
+    {
+      id: "marca",
+      label: "Marca",
+      detail: brandComplete ? "Logo y color listos" : "Agrega el logo",
+      isComplete: brandComplete,
+    },
+    {
+      id: "catalogo",
+      label: "Precios",
+      detail:
+        activeLineTemplatesCount > 0
+          ? `${activeLineTemplatesCount} lineas activas`
+          : "Carga tus lineas base",
+      isComplete: activeLineTemplatesCount > 0,
+    },
+    {
+      id: "comercial",
+      label: "Pago",
+      detail: commercialComplete ? "Condiciones visibles" : "Define forma de pago",
+      isComplete: commercialComplete,
+    },
+  ];
+  const completedSetupSteps = setupSteps.filter((step) => step.isComplete).length;
+  const nextSetupStep =
+    setupSteps.find((step) => !step.isComplete) ?? setupSteps[setupSteps.length - 1];
 
   const companySummary = compactJoin([
     form.empresaNombre.trim() || "Empresa sin nombre",
@@ -559,7 +611,6 @@ export default function ConfiguracionEmpresaPage() {
     "Vigencia por cotizacion",
     "IVA incluido",
   ]);
-  const activeLineTemplatesCount = lineTemplates.filter((item) => item.isActive).length;
   const previewIdentity = previewUrl ?? form.empresaLogoUrl;
   const previewInitials = buildOrganizationInitials(form.empresaNombre || "Mi empresa");
 
@@ -679,86 +730,138 @@ export default function ConfiguracionEmpresaPage() {
 
   return (
     <div className={s.root} data-onboarding-target="empresa-config">
-      <section className={s.publicCard}>
-        <div className={s.publicCardTop}>
-          <span className={s.cardEyebrow}>
-            <LuEye aria-hidden />
-            Vista de cotizacion
-          </span>
-          <span className={s.previewModePill}>PDF y presupuesto</span>
-        </div>
-
-        <div className={s.quotePreviewBox} style={{ ["--brand" as string]: form.brandColor }}>
-          <div className={s.quoteDocBar}>
-            <span>Presupuesto comercial</span>
-            <span>Tu marca visible</span>
-          </div>
-
-          <div className={s.quoteAvailability}>
-            <span className={s.quoteDot} aria-hidden />
-            Marca aplicada en tu cotizacion
-          </div>
-
-          <div className={s.quoteIdentity}>
-            <div className={s.quoteLogoFrame}>
-              <div className={s.publicLogo} style={{ ["--brand" as string]: form.brandColor }}>
-                {previewIdentity ? (
-                  <Image
-                    src={previewIdentity}
-                    alt={form.empresaNombre || "Logo de la empresa"}
-                    width={96}
-                    height={96}
-                    className={s.publicLogoImage}
-                    unoptimized
-                  />
-                ) : (
-                  <span>{previewInitials}</span>
-                )}
-              </div>
-            </div>
-
-            <div className={s.quoteIdentityCopy}>
-              <strong>{form.empresaNombre || "Tu empresa"}</strong>
-              {form.responsableComercial.trim() ? (
-                <span className={s.inlineInfo}>
-                  Cotiza: {form.responsableComercial.trim()}
-                </span>
-              ) : null}
-              <div className={s.quoteMetaList}>
-                <span>
-                  <LuMapPin aria-hidden />
-                  <span className={s.quoteMetaValue}>
-                    {form.empresaDireccion || "Direccion comercial"}
-                  </span>
-                </span>
-                <span>
-                  <LuPhone aria-hidden />
-                  <span className={s.quoteMetaValue}>
-                    {form.empresaTelefono || "Telefono de contacto"}
-                  </span>
-                </span>
-                <span>
-                  <LuMail aria-hidden />
-                  <span className={s.quoteMetaValue}>
-                    {form.empresaEmail || "Email comercial"}
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className={s.quoteDivider} />
-
-          <p className={s.quoteSupportCopy}>
-            Estos datos y tu color de marca se muestran en el presupuesto que recibe tu cliente.
-          </p>
-
-          <div className={s.quotePaymentCard}>
-            <strong>Forma de pago visible</strong>
-            <span>{form.formaPago.trim() || "Define tu forma de pago en Configuracion comercial."}</span>
-          </div>
+      <section className={s.desktopHeader}>
+        <div>
+          <h1>Empresa</h1>
+          <p>Marca, logo y datos comerciales del negocio</p>
         </div>
       </section>
+
+      <div className={s.desktopPreviewStack}>
+        <section className={s.publicCard}>
+          <div className={s.publicCardTop}>
+            <span className={s.cardEyebrow}>
+              <LuEye aria-hidden />
+              Vista de cotizacion
+            </span>
+            <span className={s.previewModePill}>PDF y presupuesto</span>
+          </div>
+
+          <div className={s.quotePreviewBox} style={{ ["--brand" as string]: form.brandColor }}>
+            <div className={s.quoteDocBar}>
+              <span>Presupuesto comercial</span>
+              <span>Tu marca visible</span>
+            </div>
+            <div className={s.quoteBrandStrip} aria-hidden />
+
+            <div className={s.quoteAvailability}>
+              <span className={s.quoteDot} aria-hidden />
+              Vista previa de marca
+            </div>
+
+            <div className={s.quoteIdentity}>
+              <div className={s.quoteLogoFrame}>
+                <div className={s.publicLogo} style={{ ["--brand" as string]: form.brandColor }}>
+                  {previewIdentity ? (
+                    <Image
+                      src={previewIdentity}
+                      alt={form.empresaNombre || "Logo de la empresa"}
+                      width={96}
+                      height={96}
+                      className={s.publicLogoImage}
+                      unoptimized
+                    />
+                  ) : (
+                    <span>{previewInitials}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className={s.quoteIdentityCopy}>
+                <strong>{form.empresaNombre || "Tu empresa"}</strong>
+                {form.responsableComercial.trim() ? (
+                  <span className={s.inlineInfo}>
+                    Cotiza: {form.responsableComercial.trim()}
+                  </span>
+                ) : null}
+                <div className={s.quoteMetaList}>
+                  <span>
+                    <LuMapPin aria-hidden />
+                    <span className={s.quoteMetaValue}>
+                      {form.empresaDireccion || "Direccion comercial"}
+                    </span>
+                  </span>
+                  <span>
+                    <LuPhone aria-hidden />
+                    <span className={s.quoteMetaValue}>
+                      {form.empresaTelefono || "Telefono de contacto"}
+                    </span>
+                  </span>
+                  <span>
+                    <LuMail aria-hidden />
+                    <span className={s.quoteMetaValue}>
+                      {form.empresaEmail || "Email comercial"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className={s.quoteDivider} />
+
+            <p className={s.quoteSupportCopy}>
+              Estos datos y tu color de marca se muestran en el presupuesto que recibe tu cliente.
+            </p>
+
+            <div className={s.quotePaymentCard}>
+              <strong>Forma de pago visible</strong>
+              <span>{form.formaPago.trim() || "Define tu forma de pago en Configuracion comercial."}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className={s.desktopReadinessCard} aria-label="Preparacion comercial">
+          <div className={s.readinessHeader}>
+            <div>
+              <span className={s.cardEyebrow}>Preparacion comercial</span>
+              <strong>{completedSetupSteps} de {setupSteps.length} bloques listos</strong>
+            </div>
+            <span className={s.readinessScore}>{Math.round((completedSetupSteps / setupSteps.length) * 100)}%</span>
+          </div>
+
+          <div
+            className={s.readinessBar}
+            style={{ ["--progress" as string]: `${(completedSetupSteps / setupSteps.length) * 100}%` }}
+            aria-hidden
+          />
+
+          <div className={s.readinessSteps}>
+            {setupSteps.map((step) => (
+              <button
+                key={step.id}
+                type="button"
+                className={s.readinessStep}
+                data-complete={step.isComplete}
+                onClick={() => setOpenSection(step.id)}
+              >
+                <span>{step.isComplete ? <LuCheck aria-hidden /> : null}</span>
+                <div>
+                  <strong>{step.label}</strong>
+                  <small>{step.detail}</small>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className={s.readinessAction}
+            onClick={() => setOpenSection(nextSetupStep.id)}
+          >
+            {completedSetupSteps === setupSteps.length ? "Revisar configuracion" : `Completar ${nextSetupStep.label}`}
+          </button>
+        </section>
+      </div>
 
       <div className={s.accordionList}>
         <section className={`${s.accordion} ${openSection === "empresa" ? s.accordionOpen : ""}`}>
@@ -1146,10 +1249,42 @@ export default function ConfiguracionEmpresaPage() {
             </div>
           </div>
         </section>
+
+        {!isQuoteOnlyPlan ? (
+          <section
+            className={`${s.utilityCard} ${s.desktopUtilityCard}`}
+            aria-label="Herramientas publicas"
+          >
+            <div className={s.utilityCardHeader}>
+              <span className={s.cardEyebrow}>Herramientas publicas</span>
+              <p className={s.utilityCardHint}>
+                Accesos a tu pagina, canales y mensaje listo para compartir.
+              </p>
+            </div>
+            <div className={s.utilityActions}>
+              <Link href="/configuracion/pagina-venta" className={s.secondaryLink}>
+                <LuGlobe aria-hidden />
+                Pagina publica
+              </Link>
+              <Link href="/solicitudes/canales" className={s.secondaryLink} prefetch={false}>
+                <LuQrCode aria-hidden />
+                Canales y QR
+              </Link>
+              <button
+                type="button"
+                className={s.secondaryLink}
+                onClick={() => void handleCopyPublicLink()}
+              >
+                {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+                {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
+              </button>
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {!isQuoteOnlyPlan ? (
-        <section className={s.utilityCard}>
+        <section className={`${s.utilityCard} ${s.mobileUtilityCard}`}>
           <span className={s.cardEyebrow}>Herramientas publicas</span>
           <div className={s.utilityActions}>
             <Link href="/configuracion/pagina-venta" className={s.secondaryLink}>
@@ -1160,13 +1295,14 @@ export default function ConfiguracionEmpresaPage() {
               <LuQrCode aria-hidden />
               Canales y QR
             </Link>
-              <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
-                {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
-                {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
-              </button>
+            <button type="button" className={s.secondaryLink} onClick={() => void handleCopyPublicLink()}>
+              {publicLinkCopied ? <LuCheck aria-hidden /> : <LuCopy aria-hidden />}
+              {publicLinkCopied ? "Copiado" : "Copiar texto + link"}
+            </button>
           </div>
         </section>
       ) : null}
+
     </div>
   );
 }

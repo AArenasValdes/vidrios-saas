@@ -1,0 +1,304 @@
+.root {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.trigger {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.45rem 0.7rem 0.45rem 0.8rem;
+  border: 1px solid #d5dee8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #172033;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.trigger:hover {
+  border-color: #b8c9de;
+  background: #fbfcfe;
+}
+
+.triggerOpen,
+.trigger:focus-visible {
+  border-color: #1e88ff;
+  box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.16);
+  outline: none;
+}
+
+.triggerSelected {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 72%);
+}
+
+.triggerBody {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.triggerBody strong,
+.triggerMuted {
+  overflow: hidden;
+  color: #172033;
+  font-size: 0.88rem;
+  font-weight: 780;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerMuted {
+  color: #5d6c80;
+  font-weight: 720;
+}
+
+.triggerBody small {
+  color: #7b8da6;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.triggerCaret {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: #64748b;
+}
+
+.panel {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.55rem;
+  border: 1px solid #d7e2ef;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 30, 55, 0.1);
+}
+
+.searchWrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  width: 14px;
+  height: 14px;
+  color: #8494a8;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.searchInput {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.45rem 2.1rem 0.45rem 2.15rem;
+  border: 1px solid #d8e2ee;
+  border-radius: 9px;
+  background: #f8fafc;
+  box-shadow: none;
+  color: #172033;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.25;
+  outline: none;
+  appearance: none;
+}
+
+.searchInput::placeholder {
+  color: #94a3b8;
+  font-weight: 550;
+  opacity: 1;
+}
+
+.searchInput:focus {
+  border-color: #1e88ff;
+  background: #ffffff;
+  box-shadow: none;
+  outline: none;
+}
+
+.searchClear {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: inline-grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.searchClear:hover {
+  background: #eef2f7;
+  color: #172033;
+}
+
+/* Altura fija: el accordion padre tiene overflow hidden y si no,
+   la lista crece y queda cortada sin poder scrollear. */
+.list {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+  height: 260px;
+  max-height: 260px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  padding-right: 0.2rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 139, 190, 0.7) #e8eef6;
+}
+
+.list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: rgba(108, 139, 190, 0.7);
+}
+
+.list::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: #e8eef6;
+}
+
+.group {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.groupHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.2rem 0.15rem;
+  border-bottom: 1px solid #eef2f6;
+  background: #ffffff;
+}
+
+.groupHeader strong {
+  color: #0b0f17;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.groupHeader span {
+  color: #7b8da6;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.groupOptions {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.option {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #172033;
+  font-size: 0.8rem;
+  font-weight: 680;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: #1e88ff;
+}
+
+.option:hover {
+  background: #f5f9ff;
+  border-color: #e2ebf6;
+}
+
+.optionActive {
+  border-color: rgba(30, 136, 255, 0.28);
+  background: #eef6ff;
+  color: #0b4f9c;
+  font-weight: 780;
+}
+
+.empty {
+  padding: 0.85rem 0.55rem;
+  color: #7b8da6;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.2rem;
+  border-top: 1px solid #eef2f6;
+}
+
+.clearButton {
+  border: 0;
+  background: transparent;
+  color: #a54816;
+  font-size: 0.74rem;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  color: #8a3a10;
+}

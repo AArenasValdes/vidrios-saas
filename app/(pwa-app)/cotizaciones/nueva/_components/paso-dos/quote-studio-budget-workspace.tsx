@@ -5,6 +5,7 @@ import { LuFilePlus2, LuPlus } from "react-icons/lu";
 import type { PasoDosPanelComponentesProps } from "../../_types/paso-dos";
 
 import { PasoDosPanelLista } from "./paso-dos-panel-lista";
+import { PautaConsolidadaPanel } from "./pauta-consolidada-panel";
 import d from "../paso-dos-panel-desktop.module.css";
 
 type QuoteStudioBudgetWorkspaceProps = Pick<
@@ -90,6 +91,7 @@ export function QuoteStudioBudgetWorkspace({
           isPieceInEdition={false}
           listSurface="workspace"
         />
+        <PautaConsolidadaPanel items={items} />
       </div>
     </section>
   );

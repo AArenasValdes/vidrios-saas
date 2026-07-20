@@ -61,6 +61,20 @@ const nextPolyfillModuleJs = path.join(
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.0.12"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
+        protocol: "https",
+        hostname: "yrtrwgkaopfumpidjthk.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "react-icons"],
   },

@@ -97,7 +97,7 @@ export function createCotizacionItemVisualConfigsService(
       const config = ensureGuidedVisualConfig(guided);
       const svgMarkup = renderGuidedVisualSvg(config, {
         maxW: 470,
-        maxH: 210,
+        maxH: 260,
         variant: "pdf",
         colorHex: item.color ?? null,
         showSelection: false,

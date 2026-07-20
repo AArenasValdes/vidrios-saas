@@ -222,17 +222,18 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: Formulario guiado de nueva cotizacion. Es la prioridad actual de estabilizacion y luego la base del Quote Studio desktop.
+- **Proposito**: Formulario guiado de nueva cotizacion y escritorio desktop para construir cotizaciones completas.
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Formulario multi-paso (Cliente, Presupuesto, Revisar y guardar), Joyride contextual de onboarding, selector compacto de metodo de presupuesto en Paso 1 desktop, estacion desktop de Paso 2 en dos columnas con pieza local "En edicion" y subpasos Tipo/Sistema/Medidas/Precio, modo `por_item` con costo proveedor + margen/precio por linea o producto de cristal, modo `total_global` con cuaderno comercial y total final cliente + selector IVA incluido/sin IVA, guardado borrador/presupuesto. En desktop ≥1024, al agregar Ventana/Puerta (u otro con perfilería) el subpaso Sistema ofrece el constructor tras elegir **Personalizado** (Ventana: sistema propio; Puerta/otros: config o esquema) → **Abrir constructor** (Fase 3 V2, QA 2026-07-18). Los productos de cristal guardados (`categoria='vidrio'`) pueden agregarse sin seleccionar Aluminio/PVC/color/sistema de perfileria y usan ancho, alto, cantidad y pricing por m2. En **Espejo** y **Cubierta de mesa** no se pide Aluminio/PVC ni color de perfil; en **Espejo** se muestran espesores recomendados 3–6 mm. Mobile mantiene el wizard actual.
-- **Componentes principales**: Internos de la pagina (1198 lineas)
+- **Funcionalidades visibles**: Formulario multi-paso (Cliente, Componentes, Resumen), selector `por_item` / `total_global`, guardado de borrador y presupuesto. En desktop `>=1024px`, Paso 2 ofrece **Presupuesto** y **Constructor** sobre el mismo `draft.items`. Constructor incluye siete presets — Fijo, Corredera, Abatible, Oscilobatiente, Proyectante, Puerta y Paño libre —, tablero cuadriculado, tarjetas seleccionables, medidas/cantidad/nombre editables, duplicado, eliminación, reordenamiento, progreso e inspector de línea, vidrio, material, color, apertura y precio. La paleta reutiliza `COLOR_OPTIONS`. El editor avanzado de una pieza sigue disponible mediante **Personalizado -> Abrir constructor**. Los productos de cristal guardados (`categoria='vidrio'`) pueden agregarse sin perfilería. En **Espejo** y **Cubierta de mesa** no se pide material ni color de perfil. Mobile conserva el wizard anterior.
+- **Fase 4 visible en desktop**: panel **Cubicacion y pauta** con tabla editable `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, acciones Recalcular / Restaurar / Agregar corte y persistencia `[cub:]` (`source` auto|manual). Snapshot por cotización, ajuste manual, guardado confirmado en línea y pauta consolidada están implementados; la calibración con ejemplos reales de taller sigue pendiente.
+- **Componentes principales**: `PasoDosSeccion`, `QuoteConstructorWorkspace`, `GuidedVisualComposer` e internos de la página.
 - **Nota onboarding 2026-06-19**: La entrada inicial debe priorizar `Cotizacion rapida` (`total_global`) y mostrar exito/resumen de PDF antes de pedir datos de empresa. No volver a montar Joyride contextual en esta ruta.
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
 - **Datos que consume**: Perfil org (margen/proveedor defaults), catalogo componentes, sugerencias
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: Crear borrador, guardar presupuesto, auto-crear cliente/proyecto (`projects`, visible como Obras)
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-uno-datos-cliente.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`, `src/features/cotizaciones/visual-composer/` (constructor guiado), `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-panel-componentes.tsx`, `src/features/cotizaciones/new-quote/workflow-ui.ts` (`shouldRequireProfileMaterialForComponent`, `MIRROR_GLASS_THICKNESS_OPTIONS`), `src/features/cotizaciones/new-quote/solicitud-prefill.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/component-catalog.service.ts`, `src/features/cotizaciones/services/component-suggestions.service.ts`, `src/features/cotizaciones/services/glass-recommendations.service.ts`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-wizard-vidrio-movil.tsx`
-- **Riesgos**: Pagina muy grande (1198 lineas). Workflow state persistido en sessionStorage. No romper calculos de pricing por componente, Joyride contextual ni auto-creacion de cliente/proyecto. En modo `total_global`, no exponer costo, margen ni utilidad y no mostrar `$0` por item en PDF/vista publica/documento publico. Constructor visual V2 activo en wizard desktop (entrada vía Personalizado); no abrir CAD libre, no tocar PDF/WhatsApp sin revisar renderer, no exponer el constructor en mobile. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripcion no activa.
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/nueva/page.tsx`, `app/(pwa-app)/cotizaciones/nueva/page.module.css`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`, `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`, `src/features/cotizaciones/visual-composer/`, `src/utils/cotizacion-item-presentation.ts`. Handoff obligatorio: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Riesgos**: El workflow vive en `draft.items` y se restaura desde `sessionStorage`; no crear un segundo estado persistente para el cuaderno. No romper pricing por componente ni auto-creación de cliente/proyecto. En `total_global`, no exponer costo, margen o utilidad ni mostrar `$0` por item en salidas comerciales. No abrir CAD libre, no exponer Constructor en mobile y no modificar PDF/WhatsApp/documento público sin revisar el renderer compartido. La validación local de texto inválido en ancho/alto/cantidad todavía debe bloquear revisión sin corromper el último valor válido. Esta ruta debe quedar bloqueada para cuentas con trial vencido o suscripción no activa.
 - **Riesgo onboarding 2026-06-19**: No reintroducir empresa/pagina/canales antes de crear una cotizacion ni redirigir automaticamente al PDF al guardar.
 
 ---
@@ -241,17 +242,17 @@
 
 - **Tipo**: Privada (autenticada), dinamica
 - **Archivo principal**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`
-- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (desktop: topbar oculto + ancho comercial)
 - **Proposito**: Detalle de cotizacion con items, totales y acciones
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Header con estado visible neutro (Creada/PDF generado/Enviada/etc.), cierre comercial manual en seccion secundaria, items, totales, recordatorio contextual para compartir la primera cotizacion, acciones (PDF, WhatsApp, editar, eliminar)
-- **Componentes principales**: `CotizacionDetalleMobileView`, `CotizacionDetalleMobileViewModel`
+- **Componentes principales**: `CotizacionDetalleDesktopView` (≥1024), `CotizacionDetalleMobileView` (<1024), view-model compartido
 - **Hooks**: `useCotizacionesStore`
 - **Datos que consume**: Cotizacion por ID con items
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`
 - **Acciones principales**: Ver detalle, generar PDF, compartir WhatsApp, editar, eliminar
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `src/features/cotizaciones/services/cotizacion-display-state.service.ts`
-- **Riesgos**: No romper generacion de PDF, link de WhatsApp ni la marca de `first_share`.
+- **Archivos a tocar para modificar**: `app/(pwa-app)/cotizaciones/[id]/page.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-desktop-view.tsx`, `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-desktop.module.css`, `app/(pwa-app)/cotizaciones/[id]/_components/*`, `src/features/cotizaciones/hooks/useCotizacionesStore.ts`, `src/features/cotizaciones/services/cotizacion-display-state.service.ts`
+- **Riesgos**: No romper generacion de PDF, link de WhatsApp ni la marca de `first_share`. No reutilizar shell móvil estrecho en desktop.
 
 ---
 
@@ -290,17 +291,17 @@
 
 - **Tipo**: Privada (autenticada), dinamica
 - **Archivo principal**: `app/(pwa-app)/clientes/[id]/page.tsx`
-- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
+- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (desktop: topbar oculto + ancho comercial)
 - **Proposito**: Ficha de cliente con Obras (`projects`) y cotizaciones asociadas
 - **Usuario objetivo**: Admin/vendedor autenticado
-- **Funcionalidades visibles**: Header, estado badge, telefono, direccion, tabs Obras/cotizaciones, menu contextual
-- **Componentes principales**: `ClienteDetalleMobileView`, `ClienteDetalleMobileViewModel`
+- **Funcionalidades visibles**: Header, estado badge, telefono, direccion, metricas, tabs Proyectos/Cotizaciones, editar/llamar
+- **Componentes principales**: `ClienteDetalleDesktopView` (≥1024), `ClienteDetalleMobileView` (<1024), `buildClienteDetalleMobileViewModel` compartido
 - **Hooks**: `useClientes`
 - **Datos que consume**: Cliente detalle con proyectos y cotizaciones
 - **Tablas Supabase relacionadas**: `clients`, `projects`, `cotizaciones`
 - **Acciones principales**: Ver ficha, editar, ver proyectos/cotizaciones
-- **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/[id]/page.tsx`, `app/(pwa-app)/clientes/[id]/_components/*`, `src/features/clientes/services/clientes.service.ts`
-- **Riesgos**: No romper tabs ni navegacion a cotizaciones/obras.
+- **Archivos a tocar para modificar**: `app/(pwa-app)/clientes/[id]/page.tsx`, `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-desktop-view.tsx`, `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-desktop.module.css`, `app/(pwa-app)/clientes/[id]/_components/*`, `src/features/clientes/services/clientes.service.ts`
+- **Riesgos**: No romper tabs ni navegacion a cotizaciones/obras. No forzar `max-width: 420px` del CSS mobile en desktop.
 
 ---
 
@@ -394,14 +395,15 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: CRUD del catálogo privado comercial (líneas, costos, precios, categoría, unidad de cobro, proveedor, vigencia)
+- **Proposito**: CRUD del catálogo privado comercial y técnico V1 (proveedor, sistema, línea, precios comerciales cuando existan, y reglas simples de cubicación/pauta revisable)
 - **Usuario objetivo**: Admin autenticado
 - **Componentes principales**: `LineasPreciosPageClient` en `src/features/cotizaciones/line-templates/components/`
 - **Hooks**: `useCotizacionLineTemplates`
 - **Tablas Supabase relacionadas**: `cotizacion_line_templates`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas, ir a importación
-- **Archivos a tocar para modificar**: `src/features/cotizaciones/line-templates/**`, `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
-- **Riesgos**: Requiere migración `20260709153000_extend_cotizacion_line_templates_catalog.sql` en el entorno. Sin migración, writes de campos de catálogo fallan con mensaje explícito.
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas, agrupar por proveedor/sistema, configurar cubicación y pauta V1, ir a importación
+- **UX desktop (≥1024, 2026-07-18)**: modal ancho; esenciales (identidad + precio venta/costo + activa); **Agregar más detalles** (mínimo, redondeo, merma, margen, proveedor, sistema, vigencia, vidrio/cristal); aside con vista previa + Cubicación asistida. Fase 4 permite elegir sistema V1, estado de validacion y perfiles por rol; pauta de corte sin precio queda como calculo referencial; scroll interno controlado
+- **Archivos a tocar para modificar**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`, `lineas-precios-page-client.module.css`, resto de `src/features/cotizaciones/line-templates/**`
+- **Riesgos**: Requiere migración `20260709153000_extend_cotizacion_line_templates_catalog.sql` en el entorno. Sin migración, writes de campos de catálogo fallan con mensaje explícito. Fase 4 V1 permite cubicación y pauta revisable guardadas en `catalog_metadata`, pero no precios/costos/margen, optimización de pérdida, nesting, CAD, inventario ni fabricación automática. No mostrar formulas, JSON ni variables libres al usuario.
 
 ---
 
@@ -516,4 +518,4 @@
 
 | Ruta | Proposito | Archivo |
 |---|---|---|
-| `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. Caracteristicas via `buildCotizacionItemPrintSpecs()` (sin Material/Color en Espejo/Cubierta de mesa). | `app/print/cotizaciones/[id]/page.tsx`, `app/print/cotizaciones/[id]/_utils/item-print-specs.ts` |
+| `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. Usa el renderer compartido: croquis protagonista (`maxH: 260`, marco hasta 248 px), perfiles, cotas y aperturas. Preview/export HTML revisados; falta rasterizar un PDF descargado real. Características vía `buildCotizacionItemPrintSpecs()` (sin Material/Color en Espejo/Cubierta de mesa). | `app/print/cotizaciones/[id]/page.tsx`, `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`, `src/features/cotizaciones/visual-composer/` |

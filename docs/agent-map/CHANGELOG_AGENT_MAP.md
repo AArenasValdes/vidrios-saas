@@ -4,6 +4,345 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-20 - Cotización rápida / Cotización guiada (misma pieza)
+
+- Tabs desktop `Presupuesto` / `Constructor` reemplazados por **Cotización rápida** / **Cotización guiada** con igual peso visual.
+- Contrato de dominio compartido: `src/features/cotizaciones/new-quote/quote-piece-domain.ts` (comercial vs técnico, resumen técnico).
+- Rápida: resumen técnico en tarjetas, inspector con cubicación/despiece (`PautaCubicacionPanel`), CTA «Abrir configuración guiada».
+- Guiada desktop `por_item`: 5 pasos Tipo → Sistema → Medidas → Despiece → Precio; editor desktop con tab Despiece.
+- Preferencia de modo en `localStorage`; default rápida. Cabecera de flujo compacta en Paso 2.
+- Misma fuente de verdad `draft.items`; sin migración DB; mobile intacto.
+
+## 2026-07-20 - Handoff consolidado del Constructor desktop
+
+- Se publica `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md` como fuente operativa para continuar con otro agente sin redescubrir el flujo.
+- Se consolidan estado funcional, arquitectura, modelo V2, persistencia, pricing, renderer compartido, PDF, evidencia de QA, bloqueos globales y límites de alcance.
+- Se sincronizan `Agents.md`, roadmap, índice, mapas de features, componentes, rutas, datos, overview y guía de tareas.
+- Punto exacto de reanudación: validación local de ancho/alto/cantidad inválidos que bloquee revisión sin corromper el draft; luego inspección raster de un PDF descargado real.
+- Esta pasada es exclusivamente documental: no modifica producto, esquema DB, mobile, pricing ni persistencia.
+
+## 2026-07-20 - Croquis protagonista y cotas despejadas en documentos
+
+- El renderer compartido amplía el aprovechamiento del canvas PDF y reserva una banda técnica mayor para las cotas.
+- PDF, preview y documento público renderizan croquis con `maxH: 260`; el marco visual admite hasta 248 px sin modificar datos ni precios.
+- Textos de ancho/alto incorporan halo claro y mayor separación respecto del perfil; el renderer legacy recibe el mismo tratamiento de cotas.
+
+## 2026-07-20 - Constructor desktop: cuaderno profesional y paleta compartida
+
+- `QuoteConstructorWorkspace` pasa a un unico scroll vertical con inspector sticky de 390 px y footer de progreso.
+- Tarjetas mas compactas, estados especificos y acciones agrupadas sin modificar callbacks, draft ni persistencia.
+- La barra de color del inspector reutiliza `COLOR_OPTIONS`, igual que Presupuesto, y conserva color personalizado hexadecimal.
+- Alcance solo desktop >=1024; mobile, PDF, WhatsApp y calculos quedan intactos.
+
+## 2026-07-19 - Constructor-cuaderno desktop para cotizaciones completas
+
+### Resumen
+
+Paso 2 incorpora un modo explicito **Constructor** solo desktop. El maestro puede agregar presets, ver varias ventanas/puertas en un tablero cuadriculado, editar medidas/cantidad/nombre, seleccionar linea/vidrio/material/color/apertura/precio, duplicar, eliminar y reordenar sin perder el draft. `total_global` conserva items descriptivos a `$0`; `por_item` mantiene recalculo por plantilla y override manual. El schema visual V2 suma `oscilobatiente` y `openingSide` de forma aditiva; el renderer compartido gana perfiles en capas, vidrio tintado, cotas y simbolos de apertura. Sin migracion DB y sin cambios mobile.
+
+### Archivos
+
+| Area | Archivos |
+|---|---|
+| Workspace | `quote-constructor-workspace.tsx` + `.module.css` + service |
+| Integracion | `paso-dos-seccion.tsx`, `page.tsx`, CSS desktop |
+| Modelo/SVG | `guided-visual-config.ts`, `guided-visual-renderer.service.ts`, `guided-visual-composer.tsx` |
+| Pruebas | tests V1/V2, renderer, service y componente del workspace |
+
+## 2026-07-19 - Camino 2: partidas V1 simples + handoff cubicación
+
+### Resumen
+
+Decisión de producto: **no ensanchar** el selector de cubicación con tipologías (bow, abatible ventana, etc.). Catálogo = precio comercial; partida V1 = 3 patrones de estimación; tipologías complejas = constructor. UI del modal de línea deja estimación secundaria (partida/estado primero; perfiles/descuentos/calibración en segundo paso). Se publica handoff completo para otras IAs: `CUBICACION_PAUTA_HANDOFF.md`.
+
+### Archivos
+
+| Area | Archivos |
+|---|---|
+| Handoff | `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md` |
+| Mapas | `README.md`, `AGENT_TASK_GUIDE.md`, `FEATURES_MAP.md`, `DATA_MODEL_MAP.md`, `AGENTS.md`, roadmap |
+| UI | `lineas-precios-page-client.tsx` (+ CSS) |
+
+## 2026-07-19 - Canales: UI unificada con shell Ventora
+
+### Resumen
+
+`/solicitudes/canales` deja el hero/cards apilados del diseño antiguo. Header desktop alineado a Solicitudes/Empresa, workspace de 2 columnas (canales + QR sticky), sin bloque duplicado de acciones rápidas, y "Editar página" apunta a `/configuracion/pagina-venta`. El shell reconoce la ruta como pantalla especial "Canales".
+
+### Archivos
+
+| Area | Archivos |
+|---|---|
+| Página | `app/(pwa-app)/solicitudes/canales/page.tsx`, `page.module.css` |
+| UI | `src/features/solicitudes/components/lead-channels.tsx`, `lead-channels.module.css` |
+| Shell | `src/components/layout/app-shell.tsx` |
+
+## 2026-07-19 - Trabajo personalizado: entra al constructor
+
+### Resumen
+
+`Trabajo personalizado` deja de ser item libre (`esItemLibre`). Pasa por el flujo normal de pieza y muestra el constructor visual en composición (`shouldShowGuidedComposerEntry`). La pauta sigue en modo borrador manual. `Trabajo libre / Mantencion` permanece como item libre sin constructor.
+
+## 2026-07-19 - Personalizado: pauta manual asistida (Fase 4)
+
+### Resumen
+
+Si la pieza es composición **Personalizado** (constructor o flag Personalizado), la cubicación deja de usar la pauta automática de la línea. Se siembra un **borrador editable** (marco H/V + fila por definir + vidrio del vano), con aviso claro, sin Recalcular/Restaurar de plantilla ni “Guardar ajuste para esta línea”. Al guardar, `resolveCubicationSnapshotForSave(..., personalizadoAssistMode)` no cae al auto de catálogo.
+
+## 2026-07-19 - Constructor Personalizado: marco redondeado
+
+### Resumen
+
+Se completa la forma del marco: además de `rect` y `arch_top`, ahora hay `rounded` con radio mm y esquinas `all|top` (igual lógica que el vidrio). Así marco y vidrio pueden coincidir visualmente.
+
+## 2026-07-18 - Constructor Personalizado: formas de vidrio V1
+
+### Resumen
+
+Extension Fase 3 (no Fase 4): en el constructor visual guiado se pueden marcar formas simples sin CAD.
+
+1. **Forma del marco** (root): `rect` | `arch_top` | `rounded` (+ flecha o radio mm).
+2. **Forma del vidrio** por modulo: `rect` | `rounded` + radio mm + esquinas `all|top`.
+3. SVG/PDF usan el mismo renderer (`clipPath` + paths). No cambia precio ni pauta de corte.
+
+### Archivos
+
+| Area | Archivos |
+|---|---|
+| Schema | `guided-visual-config.ts` (`frameShape`, `glassShape`) |
+| Paths | `guided-visual-shape-paths.ts` |
+| Renderer | `guided-visual-renderer.service.ts` |
+| UI | `guided-visual-composer.tsx` |
+| Tests | `guided-visual-shapes.test.ts` |
+
+---
+
+## 2026-07-18 - Fase 4: UX cubicacion en Medidas (Quote Studio)
+
+### Resumen
+
+La seccion **Cubicacion y pauta** en `/cotizaciones/nueva` desktop deja de ir al final de Medidas dentro de un `<details>`. Ahora:
+
+1. Va justo despues de dimensiones/cantidad.
+2. Muestra tarjeta con resumen siempre visible (vidrio, perfiles, barras, accesorios).
+3. La tabla de cortes es expandible ("Ver pauta" / "Ocultar pauta").
+4. Si falta linea, pauta activa o medidas, muestra estado pendiente explicito (ya no desaparece).
+
+Precio permanece solo comercial. Archivo: `paso-dos-editor-desktop.tsx` + CSS.
+
+---
+
+## 2026-07-18 - Fase 4: calibracion por ejemplos de taller
+
+### Resumen
+
+Quinto corte Fase 4 en `/configuracion/empresa/lineas-precios`:
+
+1. **Descuentos editables** (`deductionFrame*`, `deductionSash*`, `deductionGlass*`) persistidos en `catalog_metadata`; el preview ya no fuerza 0.
+2. **Perfiles** Zocalo / Accesorio visibles en ficha.
+3. **Calibrar con ejemplo real**: vano + vidrio fabricado (+ marco opcional) → delta vs calculado → **Ajustar descuentos al ejemplo**.
+4. **Preset del sistema** (partida generica, no marca) para corredera / fijo / puerta; estado pasa a `en_calibracion` (salvo `validada`/`revisar_cambios`).
+5. Medidas de ejemplo editables alimentan pauta y estimacion.
+
+### Archivos clave
+
+| Area | Archivos |
+|---|---|
+| Helpers | `cotizacion-line-template-cubication-calibration.ts` |
+| UI ficha | `lineas-precios-page-client.tsx` + CSS |
+| Tests | `…/__tests__/cotizacion-line-template-cubication-calibration.test.ts` |
+
+### Fuera de este corte
+
+Presets por proveedor/marca; multi-ejemplo persistido; optimizacion/barras avanzadas.
+
+---
+
+## 2026-07-18 - Fase 4: ajuste en linea + pauta consolidada
+
+### Resumen
+
+Cuarto corte Fase 4:
+
+1. **Guardar ajuste para esta linea**: desde pauta manual en Quote Studio, confirma y actualiza perfiles en `catalog_metadata` de la linea. Si estaba `validada`, pasa a `revisar_cambios`. No toca precios ni descuentos.
+2. **Pauta consolidada**: panel desktop en el workspace de presupuesto; agrupa cortes persistidos (`[cub:]`) por linea + perfil + medida; copia texto plano.
+
+### Archivos clave
+
+| Area | Archivos |
+|---|---|
+| Ajuste → catalogo | `cotizacion-line-template-cubication-adjustment.ts` |
+| Consolidado | `cotizacion-cubication-consolidated.ts` |
+| UI panel | `paso-dos-editor-desktop.tsx` (boton), `pauta-consolidada-panel.tsx` |
+| Cableado | `page.tsx` → `use-flujo-nueva-cotizacion` → `use-paso-dos-presentacion` |
+| Tests | `…/__tests__/cotizacion-line-template-cubication-adjustment.test.ts` |
+
+### Fuera de este corte
+
+Calibracion por ejemplos reales de taller; barras/sobrante en consolidado; impresion dedicada.
+
+---
+
+## 2026-07-18 - Fase 4: edicion manual de pauta por cotizacion
+
+### Resumen
+
+Tercer corte Fase 4: en Quote Studio desktop la pauta es editable solo para la pieza/cotizacion actual.
+
+1. Snapshot `source: "auto" | "manual"` en `[cub:]`.
+2. Panel: editar Perfil / Funcion / Medida / Cantidad, agregar/quitar cortes.
+3. Acciones `Recalcular` (desde linea actual) y `Restaurar calculo` (vuelve a auto).
+4. `resolveCubicationSnapshotForSave` prioriza draft/previous manual; no pisa ajustes con metadata de linea.
+5. Siguiente (cerrado en corte posterior): `Guardar ajuste para esta linea` y pauta consolidada.
+
+### Archivos clave
+
+| Area | Archivos |
+|---|---|
+| Snapshot + rebuild | `cotizacion-line-template-cubication-snapshot.ts` |
+| Form draft | `ComponentFormState.cubicationSnapshot` en `workflow-ui.ts` |
+| Panel editable | `paso-dos-editor-desktop.tsx` + CSS |
+
+---
+
+## 2026-07-18 - Fase 4: snapshot tecnico por cotizacion
+
+### Resumen
+
+Segundo corte de Fase 4: al guardar una pieza con linea + pauta activa + medidas, se congela la cubicacion en `cotizacion_items.observaciones` via bridge `[cub:]` (base64url JSON). Cambios futuros en `catalog_metadata` de la linea no alteran cotizaciones historicas.
+
+1. Helpers: `buildCubicationSnapshotFromCatalogMetadata()`, `serializeCubicationSnapshot()` / `parseCubicationSnapshot()`, `resolveCubicationSnapshotForSave()`.
+2. Persistencia sin tabla nueva: `encodeCotizacionItemPresentationMeta` / `decode…` incluyen `cubicationSnapshot`.
+3. `buildItemFromForm` captura snapshot al finalizar pieza (con `lineTemplates` / metadata).
+4. Panel desktop **Cubicacion y pauta**: si medidas/linea coinciden con el snapshot, muestra pauta congelada ("Snapshot guardado"); si el usuario cambia medidas, vuelve a preview en vivo.
+
+### Siguiente corte
+
+1. Edicion manual de pauta para la cotizacion actual.
+2. Acciones `Recalcular`, `Restaurar calculo`, `Guardar ajuste para esta linea` con confirmacion.
+3. Pauta consolidada imprimible/exportable.
+4. Calibracion con ejemplos reales de taller.
+
+### Archivos clave
+
+| Area | Archivos |
+|---|---|
+| Snapshot | `src/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot.ts` |
+| Bridge observaciones | `src/utils/cotizacion-item-presentation.ts` |
+| Guardado pieza | `src/features/cotizaciones/new-quote/workflow-ui.ts` (`buildItemFromForm`) |
+| Panel desktop | `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx` |
+| Tests | `…/__tests__/cotizacion-line-template-cubication-snapshot.test.ts` |
+
+### Validacion conocida
+
+`npx tsc --noEmit --pretty false --incremental false` pasa. `npm test` sigue bloqueado por Jest global `clearMocksOnScope`.
+
+---
+
+## 2026-07-18 - Fase 4: cubicacion asistida y pauta revisable V1 iniciada
+
+### Resumen
+
+Se documenta el primer corte implementado de Fase 4 para que los agentes continuen desde el punto correcto:
+
+1. Sistemas V1: `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`.
+2. Estados V1: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`.
+3. `cotizacion_line_templates.catalog_metadata` guarda perfiles por rol y ajustes simples; no hay tabla tecnica nueva.
+4. `/configuracion/empresa/lineas-precios` permite configurar sistema, estado y perfiles por rol.
+5. `/cotizaciones/nueva` desktop muestra **Cubicacion y pauta** con `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, vidrio, ml perfiles, accesorios y barras referenciales.
+
+### Siguiente corte
+
+1. Snapshot tecnico por cotizacion. *(hecho 2026-07-18)*
+2. Edicion manual de pauta para la cotizacion actual.
+3. Acciones `Recalcular`, `Restaurar calculo`, `Guardar ajuste para esta linea` con confirmacion.
+4. Pauta consolidada imprimible/exportable agrupada por linea + perfil + medida.
+5. Calibracion con ejemplos reales de taller.
+
+### Archivos clave
+
+| Area | Archivos |
+|---|---|
+| Helpers Fase 4 | `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts` |
+| Catalogo | `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx` + CSS |
+| Quote Studio desktop | `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx` + CSS |
+| Tests V1 | `src/features/cotizaciones/line-templates/types/__tests__/cotizacion-line-template-estimation.test.ts` |
+
+### Validacion conocida
+
+`npm run build` y `npx tsc --noEmit --pretty false --incremental false` pasan. Lint puntual de archivos Fase 4 pasa. `npm run lint` global esta bloqueado por deuda React Compiler en rutas ajenas; `npm test` esta bloqueado por Jest global `this._moduleMocker.clearMocksOnScope is not a function`.
+
+---
+
+## 2026-07-18 - Corrección de estado: 2B cerrada; pasada = Fase 5 desktop
+
+### Resumen
+
+1. **Fase 2B ya estaba cerrada** (2026-07-17: import PDF + cruce Excel↔técnicas). No es el siguiente trabajo.
+2. La pasada reciente fue **Fase 5 + diseño desktop** (dashboard, shell, listados, detalles, ficha catálogo).
+3. Quote Studio (1) también cerrada; no inventar pulido.
+4. **Siguiente fase formal no abierta:** Fase 4 cubicación (solo con decisión explícita).
+
+### Archivos de documentación
+
+`AGENTS.md`, roadmap, `README.md`, `PROJECT_OVERVIEW.md`, `FEATURES_MAP.md`, `AGENT_TASK_GUIDE.md`
+
+---
+
+## 2026-07-18 - Catálogo: ficha de línea lista para fabricación
+
+### Resumen
+
+Se reordena el sheet **Editar/Nueva línea** del catálogo privado:
+
+1. Secciones claras + color con propósito; progressive disclosure (**Agregar más detalles**).
+2. Desktop ≥1024: modal ancho (~1080) con vista previa + tarjeta **Fabricación (Próximamente)** sin abrir Fase 4.
+3. Scroll único en body del modal (no deformar al expandir detalles).
+
+### Archivos
+
+`lineas-precios-page-client.tsx`, `lineas-precios-page-client.module.css`
+
+---
+
+## 2026-07-18 - Estado de fase + shell/detalles desktop
+
+### Resumen
+
+Se actualiza la documentacion al estado real del producto:
+
+1. **Fase 5 dashboard** marcada como implementada (brief + roadmap + mapas).
+2. **Foco actual**: retoque final UX premium del desktop comercial + Quote Studio para demo.
+3. Shell/listados/detalles desktop documentados: vistas propias ≥1024 para `/cotizaciones/[id]` y `/clientes/[id]`; AppShell con rutas anchas y topbar oculto en detalles.
+4. Fuera de foco: cubicacion (Fase 4), CRM/seguimiento/Kanban.
+
+### Archivos de documentacion
+
+`AGENTS.md`, `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`, `docs/design/FASE_5_DASHBOARD_BRIEF.md`, `docs/agent-map/README.md`, `PROJECT_OVERVIEW.md`, `FEATURES_MAP.md`, `ROUTES_MAP.md`, `COMPONENTS_MAP.md`, `AGENT_TASK_GUIDE.md`
+
+---
+
+## 2026-07-18 - Fase 5: refinamiento editorial desktop
+
+Se corrige el ancho efectivo del dashboard (1600 px en 1920), adaptación 1280,
+proporción inferior 70/30 y densidad de filas. El gráfico queda como SVG propio:
+línea azul 2 px, relleno 4%, dos guías, un único punto permanente y tooltip CLP.
+KPI y recientes mantienen tratamiento abierto/compacto. Mobile no cambia.
+
+---
+
+## 2026-07-18 - Fase 5: rediseño Dashboard desktop + sidebar
+
+### Resumen
+
+Implementación del dashboard desktop (≥1024) según brief visual: hero valor del mes + tendencia 6 meses real, 3 KPIs, cola **Por enviar** con PDF/WhatsApp, columna respuestas/recientes, empty states. Sidebar desktop oscura con logo Ventora y nav Operativo/Configuración. Mobile intacto.
+
+### Archivos clave
+
+`dashboard-desktop.tsx`, `page.desktop.module.css`, `dashboard-summary-server.service.ts`, `use-dashboard-view-model.ts`, `app-shell.tsx` / CSS, helpers pending-send + monthly-totals
+
+---
+
 ## 2026-07-18 - Fase 5: brief dashboard (Por enviar, sin seguimiento hero)
 
 ### Resumen

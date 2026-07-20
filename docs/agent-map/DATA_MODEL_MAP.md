@@ -85,6 +85,11 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 - **Proposito**: Catálogo privado comercial por organización: líneas, costos, precios, mínimos y reglas de cobro para cotización asistida
 - **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `categoria` (CHECK: aluminio/pvc/vidrio/shower/accesorios/otros), `unidad_cobro` (CHECK: m2/metro_lineal/unidad/valor_manual), `material` (Aluminio/PVC/Cristal), `costo_base`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `merma_pct`, `margen_objetivo_pct`, `proveedor`, `vigencia_desde`, `vigencia_hasta`, `catalog_metadata` (jsonb; para `categoria='vidrio'` guarda `espesor` y `terminacion`), `vidrio_principal_recomendado`, `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
+- **Metadata Fase 4 V1 (`catalog_metadata`)**: cubicacion usa keys planas, sin tabla nueva: `cubicationSystem`, `cubicationStatus`, `profileFrame`, `profileSash`, `profileMeeting`, `profileGlazingBead`, `profileSill`, `profileAccessory`, `deductionFrameHorizontalMm`, `deductionFrameVerticalMm`, `deductionSashHorizontalMm`, `deductionSashVerticalMm`, `deductionGlassWidthMm`, `deductionGlassHeightMm`, `cuttingEnabled`, `cuttingMode`, `cuttingBarLengthMm`, `cuttingSawKerfMm`, `cuttingSashCount`.
+- **Valores Fase 4 V1**: partidas permitidas (fijas, Camino 2): `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`. **No ampliar** con tipologías de venta (bow, abatible ventana, etc.): eso va al constructor. Estados: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`. Helpers: `getLineTemplateCubicationConfig()`, `mergeLineTemplateCubicationConfig()`, `buildLineTemplateCuttingPreview()`.
+- **No confundir**: `catalog_metadata.lineSystem` (texto comercial opcional) ≠ `cubicationSystem` (partida de estimación V1).
+- **Snapshot por pieza (sin tabla nueva)**: pauta congelada en `cotizacion_items.observaciones` via bridge `[cub:]` (JSON base64url). Helpers: `cotizacion-line-template-cubication-snapshot.ts`. No recalcular historicos desde `catalog_metadata` actual.
+- **Handoff agentes**: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
 - **Relaciones**: N:1 organizations
 - **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`, `/configuracion/empresa/lineas-precios`, `/configuracion/empresa/lineas-precios/importar`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
@@ -99,8 +104,10 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Campos**: `id`, `organization_id`, `cotizacion_item_id`, `schema_version`, `config_json`, `svg_markup`, `creado_en`, `actualizado_en`, `eliminado_en`
 - **RLS**: select/insert/update por `organization_id = get_org_id()` para `authenticated`
 - **Reglas**: unique parcial 1 config activa por `cotizacion_item_id`; soft delete; `config_json` fuente de verdad en lectura (prioriza sobre bridge).
-- **Entrada UI (QA)**: desktop `/cotizaciones/nueva` → Agregar componente → Ventana/Puerta → **Personalizado** → Abrir constructor.
+- **Entrada UI (QA)**: desktop `/cotizaciones/nueva` -> Paso 2 -> modo explícito **Constructor** para cuaderno multipieza. El editor avanzado de una pieza también se abre desde Ventana/Puerta -> **Personalizado** -> Abrir constructor.
 - **Archivos donde aparece**: `src/features/cotizaciones/visual-composer/`, `cotizaciones.service.ts`, `public-cotizacion-approval.service.ts`, `paso-dos-agregar-grupo-sheet.tsx`, `paso-dos-editor-desktop.tsx`, `cotizacion-item-presentation.ts`
+- **Extensión Constructor V2**: `oscilobatiente` y `openingSide` son cambios aditivos dentro de `config_json`; no requieren tabla ni migración nueva. Persistencia formal sigue filtrada por `organization_id`; `[gvc:]` continúa solo como fallback compatible.
+- **Handoff agentes**: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
 
 ---
 

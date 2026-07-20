@@ -75,6 +75,7 @@ export default function PlanesPage() {
                 width={212}
                 height={48}
                 className={s.brandLogo}
+                priority
                 unoptimized
               />
             </Link>

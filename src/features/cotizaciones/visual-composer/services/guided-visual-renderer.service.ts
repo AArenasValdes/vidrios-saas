@@ -7,11 +7,23 @@ import {
   isModuleNode,
   listLeafModules,
   normalizeGuidedVisualConfig,
+  type GuidedFrameShape,
+  type GuidedGlassShape,
   type GuidedModuleType,
   type GuidedNodeRect,
+  type GuidedOpeningSide,
   type GuidedPalillo,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
+  buildGuidedFramePath,
+  buildGuidedGlassPathPx,
+} from "@/features/cotizaciones/visual-composer/services/guided-visual-shape-paths";
+import {
+  drawGuidedHardware,
+  resolveHardwareAnchor,
+  resolveHardwareSize,
+} from "@/features/cotizaciones/visual-composer/services/guided-visual-hardware";
 
 export type GuidedRenderVariant = "editor" | "thumbnail" | "summary" | "pdf";
 
@@ -23,6 +35,8 @@ export type GuidedVisualRenderOptions = {
   showSelection?: boolean;
   showLabels?: boolean;
   showDimensions?: boolean;
+  /** Aisla defs SVG cuando la misma configuracion se renderiza varias veces en una pagina. */
+  resourceKey?: string;
   /** Módulo en modo edición de palillos (atenuá el resto). */
   palilloEditModuleId?: string | null;
   selectedPalilloNodeId?: string | null;
@@ -59,6 +73,8 @@ export type GuidedLayoutModule = {
   widthMm: number;
   heightMm: number;
   selected: boolean;
+  glassShape: GuidedGlassShape;
+  openingSide: GuidedOpeningSide;
   /** Compat / proyección plana. */
   palillos: Array<GuidedPalillo & { x1: number; y1: number; x2: number; y2: number }>;
   /** Segmentos reales del árbol (pueden ser parciales). */
@@ -91,6 +107,7 @@ export type GuidedVisualLayout = {
   drawW: number;
   drawH: number;
   pxPerMm: number;
+  frameShape: GuidedFrameShape;
   modules: GuidedLayoutModule[];
   splits: GuidedLayoutSplit[];
 };
@@ -98,6 +115,8 @@ export type GuidedVisualLayout = {
 type StrokeScale = {
   frame: number;
   mullion: number;
+  sash: number;
+  meeting: number;
   palillo: number;
   cue: number;
   dim: number;
@@ -182,8 +201,10 @@ function resolveVariant(
 function resolveStrokeScale(variant: GuidedRenderVariant): StrokeScale {
   if (variant === "thumbnail") {
     return {
-      frame: 3.2,
-      mullion: 2.2,
+      frame: 5,
+      mullion: 3.2,
+      sash: 3,
+      meeting: 5,
       palillo: 1.4,
       cue: 1,
       dim: 1,
@@ -193,8 +214,10 @@ function resolveStrokeScale(variant: GuidedRenderVariant): StrokeScale {
   }
   if (variant === "pdf") {
     return {
-      frame: 5.5,
-      mullion: 3.6,
+      frame: 10,
+      mullion: 6.5,
+      sash: 6,
+      meeting: 10,
       palillo: 2.2,
       cue: 1.2,
       dim: 1,
@@ -204,8 +227,10 @@ function resolveStrokeScale(variant: GuidedRenderVariant): StrokeScale {
   }
   if (variant === "summary") {
     return {
-      frame: 5,
-      mullion: 3.4,
+      frame: 12,
+      mullion: 7.5,
+      sash: 7,
+      meeting: 12,
       palillo: 2,
       cue: 1.3,
       dim: 1,
@@ -213,12 +238,14 @@ function resolveStrokeScale(variant: GuidedRenderVariant): StrokeScale {
       halo: 0,
     };
   }
-  // editor — jerarquía pedida (aprox. 8–10 / 6–7 / 3–4 / 1.5–2 / 1)
+  // Editor: marco y encuentro dominantes; hojas secundarias; símbolos informativos finos.
   return {
-    frame: 9,
-    mullion: 6.5,
-    palillo: 3.5,
-    cue: 1.75,
+    frame: 22,
+    mullion: 14,
+    sash: 12,
+    meeting: 22,
+    palillo: 4,
+    cue: 1.5,
     dim: 1,
     selection: 3,
     halo: 5,
@@ -228,6 +255,44 @@ function resolveStrokeScale(variant: GuidedRenderVariant): StrokeScale {
 /** Expone la escala de trazos por variante (útil para tests visuales). */
 export function getGuidedStrokeScale(variant: GuidedRenderVariant): StrokeScale {
   return resolveStrokeScale(variant);
+}
+
+/**
+ * Vidrio = relleno de la celda del módulo. El aluminio (marco/encuentro)
+ * se pinta encima con stroke centrado; no hay que “achicar” el vidrio con
+ * insets asimétricos (eso dejaba huecos blancos y parecía desfasado).
+ */
+export function resolveModuleGlassRect(
+  module: Pick<GuidedLayoutModule, "x" | "y" | "w" | "h">
+): { x: number; y: number; w: number; h: number } {
+  return { x: module.x, y: module.y, w: module.w, h: module.h };
+}
+
+/**
+ * Rectángulo de hoja/símbolos, inset uniforme y acotado al tamaño del módulo
+ * para no colapsar en franjas muy delgadas.
+ */
+export function resolveModuleSashRect(
+  module: Pick<GuidedLayoutModule, "x" | "y" | "w" | "h">,
+  scale: StrokeScale
+): { x: number; y: number; w: number; h: number } {
+  const maxInset = Math.min(module.w, module.h) * 0.22;
+  const inset = Math.max(2.5, Math.min(maxInset, scale.sash * 0.55 + 2));
+  return {
+    x: module.x + inset,
+    y: module.y + inset,
+    w: Math.max(0, module.w - inset * 2),
+    h: Math.max(0, module.h - inset * 2),
+  };
+}
+
+/** @deprecated Usar resolveModuleGlassRect / resolveModuleSashRect. */
+export function resolveModuleContentRect(
+  module: Pick<GuidedLayoutModule, "x" | "y" | "w" | "h">,
+  _layout: Pick<GuidedVisualLayout, "originX" | "originY" | "drawW" | "drawH">,
+  scale: StrokeScale
+): { x: number; y: number; w: number; h: number } {
+  return resolveModuleSashRect(module, scale);
 }
 
 /** Expone la paleta resuelta (útil para tests de contraste). */
@@ -243,7 +308,7 @@ function resolvePalette(
   variant: GuidedRenderVariant
 ): ProfilePalette {
   const selection = "#1E88FF";
-  const selectionFill = "rgba(30, 136, 255, 0.1)";
+  const selectionFill = "rgba(30, 136, 255, 0.045)";
   // Fondos opacos: evita que el vidrio se vea “negro” sobre canvas claro o en export.
   const glassFill = variant === "pdf" ? "#F3F4F6" : "#ECF2F8";
   const glassFillMuted = variant === "pdf" ? "#EEF0F3" : "#D8E0E8";
@@ -303,27 +368,50 @@ function resolvePalette(
 const PROFILE_JOIN =
   'stroke-linecap="square" stroke-linejoin="miter" vector-effect="non-scaling-stroke"';
 
-/** Marco exterior esquemático de aluminio (doble contorno). */
+/** Marco exterior esquemático de aluminio (doble contorno; soporta arco). */
 export function drawOuterAluminumFrame(
   x: number,
   y: number,
   w: number,
   h: number,
   palette: ProfilePalette,
-  stroke: number
+  stroke: number,
+  frameShape: GuidedFrameShape = { kind: "rect" },
+  pxPerMm = 1
 ): string {
+  const outer = buildGuidedFramePath(x, y, w, h, frameShape, pxPerMm);
+  const inset = Math.max(2.2, stroke * 0.42);
+  const insetMm = inset / Math.max(pxPerMm, 0.001);
+  const innerShape: GuidedFrameShape =
+    frameShape.kind === "arch_top"
+      ? {
+          kind: "arch_top",
+          archRiseMm: Math.max(20, frameShape.archRiseMm - insetMm),
+        }
+      : frameShape.kind === "rounded"
+        ? {
+            kind: "rounded",
+            radiusMm: Math.max(4, frameShape.radiusMm - insetMm),
+            corners: frameShape.corners,
+          }
+        : { kind: "rect" };
+  const inner = buildGuidedFramePath(
+    x + inset,
+    y + inset,
+    Math.max(0, w - inset * 2),
+    Math.max(0, h - inset * 2),
+    innerShape,
+    pxPerMm
+  );
   const parts: string[] = [];
   if (palette.frameOutline) {
     parts.push(
-      `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${palette.frameOutline}" stroke-width="${px(stroke + 3)}" ${PROFILE_JOIN} />`
+      `<path d="${outer}" fill="none" stroke="${palette.frameOutline}" stroke-width="${px(stroke + 3)}" ${PROFILE_JOIN} />`
     );
   }
   parts.push(
-    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${palette.frame}" stroke-width="${px(stroke)}" ${PROFILE_JOIN} />`
-  );
-  const inset = Math.max(2.2, stroke * 0.42);
-  parts.push(
-    `<rect x="${px(x + inset)}" y="${px(y + inset)}" width="${px(Math.max(0, w - inset * 2))}" height="${px(Math.max(0, h - inset * 2))}" fill="none" stroke="${palette.frameInner}" stroke-width="${px(Math.max(1.2, stroke * 0.34))}" ${PROFILE_JOIN} />`
+    `<path d="${outer}" fill="none" stroke="${palette.frame}" stroke-width="${px(stroke)}" ${PROFILE_JOIN} />`,
+    `<path d="${inner}" fill="none" stroke="${palette.frameInner}" stroke-width="${px(Math.max(1.2, stroke * 0.34))}" ${PROFILE_JOIN} />`
   );
   return parts.join("");
 }
@@ -376,6 +464,116 @@ export function drawHorizontalTransom(
   return parts.join("");
 }
 
+function drawLayeredSashFrame(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: ProfilePalette,
+  stroke: number,
+  role: string
+): string {
+  const inset = Math.max(2, stroke * 0.34);
+  const outline = palette.frameOutline ?? palette.divInner;
+  return [
+    `<rect data-guided-profile="${role}" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${outline}" stroke-width="${px(stroke + 2.4)}" ${PROFILE_JOIN} />`,
+    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${palette.div}" stroke-width="${px(stroke)}" ${PROFILE_JOIN} />`,
+    `<rect x="${px(x + inset)}" y="${px(y + inset)}" width="${px(Math.max(0, w - inset * 2))}" height="${px(Math.max(0, h - inset * 2))}" fill="none" stroke="${palette.frameInner}" stroke-width="${px(Math.max(1, stroke * 0.13))}" ${PROFILE_JOIN} />`,
+  ].join("");
+}
+
+function drawOperableSashFrame(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: ProfilePalette,
+  scale: StrokeScale
+): string {
+  return drawLayeredSashFrame(x, y, w, h, palette, scale.sash, "operable-sash");
+}
+
+function drawSlidingSystem(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  palette: ProfilePalette,
+  scale: StrokeScale,
+  variant: GuidedRenderVariant
+): string {
+  const top = y;
+  const height = Math.max(0, h);
+  const centerX = x + w / 2;
+  const meetingWidth = Math.min(scale.meeting, Math.max(5, w * 0.11));
+  const sideGap = Math.max(2, scale.sash * 0.14);
+  const leftX = x;
+  const leftW = Math.max(0, centerX - meetingWidth / 2 - sideGap - leftX);
+  const rightX = centerX + meetingWidth / 2 + sideGap;
+  const rightW = Math.max(0, x + w - rightX);
+  const outline = palette.frameOutline ?? palette.divInner;
+  const parts = [
+    drawLayeredSashFrame(leftX, top, leftW, height, palette, scale.sash, "sliding-sash-left"),
+    drawLayeredSashFrame(rightX, top, rightW, height, palette, scale.sash, "sliding-sash-right"),
+    `<rect data-guided-profile="meeting-stile" x="${px(centerX - meetingWidth / 2)}" y="${px(top - scale.sash * 0.18)}" width="${px(meetingWidth)}" height="${px(height + scale.sash * 0.36)}" fill="${palette.frame}" stroke="${outline}" stroke-width="${px(Math.max(1.5, scale.sash * 0.2))}" ${PROFILE_JOIN} />`,
+    `<line x1="${px(centerX - meetingWidth * 0.22)}" y1="${px(top)}" x2="${px(centerX - meetingWidth * 0.22)}" y2="${px(top + height)}" stroke="${palette.frameInner}" stroke-width="${px(Math.max(1, scale.sash * 0.12))}" ${PROFILE_JOIN} />`,
+    `<line x1="${px(centerX + meetingWidth * 0.22)}" y1="${px(top)}" x2="${px(centerX + meetingWidth * 0.22)}" y2="${px(top + height)}" stroke="${palette.divInner}" stroke-width="${px(Math.max(1, scale.sash * 0.12))}" ${PROFILE_JOIN} />`,
+  ];
+
+  if (variant !== "thumbnail") {
+    const arrowLength = Math.max(13, Math.min(34, w * 0.1));
+    const arrowSize = Math.max(3.2, scale.cue * 2.2);
+    const arrowY = y + h / 2;
+    const leftArrowX = leftX + leftW * 0.62;
+    const rightArrowX = rightX + rightW * 0.38;
+    const pullSize = resolveHardwareSize(Math.min(leftW, rightW, h), h, "compact");
+    const leftPull = resolveHardwareAnchor({
+      x: leftX,
+      y: top,
+      w: leftW,
+      h: height,
+      freeSide: "right",
+      insetRatio: 0.18,
+      verticalRatio: 0.5,
+    });
+    const rightPull = resolveHardwareAnchor({
+      x: rightX,
+      y: top,
+      w: rightW,
+      h: height,
+      freeSide: "left",
+      insetRatio: 0.18,
+      verticalRatio: 0.5,
+    });
+    const pullKind =
+      h >= w * 1.15 ? "tirador_puerta_corredera" : "tirador_corredera_embutido";
+    parts.push(
+      `<g data-guided-opening="slide-left" stroke="${palette.detail}" stroke-width="${px(scale.cue)}" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"><line x1="${px(leftArrowX + arrowLength / 2)}" y1="${px(arrowY)}" x2="${px(leftArrowX - arrowLength / 2)}" y2="${px(arrowY)}" /><polyline points="${px(leftArrowX - arrowLength / 2 + arrowSize)},${px(arrowY - arrowSize)} ${px(leftArrowX - arrowLength / 2)},${px(arrowY)} ${px(leftArrowX - arrowLength / 2 + arrowSize)},${px(arrowY + arrowSize)}" /></g>`,
+      `<g data-guided-opening="slide-right" stroke="${palette.detail}" stroke-width="${px(scale.cue)}" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"><line x1="${px(rightArrowX - arrowLength / 2)}" y1="${px(arrowY)}" x2="${px(rightArrowX + arrowLength / 2)}" y2="${px(arrowY)}" /><polyline points="${px(rightArrowX + arrowLength / 2 - arrowSize)},${px(arrowY - arrowSize)} ${px(rightArrowX + arrowLength / 2)},${px(arrowY)} ${px(rightArrowX + arrowLength / 2 - arrowSize)},${px(arrowY + arrowSize)}" /></g>`,
+      drawGuidedHardware({
+        kind: pullKind,
+        cx: leftPull.cx,
+        cy: leftPull.cy,
+        size: pullSize,
+        freeSide: "right",
+        stroke: palette.detail,
+        strokeWidth: Math.max(1, scale.cue * 0.95),
+      }),
+      drawGuidedHardware({
+        kind: pullKind,
+        cx: rightPull.cx,
+        cy: rightPull.cy,
+        size: pullSize,
+        freeSide: "left",
+        stroke: palette.detail,
+        strokeWidth: Math.max(1, scale.cue * 0.95),
+      })
+    );
+  }
+
+  return parts.join("");
+}
+
 /** Palillo visual (más fino que división estructural). */
 export function drawPalilloLine(
   x1: number,
@@ -391,24 +589,41 @@ export function drawPalilloLine(
 function drawSelectionChrome(
   module: GuidedLayoutModule,
   palette: ProfilePalette,
-  scale: StrokeScale
+  scale: StrokeScale,
+  pxPerMm: number
 ): string {
   if (!module.selected || scale.selection <= 0) {
     return "";
   }
-  const pad = scale.halo * 0.35;
-  const x = module.x + pad;
-  const y = module.y + pad;
-  const w = Math.max(0, module.w - pad * 2);
-  const h = Math.max(0, module.h - pad * 2);
+  const baseX = module.x;
+  const baseY = module.y;
+  const baseW = module.w;
+  const baseH = module.h;
+  const pad = Math.max(1.5, scale.halo * 0.28);
+  const fillPath = buildGuidedGlassPathPx(
+    baseX,
+    baseY,
+    baseW,
+    baseH,
+    module.glassShape,
+    pxPerMm
+  );
+  const strokePath = buildGuidedGlassPathPx(
+    baseX + pad,
+    baseY + pad,
+    Math.max(0, baseW - pad * 2),
+    Math.max(0, baseH - pad * 2),
+    module.glassShape,
+    pxPerMm
+  );
   const badgeH = 18;
   const badgeW = 34;
-  const badgeX = module.x + 8;
-  const badgeY = module.y + 8;
+  const badgeX = baseX + 8;
+  const badgeY = baseY + 8;
   return [
-    `<rect x="${px(module.x)}" y="${px(module.y)}" width="${px(module.w)}" height="${px(module.h)}" fill="${palette.selectionFill}" stroke="none" />`,
-    `<rect x="${px(x - 1)}" y="${px(y - 1)}" width="${px(w + 2)}" height="${px(h + 2)}" fill="none" stroke="#FFFFFF" stroke-width="${px(scale.halo)}" ${PROFILE_JOIN} />`,
-    `<rect x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" fill="none" stroke="${palette.selection}" stroke-width="${px(scale.selection)}" ${PROFILE_JOIN} />`,
+    `<path d="${fillPath}" fill="${palette.selectionFill}" stroke="none" />`,
+    `<path d="${strokePath}" fill="none" stroke="#FFFFFF" stroke-width="${px(scale.halo)}" ${PROFILE_JOIN} />`,
+    `<path d="${strokePath}" fill="none" stroke="${palette.selection}" stroke-width="${px(scale.selection)}" ${PROFILE_JOIN} />`,
     `<rect x="${px(badgeX)}" y="${px(badgeY)}" width="${px(badgeW)}" height="${px(badgeH)}" rx="0" ry="0" fill="${palette.selection}" stroke="none" />`,
     `<text x="${px(badgeX + badgeW / 2)}" y="${px(badgeY + 13)}" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="ui-sans-serif, system-ui, sans-serif">M${module.leafIndex + 1}</text>`,
   ].join("");
@@ -416,14 +631,17 @@ function drawSelectionChrome(
 
 function drawModuleCue(
   type: GuidedModuleType,
+  openingSide: GuidedOpeningSide,
   x: number,
   y: number,
   w: number,
   h: number,
-  detail: string,
-  stroke: number,
+  palette: ProfilePalette,
+  scale: StrokeScale,
   variant: GuidedRenderVariant
 ) {
+  const detail = palette.detail;
+  const stroke = scale.cue;
   const cx = x + w / 2;
   const cy = y + h / 2;
   const cueJoin =
@@ -441,62 +659,125 @@ function drawModuleCue(
   }
 
   if (type === "corredera") {
-    const leafGap = Math.max(4, w * 0.04);
-    const leafW = (w - inset * 2 - leafGap) / 2;
-    const leafH = h - inset * 2;
-    const leftX = x + inset;
-    const rightX = leftX + leafW + leafGap * 0.55;
-    const leafY = y + inset;
-    const mid = leftX + leafW + leafGap * 0.25;
+    return drawSlidingSystem(x, y, w, h, palette, scale, variant);
+  }
+
+  if (type === "abatible") {
+    parts.push(drawOperableSashFrame(x, y, w, h, palette, scale));
+    const opensRight = openingSide === "right";
+    const freeSide: GuidedOpeningSide = opensRight ? "left" : "right";
+    const hingeX = opensRight ? x + w - inset - 2 : x + inset + 2;
+    const leafEdge = opensRight ? x + inset : x + w - inset;
+    const top = y + inset;
+    const bottom = y + h - inset;
+    const radius = Math.min(w * 0.55, h * 0.62);
+    const arcEndX = opensRight
+      ? Math.max(leafEdge, hingeX - radius)
+      : Math.min(leafEdge, hingeX + radius);
+    const hardware = resolveHardwareAnchor({
+      x,
+      y,
+      w,
+      h,
+      freeSide,
+      insetRatio: 0.14,
+      verticalRatio: 0.48,
+    });
     parts.push(
-      `<rect x="${px(leftX)}" y="${px(leafY)}" width="${px(leafW)}" height="${px(leafH)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.75" ${cueJoin} />`,
-      `<rect x="${px(rightX)}" y="${px(leafY)}" width="${px(leafW)}" height="${px(leafH)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.75" ${cueJoin} />`,
-      `<line x1="${px(mid)}" y1="${px(leafY + leafH * 0.12)}" x2="${px(mid)}" y2="${px(leafY + leafH * 0.88)}" stroke="${detail}" stroke-width="${px(stroke * 1.15)}" ${cueJoin} />`,
-      `<line x1="${px(cx - w * 0.16)}" y1="${px(cy)}" x2="${px(cx + w * 0.16)}" y2="${px(cy)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`,
-      `<polyline points="${px(cx - w * 0.16 + 5)},${px(cy - 3.5)} ${px(cx - w * 0.16)},${px(cy)} ${px(cx - w * 0.16 + 5)},${px(cy + 3.5)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`,
-      `<polyline points="${px(cx + w * 0.16 - 5)},${px(cy - 3.5)} ${px(cx + w * 0.16)},${px(cy)} ${px(cx + w * 0.16 - 5)},${px(cy + 3.5)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`
+      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(hingeX)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke * 1.15)}" ${cueJoin} />`,
+      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(leafEdge)}" y2="${px(top)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.7" ${cueJoin} />`,
+      `<line x1="${px(hingeX)}" y1="${px(bottom)}" x2="${px(leafEdge)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.7" ${cueJoin} />`,
+      `<path d="M ${px(hingeX)} ${px(top + 4)} A ${px(radius)} ${px(radius)} 0 0 ${opensRight ? 0 : 1} ${px(arcEndX)} ${px(cy)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`,
+      drawGuidedHardware({
+        kind: "cremona_ventana",
+        cx: hardware.cx,
+        cy: hardware.cy,
+        size: resolveHardwareSize(w, h),
+        freeSide,
+        stroke: detail,
+        strokeWidth: Math.max(1, stroke * 0.95),
+      })
     );
     return parts.join("");
   }
 
-  if (type === "abatible") {
-    const hingeX = x + inset + 2;
-    const leafRight = x + w - inset;
+  if (type === "oscilobatiente") {
+    parts.push(drawOperableSashFrame(x, y, w, h, palette, scale));
+    const freeSide: GuidedOpeningSide = openingSide === "right" ? "left" : "right";
+    const hingeX = openingSide === "right" ? x + w - inset : x + inset;
+    const freeX = openingSide === "right" ? x + inset : x + w - inset;
     const top = y + inset;
     const bottom = y + h - inset;
-    const radius = Math.min(w * 0.55, h * 0.62);
+    const hardware = resolveHardwareAnchor({
+      x,
+      y,
+      w,
+      h,
+      freeSide,
+      insetRatio: 0.13,
+      verticalRatio: 0.46,
+    });
     parts.push(
-      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(hingeX)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke * 1.15)}" ${cueJoin} />`,
-      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(leafRight)}" y2="${px(top)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.7" ${cueJoin} />`,
-      `<line x1="${px(hingeX)}" y1="${px(bottom)}" x2="${px(leafRight)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.7" ${cueJoin} />`,
-      `<path d="M ${px(hingeX)} ${px(top + 4)} A ${px(radius)} ${px(radius)} 0 0 1 ${px(Math.min(leafRight, hingeX + radius))} ${px(cy)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`
+      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(freeX)}" y2="${px(cy)}" stroke="${detail}" stroke-width="${px(stroke)}" stroke-dasharray="7 5" ${cueJoin} />`,
+      `<line x1="${px(hingeX)}" y1="${px(bottom)}" x2="${px(freeX)}" y2="${px(cy)}" stroke="${detail}" stroke-width="${px(stroke)}" stroke-dasharray="7 5" ${cueJoin} />`,
+      `<line x1="${px(x + inset)}" y1="${px(top)}" x2="${px(cx)}" y2="${px(bottom * 0.38 + top * 0.62)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.72" ${cueJoin} />`,
+      `<line x1="${px(x + w - inset)}" y1="${px(top)}" x2="${px(cx)}" y2="${px(bottom * 0.38 + top * 0.62)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.72" ${cueJoin} />`,
+      drawGuidedHardware({
+        kind: "manilla_oscilobatiente",
+        cx: hardware.cx,
+        cy: hardware.cy,
+        size: resolveHardwareSize(w, h),
+        freeSide,
+        stroke: detail,
+        strokeWidth: Math.max(1, stroke * 0.95),
+      })
     );
     return parts.join("");
   }
 
   if (type === "puerta") {
-    const hingeX = x + inset + 2;
-    const leafRight = x + w - inset - 4;
+    parts.push(drawOperableSashFrame(x, y, w, h, palette, scale));
+    const opensRight = openingSide === "right";
+    const freeSide: GuidedOpeningSide = opensRight ? "left" : "right";
+    const hingeX = opensRight ? x + w - inset - 2 : x + inset + 2;
+    const leafEdge = opensRight ? x + inset + 4 : x + w - inset - 4;
     const top = y + inset;
     const bottom = y + h - inset;
     const thresholdY = bottom - 1;
-    // Arco ~90° contenido en el módulo (no ovalo gigante).
-    const swing = Math.min((leafRight - hingeX) * 0.92, (bottom - top) * 0.55);
-    const handleX = hingeX + (leafRight - hingeX) * 0.82;
-    const arcEndX = hingeX + 2;
+    // Arco ~90° contenido: parte desde el borde libre hacia el umbral.
+    const swing = Math.min(Math.abs(leafEdge - hingeX) * 0.88, (bottom - top) * 0.52);
+    const arcEndX = hingeX + (opensRight ? -1.5 : 1.5);
     const arcEndY = top + swing;
+    const hardware = resolveHardwareAnchor({
+      x,
+      y,
+      w,
+      h,
+      freeSide,
+      insetRatio: 0.11,
+      verticalRatio: 0.5,
+    });
     parts.push(
       `<line x1="${px(x + inset)}" y1="${px(thresholdY)}" x2="${px(x + w - inset)}" y2="${px(thresholdY)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.7" ${cueJoin} />`,
       `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(hingeX)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke * 1.15)}" ${cueJoin} />`,
-      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(leafRight)}" y2="${px(top)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.65" ${cueJoin} />`,
-      `<line x1="${px(leafRight)}" y1="${px(top)}" x2="${px(leafRight)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.75" ${cueJoin} />`,
-      `<path d="M ${px(leafRight)} ${px(top)} A ${px(swing)} ${px(swing)} 0 0 1 ${px(arcEndX)} ${px(arcEndY)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`,
-      `<circle cx="${px(handleX)}" cy="${px(cy)}" r="${px(Math.max(1.8, stroke * 0.85))}" fill="${detail}" stroke="none" />`
+      `<line x1="${px(hingeX)}" y1="${px(top)}" x2="${px(leafEdge)}" y2="${px(top)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.65" ${cueJoin} />`,
+      `<line x1="${px(leafEdge)}" y1="${px(top)}" x2="${px(leafEdge)}" y2="${px(bottom)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.75" ${cueJoin} />`,
+      `<path data-guided-opening="door-swing" d="M ${px(leafEdge)} ${px(top)} A ${px(swing)} ${px(swing)} 0 0 ${opensRight ? 0 : 1} ${px(arcEndX)} ${px(arcEndY)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.85" ${cueJoin} />`,
+      drawGuidedHardware({
+        kind: "manilla_abatible",
+        cx: hardware.cx,
+        cy: hardware.cy,
+        size: resolveHardwareSize(w, h),
+        freeSide,
+        stroke: detail,
+        strokeWidth: Math.max(1.05, stroke),
+      })
     );
     return parts.join("");
   }
 
   if (type === "proyectante") {
+    parts.push(drawOperableSashFrame(x, y, w, h, palette, scale));
     const top = y + inset;
     const left = x + inset;
     const right = x + w - inset;
@@ -525,7 +806,8 @@ function drawModuleCue(
 
 /**
  * Geometría compartida: las proporciones salen siempre de widthMm/heightMm.
- * Editor/summary ocupan ~78% del canvas útil.
+ * El PDF reserva una banda técnica para cotas, pero aprovecha más el canvas
+ * para que la pieza siga siendo la protagonista del documento comercial.
  */
 export function calculateGuidedVisualLayout(
   input: GuidedVisualConfig,
@@ -535,10 +817,13 @@ export function calculateGuidedVisualLayout(
   const variant = resolveVariant(options.variant);
   const maxW = options.maxW ?? (variant === "thumbnail" ? 160 : 420);
   const maxH = options.maxH ?? (variant === "thumbnail" ? 120 : 320);
-  const targetFill = variant === "thumbnail" ? 0.9 : variant === "pdf" ? 0.78 : 0.78;
+  const targetFill = variant === "thumbnail" ? 0.9 : variant === "pdf" ? 0.88 : 0.78;
   const padX = maxW * ((1 - targetFill) / 2);
-  const bottomBand = variant === "thumbnail" ? 4 : 20;
-  const padY = Math.max(8, (maxH - bottomBand) * ((1 - targetFill) / 2));
+  const bottomBand = variant === "thumbnail" ? 4 : variant === "pdf" ? 40 : 28;
+  const padY =
+    variant === "pdf"
+      ? 10
+      : Math.max(8, (maxH - bottomBand) * ((1 - targetFill) / 2));
 
   const aspect = config.widthMm / Math.max(config.heightMm, 1);
   let drawW = maxW - padX * 2;
@@ -549,7 +834,7 @@ export function calculateGuidedVisualLayout(
   }
 
   const originX = (maxW - drawW) / 2;
-  const originY = padY;
+  const originY = Math.max(padY, (maxH - bottomBand - drawH) / 2);
   const pxPerMm = drawW / Math.max(config.widthMm, 1);
   const rects = calculateNodeRects(config);
   const showSelection = options.showSelection ?? variant === "editor";
@@ -642,6 +927,8 @@ export function calculateGuidedVisualLayout(
         widthMm: rect.widthMm,
         heightMm: rect.heightMm,
         selected: showSelection && rect.id === config.selectedNodeId,
+        glassShape: rect.glassShape ?? { kind: "rect" as const },
+        openingSide: rect.openingSide ?? "left",
         palillos,
         palilloSegments,
         palilloCells,
@@ -695,6 +982,7 @@ export function calculateGuidedVisualLayout(
     drawW,
     drawH,
     pxPerMm,
+    frameShape: config.frameShape,
     modules,
     splits,
   };
@@ -722,6 +1010,19 @@ export function renderGuidedVisualSvg(
     variant === "editor" && layout.modules.some((module) => module.selected);
   const amberFill = "rgba(217, 119, 6, 0.12)";
   const amberStroke = "#D97706";
+  const resourceToken = `${options.resourceKey ?? `${variant}-${options.maxW ?? "auto"}-${options.maxH ?? "auto"}`}-${config.root.id}`
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .slice(-56) || "root";
+  const glassGradientId = `gvc-glass-gradient-${resourceToken}`;
+  const profileGradientId = `gvc-profile-gradient-${resourceToken}`;
+  const renderedPalette: ProfilePalette =
+    variant === "pdf"
+      ? palette
+      : {
+          ...palette,
+          frame: `url(#${profileGradientId})`,
+          div: `url(#${profileGradientId})`,
+        };
 
   const body: string[] = [];
 
@@ -730,30 +1031,60 @@ export function renderGuidedVisualSvg(
     `<rect x="0" y="0" width="${px(layout.svgW)}" height="${px(layout.svgH)}" fill="${palette.canvasBg}" stroke="none" />`
   );
 
-  // 1) Vidrio por módulo
-  for (const module of layout.modules) {
-    const mutedByPalilloEdit =
-      Boolean(palilloEditModuleId) && module.id !== palilloEditModuleId;
-    const fill =
-      mutedByPalilloEdit || (hasSelection && !module.selected && !palilloEditModuleId)
-        ? palette.glassFillMuted
-        : palette.glassFill;
-    body.push(
-      `<rect x="${px(module.x)}" y="${px(module.y)}" width="${px(module.w)}" height="${px(module.h)}" fill="${fill}" stroke="none" />`
-    );
-  }
-
-  // 2) Marco exterior
-  body.push(
-    drawOuterAluminumFrame(
-      layout.originX,
-      layout.originY,
-      layout.drawW,
-      layout.drawH,
-      palette,
-      scale.frame
-    )
+  const framePath = buildGuidedFramePath(
+    layout.originX,
+    layout.originY,
+    layout.drawW,
+    layout.drawH,
+    layout.frameShape,
+    layout.pxPerMm
   );
+  const clipId = `gvc-frame-clip-${resourceToken}`;
+  body.push(
+    `<defs>` +
+      `<clipPath id="${clipId}"><path d="${framePath}" /></clipPath>` +
+      `<linearGradient id="${glassGradientId}" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        `<stop offset="0%" stop-color="${palette.glassFill}" />` +
+        `<stop offset="52%" stop-color="#C8D4EE" />` +
+        `<stop offset="100%" stop-color="#AEBBE1" />` +
+      `</linearGradient>` +
+      `<linearGradient id="${profileGradientId}" x1="0%" y1="0%" x2="100%" y2="100%">` +
+        `<stop offset="0%" stop-color="${palette.frameInner}" />` +
+        `<stop offset="48%" stop-color="${palette.frame}" />` +
+        `<stop offset="100%" stop-color="${mixHex(isValidHex(options.colorHex) ? options.colorHex : "#8A96A6", "#000000", 0.38)}" />` +
+      `</linearGradient>` +
+    `</defs>`
+  );
+  body.push(`<g clip-path="url(#${clipId})">`);
+
+  // 1) Vidrio a tope de celda; el aluminio (marco/encuentro) se dibuja encima.
+  for (const layoutModule of layout.modules) {
+    const glass = resolveModuleGlassRect(layoutModule);
+    const mutedByPalilloEdit =
+      Boolean(palilloEditModuleId) && layoutModule.id !== palilloEditModuleId;
+    const fill =
+      mutedByPalilloEdit ||
+      (hasSelection && !layoutModule.selected && !palilloEditModuleId)
+        ? palette.glassFillMuted
+        : variant === "pdf"
+          ? palette.glassFill
+          : `url(#${glassGradientId})`;
+    const glassPath = buildGuidedGlassPathPx(
+      glass.x,
+      glass.y,
+      glass.w,
+      glass.h,
+      layoutModule.glassShape,
+      layout.pxPerMm
+    );
+    if (layoutModule.glassShape.kind === "rounded") {
+      body.push(
+        `<path d="${glassPath}" fill="${fill}" stroke="${palette.detail}" stroke-width="1.35" stroke-opacity="0.55" />`
+      );
+    } else {
+      body.push(`<path d="${glassPath}" fill="${fill}" stroke="none" />`);
+    }
+  }
 
   // 3) Divisiones estructurales
   for (const split of layout.splits) {
@@ -763,7 +1094,7 @@ export function renderGuidedVisualSvg(
           split.dividerX,
           split.y,
           split.y + split.h,
-          palette,
+          renderedPalette,
           scale.mullion,
           Boolean(split.selected && variant === "editor")
         )
@@ -775,7 +1106,7 @@ export function renderGuidedVisualSvg(
           split.dividerY,
           split.x,
           split.x + split.w,
-          palette,
+          renderedPalette,
           scale.mullion,
           Boolean(split.selected && variant === "editor")
         )
@@ -784,11 +1115,12 @@ export function renderGuidedVisualSvg(
   }
 
   // 4) Palillos (árbol) + cues + labels
-  for (const module of layout.modules) {
+  for (const layoutModule of layout.modules) {
+    const sash = resolveModuleSashRect(layoutModule, scale);
     const segments =
-      module.palilloSegments.length > 0
-        ? module.palilloSegments
-        : module.palillos.map((palillo) => ({
+      layoutModule.palilloSegments.length > 0
+        ? layoutModule.palilloSegments
+        : layoutModule.palillos.map((palillo) => ({
             id: palillo.id,
             direction: palillo.axis,
             x1: palillo.x1,
@@ -802,7 +1134,7 @@ export function renderGuidedVisualSvg(
       const emphasized =
         variant === "editor" &&
         segment.selected &&
-        palilloEditModuleId === module.id;
+        palilloEditModuleId === layoutModule.id;
       if (emphasized) {
         body.push(
           `<line x1="${px(segment.x1)}" y1="${px(segment.y1)}" x2="${px(segment.x2)}" y2="${px(segment.y2)}" stroke="${amberStroke}" stroke-width="${px(scale.palillo + 1.2)}" stroke-linecap="square" vector-effect="non-scaling-stroke" />`
@@ -822,10 +1154,10 @@ export function renderGuidedVisualSvg(
 
     if (
       variant === "editor" &&
-      palilloEditModuleId === module.id &&
-      module.palilloCells.length > 0
+      palilloEditModuleId === layoutModule.id &&
+      layoutModule.palilloCells.length > 0
     ) {
-      for (const cell of module.palilloCells) {
+      for (const cell of layoutModule.palilloCells) {
         if (!cell.selected) {
           continue;
         }
@@ -837,45 +1169,79 @@ export function renderGuidedVisualSvg(
 
     body.push(
       drawModuleCue(
-        module.type,
-        module.x,
-        module.y,
-        module.w,
-        module.h,
-        palette.detail,
-        scale.cue,
+        layoutModule.type,
+        layoutModule.openingSide,
+        sash.x,
+        sash.y,
+        sash.w,
+        sash.h,
+        renderedPalette,
+        scale,
         variant
       )
     );
 
-    if (showLabels && !module.selected && module.w > 52 && module.h > 36) {
+    if (showLabels && !layoutModule.selected && layoutModule.w > 52 && layoutModule.h > 36) {
       if (variant === "editor") {
         body.push(
-          `<text x="${px(module.x + 8)}" y="${px(module.y + 16)}" font-size="11" font-weight="700" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">M${module.leafIndex + 1}</text>`
+          `<text x="${px(layoutModule.x + 8)}" y="${px(layoutModule.y + 16)}" font-size="11" font-weight="700" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">M${layoutModule.leafIndex + 1}</text>`
         );
-        if (module.w > 78 && module.h > 48) {
+        if (layoutModule.w > 78 && layoutModule.h > 48) {
           body.push(
-            `<text x="${px(module.x + module.w / 2)}" y="${px(module.y + Math.min(28, module.h * 0.24))}" text-anchor="middle" font-size="11" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">${escapeXml(module.label)}</text>`
+            `<text x="${px(layoutModule.x + layoutModule.w / 2)}" y="${px(layoutModule.y + Math.min(28, layoutModule.h * 0.24))}" text-anchor="middle" font-size="11" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">${escapeXml(layoutModule.label)}</text>`
           );
         }
       } else if (variant === "pdf" || variant === "summary") {
         body.push(
-          `<text x="${px(module.x + 8)}" y="${px(module.y + 14)}" font-size="10" font-weight="700" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">M${module.leafIndex + 1}</text>`
+          `<text x="${px(layoutModule.x + 8)}" y="${px(layoutModule.y + 14)}" font-size="10" font-weight="700" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">M${layoutModule.leafIndex + 1}</text>`
         );
       }
     }
   }
 
-  // 5) Selección encima (solo editor)
+  // Selección dentro del clip: sigue la celda del módulo (mismo origen que el vidrio)
   if (variant === "editor") {
-    for (const module of layout.modules) {
-      body.push(drawSelectionChrome(module, palette, scale));
+    for (const layoutModule of layout.modules) {
+      body.push(
+        drawSelectionChrome(layoutModule, palette, scale, layout.pxPerMm)
+      );
     }
   }
 
+  body.push("</g>");
+
+  // Marco exterior (sobre el clip, sin recortar el stroke)
+  body.push(
+    drawOuterAluminumFrame(
+      layout.originX,
+      layout.originY,
+      layout.drawW,
+      layout.drawH,
+      renderedPalette,
+      scale.frame,
+      layout.frameShape,
+      layout.pxPerMm
+    )
+  );
+
   if (showDimensions) {
+    const dimensionGap = variant === "pdf" ? 24 : 20;
+    const verticalDimensionGap = variant === "pdf" ? 28 : 24;
+    const bottomY = layout.originY + layout.drawH + dimensionGap;
+    const rightX = layout.originX + layout.drawW + verticalDimensionGap;
+    const tick = 4;
+    const dimensionTextHalo = `stroke="${palette.canvasBg}" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke fill"`;
     body.push(
-      `<text x="${px(layout.svgW / 2)}" y="${px(layout.originY + layout.drawH + 15)}" text-anchor="middle" font-size="11" fill="${palette.dimTxt}" font-family="ui-sans-serif, system-ui, sans-serif">${Math.round(layout.widthMm)} × ${Math.round(layout.heightMm)} mm</text>`
+      `<g fill="none" stroke="${palette.dimTxt}" stroke-width="${px(scale.dim)}" opacity="0.9">` +
+        `<line x1="${px(layout.originX)}" y1="${px(bottomY)}" x2="${px(layout.originX + layout.drawW)}" y2="${px(bottomY)}" />` +
+        `<line x1="${px(layout.originX)}" y1="${px(bottomY - tick)}" x2="${px(layout.originX)}" y2="${px(bottomY + tick)}" />` +
+        `<line x1="${px(layout.originX + layout.drawW)}" y1="${px(bottomY - tick)}" x2="${px(layout.originX + layout.drawW)}" y2="${px(bottomY + tick)}" />` +
+        `<line x1="${px(rightX)}" y1="${px(layout.originY)}" x2="${px(rightX)}" y2="${px(layout.originY + layout.drawH)}" />` +
+        `<line x1="${px(rightX - tick)}" y1="${px(layout.originY)}" x2="${px(rightX + tick)}" y2="${px(layout.originY)}" />` +
+        `<line x1="${px(rightX - tick)}" y1="${px(layout.originY + layout.drawH)}" x2="${px(rightX + tick)}" y2="${px(layout.originY + layout.drawH)}" />` +
+      `</g>`,
+      `<text x="${px(layout.originX + layout.drawW / 2)}" y="${px(bottomY - 7)}" text-anchor="middle" font-size="11" font-weight="650" fill="${palette.dimTxt}" ${dimensionTextHalo} font-family="ui-sans-serif, system-ui, sans-serif">${Math.round(layout.widthMm)} mm</text>`,
+      `<text x="${px(rightX - 7)}" y="${px(layout.originY + layout.drawH / 2)}" text-anchor="middle" font-size="11" font-weight="650" fill="${palette.dimTxt}" ${dimensionTextHalo} font-family="ui-sans-serif, system-ui, sans-serif" transform="rotate(-90 ${px(rightX - 7)} ${px(layout.originY + layout.drawH / 2)})">${Math.round(layout.heightMm)} mm</text>`
     );
   }
 
@@ -897,9 +1263,12 @@ export function renderGuidedModuleTypeIcon(
         id: "icon",
         type,
         palillos: [],
+        palilloLayout: null,
+        glassShape: { kind: "rect" },
       },
       selectedNodeId: null,
       selectedPalilloId: null,
+      frameShape: { kind: "rect" },
     })
   );
   if (isModuleNode(config.root)) {
@@ -912,6 +1281,7 @@ export function renderGuidedModuleTypeIcon(
     showSelection: false,
     showLabels: false,
     showDimensions: false,
+    resourceKey: `module-type-${type}-${size}`,
   });
 }
 

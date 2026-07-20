@@ -1,6 +1,6 @@
 # Brief — Fase 5 Dashboard Desktop (Ventora)
 
-**Estado:** exploración de diseño externa antes de implementar.  
+**Estado:** cerrado en implementación desktop (≥1024) — 2026-07-18. Dirección visual aprobada e implementada; refinamiento editorial de densidad/gráfico también aplicado.  
 **Fecha:** 2026-07-18  
 **Fuente de producto:** `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` § Fase 5  
 **Branding:** `docs/marketing/brand-guidelines.md`

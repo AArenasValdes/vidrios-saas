@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   LuEllipsis,
@@ -58,7 +59,19 @@ function getClienteMeta(estado: string) {
   };
 }
 
+function isInteractiveRowTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        "a, button, input, select, textarea, label, details, summary, [role='menu']"
+      )
+    )
+  );
+}
+
 export default function ClientesPage() {
+  const router = useRouter();
   const {
     clientes,
     isReady,
@@ -190,6 +203,7 @@ export default function ClientesPage() {
   const pageStart = (visiblePage - 1) * PAGE_SIZE;
   const paginatedClientes = filtrados.slice(pageStart, pageStart + PAGE_SIZE);
   const selectedCount = selectedIds.size;
+  const hasActiveFilters = filtrosActivos.length > 0;
   const visibleClienteIds = useMemo(
     () => paginatedClientes.map((cliente) => String(cliente.id)),
     [paginatedClientes]
@@ -352,6 +366,12 @@ export default function ClientesPage() {
   return (
     <PremiumPageReveal className={s.root}>
       <PremiumPageSection className={s.header}>
+        <div className={s.desktopHeaderCopy}>
+          <h1 className={s.title}>Clientes</h1>
+          <p className={s.subtitle}>
+            Organiza tus contactos, revisa sus obras y accede rápidamente a su historial.
+          </p>
+        </div>
         <div className={s.headerActions}>
           <Link className={s.btnPrimary} href="/clientes/nuevo">
             <LuUserPlus aria-hidden />
@@ -481,7 +501,13 @@ export default function ClientesPage() {
           </select>
         </div>
 
-        <button className={s.btnGhost} onClick={limpiar} type="button">
+        <button
+          className={s.btnGhost}
+          onClick={limpiar}
+          type="button"
+          aria-disabled={!hasActiveFilters}
+          data-active={hasActiveFilters}
+        >
           <LuFilterX aria-hidden />
           Limpiar
         </button>
@@ -509,7 +535,7 @@ export default function ClientesPage() {
               {isSelectionMode ? "Cancelar seleccion" : "Seleccionar"}
             </button>
           </div>
-          {filtrosActivos.length > 0 ? (
+          {hasActiveFilters ? (
             <div className={s.activeFilters}>
               {filtrosActivos.map((filtro) => (
                 <span key={filtro} className={s.filterPill}>
@@ -517,9 +543,7 @@ export default function ClientesPage() {
                 </span>
               ))}
             </div>
-          ) : (
-            <span className={s.resultsHint}>Sin filtros activos</span>
-          )}
+          ) : null}
         </div>
       </PremiumPageSection>
 
@@ -642,7 +666,30 @@ export default function ClientesPage() {
               <tbody>
                 {visibleRows.map((row) => {
                   return (
-                    <tr key={row.id} className={`${s.tr}${row.isSelected ? ` ${s.trSelected}` : ""}`}>
+                    <tr
+                      key={row.id}
+                      className={`${s.tr}${
+                        !isSelectionMode ? ` ${s.trNavigable}` : ""
+                      }${row.isSelected ? ` ${s.trSelected}` : ""}`}
+                      tabIndex={isSelectionMode ? -1 : 0}
+                      aria-label={`Abrir ficha de ${row.nombre}`}
+                      onPointerEnter={() => handlePrefetchDetail(row.id)}
+                      onClick={(event) => {
+                        if (!isSelectionMode && !isInteractiveRowTarget(event.target)) {
+                          router.push(row.detailHref);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          !isSelectionMode &&
+                          event.currentTarget === event.target &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          router.push(row.detailHref);
+                        }
+                      }}
+                    >
                       {isSelectionMode ? (
                         <td className={s.tdSelect}>
                           <button
@@ -699,27 +746,51 @@ export default function ClientesPage() {
                             >
                               <LuPencil aria-hidden />
                             </Link>
-                            <a
-                              className={s.accionBtn}
-                              href={row.telefonoHref}
-                              title="Llamar"
-                              aria-label="Llamar"
-                              data-tooltip={row.telefonoHref ? "Llamar" : "Sin telefono"}
-                            >
-                              <LuPhone aria-hidden />
-                            </a>
+                            {row.telefonoHref ? (
+                              <a
+                                className={s.accionBtn}
+                                href={row.telefonoHref}
+                                title="Llamar"
+                                aria-label="Llamar"
+                                data-tooltip="Llamar"
+                              >
+                                <LuPhone aria-hidden />
+                              </a>
+                            ) : (
+                              <button
+                                className={`${s.accionBtn} ${s.accionBtnDisabled}`}
+                                type="button"
+                                title="Sin telefono"
+                                aria-label="Sin telefono"
+                                data-tooltip="Sin telefono"
+                                disabled
+                              >
+                                <LuPhone aria-hidden />
+                              </button>
+                            )}
+                            <details className={s.desktopRowMenu}>
+                              <summary
+                                className={s.accionBtn}
+                                title="Mas acciones"
+                                aria-label="Mas acciones"
+                                data-tooltip="Mas acciones"
+                              >
+                                <LuEllipsis aria-hidden />
+                              </summary>
+                              <div className={s.desktopRowMenuContent} role="menu">
+                                <button
+                                  className={s.desktopRowMenuDanger}
+                                  onClick={() => handleDelete(row.id, row.nombre)}
+                                  type="button"
+                                  role="menuitem"
+                                  disabled={isSaving}
+                                >
+                                  <LuTrash2 aria-hidden />
+                                  Eliminar cliente
+                                </button>
+                              </div>
+                            </details>
                           </div>
-                          <button
-                            className={`${s.accionBtn} ${s.accionBtnDanger} ${s.accionBtnDelete}`}
-                            onClick={() => handleDelete(row.id, row.nombre)}
-                            title="Eliminar cliente"
-                            aria-label="Eliminar cliente"
-                            data-tooltip="Eliminar cliente"
-                            type="button"
-                            disabled={isSaving}
-                          >
-                            <LuTrash2 aria-hidden />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -858,8 +929,9 @@ export default function ClientesPage() {
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                   disabled={visiblePage === 1}
+                  aria-label="Pagina anterior"
                 >
-                  {"<"}
+                  {"‹"}
                 </button>
                 {pageNumbers.map((page) => (
                   <button
@@ -867,6 +939,7 @@ export default function ClientesPage() {
                     className={`${s.pagBtn}${page === visiblePage ? ` ${s.pagActive}` : ""}`}
                     type="button"
                     onClick={() => setCurrentPage(page)}
+                    aria-current={page === visiblePage ? "page" : undefined}
                   >
                     {page}
                   </button>
@@ -876,8 +949,9 @@ export default function ClientesPage() {
                   type="button"
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                   disabled={visiblePage === totalPages}
+                  aria-label="Pagina siguiente"
                 >
-                  {">"}
+                  {"›"}
                 </button>
               </div>
             </PremiumPageSection>

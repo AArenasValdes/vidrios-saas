@@ -162,7 +162,7 @@ describe("AppShell", () => {
       </AppShell>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /dueno@vidrios\.cl/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ventora Test admin/i }));
     fireEvent.click(screen.getByRole("button", { name: "Cerrar sesion" }));
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
@@ -182,7 +182,9 @@ describe("AppShell", () => {
       </AppShell>
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /alertas/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /notificaciones|alertas/i })
+    );
     expect(mockRefreshAlerts).toHaveBeenCalledTimes(1);
 
     currentAlerts = [
@@ -234,7 +236,7 @@ describe("AppShell", () => {
       screen.queryByText("Cargando tu espacio de trabajo")
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Terminando de conectar tu empresa y permisos/i)
+      screen.getByRole("button", { name: /Ventora Test admin/i })
     ).toBeInTheDocument();
   });
 

@@ -35,15 +35,16 @@ Si dos documentos se contradicen, manda este orden:
 
 ```text
 docs/agent-map/
-  README.md              <- Indice maestro (EMPEZAR AQUI)
-  PROJECT_OVERVIEW.md    <- Stack, arquitectura, carpetas
-  ROUTES_MAP.md          <- 17+ rutas con archivos y riesgos
-  FEATURES_MAP.md        <- 14 features con archivos criticos
-  DATA_MODEL_MAP.md      <- Tablas, relaciones, RLS, issues
-  COMPONENTS_MAP.md      <- Componentes reutilizables
-  AGENT_TASK_GUIDE.md    <- Guia practica por tipo de tarea
-  TOKEN_SAVING_RULES.md  <- Reglas para ahorrar tokens
-  CHANGELOG_AGENT_MAP.md <- Historial de cambios
+  README.md                   <- Indice maestro (EMPEZAR AQUI)
+  CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (pegar a otra IA)
+  PROJECT_OVERVIEW.md         <- Stack, arquitectura, carpetas
+  ROUTES_MAP.md               <- 17+ rutas con archivos y riesgos
+  FEATURES_MAP.md             <- 14 features con archivos criticos
+  DATA_MODEL_MAP.md           <- Tablas, relaciones, RLS, issues
+  COMPONENTS_MAP.md           <- Componentes reutilizables
+  AGENT_TASK_GUIDE.md         <- Guia practica por tipo de tarea
+  TOKEN_SAVING_RULES.md       <- Reglas para ahorrar tokens
+  CHANGELOG_AGENT_MAP.md      <- Historial de cambios
 ```
 
 ## Comandos principales
@@ -57,11 +58,29 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-06-30
+Ultima actualizacion operativa: 2026-07-20
 
-- **Fase actual**: estabilizacion de cotizacion desktop, dashboard comercial real y preparacion del Quote Studio desktop
-- **Estado del baseline**: `npm run lint`, `npm test` y `npm run build` estan pasando en el workspace principal
-- **Rutas ya estabilizadas en esta pasada**:
+- **Paso actual**: **Fase 4 — Cubicación asistida y pauta de corte revisable V1 (Camino 2)**. Fase 5 + diseño desktop quedaron cerrados para demo; Quote Studio (1) y catálogo 2A/2B están cerrados. Constructor V2/cuaderno es usable y queda abierto solo a pulido controlado. Handoff obligatorio: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Decisión Camino 2 (2026-07-19)**: no ampliar tipologías en el selector de partida. Catálogo = precio; 3 partidas V1 = estimación opcional; tipologías complejas = constructor. Handoff: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
+- **Corte Fase 4 ya implementado (2026-07-18 + UX Camino 2 2026-07-19)**:
+  - partidas V1 en metadata (fijas): `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`;
+  - estados V1: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`;
+  - roles de perfil en `cotizacion_line_templates.catalog_metadata`: marco/riel, hoja, encuentro, junquillo, zocalo y accesorio;
+  - helper central `buildLineTemplateCuttingPreview()` devuelve `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, vidrio estimado, ml perfiles, accesorios y barras referenciales;
+  - `/configuracion/empresa/lineas-precios`: estimación secundaria (partida/estado primero; perfiles/descuentos en segundo paso);
+  - `/cotizaciones/nueva` desktop muestra panel colapsable **Cubicacion y pauta** al elegir linea con pauta activa + medidas.
+- **Alcance activo Fase 4**: cubicar sin precios y mostrar pauta interna revisable por línea/proveedor/partida. Permitido: m² vidrio, ml marco/hojas, cantidad, accesorios, tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, barras y desperdicio solo como referencia.
+- **Fuera de alcance Fase 4 V1**: ampliar tipologías en el selector de partida, precios, costos, margen, inventario, compras, fabricación automática, optimización de pérdida, nesting, CAD y prometer manuales técnicos reales sin calibración de taller.
+- **No abrir por inercia**: CRM/seguimiento, Kanban.
+- **Hitos cerrados (ver roadmap; el orden numérico ≠ orden de ejecución)**:
+  - Fase 1 Quote Studio — cerrada con QA
+  - Fase 2A catálogo + import XLSX/CSV — cerrada
+  - Fase 2B import PDF / cruce técnico — **cerrada** (2026-07-17)
+  - Fase 3 constructor V2/cuaderno — usable; QA responsive y PDF visual OK, con brechas registradas en el handoff
+  - Fase 5 dashboard + pasada diseño desktop — implementada / cerrada por ahora
+- **Estado Constructor 2026-07-20**: modos desktop **Cotización rápida** / **Cotización guiada** sobre el mismo `draft.items`; contrato `quote-piece-domain.ts`; guiada en 5 pasos con Despiece; rápida con resumen técnico + pauta en inspector. Preferencia de modo en localStorage (default rápida). Sin migracion nueva y mobile no monta el workspace rápido.
+- **Estado de validacion actual**: `npm run build` y `npx tsc --noEmit --pretty false --incremental false` pasan; lint puntual de Constructor/renderer pasa. QA navegador 1024/1280/1440/1920 y mobile 390/430 completado. `npm run lint` global esta bloqueado por deuda preexistente de reglas React Compiler; `npm test` esta bloqueado por Jest global `this._moduleMocker.clearMocksOnScope is not a function`.
+- **Rutas ya estabilizadas en pasadas previas**:
   - `/api/solicitud/[empresa]`
   - `/presupuesto/[token]`
   - `/api/dashboard/summary`
@@ -70,24 +89,24 @@ Ultima actualizacion operativa: 2026-06-30
   - `/api/solicitudes`
   - `/api/solicitudes/resumen`
   - `/api/pwa/push-subscriptions`
-- **Seguridad DB ya endurecida en esta pasada**:
+- **Seguridad DB ya endurecida en pasadas previas**:
   - `web_push_subscriptions` ahora tiene policies RLS para `authenticated`
-- **Hardening adicional ya cerrado en esta pasada**:
+- **Hardening adicional ya cerrado**:
   - helper comun de auth resuelve primero por `auth_user_id` y cae a correo solo por compatibilidad
   - `/api/pwa/push-subscriptions` ahora desactiva suscripciones por `organization_id + auth_user_id`
   - `proxy.ts` ahora protege tambien `/solicitudes` y `/configuracion/*`
-- **QA autenticado ya cerrado en esta pasada**:
+- **QA autenticado ya cerrado**:
   - smoke real completado en `next start` con login valido sobre `/dashboard`, `/clientes`, `/cotizaciones`, `/solicitudes` y `/configuracion/empresa`
   - `dashboard` navega a `cotizaciones/nueva`
   - busquedas base de `clientes` y `cotizaciones` responden
   - `solicitudes` navega a `canales`
   - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
-- **Objetivo inmediato**:
- 1. Quote Studio desktop + constructor V2 cerrados para demo (2026-07-18);
- 2. **Fase 5 dashboard**: brief cerrado (`docs/design/FASE_5_DASHBOARD_BRIEF.md`) — valor cotizado + cola **Por enviar**; sin seguimiento hero; rediseño UI tras aprobar dirección visual externa;
- 3. no abrir cubicacion (Fase 4) ni CRM/seguimiento como foco;
- 4. catalogos privados ya activos.
- 5. (reserva) elevar shell desktop solo si el brief de diseño lo incluye.
+- **Cómo seguir**:
+  1. Constructor: leer `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md` y cerrar primero validacion local de ancho/alto/cantidad invalidos sin corromper draft;
+  2. Constructor/PDF: obtener PDF real, rasterizar con Poppler y validar piezas extremas + `total_global`;
+  3. Constructor: completar regresiones cuando se repare Jest global; no rehacer cuaderno ni renderer sin bug concreto;
+  4. Fase 4: validar calibracion con ejemplos reales de un piloto; presets por proveedor solo si el taller lo pide;
+  5. no reabrir 2B, CRM/Kanban ni ampliar partidas por inercia.
 - **Nueva pasada cerrada en cotizaciones**:
   - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
   - nueva tabla activa `cotizacion_line_templates`
@@ -191,7 +210,8 @@ Ultima actualizacion operativa: 2026-06-30
   - flujos profundos de `/cotizaciones/nueva`
   - acciones de edicion/eliminacion en `/clientes`
 - Correr smoke visual de Espejo/Cubierta de mesa en cotizacion y PDF si se toca `shouldRequireProfileMaterialForComponent` o `item-print-specs.ts`
-- Mantener foco en Fase 2: cotizacion, cierre comercial y desktop taller; no abrir pipeline Kanban, CRM generico ni modulos posteriores
+- Mantener foco en Fase 4 Camino 2: cubicacion asistida revisable con 3 partidas, snapshot tecnico y pauta consolidada; tipologías complejas en constructor; no ensanchar el selector de partida ni abrir pipeline Kanban, CRM generico, inventario, compras, fabricacion automatica ni modulos posteriores
+- Antes de tocar cubicación/pauta con otra IA: pegar `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`
 
 ## Notas de QA
 
@@ -232,7 +252,7 @@ Ultima actualizacion operativa: 2026-06-30
 - **No abrir Fase 3+**: pipeline Kanban y metricas decorativas no son prioridad; lo demas se posterga
 - **No crear `oportunidades` ni `cobros`**: roadmap congelado para una fase futura
 - **No crear roles, responsables, equipos ni permisos**
-- **No agregar logica de cubicacion ni tablas tecnicas nuevas sin aprobacion explicita**
+- **No agregar tablas tecnicas nuevas, formulas libres, optimizacion, nesting ni fabricacion automatica para cubicacion sin aprobacion explicita**
 - **4 tablas sin RLS policies**: quote_item_breakdown, material_types, formula_variables, cotizacion_code_counters
 - **Email push depende de env vars**: `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`
 - **Bucket Storage**: `organization-assets` requerido para logos y PDFs

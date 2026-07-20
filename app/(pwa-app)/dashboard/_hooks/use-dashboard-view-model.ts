@@ -5,6 +5,11 @@ import { useMemo } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { resolveCotizacionWorkflowState } from "@/features/cotizaciones/services/cotizacion-display-state.service";
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import { hasMeaningfulMonthlyTrend } from "@/features/dashboard/services/dashboard-monthly-totals.service";
+import {
+  resolvePendingSendAction,
+  type DashboardPendingSendAction,
+} from "@/features/dashboard/services/dashboard-pending-send.service";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useDashboardSummary } from "./use-dashboard-summary";
 
@@ -20,6 +25,39 @@ export type DashboardQuoteCard = {
   stateLabel: string;
   stateColor: DashboardQuoteStateColor;
   onPrefetchDetail?: () => void;
+};
+
+export type DashboardPendingSendRow = {
+  id: string;
+  href: string;
+  pdfHref: string;
+  clientName: string;
+  obra: string;
+  amount: string;
+  amountValue: number;
+  date: string;
+  stateLabel: string;
+  stateColor: DashboardQuoteStateColor;
+  action: DashboardPendingSendAction;
+  actionLabel: string;
+  clientPhone: string;
+  approvalToken: string | null;
+  codigo: string;
+};
+
+export type DashboardMonthlyTrendPoint = {
+  key: string;
+  label: string;
+  total: number;
+  totalLabel: string;
+};
+
+export type DashboardResponseItem = {
+  id: string;
+  href: string;
+  kind: "aprobada" | "rechazada";
+  title: string;
+  message: string;
 };
 
 export type DashboardMobileProps = {
@@ -47,17 +85,27 @@ export type DashboardDesktopProps = {
   greetingLabel: string;
   greetingName: string;
   subtitle: string;
+  companyName: string;
+  companyInitials: string;
+  periodLabel: string;
   newQuoteHref: string;
-  quotedTotalLabel: string;
-  totalCount: number;
+  quotesHref: string;
+  pendingSendHref: string;
+  quotedMonthTotalLabel: string;
+  approvedTotalLabel: string;
   pdfGeneratedCount: number;
   approvedCount: number;
   monthCount: number;
-  approvedTodayCount: number;
-  quotesHref: string;
-  quoteCards: DashboardQuoteCard[];
+  pendingSendCount: number;
+  monthlyTrend: DashboardMonthlyTrendPoint[];
+  hasMonthlyTrend: boolean;
+  pendingSendRows: DashboardPendingSendRow[];
+  recentQuoteCards: DashboardQuoteCard[];
+  responseItems: DashboardResponseItem[];
+  responseAlertCount: number;
   isLoading: boolean;
   isEmpty: boolean;
+  hasPendingSend: boolean;
 };
 
 export type DashboardViewModel = {
@@ -94,9 +142,7 @@ function getGreetingLabel(date = new Date()) {
   return chileHour >= 12 ? "Buenas tardes" : "Buenos días";
 }
 
-function mapDisplayStateToColor(
-  cls: string
-): DashboardQuoteStateColor {
+function mapDisplayStateToColor(cls: string): DashboardQuoteStateColor {
   if (cls === "stAprobada") return "success";
   if (cls === "stRechazada") return "destructive";
   if (cls === "stTerminada" || cls === "stCreada" || cls === "stSinCierre") return "neutral";
@@ -104,14 +150,39 @@ function mapDisplayStateToColor(
   return "warning";
 }
 
+function resolvePersonName(input: {
+  email?: string | null;
+  companyName: string;
+}) {
+  const emailLocal = input.email?.split("@")[0]?.trim() ?? "";
+  if (emailLocal) {
+    const cleaned = emailLocal.replace(/[._-]+/g, " ").trim();
+    const first = cleaned.split(/\s+/)[0] ?? "";
+    if (first.length >= 2) {
+      return first.charAt(0).toUpperCase() + first.slice(1);
+    }
+  }
+  return input.companyName;
+}
+
+function buildInitials(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "VE";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
+
 export function useDashboardViewModel(): DashboardViewModel {
-  const { organizacionId } = useAuth();
+  const { organizacionId, user } = useAuth();
   const { profile } = useOrganizationProfile();
   const dashboardSummary = useDashboardSummary(organizacionId);
 
   const companyName = profile?.empresaNombre?.trim() || "Mi empresa";
   const greetingLabel = useMemo(() => getGreetingLabel(), []);
-  const greetingName = companyName;
+  const greetingName = useMemo(
+    () => resolvePersonName({ email: user?.email, companyName }),
+    [companyName, user?.email]
+  );
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("es-CL", {
@@ -121,9 +192,11 @@ export function useDashboardViewModel(): DashboardViewModel {
       }).format(new Date()),
     []
   );
-  const subtitle = `${todayLabel} - ${companyName}`;
+  const subtitle = "Resumen comercial de tu taller.";
   const mobileDateLabel = formatMobileDateLabel(todayLabel);
   const quotedTotalLabel = formatClp(dashboardSummary.quotedTotal);
+  const quotedMonthTotalLabel = formatClp(dashboardSummary.quotedMonthTotal);
+  const approvedTotalLabel = formatClp(dashboardSummary.approvedTotal);
   const summaryTitle = "Valor cotizado";
   const summarySubtitle = `${dashboardSummary.totalCount} cotizacion${
     dashboardSummary.totalCount === 1 ? "" : "es"
@@ -156,6 +229,84 @@ export function useDashboardViewModel(): DashboardViewModel {
       });
   }, [dashboardSummary.recentRecords]);
 
+  const recentQuoteCards = useMemo<DashboardQuoteCard[]>(() => {
+    return [...dashboardSummary.recentRecords]
+      .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
+      .slice(0, 5)
+      .map((record) => {
+        const displayState = resolveCotizacionWorkflowState({
+          estado: record.estado,
+          pdfDescargadoEn: record.pdfDescargadoEn,
+        });
+
+        return {
+          id: record.id,
+          href: `/cotizaciones/${record.id}`,
+          name: record.clienteNombre || "Cliente",
+          code: record.codigo,
+          amount: formatClp(record.total ?? 0),
+          date: formatCotizacionDate(record.updatedAt),
+          stateLabel: displayState.label,
+          stateColor: mapDisplayStateToColor(displayState.cls),
+        };
+      });
+  }, [dashboardSummary.recentRecords]);
+
+  const pendingSendRows = useMemo<DashboardPendingSendRow[]>(() => {
+    return dashboardSummary.pendingSendRecords.slice(0, 6).map((record) => {
+      const displayState = resolveCotizacionWorkflowState({
+        estado: record.estado,
+        pdfDescargadoEn: record.pdfDescargadoEn,
+      });
+      const action = resolvePendingSendAction({
+        pdfDescargadoEn: record.pdfDescargadoEn,
+      });
+
+      return {
+        id: record.id,
+        href: `/cotizaciones/${record.id}`,
+        pdfHref: `/print/cotizaciones/${record.id}`,
+        clientName: record.clienteNombre || "Cliente",
+        obra: record.obra || "Cotización",
+        amount: formatClp(record.total ?? 0),
+        amountValue: record.total ?? 0,
+        date: formatCotizacionDate(record.updatedAt),
+        stateLabel: displayState.label,
+        stateColor: mapDisplayStateToColor(displayState.cls),
+        action,
+        actionLabel: action === "pdf" ? "Generar PDF" : "Enviar por WhatsApp",
+        clientPhone: record.clienteTelefono ?? "",
+        approvalToken: record.approvalToken ?? null,
+        codigo: record.codigo,
+      };
+    });
+  }, [dashboardSummary.pendingSendRecords]);
+
+  const monthlyTrend = useMemo<DashboardMonthlyTrendPoint[]>(() => {
+    return dashboardSummary.monthlyQuotedTotals.map((point) => ({
+      key: point.key,
+      label: point.label,
+      total: point.total,
+      totalLabel: formatClp(point.total),
+    }));
+  }, [dashboardSummary.monthlyQuotedTotals]);
+
+  const responseItems = useMemo<DashboardResponseItem[]>(() => {
+    return dashboardSummary.alerts
+      .filter(
+        (alert): alert is typeof alert & { kind: "aprobada" | "rechazada" } =>
+          alert.kind === "aprobada" || alert.kind === "rechazada"
+      )
+      .slice(0, 4)
+      .map((alert) => ({
+        id: alert.id,
+        href: alert.href,
+        kind: alert.kind,
+        title: alert.title,
+        message: alert.message,
+      }));
+  }, [dashboardSummary.alerts]);
+
   const responseAlerts = useMemo(
     () =>
       dashboardSummary.alerts.map((alert) => ({
@@ -166,12 +317,13 @@ export function useDashboardViewModel(): DashboardViewModel {
   );
 
   const isLoading = dashboardSummary.isLoading && dashboardSummary.recentRecords.length === 0;
-  const isEmpty = !isLoading && dashboardSummary.isReady && quoteCards.length === 0;
+  const isEmpty = !isLoading && dashboardSummary.isReady && dashboardSummary.totalCount === 0;
+  const hasPendingSend = pendingSendRows.length > 0;
 
   return {
     mobile: {
       greetingLabel,
-      greetingName,
+      greetingName: companyName,
       mobileDateLabel,
       newQuoteHref: "/cotizaciones/nueva",
       summaryHref: "/cotizaciones",
@@ -187,23 +339,33 @@ export function useDashboardViewModel(): DashboardViewModel {
       quoteCards,
       responseAlerts,
       isLoading: isLoading || !dashboardSummary.isReady,
-      isEmpty,
+      isEmpty: !isLoading && dashboardSummary.isReady && quoteCards.length === 0,
     },
     desktop: {
       greetingLabel,
       greetingName,
       subtitle,
+      companyName,
+      companyInitials: buildInitials(companyName),
+      periodLabel: "Este mes",
       newQuoteHref: "/cotizaciones/nueva",
-      quotedTotalLabel,
-      totalCount: dashboardSummary.totalCount,
+      quotesHref: "/cotizaciones",
+      pendingSendHref: "/cotizaciones",
+      quotedMonthTotalLabel,
+      approvedTotalLabel,
       pdfGeneratedCount: dashboardSummary.pdfGeneratedCount,
       approvedCount: dashboardSummary.approvedCount,
       monthCount: dashboardSummary.monthCount,
-      approvedTodayCount: dashboardSummary.approvedTodayCount,
-      quotesHref: "/cotizaciones",
-      quoteCards,
+      pendingSendCount: dashboardSummary.pendingSendRecords.length,
+      monthlyTrend,
+      hasMonthlyTrend: hasMeaningfulMonthlyTrend(dashboardSummary.monthlyQuotedTotals),
+      pendingSendRows,
+      recentQuoteCards,
+      responseItems,
+      responseAlertCount: responseItems.length,
       isLoading: isLoading || !dashboardSummary.isReady,
       isEmpty,
+      hasPendingSend,
     },
   };
 }

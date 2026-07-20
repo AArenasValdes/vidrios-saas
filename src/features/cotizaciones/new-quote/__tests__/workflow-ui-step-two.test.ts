@@ -33,6 +33,7 @@ import type { CotizacionLineTemplate } from "../../line-templates/types/cotizaci
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 
 function createLinePricingForm(
   overrides: Partial<ComponentFormState> = {}
@@ -1040,7 +1041,7 @@ describe("workflow-ui paso 2", () => {
     ).toBe(false);
   });
 
-  it("muestra el constructor solo tras Personalizado o si ya hay composición guiada", () => {
+  it("muestra el constructor tras Personalizado, Trabajo personalizado o si ya hay composición guiada", () => {
     expect(
       shouldShowGuidedComposerEntry({
         tipo: "Puerta",
@@ -1079,6 +1080,17 @@ describe("workflow-ui paso 2", () => {
         sistema: "Corredera",
         configuracion: "",
         sheetScheme: "Personalizado",
+        guidedVisualConfig: null,
+      })
+    ).toBe(true);
+
+    expect(
+      shouldShowGuidedComposerEntry({
+        tipo: "Trabajo personalizado",
+        material: "Aluminio",
+        sistema: "A medida",
+        configuracion: "Libre",
+        sheetScheme: "",
         guidedVisualConfig: null,
       })
     ).toBe(true);
@@ -1214,6 +1226,7 @@ describe("workflow-ui paso 2", () => {
         material: "Aluminio",
         categoria: "aluminio",
         precioM2Sugerido: 80000,
+        sortOrder: 0,
       },
       {
         id: "al-2",
@@ -1222,6 +1235,7 @@ describe("workflow-ui paso 2", () => {
         categoria: "aluminio",
         precioM2Sugerido: 0,
         catalogMetadata: { needsCommercialPrice: true },
+        sortOrder: 1,
       },
     ] as unknown as readonly CotizacionLineTemplate[];
 
@@ -1231,6 +1245,42 @@ describe("workflow-ui paso 2", () => {
         material: "Aluminio",
       }).map((template) => template.nombre)
     ).toEqual(["Serie con precio"]);
+  });
+
+  it("debe mostrar lineas PVC y Aluminio al cotizar ventana, priorizando el material actual", () => {
+    const templates = [
+      {
+        id: "pvc-1",
+        nombre: "Serie PVC",
+        material: "PVC",
+        categoria: "pvc",
+        precioM2Sugerido: 90000,
+        sortOrder: 0,
+      },
+      {
+        id: "al-1",
+        nombre: "Serie Aluminio",
+        material: "Aluminio",
+        categoria: "aluminio",
+        precioM2Sugerido: 80000,
+        sortOrder: 1,
+      },
+      {
+        id: "cr-1",
+        nombre: "Cristal 5mm",
+        material: "Cristal",
+        categoria: "vidrio",
+        precioM2Sugerido: 50000,
+        sortOrder: 2,
+      },
+    ] as unknown as readonly CotizacionLineTemplate[];
+
+    expect(
+      filterLineTemplatesForComponent(templates, {
+        tipo: "Ventana",
+        material: "Aluminio",
+      }).map((template) => template.nombre)
+    ).toEqual(["Serie Aluminio", "Serie PVC"]);
   });
 
   it("debe generar nombres comerciales para composiciones no correderas sin cambiar precio", () => {
@@ -1493,5 +1543,32 @@ describe("workflow-ui paso 2", () => {
         mirrorInteriorLine: "fine",
       })
     );
+  });
+
+  it("actualiza el nombre del constructor al cambiar tipología del croquis (fijo → corredera)", () => {
+    const item = buildItemFromForm(
+      createLinePricingForm({
+        sistema: "Personalizado",
+        configuracion: "Personalizado",
+        sheetScheme: "Personalizado",
+        sheetVariant: "",
+        isCustomScheme: true,
+        nombre: "Ventana fija",
+        guidedVisualConfig: createQuoteConstructorPresetConfig("corredera", {
+          widthMm: 1500,
+          heightMm: 1200,
+        }),
+        pricingMode: "precio_directo",
+        costoProveedorUnitario: "",
+        precioPorM2: "",
+        minimoCobrable: "",
+        precioPlantillaSugerido: "",
+        origenPrecio: "manual",
+      }),
+      [],
+      null
+    );
+
+    expect(item.nombre).toBe("Ventana corredera");
   });
 });

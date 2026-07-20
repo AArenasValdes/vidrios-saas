@@ -1,5 +1,10 @@
 import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
 import {
+  parseCubicationSnapshot,
+  serializeCubicationSnapshot,
+  type CotizacionItemCubicationSnapshot,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import {
   parseGuidedVisualConfig,
   serializeGuidedVisualConfig,
   type GuidedVisualConfig,
@@ -50,6 +55,7 @@ export type CotizacionItemPresentationMeta = {
   mirrorPaneDirection: CotizacionMirrorPaneDirection;
   mirrorInteriorLine: CotizacionMirrorInteriorLine;
   guidedVisualConfig: GuidedVisualConfig | null;
+  cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
   raw: string;
 };
 
@@ -209,6 +215,7 @@ export function encodeCotizacionItemPresentationMeta(input: {
   mirrorPaneDirection?: CotizacionMirrorPaneDirection;
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -278,6 +285,9 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const guidedVisualConfig = input.guidedVisualConfig
     ? serializeGuidedVisualConfig(input.guidedVisualConfig).replace(/\]/g, "")
     : "";
+  const cubicationSnapshot = input.cubicationSnapshot
+    ? serializeCubicationSnapshot(input.cubicationSnapshot).replace(/\]/g, "")
+    : "";
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +
@@ -314,7 +324,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[mpc:${mirrorPaneCount ?? ""}]` +
     `[mpd:${mirrorPaneDirection}]` +
     `[mil:${mirrorInteriorLine}]` +
-    `[gvc:${guidedVisualConfig}]`;
+    `[gvc:${guidedVisualConfig}]` +
+    `[cub:${cubicationSnapshot}]`;
 
   return raw ? `${meta} ${raw}` : meta;
 }
@@ -389,6 +400,9 @@ export function decodeCotizacionItemPresentationMeta(
   const guidedVisualConfig = parseGuidedVisualConfig(
     source.match(/\[gvc:([^\]]*)\]/)?.[1]
   );
+  const cubicationSnapshot = parseCubicationSnapshot(
+    source.match(/\[cub:([^\]]*)\]/)?.[1]
+  );
   const referencia =
     source.match(/\[r:([^\]]*)\]/)?.[1]?.trim() ??
     source.match(/\[l:([^\]]*)\]/)?.[1]?.trim() ??
@@ -429,6 +443,7 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[mpd:[^\]]*\]/g, "")
     .replace(/\[mil:[^\]]*\]/g, "")
     .replace(/\[gvc:[^\]]*\]/g, "")
+    .replace(/\[cub:[^\]]*\]/g, "")
     .trim();
 
   return {
@@ -467,6 +482,7 @@ export function decodeCotizacionItemPresentationMeta(
     mirrorPaneDirection,
     mirrorInteriorLine,
     guidedVisualConfig,
+    cubicationSnapshot,
     raw,
   };
 }

@@ -364,4 +364,19 @@ describe("CotizacionesPage", () => {
 
     expect(screen.getAllByTestId("cotizacion-mobile-card")).toHaveLength(3);
   });
+
+  it("abre el detalle desde la fila y agrupa acciones secundarias en un menu", () => {
+    renderPage();
+
+    const row = screen.getByLabelText("Abrir detalle de COT-250426-001");
+    fireEvent.click(row);
+
+    expect(push).toHaveBeenCalledWith("/cotizaciones/cot-1");
+
+    const menuButton = within(row).getByRole("button", { name: "Mas acciones" });
+    fireEvent.click(menuButton);
+
+    expect(within(row).getByRole("menuitem", { name: "Duplicar" })).toBeInTheDocument();
+    expect(within(row).getByRole("menuitem", { name: "Eliminar" })).toBeInTheDocument();
+  });
 });

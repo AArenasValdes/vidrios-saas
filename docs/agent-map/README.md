@@ -12,7 +12,7 @@ Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones a
 
 Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.
 
-Si la tarea es rediseño del dashboard Fase 5, leer tambien `docs/design/FASE_5_DASHBOARD_BRIEF.md` (no implementar UI hasta aprobar direccion visual).
+Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/design/FASE_5_DASHBOARD_BRIEF.md` (ya implementado en desktop; no reabrir CRM/seguimiento).
 
 ## Orden recomendado de lectura
 
@@ -27,12 +27,19 @@ Si la tarea es rediseño del dashboard Fase 5, leer tambien `docs/design/FASE_5_
 9. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
 10. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
 11. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
+12. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta / partidas V1 (pegar a otra IA)
+13. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF (leer antes de continuar esta superficie)
 
 ## Foco actual
 
 - Desktop taller, no CRM generico.
-- Quote Studio + constructor V2 cerrados para demo (2026-07-18).
-- Siguiente: Fase 5 dashboard — valor cotizado + cola **Por enviar**; brief en `docs/design/FASE_5_DASHBOARD_BRIEF.md`; UI tras aprobar diseño externo. Cubicacion fuera del alcance inmediato.
+- **Fase actual = Fase 4 — Cubicación y pauta revisable V1**. Fase 5 + diseño desktop quedó cerrada para demo. También cerradas: Fase 1, 2A, **2B** (2026-07-17). Constructor V2/cuaderno es usable y sigue en pulido controlado; handoff: `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Decisión Camino 2 (2026-07-19):** no ampliar tipologías en el selector de partida. Catálogo = precio; partida V1 = solo 3 patrones de estimación; tipologías complejas = constructor. Handoff completo: `CUBICACION_PAUTA_HANDOFF.md`.
+- Cortes Fase 4 ya implementados (2026-07-18): sistemas/estados/roles; snapshot `[cub:]`; edicion manual; Guardar ajuste; pauta consolidada; **calibracion V1** (descuentos + ejemplo real en ficha de linea).
+- Alcance Fase 4 V1: cubicar sin precios, reglas en `catalog_metadata`, pauta revisable, snapshot, ajuste a linea, consolidado, calibracion por sistema/ejemplo.
+- Siguiente corte seguro: validar calibracion con ejemplos reales de un piloto; presets por proveedor solo si hace falta.
+- Fuera de Fase 4 V1: precios/costos/margen, optimización de pérdida, nesting, CAD, inventario, fabricación automática y promesas de manual técnico universal.
+- No reinventar 2B ni Quote Studio sin bug concreto. CRM/Kanban fuera.
 
 ## Advertencia critica
 
@@ -62,6 +69,8 @@ docs/agent-map/
   DATA_MODEL_MAP.md         <- Tablas, relaciones, campos
   COMPONENTS_MAP.md         <- Componentes reutilizables
   AGENT_TASK_GUIDE.md       <- Guia practica por tarea
+  CONSTRUCTOR_DESKTOP_HANDOFF.md <- Handoff Constructor desktop / SVG / PDF
+  CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (para otras IAs)
   TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
   CHANGELOG_AGENT_MAP.md    <- Historial de cambios
   ACTIVATION_ONBOARDING.md  <- Onboarding /activacion (primera cotizacion)

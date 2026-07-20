@@ -37,6 +37,12 @@ import type {
 import { createQuoteStudioFinancialDraft } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CreateCotizacionLineTemplateInput } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  getLineTemplateCuttingRules,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { applyManualCutsAdjustmentToLineCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-adjustment";
+import { buildCubicationSnapshotFromCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import {
   DEFAULT_MARGIN_PCT,
   normalizePricingMode,
   type PricingMode,
@@ -97,6 +103,13 @@ import {
   readCustomGlassOptions,
   saveCustomGlassOption,
 } from "@/features/cotizaciones/new-quote/custom-glass-options";
+import {
+  QUOTE_CONSTRUCTOR_PRESETS,
+  createQuoteConstructorPresetConfig,
+  moveQuoteConstructorItem,
+  type QuoteConstructorItemPatch,
+  type QuoteConstructorPresetId,
+} from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 
 const NuevaCotizacionDesktop = dynamic(
   () => import("./_components/desktop/nueva-cotizacion-desktop").then((m) => ({
@@ -159,8 +172,11 @@ function NuevaCotizacionPageContent() {
   const {
     activeTemplates: activeLineTemplates,
     createTemplate: createLineTemplate,
+    updateTemplate: updateLineTemplate,
     isSaving: isSavingQuickPriceTemplate,
   } = useCotizacionLineTemplates({ activeOnly: true });
+  const [isSavingCubicationLineAdjustment, setIsSavingCubicationLineAdjustment] =
+    useState(false);
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
     createEmptyComponentForm([], "", "margen", organizationProfile?.margenDefecto)
   );
@@ -226,6 +242,7 @@ function NuevaCotizacionPageContent() {
   const pasoDosEdicionRapida = usePasoDosEdicionRapida({
     items: draft.items,
     quotePricingMode,
+    activeLineTemplates,
     setDraft,
     setGlobalError,
   });
@@ -843,6 +860,7 @@ function NuevaCotizacionPageContent() {
   };
   const pasoDosVariaciones = usePasoDosVariaciones({
     items: draft.items,
+    activeLineTemplates,
     setItems: (nextItems) => setDraft((current) => ({ ...current, items: nextItems })),
     openItemForEditing,
     clearEditingState: () => {
@@ -892,7 +910,16 @@ function NuevaCotizacionPageContent() {
         return syncTemplatePricingInComponentForm({
           ...cur,
           [key]: digitsOnly,
+          cubicationSnapshot: null,
         });
+      }
+
+      if (key === "cantidad" || key === "lineTemplateId") {
+        return {
+          ...cur,
+          [key]: value,
+          cubicationSnapshot: null,
+        } as ComponentFormState;
       }
 
       if (key === "tipo") {
@@ -915,6 +942,7 @@ function NuevaCotizacionPageContent() {
                 isCustomScheme: false,
                 nombre: "",
                 descripcion: "",
+                cubicationSnapshot: null,
               }
             : {
                 ...cur,
@@ -931,6 +959,7 @@ function NuevaCotizacionPageContent() {
                 sheetVariant: "",
                 customSchemeDescription: "",
                 isCustomScheme: false,
+                cubicationSnapshot: null,
               },
         });
 
@@ -1133,6 +1162,86 @@ function NuevaCotizacionPageContent() {
     }
   };
 
+  const handleSaveCubicationLineAdjustment = async (input?: {
+    itemId?: string;
+    snapshot?: CotizacionItemCubicationSnapshot | null;
+  }) => {
+    const sourceItem = input?.itemId
+      ? draft.items.find((item) => item.id === input.itemId) ?? null
+      : null;
+    const form = sourceItem ? mapItemToForm(sourceItem) : componentForm;
+    const templateId = form.lineTemplateId.trim();
+    const draftSnapshot = input?.snapshot ?? form.cubicationSnapshot;
+
+    if (!templateId) {
+      setGlobalError("Selecciona una línea del catálogo antes de guardar el ajuste.");
+      return;
+    }
+
+    if (!draftSnapshot || draftSnapshot.source !== "manual" || draftSnapshot.cuts.length === 0) {
+      setGlobalError("Solo puedes guardar un ajuste cuando la pauta está editada manualmente.");
+      return;
+    }
+
+    const template = activeLineTemplates.find(
+      (currentTemplate) => String(currentTemplate.id) === templateId
+    );
+
+    if (!template) {
+      setGlobalError("No encontramos la línea del catálogo para guardar el ajuste.");
+      return;
+    }
+
+    const autoSnapshot = buildCubicationSnapshotFromCatalogMetadata({
+      lineTemplateId: templateId,
+      catalogMetadata: template.catalogMetadata,
+      widthMm: draftSnapshot.widthMm,
+      heightMm: draftSnapshot.heightMm,
+      quantity: draftSnapshot.quantity,
+    });
+    const cuttingRules = getLineTemplateCuttingRules(template.catalogMetadata);
+
+    const { nextMetadata, changed, summary } = applyManualCutsAdjustmentToLineCatalogMetadata({
+      catalogMetadata: template.catalogMetadata,
+      cuts: draftSnapshot.cuts,
+      widthMm: draftSnapshot.widthMm,
+      heightMm: draftSnapshot.heightMm,
+      sashCount: cuttingRules.sashCount,
+      autoCuts: autoSnapshot?.cuts,
+      autoGlass: autoSnapshot?.glass ?? null,
+      manualGlass: draftSnapshot.glass,
+    });
+
+    if (!changed) {
+      setToastMessage("No hay cambios de perfil o descuento para guardar en la línea.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    setIsSavingCubicationLineAdjustment(true);
+    setGlobalError(null);
+
+    try {
+      await updateLineTemplate(template.id, { catalogMetadata: nextMetadata });
+      const statusNote =
+        nextMetadata.cubicationStatus === "revisar_cambios"
+          ? " La línea pasó a Revisar cambios."
+          : "";
+      const detail =
+        summary.lines.length > 0 ? ` ${summary.lines.slice(0, 2).join(" · ")}.` : "";
+      setToastMessage(`Ajuste guardado en "${template.nombre}".${detail}${statusNote}`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (error) {
+      setGlobalError(
+        error instanceof Error
+          ? error.message
+          : "No pudimos guardar el ajuste de cubicación en la línea."
+      );
+    } finally {
+      setIsSavingCubicationLineAdjustment(false);
+    }
+  };
+
   const handleCreateMobileLineTemplate = async (
     input: Omit<CreateCotizacionLineTemplateInput, "organizationId">
   ) => {
@@ -1243,7 +1352,10 @@ function NuevaCotizacionPageContent() {
       ...current,
       items: current.items.map((item) =>
         item.id === itemId
-          ? buildItemFromForm(recalculatedForm, current.items, itemId, { quotePricingMode })
+          ? buildItemFromForm(recalculatedForm, current.items, itemId, {
+              quotePricingMode,
+              lineTemplates: activeLineTemplates,
+            })
           : item
       ),
     }));
@@ -1265,6 +1377,7 @@ function NuevaCotizacionPageContent() {
       if (editingItemId) {
         const item = buildItemFromForm(componentForm, draft.items, editingItemId, {
           quotePricingMode,
+          lineTemplates: activeLineTemplates,
         });
         const updatedItems = draft.items.map((e) => (e.id === editingItemId ? item : e));
         nextItems = pasoDosVariaciones.resolveItemsAfterFullEditSave(editingItemId, updatedItems);
@@ -1287,7 +1400,12 @@ function NuevaCotizacionPageContent() {
                   nombre: "",
                 };
 
-          nextItems.push(buildItemFromForm(nextForm, nextItems, null, { quotePricingMode }));
+          nextItems.push(
+            buildItemFromForm(nextForm, nextItems, null, {
+              quotePricingMode,
+              lineTemplates: activeLineTemplates,
+            })
+          );
         }
 
         nextQuickEditItemId =
@@ -1573,7 +1691,10 @@ function NuevaCotizacionPageContent() {
           provider: suggestionProvider,
           draft: groupDraft,
         });
-        nextItem = buildItemFromForm(nextForm, nextItems, null, { quotePricingMode });
+        nextItem = buildItemFromForm(nextForm, nextItems, null, {
+          quotePricingMode,
+          lineTemplates: activeLineTemplates,
+        });
       }
 
       nextItems.push(nextItem);
@@ -1769,6 +1890,112 @@ function NuevaCotizacionPageContent() {
     setDuplicateSourceCode(item.codigo);
     pasoDosAgregarGrupo.openSheet(duplicatedForm);
     pasoDosAgregarGrupo.goToStep(3);
+  };
+
+  const handleAddConstructorPreset = (presetId: QuoteConstructorPresetId) => {
+    const preset = QUOTE_CONSTRUCTOR_PRESETS.find((current) => current.id === presetId);
+    if (!preset) return null;
+
+    const itemId = `item-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
+    setDraft((current) => {
+      const base = createEmptyComponentForm(
+        current.items,
+        suggestionProvider,
+        componentForm.pricingMode,
+        organizationProfile?.margenDefecto
+      );
+      const config = createQuoteConstructorPresetConfig(preset.id);
+      const form: ComponentFormState = {
+        ...base,
+        codigo: buildNextComponentCode(current.items, preset.componentType),
+        tipo: preset.componentType,
+        nombre: preset.defaultName,
+        ancho: "1200",
+        alto: "1000",
+        cantidad: "1",
+        sistema: "Personalizado",
+        configuracion: "Personalizado",
+        sheetScheme: "Personalizado",
+        isCustomScheme: true,
+        guidedVisualConfig: config,
+      };
+      const item = buildItemFromForm(form, current.items, itemId, {
+        quotePricingMode,
+        lineTemplates: activeLineTemplates,
+      });
+      return { ...current, items: [...current.items, item] };
+    });
+    setQuoteModeChosen(true);
+    setFieldErrors((current) => ({ ...current, items: undefined }));
+    return itemId;
+  };
+
+  const handleUpdateConstructorItem = (
+    itemId: string,
+    patch: QuoteConstructorItemPatch
+  ) => {
+    setDraft((current) => {
+      const item = current.items.find((candidate) => candidate.id === itemId);
+      if (!item) return current;
+
+      let form = mapItemToForm(item);
+      if (patch.lineTemplateId !== undefined) {
+        const template = activeLineTemplates.find(
+          (candidate) => String(candidate.id) === patch.lineTemplateId
+        );
+        form = template
+          ? applyLineTemplateToComponentForm(form, template)
+          : {
+              ...form,
+              lineTemplateId: "",
+              referencia: "",
+              precioPorM2: "",
+              minimoCobrable: "",
+              precioPlantillaSugerido: "",
+              precioAjustadoManual: false,
+              origenPrecio: "manual",
+              cubicationSnapshot: null,
+            };
+      }
+
+      const { markPriceManual, ...formPatch } = patch;
+      form = { ...form, ...formPatch };
+
+      if (patch.material) {
+        form.catalogCategoria = patch.material === "PVC" ? "pvc" : "aluminio";
+        form.colorHex = resolveMaterialColorHex(patch.material, form.colorHex);
+      }
+      if (markPriceManual) {
+        form.pricingMode = "precio_directo";
+        form.precioAjustadoManual = true;
+        form.origenPrecio = "manual";
+      }
+      // Medidas/cantidad invalidan el snapshot salvo que el patch traiga uno nuevo explícito.
+      if (
+        patch.cubicationSnapshot === undefined &&
+        (patch.ancho !== undefined || patch.alto !== undefined || patch.cantidad !== undefined)
+      ) {
+        form.cubicationSnapshot = null;
+      }
+
+      const nextItem = buildItemFromForm(form, current.items, itemId, {
+        quotePricingMode,
+        lineTemplates: activeLineTemplates,
+      });
+      return {
+        ...current,
+        items: current.items.map((candidate) =>
+          candidate.id === itemId ? nextItem : candidate
+        ),
+      };
+    });
+  };
+
+  const handleMoveConstructorItem = (itemId: string, direction: -1 | 1) => {
+    setDraft((current) => ({
+      ...current,
+      items: moveQuoteConstructorItem(current.items, itemId, direction),
+    }));
   };
 
   const handleDuplicateItemInPaso3 = (item: CotizacionWorkflowItem) => {
@@ -2587,6 +2814,8 @@ function goNextFromStep1() {
     onRecalculateTemplatePrice: handleRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: handleSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: handleSaveQuickPriceTemplate,
+    onSaveCubicationLineAdjustment: handleSaveCubicationLineAdjustment,
+    isSavingCubicationLineAdjustment,
     onDraftFleteChange: handleDraftFleteChange,
     onDraftDiscountChange: handleDraftDiscountChange,
     onDraftDiscountTypeChange: handleDraftDiscountTypeChange,
@@ -2804,6 +3033,25 @@ function goNextFromStep1() {
             onSelectMode: handleQuotePricingModeChange,
             onReturnToModeSelector: returnToModeSelector,
             duplicateSourceCode,
+            constructorLineTemplates: activeLineTemplates,
+            constructorGlassOptions: pasoDosAgregarGrupo.glassOptions,
+            totalClienteManual: draft.totalClienteManual ?? null,
+            formatCurrencyInput,
+            onAddConstructorPreset: handleAddConstructorPreset,
+            onUpdateConstructorItem: handleUpdateConstructorItem,
+            onMoveConstructorItem: handleMoveConstructorItem,
+            onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
+            onClosePieceEditors: () => {
+              returnToTotalNotebookAfterSheetCloseRef.current = false;
+              returnToModeSelectorAfterSheetCloseRef.current = false;
+              if (pasoDosAgregarGrupo.isOpen) {
+                pasoDosAgregarGrupo.closeSheet({ itemCountOverride: draft.items.length });
+              }
+              setEditingItemId(null);
+              setIsFreeValueItemFormOpen(false);
+              setEditingFreeValueItemId(null);
+            },
+            isSaving,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}
@@ -2857,6 +3105,7 @@ function goNextFromStep1() {
             },
             onAnchoChange: pasoDosAgregarGrupo.updateAncho,
             onAltoChange: pasoDosAgregarGrupo.updateAlto,
+            onCubicationSnapshotChange: pasoDosAgregarGrupo.updateCubicationSnapshot,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onPrecioPorM2Change: pasoDosAgregarGrupo.updatePrecioPorM2,
             onMinimoCobrableChange: pasoDosAgregarGrupo.updateMinimoCobrable,

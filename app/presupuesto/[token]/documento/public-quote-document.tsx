@@ -577,7 +577,7 @@ export function PublicQuoteDocument({
           colorHex,
           guidedVisualConfig,
           maxW: 470,
-          maxH: 210,
+          maxH: 260,
           variant: "pdf",
         }),
       });
@@ -829,7 +829,7 @@ export function PublicQuoteDocument({
                           colorHex,
                           guidedVisualConfig: itemMeta.guidedVisualConfig,
                           maxW: 470,
-                          maxH: 210,
+                          maxH: 260,
                           variant: "pdf",
                         });
 

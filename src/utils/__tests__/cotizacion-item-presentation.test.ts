@@ -87,6 +87,7 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       guidedVisualConfig: null,
+      cubicationSnapshot: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -130,6 +131,7 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       guidedVisualConfig: null,
+      cubicationSnapshot: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -325,6 +327,7 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       guidedVisualConfig: null,
+      cubicationSnapshot: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -368,6 +371,7 @@ describe("cotizacion-item-presentation", () => {
       palilloType: "",
       encodedMargenPct: null,
       guidedVisualConfig: null,
+      cubicationSnapshot: null,
       encodedCostInputScope: "",
       mirrorFormat: "single",
       mirrorPaneCount: null,
@@ -412,6 +416,7 @@ describe("cotizacion-item-presentation", () => {
       isCustomScheme: true,
       pricingMode: "precio_directo",
       guidedVisualConfig: guided,
+      cubicationSnapshot: null,
     });
 
     expect(encoded).toContain("[gvc:2|");

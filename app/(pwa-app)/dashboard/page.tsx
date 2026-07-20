@@ -38,12 +38,6 @@ export default function DashboardPage() {
   const showBadge = subscription && planCode && planCode !== "trial";
   const subscriptionIsUrgent = isSubscriptionUrgent(subscription?.effectiveStatus);
 
-  const desktopBadge = showBadge ? (
-    <div className={s.desktopSubscriptionWrap}>
-      <SubscriptionBadge subscription={subscription} planCode={planCode} />
-    </div>
-  ) : null;
-
   const mobileBadge = showBadge ? (
     <div
       className={
@@ -63,7 +57,6 @@ export default function DashboardPage() {
   if (isDesktop) {
     return (
       <PremiumPageReveal>
-        {desktopBadge}
         <DashboardDesktop {...viewModel.desktop} />
       </PremiumPageReveal>
     );

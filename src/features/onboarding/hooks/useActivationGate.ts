@@ -52,12 +52,53 @@ export function useActivationGate(options?: {
 
   const refreshStatus = useCallback(async () => {
     if (isReplayMode) {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "d4bf8a",
+        },
+        body: JSON.stringify({
+          sessionId: "d4bf8a",
+          runId: "activacion-gate",
+          hypothesisId: "H1",
+          location: "useActivationGate.ts:replay",
+          message: "activation_gate_replay_bypass",
+          data: { isReplayMode, rol, organizacionId: Boolean(organizacionId) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       setShouldRedirect(false);
       setIsChecking(false);
       return;
     }
 
     if (cargando || !organizacionId || rol !== "admin") {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "d4bf8a",
+        },
+        body: JSON.stringify({
+          sessionId: "d4bf8a",
+          runId: "activacion-gate",
+          hypothesisId: cargando ? "H2" : !organizacionId ? "H2" : "H3",
+          location: "useActivationGate.ts:early_exit",
+          message: "activation_gate_early_exit",
+          data: {
+            cargando,
+            hasOrg: Boolean(organizacionId),
+            rol,
+            willForceShouldRedirectFalse: true,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       setShouldRedirect(false);
       setIsChecking(false);
       return;
@@ -68,11 +109,54 @@ export function useActivationGate(options?: {
     try {
       const status = await fetchActivationStatus();
       setShouldRedirect(status.shouldRedirect);
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "d4bf8a",
+        },
+        body: JSON.stringify({
+          sessionId: "d4bf8a",
+          runId: "activacion-gate",
+          hypothesisId: "H1",
+          location: "useActivationGate.ts:status",
+          message: "activation_gate_status",
+          data: {
+            shouldRedirect: status.shouldRedirect,
+            quoteCount: status.quoteCount,
+            activationState: status.activationState,
+            rol,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (options?.redirectWhenNeeded && status.shouldRedirect) {
         router.replace("/activacion");
       }
-    } catch {
+    } catch (error) {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "d4bf8a",
+        },
+        body: JSON.stringify({
+          sessionId: "d4bf8a",
+          runId: "activacion-gate",
+          hypothesisId: "H2",
+          location: "useActivationGate.ts:error",
+          message: "activation_gate_fetch_error",
+          data: {
+            errorName: error instanceof Error ? error.name : "unknown",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       setShouldRedirect(false);
     } finally {
       setIsChecking(false);

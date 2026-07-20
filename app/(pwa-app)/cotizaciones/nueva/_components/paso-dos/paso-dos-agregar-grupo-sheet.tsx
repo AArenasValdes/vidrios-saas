@@ -19,6 +19,7 @@ import {
   isCorrederaSheetConfiguration,
   isDesktopPieceSystemStepComplete,
   isPersonalizadoCompositionSelected,
+  isTrabajoPersonalizadoComponentType,
   isGlassCatalogSelection,
   isGuillotinaOrCelosiaConfiguration,
   MATERIAL_OPTIONS,
@@ -42,6 +43,12 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
+import {
+  formatCubicationMm,
+  resolveActiveCubicationPreview,
+} from "./pauta-cubicacion-panel";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
@@ -129,6 +136,9 @@ type Props = {
   onCreateCustomGlass: (value: string) => void;
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
+  onCubicationSnapshotChange?: (value: CotizacionItemCubicationSnapshot | null) => void;
+  /** Abre la revisión de despiece desktop compartida (rápida/guiada). */
+  onOpenDespieceReview?: () => void;
   onPrecioChange: (value: string) => void;
   onPrecioPorM2Change: (value: string) => void;
   onMinimoCobrableChange: (value: string) => void;
@@ -386,6 +396,8 @@ export function PasoDosAgregarGrupoSheet({
   onCreateCustomGlass,
   onAnchoChange,
   onAltoChange,
+  onCubicationSnapshotChange,
+  onOpenDespieceReview,
   onPrecioChange,
   onPrecioPorM2Change,
   onMinimoCobrableChange,
@@ -452,11 +464,13 @@ export function PasoDosAgregarGrupoSheet({
     }
 
     hasAutoAdvancedFreeValue.current = true;
-    onGoToStep(4);
+    onGoToStep(5);
   }, [canAutoAdvanceFree, onGoToStep]);
   const orderedGlassOptions = useMemo(() => sortGlassOptions(glassOptions), [glassOptions]);
+  const selectedLineTemplate =
+    visibleLineTemplates.find((template) => String(template.id) === draft.lineTemplateId) ?? null;
   const selectedLineTemplateRecommendedGlass =
-    visibleLineTemplates.find((template) => String(template.id) === draft.lineTemplateId)
+    selectedLineTemplate
       ?.vidrioPrincipalRecomendado ?? null;
   const glassRecommendation = useMemo(
     () =>
@@ -635,7 +649,7 @@ export function PasoDosAgregarGrupoSheet({
 
   if (!isOverlay && entryMode !== "free_total_single" && (quotePricingMode === "por_item" || quotePricingMode === "total_global")) {
     const totalGlobalDetailMode = detailOnlyMode || quotePricingMode === "total_global";
-    const maxDesktopStep = totalGlobalDetailMode ? (3 as const) : (4 as const);
+    const maxDesktopStep = totalGlobalDetailMode ? (3 as const) : (5 as const);
     const typeOptions = visibleTypeGroups.flatMap((group) =>
       group.items.map((item) => ({ categoria: group.title, label: item }))
     );
@@ -742,7 +756,7 @@ export function PasoDosAgregarGrupoSheet({
               <button
                 type="button"
                 className={`${d.stepperRailButton} ${freeStepVal === 2 ? d.stepperRailActive : hasAvanzadoTipo ? d.stepperRailFuture : d.stepperRailFuture}`}
-                onClick={() => onGoToStep(4)}
+                onClick={() => onGoToStep(5)}
               >
                 <span className={d.stepperRailMark} aria-hidden>2</span>
                 <span className={d.stepperRailLabel}>Detalle y valor</span>
@@ -770,7 +784,7 @@ export function PasoDosAgregarGrupoSheet({
                               onSelectCategoria(option.categoria);
                               onSelectSubtipo(option.label);
                               if (isFreeVal) {
-                                setTimeout(() => onGoToStep(4), 0);
+                                setTimeout(() => onGoToStep(5), 0);
                               }
                             }}
                           >
@@ -841,7 +855,7 @@ export function PasoDosAgregarGrupoSheet({
                   <span className={d.footerInstruction}>Elige el tipo de pieza para comenzar.</span>
                 </div>
                 <div className={d.footerActions}>
-                  <button type="button" className={s.btnPrimary} disabled={!hasFreeTypeSelected} onClick={() => onGoToStep(4)}>
+                  <button type="button" className={s.btnPrimary} disabled={!hasFreeTypeSelected} onClick={() => onGoToStep(5)}>
                     Continuar a detalle y valor
                   </button>
                 </div>
@@ -904,7 +918,7 @@ export function PasoDosAgregarGrupoSheet({
       );
     }
 
-    const desktopStep = Math.min(paso, maxDesktopStep) as 1 | 2 | 3 | 4;
+    const desktopStep = Math.min(paso, maxDesktopStep) as 1 | 2 | 3 | 4 | 5;
     const pieceTitle = getDesktopPieceTitle(draft);
     const subtitle = draft.sistema.trim()
       ? [
@@ -924,6 +938,29 @@ export function PasoDosAgregarGrupoSheet({
       )?.label ?? "Color";
     const largePreviewSvg = getDesktopPiecePreview(draft, 330, 130);
     const measuresPreviewSvg = getDesktopPiecePreview(draft, 300, 150);
+    const personalizadoAssistMode =
+      Boolean(draft.guidedVisualConfig) ||
+      isTrabajoPersonalizadoComponentType(draft.subtipo) ||
+      isPersonalizadoCompositionSelected({
+        sistema: draft.sistema,
+        sheetScheme: draft.sheetScheme,
+        configuracion: draft.configuracion,
+      });
+    const measuresCubicationPreview = resolveActiveCubicationPreview({
+      componentForm: {
+        ancho: draft.ancho,
+        alto: draft.alto,
+        cantidad: String(Math.max(1, draft.cantidad)),
+        lineTemplateId: draft.lineTemplateId,
+        cubicationSnapshot: draft.cubicationSnapshot,
+      },
+      selectedTemplate: selectedLineTemplate,
+      personalizadoAssistMode,
+    });
+    const measuresBarUsage =
+      measuresCubicationPreview && measuresCubicationPreview.bars.length > 0
+        ? measuresCubicationPreview
+        : null;
     const areaM2 = getDraftAreaM2(draft);
     const pieceValue = getDraftPieceValue(draft);
     const quantityValue = getQuantityInputValue(draft);
@@ -946,11 +983,12 @@ export function PasoDosAgregarGrupoSheet({
       guidedVisualConfig: draft.guidedVisualConfig,
     });
     const personalizadoPending =
-      isPersonalizadoCompositionSelected({
-        sistema: draft.sistema,
-        sheetScheme: draft.sheetScheme,
-        configuracion: draft.configuracion,
-      }) &&
+      (isTrabajoPersonalizadoComponentType(draft.subtipo) ||
+        isPersonalizadoCompositionSelected({
+          sistema: draft.sistema,
+          sheetScheme: draft.sheetScheme,
+          configuracion: draft.configuracion,
+        })) &&
       !draft.guidedVisualConfig &&
       draft.customSchemeDescription.trim() === "";
     const hasMeasurements =
@@ -984,13 +1022,14 @@ export function PasoDosAgregarGrupoSheet({
     const pieceSubtotal = resolveGrupoDraftSubtotal(draft);
     const quantityForPrice = Math.max(1, draft.cantidad);
     const showCustomizeUnitPrice = isLineM2Pricing && draft.precioAjustadoManual;
-    const desktopStepCta: Record<1 | 2 | 3 | 4, string> = {
-      1: isFreeType ? "Continuar a detalle y valor" : "Continuar a composición",
+    const desktopStepCta: Record<1 | 2 | 3 | 4 | 5, string> = {
+      1: isFreeType ? "Continuar a detalle y valor" : "Continuar a sistema",
       2: "Continuar a medidas",
-      3: totalGlobalDetailMode ? "Agregar detalle al presupuesto" : "Continuar a precio",
-      4: totalGlobalDetailMode ? "Agregar detalle al presupuesto" : "Finalizar pieza",
+      3: totalGlobalDetailMode ? "Agregar detalle al presupuesto" : "Continuar a despiece",
+      4: "Continuar a precio",
+      5: "Finalizar pieza",
     };
-    const desktopStepFooterHint: Record<1 | 2 | 3 | 4, string> = {
+    const desktopStepFooterHint: Record<1 | 2 | 3 | 4 | 5, string> = {
       1: "Elige el tipo de pieza para comenzar.",
       2: personalizadoPending
         ? "Abre el constructor o describe la composición personalizada."
@@ -1002,9 +1041,8 @@ export function PasoDosAgregarGrupoSheet({
               ? "Selecciona la configuración del sistema."
               : "Confirma el sistema y su composición.",
       3: "Ingresa medidas, cantidad y terminaciones.",
-      4: totalGlobalDetailMode
-        ? "Revisa la configuracion antes de agregar el detalle."
-        : "Revisa el valor antes de finalizar la pieza.",
+      4: "Revisa la cubicación y la pauta de cortes.",
+      5: "Revisa el valor antes de finalizar la pieza.",
     };
     const canAdvanceFromCurrentStep =
       desktopStep === 1
@@ -1012,10 +1050,14 @@ export function PasoDosAgregarGrupoSheet({
         : desktopStep === 2
           ? hasSystem
           : desktopStep === 3
-            ? (totalGlobalDetailMode ? canFinishPiece : hasMeasurements)
-            : canFinishPiece;
+            ? totalGlobalDetailMode
+              ? canFinishPiece
+              : hasMeasurements
+            : desktopStep === 4
+              ? hasMeasurements
+              : canFinishPiece;
     const internalSteps: Array<{
-      id: 1 | 2 | 3 | 4;
+      id: 1 | 2 | 3 | 4 | 5;
       label: string;
       instruction: string;
       complete: boolean;
@@ -1030,31 +1072,43 @@ export function PasoDosAgregarGrupoSheet({
       },
       {
         id: 2,
-        label: "Sistema y composición",
+        label: "Sistema",
         instruction: desktopStepFooterHint[2],
         complete: hasSystem,
         locked: isFreeType || !hasType,
       },
       {
         id: 3,
-        label: "Medidas y detalles",
+        label: "Medidas",
         instruction: desktopStepFooterHint[3],
         complete: hasMeasurements,
         locked: isFreeType || !hasType || !hasSystem,
       },
-      ...(totalGlobalDetailMode ? [] : [{
-        id: 4 as const,
-        label: "Precio",
-        instruction: desktopStepFooterHint[4],
-        complete: pieceValue > 0,
-        locked: isFreeType || !hasType || !hasSystem || !hasMeasurements,
-      }]),
+      ...(totalGlobalDetailMode
+        ? []
+        : [
+            {
+              id: 4 as const,
+              label: "Despiece",
+              instruction: desktopStepFooterHint[4],
+              complete: hasMeasurements,
+              locked: isFreeType || !hasType || !hasSystem || !hasMeasurements,
+            },
+            {
+              id: 5 as const,
+              label: "Precio",
+              instruction: desktopStepFooterHint[5],
+              complete: pieceValue > 0,
+              locked: isFreeType || !hasType || !hasSystem || !hasMeasurements,
+            },
+          ]),
     ];
-    const stepHeadings: Record<1 | 2 | 3 | 4, string> = {
+    const stepHeadings: Record<1 | 2 | 3 | 4 | 5, string> = {
       1: "\u00bfQu\u00e9 est\u00e1s cotizando?",
       2: "Sistema y composición",
-      3: "Medidas y detalles",
-      4: totalGlobalDetailMode ? "Configuracion" : "Define el precio",
+      3: "Medidas y terminaciones",
+      4: "Despiece y pauta",
+      5: "Define el precio",
     };
     const configSummary = buildDesktopConfigSummary({
       sistema: draft.sistema,
@@ -1262,7 +1316,7 @@ export function PasoDosAgregarGrupoSheet({
               <>
                 <h2 className={d.headerTitle}>{editionHeadline}</h2>
                 <p className={d.headerMeta}>
-                  {pieceTitle} · Paso {desktopStep} de {totalGlobalDetailMode ? 3 : 4}
+                  {pieceTitle} · Paso {desktopStep} de {totalGlobalDetailMode ? 3 : 5}
                 </p>
               </>
             ) : (
@@ -1364,7 +1418,7 @@ export function PasoDosAgregarGrupoSheet({
         </ol>
 
         <div
-          className={`${s.desktopPieceBody} ${desktopStep === 1 ? d.typeBody : ""} ${desktopStep === 3 ? d.measuresBody : ""}`}
+          className={`${s.desktopPieceBody} ${desktopStep === 1 ? d.typeBody : ""} ${desktopStep === 3 ? d.measuresBody : ""} ${desktopStep === 4 ? d.despieceBody : ""}`}
         >
           {desktopStep !== 3 ? <h3 className={s.desktopPieceStepHeading}>{stepHeadings[desktopStep]}</h3> : null}
 
@@ -1651,11 +1705,17 @@ export function PasoDosAgregarGrupoSheet({
                   guidedVisualConfig: draft.guidedVisualConfig,
                 }) ? (
                   <div className={s.desktopPieceConfigBlock}>
-                    <span className={s.stepOneFieldLabel}>Composición personalizada</span>
+                    <span className={s.stepOneFieldLabel}>
+                      {isTrabajoPersonalizadoComponentType(draft.subtipo)
+                        ? "Constructor a medida"
+                        : "Composición personalizada"}
+                    </span>
                     <p className={d.systemHelperText}>
-                      {draft.sistema === "Personalizado"
-                        ? "Arma la ventana dividiendo módulos sobre el marco."
-                        : "Divide el marco y asigna el tipo de cada módulo."}
+                      {isTrabajoPersonalizadoComponentType(draft.subtipo)
+                        ? "Arma el trabajo dividiendo módulos. La pauta de corte queda como borrador editable."
+                        : draft.sistema === "Personalizado"
+                          ? "Arma la ventana dividiendo módulos sobre el marco."
+                          : "Divide el marco y asigna el tipo de cada módulo."}
                     </p>
                     <div className={`${s.desktopChipGrid} ${d.systemChipGrid}`}>
                       <button
@@ -1778,32 +1838,16 @@ export function PasoDosAgregarGrupoSheet({
                   <p className={d.measuresSectionTitle}>Terminaciones</p>
                   {requiresProfileMaterial || isGlassCatalogItem ? (
                     <div className={d.measuresTerminationsRow}>
-                      <label className={`${d.measureField} ${d.measureFieldLineCommercial}`}>
+                      <div className={`${d.measureField} ${d.measureFieldLineCommercial}`}>
                         <span className={d.measureFieldLabel}>{catalogLabel}</span>
-                        <select
-                          className={`${d.measureInput} ${d.measureSelect}`}
+                        <LineTemplatePicker
+                          templates={visibleLineTemplates}
                           value={draft.lineTemplateId}
-                          onChange={(event) => onSelectLineTemplate?.(event.target.value)}
-                          aria-label={catalogAriaLabel}
-                        >
-                          <option value="">{isGlassCatalogItem ? "Precio manual o sin cristal" : "Precio manual o sin linea"}</option>
-                          {visibleLineTemplates.map((template) => (
-                            <option key={template.id} value={String(template.id)}>
-                              {[
-                                template.nombre,
-                                isGlassCatalogItem ? "Cristal" : template.material,
-                                `${CLP(template.precioM2Sugerido)}/m2`,
-                                template.minimoCobrable > 0
-                                  ? `Min. ${CLP(template.minimoCobrable)}`
-                                  : "Sin minimo",
-                                template.redondeoPrecio > 0
-                                  ? `Redondeo ${CLP(template.redondeoPrecio)}`
-                                  : "Sin redondeo",
-                              ].join(" - ")}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          onChange={(templateId) => onSelectLineTemplate?.(templateId)}
+                          mode={isGlassCatalogItem ? "glass" : "profile"}
+                          ariaLabel={catalogAriaLabel}
+                        />
+                      </div>
                       {requiresProfileMaterial ? (
                       <div className={d.colorField}>
                         <span className={d.measureFieldLabel}>Color</span>
@@ -1859,6 +1903,26 @@ export function PasoDosAgregarGrupoSheet({
                       </div>
                     </div>
                   )}
+
+                  {!isFreeValue && totalGlobalDetailMode ? (
+                    <div className={d.despieceReviewLaunch}>
+                      <div>
+                        <strong>Cubicación y despiece</strong>
+                        <p>
+                          Resumen técnico ampliado fuera del formulario. No bloquea el presupuesto
+                          si la línea aún no tiene reglas.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className={d.despieceReviewLaunchButton}
+                        onClick={() => onOpenDespieceReview?.()}
+                      >
+                        Abrir despiece
+                      </button>
+                    </div>
+                  ) : null}
+
                   <div className={`${d.measureField} ${d.measureFieldFull}`}>
                     <span className={d.measureFieldLabel}>Vidrio</span>
                     {glassRecommendation.recommendedOptions.length > 0 ? (
@@ -2058,11 +2122,86 @@ export function PasoDosAgregarGrupoSheet({
                   </strong>
                   <span className={d.areaResultHint}>Calculada segun ancho × alto</span>
                 </div>
+                {measuresBarUsage ? (
+                  <div className={d.measuresBarsRail} aria-label="Uso de barras">
+                    <div className={d.measuresBarsRailHead}>
+                      <span className={d.areaResultLabel}>Uso de barras</span>
+                      <strong>
+                        {measuresBarUsage.bars.length} barra
+                        {measuresBarUsage.bars.length === 1 ? "" : "s"} · sobra{" "}
+                        {formatCubicationMm(measuresBarUsage.totalWasteMm)}
+                      </strong>
+                    </div>
+                    <ul className={d.measuresBarsRailList}>
+                      {measuresBarUsage.bars.slice(0, 4).map((bar) => {
+                        const barLengthMm = bar.usedMm + bar.wasteMm;
+                        const usedPct =
+                          barLengthMm > 0
+                            ? Math.min(100, Math.round((bar.usedMm / barLengthMm) * 100))
+                            : 0;
+                        return (
+                          <li key={bar.index} className={d.measuresBarsRailItem}>
+                            <div className={d.measuresBarsRailItemMeta}>
+                              <span>Barra {bar.index}</span>
+                              <span>
+                                {formatCubicationMm(bar.usedMm)} · sobra{" "}
+                                {formatCubicationMm(bar.wasteMm)}
+                              </span>
+                            </div>
+                            <div
+                              className={d.measuresBarsRailTrack}
+                              aria-hidden
+                            >
+                              <span
+                                className={d.measuresBarsRailFill}
+                                style={{ width: `${usedPct}%` }}
+                              />
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {measuresBarUsage.bars.length > 4 ? (
+                      <p className={d.measuresBarsRailMore}>
+                        + {measuresBarUsage.bars.length - 4} barras más en la pauta
+                      </p>
+                    ) : (
+                      <p className={d.measuresBarsRailHint}>
+                        {personalizadoAssistMode
+                          ? "Según tu borrador manual. No es pauta automática."
+                          : "Continúa al paso de despiece para revisar la pauta de cortes."}
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </aside>
             </div>
           ) : null}
 
           {!totalGlobalDetailMode && desktopStep === 4 ? (
+            <div className={d.despieceWorkspace}>
+              {!isFreeValue ? (
+                <div className={d.despieceReviewLaunch}>
+                  <div>
+                    <strong>Revisión de despiece</strong>
+                    <p>
+                      Revisa cortes, barras y sobrantes en una superficie amplia. Los ajustes
+                      manuales solo afectan esta cotización.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className={d.despieceReviewLaunchButton}
+                    onClick={() => onOpenDespieceReview?.()}
+                  >
+                    Abrir despiece
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!totalGlobalDetailMode && desktopStep === 5 ? (
             <div className={d.priceStep}>
               <p className={d.priceMethodTitle}>¿Como quieres definir el valor?</p>
               <div className={d.priceModeSegmented} role="tablist" aria-label="Modo de precio">
@@ -2295,20 +2434,20 @@ export function PasoDosAgregarGrupoSheet({
           <div className={d.footerStatusStack}>
             {desktopStep === 1 ? (
               <>
-                <strong className={d.footerStatusStep}>Paso 1 de {totalGlobalDetailMode ? 3 : 4}</strong>
+                <strong className={d.footerStatusStep}>Paso 1 de {totalGlobalDetailMode ? 3 : 5}</strong>
                 <span className={d.footerStatusHint}>{desktopStepFooterHint[1]}</span>
               </>
             ) : (
               <span className={s.desktopPieceFooterStatus}>
                 {desktopStep < maxDesktopStep
-                  ? `Paso ${desktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${desktopStepFooterHint[desktopStep]}`
+                  ? `Paso ${desktopStep} de ${totalGlobalDetailMode ? 3 : 5} · ${desktopStepFooterHint[desktopStep]}`
                   : canFinishPiece
-                    ? `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${
+                    ? `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 5} · ${
                         totalGlobalDetailMode
                           ? "Listo para agregar el detalle al presupuesto."
                           : "Listo para finalizar la pieza."
                       }`
-                    : `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 4} · ${finishBlockedHint}`}
+                    : `Paso ${maxDesktopStep} de ${totalGlobalDetailMode ? 3 : 5} · ${finishBlockedHint}`}
               </span>
             )}
             {globalError ? (
@@ -2328,13 +2467,13 @@ export function PasoDosAgregarGrupoSheet({
                 type="button"
                 className={s.btnPrimary}
                 disabled={!canAdvanceFromCurrentStep}
-                onClick={() => onGoToStep(isFreeType && desktopStep === 1 ? 4 : ((desktopStep + 1) as PasoDosGrupoPaso))}
+                onClick={() => onGoToStep(isFreeType && desktopStep === 1 ? 5 : ((desktopStep + 1) as PasoDosGrupoPaso))}
               >
                 {desktopStepCta[desktopStep]} <LuArrowRight aria-hidden />
               </button>
             ) : (
               <button type="button" className={s.btnPrimary} disabled={!canFinishPiece} onClick={onConfirm}>
-                {desktopStepCta[4]}
+                {desktopStepCta[desktopStep]}
               </button>
             )}
           </div>

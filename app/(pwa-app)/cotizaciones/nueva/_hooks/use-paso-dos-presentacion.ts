@@ -21,6 +21,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
 import { hasGlassOption, normalizeCustomGlassValue } from "@/features/cotizaciones/new-quote/custom-glass-options";
 
@@ -113,6 +114,8 @@ type UsePasoDosPresentacionParams = {
   onSaveQuickPriceTemplate: () => void;
   editingFormSnapshot: ComponentFormState | null;
   onDuplicateItemFromEditor: () => void;
+  onSaveCubicationLineAdjustment?: import("../_types/paso-dos").PasoDosFormularioComponenteProps["onSaveCubicationLineAdjustment"];
+  isSavingCubicationLineAdjustment?: boolean;
 };
 
 export function usePasoDosPresentacion(
@@ -267,6 +270,19 @@ export function usePasoDosPresentacion(
     params.onSaveDraft();
   }, [params]);
 
+  const savedCubicationSnapshot = useMemo(() => {
+    if (!params.editingItemId) {
+      return null;
+    }
+
+    const editingItem = params.items.find((item) => item.id === params.editingItemId);
+    if (!editingItem) {
+      return null;
+    }
+
+    return decodeCotizacionItemPresentationMeta(editingItem.observaciones).cubicationSnapshot;
+  }, [params.editingItemId, params.items]);
+
   const propsPasoDosFormulario = useMemo(
     () => ({
       itemsCount: params.items.length,
@@ -308,6 +324,9 @@ export function usePasoDosPresentacion(
       isDesktopQuoteStudio: params.isDesktopQuoteStudio,
       originalFormSnapshot: params.editingFormSnapshot,
       onDuplicateItemFromEditor: params.onDuplicateItemFromEditor,
+      savedCubicationSnapshot,
+      onSaveCubicationLineAdjustment: params.onSaveCubicationLineAdjustment,
+      isSavingCubicationLineAdjustment: params.isSavingCubicationLineAdjustment,
     }),
     [
       batchPreviewCodes,
@@ -322,6 +341,7 @@ export function usePasoDosPresentacion(
       hiddenBatchPreviewCount,
       linePricingSummary,
       params,
+      savedCubicationSnapshot,
       visibleBatchPreviewCodes,
     ]
   );

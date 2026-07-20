@@ -74,6 +74,7 @@ export const GUIDED_MODULE_TYPES = [
   "fijo",
   "corredera",
   "abatible",
+  "oscilobatiente",
   "proyectante",
   "puerta",
   "pano_libre",
@@ -90,9 +91,18 @@ export const GUIDED_MODULE_TYPE_LABELS: Record<GuidedModuleType, string> = {
   fijo: "Fijo",
   corredera: "Corredera",
   abatible: "Abatible",
+  oscilobatiente: "Oscilobatiente",
   proyectante: "Proyectante",
   puerta: "Puerta",
   pano_libre: "Paño libre",
+};
+
+export const GUIDED_OPENING_SIDES = ["left", "right"] as const;
+export type GuidedOpeningSide = (typeof GUIDED_OPENING_SIDES)[number];
+
+export const GUIDED_OPENING_SIDE_LABELS: Record<GuidedOpeningSide, string> = {
+  left: "Abre a la izquierda",
+  right: "Abre a la derecha",
 };
 
 export const GUIDED_SPLIT_SNAP_RATIOS = [0.25, 1 / 3, 0.5, 2 / 3, 0.75] as const;
@@ -102,6 +112,34 @@ export type GuidedPalillo = {
   axis: GuidedSplitDirection;
   /** Posición 0–1 a lo largo del eje del módulo (0.05–0.95). */
   position: number;
+};
+
+/** Forma del marco / vano completo (V1: rectángulo, arco superior o redondeado). */
+export type GuidedFrameShape =
+  | { kind: "rect" }
+  | { kind: "arch_top"; archRiseMm: number }
+  | { kind: "rounded"; radiusMm: number; corners: "all" | "top" };
+
+/** Forma del vidrio por módulo (V1: rectángulo o esquinas redondeadas). */
+export type GuidedGlassShape =
+  | { kind: "rect" }
+  | { kind: "rounded"; radiusMm: number; corners: "all" | "top" };
+
+export const GUIDED_FRAME_SHAPE_KINDS = ["rect", "arch_top", "rounded"] as const;
+export type GuidedFrameShapeKind = (typeof GUIDED_FRAME_SHAPE_KINDS)[number];
+
+export const GUIDED_GLASS_SHAPE_KINDS = ["rect", "rounded"] as const;
+export type GuidedGlassShapeKind = (typeof GUIDED_GLASS_SHAPE_KINDS)[number];
+
+export const GUIDED_FRAME_SHAPE_LABELS: Record<GuidedFrameShapeKind, string> = {
+  rect: "Rectángulo",
+  arch_top: "Arco superior",
+  rounded: "Redondeado",
+};
+
+export const GUIDED_GLASS_SHAPE_LABELS: Record<GuidedGlassShapeKind, string> = {
+  rect: "Rectángulo",
+  rounded: "Redondeado",
 };
 
 export type GuidedModuleNode = {
@@ -115,6 +153,10 @@ export type GuidedModuleNode = {
   palillos: GuidedPalillo[];
   /** Árbol decorativo de palillos. null = sin palillos. */
   palilloLayout: GuidedPalilloNode | null;
+  /** Forma del vidrio de este módulo (solo visual). */
+  glassShape: GuidedGlassShape;
+  /** Lado visual de bisagra/apertura. Compat: ausente equivale a left. */
+  openingSide?: GuidedOpeningSide;
 };
 
 export type GuidedSplitNode = {
@@ -136,6 +178,8 @@ export type GuidedVisualConfig = {
   root: GuidedRegionNode;
   selectedNodeId: string | null;
   selectedPalilloId: string | null;
+  /** Silueta del vano/marco (solo visual; no cambia precio ni cubicación). */
+  frameShape: GuidedFrameShape;
 };
 
 /** Forma legacy plana (schema 1). */
@@ -166,6 +210,8 @@ export type GuidedNodeRect = {
   type?: GuidedModuleType;
   palillos?: GuidedPalillo[];
   palilloLayout?: GuidedPalilloNode | null;
+  glassShape?: GuidedGlassShape;
+  openingSide?: GuidedOpeningSide;
   direction?: GuidedSplitDirection;
   ratio?: number;
   /** Línea divisoria en mm (coordenada absoluta). */
@@ -174,6 +220,10 @@ export type GuidedNodeRect = {
 
 export function isGuidedModuleType(value: string): value is GuidedModuleType {
   return (GUIDED_MODULE_TYPES as readonly string[]).includes(value);
+}
+
+export function normalizeGuidedOpeningSide(value: unknown): GuidedOpeningSide {
+  return value === "right" ? "right" : "left";
 }
 
 export function isModuleNode(node: GuidedRegionNode): node is GuidedModuleNode {
@@ -257,6 +307,58 @@ function resolveModulePalilloLayout(
   return { layout, palillos: flat };
 }
 
+export function normalizeGuidedFrameShape(
+  value: unknown,
+  heightMm: number
+): GuidedFrameShape {
+  if (!value || typeof value !== "object") {
+    return { kind: "rect" };
+  }
+  const raw = value as Partial<GuidedFrameShape> & {
+    archRiseMm?: unknown;
+    radiusMm?: unknown;
+    corners?: unknown;
+  };
+  if (raw.kind === "arch_top") {
+    const maxRise = Math.max(40, Math.round(heightMm * 0.45));
+    const rise = Math.round(Number(raw.archRiseMm));
+    return {
+      kind: "arch_top",
+      archRiseMm: Number.isFinite(rise)
+        ? Math.min(Math.max(rise, 40), maxRise)
+        : Math.min(Math.max(Math.round(heightMm * 0.18), 80), maxRise),
+    };
+  }
+  if (raw.kind === "rounded") {
+    const radius = Math.round(Number(raw.radiusMm));
+    return {
+      kind: "rounded",
+      radiusMm: Number.isFinite(radius) ? Math.min(Math.max(radius, 8), 400) : 40,
+      corners: raw.corners === "top" ? "top" : "all",
+    };
+  }
+  return { kind: "rect" };
+}
+
+export function normalizeGuidedGlassShape(value: unknown): GuidedGlassShape {
+  if (!value || typeof value !== "object") {
+    return { kind: "rect" };
+  }
+  const raw = value as Partial<GuidedGlassShape> & {
+    radiusMm?: unknown;
+    corners?: unknown;
+  };
+  if (raw.kind === "rounded") {
+    const radius = Math.round(Number(raw.radiusMm));
+    return {
+      kind: "rounded",
+      radiusMm: Number.isFinite(radius) ? Math.min(Math.max(radius, 8), 400) : 40,
+      corners: raw.corners === "top" ? "top" : "all",
+    };
+  }
+  return { kind: "rect" };
+}
+
 export function createModuleNode(
   type: GuidedModuleType = "fijo",
   palillos: GuidedPalillo[] = []
@@ -268,6 +370,8 @@ export function createModuleNode(
     type: isGuidedModuleType(type) ? type : "fijo",
     palillos: resolved.palillos,
     palilloLayout: resolved.layout,
+    glassShape: { kind: "rect" },
+    openingSide: "left",
   };
 }
 
@@ -277,13 +381,15 @@ export function createDefaultGuidedVisualConfig(input?: {
   axis?: GuidedVisualAxis;
 }): GuidedVisualConfig {
   const root = createModuleNode("fijo");
+  const heightMm = safeDimensionMm(input?.heightMm, 1000);
   return {
     schemaVersion: GUIDED_VISUAL_SCHEMA_VERSION,
     widthMm: safeDimensionMm(input?.widthMm, 1200),
-    heightMm: safeDimensionMm(input?.heightMm, 1000),
+    heightMm,
     root,
     selectedNodeId: root.id,
     selectedPalilloId: null,
+    frameShape: { kind: "rect" },
   };
 }
 
@@ -367,6 +473,9 @@ function replaceNode(
 export function normalizeGuidedVisualConfig(
   config: GuidedVisualConfig
 ): GuidedVisualConfig {
+  const widthMm = safeDimensionMm(config.widthMm, 1200);
+  const heightMm = safeDimensionMm(config.heightMm, 1000);
+
   const normalizeNode = (node: GuidedRegionNode): GuidedRegionNode => {
     if (isModuleNode(node)) {
       const resolved = resolveModulePalilloLayout(
@@ -379,6 +488,12 @@ export function normalizeGuidedVisualConfig(
         type: isGuidedModuleType(node.type) ? node.type : "fijo",
         palillos: resolved.palillos,
         palilloLayout: resolved.layout,
+        glassShape: normalizeGuidedGlassShape(
+          (node as GuidedModuleNode).glassShape
+        ),
+        openingSide: normalizeGuidedOpeningSide(
+          (node as GuidedModuleNode).openingSide
+        ),
       };
     }
 
@@ -413,13 +528,14 @@ export function normalizeGuidedVisualConfig(
 
   return {
     schemaVersion: GUIDED_VISUAL_SCHEMA_VERSION,
-    widthMm: safeDimensionMm(config.widthMm, 1200),
-    heightMm: safeDimensionMm(config.heightMm, 1000),
+    widthMm,
+    heightMm,
     root,
     selectedNodeId: selectedExists
       ? config.selectedNodeId
       : leaves[0]?.id ?? null,
     selectedPalilloId,
+    frameShape: normalizeGuidedFrameShape(config.frameShape, heightMm),
   };
 }
 
@@ -479,6 +595,8 @@ function buildTreeFromFlatModules(
       type: isGuidedModuleType(only.type) ? only.type : "fijo",
       palillos: [],
       palilloLayout: null,
+      glassShape: { kind: "rect" },
+      openingSide: "left",
     };
   }
 
@@ -501,6 +619,8 @@ function buildTreeFromFlatModules(
       type: isGuidedModuleType(modules[0].type) ? modules[0].type : "fijo",
       palillos: [],
       palilloLayout: null,
+      glassShape: { kind: "rect" },
+      openingSide: "left",
     },
     second: buildTreeFromFlatModules(modules.slice(1), axis),
   };
@@ -534,6 +654,7 @@ export function migrateGuidedVisualConfigV1ToV2(
     root,
     selectedNodeId: selected,
     selectedPalilloId: null,
+    frameShape: { kind: "rect" },
   });
 }
 
@@ -585,6 +706,8 @@ export function calculateNodeRects(
         type: node.type,
         palillos: node.palillos,
         palilloLayout: node.palilloLayout,
+        glassShape: node.glassShape,
+        openingSide: normalizeGuidedOpeningSide(node.openingSide),
       });
       return;
     }
@@ -821,6 +944,31 @@ export function updateModuleType(
   });
 }
 
+export function updateModuleOpeningSide(
+  config: GuidedVisualConfig,
+  moduleId: string,
+  openingSide: GuidedOpeningSide
+): GuidedVisualConfig {
+  const normalized = normalizeGuidedVisualConfig(config);
+  const root = mapTree(normalized.root, (node) => {
+    if (isModuleNode(node) && node.id === moduleId) {
+      return { ...node, openingSide: normalizeGuidedOpeningSide(openingSide) };
+    }
+    return node;
+  });
+
+  if (!root) {
+    return normalized;
+  }
+
+  return normalizeGuidedVisualConfig({
+    ...normalized,
+    root,
+    selectedNodeId: moduleId,
+    selectedPalilloId: null,
+  });
+}
+
 export function selectGuidedNode(
   config: GuidedVisualConfig,
   nodeId: string | null
@@ -856,6 +1004,44 @@ export function setGuidedVisualDimensions(
       input.heightMm !== undefined
         ? safeDimensionMm(input.heightMm, normalized.heightMm)
         : normalized.heightMm,
+  });
+}
+
+export function setGuidedFrameShape(
+  config: GuidedVisualConfig,
+  frameShape: GuidedFrameShape
+): GuidedVisualConfig {
+  const normalized = normalizeGuidedVisualConfig(config);
+  return normalizeGuidedVisualConfig({
+    ...normalized,
+    frameShape,
+  });
+}
+
+export function updateModuleGlassShape(
+  config: GuidedVisualConfig,
+  moduleId: string,
+  glassShape: GuidedGlassShape
+): GuidedVisualConfig {
+  const normalized = normalizeGuidedVisualConfig(config);
+  const root = mapTree(normalized.root, (node) => {
+    if (isModuleNode(node) && node.id === moduleId) {
+      return {
+        ...node,
+        glassShape: normalizeGuidedGlassShape(glassShape),
+      };
+    }
+    return node;
+  });
+
+  if (!root) {
+    return normalized;
+  }
+
+  return normalizeGuidedVisualConfig({
+    ...normalized,
+    root,
+    selectedNodeId: moduleId,
   });
 }
 
@@ -1161,10 +1347,21 @@ export function describeGuidedVisualConfig(config: GuidedVisualConfig): string {
   );
   const leaves = listLeafModules(normalized.root);
   const labels = leaves.map((leaf) => GUIDED_MODULE_TYPE_LABELS[leaf.type]);
+  const frameNote =
+    normalized.frameShape.kind === "arch_top"
+      ? ` · Arco ${normalized.frameShape.archRiseMm} mm`
+      : normalized.frameShape.kind === "rounded"
+        ? ` · Marco redondeado ${normalized.frameShape.radiusMm} mm`
+        : "";
+  const roundedCount = leaves.filter((leaf) => leaf.glassShape.kind === "rounded").length;
+  const glassNote =
+    roundedCount > 0
+      ? ` · ${roundedCount} vidrio${roundedCount === 1 ? "" : "s"} redondeado${roundedCount === 1 ? "" : "s"}`
+      : "";
   if (leaves.length === 1) {
-    return `1 módulo · ${labels[0]}`;
+    return `1 módulo · ${labels[0]}${frameNote}${glassNote}`;
   }
-  return `${leaves.length} módulos · ${labels.join(" + ")}`;
+  return `${leaves.length} módulos · ${labels.join(" + ")}${frameNote}${glassNote}`;
 }
 
 export function describeGuidedVisualShort(config: GuidedVisualConfig): string {
@@ -1195,6 +1392,7 @@ export function serializeGuidedVisualConfig(config: GuidedVisualConfig): string 
     w: normalized.widthMm,
     h: normalized.heightMm,
     root: normalized.root,
+    fs: normalized.frameShape,
   });
   return `${GUIDED_VISUAL_SCHEMA_VERSION}|${encodeUtf8ToBase64Url(json)}`;
 }
@@ -1266,6 +1464,7 @@ export function parseGuidedVisualConfig(
         w?: number;
         h?: number;
         root?: GuidedRegionNode;
+        fs?: GuidedFrameShape;
       };
       if (data.v !== GUIDED_VISUAL_SCHEMA_VERSION || !data.root) {
         return null;
@@ -1277,6 +1476,7 @@ export function parseGuidedVisualConfig(
         root: data.root,
         selectedNodeId: listLeafModules(data.root)[0]?.id ?? null,
         selectedPalilloId: null,
+        frameShape: data.fs ?? { kind: "rect" },
       });
     } catch {
       return null;

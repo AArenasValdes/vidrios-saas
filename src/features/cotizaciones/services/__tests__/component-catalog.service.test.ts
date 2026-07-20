@@ -4,6 +4,7 @@ import {
   getConfigurationOptionsForComponentSistema,
   getComponentTypeOptionsForCategory,
   getSystemOptionsForComponent,
+  isFreeValueComponentType,
   resolveComponentCategory,
   splitComponentReference,
 } from "../component-catalog.service";
@@ -26,12 +27,14 @@ describe("component-catalog service", () => {
     expect(especiales).not.toContain("Componente manual");
     expect(especiales).not.toContain("Proyecto a medida");
     expect(especiales).not.toContain("Otro trabajo especial");
+    expect(isFreeValueComponentType("Trabajo personalizado")).toBe(false);
   });
 
   it("debe exponer 'Proyecto libre y Mantencion' con un solo item consolidado", () => {
     const libres = getComponentTypeOptionsForCategory("Proyecto libre y Mantencion");
     expect(libres).toHaveLength(1);
     expect(libres).toEqual(["Trabajo libre / Mantencion"]);
+    expect(isFreeValueComponentType("Trabajo libre / Mantencion")).toBe(true);
   });
 
   it("debe exponer circular como sistema de cubierta de mesa", () => {

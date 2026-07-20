@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
 import type {
@@ -15,12 +15,28 @@ import { PasoDosCambiarModoDialog } from "./paso-dos/paso-dos-cambiar-modo-dialo
 import { PasoDosItemLibreForm } from "./paso-dos/paso-dos-item-libre-form";
 import { PasoDosPanelComponentes } from "./paso-dos-panel-componentes";
 import { QuoteStudioBudgetWorkspace } from "./paso-dos/quote-studio-budget-workspace";
+import { QuoteConstructorWorkspace } from "@/features/cotizaciones/visual-composer/components/quote-constructor-workspace";
+import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
 import { PasoDosModoCotizacion } from "./paso-dos/paso-dos-modo-cotizacion";
 import { isQuoteStudioDesktopPieceInEdition } from "./paso-dos/quote-studio-desktop-edition";
 import { resolveQuoteStudioPieceEditionHeadline } from "./paso-dos/quote-studio-piece-edition-label";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 import d from "./paso-dos-panel-desktop.module.css";
 import s from "../page.module.css";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type {
+  QuoteConstructorItemPatch,
+  QuoteConstructorPresetId,
+} from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
+import {
+  QUOTE_DESKTOP_WORKSPACE_MODE_LABELS,
+  isPieceCommerciallyComplete,
+  readQuoteDesktopWorkspaceModePreference,
+  writeQuoteDesktopWorkspaceModePreference,
+  type QuoteDesktopWorkspaceMode,
+} from "@/features/cotizaciones/new-quote/quote-piece-domain";
 
 type PasoDosAgregarGrupoSheetProps = ComponentProps<typeof PasoDosAgregarGrupoSheet>;
 
@@ -42,6 +58,16 @@ type PasoDosSeccionProps = {
   onSelectMode: (mode: QuotePricingMode) => void;
   onReturnToModeSelector: () => void;
   duplicateSourceCode?: string;
+  constructorLineTemplates: CotizacionLineTemplate[];
+  constructorGlassOptions: readonly string[];
+  totalClienteManual: number | null;
+  formatCurrencyInput: (value: string) => string;
+  onAddConstructorPreset: (preset: QuoteConstructorPresetId) => string | null;
+  onUpdateConstructorItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
+  onMoveConstructorItem: (itemId: string, direction: -1 | 1) => void;
+  onGlobalTotalClienteChange: (value: string) => void;
+  onClosePieceEditors?: () => void;
+  isSaving?: boolean;
 };
 
 export function PasoDosSeccion({
@@ -59,14 +85,74 @@ export function PasoDosSeccion({
   onSelectMode,
   onReturnToModeSelector,
   duplicateSourceCode,
+  constructorLineTemplates,
+  constructorGlassOptions,
+  totalClienteManual,
+  formatCurrencyInput,
+  onAddConstructorPreset,
+  onUpdateConstructorItem,
+  onMoveConstructorItem,
+  onGlobalTotalClienteChange,
+  onClosePieceEditors,
+  isSaving = false,
 }: PasoDosSeccionProps) {
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const [isFullBudgetPreviewOpen, setIsFullBudgetPreviewOpen] = useState(false);
+  const [pendingRemoveItemId, setPendingRemoveItemId] = useState<string | null>(null);
+  const [desktopWorkspaceMode, setDesktopWorkspaceMode] = useState<QuoteDesktopWorkspaceMode>(
+    () => readQuoteDesktopWorkspaceModePreference()
+  );
+  const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
+  const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
+
+  const pendingRemoveItem = useMemo(
+    () => panel.items.find((item) => item.id === pendingRemoveItemId) ?? null,
+    [panel.items, pendingRemoveItemId]
+  );
+
+  const requestRemoveItem = (itemId: string) => {
+    setPendingRemoveItemId(itemId);
+  };
+
+  const confirmRemoveItem = () => {
+    if (!pendingRemoveItemId) return;
+    const itemId = pendingRemoveItemId;
+    const label =
+      pendingRemoveItem?.nombre?.trim() ||
+      pendingRemoveItem?.codigo?.trim() ||
+      "la pieza";
+    setPendingRemoveItemId(null);
+    panel.onRemoveItem(itemId);
+    if (constructorActiveItemId === itemId) setConstructorActiveItemId(null);
+    toast.success(`Se eliminó ${label}`);
+  };
+
+  const cancelRemoveItem = () => {
+    setPendingRemoveItemId(null);
+  };
+
+  const closeOpenPieceEditors = () => {
+    if (itemLibreForm.isOpen) {
+      itemLibreForm.onCancel();
+    }
+    onClosePieceEditors?.();
+  };
+
+  const setWorkspaceMode = (mode: QuoteDesktopWorkspaceMode) => {
+    if (mode === "rapida") {
+      // La rápida es el cuaderno: cerrar wizard/editor guiado para no dejar
+      // la misma pantalla de "Nueva pieza" con el tab en rápida.
+      closeOpenPieceEditors();
+    }
+    setDesktopWorkspaceMode(mode);
+    writeQuoteDesktopWorkspaceModePreference(mode);
+  };
 
   useEffect(() => {
     if (
       isMobileViewport ||
+      desktopWorkspaceMode === "rapida" ||
       !quoteModeChosen ||
       quotePricingMode !== "total_global" ||
       itemLibreForm.isOpen ||
@@ -79,6 +165,7 @@ export function PasoDosSeccion({
     onOpenFreeTotalNotebook();
   }, [
     isMobileViewport,
+    desktopWorkspaceMode,
     quoteModeChosen,
     quotePricingMode,
     itemLibreForm.isOpen,
@@ -98,9 +185,17 @@ export function PasoDosSeccion({
     quoteModeChosen &&
     !itemLibreForm.isOpen &&
     !showModeChoice;
+  const showRapidaWorkspace =
+    !isMobileViewport && quoteModeChosen && desktopWorkspaceMode === "rapida";
   const pieceEditionHeadline = addGroupSheetProps.draft
     ? resolveQuoteStudioPieceEditionHeadline({ duplicateSourceCode })
     : "";
+
+  const completeCount = useMemo(
+    () => panel.items.filter((item) => isPieceCommerciallyComplete(item, quotePricingMode)).length,
+    [panel.items, quotePricingMode]
+  );
+  const pendingCount = Math.max(0, panel.items.length - completeCount);
 
   const activeDraftCard =
     !isMobileViewport &&
@@ -114,15 +209,15 @@ export function PasoDosSeccion({
             addGroupSheetProps.draft.subtipo.trim() || "Tipo por definir";
           const stepLabel = isFreeVal
             ? "Paso 2 de 2"
-            : `Paso ${Math.min(addGroupSheetProps.paso, 4)} de 4`;
+            : `Paso ${Math.min(addGroupSheetProps.paso, 5)} de 5`;
           const missingLabel = isFreeVal
             ? "Falta completar detalle y valor"
             : addGroupSheetProps.paso >= 5
-              ? "Falta finalizar la pieza"
+              ? "Falta definir el precio"
               : addGroupSheetProps.paso >= 4
-                ? "Falta definir el precio"
+                ? "Falta revisar el despiece"
                 : addGroupSheetProps.paso >= 3
-                  ? "Faltan medidas y precio"
+                  ? "Faltan medidas y despiece"
                   : addGroupSheetProps.draft.subtipo.trim()
                     ? "Falta elegir sistema, medidas y precio"
                     : "Faltan sistema, medidas y precio";
@@ -138,9 +233,12 @@ export function PasoDosSeccion({
     }
   };
 
+  const openGuidedForItem = (item: (typeof panel.items)[number]) => {
+    setWorkspaceMode("guiada");
+    panel.onEditItem(item);
+  };
+
   const leftSurface = (() => {
-    // Item libre tiene prioridad: si el sheet de componente sigue abierto,
-    // no debe tapar el formulario de trabajo libre.
     if (itemLibreForm.isOpen) {
       return <PasoDosItemLibreForm {...itemLibreForm} />;
     }
@@ -153,6 +251,13 @@ export function PasoDosSeccion({
           pieceEditionHeadline={pieceEditionHeadline}
           onDiscardDraft={onReturnToModeSelector}
           onRequestSwitchMode={handleRequestSwitchMode}
+          onOpenDespieceReview={() => {
+            if (formulario.editingItemId) {
+              setConstructorActiveItemId(formulario.editingItemId);
+              panel.onSelectQuickEditItem(formulario.editingItemId);
+            }
+            setDespieceReviewOpen(true);
+          }}
         />
       );
     }
@@ -182,9 +287,9 @@ export function PasoDosSeccion({
                 Por componentes · Cambiar
               </button>
             ) : null}
-            <span className={s.desktopPieceEyebrow}>Presupuesto</span>
+            <span className={s.desktopPieceEyebrow}>Cotización guiada</span>
             <h2>{panel.items.length > 0 ? "Agrega otra pieza o revisa el presupuesto" : "Crea la primera pieza"}</h2>
-            <p>Cada pieza se completa en cuatro pasos: tipo, sistema, medidas y precio.</p>
+            <p>Cada pieza se completa en cinco pasos: tipo, sistema, medidas, despiece y precio.</p>
             <div>
               <button type="button" className={s.btnPrimary} onClick={onOpenCreator}>
                 {panel.items.length > 0 ? "+ Agregar otra pieza" : "+ Agregar primera pieza"}
@@ -276,7 +381,7 @@ export function PasoDosSeccion({
     onSelectQuickEditItem: panel.onSelectQuickEditItem,
     onEditItem: panel.onEditItem,
     onDuplicateItem: panel.onDuplicateItem,
-    onRemoveItem: panel.onRemoveItem,
+    onRemoveItem: requestRemoveItem,
     onRecalculateTemplatePrice: panel.onRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: panel.onSaveQuickPriceTemplateFromItem,
     isSavingQuickPriceTemplate: panel.isSavingQuickPriceTemplate,
@@ -317,9 +422,123 @@ export function PasoDosSeccion({
     },
   };
 
+  const reviewPendingPieces = () => {
+    const pending = panel.items.find((item) => !isPieceCommerciallyComplete(item, quotePricingMode));
+    if (!pending) {
+      panel.onGoToSummary();
+      return;
+    }
+    if (desktopWorkspaceMode === "rapida") {
+      setConstructorActiveItemId(pending.id);
+      panel.onSelectQuickEditItem(pending.id);
+      return;
+    }
+    openGuidedForItem(pending);
+  };
+
   return (
-    <div className={!isMobileViewport ? s.stepTwoDesktopShell : undefined}>
-      {showModeChoice ? (
+    <div
+      className={!isMobileViewport ? s.stepTwoDesktopShell : undefined}
+      data-constructor-workspace={showRapidaWorkspace ? "true" : undefined}
+    >
+      {!isMobileViewport && quoteModeChosen && !showModeChoice ? (
+        <header className={d.desktopWorkspaceModeBar} aria-label="Componentes de la cotización">
+          <div className={d.desktopComponentsHeaderCopy}>
+            <button
+              type="button"
+              className={d.desktopComponentsBackButton}
+              onClick={handleRequestSwitchMode}
+            >
+              ← Cambiar modalidad
+            </button>
+            <strong>Componentes de la cotización</strong>
+            <span>
+              {panel.items.length} {panel.items.length === 1 ? "pieza" : "piezas"}
+              {panel.items.length > 0
+                ? ` · ${completeCount} de ${panel.items.length} completas`
+                : ""}
+            </span>
+          </div>
+          <div
+            className={d.desktopWorkspaceModeTabs}
+            role="tablist"
+            aria-label="Modo de trabajo de componentes"
+          >
+            {(["rapida", "guiada"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={desktopWorkspaceMode === mode}
+                className={desktopWorkspaceMode === mode ? d.desktopWorkspaceModeActive : ""}
+                onClick={() => setWorkspaceMode(mode)}
+              >
+                {QUOTE_DESKTOP_WORKSPACE_MODE_LABELS[mode]}
+              </button>
+            ))}
+          </div>
+          <div className={d.desktopComponentsHeaderMeta}>
+            <span className={d.desktopComponentsSaveChip} aria-live="polite">
+              {isSaving ? "Guardando…" : "Autoguardado activo"}
+            </span>
+            {panel.items.length > 0 ? (
+              <button
+                type="button"
+                className={d.desktopReviewDespieceButton}
+                onClick={() => setDespieceReviewOpen(true)}
+              >
+                Revisar despiece
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={reviewPendingPieces}
+              disabled={panel.items.length === 0}
+            >
+              {pendingCount > 0 ? `Revisar pendientes (${pendingCount})` : "Revisar cotización"}
+            </button>
+          </div>
+        </header>
+      ) : null}
+
+      {showRapidaWorkspace ? (
+        <QuoteConstructorWorkspace
+          items={panel.items}
+          quotePricingMode={quotePricingMode}
+          lineTemplates={constructorLineTemplates}
+          glassOptions={constructorGlassOptions}
+          activeItemId={constructorActiveItemId}
+          totalClienteManual={totalClienteManual}
+          formatCurrencyInput={formatCurrencyInput}
+          onActiveItemChange={(itemId) => {
+            setConstructorActiveItemId(itemId);
+            panel.onSelectQuickEditItem(itemId);
+          }}
+          onAddPreset={(preset) => {
+            const itemId = onAddConstructorPreset(preset);
+            if (itemId) setConstructorActiveItemId(itemId);
+          }}
+          onUpdateItem={onUpdateConstructorItem}
+          onDuplicateItem={(item) => {
+            panel.onDuplicateItem(item);
+          }}
+          onRemoveItem={requestRemoveItem}
+          onMoveItem={onMoveConstructorItem}
+          onEditAdvanced={(item) => {
+            openGuidedForItem(item);
+          }}
+          onRecalculateTemplatePrice={panel.onRecalculateTemplatePrice}
+          onGlobalTotalChange={onGlobalTotalClienteChange}
+          onGoToSummary={panel.onGoToSummary}
+          onOpenDespieceReview={(itemId) => {
+            if (itemId) {
+              setConstructorActiveItemId(itemId);
+              panel.onSelectQuickEditItem(itemId);
+            }
+            setDespieceReviewOpen(true);
+          }}
+        />
+      ) : showModeChoice ? (
         <div className={s.stepTwoModeChoiceDesktopWrap}>
           <PasoDosModoCotizacion
             variant="desktop"
@@ -327,7 +546,7 @@ export function PasoDosSeccion({
             contextObra={budgetContext?.obra}
             onSelectMode={(mode) => {
               onSelectMode(mode);
-              if (mode === "por_item") {
+              if (mode === "por_item" && desktopWorkspaceMode === "guiada") {
                 onOpenCreator();
               }
             }}
@@ -401,6 +620,45 @@ export function PasoDosSeccion({
           onReturnToModeSelector();
         }}
       />
+
+      <ConfirmDialog
+        open={Boolean(pendingRemoveItemId)}
+        title="¿Eliminar esta pieza?"
+        description={
+          pendingRemoveItem
+            ? `Vas a quitar ${pendingRemoveItem.codigo}${
+                pendingRemoveItem.nombre ? ` · ${pendingRemoveItem.nombre}` : ""
+              } del presupuesto. Esta acción no se puede deshacer desde aquí.`
+            : "Vas a quitar esta pieza del presupuesto. Esta acción no se puede deshacer desde aquí."
+        }
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        tone="danger"
+        onConfirm={confirmRemoveItem}
+        onCancel={cancelRemoveItem}
+      />
+
+      {!isMobileViewport ? (
+        <DespieceReviewSurface
+          open={despieceReviewOpen}
+          items={panel.items}
+          lineTemplates={constructorLineTemplates}
+          quotePricingMode={quotePricingMode}
+          activeItemId={constructorActiveItemId}
+          onActiveItemChange={(itemId) => {
+            setConstructorActiveItemId(itemId);
+            panel.onSelectQuickEditItem(itemId);
+          }}
+          onUpdateItem={onUpdateConstructorItem}
+          onClose={() => setDespieceReviewOpen(false)}
+          onContinueToSummary={() => {
+            setDespieceReviewOpen(false);
+            panel.onGoToSummary();
+          }}
+          onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
+          isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+        />
+      ) : null}
     </div>
   );
 }

@@ -489,13 +489,17 @@ function dimH(x: number, y: number, w: number, text: string, p: Palette, v: stri
   const fw2 = v === "pdf" ? "700" : "400";
   const textY = v === "pdf" ? y - 10 : y - 8;
   const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
+  const textHalo =
+    v === "pdf"
+      ? 'stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke fill"'
+      : "";
   return [
     `<line x1="${px(x)}" y1="${px(y)}" x2="${px(x + w)}" y2="${px(y)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x)}" y1="${px(y - tk)}" x2="${px(x)}" y2="${px(y + tk)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x + w)}" y1="${px(y - tk)}" x2="${px(x + w)}" y2="${px(y + tk)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     v !== "pdf" ? arrowTip(x, y, "left", 1, p.dim) : "",
     v !== "pdf" ? arrowTip(x + w, y, "right", 1, p.dim) : "",
-    `<text x="${px(x + w / 2)}" y="${px(textY)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}">${escapeXml(text)}</text>`,
+    `<text x="${px(x + w / 2)}" y="${px(textY)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}" ${textHalo}>${escapeXml(text)}</text>`,
   ].join("");
 }
 
@@ -506,13 +510,17 @@ function dimV(x: number, y: number, h: number, text: string, p: Palette, v: stri
   const fw2 = v === "pdf" ? "700" : "400";
   const textX = v === "pdf" ? x - 15 : x - 11;
   const textColor = v === "pdf" ? "#616b78" : p.dimTxt;
+  const textHalo =
+    v === "pdf"
+      ? 'stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke fill"'
+      : "";
   return [
     `<line x1="${px(x)}" y1="${px(y)}" x2="${px(x)}" y2="${px(y + h)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x - tk)}" y1="${px(y)}" x2="${px(x + tk)}" y2="${px(y)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     `<line x1="${px(x - tk)}" y1="${px(y + h)}" x2="${px(x + tk)}" y2="${px(y + h)}" stroke="${p.dim}" stroke-width="${sw}"/>`,
     v !== "pdf" ? arrowTip(x, y, "up", 1, p.dim) : "",
     v !== "pdf" ? arrowTip(x, y + h, "down", 1, p.dim) : "",
-    `<text x="${px(textX)}" y="${px(y + h / 2)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}" transform="rotate(-90 ${px(textX)} ${px(y + h / 2)})">${escapeXml(text)}</text>`,
+    `<text x="${px(textX)}" y="${px(y + h / 2)}" text-anchor="middle" font-size="${fs}" font-family="sans-serif" fill="${textColor}" font-weight="${fw2}" ${textHalo} transform="rotate(-90 ${px(textX)} ${px(y + h / 2)})">${escapeXml(text)}</text>`,
   ].join("");
 }
 
@@ -2702,10 +2710,10 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
         : 68;
   const drawW = Math.max(minDrawW, Math.round(rW * scale));
   const drawH = Math.max(isMesaCircular ? 52 : 52, Math.round(rH * scale));
-  const dimLeft = variant === "pdf" ? 52 : 46;
+  const dimLeft = variant === "pdf" ? 60 : 46;
   const dimBot  = variant === "pdf" ? 8 : 42;
-  const topPad  = variant === "pdf" ? 34 : 12;
-  const rightPad = variant === "pdf" ? 6 : 12;
+  const topPad  = variant === "pdf" ? 46 : 12;
+  const rightPad = variant === "pdf" ? 8 : 12;
 
   const totalW  = drawW + dimLeft + rightPad;
   const totalH  = drawH + topPad + dimBot;
@@ -2735,7 +2743,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     params.mirrorInteriorLine
   );
 
-  const dimY = variant === "pdf" ? originY - 8 : originY + drawH + 18;
+  const dimY = variant === "pdf" ? originY - 18 : originY + drawH + 18;
   const dimensions = isMesaCircular
     ? dimH(
         originX,
@@ -2748,7 +2756,7 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     : [
         dimH(originX, dimY, drawW, formatMm(params.ancho), palette, variant),
         dimV(
-          originX - (variant === "pdf" ? 22 : 20),
+          originX - (variant === "pdf" ? 28 : 20),
           originY,
           drawH,
           formatMm(params.alto),

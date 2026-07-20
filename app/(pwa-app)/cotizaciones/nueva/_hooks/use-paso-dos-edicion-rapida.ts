@@ -17,6 +17,7 @@ import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import {
   normalizeQuotePricingMode,
@@ -26,12 +27,14 @@ import {
 type UsePasoDosEdicionRapidaParams = {
   items: CotizacionWorkflowItem[];
   quotePricingMode?: QuotePricingMode;
+  activeLineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
   setDraft: React.Dispatch<React.SetStateAction<CotizacionWorkflowDraft>>;
   setGlobalError: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
   const quotePricingMode = normalizeQuotePricingMode(params.quotePricingMode);
+  const lineTemplates = params.activeLineTemplates;
   const [itemExpandidoId, setItemExpandidoId] = useState<string | null>(null);
   const [campoFocoExpandido, setCampoFocoExpandido] = useState<QuickEditFieldKey | null>("ancho");
   const [mostrarSoloPendientes, setMostrarSoloPendientes] = useState(false);
@@ -56,9 +59,10 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
       applyQuickEditDraftStatesToItems(
         params.items,
         borradoresRapidosSincronizados,
-        quotePricingMode
+        quotePricingMode,
+        { lineTemplates }
       ),
-    [borradoresRapidosSincronizados, params.items, quotePricingMode]
+    [borradoresRapidosSincronizados, lineTemplates, params.items, quotePricingMode]
   );
 
   const cantidadCompletos = useMemo(
@@ -236,9 +240,10 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
       applyQuickEditDraftStatesToItems(
         items,
         borradoresRapidosSincronizados,
-        quotePricingMode
+        quotePricingMode,
+        { lineTemplates }
       ),
-    [borradoresRapidosSincronizados, quotePricingMode]
+    [borradoresRapidosSincronizados, lineTemplates, quotePricingMode]
   );
 
   const flushBorradoresRapidos = useCallback(() => {
@@ -312,6 +317,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
           } as ComponentFormState;
           const nextItem = buildItemFromForm(nextForm, current.items, target.id, {
             quotePricingMode,
+            lineTemplates,
           });
 
           return {
@@ -323,7 +329,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
         }
       });
     },
-    [borradoresRapidosSincronizados, params, quotePricingMode]
+    [borradoresRapidosSincronizados, lineTemplates, params, quotePricingMode]
   );
 
   const iniciarSeleccionLote = useCallback(() => {
@@ -387,7 +393,10 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
         ),
       } as ComponentFormState;
 
-      return buildItemFromForm(nextForm, itemsFlusheados, item.id, { quotePricingMode });
+      return buildItemFromForm(nextForm, itemsFlusheados, item.id, {
+        quotePricingMode,
+        lineTemplates,
+      });
     });
 
     params.setDraft((current) => ({ ...current, items: siguientesItems }));
@@ -410,6 +419,7 @@ export function usePasoDosEdicionRapida(params: UsePasoDosEdicionRapidaParams) {
     flushBorradoresRapidos,
     idsSeleccionLoteEfectivos,
     itemSeleccionado,
+    lineTemplates,
     params,
     quotePricingMode,
     targetsSeleccionMismoTipo,

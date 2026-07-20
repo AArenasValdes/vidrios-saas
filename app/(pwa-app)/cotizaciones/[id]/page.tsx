@@ -11,6 +11,7 @@ import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizacio
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
 import { buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 
+import { CotizacionDetalleDesktopView } from "./_components/cotizacion-detalle-desktop-view";
 import { CotizacionDetalleMobileView } from "./_components/cotizacion-detalle-mobile-view";
 import { buildCotizacionDetalleMobileViewModel } from "./_components/cotizacion-detalle-mobile-view-model";
 
@@ -51,9 +52,29 @@ export default function CotizacionDetallePage() {
     clienteRespondioEn: string | null;
     clienteRespuestaCanal: string | null;
   } | null>(null);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
   const loadedItemsForIdRef = useRef<string | null>(
     cotizacion?.items.length ? params.id : null
   );
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktopViewport(media.matches);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => media.removeEventListener("change", sync);
+    }
+
+    media.addListener(sync);
+    return () => media.removeListener(sync);
+  }, []);
 
   useEffect(() => {
     loadedItemsForIdRef.current = null;
@@ -278,8 +299,8 @@ export default function CotizacionDetallePage() {
 
   if (isReady && hasResolvedInitialLoad && !cotizacion) {
     return (
-      <div className={s.stateRoot}>
-        <div className={s.stateCard}>
+      <div className={`${s.stateRoot}${isDesktopViewport ? ` ${s.stateRootDesktop}` : ""}`}>
+        <div className={`${s.stateCard}${isDesktopViewport ? ` ${s.stateCardDesktop}` : ""}`}>
           <Link href="/cotizaciones" className={s.backLink}>
             <LuArrowLeft aria-hidden />
             Cotizaciones
@@ -295,8 +316,10 @@ export default function CotizacionDetallePage() {
 
   if (!cotizacion || !hasResolvedInitialLoad) {
     return (
-      <div className={s.stateRoot}>
-        <section className={s.stateCard}>
+      <div className={`${s.stateRoot}${isDesktopViewport ? ` ${s.stateRootDesktop}` : ""}`}>
+        <section
+          className={`${s.stateCard}${isDesktopViewport ? ` ${s.stateCardDesktop} ${s.loadingStateDesktop}` : ""}`}
+        >
           <div className={s.loadingState}>
             <span className={s.loadingSpinner} aria-hidden />
             <div>
@@ -323,32 +346,38 @@ export default function CotizacionDetallePage() {
     isHydratingItems,
   });
 
+  const viewProps = {
+    model,
+    isHydratingItems,
+    isPreparingPdf,
+    isSaving,
+    isUpdatingResponse,
+    whatsappDisabled: !cotizacion.clienteTelefono?.trim(),
+    updatedLabel: formatCotizacionDate(cotizacion.updatedAt),
+    editHref: `/cotizaciones/nueva?edit=${cotizacion.id}`,
+    editComponentsHref: `/cotizaciones/nueva?edit=${cotizacion.id}&step=2`,
+    copyFeedback,
+    onDelete: handleDelete,
+    onCopyApprovalLink: handleCopyApprovalLink,
+    onManualResponseChange: handleManualResponseChange,
+    onOpenPdf: handleOpenPdf,
+    onOpenWhatsappShare: handleOpenWhatsappShare,
+  };
+
   return (
     <>
       {actionError ? (
-        <div className={s.stateRoot}>
-          <div className={s.stateCard}>
+        <div className={`${s.stateRoot}${isDesktopViewport ? ` ${s.stateRootDesktop}` : ""}`}>
+          <div className={`${s.stateCard}${isDesktopViewport ? ` ${s.stateCardDesktop}` : ""}`}>
             <p className={s.stateText}>{actionError}</p>
           </div>
         </div>
       ) : null}
-      <CotizacionDetalleMobileView
-        model={model}
-        isHydratingItems={isHydratingItems}
-        isPreparingPdf={isPreparingPdf}
-        isSaving={isSaving}
-        isUpdatingResponse={isUpdatingResponse}
-        whatsappDisabled={!cotizacion.clienteTelefono?.trim()}
-        updatedLabel={formatCotizacionDate(cotizacion.updatedAt)}
-        editHref={`/cotizaciones/nueva?edit=${cotizacion.id}`}
-        editComponentsHref={`/cotizaciones/nueva?edit=${cotizacion.id}&step=2`}
-        copyFeedback={copyFeedback}
-        onDelete={handleDelete}
-        onCopyApprovalLink={handleCopyApprovalLink}
-        onManualResponseChange={handleManualResponseChange}
-        onOpenPdf={handleOpenPdf}
-        onOpenWhatsappShare={handleOpenWhatsappShare}
-      />
+      {isDesktopViewport ? (
+        <CotizacionDetalleDesktopView {...viewProps} />
+      ) : (
+        <CotizacionDetalleMobileView {...viewProps} />
+      )}
     </>
   );
 }

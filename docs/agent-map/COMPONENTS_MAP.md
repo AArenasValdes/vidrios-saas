@@ -26,13 +26,14 @@
 
 ### Componente: AppShell
 
-- **Archivo**: `src/components/layout/app-shell.tsx` (990 lineas)
-- **Proposito**: Shell operativa completa de la app. Sidebar desktop + tabbar mobile + header, navegacion, notificaciones, alertas de cotizacion, perfil org.
+- **Archivo**: `src/components/layout/app-shell.tsx`
+- **Proposito**: Shell operativa completa de la app. Sidebar desktop grafito + tabbar mobile + header, navegacion, notificaciones, alertas de cotizacion, perfil org.
 - **Usado en**: `app/(pwa-app)/layout.tsx` (envuelve todas las rutas privadas)
 - **Props importantes**: `children: ReactNode`
 - **Dependencias**: `useAuth`, `useCotizacionAlerts`, `useOrganizationProfile`, `PushNotificationsPrompt`, framer-motion
 - **Cuando modificarlo**: Cambios en navegacion, sidebar, tabbar, header, notificaciones en shell
-- **Riesgos**: Componente central. Cambios afectan TODA la app operativa. No romper navegacion ni breakpoints.
+- **Desktop comercial (2026-07-18)**: rutas de listado usan `rootCommercialList` + `pageContentDashboard` (~1664px). Rutas anchas adicionales: `/configuracion/empresa`, detalle cotización (`isCotizacionDetailRoute`), detalle cliente (`isClienteDetailRoute`). En esas rutas de detalle el topbar genérico se oculta.
+- **Riesgos**: Componente central. Cambios afectan TODA la app operativa. No romper navegacion ni breakpoints. No oscurecer toda la app interna por branding de marketing.
 
 ### Componente: AppShell CSS
 
@@ -226,12 +227,42 @@
 - **Proposito**: Nucleo actual del Quote Studio desktop. En desktop embebido renderiza el editor comercial de pieza activa en 4 pasos (`Tipo`, `Sistema`, `Medidas y detalles`, `Precio`) y mantiene el cuaderno comercial para modo `total_global`. En overlay/legacy conserva el flujo anterior. En subpaso **Sistema**, tras elegir **Personalizado**, expone **Abrir constructor** → `GuidedVisualComposer`.
 - **Usado en**: `PasoDosSeccion` (desktop) y orquestacion de `page.tsx`.
 
+### Componente: LineasPreciosPageClient
+
+- **Archivo**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
+- **Proposito**: CRUD del catalogo privado de lineas/productos. En Fase 4 tambien configura cubicacion asistida V1: sistema, estado de validacion, perfiles por rol, pauta de corte sin precio y preview referencial.
+- **Usado en**: `/configuracion/empresa/lineas-precios`
+- **Dependencias**: `useCotizacionLineTemplates`, helpers de `cotizacion-line-template.ts`, importadores de catalogo.
+- **Cuando modificarlo**: UX de ficha de linea, reglas simples en `catalog_metadata`, configuracion por proveedor/sistema/linea o preparacion del asistente guiado de calibracion.
+- **Riesgos**: No mostrar formulas/JSON/variables libres. No mezclar cubicacion con precios/costos/margen. No crear migraciones ni reactivar tablas legacy sin aprobacion.
+
+### Componente interno: PautaCubicacionPanel
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`
+- **Proposito**: Panel desktop secundario **Cubicacion y pauta** para Fase 4. Aparece cuando la pieza tiene linea con pauta activa y medidas. Muestra estado de validacion, vidrio estimado, ml de perfiles, accesorios, barras referenciales y tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`.
+- **Usado en**: `PasoDosEditorDesktop` tab Medidas.
+- **Dependencias**: `getLineTemplateCuttingRules()`, `getLineTemplateCubicationConfig()`, `buildLineTemplateCuttingPreview()` desde `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`.
+- **Cuando modificarlo**: UX de pauta editable por pieza, snapshot `[cub:]` auto/manual, o flujo `Guardar ajuste para esta linea` / pauta consolidada.
+- **Riesgos**: Solo desktop. No mover a mobile sin aprobacion. No agregar precios/costos/margen ni prometer optimizacion; barras/sobrante son referencia.
+
 ### Componente: GuidedVisualComposer
 
 - **Archivo**: `src/features/cotizaciones/visual-composer/components/guided-visual-composer.tsx`
 - **Proposito**: Overlay desktop del constructor visual guiado V2 (croquis protagonista, partir módulos, tipos, palillos, undo/redo). UX orientada a maestros.
 - **Usado en**: `PasoDosAgregarGrupoSheet` (agregar pieza), `PasoDosEditorDesktop` (editar pieza, tab Configuración).
-- **Riesgos**: Solo desktop ≥1024; no montar en mobile. Persistencia: sync al guardar + hydrate formal en lecturas + bridge `[gvc:]` fallback; smoke PDF OK (2026-07-18).
+- **Renderer compartido**: `guided-visual-renderer.service.ts`; la variante PDF usa canvas `470 x 260`, mayor ocupación visual y banda de cotas separada con halo para coincidir en print/documento público.
+- **Handoff**: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Riesgos**: Solo desktop ≥1024; no montar en mobile. Persistencia: sync al guardar + hydrate formal en lecturas + bridge `[gvc:]` fallback. El dibujo es referencial, no CAD. Si se toca PDF, validar el renderer compartido y no crear una segunda geometria.
+
+### Componente: QuoteConstructorWorkspace
+
+- **Archivo**: `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx`
+- **Proposito**: Modo desktop `Constructor` de Paso 2. Presenta presets de ventana/puerta, cuaderno responsive de piezas, medidas/cantidad editables, estados concretos, inspector sticky de 390 px y footer de progreso. El selector rapido reutiliza `COLOR_OPTIONS`, la misma paleta del modo Presupuesto.
+- **Usado en**: `PasoDosSeccion`, como alternativa explicita a `Presupuesto` solo bajo `min-width: 1024px`.
+- **Dependencias**: `quote-constructor-workspace.service.ts`, `GuidedVisualComposer`, callbacks controlados de `page.tsx` y el mismo `draft.items` persistido en `sessionStorage`.
+- **Estado QA**: 1024/1280/1440/1920 y mobile 390/430 revisados; un scroll vertical, sin overflow horizontal, color/menu/teclado basico operativos. Build y TypeScript pasan.
+- **Brecha conocida**: la validacion local de ancho/alto/cantidad invalidos debe bloquear progreso sin escribir el draft; ver prioridad 1 del handoff.
+- **Riesgos**: Solo desktop >=1024 y un unico scroll vertical principal; no trasladar su layout a mobile. No persiste en Supabase antes de guardar la cotizacion. No aplicar limite de seis piezas: ese limite pertenece solo a modulos dentro de una composicion. Items no compatibles siguen en la vista comercial tradicional.
 
 ### Componente: PasoDosPanelComponentes
 
@@ -285,8 +316,8 @@
 
 ### Componente: LeadChannels
 
-- **Archivo**: `src/features/solicitudes/components/lead-channels.tsx` (609 lineas)
-- **CSS**: `src/features/solicitudes/components/lead-channels.module.css` (436 lineas)
+- **Archivo**: `src/features/solicitudes/components/lead-channels.tsx`
+- **CSS**: `src/features/solicitudes/components/lead-channels.module.css`
 - **Proposito**: Cards de canal de captacion (directo, Instagram, Facebook, WhatsApp) con QR, copiar link, descargar PNG
 - **Usado en**: `/solicitudes/canales`
 - **Dependencias**: `react-qr-code`, `useLeadChannels`

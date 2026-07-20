@@ -140,6 +140,8 @@ type UseFlujoNuevaCotizacionParams = {
   onRecalculateTemplatePrice: (itemId: string) => void;
   onSaveQuickPriceTemplateFromItem: (itemId: string) => void;
   onSaveQuickPriceTemplate: () => void;
+  onSaveCubicationLineAdjustment?: import("../_types/paso-dos").PasoDosFormularioComponenteProps["onSaveCubicationLineAdjustment"];
+  isSavingCubicationLineAdjustment?: boolean;
   isDesktopQuoteStudio: boolean;
   editingFormSnapshot: ComponentFormState | null;
   onDuplicateItemFromEditor: () => void;
@@ -249,6 +251,8 @@ export function useFlujoNuevaCotizacion(params: UseFlujoNuevaCotizacionParams) {
     onRecalculateTemplatePrice: params.onRecalculateTemplatePrice,
     onSaveQuickPriceTemplateFromItem: params.onSaveQuickPriceTemplateFromItem,
     onSaveQuickPriceTemplate: params.onSaveQuickPriceTemplate,
+    onSaveCubicationLineAdjustment: params.onSaveCubicationLineAdjustment,
+    isSavingCubicationLineAdjustment: params.isSavingCubicationLineAdjustment,
     editingFormSnapshot: params.editingFormSnapshot,
     onDuplicateItemFromEditor: params.onDuplicateItemFromEditor,
   });

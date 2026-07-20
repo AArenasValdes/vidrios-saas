@@ -54,6 +54,7 @@ import {
   isWriteRestrictedPrivatePath,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
+import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -100,7 +101,7 @@ type BrowserWindowWithIdleCallback = Window &
     cancelIdleCallback?: (handle: number) => void;
   };
 
-const NAV_ITEMS: NavItem[] = [
+const OPERATIVE_NAV_ITEMS: NavItem[] = [
   {
     href: "/dashboard",
     icon: LuLayoutDashboard,
@@ -129,6 +130,9 @@ const NAV_ITEMS: NavItem[] = [
     mobileLabel: "Solicitudes",
     description: "Contactos y demos que llegan desde la landing",
   },
+];
+
+const CONFIG_NAV_ITEMS: NavItem[] = [
   {
     href: "/configuracion/empresa",
     icon: LuSettings,
@@ -139,11 +143,30 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/configuracion/pagina-venta",
     icon: LuGlobe,
-    label: "Pagina de venta",
+    label: "Página de venta",
     mobileLabel: "Pagina",
     description: "Configura tu mini landing publica",
   },
 ];
+
+const SIDEBAR_SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+  active: "Activo",
+  trial_active: "Prueba activa",
+  trial_expiring: "Prueba por vencer",
+  trial_expired: "Prueba vencida",
+  past_due: "Vencido",
+  cancelled: "Cancelado",
+};
+
+function formatSidebarSubscriptionDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-CL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+const NAV_ITEMS: NavItem[] = [...OPERATIVE_NAV_ITEMS, ...CONFIG_NAV_ITEMS];
 
 const SPECIAL_SCREENS: ContextItem[] = [
   {
@@ -151,6 +174,12 @@ const SPECIAL_SCREENS: ContextItem[] = [
     label: "Crear cotizacion",
     mobileLabel: "Crear",
     description: "Flujo principal para crear una cotizacion desde cero.",
+  },
+  {
+    href: "/solicitudes/canales",
+    label: "Canales",
+    mobileLabel: "Canales",
+    description: "Comparte tu página y marca de dónde llega cada solicitud",
   },
 ];
 
@@ -423,6 +452,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   );
   const email = user?.email ?? "usuario@empresa.cl";
   const companyName = profile?.empresaNombre ?? "Mi empresa";
+  const sidebarPlanLabel = getPlanLabel(profile?.planCode ?? subscription.planCode);
+  const sidebarPlanStatus =
+    SIDEBAR_SUBSCRIPTION_STATUS_LABELS[subscription.effectiveStatus] ??
+    subscription.effectiveStatus;
+  const sidebarPlanEndDate =
+    subscription.subscriptionEndsAt ?? subscription.trialEndsAt;
   const companyInitials = useMemo(
     () => buildOrganizationInitials(companyName),
     [companyName]
@@ -437,6 +472,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const shouldRedirectQuoteOnlyRoute =
     isQuoteOnlyPlan && !subscription.isWriteBlocked && isQuoteOnlyRestrictedPath(pathname);
   const isDashboardRoute = pathname === "/dashboard";
+  const isCommercialListRoute =
+    pathname === "/cotizaciones" ||
+    pathname === "/clientes" ||
+    pathname === "/solicitudes" ||
+    pathname === "/solicitudes/canales";
+  const isCotizacionDetailRoute =
+    pathname.startsWith("/cotizaciones/") && pathname !== "/cotizaciones/nueva";
+  const clienteDetailMatch = pathname.match(/^\/clientes\/([^/]+)$/);
+  const isClienteDetailRoute = Boolean(
+    clienteDetailMatch && clienteDetailMatch[1] !== "nuevo"
+  );
+  const isWideSettingsRoute =
+    pathname === "/configuracion/empresa" ||
+    pathname === "/configuracion/pagina-venta" ||
+    pathname.startsWith("/configuracion/empresa/lineas-precios") ||
+    isCotizacionDetailRoute ||
+    isClienteDetailRoute;
   const trialDaysRemaining = subscription.daysRemaining ?? 0;
   const isTrialInProgress =
     subscription.isTrial &&
@@ -751,8 +803,38 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "d4bf8a",
+      },
+      body: JSON.stringify({
+        sessionId: "d4bf8a",
+        runId: "activacion-gate",
+        hypothesisId: "H4",
+        location: "app-shell.tsx:subscription_redirect",
+        message: "subscription_kick_cuenta_vencida",
+        data: {
+          pathname,
+          isWriteBlocked: subscription.isWriteBlocked,
+          effectiveStatus: subscription.effectiveStatus,
+          isActivationRoute,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     router.replace("/cuenta-vencida");
-  }, [router, shouldRedirectForSubscription]);
+  }, [
+    isActivationRoute,
+    pathname,
+    router,
+    shouldRedirectForSubscription,
+    subscription.effectiveStatus,
+    subscription.isWriteBlocked,
+  ]);
 
   useEffect(() => {
     if (!shouldRedirectQuoteOnlyRoute) {
@@ -1064,6 +1146,31 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    if (!isDashboardRoute) {
+      return;
+    }
+
+    const onToggleShellAlerts = () => {
+      setShouldLoadShellFeeds(true);
+      setProfileMenuAnchor(null);
+      setIsAlertsOpen((open) => {
+        const nextIsOpen = !open;
+        if (nextIsOpen) {
+          markAlertsAsSeen();
+          markSolicitudesAsSeen();
+          void refresh();
+        }
+        return nextIsOpen;
+      });
+    };
+
+    window.addEventListener("ventora:toggle-shell-alerts", onToggleShellAlerts);
+    return () => {
+      window.removeEventListener("ventora:toggle-shell-alerts", onToggleShellAlerts);
+    };
+  }, [isDashboardRoute, markAlertsAsSeen, markSolicitudesAsSeen, refresh]);
+
   const handleClearAlerts = () => {
     markAlertsAsSeen();
     markSolicitudesAsSeen();
@@ -1166,47 +1273,46 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div
       className={`${s.root}${
         usesMinimalShell && !isActivationRoute ? ` ${s.rootMinimal}` : ""
+      }${isDashboardRoute ? ` ${s.rootDashboard}` : ""}${
+        isCommercialListRoute || isWideSettingsRoute ? ` ${s.rootCommercialList}` : ""
       }`}
     >
       {!usesMinimalShell ? (
       <aside className={s.sidebar}>
         <div className={s.sidebarTop}>
-          <div className={s.sidebarBrand}>
-            <div className={s.sidebarBrandIcon}>
-              <div className={s.sidebarBrandDot}>{companyInitials}</div>
-            </div>
-            <div>
-              <span className={s.sidebarBrandName}>Panel operativo</span>
-              <div className={s.sidebarOrg}>{companyName}</div>
-            </div>
-          </div>
-
-          <div className={s.sidebarPitch}>
-            Cotiza en terreno y controla el avance del negocio desde un solo panel.
-          </div>
+          <Link href="/dashboard" className={s.sidebarBrand} prefetch={false}>
+            <Image
+              alt="Ventora"
+              className={s.sidebarBrandLogo}
+              src="/brand/ventora-logo-premium-dark.svg"
+              width={148}
+              height={32}
+              unoptimized
+              priority
+            />
+            <span className={s.sidebarBrandTag}>Software comercial</span>
+          </Link>
         </div>
 
         <div className={s.sidebarCta}>
-          <div className={s.navLabel}>Crear</div>
           <Link
             href={resolveGuardedHref("/cotizaciones/nueva")}
             prefetch={false}
             className={`${s.sidebarCtaButton}${isNuevaCotizacionRoute ? ` ${s.sidebarCtaButtonActive}` : ""}`}
           >
             <LuFilePlus2 aria-hidden />
-            Crear cotizacion
+            Nueva cotización
           </Link>
         </div>
 
         <nav className={s.sidebarNav}>
-          <div className={s.navLabel}>Operacion</div>
-
-          {NAV_ITEMS.map((item) => {
+          <div className={s.navLabel}>Operativo</div>
+          {OPERATIVE_NAV_ITEMS.map((item) => {
             if (item.href === "/solicitudes" && !canReviewSolicitudes) {
               return null;
             }
 
-            if (isQuoteOnlyPlan && (item.href === "/solicitudes" || item.href === "/configuracion/pagina-venta")) {
+            if (isQuoteOnlyPlan && item.href === "/solicitudes") {
               return null;
             }
 
@@ -1235,6 +1341,33 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          <div className={`${s.navLabel} ${s.navLabelSpaced}`}>Configuración</div>
+          {CONFIG_NAV_ITEMS.map((item) => {
+            if (isQuoteOnlyPlan && item.href === "/configuracion/pagina-venta") {
+              return null;
+            }
+
+            const active = isActivePath(pathname, item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={resolveGuardedHref(item.href)}
+                prefetch={false}
+                className={`${s.navItem}${active ? ` ${s.navItemActive}` : ""}`}
+              >
+                <span className={s.navIconWrap}>
+                  <Icon className={s.navIcon} aria-hidden />
+                </span>
+                <span className={s.navText}>
+                  <span className={s.navTitle}>{item.label}</span>
+                  <span className={s.navHint}>{item.description}</span>
+                </span>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className={s.profileMenuWrap}>
@@ -1245,10 +1378,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
             aria-expanded={profileMenuAnchor === "sidebar"}
             onClick={() => handleToggleProfileMenu("sidebar")}
           >
-            <div className={s.userAvatar}>{initial}</div>
+            <div className={s.userAvatar}>{companyInitials || initial}</div>
             <div className={s.userInfo}>
-              <div className={s.userName}>{email}</div>
-              <div className={s.userRole}>{rol ?? "usuario"}</div>
+              <div className={s.userName}>{companyName}</div>
+              <div
+                className={`${s.userRole}${
+                  isDashboardRoute ? ` ${s.dashboardUserRole}` : ""
+                }`}
+              >
+                {rol ?? "usuario"}
+              </div>
+              {isDashboardRoute ? (
+                <>
+                  <div className={s.sidebarPlanLine}>
+                    <span>{sidebarPlanLabel}</span>
+                    <span aria-hidden>·</span>
+                    <span className={s.sidebarPlanStatus}>{sidebarPlanStatus}</span>
+                  </div>
+                  {sidebarPlanEndDate ? (
+                    <div className={s.sidebarPlanDate}>
+                      Vence {formatSidebarSubscriptionDate(sidebarPlanEndDate)}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </div>
             <LuChevronRight className={s.profileTriggerArrow} aria-hidden />
           </button>
@@ -1311,8 +1464,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
               : ""
         }${isNuevaCotizacionRoute ? ` ${s.mainCreateFlow}` : ""}`}
       >
-        {!usesMinimalShell && !isNuevaCotizacionRoute ? (
-          <div className={s.topbar}>
+        {!usesMinimalShell &&
+        !isNuevaCotizacionRoute &&
+        !isDashboardRoute &&
+        !isCommercialListRoute &&
+        !isCotizacionDetailRoute &&
+        !isClienteDetailRoute ? (
+          <div className={`${s.topbar}${isWideSettingsRoute ? ` ${s.topbarDashboardHidden}` : ""}`}>
             <div>
               <p className={s.topbarEyebrow}>Panel operativo</p>
               <h1 className={s.topbarTitle}>{currentItem.label}</h1>
@@ -1371,7 +1529,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
               : usesMinimalShell
                 ? ` ${s.pageContentMinimal}`
                 : ""
-          }${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}`}
+          }${isNuevaCotizacionRoute ? ` ${s.pageContentCreateFlow}` : ""}${
+            isDashboardRoute || isCommercialListRoute || isWideSettingsRoute
+              ? ` ${s.pageContentDashboard}`
+              : ""
+          }`}
         >
           {shouldShowDashboardTrialPill ? (
             <section className={s.trialCompactNotice} role="status" aria-live="polite">

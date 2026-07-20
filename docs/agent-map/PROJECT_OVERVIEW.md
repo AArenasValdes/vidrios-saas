@@ -66,12 +66,12 @@ pagina/componente -> hook -> service -> repository -> Supabase
 - Mobile sigue siendo prioritario para cotizar en terreno.
 - Desktop evoluciona como escritorio de cotizacion y control comercial real.
 - `projects` es la tabla tecnica; en producto se presenta como **Obras**.
-- El orden activo de milestones es:
-  1. estabilizar cotizacion desktop;
-  2. dashboard comercial con datos reales;
-  3. Quote Studio desktop impecable;
-  4. constructor visual guiado V2 usable (smoke PDF OK 2026-07-18);
-  5. catalogo privado y cubicacion como piloto posterior.
+- **Estado a 2026-07-20:**
+  1. Fases 1, 2A, **2B** y 5 — cerradas / implementadas (2B en changelog 17-07);
+  2. Fase 3 constructor V2/cuaderno desktop — usable y abierto solo a pulido controlado; handoff en `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`;
+  3. Pasada reciente = diseño desktop (Fase 5 + shell/listados/detalles/catálogo UX);
+  4. **Fase actual:** Fase 4 cubicacion asistida y pauta revisable V1; corte inicial implementado con sistemas/estados/roles en `catalog_metadata` y panel desktop en `/cotizaciones/nueva`;
+  5. CRM/Kanban — no abrir.
 - Desktop no esta abriendo pipeline CRM, oportunidades, cobros ni multiusuario en esta etapa.
 
 ## Estructura de carpetas

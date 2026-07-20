@@ -313,7 +313,10 @@ export default async function SolicitudEmpresaPage({
                 alt=""
                 fill
                 className={s.heroBackgroundImage}
-                unoptimized
+                priority
+                fetchPriority="high"
+                sizes="(max-width: 900px) 100vw, 1200px"
+                quality={65}
               />
             </div>
           ) : (
@@ -351,7 +354,7 @@ export default async function SolicitudEmpresaPage({
                     alt={displayName}
                     width={64}
                     height={64}
-                    unoptimized
+                    sizes="64px"
                   />
                 ) : (
                   <div className={s.logoFallback} aria-hidden>
@@ -457,7 +460,9 @@ export default async function SolicitudEmpresaPage({
                       alt={image.workTitle || image.label || `Trabajo ${index + 1}`}
                       fill
                       className={s.galleryImage}
-                      unoptimized
+                      sizes="(max-width: 768px) 80vw, 280px"
+                      quality={65}
+                      loading="lazy"
                     />
                     {image.workBadge ? (
                       <span className={s.galleryTag}>{image.workBadge}</span>
@@ -642,7 +647,7 @@ export default async function SolicitudEmpresaPage({
                   alt={displayName}
                   width={56}
                   height={56}
-                  unoptimized
+                  sizes="56px"
                 />
               ) : (
                 <div className={s.footerLogoFallback} aria-hidden>

@@ -30,7 +30,95 @@ Reglas:
 - KPI hero = valor cotizado; cola principal = **Por enviar** (no seguimiento como foco);
 - no abrir CRM, oportunidades ni cobros;
 - no romper contrato actual consumido por mobile;
-- no implementar rediseño UI hasta aprobar dirección visual del brief.
+- Fase 5 desktop ya esta implementada: solo pulido fino / bugs; no reabrir direccion de producto.
+
+---
+
+## Si la tarea es retoque final UX / diseño premium desktop, revisar primero:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — estado operativo actual
+2. `docs/marketing/brand-guidelines.md` — solo acentos; no forzar dark marketing en app interna
+3. Pantalla afectada en `ROUTES_MAP.md` + `FEATURES_MAP.md`
+4. `src/components/layout/app-shell.tsx` + CSS (ancho comercial, sidebar, topbar)
+5. Vista desktop existente de la ruta (no reutilizar columna mobile 420/468px)
+
+Reglas:
+
+- desktop ≥1024; validar 1024 / 1280 / 1440 / 1920;
+- mobile 390 / 430 intacto (regresion bloqueante);
+- una composicion clara, CTA `#1E88FF`, tipografia sistema, superficie `#F3F6FA`, sin look SaaS genérico ni purple/cream AI;
+- no inventar features ni abrir CRM/Kanban/cubicacion;
+- reutilizar view-models / acciones existentes; solo layout y craft visual.
+
+Skill recomendada: `premium-ui`. Agente: modo Agent (implementacion). Opcional: Plan primero si el alcance cruza muchas pantallas.
+
+---
+
+## Si la tarea es sobre catálogo / líneas y precios, revisar primero:
+
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 2A + estado operativo
+2. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios`
+3. `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
+4. `src/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates.ts`
+5. `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
+
+Reglas:
+
+- UX ficha desktop está en Fase 4 V1: esenciales + Más detalles + proveedor/sistema + Cubicación asistida + pauta sin precio;
+- Fase 2A/2B de import **ya cerradas** (no reabrir como “falta 2B”);
+- Fase 4 aprobada en alcance acotado: cubicación simple y pauta revisable en `catalog_metadata`; no abrir optimización, nesting, CAD, inventario, fabricación automática ni precios/costos/margen;
+- no romper import revisable ni writes multi-tenant;
+- mobile sheet no debe degradarse al pulir desktop.
+
+---
+
+## Si la tarea es sobre cubicación asistida / pauta de corte, revisar primero:
+
+0. **`docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`** — handoff completo (pegar a otra IA)
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 + decisión Camino 2
+2. `docs/agent-map/FEATURES_MAP.md` — bloque Cotizaciones / Fase 4
+3. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios` y `/cotizaciones/nueva`
+4. `docs/agent-map/DATA_MODEL_MAP.md` — `cotizacion_line_templates.catalog_metadata`
+5. `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
+6. `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
+7. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`
+
+### Decisión Camino 2 (2026-07-19) — obligatoria
+
+- **No ampliar** `LINE_TEMPLATE_CUBICATION_SYSTEMS` con bow / abatible ventana / proyectante / etc.
+- El selector es **partida de estimación** (patrón de cálculo), no tipología de venta.
+- Tipologías complejas → **constructor visual** al cotizar.
+- Catálogo de líneas = **precio comercial primero**; estimación = secundaria y opcional (UI en dos pasos).
+
+Estado implementado:
+
+- Partidas V1 (únicas): `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`.
+- Estados V1: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`.
+- `catalog_metadata` guarda perfiles por rol (`profileFrame`, `profileSash`, `profileMeeting`, `profileGlazingBead`, `profileSill`, `profileAccessory`) y descuentos/calibracion iniciales.
+- `buildLineTemplateCuttingPreview()` devuelve pauta `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, vidrio, ml perfiles, accesorios y barras referenciales.
+- Quote Studio desktop muestra **Cubicacion y pauta** como seccion secundaria colapsable cuando hay linea con pauta activa + medidas.
+- Modal línea: estimación colapsada; perfiles/descuentos/calibración en segundo paso opcional.
+
+Siguiente corte seguro:
+
+1. ~~snapshot tecnico por cotizacion~~ *(hecho: bridge `[cub:]`)*;
+2. ~~edicion manual de pauta + Recalcular / Restaurar~~ *(hecho en desktop)*;
+3. ~~`Guardar ajuste para esta linea`~~ *(hecho: confirmacion → perfiles en catalogo; `validada` → `revisar_cambios`)*;
+4. ~~pauta consolidada~~ *(hecho: panel desktop + copiar texto; agrupacion linea+perfil+medida)*;
+5. ~~calibracion por ejemplos reales~~ *(hecho V1: descuentos + preset sistema + contraste vano/vidrio en ficha)*; validar con piloto.
+6. ~~Camino 2 UX/docs~~ *(hecho 2026-07-19)*; no ensanchar partidas.
+
+Reglas:
+
+- no mostrar formulas, JSON, variables libres ni editor tecnico al usuario;
+- no crear tablas tecnicas nuevas ni migraciones sin aprobacion explicita;
+- no implementar precios, costos, margen, inventario, compras, fabricacion automatica, optimizacion avanzada, nesting ni CAD;
+- no llamar al calculo "optimizador"; barras/sobrante son referencia simple;
+- solo configuraciones `validada` se usan sin advertencia; el resto debe mostrar pauta referencial;
+- composición **Personalizado** (`guidedVisualConfig` o flag Personalizado): pauta en modo borrador manual (`buildPersonalizadoManualCubicationDraft`); no usar auto de línea ni venderla como fabricación;
+- cambios de perfiles o descuentos despues de validar deben volver a `revisar_cambios`;
+- no modificar mobile al trabajar el panel desktop;
+- no confundir campo comercial `lineSystem` (texto) con `cubicationSystem` (partida V1).
 
 ---
 
@@ -63,6 +151,8 @@ Reglas:
 - Si agregas otro tipo solo vidrio, actualizar el set en `workflow-ui.ts` y correr `profile-material-regression.test.ts`.
 
 ### Si la tarea es sobre Quote Studio desktop especificamente:
+
+> **Estado:** Fase 1 cerrada con QA. Solo tocar si hay bug reproducible o pedido explícito de demo; no inventar pulido.
 1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 0 y 2
 2. `app/(pwa-app)/cotizaciones/nueva/page.tsx`
 3. `app/(pwa-app)/cotizaciones/nueva/_components/resumen-desktop-lateral.tsx`
@@ -88,37 +178,47 @@ Reglas:
 
 ## Si la tarea es sobre constructor visual guiado, revisar primero:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 3
-2. `docs/COTIZACION_FLOW_CONTEXT.md`
-3. `docs/agent-map/CHANGELOG_AGENT_MAP.md` - entrada QA "Constructor visual: UX maestro + entrada Personalizado"
-4. `src/features/cotizaciones/visual-composer/` (tipos, renderer, `GuidedVisualComposer`)
-5. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` (entrada principal al agregar)
-6. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx` (al editar pieza)
-7. `src/utils/cotizacion-item-presentation.ts` (puente `[gvc:...]`)
-8. `src/utils/window-drawings.ts` (croquis legacy; no reemplazar a ciegas)
-9. `docs/agent-map/DATA_MODEL_MAP.md` - `cotizacion_item_visual_configs`
+0. **`docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`** — estado operativo completo y punto exacto de reanudación.
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 3.
+2. `app/(pwa-app)/cotizaciones/nueva/page.tsx` y `page.module.css` - modo y layout desktop.
+3. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx` - integración Presupuesto/Constructor.
+4. `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx` - cuaderno multipieza.
+5. `src/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service.ts` - presets, compatibilidad y sincronización.
+6. `src/features/cotizaciones/visual-composer/` - tipos V2, normalización, renderer y `GuidedVisualComposer`.
+7. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` y `paso-dos-editor-desktop.tsx` - editor avanzado vía Personalizado.
+8. `src/utils/cotizacion-item-presentation.ts` - bridge `[gvc:...]`.
+9. `src/utils/window-drawings.ts` - croquis legacy; no reemplazar a ciegas.
+10. `docs/agent-map/DATA_MODEL_MAP.md` - `cotizacion_item_visual_configs`.
 
 Reglas:
 
 - no construir CAD libre;
-- entrada solo desktop ≥1024; no exponer en mobile;
-- el constructor se ofrece tras elegir **Personalizado** (sistema Ventana, o config/esquema en Puerta/otros), no como CTA suelto en medio del paso Sistema;
+- modo cuaderno solo desktop `>=1024px`; no alterar ni exponerlo en mobile;
+- **Constructor** y **Presupuesto** operan sobre el mismo `draft.items`; no crear una segunda persistencia ni guardar en Supabase antes de guardar la cotización;
+- el editor avanzado de una pieza se ofrece tras elegir **Personalizado**; es distinto del modo cuaderno multipieza;
+- mantener los siete presets, el límite de seis módulos internos por composición y piezas de cotización sin límite compartido;
+- reutilizar `COLOR_OPTIONS` y preservar overrides manuales de precio;
 - no tocar PDF ni renderer publico sin revisar compatibilidad;
 - tabla visual + sync al guardar + hydrate formal en lecturas (`getWorkflowById` / presupuesto publico); bridge `[gvc:]` como fallback;
 - no agregar cubicacion automatica en esta fase.
 
+**Siguiente corte seguro:** mantener el texto inválido de ancho/alto/cantidad visible localmente, marcar la pieza incompleta y bloquear revisión sin sobrescribir el último valor válido del draft. Después, rasterizar y revisar un PDF descargado real.
+
 ### Como probar (QA local)
 
 1. Desktop ≥1024; preferir `npm run build` + `npm run start` (o `pnpm`).
-2. `/cotizaciones/nueva` → Paso 2 → Agregar componente → **Ventana** → sistema **Personalizado** → **Abrir constructor**.
-3. Alternativa: **Puerta** → config **Personalizado** → constructor; o Ventana Corredera → esquema **Personalizado**.
-4. Aplicar → medidas → precio → **Finalizar pieza** (sin error `base64url`).
+2. `/cotizaciones/nueva` -> Paso 2 -> **Constructor** -> agregar al menos tres presets -> editar, seleccionar, duplicar, reordenar y eliminar.
+3. Alternar Presupuesto/Constructor y confirmar que nombre, medidas, cantidad, color y precio no se pierden.
+4. Abrir el editor avanzado de una pieza mediante **Personalizado -> Abrir constructor**, aplicar y volver al cuaderno.
+5. Probar `por_item`, override manual + Recalcular y `total_global` sin `$0` comercial visible.
+6. Verificar 1024/1280/1440/1920 px y confirmar mobile 390/430 sin cambios.
 
 ### Para PDF especificamente:
 1. `src/utils/cotizacion-pdf.ts`
 2. `src/features/cotizaciones/pdf-cache/services/cotizacion-pdf-cache.service.ts`
 3. `app/print/cotizaciones/[id]/page.tsx`
 4. `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`
+5. Contrato actual: canvas visual `470 x 260`, marco de hasta 248 px, `targetFill` 0.88 y cotas separadas con halo. Preview/export HTML ya fueron revisados; falta inspección raster del archivo PDF descargado real.
 
 ---
 
@@ -263,7 +363,7 @@ Reglas:
 - [ ] Verificar RLS si se agrega query nueva
 - [ ] No crear migraciones sin aprobacion explicita
 - [ ] No tocar PDF, WhatsApp ni rutas publicas sin aprobacion
-- [ ] No agregar logica de cubicacion sin piloto aprobado
+- [ ] En Fase 4, mantener cubicacion acotada: sin formulas libres, tablas nuevas, optimizacion, nesting, inventario ni fabricacion automatica
 - [ ] No abrir oportunidades, cobros, roles o equipos por fuera del roadmap
 
 ## Checklist despues de modificar codigo

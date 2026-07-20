@@ -384,7 +384,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
           colorHex,
           guidedVisualConfig,
           maxW: 470,
-          maxH: 210,
+          maxH: 260,
           variant: "pdf",
         }),
       });
@@ -662,7 +662,7 @@ export function PublicQuotePreview({ quote }: PublicQuotePreviewProps) {
                             colorHex,
                             guidedVisualConfig: itemMeta.guidedVisualConfig,
                             maxW: 470,
-                            maxH: 210,
+                            maxH: 260,
                             variant: "pdf",
                           });
 

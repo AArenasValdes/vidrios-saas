@@ -25,6 +25,7 @@ import {
   shouldShowSheetSchemeForComponent,
   shouldShowSystemSelectionForComponent,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
+import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { PasoDosFormularioComponenteProps } from "../../_types/paso-dos";
 
 import s from "../../page.module.css";
@@ -143,25 +144,13 @@ export function PasoDosFormularioBloqueConfiguracion({
       <div className={`${s.field} ${s.fieldFull}`}>
         <span className={s.label}>Linea comercial</span>
         <div className={s.formGrid2}>
-          <div className={s.selectWrap}>
-            <select
-              className={s.input}
-              value={componentForm.lineTemplateId}
-              onChange={(event) => onSelectLineTemplate(event.target.value)}
-              aria-label="Seleccionar linea comercial"
-            >
-              <option value="">Precio manual o sin linea</option>
-              {visibleLineTemplates.map((template) => (
-                <option key={template.id} value={String(template.id)}>
-                  {`${template.nombre} · ${template.material} · ${CLP(template.precioM2Sugerido)}/m² · Mín. ${
-                    template.minimoCobrable > 0 ? CLP(template.minimoCobrable) : "Sin mínimo"
-                  } · Redondeo ${
-                    template.redondeoPrecio > 0 ? CLP(template.redondeoPrecio) : "Sin redondeo"
-                  }`}
-                </option>
-              ))}
-            </select>
-          </div>
+          <LineTemplatePicker
+            templates={visibleLineTemplates}
+            value={componentForm.lineTemplateId}
+            onChange={onSelectLineTemplate}
+            mode={isGlassCatalogSelection(componentForm) ? "glass" : "profile"}
+            ariaLabel="Seleccionar linea comercial"
+          />
           <label className={s.field}>
             <span className={s.label}>Nombre visible de la linea</span>
             <input

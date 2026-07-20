@@ -12,7 +12,12 @@ import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/c
 import {
   getLineTemplateGlassMetadata,
   type CotizacionLineTemplate,
+  type CotizacionLineTemplateCatalogMetadata,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  resolveCubicationSnapshotForSave,
+  type CotizacionItemCubicationSnapshot,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
@@ -30,6 +35,7 @@ import {
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { resolveQuoteConstructorCommercialName, isQuoteConstructorPresetDefaultName } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
   normalizePricingMode,
   DEFAULT_MARGIN_PCT,
@@ -93,6 +99,8 @@ export type ComponentFormState = {
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   mirrorCustomPaneCount?: string;
   guidedVisualConfig?: GuidedVisualConfig | null;
+  /** Borrador de cubicación de esta pieza (auto o ajuste manual). */
+  cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
 };
 
 export type FieldErrors = Partial<
@@ -765,8 +773,9 @@ export function isDesktopPieceSystemStepComplete(input: {
     return true;
   }
 
-  // Personalizado exige constructor o descripción: no basta marcar el chip.
+  // Trabajo personalizado / Personalizado: exige constructor o descripción.
   if (
+    isTrabajoPersonalizadoComponentType(input.subtipo) ||
     isPersonalizadoCompositionSelected({
       sistema: input.sistema,
       sheetScheme: input.sheetScheme,
@@ -907,9 +916,15 @@ export function isPersonalizadoCompositionSelected(input: {
   );
 }
 
+/** Tipo de catálogo "Trabajo personalizado" (fabricación a medida con constructor). */
+export function isTrabajoPersonalizadoComponentType(tipo: string) {
+  return (tipo ?? "").trim() === "Trabajo personalizado";
+}
+
 /**
  * Entrada del constructor visual: tras elegir Personalizado (sistema en ventanas,
- * config/esquema en puertas y demás), o para editar una composición ya aplicada.
+ * config/esquema en puertas y demás), en Trabajo personalizado, o para editar
+ * una composición ya aplicada.
  */
 export function shouldShowGuidedComposerEntry(input: {
   tipo: string;
@@ -920,11 +935,15 @@ export function shouldShowGuidedComposerEntry(input: {
   configuracion?: string | null;
   guidedVisualConfig?: GuidedVisualConfig | null;
 }) {
-  if (!shouldRequireProfileMaterialForComponent(input.tipo)) {
+  if (isGlassCatalogSelection(input)) {
     return false;
   }
 
-  if (isGlassCatalogSelection(input)) {
+  if (isTrabajoPersonalizadoComponentType(input.tipo)) {
+    return true;
+  }
+
+  if (!shouldRequireProfileMaterialForComponent(input.tipo)) {
     return false;
   }
 
@@ -935,6 +954,37 @@ export function shouldShowGuidedComposerEntry(input: {
   return isPersonalizadoCompositionSelected(input);
 }
 
+function isGlassLineTemplate(
+  template: Pick<CotizacionLineTemplate, "material" | "categoria">
+) {
+  return template.material === "Cristal" || template.categoria === "vidrio";
+}
+
+function isProfileLineTemplate(
+  template: Pick<CotizacionLineTemplate, "material" | "categoria">
+) {
+  if (isGlassLineTemplate(template)) {
+    return false;
+  }
+
+  return (
+    template.material === "Aluminio" ||
+    template.material === "PVC" ||
+    template.categoria === "aluminio" ||
+    template.categoria === "pvc" ||
+    template.categoria === "shower" ||
+    template.categoria === "accesorios" ||
+    template.categoria === "otros"
+  );
+}
+
+/**
+ * Líneas visibles al cotizar.
+ * - Vidrio: solo productos de cristal con precio.
+ * - Perfilería (ventana/puerta/etc.): todas las líneas activas con precio
+ *   (Aluminio y PVC), priorizando el material actual. Así una línea creada
+ *   en PVC no “desaparece” si el borrador sigue en Aluminio.
+ */
 export function filterLineTemplatesForComponent(
   templates: readonly CotizacionLineTemplate[],
   input: {
@@ -948,12 +998,25 @@ export function filterLineTemplatesForComponent(
   );
 
   if (isGlassOnlyComponentType(input.tipo) || isGlassCatalogSelection(input)) {
-    return withSalePrice.filter(
-      (template) => template.material === "Cristal" || template.categoria === "vidrio"
-    );
+    return withSalePrice.filter(isGlassLineTemplate);
   }
 
-  return withSalePrice.filter((template) => template.material === input.material);
+  const preferredMaterial = input.material === "PVC" ? "PVC" : "Aluminio";
+  const profileTemplates = withSalePrice.filter(isProfileLineTemplate);
+
+  return [...profileTemplates].sort((left, right) => {
+    const leftPreferred = left.material === preferredMaterial ? 0 : 1;
+    const rightPreferred = right.material === preferredMaterial ? 0 : 1;
+    if (leftPreferred !== rightPreferred) {
+      return leftPreferred - rightPreferred;
+    }
+
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.nombre.localeCompare(right.nombre, "es");
+  });
 }
 
 export function getSheetSchemeOptions(input: {
@@ -1079,7 +1142,13 @@ export function buildSheetSchemeLabel(input: {
 export function buildCommercialComponentDisplayName(
   form: Pick<
     ComponentFormState,
-    "tipo" | "sistema" | "sheetScheme" | "sheetVariant" | "customSchemeDescription" | "isCustomScheme"
+    | "tipo"
+    | "sistema"
+    | "sheetScheme"
+    | "sheetVariant"
+    | "customSchemeDescription"
+    | "isCustomScheme"
+    | "guidedVisualConfig"
   > & { configuracion?: string; palilloEnabled?: boolean; palilloType?: string }
 ) {
   const tipo = form.tipo.trim() || "Componente";
@@ -1094,10 +1163,25 @@ export function buildCommercialComponentDisplayName(
     normalizedTipo === "ventana" &&
     Boolean(normalizedSistema) &&
     normalizedScheme.startsWith(normalizedSistema);
+  const guidedCommercialName = resolveQuoteConstructorCommercialName(form.guidedVisualConfig);
 
   if (normalizedTipo === "ventana" && normalizedSistema === "personalizado") {
     const guidedLabel = form.customSchemeDescription.trim();
-    return guidedLabel ? `Ventana personalizada · ${guidedLabel}` : "Ventana personalizada";
+    if (guidedLabel) {
+      return `Ventana personalizada · ${guidedLabel}`;
+    }
+    if (guidedCommercialName) {
+      return guidedCommercialName;
+    }
+    return "Ventana personalizada";
+  }
+
+  if (
+    (normalizedTipo === "puerta" || normalizedTipo === "trabajo personalizado") &&
+    normalizedSistema === "personalizado" &&
+    guidedCommercialName
+  ) {
+    return guidedCommercialName;
   }
 
   const baseSistema =
@@ -1243,6 +1327,14 @@ function isLegacyAutoComponentLabel(tipo: string, descripcion: string) {
   return descriptionParts.slice(0, -1).join(" ") === normalizedTipo;
 }
 
+function isGenericPersonalizadoDisplayName(nombre: string) {
+  const normalized = normalizeComparableComponentText(nombre);
+  return (
+    normalized === "ventana personalizada" ||
+    normalized.startsWith("ventana personalizada ")
+  );
+}
+
 function shouldUseExplicitComponentName(
   nombre: string,
   form: Pick<ComponentFormState, "tipo" | "codigo">,
@@ -1254,6 +1346,12 @@ function shouldUseExplicitComponentName(
     return false;
   }
 
+  // Presets del constructor ("Ventana fija", "Ventana corredera", …) son
+  // nombres automáticos: si el croquis cambia, deben poder actualizarse.
+  if (isQuoteConstructorPresetDefaultName(trimmed)) {
+    return false;
+  }
+
   const normalizedNombre = normalizeComparableComponentText(trimmed);
   const normalizedGenerated = normalizeComparableComponentText(generatedDisplayName);
   const normalizedAuto = normalizeComparableComponentText(buildAutoComponentName(form));
@@ -1261,7 +1359,8 @@ function shouldUseExplicitComponentName(
   if (
     normalizedNombre === normalizedGenerated ||
     normalizedNombre === normalizedAuto ||
-    isLegacyAutoComponentLabel(form.tipo, trimmed)
+    isLegacyAutoComponentLabel(form.tipo, trimmed) ||
+    isGenericPersonalizadoDisplayName(trimmed)
   ) {
     return false;
   }
@@ -1287,7 +1386,28 @@ function isStaleComponentNameForTipo(
   }
 
   const normalizedNombre = normalizeComparableComponentText(trimmed);
+  const normalizedGenerated = normalizeComparableComponentText(generatedDisplayName);
   const tipoHead = normalizeComparableComponentText(form.tipo).split(" ")[0] ?? "";
+
+  // Sube nombres genéricos del constructor ("Ventana personalizada") cuando
+  // el croquis ya tiene tipología clara (p. ej. fijo → "Ventana fija").
+  if (
+    isGenericPersonalizadoDisplayName(trimmed) &&
+    normalizedGenerated &&
+    normalizedGenerated !== normalizedNombre
+  ) {
+    return true;
+  }
+
+  // Si el nombre sigue siendo el de un preset y el croquis ya sugiere otro
+  // (fijo → corredera), reemplazar automáticamente.
+  if (
+    isQuoteConstructorPresetDefaultName(trimmed) &&
+    normalizedGenerated &&
+    normalizedGenerated !== normalizedNombre
+  ) {
+    return true;
+  }
 
   if (tipoHead && normalizedNombre.includes(tipoHead)) {
     return false;
@@ -1417,10 +1537,36 @@ export function isWorkflowItemEffectivelyComplete(
     : isWorkflowItemComplete(item, quotePricingMode);
 }
 
+export type BuildItemFromFormOptions = {
+  quotePricingMode?: QuotePricingMode;
+  lineTemplateCatalogMetadata?: CotizacionLineTemplateCatalogMetadata | null;
+  lineTemplates?: Array<Pick<CotizacionLineTemplate, "id" | "catalogMetadata">>;
+};
+
+function resolveLineTemplateCatalogMetadataForForm(
+  form: Pick<ComponentFormState, "lineTemplateId">,
+  options?: BuildItemFromFormOptions
+): CotizacionLineTemplateCatalogMetadata | null {
+  if (options?.lineTemplateCatalogMetadata) {
+    return options.lineTemplateCatalogMetadata;
+  }
+
+  const lineTemplateId = form.lineTemplateId?.trim() ?? "";
+  if (!lineTemplateId || !options?.lineTemplates?.length) {
+    return null;
+  }
+
+  return (
+    options.lineTemplates.find((template) => String(template.id) === lineTemplateId)
+      ?.catalogMetadata ?? null
+  );
+}
+
 export function applyQuickEditDraftStatesToItems(
   items: CotizacionWorkflowItem[],
   quickEditDrafts: Record<string, QuickEditDraftState>,
-  quotePricingMode: QuotePricingMode = "por_item"
+  quotePricingMode: QuotePricingMode = "por_item",
+  options?: Pick<BuildItemFromFormOptions, "lineTemplates" | "lineTemplateCatalogMetadata">
 ) {
   return items.map((item) => {
     if (item.tipoItem === "item_libre_con_valor") {
@@ -1453,7 +1599,11 @@ export function applyQuickEditDraftStatesToItems(
           currentForm.precioAjustadoManual || isManualTemplateOverride,
       } as ComponentFormState;
 
-      return buildItemFromForm(nextForm, items, item.id, { quotePricingMode });
+      return buildItemFromForm(nextForm, items, item.id, {
+        quotePricingMode,
+        lineTemplates: options?.lineTemplates,
+        lineTemplateCatalogMetadata: options?.lineTemplateCatalogMetadata,
+      });
     } catch {
       return item;
     }
@@ -1728,6 +1878,7 @@ export function applyLineTemplateToComponentForm(
       redondeoPrecio: String(Math.round(template.redondeoPrecio ?? 0)),
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
+      cubicationSnapshot: null,
     },
     { forceSuggestedPrice: !preserveManualPrice }
   );
@@ -1837,6 +1988,7 @@ export function buildSuggestedComponentForm(
     mirrorInteriorLine: current.mirrorInteriorLine ?? "fine",
     mirrorCustomPaneCount: current.mirrorCustomPaneCount ?? "",
     guidedVisualConfig: current.guidedVisualConfig ?? null,
+    cubicationSnapshot: current.cubicationSnapshot ?? null,
   };
 }
 
@@ -1858,7 +2010,8 @@ export function createEmptyComponentForm(
 export function reconcileWorkflowItemPricing(
   item: CotizacionWorkflowItem,
   items: CotizacionWorkflowItem[],
-  quotePricingMode: QuotePricingMode = "por_item"
+  quotePricingMode: QuotePricingMode = "por_item",
+  options?: Pick<BuildItemFromFormOptions, "lineTemplates" | "lineTemplateCatalogMetadata">
 ): CotizacionWorkflowItem {
   if (item.tipoItem === "item_libre_con_valor") {
     const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
@@ -1884,7 +2037,11 @@ export function reconcileWorkflowItemPricing(
 
   try {
     const form = mapItemToForm(item);
-    return buildItemFromForm(form, items, item.id, { quotePricingMode });
+    return buildItemFromForm(form, items, item.id, {
+      quotePricingMode,
+      lineTemplates: options?.lineTemplates,
+      lineTemplateCatalogMetadata: options?.lineTemplateCatalogMetadata,
+    });
   } catch {
     return item;
   }
@@ -1892,12 +2049,15 @@ export function reconcileWorkflowItemPricing(
 
 export function reconcileWorkflowItemsPricing(
   items: CotizacionWorkflowItem[],
-  quotePricingMode: QuotePricingMode = "por_item"
+  quotePricingMode: QuotePricingMode = "por_item",
+  options?: Pick<BuildItemFromFormOptions, "lineTemplates" | "lineTemplateCatalogMetadata">
 ): CotizacionWorkflowItem[] {
   const reconciled: CotizacionWorkflowItem[] = [];
 
   for (const item of items) {
-    reconciled.push(reconcileWorkflowItemPricing(item, reconciled, quotePricingMode));
+    reconciled.push(
+      reconcileWorkflowItemPricing(item, reconciled, quotePricingMode, options)
+    );
   }
 
   return reconciled;
@@ -1979,6 +2139,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorPaneDirection,
     mirrorInteriorLine,
     guidedVisualConfig,
+    cubicationSnapshot,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
 
@@ -2061,6 +2222,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorInteriorLine,
     mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
     guidedVisualConfig,
+    cubicationSnapshot,
   };
 }
 
@@ -2068,7 +2230,7 @@ export function buildItemFromForm(
   form: ComponentFormState,
   items: CotizacionWorkflowItem[],
   editingItemId: string | null,
-  options?: { quotePricingMode?: QuotePricingMode }
+  options?: BuildItemFromFormOptions
 ) {
   const pricingMode = normalizePricingMode(form.pricingMode);
   const quotePricingMode = normalizeQuotePricingMode(options?.quotePricingMode);
@@ -2144,6 +2306,7 @@ export function buildItemFromForm(
     sheetVariant,
     customSchemeDescription,
     isCustomScheme,
+    guidedVisualConfig: syncedForm.guidedVisualConfig,
     configuracion,
     palilloEnabled: syncedForm.palilloEnabled,
     palilloType: syncedForm.palilloType,
@@ -2172,6 +2335,30 @@ export function buildItemFromForm(
         ? "manual"
         : "plantilla"
       : "manual";
+
+  const previousPresentation = editingItemId
+    ? decodeCotizacionItemPresentationMeta(
+        items.find((item) => item.id === editingItemId)?.observaciones
+      )
+    : null;
+  const personalizadoAssistMode =
+    Boolean(syncedForm.guidedVisualConfig) ||
+    isTrabajoPersonalizadoComponentType(syncedForm.tipo) ||
+    isPersonalizadoCompositionSelected({
+      sistema,
+      sheetScheme,
+      configuracion,
+    });
+  const cubicationSnapshot = resolveCubicationSnapshotForSave({
+    lineTemplateId: syncedForm.lineTemplateId,
+    widthMm: syncedForm.ancho ? Number(syncedForm.ancho) : null,
+    heightMm: syncedForm.alto ? Number(syncedForm.alto) : null,
+    quantity: Number(syncedForm.cantidad || 1),
+    catalogMetadata: resolveLineTemplateCatalogMetadataForForm(syncedForm, options),
+    draftSnapshot: syncedForm.cubicationSnapshot ?? null,
+    previousSnapshot: previousPresentation?.cubicationSnapshot ?? null,
+    personalizadoAssistMode,
+  });
 
   return calculateComponentItem({
     id: editingItemId ?? undefined,
@@ -2227,6 +2414,7 @@ export function buildItemFromForm(
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
       guidedVisualConfig: syncedForm.guidedVisualConfig ?? null,
+      cubicationSnapshot,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",
@@ -2272,6 +2460,7 @@ export function applyQuotePricingToItems(
       mirrorPaneDirection,
       mirrorInteriorLine,
       guidedVisualConfig,
+      cubicationSnapshot,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return calculateComponentItem({
@@ -2327,6 +2516,7 @@ export function applyQuotePricingToItems(
         mirrorPaneDirection,
         mirrorInteriorLine,
         guidedVisualConfig,
+        cubicationSnapshot,
         raw,
       }),
     });

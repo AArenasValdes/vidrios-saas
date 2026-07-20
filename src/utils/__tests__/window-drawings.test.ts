@@ -102,13 +102,14 @@ describe("generateComponentSVG", () => {
       alto: 1500,
       variant: "pdf",
       maxW: 470,
-      maxH: 210,
+      maxH: 260,
     });
 
     expect(svg).toContain("1200 mm");
     expect(svg).toContain("1500 mm");
     expect(svg).not.toMatch(/<text x="[0-9]" y="/);
     expect(svg).not.toMatch(/rotate\(-90 3 /);
+    expect(svg).toContain('paint-order="stroke fill"');
   });
 
   it("dibuja cubierta de mesa circular con un circulo y cota de diametro", () => {
@@ -119,7 +120,7 @@ describe("generateComponentSVG", () => {
       alto: 900,
       variant: "pdf",
       maxW: 470,
-      maxH: 210,
+      maxH: 260,
     });
 
     expect(svg).toContain("<circle");
@@ -134,14 +135,14 @@ describe("generateComponentSVG", () => {
       alto: 1900,
       variant: "pdf",
       maxW: 470,
-      maxH: 210,
+      maxH: 260,
     });
 
     const glass = svg.match(
       /<rect x="(\d+(?:\.\d+)?)" y="(\d+(?:\.\d+)?)" width="(\d+(?:\.\d+)?)" height="(\d+(?:\.\d+)?)" fill="rgba\(220,234,247,0\.86\)"/
     );
     const dimV = svg.match(
-      /x1="30" y1="(\d+(?:\.\d+)?)" x2="30" y2="(\d+(?:\.\d+)?)" stroke="#999999"/
+      /x1="32" y1="(\d+(?:\.\d+)?)" x2="32" y2="(\d+(?:\.\d+)?)" stroke="#999999"/
     );
 
     expect(glass).not.toBeNull();

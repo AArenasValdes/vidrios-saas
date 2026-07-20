@@ -28,8 +28,13 @@ import {
   MAX_GUIDED_LEAF_MODULES,
   MAX_GUIDED_PALILLOS_PER_MODULE,
   MIN_GUIDED_DIMENSION_MM,
+  GUIDED_FRAME_SHAPE_KINDS,
+  GUIDED_FRAME_SHAPE_LABELS,
+  GUIDED_GLASS_SHAPE_LABELS,
   GUIDED_MODULE_TYPE_LABELS,
   GUIDED_MODULE_TYPES,
+  GUIDED_OPENING_SIDE_LABELS,
+  GUIDED_OPENING_SIDES,
   GUIDED_PALILLO_PRESET_LABELS,
   applyPalilloPresetToModule,
   applyQuickSplitRatio,
@@ -58,14 +63,20 @@ import {
   resetGuidedComposition,
   selectGuidedNode,
   selectPalilloNode,
+  setGuidedFrameShape,
   setGuidedVisualDimensions,
   splitModule,
   splitModulePalilloCell,
+  updateModuleGlassShape,
+  updateModuleOpeningSide,
   updateModulePalilloSplitRatio,
   updateModuleType,
   updateSplitFirstSizeMm,
   updateSplitRatio,
+  type GuidedFrameShapeKind,
+  type GuidedGlassShapeKind,
   type GuidedModuleType,
+  type GuidedOpeningSide,
   type GuidedPalilloPresetId,
   type GuidedModuleNode,
   type GuidedSplitDirection,
@@ -164,6 +175,9 @@ export function GuidedVisualComposer({
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [widthDraft, setWidthDraft] = useState(String(config.widthMm));
   const [heightDraft, setHeightDraft] = useState(String(config.heightMm));
+  const [archRiseDraft, setArchRiseDraft] = useState("");
+  const [frameRadiusDraft, setFrameRadiusDraft] = useState("");
+  const [glassRadiusDraft, setGlassRadiusDraft] = useState("");
   const [splitMmDraft, setSplitMmDraft] = useState("");
   const [palilloEditModuleId, setPalilloEditModuleId] = useState<string | null>(null);
   const [showPalilloPresets, setShowPalilloPresets] = useState(false);
@@ -224,8 +238,9 @@ export function GuidedVisualComposer({
       showSelection: true,
       palilloEditModuleId,
       selectedPalilloNodeId: working.selectedPalilloId,
+      resourceKey: `composer-${titleId}`,
     }),
-    [colorHex, palilloEditModuleId, working.selectedPalilloId]
+    [colorHex, palilloEditModuleId, titleId, working.selectedPalilloId]
   );
   const layout = useMemo(
     () => calculateGuidedVisualLayout(working, renderOptions),
@@ -388,6 +403,92 @@ export function GuidedVisualComposer({
       history.setConfig(setGuidedVisualDimensions(working, { widthMm, heightMm }));
     }
   }, [widthDraft, heightDraft, working, history]);
+
+  useEffect(() => {
+    if (working.frameShape.kind === "arch_top") {
+      setArchRiseDraft(String(working.frameShape.archRiseMm));
+      setFrameRadiusDraft("");
+    } else if (working.frameShape.kind === "rounded") {
+      setFrameRadiusDraft(String(working.frameShape.radiusMm));
+      setArchRiseDraft("");
+    } else {
+      setArchRiseDraft("");
+      setFrameRadiusDraft("");
+    }
+  }, [working.frameShape]);
+
+  useEffect(() => {
+    if (selectedModule?.glassShape.kind === "rounded") {
+      setGlassRadiusDraft(String(selectedModule.glassShape.radiusMm));
+    } else {
+      setGlassRadiusDraft("");
+    }
+  }, [selectedModule?.id, selectedModule?.glassShape]);
+
+  const commitArchRise = useCallback(() => {
+    if (working.frameShape.kind !== "arch_top") {
+      return;
+    }
+    const rise = Number(archRiseDraft.replace(/[^\d]/g, "")) || 0;
+    const next = setGuidedFrameShape(working, {
+      kind: "arch_top",
+      archRiseMm: rise,
+    });
+    setArchRiseDraft(
+      next.frameShape.kind === "arch_top"
+        ? String(next.frameShape.archRiseMm)
+        : archRiseDraft
+    );
+    if (
+      next.frameShape.kind === "arch_top" &&
+      working.frameShape.kind === "arch_top" &&
+      next.frameShape.archRiseMm !== working.frameShape.archRiseMm
+    ) {
+      history.setConfig(next);
+    }
+  }, [archRiseDraft, working, history]);
+
+  const commitFrameRadius = useCallback(() => {
+    if (working.frameShape.kind !== "rounded") {
+      return;
+    }
+    const radiusMm = Number(frameRadiusDraft.replace(/[^\d]/g, "")) || 40;
+    const next = setGuidedFrameShape(working, {
+      kind: "rounded",
+      radiusMm,
+      corners: working.frameShape.corners,
+    });
+    if (next.frameShape.kind === "rounded") {
+      setFrameRadiusDraft(String(next.frameShape.radiusMm));
+      if (
+        working.frameShape.kind === "rounded" &&
+        next.frameShape.radiusMm !== working.frameShape.radiusMm
+      ) {
+        history.setConfig(next);
+      }
+    }
+  }, [frameRadiusDraft, working, history]);
+
+  const commitGlassRadius = useCallback(() => {
+    if (!selectedModule || selectedModule.glassShape.kind !== "rounded") {
+      return;
+    }
+    const radiusMm = Number(glassRadiusDraft.replace(/[^\d]/g, "")) || 40;
+    const next = updateModuleGlassShape(working, selectedModule.id, {
+      kind: "rounded",
+      radiusMm,
+      corners: selectedModule.glassShape.corners,
+    });
+    const nextLeaf = listLeafModules(next.root).find(
+      (leaf) => leaf.id === selectedModule.id
+    );
+    if (nextLeaf?.glassShape.kind === "rounded") {
+      setGlassRadiusDraft(String(nextLeaf.glassShape.radiusMm));
+      if (nextLeaf.glassShape.radiusMm !== selectedModule.glassShape.radiusMm) {
+        history.setConfig(next);
+      }
+    }
+  }, [glassRadiusDraft, selectedModule, working, history]);
 
   const canSplit = leafCount < MAX_GUIDED_LEAF_MODULES && Boolean(selectedModule);
   const findParentSplitExists = Boolean(
@@ -1093,6 +1194,143 @@ export function GuidedVisualComposer({
               </div>
             </div>
 
+            <div className={s.block}>
+              <span className={s.blockLabel}>Forma del marco</span>
+              <p className={s.hint}>Solo visual. No cambia precio ni pauta.</p>
+              <div className={s.shapeChipRow} role="listbox" aria-label="Forma del marco">
+                {GUIDED_FRAME_SHAPE_KINDS.map((kind: GuidedFrameShapeKind) => {
+                  const active = working.frameShape.kind === kind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      className={`${s.shapeChip} ${active ? s.shapeChipActive : ""}`}
+                      onClick={() => {
+                        if (kind === "arch_top") {
+                          history.setConfig(
+                            setGuidedFrameShape(working, {
+                              kind: "arch_top",
+                              archRiseMm:
+                                working.frameShape.kind === "arch_top"
+                                  ? working.frameShape.archRiseMm
+                                  : Math.round(working.heightMm * 0.18),
+                            })
+                          );
+                          return;
+                        }
+                        if (kind === "rounded") {
+                          history.setConfig(
+                            setGuidedFrameShape(working, {
+                              kind: "rounded",
+                              radiusMm:
+                                working.frameShape.kind === "rounded"
+                                  ? working.frameShape.radiusMm
+                                  : 80,
+                              corners:
+                                working.frameShape.kind === "rounded"
+                                  ? working.frameShape.corners
+                                  : "all",
+                            })
+                          );
+                          return;
+                        }
+                        history.setConfig(
+                          setGuidedFrameShape(working, { kind: "rect" })
+                        );
+                      }}
+                    >
+                      {GUIDED_FRAME_SHAPE_LABELS[kind]}
+                    </button>
+                  );
+                })}
+              </div>
+              {working.frameShape.kind === "arch_top" ? (
+                <label className={s.fullLabel}>
+                  Flecha del arco (mm)
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={archRiseDraft}
+                    onChange={(event) =>
+                      setArchRiseDraft(event.target.value.replace(/[^\d]/g, ""))
+                    }
+                    onBlur={commitArchRise}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        (event.target as HTMLInputElement).blur();
+                      }
+                    }}
+                  />
+                </label>
+              ) : null}
+              {working.frameShape.kind === "rounded" ? (
+                <>
+                  <label className={s.fullLabel}>
+                    Radio del marco (mm)
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={frameRadiusDraft}
+                      onChange={(event) =>
+                        setFrameRadiusDraft(
+                          event.target.value.replace(/[^\d]/g, "")
+                        )
+                      }
+                      onBlur={commitFrameRadius}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          (event.target as HTMLInputElement).blur();
+                        }
+                      }}
+                    />
+                  </label>
+                  <div className={s.shapeChipRow} role="listbox" aria-label="Esquinas del marco">
+                    {([
+                      ["all", "Todas"],
+                      ["top", "Solo arriba"],
+                    ] as const).map(([corners, label]) => {
+                      const active =
+                        working.frameShape.kind === "rounded" &&
+                        working.frameShape.corners === corners;
+                      return (
+                        <button
+                          key={corners}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          className={`${s.shapeChip} ${active ? s.shapeChipActive : ""}`}
+                          onClick={() => {
+                            if (
+                              working.frameShape.kind === "rounded" &&
+                              working.frameShape.corners === corners
+                            ) {
+                              return;
+                            }
+                            history.setConfig(
+                              setGuidedFrameShape(working, {
+                                kind: "rounded",
+                                radiusMm:
+                                  working.frameShape.kind === "rounded"
+                                    ? working.frameShape.radiusMm
+                                    : 80,
+                                corners,
+                              })
+                            );
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
             {palilloEditModuleId && palilloEditModuleNode ? (
               <>
                 <div className={s.block}>
@@ -1322,6 +1560,150 @@ export function GuidedVisualComposer({
                     );
                   })}
                 </div>
+
+                {selectedModule.type === "abatible" ||
+                selectedModule.type === "oscilobatiente" ||
+                selectedModule.type === "puerta" ? (
+                  <>
+                    <span className={s.blockLabel}>Sentido de apertura</span>
+                    <div
+                      className={s.shapeChipRow}
+                      role="listbox"
+                      aria-label="Sentido de apertura"
+                    >
+                      {GUIDED_OPENING_SIDES.map((side: GuidedOpeningSide) => {
+                        const active = (selectedModule.openingSide ?? "left") === side;
+                        return (
+                          <button
+                            key={side}
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            className={`${s.shapeChip} ${active ? s.shapeChipActive : ""}`}
+                            onClick={() =>
+                              history.setConfig(
+                                updateModuleOpeningSide(
+                                  working,
+                                  selectedModule.id,
+                                  side
+                                )
+                              )
+                            }
+                          >
+                            {GUIDED_OPENING_SIDE_LABELS[side]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+
+                <span className={s.blockLabel}>Forma del vidrio</span>
+                <div className={s.shapeChipRow} role="listbox" aria-label="Forma del vidrio">
+                  {(["rect", "rounded"] as const).map((kind: GuidedGlassShapeKind) => {
+                    const active = selectedModule.glassShape.kind === kind;
+                    return (
+                      <button
+                        key={kind}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={`${s.shapeChip} ${active ? s.shapeChipActive : ""}`}
+                        onClick={() =>
+                          history.setConfig(
+                            updateModuleGlassShape(
+                              working,
+                              selectedModule.id,
+                              kind === "rounded"
+                                ? {
+                                    kind: "rounded",
+                                    radiusMm:
+                                      selectedModule.glassShape.kind === "rounded"
+                                        ? selectedModule.glassShape.radiusMm
+                                        : 40,
+                                    corners:
+                                      selectedModule.glassShape.kind === "rounded"
+                                        ? selectedModule.glassShape.corners
+                                        : "all",
+                                  }
+                                : { kind: "rect" }
+                            )
+                          )
+                        }
+                      >
+                        {GUIDED_GLASS_SHAPE_LABELS[kind]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedModule.glassShape.kind === "rounded" ? (
+                  <>
+                    <label className={s.fullLabel}>
+                      Radio (mm)
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={glassRadiusDraft}
+                        onChange={(event) =>
+                          setGlassRadiusDraft(
+                            event.target.value.replace(/[^\d]/g, "")
+                          )
+                        }
+                        onBlur={commitGlassRadius}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            (event.target as HTMLInputElement).blur();
+                          }
+                        }}
+                      />
+                    </label>
+                    <p className={s.hint}>
+                      Confirma el radio con Enter. &quot;Todas&quot; = 4 esquinas;
+                      &quot;Solo arriba&quot; = base recta.
+                    </p>
+                    <div className={s.shapeChipRow} role="listbox" aria-label="Esquinas">
+                      {([
+                        ["all", "Todas"],
+                        ["top", "Solo arriba"],
+                      ] as const).map(([corners, label]) => {
+                        const active =
+                          selectedModule.glassShape.kind === "rounded" &&
+                          selectedModule.glassShape.corners === corners;
+                        return (
+                          <button
+                            key={corners}
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            className={`${s.shapeChip} ${active ? s.shapeChipActive : ""}`}
+                            onClick={() => {
+                              if (
+                                selectedModule.glassShape.kind === "rounded" &&
+                                selectedModule.glassShape.corners === corners
+                              ) {
+                                return;
+                              }
+                              history.setConfig(
+                                updateModuleGlassShape(working, selectedModule.id, {
+                                  kind: "rounded",
+                                  radiusMm:
+                                    selectedModule.glassShape.kind === "rounded"
+                                      ? selectedModule.glassShape.radiusMm
+                                      : 40,
+                                  corners,
+                                })
+                              );
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+
                 <div className={s.secondaryActions}>
                   <button
                     type="button"

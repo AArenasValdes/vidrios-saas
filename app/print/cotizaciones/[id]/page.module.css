@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
-
 .page {
   --brand: #800020;
   --carbon: #111827;
@@ -1350,15 +1348,15 @@
 }
 
 .spaciousCoverPage .drawingFrame {
-  min-height: 218px;
+  min-height: 266px;
 }
 
 .spaciousCoverPage .drawingSvg {
-  height: 202px;
+  height: 256px;
 }
 
 .spaciousCoverPage .drawingSvg svg {
-  max-height: 202px;
+  max-height: 256px;
 }
 
 .spaciousCoverPage .specsColumn {
@@ -1538,9 +1536,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  min-height: 224px;
-  padding: 8px 9px 7px;
+  gap: 5px;
+  min-height: 286px;
+  padding: 7px 9px 6px;
   background: #f8fafc;
   border-right: 1px solid #e5eaf0;
   box-sizing: border-box;
@@ -1548,7 +1546,7 @@
 
 .drawingFrame {
   width: 100%;
-  min-height: 204px;
+  min-height: 260px;
   background: transparent;
   border: 0;
   display: flex;
@@ -1563,14 +1561,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 190px;
+  height: 248px;
   overflow: hidden;
 }
 
 .drawingSvg svg {
   display: block;
   max-width: 100%;
-  max-height: 190px;
+  max-height: 248px;
   width: auto;
   height: auto;
 }

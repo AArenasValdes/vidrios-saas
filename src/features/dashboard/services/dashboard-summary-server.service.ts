@@ -10,6 +10,8 @@ import type {
   CotizacionWorkflowRecord,
   EstadoCotizacionWorkflow,
 } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { buildLastMonthBuckets } from "@/features/dashboard/services/dashboard-monthly-totals.service";
+import { isCotizacionPendingSend } from "@/features/dashboard/services/dashboard-pending-send.service";
 import type { DashboardSummary } from "@/features/dashboard/types/dashboard-summary";
 import { createProjectsRepository } from "@/features/projects/repositories/projects.repository";
 import { createClient } from "@/lib/supabase/server";
@@ -126,19 +128,30 @@ export async function getDashboardSummaryByOrganizationId(
   });
   const { monthStartIso, monthEndIso, todayStartIso, tomorrowStartIso } =
     getMonthBounds();
+  const monthBuckets = buildLastMonthBuckets(6);
 
   const [
     totalCount,
     quotedTotal,
+    quotedMonthTotal,
+    approvedTotal,
     pdfGeneratedCount,
     approvedCount,
     monthCount,
     approvedTodayCount,
     recentRecordsBase,
     alertRecordsBase,
+    ...monthlyTotalsRaw
   ] = await Promise.all([
     cotizacionesRepository.countByOrganizationId(organizationId),
     cotizacionesRepository.sumTotalByOrganizationId(organizationId),
+    cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
+      updatedFrom: monthStartIso,
+      updatedTo: monthEndIso,
+    }),
+    cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
+      estados: ["aprobada"],
+    }),
     cotizacionesRepository.countByOrganizationId(organizationId, {
       pdfDownloadedOnly: true,
     }),
@@ -154,14 +167,20 @@ export async function getDashboardSummaryByOrganizationId(
       updatedFrom: todayStartIso,
       updatedTo: tomorrowStartIso,
     }),
-    cotizacionesRepository.listRecentByOrganizationId(organizationId, 24),
+    cotizacionesRepository.listRecentByOrganizationId(organizationId, 48),
     cotizacionesRepository.listDashboardAlertCandidatesByOrganizationId(
       organizationId,
       21
     ),
+    ...monthBuckets.map((bucket) =>
+      cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
+        updatedFrom: bucket.startIso,
+        updatedTo: bucket.endIso,
+      })
+    ),
   ]);
 
-  const recentRecordsSorted = sortByUpdatedDesc(recentRecordsBase).slice(0, 12);
+  const recentRecordsSorted = sortByUpdatedDesc(recentRecordsBase);
   const relevantProjectIds = Array.from(
     new Set(
       [...recentRecordsSorted, ...alertRecordsBase]
@@ -193,28 +212,42 @@ export async function getDashboardSummaryByOrganizationId(
       : null;
     const client =
       project?.clienteId != null ? clientsById.get(String(project.clienteId)) : null;
+    const hasProject = Boolean(cotizacion.proyectoId);
 
     return mapCotizacionToWorkflowRecord({
       cotizacion,
       clientId: project?.clienteId ?? null,
-      clientName: client?.nombre ?? "Cliente sin nombre",
+      clientName: client?.nombre ?? (hasProject ? "Cliente sin nombre" : "Cliente"),
       clientPhone: client?.telefono ?? "",
       clientAddress: client?.direccion ?? "",
-      projectTitle: project?.titulo ?? "Proyecto sin nombre",
+      projectTitle: project?.titulo ?? (hasProject ? "Proyecto sin nombre" : "Cotización"),
     });
   };
 
-  const recentRecords = recentRecordsSorted.map(enrichRecord);
+  const enrichedRecent = recentRecordsSorted.map(enrichRecord);
+  const recentRecords = enrichedRecent.slice(0, 12);
+  const pendingSendRecords = enrichedRecent
+    .filter((record) => isCotizacionPendingSend(record.estado))
+    .slice(0, 12);
   const alertRecords = alertRecordsBase.map(enrichRecord);
+  const monthlyQuotedTotals = monthBuckets.map((bucket, index) => ({
+    key: bucket.key,
+    label: bucket.label,
+    total: toNumber(monthlyTotalsRaw[index]),
+  }));
 
   return {
     recentRecords,
+    pendingSendRecords,
     alerts: buildCotizacionAlerts(alertRecords, { limit: 3 }),
     totalCount,
     quotedTotal,
+    quotedMonthTotal,
+    approvedTotal,
     pdfGeneratedCount,
     approvedCount,
     monthCount,
+    monthlyQuotedTotals,
     approvedTodayCount,
   };
 }

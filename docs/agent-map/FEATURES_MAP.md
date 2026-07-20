@@ -102,26 +102,29 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 - **Que hace**: Tablero comercial real del producto actual (Fase 5). Empuja el flujo maestro **cotizar → PDF → WhatsApp**: valor cotizado, cola **Por enviar**, PDF/aprobadas, recientes. No es CRM ni seguimiento.
 - **Rutas involucradas**: `/dashboard`
-- **Brief de diseño / Fase 5**: `docs/design/FASE_5_DASHBOARD_BRIEF.md` + roadmap § Fase 5
+- **Brief de diseño / Fase 5**: `docs/design/FASE_5_DASHBOARD_BRIEF.md` + roadmap § Fase 5 (**estado: implementado**)
 - **Archivos principales**:
   - `app/(pwa-app)/dashboard/page.tsx`
   - `app/(pwa-app)/dashboard/_components/mobile/dashboard-mobile.tsx`
   - `app/(pwa-app)/dashboard/_components/desktop/dashboard-desktop.tsx`
+  - `app/(pwa-app)/dashboard/_components/desktop/dashboard-monthly-trend-chart.tsx`
   - `app/(pwa-app)/dashboard/_hooks/use-dashboard-summary.ts`
   - `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`
   - `app/(pwa-app)/dashboard/_hooks/use-dashboard-breakpoint.ts`
   - `src/features/dashboard/services/dashboard-summary-server.service.ts`
+  - `src/features/dashboard/services/dashboard-pending-send.service.ts`
+  - `src/features/dashboard/services/dashboard-monthly-totals.service.ts`
   - `src/features/dashboard/types/dashboard-summary.ts`
   - `app/api/dashboard/summary/route.ts`
-- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`
+- **Componentes principales**: `DashboardDesktop`, `DashboardMobile`, `DashboardMonthlyTrendChart`
 - **Hooks/servicios/actions**: `useDashboardViewModel`, `useDashboardSummary`, `useDashboardBreakpoint`
 - **Tablas Supabase**: `cotizaciones`, `clients`, `projects`, `solicitudes_contacto`
 - **Flujo de datos**: Page -> `useDashboardViewModel` -> `useDashboardSummary` -> API `/api/dashboard/summary` -> `dashboardSummaryServerService` -> repositories directos
 - **Estados importantes**: isLoading, isReady, isEmpty; KPIs `quotedTotal`, `pdfGeneratedCount`, `approvedCount`, `totalCount`, `monthCount`, `approvedTodayCount`. Fase 5 V1 agrega cola **Por enviar** (Creada/PDF generado sin cierre de envío/aprobación) sin métrica hero de seguimiento.
-- **Donde editar UI**: `app/(pwa-app)/dashboard/_components/` (rediseño desktop tras aprobar brief visual)
+- **Donde editar UI**: `app/(pwa-app)/dashboard/_components/` (desktop ya montado; solo pulido fino, no reabrir CRM)
 - **Donde editar logica**: `app/(pwa-app)/dashboard/_hooks/use-dashboard-view-model.ts`, `src/features/dashboard/services/dashboard-summary-server.service.ts`
 - **Donde editar persistencia**: `app/api/dashboard/summary/route.ts` (usa repositories directamente)
-- **Consideraciones UX**: Breakpoint 1024px. KPI hero = **Valor cotizado**. Cola accionable = **Por enviar** (no “seguimiento”). Alertas de respuesta publica solo si existen. Estados neutrales via `cotizacion-display-state.service.ts`. Premium sobrio; no forzar dark de marketing. No CRM ni cobros. UI nueva solo tras brief aprobado.
+- **Consideraciones UX**: Breakpoint dashboard desktop **1024px** (mobile sin cambios). KPI hero = **Valor cotizado este mes** + tendencia 6 meses real. Cola accionable = **Por enviar** (PDF/WhatsApp). Alertas de respuesta publica solo si existen. Estados neutrales via `cotizacion-display-state.service.ts`. Sidebar desktop grafito + logo Ventora. No CRM ni cobros.
 - **Riesgos al modificar**: No romper orquestacion de hooks ni formateo de moneda. No reintroducir "presupuestos pendientes" ni seguimiento como alerta dominante. No agregar KPIs mock. No romper contrato mobile del summary.
 
 ---
@@ -278,12 +281,14 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Cotizaciones
 
-- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp y estados. Hoy tiene dos frentes claros del roadmap: primero estabilizacion del flujo desktop compartido; despues evolucion a Quote Studio desktop sin romper mobile.
+- **Que hace**: CRUD completo de cotizaciones: listado con filtros, nueva cotizacion guiada, detalle, PDF, WhatsApp y estados. Desktop comercial y Quote Studio Fase 1 ya estan cerrados para demo; solo tocar UX con bug o pedido concreto, sin romper mobile.
 - **Rutas involucradas**: `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`
 - **Archivos principales**:
-  - `app/(pwa-app)/cotizaciones/page.tsx` (listado, 1055 lineas)
-  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva, 1710+ lineas)
-  - `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle)
+  - `app/(pwa-app)/cotizaciones/page.tsx` (listado desktop/mobile)
+  - `app/(pwa-app)/cotizaciones/nueva/page.tsx` (nueva / Quote Studio)
+  - `app/(pwa-app)/cotizaciones/[id]/page.tsx` (detalle; switch desktop ≥1024 / mobile)
+  - `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-desktop-view.tsx`
+  - `app/(pwa-app)/cotizaciones/[id]/_components/cotizacion-detalle-desktop.module.css`
   - `app/(pwa-app)/configuracion/empresa/page.tsx` (bloque compacto `Lineas y precios base`)
   - `app/(pwa-app)/cotizaciones/nueva/_components/paso-uno-datos-cliente.tsx` (desktop integra buscador, datos del trabajo y selector compacto de metodo de presupuesto)
   - `app/(pwa-app)/cotizaciones/nueva/_components/resumen-desktop-lateral.tsx` (desktop: resumen sticky con accion unica de continuar al presupuesto)
@@ -337,7 +342,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/constants/component-colors.ts`
   - `app/api/cotizaciones/resumen/route.ts`
   - `app/api/cotizaciones/[id]/pdf-descargado/route.ts`
-- **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleMobileView`, `PasoDosModoCotizacion`, `PasoDosItemLibreForm`, `PasoDosWizardFooterMovil`, `PasoDosWizardPrecioMovil`
+- **Componentes principales**: `CotizacionMobileCard`, `CotizacionesMobileSummary`, `CotizacionesFilterFields`, `CotizacionDetalleDesktopView`, `CotizacionDetalleMobileView`, `PasoDosModoCotizacion`, `PasoDosItemLibreForm`, `PasoDosWizardFooterMovil`, `PasoDosWizardPrecioMovil`
 - **Hooks/servicios/actions**: `useCotizacionesStore`, `useCotizacionAlerts`, `cotizacionesAppService`, `cotizacionesWorkflowService`, `cotizacionesRepository`, `resolveCotizacionWorkflowState`, `resolveCotizacionClosureState`, `isFreeValueComponentType`
 - **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `cotizacion_line_templates`, `clients`, `projects`, `cotizacion_code_counters`
 - **Flujo de datos**:
@@ -351,13 +356,16 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/(pwa-app)/cotizaciones/` (paginas y _components)
 - **Donde editar logica**: `src/features/cotizaciones/services/`, `src/features/cotizaciones/hooks/`
 - **Prioridad de roadmap**:
-  - Milestone 0: estabilizar cotizacion desktop actual.
-  - Fase 1: dejar Quote Studio desktop impecable y vendible, exclusivamente desde `min-width: 1024px`.
-  - Fase 3 V2 (activo, QA UX + smoke PDF + hydrate formal OK 2026-07-18): constructor visual guiado en wizard desktop Paso 2 tras **Personalizado** (Ventana: sistema; Puerta/otros: config o esquema) y al editar pieza (tab Configuración). Lecturas priorizan `cotizacion_item_visual_configs`. QA: `CHANGELOG_AGENT_MAP.md`.
-- **Activo**: catalogo privado (`cotizacion_line_templates`) con import Excel/CSV/PDF tecnico y cruce de precios sobre lineas tecnicas; sin precio no entra a cotizacion. Constructor visual guiado **V2** (árbol de regiones, `palilloLayout`, drag, UI maestro, PDF unificado, sync `cotizacion_item_visual_configs`; bridge `[gvc:]` base64url-safe; finalizar pieza con guided OK).
-- **Futuro documentado, no activo**: cubicacion asistida (Fase 4).
+  - Milestone 0: estabilizar cotizacion desktop actual — cerrado.
+  - Fase 1 Quote Studio desktop — **cerrada con QA** (2026-07-09 + pulidos 18-07); no reabrir alcance sin bug/demo.
+  - Fase 3 V2 (activo, QA UX + smoke PDF + hydrate formal OK 2026-07-18): constructor visual guiado en wizard desktop Paso 2 tras **Personalizado** (Ventana: sistema; Puerta/otros: config o esquema), en tipo **Trabajo personalizado**, y al editar pieza (tab Configuración). Lecturas priorizan `cotizacion_item_visual_configs`. Extensión formas V1: marco `rect|arch_top|rounded` + vidrio `rect|rounded` por módulo (solo visual; sin precio ni pauta curva). QA: `CHANGELOG_AGENT_MAP.md`.
+- **Constructor-cuaderno desktop (2026-07-19/20)**: Paso 2 ofrece modo explicito **Constructor** con siete presets, varias piezas sobre el mismo `draft.items`, medidas/cantidad inline, estados concretos, inspector 390px, paleta `COLOR_OPTIONS`, menu de acciones, progreso y ordenamiento. Usa un unico scroll vertical; tarjetas responden 1/2/3 columnas segun viewport. Schema V2 suma `oscilobatiente` y `openingSide` de forma aditiva. Mobile no monta el workspace y la persistencia formal permanece sin cambios. Handoff: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Activo**: catalogo privado (`cotizacion_line_templates`) con import Excel/CSV/PDF tecnico y cruce de precios sobre lineas tecnicas. **Fase 2A/2B cerradas** (2B cierre 2026-07-17). UI ficha en `lineas-precios-page-client.tsx`: proveedor, sistema, linea, precio comercial y reglas V1 de cubicacion/pauta en `catalog_metadata`. Constructor visual guiado **V2**.
+- **Fase actual**: **Fase 4 — Cubicacion asistida y pauta revisable V1**. Cortes: sistemas/estados/roles; snapshot `[cub:]`; edicion manual; Guardar ajuste en linea; pauta consolidada; **calibracion con ejemplo real** (descuentos + preset + contraste vano/vidrio en ficha de linea).
+- **Camino 2 (2026-07-19)**: no ampliar tipologías en el selector. Solo 3 partidas (`pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`) como patrón de estimación. Tipologías complejas (bow, abatible ventana, etc.) → constructor. UI línea: estimación opcional en dos pasos. Handoff: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
+- **Alcance Fase 4**: cubicacion sin precios, pauta revisable, snapshot, ajuste perfiles, consolidado, calibracion V1 por sistema/ejemplo. **Personalizado**: pauta solo como borrador manual asistido (no plantilla automática de línea). Siguiente opcional: presets por proveedor, derivar cortes desde módulos del constructor. No optimizador, nesting, CAD, inventario, compras, costos/margen ni fabricacion automatica.
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
-- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 abre una estacion de trabajo de dos columnas con pieza local "En edicion"; no se persiste como item completo hasta "Finalizar pieza". Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio, incluyendo productos de cristal por m2 desde `cotizacion_line_templates`) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`) y productos de cat?logo `categoria='vidrio'`: no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3?6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
+- **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 ofrece **Presupuesto** + **Constructor** sobre los mismos items; el Constructor no crea otra persistencia. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio, incluyendo productos de cristal por m2 desde `cotizacion_line_templates`) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`) y productos de catalogo `categoria='vidrio'`: no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3-6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
 - **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial; para Cristales tambien se codifica categoria/espesor/terminacion en `observaciones`. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
 
 ---
@@ -365,6 +373,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 ## Feature: PDF de Cotizacion
 
 - **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa. Al descargar/abrir el PDF desde el visor interno, registra `pdf_descargado_en` en silencio y muestra toast "PDF descargado" sin modal ni cambio de estado comercial. Las caracteristicas de cada item se arman con `buildCotizacionItemPrintSpecs()`; **Espejo** y **Cubierta de mesa** omiten Material y Color en la grilla sin romper el layout.
+- **Croquis Constructor 2026-07-20**: renderer compartido usa canvas PDF `470 x 260`, contenedor hasta 248px, ocupacion 0.88, banda de cotas y halo claro. Ventana/puerta crecen cerca de 30% sin cambiar medidas. Aplica a visor, export y documentos publicos; detalle y evidencia en `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
 - **Rutas involucradas**: `/print/cotizaciones/[id]`, detalle cotizacion
 - **Archivos principales**:
   - `src/utils/cotizacion-pdf.ts` (703 lineas)
@@ -433,10 +442,12 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Que hace**: CRUD de clientes con estados (activo/seguimiento/prospecto/inactivo), ficha con proyectos y cotizaciones asociadas
 - **Rutas involucradas**: `/clientes`, `/clientes/nuevo`, `/clientes/[id]`, `/clientes/[id]/editar`
 - **Archivos principales**:
-  - `app/(pwa-app)/clientes/page.tsx` (696 lineas)
+  - `app/(pwa-app)/clientes/page.tsx`
   - `app/(pwa-app)/clientes/nuevo/page.tsx`
-  - `app/(pwa-app)/clientes/[id]/page.tsx`
+  - `app/(pwa-app)/clientes/[id]/page.tsx` (switch desktop ≥1024 / mobile)
   - `app/(pwa-app)/clientes/[id]/editar/page.tsx`
+  - `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-desktop-view.tsx`
+  - `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-desktop.module.css`
   - `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-mobile-view.tsx`
   - `app/(pwa-app)/clientes/[id]/_components/cliente-detalle-mobile-view-model.ts`
   - `src/features/clientes/hooks/useClientes.ts`
@@ -445,16 +456,16 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/clientes/repositories/clientes-repository.ts`
   - `src/features/clientes/types/cliente.ts`
   - `app/api/clientes/resumen/route.ts`
-- **Componentes principales**: `ClienteDetalleMobileView`
+- **Componentes principales**: `ClienteDetalleDesktopView`, `ClienteDetalleMobileView` (mismo view-model)
 - **Hooks/servicios/actions**: `useClientes`, `clientesService`
 - **Tablas Supabase**: `clients`
 - **Flujo de datos**: Page -> `useClientes` -> API `/api/clientes/resumen` -> server -> `clientesRepository`
 - **Estados importantes**: activo, seguimiento, prospecto, inactivo (calculado o manual via `estado_manual`)
-- **Donde editar UI**: `app/(pwa-app)/clientes/`
+- **Donde editar UI**: `app/(pwa-app)/clientes/` (listado desktop en `page.module.css`; detalle desktop en `_components/cliente-detalle-desktop*`)
 - **Donde editar logica**: `src/features/clientes/services/clientes.service.ts`
 - **Donde editar persistencia**: `src/features/clientes/repositories/clientes-repository.ts`
-- **Consideraciones UX**: Estado calculado segun actividad reciente cruzando cotizaciones y proyectos. Con trial vencido la vista sigue en lectura, pero alta/edicion/delete quedan bloqueados.
-- **Riesgos al modificar**: No romper soft delete ni calculo de estado. `unique_correo_clients` es global (no por org) - bug conocido. No abrir escrituras sin pasar por el guard de suscripcion en `useClientes`.
+- **Consideraciones UX**: Listado y ficha desktop ≥1024 usan ancho comercial del shell (`rootCommercialList` / `pageContentDashboard`); no reutilizar columna 420px del mobile en desktop. Estado calculado segun actividad reciente. Con trial vencido la vista sigue en lectura, pero alta/edicion/delete quedan bloqueados.
+- **Riesgos al modificar**: No romper soft delete ni calculo de estado. `unique_correo_clients` es global (no por org) - bug conocido. No abrir escrituras sin pasar por el guard de suscripcion en `useClientes`. No alterar mobile al pulir desktop.
 
 ---
 
@@ -500,17 +511,19 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Rutas involucradas**: `/solicitudes/canales`
 - **Archivos principales**:
   - `src/features/solicitudes/hooks/useLeadChannels.ts`
-  - `src/features/solicitudes/components/lead-channels.tsx` (609 lineas)
-  - `src/features/solicitudes/components/lead-channels.module.css` (436 lineas)
+  - `src/features/solicitudes/components/lead-channels.tsx`
+  - `src/features/solicitudes/components/lead-channels.module.css`
   - `app/(pwa-app)/solicitudes/canales/page.tsx`
+  - `app/(pwa-app)/solicitudes/canales/page.module.css`
 - **Componentes principales**: `LeadChannels`
 - **Hooks/servicios/actions**: `useLeadChannels`
 - **Tablas Supabase**: Ninguna (lee slug de org desde perfil)
 - **Flujo de datos**: Org slug + canal -> URL con UTM params -> QR + copy link
-- **Donde editar UI**: `src/features/solicitudes/components/lead-channels.tsx`
+- **Donde editar UI**: `src/features/solicitudes/components/lead-channels.tsx` + `canales/page.tsx` (header desktop alineado a shell)
 - **Donde editar logica**: `src/features/solicitudes/hooks/useLeadChannels.ts`
 - **Donde editar persistencia**: N/A
-- **Riesgos al modificar**: No romper formato de URLs ni params UTM
+- **Consideraciones UX**: Layout compacto (pagina publica + canales + QR sticky). Sin bloque duplicado de acciones rapidas. CTA "Editar pagina" apunta a `/configuracion/pagina-venta`.
+- **Riesgos al modificar**: No romper formato de URLs ni params UTM; conservar targets de onboarding (`canales-hero`, `canales-public-card`, `canales-share-actions`)
 
 ---
 

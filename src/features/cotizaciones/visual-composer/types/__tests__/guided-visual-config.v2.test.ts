@@ -18,6 +18,7 @@ import {
   serializeGuidedVisualConfig,
   splitModule,
   updateModuleType,
+  updateModuleOpeningSide,
   updatePalilloPosition,
   updateSplitFirstSizeMm,
   updateSplitRatio,
@@ -113,6 +114,25 @@ describe("guided-visual-config V2", () => {
 
     expect(countLeafModules(config.root)).toBe(1);
     expect(listLeafModules(config.root)[0].type).toBe("puerta");
+  });
+
+  it("normaliza oscilobatiente y sentido de apertura sin romper V2 legacy", () => {
+    let config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1400 });
+    const moduleId = listLeafModules(config.root)[0].id;
+    config = updateModuleType(config, moduleId, "oscilobatiente");
+    config = updateModuleOpeningSide(config, moduleId, "right");
+
+    const parsed = parseGuidedVisualConfig(serializeGuidedVisualConfig(config));
+    expect(parsed && listLeafModules(parsed.root)[0]).toMatchObject({
+      type: "oscilobatiente",
+      openingSide: "right",
+    });
+
+    const legacy = ensureGuidedVisualConfig({
+      ...config,
+      root: { ...listLeafModules(config.root)[0], openingSide: undefined },
+    });
+    expect(listLeafModules(legacy.root)[0].openingSide).toBe("left");
   });
 
   it("agrega, mueve y quita palillos sin crear módulos", () => {

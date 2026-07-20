@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
-const DESKTOP_QUERY = "(min-width: 861px)";
+/** Quote Studio / Fase 5: desktop dashboard desde 1024px. Bajo eso se conserva mobile. */
+const DESKTOP_QUERY = "(min-width: 1024px)";
 
 function subscribe(onStoreChange: () => void) {
   if (typeof window === "undefined") {

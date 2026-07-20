@@ -27,8 +27,8 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
     align-items: start;
-    width: min(100%, calc(100vw - 3.5rem));
-    max-width: 1280px;
+    width: min(1664px, calc(100% - 2.5rem));
+    max-width: 1664px;
     margin: 0 auto;
     padding: 1.25rem 0 2.5rem;
   }
@@ -36,6 +36,6 @@
   :global(.layoutStepTwo).layout,
   :global(.layoutFinalStep).layout {
     display: block;
-    width: min(1190px, calc(100vw - 4rem));
+    width: min(1664px, calc(100% - 2.5rem));
   }
 }

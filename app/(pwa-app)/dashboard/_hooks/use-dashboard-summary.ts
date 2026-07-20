@@ -6,15 +6,25 @@ import { getDashboardSummaryByOrganizationId } from "@/features/cotizaciones/ser
 import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 
+type DashboardMonthlyQuotedPoint = {
+  key: string;
+  label: string;
+  total: number;
+};
+
 type DashboardSummaryState = {
   organizationKey: string | null;
   recentRecords: CotizacionWorkflowRecord[];
+  pendingSendRecords: CotizacionWorkflowRecord[];
   alerts: CotizacionAlert[];
   totalCount: number;
   quotedTotal: number;
+  quotedMonthTotal: number;
+  approvedTotal: number;
   pdfGeneratedCount: number;
   approvedCount: number;
   monthCount: number;
+  monthlyQuotedTotals: DashboardMonthlyQuotedPoint[];
   approvedTodayCount: number;
   isLoading: boolean;
   isReady: boolean;
@@ -36,12 +46,16 @@ const DASHBOARD_SUMMARY_STORAGE_PREFIX = "vidrios-saas:dashboard-summary:";
 
 const EMPTY_SUMMARY: DashboardSummaryCacheEntry = {
   recentRecords: [],
+  pendingSendRecords: [],
   alerts: [],
   totalCount: 0,
   quotedTotal: 0,
+  quotedMonthTotal: 0,
+  approvedTotal: 0,
   pdfGeneratedCount: 0,
   approvedCount: 0,
   monthCount: 0,
+  monthlyQuotedTotals: [],
   approvedTodayCount: 0,
 };
 
@@ -54,12 +68,18 @@ function normalizeDashboardSummaryCacheEntry(
 
   return {
     recentRecords: value.recentRecords ?? [],
+    pendingSendRecords: value.pendingSendRecords ?? [],
     alerts: value.alerts ?? [],
     totalCount: value.totalCount ?? 0,
     quotedTotal: value.quotedTotal ?? value.approvedMonthTotal ?? 0,
+    quotedMonthTotal: value.quotedMonthTotal ?? 0,
+    approvedTotal: value.approvedTotal ?? 0,
     pdfGeneratedCount: value.pdfGeneratedCount ?? 0,
     approvedCount: value.approvedCount ?? 0,
     monthCount: value.monthCount ?? 0,
+    monthlyQuotedTotals: Array.isArray(value.monthlyQuotedTotals)
+      ? value.monthlyQuotedTotals
+      : [],
     approvedTodayCount: value.approvedTodayCount ?? 0,
   };
 }
@@ -215,12 +235,16 @@ export function useDashboardSummary(organizationId: string | number | null | und
           .then((summary) =>
             normalizeDashboardSummaryCacheEntry({
               recentRecords: summary.recentRecords,
+              pendingSendRecords: summary.pendingSendRecords,
               alerts: summary.alerts,
               totalCount: summary.totalCount,
               quotedTotal: summary.quotedTotal,
+              quotedMonthTotal: summary.quotedMonthTotal,
+              approvedTotal: summary.approvedTotal,
               pdfGeneratedCount: summary.pdfGeneratedCount,
               approvedCount: summary.approvedCount,
               monthCount: summary.monthCount,
+              monthlyQuotedTotals: summary.monthlyQuotedTotals,
               approvedTodayCount: summary.approvedTodayCount,
             })
           )
