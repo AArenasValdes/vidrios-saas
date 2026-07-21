@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 const RegisterServiceWorker = dynamic(
@@ -32,13 +33,79 @@ function isMarketingPublicPath(pathname: string | null) {
   );
 }
 
+/**
+ * bundle-defer-third-party / bundle-conditional:
+ * en marketing no montamos SW ni install prompt hasta idle (no compiten con FCP).
+ * en app privada el SW entra al hidratar (PWA real).
+ */
 export function DynamicPwaComponents() {
   const pathname = usePathname();
   const marketing = isMarketingPublicPath(pathname);
+  const [allowPwa, setAllowPwa] = useState(!marketing);
+
+  useEffect(() => {
+    if (!marketing) {
+      setAllowPwa(true);
+      return;
+    }
+
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
+    const enable = () => {
+      if (!cancelled) setAllowPwa(true);
+    };
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      idleId = idleWindow.requestIdleCallback(enable, { timeout: 4000 });
+    } else {
+      timeoutId = setTimeout(enable, 3000);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof idleWindow.cancelIdleCallback === "function") {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [marketing]);
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "d4bf8a",
+      },
+      body: JSON.stringify({
+        sessionId: "d4bf8a",
+        runId: "pass3",
+        hypothesisId: "H-PWA",
+        location: "dynamic-pwa-components.tsx:allowPwa",
+        message: "pwa_gate_state",
+        data: { pathname, marketing, allowPwa },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [allowPwa, marketing, pathname]);
+
+  if (!allowPwa) {
+    return null;
+  }
 
   return (
     <>
-      {/* SW en todas las rutas; prompt de instalación solo en app privada. */}
       <RegisterServiceWorker />
       {marketing ? null : <InstallAppPrompt />}
     </>

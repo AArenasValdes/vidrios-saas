@@ -58,9 +58,10 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/organization-profile/hooks/useOrganizationProfile.ts`
   - `src/components/layout/app-shell.tsx`
   - `src/components/layout/app-shell.module.css`
-  - `app/(pwa-app)/cuenta-vencida/page.tsx`
-  - `app/(pwa-app)/cuenta-vencida/page-content.tsx`
-  - `app/(pwa-app)/cuenta-vencida/page.module.css`
+  - `app/(subscription-gate)/cuenta-vencida/page.tsx`
+  - `app/(subscription-gate)/cuenta-vencida/page-content.tsx`
+  - `app/(subscription-gate)/cuenta-vencida/page.module.css`
+  - `app/(subscription-gate)/layout.tsx`
   - `app/api/billing/checkout/route.ts`
   - `app/api/billing/flow/confirmar/route.ts`
   - `app/api/subscriptions/webpay/crear/route.ts`

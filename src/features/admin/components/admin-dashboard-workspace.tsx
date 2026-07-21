@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuArrowRight,
   LuCalendarClock,
@@ -103,13 +103,22 @@ const HEALTH_BUCKET_PRESENTATION: Record<
   },
 };
 
-export function AdminDashboardWorkspace() {
+type AdminDashboardWorkspaceProps = {
+  initialDashboard?: AdminDashboard | null;
+  initialPeriodDays?: number;
+};
+
+export function AdminDashboardWorkspace({
+  initialDashboard = null,
+  initialPeriodDays = 30,
+}: AdminDashboardWorkspaceProps = {}) {
   const { setHeaderState, resetHeaderState } = useAdminHeaderActions();
-  const [periodDays, setPeriodDays] = useState(30);
-  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [periodDays, setPeriodDays] = useState(initialPeriodDays);
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(initialDashboard);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialDashboard);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasLoadedInitialRef = useRef(Boolean(initialDashboard));
 
   const loadDashboard = useCallback(async (days: number, refresh = false) => {
     if (refresh) {
@@ -147,8 +156,14 @@ export function AdminDashboardWorkspace() {
   }, []);
 
   useEffect(() => {
+    // async-defer-await / client waterfall: si ya vino del server, no re-fetch del período inicial.
+    if (hasLoadedInitialRef.current && periodDays === initialPeriodDays) {
+      hasLoadedInitialRef.current = false;
+      return;
+    }
+
     void loadDashboard(periodDays);
-  }, [loadDashboard, periodDays]);
+  }, [initialPeriodDays, loadDashboard, periodDays]);
 
   useEffect(() => {
     setHeaderState({

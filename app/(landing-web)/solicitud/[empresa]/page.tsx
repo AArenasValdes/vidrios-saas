@@ -26,19 +26,18 @@ import {
   isOrganizationOpenAtDate,
 } from "@/features/organization-profile/services/organization-profile.service";
 import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
-import {
-  getCachedApprovedPublicTestimonialsByOrganizationId,
-  getCachedPublicGalleryByOrganizationId,
-  getCachedPublicRequestConfig,
-} from "@/features/solicitudes/services/solicitudes-public-cache.server";
+import { getCachedPublicRequestConfig } from "@/features/solicitudes/services/solicitudes-public-cache.server";
 import {
   formatChileMobilePhone,
   normalizeChileMobilePhone,
 } from "@/utils/chile-mobile-phone";
 import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
+import {
+  SolicitudEmpresaDeferredGallery,
+  SolicitudEmpresaDeferredTestimonials,
+} from "./solicitud-empresa-deferred";
 import { SolicitudEmpresaForm } from "./solicitud-empresa-form";
-import { SolicitudEmpresaTestimonialForm } from "./solicitud-empresa-testimonial-form";
 import s from "./page.module.css";
 
 const landingBodyFont = Lato({
@@ -252,25 +251,6 @@ export default async function SolicitudEmpresaPage({
   const formattedPhone = formatPublicPhone(config.empresaTelefono);
   const isPreview = isPreviewEnabled(resolvedSearchParams.preview);
 
-  const [galleryImages, approvedTestimonials] = await Promise.all([
-    showGallery
-      ? getCachedPublicGalleryByOrganizationId(config.organizationId)
-      : Promise.resolve([]),
-    showRating
-      ? getCachedApprovedPublicTestimonialsByOrganizationId(config.organizationId)
-      : Promise.resolve([]),
-  ]);
-
-  const resolvedGallery = galleryImages;
-
-  const approvedTestimonialsCount = approvedTestimonials.length;
-  const averageRating = approvedTestimonialsCount
-    ? (
-        approvedTestimonials.reduce((sum, item) => sum + item.estrellas, 0) /
-        approvedTestimonialsCount
-      ).toFixed(1)
-    : null;
-
   const featuredServices = serviceItems.slice(0, 3);
   const chipServices = serviceItems.slice(3);
 
@@ -444,38 +424,10 @@ export default async function SolicitudEmpresaPage({
           </div>
         </section>
 
-        {/* Gallery */}
-        {resolvedGallery.length > 0 ? (
-          <section className={s.gallerySection} aria-label="Trabajos recientes">
-            <div className={s.sectionHeader}>
-              <h2 className={s.sectionTitle}>Trabajos Recientes</h2>
-            </div>
-
-            <div className={s.galleryRail}>
-              {resolvedGallery.map((image, index) => (
-                <article key={`${image.imageUrl}-${index}`} className={s.portfolioCard}>
-                  <div className={s.galleryImageWrap}>
-                    <Image
-                      src={image.imageUrl}
-                      alt={image.workTitle || image.label || `Trabajo ${index + 1}`}
-                      fill
-                      className={s.galleryImage}
-                      sizes="(max-width: 768px) 80vw, 280px"
-                      quality={65}
-                      loading="lazy"
-                    />
-                    {image.workBadge ? (
-                      <span className={s.galleryTag}>{image.workBadge}</span>
-                    ) : null}
-                  </div>
-                  <div className={s.galleryCardOverlay}>
-                    <strong>{image.workTitle || image.label || "Trabajo reciente"}</strong>
-                    <span>{[image.workType, image.workZone].filter(Boolean).join(" · ")}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+        {showGallery ? (
+          <Suspense fallback={null}>
+            <SolicitudEmpresaDeferredGallery organizationId={config.organizationId} />
+          </Suspense>
         ) : null}
 
         {/* How it works */}
@@ -602,37 +554,13 @@ export default async function SolicitudEmpresaPage({
           </Suspense>
         </section>
 
-        {/* Testimonials */}
-        {showRating && approvedTestimonialsCount > 0 ? (
-          <section className={s.sectionCard}>
-            <div className={s.sectionHeader}>
-              <span className={s.sectionEyebrow}>Clientes que confiaron en nosotros</span>
-              <div className={s.testimonialSummaryPublic}>
-                <strong>{`\u2605\u2605\u2605\u2605\u2605 ${averageRating}`}</strong>
-                <span>{`${approvedTestimonialsCount} valoraciones`}</span>
-              </div>
-            </div>
-
-            <div className={s.testimonialPublicRail}>
-              {approvedTestimonials.slice(0, 3).map((item) => (
-                <article key={String(item.id)} className={s.testimonialPublicCard}>
-                  <div className={s.testimonialPublicTop}>
-                    <strong>{item.nombreCorto || "Cliente"}</strong>
-                    <span>{`${"\u2605".repeat(item.estrellas)}${"\u2606".repeat(
-                      5 - item.estrellas,
-                    )}`}</span>
-                  </div>
-                  <p>{item.comentario}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         {showRating ? (
-          <section className={s.testimonialSection}>
-            <SolicitudEmpresaTestimonialForm slug={config.solicitudPublicaSlug} />
-          </section>
+          <Suspense fallback={null}>
+            <SolicitudEmpresaDeferredTestimonials
+              organizationId={config.organizationId}
+              slug={config.solicitudPublicaSlug}
+            />
+          </Suspense>
         ) : null}
 
         {/* Footer */}

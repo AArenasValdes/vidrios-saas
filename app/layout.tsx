@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import "./globals.css";
 
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
+const shouldRenderDebugProbe = process.env.NODE_ENV === "development";
 const gtmContainerId = googleTagService.getGtmContainerId();
 
 export const metadata: Metadata = {
@@ -86,7 +87,7 @@ export default function RootLayout({
         ) : null}
         <DynamicPwaComponents />
         {/* #region agent log */}
-        <WebVitalsDebugProbe />
+        {shouldRenderDebugProbe ? <WebVitalsDebugProbe /> : null}
         {/* #endregion */}
         {children}
         {shouldRenderVercelInsights ? <Analytics /> : null}

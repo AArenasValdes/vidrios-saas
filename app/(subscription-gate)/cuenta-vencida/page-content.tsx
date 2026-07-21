@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LuArrowLeft } from "react-icons/lu";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import {
@@ -75,6 +74,35 @@ export function CuentaVencidaPageContent() {
     router.push("/dashboard");
   }, [router]);
 
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "d4bf8a",
+      },
+      body: JSON.stringify({
+        sessionId: "d4bf8a",
+        runId: "pass3",
+        hypothesisId: "H-CUENTA",
+        location: "cuenta-vencida/page-content.tsx:mount",
+        message: "cuenta_vencida_shell_check",
+        data: {
+          hasAppShellNav: Boolean(
+            document.querySelector("[class*='sidebar'], [class*='bottomNav']")
+          ),
+          scriptCount: document.scripts.length,
+          fcpMs: Math.round(
+            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? -1
+          ),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, []);
+
   const statusText = (() => {
     if (pagoPendiente) {
       return "Pago pendiente de confirmacion.";
@@ -101,7 +129,16 @@ export function CuentaVencidaPageContent() {
     <section className={s.wrap}>
       <div className={s.card}>
         <button className={s.backButton} type="button" onClick={volver}>
-          <LuArrowLeft aria-hidden />
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+            <path
+              d="M15 18l-6-6 6-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
           <span>Volver</span>
         </button>
 

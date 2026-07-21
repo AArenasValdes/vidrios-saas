@@ -11,8 +11,19 @@ export function GoogleTagProvider() {
 
   useEffect(() => {
     const gtmContainerId = googleTagService.getGtmContainerId();
+    if (!gtmContainerId) {
+      return;
+    }
 
-    if (gtmContainerId && !document.getElementById("ventora-google-tag-manager")) {
+    let cancelled = false;
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const loadGtm = () => {
+      if (cancelled || document.getElementById("ventora-google-tag-manager")) {
+        return;
+      }
+
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
         "gtm.start": new Date().getTime(),
@@ -26,9 +37,30 @@ export function GoogleTagProvider() {
         gtmContainerId
       )}`;
       document.head.appendChild(script);
+      googleTagService.configurePage();
+    };
+
+    // bundle-defer-third-party: no competir con FCP/LCP del primer paint.
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof idleWindow.requestIdleCallback === "function") {
+      idleId = idleWindow.requestIdleCallback(loadGtm, { timeout: 2500 });
+    } else {
+      timeoutId = setTimeout(loadGtm, 1800);
     }
 
-    googleTagService.configurePage();
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof idleWindow.cancelIdleCallback === "function") {
+        idleWindow.cancelIdleCallback(idleId);
+      }
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   useEffect(() => {

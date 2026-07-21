@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FaArrowRight, FaCheckCircle, FaClock, FaComments, FaPhoneAlt } from "react-icons/fa";
 
 import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
 import s from "./page.module.css";
+
+/** Página de conversión cacheable: sin data dinámica. */
+export const dynamic = "force-static";
 
 const DEMO_WHATSAPP_HREF = `https://wa.me/56977338906?text=${encodeURIComponent(
   "Hola, quiero un piloto de Ventora para mi empresa."
@@ -42,25 +44,93 @@ const OPTIONS = [
     },
     tone: "secondary",
   },
-];
+] as const;
 
 const signals = [
   {
-    icon: FaClock,
+    key: "clock",
     title: "Cotiza rápido",
     text: "Arma presupuestos desde el celular en pocos minutos, sin plantillas rotas ni Word a mano.",
   },
   {
-    icon: FaComments,
+    key: "comments",
     title: "PDF + WhatsApp",
     text: "Genera un presupuesto profesional y envíalo directo al cliente por WhatsApp.",
   },
   {
-    icon: FaPhoneAlt,
+    key: "phone",
     title: "Siguiente paso claro",
     text: "Agenda demo o entra a tu cuenta. Sin formularios eternos ni páginas de pricing vacías.",
   },
-];
+] as const;
+
+function SignalIcon({ name }: { name: (typeof signals)[number]["key"] }) {
+  if (name === "clock") {
+    return (
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M12 7v5l3 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (name === "comments") {
+    return (
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+        <path
+          d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+      <path
+        d="M6 4h3l2 5-2 1a10 10 0 0 0 5 5l1-2 5 2v3a2 2 0 0 1-2 2A14 14 0 0 1 4 6a2 2 0 0 1 2-2z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
+      <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.18" />
+      <path
+        d="M7.5 12.5l3 3 6-7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
+      <path
+        d="M5 12h12M13 6l6 6-6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export default function PlanesPage() {
   return (
@@ -109,7 +179,7 @@ export default function PlanesPage() {
                   trackingEventName="demo_click"
                 >
                   Ver demo por WhatsApp
-                  <FaArrowRight aria-hidden />
+                  <ArrowIcon />
                 </TrackedExternalLink>
                 <Link className={s.secondaryButton} href="/login">
                   Entrar a mi cuenta
@@ -118,21 +188,17 @@ export default function PlanesPage() {
             </div>
 
             <div className={s.heroPanel}>
-              {signals.map((signal) => {
-                const Icon = signal.icon;
-
-                return (
-                  <article key={signal.title} className={s.signalCard}>
-                    <div className={s.signalIcon}>
-                      <Icon aria-hidden />
-                    </div>
-                    <div>
-                      <h2>{signal.title}</h2>
-                      <p>{signal.text}</p>
-                    </div>
-                  </article>
-                );
-              })}
+              {signals.map((signal) => (
+                <article key={signal.title} className={s.signalCard}>
+                  <div className={s.signalIcon}>
+                    <SignalIcon name={signal.key} />
+                  </div>
+                  <div>
+                    <h2>{signal.title}</h2>
+                    <p>{signal.text}</p>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </div>
@@ -153,7 +219,7 @@ export default function PlanesPage() {
                 <ul className={s.list}>
                   {option.bullets.map((bullet) => (
                     <li key={bullet} className={s.listItem}>
-                      <FaCheckCircle aria-hidden />
+                      <CheckIcon />
                       <span>{bullet}</span>
                     </li>
                   ))}

@@ -357,9 +357,9 @@
 ## Ruta: /cuenta-vencida
 
 - **Tipo**: Privada (autenticada)
-- **Archivo principal**: `app/(pwa-app)/cuenta-vencida/page.tsx`
-- **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell` (modo minimo)
-- **CSS**: `app/(pwa-app)/cuenta-vencida/page.module.css`
+- **Archivo principal**: `app/(subscription-gate)/cuenta-vencida/page.tsx`
+- **Layout usado**: `app/(subscription-gate)/layout.tsx` (sin `AppShell`; tipografías PWA únicamente)
+- **CSS**: `app/(subscription-gate)/cuenta-vencida/page.module.css`
 - **Proposito**: Pantalla de activacion/renovacion cuando el trial o la suscripcion de la organizacion vencio. Debe empujar planes anuales con Webpay Plus y dejar el mensual manual como opcion secundaria.
 - **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
 - **Funcionalidades visibles**: Flecha volver, hero de activacion, plan recomendado `Founder Full Anual`, opcion `Solo Cotizacion Anual`, opcion `Mensual` por WhatsApp, bloque consultivo `Plan Empresa Acompañado`, accion discreta `Seguir en modo lectura`
@@ -367,7 +367,7 @@
 - **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
 - **Tablas Supabase relacionadas**: `organization_profile`
 - **Acciones principales**: Iniciar Webpay anual, abrir WhatsApp para plan mensual manual, volver a lectura basica
-- **Archivos a tocar para modificar**: `app/(pwa-app)/cuenta-vencida/page.tsx`, `app/(pwa-app)/cuenta-vencida/page.module.css`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
+- **Archivos a tocar para modificar**: `app/(subscription-gate)/cuenta-vencida/page.tsx`, `app/(subscription-gate)/cuenta-vencida/page.module.css`, `app/(subscription-gate)/layout.tsx`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
 - **Riesgos**: No convertirla en logout forzado. Debe convivir con lectura basica del panel y no tocar rutas publicas `/solicitud/[empresa]` ni `/presupuesto/[token]`. Si la cuenta ya esta activa con vencimiento futuro, la UI debe deshabilitar Webpay y mostrar mensaje controlado para evitar doble pago accidental.
 
 ---

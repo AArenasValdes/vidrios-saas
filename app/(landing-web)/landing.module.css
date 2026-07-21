@@ -599,6 +599,16 @@
 }
 
 .showcaseSection,
+/* rendering-content-visibility: secciones largas no bloquean el primer paint. */
+.resultsSection,
+.pricingSection,
+.faqSection,
+.contactSection,
+.footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 900px;
+}
+
 .resultsSection {
   background: linear-gradient(180deg, #101826 0%, #0b1019 100%);
 }

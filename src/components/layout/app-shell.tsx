@@ -379,20 +379,24 @@ function getDesktopViewportServerSnapshot() {
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  // `/cuenta-vencida` vive fuera de AppShell (`(subscription-gate)`).
+  const isActivationRoute = pathname.startsWith("/activacion");
+  const usesMinimalShell = isActivationRoute;
   const { user, rol, signOut, organizacionId, cargando: authCargando } = useAuth();
   const { profile } = useOrganizationProfile();
   const subscription = profile?.subscription ?? resolveOrganizationSubscriptionState(null);
   const isQuoteOnlyPlan =
     profile?.planCode === "quote_only" || subscription.planCode === "quote_only";
   const reduceMotion = useReducedMotion();
-  const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(() =>
-    pathname.startsWith("/solicitudes")
+  const [shouldLoadShellFeeds, setShouldLoadShellFeeds] = useState(
+    () => !usesMinimalShell && pathname.startsWith("/solicitudes")
   );
   const { alerts, isLoading: isAlertsLoading, error: alertsError, refresh } =
-    useCotizacionAlerts(organizacionId, {
-      autoRefresh: shouldLoadShellFeeds,
-      refreshOnVisibility: shouldLoadShellFeeds,
-      pollingIntervalMs: shouldLoadShellFeeds ? 45000 : 0,
+    useCotizacionAlerts(usesMinimalShell ? null : organizacionId, {
+      autoRefresh: !usesMinimalShell && shouldLoadShellFeeds,
+      refreshOnVisibility: !usesMinimalShell && shouldLoadShellFeeds,
+      pollingIntervalMs:
+        !usesMinimalShell && shouldLoadShellFeeds ? 45000 : 0,
     });
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
@@ -445,7 +449,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       "default"
   );
   const { solicitudes: solicitudesShell } = useSolicitudesContacto(
-    canReviewSolicitudes &&
+    !usesMinimalShell &&
+      canReviewSolicitudes &&
       !cargando &&
       (shouldLoadShellFeeds || pathname.startsWith("/solicitudes")),
     solicitudesShellCacheKey
@@ -462,9 +467,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     () => buildOrganizationInitials(companyName),
     [companyName]
   );
-  const isCuentaVencidaRoute = pathname === "/cuenta-vencida";
-  const isActivationRoute = pathname.startsWith("/activacion");
-  const usesMinimalShell = isCuentaVencidaRoute || isActivationRoute;
   const shouldRedirectForSubscription =
     profile !== null &&
     subscription.isWriteBlocked &&
@@ -1271,9 +1273,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className={`${s.root}${
-        usesMinimalShell && !isActivationRoute ? ` ${s.rootMinimal}` : ""
-      }${isDashboardRoute ? ` ${s.rootDashboard}` : ""}${
+      className={`${s.root}${isDashboardRoute ? ` ${s.rootDashboard}` : ""}${
         isCommercialListRoute || isWideSettingsRoute ? ` ${s.rootCommercialList}` : ""
       }`}
     >
