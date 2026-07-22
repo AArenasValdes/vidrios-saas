@@ -60,6 +60,7 @@ function renderWorkspace(overrides: Partial<ComponentProps<typeof QuoteConstruct
     onRecalculateTemplatePrice: jest.fn(),
     onGlobalTotalChange: jest.fn(),
     onGoToSummary: jest.fn(),
+    onOpenDespieceReview: jest.fn(),
     ...overrides,
   };
   render(<QuoteConstructorWorkspace {...props} />);
@@ -70,6 +71,8 @@ describe("QuoteConstructorWorkspace", () => {
   it("muestra presets y varias piezas en el mismo cuaderno", () => {
     const props = renderWorkspace();
     expect(screen.getByRole("button", { name: "Oscilobatiente" })).toBeInTheDocument();
+    expect(screen.getByText(/Agregar pieza/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar otra pieza" })).toBeInTheDocument();
     expect(screen.getAllByText("VEN-01").length).toBeGreaterThan(0);
     expect(screen.getAllByText("VEN-02").length).toBeGreaterThan(0);
     expect(screen.getAllByText("VEN-03").length).toBeGreaterThan(0);
@@ -108,11 +111,30 @@ describe("QuoteConstructorWorkspace", () => {
         item("a", "VEN-01"),
         { ...item("b", "VEN-02"), precioUnitario: 0, precioTotal: 0 },
       ],
+      activeItemId: "b",
     });
 
     expect(screen.getAllByText("1 de 2 completas").length).toBeGreaterThan(0);
-    expect(screen.getByText("Falta precio")).toBeInTheDocument();
+    expect(screen.getAllByText("Falta precio").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Falta completar 1 dato/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Precio unitario" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Faltan precios en 1 pieza" })).toBeInTheDocument();
+  });
+
+  it("permite confirmar una pieza completa y pasar a la siguiente pendiente", () => {
+    const onActiveItemChange = jest.fn();
+    renderWorkspace({
+      items: [
+        item("a", "VEN-01"),
+        { ...item("b", "VEN-02"), precioUnitario: 0, precioTotal: 0 },
+      ],
+      activeItemId: "a",
+      onActiveItemChange,
+    });
+
+    expect(screen.getByText(/Lista para confirmar/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar pieza lista/i }));
+    expect(onActiveItemChange).toHaveBeenCalledWith("b");
   });
 
   it("usa total global sin exponer precio por pieza", () => {

@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type ReactNode,
@@ -17,6 +18,7 @@ import {
   LuCopy,
   LuEllipsis,
   LuPencilRuler,
+  LuPlus,
   LuTrash2,
 } from "react-icons/lu";
 
@@ -33,6 +35,7 @@ import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/compo
 import {
   buildPieceDomainView,
   formatPieceTechnicalSummaryLines,
+  getPiecePresentationMeta,
   isPieceCommerciallyComplete,
   type PieceDomainView,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
@@ -227,6 +230,116 @@ function isInspectorSectionPending(sectionId: InspectorSectionId, view: PieceDom
   }
 }
 
+type InspectorSectionStatus = "pending" | "ready" | "optional";
+type PieceGapTarget = InspectorSectionId | "medidas";
+
+type PieceGap = {
+  id: string;
+  label: string;
+  required: boolean;
+  target: PieceGapTarget;
+};
+
+function getInspectorSectionStatus(
+  sectionId: InspectorSectionId,
+  view: PieceDomainView,
+  pricingMode: QuotePricingMode,
+  item: CotizacionWorkflowItem
+): InspectorSectionStatus {
+  if (sectionId === "apertura") return "optional";
+  if (sectionId === "precio" && pricingMode === "total_global") return "optional";
+
+  if (sectionId === "identificacion") {
+    return item.nombre.trim() ? "ready" : "pending";
+  }
+
+  if (sectionId === "sistema") {
+    const meta = getPiecePresentationMeta(item);
+    return meta.lineTemplateId || item.lineaComercial.trim() ? "ready" : "pending";
+  }
+
+  if (sectionId === "vidrio") {
+    return item.vidrio.trim() ? "ready" : "pending";
+  }
+
+  if (sectionId === "precio") {
+    return pricingMode === "por_item" && item.precioUnitario <= 0 ? "pending" : "ready";
+  }
+
+  if (sectionId === "cubicacion") {
+    return isInspectorSectionPending("cubicacion", view) ? "pending" : "ready";
+  }
+
+  return "ready";
+}
+
+function listPieceGaps(params: {
+  item: CotizacionWorkflowItem;
+  view: PieceDomainView;
+  pricingMode: QuotePricingMode;
+  hasLocalErrors: boolean;
+}): PieceGap[] {
+  const { item, view, pricingMode, hasLocalErrors } = params;
+  const gaps: PieceGap[] = [];
+
+  if (!item.nombre.trim()) {
+    gaps.push({
+      id: "nombre",
+      label: "Nombre",
+      required: true,
+      target: "identificacion",
+    });
+  }
+
+  if (hasLocalErrors || !item.ancho || !item.alto || item.cantidad < 1) {
+    gaps.push({
+      id: "medidas",
+      label: "Medidas o cantidad",
+      required: true,
+      target: "medidas",
+    });
+  }
+
+  if (pricingMode === "por_item" && item.precioUnitario <= 0) {
+    gaps.push({
+      id: "precio",
+      label: "Precio unitario",
+      required: true,
+      target: "precio",
+    });
+  }
+
+  const meta = getPiecePresentationMeta(item);
+  if (!meta.lineTemplateId && !item.lineaComercial.trim()) {
+    gaps.push({
+      id: "linea",
+      label: "Línea comercial",
+      required: false,
+      target: "sistema",
+    });
+  }
+
+  if (!item.vidrio.trim()) {
+    gaps.push({
+      id: "vidrio",
+      label: "Vidrio",
+      required: false,
+      target: "vidrio",
+    });
+  }
+
+  if (isInspectorSectionPending("cubicacion", view)) {
+    gaps.push({
+      id: "cubicacion",
+      label: "Cubicación",
+      required: false,
+      target: "cubicacion",
+    });
+  }
+
+  return gaps;
+}
+
 type EditableInputProps = {
   label: string;
   value: string;
@@ -295,7 +408,7 @@ function EditableInput({
 type InspectorAccordionSectionProps = {
   title: string;
   isOpen: boolean;
-  isPending: boolean;
+  status: InspectorSectionStatus;
   onToggle: () => void;
   children: ReactNode;
 };
@@ -303,12 +416,16 @@ type InspectorAccordionSectionProps = {
 function InspectorAccordionSection({
   title,
   isOpen,
-  isPending,
+  status,
   onToggle,
   children,
 }: InspectorAccordionSectionProps) {
   return (
-    <section className={`${s.accordion} ${isOpen ? s.accordionOpen : ""}`}>
+    <section
+      className={`${s.accordion} ${isOpen ? s.accordionOpen : ""} ${
+        status === "ready" ? s.accordionReadyState : ""
+      } ${status === "pending" ? s.accordionPendingState : ""}`}
+    >
       <button
         type="button"
         className={s.accordionTrigger}
@@ -316,7 +433,18 @@ function InspectorAccordionSection({
         aria-expanded={isOpen}
       >
         <span className={s.accordionTitle}>{title}</span>
-        {isPending ? <span className={s.accordionPending}>Pendiente</span> : null}
+        {status === "pending" ? (
+          <span className={s.accordionPending}>Pendiente</span>
+        ) : null}
+        {status === "ready" ? (
+          <span className={s.accordionReady}>
+            <LuCheck aria-hidden />
+            Listo
+          </span>
+        ) : null}
+        {status === "optional" ? (
+          <span className={s.accordionOptional}>Opcional</span>
+        ) : null}
         <LuChevronDown aria-hidden className={s.accordionChevron} />
       </button>
       <div className={s.accordionPanel}>
@@ -371,6 +499,9 @@ export function QuoteConstructorWorkspace({
   const [fieldDraftsByItemId, setFieldDraftsByItemId] = useState<
     Record<string, ItemFieldDrafts>
   >({});
+  const [confirmedPieceIds, setConfirmedPieceIds] = useState<Set<string>>(() => new Set());
+  const [highlightAddBar, setHighlightAddBar] = useState(false);
+  const presetBarRef = useRef<HTMLElement | null>(null);
   const composerItem = visualItems.find((item) => item.id === composerItemId) ?? null;
   const activeId = activeItem?.id ?? null;
 
@@ -393,13 +524,61 @@ export function QuoteConstructorWorkspace({
   const activeEffectivelyComplete = Boolean(
     activeView?.isCommerciallyComplete && !activeHasLocalErrors
   );
+  const activeGaps =
+    activeItem && activeView
+      ? listPieceGaps({
+          item: activeItem,
+          view: activeView,
+          pricingMode: quotePricingMode,
+          hasLocalErrors: activeHasLocalErrors,
+        })
+      : [];
+  const activeRequiredGaps = activeGaps.filter((gap) => gap.required);
+  const activeRecommendedGaps = activeGaps.filter((gap) => !gap.required);
+  const activeIsConfirmed =
+    Boolean(activeItem) &&
+    activeEffectivelyComplete &&
+    confirmedPieceIds.has(activeItem!.id);
   const activeCommercialLabel = activeHasLocalErrors
     ? "Faltan medidas"
-    : activeView?.commercialLabel ?? "";
+    : activeIsConfirmed
+      ? "Lista"
+      : activeEffectivelyComplete
+        ? "Completa"
+        : activeView?.commercialLabel ?? "";
 
   useEffect(() => {
     if (!activeItemId && visualItems[0]) onActiveItemChange(visualItems[0].id);
   }, [activeItemId, visualItems, onActiveItemChange]);
+
+  useEffect(() => {
+    if (!highlightAddBar) return;
+    const timer = window.setTimeout(() => setHighlightAddBar(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [highlightAddBar]);
+
+  useEffect(() => {
+    setConfirmedPieceIds((current) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of current) {
+        const item = visualItems.find((entry) => entry.id === id);
+        if (!item) {
+          changed = true;
+          continue;
+        }
+        if (
+          itemHasLocalFieldErrors(fieldDraftsByItemId[id]) ||
+          !isPieceCommerciallyComplete(item, quotePricingMode)
+        ) {
+          changed = true;
+          continue;
+        }
+        next.add(id);
+      }
+      return changed ? next : current;
+    });
+  }, [visualItems, fieldDraftsByItemId, quotePricingMode]);
 
   // Si el croquis ya no coincide con un nombre preset ("Ventana fija" → corredera),
   // alinear el nombre comercial sin pedir reabrir el compositor.
@@ -443,6 +622,60 @@ export function QuoteConstructorWorkspace({
       }
       return next;
     });
+  };
+
+  const focusGap = (target: PieceGapTarget) => {
+    if (target === "medidas") {
+      const card = document.querySelector<HTMLElement>(
+        `[data-constructor-piece-id="${activeItem?.id ?? ""}"]`
+      );
+      card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const labels = Array.from(card?.querySelectorAll("label") ?? []);
+      const widthLabel = labels.find((label) =>
+        Boolean(label.querySelector("span")?.textContent?.includes("Ancho"))
+      );
+      widthLabel?.querySelector("input")?.focus();
+      return;
+    }
+    setOpenSections(new Set<InspectorSectionId>([target]));
+  };
+
+  const focusAddBar = () => {
+    setHighlightAddBar(true);
+    presetBarRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const confirmActivePiece = () => {
+    if (!activeItem || !activeEffectivelyComplete) {
+      const firstRequired = activeRequiredGaps[0];
+      if (firstRequired) focusGap(firstRequired.target);
+      return;
+    }
+
+    setConfirmedPieceIds((current) => {
+      const next = new Set(current);
+      next.add(activeItem.id);
+      return next;
+    });
+
+    const nextPending = visualItems.find(
+      (item) => item.id !== activeItem.id && isItemEffectivelyIncomplete(item)
+    );
+    if (nextPending) {
+      onActiveItemChange(nextPending.id);
+      return;
+    }
+
+    const nextUnconfirmed = visualItems.find(
+      (item) =>
+        item.id !== activeItem.id &&
+        !confirmedPieceIds.has(item.id) &&
+        isPieceCommerciallyComplete(item, quotePricingMode) &&
+        !itemHasLocalFieldErrors(fieldDraftsByItemId[item.id])
+    );
+    if (nextUnconfirmed) {
+      onActiveItemChange(nextUnconfirmed.id);
+    }
   };
 
   const setLocalFieldDraft = (
@@ -609,17 +842,29 @@ export function QuoteConstructorWorkspace({
         </div>
       </header>
 
-      <nav className={s.presetBar} aria-label="Agregar componente">
-        <span className={s.presetLabel}>Agregar</span>
-        {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
-          <button key={preset.id} type="button" onClick={() => onAddPreset(preset.id)}>
-            <span
-              aria-hidden
-              dangerouslySetInnerHTML={{ __html: renderGuidedModuleTypeIcon(preset.id, 30) }}
-            />
-            {preset.label}
-          </button>
-        ))}
+      <nav
+        ref={presetBarRef}
+        className={`${s.presetBar} ${highlightAddBar ? s.presetBarHighlight : ""}`}
+        aria-label="Agregar componente"
+      >
+        <div className={s.presetIntro}>
+          <span className={s.presetLabel}>
+            <LuPlus aria-hidden />
+            Agregar pieza
+          </span>
+          <p>Elige un tipo para sumarlo al cuaderno</p>
+        </div>
+        <div className={s.presetButtons}>
+          {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
+            <button key={preset.id} type="button" onClick={() => onAddPreset(preset.id)}>
+              <span
+                aria-hidden
+                dangerouslySetInnerHTML={{ __html: renderGuidedModuleTypeIcon(preset.id, 30) }}
+              />
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </nav>
 
       <div className={s.body}>
@@ -627,8 +872,28 @@ export function QuoteConstructorWorkspace({
           {visualItems.length === 0 ? (
             <div className={s.emptyState}>
               <LuPencilRuler aria-hidden />
-              <h3>Agrega primera ventana o puerta</h3>
-              <p>Elige tipología arriba. Luego ajusta medidas y propiedades aquí mismo.</p>
+              <h3>Empieza agregando la primera pieza</h3>
+              <p>
+                Usa los botones de arriba o elige un tipo aquí. Después ajustas medidas
+                en la tarjeta y el resto en el panel derecho.
+              </p>
+              <div className={s.emptyPresetGrid}>
+                {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => onAddPreset(preset.id)}
+                  >
+                    <span
+                      aria-hidden
+                      dangerouslySetInnerHTML={{
+                        __html: renderGuidedModuleTypeIcon(preset.id, 34),
+                      }}
+                    />
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             <div className={s.pieceGrid}>
@@ -641,16 +906,25 @@ export function QuoteConstructorWorkspace({
                 const hasLocalErrors = itemHasLocalFieldErrors(itemDrafts);
                 const isEffectivelyComplete =
                   view.isCommerciallyComplete && !hasLocalErrors;
+                const isConfirmed =
+                  isEffectivelyComplete && confirmedPieceIds.has(item.id);
                 const commercialLabel = hasLocalErrors
                   ? "Faltan medidas"
-                  : view.commercialLabel;
+                  : isConfirmed
+                    ? "Lista"
+                    : isEffectivelyComplete
+                      ? "Completa"
+                      : view.commercialLabel;
                 const anchoDraft = itemDrafts?.ancho;
                 const altoDraft = itemDrafts?.alto;
                 const cantidadDraft = itemDrafts?.cantidad;
                 return (
                   <article
                     key={item.id}
-                    className={`${s.pieceCard} ${active ? s.pieceCardActive : ""}`}
+                    data-constructor-piece-id={item.id}
+                    className={`${s.pieceCard} ${active ? s.pieceCardActive : ""} ${
+                      isConfirmed ? s.pieceCardConfirmed : ""
+                    }`}
                     onClick={() => onActiveItemChange(item.id)}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
@@ -671,8 +945,16 @@ export function QuoteConstructorWorkspace({
                         <strong>{item.nombre || "Pieza sin nombre"}</strong>
                       </div>
                       <div className={s.badgeRow}>
-                        <span className={isEffectivelyComplete ? s.ready : s.pending}>
-                          {isEffectivelyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
+                        <span
+                          className={
+                            isConfirmed || isEffectivelyComplete ? s.ready : s.pending
+                          }
+                        >
+                          {isConfirmed || isEffectivelyComplete ? (
+                            <LuCheck aria-hidden />
+                          ) : (
+                            <LuCircleAlert aria-hidden />
+                          )}
                           {commercialLabel}
                         </span>
                         <span
@@ -786,6 +1068,18 @@ export function QuoteConstructorWorkspace({
                   </article>
                 );
               })}
+              <button
+                type="button"
+                className={s.addPieceTile}
+                onClick={focusAddBar}
+                aria-label="Agregar otra pieza"
+              >
+                <span className={s.addPieceTileIcon}>
+                  <LuPlus aria-hidden />
+                </span>
+                <strong>Agregar otra pieza</strong>
+                <span>Fijo, corredera, puerta y más</span>
+              </button>
             </div>
           )}
           {nonVisualCount > 0 ? (
@@ -804,8 +1098,16 @@ export function QuoteConstructorWorkspace({
                   <strong>{activeItem.codigo}</strong>
                 </div>
                 <div className={s.badgeRow}>
-                  <span className={activeEffectivelyComplete ? s.ready : s.pending}>
-                    {activeEffectivelyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
+                  <span
+                    className={
+                      activeIsConfirmed || activeEffectivelyComplete ? s.ready : s.pending
+                    }
+                  >
+                    {activeIsConfirmed || activeEffectivelyComplete ? (
+                      <LuCheck aria-hidden />
+                    ) : (
+                      <LuCircleAlert aria-hidden />
+                    )}
                     {activeCommercialLabel}
                   </span>
                   <span
@@ -818,11 +1120,97 @@ export function QuoteConstructorWorkspace({
                 </div>
               </div>
 
+              <div
+                className={`${s.checklistPanel} ${
+                  activeIsConfirmed
+                    ? s.checklistReady
+                    : activeRequiredGaps.length > 0
+                      ? s.checklistPending
+                      : s.checklistSoft
+                }`}
+                aria-live="polite"
+              >
+                {activeIsConfirmed ? (
+                  <>
+                    <div className={s.checklistHeader}>
+                      <LuCheck aria-hidden />
+                      <strong>Pieza lista</strong>
+                    </div>
+                    <p>Ya puedes seguir con otra pieza o ir al resumen.</p>
+                  </>
+                ) : activeRequiredGaps.length > 0 ? (
+                  <>
+                    <div className={s.checklistHeader}>
+                      <LuCircleAlert aria-hidden />
+                      <strong>
+                        Falta completar {activeRequiredGaps.length}{" "}
+                        {activeRequiredGaps.length === 1 ? "dato" : "datos"}
+                      </strong>
+                    </div>
+                    <div className={s.checklistChips}>
+                      {activeRequiredGaps.map((gap) => (
+                        <button
+                          key={gap.id}
+                          type="button"
+                          className={s.checklistChipRequired}
+                          onClick={() => focusGap(gap.target)}
+                        >
+                          {gap.label}
+                        </button>
+                      ))}
+                    </div>
+                    {activeRecommendedGaps.length > 0 ? (
+                      <div className={s.checklistChipsSoft}>
+                        <span>Recomendado:</span>
+                        {activeRecommendedGaps.map((gap) => (
+                          <button
+                            key={gap.id}
+                            type="button"
+                            className={s.checklistChipSoft}
+                            onClick={() => focusGap(gap.target)}
+                          >
+                            {gap.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <div className={s.checklistHeader}>
+                      <LuCheck aria-hidden />
+                      <strong>Lista para confirmar</strong>
+                    </div>
+                    <p>Revisa el precio y marca la pieza como lista cuando esté OK.</p>
+                    {activeRecommendedGaps.length > 0 ? (
+                      <div className={s.checklistChipsSoft}>
+                        <span>Opcional:</span>
+                        {activeRecommendedGaps.map((gap) => (
+                          <button
+                            key={gap.id}
+                            type="button"
+                            className={s.checklistChipSoft}
+                            onClick={() => focusGap(gap.target)}
+                          >
+                            {gap.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+
               <div className={s.accordionList}>
                 <InspectorAccordionSection
                   title="Identificación"
                   isOpen={openSections.has("identificacion")}
-                  isPending={isInspectorSectionPending("identificacion", activeView)}
+                  status={getInspectorSectionStatus(
+                    "identificacion",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("identificacion")}
                 >
                   <EditableInput
@@ -837,7 +1225,12 @@ export function QuoteConstructorWorkspace({
                 <InspectorAccordionSection
                   title="Sistema y material"
                   isOpen={openSections.has("sistema")}
-                  isPending={isInspectorSectionPending("sistema", activeView)}
+                  status={getInspectorSectionStatus(
+                    "sistema",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("sistema")}
                 >
                   <div className={s.inspectorField}>
@@ -873,7 +1266,12 @@ export function QuoteConstructorWorkspace({
                 <InspectorAccordionSection
                   title="Vidrio y color"
                   isOpen={openSections.has("vidrio")}
-                  isPending={isInspectorSectionPending("vidrio", activeView)}
+                  status={getInspectorSectionStatus(
+                    "vidrio",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("vidrio")}
                 >
                   <div className={s.inspectorField}>
@@ -943,7 +1341,12 @@ export function QuoteConstructorWorkspace({
                 <InspectorAccordionSection
                   title="Apertura y composición"
                   isOpen={openSections.has("apertura")}
-                  isPending={isInspectorSectionPending("apertura", activeView)}
+                  status={getInspectorSectionStatus(
+                    "apertura",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("apertura")}
                 >
                   <div className={s.openingField}>
@@ -985,7 +1388,12 @@ export function QuoteConstructorWorkspace({
                 <InspectorAccordionSection
                   title="Cubicación y despiece"
                   isOpen={openSections.has("cubicacion")}
-                  isPending={isInspectorSectionPending("cubicacion", activeView)}
+                  status={getInspectorSectionStatus(
+                    "cubicacion",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("cubicacion")}
                 >
                   <DespieceInspectorSummary
@@ -1005,7 +1413,12 @@ export function QuoteConstructorWorkspace({
                 <InspectorAccordionSection
                   title="Precio"
                   isOpen={openSections.has("precio")}
-                  isPending={isInspectorSectionPending("precio", activeView)}
+                  status={getInspectorSectionStatus(
+                    "precio",
+                    activeView,
+                    quotePricingMode,
+                    activeItem
+                  )}
                   onToggle={() => toggleSection("precio")}
                 >
                   <div className={s.priceSectionInner}>
@@ -1046,16 +1459,61 @@ export function QuoteConstructorWorkspace({
                 </InspectorAccordionSection>
               </div>
 
-              <button
-                type="button"
-                className={s.advancedButton}
-                onClick={() => onEditAdvanced(activeItem)}
-              >
-                Abrir configuración guiada
-              </button>
+              <div className={s.inspectorFooter}>
+                <button
+                  type="button"
+                  className={
+                    activeIsConfirmed
+                      ? s.confirmPieceDone
+                      : activeEffectivelyComplete
+                        ? s.confirmPieceReady
+                        : s.confirmPieceBlocked
+                  }
+                  onClick={
+                    activeIsConfirmed && incompleteCount === 0
+                      ? onGoToSummary
+                      : confirmActivePiece
+                  }
+                >
+                  {activeIsConfirmed ? (
+                    incompleteCount === 0 ? (
+                      <>
+                        Ir al resumen
+                        <LuArrowRight aria-hidden />
+                      </>
+                    ) : (
+                      <>
+                        <LuCheck aria-hidden />
+                        Pieza confirmada
+                      </>
+                    )
+                  ) : activeEffectivelyComplete ? (
+                    <>
+                      <LuCheck aria-hidden />
+                      Confirmar pieza lista
+                    </>
+                  ) : (
+                    <>Completar lo pendiente</>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={s.advancedButton}
+                  onClick={() => onEditAdvanced(activeItem)}
+                >
+                  Abrir configuración guiada
+                </button>
+              </div>
             </>
           ) : (
-            <div className={s.inspectorEmpty}>Selecciona o agrega una pieza.</div>
+            <div className={s.inspectorEmpty}>
+              <LuPlus aria-hidden />
+              <strong>Sin pieza seleccionada</strong>
+              <p>Agrega un tipo arriba o elige una tarjeta del cuaderno.</p>
+              <button type="button" className={s.emptyFocusAdd} onClick={focusAddBar}>
+                Ir a agregar pieza
+              </button>
+            </div>
           )}
         </aside>
       </div>
