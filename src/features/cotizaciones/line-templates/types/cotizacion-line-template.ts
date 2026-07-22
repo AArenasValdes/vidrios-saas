@@ -38,7 +38,7 @@ export type CotizacionLineTemplate = {
   proveedor: string | null;
   vigenciaDesde: string | null;
   vigenciaHasta: string | null;
-  catalogMetadata: Record<string, string | number | boolean | null>;
+  catalogMetadata: CotizacionLineTemplateCatalogMetadata;
   isActive: boolean;
   sortOrder: number;
   creadoEn: string | null;
@@ -46,9 +46,17 @@ export type CotizacionLineTemplate = {
   eliminadoEn: string | null;
 };
 
+/** Escalares + objetos anidados conocidos (fabricationRecipe, workshopProfiles). */
+export type CotizacionLineTemplateCatalogMetadataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | object;
+
 export type CotizacionLineTemplateCatalogMetadata = Record<
   string,
-  string | number | boolean | null
+  CotizacionLineTemplateCatalogMetadataValue
 >;
 
 export type CotizacionGlassProductMetadata = {
@@ -673,7 +681,7 @@ export type CreateCotizacionLineTemplateInput = {
   proveedor?: string | null;
   vigenciaDesde?: string | null;
   vigenciaHasta?: string | null;
-  catalogMetadata?: Record<string, string | number | boolean | null>;
+  catalogMetadata?: CotizacionLineTemplateCatalogMetadata;
   isActive?: boolean;
   sortOrder?: number;
 };
@@ -693,7 +701,7 @@ export type UpdateCotizacionLineTemplateInput = {
   proveedor?: string | null;
   vigenciaDesde?: string | null;
   vigenciaHasta?: string | null;
-  catalogMetadata?: Record<string, string | number | boolean | null>;
+  catalogMetadata?: CotizacionLineTemplateCatalogMetadata;
   isActive?: boolean;
   sortOrder?: number;
 };

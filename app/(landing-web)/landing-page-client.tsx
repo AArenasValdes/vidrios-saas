@@ -252,31 +252,6 @@ function CountUpNumber({
 export function LandingBelowFold() {
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
 
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "d4bf8a",
-      },
-      body: JSON.stringify({
-        sessionId: "d4bf8a",
-        runId: "pass3",
-        hypothesisId: "H-LANDING",
-        location: "landing-page-client.tsx:LandingBelowFold",
-        message: "below_fold_mounted",
-        data: {
-          fcpMs: Math.round(
-            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? -1
-          ),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, []);
-
   function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
     if (kind === "whatsapp") {
       googleTagService.trackWhatsappClick({

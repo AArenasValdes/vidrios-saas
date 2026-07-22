@@ -107,20 +107,35 @@ function normalizeUnidadCobroFromRow(
   return "m2";
 }
 
+const NESTED_CATALOG_METADATA_KEYS = new Set([
+  "fabricationRecipe",
+  "workshopProfiles",
+]);
+
 function mapCatalogMetadata(
   value: Record<string, unknown> | null | undefined
-): Record<string, string | number | boolean | null> {
+): Record<string, string | number | boolean | null | object> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
 
-  const output: Record<string, string | number | boolean | null> = {};
+  const output: Record<string, string | number | boolean | null | object> = {};
   for (const [key, entry] of Object.entries(value)) {
     if (
       typeof entry === "string" ||
       typeof entry === "number" ||
       typeof entry === "boolean" ||
       entry === null
+    ) {
+      output[key] = entry;
+      continue;
+    }
+
+    // Conservar objetos/arrays anidados conocidos (receta de fabricación V1).
+    if (
+      NESTED_CATALOG_METADATA_KEYS.has(key) &&
+      entry !== undefined &&
+      typeof entry === "object"
     ) {
       output[key] = entry;
     }

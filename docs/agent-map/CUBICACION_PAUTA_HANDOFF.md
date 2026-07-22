@@ -1,6 +1,6 @@
 # Handoff autocontenido — Cubicación y pauta (Ventora)
 
-**Fecha:** 2026-07-19  
+**Fecha:** 2026-07-21  
 **Para:** IA web / ChatGPT / Claude / Gemini / agente sin acceso al repo  
 **Cómo usar:** copia **TODO este archivo** y pégalo en el chat. No necesita abrir otros archivos.  
 **Idioma de respuesta esperado:** español.
@@ -12,7 +12,7 @@
 Eres un asesor/implementador de producto y UX para **Ventora**, software comercial para talleres de vidrios, aluminio y PVC.
 
 Este documento es tu **única fuente de verdad** sobre cubicación, pauta de cortes, catálogo de líneas y constructor.  
-Si el usuario te pide algo que contradiga este handoff, **explícalo y recomienda seguir Camino 2**, no inventes un ERP técnico.
+Si el usuario te pide algo que contradiga este handoff, **explícalo y recomienda seguir el modelo de recetas**, no inventes un ERP técnico.
 
 Reglas:
 1. Responde en español, claro y accionable.
@@ -45,12 +45,35 @@ Ventora **no** es:
 
 ---
 
-## 2. Decisión vigente: Camino 2 (2026-07-19)
+## 2. Decisión vigente: Recetas de fabricación (2026-07-21)
+
+**Supersede Camino 2** respecto a “solo 3 partidas genéricas Marco/Hoja”.
+
+El modelo de cubicación pasa a **recetas de componentes reales** (riel, jamba, cabezal, zócalo, pierna, traslapo, etc.) con reglas de corte guiadas. Las 3 partidas V1 quedan como **compatibilidad/migración** al leer líneas antiguas.
+
+| Capa | Rol | Obligatorio para cotizar |
+|---|---|---|
+| **Línea del catálogo** | Precio comercial | Sí (datos básicos) |
+| **Receta de fabricación** | Componentes reales + reglas por línea/variante | No (solo si el taller activa cubicación) |
+| **Constructor visual** | Tipología / composición geométrica | Solo si el trabajo es visual/complejo |
+| **Pauta en la cotización** | Cortes por perfil + snapshot histórico (v2) | No |
+
+### Mejor solución
+
+1. Cotizar con precio **no requiere** cubicación.
+2. Tipo de fabricación → **plantilla estructural** editable (no motor único marco/hoja).
+3. El taller vincula perfiles y valida con un trabajo real.
+4. Tipologías complejas → **constructor**; la **receta** define cortes.
+5. No abrir optimizador / nesting / CAD / ERP técnico. La distribución de barras es **sugerida / referencial**.
+
+---
+
+## 2b. Decisión anterior: Camino 2 (2026-07-19) — histórica
 
 Problema que vimos en producto:  
 el campo “Sistema que fabrica” parecía un catálogo de tipologías (bow, abatibles, etc.), pero en realidad solo alimenta una **estimación V1**. Eso abruma a los maestros.
 
-### Decisión
+### Decisión (histórica; reemplazada por recetas)
 
 | Capa | Rol | Obligatorio para cotizar |
 |---|---|---|
@@ -82,23 +105,25 @@ el campo “Sistema que fabrica” parecía un catálogo de tipologías (bow, ab
 A) Catálogo privado (configuración)
    Ruta conceptual: Configuración → Líneas y precios
    1. Crear línea comercial: nombre, categoría, material, precio, mínimo, redondeo
-   2. (Opcional) Activar “Estimación V1”
-   3. Elegir PARTIDA: Paño fijo | Corredera 2 hojas | Puerta abatible 1 hoja
-   4. Elegir ESTADO: sin configurar → … → validada
-   5. (Segundo paso opcional) Perfiles del taller, descuentos en mm, calibración con ejemplo real
+   2. Elegir uso: Solo cotizar | Estimación | Cubicación y pauta
+   3. Si activa cubicación: tipo de fabricación → plantilla estructural (riel, jamba, cabezal…)
+   4. Asignar códigos de perfil reales del taller + descuentos mm
+   5. Validar con un trabajo real (estados de receta hasta Validada)
+   Nota: partidas Marco/Hoja V1 solo migran líneas antiguas; no son la UI principal.
 
 B) Cotizar (Quote Studio desktop)
    1. Elegir componente (ventana, puerta, etc.)
    2. Elegir línea del catálogo (esto trae el precio)
-   3. Composición / tipología en constructor si aplica (bow, módulos, personalizado…)
+   3. Composición / tipología en constructor si aplica
    4. Ingresar medidas
-   5. Si la línea tiene estimación activa: ver “Cubicación y pauta” revisable
-   6. Al guardar la pieza: se congela un snapshot histórico de la pauta
+   5. Si la línea tiene pauta activa: ver “Cubicación y pauta” / despiece revisable
+   6. Al guardar la pieza: se congela un snapshot histórico v2 (incluye receta)
 
 C) Ajuste
    - Se puede editar la pauta solo para esa cotización
-   - Se puede “guardar ajuste” de perfiles de vuelta a la línea (con cuidado de estado)
+   - Se puede “guardar ajuste” de vuelta a la línea (con cuidado de estado)
    - Se puede ver pauta consolidada de toda la cotización
+   - Barras = distribución sugerida / referencial (no optimizador)
 ```
 
 ### Preguntas típicas del usuario → respuesta correcta
@@ -106,10 +131,10 @@ C) Ajuste
 | Pregunta | Respuesta |
 |---|---|
 | ¿Cuánto cobro? | Precio de la **línea** (+ mínimo/redondeo) |
-| ¿Es bow / abatible / proyectante? | Se arma en el **constructor**, no en la partida |
-| ¿Cuánto material estimo? | **Partida V1** + descuentos + pauta (opcional) |
-| ¿Por qué no hay más sistemas? | Porque no es catálogo de tipologías; son 3 patrones de cálculo |
-| ¿Si cambio la línea después, cambia una cotización vieja? | No: la pauta histórica queda congelada en snapshot |
+| ¿Es bow / abatible / proyectante? | Se arma en el **constructor**, no en la receta de catálogo |
+| ¿Cuánto material estimo? | **Receta de fabricación** + pauta (opcional) |
+| ¿Por qué dice Por asignar en Perfil? | Falta código real del taller; la función (Riel/Jamba…) sí está |
+| ¿Si cambio la línea después, cambia una cotización vieja? | No: la pauta histórica queda congelada en snapshot v2 |
 
 ---
 
@@ -262,23 +287,24 @@ Motivo: Personalizado no se parece a una partida fija; forzar auto miente al tal
 
 ---
 
-## 9. UX que debe sentirse (Camino 2)
+## 9. UX que debe sentirse (recetas)
 
 ### Modal “Nueva línea”
 
 1. Primero: datos básicos + precio (esto basta para cotizar).
 2. Banner claro: “Para cotizar basta con esto”.
-3. Estimación **apagada** por defecto.
-4. Si la activan: solo ven **partida + estado**.
-5. Segundo paso opcional: “Configurar perfiles y descuentos”.
-6. Copy: “patrón de cálculo, no tipología; tipologías complejas van en el constructor”.
+3. Uso de línea: Solo cotizar / Estimación / Cubicación y pauta (apagado por defecto).
+4. Si activan cubicación: tipo de fabricación → componentes reales + códigos de perfil del taller.
+5. Validar con ejemplo real antes de tratar la pauta como confiable.
+6. Tipologías complejas van en el constructor, no en el catálogo.
 
 ### Quote Studio (cotizar)
 
 - Precio viene de la línea.
 - Tipología visual del constructor.
-- Cubicación/pauta aparece como sección secundaria cuando hay línea con estimación + medidas.
-- Debe sentirse revisable, no “automática e infalible”.
+- Cubicación/pauta aparece cuando hay línea con pauta + medidas.
+- Perfil sin código real muestra **Por asignar**; la función (Riel, Jamba…) sí se muestra.
+- Debe sentirse revisable / referencial, no “automática e infalible”.
 
 ### Principios UX para maestros
 - Poco scroll / poca densidad al entrar.
@@ -405,3 +431,11 @@ Luego pega **todo este archivo** debajo.
 - **Validada:** estimación confiable; otros estados = referencial.
 - **Personalizado:** pieza a medida; pauta manual asistida.
 - **Camino 2:** decisión de mantener estimación simple y tipología en el constructor.
+
+## 15. QA smoke (2026-07-21)
+
+- Credencial de prueba local: `admin@test.com` / `1234` (no `!1234`).
+- Flujo OK: Líneas y precios → uso Cubicación y pauta → guardar → `/cotizaciones/nueva` → línea + medidas → Recalcular → Abrir despiece.
+- Esperado: filas con **Función** real (Riel superior, Jamba, Cabezal…) y **Perfil** = código de taller o `Por asignar`.
+- Barras y sobrante son referenciales.
+

@@ -66,11 +66,11 @@ pagina/componente -> hook -> service -> repository -> Supabase
 - Mobile sigue siendo prioritario para cotizar en terreno.
 - Desktop evoluciona como escritorio de cotizacion y control comercial real.
 - `projects` es la tabla tecnica; en producto se presenta como **Obras**.
-- **Estado a 2026-07-20:**
+- **Estado a 2026-07-21:**
   1. Fases 1, 2A, **2B** y 5 — cerradas / implementadas (2B en changelog 17-07);
   2. Fase 3 constructor V2/cuaderno desktop — usable y abierto solo a pulido controlado; handoff en `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`;
-  3. Pasada reciente = diseño desktop (Fase 5 + shell/listados/detalles/catálogo UX);
-  4. **Fase actual:** Fase 4 cubicacion asistida y pauta revisable V1; corte inicial implementado con sistemas/estados/roles en `catalog_metadata` y panel desktop en `/cotizaciones/nueva`;
+  3. Pasada reciente de diseño desktop (Fase 5 + shell/listados/detalles/catálogo UX);
+  4. **Fase actual:** Fase 4 — **recetas de fabricación** + pauta revisable + snapshot v2; panel en `/cotizaciones/nueva`; handoff `CUBICACION_PAUTA_HANDOFF.md`;
   5. CRM/Kanban — no abrir.
 - Desktop no esta abriendo pipeline CRM, oportunidades, cobros ni multiusuario en esta etapa.
 

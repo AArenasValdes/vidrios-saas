@@ -221,9 +221,8 @@ function NuevaCotizacionPageContent() {
     clientId?: string | number | null;
     projectId?: string | number | null;
   } | null>(null);
-  const [sourceSolicitudId, setSourceSolicitudId] = useState<string | null>(() =>
-    getNuevaCotizacionSolicitudSourceId()
-  );
+  // null en SSR + primer paint; sessionStorage se lee en effect (evita hydration mismatch)
+  const [sourceSolicitudId, setSourceSolicitudId] = useState<string | null>(null);
   const {
     clientes,
     ensureClientesLoaded,
@@ -233,6 +232,10 @@ function NuevaCotizacionPageContent() {
     isReady,
     isSaving,
   } = useCotizacionesStore({ autoLoadSummary: false });
+
+  useEffect(() => {
+    setSourceSolicitudId(getNuevaCotizacionSolicitudSourceId());
+  }, []);
 
   const suggestionProvider: PreferredProvider = "";
   const preferredPricingMode = normalizePricingMode(

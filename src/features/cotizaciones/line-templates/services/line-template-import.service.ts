@@ -4,6 +4,7 @@ import {
   LINE_TEMPLATE_CATEGORIAS,
   LINE_TEMPLATE_UNIDADES_COBRO,
   type CotizacionLineTemplate,
+  type CotizacionLineTemplateCatalogMetadata,
   type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateMaterial,
   type CotizacionLineTemplateUnidadCobro,
@@ -461,7 +462,7 @@ export function buildLineTemplateImportPreview(input: {
 
     const espesor = cellValue(row, input.mapping.espesor);
     const terminacion = cellValue(row, input.mapping.terminacion);
-    const commercialMetadata: Record<string, string | number | boolean | null> = {};
+    const commercialMetadata: CotizacionLineTemplateCatalogMetadata = {};
     if (espesor) commercialMetadata.espesor = espesor;
     if (terminacion) commercialMetadata.terminacion = terminacion;
 

@@ -123,4 +123,55 @@ describe("QuoteConstructorWorkspace", () => {
     fireEvent.blur(totalInput);
     expect(props.onGlobalTotalChange).toHaveBeenCalledWith("500000");
   });
+
+  it("no escribe medidas inválidas y bloquea el CTA hasta corregir", () => {
+    const props = renderWorkspace({ items: [item("a", "VEN-01")] });
+    const widthInput = screen.getAllByLabelText(/Ancho/)[0];
+
+    fireEvent.change(widthInput, { target: { value: "150" } });
+    fireEvent.blur(widthInput);
+
+    expect(props.onUpdateItem).not.toHaveBeenCalled();
+    expect(screen.getAllByText("Ancho mínimo 200 mm").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Faltan medidas").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Revisar pendientes|Faltan/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Revisar cotización" })
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(widthInput, { target: { value: "1500" } });
+    fireEvent.blur(widthInput);
+
+    expect(props.onUpdateItem).toHaveBeenCalledWith(
+      "a",
+      expect.objectContaining({
+        ancho: "1500",
+        guidedVisualConfig: expect.objectContaining({ widthMm: 1500 }),
+      })
+    );
+    expect(screen.queryByText("Ancho mínimo 200 mm")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revisar cotización" })).toBeInTheDocument();
+  });
+
+  it("no escribe cantidad inválida y conserva el draft al cambiar de pieza", () => {
+    const onActiveItemChange = jest.fn();
+    const props = renderWorkspace({
+      items: [item("a", "VEN-01"), item("b", "VEN-02")],
+      onActiveItemChange,
+    });
+
+    const quantityInputs = screen.getAllByLabelText(/Cantidad/);
+    fireEvent.change(quantityInputs[0], { target: { value: "0" } });
+    fireEvent.blur(quantityInputs[0]);
+
+    expect(props.onUpdateItem).not.toHaveBeenCalled();
+    expect(screen.getAllByText("Cantidad inválida").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByText("VEN-02")[0]);
+    expect(onActiveItemChange).toHaveBeenCalledWith("b");
+
+    const quantityAfterSwitch = screen.getAllByLabelText(/Cantidad/)[0] as HTMLInputElement;
+    expect(quantityAfterSwitch.value).toBe("0");
+    expect(screen.getAllByText("Cantidad inválida").length).toBeGreaterThan(0);
+  });
 });

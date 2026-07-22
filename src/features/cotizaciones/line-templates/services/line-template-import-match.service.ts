@@ -1,4 +1,7 @@
-import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type {
+  CotizacionLineTemplate,
+  CotizacionLineTemplateCatalogMetadata,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
 export type LineTemplateImportMatchKind = "exact_name" | "line_code" | "fuzzy_name";
 
@@ -123,11 +126,11 @@ export function findExistingTemplateForImport(
 }
 
 export function mergeCatalogMetadataForCommercialUpdate(
-  existing: Record<string, string | number | boolean | null> | undefined,
-  incoming: Record<string, string | number | boolean | null> | undefined,
+  existing: CotizacionLineTemplateCatalogMetadata | undefined,
+  incoming: CotizacionLineTemplateCatalogMetadata | undefined,
   precioM2Sugerido: number
 ) {
-  const next: Record<string, string | number | boolean | null> = {
+  const next: CotizacionLineTemplateCatalogMetadata = {
     ...(existing ?? {}),
   };
 

@@ -2233,10 +2233,11 @@
     gap: 0.65rem;
     align-content: start;
     min-height: 0;
-    padding: 0.75rem 1.25rem 0.8rem;
+    padding: 0.75rem 1.25rem 1.35rem;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    scroll-padding-bottom: 1.25rem;
   }
 
   .desktopPieceBody .field span {
@@ -2395,6 +2396,8 @@
     gap: 1rem;
     align-items: center;
     flex-shrink: 0;
+    position: relative;
+    z-index: 2;
     padding: 0.55rem 1.25rem;
     border-top: 1px solid #eef2f6;
     background: #ffffff;

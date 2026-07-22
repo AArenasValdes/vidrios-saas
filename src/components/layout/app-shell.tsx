@@ -805,38 +805,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "d4bf8a",
-      },
-      body: JSON.stringify({
-        sessionId: "d4bf8a",
-        runId: "activacion-gate",
-        hypothesisId: "H4",
-        location: "app-shell.tsx:subscription_redirect",
-        message: "subscription_kick_cuenta_vencida",
-        data: {
-          pathname,
-          isWriteBlocked: subscription.isWriteBlocked,
-          effectiveStatus: subscription.effectiveStatus,
-          isActivationRoute,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     router.replace("/cuenta-vencida");
-  }, [
-    isActivationRoute,
-    pathname,
-    router,
-    shouldRedirectForSubscription,
-    subscription.effectiveStatus,
-    subscription.isWriteBlocked,
-  ]);
+  }, [router, shouldRedirectForSubscription]);
 
   useEffect(() => {
     if (!shouldRedirectQuoteOnlyRoute) {

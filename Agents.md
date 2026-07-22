@@ -58,19 +58,18 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-07-20
+Ultima actualizacion operativa: 2026-07-21
 
-- **Paso actual**: **Fase 4 — Cubicación asistida y pauta de corte revisable V1 (Camino 2)**. Fase 5 + diseño desktop quedaron cerrados para demo; Quote Studio (1) y catálogo 2A/2B están cerrados. Constructor V2/cuaderno es usable y queda abierto solo a pulido controlado. Handoff obligatorio: `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`.
-- **Decisión Camino 2 (2026-07-19)**: no ampliar tipologías en el selector de partida. Catálogo = precio; 3 partidas V1 = estimación opcional; tipologías complejas = constructor. Handoff: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
-- **Corte Fase 4 ya implementado (2026-07-18 + UX Camino 2 2026-07-19)**:
-  - partidas V1 en metadata (fijas): `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`;
-  - estados V1: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`;
-  - roles de perfil en `cotizacion_line_templates.catalog_metadata`: marco/riel, hoja, encuentro, junquillo, zocalo y accesorio;
-  - helper central `buildLineTemplateCuttingPreview()` devuelve `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, vidrio estimado, ml perfiles, accesorios y barras referenciales;
-  - `/configuracion/empresa/lineas-precios`: estimación secundaria (partida/estado primero; perfiles/descuentos en segundo paso);
-  - `/cotizaciones/nueva` desktop muestra panel colapsable **Cubicacion y pauta** al elegir linea con pauta activa + medidas.
-- **Alcance activo Fase 4**: cubicar sin precios y mostrar pauta interna revisable por línea/proveedor/partida. Permitido: m² vidrio, ml marco/hojas, cantidad, accesorios, tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, barras y desperdicio solo como referencia.
-- **Fuera de alcance Fase 4 V1**: ampliar tipologías en el selector de partida, precios, costos, margen, inventario, compras, fabricación automática, optimización de pérdida, nesting, CAD y prometer manuales técnicos reales sin calibración de taller.
+- **Paso actual**: **Fase 4 — Cubicación y pauta revisable con recetas de fabricación**. Fase 5 + diseño desktop cerrados para demo; Quote Studio (1), catálogo 2A/2B y constructor V2/cuaderno cerrados o en pulido controlado. Handoffs: `CUBICACION_PAUTA_HANDOFF.md` + `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
+- **Modelo vigente (2026-07-21)**: supersede Camino 2 como UI principal. Catálogo = precio; **receta opcional** (riel/jamba/cabezal/…) = cubicación/pauta; tipologías complejas = constructor. Partidas Marco/Hoja V1 = solo migración. Handoff: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
+- **Corte Fase 4 ya implementado**:
+  - `catalog_metadata.fabricationRecipe` + wizard Nueva línea pasos 3–4;
+  - estados de receta: `sin_configurar` → `validada` / `requiere_revision`;
+  - motor `buildRecipeCuttingPreview()` (cortes por perfil/función, vidrio, barras referenciales);
+  - snapshot cotización **v2** `[cub:]`; panel desktop en `/cotizaciones/nueva`;
+  - placeholders `Marco`/`Hoja` ya no se muestran como código de perfil (UI: `Por asignar`).
+- **Alcance activo Fase 4**: cubicar sin precios y mostrar pauta interna revisable. Permitido: m² vidrio, ml perfiles, cantidad, accesorios, tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, barras y desperdicio solo como referencia.
+- **Fuera de alcance Fase 4 V1**: precios/costos de pauta, inventario, compras, fabricación automática, optimización de pérdida, nesting, CAD y prometer manuales técnicos reales sin calibración de taller.
 - **No abrir por inercia**: CRM/seguimiento, Kanban.
 - **Hitos cerrados (ver roadmap; el orden numérico ≠ orden de ejecución)**:
   - Fase 1 Quote Studio — cerrada con QA
@@ -101,12 +100,11 @@ Ultima actualizacion operativa: 2026-07-20
   - busquedas base de `clientes` y `cotizaciones` responden
   - `solicitudes` navega a `canales`
   - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
+- **Smoke cubicación (2026-07-21)**: `admin@test.com` / `1234` — línea con pauta → cotizar → Recalcular → Abrir despiece muestra cortes por función (Riel/Jamba/Cabezal) y resumen ml/barras.
 - **Cómo seguir**:
-  1. Constructor: leer `docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md` y cerrar primero validacion local de ancho/alto/cantidad invalidos sin corromper draft;
-  2. Constructor/PDF: obtener PDF real, rasterizar con Poppler y validar piezas extremas + `total_global`;
-  3. Constructor: completar regresiones cuando se repare Jest global; no rehacer cuaderno ni renderer sin bug concreto;
-  4. Fase 4: validar calibracion con ejemplos reales de un piloto; presets por proveedor solo si el taller lo pide;
-  5. no reabrir 2B, CRM/Kanban ni ampliar partidas por inercia.
+  1. Fase 4: calibrar con códigos de perfil reales de un piloto (dejar `Por asignar`);
+  2. Constructor/PDF: rasterizar PDF real con Poppler si se toca croquis;
+  3. no reabrir 2B, CRM/Kanban ni inventar tipologías en el catálogo.
 - **Nueva pasada cerrada en cotizaciones**:
   - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
   - nueva tabla activa `cotizacion_line_templates`
@@ -210,7 +208,7 @@ Ultima actualizacion operativa: 2026-07-20
   - flujos profundos de `/cotizaciones/nueva`
   - acciones de edicion/eliminacion en `/clientes`
 - Correr smoke visual de Espejo/Cubierta de mesa en cotizacion y PDF si se toca `shouldRequireProfileMaterialForComponent` o `item-print-specs.ts`
-- Mantener foco en Fase 4 Camino 2: cubicacion asistida revisable con 3 partidas, snapshot tecnico y pauta consolidada; tipologías complejas en constructor; no ensanchar el selector de partida ni abrir pipeline Kanban, CRM generico, inventario, compras, fabricacion automatica ni modulos posteriores
+- Mantener foco en Fase 4 con **recetas de fabricación**: pauta revisable, snapshot v2, calibración con perfiles reales; tipologías complejas en constructor; no abrir Kanban, CRM genérico, inventario, compras ni fabricación automática
 - Antes de tocar cubicación/pauta con otra IA: pegar `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`
 
 ## Notas de QA

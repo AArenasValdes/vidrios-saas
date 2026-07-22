@@ -1209,7 +1209,7 @@
     align-self: start;
     position: sticky;
     top: 0.5rem;
-    z-index: 2;
+    z-index: 1;
     min-width: 0;
     max-height: calc(100% - 0.75rem);
     overflow: auto;

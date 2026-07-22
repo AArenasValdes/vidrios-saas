@@ -2324,41 +2324,24 @@
   }
 
   .sheetBody {
-    grid-template-columns: minmax(0, 1.2fr) minmax(380px, 0.95fr);
-    grid-template-rows: minmax(0, 1fr);
-    gap: 22px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 12px;
     padding: 22px 28px;
     min-height: 0;
-    align-content: stretch;
+    align-content: start;
     align-items: stretch;
-    overflow: hidden;
-  }
-
-  .sheetMain {
-    min-height: 0;
-    height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
-    padding-right: 6px;
-    padding-bottom: 8px;
-    gap: 16px;
-    align-content: start;
-    scrollbar-gutter: stable;
   }
 
+  .sheetMain,
   .sheetAside {
-    align-self: stretch;
-    grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
-    height: 100%;
-    max-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding-right: 6px;
-    padding-bottom: 8px;
-    gap: 16px;
-    align-content: start;
-    scrollbar-gutter: stable;
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
+    padding-bottom: 0;
   }
 
   .essentialsBanner {
@@ -2670,7 +2653,7 @@
   }
 
   .sheetBody {
-    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.9fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 18px;
     padding: 18px 22px;
   }
@@ -2706,5 +2689,613 @@
 
   .list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --- Line template form wizard --- */
+.sheet.sheetWizard {
+  height: min(94svh, 900px);
+  max-height: calc(100dvh - 16px);
+  /* handle / header(+progreso) / body / footer */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: #ffffff;
+}
+
+.sheetWizard .sheetHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 14px 12px;
+  border-bottom: 1px solid #eef2f7;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.wizardHeaderTop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.sheetWizard .sheetHeaderCopy h2 {
+  color: #0b1526;
+  font-size: 20px;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+}
+
+.sheetWizard .sheetHeaderCopy p {
+  color: #5b6b82;
+  font-size: 13px;
+  font-weight: 520;
+  line-height: 1.4;
+  max-width: 54ch;
+}
+
+.sheetWizard .sheetBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  gap: 10px;
+  align-content: start;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px 28px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+.sheetWizard .sheetFooter {
+  flex-shrink: 0;
+  z-index: 4;
+  border-top: 1px solid #e8eef6;
+  background: #ffffff;
+  padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.wizardCompactSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #e3ebf5;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.wizardCompactSummary span {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  color: #1a2b44;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.wizardCompactSummary strong {
+  color: #7a8799;
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.wizardProgress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.wizardProgressItem {
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 1px solid #e4eaf2;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #5f7086;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wizardProgressItemActive {
+  border-color: rgba(30, 136, 255, 0.45);
+  background: #eef6ff;
+  color: #0f3f86;
+  box-shadow: inset 0 0 0 1px rgba(30, 136, 255, 0.12);
+}
+
+.wizardProgressItemDone {
+  border-color: rgba(17, 121, 77, 0.28);
+  background: #f1faf5;
+  color: #11794d;
+}
+
+.wizardProgressDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #d5ddeb;
+  background: #ffffff;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.wizardProgressItemActive .wizardProgressDot {
+  border-color: #1e88ff;
+  background: #1e88ff;
+  color: #fff;
+}
+
+.wizardProgressItemDone .wizardProgressDot {
+  border-color: rgba(17, 121, 77, 0.35);
+  background: #dff5e9;
+  color: #11794d;
+}
+
+.wizardProgressLabel {
+  font-size: 11.5px;
+  font-weight: 720;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wizardStep {
+  border: 1px solid #e5ebf3;
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: visible;
+}
+
+.wizardStepCollapsed {
+  background: #fbfcfe;
+}
+
+.wizardStepOpen {
+  border-color: #c9daf2;
+  box-shadow: 0 1px 0 rgba(15, 31, 54, 0.03);
+}
+
+.wizardStepHeader {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wizardStepCollapsed .wizardStepHeader {
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.wizardStepHeaderOpen {
+  border-bottom: 1px solid #eef2f7;
+  background: #f8fbff;
+  border-radius: 14px 14px 0 0;
+}
+
+.wizardStepHeaderComplete .wizardStepBadge {
+  border-color: rgba(17, 121, 77, 0.3);
+  background: #e8f8ef;
+  color: #11794d;
+}
+
+.wizardStepBadge {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid #d5ddeb;
+  background: #fff;
+  color: #4f6078;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.wizardStepHeaderOpen .wizardStepBadge {
+  border-color: #1e88ff;
+  background: #1e88ff;
+  color: #fff;
+}
+
+.wizardStepHeaderCopy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wizardStepHeaderCopy strong {
+  color: #0f1f36;
+  font-size: 13.5px;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.wizardStepHeaderCopy span {
+  color: #6a7a91;
+  font-size: 12px;
+  font-weight: 520;
+  line-height: 1.35;
+}
+
+.wizardStepCollapsed .wizardStepHeaderCopy span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wizardStepBody {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  overflow: visible;
+}
+
+.wizardStepBodyTall {
+  padding-bottom: 8px;
+  gap: 14px;
+}
+
+.wizardStepSummary {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: #5f708c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.wizardFieldGroup {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e8eef6;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.wizardFieldGroupHead {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: #1e88ff;
+}
+
+.wizardFieldGroupHead svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+
+.wizardFieldGroupHead div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wizardFieldGroupHead strong {
+  color: #12233d;
+  font-size: 13.5px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.wizardFieldGroupHead span {
+  color: #66768d;
+  font-size: 12px;
+  font-weight: 520;
+  line-height: 1.35;
+}
+
+.wizardUsageGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.wizardUsageCard {
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid #dde6f1;
+  border-radius: 12px;
+  background: #fff;
+  color: #536073;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.wizardUsageCard:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wizardUsageCard strong {
+  color: #12233d;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.wizardUsageCard span {
+  color: #66768d;
+  font-size: 12.5px;
+  font-weight: 520;
+  line-height: 1.35;
+}
+
+.wizardUsageCardActive {
+  border-color: #1e88ff;
+  background: #f3f8ff;
+  box-shadow: inset 0 0 0 1px rgba(30, 136, 255, 0.18);
+}
+
+.wizardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.wizardFooterActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.wizardSecondaryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #d5deea;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f3558;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wizardSecondaryButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sheetWizard .wizardFooter .primaryButton {
+  min-height: 44px;
+  border-radius: 12px;
+  background: #1e88ff;
+  box-shadow: none;
+  font-size: 14.5px;
+  font-weight: 740;
+}
+
+.sheetWizard .calibrationCard,
+.sheetWizard .profileRoleCard,
+.sheetWizard .cuttingCard,
+.sheetWizard .estimationPreview {
+  overflow: visible;
+}
+
+@media (min-width: 720px) {
+  .wizardCompactSummary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .wizardUsageGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 860px) {
+  .sheet.sheetWizard {
+    width: min(100%, 920px);
+    height: min(92dvh, 920px);
+    max-height: calc(100dvh - 40px);
+    /* handle oculto: header / body / footer */
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .sheetWizard .sheetHeader {
+    padding: 16px 24px 14px;
+  }
+
+  .sheetWizard .sheetBody {
+    padding: 16px 24px 32px;
+    gap: 10px;
+  }
+
+  .sheetWizard .sheetFooter {
+    padding: 12px 24px 16px;
+  }
+
+  .wizardFooter .primaryButton {
+    width: auto;
+    min-width: 160px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sheet.sheetWizard {
+    width: min(100%, 980px);
+    height: min(94dvh, 960px);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .sheetWizard .sheetHeader {
+    padding: 18px 28px 14px;
+  }
+
+  .sheetWizard .sheetHeaderCopy h2 {
+    font-size: 22px;
+  }
+
+  .sheetWizard .sheetBody {
+    padding: 18px 28px 36px;
+  }
+
+  .sheetWizard .sheetFooter {
+    padding: 14px 28px 18px;
+  }
+
+  .wizardProgressLabel {
+    font-size: 12.5px;
+  }
+
+  .wizardFooter .primaryButton {
+    min-width: 180px;
+  }
+}
+
+/* —— Receta de fabricación (wizard pasos 3–4) —— */
+.recipeEditor {
+  display: grid;
+  gap: 14px;
+}
+
+.recipeStatusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  color: #4b5568;
+  font-size: 12.5px;
+}
+
+.recipeStatusRow strong {
+  color: #111827;
+}
+
+.recipeComponentList {
+  display: grid;
+  gap: 10px;
+}
+
+.recipeComponentCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d7e0ea;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.recipeComponentHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.recipeComponentHead strong {
+  display: block;
+  color: #111827;
+  font-size: 13.5px;
+}
+
+.recipeComponentHead span {
+  display: block;
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 11.5px;
+}
+
+.recipeComponentActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.recipeComponentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recipeAddRow {
+  margin-top: 8px;
+}
+
+.recipeCompareList {
+  display: grid;
+  gap: 10px;
+}
+
+.recipeCompareCard {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #d7e0ea;
+  border-radius: 12px;
+  background: #fff;
+  color: #374151;
+  font-size: 12.5px;
+}
+
+.ghostButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #1e88ff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.secondaryButton {
+  appearance: none;
+  border: 1px solid #c5d0dc;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+@media (min-width: 900px) {
+  .recipeComponentGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

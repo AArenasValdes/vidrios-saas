@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -73,35 +73,6 @@ export function CuentaVencidaPageContent() {
 
     router.push("/dashboard");
   }, [router]);
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "d4bf8a",
-      },
-      body: JSON.stringify({
-        sessionId: "d4bf8a",
-        runId: "pass3",
-        hypothesisId: "H-CUENTA",
-        location: "cuenta-vencida/page-content.tsx:mount",
-        message: "cuenta_vencida_shell_check",
-        data: {
-          hasAppShellNav: Boolean(
-            document.querySelector("[class*='sidebar'], [class*='bottomNav']")
-          ),
-          scriptCount: document.scripts.length,
-          fcpMs: Math.round(
-            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? -1
-          ),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, []);
 
   const statusText = (() => {
     if (pagoPendiente) {

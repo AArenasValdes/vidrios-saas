@@ -260,17 +260,17 @@ Capturas:
 
 ## Brechas conocidas y siguientes cortes seguros
 
-### Prioridad 1 - validacion local de campos invalidos
+### Prioridad 1 - validacion local de campos invalidos — CERRADA (2026-07-21)
 
-El plan original exigia que ancho/alto/cantidad invalidos quedaran visibles, bloquearan revision y no corrompieran el draft. Hoy `EditableInput` conserva temporalmente el texto invalido en el DOM y `commitDimension()` evita escribirlo, pero el estado de completitud sigue leyendo el item previo. El siguiente agente debe cerrar esta brecha con estado local de errores por pieza, sin escribir valores invalidos en `draft.items`.
+Cerrada con estado local `fieldDraftsByItemId` en `QuoteConstructorWorkspace`:
 
-Aceptar cuando:
+- ancho/alto inválidos (< 200 mm) y cantidad inválida (< 1) quedan visibles con mensaje;
+- no se llama `onUpdateItem` ni se corrompe `draft.items`;
+- tarjeta, inspector y footer pasan a pendiente (`Faltan medidas`); CTA usa `Revisar pendientes`;
+- al cambiar de pieza se conserva el draft/error local;
+- al corregir se sincroniza item + `GuidedVisualConfig` (medidas) y vuelve a Completa si el resto está OK.
 
-- el valor invalido queda visible con mensaje claro;
-- la tarjeta y footer quedan pendientes;
-- cambiar de pieza no pierde el valor/error local accidentalmente;
-- corregirlo sincroniza item + `GuidedVisualConfig`;
-- no cambia mobile.
+Siguiente corte seguro: Prioridad 2.
 
 ### Prioridad 2 - PDF real rasterizado
 

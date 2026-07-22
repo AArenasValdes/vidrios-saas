@@ -55,39 +55,6 @@ export async function getAdminTareasWorkspace(): Promise<AdminTareasWorkspace> {
   const tasks = candidates;
   const priorityToday = buildTodayPriorityTasks(tasks);
 
-  if (process.env.NEXT_PUBLIC_ENABLE_AGENT_DEBUG === "1") {
-  fetch("/api/internal-debug-disabled", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sessionId: "aebe32",
-      runId: "tareas-classification",
-      hypothesisId: "A",
-      location: "admin-tareas.service.ts:getAdminTareasWorkspace",
-      message: "Clasificación de tareas admin",
-      data: {
-        totalTasks: tasks.length,
-        solicitudPublicaTasks: tasks.filter((task) => task.origin === "solicitud_publica").length,
-        prospectoMisclassified: tasks.filter(
-          (task) =>
-            task.origin === "prospectos" &&
-            task.title.toLowerCase().includes("contacto entrante")
-        ).length,
-        publicChannelSample: tasks
-          .filter((task) => task.origin === "solicitud_publica")
-          .slice(0, 3)
-          .map((task) => ({
-            id: task.id,
-            empresa: task.empresaNombre,
-            solicitante: task.contactoLabel,
-            title: task.title,
-          })),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  }
-
   return {
     syncedAt: new Date().toISOString(),
     tasks,

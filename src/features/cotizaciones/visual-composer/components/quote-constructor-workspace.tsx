@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import {
   LuArrowRight,
   LuCheck,
@@ -91,6 +97,54 @@ type InspectorSectionId =
   | "cubicacion"
   | "precio";
 
+type DimensionFieldKey = "ancho" | "alto" | "cantidad";
+type LocalFieldDraft = { text: string; error: string | null };
+type ItemFieldDrafts = Partial<Record<DimensionFieldKey, LocalFieldDraft>>;
+
+function validateDimensionMm(raw: string, label: "Ancho" | "Alto"): string | null {
+  const digits = raw.replace(/[^\d]/g, "").trim();
+  if (!digits) return `${label} mínimo 200 mm`;
+  const value = Math.round(Number(digits));
+  if (!Number.isFinite(value) || value < 200) return `${label} mínimo 200 mm`;
+  return null;
+}
+
+function validateQuantityValue(raw: string): string | null {
+  const digits = raw.replace(/[^\d]/g, "").trim();
+  if (!digits) return "Cantidad inválida";
+  const value = Math.round(Number(digits));
+  if (!Number.isFinite(value) || value < 1) return "Cantidad inválida";
+  return null;
+}
+
+function parseDimensionMm(raw: string): number | null {
+  const digits = raw.replace(/[^\d]/g, "").trim();
+  if (!digits) return null;
+  const value = Math.round(Number(digits));
+  return Number.isFinite(value) && value >= 200 ? value : null;
+}
+
+function parseQuantityValue(raw: string): number | null {
+  const digits = raw.replace(/[^\d]/g, "").trim();
+  if (!digits) return null;
+  const value = Math.round(Number(digits));
+  return Number.isFinite(value) && value >= 1 ? value : null;
+}
+
+function itemHasLocalFieldErrors(drafts: ItemFieldDrafts | undefined) {
+  if (!drafts) return false;
+  return Boolean(drafts.ancho?.error || drafts.alto?.error || drafts.cantidad?.error);
+}
+
+function getCommittedFieldText(
+  item: CotizacionWorkflowItem,
+  key: DimensionFieldKey
+): string {
+  if (key === "cantidad") return String(item.cantidad);
+  const value = item[key];
+  return value ? String(value) : "";
+}
+
 function inferConfig(item: CotizacionWorkflowItem) {
   const persisted = getQuoteConstructorItemConfig(item);
   if (persisted) return persisted;
@@ -178,25 +232,62 @@ type EditableInputProps = {
   value: string;
   inputMode?: "text" | "numeric";
   suffix?: string;
+  error?: string | null;
+  /** Con onChange el input es controlado (draft local). Sin onChange usa defaultValue. */
+  onChange?: (value: string) => void;
   onCommit: (value: string) => void;
 };
 
-function EditableInput({ label, value, inputMode = "text", suffix, onCommit }: EditableInputProps) {
+function EditableInput({
+  label,
+  value,
+  inputMode = "text",
+  suffix,
+  error = null,
+  onChange,
+  onCommit,
+}: EditableInputProps) {
+  const isControlled = typeof onChange === "function";
+  const errorId = error ? `${label.replace(/\s+/g, "-").toLowerCase()}-error` : undefined;
+
   return (
-    <label className={s.inlineField}>
+    <label className={`${s.inlineField} ${error ? s.inlineFieldError : ""}`}>
       <span>{label}</span>
       <span className={s.inputShell}>
-        <input
-          key={value}
-          defaultValue={value}
-          inputMode={inputMode}
-          onBlur={(event) => onCommit(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-        />
+        {isControlled ? (
+          <input
+            value={value}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onChange(event.currentTarget.value)
+            }
+            inputMode={inputMode}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={errorId}
+            onBlur={(event) => onCommit(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+          />
+        ) : (
+          <input
+            key={value}
+            defaultValue={value}
+            inputMode={inputMode}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={errorId}
+            onBlur={(event) => onCommit(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+          />
+        )}
         {suffix ? <small>{suffix}</small> : null}
       </span>
+      {error ? (
+        <em className={s.fieldError} id={errorId}>
+          {error}
+        </em>
+      ) : null}
     </label>
   );
 }
@@ -266,14 +357,6 @@ export function QuoteConstructorWorkspace({
   const activeView = activeItem
     ? buildPieceDomainView(activeItem, quotePricingMode, activeTemplate)
     : null;
-  const incompleteCount = visualItems.filter(
-    (item) => !isPieceCommerciallyComplete(item, quotePricingMode)
-  ).length;
-  const completeCount = visualItems.length - incompleteCount;
-  const missingPriceCount = visualItems.filter(
-    (item) => quotePricingMode === "por_item" && item.precioUnitario <= 0
-  ).length;
-  const canContinue = visualItems.length > 0 && incompleteCount === 0;
   const selectedColor = activeForm
     ? COLOR_OPTIONS.find(
         (option) => option.hex.toLowerCase() === activeForm.colorHex.toLowerCase()
@@ -285,8 +368,34 @@ export function QuoteConstructorWorkspace({
     () => new Set<InspectorSectionId>(["identificacion"])
   );
   const [inspectorSyncedItemId, setInspectorSyncedItemId] = useState<string | null>(null);
+  const [fieldDraftsByItemId, setFieldDraftsByItemId] = useState<
+    Record<string, ItemFieldDrafts>
+  >({});
   const composerItem = visualItems.find((item) => item.id === composerItemId) ?? null;
   const activeId = activeItem?.id ?? null;
+
+  const isItemEffectivelyIncomplete = (item: CotizacionWorkflowItem) =>
+    itemHasLocalFieldErrors(fieldDraftsByItemId[item.id]) ||
+    !isPieceCommerciallyComplete(item, quotePricingMode);
+
+  const incompleteCount = visualItems.filter(isItemEffectivelyIncomplete).length;
+  const completeCount = visualItems.length - incompleteCount;
+  const missingPriceCount = visualItems.filter(
+    (item) =>
+      !itemHasLocalFieldErrors(fieldDraftsByItemId[item.id]) &&
+      quotePricingMode === "por_item" &&
+      item.precioUnitario <= 0
+  ).length;
+  const canContinue = visualItems.length > 0 && incompleteCount === 0;
+  const activeHasLocalErrors = activeItem
+    ? itemHasLocalFieldErrors(fieldDraftsByItemId[activeItem.id])
+    : false;
+  const activeEffectivelyComplete = Boolean(
+    activeView?.isCommerciallyComplete && !activeHasLocalErrors
+  );
+  const activeCommercialLabel = activeHasLocalErrors
+    ? "Faltan medidas"
+    : activeView?.commercialLabel ?? "";
 
   useEffect(() => {
     if (!activeItemId && visualItems[0]) onActiveItemChange(visualItems[0].id);
@@ -336,9 +445,61 @@ export function QuoteConstructorWorkspace({
     });
   };
 
-  const commitDimension = (item: CotizacionWorkflowItem, key: "ancho" | "alto", raw: string) => {
-    const value = Math.round(Number(raw.replace(/[^\d]/g, "")));
-    if (!Number.isFinite(value) || value < 200) return;
+  const setLocalFieldDraft = (
+    itemId: string,
+    key: DimensionFieldKey,
+    draft: LocalFieldDraft | null
+  ) => {
+    setFieldDraftsByItemId((current) => {
+      const previous = current[itemId] ?? {};
+      if (!draft) {
+        if (!(key in previous)) return current;
+        const nextItem: ItemFieldDrafts = { ...previous };
+        delete nextItem[key];
+        if (Object.keys(nextItem).length === 0) {
+          const nextMap = { ...current };
+          delete nextMap[itemId];
+          return nextMap;
+        }
+        return { ...current, [itemId]: nextItem };
+      }
+      return {
+        ...current,
+        [itemId]: {
+          ...previous,
+          [key]: draft,
+        },
+      };
+    });
+  };
+
+  const handleLocalFieldChange = (
+    itemId: string,
+    key: DimensionFieldKey,
+    text: string
+  ) => {
+    setLocalFieldDraft(itemId, key, { text, error: null });
+  };
+
+  const commitDimension = (
+    item: CotizacionWorkflowItem,
+    key: "ancho" | "alto",
+    raw: string
+  ) => {
+    const label = key === "ancho" ? "Ancho" : "Alto";
+    const error = validateDimensionMm(raw, label);
+    if (error) {
+      setLocalFieldDraft(item.id, key, { text: raw, error });
+      return;
+    }
+
+    const value = parseDimensionMm(raw);
+    if (value == null) {
+      setLocalFieldDraft(item.id, key, { text: raw, error: `${label} mínimo 200 mm` });
+      return;
+    }
+
+    setLocalFieldDraft(item.id, key, null);
     const config = inferConfig(item);
     onUpdateItem(item.id, {
       [key]: String(value),
@@ -347,6 +508,23 @@ export function QuoteConstructorWorkspace({
         heightMm: key === "alto" ? value : config.heightMm,
       }),
     });
+  };
+
+  const commitQuantity = (item: CotizacionWorkflowItem, raw: string) => {
+    const error = validateQuantityValue(raw);
+    if (error) {
+      setLocalFieldDraft(item.id, "cantidad", { text: raw, error });
+      return;
+    }
+
+    const quantity = parseQuantityValue(raw);
+    if (quantity == null) {
+      setLocalFieldDraft(item.id, "cantidad", { text: raw, error: "Cantidad inválida" });
+      return;
+    }
+
+    setLocalFieldDraft(item.id, "cantidad", null);
+    onUpdateItem(item.id, { cantidad: String(quantity) });
   };
 
   const updateOpeningSide = (side: "left" | "right") => {
@@ -361,9 +539,7 @@ export function QuoteConstructorWorkspace({
   };
 
   const reviewPending = () => {
-    const pendingItem = visualItems.find(
-      (item) => !isPieceCommerciallyComplete(item, quotePricingMode)
-    );
+    const pendingItem = visualItems.find(isItemEffectivelyIncomplete);
     if (pendingItem) {
       onActiveItemChange(pendingItem.id);
       return;
@@ -461,6 +637,16 @@ export function QuoteConstructorWorkspace({
                 const active = activeItem?.id === item.id;
                 const view = buildItemDomainView(item, quotePricingMode, lineTemplates);
                 const techLines = formatPieceTechnicalSummaryLines(view.technicalSummary);
+                const itemDrafts = fieldDraftsByItemId[item.id];
+                const hasLocalErrors = itemHasLocalFieldErrors(itemDrafts);
+                const isEffectivelyComplete =
+                  view.isCommerciallyComplete && !hasLocalErrors;
+                const commercialLabel = hasLocalErrors
+                  ? "Faltan medidas"
+                  : view.commercialLabel;
+                const anchoDraft = itemDrafts?.ancho;
+                const altoDraft = itemDrafts?.alto;
+                const cantidadDraft = itemDrafts?.cantidad;
                 return (
                   <article
                     key={item.id}
@@ -477,7 +663,7 @@ export function QuoteConstructorWorkspace({
                     }}
                     tabIndex={0}
                     aria-current={active ? "true" : undefined}
-                    aria-label={`${item.codigo}, ${item.nombre || "Pieza sin nombre"}, ${view.commercialLabel}, ${view.technicalLabel}`}
+                    aria-label={`${item.codigo}, ${item.nombre || "Pieza sin nombre"}, ${commercialLabel}, ${view.technicalLabel}`}
                   >
                     <header className={s.pieceHeader}>
                       <div>
@@ -485,9 +671,9 @@ export function QuoteConstructorWorkspace({
                         <strong>{item.nombre || "Pieza sin nombre"}</strong>
                       </div>
                       <div className={s.badgeRow}>
-                        <span className={view.isCommerciallyComplete ? s.ready : s.pending}>
-                          {view.isCommerciallyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
-                          {view.commercialLabel}
+                        <span className={isEffectivelyComplete ? s.ready : s.pending}>
+                          {isEffectivelyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
+                          {commercialLabel}
                         </span>
                         <span
                           className={
@@ -525,26 +711,29 @@ export function QuoteConstructorWorkspace({
                     <div className={s.cardFields}>
                       <EditableInput
                         label="Ancho"
-                        value={item.ancho ? String(item.ancho) : ""}
+                        value={anchoDraft?.text ?? getCommittedFieldText(item, "ancho")}
                         inputMode="numeric"
                         suffix="mm"
+                        error={anchoDraft?.error ?? null}
+                        onChange={(value) => handleLocalFieldChange(item.id, "ancho", value)}
                         onCommit={(value) => commitDimension(item, "ancho", value)}
                       />
                       <EditableInput
                         label="Alto"
-                        value={item.alto ? String(item.alto) : ""}
+                        value={altoDraft?.text ?? getCommittedFieldText(item, "alto")}
                         inputMode="numeric"
                         suffix="mm"
+                        error={altoDraft?.error ?? null}
+                        onChange={(value) => handleLocalFieldChange(item.id, "alto", value)}
                         onCommit={(value) => commitDimension(item, "alto", value)}
                       />
                       <EditableInput
                         label="Cantidad"
-                        value={String(item.cantidad)}
+                        value={cantidadDraft?.text ?? getCommittedFieldText(item, "cantidad")}
                         inputMode="numeric"
-                        onCommit={(value) => {
-                          const quantity = Math.round(Number(value.replace(/[^\d]/g, "")));
-                          if (quantity >= 1) onUpdateItem(item.id, { cantidad: String(quantity) });
-                        }}
+                        error={cantidadDraft?.error ?? null}
+                        onChange={(value) => handleLocalFieldChange(item.id, "cantidad", value)}
+                        onCommit={(value) => commitQuantity(item, value)}
                       />
                     </div>
                     <div className={s.techSummary}>
@@ -615,9 +804,9 @@ export function QuoteConstructorWorkspace({
                   <strong>{activeItem.codigo}</strong>
                 </div>
                 <div className={s.badgeRow}>
-                  <span className={activeView.isCommerciallyComplete ? s.ready : s.pending}>
-                    {activeView.isCommerciallyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
-                    {activeView.commercialLabel}
+                  <span className={activeEffectivelyComplete ? s.ready : s.pending}>
+                    {activeEffectivelyComplete ? <LuCheck aria-hidden /> : <LuCircleAlert aria-hidden />}
+                    {activeCommercialLabel}
                   </span>
                   <span
                     className={

@@ -7,6 +7,7 @@ import {
   LINE_TEMPLATE_MATERIALS,
   clearNeedsCommercialPriceFlag,
   type CotizacionLineTemplate,
+  type CotizacionLineTemplateCatalogMetadata,
   type CotizacionLineTemplateCategoria,
   type CotizacionLineTemplateMaterial,
   type CotizacionLineTemplateUnidadCobro,
@@ -88,7 +89,7 @@ function normalizeTemplateMaterial(value: string | null | undefined): Cotizacion
 }
 
 function allowsZeroSalePrice(
-  metadata: Record<string, string | number | boolean | null> | undefined
+  metadata: CotizacionLineTemplateCatalogMetadata | undefined
 ) {
   return metadata?.needsCommercialPrice === true;
 }
@@ -173,16 +174,17 @@ function normalizeUnitForCategoria(
 
 function normalizeGlassMetadata(
   categoria: CotizacionLineTemplateCategoria,
-  metadata: Record<string, string | number | boolean | null> | undefined
+  metadata: CotizacionLineTemplateCatalogMetadata | undefined
 ) {
   if (categoria !== "vidrio") {
     return metadata ?? {};
   }
 
-  const next = { ...(metadata ?? {}) };
+  const next: CotizacionLineTemplateCatalogMetadata = { ...(metadata ?? {}) };
   for (const key of ["espesor", "terminacion", "descripcion"] as const) {
-    if (typeof next[key] === "string") {
-      const trimmed = next[key].trim();
+    const value = next[key];
+    if (typeof value === "string") {
+      const trimmed = value.trim();
       if (trimmed) next[key] = trimmed.slice(0, key === "espesor" ? 40 : 160);
       else delete next[key];
     }

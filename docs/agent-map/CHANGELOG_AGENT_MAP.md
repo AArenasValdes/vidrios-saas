@@ -4,6 +4,21 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-21 - Smoke + pulido post-recetas
+
+- Smoke autenticado (`admin@test.com` / `1234`): cubicación y despiece visibles en cotizar con cortes por función.
+- Fix hydration: `sourceSolicitudId` ya no lee `sessionStorage` en el primer paint (SSR-safe).
+- Perfiles genéricos `Marco`/`Hoja` dejan de mostrarse como código; UI usa `Por asignar` hasta código real de taller.
+- Cortes se estiman sin perfil asignado; el estado de receta exige perfiles reales para `lista_para_validar`.
+- Docs sincronizadas: `AGENTS.md`, roadmap, handoff, overview.
+
+## 2026-07-21 - Recetas de fabricación (cubicación real)
+
+- Se reemplaza el modelo genérico Marco/Hoja como UI principal por **recetas de componentes reales** (`fabricationRecipe` en `catalog_metadata`).
+- Wizard Nueva línea pasos 3–4: tipo de fabricación, componentes, reglas guiadas, validación por corte real.
+- Motor: `fabrication-recipe.service.ts`; plantillas estructurales; bridge legacy; snapshot cotización **v2**.
+- Camino 2 (3 partidas) queda como migración/compatibilidad. Docs: `CUBICACION_PAUTA_HANDOFF.md`, `FEATURES_MAP.md`, `README.md`.
+
 ## 2026-07-20 - Cotización rápida / Cotización guiada (misma pieza)
 
 - Tabs desktop `Presupuesto` / `Constructor` reemplazados por **Cotización rápida** / **Cotización guiada** con igual peso visual.

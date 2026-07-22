@@ -2,33 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   LuArrowLeft,
-  LuBadgeDollarSign,
-  LuChevronDown,
   LuChevronRight,
-  LuChevronUp,
   LuCopyPlus,
   LuEllipsisVertical,
-  LuFactory,
-  LuEye,
   LuPlus,
   LuSearch,
-  LuScissors,
-  LuSlidersHorizontal,
-  LuTag,
-  LuTruck,
   LuTrash2,
   LuUpload,
-  LuX,
 } from "react-icons/lu";
-
-import {
-  buildGlassValue,
-  formatCurrencyInput,
-  GLASS_OPTIONS,
-} from "@/features/cotizaciones/new-quote/workflow-ui";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import {
   buildLineTemplateCuttingPreview,
@@ -43,10 +27,6 @@ import {
   mergeLineTemplateEstimationRules,
   mergeLineTemplateSystemMetadata,
   clearNeedsCommercialPriceFlag,
-  LINE_TEMPLATE_CUBICATION_STATUS_LABELS,
-  LINE_TEMPLATE_CUBICATION_STATUSES,
-  LINE_TEMPLATE_CUBICATION_SYSTEM_LABELS,
-  LINE_TEMPLATE_CUBICATION_SYSTEMS,
   lineTemplateNeedsCommercialPrice,
   CotizacionLineTemplate,
   CotizacionLineTemplateCubicationStatus,
@@ -66,7 +46,6 @@ import {
 import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
-  LINE_TEMPLATE_UNIDAD_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import {
   compareLineTemplateGroups,
@@ -78,52 +57,20 @@ import {
 } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
+import {
+  LineTemplateFormWizard,
+  resolveLineUsageMode,
+  type LineTemplateFormDraft,
+} from "./line-template-form-wizard";
+import { mergeFabricationRecipeIntoMetadata } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import {
+  buildRecipeCuttingPreview,
+  migrateLegacyCubicationToRecipe,
+  recipePreviewToLegacyCuttingPreview,
+} from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import s from "./lineas-precios-page-client.module.css";
 
-type LineTemplateFormDraft = {
-  nombre: string;
-  categoria: CotizacionLineTemplateCategoria | "";
-  unidadCobro: CotizacionLineTemplateUnidadCobro | "";
-  material: CotizacionLineTemplateMaterial | "";
-  espesor: string;
-  terminacion: string;
-  vidrioPrincipalRecomendado: string;
-  costoBase: string;
-  precioM2Sugerido: string;
-  minimoCobrable: string;
-  redondeoPrecio: string;
-  mermaPct: string;
-  margenObjetivoPct: string;
-  proveedor: string;
-  lineSystem: string;
-  cubicationSystem: CotizacionLineTemplateCubicationSystem;
-  cubicationStatus: CotizacionLineTemplateCubicationStatus;
-  profileFrame: string;
-  profileSash: string;
-  profileMeeting: string;
-  profileGlazingBead: string;
-  profileSill: string;
-  profileAccessory: string;
-  deductionFrameHorizontalMm: string;
-  deductionFrameVerticalMm: string;
-  deductionSashHorizontalMm: string;
-  deductionSashVerticalMm: string;
-  deductionGlassWidthMm: string;
-  deductionGlassHeightMm: string;
-  vigenciaDesde: string;
-  vigenciaHasta: string;
-  estimationEnabled: boolean;
-  estimationMode: CotizacionLineTemplateEstimationMode;
-  estimationFrameFactor: string;
-  estimationSashFactor: string;
-  estimationAccessoryUnits: string;
-  cuttingEnabled: boolean;
-  cuttingMode: CotizacionLineTemplateCuttingMode;
-  cuttingBarLengthMm: string;
-  cuttingSawKerfMm: string;
-  cuttingSashCount: string;
-  isActive: boolean;
-};
+export type { LineTemplateFormDraft };
 
 function formatDeductionInput(value: number) {
   return value > 0 ? String(Math.round(value)) : "0";
@@ -136,42 +83,6 @@ type Props = {
   openNewByDefault?: boolean;
 };
 
-const ROUNDING_OPTIONS = [
-  { value: "0", label: "Sin redondeo" },
-  { value: "1000", label: "Redondear a $1.000" },
-  { value: "5000", label: "Redondear a $5.000" },
-  { value: "10000", label: "Redondear a $10.000" },
-] as const;
-const GLASS_SELECT_OPTIONS = GLASS_OPTIONS.flatMap((group) =>
-  group.items.map((item) => buildGlassValue(group.prefix, item))
-);
-const ESTIMATION_MODE_OPTIONS: Array<{
-  value: CotizacionLineTemplateEstimationMode;
-  label: string;
-  description: string;
-}> = [
-  { value: "vidrio", label: "Solo vidrio", description: "m² de vidrio y merma" },
-  { value: "marco_simple", label: "Marco simple", description: "perímetro exterior" },
-  { value: "marco_hojas", label: "Marco + hojas", description: "marco y hojas estimadas" },
-];
-const CUTTING_MODE_OPTIONS: Array<{
-  value: CotizacionLineTemplateCuttingMode;
-  label: string;
-  description: string;
-}> = [
-  { value: "marco", label: "Marco", description: "4 cortes exteriores" },
-  { value: "marco_hojas", label: "Marco + hojas", description: "incluye hojas correderas" },
-];
-const LINE_SYSTEM_OPTIONS = [
-  "Corredera",
-  "Fija",
-  "Proyectante",
-  "Puerta",
-  "Shower",
-  "Cristal",
-  "Otro",
-] as const;
-
 function parseDecimal(value: string) {
   const normalized = value.replace(",", ".").trim();
   const parsed = Number(normalized);
@@ -180,17 +91,6 @@ function parseDecimal(value: string) {
 
 function formatDecimalInput(value: number) {
   return value > 0 ? String(value).replace(".", ",") : "";
-}
-
-function formatMeasurement(value: number, suffix: string) {
-  return `${value.toLocaleString("es-CL", {
-    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  })} ${suffix}`;
-}
-
-function formatMillimeters(value: number) {
-  return `${Math.round(value).toLocaleString("es-CL")} mm`;
 }
 
 function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
@@ -249,6 +149,9 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     cuttingSawKerfMm: String(cuttingRules.sawKerfMm),
     cuttingSashCount: String(cuttingRules.sashCount),
     isActive: template?.isActive ?? true,
+    fabricationRecipe: template
+      ? migrateLegacyCubicationToRecipe(template.catalogMetadata)
+      : null,
   };
 }
 
@@ -259,10 +162,6 @@ function getDigits(value: string) {
 function parseMoney(value: string) {
   const digits = getDigits(value);
   return digits ? Number(digits) : 0;
-}
-
-function formatMoneyDigits(value: string) {
-  return formatCurrencyInput(getDigits(value));
 }
 
 function buildRoundingLabel(value: number) {
@@ -283,20 +182,6 @@ function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
       draft.terminacion.trim() ||
       (draft.redondeoPrecio !== "0" && draft.redondeoPrecio !== "1000")
   );
-}
-
-function buildAdvancedDetailsSummary(draft: LineTemplateFormDraft) {
-  const parts: string[] = [];
-
-  if (draft.minimoCobrable) parts.push("Mínimo");
-  if (draft.redondeoPrecio !== "0") parts.push("Redondeo");
-  if (draft.mermaPct) parts.push("Merma");
-  if (draft.margenObjetivoPct) parts.push("Margen");
-  if (draft.proveedor.trim()) parts.push("Proveedor");
-  if (draft.lineSystem.trim()) parts.push("Sistema");
-  if (draft.vidrioPrincipalRecomendado) parts.push("Vidrio");
-
-  return parts.slice(0, 4).join(" · ");
 }
 
 function buildLineTemplateGroup(template: CotizacionLineTemplate) {
@@ -340,9 +225,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   );
   const [editingTemplateId, setEditingTemplateId] = useState<string | number | null>(null);
   const [draft, setDraft] = useState<LineTemplateFormDraft>(() => buildDraft());
+  const [wizardStep, setWizardStep] = useState(1);
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
-  /** Camino 2: perfiles/descuentos/calibración quedan detrás de un segundo paso. */
-  const [showCubicationWorkshopDetails, setShowCubicationWorkshopDetails] = useState(false);
   const [calibrationVanoWidthMm, setCalibrationVanoWidthMm] = useState("1200");
   const [calibrationVanoHeightMm, setCalibrationVanoHeightMm] = useState("1000");
   const [expectedGlassWidthMm, setExpectedGlassWidthMm] = useState("");
@@ -352,8 +236,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(
     null
   );
-  const sheetBodyRef = useRef<HTMLDivElement | null>(null);
-  const moreDetailsButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -510,21 +392,33 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const expectedGlassHeightValue = expectedGlassHeightMm.trim()
     ? Math.round(parseDecimal(expectedGlassHeightMm))
     : null;
-  const cuttingPreview = buildLineTemplateCuttingPreview(
-    {
+  const cuttingPreview = (() => {
+    const rules = {
       enabled: draft.estimationEnabled && draft.cuttingEnabled && !isGlassDraft,
       mode: draft.cuttingMode,
       barLengthMm: parseDecimal(draft.cuttingBarLengthMm),
       sawKerfMm: parseDecimal(draft.cuttingSawKerfMm),
       sashCount: parseDecimal(draft.cuttingSashCount),
-    },
-    {
+    };
+    const dims = {
       widthMm: calibrationWidthMm,
       heightMm: calibrationHeightMm,
       quantity: 1,
-    },
-    draftCubicationConfig
-  );
+    };
+    if (draft.fabricationRecipe && rules.enabled) {
+      return recipePreviewToLegacyCuttingPreview(
+        buildRecipeCuttingPreview(draft.fabricationRecipe, {
+          ...dims,
+          sashCount: draft.fabricationRecipe.sashCount,
+          moduleCount: draft.fabricationRecipe.moduleCount,
+        }, {
+          barLengthMm: rules.barLengthMm,
+          kerfMm: rules.sawKerfMm,
+        })
+      );
+    }
+    return buildLineTemplateCuttingPreview(rules, dims, draftCubicationConfig);
+  })();
   const glassCalibrationDelta =
     cuttingPreview.glass &&
     expectedGlassWidthValue != null &&
@@ -556,8 +450,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const openNewSheet = () => {
     const nextDraft = buildDraft();
     setDraft(nextDraft);
+    setWizardStep(1);
     setShowAdvancedDetails(false);
-    setShowCubicationWorkshopDetails(false);
     setCalibrationVanoWidthMm("1200");
     setCalibrationVanoHeightMm("1000");
     setExpectedGlassWidthMm("");
@@ -573,8 +467,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const openEditSheet = (template: CotizacionLineTemplate) => {
     const nextDraft = buildDraft(template);
     setDraft(nextDraft);
+    setWizardStep(1);
     setShowAdvancedDetails(draftHasAdvancedDetails(nextDraft));
-    setShowCubicationWorkshopDetails(nextDraft.estimationEnabled);
     setCalibrationVanoWidthMm("1200");
     setCalibrationVanoHeightMm("1000");
     setExpectedGlassWidthMm("");
@@ -590,8 +484,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const closeSheet = () => {
     setSheetMode(null);
     setEditingTemplateId(null);
+    setWizardStep(1);
     setShowAdvancedDetails(false);
-    setShowCubicationWorkshopDetails(false);
     setDraft(buildDraft());
     resetQueryFlag();
   };
@@ -600,34 +494,37 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const handleApplySystemCalibrationPreset = () => {
     const preset = getCubicationSystemCalibrationPreset(draft.cubicationSystem);
     const cubicationPatch = applyCalibrationPresetToCubicationPatch(preset);
-    setDraft((current) => ({
-      ...current,
-      profileFrame: cubicationPatch.profileFrame ?? current.profileFrame,
-      profileSash: cubicationPatch.profileSash ?? current.profileSash,
-      profileMeeting: cubicationPatch.profileMeeting ?? "",
-      profileGlazingBead: cubicationPatch.profileGlazingBead ?? "",
-      profileSill: cubicationPatch.profileSill ?? "",
-      profileAccessory: cubicationPatch.profileAccessory ?? "",
-      deductionFrameHorizontalMm: formatDeductionInput(
-        cubicationPatch.deductionFrameHorizontalMm ?? 0
-      ),
-      deductionFrameVerticalMm: formatDeductionInput(
-        cubicationPatch.deductionFrameVerticalMm ?? 0
-      ),
-      deductionSashHorizontalMm: formatDeductionInput(
-        cubicationPatch.deductionSashHorizontalMm ?? 0
-      ),
-      deductionSashVerticalMm: formatDeductionInput(
-        cubicationPatch.deductionSashVerticalMm ?? 0
-      ),
-      deductionGlassWidthMm: formatDeductionInput(cubicationPatch.deductionGlassWidthMm ?? 0),
-      deductionGlassHeightMm: formatDeductionInput(cubicationPatch.deductionGlassHeightMm ?? 0),
-      cuttingMode: preset.suggestedCuttingMode,
-      cuttingSashCount: String(preset.suggestedSashCount),
-      estimationEnabled: true,
-      cuttingEnabled: true,
-      cubicationStatus: resolveStatusAfterCalibrationEdit(current.cubicationStatus),
-    }));
+    setDraft((current) => {
+      const usageMode = resolveLineUsageMode(current);
+      return {
+        ...current,
+        profileFrame: cubicationPatch.profileFrame ?? current.profileFrame,
+        profileSash: cubicationPatch.profileSash ?? current.profileSash,
+        profileMeeting: cubicationPatch.profileMeeting ?? "",
+        profileGlazingBead: cubicationPatch.profileGlazingBead ?? "",
+        profileSill: cubicationPatch.profileSill ?? "",
+        profileAccessory: cubicationPatch.profileAccessory ?? "",
+        deductionFrameHorizontalMm: formatDeductionInput(
+          cubicationPatch.deductionFrameHorizontalMm ?? 0
+        ),
+        deductionFrameVerticalMm: formatDeductionInput(
+          cubicationPatch.deductionFrameVerticalMm ?? 0
+        ),
+        deductionSashHorizontalMm: formatDeductionInput(
+          cubicationPatch.deductionSashHorizontalMm ?? 0
+        ),
+        deductionSashVerticalMm: formatDeductionInput(
+          cubicationPatch.deductionSashVerticalMm ?? 0
+        ),
+        deductionGlassWidthMm: formatDeductionInput(cubicationPatch.deductionGlassWidthMm ?? 0),
+        deductionGlassHeightMm: formatDeductionInput(cubicationPatch.deductionGlassHeightMm ?? 0),
+        cuttingMode: preset.suggestedCuttingMode,
+        cuttingSashCount: String(preset.suggestedSashCount),
+        estimationEnabled: usageMode !== "solo_cotizar",
+        cuttingEnabled: usageMode === "cubicacion_pauta",
+        cubicationStatus: resolveStatusAfterCalibrationEdit(current.cubicationStatus),
+      };
+    });
     setFeedback({
       kind: "success",
       message: "Preset del sistema aplicado. Revisa con tu ejemplo real y guarda.",
@@ -730,11 +627,10 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       return { ...current, [key]: value };
     });
+  };
 
-    // Camino 2: side-effect fuera del updater de draft.
-    if (key === "estimationEnabled") {
-      setShowCubicationWorkshopDetails(value === true && sheetMode === "edit");
-    }
+  const handleDraftPatch = (patch: Partial<LineTemplateFormDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }));
   };
 
   const handleSave = async () => {
@@ -812,6 +708,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       ),
       pricePerM2
     );
+
+    const withRecipe = mergeFabricationRecipeIntoMetadata(
+      catalogMetadata,
+      draft.fabricationRecipe
+    ) as typeof catalogMetadata;
+    Object.assign(catalogMetadata, withRecipe);
     if (pricePerM2 <= 0) {
       catalogMetadata.needsCommercialPrice = true;
     }
@@ -1252,1245 +1154,52 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       ) : null}
 
       {sheetMode ? (
-        <div className={s.overlay} role="presentation" onClick={closeSheet}>
-          <section
-            className={s.sheet}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="linea-precio-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className={s.sheetHandle} />
-
-            <header className={s.sheetHeader}>
-              <div className={s.sheetHeaderCopy}>
-                <h2 id="linea-precio-title">{sheetTitle}</h2>
-                <p>
-                  {isGlassDraft
-                    ? "Empieza por el nombre y el precio. El resto puedes dejarlo para después."
-                    : "Empieza por el nombre y el precio de venta. Cubicación y detalles son opcionales."}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className={s.sheetClose}
-                onClick={closeSheet}
-                aria-label="Cerrar"
-              >
-                <LuX aria-hidden />
-              </button>
-            </header>
-
-            <div className={s.sheetBody} ref={sheetBodyRef}>
-              <div className={s.sheetMain}>
-                <div className={s.essentialsBanner} role="note">
-                  <strong>Para cotizar basta con esto</strong>
-                  <span>
-                    {isGlassDraft
-                      ? "Nombre, precio de venta y estado. Lo avanzado es opcional."
-                      : "Nombre, categoría, material y precio de venta. Lo de la derecha solo si usas cubicación."}
-                  </span>
-                </div>
-
-                <section
-                  className={`${s.formSection} ${s.formSectionIdentidad}`}
-                  aria-labelledby="linea-identidad-title"
-                >
-                  <div className={s.formSectionHead}>
-                    <span className={s.formSectionIcon} aria-hidden>
-                      <LuTag />
-                    </span>
-                    <div className={s.formSectionHeadCopy}>
-                      <h3 id="linea-identidad-title">Datos básicos</h3>
-                      <p>Cómo la verás al armar una cotización</p>
-                    </div>
-                  </div>
-
-                  <div className={s.formSectionGrid}>
-                    <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                      <span className={s.fieldLabel}>Nombre comercial</span>
-                      <input
-                        className={s.textInput}
-                        value={draft.nombre}
-                        onChange={(event) => handleDraftChange("nombre", event.target.value)}
-                        placeholder="Ej: Serie 25 negra"
-                      />
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Categoría</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.categoria}
-                        onChange={(event) =>
-                          handleDraftChange(
-                            "categoria",
-                            event.target.value as CotizacionLineTemplateCategoria
-                          )
-                        }
-                      >
-                        {Object.entries(LINE_TEMPLATE_CATEGORIA_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Unidad de cobro</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.unidadCobro}
-                        onChange={(event) =>
-                          handleDraftChange(
-                            "unidadCobro",
-                            event.target.value as CotizacionLineTemplateUnidadCobro
-                          )
-                        }
-                      >
-                        {Object.entries(LINE_TEMPLATE_UNIDAD_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    {!isGlassDraft ? (
-                      <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                        <span className={s.fieldLabel}>Material de perfil</span>
-                        <div className={s.materialSelect}>
-                          {(["Aluminio", "PVC"] as const).map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              className={`${s.materialSelectButton} ${
-                                draft.material === option ? s.materialSelectButtonActive : ""
-                              }`}
-                              data-material={option}
-                              aria-pressed={draft.material === option}
-                              onClick={() => handleDraftChange("material", option)}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </label>
-                    ) : null}
-                  </div>
-                </section>
-
-                <section
-                  className={`${s.formSection} ${s.formSectionPrecio}`}
-                  aria-labelledby="linea-precio-section-title"
-                >
-                  <div className={s.formSectionHead}>
-                    <span className={s.formSectionIcon} aria-hidden>
-                      <LuBadgeDollarSign />
-                    </span>
-                    <div className={s.formSectionHeadCopy}>
-                      <h3 id="linea-precio-section-title">Precio comercial</h3>
-                      <p>Reglas que usa Ventora al cotizar hoy</p>
-                    </div>
-                  </div>
-
-                  <div className={s.formSectionGrid}>
-                    <label className={`${s.fieldBlock} ${s.fieldHighlight}`}>
-                      <span className={s.fieldLabel}>
-                        Precio de venta · {LINE_TEMPLATE_UNIDAD_LABELS[unidadCobro]}
-                      </span>
-                      <div className={s.moneyWrap}>
-                        <span className={s.moneyPrefix}>$</span>
-                        <input
-                          className={`${s.moneyInput} ${s.moneyInputPrimary}`}
-                          inputMode="numeric"
-                          value={formatMoneyDigits(draft.precioM2Sugerido)}
-                          onChange={(event) =>
-                            handleDraftChange("precioM2Sugerido", getDigits(event.target.value))
-                          }
-                          placeholder="150.000"
-                        />
-                      </div>
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>
-                        Costo base <em className={s.optionalMark}>opcional</em>
-                      </span>
-                      <div className={s.moneyWrap}>
-                        <span className={s.moneyPrefix}>$</span>
-                        <input
-                          className={s.moneyInput}
-                          inputMode="numeric"
-                          value={formatMoneyDigits(draft.costoBase)}
-                          onChange={(event) =>
-                            handleDraftChange("costoBase", getDigits(event.target.value))
-                          }
-                          placeholder="90.000"
-                        />
-                      </div>
-                    </label>
-                  </div>
-                </section>
-
-                <div className={`${s.activeCard} ${s.activeCardInline}`}>
-                  <div className={s.activeCardCopy}>
-                    <strong>Activa para cotizar</strong>
-                    <span>Aparece como opción en nuevas cotizaciones.</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`${s.switch} ${draft.isActive ? s.switchOn : ""}`}
-                    onClick={() => handleDraftChange("isActive", !draft.isActive)}
-                    aria-pressed={draft.isActive}
-                    aria-label="Cambiar estado de la línea"
-                  >
-                    <span className={s.switchThumb} />
-                  </button>
-                </div>
-
-                <button
-                  ref={moreDetailsButtonRef}
-                  type="button"
-                  className={`${s.moreDetailsButton} ${
-                    showAdvancedDetails ? s.moreDetailsButtonOpen : ""
-                  }`}
-                  onClick={() => {
-                    const body = sheetBodyRef.current;
-                    const previousScrollTop = body?.scrollTop ?? 0;
-
-                    setShowAdvancedDetails((current) => !current);
-
-                    window.requestAnimationFrame(() => {
-                      if (!body) return;
-                      // Mantener el scroll; si el botón queda fuera, solo acercarlo sin saltar arriba
-                      body.scrollTop = previousScrollTop;
-                      moreDetailsButtonRef.current?.scrollIntoView({
-                        block: "nearest",
-                        inline: "nearest",
-                      });
-                    });
-                  }}
-                  aria-expanded={showAdvancedDetails}
-                >
-                  <span className={s.moreDetailsButtonCopy}>
-                    <strong>
-                      {showAdvancedDetails ? "Ocultar detalles" : "Agregar más detalles"}
-                    </strong>
-                    <span>
-                      {showAdvancedDetails
-                        ? "Mínimo, redondeo, merma, proveedor y más"
-                        : buildAdvancedDetailsSummary(draft) ||
-                          "Mínimo cobrable, redondeo, merma, margen, proveedor…"}
-                    </span>
-                  </span>
-                  {showAdvancedDetails ? (
-                    <LuChevronUp aria-hidden />
-                  ) : (
-                    <LuChevronDown aria-hidden />
-                  )}
-                </button>
-
-                {showAdvancedDetails ? (
-                  <div className={s.advancedDetails}>
-                    <section
-                      className={`${s.formSection} ${s.formSectionPrecio}`}
-                      aria-labelledby="linea-precio-avanzado-title"
-                    >
-                      <div className={s.formSectionHead}>
-                        <span className={s.formSectionIcon} aria-hidden>
-                          <LuSlidersHorizontal />
-                        </span>
-                        <div className={s.formSectionHeadCopy}>
-                          <h3 id="linea-precio-avanzado-title">Reglas de precio</h3>
-                          <p>Mínimo, redondeo y márgenes</p>
-                        </div>
-                      </div>
-
-                      <div className={s.formSectionGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Mínimo cobrable <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <div className={s.moneyWrap}>
-                            <span className={s.moneyPrefix}>$</span>
-                            <input
-                              className={s.moneyInput}
-                              inputMode="numeric"
-                              value={formatMoneyDigits(draft.minimoCobrable)}
-                              onChange={(event) =>
-                                handleDraftChange("minimoCobrable", getDigits(event.target.value))
-                              }
-                              placeholder="95.000"
-                            />
-                          </div>
-                          <p className={s.fieldHint}>
-                            Se aplica cuando el cálculo quede por debajo de este monto.
-                          </p>
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Redondeo</span>
-                          <select
-                            className={s.selectInput}
-                            value={draft.redondeoPrecio}
-                            onChange={(event) =>
-                              handleDraftChange("redondeoPrecio", event.target.value)
-                            }
-                          >
-                            {ROUNDING_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Merma % <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <input
-                            className={s.textInput}
-                            inputMode="decimal"
-                            value={draft.mermaPct}
-                            onChange={(event) =>
-                              handleDraftChange("mermaPct", event.target.value)
-                            }
-                            placeholder="5"
-                          />
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Margen objetivo % <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <input
-                            className={s.textInput}
-                            inputMode="decimal"
-                            value={draft.margenObjetivoPct}
-                            onChange={(event) =>
-                              handleDraftChange("margenObjetivoPct", event.target.value)
-                            }
-                            placeholder="35"
-                          />
-                        </label>
-                      </div>
-                    </section>
-
-                    <section
-                      className={`${s.formSection} ${s.formSectionProveedor}`}
-                      aria-labelledby="linea-proveedor-title"
-                    >
-                      <div className={s.formSectionHead}>
-                        <span className={s.formSectionIcon} aria-hidden>
-                          <LuTruck />
-                        </span>
-                        <div className={s.formSectionHeadCopy}>
-                          <h3 id="linea-proveedor-title">Proveedor y vigencia</h3>
-                          <p>Referencia comercial</p>
-                        </div>
-                      </div>
-
-                      <div className={s.formSectionGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Proveedor <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <input
-                            className={s.textInput}
-                            value={draft.proveedor}
-                            onChange={(event) =>
-                              handleDraftChange("proveedor", event.target.value)
-                            }
-                            placeholder="Ej: Alar"
-                          />
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Sistema <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <input
-                            className={s.textInput}
-                            list="line-system-options"
-                            value={draft.lineSystem}
-                            onChange={(event) =>
-                              handleDraftChange("lineSystem", event.target.value)
-                            }
-                            placeholder="Ej: Corredera"
-                          />
-                          <datalist id="line-system-options">
-                            {LINE_SYSTEM_OPTIONS.map((option) => (
-                              <option key={option} value={option} />
-                            ))}
-                          </datalist>
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vigencia desde</span>
-                          <input
-                            className={s.textInput}
-                            type="date"
-                            value={draft.vigenciaDesde}
-                            onChange={(event) =>
-                              handleDraftChange("vigenciaDesde", event.target.value)
-                            }
-                          />
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vigencia hasta</span>
-                          <input
-                            className={s.textInput}
-                            type="date"
-                            value={draft.vigenciaHasta}
-                            onChange={(event) =>
-                              handleDraftChange("vigenciaHasta", event.target.value)
-                            }
-                          />
-                        </label>
-                      </div>
-                    </section>
-
-                    <section
-                      className={`${s.formSection} ${s.formSectionUso}`}
-                      aria-labelledby="linea-uso-title"
-                    >
-                      <div className={s.formSectionHead}>
-                        <span className={s.formSectionIcon} aria-hidden>
-                          <LuSlidersHorizontal />
-                        </span>
-                        <div className={s.formSectionHeadCopy}>
-                          <h3 id="linea-uso-title">
-                            {isGlassDraft ? "Detalle del cristal" : "Uso en cotización"}
-                          </h3>
-                          <p>
-                            {isGlassDraft
-                              ? "Espesor y terminación opcionales"
-                              : "Preferencia al armar el presupuesto"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className={s.formSectionGrid}>
-                        {isGlassDraft ? (
-                          <>
-                            <label className={s.fieldBlock}>
-                              <span className={s.fieldLabel}>
-                                Espesor <em className={s.optionalMark}>opcional</em>
-                              </span>
-                              <input
-                                className={s.textInput}
-                                value={draft.espesor}
-                                onChange={(event) =>
-                                  handleDraftChange("espesor", event.target.value)
-                                }
-                                placeholder="Ej: 10 mm, 5+5, 4-10-4"
-                              />
-                            </label>
-
-                            <label className={s.fieldBlock}>
-                              <span className={s.fieldLabel}>
-                                Terminación <em className={s.optionalMark}>opcional</em>
-                              </span>
-                              <input
-                                className={s.textInput}
-                                value={draft.terminacion}
-                                onChange={(event) =>
-                                  handleDraftChange("terminacion", event.target.value)
-                                }
-                                placeholder="Ej: templado, laminado, espejo"
-                              />
-                            </label>
-                          </>
-                        ) : (
-                          <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                            <span className={s.fieldLabel}>Vidrio usado normalmente</span>
-                            <select
-                              className={s.selectInput}
-                              value={draft.vidrioPrincipalRecomendado}
-                              onChange={(event) =>
-                                handleDraftChange(
-                                  "vidrioPrincipalRecomendado",
-                                  event.target.value
-                                )
-                              }
-                            >
-                              <option value="">Sin sugerencia fija</option>
-                              {GLASS_SELECT_OPTIONS.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                            <p className={s.fieldHint}>
-                              Este vidrio aparecerá primero al cotizar con esta línea.
-                            </p>
-                          </label>
-                        )}
-                      </div>
-                    </section>
-                  </div>
-                ) : null}
-              </div>
-
-              <aside className={s.sheetAside}>
-                <div className={s.previewCard}>
-                  <div className={s.previewCardHead}>
-                    <span className={s.previewIcon} aria-hidden>
-                      <LuEye />
-                    </span>
-                    <strong>Vista previa</strong>
-                  </div>
-                  {pricePerM2 <= 0 ? (
-                    <p className={s.previewEmpty}>
-                      Completa el precio de venta para ver cómo se cotizará.
-                    </p>
-                  ) : (
-                    <div className={s.previewValues}>
-                      <strong className={s.previewPrice}>
-                        {formatLineTemplatePriceLabel(unidadCobro, pricePerM2, formatCurrency)}
-                      </strong>
-                      <span>Precio por unidad cotizable</span>
-                      <span className={s.previewMeta}>
-                        Mínimo: {minimum > 0 ? formatCurrency(minimum) : "Sin mínimo"}
-                        {costoBase > 0 ? ` · Costo ${formatCurrency(costoBase)}` : ""}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <section
-                  className={`${s.formSection} ${s.formSectionCubicacion}`}
-                  aria-labelledby="linea-cubicacion-title"
-                >
-                  <div className={s.formSectionHead}>
-                    <span className={s.formSectionIcon} aria-hidden>
-                      <LuFactory />
-                    </span>
-                    <div className={s.formSectionHeadCopy}>
-                      <h3 id="linea-cubicacion-title">Estimación de materiales</h3>
-                      <p>Opcional · no hace falta para cotizar con precio</p>
-                    </div>
-                  </div>
-
-                  <div className={s.cubicacionIntro}>
-                    <div>
-                      <strong>Activar estimación V1</strong>
-                      <span>
-                        Solo 3 partidas base (fijo, corredera 2 hojas, puerta). Tipologías
-                        complejas van en el constructor al cotizar.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className={`${s.switch} ${draft.estimationEnabled ? s.switchOn : ""}`}
-                      onClick={() =>
-                        handleDraftChange("estimationEnabled", !draft.estimationEnabled)
-                      }
-                      aria-pressed={draft.estimationEnabled}
-                      aria-label="Activar estimación de materiales para esta línea"
-                    >
-                      <span className={s.switchThumb} />
-                    </button>
-                  </div>
-
-                  {!draft.estimationEnabled ? (
-                    <p className={s.cubicationIdle}>
-                      Déjala apagada para guardar solo la línea comercial. Actívala después si
-                      quieres una pauta de materiales revisable en Quote Studio.
-                    </p>
-                  ) : (
-                  <div className={s.cubicationDetails}>
-                  <div className={s.cubicationSetupGrid}>
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Partida de estimación</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.cubicationSystem}
-                        onChange={(event) =>
-                          handleDraftChange(
-                            "cubicationSystem",
-                            event.target.value as CotizacionLineTemplateCubicationSystem
-                          )
-                        }
-                        disabled={!draft.estimationEnabled || isGlassDraft}
-                      >
-                        {LINE_TEMPLATE_CUBICATION_SYSTEMS.map((system) => (
-                          <option key={system} value={system}>
-                            {LINE_TEMPLATE_CUBICATION_SYSTEM_LABELS[system]}
-                          </option>
-                        ))}
-                      </select>
-                      <p className={s.fieldHint}>
-                        Patrón de cálculo, no tipología de venta. Bow, abatible de ventana,
-                        proyectante u otros módulos se arman en el constructor.
-                      </p>
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Estado de la estimación</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.cubicationStatus}
-                        onChange={(event) =>
-                          handleDraftChange(
-                            "cubicationStatus",
-                            event.target.value as CotizacionLineTemplateCubicationStatus
-                          )
-                        }
-                        disabled={!draft.estimationEnabled || isGlassDraft}
-                      >
-                        {LINE_TEMPLATE_CUBICATION_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {LINE_TEMPLATE_CUBICATION_STATUS_LABELS[status]}
-                          </option>
-                        ))}
-                      </select>
-                      <p className={s.fieldHint}>
-                        Solo “Validada” se usa sin advertencia. El resto muestra pauta
-                        referencial.
-                      </p>
-                    </label>
-                  </div>
-
-                  {!isGlassDraft && !showCubicationWorkshopDetails ? (
-                    <button
-                      type="button"
-                      className={s.moreDetailsButton}
-                      onClick={() => setShowCubicationWorkshopDetails(true)}
-                      aria-expanded={false}
-                    >
-                      <span className={s.moreDetailsButtonCopy}>
-                        <strong>Configurar perfiles y descuentos</strong>
-                        <span>
-                          Segundo paso opcional: nombres de taller, mm y calibración
-                        </span>
-                      </span>
-                      <LuChevronDown aria-hidden />
-                    </button>
-                  ) : null}
-
-                  {!isGlassDraft && showCubicationWorkshopDetails ? (
-                    <>
-                    <button
-                      type="button"
-                      className={`${s.moreDetailsButton} ${s.moreDetailsButtonOpen}`}
-                      onClick={() => setShowCubicationWorkshopDetails(false)}
-                      aria-expanded
-                    >
-                      <span className={s.moreDetailsButtonCopy}>
-                        <strong>Ocultar perfiles y descuentos</strong>
-                        <span>Puedes volver a abrirlos cuando quieras</span>
-                      </span>
-                      <LuChevronUp aria-hidden />
-                    </button>
-                    <div className={s.profileRoleCard}>
-                      <div className={s.profileRoleHead}>
-                        <strong>Perfiles por rol</strong>
-                        <span>Usa el código o nombre que reconoce tu taller.</span>
-                      </div>
-                      <div className={s.profileRoleGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Marco / riel</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileFrame}
-                            onChange={(event) =>
-                              handleDraftChange("profileFrame", event.target.value)
-                            }
-                            placeholder="Ej: L20 marco"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Hoja</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileSash}
-                            onChange={(event) =>
-                              handleDraftChange("profileSash", event.target.value)
-                            }
-                            placeholder="Ej: L20 hoja"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Encuentro</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileMeeting}
-                            onChange={(event) =>
-                              handleDraftChange("profileMeeting", event.target.value)
-                            }
-                            placeholder="Opcional"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Junquillo</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileGlazingBead}
-                            onChange={(event) =>
-                              handleDraftChange("profileGlazingBead", event.target.value)
-                            }
-                            placeholder="Opcional"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Zócalo</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileSill}
-                            onChange={(event) =>
-                              handleDraftChange("profileSill", event.target.value)
-                            }
-                            placeholder="Opcional"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Accesorio</span>
-                          <input
-                            className={s.textInput}
-                            value={draft.profileAccessory}
-                            onChange={(event) =>
-                              handleDraftChange("profileAccessory", event.target.value)
-                            }
-                            placeholder="Opcional"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className={s.profileRoleCard}>
-                      <div className={s.profileRoleHead}>
-                        <strong>Descuentos de fabricación</strong>
-                        <span>mm totales que se restan al vano / hoja.</span>
-                      </div>
-                      <div className={s.profileRoleGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Marco horizontal</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionFrameHorizontalMm}
-                            onChange={(event) =>
-                              handleDraftChange(
-                                "deductionFrameHorizontalMm",
-                                event.target.value
-                              )
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Marco vertical</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionFrameVerticalMm}
-                            onChange={(event) =>
-                              handleDraftChange("deductionFrameVerticalMm", event.target.value)
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Hoja horizontal</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionSashHorizontalMm}
-                            onChange={(event) =>
-                              handleDraftChange(
-                                "deductionSashHorizontalMm",
-                                event.target.value
-                              )
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Hoja vertical</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionSashVerticalMm}
-                            onChange={(event) =>
-                              handleDraftChange("deductionSashVerticalMm", event.target.value)
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vidrio ancho</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionGlassWidthMm}
-                            onChange={(event) =>
-                              handleDraftChange("deductionGlassWidthMm", event.target.value)
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vidrio alto</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.deductionGlassHeightMm}
-                            onChange={(event) =>
-                              handleDraftChange("deductionGlassHeightMm", event.target.value)
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className={s.calibrationCard}>
-                      <div className={s.profileRoleHead}>
-                        <strong>Calibrar con ejemplo real</strong>
-                        <span>Contrasta un vano fabricado y ajusta descuentos.</span>
-                      </div>
-                      <p className={s.calibrationNote}>{systemCalibrationPreset.note}</p>
-                      <div className={s.profileRoleGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vano ancho mm</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={calibrationVanoWidthMm}
-                            onChange={(event) => setCalibrationVanoWidthMm(event.target.value)}
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vano alto mm</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={calibrationVanoHeightMm}
-                            onChange={(event) => setCalibrationVanoHeightMm(event.target.value)}
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vidrio real ancho</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={expectedGlassWidthMm}
-                            onChange={(event) => setExpectedGlassWidthMm(event.target.value)}
-                            placeholder="Ej: 1180"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Vidrio real alto</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={expectedGlassHeightMm}
-                            onChange={(event) => setExpectedGlassHeightMm(event.target.value)}
-                            placeholder="Ej: 980"
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Marco real horiz. (opc.)</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={expectedFrameHorizontalMm}
-                            onChange={(event) =>
-                              setExpectedFrameHorizontalMm(event.target.value)
-                            }
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Marco real vert. (opc.)</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={expectedFrameVerticalMm}
-                            onChange={(event) => setExpectedFrameVerticalMm(event.target.value)}
-                            disabled={!draft.estimationEnabled}
-                          />
-                        </label>
-                      </div>
-                      <div className={s.calibrationCompare}>
-                        <span>
-                          Calculado
-                          <strong>
-                            {cuttingPreview.glass
-                              ? `${formatMillimeters(cuttingPreview.glass.widthMm)} × ${formatMillimeters(cuttingPreview.glass.heightMm)}`
-                              : "—"}
-                          </strong>
-                        </span>
-                        <span>
-                          Esperado
-                          <strong>
-                            {expectedGlassWidthValue != null && expectedGlassHeightValue != null
-                              ? `${formatMillimeters(expectedGlassWidthValue)} × ${formatMillimeters(expectedGlassHeightValue)}`
-                              : "—"}
-                          </strong>
-                        </span>
-                        <span>
-                          Delta
-                          <strong>
-                            {glassCalibrationDelta
-                              ? `${glassCalibrationDelta.widthMm >= 0 ? "+" : ""}${glassCalibrationDelta.widthMm} / ${glassCalibrationDelta.heightMm >= 0 ? "+" : ""}${glassCalibrationDelta.heightMm} mm`
-                              : "—"}
-                          </strong>
-                        </span>
-                      </div>
-                      <div className={s.calibrationActions}>
-                        <button
-                          type="button"
-                          className={s.calibrationBtn}
-                          onClick={handleApplySystemCalibrationPreset}
-                          disabled={!draft.estimationEnabled}
-                        >
-                          Aplicar preset del sistema
-                        </button>
-                        <button
-                          type="button"
-                          className={s.calibrationBtnPrimary}
-                          onClick={handleApplyWorkshopCalibrationSuggestion}
-                          disabled={!draft.estimationEnabled || !calibrationSuggestion.canApply}
-                        >
-                          Ajustar descuentos al ejemplo
-                        </button>
-                      </div>
-                    </div>
-
-                  <div
-                    className={s.estimationModeGrid}
-                    role="tablist"
-                    aria-label="Modo de estimación"
-                  >
-                    {ESTIMATION_MODE_OPTIONS.map((option) => {
-                      const disabled = isGlassDraft && option.value !== "vidrio";
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`${s.estimationModeButton} ${
-                            draft.estimationMode === option.value
-                              ? s.estimationModeButtonActive
-                              : ""
-                          }`}
-                          onClick={() => handleDraftChange("estimationMode", option.value)}
-                          aria-pressed={draft.estimationMode === option.value}
-                          disabled={disabled}
-                        >
-                          <strong>{option.label}</strong>
-                          <span>{option.description}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className={s.estimationFields}>
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Factor marco</span>
-                      <input
-                        className={s.textInput}
-                        inputMode="decimal"
-                        value={draft.estimationFrameFactor}
-                        onChange={(event) =>
-                          handleDraftChange("estimationFrameFactor", event.target.value)
-                        }
-                        placeholder="1"
-                        disabled={!draft.estimationEnabled || draft.estimationMode === "vidrio"}
-                      />
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Factor hojas</span>
-                      <input
-                        className={s.textInput}
-                        inputMode="decimal"
-                        value={draft.estimationSashFactor}
-                        onChange={(event) =>
-                          handleDraftChange("estimationSashFactor", event.target.value)
-                        }
-                        placeholder="1"
-                        disabled={
-                          !draft.estimationEnabled || draft.estimationMode !== "marco_hojas"
-                        }
-                      />
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Accesorios por pieza</span>
-                      <input
-                        className={s.textInput}
-                        inputMode="decimal"
-                        value={draft.estimationAccessoryUnits}
-                        onChange={(event) =>
-                          handleDraftChange("estimationAccessoryUnits", event.target.value)
-                        }
-                        placeholder="0"
-                        disabled={!draft.estimationEnabled}
-                      />
-                    </label>
-                  </div>
-
-                  <div
-                    className={s.estimationPreview}
-                    aria-label="Vista previa de cubicación asistida"
-                  >
-                    <div className={s.estimationPreviewHead}>
-                      <strong>{`Ejemplo con ${calibrationWidthMm} x ${calibrationHeightMm} mm`}</strong>
-                      <span>{draft.estimationEnabled ? "Automático" : "Desactivado"}</span>
-                    </div>
-                    <div className={s.estimationPreviewGrid}>
-                      <span>
-                        <strong>{formatMeasurement(estimationSampleAreaM2, "m²")}</strong>
-                        Vidrio
-                      </span>
-                      <span>
-                        <strong>{formatMeasurement(estimationSampleFrameMl, "ml")}</strong>
-                        Marco
-                      </span>
-                      <span>
-                        <strong>{formatMeasurement(estimationSampleSashMl, "ml")}</strong>
-                        Hojas
-                      </span>
-                      <span>
-                        <strong>{formatMeasurement(estimationAccessoryUnits, "un")}</strong>
-                        Accesorios
-                      </span>
-                    </div>
-                  </div>
-
-                    <div className={s.cuttingCard}>
-                      <div className={s.cuttingCardHead}>
-                        <span className={s.cuttingIcon} aria-hidden>
-                          <LuScissors />
-                        </span>
-                        <div>
-                          <strong>Pauta de corte sin precio</strong>
-                          <span>Para probar barras y desperdicio antes de costear.</span>
-                        </div>
-                      </div>
-
-                      <div className={s.cubicacionIntro}>
-                        <div>
-                          <strong>Activar pauta</strong>
-                          <span>Solo calcula cortes sugeridos. El maestro valida.</span>
-                        </div>
-                        <button
-                          type="button"
-                          className={`${s.switch} ${draft.cuttingEnabled ? s.switchOn : ""}`}
-                          onClick={() =>
-                            handleDraftChange("cuttingEnabled", !draft.cuttingEnabled)
-                          }
-                          aria-pressed={draft.cuttingEnabled}
-                          aria-label="Activar pauta de corte sin precio"
-                          disabled={!draft.estimationEnabled}
-                        >
-                          <span className={s.switchThumb} />
-                        </button>
-                      </div>
-
-                      <div
-                        className={s.cuttingModeGrid}
-                        role="tablist"
-                        aria-label="Tipo de pauta de corte"
-                      >
-                        {CUTTING_MODE_OPTIONS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={`${s.estimationModeButton} ${
-                              draft.cuttingMode === option.value
-                                ? s.estimationModeButtonActive
-                                : ""
-                            }`}
-                            onClick={() => handleDraftChange("cuttingMode", option.value)}
-                            aria-pressed={draft.cuttingMode === option.value}
-                            disabled={!draft.estimationEnabled || !draft.cuttingEnabled}
-                          >
-                            <strong>{option.label}</strong>
-                            <span>{option.description}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className={s.estimationFields}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Largo barra mm</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.cuttingBarLengthMm}
-                            onChange={(event) =>
-                              handleDraftChange("cuttingBarLengthMm", event.target.value)
-                            }
-                            placeholder="6000"
-                            disabled={!draft.estimationEnabled || !draft.cuttingEnabled}
-                          />
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Disco / corte mm</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="decimal"
-                            value={draft.cuttingSawKerfMm}
-                            onChange={(event) =>
-                              handleDraftChange("cuttingSawKerfMm", event.target.value)
-                            }
-                            placeholder="3"
-                            disabled={!draft.estimationEnabled || !draft.cuttingEnabled}
-                          />
-                        </label>
-
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Hojas muestra</span>
-                          <input
-                            className={s.textInput}
-                            inputMode="numeric"
-                            value={draft.cuttingSashCount}
-                            onChange={(event) =>
-                              handleDraftChange("cuttingSashCount", event.target.value)
-                            }
-                            placeholder="2"
-                            disabled={
-                              !draft.estimationEnabled ||
-                              !draft.cuttingEnabled ||
-                              draft.cuttingMode !== "marco_hojas"
-                            }
-                          />
-                        </label>
-                      </div>
-
-                      <div className={s.cuttingPreview}>
-                        <div className={s.estimationPreviewHead}>
-                          <strong>{`Pauta ejemplo ${calibrationWidthMm} x ${calibrationHeightMm} mm`}</strong>
-                          <span>{cuttingPreview.bars.length || "Sin"} barras</span>
-                        </div>
-
-                        {cuttingPreview.cuts.length > 0 ? (
-                          <>
-                            <div className={s.cuttingCutList}>
-                              {cuttingPreview.cuts.map((cut, cutIndex) => (
-                                <span
-                                  key={`${cut.label}-${cut.functionLabel}-${cut.lengthMm}-${cut.quantity}-${cutIndex}`}
-                                >
-                                  <strong>{cut.quantity}x</strong>
-                                  {cut.label} · {formatMillimeters(cut.lengthMm)}
-                                </span>
-                              ))}
-                            </div>
-                            <div className={s.cuttingWasteSummary}>
-                              <span>
-                                Usado
-                                <strong>{formatMillimeters(cuttingPreview.totalUsedMm)}</strong>
-                              </span>
-                              <span>
-                                Desperdicio
-                                <strong>{formatMillimeters(cuttingPreview.totalWasteMm)}</strong>
-                              </span>
-                              <span>
-                                Merma barra
-                                <strong>{cuttingPreview.wastePct.toFixed(1)}%</strong>
-                              </span>
-                            </div>
-                            <div className={s.cuttingBars}>
-                              {cuttingPreview.bars.slice(0, 2).map((bar) => (
-                                <span key={bar.index}>
-                                  Barra {bar.index}: {formatMillimeters(bar.usedMm)} usado · sobra{" "}
-                                  {formatMillimeters(bar.wasteMm)}
-                                </span>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <p className={s.previewEmpty}>
-                            Activa cubicación y pauta para ver cortes sin calcular precio.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                  ) : null}
-
-                  {isGlassDraft ? (
-                    <>
-                      <div
-                        className={s.estimationModeGrid}
-                        role="tablist"
-                        aria-label="Modo de estimación"
-                      >
-                        {ESTIMATION_MODE_OPTIONS.map((option) => {
-                          const disabled = option.value !== "vidrio";
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`${s.estimationModeButton} ${
-                                draft.estimationMode === option.value
-                                  ? s.estimationModeButtonActive
-                                  : ""
-                              }`}
-                              onClick={() => handleDraftChange("estimationMode", option.value)}
-                              aria-pressed={draft.estimationMode === option.value}
-                              disabled={disabled}
-                            >
-                              <strong>{option.label}</strong>
-                              <span>{option.description}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className={s.estimationPreview}>
-                        <div className={s.estimationPreviewHead}>
-                          <strong>{`Ejemplo con ${calibrationWidthMm} x ${calibrationHeightMm} mm`}</strong>
-                          <span>Vidrio</span>
-                        </div>
-                        <div className={s.estimationPreviewGrid}>
-                          <span>
-                            <strong>{formatMeasurement(estimationSampleAreaM2, "m²")}</strong>
-                            Vidrio
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                  </div>
-                  )}
-                </section>
-              </aside>
-            </div>
-
-            <footer className={s.sheetFooter}>
-              <p className={s.sheetFooterHint}>
-                Con los datos básicos ya puedes guardar. El resto es opcional.
-              </p>
-              <button
-                type="button"
-                className={s.primaryButton}
-                onClick={() => void handleSave()}
-                disabled={saveDisabled || isSaving}
-              >
-                {isSaving ? "Guardando..." : isGlassDraft ? "Guardar producto" : "Guardar línea"}
-              </button>
-            </footer>
-          </section>
-        </div>
+        <LineTemplateFormWizard
+          sheetMode={sheetMode}
+          sheetTitle={sheetTitle}
+          wizardStep={wizardStep}
+          onWizardStepChange={setWizardStep}
+          draft={draft}
+          onDraftChange={handleDraftChange}
+          onDraftPatch={handleDraftPatch}
+          showAdvancedDetails={showAdvancedDetails}
+          onShowAdvancedDetailsChange={setShowAdvancedDetails}
+          isGlassDraft={isGlassDraft}
+          saveDisabled={saveDisabled}
+          isSaving={isSaving}
+          onSave={() => void handleSave()}
+          onClose={closeSheet}
+          pricePerM2={pricePerM2}
+          minimum={minimum}
+          costoBase={costoBase}
+          unidadCobro={unidadCobro}
+          calibrationVanoWidthMm={calibrationVanoWidthMm}
+          calibrationVanoHeightMm={calibrationVanoHeightMm}
+          expectedGlassWidthMm={expectedGlassWidthMm}
+          expectedGlassHeightMm={expectedGlassHeightMm}
+          expectedFrameHorizontalMm={expectedFrameHorizontalMm}
+          expectedFrameVerticalMm={expectedFrameVerticalMm}
+          onCalibrationVanoWidthMmChange={setCalibrationVanoWidthMm}
+          onCalibrationVanoHeightMmChange={setCalibrationVanoHeightMm}
+          onExpectedGlassWidthMmChange={setExpectedGlassWidthMm}
+          onExpectedGlassHeightMmChange={setExpectedGlassHeightMm}
+          onExpectedFrameHorizontalMmChange={setExpectedFrameHorizontalMm}
+          onExpectedFrameVerticalMmChange={setExpectedFrameVerticalMm}
+          calibrationWidthMm={calibrationWidthMm}
+          calibrationHeightMm={calibrationHeightMm}
+          expectedGlassWidthValue={expectedGlassWidthValue}
+          expectedGlassHeightValue={expectedGlassHeightValue}
+          glassCalibrationDelta={glassCalibrationDelta}
+          cuttingPreview={cuttingPreview}
+          systemCalibrationPreset={systemCalibrationPreset}
+          calibrationSuggestion={calibrationSuggestion}
+          onApplySystemCalibrationPreset={handleApplySystemCalibrationPreset}
+          onApplyWorkshopCalibrationSuggestion={handleApplyWorkshopCalibrationSuggestion}
+          estimationSampleAreaM2={estimationSampleAreaM2}
+          estimationSampleFrameMl={estimationSampleFrameMl}
+          estimationSampleSashMl={estimationSampleSashMl}
+          estimationAccessoryUnits={estimationAccessoryUnits}
+        />
       ) : null}
     </div>
   );

@@ -24,6 +24,10 @@ import {
   rebuildCubicationSnapshotWithCuts,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import {
+  RECIPE_STATUS_LABELS,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import { resolveRecipeFromMetadata } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 
 import editor from "./pauta-cubicacion-panel.module.css";
 
@@ -185,6 +189,9 @@ export function PautaCubicacionPanel({
   const cubicationConfig = selectedTemplate
     ? getLineTemplateCubicationConfig(selectedTemplate.catalogMetadata)
     : null;
+  const fabricationRecipe = selectedTemplate
+    ? resolveRecipeFromMetadata(selectedTemplate.catalogMetadata)
+    : null;
   const dims = { lineTemplateId, widthMm, heightMm, quantity };
   const draftMatches = cubicationSnapshotMatchesDimensions(
     componentForm.cubicationSnapshot,
@@ -254,16 +261,20 @@ export function PautaCubicacionPanel({
       ? "Ajustada manualmente"
       : draftMatches || savedMatches
         ? "Snapshot guardado"
-        : cubicationConfig
-          ? LINE_TEMPLATE_CUBICATION_STATUS_LABELS[cubicationConfig.status]
-          : "Sin configurar";
+        : fabricationRecipe
+          ? RECIPE_STATUS_LABELS[fabricationRecipe.status]
+          : cubicationConfig
+            ? LINE_TEMPLATE_CUBICATION_STATUS_LABELS[cubicationConfig.status]
+            : "Sin configurar";
   const isValidated = personalizadoAssistMode
     ? false
     : isManual
       ? false
       : activeSnapshot
         ? activeSnapshot.status === "validada"
-        : cubicationConfig?.status === "validada";
+        : fabricationRecipe
+          ? fabricationRecipe.status === "validada"
+          : cubicationConfig?.status === "validada";
 
   const [isPautaExpanded, setIsPautaExpanded] = useState(layout === "workspace");
   const [isAdjustmentChoiceOpen, setIsAdjustmentChoiceOpen] = useState(false);
@@ -723,6 +734,9 @@ export function PautaCubicacionPanel({
 
           {showBarUsageInline ? (
             <div className={editor.cubicacionBars}>
+              <span className={editor.cubicacionBarsNote}>
+                Distribución sugerida por perfil (pauta referencial)
+              </span>
               {preview.bars.slice(0, 3).map((bar) => (
                 <span key={bar.index}>
                   Barra {bar.index}: usado {formatMm(bar.usedMm)} · sobra{" "}

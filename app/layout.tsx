@@ -7,13 +7,11 @@ import { GoogleTagProvider } from "@/features/analytics/components/google-tag-pr
 import { OAuthReturnTracker } from "@/features/auth/components/oauth-return-tracker";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { DynamicPwaComponents } from "@/components/pwa/dynamic-pwa-components";
-import { WebVitalsDebugProbe } from "@/components/debug/web-vitals-debug-probe";
 import { geistSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
 const shouldRenderVercelInsights = process.env.VERCEL === "1";
-const shouldRenderDebugProbe = process.env.NODE_ENV === "development";
 const gtmContainerId = googleTagService.getGtmContainerId();
 
 export const metadata: Metadata = {
@@ -86,9 +84,6 @@ export default function RootLayout({
           </noscript>
         ) : null}
         <DynamicPwaComponents />
-        {/* #region agent log */}
-        {shouldRenderDebugProbe ? <WebVitalsDebugProbe /> : null}
-        {/* #endregion */}
         {children}
         {shouldRenderVercelInsights ? <Analytics /> : null}
         {shouldRenderVercelInsights ? <SpeedInsights /> : null}

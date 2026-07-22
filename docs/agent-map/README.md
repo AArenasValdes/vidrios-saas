@@ -33,12 +33,9 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 ## Foco actual
 
 - Desktop taller, no CRM generico.
-- **Fase actual = Fase 4 — Cubicación y pauta revisable V1**. Fase 5 + diseño desktop quedó cerrada para demo. También cerradas: Fase 1, 2A, **2B** (2026-07-17). Constructor V2/cuaderno es usable y sigue en pulido controlado; handoff: `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
-- **Decisión Camino 2 (2026-07-19):** no ampliar tipologías en el selector de partida. Catálogo = precio; partida V1 = solo 3 patrones de estimación; tipologías complejas = constructor. Handoff completo: `CUBICACION_PAUTA_HANDOFF.md`.
-- Cortes Fase 4 ya implementados (2026-07-18): sistemas/estados/roles; snapshot `[cub:]`; edicion manual; Guardar ajuste; pauta consolidada; **calibracion V1** (descuentos + ejemplo real en ficha de linea).
-- Alcance Fase 4 V1: cubicar sin precios, reglas en `catalog_metadata`, pauta revisable, snapshot, ajuste a linea, consolidado, calibracion por sistema/ejemplo.
-- Siguiente corte seguro: validar calibracion con ejemplos reales de un piloto; presets por proveedor solo si hace falta.
-- Fuera de Fase 4 V1: precios/costos/margen, optimización de pérdida, nesting, CAD, inventario, fabricación automática y promesas de manual técnico universal.
+- **Fase actual = Fase 4 — Cubicación y pauta revisable**. Modelo vigente (2026-07-21): **recetas de fabricación** (componentes reales + reglas guiadas) en el wizard de línea; snapshot cotización v2. Camino 2 (3 partidas Marco/Hoja) queda como migración. Handoff: `CUBICACION_PAUTA_HANDOFF.md`.
+- Cortes Fase 4: receta en `catalog_metadata.fabricationRecipe`; validación por componente; pauta por perfil; snapshot `[cub:]` v2; editor en pasos 3–4 del modal Nueva línea.
+- Fuera de alcance: optimizador real de barras, nesting, CAD, inventario, fabricación automática.
 - No reinventar 2B ni Quote Studio sin bug concreto. CRM/Kanban fuera.
 
 ## Advertencia critica

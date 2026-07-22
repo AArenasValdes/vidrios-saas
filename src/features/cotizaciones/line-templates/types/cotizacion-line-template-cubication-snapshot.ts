@@ -17,17 +17,30 @@ import {
   type CotizacionLineTemplateCut,
   type CotizacionLineTemplateGlassPiece,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import {
+  buildRecipeCuttingPreview,
+  recipePreviewToLegacyCuttingPreview,
+  resolveRecipeFromMetadata,
+} from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
+import {
+  parseFabricationRecipe,
+  type FabricationRecipe,
+  type RecipeStatus,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 
-export const COTIZACION_CUBICATION_SNAPSHOT_VERSION = 1 as const;
+export const COTIZACION_CUBICATION_SNAPSHOT_VERSION = 2 as const;
+export const COTIZACION_CUBICATION_SNAPSHOT_LEGACY_VERSION = 1 as const;
 
 export type CotizacionItemCubicationSnapshotSource = "auto" | "manual";
 
 export type CotizacionItemCubicationSnapshot = {
-  v: typeof COTIZACION_CUBICATION_SNAPSHOT_VERSION;
+  v:
+    | typeof COTIZACION_CUBICATION_SNAPSHOT_VERSION
+    | typeof COTIZACION_CUBICATION_SNAPSHOT_LEGACY_VERSION;
   source: CotizacionItemCubicationSnapshotSource;
   lineTemplateId: string;
-  system: CotizacionLineTemplateCubicationSystem;
-  status: CotizacionLineTemplateCubicationStatus;
+  system: CotizacionLineTemplateCubicationSystem | string;
+  status: CotizacionLineTemplateCubicationStatus | RecipeStatus | string;
   widthMm: number;
   heightMm: number;
   quantity: number;
@@ -40,6 +53,8 @@ export type CotizacionItemCubicationSnapshot = {
   totalProfilesLinealMm: number;
   glass: CotizacionLineTemplateGlassPiece | null;
   accessoryUnits: number;
+  /** Receta congelada (v2). Cotizaciones antiguas pueden no traerla. */
+  recipe?: FabricationRecipe | null;
 };
 
 function toBase64Url(base64: string): string {
@@ -117,31 +132,19 @@ function parseGlass(value: unknown): CotizacionLineTemplateGlassPiece | null {
   };
 }
 
-function normalizeSystem(value: unknown): CotizacionLineTemplateCubicationSystem {
-  if (
-    value === "pano_fijo" ||
-    value === "corredera_2_hojas" ||
-    value === "puerta_abatible_1_hoja"
-  ) {
-    return value;
-  }
-  return "corredera_2_hojas";
+function normalizeSystem(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim() : "corredera_2_hojas";
 }
 
-function normalizeStatus(value: unknown): CotizacionLineTemplateCubicationStatus {
-  return value === "lista_para_probar" ||
-    value === "en_calibracion" ||
-    value === "validada" ||
-    value === "revisar_cambios"
-    ? value
-    : "sin_configurar";
+function normalizeStatus(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim() : "sin_configurar";
 }
 
 export function serializeCubicationSnapshot(
   snapshot: CotizacionItemCubicationSnapshot
 ): string {
   const json = JSON.stringify(snapshot);
-  return `${COTIZACION_CUBICATION_SNAPSHOT_VERSION}|${encodeUtf8ToBase64Url(json)}`;
+  return `${snapshot.v}|${encodeUtf8ToBase64Url(json)}`;
 }
 
 export function parseCubicationSnapshot(
@@ -154,10 +157,15 @@ export function parseCubicationSnapshot(
     const pipeIndex = raw.indexOf("|");
     if (pipeIndex <= 0) return null;
     const version = Number(raw.slice(0, pipeIndex));
-    if (version !== COTIZACION_CUBICATION_SNAPSHOT_VERSION) return null;
+    if (
+      version !== COTIZACION_CUBICATION_SNAPSHOT_VERSION &&
+      version !== COTIZACION_CUBICATION_SNAPSHOT_LEGACY_VERSION
+    ) {
+      return null;
+    }
 
     const parsed = JSON.parse(decodeBase64Url(raw.slice(pipeIndex + 1))) as unknown;
-    if (!isRecord(parsed) || parsed.v !== COTIZACION_CUBICATION_SNAPSHOT_VERSION) {
+    if (!isRecord(parsed) || (parsed.v !== 1 && parsed.v !== 2)) {
       return null;
     }
 
@@ -178,8 +186,10 @@ export function parseCubicationSnapshot(
       ? parsed.bars.map(parseBar).filter((bar): bar is CotizacionLineTemplateCuttingBar => Boolean(bar))
       : [];
 
+    const recipe = parseFabricationRecipe(parsed.recipe);
+
     return {
-      v: COTIZACION_CUBICATION_SNAPSHOT_VERSION,
+      v: parsed.v === 2 ? 2 : 1,
       source: parsed.source === "manual" ? "manual" : "auto",
       lineTemplateId,
       system: normalizeSystem(parsed.system),
@@ -202,6 +212,7 @@ export function parseCubicationSnapshot(
       ),
       glass: parseGlass(parsed.glass),
       accessoryUnits: Math.max(0, Math.round(Number(parsed.accessoryUnits) || 0)),
+      recipe: recipe ?? null,
     };
   } catch {
     return null;
@@ -469,11 +480,20 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
   }
 
   const cubicationConfig = getLineTemplateCubicationConfig(input.catalogMetadata);
-  const preview = buildLineTemplateCuttingPreview(
-    rules,
-    { widthMm, heightMm, quantity },
-    cubicationConfig
-  );
+  const recipe = resolveRecipeFromMetadata(input.catalogMetadata);
+  const preview = recipe
+    ? recipePreviewToLegacyCuttingPreview(
+        buildRecipeCuttingPreview(
+          recipe,
+          { widthMm, heightMm, quantity, sashCount: recipe.sashCount, moduleCount: recipe.moduleCount },
+          { barLengthMm: rules.barLengthMm, kerfMm: rules.sawKerfMm }
+        )
+      )
+    : buildLineTemplateCuttingPreview(
+        rules,
+        { widthMm, heightMm, quantity },
+        cubicationConfig
+      );
 
   if (preview.cuts.length === 0) {
     return null;
@@ -483,8 +503,8 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     v: COTIZACION_CUBICATION_SNAPSHOT_VERSION,
     source: "auto",
     lineTemplateId,
-    system: cubicationConfig.system,
-    status: cubicationConfig.status,
+    system: recipe?.fabricationType ?? cubicationConfig.system,
+    status: recipe?.status ?? cubicationConfig.status,
     widthMm,
     heightMm,
     quantity,
@@ -497,6 +517,7 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     totalProfilesLinealMm: preview.totalProfilesLinealMm,
     glass: preview.glass,
     accessoryUnits: preview.accessoryUnits,
+    recipe: recipe ?? null,
   };
 }
 

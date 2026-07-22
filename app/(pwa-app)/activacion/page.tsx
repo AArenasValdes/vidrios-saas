@@ -437,30 +437,6 @@ function ActivacionPageContent() {
     initialGateCheckedRef.current = true;
 
     if (!shouldRedirect) {
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "d4bf8a",
-        },
-        body: JSON.stringify({
-          sessionId: "d4bf8a",
-          runId: "activacion-gate",
-          hypothesisId: "H1",
-          location: "activacion/page.tsx:kick_dashboard",
-          message: "activacion_kicked_to_dashboard",
-          data: {
-            isReplayMode,
-            isChecking,
-            shouldRedirect,
-            hasReturnParams: Boolean(activationReturnParams),
-            href: typeof window !== "undefined" ? window.location.href : "",
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       router.replace("/dashboard");
     }
   }, [activationReturnParams, isChecking, isReplayMode, router, shouldRedirect]);
