@@ -64,6 +64,7 @@ export function PautaConsolidadaPanel({ items }: Props) {
       <div className={d.consolidatedPautaTable} role="table" aria-label="Cortes consolidados">
         <div className={d.consolidatedPautaHead} role="row">
           <span role="columnheader">Perfil</span>
+          <span role="columnheader">Función</span>
           <span role="columnheader">Medida</span>
           <span role="columnheader">Cant.</span>
           <span role="columnheader">Total</span>
@@ -72,6 +73,9 @@ export function PautaConsolidadaPanel({ items }: Props) {
         {pauta.rows.map((row) => (
           <div key={row.key} className={d.consolidatedPautaRow} role="row">
             <strong role="cell">{row.profile}</strong>
+            <span role="cell" title={row.measureExplanation ?? undefined}>
+              {row.functionLabel}
+            </span>
             <span role="cell">{formatMm(row.lengthMm)}</span>
             <span role="cell">{row.quantity}</span>
             <span role="cell">{formatMm(row.totalLinealMm)}</span>

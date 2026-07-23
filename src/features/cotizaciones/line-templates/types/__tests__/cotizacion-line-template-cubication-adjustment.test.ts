@@ -196,10 +196,10 @@ describe("pauta consolidada", () => {
     expect(pauta.itemCountWithPauta).toBe(2);
     expect(pauta.rows.length).toBeGreaterThan(0);
 
-    const riel = pauta.rows.find((row) =>
-      row.profile.toLowerCase().includes("marco")
-    );
+    const riel = pauta.rows.find((row) => row.functionLabel === "Riel superior");
     expect(riel?.pieceCodes).toEqual(expect.arrayContaining(["V1", "V2"]));
     expect(riel?.quantity).toBeGreaterThan(1);
+    // Agrupa por perfil + función + medida (no toda la línea como un solo perfil).
+    expect(riel?.functionLabel).toBe("Riel superior");
   });
 });

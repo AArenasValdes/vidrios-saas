@@ -922,6 +922,27 @@ export function isTrabajoPersonalizadoComponentType(tipo: string) {
 }
 
 /**
+ * Modo de pauta geométrica estimada (sin receta de línea).
+ * NO debe activarse solo por tener croquis/constructor (`guidedVisualConfig`):
+ * una corredera con croquis y línea L5000 debe usar la receta de fabricación.
+ */
+export function isCubicationPersonalizadoAssistMode(input: {
+  tipo?: string | null;
+  sistema?: string | null;
+  sheetScheme?: string | null;
+  configuracion?: string | null;
+  isCustomScheme?: boolean | null;
+}) {
+  if (input.isCustomScheme) return true;
+  if (isTrabajoPersonalizadoComponentType(input.tipo ?? "")) return true;
+  return isPersonalizadoCompositionSelected({
+    sistema: input.sistema,
+    sheetScheme: input.sheetScheme,
+    configuracion: input.configuracion,
+  });
+}
+
+/**
  * Entrada del constructor visual: tras elegir Personalizado (sistema en ventanas,
  * config/esquema en puertas y demás), en Trabajo personalizado, o para editar
  * una composición ya aplicada.
@@ -2341,14 +2362,13 @@ export function buildItemFromForm(
         items.find((item) => item.id === editingItemId)?.observaciones
       )
     : null;
-  const personalizadoAssistMode =
-    Boolean(syncedForm.guidedVisualConfig) ||
-    isTrabajoPersonalizadoComponentType(syncedForm.tipo) ||
-    isPersonalizadoCompositionSelected({
-      sistema,
-      sheetScheme,
-      configuracion,
-    });
+  const personalizadoAssistMode = isCubicationPersonalizadoAssistMode({
+    tipo: syncedForm.tipo,
+    sistema,
+    sheetScheme,
+    configuracion,
+    isCustomScheme,
+  });
   const cubicationSnapshot = resolveCubicationSnapshotForSave({
     lineTemplateId: syncedForm.lineTemplateId,
     widthMm: syncedForm.ancho ? Number(syncedForm.ancho) : null,

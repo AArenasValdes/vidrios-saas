@@ -96,6 +96,39 @@ export type LineTemplateFormDraft = {
 
 export type LineUsageMode = "solo_cotizar" | "con_estimacion" | "cubicacion_pauta";
 
+function pricingUnitCopy(unidad: CotizacionLineTemplateUnidadCobro) {
+  switch (unidad) {
+    case "metro_lineal":
+      return {
+        saleLabel: "Precio de venta por ml",
+        costLabel: "Costo estimado por ml",
+        saleHelp: "Valor que cobrarás al cliente por cada ml.",
+        unitSuffix: "/ml",
+      };
+    case "unidad":
+      return {
+        saleLabel: "Precio de venta por unidad",
+        costLabel: "Costo estimado por unidad",
+        saleHelp: "Valor que cobrarás al cliente por cada unidad.",
+        unitSuffix: "/ud",
+      };
+    case "valor_manual":
+      return {
+        saleLabel: "Precio de venta",
+        costLabel: "Costo estimado",
+        saleHelp: "Valor que cobrarás al cliente.",
+        unitSuffix: "",
+      };
+    default:
+      return {
+        saleLabel: "Precio de venta por m²",
+        costLabel: "Costo estimado por m²",
+        saleHelp: "Valor que cobrarás al cliente por cada m².",
+        unitSuffix: "/m²",
+      };
+  }
+}
+
 const ROUNDING_OPTIONS = [
   { value: "0", label: "Sin redondeo" },
   { value: "1000", label: "Redondear a $1.000" },
@@ -353,6 +386,7 @@ export function LineTemplateFormWizard({
   const usageMode = resolveLineUsageMode(draft);
   const maxStep = getWizardMaxStep(usageMode);
   const openStep = Math.min(wizardStep, maxStep);
+  const pricingCopy = pricingUnitCopy(unidadCobro);
 
   useEffect(() => {
     const body = sheetBodyRef.current;
@@ -686,47 +720,85 @@ export function LineTemplateFormWizard({
                   <div className={s.wizardFieldGroupHead}>
                     <LuBadgeDollarSign aria-hidden />
                     <div>
-                      <strong>Precio de venta</strong>
-                      <span>Lo que cobras al cliente</span>
+                      <strong>Precio y rentabilidad</strong>
+                      <span>
+                        Define cuánto cobrarás y, opcionalmente, cuánto te cuesta fabricar.
+                      </span>
                     </div>
                   </div>
 
-                  <div className={s.formSectionGrid}>
-                    <label className={`${s.fieldBlock} ${s.fieldHighlight}`}>
+                  <div className={s.pricingFieldsStack}>
+                    <label
+                      className={`${s.fieldBlock} ${s.fieldHighlight} ${s.pricingSaleField}`}
+                    >
                       <span className={s.fieldLabel}>
-                        Precio · {LINE_TEMPLATE_UNIDAD_LABELS[unidadCobro]}
+                        {pricingCopy.saleLabel}
+                        {pricingCopy.unitSuffix ? (
+                          <em className={s.pricingUnitMark}>{pricingCopy.unitSuffix}</em>
+                        ) : null}
                       </span>
+                      <span className={s.pricingFieldHelp}>{pricingCopy.saleHelp}</span>
                       <div className={s.moneyWrap}>
                         <span className={s.moneyPrefix}>$</span>
                         <input
-                          className={`${s.moneyInput} ${s.moneyInputPrimary}`}
+                          className={`${s.moneyInput} ${s.moneyInputPrimary} ${
+                            pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
+                          }`}
                           inputMode="numeric"
                           value={formatMoneyDigits(draft.precioM2Sugerido)}
                           onChange={(event) =>
                             onDraftChange("precioM2Sugerido", getDigits(event.target.value))
                           }
-                          placeholder="150.000"
+                          placeholder="Ej: 65.000"
+                          aria-required="true"
                         />
+                        {pricingCopy.unitSuffix ? (
+                          <span className={s.moneySuffix}>{pricingCopy.unitSuffix}</span>
+                        ) : null}
                       </div>
                     </label>
 
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>
-                        Costo <em className={s.optionalMark}>opcional</em>
-                      </span>
-                      <div className={s.moneyWrap}>
-                        <span className={s.moneyPrefix}>$</span>
-                        <input
-                          className={s.moneyInput}
-                          inputMode="numeric"
-                          value={formatMoneyDigits(draft.costoBase)}
-                          onChange={(event) =>
-                            onDraftChange("costoBase", getDigits(event.target.value))
-                          }
-                          placeholder="90.000"
-                        />
-                      </div>
-                    </label>
+                    <div className={`${s.fieldBlock} ${s.pricingCostField}`}>
+                      <label className={s.pricingCostLabelWrap}>
+                        <span className={s.fieldLabel}>
+                          {pricingCopy.costLabel}
+                          <em className={s.optionalMark}>Opcional</em>
+                          {pricingCopy.unitSuffix ? (
+                            <em className={s.pricingUnitMark}>{pricingCopy.unitSuffix}</em>
+                          ) : null}
+                        </span>
+                        <span className={s.pricingFieldHelp}>
+                          Tu costo aproximado de fabricación. Se usa para calcular margen y
+                          utilidad; no se muestra al cliente.
+                        </span>
+                        <div className={s.moneyWrap}>
+                          <span className={s.moneyPrefix}>$</span>
+                          <input
+                            className={`${s.moneyInput} ${
+                              pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
+                            }`}
+                            inputMode="numeric"
+                            value={formatMoneyDigits(draft.costoBase)}
+                            onChange={(event) =>
+                              onDraftChange("costoBase", getDigits(event.target.value))
+                            }
+                            placeholder="Ej: 40.000"
+                          />
+                          {pricingCopy.unitSuffix ? (
+                            <span className={s.moneySuffix}>{pricingCopy.unitSuffix}</span>
+                          ) : null}
+                        </div>
+                      </label>
+                      {!draft.costoBase.trim() ? (
+                        <div className={s.pricingCostEmptyHint} aria-live="polite">
+                          <p>Puedes cotizar normalmente sin completar este dato.</p>
+                          <p className={s.pricingCostEmptyHintSecondary}>
+                            Ventora no podrá calcular la utilidad estimada hasta que ingreses
+                            un costo.
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 

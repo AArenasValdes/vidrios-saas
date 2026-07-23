@@ -2,7 +2,9 @@
 
 import {
   buildRecipeCuttingPreview,
+  describeRecipeMeasure,
   migrateLegacyCubicationToRecipe,
+  recipePreviewToLegacyCuttingPreview,
   resolveComponentLengthMm,
   resolveComponentQuantity,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
@@ -13,8 +15,14 @@ import {
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
   recipeDisplayProfile,
+  type FabricationRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import { createStructuralRecipeTemplate } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-templates";
+import {
+  buildCubicationSnapshotFromCatalogMetadata,
+  isGeometricFallbackSnapshot,
+  resolveCubicationSnapshotForSave,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 
 describe("fabrication recipe domain", () => {
   it("crea plantilla de corredera 2 hojas con componentes reales", () => {
@@ -77,7 +85,7 @@ describe("fabrication recipe domain", () => {
     expect(deriveRecipeStatus(recipe)).not.toBe("lista_para_validar");
   });
 
-  it("estima cortes aunque el perfil diga Por asignar", () => {
+  it("estima cortes aunque el perfil diga Perfil sin código", () => {
     const recipe = createStructuralRecipeTemplate("corredera_2_hojas");
     const preview = buildRecipeCuttingPreview(recipe, {
       widthMm: 1200,
@@ -86,8 +94,10 @@ describe("fabrication recipe domain", () => {
       quantity: 1,
     });
     expect(preview.profileCuts.length).toBeGreaterThan(0);
-    expect(preview.profileCuts.every((cut) => cut.label === "Por asignar")).toBe(true);
+    expect(preview.profileCuts.every((cut) => cut.label === "Perfil sin código")).toBe(true);
     expect(preview.profileCuts.some((cut) => cut.functionLabel === "Riel superior")).toBe(true);
+    // Sin código de taller no hay barras confiables.
+    expect(preview.barSuggestions.length).toBe(0);
   });
 
   it("pasa a lista_para_validar cuando los obligatorios están configurados", () => {
@@ -210,6 +220,290 @@ describe("fabrication recipe domain", () => {
     });
     const riel = recipe.components.find((c) => c.functionKey === "riel_superior");
     expect(riel?.profileCode).toBe("");
-    expect(riel ? recipeDisplayProfile(riel) : "").toBe("Por asignar");
+    expect(riel ? recipeDisplayProfile(riel) : "").toBe("Perfil sin código");
+  });
+});
+
+function buildL5000AcceptanceRecipe(): FabricationRecipe {
+  return {
+    v: 1,
+    fabricationType: "corredera_2_hojas",
+    variant: "estandar",
+    sashCount: 2,
+    moduleCount: 1,
+    status: "validada",
+    validatedAt: "2026-07-23T00:00:00.000Z",
+    validationCase: null,
+    components: [
+      createRecipeComponent({
+        functionKey: "riel_superior",
+        profileCode: "L5000-RS",
+        quantityRule: "fixed",
+        quantityValue: 1,
+        measureBase: "vano_width",
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "riel_inferior",
+        profileCode: "L5000-RI",
+        quantityRule: "fixed",
+        quantityValue: 1,
+        measureBase: "vano_width",
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "jamba",
+        profileCode: "L5000-J",
+        quantityRule: "fixed",
+        quantityValue: 2,
+        measureBase: "vano_height",
+        adjustMode: "subtract",
+        adjustMm: 3,
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "cabezal",
+        profileCode: "L5000-C",
+        quantityRule: "per_sash",
+        quantityValue: 1,
+        measureBase: "half_vano_width",
+        adjustMode: "subtract",
+        adjustMm: 2,
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "zocalo",
+        profileCode: "L5000-Z",
+        quantityRule: "per_sash",
+        quantityValue: 1,
+        measureBase: "half_vano_width",
+        adjustMode: "subtract",
+        adjustMm: 2,
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "pierna",
+        profileCode: "L5000-P",
+        quantityRule: "per_sash",
+        quantityValue: 1,
+        measureBase: "sash_height",
+        adjustMode: "subtract",
+        adjustMm: 18,
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "traslapo",
+        profileCode: "L5000-T",
+        quantityRule: "per_sash",
+        quantityValue: 1,
+        measureBase: "sash_height",
+        adjustMode: "subtract",
+        adjustMm: 18,
+        required: false,
+        barLengthMm: 6000,
+      }),
+      createRecipeComponent({
+        functionKey: "vidrio",
+        kind: "glass",
+        profileCode: "VID",
+        quantityRule: "per_sash",
+        quantityValue: 1,
+        measureBase: "glass_width",
+      }),
+      createRecipeComponent({
+        functionKey: "accesorio",
+        kind: "accessory",
+        profileCode: "ACC",
+        quantityRule: "two_per_sash",
+        quantityValue: 1,
+        measureBase: "fixed",
+        required: false,
+      }),
+    ],
+  };
+}
+
+describe("aceptación despiece receta L5000", () => {
+  const recipe = buildL5000AcceptanceRecipe();
+  const metadata = {
+    cuttingEnabled: true,
+    cuttingMode: "marco_hojas" as const,
+    cuttingBarLengthMm: 6000,
+    cuttingSawKerfMm: 3,
+    cuttingSashCount: 2,
+    cubicationSystem: "corredera_2_hojas",
+    cubicationStatus: "validada",
+    fabricationRecipe: recipe,
+  };
+
+  const findCut = (
+    cuts: Array<{ functionLabel: string; lengthMm: number; quantity: number }>,
+    functionLabel: string
+  ) => cuts.find((cut) => cut.functionLabel === functionLabel);
+
+  it("una pieza 1200×1000 aplica la receta con trazabilidad", () => {
+    const preview = buildRecipeCuttingPreview(recipe, {
+      widthMm: 1200,
+      heightMm: 1000,
+      sashCount: 2,
+      quantity: 1,
+    });
+
+    expect(findCut(preview.profileCuts, "Riel superior")).toMatchObject({
+      quantity: 1,
+      lengthMm: 1200,
+    });
+    expect(findCut(preview.profileCuts, "Riel inferior")).toMatchObject({
+      quantity: 1,
+      lengthMm: 1200,
+    });
+    expect(findCut(preview.profileCuts, "Jamba")).toMatchObject({ quantity: 2, lengthMm: 997 });
+    expect(findCut(preview.profileCuts, "Cabezal")).toMatchObject({ quantity: 2, lengthMm: 598 });
+    expect(findCut(preview.profileCuts, "Zócalo")).toMatchObject({ quantity: 2, lengthMm: 598 });
+    expect(findCut(preview.profileCuts, "Pierna")).toMatchObject({ quantity: 2, lengthMm: 982 });
+    expect(findCut(preview.profileCuts, "Traslapo")).toMatchObject({ quantity: 2, lengthMm: 982 });
+    expect(preview.glasses[0]).toMatchObject({
+      widthMm: 600,
+      heightMm: 1000,
+      quantity: 2,
+      totalM2: 1.2,
+    });
+    expect(preview.accessories.reduce((sum, entry) => sum + entry.quantity, 0)).toBe(4);
+    expect(preview.totalProfilesLinealMm).toBe(10714);
+    expect(preview.profileCuts.some((cut) => /Marco|División/i.test(cut.functionLabel))).toBe(
+      false
+    );
+
+    const ctx = {
+      widthMm: 1200,
+      heightMm: 1000,
+      sashCount: 2,
+      moduleCount: 1,
+      quantity: 1,
+    };
+    expect(describeRecipeMeasure(recipe.components[2]!, ctx, 997)).toBe(
+      "Alto total 1.000 mm − 3 mm = 997 mm"
+    );
+    expect(describeRecipeMeasure(recipe.components[3]!, ctx, 598)).toBe(
+      "Mitad del ancho total 600 mm − 2 mm = 598 mm"
+    );
+    expect(describeRecipeMeasure(recipe.components[5]!, ctx, 982)).toBe(
+      "Alto de hoja 1.000 mm − 18 mm = 982 mm"
+    );
+  });
+
+  it("seis piezas idénticas consolidan 64.284 mm, 7,20 m² y 24 accesorios", () => {
+    const rowMap = new Map<
+      string,
+      { functionLabel: string; lengthMm: number; quantity: number; totalLinealMm: number }
+    >();
+    let totalProfilesLinealMm = 0;
+    let totalGlassM2 = 0;
+    let totalAccessories = 0;
+
+    for (let i = 0; i < 6; i += 1) {
+      const legacy = recipePreviewToLegacyCuttingPreview(
+        buildRecipeCuttingPreview(recipe, {
+          widthMm: 1200,
+          heightMm: 1000,
+          sashCount: 2,
+          quantity: 1,
+        })
+      );
+      totalAccessories += legacy.accessoryUnits;
+      totalGlassM2 += legacy.glass?.totalM2 ?? 0;
+      legacy.cuts.forEach((cut) => {
+        const key = `${cut.label}|${cut.functionLabel}|${cut.lengthMm}`;
+        const existing = rowMap.get(key);
+        if (existing) {
+          existing.quantity += cut.quantity;
+          existing.totalLinealMm += cut.totalLinealMm;
+        } else {
+          rowMap.set(key, {
+            functionLabel: cut.functionLabel,
+            lengthMm: cut.lengthMm,
+            quantity: cut.quantity,
+            totalLinealMm: cut.totalLinealMm,
+          });
+        }
+        totalProfilesLinealMm += cut.totalLinealMm;
+      });
+    }
+
+    expect(totalProfilesLinealMm).toBe(64284);
+    expect(totalGlassM2).toBeCloseTo(7.2, 5);
+    expect(totalAccessories).toBe(24);
+
+    const rows = Array.from(rowMap.values());
+    expect(rows.find((row) => row.functionLabel === "Riel superior")).toMatchObject({
+      quantity: 6,
+      lengthMm: 1200,
+    });
+    expect(rows.find((row) => row.functionLabel === "Jamba")).toMatchObject({
+      quantity: 12,
+      lengthMm: 997,
+    });
+    expect(rows.find((row) => row.functionLabel === "Cabezal")).toMatchObject({
+      quantity: 12,
+      lengthMm: 598,
+    });
+    expect(rows.find((row) => row.functionLabel === "Pierna")).toMatchObject({
+      quantity: 12,
+      lengthMm: 982,
+    });
+  });
+
+  it("piezas con medidas distintas no mezclan cortes de jamba", () => {
+    const a = recipePreviewToLegacyCuttingPreview(
+      buildRecipeCuttingPreview(recipe, {
+        widthMm: 1200,
+        heightMm: 1000,
+        sashCount: 2,
+        quantity: 1,
+      })
+    );
+    const b = recipePreviewToLegacyCuttingPreview(
+      buildRecipeCuttingPreview(recipe, {
+        widthMm: 1500,
+        heightMm: 1200,
+        sashCount: 2,
+        quantity: 1,
+      })
+    );
+
+    const jambaLengths = new Set(
+      [...a.cuts, ...b.cuts]
+        .filter((cut) => cut.functionLabel === "Jamba")
+        .map((cut) => cut.lengthMm)
+    );
+    expect(jambaLengths.has(997)).toBe(true);
+    expect(jambaLengths.has(1197)).toBe(true);
+    expect(jambaLengths.size).toBe(2);
+  });
+
+  it("snapshot desde metadata usa receta y no fallback geométrico", () => {
+    const snapshot = buildCubicationSnapshotFromCatalogMetadata({
+      lineTemplateId: "tpl-l5000",
+      catalogMetadata: metadata,
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+    });
+    expect(snapshot?.estimationKind).toBe("recipe");
+    expect(isGeometricFallbackSnapshot(snapshot)).toBe(false);
+    expect(findCut(snapshot!.cuts, "Jamba")).toMatchObject({ quantity: 2, lengthMm: 997 });
+    expect(findCut(snapshot!.cuts, "Jamba")?.measureExplanation).toContain("997");
+
+    const saved = resolveCubicationSnapshotForSave({
+      lineTemplateId: "tpl-l5000",
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+      catalogMetadata: metadata,
+      personalizadoAssistMode: true,
+    });
+    expect(saved?.estimationKind).toBe("recipe");
+    expect(saved?.cuts.some((cut) => cut.label === "Marco")).toBe(false);
+    expect(saved?.cuts.some((cut) => cut.label === "División / hoja")).toBe(false);
   });
 });

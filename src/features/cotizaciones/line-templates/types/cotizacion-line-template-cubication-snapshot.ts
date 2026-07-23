@@ -33,6 +33,12 @@ export const COTIZACION_CUBICATION_SNAPSHOT_LEGACY_VERSION = 1 as const;
 
 export type CotizacionItemCubicationSnapshotSource = "auto" | "manual";
 
+/** Origen del cálculo de pauta mostrado al maestro. */
+export type CotizacionCubicationEstimationKind =
+  | "recipe"
+  | "legacy_partida"
+  | "geometric_fallback";
+
 export type CotizacionItemCubicationSnapshot = {
   v:
     | typeof COTIZACION_CUBICATION_SNAPSHOT_VERSION
@@ -55,7 +61,34 @@ export type CotizacionItemCubicationSnapshot = {
   accessoryUnits: number;
   /** Receta congelada (v2). Cotizaciones antiguas pueden no traerla. */
   recipe?: FabricationRecipe | null;
+  /** Cómo se generó la pauta (receta / partida V1 / estimado geométrico). */
+  estimationKind?: CotizacionCubicationEstimationKind | null;
 };
+
+export const GEOMETRIC_FALLBACK_NOTICE =
+  "Despiece estimado — esta línea todavía no tiene receta de fabricación configurada.";
+
+export function snapshotUsesFabricationRecipe(
+  snapshot: CotizacionItemCubicationSnapshot | null | undefined
+): boolean {
+  if (!snapshot) return false;
+  if (snapshot.estimationKind === "recipe") return true;
+  return Boolean(snapshot.recipe && snapshot.recipe.components.length > 0);
+}
+
+export function isGeometricFallbackSnapshot(
+  snapshot: CotizacionItemCubicationSnapshot | null | undefined
+): boolean {
+  if (!snapshot) return false;
+  if (snapshot.estimationKind === "geometric_fallback") return true;
+  if (snapshotUsesFabricationRecipe(snapshot)) return false;
+  return snapshot.cuts.some(
+    (cut) =>
+      cut.label === "División / hoja" ||
+      (cut.label === "Marco" &&
+        (cut.functionLabel === "Horizontal" || cut.functionLabel === "Vertical"))
+  );
+}
 
 function toBase64Url(base64: string): string {
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
@@ -96,12 +129,17 @@ function parseCut(value: unknown): CotizacionLineTemplateCut | null {
   const quantity = normalizePositiveInteger(value.quantity, 0);
   const lengthMm = normalizePositiveInteger(value.lengthMm, 0);
   if (!label || !functionLabel || quantity <= 0 || lengthMm <= 0) return null;
+  const measureExplanation =
+    typeof value.measureExplanation === "string" && value.measureExplanation.trim()
+      ? value.measureExplanation.trim()
+      : null;
   return {
     label,
     functionLabel,
     quantity,
     lengthMm,
     totalLinealMm: normalizePositiveInteger(value.totalLinealMm, lengthMm * quantity),
+    measureExplanation,
   };
 }
 
@@ -213,6 +251,14 @@ export function parseCubicationSnapshot(
       glass: parseGlass(parsed.glass),
       accessoryUnits: Math.max(0, Math.round(Number(parsed.accessoryUnits) || 0)),
       recipe: recipe ?? null,
+      estimationKind:
+        parsed.estimationKind === "recipe" ||
+        parsed.estimationKind === "legacy_partida" ||
+        parsed.estimationKind === "geometric_fallback"
+          ? parsed.estimationKind
+          : recipe
+            ? "recipe"
+            : null,
     };
   } catch {
     return null;
@@ -228,12 +274,17 @@ function normalizeEditableCut(cut: Partial<CotizacionLineTemplateCut>): Cotizaci
   if (!label || !functionLabel || quantity <= 0 || lengthMm <= 0) {
     return null;
   }
+  const measureExplanation =
+    typeof cut.measureExplanation === "string" && cut.measureExplanation.trim()
+      ? cut.measureExplanation.trim()
+      : null;
   return {
     label: label.slice(0, 80),
     functionLabel: functionLabel.slice(0, 80),
     quantity,
     lengthMm,
     totalLinealMm: lengthMm * quantity,
+    measureExplanation,
   };
 }
 
@@ -242,40 +293,54 @@ function packCutsIntoBars(
   barLengthMm: number,
   sawKerfMm: number
 ): CotizacionLineTemplateCuttingBar[] {
-  const expanded = cuts
-    .flatMap((cut) =>
-      Array.from({ length: cut.quantity }, () => ({
+  const safeBarLength = Math.max(normalizePositiveInteger(barLengthMm, 6000), 1000);
+  const safeKerf = Math.max(0, Math.round(Number(sawKerfMm) || 0));
+  const missingProfile = "Perfil sin código";
+
+  // Separar por código de perfil: nunca mezclar barras de códigos distintos.
+  const byProfile = new Map<string, CotizacionLineTemplateCut[]>();
+  cuts.forEach((cut) => {
+    const profile = cut.label.trim() || missingProfile;
+    // Sin código comercial no hay estimación confiable de barras.
+    if (profile === missingProfile || profile === "Por asignar") {
+      return;
+    }
+    const list = byProfile.get(profile) ?? [];
+    for (let i = 0; i < cut.quantity; i += 1) {
+      list.push({
         ...cut,
         quantity: 1,
         totalLinealMm: cut.lengthMm,
-      }))
-    )
-    .sort((a, b) => b.lengthMm - a.lengthMm);
+      });
+    }
+    byProfile.set(profile, list);
+  });
 
   const bars: CotizacionLineTemplateCuttingBar[] = [];
-  const safeBarLength = Math.max(normalizePositiveInteger(barLengthMm, 6000), 1000);
-  const safeKerf = Math.max(0, Math.round(Number(sawKerfMm) || 0));
+  Array.from(byProfile.values()).forEach((profileCuts) => {
+    const expanded = [...profileCuts].sort((a, b) => b.lengthMm - a.lengthMm);
+    expanded.forEach((cut) => {
+      const existingBar = bars.find((bar) => {
+        if (bar.cuts[0]?.label !== cut.label) return false;
+        const kerf = bar.cuts.length > 0 ? safeKerf : 0;
+        return bar.usedMm + kerf + cut.lengthMm <= safeBarLength;
+      });
+      const targetBar =
+        existingBar ??
+        ({
+          index: bars.length + 1,
+          usedMm: 0,
+          wasteMm: safeBarLength,
+          cuts: [],
+        } satisfies CotizacionLineTemplateCuttingBar);
 
-  expanded.forEach((cut) => {
-    const existingBar = bars.find((bar) => {
-      const kerf = bar.cuts.length > 0 ? safeKerf : 0;
-      return bar.usedMm + kerf + cut.lengthMm <= safeBarLength;
+      if (!existingBar) bars.push(targetBar);
+
+      const kerf = targetBar.cuts.length > 0 ? safeKerf : 0;
+      targetBar.usedMm += kerf + cut.lengthMm;
+      targetBar.wasteMm = Math.max(safeBarLength - targetBar.usedMm, 0);
+      targetBar.cuts.push(cut);
     });
-    const targetBar =
-      existingBar ??
-      ({
-        index: bars.length + 1,
-        usedMm: 0,
-        wasteMm: safeBarLength,
-        cuts: [],
-      } satisfies CotizacionLineTemplateCuttingBar);
-
-    if (!existingBar) bars.push(targetBar);
-
-    const kerf = targetBar.cuts.length > 0 ? safeKerf : 0;
-    targetBar.usedMm += kerf + cut.lengthMm;
-    targetBar.wasteMm = Math.max(safeBarLength - targetBar.usedMm, 0);
-    targetBar.cuts.push(cut);
   });
 
   return bars;
@@ -366,9 +431,8 @@ export function cubicationSnapshotToPreview(
 }
 
 /**
- * Borrador manual para composiciones Personalizado.
- * No usa la plantilla automática de la línea (evitar pauta falsa).
- * Solo ofrece filas editables + vidrio del vano como punto de partida.
+ * Fallback geométrico estimado (solo si la línea no tiene receta).
+ * Visible como “Despiece estimado — esta línea todavía no tiene receta…”.
  */
 export function buildPersonalizadoManualCubicationDraft(input: {
   lineTemplateId: string;
@@ -393,23 +457,26 @@ export function buildPersonalizadoManualCubicationDraft(input: {
     {
       label: "Marco",
       functionLabel: "Horizontal",
-      quantity: 2,
+      quantity: 2 * quantity,
       lengthMm: widthMm,
-      totalLinealMm: widthMm * 2,
+      totalLinealMm: widthMm * 2 * quantity,
+      measureExplanation: `Ancho total ${widthMm.toLocaleString("es-CL")} mm (estimado geométrico)`,
     },
     {
       label: "Marco",
       functionLabel: "Vertical",
-      quantity: 2,
+      quantity: 2 * quantity,
       lengthMm: heightMm,
-      totalLinealMm: heightMm * 2,
+      totalLinealMm: heightMm * 2 * quantity,
+      measureExplanation: `Alto total ${heightMm.toLocaleString("es-CL")} mm (estimado geométrico)`,
     },
     {
       label: "División / hoja",
       functionLabel: "Por definir",
-      quantity: 1,
+      quantity: 1 * quantity,
       lengthMm: heightMm,
-      totalLinealMm: heightMm,
+      totalLinealMm: heightMm * quantity,
+      measureExplanation: `Alto total ${heightMm.toLocaleString("es-CL")} mm (estimado geométrico)`,
     },
   ];
 
@@ -436,6 +503,8 @@ export function buildPersonalizadoManualCubicationDraft(input: {
       totalM2: (widthMm * heightMm * quantity) / 1_000_000,
     },
     accessoryUnits: 0,
+    recipe: null,
+    estimationKind: "geometric_fallback",
   };
 
   const rebuilt = rebuildCubicationSnapshotWithCuts(base, starterCuts, {
@@ -454,6 +523,8 @@ export function buildPersonalizadoManualCubicationDraft(input: {
     status: "en_calibracion",
     glass: base.glass,
     accessoryUnits: 0,
+    recipe: null,
+    estimationKind: "geometric_fallback",
   };
 }
 
@@ -475,25 +546,60 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
   }
 
   const rules = getLineTemplateCuttingRules(input.catalogMetadata);
+  const cubicationConfig = getLineTemplateCubicationConfig(input.catalogMetadata);
+  const recipe = resolveRecipeFromMetadata(input.catalogMetadata);
+  const hasRecipe = Boolean(recipe && recipe.components.length > 0);
+
+  // Receta de fabricación: fuente de verdad aunque cuttingEnabled esté mal seteado.
+  if (hasRecipe && recipe) {
+    const preview = recipePreviewToLegacyCuttingPreview(
+      buildRecipeCuttingPreview(
+        recipe,
+        {
+          widthMm,
+          heightMm,
+          quantity,
+          sashCount: recipe.sashCount,
+          moduleCount: recipe.moduleCount,
+        },
+        { barLengthMm: rules.barLengthMm, kerfMm: rules.sawKerfMm }
+      )
+    );
+    if (preview.cuts.length === 0 && preview.accessoryUnits <= 0 && !preview.glass) {
+      return null;
+    }
+    return {
+      v: COTIZACION_CUBICATION_SNAPSHOT_VERSION,
+      source: "auto",
+      lineTemplateId,
+      system: recipe.fabricationType,
+      status: recipe.status,
+      widthMm,
+      heightMm,
+      quantity,
+      capturedAt: input.capturedAt ?? new Date().toISOString(),
+      cuts: preview.cuts,
+      bars: preview.bars,
+      totalUsedMm: preview.totalUsedMm,
+      totalWasteMm: preview.totalWasteMm,
+      wastePct: preview.wastePct,
+      totalProfilesLinealMm: preview.totalProfilesLinealMm,
+      glass: preview.glass,
+      accessoryUnits: preview.accessoryUnits,
+      recipe,
+      estimationKind: "recipe",
+    };
+  }
+
   if (!rules.enabled || rules.mode === "sin_corte") {
     return null;
   }
 
-  const cubicationConfig = getLineTemplateCubicationConfig(input.catalogMetadata);
-  const recipe = resolveRecipeFromMetadata(input.catalogMetadata);
-  const preview = recipe
-    ? recipePreviewToLegacyCuttingPreview(
-        buildRecipeCuttingPreview(
-          recipe,
-          { widthMm, heightMm, quantity, sashCount: recipe.sashCount, moduleCount: recipe.moduleCount },
-          { barLengthMm: rules.barLengthMm, kerfMm: rules.sawKerfMm }
-        )
-      )
-    : buildLineTemplateCuttingPreview(
-        rules,
-        { widthMm, heightMm, quantity },
-        cubicationConfig
-      );
+  const preview = buildLineTemplateCuttingPreview(
+    rules,
+    { widthMm, heightMm, quantity },
+    cubicationConfig
+  );
 
   if (preview.cuts.length === 0) {
     return null;
@@ -503,8 +609,8 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     v: COTIZACION_CUBICATION_SNAPSHOT_VERSION,
     source: "auto",
     lineTemplateId,
-    system: recipe?.fabricationType ?? cubicationConfig.system,
-    status: recipe?.status ?? cubicationConfig.status,
+    system: cubicationConfig.system,
+    status: cubicationConfig.status,
     widthMm,
     heightMm,
     quantity,
@@ -517,7 +623,8 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     totalProfilesLinealMm: preview.totalProfilesLinealMm,
     glass: preview.glass,
     accessoryUnits: preview.accessoryUnits,
-    recipe: recipe ?? null,
+    recipe: null,
+    estimationKind: "legacy_partida",
   };
 }
 
@@ -529,7 +636,10 @@ export function resolveCubicationSnapshotForSave(input: {
   catalogMetadata?: CotizacionLineTemplateCatalogMetadata | null;
   draftSnapshot?: CotizacionItemCubicationSnapshot | null;
   previousSnapshot?: CotizacionItemCubicationSnapshot | null;
-  /** Composición Personalizado: nunca caer a pauta automática de línea. */
+  /**
+   * Composición Personalizado sin receta: pauta geométrica estimada.
+   * Si la línea tiene receta de fabricación, la receta manda.
+   */
   personalizadoAssistMode?: boolean;
 }): CotizacionItemCubicationSnapshot | null {
   const lineTemplateId = input.lineTemplateId.trim();
@@ -542,12 +652,52 @@ export function resolveCubicationSnapshotForSave(input: {
     return null;
   }
 
+  const recipeFromCatalog = resolveRecipeFromMetadata(input.catalogMetadata);
+  const catalogHasRecipe = Boolean(
+    recipeFromCatalog && recipeFromCatalog.components.length > 0
+  );
+
+  const preserveManualRecipeAdjustment = (
+    snapshot: CotizacionItemCubicationSnapshot | null | undefined
+  ) =>
+    Boolean(
+      snapshot &&
+        cubicationSnapshotMatchesDimensions(snapshot, dims) &&
+        snapshot.source === "manual" &&
+        snapshotUsesFabricationRecipe(snapshot) &&
+        !isGeometricFallbackSnapshot(snapshot)
+    );
+
+  // Receta de línea: siempre manda sobre el croquis / modo Personalizado.
+  if (catalogHasRecipe && input.catalogMetadata) {
+    if (preserveManualRecipeAdjustment(input.draftSnapshot)) {
+      return rebuildCubicationSnapshotWithCuts(
+        input.draftSnapshot!,
+        input.draftSnapshot!.cuts,
+        {
+          source: "manual",
+          capturedAt: input.draftSnapshot!.capturedAt,
+        }
+      );
+    }
+    if (preserveManualRecipeAdjustment(input.previousSnapshot)) {
+      return input.previousSnapshot ?? null;
+    }
+    return buildCubicationSnapshotFromCatalogMetadata({
+      lineTemplateId,
+      catalogMetadata: input.catalogMetadata,
+      widthMm,
+      heightMm,
+      quantity,
+    });
+  }
+
   if (input.personalizadoAssistMode) {
     if (
       cubicationSnapshotMatchesDimensions(input.draftSnapshot, dims) &&
       input.draftSnapshot?.source === "manual"
     ) {
-      return rebuildCubicationSnapshotWithCuts(
+      const rebuilt = rebuildCubicationSnapshotWithCuts(
         input.draftSnapshot,
         input.draftSnapshot.cuts,
         {
@@ -555,13 +705,20 @@ export function resolveCubicationSnapshotForSave(input: {
           capturedAt: input.draftSnapshot.capturedAt,
         }
       );
+      return rebuilt
+        ? { ...rebuilt, estimationKind: "geometric_fallback", recipe: null }
+        : null;
     }
 
     if (
       cubicationSnapshotMatchesDimensions(input.previousSnapshot, dims) &&
       input.previousSnapshot?.source === "manual"
     ) {
-      return input.previousSnapshot;
+      return {
+        ...input.previousSnapshot,
+        estimationKind: "geometric_fallback",
+        recipe: null,
+      };
     }
 
     return buildPersonalizadoManualCubicationDraft({
@@ -577,7 +734,10 @@ export function resolveCubicationSnapshotForSave(input: {
     cubicationSnapshotMatchesDimensions(input.draftSnapshot, dims) &&
     input.draftSnapshot
   ) {
-    if (input.draftSnapshot.source === "manual") {
+    if (
+      input.draftSnapshot.source === "manual" &&
+      !isGeometricFallbackSnapshot(input.draftSnapshot)
+    ) {
       return rebuildCubicationSnapshotWithCuts(input.draftSnapshot, input.draftSnapshot.cuts, {
         source: "manual",
         capturedAt: input.draftSnapshot.capturedAt,
@@ -599,7 +759,8 @@ export function resolveCubicationSnapshotForSave(input: {
 
   if (
     cubicationSnapshotMatchesDimensions(input.previousSnapshot, dims) &&
-    input.previousSnapshot?.source === "manual"
+    input.previousSnapshot?.source === "manual" &&
+    !isGeometricFallbackSnapshot(input.previousSnapshot)
   ) {
     return input.previousSnapshot;
   }

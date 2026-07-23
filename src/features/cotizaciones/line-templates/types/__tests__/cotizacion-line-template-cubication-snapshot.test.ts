@@ -186,28 +186,76 @@ describe("cotizacion line template cubication snapshot", () => {
     expect(draft?.glass?.heightMm).toBe(1000);
   });
 
-  it("en Personalizado el save no cae a pauta automática de línea", () => {
-    const auto = buildCubicationSnapshotFromCatalogMetadata({
-      lineTemplateId: "tpl-1",
-      catalogMetadata: { ...SAMPLE_METADATA },
-      widthMm: 1200,
-      heightMm: 1000,
-      quantity: 1,
-    });
-    expect(auto).not.toBeNull();
+  it("en Personalizado sin receta usa estimado geométrico (no partida automática silenciosa)", () => {
+    const metadataSinReceta = {
+      cuttingEnabled: false,
+      cuttingMode: "sin_corte" as const,
+      cubicationSystem: "corredera_2_hojas",
+      cubicationStatus: "sin_configurar",
+    };
 
     const saved = resolveCubicationSnapshotForSave({
       lineTemplateId: "tpl-1",
       widthMm: 1200,
       heightMm: 1000,
       quantity: 1,
-      catalogMetadata: { ...SAMPLE_METADATA },
+      catalogMetadata: metadataSinReceta,
       draftSnapshot: null,
       personalizadoAssistMode: true,
     });
 
     expect(saved?.source).toBe("manual");
-    expect(saved?.status).toBe("en_calibracion");
-    expect(saved?.cuts).not.toEqual(auto?.cuts);
+    expect(saved?.estimationKind).toBe("geometric_fallback");
+    expect(saved?.cuts.some((cut) => cut.label === "División / hoja")).toBe(true);
+  });
+
+  it("si la línea tiene receta, personalizado no reemplaza por Marco/División", () => {
+    const withRecipe = {
+      ...SAMPLE_METADATA,
+      fabricationRecipe: {
+        v: 1,
+        fabricationType: "corredera_2_hojas",
+        variant: "estandar",
+        sashCount: 2,
+        moduleCount: 1,
+        status: "validada",
+        validatedAt: "2026-07-23T00:00:00.000Z",
+        validationCase: null,
+        components: [
+          {
+            id: "riel-1",
+            functionKey: "riel_superior",
+            functionLabel: "Riel superior",
+            kind: "profile",
+            profileCode: "5001",
+            profileName: "Riel",
+            quantityRule: "fixed",
+            quantityValue: 1,
+            measureBase: "vano_width",
+            adjustMode: "none",
+            adjustMm: 0,
+            fixedMeasureMm: 0,
+            required: true,
+            barLengthMm: 6000,
+            kerfMm: 3,
+            notes: "",
+          },
+        ],
+      },
+    };
+
+    const saved = resolveCubicationSnapshotForSave({
+      lineTemplateId: "tpl-1",
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+      catalogMetadata: withRecipe,
+      draftSnapshot: null,
+      personalizadoAssistMode: true,
+    });
+
+    expect(saved?.estimationKind).toBe("recipe");
+    expect(saved?.cuts.some((cut) => cut.functionLabel === "Riel superior")).toBe(true);
+    expect(saved?.cuts.some((cut) => cut.label === "Marco")).toBe(false);
   });
 });

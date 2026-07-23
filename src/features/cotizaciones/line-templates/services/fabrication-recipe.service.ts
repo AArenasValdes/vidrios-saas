@@ -13,9 +13,12 @@ import {
   createRecipeComponent,
   deriveRecipeStatus,
   getFabricationRecipeFromMetadata,
+  hasWorkshopProfileCode,
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
+  MEASURE_BASE_LABELS,
   parseFabricationRecipe,
+  RECIPE_MISSING_PROFILE_LABEL,
   recipeDisplayProfile,
   sanitizeWorkshopProfileCode,
   type FabricationRecipe,
@@ -40,6 +43,8 @@ export type RecipeCutPreviewRow = {
   totalLinealMm: number;
   pending: boolean;
   error: string | null;
+  measureExplanation: string | null;
+  hasProfileCode: boolean;
 };
 
 export type RecipeBarSuggestion = {
@@ -75,6 +80,62 @@ function roundMm(value: number) {
   return Math.round(value);
 }
 
+function formatTraceMm(value: number) {
+  return Math.round(value).toLocaleString("es-CL");
+}
+
+function resolveMeasureBaseMm(
+  component: RecipeComponent,
+  ctx: RecipeMeasureContext
+): number {
+  const sashWidth = ctx.widthMm / Math.max(1, ctx.sashCount);
+  const moduleWidth = ctx.widthMm / Math.max(1, ctx.moduleCount);
+  const moduleHeight = ctx.heightMm / Math.max(1, ctx.moduleCount);
+
+  switch (component.measureBase) {
+    case "vano_width":
+      return ctx.widthMm;
+    case "vano_height":
+      return ctx.heightMm;
+    case "half_vano_width":
+      return ctx.widthMm / 2;
+    case "sash_width":
+      return sashWidth;
+    case "sash_height":
+      return ctx.heightMm;
+    case "module_width":
+      return moduleWidth;
+    case "module_height":
+      return moduleHeight;
+    case "glass_width":
+      return sashWidth;
+    case "glass_height":
+      return ctx.heightMm;
+    case "fixed":
+      return component.fixedMeasureMm;
+    default:
+      return 0;
+  }
+}
+
+/** Explicación breve de cómo se obtuvo la medida (trazabilidad para el maestro). */
+export function describeRecipeMeasure(
+  component: RecipeComponent,
+  ctx: RecipeMeasureContext,
+  lengthMm: number
+): string {
+  const baseLabel = MEASURE_BASE_LABELS[component.measureBase] ?? "Medida";
+  const baseMm = roundMm(resolveMeasureBaseMm(component, ctx));
+
+  if (component.adjustMode === "subtract" && component.adjustMm > 0) {
+    return `${baseLabel} ${formatTraceMm(baseMm)} mm − ${formatTraceMm(component.adjustMm)} mm = ${formatTraceMm(lengthMm)} mm`;
+  }
+  if (component.adjustMode === "add" && component.adjustMm > 0) {
+    return `${baseLabel} ${formatTraceMm(baseMm)} mm + ${formatTraceMm(component.adjustMm)} mm = ${formatTraceMm(lengthMm)} mm`;
+  }
+  return `${baseLabel} ${formatTraceMm(lengthMm)} mm`;
+}
+
 export function resolveComponentQuantity(
   component: RecipeComponent,
   ctx: RecipeMeasureContext
@@ -101,47 +162,7 @@ export function resolveComponentLengthMm(
     return { lengthMm: null, error: null };
   }
 
-  const sashWidth = ctx.widthMm / Math.max(1, ctx.sashCount);
-  const moduleWidth = ctx.widthMm / Math.max(1, ctx.moduleCount);
-  const moduleHeight = ctx.heightMm / Math.max(1, ctx.moduleCount);
-
-  // Vidrio: ancho/alto se resuelven por pares en el preview; aquí base lineal genérica.
-  let base = 0;
-  switch (component.measureBase) {
-    case "vano_width":
-      base = ctx.widthMm;
-      break;
-    case "vano_height":
-      base = ctx.heightMm;
-      break;
-    case "half_vano_width":
-      base = ctx.widthMm / 2;
-      break;
-    case "sash_width":
-      base = sashWidth;
-      break;
-    case "sash_height":
-      base = ctx.heightMm;
-      break;
-    case "module_width":
-      base = moduleWidth;
-      break;
-    case "module_height":
-      base = moduleHeight;
-      break;
-    case "glass_width":
-      base = sashWidth;
-      break;
-    case "glass_height":
-      base = ctx.heightMm;
-      break;
-    case "fixed":
-      base = component.fixedMeasureMm;
-      break;
-    default:
-      base = 0;
-  }
-
+  const base = resolveMeasureBaseMm(component, ctx);
   const adjust =
     component.adjustMode === "subtract"
       ? -component.adjustMm
@@ -262,6 +283,7 @@ export function buildRecipeCuttingPreview(
 
   recipe.components.forEach((component) => {
     const configured = isComponentConfigured(component);
+    const hasProfileCode = hasWorkshopProfileCode(component);
     if (!configured) {
       if (component.required) pendingRequiredCount += 1;
       rows.push({
@@ -276,6 +298,8 @@ export function buildRecipeCuttingPreview(
         totalLinealMm: 0,
         pending: true,
         error: null,
+        measureExplanation: null,
+        hasProfileCode,
       });
       return;
     }
@@ -299,6 +323,8 @@ export function buildRecipeCuttingPreview(
         totalLinealMm: 0,
         pending: false,
         error: null,
+        measureExplanation: null,
+        hasProfileCode,
       });
       return;
     }
@@ -320,9 +346,12 @@ export function buildRecipeCuttingPreview(
           totalLinealMm: 0,
           pending: false,
           error: message,
+          measureExplanation: null,
+          hasProfileCode,
         });
         return;
       }
+      const glassExplanation = `${describeRecipeMeasure(component, ctx, pair.widthMm)} · alto ${formatTraceMm(pair.heightMm)} mm`;
       glasses.push({
         label: component.functionLabel,
         widthMm: pair.widthMm,
@@ -342,6 +371,8 @@ export function buildRecipeCuttingPreview(
         totalLinealMm: 0,
         pending: false,
         error: null,
+        measureExplanation: glassExplanation,
+        hasProfileCode,
       });
       return;
     }
@@ -361,6 +392,8 @@ export function buildRecipeCuttingPreview(
         totalLinealMm: 0,
         pending: false,
         error: error ?? "Medida inválida",
+        measureExplanation: null,
+        hasProfileCode,
       });
       return;
     }
@@ -377,6 +410,8 @@ export function buildRecipeCuttingPreview(
       totalLinealMm: lengthMm * quantity,
       pending: false,
       error: null,
+      measureExplanation: describeRecipeMeasure(component, ctx, lengthMm),
+      hasProfileCode,
     });
   });
 
@@ -388,21 +423,36 @@ export function buildRecipeCuttingPreview(
       quantity: row.quantity,
       lengthMm: row.lengthMm as number,
       totalLinealMm: row.totalLinealMm,
+      measureExplanation: row.measureExplanation,
     }));
 
   const byProfile = new Map<
     string,
-    { barLengthMm: number; kerfMm: number; cuts: Array<{ functionLabel: string; lengthMm: number }> }
+    {
+      barLengthMm: number;
+      kerfMm: number;
+      cuts: Array<{ functionLabel: string; lengthMm: number }>;
+      hasCommercialBar: boolean;
+    }
   >();
 
   rows.forEach((row) => {
     if (row.kind !== "profile" || row.pending || row.lengthMm == null || row.error) return;
+    // Sin código de taller no hay estimación confiable de barras (no mezclar con otros perfiles).
+    if (!row.hasProfileCode || row.profileCode === RECIPE_MISSING_PROFILE_LABEL) {
+      return;
+    }
     const component = recipe.components.find((entry) => entry.id === row.componentId);
+    const barLengthMm = component?.barLengthMm ?? defaultBar;
+    if (!barLengthMm || barLengthMm < 1000) {
+      return;
+    }
     const profileCode = row.profileCode;
     const current = byProfile.get(profileCode) ?? {
-      barLengthMm: component?.barLengthMm ?? defaultBar,
+      barLengthMm,
       kerfMm: component?.kerfMm ?? defaultKerf,
       cuts: [],
+      hasCommercialBar: true,
     };
     for (let i = 0; i < row.quantity; i += 1) {
       current.cuts.push({ functionLabel: row.functionLabel, lengthMm: row.lengthMm });

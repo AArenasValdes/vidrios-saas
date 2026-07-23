@@ -2263,11 +2263,12 @@
 .consolidatedPautaRow {
   display: grid;
   grid-template-columns:
-    minmax(0, 1.1fr)
+    minmax(0, 1fr)
+    minmax(0, 0.9fr)
     minmax(4.5rem, 0.7fr)
     minmax(3.2rem, 0.45fr)
     minmax(5rem, 0.7fr)
-    minmax(0, 1.2fr);
+    minmax(0, 1fr);
   align-items: center;
 }
 

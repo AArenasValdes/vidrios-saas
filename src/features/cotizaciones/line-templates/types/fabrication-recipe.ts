@@ -559,10 +559,22 @@ export function sanitizeWorkshopProfileCode(value: string | null | undefined): s
   return trimmed;
 }
 
+/** Etiqueta visible cuando falta código de taller (pauta / despiece). */
+export const RECIPE_MISSING_PROFILE_LABEL = "Perfil sin código";
+
 export function recipeDisplayProfile(component: RecipeComponent): string {
   const code = sanitizeWorkshopProfileCode(component.profileCode);
   if (code) return code;
   const name = sanitizeWorkshopProfileCode(component.profileName);
   if (name && name !== component.functionLabel.trim()) return name;
-  return "Por asignar";
+  return RECIPE_MISSING_PROFILE_LABEL;
+}
+
+export function hasWorkshopProfileCode(component: RecipeComponent): boolean {
+  return Boolean(
+    sanitizeWorkshopProfileCode(component.profileCode) ||
+      (sanitizeWorkshopProfileCode(component.profileName) &&
+        sanitizeWorkshopProfileCode(component.profileName) !==
+          component.functionLabel.trim())
+  );
 }

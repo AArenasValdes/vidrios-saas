@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import {
   ADJUST_MODE_LABELS,
   ADJUST_MODES,
@@ -16,10 +18,12 @@ import {
   duplicateRecipeAsVariant,
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
+  recipeDisplayProfile,
   type FabricationRecipe,
   type FabricationType,
   type RecipeComponent,
   type RecipeComponentFunction,
+  type RecipeStatus,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import { createStructuralRecipeTemplate } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-templates";
 import {
@@ -27,6 +31,7 @@ import {
   applyRealMeasuresAsAdjustments,
   buildRecipeCuttingPreview,
   confirmRecipeValidated,
+  resolveComponentQuantity,
   type RecipeCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 
@@ -45,6 +50,73 @@ type Props = {
 function formatMm(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${Math.round(value)} mm`;
+}
+
+function quantityValueLabel(rule: RecipeComponent["quantityRule"]) {
+  switch (rule) {
+    case "fixed":
+      return "Cantidad total";
+    case "per_sash":
+      return "Piezas por hoja";
+    case "two_per_sash":
+      return "Multiplicador (×2 por hoja)";
+    case "per_module":
+      return "Piezas por módulo";
+    case "two_per_module":
+      return "Multiplicador (×2 por módulo)";
+    case "custom":
+      return "Cantidad personalizada";
+    default:
+      return "Valor cantidad";
+  }
+}
+
+function quantityRuleHint(
+  rule: RecipeComponent["quantityRule"],
+  quantityValue: number,
+  sashCount: number,
+  resultCuts: number
+) {
+  const value = Math.max(1, quantityValue);
+  const hojas = Math.max(1, sashCount);
+  switch (rule) {
+    case "fixed":
+      return `${resultCuts} corte${resultCuts === 1 ? "" : "s"} fijos por ventana`;
+    case "per_sash":
+      return `${value} × ${hojas} hojas = ${resultCuts} cortes`;
+    case "two_per_sash":
+      return `2 × ${value} × ${hojas} hojas = ${resultCuts} cortes`;
+    case "per_module":
+      return `${value} por módulo = ${resultCuts} cortes`;
+    case "two_per_module":
+      return `2 × ${value} por módulo = ${resultCuts} cortes`;
+    default:
+      return `${resultCuts} cortes por ventana`;
+  }
+}
+
+function parsePositiveDraft(raw: string, fallback: number) {
+  const parsed = Math.round(Number(raw.replace(",", ".")));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseNonNegativeDraft(raw: string, fallback: number) {
+  const parsed = Math.round(Number(raw.replace(",", ".")));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function recipeStatusToneClass(status: RecipeStatus) {
+  switch (status) {
+    case "validada":
+    case "lista_para_validar":
+      return s.recipeToneOk;
+    case "en_validacion":
+    case "en_configuracion":
+    case "requiere_revision":
+      return s.recipeToneWarn;
+    default:
+      return s.recipeToneMuted;
+  }
 }
 
 function updateComponent(
@@ -79,6 +151,36 @@ export function FabricationRecipeEditor({
     quantity: 1,
   });
   const status = deriveRecipeStatus(recipe);
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
+  const [adjustDrafts, setAdjustDrafts] = useState<Record<string, string>>({});
+  const [sashDraft, setSashDraft] = useState(String(recipe.sashCount));
+  const [moduleDraft, setModuleDraft] = useState(String(recipe.moduleCount));
+
+  useEffect(() => {
+    setQuantityDrafts((previous) => {
+      const next: Record<string, string> = {};
+      recipe.components.forEach((component) => {
+        next[component.id] =
+          previous[component.id] ?? String(component.quantityValue);
+      });
+      return next;
+    });
+    setAdjustDrafts((previous) => {
+      const next: Record<string, string> = {};
+      recipe.components.forEach((component) => {
+        next[component.id] = previous[component.id] ?? String(component.adjustMm);
+      });
+      return next;
+    });
+  }, [recipe.components]);
+
+  useEffect(() => {
+    setSashDraft(String(recipe.sashCount));
+  }, [recipe.sashCount]);
+
+  useEffect(() => {
+    setModuleDraft(String(recipe.moduleCount));
+  }, [recipe.moduleCount]);
 
   const handleTypeChange = (type: FabricationType) => {
     const next = createStructuralRecipeTemplate(type);
@@ -88,113 +190,214 @@ export function FabricationRecipeEditor({
     });
   };
 
+  const commitQuantityValue = (componentId: string, raw: string) => {
+    const value = parsePositiveDraft(raw, 1);
+    setQuantityDrafts((current) => ({ ...current, [componentId]: String(value) }));
+    onRecipeChange(
+      updateComponent(recipe, componentId, {
+        quantityValue: value,
+      })
+    );
+  };
+
+  const commitAdjustMm = (componentId: string, raw: string, fallback: number) => {
+    const value = parseNonNegativeDraft(raw, fallback);
+    setAdjustDrafts((current) => ({ ...current, [componentId]: String(value) }));
+    onRecipeChange(
+      updateComponent(recipe, componentId, {
+        adjustMm: value,
+      })
+    );
+  };
+
+  const configuredCount = recipe.components.filter((component) =>
+    isComponentConfigured(component)
+  ).length;
+  const pendingCount = Math.max(0, recipe.components.length - configuredCount);
+  const missingCodes = recipe.components.filter(
+    (component) =>
+      component.kind === "profile" &&
+      component.required &&
+      recipeDisplayProfile(component) === "Perfil sin código"
+  ).length;
+
   if (mode === "configure") {
     return (
       <div className={s.recipeEditor}>
-        <p className={s.fieldHint}>
-          Ventora cargó una estructura sugerida. Confirma los perfiles y cortes que utiliza tu
-          taller.
-        </p>
+        <header className={s.recipeIntro}>
+          <div>
+            <p className={s.recipeIntroEyebrow}>Paso 3 · Fabricación</p>
+            <h3 className={s.recipeIntroTitle}>Receta de cortes de esta línea</h3>
+            <p className={s.recipeIntroText}>
+              Define cada perfil real del taller. La medida va en “Calcular según”, los mm en
+              “Ajuste”, y cuántas piezas salen en “Cómo contar”.
+            </p>
+          </div>
+          <div className={s.recipeStatusChips}>
+            <em className={recipeStatusToneClass(status)}>{RECIPE_STATUS_LABELS[status]}</em>
+            <em className={pendingCount > 0 ? s.recipeToneWarn : s.recipeToneOk}>
+              {pendingCount > 0
+                ? `${pendingCount} pendientes`
+                : `${configuredCount} componentes listos`}
+            </em>
+            {missingCodes > 0 ? (
+              <em className={s.recipeToneMuted}>
+                {missingCodes} sin código de perfil
+              </em>
+            ) : null}
+          </div>
+        </header>
 
-        <div className={s.cubicationSetupGrid}>
-          <label className={s.fieldBlock}>
-            <span className={s.fieldLabel}>Tipo de fabricación</span>
-            <select
-              className={s.selectInput}
-              value={recipe.fabricationType}
-              onChange={(event) =>
-                handleTypeChange(event.target.value as FabricationType)
+        <section className={s.recipeSetupCard} aria-label="Datos de la tipología">
+          <div className={s.recipeSectionHead}>
+            <strong>Tipología</strong>
+            <span>Tipo, hojas y variante de esta línea</span>
+          </div>
+          <div className={s.cubicationSetupGrid}>
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Tipo de fabricación</span>
+              <select
+                className={s.selectInput}
+                value={recipe.fabricationType}
+                onChange={(event) =>
+                  handleTypeChange(event.target.value as FabricationType)
+                }
+              >
+                {FABRICATION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {FABRICATION_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Variante</span>
+              <input
+                className={s.textInput}
+                value={recipe.variant}
+                onChange={(event) =>
+                  onRecipeChange(
+                    markRecipeDirtyAfterEdit({ ...recipe, variant: event.target.value })
+                  )
+                }
+                placeholder="estandar, reforzada, termopanel…"
+              />
+            </label>
+
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Cantidad de hojas</span>
+              <input
+                className={s.textInput}
+                inputMode="numeric"
+                value={sashDraft}
+                onChange={(event) => setSashDraft(event.target.value)}
+                onBlur={() => {
+                  const value = parsePositiveDraft(sashDraft, recipe.sashCount);
+                  setSashDraft(String(value));
+                  onRecipeChange(
+                    markRecipeDirtyAfterEdit({
+                      ...recipe,
+                      sashCount: value,
+                    })
+                  );
+                }}
+              />
+            </label>
+
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Módulos</span>
+              <input
+                className={s.textInput}
+                inputMode="numeric"
+                value={moduleDraft}
+                onChange={(event) => setModuleDraft(event.target.value)}
+                onBlur={() => {
+                  const value = parsePositiveDraft(moduleDraft, recipe.moduleCount);
+                  setModuleDraft(String(value));
+                  onRecipeChange(
+                    markRecipeDirtyAfterEdit({
+                      ...recipe,
+                      moduleCount: value,
+                    })
+                  );
+                }}
+              />
+            </label>
+          </div>
+          <div className={s.recipeSetupActions}>
+            <button
+              type="button"
+              className={s.secondaryButton}
+              onClick={() =>
+                onRecipeChange(duplicateRecipeAsVariant(recipe, `${recipe.variant} (copia)`))
               }
             >
-              {FABRICATION_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {FABRICATION_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </label>
+              Duplicar como variante
+            </button>
+          </div>
+        </section>
 
-          <label className={s.fieldBlock}>
-            <span className={s.fieldLabel}>Variante</span>
-            <input
-              className={s.textInput}
-              value={recipe.variant}
-              onChange={(event) =>
-                onRecipeChange(
-                  markRecipeDirtyAfterEdit({ ...recipe, variant: event.target.value })
-                )
-              }
-              placeholder="estandar, reforzada, termopanel…"
-            />
-          </label>
-
-          <label className={s.fieldBlock}>
-            <span className={s.fieldLabel}>Cantidad de hojas</span>
-            <input
-              className={s.textInput}
-              inputMode="numeric"
-              value={String(recipe.sashCount)}
-              onChange={(event) =>
-                onRecipeChange(
-                  markRecipeDirtyAfterEdit({
-                    ...recipe,
-                    sashCount: Math.max(1, Math.round(Number(event.target.value)) || 1),
-                  })
-                )
-              }
-            />
-          </label>
-
-          <label className={s.fieldBlock}>
-            <span className={s.fieldLabel}>Módulos</span>
-            <input
-              className={s.textInput}
-              inputMode="numeric"
-              value={String(recipe.moduleCount)}
-              onChange={(event) =>
-                onRecipeChange(
-                  markRecipeDirtyAfterEdit({
-                    ...recipe,
-                    moduleCount: Math.max(1, Math.round(Number(event.target.value)) || 1),
-                  })
-                )
-              }
-            />
-          </label>
-        </div>
-
-        <div className={s.recipeStatusRow}>
-          <strong>Estado técnico:</strong>
-          <span>{RECIPE_STATUS_LABELS[status]}</span>
-          <button
-            type="button"
-            className={s.secondaryButton}
-            onClick={() =>
-              onRecipeChange(duplicateRecipeAsVariant(recipe, `${recipe.variant} (copia)`))
-            }
-          >
-            Duplicar como variante
-          </button>
-        </div>
-
-        <div className={s.profileRoleCard}>
-          <div className={s.profileRoleHead}>
-            <strong>Perfiles que componen esta fabricación</strong>
-            <span>Una fila por componente real</span>
+        <section className={s.recipeComponentsSection} aria-label="Componentes de la receta">
+          <div className={s.recipeSectionHead}>
+            <strong>Componentes de la fabricación</strong>
+            <span>
+              {recipe.components.length}{" "}
+              {recipe.components.length === 1 ? "componente" : "componentes"} · una tarjeta por
+              perfil o accesorio
+            </span>
           </div>
 
           <div className={s.recipeComponentList}>
-            {recipe.components.map((component) => {
+            {recipe.components.map((component, index) => {
               const configured = isComponentConfigured(component);
+              const hasCode =
+                component.kind !== "profile" ||
+                recipeDisplayProfile(component) !== "Perfil sin código";
+              const quantityDraft =
+                quantityDrafts[component.id] ?? String(component.quantityValue);
+              const liveQuantityValue =
+                quantityDraft.trim() === ""
+                  ? component.quantityValue
+                  : parsePositiveDraft(quantityDraft, component.quantityValue);
+              const resultCuts = resolveComponentQuantity(
+                { ...component, quantityValue: liveQuantityValue },
+                {
+                  widthMm,
+                  heightMm,
+                  sashCount: recipe.sashCount,
+                  moduleCount: recipe.moduleCount,
+                  quantity: 1,
+                }
+              );
+              const previewRow = preview.rows.find((row) => row.componentId === component.id);
+
               return (
-                <article key={component.id} className={s.recipeComponentCard}>
+                <article
+                  key={component.id}
+                  className={`${s.recipeComponentCard} ${
+                    configured ? s.recipeCardReady : s.recipeCardPending
+                  }`}
+                >
                   <header className={s.recipeComponentHead}>
-                    <div>
-                      <strong>{component.functionLabel}</strong>
-                      <span>
-                        {component.required ? "Obligatorio" : "Opcional"}
-                        {!configured ? " · Pendiente de configurar" : ""}
-                      </span>
+                    <div className={s.recipeComponentTitleBlock}>
+                      <span className={s.recipeComponentIndex}>{index + 1}</span>
+                      <div>
+                        <strong>{component.functionLabel}</strong>
+                        <div className={s.recipeComponentBadges}>
+                          <em className={component.required ? s.badgeRequired : s.badgeOptional}>
+                            {component.required ? "Obligatorio" : "Opcional"}
+                          </em>
+                          <em className={configured ? s.badgeReady : s.badgePending}>
+                            {configured ? "Listo" : "Pendiente"}
+                          </em>
+                          {component.kind === "profile" ? (
+                            <em className={hasCode ? s.badgeReady : s.badgeMuted}>
+                              {hasCode ? recipeDisplayProfile(component) : "Sin código"}
+                            </em>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
                     <div className={s.recipeComponentActions}>
                       <button
@@ -220,7 +423,7 @@ export function FabricationRecipeEditor({
                       {!component.required ? (
                         <button
                           type="button"
-                          className={s.ghostButton}
+                          className={s.ghostButtonDanger}
                           onClick={() =>
                             onRecipeChange(
                               markRecipeDirtyAfterEdit({
@@ -238,142 +441,195 @@ export function FabricationRecipeEditor({
                     </div>
                   </header>
 
-                  <div className={s.recipeComponentGrid}>
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Código / perfil</span>
-                      <input
-                        className={s.textInput}
-                        value={component.profileCode}
-                        onChange={(event) =>
-                          onRecipeChange(
-                            updateComponent(recipe, component.id, {
-                              profileCode: event.target.value,
-                              profileName: component.profileName || event.target.value,
-                            })
-                          )
-                        }
-                        placeholder="Ej: 5001"
-                      />
-                    </label>
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Nombre</span>
-                      <input
-                        className={s.textInput}
-                        value={component.profileName}
-                        onChange={(event) =>
-                          onRecipeChange(
-                            updateComponent(recipe, component.id, {
-                              profileName: event.target.value,
-                            })
-                          )
-                        }
-                        placeholder="Nombre reconocido por el taller"
-                      />
-                    </label>
+                  <div className={s.recipeComponentSections}>
+                    <div className={s.recipeFieldGroup}>
+                      <p className={s.recipeFieldGroupTitle}>1. Identidad del perfil</p>
+                      <div className={s.recipeComponentGrid}>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Código / perfil</span>
+                          <input
+                            className={s.textInput}
+                            value={component.profileCode}
+                            onChange={(event) =>
+                              onRecipeChange(
+                                updateComponent(recipe, component.id, {
+                                  profileCode: event.target.value,
+                                  profileName: component.profileName || event.target.value,
+                                })
+                              )
+                            }
+                            placeholder="Ej: 5001"
+                          />
+                        </label>
+                        <label className={s.fieldBlock}>
+                          <span className={s.fieldLabel}>Nombre en taller</span>
+                          <input
+                            className={s.textInput}
+                            value={component.profileName}
+                            onChange={(event) =>
+                              onRecipeChange(
+                                updateComponent(recipe, component.id, {
+                                  profileName: event.target.value,
+                                })
+                              )
+                            }
+                            placeholder="Nombre reconocido por el taller"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
                     {component.kind !== "accessory" ? (
-                      <>
+                      <div className={s.recipeFieldGroup}>
+                        <p className={s.recipeFieldGroupTitle}>2. Medida del corte</p>
+                        <div className={s.recipeComponentGrid}>
+                          <label className={s.fieldBlock}>
+                            <span className={s.fieldLabel}>Calcular según</span>
+                            <select
+                              className={s.selectInput}
+                              value={component.measureBase}
+                              onChange={(event) =>
+                                onRecipeChange(
+                                  updateComponent(recipe, component.id, {
+                                    measureBase: event.target
+                                      .value as RecipeComponent["measureBase"],
+                                  })
+                                )
+                              }
+                            >
+                              {MEASURE_BASES.map((base) => (
+                                <option key={base} value={base}>
+                                  {MEASURE_BASE_LABELS[base]}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className={s.fieldBlock}>
+                            <span className={s.fieldLabel}>Ajuste</span>
+                            <select
+                              className={s.selectInput}
+                              value={component.adjustMode}
+                              onChange={(event) =>
+                                onRecipeChange(
+                                  updateComponent(recipe, component.id, {
+                                    adjustMode: event.target
+                                      .value as RecipeComponent["adjustMode"],
+                                  })
+                                )
+                              }
+                            >
+                              {ADJUST_MODES.map((modeOption) => (
+                                <option key={modeOption} value={modeOption}>
+                                  {ADJUST_MODE_LABELS[modeOption]}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className={s.fieldBlock}>
+                            <span className={s.fieldLabel}>mm de ajuste</span>
+                            <input
+                              className={s.textInput}
+                              inputMode="numeric"
+                              value={
+                                adjustDrafts[component.id] ?? String(component.adjustMm)
+                              }
+                              onChange={(event) => {
+                                const raw = event.target.value.replace(/[^\d]/g, "");
+                                setAdjustDrafts((current) => ({
+                                  ...current,
+                                  [component.id]: raw,
+                                }));
+                              }}
+                              onBlur={(event) =>
+                                commitAdjustMm(
+                                  component.id,
+                                  event.currentTarget.value,
+                                  component.adjustMm
+                                )
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.currentTarget.blur();
+                                }
+                              }}
+                              disabled={component.adjustMode === "none"}
+                            />
+                          </label>
+                        </div>
+                        <p className={s.recipeFieldGroupHint}>
+                          La fórmula está en “Calcular según”. El ajuste solo suma o resta mm.
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <div className={s.recipeFieldGroup}>
+                      <p className={s.recipeFieldGroupTitle}>3. Cantidad de piezas</p>
+                      <div className={s.recipeComponentGrid}>
                         <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Calcular según</span>
+                          <span className={s.fieldLabel}>Cómo contar</span>
                           <select
                             className={s.selectInput}
-                            value={component.measureBase}
+                            value={component.quantityRule}
                             onChange={(event) =>
                               onRecipeChange(
                                 updateComponent(recipe, component.id, {
-                                  measureBase: event.target
-                                    .value as RecipeComponent["measureBase"],
+                                  quantityRule: event.target
+                                    .value as RecipeComponent["quantityRule"],
                                 })
                               )
                             }
                           >
-                            {MEASURE_BASES.map((base) => (
-                              <option key={base} value={base}>
-                                {MEASURE_BASE_LABELS[base]}
+                            {QUANTITY_RULES.map((rule) => (
+                              <option key={rule} value={rule}>
+                                {QUANTITY_RULE_LABELS[rule]}
                               </option>
                             ))}
                           </select>
                         </label>
                         <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>Ajuste</span>
-                          <select
-                            className={s.selectInput}
-                            value={component.adjustMode}
-                            onChange={(event) =>
-                              onRecipeChange(
-                                updateComponent(recipe, component.id, {
-                                  adjustMode: event.target
-                                    .value as RecipeComponent["adjustMode"],
-                                })
-                              )
-                            }
-                          >
-                            {ADJUST_MODES.map((modeOption) => (
-                              <option key={modeOption} value={modeOption}>
-                                {ADJUST_MODE_LABELS[modeOption]}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>mm de ajuste</span>
+                          <span className={s.fieldLabel}>
+                            {quantityValueLabel(component.quantityRule)}
+                          </span>
                           <input
                             className={s.textInput}
                             inputMode="numeric"
-                            value={String(component.adjustMm)}
-                            onChange={(event) =>
-                              onRecipeChange(
-                                updateComponent(recipe, component.id, {
-                                  adjustMm: Math.max(
-                                    0,
-                                    Math.round(Number(event.target.value)) || 0
-                                  ),
-                                })
+                            value={quantityDraft}
+                            onChange={(event) => {
+                              const raw = event.target.value.replace(/[^\d]/g, "");
+                              setQuantityDrafts((current) => ({
+                                ...current,
+                                [component.id]: raw,
+                              }));
+                            }}
+                            onBlur={(event) =>
+                              commitQuantityValue(
+                                component.id,
+                                event.currentTarget.value
                               )
                             }
-                            disabled={component.adjustMode === "none"}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.currentTarget.blur();
+                              }
+                            }}
                           />
                         </label>
-                      </>
-                    ) : null}
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Cantidad</span>
-                      <select
-                        className={s.selectInput}
-                        value={component.quantityRule}
-                        onChange={(event) =>
-                          onRecipeChange(
-                            updateComponent(recipe, component.id, {
-                              quantityRule: event.target
-                                .value as RecipeComponent["quantityRule"],
-                            })
-                          )
-                        }
-                      >
-                        {QUANTITY_RULES.map((rule) => (
-                          <option key={rule} value={rule}>
-                            {QUANTITY_RULE_LABELS[rule]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Valor cantidad</span>
-                      <input
-                        className={s.textInput}
-                        inputMode="numeric"
-                        value={String(component.quantityValue)}
-                        onChange={(event) =>
-                          onRecipeChange(
-                            updateComponent(recipe, component.id, {
-                              quantityValue: Math.max(
-                                1,
-                                Math.round(Number(event.target.value)) || 1
-                              ),
-                            })
-                          )
-                        }
-                      />
-                    </label>
+                        <div className={s.recipeResultPill} aria-live="polite">
+                          <small>Resultado</small>
+                          <strong>
+                            {quantityRuleHint(
+                              component.quantityRule,
+                              liveQuantityValue,
+                              recipe.sashCount,
+                              resultCuts
+                            )}
+                          </strong>
+                          {previewRow?.measureExplanation ? (
+                            <span>{previewRow.measureExplanation}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </article>
               );
@@ -402,17 +658,17 @@ export function FabricationRecipeEditor({
               </select>
             </label>
           </div>
-        </div>
+        </section>
 
-        <div className={s.cuttingPreview}>
+        <section className={s.cuttingPreview} aria-label="Vista previa de cortes">
           <div className={s.cuttingPreviewHead}>
             <strong>
-              Ejemplo vano {formatMm(widthMm).replace(" mm", "")} × {formatMm(heightMm)}
+              Vista previa · vano {formatMm(widthMm).replace(" mm", "")} × {formatMm(heightMm)}
             </strong>
             <span>
               {preview.pendingRequiredCount > 0
                 ? `${preview.pendingRequiredCount} pendientes`
-                : "Reglas listas para validar"}
+                : "Lista para validar con un trabajo real"}
             </span>
           </div>
           <div className={s.cuttingCutList}>
@@ -420,7 +676,9 @@ export function FabricationRecipeEditor({
               <div key={row.componentId} className={s.cuttingCutRow}>
                 <span>
                   {row.functionLabel}
-                  {row.profileCode !== "Sin perfil" && row.profileCode !== "Por asignar"
+                  {row.profileCode !== "Sin perfil" &&
+                  row.profileCode !== "Por asignar" &&
+                  row.profileCode !== "Perfil sin código"
                     ? ` · ${row.profileCode}`
                     : ""}
                 </span>
@@ -442,8 +700,12 @@ export function FabricationRecipeEditor({
             <p className={s.fieldHint}>
               Distribución sugerida por perfil (pauta referencial, no optimización de desperdicio).
             </p>
-          ) : null}
-        </div>
+          ) : (
+            <p className={s.fieldHint}>
+              Sin códigos y largos comerciales, Ventora no estima barras ni sobrantes.
+            </p>
+          )}
+        </section>
       </div>
     );
   }

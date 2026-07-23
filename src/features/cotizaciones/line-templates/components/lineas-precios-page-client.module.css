@@ -1163,8 +1163,102 @@
   font-weight: 800;
 }
 
+.moneySuffix {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .moneyInput {
   padding: 0 14px 0 34px;
+}
+
+.moneyInputWithSuffix {
+  padding-right: 48px;
+}
+
+.pricingFieldsStack {
+  display: grid;
+  gap: 12px;
+}
+
+.pricingSaleField,
+.pricingCostField {
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.pricingSaleField .fieldLabel,
+.pricingCostField .fieldLabel {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.pricingSaleField {
+  border: 1px solid rgba(22, 155, 98, 0.22);
+  background: linear-gradient(180deg, #f7fcf9 0%, #ffffff 100%);
+}
+
+.pricingCostField {
+  gap: 8px;
+  border: 1px solid #e5eaf1;
+  background: #f8fafc;
+}
+
+.pricingCostLabelWrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pricingFieldHelp {
+  color: #5b6b82;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.pricingUnitMark {
+  color: #475569;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.pricingCostEmptyHint {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.pricingCostEmptyHint p {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
+.pricingCostEmptyHintSecondary {
+  color: #64748b !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
 }
 
 .materialSelect {
@@ -1551,11 +1645,29 @@
 
 .cuttingPreview {
   display: grid;
-  gap: 9px;
-  padding: 10px;
-  border: 1px solid #dfe7f2;
-  border-radius: 13px;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #d7e0ea;
+  border-radius: 14px;
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.cuttingPreviewHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.cuttingPreviewHead strong {
+  color: #0f172a;
+  font-size: 13.5px;
+}
+
+.cuttingPreviewHead span {
+  color: #64748b;
+  font-size: 12px;
 }
 
 .cuttingCutList,
@@ -3187,7 +3299,123 @@
 /* —— Receta de fabricación (wizard pasos 3–4) —— */
 .recipeEditor {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+}
+
+.recipeIntro {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #d7e0ea;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.recipeIntroEyebrow {
+  margin: 0 0 4px;
+  color: #1e88ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recipeIntroTitle {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.recipeIntroText {
+  margin: 6px 0 0;
+  color: #4b5568;
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 62ch;
+}
+
+.recipeStatusChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recipeStatusChips em,
+.recipeComponentBadges em {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 650;
+  border: 1px solid transparent;
+}
+
+.recipeToneOk,
+.badgeReady {
+  color: #166534;
+  background: #ecfdf3;
+  border-color: #bbf7d0;
+}
+
+.recipeToneWarn,
+.badgePending {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.recipeToneMuted,
+.badgeMuted {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.badgeRequired {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.badgeOptional {
+  color: #334155;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.recipeSetupCard,
+.recipeComponentsSection {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #d7e0ea;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.recipeSectionHead {
+  display: grid;
+  gap: 2px;
+}
+
+.recipeSectionHead strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.recipeSectionHead span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.recipeSetupActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .recipeStatusRow {
@@ -3205,16 +3433,27 @@
 
 .recipeComponentList {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .recipeComponentCard {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid #d7e0ea;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fbfcfe;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+.recipeCardReady {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f8fffb 0%, #fbfcfe 48%);
+}
+
+.recipeCardPending {
+  border-color: #fdba74;
+  background: linear-gradient(180deg, #fffaf5 0%, #fbfcfe 48%);
 }
 
 .recipeComponentHead {
@@ -3224,10 +3463,32 @@
   align-items: flex-start;
 }
 
+.recipeComponentTitleBlock {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.recipeComponentIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #e8f2ff;
+  color: #1e88ff;
+  font-size: 12px;
+  font-weight: 750;
+  flex-shrink: 0;
+}
+
 .recipeComponentHead strong {
   display: block;
-  color: #111827;
-  font-size: 13.5px;
+  color: #0f172a;
+  font-size: 14px;
+  letter-spacing: -0.01em;
 }
 
 .recipeComponentHead span {
@@ -3237,10 +3498,78 @@
   font-size: 11.5px;
 }
 
+.recipeComponentBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .recipeComponentActions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.recipeComponentSections {
+  display: grid;
+  gap: 12px;
+}
+
+.recipeFieldGroup {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.recipeFieldGroupTitle {
+  margin: 0;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.recipeFieldGroupHint {
+  margin: 0;
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.recipeResultPill {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  min-height: 72px;
+}
+
+.recipeResultPill small {
+  color: #1d4ed8;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recipeResultPill strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.recipeResultPill span {
+  color: #475569;
+  font-size: 11.5px;
+  line-height: 1.35;
 }
 
 .recipeComponentGrid {
@@ -3250,7 +3579,19 @@
 }
 
 .recipeAddRow {
-  margin-top: 8px;
+  margin-top: 4px;
+}
+
+.ghostButtonDanger {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  padding: 4px 6px;
 }
 
 .recipeCompareList {

@@ -33,9 +33,8 @@ import {
   MARGIN_SELECT_OPTIONS,
   MATERIAL_OPTIONS,
   requiresCustomSheetDescription,
+  isCubicationPersonalizadoAssistMode,
   isGlassCatalogSelection,
-  isPersonalizadoCompositionSelected,
-  isTrabajoPersonalizadoComponentType,
   shouldRequireProfileMaterialForComponent,
   shouldShowGuidedComposerEntry,
   shouldShowSheetSchemeForComponent,
@@ -1003,14 +1002,13 @@ function TabDespiece({
     activeLineTemplates.find(
       (template) => String(template.id) === componentForm.lineTemplateId
     ) ?? null;
-  const personalizadoAssistMode =
-    Boolean(componentForm.guidedVisualConfig) ||
-    isTrabajoPersonalizadoComponentType(componentForm.tipo) ||
-    isPersonalizadoCompositionSelected({
-      sistema: componentForm.sistema,
-      sheetScheme: componentForm.sheetScheme,
-      configuracion: componentForm.configuracion,
-    });
+  const personalizadoAssistMode = isCubicationPersonalizadoAssistMode({
+    tipo: componentForm.tipo,
+    sistema: componentForm.sistema,
+    sheetScheme: componentForm.sheetScheme,
+    configuracion: componentForm.configuracion,
+    isCustomScheme: componentForm.isCustomScheme,
+  });
 
   if (isFreeValueComponentType(componentForm.tipo)) {
     return null;

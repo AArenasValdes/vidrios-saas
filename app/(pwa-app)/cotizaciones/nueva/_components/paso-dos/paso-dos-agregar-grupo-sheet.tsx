@@ -18,6 +18,7 @@ import {
   isBowWindowConfiguration,
   isCorrederaSheetConfiguration,
   isDesktopPieceSystemStepComplete,
+  isCubicationPersonalizadoAssistMode,
   isPersonalizadoCompositionSelected,
   isTrabajoPersonalizadoComponentType,
   isGlassCatalogSelection,
@@ -938,14 +939,13 @@ export function PasoDosAgregarGrupoSheet({
       )?.label ?? "Color";
     const largePreviewSvg = getDesktopPiecePreview(draft, 330, 130);
     const measuresPreviewSvg = getDesktopPiecePreview(draft, 300, 150);
-    const personalizadoAssistMode =
-      Boolean(draft.guidedVisualConfig) ||
-      isTrabajoPersonalizadoComponentType(draft.subtipo) ||
-      isPersonalizadoCompositionSelected({
-        sistema: draft.sistema,
-        sheetScheme: draft.sheetScheme,
-        configuracion: draft.configuracion,
-      });
+    const personalizadoAssistMode = isCubicationPersonalizadoAssistMode({
+      tipo: draft.subtipo,
+      sistema: draft.sistema,
+      sheetScheme: draft.sheetScheme,
+      configuracion: draft.configuracion,
+      isCustomScheme: draft.isCustomScheme,
+    });
     const measuresCubicationPreview = resolveActiveCubicationPreview({
       componentForm: {
         ancho: draft.ancho,

@@ -22,20 +22,20 @@ const CORREDERA_SEEDS: TemplateSeed[] = [
   { functionKey: "jamba", measureBase: "vano_height", quantityValue: 2 },
   {
     functionKey: "cabezal",
-    measureBase: "sash_width",
-    quantityRule: "two_per_sash",
+    measureBase: "half_vano_width",
+    quantityRule: "per_sash",
     quantityValue: 1,
   },
   {
     functionKey: "zocalo",
-    measureBase: "sash_width",
+    measureBase: "half_vano_width",
     quantityRule: "per_sash",
     quantityValue: 1,
   },
   {
     functionKey: "pierna",
     measureBase: "sash_height",
-    quantityRule: "two_per_sash",
+    quantityRule: "per_sash",
     quantityValue: 1,
   },
   {

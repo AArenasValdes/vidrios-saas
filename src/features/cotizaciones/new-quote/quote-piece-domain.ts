@@ -215,7 +215,10 @@ export function derivePieceTechnicalSummary(
     areaVidrioM2: snapshot.glass?.totalM2 ?? null,
     mlPerfiles: round2((snapshot.totalProfilesLinealMm || 0) / 1000),
     barras: snapshot.bars.length,
-    cortes: snapshot.cuts.length,
+    cortes: snapshot.cuts.reduce(
+      (sum, cut) => sum + Math.max(1, Math.round(cut.quantity)),
+      0
+    ),
     accesorios: snapshot.accessoryUnits || 0,
     sobranteMm: Math.max(0, Math.round(snapshot.totalWasteMm || 0)),
     source: snapshot.source,

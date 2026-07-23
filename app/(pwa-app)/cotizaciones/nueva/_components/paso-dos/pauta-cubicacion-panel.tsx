@@ -21,7 +21,10 @@ import {
   createEmptyCubicationCutDraft,
   cubicationSnapshotMatchesDimensions,
   cubicationSnapshotToPreview,
+  GEOMETRIC_FALLBACK_NOTICE,
+  isGeometricFallbackSnapshot,
   rebuildCubicationSnapshotWithCuts,
+  snapshotUsesFabricationRecipe,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import {
@@ -110,6 +113,42 @@ function resolveActiveCubicationSnapshotInternal(input: {
     input.savedCubicationSnapshot,
     dims
   );
+  const recipe = input.selectedTemplate
+    ? resolveRecipeFromMetadata(input.selectedTemplate.catalogMetadata)
+    : null;
+  const catalogHasRecipe = Boolean(recipe && recipe.components.length > 0);
+
+  const autoSnapshot =
+    input.selectedTemplate && widthMm > 0 && heightMm > 0
+      ? buildCubicationSnapshotFromCatalogMetadata({
+          lineTemplateId,
+          catalogMetadata: input.selectedTemplate.catalogMetadata,
+          widthMm,
+          heightMm,
+          quantity,
+        })
+      : null;
+
+  // Receta de fabricación: nunca mostrar Marco/División genérico si la línea la tiene.
+  if (catalogHasRecipe) {
+    if (
+      draftMatches &&
+      input.componentForm.cubicationSnapshot?.source === "manual" &&
+      snapshotUsesFabricationRecipe(input.componentForm.cubicationSnapshot) &&
+      !isGeometricFallbackSnapshot(input.componentForm.cubicationSnapshot)
+    ) {
+      return input.componentForm.cubicationSnapshot;
+    }
+    if (
+      savedMatches &&
+      input.savedCubicationSnapshot?.source === "manual" &&
+      snapshotUsesFabricationRecipe(input.savedCubicationSnapshot) &&
+      !isGeometricFallbackSnapshot(input.savedCubicationSnapshot)
+    ) {
+      return input.savedCubicationSnapshot;
+    }
+    return autoSnapshot;
+  }
 
   if (input.personalizadoAssistMode) {
     if (draftMatches && input.componentForm.cubicationSnapshot?.source === "manual") {
@@ -130,24 +169,23 @@ function resolveActiveCubicationSnapshotInternal(input: {
     });
   }
 
-  const autoSnapshot =
-    input.selectedTemplate && rules?.enabled && widthMm > 0 && heightMm > 0
-      ? buildCubicationSnapshotFromCatalogMetadata({
-          lineTemplateId,
-          catalogMetadata: input.selectedTemplate.catalogMetadata,
-          widthMm,
-          heightMm,
-          quantity,
-        })
-      : null;
-
-  if (draftMatches) {
-    return input.componentForm.cubicationSnapshot ?? null;
+  if (
+    draftMatches &&
+    input.componentForm.cubicationSnapshot &&
+    !isGeometricFallbackSnapshot(input.componentForm.cubicationSnapshot)
+  ) {
+    return input.componentForm.cubicationSnapshot;
   }
-  if (savedMatches) {
-    return input.savedCubicationSnapshot ?? null;
+  if (
+    savedMatches &&
+    input.savedCubicationSnapshot &&
+    !isGeometricFallbackSnapshot(input.savedCubicationSnapshot)
+  ) {
+    return input.savedCubicationSnapshot;
   }
-  return autoSnapshot;
+  if (autoSnapshot) return autoSnapshot;
+  if (rules?.enabled) return null;
+  return null;
 }
 
 /** Resuelve el preview activo (draft / guardado / auto) para UI de pauta o rail. */
@@ -476,8 +514,11 @@ export function PautaCubicacionPanel({
   const profilesSummary = preview
     ? `${(preview.totalProfilesLinealMm / 1000).toFixed(2)} ml`
     : "—";
+  const profilesCutUnits = preview
+    ? preview.cuts.reduce((sum, cut) => sum + Math.max(1, cut.quantity), 0)
+    : 0;
   const profilesCutsLabel = preview
-    ? `${preview.cuts.length} ${preview.cuts.length === 1 ? "corte" : "cortes"}`
+    ? `${profilesCutUnits} ${profilesCutUnits === 1 ? "corte" : "cortes"}`
     : null;
 
   const waitingReason = !selectedTemplate
@@ -581,7 +622,11 @@ export function PautaCubicacionPanel({
         </span>
       </div>
 
-      {personalizadoAssistMode ? (
+      {isGeometricFallbackSnapshot(activeSnapshot) ? (
+        <p className={`${editor.cubicacionNotice} ${editor.cubicacionNoticePersonalizado}`}>
+          {GEOMETRIC_FALLBACK_NOTICE}
+        </p>
+      ) : personalizadoAssistMode ? (
         <p className={`${editor.cubicacionNotice} ${editor.cubicacionNoticePersonalizado}`}>
           Esta composición es Personalizado: no usamos la pauta automática de la línea.
           Completa o corrige los cortes abajo. Es un borrador de taller, no fabricación

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   LuArrowRight,
   LuCircleAlert,
-  LuDownload,
+  LuPencil,
   LuX,
 } from "react-icons/lu";
 
@@ -14,8 +14,9 @@ import {
   getLineTemplateCuttingRules,
   type CotizacionLineTemplate,
   type CotizacionLineTemplateCut,
+  type CotizacionLineTemplateCuttingPreview,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import { buildConsolidatedCubicationPauta } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
+import { buildConsolidatedCubicationPautaFromSnapshots } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
 import {
   summarizeCubicationLineAdjustment,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-adjustment";
@@ -24,15 +25,22 @@ import {
   buildPersonalizadoManualCubicationDraft,
   createEmptyCubicationCutDraft,
   cubicationSnapshotToPreview,
+  GEOMETRIC_FALLBACK_NOTICE,
+  isGeometricFallbackSnapshot,
   rebuildCubicationSnapshotWithCuts,
+  snapshotUsesFabricationRecipe,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import { RECIPE_MISSING_PROFILE_LABEL } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import { resolveRecipeFromMetadata } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import {
   buildPieceDomainView,
   type PieceDomainView,
-  type PieceTechnicalStatus,
 } from "@/features/cotizaciones/new-quote/quote-piece-domain";
-import { mapItemToForm } from "@/features/cotizaciones/new-quote/workflow-ui";
+import {
+  isCubicationPersonalizadoAssistMode,
+  mapItemToForm,
+} from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import {
@@ -50,6 +58,26 @@ import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/s
 import styles from "./despiece-review-surface.module.css";
 
 type ReviewTab = "pieza" | "consolidado";
+
+type DespieceUiStatus =
+  | "calculado_con_receta"
+  | "configuracion_incompleta"
+  | "estimacion_geometrica"
+  | "sin_reglas";
+
+const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
+  calculado_con_receta: "Calculado con receta",
+  configuracion_incompleta: "Configuración incompleta",
+  estimacion_geometrica: "Estimación geométrica",
+  sin_reglas: "Sin reglas técnicas",
+};
+
+const BARS_NOT_CALCULABLE_HINT =
+  "Configura el código del perfil y el largo comercial de la barra.";
+const BARS_INCOMPLETE_WARNING =
+  "Faltan códigos de perfil y largos comerciales para calcular barras y sobrantes.";
+const GLASS_PRELIMINARY_WARNING =
+  "Medida preliminar basada en el ancho y alto de la pieza. Confirma los descuentos de vidrio de esta línea.";
 
 type Props = {
   open: boolean;
@@ -115,19 +143,65 @@ function inferConfig(item: CotizacionWorkflowItem) {
   });
 }
 
-function statusToneClass(status: PieceTechnicalStatus) {
+function despieceStatusToneClass(status: DespieceUiStatus) {
   switch (status) {
-    case "configurado":
+    case "calculado_con_receta":
       return styles.statusOk;
-    case "referencial":
-      return styles.statusWarn;
-    case "requiere_revision":
+    case "configuracion_incompleta":
+    case "estimacion_geometrica":
       return styles.statusWarn;
     case "sin_reglas":
-      return styles.statusMuted;
     default:
       return styles.statusMuted;
   }
+}
+
+function isMissingProfileLabel(label: string) {
+  const normalized = label.trim().toLocaleLowerCase("es");
+  return (
+    !normalized ||
+    normalized === RECIPE_MISSING_PROFILE_LABEL.toLocaleLowerCase("es") ||
+    normalized === "por asignar"
+  );
+}
+
+function areBarsCalculable(preview: CotizacionLineTemplateCuttingPreview | null) {
+  if (!preview || preview.bars.length === 0) return false;
+  return preview.cuts.some((cut) => !isMissingProfileLabel(cut.label));
+}
+
+function countCutUnits(cuts: CotizacionLineTemplateCut[]) {
+  return cuts.reduce((sum, cut) => sum + Math.max(1, cut.quantity), 0);
+}
+
+function resolveDespieceUiStatus(input: {
+  snapshot: CotizacionItemCubicationSnapshot | null;
+  preview: CotizacionLineTemplateCuttingPreview | null;
+  template: CotizacionLineTemplate | null;
+}): DespieceUiStatus {
+  const { snapshot, preview, template } = input;
+  if (isGeometricFallbackSnapshot(snapshot)) {
+    return "estimacion_geometrica";
+  }
+
+  const recipeApplied =
+    snapshotUsesFabricationRecipe(snapshot) || snapshot?.estimationKind === "recipe";
+  if (recipeApplied && preview && preview.cuts.length > 0) {
+    return "calculado_con_receta";
+  }
+
+  const recipeOnTemplate = template
+    ? resolveRecipeFromMetadata(template.catalogMetadata)
+    : null;
+  if (recipeOnTemplate && recipeOnTemplate.components.length > 0) {
+    return "configuracion_incompleta";
+  }
+
+  if (!preview || preview.cuts.length === 0) {
+    return "sin_reglas";
+  }
+
+  return "configuracion_incompleta";
 }
 
 function parsePositiveIntegerInput(value: string, fallback = 0) {
@@ -150,6 +224,7 @@ export function DespieceReviewSurface({
 }: Props) {
   const [tab, setTab] = useState<ReviewTab>("pieza");
   const [mounted, setMounted] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isAdjustmentChoiceOpen, setIsAdjustmentChoiceOpen] = useState(false);
   const [hasOfferedAdjustmentChoice, setHasOfferedAdjustmentChoice] = useState(false);
   const [pendingAdjustmentSnapshot, setPendingAdjustmentSnapshot] =
@@ -168,7 +243,15 @@ export function DespieceReviewSurface({
   const selectedView = selectedItem
     ? buildPieceDomainView(selectedItem, quotePricingMode, selectedTemplate)
     : null;
-  const personalizadoAssistMode = Boolean(selectedForm?.isCustomScheme);
+  const personalizadoAssistMode = selectedForm
+    ? isCubicationPersonalizadoAssistMode({
+        tipo: selectedForm.tipo,
+        sistema: selectedForm.sistema,
+        sheetScheme: selectedForm.sheetScheme,
+        configuracion: selectedForm.configuracion,
+        isCustomScheme: selectedForm.isCustomScheme,
+      })
+    : false;
   const activeSnapshot = selectedForm
     ? resolveActiveCubicationSnapshot({
         componentForm: {
@@ -228,9 +311,51 @@ export function DespieceReviewSurface({
       manualGlass: activeSnapshot.glass,
     });
   }, [selectedTemplate, activeSnapshot, autoSnapshot, rules?.sashCount]);
-  const consolidated = useMemo(
-    () => buildConsolidatedCubicationPauta(items),
-    [items]
+  const consolidated = useMemo(() => {
+    const carriers = visualItems
+      .map((item) => {
+        const form = mapItemToForm(item);
+        const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
+        const view = buildPieceDomainView(item, quotePricingMode, template);
+        const personalizado = isCubicationPersonalizadoAssistMode({
+          tipo: form.tipo,
+          sistema: form.sistema,
+          sheetScheme: form.sheetScheme,
+          configuracion: form.configuracion,
+          isCustomScheme: form.isCustomScheme,
+        });
+        const snapshot = resolveActiveCubicationSnapshot({
+          componentForm: {
+            ancho: form.ancho,
+            alto: form.alto,
+            cantidad: form.cantidad,
+            lineTemplateId: form.lineTemplateId,
+            cubicationSnapshot: form.cubicationSnapshot,
+          },
+          selectedTemplate: template,
+          savedCubicationSnapshot: view.cubicationSnapshot,
+          personalizadoAssistMode: personalizado,
+        });
+        if (!snapshot) return null;
+        return {
+          codigo: item.codigo,
+          lineaComercial: item.lineaComercial || template?.nombre || null,
+          nombre: item.nombre,
+          snapshot,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+    return buildConsolidatedCubicationPautaFromSnapshots(carriers);
+  }, [visualItems, lineTemplates, quotePricingMode]);
+  const consolidatedCutUnits = useMemo(
+    () => consolidated.rows.reduce((sum, row) => sum + Math.max(1, row.quantity), 0),
+    [consolidated.rows]
+  );
+  const consolidatedBarsCalculable = useMemo(
+    () =>
+      consolidated.totalBars > 0 &&
+      consolidated.rows.some((row) => !isMissingProfileLabel(row.profile)),
+    [consolidated.totalBars, consolidated.rows]
   );
   const warnings = useMemo(() => {
     return visualItems
@@ -238,13 +363,38 @@ export function DespieceReviewSurface({
         const form = mapItemToForm(item);
         const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
         const view = buildPieceDomainView(item, quotePricingMode, template);
-        return { item, view };
+        const personalizado = isCubicationPersonalizadoAssistMode({
+          tipo: form.tipo,
+          sistema: form.sistema,
+          sheetScheme: form.sheetScheme,
+          configuracion: form.configuracion,
+          isCustomScheme: form.isCustomScheme,
+        });
+        const snapshot = resolveActiveCubicationSnapshot({
+          componentForm: {
+            ancho: form.ancho,
+            alto: form.alto,
+            cantidad: form.cantidad,
+            lineTemplateId: form.lineTemplateId,
+            cubicationSnapshot: form.cubicationSnapshot,
+          },
+          selectedTemplate: template,
+          savedCubicationSnapshot: view.cubicationSnapshot,
+          personalizadoAssistMode: personalizado,
+        });
+        const previewForItem = snapshot ? cubicationSnapshotToPreview(snapshot) : null;
+        const uiStatus = resolveDespieceUiStatus({
+          snapshot,
+          preview: previewForItem,
+          template,
+        });
+        return { item, view, uiStatus };
       })
       .filter(
-        ({ view }) =>
-          view.technicalStatus === "sin_reglas" ||
-          view.technicalStatus === "requiere_revision" ||
-          view.technicalStatus === "sin_configurar"
+        ({ uiStatus }) =>
+          uiStatus === "sin_reglas" ||
+          uiStatus === "configuracion_incompleta" ||
+          uiStatus === "estimacion_geometrica"
       );
   }, [visualItems, lineTemplates, quotePricingMode]);
 
@@ -274,7 +424,12 @@ export function DespieceReviewSurface({
     setHasOfferedAdjustmentChoice(false);
     setIsAdjustmentChoiceOpen(false);
     setPendingAdjustmentSnapshot(null);
+    setIsEditMode(false);
   }, [selectedItem?.id, selectedForm?.lineTemplateId]);
+
+  useEffect(() => {
+    if (tab !== "pieza") setIsEditMode(false);
+  }, [tab]);
 
   if (!open || !mounted || typeof document === "undefined") {
     return null;
@@ -443,12 +598,15 @@ export function DespieceReviewSurface({
       ? Math.min(100, Math.round((areaCalculated / areaProjected) * 100))
       : null;
 
-  const primaryBar = preview?.bars[0] ?? null;
-  const barLengthMm = primaryBar ? primaryBar.usedMm + primaryBar.wasteMm : null;
-  const usedPct =
-    primaryBar && barLengthMm && barLengthMm > 0
-      ? Math.min(100, Math.round((primaryBar.usedMm / barLengthMm) * 100))
-      : 0;
+  const pieceUiStatus = resolveDespieceUiStatus({
+    snapshot: activeSnapshot,
+    preview,
+    template: selectedTemplate,
+  });
+  const barsCalculable = areBarsCalculable(preview);
+  const cutUnits = preview ? countCutUnits(preview.cuts) : 0;
+  const showBarsIncompleteWarning =
+    pieceUiStatus === "calculado_con_receta" && !barsCalculable;
 
   const config = selectedItem ? inferConfig(selectedItem) : null;
   const colorHex = selectedForm?.colorHex;
@@ -496,6 +654,31 @@ export function DespieceReviewSurface({
                   const form = mapItemToForm(item);
                   const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
                   const view = buildPieceDomainView(item, quotePricingMode, template);
+                  const personalizado = isCubicationPersonalizadoAssistMode({
+                    tipo: form.tipo,
+                    sistema: form.sistema,
+                    sheetScheme: form.sheetScheme,
+                    configuracion: form.configuracion,
+                    isCustomScheme: form.isCustomScheme,
+                  });
+                  const snapshot = resolveActiveCubicationSnapshot({
+                    componentForm: {
+                      ancho: form.ancho,
+                      alto: form.alto,
+                      cantidad: form.cantidad,
+                      lineTemplateId: form.lineTemplateId,
+                      cubicationSnapshot: form.cubicationSnapshot,
+                    },
+                    selectedTemplate: template,
+                    savedCubicationSnapshot: view.cubicationSnapshot,
+                    personalizadoAssistMode: personalizado,
+                  });
+                  const itemPreview = snapshot ? cubicationSnapshotToPreview(snapshot) : null;
+                  const uiStatus = resolveDespieceUiStatus({
+                    snapshot,
+                    preview: itemPreview,
+                    template,
+                  });
                   const selected = selectedItem?.id === item.id;
                   return (
                     <li key={item.id}>
@@ -507,7 +690,9 @@ export function DespieceReviewSurface({
                         <strong>
                           {item.codigo} {item.nombre || "Sin nombre"}
                         </strong>
-                        <em className={statusToneClass(view.technicalStatus)}>{view.technicalLabel}</em>
+                        <em className={despieceStatusToneClass(uiStatus)}>
+                          {DESPIECE_UI_STATUS_LABELS[uiStatus]}
+                        </em>
                       </button>
                     </li>
                   );
@@ -534,10 +719,23 @@ export function DespieceReviewSurface({
                             : ""}
                       </p>
                     </div>
-                    <em className={statusToneClass(selectedView.technicalStatus)}>
-                      {selectedView.technicalLabel}
+                    <em className={despieceStatusToneClass(pieceUiStatus)}>
+                      {DESPIECE_UI_STATUS_LABELS[pieceUiStatus]}
                     </em>
                   </header>
+
+                  {showBarsIncompleteWarning ? (
+                    <p className={styles.compactWarning} role="status">
+                      <LuCircleAlert aria-hidden />
+                      {BARS_INCOMPLETE_WARNING}
+                    </p>
+                  ) : null}
+                  {isGeometricFallbackSnapshot(activeSnapshot) ? (
+                    <p className={styles.compactWarning} role="status">
+                      <LuCircleAlert aria-hidden />
+                      {GEOMETRIC_FALLBACK_NOTICE}
+                    </p>
+                  ) : null}
 
                   <div className={styles.visualMetrics}>
                     <div className={styles.drawingCard}>
@@ -575,45 +773,58 @@ export function DespieceReviewSurface({
                         <small>Perfiles</small>
                         <strong>
                           {preview
-                            ? formatMl(preview.totalProfilesLinealMm / 1000)
+                            ? formatMm(preview.totalProfilesLinealMm)
                             : "—"}
                         </strong>
                         <em>
                           {preview
-                            ? `${preview.cuts.length} ${
-                                preview.cuts.length === 1 ? "corte" : "cortes"
-                              }`
+                            ? `${cutUnits} ${cutUnits === 1 ? "corte" : "cortes"}`
                             : "Sin cortes"}
                         </em>
                       </span>
                       <span>
-                        <small>Barras ref.</small>
-                        <strong>{preview?.bars.length ?? 0}</strong>
-                        <em>
-                          {barLengthMm ? `sobre ${formatMm(barLengthMm)}` : "Sin barra"}
-                        </em>
+                        <small>Barras</small>
+                        <strong className={!barsCalculable ? styles.notCalculable : undefined}>
+                          {barsCalculable ? preview?.bars.length ?? 0 : "No calculable"}
+                        </strong>
+                        <em>{barsCalculable ? "referencia" : "Falta código y largo"}</em>
                       </span>
                       <span>
                         <small>Accesorios</small>
                         <strong>{preview?.accessoryUnits ?? 0}</strong>
-                        <em>unidades est.</em>
+                        <em>unidades</em>
                       </span>
                     </div>
                   </div>
+
+                  {preview?.glass ? (
+                    <p className={styles.glassNote} role="note">
+                      <LuCircleAlert aria-hidden />
+                      {GLASS_PRELIMINARY_WARNING}
+                    </p>
+                  ) : null}
 
                   <div className={styles.tableBlock}>
                     <div className={styles.tableToolbar}>
                       <strong>Despiece de perfiles</strong>
                       <div className={styles.tableActions}>
-                        {!personalizadoAssistMode ? (
+                        <button
+                          type="button"
+                          className={isEditMode ? styles.editModeActive : styles.editModeButton}
+                          onClick={() => setIsEditMode((current) => !current)}
+                        >
+                          <LuPencil aria-hidden />
+                          {isEditMode ? "Listo" : "Editar despiece"}
+                        </button>
+                        {isEditMode && !personalizadoAssistMode ? (
                           <>
-                            <button type="button" onClick={handleRecalcular} disabled={!rules?.enabled}>
+                            <button type="button" onClick={handleRecalcular} disabled={!rules?.enabled && !activeSnapshot}>
                               Recalcular
                             </button>
                             <button
                               type="button"
                               onClick={handleRestaurar}
-                              disabled={!rules?.enabled || activeSnapshot?.source !== "manual"}
+                              disabled={activeSnapshot?.source !== "manual"}
                             >
                               Restaurar cálculo
                             </button>
@@ -633,84 +844,139 @@ export function DespieceReviewSurface({
                             ) : null}
                           </>
                         ) : null}
-                        <button type="button" onClick={handleAddCut} disabled={!ensureEditableBase()}>
-                          Agregar corte
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.exportGhost}
-                          aria-label="Exportar (próximamente)"
-                          disabled
-                          title="Exportación disponible en un corte futuro"
-                        >
-                          <LuDownload aria-hidden />
-                        </button>
+                        {isEditMode ? (
+                          <button type="button" onClick={handleAddCut} disabled={!ensureEditableBase()}>
+                            Agregar corte
+                          </button>
+                        ) : null}
                       </div>
                     </div>
 
                     {preview && preview.cuts.length > 0 ? (
-                      <div className={styles.table} role="table" aria-label="Despiece de perfiles">
+                      <div
+                        className={`${styles.table} ${isEditMode ? styles.tableEditing : styles.tableReading}`}
+                        role="table"
+                        aria-label="Despiece de perfiles"
+                      >
                         <div className={styles.tableHead} role="row">
                           <span role="columnheader">Perfil</span>
                           <span role="columnheader">Función</span>
-                          <span role="columnheader">Medida mm</span>
+                          <span role="columnheader">Medida</span>
                           <span role="columnheader">Cant.</span>
-                          <span role="columnheader">Total</span>
-                          <span role="columnheader">
-                            <span className={styles.srOnly}>Quitar</span>
-                          </span>
+                          <span role="columnheader">Total lineal</span>
+                          {isEditMode ? (
+                            <span role="columnheader">
+                              <span className={styles.srOnly}>Quitar</span>
+                            </span>
+                          ) : null}
                         </div>
-                        {preview.cuts.map((cut: CotizacionLineTemplateCut, cutIndex: number) => (
-                          <div key={`cut-${cutIndex}`} className={styles.tableRow} role="row">
-                            <label>
-                              <span className={styles.srOnly}>Perfil</span>
-                              <input
-                                value={cut.label}
-                                onChange={(event) =>
-                                  handleCutFieldChange(cutIndex, "label", event.target.value)
-                                }
-                              />
-                            </label>
-                            <label>
-                              <span className={styles.srOnly}>Función</span>
-                              <input
-                                value={cut.functionLabel}
-                                onChange={(event) =>
-                                  handleCutFieldChange(cutIndex, "functionLabel", event.target.value)
-                                }
-                              />
-                            </label>
-                            <label>
-                              <span className={styles.srOnly}>Medida mm</span>
-                              <input
-                                inputMode="numeric"
-                                value={String(cut.lengthMm)}
-                                onChange={(event) =>
-                                  handleCutFieldChange(cutIndex, "lengthMm", event.target.value)
-                                }
-                              />
-                            </label>
-                            <label>
-                              <span className={styles.srOnly}>Cantidad</span>
-                              <input
-                                inputMode="numeric"
-                                value={String(cut.quantity)}
-                                onChange={(event) =>
-                                  handleCutFieldChange(cutIndex, "quantity", event.target.value)
-                                }
-                              />
-                            </label>
-                            <strong role="cell">{formatMm(cut.totalLinealMm)}</strong>
-                            <button
-                              type="button"
-                              aria-label="Quitar corte"
-                              disabled={preview.cuts.length <= 1}
-                              onClick={() => handleRemoveCut(cutIndex)}
+                        {preview.cuts.map((cut: CotizacionLineTemplateCut, cutIndex: number) => {
+                          const missingProfile = isMissingProfileLabel(cut.label);
+                          return (
+                            <div
+                              key={`cut-${cutIndex}`}
+                              className={`${styles.tableRow} ${
+                                missingProfile ? styles.rowMissingProfile : ""
+                              }`}
+                              role="row"
                             >
-                              ×
-                            </button>
-                          </div>
-                        ))}
+                              {isEditMode ? (
+                                <label>
+                                  <span className={styles.srOnly}>Perfil</span>
+                                  <input
+                                    value={cut.label}
+                                    onChange={(event) =>
+                                      handleCutFieldChange(cutIndex, "label", event.target.value)
+                                    }
+                                  />
+                                </label>
+                              ) : (
+                                <span
+                                  role="cell"
+                                  className={`${styles.readCell} ${
+                                    missingProfile ? styles.missingProfileChip : ""
+                                  }`}
+                                >
+                                  {cut.label || RECIPE_MISSING_PROFILE_LABEL}
+                                </span>
+                              )}
+                              {isEditMode ? (
+                                <label className={styles.functionEditCell}>
+                                  <span className={styles.srOnly}>Función</span>
+                                  <input
+                                    value={cut.functionLabel}
+                                    onChange={(event) =>
+                                      handleCutFieldChange(
+                                        cutIndex,
+                                        "functionLabel",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                  {cut.measureExplanation ? (
+                                    <small className={styles.formulaLine}>
+                                      {cut.measureExplanation}
+                                    </small>
+                                  ) : null}
+                                </label>
+                              ) : (
+                                <span role="cell" className={styles.functionReadCell}>
+                                  <strong>{cut.functionLabel}</strong>
+                                  {cut.measureExplanation ? (
+                                    <small className={styles.formulaLine}>
+                                      {cut.measureExplanation}
+                                    </small>
+                                  ) : null}
+                                </span>
+                              )}
+                              {isEditMode ? (
+                                <label>
+                                  <span className={styles.srOnly}>Medida mm</span>
+                                  <input
+                                    inputMode="numeric"
+                                    value={String(cut.lengthMm)}
+                                    onChange={(event) =>
+                                      handleCutFieldChange(cutIndex, "lengthMm", event.target.value)
+                                    }
+                                  />
+                                </label>
+                              ) : (
+                                <span role="cell" className={`${styles.readCell} ${styles.numCell}`}>
+                                  {formatMm(cut.lengthMm)}
+                                </span>
+                              )}
+                              {isEditMode ? (
+                                <label>
+                                  <span className={styles.srOnly}>Cantidad</span>
+                                  <input
+                                    inputMode="numeric"
+                                    value={String(cut.quantity)}
+                                    onChange={(event) =>
+                                      handleCutFieldChange(cutIndex, "quantity", event.target.value)
+                                    }
+                                  />
+                                </label>
+                              ) : (
+                                <span role="cell" className={`${styles.readCell} ${styles.numCell}`}>
+                                  {cut.quantity}
+                                </span>
+                              )}
+                              <strong role="cell" className={styles.totalCell}>
+                                {formatMm(cut.totalLinealMm)}
+                              </strong>
+                              {isEditMode ? (
+                                <button
+                                  type="button"
+                                  aria-label="Quitar corte"
+                                  disabled={preview.cuts.length <= 1}
+                                  onClick={() => handleRemoveCut(cutIndex)}
+                                >
+                                  ×
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                         <div className={styles.tableFoot} role="row">
                           <span>Total perfiles</span>
                           <strong>{formatMm(preview.totalProfilesLinealMm)}</strong>
@@ -718,7 +984,7 @@ export function DespieceReviewSurface({
                       </div>
                     ) : (
                       <div className={styles.emptyTable}>
-                        {selectedView.technicalStatus === "sin_reglas"
+                        {pieceUiStatus === "sin_reglas"
                           ? "Esta pieza no tiene reglas técnicas de cubicación. Puedes cotizar igual; define la pauta cuando el taller la tenga."
                           : "Aún no hay cortes para esta pieza. Completa línea y medidas, o agrega cortes manualmente."}
                       </div>
@@ -753,52 +1019,43 @@ export function DespieceReviewSurface({
               </div>
 
               <div className={styles.summaryCard}>
-                <strong className={styles.summaryTitle}>Uso de barras</strong>
-                {primaryBar && barLengthMm ? (
-                  <>
-                    <p className={styles.barMeta}>
-                      {selectedForm?.material || "Perfil"} {formatMm(barLengthMm)}
-                    </p>
-                    <div className={styles.barTrack} aria-hidden>
-                      <span style={{ width: `${usedPct}%` }} />
-                    </div>
-                    <p className={styles.barMeta}>
-                      Usado: {formatMm(primaryBar.usedMm)} · Sobrante:{" "}
-                      {formatMm(primaryBar.wasteMm)}
-                    </p>
-                  </>
-                ) : (
-                  <p className={styles.barMeta}>Sin barras estimadas</p>
-                )}
-              </div>
-
-              <div className={styles.summaryCard}>
                 <span>
                   <small>Cortes totales</small>
-                  <strong>{preview?.cuts.length ?? 0}</strong>
+                  <strong>{cutUnits}</strong>
                 </span>
                 <span>
-                  <small>Sobrantes estimados</small>
-                  <strong>
-                    {preview
-                      ? `${(preview.totalWasteMm / 1000).toLocaleString("es-CL", {
-                          maximumFractionDigits: 2,
-                        })} m`
-                      : "—"}
+                  <small>Accesorios</small>
+                  <strong>{preview?.accessoryUnits ?? 0}</strong>
+                </span>
+                <span>
+                  <small>Barras</small>
+                  <strong className={!barsCalculable ? styles.notCalculable : undefined}>
+                    {barsCalculable ? preview?.bars.length ?? 0 : "No calculable"}
                   </strong>
                 </span>
+                <span>
+                  <small>Sobrantes</small>
+                  <strong className={!barsCalculable ? styles.notCalculable : undefined}>
+                    {barsCalculable
+                      ? formatMm(preview?.totalWasteMm ?? 0)
+                      : "No calculable"}
+                  </strong>
+                </span>
+                {!barsCalculable ? (
+                  <p className={styles.barMeta}>{BARS_NOT_CALCULABLE_HINT}</p>
+                ) : null}
               </div>
 
               {warnings.length > 0 ? (
                 <div className={styles.warnings}>
                   <strong>
-                    <LuCircleAlert aria-hidden /> Advertencias
+                    <LuCircleAlert aria-hidden /> Atención
                   </strong>
                   <ul>
-                    {warnings.slice(0, 4).map(({ item, view }) => (
+                    {warnings.slice(0, 4).map(({ item, uiStatus }) => (
                       <li key={item.id}>
                         <button type="button" onClick={() => onActiveItemChange(item.id)}>
-                          {item.codigo}: {view.technicalLabel}
+                          {item.codigo}: {DESPIECE_UI_STATUS_LABELS[uiStatus]}
                         </button>
                       </li>
                     ))}
@@ -811,75 +1068,172 @@ export function DespieceReviewSurface({
           <div className={styles.consolidatedLayout}>
             <header className={styles.consolidatedHead}>
               <div>
-                <h3>Pauta consolidada</h3>
+                <h3>Despiece consolidado</h3>
+                <p className={styles.consolidatedSubtitle}>
+                  Agrupado por línea, código de perfil, función y medida.
+                </p>
                 <p>
                   {consolidated.itemCountWithPauta}{" "}
                   {consolidated.itemCountWithPauta === 1 ? "pieza" : "piezas"} ·{" "}
+                  {consolidatedCutUnits} cortes ·{" "}
                   {formatMl(consolidated.totalProfilesLinealMm / 1000)} perfiles ·{" "}
-                  {formatM2(consolidated.totalGlassM2)} vidrio · {consolidated.totalBars} barras
-                  {consolidated.dominantBarLengthMm
-                    ? ` · barra ref. ${formatMm(consolidated.dominantBarLengthMm)}`
-                    : ""}
+                  {formatM2(consolidated.totalGlassM2)} vidrio · {consolidated.totalAccessories}{" "}
+                  accesorios
                 </p>
               </div>
-              <p className={styles.consolidatedHint}>
-                Agrupado por línea, perfil y medida. Preparado para una futura optimización de
-                cortes (sin nesting en V1).
-              </p>
+              {!consolidatedBarsCalculable ? (
+                <p className={styles.compactWarning} role="status">
+                  <LuCircleAlert aria-hidden />
+                  Barras no calculables · falta largo comercial y código de perfil
+                </p>
+              ) : null}
             </header>
 
             {consolidated.lineGroups.length === 0 ? (
               <div className={styles.emptyTable}>
-                Todavía no hay pauta consolidable. Revisa piezas con línea, medidas y cortes.
+                Todavía no hay despiece consolidable. Revisa piezas con línea, medidas y cortes.
               </div>
             ) : (
-              consolidated.lineGroups.map((group) => (
-                <section key={group.lineTemplateId || group.lineName} className={styles.lineGroup}>
-                  <header>
-                    <div>
-                      <strong>{group.lineName}</strong>
-                      <span>
-                        {group.barLengthMm
-                          ? `Barra comercial ${formatMm(group.barLengthMm)}`
-                          : "Barra comercial no definida"}
-                        {" · "}
-                        {group.bars} barras · sobra {formatMm(group.wasteMm)} ·{" "}
-                        {group.accessories} accesorios
-                      </span>
-                    </div>
-                    <em>{formatMl(group.totalLinealMm / 1000)}</em>
-                  </header>
-                  <div className={styles.consolidatedTable} role="table">
-                    <div className={styles.consolidatedHeadRow} role="row">
-                      <span role="columnheader">Perfil</span>
-                      <span role="columnheader">Longitud</span>
-                      <span role="columnheader">Cortes</span>
-                      <span role="columnheader">Total lineal</span>
-                      <span role="columnheader">Piezas</span>
-                    </div>
-                    {group.rows.map((row) => (
-                      <div key={row.key} className={styles.consolidatedRow} role="row">
-                        <strong role="cell">{row.profile}</strong>
-                        <span role="cell">{formatMm(row.lengthMm)}</span>
-                        <span role="cell">{row.quantity}</span>
-                        <span role="cell">{formatMm(row.totalLinealMm)}</span>
-                        <span role="cell">{row.pieceCodes.join(", ")}</span>
+              consolidated.lineGroups.map((group) => {
+                const groupBarsCalculable =
+                  group.bars > 0 &&
+                  group.rows.some((row) => !isMissingProfileLabel(row.profile));
+                return (
+                  <section
+                    key={group.lineTemplateId || group.lineName}
+                    className={styles.lineGroup}
+                  >
+                    <header>
+                      <div>
+                        <strong>{group.lineName}</strong>
+                        <span>
+                          {groupBarsCalculable
+                            ? `${group.bars} barras · sobra ${formatMm(group.wasteMm)}`
+                            : "Barras no calculables · falta largo comercial y código de perfil"}
+                          {" · "}
+                          {group.accessories} accesorios
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </section>
-              ))
+                      <em>{formatMl(group.totalLinealMm / 1000)}</em>
+                    </header>
+                    <div className={styles.consolidatedTable} role="table">
+                      <div className={styles.consolidatedHeadRow} role="row">
+                        <span role="columnheader">Perfil</span>
+                        <span role="columnheader">Función</span>
+                        <span role="columnheader">Medida</span>
+                        <span role="columnheader">Cortes</span>
+                        <span role="columnheader">Total lineal</span>
+                        <span role="columnheader">Piezas</span>
+                      </div>
+                      {group.rows.map((row) => {
+                        const missingProfile = isMissingProfileLabel(row.profile);
+                        return (
+                          <div
+                            key={row.key}
+                            className={`${styles.consolidatedRow} ${
+                              missingProfile ? styles.rowMissingProfile : ""
+                            }`}
+                            role="row"
+                          >
+                            <strong
+                              role="cell"
+                              className={missingProfile ? styles.missingProfileChip : undefined}
+                            >
+                              {row.profile}
+                            </strong>
+                            <span role="cell" title={row.measureExplanation ?? undefined}>
+                              {row.functionLabel}
+                            </span>
+                            <span role="cell" className={styles.numCell}>
+                              {formatMm(row.lengthMm)}
+                            </span>
+                            <span role="cell" className={styles.numCell}>
+                              {row.quantity}
+                            </span>
+                            <span role="cell" className={`${styles.numCell} ${styles.alignRight}`}>
+                              {formatMm(row.totalLinealMm)}
+                            </span>
+                            <span role="cell">{row.pieceCodes.join(", ")}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })
             )}
+
+            {consolidated.glassRows.length > 0 ? (
+              <section className={`${styles.lineGroup} ${styles.glassGroup}`} aria-label="Vidrios consolidados">
+                <header>
+                  <div>
+                    <strong>Vidrios</strong>
+                    <span>Separados de los metros lineales de perfiles</span>
+                  </div>
+                  <em>{formatM2(consolidated.totalGlassM2)}</em>
+                </header>
+                <div className={`${styles.consolidatedTable} ${styles.glassTable}`} role="table">
+                  <div className={styles.consolidatedHeadRow} role="row">
+                    <span role="columnheader">Medida</span>
+                    <span role="columnheader">Unidades</span>
+                    <span role="columnheader">Total m²</span>
+                    <span role="columnheader">Piezas</span>
+                  </div>
+                  {consolidated.glassRows.map((row) => (
+                    <div key={row.key} className={styles.consolidatedRow} role="row">
+                      <strong role="cell">
+                        {formatMm(row.widthMm)} × {formatMm(row.heightMm)}
+                      </strong>
+                      <span role="cell" className={styles.numCell}>
+                        {row.quantity}
+                      </span>
+                      <span role="cell" className={`${styles.numCell} ${styles.alignRight}`}>
+                        {formatM2(row.totalM2)}
+                      </span>
+                      <span role="cell">{row.pieceCodes.join(", ")}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className={styles.glassNote}>
+                  <LuCircleAlert aria-hidden />
+                  {GLASS_PRELIMINARY_WARNING}
+                </p>
+              </section>
+            ) : null}
+
+            {consolidated.totalAccessories > 0 ? (
+              <section className={`${styles.lineGroup} ${styles.accessoryGroup}`} aria-label="Accesorios consolidados">
+                <header>
+                  <div>
+                    <strong>Accesorios</strong>
+                    <span>No forman parte de los metros lineales</span>
+                  </div>
+                  <em>{consolidated.totalAccessories} unidades</em>
+                </header>
+              </section>
+            ) : null}
 
             <div className={styles.consolidatedTotals}>
               <span>
-                Barras necesarias: <strong>{consolidated.totalBars}</strong>
+                Barras necesarias:{" "}
+                <strong className={!consolidatedBarsCalculable ? styles.notCalculable : undefined}>
+                  {consolidatedBarsCalculable ? consolidated.totalBars : "No calculable"}
+                </strong>
               </span>
               <span>
-                Sobrantes totales: <strong>{formatMm(consolidated.totalWasteMm)}</strong>
+                Sobrantes:{" "}
+                <strong className={!consolidatedBarsCalculable ? styles.notCalculable : undefined}>
+                  {consolidatedBarsCalculable
+                    ? formatMm(consolidated.totalWasteMm)
+                    : "No calculable"}
+                </strong>
               </span>
               <span>
                 Accesorios: <strong>{consolidated.totalAccessories}</strong>
+              </span>
+              <span>
+                Perfiles:{" "}
+                <strong>{formatMl(consolidated.totalProfilesLinealMm / 1000)}</strong>
               </span>
             </div>
           </div>
@@ -946,9 +1300,23 @@ export function DespieceInspectorSummary({
   onRecalculate: () => void;
 }) {
   const summary = view.technicalSummary;
+  const barsCalculableHere = summary.hasSnapshot && summary.barras > 0;
+  const badgeStatus: DespieceUiStatus =
+    view.technicalStatus === "sin_reglas"
+      ? "sin_reglas"
+      : view.technicalStatus === "sin_configurar"
+        ? "configuracion_incompleta"
+        : view.cubicationSnapshot && isGeometricFallbackSnapshot(view.cubicationSnapshot)
+          ? "estimacion_geometrica"
+          : summary.hasSnapshot
+            ? "calculado_con_receta"
+            : "sin_reglas";
+
   return (
     <div className={styles.inspectorSummary}>
-      <em className={statusToneClass(view.technicalStatus)}>{view.technicalLabel}</em>
+      <em className={despieceStatusToneClass(badgeStatus)}>
+        {DESPIECE_UI_STATUS_LABELS[badgeStatus]}
+      </em>
       <dl className={styles.inspectorMetrics}>
         <div>
           <dt>Área</dt>
@@ -966,7 +1334,13 @@ export function DespieceInspectorSummary({
         </div>
         <div>
           <dt>Barras</dt>
-          <dd>{summary.hasSnapshot ? summary.barras : "—"}</dd>
+          <dd className={!barsCalculableHere ? styles.notCalculable : undefined}>
+            {summary.hasSnapshot
+              ? barsCalculableHere
+                ? summary.barras
+                : "No calculable"
+              : "—"}
+          </dd>
         </div>
         <div>
           <dt>Cortes</dt>
@@ -977,13 +1351,13 @@ export function DespieceInspectorSummary({
           <dd>{summary.hasSnapshot ? summary.accesorios : "—"}</dd>
         </div>
         <div>
-          <dt>Sobrante est.</dt>
-          <dd>
-            {summary.hasSnapshot && summary.sobranteMm > 0
-              ? formatMm(summary.sobranteMm)
-              : summary.hasSnapshot
-                ? "0 mm"
-                : "—"}
+          <dt>Sobrantes</dt>
+          <dd className={!barsCalculableHere ? styles.notCalculable : undefined}>
+            {summary.hasSnapshot
+              ? barsCalculableHere
+                ? formatMm(summary.sobranteMm)
+                : "No calculable"
+              : "—"}
           </dd>
         </div>
       </dl>

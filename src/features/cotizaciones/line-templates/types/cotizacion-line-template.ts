@@ -161,6 +161,8 @@ export type CotizacionLineTemplateCut = {
   quantity: number;
   lengthMm: number;
   totalLinealMm: number;
+  /** Trazabilidad breve: p. ej. "Alto total 1.000 mm − 3 mm = 997 mm". */
+  measureExplanation?: string | null;
 };
 
 export type CotizacionLineTemplateCuttingBar = {
