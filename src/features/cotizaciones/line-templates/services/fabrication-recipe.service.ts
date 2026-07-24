@@ -20,6 +20,8 @@ import {
   parseFabricationRecipe,
   RECIPE_MISSING_PROFILE_LABEL,
   recipeDisplayProfile,
+  resolveComponentBarLengthMm,
+  resolveRecipeKerfMm,
   sanitizeWorkshopProfileCode,
   type FabricationRecipe,
   type RecipeComponent,
@@ -49,11 +51,34 @@ export type RecipeCutPreviewRow = {
 
 export type RecipeBarSuggestion = {
   profileCode: string;
+  profileName: string;
   index: number;
+  /** Suma de largos de corte (sin kerf). */
   usedMm: number;
+  /** Pérdida total por cortes en la barra (kerf × cantidad de cortes). */
+  kerfTotalMm: number;
+  /** Sobrante = largo comercial − usado − pérdida. */
   wasteMm: number;
   barLengthMm: number;
+  utilizationPct: number;
   cuts: Array<{ functionLabel: string; lengthMm: number }>;
+};
+
+export type RecipeBarsStatus = "no_calculable" | "pauta_parcial" | "calculado";
+
+export type RecipeProfileBarPlan = {
+  key: string;
+  profileCode: string;
+  profileName: string;
+  barLengthMm: number | null;
+  kerfMm: number;
+  cutCount: number;
+  barsNeeded: number;
+  bars: RecipeBarSuggestion[];
+  calculable: boolean;
+  /** Si no calculable: mensaje para el maestro (p. ej. Pauta pendiente). */
+  pendingLabel: string | null;
+  functionLabels: string[];
 };
 
 export type RecipeCuttingPreview = {
@@ -68,8 +93,11 @@ export type RecipeCuttingPreview = {
   }>;
   accessories: Array<{ label: string; quantity: number }>;
   barSuggestions: RecipeBarSuggestion[];
+  profileBarPlans: RecipeProfileBarPlan[];
+  barsStatus: RecipeBarsStatus;
   totalUsedMm: number;
   totalWasteMm: number;
+  totalKerfMm: number;
   wastePct: number;
   totalProfilesLinealMm: number;
   pendingRequiredCount: number;
@@ -216,8 +244,13 @@ function resolveGlassPair(
   return { widthMm, heightMm };
 }
 
+/**
+ * First Fit Decreasing con pérdida por cada corte.
+ * Agrupa solo cortes del mismo código + mismo largo comercial.
+ */
 function distributeBarsForProfile(input: {
   profileCode: string;
+  profileName: string;
   cuts: Array<{ functionLabel: string; lengthMm: number }>;
   barLengthMm: number;
   kerfMm: number;
@@ -228,25 +261,30 @@ function distributeBarsForProfile(input: {
   const bars: RecipeBarSuggestion[] = [];
 
   sorted.forEach((cut) => {
-    const existing = bars.find((bar) => {
-      const kerf = bar.cuts.length > 0 ? kerfMm : 0;
-      return bar.usedMm + kerf + cut.lengthMm <= barLengthMm;
-    });
+    const need = cut.lengthMm + kerfMm;
+    const existing = bars.find((bar) => bar.usedMm + bar.kerfTotalMm + need <= barLengthMm);
     const target =
       existing ??
       ({
         profileCode: input.profileCode,
+        profileName: input.profileName,
         index: bars.length + 1,
         usedMm: 0,
+        kerfTotalMm: 0,
         wasteMm: barLengthMm,
         barLengthMm,
+        utilizationPct: 0,
         cuts: [],
       } satisfies RecipeBarSuggestion);
 
     if (!existing) bars.push(target);
-    const kerf = target.cuts.length > 0 ? kerfMm : 0;
-    target.usedMm += kerf + cut.lengthMm;
-    target.wasteMm = Math.max(barLengthMm - target.usedMm, 0);
+    target.usedMm += cut.lengthMm;
+    target.kerfTotalMm += kerfMm;
+    target.wasteMm = Math.max(barLengthMm - target.usedMm - target.kerfTotalMm, 0);
+    target.utilizationPct =
+      barLengthMm > 0
+        ? ((target.usedMm + target.kerfTotalMm) / barLengthMm) * 100
+        : 0;
     target.cuts.push(cut);
   });
 
@@ -272,8 +310,18 @@ export function buildRecipeCuttingPreview(
     quantity: Math.max(1, Math.round(dimensions.quantity ?? 1)),
   };
 
-  const defaultBar = Math.max(1000, Math.round(defaults.barLengthMm ?? 6000));
-  const defaultKerf = Math.max(0, Math.round(defaults.kerfMm ?? 3));
+  const defaultBar = Math.max(
+    1000,
+    Math.round(recipe.defaultBarLengthMm || defaults.barLengthMm || 6000)
+  );
+  const defaultKerf = Math.max(
+    0,
+    Math.round(
+      recipe.defaultKerfMm !== undefined && recipe.defaultKerfMm !== null
+        ? recipe.defaultKerfMm
+        : (defaults.kerfMm ?? 3)
+    )
+  );
 
   const rows: RecipeCutPreviewRow[] = [];
   const glasses: RecipeCuttingPreview["glasses"] = [];
@@ -426,51 +474,135 @@ export function buildRecipeCuttingPreview(
       measureExplanation: row.measureExplanation,
     }));
 
-  const byProfile = new Map<
+  const byProfileBar = new Map<
     string,
     {
+      profileCode: string;
+      profileName: string;
       barLengthMm: number;
       kerfMm: number;
       cuts: Array<{ functionLabel: string; lengthMm: number }>;
-      hasCommercialBar: boolean;
+      functionLabels: Set<string>;
     }
   >();
+  const pendingPlans: RecipeProfileBarPlan[] = [];
+  const seenPending = new Set<string>();
 
   rows.forEach((row) => {
     if (row.kind !== "profile" || row.pending || row.lengthMm == null || row.error) return;
-    // Sin código de taller no hay estimación confiable de barras (no mezclar con otros perfiles).
-    if (!row.hasProfileCode || row.profileCode === RECIPE_MISSING_PROFILE_LABEL) {
-      return;
-    }
     const component = recipe.components.find((entry) => entry.id === row.componentId);
-    const barLengthMm = component?.barLengthMm ?? defaultBar;
-    if (!barLengthMm || barLengthMm < 1000) {
+    if (!component) return;
+
+    const profileCode = row.hasProfileCode
+      ? row.profileCode
+      : RECIPE_MISSING_PROFILE_LABEL;
+    const profileName =
+      component.profileName.trim() || component.functionLabel || profileCode;
+    const barLengthMm = resolveComponentBarLengthMm(component, {
+      defaultBarLengthMm: defaultBar,
+    });
+    const kerfMm = resolveRecipeKerfMm(
+      { defaultKerfMm: defaultKerf },
+      component
+    );
+
+    if (!row.hasProfileCode || profileCode === RECIPE_MISSING_PROFILE_LABEL || !barLengthMm) {
+      const pendingKey = `${profileCode}::${component.functionKey}`;
+      if (!seenPending.has(pendingKey)) {
+        seenPending.add(pendingKey);
+        pendingPlans.push({
+          key: pendingKey,
+          profileCode,
+          profileName,
+          barLengthMm,
+          kerfMm,
+          cutCount: row.quantity,
+          barsNeeded: 0,
+          bars: [],
+          calculable: false,
+          pendingLabel: "Pauta pendiente",
+          functionLabels: [row.functionLabel],
+        });
+      } else {
+        const existingPending = pendingPlans.find((plan) => plan.key === pendingKey);
+        if (existingPending) {
+          existingPending.cutCount += row.quantity;
+          if (!existingPending.functionLabels.includes(row.functionLabel)) {
+            existingPending.functionLabels.push(row.functionLabel);
+          }
+        }
+      }
       return;
     }
-    const profileCode = row.profileCode;
-    const current = byProfile.get(profileCode) ?? {
+
+    // Agrupa por código de perfil + largo comercial (funciones distintas sí comparten).
+    const groupKey = `${profileCode}::${barLengthMm}`;
+    const current = byProfileBar.get(groupKey) ?? {
+      profileCode,
+      profileName,
       barLengthMm,
-      kerfMm: component?.kerfMm ?? defaultKerf,
+      kerfMm,
       cuts: [],
-      hasCommercialBar: true,
+      functionLabels: new Set<string>(),
     };
     for (let i = 0; i < row.quantity; i += 1) {
       current.cuts.push({ functionLabel: row.functionLabel, lengthMm: row.lengthMm });
     }
-    byProfile.set(profileCode, current);
+    current.functionLabels.add(row.functionLabel);
+    if (!current.profileName || current.profileName === profileCode) {
+      current.profileName = profileName;
+    }
+    byProfileBar.set(groupKey, current);
   });
 
-  const barSuggestions = Array.from(byProfile.entries()).flatMap(([profileCode, group]) =>
-    distributeBarsForProfile({
-      profileCode,
-      cuts: group.cuts,
-      barLengthMm: group.barLengthMm,
-      kerfMm: group.kerfMm,
-    })
+  const calculablePlans: RecipeProfileBarPlan[] = Array.from(byProfileBar.entries()).map(
+    ([key, group]) => {
+      const bars = distributeBarsForProfile({
+        profileCode: group.profileCode,
+        profileName: group.profileName,
+        cuts: group.cuts,
+        barLengthMm: group.barLengthMm,
+        kerfMm: group.kerfMm,
+      });
+      return {
+        key,
+        profileCode: group.profileCode,
+        profileName: group.profileName,
+        barLengthMm: group.barLengthMm,
+        kerfMm: group.kerfMm,
+        cutCount: group.cuts.length,
+        barsNeeded: bars.length,
+        bars,
+        calculable: true,
+        pendingLabel: null,
+        functionLabels: Array.from(group.functionLabels),
+      };
+    }
   );
+
+  const profileBarPlans = [...calculablePlans, ...pendingPlans];
+  const barSuggestions = calculablePlans.flatMap((plan) => plan.bars);
+
+  const requiredProfiles = recipe.components.filter(
+    (component) => component.kind === "profile" && component.required
+  );
+  const requiredCalculableCount = requiredProfiles.filter((component) => {
+    const codeOk = hasWorkshopProfileCode(component);
+    const lengthOk = resolveComponentBarLengthMm(component, {
+      defaultBarLengthMm: defaultBar,
+    });
+    return codeOk && lengthOk != null;
+  }).length;
+  const anyCalculable = calculablePlans.length > 0;
+  const barsStatus: RecipeBarsStatus = !anyCalculable
+    ? "no_calculable"
+    : requiredProfiles.length > 0 && requiredCalculableCount === requiredProfiles.length
+      ? "calculado"
+      : "pauta_parcial";
 
   const totalUsedMm = barSuggestions.reduce((sum, bar) => sum + bar.usedMm, 0);
   const totalWasteMm = barSuggestions.reduce((sum, bar) => sum + bar.wasteMm, 0);
+  const totalKerfMm = barSuggestions.reduce((sum, bar) => sum + bar.kerfTotalMm, 0);
   const totalCapacity = barSuggestions.reduce((sum, bar) => sum + bar.barLengthMm, 0);
   const totalProfilesLinealMm = profileCuts.reduce((sum, cut) => sum + cut.totalLinealMm, 0);
 
@@ -480,9 +612,12 @@ export function buildRecipeCuttingPreview(
     glasses,
     accessories,
     barSuggestions,
+    profileBarPlans,
+    barsStatus,
     totalUsedMm,
     totalWasteMm,
-    wastePct: totalCapacity > 0 ? (totalWasteMm / totalCapacity) * 100 : 0,
+    totalKerfMm,
+    wastePct: totalCapacity > 0 ? ((totalWasteMm + totalKerfMm) / totalCapacity) * 100 : 0,
     totalProfilesLinealMm,
     pendingRequiredCount,
     errors,
@@ -506,7 +641,7 @@ export function recipePreviewToLegacyCuttingPreview(
     cuts: preview.profileCuts,
     bars: preview.barSuggestions.map((bar) => ({
       index: bar.index,
-      usedMm: bar.usedMm,
+      usedMm: bar.usedMm + bar.kerfTotalMm,
       wasteMm: bar.wasteMm,
       cuts: bar.cuts.map((cut) => ({
         label: bar.profileCode,
@@ -694,8 +829,8 @@ export function buildCuttingPreviewFromMetadata(
       sashCount: recipe.sashCount,
       moduleCount: recipe.moduleCount,
     }, {
-      barLengthMm: rules.barLengthMm,
-      kerfMm: rules.sawKerfMm,
+      barLengthMm: recipe.defaultBarLengthMm ?? rules.barLengthMm,
+      kerfMm: recipe.defaultKerfMm ?? rules.sawKerfMm,
     });
     if (preview.errors.length > 0 && preview.profileCuts.length === 0) {
       return {

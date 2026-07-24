@@ -231,6 +231,8 @@ function buildL5000AcceptanceRecipe(): FabricationRecipe {
     variant: "estandar",
     sashCount: 2,
     moduleCount: 1,
+    defaultBarLengthMm: 6000,
+    defaultKerfMm: 3,
     status: "validada",
     validatedAt: "2026-07-23T00:00:00.000Z",
     validationCase: null,
@@ -505,5 +507,160 @@ describe("aceptación despiece receta L5000", () => {
     expect(saved?.estimationKind).toBe("recipe");
     expect(saved?.cuts.some((cut) => cut.label === "Marco")).toBe(false);
     expect(saved?.cuts.some((cut) => cut.label === "División / hoja")).toBe(false);
+    expect(saved?.recipe?.defaultBarLengthMm).toBe(6000);
+    expect(saved?.recipe?.defaultKerfMm).toBe(3);
+  });
+});
+
+describe("distribución sugerida de barras (FFD)", () => {
+  it("aplica First Fit Decreasing con pérdida por cada corte", () => {
+    const recipe: FabricationRecipe = {
+      ...createStructuralRecipeTemplate("corredera_2_hojas"),
+      defaultBarLengthMm: 6000,
+      defaultKerfMm: 3,
+      components: [
+        createRecipeComponent({
+          functionKey: "jamba",
+          profileCode: "5003",
+          profileName: "Jamba 5003",
+          quantityRule: "fixed",
+          quantityValue: 6,
+          measureBase: "fixed",
+          fixedMeasureMm: 997,
+        }),
+      ],
+    };
+
+    const preview = buildRecipeCuttingPreview(recipe, {
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+    });
+
+    expect(preview.barsStatus).toBe("calculado");
+    expect(preview.barSuggestions).toHaveLength(1);
+    expect(preview.barSuggestions[0]).toMatchObject({
+      usedMm: 5982,
+      kerfTotalMm: 18,
+      wasteMm: 0,
+      barLengthMm: 6000,
+    });
+    expect(preview.barSuggestions[0]?.cuts).toHaveLength(6);
+  });
+
+  it("no mezcla códigos distintos y hereda largo salvo override", () => {
+    const recipe: FabricationRecipe = {
+      ...createStructuralRecipeTemplate("corredera_2_hojas"),
+      defaultBarLengthMm: 6000,
+      defaultKerfMm: 3,
+      components: [
+        createRecipeComponent({
+          functionKey: "riel_superior",
+          profileCode: "5001",
+          quantityValue: 2,
+          measureBase: "fixed",
+          fixedMeasureMm: 1200,
+        }),
+        createRecipeComponent({
+          functionKey: "riel_inferior",
+          profileCode: "5002",
+          quantityValue: 2,
+          measureBase: "fixed",
+          fixedMeasureMm: 1200,
+        }),
+        createRecipeComponent({
+          functionKey: "jamba",
+          profileCode: "5003",
+          quantityValue: 2,
+          measureBase: "fixed",
+          fixedMeasureMm: 1500,
+          barLengthMm: 5800,
+        }),
+        createRecipeComponent({
+          functionKey: "vidrio",
+          kind: "glass",
+          measureBase: "glass_width",
+          quantityRule: "per_sash",
+        }),
+      ],
+    };
+
+    const preview = buildRecipeCuttingPreview(recipe, {
+      widthMm: 1200,
+      heightMm: 1500,
+      sashCount: 2,
+      quantity: 1,
+    });
+
+    const codes = new Set(preview.barSuggestions.map((bar) => bar.profileCode));
+    expect(codes.has("5001")).toBe(true);
+    expect(codes.has("5002")).toBe(true);
+    expect(codes.has("5003")).toBe(true);
+    expect(
+      preview.barSuggestions.some(
+        (bar) => bar.profileCode === "5001" && bar.cuts.some((cut) => cut.functionLabel.includes("5002"))
+      )
+    ).toBe(false);
+    expect(
+      preview.profileBarPlans.find((plan) => plan.profileCode === "5003")?.barLengthMm
+    ).toBe(5800);
+    expect(
+      preview.profileBarPlans.find((plan) => plan.profileCode === "5001")?.barLengthMm
+    ).toBe(6000);
+    expect(preview.glasses.length).toBeGreaterThan(0);
+    expect(preview.profileBarPlans.every((plan) => plan.profileCode !== "VID")).toBe(true);
+  });
+
+  it("marca No calculable / Pauta pendiente sin código o largo", () => {
+    const noBarRecipe: FabricationRecipe = {
+      ...createStructuralRecipeTemplate("corredera_2_hojas"),
+      defaultBarLengthMm: 6000,
+      defaultKerfMm: 3,
+      components: [
+        createRecipeComponent({
+          functionKey: "riel_superior",
+          profileCode: "",
+          quantityValue: 1,
+          measureBase: "vano_width",
+        }),
+      ],
+    };
+    const previewEmpty = buildRecipeCuttingPreview(noBarRecipe, {
+      widthMm: 1200,
+      heightMm: 1000,
+    });
+    expect(previewEmpty.barsStatus).toBe("no_calculable");
+    expect(previewEmpty.profileBarPlans[0]?.pendingLabel).toBe("Pauta pendiente");
+
+    const partial: FabricationRecipe = {
+      ...createStructuralRecipeTemplate("corredera_2_hojas"),
+      defaultBarLengthMm: 6000,
+      defaultKerfMm: 3,
+      components: [
+        createRecipeComponent({
+          functionKey: "riel_superior",
+          profileCode: "5001",
+          required: true,
+          quantityValue: 1,
+          measureBase: "vano_width",
+        }),
+        createRecipeComponent({
+          functionKey: "jamba",
+          profileCode: "",
+          required: true,
+          quantityValue: 2,
+          measureBase: "vano_height",
+        }),
+      ],
+    };
+    const previewPartial = buildRecipeCuttingPreview(partial, {
+      widthMm: 1200,
+      heightMm: 1000,
+    });
+    expect(previewPartial.barsStatus).toBe("pauta_parcial");
+    expect(previewPartial.barSuggestions.length).toBeGreaterThan(0);
+    expect(
+      previewPartial.profileBarPlans.some((plan) => plan.pendingLabel === "Pauta pendiente")
+    ).toBe(true);
   });
 });

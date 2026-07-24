@@ -701,8 +701,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         {
           enabled: draft.estimationEnabled && draft.cuttingEnabled && !isGlassDraft,
           mode: isGlassDraft ? "sin_corte" : draft.cuttingMode,
-          barLengthMm: parseDecimal(draft.cuttingBarLengthMm),
-          sawKerfMm: parseDecimal(draft.cuttingSawKerfMm),
+          barLengthMm: draft.fabricationRecipe?.defaultBarLengthMm
+            ? draft.fabricationRecipe.defaultBarLengthMm
+            : parseDecimal(draft.cuttingBarLengthMm),
+          sawKerfMm:
+            draft.fabricationRecipe?.defaultKerfMm != null
+              ? draft.fabricationRecipe.defaultKerfMm
+              : parseDecimal(draft.cuttingSawKerfMm),
           sashCount: parseDecimal(draft.cuttingSashCount),
         }
       ),

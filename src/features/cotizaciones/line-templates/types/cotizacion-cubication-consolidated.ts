@@ -7,6 +7,7 @@
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import { recipeFunctionWorkshopOrder } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 
 export type ConsolidatedCubicationRow = {
   key: string;
@@ -215,13 +216,16 @@ function finalizePauta(
     totalAccessories: number;
   }
 ): ConsolidatedCubicationPauta {
+  // Orden de taller (no alfabético): Riel sup → Riel inf → Jamba → Cabezal → Zócalo → Pierna → Traslapo
   const rows = Array.from(rowMap.values()).sort((left, right) => {
     const byLine = left.lineName.localeCompare(right.lineName, "es");
     if (byLine !== 0) return byLine;
+    const byFunction =
+      recipeFunctionWorkshopOrder(left.functionLabel) -
+      recipeFunctionWorkshopOrder(right.functionLabel);
+    if (byFunction !== 0) return byFunction;
     const byProfile = left.profile.localeCompare(right.profile, "es");
     if (byProfile !== 0) return byProfile;
-    const byFunction = left.functionLabel.localeCompare(right.functionLabel, "es");
-    if (byFunction !== 0) return byFunction;
     return right.lengthMm - left.lengthMm;
   });
 

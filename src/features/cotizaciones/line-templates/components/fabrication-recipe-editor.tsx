@@ -19,6 +19,7 @@ import {
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
   recipeDisplayProfile,
+  resolveComponentBarLengthMm,
   type FabricationRecipe,
   type FabricationType,
   type RecipeComponent,
@@ -119,6 +120,32 @@ function recipeStatusToneClass(status: RecipeStatus) {
   }
 }
 
+function barsStatusLabel(status: RecipeCuttingPreview["barsStatus"]) {
+  switch (status) {
+    case "calculado":
+      return "Calculado";
+    case "pauta_parcial":
+      return "Pauta parcial";
+    default:
+      return "No calculable";
+  }
+}
+
+function barsStatusToneClass(status: RecipeCuttingPreview["barsStatus"]) {
+  switch (status) {
+    case "calculado":
+      return s.recipeToneOk;
+    case "pauta_parcial":
+      return s.recipeToneWarn;
+    default:
+      return s.recipeToneMuted;
+  }
+}
+
+function formatBarCutsLine(cuts: Array<{ lengthMm: number }>) {
+  return cuts.map((cut) => formatMm(cut.lengthMm).replace(" mm", "")).join(" + ");
+}
+
 function updateComponent(
   recipe: FabricationRecipe,
   componentId: string,
@@ -143,18 +170,30 @@ export function FabricationRecipeEditor({
 }: Props) {
   const widthMm = Math.max(1, Math.round(Number(vanoWidthMm.replace(",", ".")) || 1200));
   const heightMm = Math.max(1, Math.round(Number(vanoHeightMm.replace(",", ".")) || 1000));
-  const preview: RecipeCuttingPreview = buildRecipeCuttingPreview(recipe, {
+  const recipeWithBarDefaults: FabricationRecipe = {
+    ...recipe,
+    defaultBarLengthMm: recipe.defaultBarLengthMm ?? 6000,
+    defaultKerfMm: recipe.defaultKerfMm ?? 3,
+  };
+  const preview: RecipeCuttingPreview = buildRecipeCuttingPreview(recipeWithBarDefaults, {
     widthMm,
     heightMm,
     sashCount: recipe.sashCount,
     moduleCount: recipe.moduleCount,
     quantity: 1,
   });
-  const status = deriveRecipeStatus(recipe);
+  const status = deriveRecipeStatus(recipeWithBarDefaults);
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({});
   const [adjustDrafts, setAdjustDrafts] = useState<Record<string, string>>({});
+  const [barOverrideDrafts, setBarOverrideDrafts] = useState<Record<string, string>>({});
   const [sashDraft, setSashDraft] = useState(String(recipe.sashCount));
   const [moduleDraft, setModuleDraft] = useState(String(recipe.moduleCount));
+  const [defaultBarDraft, setDefaultBarDraft] = useState(
+    String(recipeWithBarDefaults.defaultBarLengthMm)
+  );
+  const [defaultKerfDraft, setDefaultKerfDraft] = useState(
+    String(recipeWithBarDefaults.defaultKerfMm)
+  );
 
   useEffect(() => {
     setQuantityDrafts((previous) => {
@@ -172,6 +211,15 @@ export function FabricationRecipeEditor({
       });
       return next;
     });
+    setBarOverrideDrafts((previous) => {
+      const next: Record<string, string> = {};
+      recipe.components.forEach((component) => {
+        next[component.id] =
+          previous[component.id] ??
+          (component.barLengthMm != null ? String(component.barLengthMm) : "");
+      });
+      return next;
+    });
   }, [recipe.components]);
 
   useEffect(() => {
@@ -182,11 +230,21 @@ export function FabricationRecipeEditor({
     setModuleDraft(String(recipe.moduleCount));
   }, [recipe.moduleCount]);
 
+  useEffect(() => {
+    setDefaultBarDraft(String(recipe.defaultBarLengthMm ?? 6000));
+  }, [recipe.defaultBarLengthMm]);
+
+  useEffect(() => {
+    setDefaultKerfDraft(String(recipe.defaultKerfMm ?? 3));
+  }, [recipe.defaultKerfMm]);
+
   const handleTypeChange = (type: FabricationType) => {
     const next = createStructuralRecipeTemplate(type);
     onRecipeChange({
       ...next,
       variant: recipe.variant,
+      defaultBarLengthMm: recipe.defaultBarLengthMm ?? next.defaultBarLengthMm,
+      defaultKerfMm: recipe.defaultKerfMm ?? next.defaultKerfMm,
     });
   };
 
@@ -206,6 +264,27 @@ export function FabricationRecipeEditor({
     onRecipeChange(
       updateComponent(recipe, componentId, {
         adjustMm: value,
+      })
+    );
+  };
+
+  const commitBarOverride = (componentId: string, raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      setBarOverrideDrafts((current) => ({ ...current, [componentId]: "" }));
+      onRecipeChange(
+        updateComponent(recipe, componentId, {
+          barLengthMm: null,
+        })
+      );
+      return;
+    }
+    const value = parsePositiveDraft(trimmed, recipeWithBarDefaults.defaultBarLengthMm);
+    const safe = Math.max(1000, value);
+    setBarOverrideDrafts((current) => ({ ...current, [componentId]: String(safe) }));
+    onRecipeChange(
+      updateComponent(recipe, componentId, {
+        barLengthMm: safe,
       })
     );
   };
@@ -335,6 +414,73 @@ export function FabricationRecipeEditor({
             >
               Duplicar como variante
             </button>
+          </div>
+        </section>
+
+        <section className={s.recipeSetupCard} aria-label="Barras comerciales">
+          <div className={s.recipeSectionHead}>
+            <strong>Barras comerciales</strong>
+            <span>
+              Largo y pérdida por corte para estimar barras. Cada perfil hereda estos valores
+              salvo que lo sobrescribas.
+            </span>
+          </div>
+          <div className={s.cubicationSetupGrid}>
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Largo comercial predeterminado</span>
+              <input
+                className={s.textInput}
+                inputMode="numeric"
+                value={defaultBarDraft}
+                onChange={(event) =>
+                  setDefaultBarDraft(event.target.value.replace(/[^\d]/g, ""))
+                }
+                onBlur={() => {
+                  const value = Math.max(
+                    1000,
+                    parsePositiveDraft(
+                      defaultBarDraft,
+                      recipeWithBarDefaults.defaultBarLengthMm
+                    )
+                  );
+                  setDefaultBarDraft(String(value));
+                  onRecipeChange(
+                    markRecipeDirtyAfterEdit({
+                      ...recipe,
+                      defaultBarLengthMm: value,
+                    })
+                  );
+                }}
+                placeholder="Ej: 6000"
+              />
+              <span className={s.fieldHint}>Ejemplo: 6.000 mm</span>
+            </label>
+            <label className={s.fieldBlock}>
+              <span className={s.fieldLabel}>Pérdida por corte</span>
+              <input
+                className={s.textInput}
+                inputMode="numeric"
+                value={defaultKerfDraft}
+                onChange={(event) =>
+                  setDefaultKerfDraft(event.target.value.replace(/[^\d]/g, ""))
+                }
+                onBlur={() => {
+                  const value = parseNonNegativeDraft(
+                    defaultKerfDraft,
+                    recipeWithBarDefaults.defaultKerfMm
+                  );
+                  setDefaultKerfDraft(String(value));
+                  onRecipeChange(
+                    markRecipeDirtyAfterEdit({
+                      ...recipe,
+                      defaultKerfMm: value,
+                    })
+                  );
+                }}
+                placeholder="Ej: 3"
+              />
+              <span className={s.fieldHint}>Ejemplo: 3 mm (sierra / disco)</span>
+            </label>
           </div>
         </section>
 
@@ -476,6 +622,47 @@ export function FabricationRecipeEditor({
                             placeholder="Nombre reconocido por el taller"
                           />
                         </label>
+                        {component.kind === "profile" ? (
+                          <label className={s.fieldBlock}>
+                            <span className={s.fieldLabel}>
+                              Largo comercial{" "}
+                              <em className={s.optionalMark}>Opcional</em>
+                            </span>
+                            <input
+                              className={s.textInput}
+                              inputMode="numeric"
+                              value={barOverrideDrafts[component.id] ?? ""}
+                              onChange={(event) => {
+                                const raw = event.target.value.replace(/[^\d]/g, "");
+                                setBarOverrideDrafts((current) => ({
+                                  ...current,
+                                  [component.id]: raw,
+                                }));
+                              }}
+                              onBlur={(event) =>
+                                commitBarOverride(component.id, event.currentTarget.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.currentTarget.blur();
+                                }
+                              }}
+                              placeholder={`Hereda ${formatMm(
+                                recipeWithBarDefaults.defaultBarLengthMm
+                              ).replace(" mm", "")}`}
+                            />
+                            <span className={s.fieldHint}>
+                              {component.barLengthMm != null
+                                ? `Personalizado: ${formatMm(component.barLengthMm)}`
+                                : `Usa el largo general (${formatMm(
+                                    resolveComponentBarLengthMm(
+                                      component,
+                                      recipeWithBarDefaults
+                                    ) ?? recipeWithBarDefaults.defaultBarLengthMm
+                                  )}). Déjalo vacío para heredar.`}
+                            </span>
+                          </label>
+                        ) : null}
                       </div>
                     </div>
 
@@ -696,14 +883,98 @@ export function FabricationRecipeEditor({
               </div>
             ))}
           </div>
-          {preview.barSuggestions.length > 0 ? (
+        </section>
+
+        <section className={s.barDistribution} aria-label="Distribución sugerida de cortes">
+          <div className={s.barDistributionHead}>
+            <div>
+              <strong>Distribución sugerida de cortes</strong>
+              <span>
+                Referencia de taller con First Fit Decreasing. No garantiza desperdicio mínimo.
+              </span>
+            </div>
+            <em className={barsStatusToneClass(preview.barsStatus)}>
+              {barsStatusLabel(preview.barsStatus)}
+            </em>
+          </div>
+
+          {preview.profileBarPlans.length === 0 ? (
             <p className={s.fieldHint}>
-              Distribución sugerida por perfil (pauta referencial, no optimización de desperdicio).
+              Agrega perfiles con código y largo comercial para estimar barras. Vidrios y
+              accesorios no usan barras.
             </p>
           ) : (
-            <p className={s.fieldHint}>
-              Sin códigos y largos comerciales, Ventora no estima barras ni sobrantes.
-            </p>
+            <div className={s.barPlanList}>
+              {preview.profileBarPlans.map((plan) => (
+                <article
+                  key={plan.key}
+                  className={`${s.barPlanCard} ${
+                    plan.calculable ? s.barPlanCardOk : s.barPlanCardPending
+                  }`}
+                >
+                  <header className={s.barPlanCardHead}>
+                    <div>
+                      <strong>
+                        {plan.profileCode}
+                        {plan.profileName && plan.profileName !== plan.profileCode
+                          ? ` · ${plan.profileName}`
+                          : ""}
+                      </strong>
+                      <span>
+                        {plan.functionLabels.join(" · ") || "Perfil"}
+                        {plan.barLengthMm
+                          ? ` · Largo ${formatMm(plan.barLengthMm)}`
+                          : " · Sin largo comercial"}
+                      </span>
+                    </div>
+                    {plan.calculable ? (
+                      <em className={s.recipeToneOk}>
+                        {plan.cutCount} cortes · {plan.barsNeeded} barra
+                        {plan.barsNeeded === 1 ? "" : "s"}
+                      </em>
+                    ) : (
+                      <em className={s.recipeToneWarn}>{plan.pendingLabel}</em>
+                    )}
+                  </header>
+
+                  {plan.calculable ? (
+                    <div className={s.barPlanMeta}>
+                      <span>Pérdida por corte: {formatMm(plan.kerfMm)}</span>
+                      <span>
+                        Aprovechamiento medio:{" "}
+                        {plan.bars.length > 0
+                          ? `${(
+                              plan.bars.reduce((sum, bar) => sum + bar.utilizationPct, 0) /
+                              plan.bars.length
+                            ).toFixed(0)}%`
+                          : "—"}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className={s.fieldHint}>
+                      El despiece se mantiene. Completa código y largo comercial para estimar
+                      barras de este perfil.
+                    </p>
+                  )}
+
+                  {plan.calculable
+                    ? plan.bars.map((bar) => (
+                        <div key={`${plan.key}-${bar.index}`} className={s.barSuggestionRow}>
+                          <strong>
+                            Barra {bar.index} · {formatMm(bar.barLengthMm)}
+                          </strong>
+                          <p className={s.barSuggestionCuts}>{formatBarCutsLine(bar.cuts)}</p>
+                          <span>
+                            Usado: {formatMm(bar.usedMm)} · Pérdida:{" "}
+                            {formatMm(bar.kerfTotalMm)} · Sobrante: {formatMm(bar.wasteMm)} ·{" "}
+                            {bar.utilizationPct.toFixed(0)}%
+                          </span>
+                        </div>
+                      ))
+                    : null}
+                </article>
+              ))}
+            </div>
           )}
         </section>
       </div>

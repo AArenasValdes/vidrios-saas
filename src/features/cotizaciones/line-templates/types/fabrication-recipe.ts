@@ -93,6 +93,39 @@ export const RECIPE_COMPONENT_FUNCTION_LABELS: Record<RecipeComponentFunction, s
   otro: "Otro perfil",
 };
 
+/**
+ * Orden de taller / pauta (marco → hoja → vidrio).
+ * Corredera L5000 típica: Riel sup → Riel inf → Jamba → Cabezal → Zócalo → Pierna → Traslapo.
+ * No ordenar alfabetico en despiece consolidado.
+ */
+export function recipeFunctionWorkshopOrder(
+  functionKeyOrLabel: string | null | undefined
+): number {
+  const raw = (functionKeyOrLabel ?? "").trim().toLowerCase();
+  if (!raw) return RECIPE_COMPONENT_FUNCTIONS.length + 1;
+
+  const byKey = RECIPE_COMPONENT_FUNCTIONS.indexOf(
+    raw as RecipeComponentFunction
+  );
+  if (byKey >= 0) return byKey;
+
+  const byLabel = RECIPE_COMPONENT_FUNCTIONS.findIndex(
+    (key) => RECIPE_COMPONENT_FUNCTION_LABELS[key].toLowerCase() === raw
+  );
+  if (byLabel >= 0) return byLabel;
+
+  // Aliases frecuentes en pautas legacy / taller
+  if (raw.includes("riel") && raw.includes("sup")) return 0;
+  if (raw.includes("riel") && raw.includes("inf")) return 1;
+  if (raw.startsWith("jamba")) return 2;
+  if (raw.startsWith("cabezal")) return 3;
+  if (raw.startsWith("zócalo") || raw.startsWith("zocalo")) return 4;
+  if (raw.startsWith("pierna") || raw.startsWith("batiente")) return 5;
+  if (raw.startsWith("traslapo") || raw.startsWith("enganche")) return 6;
+
+  return RECIPE_COMPONENT_FUNCTIONS.length;
+}
+
 export const MEASURE_BASES = [
   "vano_width",
   "vano_height",
@@ -193,6 +226,10 @@ export type FabricationRecipe = {
   variant: RecipeVariant;
   sashCount: number;
   moduleCount: number;
+  /** Largo comercial predeterminado de barra (mm). Los perfiles lo heredan si no tienen override. */
+  defaultBarLengthMm: number;
+  /** Pérdida por corte / kerf (mm). Aplica a todos los perfiles. */
+  defaultKerfMm: number;
   status: RecipeStatus;
   components: RecipeComponent[];
   validatedAt: string | null;
@@ -258,6 +295,8 @@ export function createEmptyRecipe(
           ? 2
           : 1,
     moduleCount: 1,
+    defaultBarLengthMm: 6000,
+    defaultKerfMm: 3,
     status: "sin_configurar",
     components: [],
     validatedAt: null,
@@ -329,6 +368,8 @@ export function parseFabricationRecipe(value: unknown): FabricationRecipe | null
     variant: asText(value.variant, "estandar") || "estandar",
     sashCount: asPositiveInt(value.sashCount, 1),
     moduleCount: asPositiveInt(value.moduleCount, 1),
+    defaultBarLengthMm: asPositiveInt(value.defaultBarLengthMm, 6000),
+    defaultKerfMm: asNonNeg(value.defaultKerfMm, 3),
     status,
     components,
     validatedAt: asText(value.validatedAt) || null,
@@ -528,6 +569,40 @@ export function duplicateRecipeAsVariant(
       id: createId(component.functionKey),
     })),
   };
+}
+
+/** Largo comercial efectivo del perfil: override o default de la receta. */
+export function resolveComponentBarLengthMm(
+  component: RecipeComponent,
+  recipe: Pick<FabricationRecipe, "defaultBarLengthMm">
+): number | null {
+  if (component.kind !== "profile") return null;
+  const override = component.barLengthMm;
+  if (override != null && override >= 1000) return Math.round(override);
+  const fallback = Math.round(recipe.defaultBarLengthMm || 0);
+  return fallback >= 1000 ? fallback : null;
+}
+
+export function resolveRecipeKerfMm(
+  recipe: Pick<FabricationRecipe, "defaultKerfMm">,
+  component?: RecipeComponent | null
+): number {
+  if (component?.kerfMm != null && component.kerfMm >= 0) {
+    return Math.round(component.kerfMm);
+  }
+  return Math.max(0, Math.round(recipe.defaultKerfMm ?? 3));
+}
+
+/** True si el perfil puede entrar al cálculo de barras (código + largo comercial). */
+export function canCalculateBarsForComponent(
+  component: RecipeComponent,
+  recipe: Pick<FabricationRecipe, "defaultBarLengthMm">
+): boolean {
+  if (component.kind !== "profile") return false;
+  return (
+    hasWorkshopProfileCode(component) &&
+    resolveComponentBarLengthMm(component, recipe) != null
+  );
 }
 
 /** Etiquetas de rol legacy (Marco/Hoja/…) — no son códigos de perfil de taller. */

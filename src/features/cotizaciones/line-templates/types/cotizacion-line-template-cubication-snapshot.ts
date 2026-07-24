@@ -562,7 +562,7 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
           sashCount: recipe.sashCount,
           moduleCount: recipe.moduleCount,
         },
-        { barLengthMm: rules.barLengthMm, kerfMm: rules.sawKerfMm }
+        { barLengthMm: recipe.defaultBarLengthMm, kerfMm: recipe.defaultKerfMm }
       )
     );
     if (preview.cuts.length === 0 && preview.accessoryUnits <= 0 && !preview.glass) {
