@@ -353,7 +353,7 @@ function estimatePillWidth(text: string, base = 18, perChar = 4.3) {
 }
 
 function ExportBadge({ label }: { label: string }) {
-  const width = estimatePillWidth(label, 24, 4.9);
+  const width = estimatePillWidth(label, 28, 5.4);
 
   return (
     <svg
@@ -369,9 +369,9 @@ function ExportBadge({ label }: { label: string }) {
         y="11"
         fill="var(--brand)"
         fontFamily="Montserrat, Arial, sans-serif"
-        fontSize="8.2"
+        fontSize="10"
         fontWeight="700"
-        letterSpacing="0.4"
+        letterSpacing="0.3"
         textAnchor="middle"
         dominantBaseline="middle"
       >
@@ -386,7 +386,7 @@ function ExportTitleRow({
 }: {
   name: string;
 }) {
-  const nameWidth = estimatePillWidth(name, 92, 7);
+  const nameWidth = estimatePillWidth(name, 100, 7.6);
   const totalWidth = nameWidth;
 
   return (
@@ -402,7 +402,7 @@ function ExportTitleRow({
         y="11.4"
         fill="#ffffff"
         fontFamily="Georgia, Times New Roman, serif"
-        fontSize="12"
+        fontSize="14"
         fontWeight="700"
         dominantBaseline="middle"
       >
@@ -428,7 +428,7 @@ function ExportPager({
         y="9.4"
         fill="#ffffff"
         fontFamily="Montserrat, Arial, sans-serif"
-        fontSize="9.2"
+        fontSize="10"
         fontWeight="700"
         textAnchor="middle"
         dominantBaseline="middle"
@@ -440,7 +440,7 @@ function ExportPager({
         y="9.4"
         fill="#6b7280"
         fontFamily="Montserrat, Arial, sans-serif"
-        fontSize="8"
+        fontSize="9"
         fontWeight="700"
         textAnchor="middle"
         dominantBaseline="middle"

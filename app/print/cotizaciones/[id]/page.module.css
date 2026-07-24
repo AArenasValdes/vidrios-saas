@@ -211,6 +211,13 @@
   overflow: hidden;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+  /* Escala tipográfica del PDF: legible sin achicar croquis/layout */
+  --pdf-fs-micro: 8.5px;
+  --pdf-fs-label: 9.5px;
+  --pdf-fs-body: 11.5px;
+  --pdf-fs-body-strong: 12.5px;
+  --pdf-fs-title: 14.5px;
+  --pdf-fs-display: 16px;
 }
 
 .pdfPage {
@@ -822,12 +829,12 @@
 }
 
 .companyAddressPrimary {
-  font-size: 10.8px;
+  font-size: 12px;
   line-height: 1.42;
 }
 
 .companyAddressSecondary {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.44;
   color: #74839b;
 }
@@ -841,7 +848,7 @@
   text-align: right;
   font-family: var(--font-sans), Arial, sans-serif;
   color: #60718b;
-  font-size: 9px;
+  font-size: 10px;
   flex-shrink: 0;
   border-left: 1px solid rgba(181, 196, 220, 0.46);
 }
@@ -850,9 +857,9 @@
 .quoteTypeBadge {
   display: block;
   width: 100%;
-  font-size: 7.8px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #7f91ad;
 }
@@ -872,7 +879,7 @@
 .quoteTitle {
   display: block;
   width: 100%;
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 800;
   color: #243b6b;
   line-height: 1;
@@ -882,21 +889,21 @@
 .quoteMetaCode {
   display: block;
   width: 100%;
-  font-size: 9.2px;
+  font-size: 10.5px;
   font-weight: 800;
   color: #60718b;
   white-space: nowrap;
 }
 
 .quoteMetaDue {
-  font-size: 8.5px;
+  font-size: 10px;
   letter-spacing: 0.03em;
 }
 
 .quoteMetaDate,
 .quoteMetaDue,
 .quoteMetaPage {
-  font-size: 8.3px;
+  font-size: 10px;
 }
 
 .clientPanel {
@@ -921,10 +928,10 @@
 .detailLabel,
 .summaryLabel {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 9.2px;
+  font-size: var(--pdf-fs-label);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: #4b5563;
 }
 
@@ -969,8 +976,8 @@
 .globalWorkSummaryDescription {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--pdf-fs-body);
+  line-height: 1.55;
   color: #526176;
 }
 
@@ -983,15 +990,15 @@
 .globalWorkSummaryMeta span {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
+  min-height: 24px;
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(30, 136, 255, 0.08);
   color: #335ea9;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 8px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -1047,9 +1054,9 @@
 .globalDescriptionCount,
 .totalGlobalSectionHeader span:last-child {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 8px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #7f91ad;
 }
@@ -1199,24 +1206,24 @@
 }
 
 .totalGlobalDetailMeta span {
-  min-height: 16px;
-  padding: 0 6px;
+  min-height: 18px;
+  padding: 0 7px;
   border-radius: 999px;
   background: #f4f7fb;
   color: #60718b;
   display: inline-flex;
   align-items: center;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.4px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .totalGlobalDetailName {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 12.2px;
+  font-size: var(--pdf-fs-body-strong);
   line-height: 1.22;
   font-weight: 800;
   color: #111827;
@@ -1225,7 +1232,7 @@
 .totalGlobalDetailDescription {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 10.5px;
+  font-size: var(--pdf-fs-body);
   line-height: 1.42;
   color: #4b5563;
   white-space: pre-wrap;
@@ -1279,16 +1286,16 @@
 
 .clientLabel {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 8.4px;
+  font-size: var(--pdf-fs-label);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: #6b7280;
 }
 
 .clientValue {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 12.2px;
+  font-size: var(--pdf-fs-body-strong);
   font-weight: 700;
   color: var(--carbon);
 }
@@ -1369,10 +1376,10 @@
 
 .itemBadge {
   position: absolute;
-  top: 6px;
+  top: 5px;
   left: 10px;
-  height: 16px;
-  padding: 0 7px;
+  height: 18px;
+  padding: 0 8px;
   border-radius: 3px;
   background: #fff;
   color: var(--brand);
@@ -1380,10 +1387,10 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.2px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.05em;
-  line-height: 16px;
+  letter-spacing: 0.04em;
+  line-height: 18px;
   z-index: 2;
 }
 
@@ -1407,10 +1414,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 28px;
+  min-height: 30px;
   margin-left: 0;
   margin-bottom: 0;
-  padding: 5px 10px 5px 72px;
+  padding: 6px 10px 6px 78px;
   background: var(--brand);
   box-sizing: border-box;
 }
@@ -1427,7 +1434,7 @@
 .itemCode {
   display: block;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 8.5px;
+  font-size: var(--pdf-fs-micro);
   color: #6b7280;
   line-height: 22px;
 }
@@ -1436,7 +1443,7 @@
   margin: 0;
   display: block;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 12.8px;
+  font-size: var(--pdf-fs-title);
   font-weight: 700;
   color: #fff;
   line-height: 1.15;
@@ -1472,8 +1479,8 @@
 }
 
 .itemChip {
-  height: 18px;
-  padding: 0 7px;
+  height: 20px;
+  padding: 0 8px;
   border: 1px solid #d1d5db;
   border-radius: 999px;
   display: inline-flex;
@@ -1481,10 +1488,10 @@
   justify-content: center;
   gap: 6px;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7px;
-  font-weight: 500;
+  font-size: var(--pdf-fs-micro);
+  font-weight: 600;
   color: #4b5563;
-  line-height: 18px;
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -1524,8 +1531,8 @@
 .descriptionText {
   margin: 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 9.6px;
-  line-height: 1.65;
+  font-size: var(--pdf-fs-body);
+  line-height: 1.55;
   color: #374151;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1603,9 +1610,9 @@
 
 .drawingCaption {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.1px;
+  font-size: var(--pdf-fs-micro);
   text-transform: uppercase;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
   color: #8da0b8;
 }
 
@@ -1619,8 +1626,8 @@
   display: grid;
   align-content: start;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
-  padding: 10px 12px 9px;
+  gap: 9px 16px;
+  padding: 11px 12px 10px;
   background: #fff;
   box-sizing: border-box;
 }
@@ -1628,7 +1635,7 @@
 .infoSectionHeading {
   grid-column: 1 / -1;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.8px;
+  font-size: var(--pdf-fs-label);
   font-weight: 800;
   letter-spacing: 0.05em;
   color: var(--brand);
@@ -1637,8 +1644,8 @@
 
 .specRow {
   display: grid;
-  grid-template-columns: 5px minmax(0, 1fr);
-  gap: 2px 3px;
+  grid-template-columns: 6px minmax(0, 1fr);
+  gap: 2px 4px;
   align-items: start;
 }
 
@@ -1647,9 +1654,9 @@
 }
 
 .specBullet {
-  width: 5px;
-  height: 5px;
-  margin-top: 3px;
+  width: 6px;
+  height: 6px;
+  margin-top: 4px;
 }
 
 .specKey,
@@ -1665,24 +1672,24 @@
 }
 
 .specKey {
-  font-size: 6.7px;
+  font-size: var(--pdf-fs-label);
   font-weight: 800;
   text-transform: uppercase;
   color: #55708f;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
 }
 
 .specValue {
   grid-column: 2;
-  font-size: 9.4px;
+  font-size: var(--pdf-fs-body);
   font-weight: 700;
   color: #111827;
   line-height: 1.3;
 }
 
 .specDimensionRow .specValue {
-  font-size: 12px;
+  font-size: var(--pdf-fs-title);
   font-weight: 800;
   color: #0f172a;
 }
@@ -1698,21 +1705,21 @@
 }
 
 .pricesHeading {
-  font-size: 8.1px;
+  font-size: var(--pdf-fs-label);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.045em;
   color: var(--brand);
-  padding: 8px 12px 2px;
+  padding: 9px 12px 3px;
   background: #f8fafc;
 }
 
 .pricesSubheading {
-  font-size: 6.8px;
+  font-size: var(--pdf-fs-micro);
   text-transform: uppercase;
   letter-spacing: 0.035em;
   color: #7e93ad;
-  padding: 0 12px 6px;
+  padding: 0 12px 7px;
   border-bottom: 1px solid #94a3b8;
   background: #f8fafc;
 }
@@ -1727,9 +1734,9 @@
 }
 
 .priceRow {
-  font-size: 9.6px;
+  font-size: var(--pdf-fs-body);
   color: #526174;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid #d5dce6;
 }
 
@@ -1752,7 +1759,7 @@
 
 .priceTotal span,
 .priceTotal strong {
-  font-size: 13.8px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--brand);
 }
@@ -1769,13 +1776,13 @@
 }
 
 .paymentLabel {
-  font-size: 10.2px;
+  font-size: var(--pdf-fs-body);
   font-weight: 800;
   color: var(--brand);
 }
 
 .paymentValue {
-  font-size: 10.2px;
+  font-size: var(--pdf-fs-body);
   color: #374151;
 }
 
@@ -1795,16 +1802,16 @@
 }
 
 .approvalLabel {
-  font-size: 8px;
+  font-size: var(--pdf-fs-label);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--brand);
 }
 
 .approvalValue {
-  font-size: 8.7px;
-  line-height: 1.55;
+  font-size: var(--pdf-fs-body);
+  line-height: 1.5;
   color: #374151;
   word-break: break-all;
 }
@@ -1830,12 +1837,12 @@
 
 .summarySection.totalGlobalSummarySection .summaryLabel {
   padding: 10px 14px 7px;
-  font-size: 9.6px;
+  font-size: var(--pdf-fs-label);
 }
 
 .summarySection.totalGlobalSummarySection .totalRow {
-  padding: 7px 14px;
-  font-size: 10.4px;
+  padding: 8px 14px;
+  font-size: var(--pdf-fs-body);
 }
 
 .conditionsColumn {
@@ -1847,8 +1854,8 @@
 .conditionsText {
   margin: 8px 0 0;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 9.8px;
-  line-height: 1.78;
+  font-size: var(--pdf-fs-body);
+  line-height: 1.65;
   color: #374151;
   white-space: pre-wrap;
 }
@@ -1872,9 +1879,9 @@
 }
 
 .totalRow {
-  font-size: 9.6px;
+  font-size: var(--pdf-fs-body);
   color: #4b5563;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -1912,12 +1919,12 @@
 }
 
 .grandTotal span {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 800;
 }
 
 .grandTotal strong {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -1988,20 +1995,20 @@
 }
 
 .footerPagerCurrent {
-  min-width: 24px;
-  padding: 0 7px;
+  min-width: 26px;
+  padding: 0 8px;
   background: var(--brand);
   color: #fff;
-  font-size: 9.2px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 .footerPagerTotal {
-  min-width: 30px;
+  min-width: 32px;
   padding: 0 8px 0 7px;
   background: #eef2f7;
   color: #6b7280;
-  font-size: 8px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 700;
 }
 
@@ -2038,9 +2045,9 @@
 
 .freeItemsCount {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.6px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #7f91ad;
 }
@@ -2130,21 +2137,21 @@
 .freeItemBadge {
   display: inline-flex;
   align-items: center;
-  min-height: 15px;
-  padding: 0 7px;
+  min-height: 18px;
+  padding: 0 8px;
   border-radius: 999px;
   background: rgba(30, 136, 255, 0.08);
   color: #335ea9;
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 6.8px;
+  font-size: var(--pdf-fs-micro);
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .freeItemMeta > span:not(.freeItemBadge) {
   font-family: var(--font-sans), Arial, sans-serif;
-  font-size: 7.8px;
+  font-size: var(--pdf-fs-label);
   color: #7f91ad;
 }
 
