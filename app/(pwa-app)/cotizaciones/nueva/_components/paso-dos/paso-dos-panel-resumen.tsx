@@ -79,7 +79,7 @@ export function PasoDosPanelResumen({
     isQuoteStudioEditingNavigate && !hasCompletedPieces
       ? true
       : isDesktopLayout && Boolean(blockedReason);
-  const reviewButtonLabel = isQuoteStudioEditingNavigate
+  const reviewButtonLabel = isQuoteStudioFinancialLayout
     ? "Ir al resumen"
     : isDesktopLayout
       ? "Continuar a revisar"

@@ -98,7 +98,6 @@ export function PasoDosPanelComponentes({
             <QuoteStudioFinancialPanel
               embedded
               initialDetailOpen={isSummaryPanel}
-              showQuoteTotals={isSummaryPanel}
               summary={props.financialSummary}
               adjustments={props.quoteStudioFinancial}
               formatCurrencyInput={props.formatCurrencyInput}
@@ -107,16 +106,14 @@ export function PasoDosPanelComponentes({
             />
           </div>
 
-          {!isSummaryPanel ? (
-            <PasoDosPanelResumen
-              {...props}
-              isPieceInEdition={isPieceInEdition}
-              pieceInEditionHint={QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT}
-              summaryNavigateHint={summaryNavigateHint}
-              layout="desktop"
-              desktopClasses={desktopClasses}
-            />
-          ) : null}
+          <PasoDosPanelResumen
+            {...props}
+            isPieceInEdition={isPieceInEdition}
+            pieceInEditionHint={QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT}
+            summaryNavigateHint={summaryNavigateHint}
+            layout="desktop"
+            desktopClasses={desktopClasses}
+          />
         </div>
       </aside>
     );

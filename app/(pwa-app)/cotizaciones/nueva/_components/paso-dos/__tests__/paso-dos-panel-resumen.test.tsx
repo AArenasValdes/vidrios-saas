@@ -68,12 +68,12 @@ describe("PasoDosPanelResumen desktop quote studio", () => {
     expect(screen.getByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)).toBeInTheDocument();
   });
 
-  it("muestra Continuar a revisar cuando no hay pieza en edicion", () => {
+  it("muestra Ir al resumen tambien cuando no hay pieza en edicion", () => {
     render(<PasoDosPanelResumen {...buildProps()} />);
 
-    expect(
-      screen.getByRole("button", { name: /Continuar a revisar/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ir al resumen/i })).toBeInTheDocument();
+    expect(screen.getByText("Subtotal neto")).toBeInTheDocument();
+    expect(screen.getByText("Total a cobrar con IVA")).toBeInTheDocument();
     expect(
       screen.queryByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)
     ).not.toBeInTheDocument();

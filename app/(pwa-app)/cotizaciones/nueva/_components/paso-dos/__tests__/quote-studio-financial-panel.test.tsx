@@ -65,19 +65,15 @@ describe("QuoteStudioFinancialPanel", () => {
     expect(screen.getByText("Mano de obra")).toBeInTheDocument();
   });
 
-  it("en rápida abre costos y conserva el total general visible", () => {
+  it("en rápida abre costos desde el inicio", () => {
     render(
       <QuoteStudioFinancialPanel
         {...buildProps(buildSummary())}
         embedded
         initialDetailOpen
-        showQuoteTotals
       />
     );
 
-    expect(screen.getByText("Subtotal neto")).toBeInTheDocument();
-    expect(screen.getByText("IVA 19%")).toBeInTheDocument();
-    expect(screen.getByText("Total a cobrar con IVA")).toBeInTheDocument();
     expect(screen.getByLabelText("Detalle de costos")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ocultar costos/i })).toBeInTheDocument();
   });
