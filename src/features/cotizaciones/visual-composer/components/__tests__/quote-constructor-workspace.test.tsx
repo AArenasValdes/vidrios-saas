@@ -3,6 +3,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 
+import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -38,6 +39,33 @@ function item(id: string, code: string): CotizacionWorkflowItem {
       material: "Aluminio",
       guidedVisualConfig: createQuoteConstructorPresetConfig("fijo"),
     }),
+  };
+}
+
+function lineTemplate(): CotizacionLineTemplate {
+  return {
+    id: "linea-l5000",
+    organizationId: "org-1",
+    nombre: "L5000",
+    categoria: "aluminio",
+    unidadCobro: "m2",
+    material: "Aluminio",
+    vidrioPrincipalRecomendado: null,
+    costoBase: 0,
+    precioM2Sugerido: 100000,
+    minimoCobrable: 0,
+    redondeoPrecio: 0,
+    mermaPct: 0,
+    margenObjetivoPct: null,
+    proveedor: null,
+    vigenciaDesde: null,
+    vigenciaHasta: null,
+    catalogMetadata: {},
+    isActive: true,
+    sortOrder: 0,
+    creadoEn: null,
+    actualizadoEn: null,
+    eliminadoEn: null,
   };
 }
 
@@ -144,6 +172,30 @@ describe("QuoteConstructorWorkspace", () => {
     fireEvent.change(totalInput, { target: { value: "500000" } });
     fireEvent.blur(totalInput);
     expect(props.onGlobalTotalChange).toHaveBeenCalledWith("500000");
+  });
+
+  it("usa la linea base en piezas nuevas y la aplica a las ya creadas solo por accion explicita", () => {
+    const props = renderWorkspace({
+      lineTemplates: [lineTemplate()],
+      defaultLineTemplateId: "linea-l5000",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fijo" }));
+    expect(props.onAddPreset).toHaveBeenCalledWith("fijo", "linea-l5000");
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar a 3 piezas" }));
+    expect(props.onUpdateItem).toHaveBeenCalledTimes(3);
+    expect(props.onUpdateItem).toHaveBeenCalledWith("a", { lineTemplateId: "linea-l5000" });
+    expect(props.onUpdateItem).toHaveBeenCalledWith("b", { lineTemplateId: "linea-l5000" });
+    expect(props.onUpdateItem).toHaveBeenCalledWith("c", { lineTemplateId: "linea-l5000" });
+  });
+
+  it("evita acciones de revision duplicadas cuando esta dentro de Quote Studio", () => {
+    renderWorkspace({ embeddedInQuoteStudio: true });
+
+    expect(screen.queryByRole("button", { name: "Revisar despiece" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Revisar cotizaci.n/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuar al resumen" })).toBeInTheDocument();
   });
 
   it("no escribe medidas inválidas y bloquea el CTA hasta corregir", () => {

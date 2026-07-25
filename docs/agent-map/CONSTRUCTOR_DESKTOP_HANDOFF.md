@@ -19,6 +19,8 @@ Antes de editar, leer en este orden:
 
 - El Paso 2 desktop ofrece dos modos equivalentes sobre el mismo `draft.items`: **Cotización rápida** (cuaderno) y **Cotización guiada** (wizard 5 pasos).
 - Nombres anteriores (`Presupuesto` / `Constructor`) quedaron reemplazados; la preferencia de modo se guarda en `localStorage` (`ventora:quote-desktop-workspace-mode`), default **Cotización rápida**.
+- Cotización rápida ahora se monta dentro del shell Quote Studio: header y tabs compartidos, cuaderno al centro y el mismo panel financiero/resumen. El panel usa scroll natural: no queda fijo mientras avanzan las piezas. Entre 1024 y 1439 px queda bajo el cuaderno; desde 1440 px se ubica a la derecha. Entre 1024 y 1279 px el inspector baja bajo el tablero para no comprimir las tarjetas.
+- La cabecera del cuaderno ofrece una línea base opcional: se usa para nuevas piezas y puede aplicarse explícitamente a las piezas ya creadas. No es otro modo ni cambia PDF, WhatsApp, schema o persistencia formal; cada ítem conserva su propia línea al guardar.
 - Contrato de dominio compartido: `src/features/cotizaciones/new-quote/quote-piece-domain.ts` (estado comercial, estado técnico, resumen técnico). No hay segundo draft ni sincronización artificial.
 - Cotización rápida muestra resumen técnico por tarjeta, badges duales y cubicación/despiece en el inspector (mismo `PautaCubicacionPanel` / snapshot `[cub:]`).
 - Cotización guiada desktop `por_item`: Tipo → Sistema → Medidas → Despiece → Precio. Mobile intacto.
@@ -335,4 +337,3 @@ Validar en `next start` (desktop 1024/1280/1440/1920 + mobile 390/430):
 4. PDF real rasterizado (Prioridad 2 histórica) si no se cerró aún.
 
 No redisenar el cuaderno ni el renderer sin bug concreto.
-

@@ -261,10 +261,10 @@
 ### Componente: QuoteConstructorWorkspace
 
 - **Archivo**: `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx`
-- **Proposito**: Modo desktop `Constructor` de Paso 2. Presenta presets de ventana/puerta, cuaderno responsive de piezas, medidas/cantidad editables, estados concretos, inspector sticky de 390 px y footer de progreso. El selector rapido reutiliza `COLOR_OPTIONS`, la misma paleta del modo Presupuesto.
-- **Usado en**: `PasoDosSeccion`, como alternativa explicita a `Presupuesto` solo bajo `min-width: 1024px`.
+- **Proposito**: Modo desktop `Cotización rápida` de Paso 2. Dentro del shell Quote Studio presenta presets de ventana/puerta, línea base opcional para nuevas piezas y acción explícita para aplicarla a las ya creadas, cuaderno responsive, medidas/cantidad editables, estados concretos, inspector y footer de progreso. Oculta sus acciones de revisión duplicadas al estar embebido; el header del Studio es la fuente de esas acciones.
+- **Usado en**: `PasoDosSeccion`, como modo explícito solo bajo `min-width: 1024px`; el panel financiero/resumen hace scroll natural, queda bajo el cuaderno hasta 1439 px y al costado desde 1440 px. El inspector baja bajo el tablero entre 1024 y 1279 px.
 - **Dependencias**: `quote-constructor-workspace.service.ts`, `GuidedVisualComposer`, callbacks controlados de `page.tsx` y el mismo `draft.items` persistido en `sessionStorage`.
-- **Estado QA**: 1024/1280/1440/1920 y mobile 390/430 revisados; un scroll vertical, sin overflow horizontal, color/menu/teclado basico operativos. Build y TypeScript pasan.
+- **Estado QA**: La composicion rapida dentro de Quote Studio fue revisada en 1024/1280/1440 y mobile 390/430; conserva un scroll vertical y no agrega overflow horizontal. Tests focalizados, TypeScript y lint de archivos tocados pasan. `pnpm build` sigue bloqueado por el selector CSS impuro existente en `app/print/cotizaciones/[id]/fabricacion/page.module.css`.
 - **Brecha conocida**: la validacion local de ancho/alto/cantidad invalidos debe bloquear progreso sin escribir el draft; ver prioridad 1 del handoff.
 - **Riesgos**: Solo desktop >=1024 y un unico scroll vertical principal; no trasladar su layout a mobile. No persiste en Supabase antes de guardar la cotizacion. No aplicar limite de seis piezas: ese limite pertenece solo a modulos dentro de una composicion. Items no compatibles siguen en la vista comercial tradicional.
 

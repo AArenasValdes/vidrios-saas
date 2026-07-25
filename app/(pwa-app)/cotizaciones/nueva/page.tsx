@@ -1895,7 +1895,10 @@ function NuevaCotizacionPageContent() {
     pasoDosAgregarGrupo.goToStep(3);
   };
 
-  const handleAddConstructorPreset = (presetId: QuoteConstructorPresetId) => {
+  const handleAddConstructorPreset = (
+    presetId: QuoteConstructorPresetId,
+    lineTemplateId?: string
+  ) => {
     const preset = QUOTE_CONSTRUCTOR_PRESETS.find((current) => current.id === presetId);
     if (!preset) return null;
 
@@ -1908,7 +1911,7 @@ function NuevaCotizacionPageContent() {
         organizationProfile?.margenDefecto
       );
       const config = createQuoteConstructorPresetConfig(preset.id);
-      const form: ComponentFormState = {
+      let form: ComponentFormState = {
         ...base,
         codigo: buildNextComponentCode(current.items, preset.componentType),
         tipo: preset.componentType,
@@ -1922,6 +1925,12 @@ function NuevaCotizacionPageContent() {
         isCustomScheme: true,
         guidedVisualConfig: config,
       };
+      const lineTemplate = lineTemplateId
+        ? activeLineTemplates.find((template) => String(template.id) === lineTemplateId)
+        : null;
+      if (lineTemplate) {
+        form = applyLineTemplateToComponentForm(form, lineTemplate);
+      }
       const item = buildItemFromForm(form, current.items, itemId, {
         quotePricingMode,
         lineTemplates: activeLineTemplates,

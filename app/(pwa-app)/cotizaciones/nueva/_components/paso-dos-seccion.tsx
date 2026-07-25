@@ -62,7 +62,10 @@ type PasoDosSeccionProps = {
   constructorGlassOptions: readonly string[];
   totalClienteManual: number | null;
   formatCurrencyInput: (value: string) => string;
-  onAddConstructorPreset: (preset: QuoteConstructorPresetId) => string | null;
+  onAddConstructorPreset: (
+    preset: QuoteConstructorPresetId,
+    lineTemplateId?: string
+  ) => string | null;
   onUpdateConstructorItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
   onMoveConstructorItem: (itemId: string, direction: -1 | 1) => void;
   onGlobalTotalClienteChange: (value: string) => void;
@@ -103,6 +106,7 @@ export function PasoDosSeccion({
     () => readQuoteDesktopWorkspaceModePreference()
   );
   const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
+  const [constructorDefaultLineTemplateId, setConstructorDefaultLineTemplateId] = useState("");
   const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
 
@@ -305,6 +309,8 @@ export function PasoDosSeccion({
 
   const isQuoteStudioDesktop = Boolean(panel.isDesktopQuoteStudio && !isMobileViewport);
 
+  const showQuoteStudioRapidaLayout = showRapidaWorkspace && isQuoteStudioDesktop;
+
   const isQuoteStudioPieceEditing =
     isQuoteStudioDesktop &&
     isQuoteStudioDesktopPieceInEdition({
@@ -325,7 +331,7 @@ export function PasoDosSeccion({
     quotePricingMode === "por_item";
 
   const showQuoteStudioDesktopLayout =
-    showQuoteStudioBudgetIdle || showQuoteStudioEditingLayout;
+    showQuoteStudioRapidaLayout || showQuoteStudioBudgetIdle || showQuoteStudioEditingLayout;
 
   useEffect(() => {
     if (!showQuoteStudioEditingLayout) {
@@ -340,9 +346,11 @@ export function PasoDosSeccion({
   const stepTwoLayoutClassName = [
     s.stepTwoLayout,
     isQuoteStudioDesktop
-      ? showQuoteStudioEditingLayout
-        ? s.stepTwoLayoutQuoteStudioEditing
-        : s.stepTwoLayoutQuoteStudioIdle
+      ? showQuoteStudioRapidaLayout
+        ? s.stepTwoLayoutQuoteStudioRapida
+        : showQuoteStudioEditingLayout
+          ? s.stepTwoLayoutQuoteStudioEditing
+          : s.stepTwoLayoutQuoteStudioIdle
       : "",
   ]
     .filter(Boolean)
@@ -421,6 +429,48 @@ export function PasoDosSeccion({
       });
     },
   };
+
+  const rapidWorkspace = (
+    <QuoteConstructorWorkspace
+      items={panel.items}
+      quotePricingMode={quotePricingMode}
+      lineTemplates={constructorLineTemplates}
+      glassOptions={constructorGlassOptions}
+      activeItemId={constructorActiveItemId}
+      totalClienteManual={totalClienteManual}
+      formatCurrencyInput={formatCurrencyInput}
+      embeddedInQuoteStudio={showQuoteStudioRapidaLayout}
+      defaultLineTemplateId={constructorDefaultLineTemplateId}
+      onDefaultLineTemplateChange={setConstructorDefaultLineTemplateId}
+      onActiveItemChange={(itemId) => {
+        setConstructorActiveItemId(itemId);
+        panel.onSelectQuickEditItem(itemId);
+      }}
+      onAddPreset={(preset) => {
+        const itemId = onAddConstructorPreset(preset);
+        if (itemId) setConstructorActiveItemId(itemId);
+      }}
+      onUpdateItem={onUpdateConstructorItem}
+      onDuplicateItem={(item) => {
+        panel.onDuplicateItem(item);
+      }}
+      onRemoveItem={requestRemoveItem}
+      onMoveItem={onMoveConstructorItem}
+      onEditAdvanced={(item) => {
+        openGuidedForItem(item);
+      }}
+      onRecalculateTemplatePrice={panel.onRecalculateTemplatePrice}
+      onGlobalTotalChange={onGlobalTotalClienteChange}
+      onGoToSummary={panel.onGoToSummary}
+      onOpenDespieceReview={(itemId) => {
+        if (itemId) {
+          setConstructorActiveItemId(itemId);
+          panel.onSelectQuickEditItem(itemId);
+        }
+        setDespieceReviewOpen(true);
+      }}
+    />
+  );
 
   const reviewPendingPieces = () => {
     const pending = panel.items.find((item) => !isPieceCommerciallyComplete(item, quotePricingMode));
@@ -501,43 +551,8 @@ export function PasoDosSeccion({
         </header>
       ) : null}
 
-      {showRapidaWorkspace ? (
-        <QuoteConstructorWorkspace
-          items={panel.items}
-          quotePricingMode={quotePricingMode}
-          lineTemplates={constructorLineTemplates}
-          glassOptions={constructorGlassOptions}
-          activeItemId={constructorActiveItemId}
-          totalClienteManual={totalClienteManual}
-          formatCurrencyInput={formatCurrencyInput}
-          onActiveItemChange={(itemId) => {
-            setConstructorActiveItemId(itemId);
-            panel.onSelectQuickEditItem(itemId);
-          }}
-          onAddPreset={(preset) => {
-            const itemId = onAddConstructorPreset(preset);
-            if (itemId) setConstructorActiveItemId(itemId);
-          }}
-          onUpdateItem={onUpdateConstructorItem}
-          onDuplicateItem={(item) => {
-            panel.onDuplicateItem(item);
-          }}
-          onRemoveItem={requestRemoveItem}
-          onMoveItem={onMoveConstructorItem}
-          onEditAdvanced={(item) => {
-            openGuidedForItem(item);
-          }}
-          onRecalculateTemplatePrice={panel.onRecalculateTemplatePrice}
-          onGlobalTotalChange={onGlobalTotalClienteChange}
-          onGoToSummary={panel.onGoToSummary}
-          onOpenDespieceReview={(itemId) => {
-            if (itemId) {
-              setConstructorActiveItemId(itemId);
-              panel.onSelectQuickEditItem(itemId);
-            }
-            setDespieceReviewOpen(true);
-          }}
-        />
+      {showRapidaWorkspace && !showQuoteStudioRapidaLayout ? (
+        rapidWorkspace
       ) : showModeChoice ? (
         <div className={s.stepTwoModeChoiceDesktopWrap}>
           <PasoDosModoCotizacion
@@ -559,7 +574,9 @@ export function PasoDosSeccion({
       ) : showQuoteStudioDesktopLayout ? (
         <div className={stepTwoLayoutClassName}>
           <div className={s.stepTwoPrimarySurface} ref={primarySurfaceRef}>
-            {showQuoteStudioBudgetIdle ? (
+            {showQuoteStudioRapidaLayout ? (
+              rapidWorkspace
+            ) : showQuoteStudioBudgetIdle ? (
               <QuoteStudioBudgetWorkspace
                 {...panelListaProps}
                 onOpenComponentCreator={openComponentCreatorFromBudget}

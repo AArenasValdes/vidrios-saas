@@ -16014,11 +16014,13 @@
   }
 
   /* En idle, la lista del presupuesto scrollea por sí misma. */
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPrimarySurface {
     min-height: 0;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: 1rem;
@@ -16038,7 +16040,8 @@
     overflow: hidden;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPrimarySurface,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPrimarySurface {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -16057,7 +16060,8 @@
     overflow: hidden;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPanel {
     grid-column: 1;
     grid-row: 2;
     min-width: 0;
@@ -16088,6 +16092,7 @@
   }
 
   .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle .desktopPieceEditor,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida .desktopPieceEditor,
   .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle #component-form {
     width: 100%;
     max-width: 100%;
@@ -16104,7 +16109,8 @@
     min-height: 0;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle .desktopPieceBody {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle .desktopPieceBody,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida .desktopPieceBody {
     overflow: visible;
     overscroll-behavior: auto;
   }
@@ -16126,7 +16132,8 @@
     max-width: 100%;
   }
 
-  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel.stepTwoPanelModeDesktop {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioIdle > .stepTwoPanel.stepTwoPanelModeDesktop,
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPanel.stepTwoPanelModeDesktop {
     height: auto;
     max-height: none;
     min-width: 0;
@@ -16162,6 +16169,34 @@
     align-self: stretch;
     max-height: 100%;
     overflow: auto;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPrimarySurface {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPanel {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1440px) {
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida {
+    grid-template-columns: minmax(0, 1fr) clamp(290px, 22vw, 310px);
+    gap: 1rem;
+  }
+
+  .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPanel {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: clamp(290px, 22vw, 310px);
   }
 }
 

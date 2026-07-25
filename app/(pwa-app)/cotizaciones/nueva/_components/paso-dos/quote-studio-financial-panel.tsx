@@ -19,6 +19,8 @@ type QuoteStudioFinancialPanelProps = {
   onAdjustmentChange: (field: QuoteStudioFinancialField, value: string) => void;
   onApplyRecommendedPrice: () => void;
   embedded?: boolean;
+  initialDetailOpen?: boolean;
+  showQuoteTotals?: boolean;
 };
 
 function formatPct(value: number) {
@@ -176,9 +178,12 @@ export function QuoteStudioFinancialPanel({
   onAdjustmentChange,
   onApplyRecommendedPrice,
   embedded = false,
+  initialDetailOpen = false,
+  showQuoteTotals = false,
 }: QuoteStudioFinancialPanelProps) {
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(initialDetailOpen);
   const hasCostBasis = summary.hasCostBasis;
+  const taxAmount = Math.max(0, summary.precioFinalCliente - summary.precioFinalNeto);
   const canApplyRecommended = canApplyQuoteStudioRecommendedPrice(summary);
   const recommendedDeltaLabel = buildQuoteStudioRecommendedDeltaLabel(summary);
   const applyRecommendedLabel = buildQuoteStudioApplyRecommendedLabel(summary);
@@ -216,34 +221,54 @@ export function QuoteStudioFinancialPanel({
           </div>
         </header>
 
-        {hasCostBasis ? (
+        {hasCostBasis || showQuoteTotals ? (
           <div className={d.financialSummaryList} aria-label="Resumen de rentabilidad">
-            <FinancialSummaryRow
-              label="Precio de venta"
-              value={formatCurrency(summary.precioFinalNeto)}
-              tone="primary"
-            />
-            <FinancialSummaryRow
-              label="Costo estimado"
-              value={formatCurrency(summary.costoTotal)}
-            />
-            <FinancialSummaryRow
-              label="Utilidad"
-              value={formatCurrency(summary.utilidadEstimada)}
-              tone="highlight"
-              valueClassName={utilityValueClass}
-            />
-            <FinancialSummaryRow
-              label="Margen real"
-              value={marginDisplayValue}
-              tone="margin"
-              valueClassName={marginValueClass}
-            />
-            <FinancialSummaryRow
-              label="Precio recomendado"
-              value={formatCurrency(summary.precioRecomendadoNeto)}
-              tone="recommended"
-            />
+            {showQuoteTotals ? (
+              <>
+                <FinancialSummaryRow
+                  label="Subtotal neto"
+                  value={formatCurrency(summary.precioFinalNeto)}
+                  tone="primary"
+                />
+                <FinancialSummaryRow label="IVA 19%" value={formatCurrency(taxAmount)} />
+                <FinancialSummaryRow
+                  label="Total a cobrar con IVA"
+                  value={formatCurrency(summary.precioFinalCliente)}
+                  tone="highlight"
+                />
+              </>
+            ) : (
+              <FinancialSummaryRow
+                label="Precio de venta"
+                value={formatCurrency(summary.precioFinalNeto)}
+                tone="primary"
+              />
+            )}
+            {hasCostBasis ? (
+              <>
+                <FinancialSummaryRow
+                  label="Costo estimado"
+                  value={formatCurrency(summary.costoTotal)}
+                />
+                <FinancialSummaryRow
+                  label="Utilidad"
+                  value={formatCurrency(summary.utilidadEstimada)}
+                  tone="highlight"
+                  valueClassName={utilityValueClass}
+                />
+                <FinancialSummaryRow
+                  label="Margen real"
+                  value={marginDisplayValue}
+                  tone="margin"
+                  valueClassName={marginValueClass}
+                />
+                <FinancialSummaryRow
+                  label="Precio recomendado"
+                  value={formatCurrency(summary.precioRecomendadoNeto)}
+                  tone="recommended"
+                />
+              </>
+            ) : null}
             {canApplyRecommended ? (
               <div className={d.financialRecommendedAction}>
                 {recommendedDeltaLabel ? (

@@ -80,7 +80,7 @@ type Props = {
   totalClienteManual: number | null;
   formatCurrencyInput: (value: string) => string;
   onActiveItemChange: (itemId: string) => void;
-  onAddPreset: (preset: QuoteConstructorPresetId) => void;
+  onAddPreset: (preset: QuoteConstructorPresetId, lineTemplateId?: string) => void;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
   onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
@@ -90,6 +90,9 @@ type Props = {
   onGlobalTotalChange: (value: string) => void;
   onGoToSummary: () => void;
   onOpenDespieceReview: (itemId?: string) => void;
+  embeddedInQuoteStudio?: boolean;
+  defaultLineTemplateId?: string;
+  onDefaultLineTemplateChange?: (lineTemplateId: string) => void;
 };
 
 type InspectorSectionId =
@@ -473,6 +476,9 @@ export function QuoteConstructorWorkspace({
   onGlobalTotalChange,
   onGoToSummary,
   onOpenDespieceReview,
+  embeddedInQuoteStudio = false,
+  defaultLineTemplateId = "",
+  onDefaultLineTemplateChange = () => undefined,
 }: Props) {
   const visualItems = useMemo(() => items.filter(isQuoteConstructorCompatibleItem), [items]);
   const nonVisualCount = items.length - visualItems.length;
@@ -482,6 +488,12 @@ export function QuoteConstructorWorkspace({
   const activeTemplate = activeForm
     ? resolveLineTemplate(lineTemplates, activeForm.lineTemplateId)
     : null;
+  const defaultLineTemplate = resolveLineTemplate(lineTemplates, defaultLineTemplateId);
+  const itemsWithoutDefaultLine = defaultLineTemplate
+    ? visualItems.filter(
+        (item) => mapItemToForm(item).lineTemplateId !== defaultLineTemplateId
+      )
+    : [];
   const activeView = activeItem
     ? buildPieceDomainView(activeItem, quotePricingMode, activeTemplate)
     : null;
@@ -801,6 +813,21 @@ export function QuoteConstructorWorkspace({
     if (next) onUpdateItem(activeItem.id, { cubicationSnapshot: next });
   };
 
+  const addPreset = (preset: QuoteConstructorPresetId) => {
+    if (defaultLineTemplateId) {
+      onAddPreset(preset, defaultLineTemplateId);
+      return;
+    }
+    onAddPreset(preset);
+  };
+
+  const applyDefaultLineToExistingPieces = () => {
+    if (!defaultLineTemplate) return;
+    itemsWithoutDefaultLine.forEach((item) => {
+      onUpdateItem(item.id, { lineTemplateId: defaultLineTemplateId });
+    });
+  };
+
   const footerActionLabel = canContinue
     ? "Continuar al resumen"
     : visualItems.length === 0
@@ -812,7 +839,7 @@ export function QuoteConstructorWorkspace({
   return (
     <section className={s.workspace} aria-label="Constructor de componentes">
       <header className={s.header}>
-        <div>
+        <div className={s.headerCopy}>
           <span className={s.headerEyebrow}>Constructor</span>
           <h2>Cuaderno de componentes</h2>
           <p>
@@ -821,7 +848,34 @@ export function QuoteConstructorWorkspace({
             Cambios guardados en borrador
           </p>
         </div>
-        <div className={s.headerActions}>
+        {lineTemplates.length > 0 ? (
+          <div className={s.defaultLineControl}>
+            <span className={s.defaultLineLabel}>Línea base</span>
+            <LineTemplatePicker
+              templates={lineTemplates}
+              value={defaultLineTemplateId}
+              onChange={onDefaultLineTemplateChange}
+              ariaLabel="Línea para nuevas piezas"
+              className={s.defaultLinePicker}
+            />
+            {defaultLineTemplate && itemsWithoutDefaultLine.length > 0 ? (
+              <button
+                type="button"
+                className={s.defaultLineApply}
+                onClick={applyDefaultLineToExistingPieces}
+              >
+                Aplicar a {itemsWithoutDefaultLine.length}{" "}
+                {itemsWithoutDefaultLine.length === 1 ? "pieza" : "piezas"}
+              </button>
+            ) : defaultLineTemplate && visualItems.length > 0 ? (
+              <span className={s.defaultLineApplied}>
+                {visualItems.length} {visualItems.length === 1 ? "pieza usa" : "piezas usan"} línea base
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {!embeddedInQuoteStudio ? (
+          <div className={s.headerActions}>
           {visualItems.length > 0 ? (
             <button
               type="button"
@@ -839,7 +893,8 @@ export function QuoteConstructorWorkspace({
           >
             {incompleteCount > 0 ? "Revisar pendientes" : "Revisar cotización"}
           </button>
-        </div>
+          </div>
+        ) : null}
       </header>
 
       <nav
@@ -856,7 +911,7 @@ export function QuoteConstructorWorkspace({
         </div>
         <div className={s.presetButtons}>
           {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
-            <button key={preset.id} type="button" onClick={() => onAddPreset(preset.id)}>
+            <button key={preset.id} type="button" onClick={() => addPreset(preset.id)}>
               <span
                 aria-hidden
                 dangerouslySetInnerHTML={{ __html: renderGuidedModuleTypeIcon(preset.id, 30) }}
@@ -882,7 +937,7 @@ export function QuoteConstructorWorkspace({
                   <button
                     key={preset.id}
                     type="button"
-                    onClick={() => onAddPreset(preset.id)}
+                    onClick={() => addPreset(preset.id)}
                   >
                     <span
                       aria-hidden
