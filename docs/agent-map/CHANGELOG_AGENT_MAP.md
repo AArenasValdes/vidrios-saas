@@ -4,6 +4,13 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-25 - Selector visual de tipologias en Cotizacion rapida
+
+- `QuoteConstructorWorkspace` mantiene seis accesos principales y mueve tipologias especiales a menus compactos de Puerta y Mas tipologias.
+- El schema visual y el renderer compartido incorporan Guillotina, Celosia, Puerta corredera, Shower frontal y Shower corredera; `pano_libre` se presenta como Composicion personalizada sin cambiar el dato persistido.
+- Selector y croquis principal comparten SVG, color de perfil, indicadores de apertura y targets hacia el inspector.
+- Alcance solo UI desktop: sin cambios de pricing, cubicacion, snapshots, PDF, WhatsApp, tablas ni rutas de guardado.
+
 ## 2026-07-24 - Cubicación V1 vendible + giro de producto documentado
 
 - Nuevo rector de giro: `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.

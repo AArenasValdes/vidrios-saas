@@ -42,15 +42,20 @@ function item(overrides: Partial<CotizacionWorkflowItem> = {}): CotizacionWorkfl
 }
 
 describe("quote constructor workspace service", () => {
-  it("expone siete presets de ventanas y puertas", () => {
+  it("expone las doce tipologías visuales del modo rápido", () => {
     expect(QUOTE_CONSTRUCTOR_PRESETS.map((preset) => preset.id)).toEqual([
       "fijo",
       "corredera",
       "abatible",
-      "oscilobatiente",
       "proyectante",
       "puerta",
+      "puerta_corredera",
       "pano_libre",
+      "oscilobatiente",
+      "guillotina",
+      "celosia",
+      "shower_frontal",
+      "shower_corredera",
     ]);
   });
 

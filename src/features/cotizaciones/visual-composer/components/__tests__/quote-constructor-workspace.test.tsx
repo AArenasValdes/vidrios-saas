@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -98,7 +98,10 @@ function renderWorkspace(overrides: Partial<ComponentProps<typeof QuoteConstruct
 describe("QuoteConstructorWorkspace", () => {
   it("muestra presets y varias piezas en el mismo cuaderno", () => {
     const props = renderWorkspace();
-    expect(screen.getByRole("button", { name: "Oscilobatiente" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Más tipologías")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Puerta: elegir entre abatible y corredera")
+    ).toBeInTheDocument();
     expect(screen.getByText(/Agregar pieza/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar otra pieza" })).toBeInTheDocument();
     expect(screen.getAllByText("VEN-01").length).toBeGreaterThan(0);
@@ -107,6 +110,23 @@ describe("QuoteConstructorWorkspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Corredera" }));
     expect(props.onAddPreset).toHaveBeenCalledWith("corredera");
+
+    fireEvent.click(screen.getByLabelText("Más tipologías"));
+    fireEvent.click(screen.getByRole("button", { name: "Guillotina" }));
+    expect(props.onAddPreset).toHaveBeenCalledWith("guillotina");
+
+    const doorTrigger = screen.getByLabelText(
+      "Puerta: elegir entre abatible y corredera"
+    );
+    fireEvent.click(doorTrigger);
+    const doorMenu = doorTrigger.closest("details");
+    expect(doorMenu).not.toBeNull();
+    fireEvent.click(
+      within(doorMenu as HTMLDetailsElement).getByRole("button", {
+        name: "Puerta corredera",
+      })
+    );
+    expect(props.onAddPreset).toHaveBeenCalledWith("puerta_corredera");
   });
 
   it("confirma medidas inline y expone acciones de orden", () => {
@@ -188,6 +208,14 @@ describe("QuoteConstructorWorkspace", () => {
     expect(props.onUpdateItem).toHaveBeenCalledWith("a", { lineTemplateId: "linea-l5000" });
     expect(props.onUpdateItem).toHaveBeenCalledWith("b", { lineTemplateId: "linea-l5000" });
     expect(props.onUpdateItem).toHaveBeenCalledWith("c", { lineTemplateId: "linea-l5000" });
+  });
+
+  it("abre el modal de composición al tocar el croquis de una pieza", () => {
+    renderWorkspace({ items: [item("a", "VEN-01")], activeItemId: "a" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir composición de VEN-01" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("evita acciones de revision duplicadas cuando esta dentro de Quote Studio", () => {

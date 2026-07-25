@@ -46,8 +46,8 @@ import {
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { GuidedVisualComposer } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
+import { QuoteConstructorPresetSelector } from "@/features/cotizaciones/visual-composer/components/quote-constructor-preset-selector";
 import {
-  QUOTE_CONSTRUCTOR_PRESETS,
   createQuoteConstructorPresetConfig,
   getQuoteConstructorItemConfig,
   isQuoteConstructorCompatibleItem,
@@ -56,10 +56,7 @@ import {
   type QuoteConstructorItemPatch,
   type QuoteConstructorPresetId,
 } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
-import {
-  renderGuidedModuleTypeIcon,
-  renderGuidedVisualSvg,
-} from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import {
   findNodeById,
   isModuleNode,
@@ -80,7 +77,10 @@ type Props = {
   totalClienteManual: number | null;
   formatCurrencyInput: (value: string) => string;
   onActiveItemChange: (itemId: string) => void;
-  onAddPreset: (preset: QuoteConstructorPresetId, lineTemplateId?: string) => void;
+  onAddPreset: (
+    preset: QuoteConstructorPresetId,
+    lineTemplateId?: string
+  ) => string | null | void;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
   onDuplicateItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
@@ -157,13 +157,25 @@ function inferConfig(item: CotizacionWorkflowItem) {
   const haystack = `${item.tipo} ${item.nombre} ${item.lineaComercial}`.toLocaleLowerCase("es");
   const preset: QuoteConstructorPresetId = haystack.includes("oscilo")
     ? "oscilobatiente"
-    : haystack.includes("corre")
-      ? "corredera"
-      : haystack.includes("proyect")
-        ? "proyectante"
-        : haystack.includes("abat") || haystack.includes("puerta")
-          ? item.tipo.toLocaleLowerCase("es") === "puerta" ? "puerta" : "abatible"
-          : "fijo";
+    : haystack.includes("guillot")
+      ? "guillotina"
+      : haystack.includes("celos")
+        ? "celosia"
+        : haystack.includes("shower") && haystack.includes("corre")
+          ? "shower_corredera"
+          : haystack.includes("shower")
+            ? "shower_frontal"
+            : haystack.includes("puerta") && haystack.includes("corre")
+              ? "puerta_corredera"
+              : haystack.includes("corre")
+                ? "corredera"
+                : haystack.includes("proyect")
+                  ? "proyectante"
+                  : haystack.includes("abat") || haystack.includes("puerta")
+                    ? item.tipo.toLocaleLowerCase("es") === "puerta"
+                      ? "puerta"
+                      : "abatible"
+                    : "fijo";
   return createQuoteConstructorPresetConfig(preset, {
     widthMm: item.ancho ?? 1200,
     heightMm: item.alto ?? 1000,
@@ -485,6 +497,12 @@ export function QuoteConstructorWorkspace({
   const activeItem = visualItems.find((item) => item.id === activeItemId) ?? visualItems[0] ?? null;
   const activeForm = activeItem ? mapItemToForm(activeItem) : null;
   const activeConfig = activeItem ? inferConfig(activeItem) : null;
+  const activePresetId = useMemo<QuoteConstructorPresetId | null>(() => {
+    if (!activeConfig) return null;
+    const leaves = listLeafModules(activeConfig.root);
+    const types = new Set(leaves.map((leaf) => leaf.type));
+    return types.size === 1 ? leaves[0]?.type ?? null : "pano_libre";
+  }, [activeConfig]);
   const activeTemplate = activeForm
     ? resolveLineTemplate(lineTemplates, activeForm.lineTemplateId)
     : null;
@@ -814,11 +832,13 @@ export function QuoteConstructorWorkspace({
   };
 
   const addPreset = (preset: QuoteConstructorPresetId) => {
-    if (defaultLineTemplateId) {
-      onAddPreset(preset, defaultLineTemplateId);
-      return;
+    const itemId = defaultLineTemplateId
+      ? onAddPreset(preset, defaultLineTemplateId)
+      : onAddPreset(preset);
+    // Composición pide el editor profundo de inmediato; el resto abre al tocar el croquis.
+    if (preset === "pano_libre" && typeof itemId === "string" && itemId) {
+      setComposerItemId(itemId);
     }
-    onAddPreset(preset);
   };
 
   const applyDefaultLineToExistingPieces = () => {
@@ -909,17 +929,10 @@ export function QuoteConstructorWorkspace({
           </span>
           <p>Elige un tipo para sumarlo al cuaderno</p>
         </div>
-        <div className={s.presetButtons}>
-          {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
-            <button key={preset.id} type="button" onClick={() => addPreset(preset.id)}>
-              <span
-                aria-hidden
-                dangerouslySetInnerHTML={{ __html: renderGuidedModuleTypeIcon(preset.id, 30) }}
-              />
-              {preset.label}
-            </button>
-          ))}
-        </div>
+        <QuoteConstructorPresetSelector
+          activePresetId={activePresetId}
+          onSelect={addPreset}
+        />
       </nav>
 
       <div className={s.body}>
@@ -932,23 +945,9 @@ export function QuoteConstructorWorkspace({
                 Usa los botones de arriba o elige un tipo aquí. Después ajustas medidas
                 en la tarjeta y el resto en el panel derecho.
               </p>
-              <div className={s.emptyPresetGrid}>
-                {QUOTE_CONSTRUCTOR_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => addPreset(preset.id)}
-                  >
-                    <span
-                      aria-hidden
-                      dangerouslySetInnerHTML={{
-                        __html: renderGuidedModuleTypeIcon(preset.id, 34),
-                      }}
-                    />
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
+              <button type="button" className={s.emptyFocusAdd} onClick={focusAddBar}>
+                Elegir tipología
+              </button>
             </div>
           ) : (
             <div className={s.pieceGrid}>
@@ -1034,8 +1033,8 @@ export function QuoteConstructorWorkspace({
                         }}
                         dangerouslySetInnerHTML={{
                           __html: renderGuidedVisualSvg(config, {
-                            maxW: 380,
-                            maxH: 220,
+                            maxW: 420,
+                            maxH: 250,
                             variant: "summary",
                             colorHex: mapItemToForm(item).colorHex,
                             showSelection: false,

@@ -221,6 +221,30 @@ describe("guided-visual-renderer V2", () => {
     expect(svg).toContain(">1400 mm</text>");
   });
 
+  it.each([
+    ["guillotina", 'data-guided-opening="guillotine-up"'],
+    ["celosia", 'data-guided-louver="1"'],
+    ["puerta_corredera", 'data-guided-opening="slide-left"'],
+    ["shower_frontal", 'data-guided-hardware="manilla_abatible"'],
+    ["shower_corredera", 'data-guided-opening="slide-right"'],
+  ] as const)("dibuja %s con indicadores técnicos consistentes", (type, marker) => {
+    let config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1900 });
+    const moduleId = listLeafModules(config.root)[0].id;
+    config = updateModuleType(config, moduleId, type);
+
+    const svg = renderGuidedVisualSvg(config, {
+      maxW: 420,
+      maxH: 320,
+      variant: "summary",
+      colorHex: "#4b5563",
+    });
+
+    expect(svg).toContain(marker);
+    expect(svg).toContain(`data-guided-motion="${type}"`);
+    expect(svg).toContain('data-guided-target="vidrio"');
+    expect(svg).toContain('data-guided-target="sistema"');
+  });
+
   it("aisla los recursos SVG entre miniatura y editor de la misma composicion", () => {
     const config = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1000 });
     const summarySvg = renderGuidedVisualSvg(config, {

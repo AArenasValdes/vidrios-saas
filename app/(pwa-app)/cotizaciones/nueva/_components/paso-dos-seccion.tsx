@@ -446,8 +446,8 @@ export function PasoDosSeccion({
         setConstructorActiveItemId(itemId);
         panel.onSelectQuickEditItem(itemId);
       }}
-      onAddPreset={(preset) => {
-        const itemId = onAddConstructorPreset(preset);
+      onAddPreset={(preset, lineTemplateId) => {
+        const itemId = onAddConstructorPreset(preset, lineTemplateId);
         if (itemId) setConstructorActiveItemId(itemId);
       }}
       onUpdateItem={onUpdateConstructorItem}

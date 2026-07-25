@@ -261,12 +261,19 @@
 ### Componente: QuoteConstructorWorkspace
 
 - **Archivo**: `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx`
-- **Proposito**: Modo desktop `Cotización rápida` de Paso 2. Dentro del shell Quote Studio presenta presets de ventana/puerta, línea base opcional para nuevas piezas y acción explícita para aplicarla a las ya creadas, cuaderno responsive, medidas/cantidad editables, estados concretos, inspector y footer de progreso. Oculta sus acciones de revisión duplicadas al estar embebido; el header del Studio es la fuente de esas acciones.
+- **Proposito**: Modo desktop `Cotización rápida` de Paso 2. Dentro del shell Quote Studio presenta presets visuales de ventana/puerta, línea base opcional para nuevas piezas y acción explícita para aplicarla a las ya creadas, cuaderno responsive, medidas/cantidad editables, estados concretos, inspector y footer de progreso. Oculta sus acciones de revisión duplicadas al estar embebido; el header del Studio es la fuente de esas acciones.
 - **Usado en**: `PasoDosSeccion`, como modo explícito solo bajo `min-width: 1024px`; el panel financiero/resumen hace scroll natural, queda bajo el cuaderno hasta 1439 px y al costado desde 1440 px. El inspector baja bajo el tablero entre 1024 y 1279 px.
-- **Dependencias**: `quote-constructor-workspace.service.ts`, `GuidedVisualComposer`, callbacks controlados de `page.tsx` y el mismo `draft.items` persistido en `sessionStorage`.
-- **Estado QA**: La composicion rapida dentro de Quote Studio fue revisada en 1024/1280/1440 y mobile 390/430; conserva un scroll vertical y no agrega overflow horizontal. Tests focalizados, TypeScript y lint de archivos tocados pasan. `pnpm build` sigue bloqueado por el selector CSS impuro existente en `app/print/cotizaciones/[id]/fabricacion/page.module.css`.
+- **Dependencias**: `quote-constructor-preset-selector.tsx`, `quote-constructor-workspace.service.ts`, `GuidedVisualComposer`, `guided-visual-renderer.service.ts`, callbacks controlados de `page.tsx` y el mismo `draft.items` persistido en `sessionStorage`.
+- **Estado QA**: La composicion rapida dentro de Quote Studio fue revisada en 1024/1280/1440; conserva un scroll vertical y no agrega overflow horizontal. TypeScript y el test de integracion del workspace pasan. Los tests puros de service/renderer siguen bloqueados por la infraestructura Jest `clearMocksOnScope`; `pnpm build` sigue bloqueado por el selector CSS impuro existente en `app/print/cotizaciones/[id]/fabricacion/page.module.css`.
 - **Brecha conocida**: la validacion local de ancho/alto/cantidad invalidos debe bloquear progreso sin escribir el draft; ver prioridad 1 del handoff.
 - **Riesgos**: Solo desktop >=1024 y un unico scroll vertical principal; no trasladar su layout a mobile. No persiste en Supabase antes de guardar la cotizacion. No aplicar limite de seis piezas: ese limite pertenece solo a modulos dentro de una composicion. Items no compatibles siguen en la vista comercial tradicional.
+
+### Componente: QuoteConstructorPresetSelector
+
+- **Archivo**: `src/features/cotizaciones/visual-composer/components/quote-constructor-preset-selector.tsx`
+- **Proposito**: Selector visual de tipologias para `Cotizacion rapida`. Mantiene visibles Fijo, Corredera, Abatible, Proyectante, Puerta y Composicion; Puerta abre acceso rapido a abatible/corredera y `Mas tipologias` agrupa Oscilobatiente, Guillotina, Celosia, Puerta corredera, Shower frontal y Shower corredera.
+- **Renderer**: Reutiliza `guided-visual-renderer.service.ts`; no contiene SVG paralelos. Tarjeta completa clickeable, estado seleccionado, microanimacion hover y `prefers-reduced-motion`.
+- **Riesgos**: Es presentacion desktop. Agregar una tipologia exige extender el tipo, el preset y el renderer compartido sin crear otra ruta de guardado ni asociarla automaticamente a una receta de fabricacion.
 
 ### Componente: PasoDosPanelComponentes
 

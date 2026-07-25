@@ -520,8 +520,11 @@ function drawSlidingSystem(
     `<line x1="${px(centerX + meetingWidth * 0.22)}" y1="${px(top)}" x2="${px(centerX + meetingWidth * 0.22)}" y2="${px(top + height)}" stroke="${palette.divInner}" stroke-width="${px(Math.max(1, scale.sash * 0.12))}" ${PROFILE_JOIN} />`,
   ];
 
-  if (variant !== "thumbnail") {
-    const arrowLength = Math.max(13, Math.min(34, w * 0.1));
+  {
+    const arrowLength = Math.max(
+      variant === "thumbnail" ? 8 : 13,
+      Math.min(variant === "thumbnail" ? 18 : 34, w * 0.1)
+    );
     const arrowSize = Math.max(3.2, scale.cue * 2.2);
     const arrowY = y + h / 2;
     const leftArrowX = leftX + leftW * 0.62;
@@ -785,6 +788,99 @@ function drawModuleCue(
       `<line x1="${px(left)}" y1="${px(top)}" x2="${px(right)}" y2="${px(top)}" stroke="${detail}" stroke-width="${px(stroke * 1.2)}" ${cueJoin} />`,
       `<polyline points="${px(left + 2)},${px(top + 4)} ${px(cx)},${px(y + h * 0.58)} ${px(right - 2)},${px(top + 4)}" stroke="${detail}" stroke-width="${px(stroke)}" ${cueJoin} />`,
       `<line x1="${px(cx)}" y1="${px(y + h * 0.58)}" x2="${px(cx)}" y2="${px(y + h - inset)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.55" ${cueJoin} />`
+    );
+    return parts.join("");
+  }
+
+  if (type === "guillotina") {
+    const halfHeight = h / 2;
+    const sashGap = Math.max(2, scale.sash * 0.16);
+    const arrowX = x + w * 0.72;
+    const arrowTop = y + h * 0.27;
+    const arrowBottom = y + h * 0.64;
+    const arrowSize = Math.max(3, stroke * 2.1);
+    parts.push(
+      drawLayeredSashFrame(
+        x,
+        y,
+        w,
+        Math.max(0, halfHeight - sashGap),
+        palette,
+        scale.sash,
+        "guillotine-upper-sash"
+      ),
+      drawLayeredSashFrame(
+        x,
+        y + halfHeight + sashGap,
+        w,
+        Math.max(0, halfHeight - sashGap),
+        palette,
+        scale.sash,
+        "guillotine-lower-sash"
+      ),
+      `<line x1="${px(x)}" y1="${px(y + halfHeight)}" x2="${px(x + w)}" y2="${px(y + halfHeight)}" stroke="${palette.div}" stroke-width="${px(scale.meeting)}" ${PROFILE_JOIN} />`,
+      `<g data-guided-opening="guillotine-up" stroke="${detail}" stroke-width="${px(stroke)}" stroke-linecap="round" stroke-linejoin="round" fill="none" vector-effect="non-scaling-stroke"><line x1="${px(arrowX)}" y1="${px(arrowBottom)}" x2="${px(arrowX)}" y2="${px(arrowTop)}" /><polyline points="${px(arrowX - arrowSize)},${px(arrowTop + arrowSize)} ${px(arrowX)},${px(arrowTop)} ${px(arrowX + arrowSize)},${px(arrowTop + arrowSize)}" /></g>`,
+      `<rect data-guided-hardware="guillotine-pull" x="${px(cx - Math.min(18, w * 0.12))}" y="${px(y + halfHeight + Math.max(5, h * 0.05))}" width="${px(Math.min(36, w * 0.24))}" height="${px(Math.max(2.5, stroke * 1.5))}" rx="${px(stroke)}" fill="${detail}" />`
+    );
+    return parts.join("");
+  }
+
+  if (type === "celosia") {
+    const left = x + inset;
+    const right = x + w - inset;
+    const bladeCount = 6;
+    const bladeGap = Math.max(5, (h - inset * 2) / (bladeCount + 1));
+    for (let index = 1; index <= bladeCount; index += 1) {
+      const bladeY = y + inset + bladeGap * index;
+      const tilt = Math.min(7, bladeGap * 0.36);
+      parts.push(
+        `<g data-guided-louver="${index}"><line x1="${px(left)}" y1="${px(bladeY - tilt)}" x2="${px(right)}" y2="${px(bladeY + tilt)}" stroke="${palette.div}" stroke-width="${px(Math.max(scale.sash * 0.68, 2.4))}" ${PROFILE_JOIN} /><circle cx="${px(cx)}" cy="${px(bladeY)}" r="${px(Math.max(1.5, stroke * 0.8))}" fill="${detail}" /></g>`
+      );
+    }
+    return parts.join("");
+  }
+
+  if (type === "puerta_corredera") {
+    parts.push(
+      drawSlidingSystem(x, y, w, h, palette, scale, variant),
+      `<line x1="${px(x + inset * 0.4)}" y1="${px(y + h - inset * 0.4)}" x2="${px(x + w - inset * 0.4)}" y2="${px(y + h - inset * 0.4)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.65" ${cueJoin} />`
+    );
+    return parts.join("");
+  }
+
+  if (type === "shower_frontal") {
+    const dividerX = x + w * 0.42;
+    const freeSide: GuidedOpeningSide = openingSide === "right" ? "left" : "right";
+    const handle = resolveHardwareAnchor({
+      x: dividerX,
+      y,
+      w: Math.max(1, x + w - dividerX),
+      h,
+      freeSide,
+      insetRatio: 0.18,
+      verticalRatio: 0.5,
+    });
+    parts.push(
+      `<line x1="${px(dividerX)}" y1="${px(y)}" x2="${px(dividerX)}" y2="${px(y + h)}" stroke="${palette.div}" stroke-width="${px(scale.meeting)}" ${PROFILE_JOIN} />`,
+      `<line x1="${px(dividerX + inset)}" y1="${px(y + inset)}" x2="${px(x + w - inset)}" y2="${px(y + h / 2)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.72" ${cueJoin} />`,
+      `<line x1="${px(dividerX + inset)}" y1="${px(y + h - inset)}" x2="${px(x + w - inset)}" y2="${px(y + h / 2)}" stroke="${detail}" stroke-width="${px(stroke)}" opacity="0.72" ${cueJoin} />`,
+      drawGuidedHardware({
+        kind: "manilla_abatible",
+        cx: handle.cx,
+        cy: handle.cy,
+        size: resolveHardwareSize(w, h, "compact"),
+        freeSide,
+        stroke: detail,
+        strokeWidth: Math.max(1, stroke),
+      })
+    );
+    return parts.join("");
+  }
+
+  if (type === "shower_corredera") {
+    parts.push(
+      drawSlidingSystem(x, y, w, h, palette, scale, variant),
+      `<line x1="${px(x)}" y1="${px(y + h - Math.max(2, stroke))}" x2="${px(x + w)}" y2="${px(y + h - Math.max(2, stroke))}" stroke="${palette.div}" stroke-width="${px(Math.max(2, scale.sash * 0.72))}" ${PROFILE_JOIN} />`
     );
     return parts.join("");
   }
@@ -1079,10 +1175,12 @@ export function renderGuidedVisualSvg(
     );
     if (layoutModule.glassShape.kind === "rounded") {
       body.push(
-        `<path d="${glassPath}" fill="${fill}" stroke="${palette.detail}" stroke-width="1.35" stroke-opacity="0.55" />`
+        `<path data-guided-target="vidrio" d="${glassPath}" fill="${fill}" stroke="${palette.detail}" stroke-width="1.35" stroke-opacity="0.55" />`
       );
     } else {
-      body.push(`<path d="${glassPath}" fill="${fill}" stroke="none" />`);
+      body.push(
+        `<path data-guided-target="vidrio" d="${glassPath}" fill="${fill}" stroke="none" />`
+      );
     }
   }
 
@@ -1168,6 +1266,7 @@ export function renderGuidedVisualSvg(
     }
 
     body.push(
+      `<g data-guided-target="apertura" data-guided-motion="${layoutModule.type}">`,
       drawModuleCue(
         layoutModule.type,
         layoutModule.openingSide,
@@ -1178,7 +1277,8 @@ export function renderGuidedVisualSvg(
         renderedPalette,
         scale,
         variant
-      )
+      ),
+      `</g>`
     );
 
     if (showLabels && !layoutModule.selected && layoutModule.w > 52 && layoutModule.h > 36) {
@@ -1212,7 +1312,7 @@ export function renderGuidedVisualSvg(
 
   // Marco exterior (sobre el clip, sin recortar el stroke)
   body.push(
-    drawOuterAluminumFrame(
+    `<g data-guided-target="sistema">${drawOuterAluminumFrame(
       layout.originX,
       layout.originY,
       layout.drawW,
@@ -1221,7 +1321,7 @@ export function renderGuidedVisualSvg(
       scale.frame,
       layout.frameShape,
       layout.pxPerMm
-    )
+    )}</g>`
   );
 
   if (showDimensions) {

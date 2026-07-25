@@ -76,7 +76,12 @@ export const GUIDED_MODULE_TYPES = [
   "abatible",
   "oscilobatiente",
   "proyectante",
+  "guillotina",
+  "celosia",
   "puerta",
+  "puerta_corredera",
+  "shower_frontal",
+  "shower_corredera",
   "pano_libre",
 ] as const;
 
@@ -93,8 +98,13 @@ export const GUIDED_MODULE_TYPE_LABELS: Record<GuidedModuleType, string> = {
   abatible: "Abatible",
   oscilobatiente: "Oscilobatiente",
   proyectante: "Proyectante",
-  puerta: "Puerta",
-  pano_libre: "Paño libre",
+  guillotina: "Guillotina",
+  celosia: "Celosía",
+  puerta: "Puerta abatible",
+  puerta_corredera: "Puerta corredera",
+  shower_frontal: "Shower frontal",
+  shower_corredera: "Shower corredera",
+  pano_libre: "Composición personalizada",
 };
 
 export const GUIDED_OPENING_SIDES = ["left", "right"] as const;

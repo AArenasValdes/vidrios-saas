@@ -16,17 +16,46 @@ export type QuoteConstructorPreset = {
   label: string;
   componentType: "Ventana" | "Puerta";
   defaultName: string;
+  group: "primary" | "door" | "more";
 };
 
 export const QUOTE_CONSTRUCTOR_PRESETS: QuoteConstructorPreset[] = [
-  { id: "fijo", label: "Fijo", componentType: "Ventana", defaultName: "Ventana fija" },
-  { id: "corredera", label: "Corredera", componentType: "Ventana", defaultName: "Ventana corredera" },
-  { id: "abatible", label: "Abatible", componentType: "Ventana", defaultName: "Ventana abatible" },
-  { id: "oscilobatiente", label: "Oscilobatiente", componentType: "Ventana", defaultName: "Ventana oscilobatiente" },
-  { id: "proyectante", label: "Proyectante", componentType: "Ventana", defaultName: "Ventana proyectante" },
-  { id: "puerta", label: "Puerta", componentType: "Puerta", defaultName: "Puerta abatible" },
-  { id: "pano_libre", label: "Paño libre", componentType: "Ventana", defaultName: "Paño por definir" },
+  { id: "fijo", label: "Fijo", componentType: "Ventana", defaultName: "Ventana fija", group: "primary" },
+  { id: "corredera", label: "Corredera", componentType: "Ventana", defaultName: "Ventana corredera", group: "primary" },
+  { id: "abatible", label: "Abatible", componentType: "Ventana", defaultName: "Ventana abatible", group: "primary" },
+  { id: "proyectante", label: "Proyectante", componentType: "Ventana", defaultName: "Ventana proyectante", group: "primary" },
+  { id: "puerta", label: "Puerta abatible", componentType: "Puerta", defaultName: "Puerta abatible", group: "door" },
+  { id: "puerta_corredera", label: "Puerta corredera", componentType: "Puerta", defaultName: "Puerta corredera", group: "door" },
+  { id: "pano_libre", label: "Composición", componentType: "Ventana", defaultName: "Composición personalizada", group: "primary" },
+  { id: "oscilobatiente", label: "Oscilobatiente", componentType: "Ventana", defaultName: "Ventana oscilobatiente", group: "more" },
+  { id: "guillotina", label: "Guillotina", componentType: "Ventana", defaultName: "Ventana guillotina", group: "more" },
+  { id: "celosia", label: "Celosía", componentType: "Ventana", defaultName: "Ventana celosía", group: "more" },
+  { id: "shower_frontal", label: "Shower frontal", componentType: "Puerta", defaultName: "Shower frontal", group: "more" },
+  { id: "shower_corredera", label: "Shower corredera", componentType: "Puerta", defaultName: "Shower corredera", group: "more" },
 ];
+
+export const QUOTE_CONSTRUCTOR_PRIMARY_PRESETS = QUOTE_CONSTRUCTOR_PRESETS.filter(
+  (preset) => preset.group === "primary"
+);
+
+export const QUOTE_CONSTRUCTOR_DOOR_PRESETS = QUOTE_CONSTRUCTOR_PRESETS.filter(
+  (preset) => preset.group === "door"
+);
+
+const QUOTE_CONSTRUCTOR_MORE_PRESET_IDS: QuoteConstructorPresetId[] = [
+  "oscilobatiente",
+  "guillotina",
+  "celosia",
+  "puerta_corredera",
+  "shower_frontal",
+  "shower_corredera",
+];
+
+export const QUOTE_CONSTRUCTOR_MORE_PRESETS =
+  QUOTE_CONSTRUCTOR_MORE_PRESET_IDS.flatMap((id) => {
+    const preset = QUOTE_CONSTRUCTOR_PRESETS.find((candidate) => candidate.id === id);
+    return preset ? [preset] : [];
+  });
 
 export type QuoteConstructorItemPatch = Partial<
   Pick<

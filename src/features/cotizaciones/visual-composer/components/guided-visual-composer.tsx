@@ -1563,7 +1563,8 @@ export function GuidedVisualComposer({
 
                 {selectedModule.type === "abatible" ||
                 selectedModule.type === "oscilobatiente" ||
-                selectedModule.type === "puerta" ? (
+                selectedModule.type === "puerta" ||
+                selectedModule.type === "shower_frontal" ? (
                   <>
                     <span className={s.blockLabel}>Sentido de apertura</span>
                     <div

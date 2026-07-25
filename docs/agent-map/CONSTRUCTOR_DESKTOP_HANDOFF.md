@@ -288,17 +288,26 @@ Obtener el PDF descargado desde el flujo productivo, renderizar paginas con Popp
 Completar cuando Jest global este reparado:
 
 - V1/V2 y `openingSide`;
-- SVG de las siete tipologias;
+- SVG de las doce tipologias del selector rapido;
 - sincronizacion de medidas;
 - precio plantilla vs override manual;
 - agregar tres piezas, seleccionar, editar, duplicar, mover y eliminar;
 - sessionStorage y edicion de cotizacion existente;
 - hydrate formal, PDF, publico y WhatsApp.
 
+### Selector visual vigente en Cotizacion rapida
+
+- Barra principal: Fijo, Corredera, Abatible, Proyectante, Puerta y Composicion.
+- `Puerta`: acceso rapido a Puerta abatible y Puerta corredera.
+- `Mas tipologias`: Oscilobatiente, Guillotina, Celosia, Puerta corredera, Shower frontal y Shower corredera.
+- `Composicion personalizada` reemplaza conceptualmente a `Pano libre`; mantiene el mismo tipo persistido `pano_libre`.
+- Todas las miniaturas y el croquis principal usan `guided-visual-renderer.service.ts`; no hay SVG alterno en el selector.
+- Los targets `sistema`, `vidrio` y `apertura` del croquis abren la seccion correspondiente del inspector cuando aplica.
+- Las animaciones son solo hover/focus visual y respetan `prefers-reduced-motion`; no cambian estado ni geometria persistida.
+
 ### Pulido posterior, solo con pedido concreto
 
 - compactar el inspector si su altura vuelve incomodo el sticky;
-- cerrar menu de acciones con Escape/click exterior;
 - revisar escala del croquis en tarjetas del cuaderno por breakpoint;
 - seguir mejorando perfiles/simbolos desde el renderer compartido, nunca con un SVG paralelo solo para PDF.
 
