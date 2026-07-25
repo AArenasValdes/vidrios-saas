@@ -399,6 +399,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
         !usesMinimalShell && shouldLoadShellFeeds ? 45000 : 0,
     });
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
+  const isPerformanceSensitiveRoute =
+    isNuevaCotizacionRoute || pathname.startsWith("/configuracion/empresa/lineas-precios");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<
     "sidebar" | "mobile" | "topbar" | null
@@ -998,17 +1000,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [alerts, isAlertsOpen, markAlertsAsSeen]);
 
   useEffect(() => {
-    if (cargando || !organizacionId || shouldLoadShellFeeds) {
+    if (isPerformanceSensitiveRoute && shouldLoadShellFeeds) {
+      setShouldLoadShellFeeds(false);
+    }
+  }, [isPerformanceSensitiveRoute, shouldLoadShellFeeds]);
+
+  useEffect(() => {
+    if (
+      cargando ||
+      !organizacionId ||
+      shouldLoadShellFeeds ||
+      isPerformanceSensitiveRoute
+    ) {
       return;
     }
 
     return scheduleDeferredShellWork(() => {
       setShouldLoadShellFeeds(true);
     });
-  }, [cargando, organizacionId, shouldLoadShellFeeds]);
+  }, [cargando, isPerformanceSensitiveRoute, organizacionId, shouldLoadShellFeeds]);
 
   useEffect(() => {
-    if (cargando || !organizacionId || !shouldLoadShellFeeds || shouldSkipRoutePrefetch()) {
+    if (
+      cargando ||
+      !organizacionId ||
+      !shouldLoadShellFeeds ||
+      isPerformanceSensitiveRoute ||
+      shouldSkipRoutePrefetch()
+    ) {
       return;
     }
 
@@ -1048,7 +1067,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => {
       timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };
-  }, [cargando, organizacionId, pathname, router, shouldLoadShellFeeds]);
+  }, [
+    cargando,
+    isPerformanceSensitiveRoute,
+    organizacionId,
+    pathname,
+    router,
+    shouldLoadShellFeeds,
+  ]);
 
   useEffect(() => {
     if (!isAlertsOpen && !isProfileMenuOpen) {

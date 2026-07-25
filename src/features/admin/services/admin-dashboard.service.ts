@@ -3,9 +3,11 @@ import "server-only";
 import {
   listAdminOrganizationsSnapshot,
   type AdminOrganizationPaymentRow,
-  type AdminOrganizationProfileRow,
 } from "@/features/admin/repositories/admin-clients.repository";
-import { listAdminClients } from "@/features/admin/services/admin-clients.service";
+import {
+  listAdminClientsFromSnapshot,
+  type listAdminClients,
+} from "@/features/admin/services/admin-clients.service";
 import type {
   AdminDashboard,
   AdminDashboardActionItem,
@@ -532,11 +534,13 @@ export async function getAdminDashboard(
 ): Promise<AdminDashboard> {
   const admin = createAdminClient();
   const { start, end, previousStart, previousEnd } = resolvePeriodWindow(periodDays);
+  const snapshotPromise = listAdminOrganizationsSnapshot();
+  const clientsPromise = snapshotPromise.then(listAdminClientsFromSnapshot);
 
   const [clients, snapshot, workspaceResult, prospectsResult, tasksResult, quotesResult, solicitudesResult] =
     await Promise.all([
-      listAdminClients(),
-      listAdminOrganizationsSnapshot(),
+      clientsPromise,
+      snapshotPromise,
       admin
         .from("growth_workspaces")
         .select("configuracion_json")

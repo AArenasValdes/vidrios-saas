@@ -3,6 +3,7 @@ import "server-only";
 import {
   getAdminOrganizationSnapshot,
   listAdminOrganizationsSnapshot,
+  type AdminOrganizationsSnapshot,
   type AdminOrganizationPaymentRow,
   type AdminOrganizationProfileRow,
   type AdminOrganizationRow,
@@ -213,8 +214,9 @@ function buildAdminClientListItem(input: {
   };
 }
 
-export async function listAdminClients(): Promise<AdminClientListItem[]> {
-  const snapshot = await listAdminOrganizationsSnapshot();
+export async function listAdminClientsFromSnapshot(
+  snapshot: AdminOrganizationsSnapshot
+): Promise<AdminClientListItem[]> {
   const organizationIds = snapshot.organizations.map((row) => Number(row.id));
   const [usageMap, publicSummaries] = await Promise.all([
     fetchAdminClientsUsageMap(organizationIds),
@@ -277,6 +279,11 @@ export async function listAdminClients(): Promise<AdminClientListItem[]> {
         : undefined,
     });
   });
+}
+
+export async function listAdminClients(): Promise<AdminClientListItem[]> {
+  const snapshot = await listAdminOrganizationsSnapshot();
+  return listAdminClientsFromSnapshot(snapshot);
 }
 
 export async function getAdminClientDetail(

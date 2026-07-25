@@ -12,7 +12,10 @@ import type {
   UpdateCotizacionLineTemplateInput,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 
-export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
+export function useCotizacionLineTemplates(options?: {
+  activeOnly?: boolean;
+  enabled?: boolean;
+}) {
   const { organizacionId } = useAuth();
   const [templates, setTemplates] = useState<CotizacionLineTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +24,9 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
   const activeLoadIdRef = useRef(0);
 
   const loadTemplates = useCallback(async () => {
-    if (!organizacionId) {
+    if (!organizacionId || options?.enabled === false) {
       setTemplates([]);
+      setIsLoading(false);
       return;
     }
 
@@ -52,7 +56,7 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
         setIsLoading(false);
       }
     }
-  }, [organizacionId, options?.activeOnly]);
+  }, [organizacionId, options?.activeOnly, options?.enabled]);
 
   useEffect(() => {
     void loadTemplates();
@@ -64,12 +68,16 @@ export function useCotizacionLineTemplates(options?: { activeOnly?: boolean }) {
     }
 
     const handleFocus = () => {
+      if (options?.enabled === false) {
+        return;
+      }
+
       void loadTemplates();
     };
 
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [loadTemplates]);
+  }, [loadTemplates, options?.enabled]);
 
   const createTemplate = useCallback(
     async (input: Omit<CreateCotizacionLineTemplateInput, "organizationId">) => {

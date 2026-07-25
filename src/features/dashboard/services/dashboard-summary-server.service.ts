@@ -113,6 +113,22 @@ function sortByUpdatedDesc(records: Cotizacion[]) {
   });
 }
 
+function isUpdatedWithinRange(
+  value: string | null,
+  fromIso: string,
+  toIso: string
+) {
+  if (!value) {
+    return false;
+  }
+
+  const timestamp = new Date(value).getTime();
+  const from = new Date(fromIso).getTime();
+  const to = new Date(toIso).getTime();
+
+  return !Number.isNaN(timestamp) && timestamp >= from && timestamp < to;
+}
+
 export async function getDashboardSummaryByOrganizationId(
   organizationId: EntityId
 ): Promise<DashboardSummary> {
@@ -130,55 +146,34 @@ export async function getDashboardSummaryByOrganizationId(
     getMonthBounds();
   const monthBuckets = buildLastMonthBuckets(6);
 
-  const [
-    totalCount,
-    quotedTotal,
-    quotedMonthTotal,
-    approvedTotal,
-    pdfGeneratedCount,
-    approvedCount,
-    monthCount,
-    approvedTodayCount,
-    recentRecordsBase,
-    alertRecordsBase,
-    ...monthlyTotalsRaw
-  ] = await Promise.all([
-    cotizacionesRepository.countByOrganizationId(organizationId),
-    cotizacionesRepository.sumTotalByOrganizationId(organizationId),
-    cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
-      updatedFrom: monthStartIso,
-      updatedTo: monthEndIso,
-    }),
-    cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
-      estados: ["aprobada"],
-    }),
-    cotizacionesRepository.countByOrganizationId(organizationId, {
-      pdfDownloadedOnly: true,
-    }),
-    cotizacionesRepository.countByOrganizationId(organizationId, {
-      estados: ["aprobada"],
-    }),
-    cotizacionesRepository.countByOrganizationId(organizationId, {
-      updatedFrom: monthStartIso,
-      updatedTo: monthEndIso,
-    }),
-    cotizacionesRepository.countByOrganizationId(organizationId, {
-      estados: ["aprobada"],
-      updatedFrom: todayStartIso,
-      updatedTo: tomorrowStartIso,
-    }),
+  const [dashboardMetrics, recentRecordsBase, alertRecordsBase] = await Promise.all([
+    cotizacionesRepository.listDashboardMetricsByOrganizationId(organizationId),
     cotizacionesRepository.listRecentByOrganizationId(organizationId, 48),
     cotizacionesRepository.listDashboardAlertCandidatesByOrganizationId(
       organizationId,
       21
     ),
-    ...monthBuckets.map((bucket) =>
-      cotizacionesRepository.sumTotalByOrganizationId(organizationId, {
-        updatedFrom: bucket.startIso,
-        updatedTo: bucket.endIso,
-      })
-    ),
   ]);
+
+  const totalCount = dashboardMetrics.length;
+  const quotedTotal = dashboardMetrics.reduce((total, metric) => total + metric.total, 0);
+  const approvedMetrics = dashboardMetrics.filter((metric) => metric.estado === "aprobada");
+  const quotedMonthMetrics = dashboardMetrics.filter((metric) =>
+    isUpdatedWithinRange(metric.actualizadoEn, monthStartIso, monthEndIso)
+  );
+  const quotedMonthTotal = quotedMonthMetrics.reduce(
+    (total, metric) => total + metric.total,
+    0
+  );
+  const approvedTotal = approvedMetrics.reduce((total, metric) => total + metric.total, 0);
+  const pdfGeneratedCount = dashboardMetrics.filter(
+    (metric) => metric.pdfDescargadoEn !== null
+  ).length;
+  const approvedCount = approvedMetrics.length;
+  const monthCount = quotedMonthMetrics.length;
+  const approvedTodayCount = approvedMetrics.filter((metric) =>
+    isUpdatedWithinRange(metric.actualizadoEn, todayStartIso, tomorrowStartIso)
+  ).length;
 
   const recentRecordsSorted = sortByUpdatedDesc(recentRecordsBase);
   const relevantProjectIds = Array.from(
@@ -230,10 +225,14 @@ export async function getDashboardSummaryByOrganizationId(
     .filter((record) => isCotizacionPendingSend(record.estado))
     .slice(0, 12);
   const alertRecords = alertRecordsBase.map(enrichRecord);
-  const monthlyQuotedTotals = monthBuckets.map((bucket, index) => ({
+  const monthlyQuotedTotals = monthBuckets.map((bucket) => ({
     key: bucket.key,
     label: bucket.label,
-    total: toNumber(monthlyTotalsRaw[index]),
+    total: dashboardMetrics
+      .filter((metric) =>
+        isUpdatedWithinRange(metric.actualizadoEn, bucket.startIso, bucket.endIso)
+      )
+      .reduce((total, metric) => total + metric.total, 0),
   }));
 
   return {

@@ -168,13 +168,14 @@ function NuevaCotizacionPageContent() {
   });
 
   const [draft, setDraft] = useState<CotizacionWorkflowDraft>(createCotizacionWorkflowDraft);
+  const [step, setStep] = useState<StepKey>(1);
   const { profile: organizationProfile } = useOrganizationProfile();
   const {
     activeTemplates: activeLineTemplates,
     createTemplate: createLineTemplate,
     updateTemplate: updateLineTemplate,
     isSaving: isSavingQuickPriceTemplate,
-  } = useCotizacionLineTemplates({ activeOnly: true });
+  } = useCotizacionLineTemplates({ activeOnly: true, enabled: step !== 1 });
   const [isSavingCubicationLineAdjustment, setIsSavingCubicationLineAdjustment] =
     useState(false);
   const [componentForm, setComponentForm] = useState<ComponentFormState>(() =>
@@ -188,7 +189,6 @@ function NuevaCotizacionPageContent() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [clientQuery, setClientQuery] = useState("");
-  const [step, setStep] = useState<StepKey>(1);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [savedRecord, setSavedRecord] = useState<CotizacionWorkflowRecord | null>(null);

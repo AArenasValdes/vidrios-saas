@@ -119,6 +119,10 @@ const COTIZACION_BREAKDOWN_SELECT =
   "id, cotizacion_item_id, material_id, descripcion, unidad, cantidad, costo_unitario, costo_total, precio_unitario, precio_total, origen, creado_en, organization_id";
 const COTIZACION_DASHBOARD_SELECT =
   "id, proyecto_id, organization_id, numero, estado, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, creado_en, actualizado_en, total";
+const COTIZACION_DASHBOARD_METRICS_SELECT =
+  "estado, total, actualizado_en, pdf_descargado_en";
+const COTIZACION_DASHBOARD_METRICS_SELECT_LEGACY =
+  "estado, total, actualizado_en";
 const COTIZACION_CLIENT_SUMMARY_SELECT =
   "id, proyecto_id, estado, cliente_vio_en, cliente_respondio_en, creado_en, actualizado_en";
 const COTIZACION_CLIENT_SUMMARY_SELECT_LEGACY =
@@ -132,6 +136,13 @@ export type CotizacionClienteSummary = {
   actualizadoEn: string | null;
   clienteVioEn: string | null;
   clienteRespondioEn: string | null;
+};
+
+export type CotizacionDashboardMetric = {
+  estado: string;
+  total: number;
+  actualizadoEn: string | null;
+  pdfDescargadoEn: string | null;
 };
 
 type CotizacionesDashboardFilter = {
@@ -1041,6 +1052,74 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     }));
   }
 
+  async function listDashboardMetricsRows(
+    organizationId: EntityId,
+    select: string,
+    includesPdfDownloadedAt: boolean
+  ): Promise<CotizacionDashboardMetric[]> {
+    const pageSize = 1_000;
+    const rows: CotizacionDashboardMetric[] = [];
+
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("cotizaciones")
+        .select(select)
+        .eq("organization_id", organizationId)
+        .is("eliminado_en", null)
+        .order("actualizado_en", { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        throw error;
+      }
+
+      const page =
+        (data as Array<{
+          estado: string | null;
+          total: number | string | null;
+          actualizado_en: string | null;
+          pdf_descargado_en?: string | null;
+        }>) ?? [];
+
+      rows.push(
+        ...page.map((row) => ({
+          estado: row.estado ?? "borrador",
+          total: Number(row.total ?? 0),
+          actualizadoEn: row.actualizado_en,
+          pdfDescargadoEn: includesPdfDownloadedAt
+            ? row.pdf_descargado_en ?? null
+            : null,
+        }))
+      );
+
+      if (page.length < pageSize) {
+        return rows;
+      }
+    }
+  }
+
+  async function listDashboardMetricsBase(
+    organizationId: EntityId
+  ): Promise<CotizacionDashboardMetric[]> {
+    try {
+      return await listDashboardMetricsRows(
+        organizationId,
+        COTIZACION_DASHBOARD_METRICS_SELECT,
+        true
+      );
+    } catch (error) {
+      if (!isMissingApprovalFieldsError(error)) {
+        throw error;
+      }
+
+      return listDashboardMetricsRows(
+        organizationId,
+        COTIZACION_DASHBOARD_METRICS_SELECT_LEGACY,
+        false
+      );
+    }
+  }
+
   async function listClientSummaryBase(
     organizationId: EntityId
   ): Promise<CotizacionRow[]> {
@@ -1432,6 +1511,10 @@ async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
       const rows = await listDashboardAlertCandidatesBase(organizationId, recentResponseDays);
 
       return rows.map(mapCotizacion);
+    },
+
+    async listDashboardMetricsByOrganizationId(organizationId: EntityId) {
+      return listDashboardMetricsBase(organizationId);
     },
 
     async countByOrganizationId(
@@ -1859,6 +1942,11 @@ export const cotizacionesRepository: CotizacionesRepository = {
   },
   listDashboardAlertCandidatesByOrganizationId(...args) {
     return getDefaultCotizacionesRepository().listDashboardAlertCandidatesByOrganizationId(
+      ...args
+    );
+  },
+  listDashboardMetricsByOrganizationId(...args) {
+    return getDefaultCotizacionesRepository().listDashboardMetricsByOrganizationId(
       ...args
     );
   },

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
@@ -57,11 +58,7 @@ import {
 } from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-import {
-  LineTemplateFormWizard,
-  resolveLineUsageMode,
-  type LineTemplateFormDraft,
-} from "./line-template-form-wizard";
+import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import {
   mergeFabricationRecipePackIntoMetadata,
   getFabricationRecipeFromMetadata,
@@ -73,6 +70,21 @@ import {
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import s from "./lineas-precios-page-client.module.css";
+
+const LineTemplateFormWizard = dynamic(
+  () =>
+    import("./line-template-form-wizard").then((module) => ({
+      default: module.LineTemplateFormWizard,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className={s.wizardLoadingOverlay} role="status" aria-live="polite">
+        <div className={s.wizardLoading}>Preparando editor...</div>
+      </div>
+    ),
+  }
+);
 
 export type { LineTemplateFormDraft };
 
@@ -163,6 +175,11 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
         )
       : null,
   };
+}
+
+function resolveDraftLineUsageMode(draft: LineTemplateFormDraft) {
+  if (!draft.estimationEnabled) return "solo_cotizar" as const;
+  return draft.cuttingEnabled ? "cubicacion_pauta" : "con_estimacion";
 }
 
 function getDigits(value: string) {
@@ -505,7 +522,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     const preset = getCubicationSystemCalibrationPreset(draft.cubicationSystem);
     const cubicationPatch = applyCalibrationPresetToCubicationPatch(preset);
     setDraft((current) => {
-      const usageMode = resolveLineUsageMode(current);
+      const usageMode = resolveDraftLineUsageMode(current);
       return {
         ...current,
         profileFrame: cubicationPatch.profileFrame ?? current.profileFrame,
