@@ -206,7 +206,7 @@
   }
 
   .toolbar,
-  [data-print-hide="1"] {
+  .printRoot [data-print-hide="1"] {
     display: none !important;
   }
 
