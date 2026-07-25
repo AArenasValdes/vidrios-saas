@@ -1,33 +1,43 @@
 # Ventora - Documento Maestro para IAs, BI y Marketing
 
-Actualizado: 2026-05-16
+Actualizado: 2026-07-24
 
 Este archivo es la referencia corta y ejecutiva para cualquier IA, consultor, analista, marketer o colaborador que necesite entender rapidamente que es Ventora, en que fase va, que funcionalidades tiene hoy y cual es el norte real del producto.
+
+**Giro julio 2026 (leer también):** `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`  
+**Roadmap desktop:** `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
 
 ---
 
 ## 1. Que es Ventora
 
-**Ventora** es un software comercial SaaS para empresas de vidrios y aluminio que:
+**Ventora** es un software comercial SaaS para empresas de vidrios, aluminio y PVC que:
 
 - capta leads desde una pagina publica propia
 - centraliza esos leads para que no se pierdan
 - ayuda a responder rapido por WhatsApp
 - convierte el avance comercial en cliente + cotizacion + cierre
+- en desktop: catálogo de precios propio, constructor visual cuando hace falta, y **pauta de fabricación revisable** (opcional) con recetas del taller
 
 No es:
 
 - un ERP
 - un sistema logístico
-- un software de producción
-- un cotizador técnico de perfilería
-- un configurador de materiales
+- un software de producción / CAD / optimizador de cortes
+- un cotizador técnico universal de perfilería
 
-La cotización es importante, pero existe como **herramienta de cierre comercial**, no como identidad principal del producto.
+La cotización es **herramienta de cierre comercial**. La cubicación es **ayuda interna revisable**, no promesa de máquina.
 
-### Frase clave del producto
+### Frases clave
 
-**"Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."**
+**Captación:** "Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."
+
+**Cierre:** "Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos."
+
+### Capas (no mezclar en marketing)
+
+1. Captación → 2. Cierre comercial → 3. Catálogo precios → 4. Constructor → 5. Receta/pauta opcional  
+Plantillas L5000/L20/L25 = **iniciales sugeridas** (no verificadas hasta piloto).
 
 ---
 

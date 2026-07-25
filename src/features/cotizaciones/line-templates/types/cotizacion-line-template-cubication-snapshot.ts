@@ -23,6 +23,7 @@ import {
   resolveRecipeFromMetadata,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import {
+  deriveRecipeStatus,
   parseFabricationRecipe,
   type FabricationRecipe,
   type RecipeStatus,
@@ -535,6 +536,9 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
   heightMm: number;
   quantity?: number;
   capturedAt?: string;
+  preferredRecipeId?: string | null;
+  apertura?: import("@/features/cotizaciones/line-templates/types/fabrication-recipe").AperturaTipo | null;
+  fabricationType?: import("@/features/cotizaciones/line-templates/types/fabrication-recipe").FabricationType | null;
 }): CotizacionItemCubicationSnapshot | null {
   const lineTemplateId = input.lineTemplateId.trim();
   const widthMm = normalizePositiveInteger(input.widthMm, 0);
@@ -547,11 +551,18 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
 
   const rules = getLineTemplateCuttingRules(input.catalogMetadata);
   const cubicationConfig = getLineTemplateCubicationConfig(input.catalogMetadata);
-  const recipe = resolveRecipeFromMetadata(input.catalogMetadata);
+  const recipe = resolveRecipeFromMetadata(input.catalogMetadata, {
+    preferredRecipeId: input.preferredRecipeId,
+    apertura: input.apertura,
+    fabricationType: input.fabricationType,
+  });
   const hasRecipe = Boolean(recipe && recipe.components.length > 0);
+  const recipeValidated =
+    Boolean(recipe) && deriveRecipeStatus(recipe as FabricationRecipe) === "validada";
 
-  // Receta de fabricación: fuente de verdad aunque cuttingEnabled esté mal seteado.
-  if (hasRecipe && recipe) {
+  // Receta validada: fuente de verdad de pauta operativa.
+  // Recetas en borrador no habilitan cubicación/pauta en cotización.
+  if (hasRecipe && recipe && recipeValidated) {
     const preview = recipePreviewToLegacyCuttingPreview(
       buildRecipeCuttingPreview(
         recipe,

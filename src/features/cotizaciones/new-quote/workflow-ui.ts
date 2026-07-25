@@ -101,6 +101,8 @@ export type ComponentFormState = {
   guidedVisualConfig?: GuidedVisualConfig | null;
   /** Borrador de cubicación de esta pieza (auto o ajuste manual). */
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
+  /** Variante de receta elegida cuando hay varias activas compatibles. */
+  fabricationRecipeId?: string;
 };
 
 export type FieldErrors = Partial<
@@ -1900,6 +1902,7 @@ export function applyLineTemplateToComponentForm(
       precioAjustadoManual: preserveManualPrice,
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
       cubicationSnapshot: null,
+      fabricationRecipeId: "",
     },
     { forceSuggestedPrice: !preserveManualPrice }
   );
@@ -2010,6 +2013,7 @@ export function buildSuggestedComponentForm(
     mirrorCustomPaneCount: current.mirrorCustomPaneCount ?? "",
     guidedVisualConfig: current.guidedVisualConfig ?? null,
     cubicationSnapshot: current.cubicationSnapshot ?? null,
+    fabricationRecipeId: current.fabricationRecipeId ?? "",
   };
 }
 

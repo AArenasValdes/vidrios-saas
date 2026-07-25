@@ -4,6 +4,14 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-24 - Cubicación V1 vendible + giro de producto documentado
+
+- Nuevo rector de giro: `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
+- Roadmap / AGENTS / README / FEATURES / DATA / ROUTES / COMPONENTS / AGENT_TASK_GUIDE / handoff / manual alineados a **pack multi-tipología**.
+- Implementado en código: `fabricationRecipePack`, plantillas L5000/L20/L25 sugeridas, bases tipológicas pendientes, filtro tipología en cotizar, print `/print/cotizaciones/[id]/fabricacion`, UX origen arriba en wizard.
+- Naming cerrado: sugeridas ≠ verificadas; bases = pendientes de taller; FFD = distribución referencial; PDF cliente sin técnico.
+- Go-to-market: motor listo → piloto 3 correderas → fórmulas otras tipologías → recién entonces cobertura amplia.
+
 ## 2026-07-21 - Smoke + pulido post-recetas
 
 - Smoke autenticado (`admin@test.com` / `1234`): cubicación y despiece visibles en cotizar con cortes por función.

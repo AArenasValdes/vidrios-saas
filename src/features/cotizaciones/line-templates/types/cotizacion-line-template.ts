@@ -1,4 +1,8 @@
 import type { EntityId } from "@/types/common";
+import {
+  deriveRecipeStatus,
+  getFabricationRecipeFromMetadata,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 
 export const LINE_TEMPLATE_MATERIALS = ["Aluminio", "PVC", "Cristal"] as const;
 export type CotizacionLineTemplateMaterial = (typeof LINE_TEMPLATE_MATERIALS)[number];
@@ -461,8 +465,17 @@ export function mergeLineTemplateCubicationConfig(
 export function getLineTemplateCuttingRules(
   metadata: CotizacionLineTemplate["catalogMetadata"] | null | undefined
 ): CotizacionLineTemplateCuttingRules {
+  const wantsCutting = metadata?.cuttingEnabled === true;
+  // Con receta de fabricación: la pauta operativa solo si está validada.
+  // Sin receta (legacy Marco/Hoja): basta cuttingEnabled.
+  const recipe = metadata
+    ? getFabricationRecipeFromMetadata(metadata as Record<string, unknown>)
+    : null;
+  const recipeAllowsCutting =
+    !recipe || deriveRecipeStatus(recipe) === "validada";
+
   return {
-    enabled: metadata?.cuttingEnabled === true,
+    enabled: wantsCutting && recipeAllowsCutting,
     mode: normalizeCuttingMode(metadata?.cuttingMode),
     barLengthMm: normalizePositiveInteger(metadata?.cuttingBarLengthMm, 6000),
     sawKerfMm: normalizeMetadataNumber(metadata?.cuttingSawKerfMm, 3),

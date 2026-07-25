@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LuBadgeDollarSign,
   LuCheck,
@@ -30,9 +30,17 @@ import {
 import {
   RECIPE_STATUS_LABELS,
   deriveRecipeStatus,
+  upsertRecipeInPack,
   type FabricationRecipe,
+  type FabricationRecipePack,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import { createStructuralRecipeTemplate } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-templates";
+import {
+  COMMERCIAL_PENDING_BASES,
+  COMMERCIAL_SUGGESTED_TEMPLATES,
+  createCommercialTemplateRecipe,
+  matchSuggestedTemplateIdByLineName,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
 import { FabricationRecipeEditor } from "@/features/cotizaciones/line-templates/components/fabrication-recipe-editor";
 import {
   type CubicationSystemCalibrationPreset,
@@ -90,8 +98,10 @@ export type LineTemplateFormDraft = {
   cuttingSawKerfMm: string;
   cuttingSashCount: string;
   isActive: boolean;
-  /** Receta de fabricación V1 (componentes reales). Null = aún no iniciada. */
+  /** Receta en edición (variante activa del pack). */
   fabricationRecipe: FabricationRecipe | null;
+  /** Pack de variantes de la línea. */
+  fabricationRecipePack: FabricationRecipePack | null;
 };
 
 export type LineUsageMode = "solo_cotizar" | "con_estimacion" | "cubicacion_pauta";
@@ -168,7 +178,8 @@ const USAGE_MODE_OPTIONS: Array<{
   {
     value: "cubicacion_pauta",
     title: "Cubicación y pauta",
-    description: "Usa una receta de fabricación configurada y validada por el taller.",
+    description:
+      "Cotiza desde ya; la pauta de corte se habilita solo cuando valides la receta.",
   },
 ];
 
@@ -189,7 +200,6 @@ function formatMeasurement(value: number, suffix: string) {
 
 function buildAdvancedDetailsSummary(draft: LineTemplateFormDraft) {
   const parts: string[] = [];
-  if (draft.minimoCobrable) parts.push("Mínimo");
   if (draft.redondeoPrecio !== "0") parts.push("Redondeo");
   if (draft.mermaPct) parts.push("Merma");
   if (draft.margenObjetivoPct) parts.push("Margen");
@@ -382,6 +392,11 @@ export function LineTemplateFormWizard({
 }: Props) {
   const sheetBodyRef = useRef<HTMLDivElement | null>(null);
   const moreDetailsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [recipeFocusComponentId, setRecipeFocusComponentId] = useState<string | null>(null);
+  const [originChoice, setOriginChoice] = useState<
+    "plantilla" | "base" | "propia" | null
+  >(null);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
 
   const usageMode = resolveLineUsageMode(draft);
   const maxStep = getWizardMaxStep(usageMode);
@@ -395,24 +410,12 @@ export function LineTemplateFormWizard({
   }, [openStep]);
 
   useEffect(() => {
-    if (openStep < 3 || isGlassDraft || draft.fabricationRecipe) return;
-    if (!draft.estimationEnabled) return;
-    const seeded = createStructuralRecipeTemplate(
-      draft.cubicationSystem === "pano_fijo"
-        ? "pano_fijo"
-        : draft.cubicationSystem === "puerta_abatible_1_hoja"
-          ? "puerta_abatible"
-          : "corredera_2_hojas"
-    );
-    onDraftPatch({ fabricationRecipe: seeded });
-  }, [
-    openStep,
-    isGlassDraft,
-    draft.fabricationRecipe,
-    draft.estimationEnabled,
-    draft.cubicationSystem,
-    onDraftPatch,
-  ]);
+    if (openStep !== 3 || !recipeFocusComponentId) return;
+    const timer = window.setTimeout(() => setRecipeFocusComponentId(null), 400);
+    return () => window.clearTimeout(timer);
+  }, [openStep, recipeFocusComponentId]);
+
+  // No auto-sembrar receta: el maestro elige plantilla / base / propia.
 
   const wizardSteps = [
     { id: 1, label: "Datos básicos" },
@@ -492,21 +495,90 @@ export function LineTemplateFormWizard({
     );
   };
 
-  const handleRecipeChange = (recipe: FabricationRecipe) => {
+  const applyRecipeToDraft = (
+    recipe: FabricationRecipe,
+    options?: { replacePack?: boolean; setAsDefault?: boolean }
+  ) => {
+    const pack = options?.replacePack
+      ? upsertRecipeInPack(null, recipe, { setAsDefault: true })
+      : upsertRecipeInPack(draft.fabricationRecipePack, recipe, {
+          setAsDefault: options?.setAsDefault ?? !draft.fabricationRecipePack?.defaultRecipeId,
+        });
+    const nextStatus = deriveRecipeStatus(recipe);
     onDraftPatch({
       fabricationRecipe: recipe,
+      fabricationRecipePack: pack,
       cuttingSashCount: String(recipe.sashCount),
       cubicationStatus:
-        recipe.status === "validada"
+        nextStatus === "validada"
           ? "validada"
-          : recipe.status === "requiere_revision"
+          : nextStatus === "requiere_revision"
             ? "revisar_cambios"
-            : recipe.status === "en_validacion"
+            : nextStatus === "en_validacion"
               ? "en_calibracion"
-              : recipe.status === "lista_para_validar"
+              : nextStatus === "lista_para_validar"
                 ? "lista_para_probar"
                 : "sin_configurar",
     });
+  };
+
+  const handleRecipeChange = (recipe: FabricationRecipe) => {
+    applyRecipeToDraft(recipe);
+  };
+
+  const handleStartFromPath = (
+    path: "plantilla" | "base" | "propia",
+    templateId?: string
+  ) => {
+    if (path === "propia") {
+      const recipe = createStructuralRecipeTemplate(
+        draft.cubicationSystem === "pano_fijo"
+          ? "pano_fijo"
+          : draft.cubicationSystem === "puerta_abatible_1_hoja"
+            ? "puerta_abatible"
+            : "corredera_2_hojas"
+      );
+      applyRecipeToDraft(
+        { ...recipe, sourceKind: "propia", variant: "propia" },
+        { replacePack: true, setAsDefault: true }
+      );
+      return;
+    }
+    const id =
+      templateId ||
+      (path === "plantilla"
+        ? matchSuggestedTemplateIdByLineName(draft.nombre) ||
+          matchSuggestedTemplateIdByLineName(draft.lineSystem) ||
+          "sugerida_l5000_corredera_caracol"
+        : "base_pano_fijo");
+    const recipe = createCommercialTemplateRecipe(id);
+    if (!recipe) return;
+    applyRecipeToDraft(recipe, { replacePack: true, setAsDefault: true });
+  };
+
+  const suggestedMatchId =
+    matchSuggestedTemplateIdByLineName(draft.nombre) ||
+    matchSuggestedTemplateIdByLineName(draft.lineSystem);
+
+  useEffect(() => {
+    if (draft.fabricationRecipe || openStep !== 3) return;
+    if (originChoice != null) return;
+    if (!suggestedMatchId) return;
+    setOriginChoice("plantilla");
+    setPendingTemplateId(suggestedMatchId);
+  }, [draft.fabricationRecipe, openStep, originChoice, suggestedMatchId]);
+
+  const pendingTemplate =
+    COMMERCIAL_SUGGESTED_TEMPLATES.find((entry) => entry.id === pendingTemplateId) ??
+    null;
+
+  const handleOriginChoice = (choice: "plantilla" | "base" | "propia") => {
+    setOriginChoice(choice);
+    if (choice === "plantilla") {
+      setPendingTemplateId((current) => current ?? suggestedMatchId ?? null);
+      return;
+    }
+    setPendingTemplateId(null);
   };
 
   const renderStepHeader = (
@@ -615,7 +687,7 @@ export function LineTemplateFormWizard({
           </nav>
         </header>
 
-        <div className={s.sheetBody} ref={sheetBodyRef}>
+        <div className={`${s.sheetBody} ${s.wizardBodyWorkspace}`} ref={sheetBodyRef}>
           <article
             className={`${s.wizardStep} ${openStep === 1 ? s.wizardStepOpen : ""} ${
               openStep !== 1 ? s.wizardStepCollapsed : ""
@@ -629,193 +701,242 @@ export function LineTemplateFormWizard({
               openStep > 1
             )}
             {openStep === 1 ? (
-              <div className={s.wizardStepBody}>
-                <div className={s.wizardFieldGroup}>
-                  <div className={s.wizardFieldGroupHead}>
-                    <LuTag aria-hidden />
-                    <div>
-                      <strong>Datos de la línea</strong>
-                      <span>Así aparecerá al cotizar</span>
-                    </div>
-                  </div>
-
-                  <div className={s.formSectionGrid}>
-                    <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                      <span className={s.fieldLabel}>Nombre comercial</span>
-                      <input
-                        className={s.textInput}
-                        value={draft.nombre}
-                        onChange={(event) => onDraftChange("nombre", event.target.value)}
-                        placeholder="Ej: Serie 25 negra"
-                      />
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Categoría</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.categoria}
-                        onChange={(event) =>
-                          onDraftChange(
-                            "categoria",
-                            event.target.value as CotizacionLineTemplateCategoria
-                          )
-                        }
-                      >
-                        {Object.entries(LINE_TEMPLATE_CATEGORIA_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={s.fieldBlock}>
-                      <span className={s.fieldLabel}>Unidad de cobro</span>
-                      <select
-                        className={s.selectInput}
-                        value={draft.unidadCobro}
-                        onChange={(event) =>
-                          onDraftChange(
-                            "unidadCobro",
-                            event.target.value as CotizacionLineTemplateUnidadCobro
-                          )
-                        }
-                      >
-                        {Object.entries(LINE_TEMPLATE_UNIDAD_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    {!isGlassDraft ? (
-                      <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
-                        <span className={s.fieldLabel}>Material de perfil</span>
-                        <div className={s.materialSelect}>
-                          {(["Aluminio", "PVC"] as const).map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              className={`${s.materialSelectButton} ${
-                                draft.material === option ? s.materialSelectButtonActive : ""
-                              }`}
-                              data-material={option}
-                              aria-pressed={draft.material === option}
-                              onClick={() =>
-                                onDraftChange("material", option as CotizacionLineTemplateMaterial)
-                              }
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </label>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className={s.wizardFieldGroup}>
-                  <div className={s.wizardFieldGroupHead}>
-                    <LuBadgeDollarSign aria-hidden />
-                    <div>
-                      <strong>Precio y rentabilidad</strong>
-                      <span>
-                        Define cuánto cobrarás y, opcionalmente, cuánto te cuesta fabricar.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={s.pricingFieldsStack}>
-                    <label
-                      className={`${s.fieldBlock} ${s.fieldHighlight} ${s.pricingSaleField}`}
-                    >
-                      <span className={s.fieldLabel}>
-                        {pricingCopy.saleLabel}
-                        {pricingCopy.unitSuffix ? (
-                          <em className={s.pricingUnitMark}>{pricingCopy.unitSuffix}</em>
-                        ) : null}
-                      </span>
-                      <span className={s.pricingFieldHelp}>{pricingCopy.saleHelp}</span>
-                      <div className={s.moneyWrap}>
-                        <span className={s.moneyPrefix}>$</span>
-                        <input
-                          className={`${s.moneyInput} ${s.moneyInputPrimary} ${
-                            pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
-                          }`}
-                          inputMode="numeric"
-                          value={formatMoneyDigits(draft.precioM2Sugerido)}
-                          onChange={(event) =>
-                            onDraftChange("precioM2Sugerido", getDigits(event.target.value))
-                          }
-                          placeholder="Ej: 65.000"
-                          aria-required="true"
-                        />
-                        {pricingCopy.unitSuffix ? (
-                          <span className={s.moneySuffix}>{pricingCopy.unitSuffix}</span>
-                        ) : null}
+              <div className={`${s.wizardStepBody} ${s.wizardStepBodyWide}`}>
+                <div className={s.wizardStep1Layout}>
+                  <div className={s.wizardFieldGroup}>
+                    <div className={s.wizardFieldGroupHead}>
+                      <LuTag aria-hidden />
+                      <div>
+                        <strong>Datos de la línea</strong>
+                        <span>Así aparecerá al cotizar</span>
                       </div>
-                    </label>
+                    </div>
 
-                    <div className={`${s.fieldBlock} ${s.pricingCostField}`}>
-                      <label className={s.pricingCostLabelWrap}>
-                        <span className={s.fieldLabel}>
-                          {pricingCopy.costLabel}
-                          <em className={s.optionalMark}>Opcional</em>
-                          {pricingCopy.unitSuffix ? (
-                            <em className={s.pricingUnitMark}>{pricingCopy.unitSuffix}</em>
-                          ) : null}
-                        </span>
-                        <span className={s.pricingFieldHelp}>
-                          Tu costo aproximado de fabricación. Se usa para calcular margen y
-                          utilidad; no se muestra al cliente.
-                        </span>
-                        <div className={s.moneyWrap}>
-                          <span className={s.moneyPrefix}>$</span>
-                          <input
-                            className={`${s.moneyInput} ${
-                              pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
-                            }`}
-                            inputMode="numeric"
-                            value={formatMoneyDigits(draft.costoBase)}
-                            onChange={(event) =>
-                              onDraftChange("costoBase", getDigits(event.target.value))
-                            }
-                            placeholder="Ej: 40.000"
-                          />
-                          {pricingCopy.unitSuffix ? (
-                            <span className={s.moneySuffix}>{pricingCopy.unitSuffix}</span>
-                          ) : null}
-                        </div>
+                    <div className={s.formSectionGrid}>
+                      <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                        <span className={s.fieldLabel}>Nombre comercial</span>
+                        <input
+                          className={s.textInput}
+                          value={draft.nombre}
+                          onChange={(event) => onDraftChange("nombre", event.target.value)}
+                          placeholder="Ej: Serie 25 negra"
+                        />
                       </label>
-                      {!draft.costoBase.trim() ? (
-                        <div className={s.pricingCostEmptyHint} aria-live="polite">
-                          <p>Puedes cotizar normalmente sin completar este dato.</p>
-                          <p className={s.pricingCostEmptyHintSecondary}>
-                            Ventora no podrá calcular la utilidad estimada hasta que ingreses
-                            un costo.
-                          </p>
-                        </div>
+
+                      <label className={s.fieldBlock}>
+                        <span className={s.fieldLabel}>Categoría</span>
+                        <select
+                          className={s.selectInput}
+                          value={draft.categoria}
+                          onChange={(event) =>
+                            onDraftChange(
+                              "categoria",
+                              event.target.value as CotizacionLineTemplateCategoria
+                            )
+                          }
+                        >
+                          {Object.entries(LINE_TEMPLATE_CATEGORIA_LABELS).map(
+                            ([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+
+                      <label className={s.fieldBlock}>
+                        <span className={s.fieldLabel}>Unidad de cobro</span>
+                        <select
+                          className={s.selectInput}
+                          value={draft.unidadCobro}
+                          onChange={(event) =>
+                            onDraftChange(
+                              "unidadCobro",
+                              event.target.value as CotizacionLineTemplateUnidadCobro
+                            )
+                          }
+                        >
+                          {Object.entries(LINE_TEMPLATE_UNIDAD_LABELS).map(
+                            ([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </label>
+
+                      {!isGlassDraft ? (
+                        <label className={`${s.fieldBlock} ${s.fieldSpan2}`}>
+                          <span className={s.fieldLabel}>Material de perfil</span>
+                          <div className={s.materialSelect}>
+                            {(["Aluminio", "PVC"] as const).map((option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                className={`${s.materialSelectButton} ${
+                                  draft.material === option
+                                    ? s.materialSelectButtonActive
+                                    : ""
+                                }`}
+                                data-material={option}
+                                aria-pressed={draft.material === option}
+                                onClick={() =>
+                                  onDraftChange(
+                                    "material",
+                                    option as CotizacionLineTemplateMaterial
+                                  )
+                                }
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          </div>
+                        </label>
                       ) : null}
                     </div>
                   </div>
-                </div>
 
-                <div className={`${s.activeCard} ${s.activeCardInline}`}>
-                  <div className={s.activeCardCopy}>
-                    <strong>Usar en cotizaciones</strong>
-                    <span>Si está apagada, no aparece al cotizar.</span>
+                  <div className={s.wizardStep1PricingCol}>
+                    <div className={s.wizardFieldGroup}>
+                      <div className={s.wizardFieldGroupHead}>
+                        <LuBadgeDollarSign aria-hidden />
+                        <div>
+                          <strong>Precio y rentabilidad</strong>
+                          <span>
+                            Define cuánto cobrarás y, opcionalmente, tu costo y mínimo.
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className={`${s.pricingFieldsStack} ${s.pricingFieldsWide}`}>
+                        <label
+                          className={`${s.fieldBlock} ${s.fieldHighlight} ${s.pricingSaleField}`}
+                        >
+                          <span className={s.fieldLabel}>
+                            {pricingCopy.saleLabel}
+                            {pricingCopy.unitSuffix ? (
+                              <em className={s.pricingUnitMark}>
+                                {pricingCopy.unitSuffix}
+                              </em>
+                            ) : null}
+                          </span>
+                          <span className={s.pricingFieldHelp}>{pricingCopy.saleHelp}</span>
+                          <div className={s.moneyWrap}>
+                            <span className={s.moneyPrefix}>$</span>
+                            <input
+                              className={`${s.moneyInput} ${s.moneyInputPrimary} ${
+                                pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
+                              }`}
+                              inputMode="numeric"
+                              value={formatMoneyDigits(draft.precioM2Sugerido)}
+                              onChange={(event) =>
+                                onDraftChange(
+                                  "precioM2Sugerido",
+                                  getDigits(event.target.value)
+                                )
+                              }
+                              placeholder="Ej: 65.000"
+                              aria-required="true"
+                            />
+                            {pricingCopy.unitSuffix ? (
+                              <span className={s.moneySuffix}>
+                                {pricingCopy.unitSuffix}
+                              </span>
+                            ) : null}
+                          </div>
+                        </label>
+
+                        <div className={s.pricingSecondaryRow}>
+                          <div className={`${s.fieldBlock} ${s.pricingCostField}`}>
+                            <label className={s.pricingCostLabelWrap}>
+                              <span className={s.fieldLabel}>
+                                {pricingCopy.costLabel}
+                                <em className={s.optionalMark}>Opcional</em>
+                                {pricingCopy.unitSuffix ? (
+                                  <em className={s.pricingUnitMark}>
+                                    {pricingCopy.unitSuffix}
+                                  </em>
+                                ) : null}
+                              </span>
+                              <span className={s.pricingFieldHelp}>
+                                Costo aproximado. No se muestra al cliente.
+                              </span>
+                              <div className={s.moneyWrap}>
+                                <span className={s.moneyPrefix}>$</span>
+                                <input
+                                  className={`${s.moneyInput} ${
+                                    pricingCopy.unitSuffix ? s.moneyInputWithSuffix : ""
+                                  }`}
+                                  inputMode="numeric"
+                                  value={formatMoneyDigits(draft.costoBase)}
+                                  onChange={(event) =>
+                                    onDraftChange(
+                                      "costoBase",
+                                      getDigits(event.target.value)
+                                    )
+                                  }
+                                  placeholder="Ej: 40.000"
+                                />
+                                {pricingCopy.unitSuffix ? (
+                                  <span className={s.moneySuffix}>
+                                    {pricingCopy.unitSuffix}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </label>
+                            {!draft.costoBase.trim() ? (
+                              <div className={s.pricingCostEmptyHint} aria-live="polite">
+                                <p>Puedes cotizar sin este dato.</p>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <label className={`${s.fieldBlock} ${s.pricingCostField}`}>
+                            <span className={s.fieldLabel}>
+                              Mínimo cobrable
+                              <em className={s.optionalMark}>Opcional</em>
+                            </span>
+                            <span className={s.pricingFieldHelp}>
+                              Si el cálculo queda bajo, se cobra este mínimo.
+                            </span>
+                            <div className={s.moneyWrap}>
+                              <span className={s.moneyPrefix}>$</span>
+                              <input
+                                className={s.moneyInput}
+                                inputMode="numeric"
+                                value={formatMoneyDigits(draft.minimoCobrable)}
+                                onChange={(event) =>
+                                  onDraftChange(
+                                    "minimoCobrable",
+                                    getDigits(event.target.value)
+                                  )
+                                }
+                                placeholder="Ej: 95.000"
+                              />
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`${s.activeCard} ${s.activeCardInline}`}>
+                      <div className={s.activeCardCopy}>
+                        <strong>Usar en cotizaciones</strong>
+                        <span>Si está apagada, no aparece al cotizar.</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`${s.switch} ${draft.isActive ? s.switchOn : ""}`}
+                        onClick={() => onDraftChange("isActive", !draft.isActive)}
+                        aria-pressed={draft.isActive}
+                        aria-label="Cambiar estado de la línea"
+                      >
+                        <span className={s.switchThumb} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className={`${s.switch} ${draft.isActive ? s.switchOn : ""}`}
-                    onClick={() => onDraftChange("isActive", !draft.isActive)}
-                    aria-pressed={draft.isActive}
-                    aria-label="Cambiar estado de la línea"
-                  >
-                    <span className={s.switchThumb} />
-                  </button>
                 </div>
 
                 <button
@@ -845,9 +966,9 @@ export function LineTemplateFormWizard({
                     </strong>
                     <span>
                       {showAdvancedDetails
-                        ? "Mínimo, redondeo, merma, proveedor y más"
+                        ? "Redondeo, merma, proveedor y más"
                         : buildAdvancedDetailsSummary(draft) ||
-                          "Mínimo cobrable, redondeo, merma, margen, proveedor…"}
+                          "Redondeo, merma, margen, proveedor…"}
                     </span>
                   </span>
                   {showAdvancedDetails ? (
@@ -869,29 +990,11 @@ export function LineTemplateFormWizard({
                         </span>
                         <div className={s.formSectionHeadCopy}>
                           <h3 id="linea-precio-avanzado-title">Reglas de precio</h3>
-                          <p>Mínimo, redondeo y márgenes</p>
+                          <p>Redondeo y márgenes</p>
                         </div>
                       </div>
 
                       <div className={s.formSectionGrid}>
-                        <label className={s.fieldBlock}>
-                          <span className={s.fieldLabel}>
-                            Mínimo cobrable <em className={s.optionalMark}>opcional</em>
-                          </span>
-                          <div className={s.moneyWrap}>
-                            <span className={s.moneyPrefix}>$</span>
-                            <input
-                              className={s.moneyInput}
-                              inputMode="numeric"
-                              value={formatMoneyDigits(draft.minimoCobrable)}
-                              onChange={(event) =>
-                                onDraftChange("minimoCobrable", getDigits(event.target.value))
-                              }
-                              placeholder="95.000"
-                            />
-                          </div>
-                        </label>
-
                         <label className={s.fieldBlock}>
                           <span className={s.fieldLabel}>Redondeo</span>
                           <select
@@ -1145,23 +1248,220 @@ export function LineTemplateFormWizard({
             >
               {renderStepHeader(
                 3,
-                "Define cómo fabricas esta línea",
-                "Tipo de fabricación, variante y componentes reales",
+                "Fabricación",
+                "Elige origen, revisa componentes y edita solo lo necesario",
                 step3Summary,
                 openStep > 3
               )}
               {openStep === 3 ? (
-                <div className={s.wizardStepBody}>
+                <div className={`${s.wizardStepBody} ${s.wizardStepBodyWorkspace}`}>
                   {!isGlassDraft ? (
-                    <FabricationRecipeEditor
-                      mode="configure"
-                      recipe={ensureRecipe()}
-                      vanoWidthMm={calibrationVanoWidthMm}
-                      vanoHeightMm={calibrationVanoHeightMm}
-                      onRecipeChange={handleRecipeChange}
-                      onVanoWidthChange={onCalibrationVanoWidthMmChange}
-                      onVanoHeightChange={onCalibrationVanoHeightMmChange}
-                    />
+                    draft.fabricationRecipe ? (
+                      <>
+                        {(draft.fabricationRecipePack?.recipes.length ?? 0) > 1 ? (
+                          <label className={`${s.fieldBlock} ${s.recipeVariantPicker}`}>
+                            <span className={s.fieldLabel}>Variante activa de esta línea</span>
+                            <select
+                              className={s.selectInput}
+                              value={draft.fabricationRecipe.id}
+                              onChange={(event) => {
+                                const next = draft.fabricationRecipePack?.recipes.find(
+                                  (entry) => entry.id === event.target.value
+                                );
+                                if (next) applyRecipeToDraft(next, { setAsDefault: true });
+                              }}
+                            >
+                              {draft.fabricationRecipePack?.recipes.map((entry) => (
+                                <option key={entry.id} value={entry.id}>
+                                  {entry.variant || entry.id}
+                                  {!entry.isActive ? " (inactiva)" : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                        <FabricationRecipeEditor
+                          mode="configure"
+                          recipe={draft.fabricationRecipe}
+                          vanoWidthMm={calibrationVanoWidthMm}
+                          vanoHeightMm={calibrationVanoHeightMm}
+                          onRecipeChange={handleRecipeChange}
+                          onVanoWidthChange={onCalibrationVanoWidthMmChange}
+                          onVanoHeightChange={onCalibrationVanoHeightMmChange}
+                          onVariantCreated={(variant) =>
+                            applyRecipeToDraft(variant, { setAsDefault: true })
+                          }
+                          focusComponentId={recipeFocusComponentId}
+                          onChangeRecipeOrigin={() =>
+                            onDraftPatch({
+                              fabricationRecipe: null,
+                              fabricationRecipePack: null,
+                            })
+                          }
+                        />
+                      </>
+                    ) : (
+                      <div className={s.recipeOriginPicker} aria-label="Origen de la receta">
+                        <header className={s.recipeOriginHeader}>
+                          <h3 className={s.recipeOriginTitle}>¿Cómo quieres comenzar?</h3>
+                        </header>
+
+                        <div
+                          className={s.recipeOriginChoiceGrid}
+                          role="radiogroup"
+                          aria-label="Cómo comenzar la receta"
+                        >
+                          {(
+                            [
+                              {
+                                id: "plantilla" as const,
+                                title: "Usar plantilla sugerida",
+                                description:
+                                  "Empieza con una receta inicial de Ventora.",
+                              },
+                              {
+                                id: "base" as const,
+                                title: "Usar base tipológica",
+                                description:
+                                  "Obtén la estructura y completa los descuentos de tu taller.",
+                              },
+                              {
+                                id: "propia" as const,
+                                title: "Crear desde cero",
+                                description:
+                                  "Configura manualmente todos los componentes.",
+                              },
+                            ] as const
+                          ).map((option) => {
+                            const selected = originChoice === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                className={`${s.recipeOriginChoiceCard} ${
+                                  selected ? s.recipeOriginChoiceCardSelected : ""
+                                }`}
+                                onClick={() => handleOriginChoice(option.id)}
+                              >
+                                <span
+                                  className={`${s.recipeOriginRadio} ${
+                                    selected ? s.recipeOriginRadioChecked : ""
+                                  }`}
+                                  aria-hidden
+                                />
+                                <span className={s.recipeOriginChoiceCopy}>
+                                  <strong>{option.title}</strong>
+                                  <span>{option.description}</span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {originChoice === "plantilla" ? (
+                          <section
+                            className={s.recipeOriginDetail}
+                            aria-label="Plantillas sugeridas"
+                          >
+                            <div className={s.recipeOriginTemplateGrid}>
+                              {COMMERCIAL_SUGGESTED_TEMPLATES.map((template) => {
+                                const selected = pendingTemplateId === template.id;
+                                const recommended = suggestedMatchId === template.id;
+                                return (
+                                  <button
+                                    key={template.id}
+                                    type="button"
+                                    className={`${s.recipeOriginTemplateCard} ${
+                                      selected ? s.recipeOriginTemplateCardSelected : ""
+                                    } ${
+                                      recommended && !selected
+                                        ? s.recipeOriginTemplateCardRecommended
+                                        : ""
+                                    }`}
+                                    onClick={() => setPendingTemplateId(template.id)}
+                                    aria-pressed={selected}
+                                  >
+                                    <strong>
+                                      {template.lineHint || template.title} — Corredera · 2
+                                      hojas · Caracol
+                                    </strong>
+                                    {recommended ? (
+                                      <em>Sugerida por el nombre de tu línea</em>
+                                    ) : (
+                                      <em>Plantilla inicial</em>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {pendingTemplate ? (
+                              <div className={s.recipeOriginConfirm}>
+                                <div className={s.recipeOriginConfirmCopy}>
+                                  <strong>
+                                    {pendingTemplate.lineHint || pendingTemplate.title}{" "}
+                                    seleccionada
+                                  </strong>
+                                  <span>Plantilla inicial pendiente de validación</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className={s.primaryButton}
+                                  onClick={() =>
+                                    handleStartFromPath("plantilla", pendingTemplate.id)
+                                  }
+                                >
+                                  Continuar con esta plantilla
+                                </button>
+                              </div>
+                            ) : (
+                              <p className={s.fieldHint}>
+                                Elige L5000, L20 o L25 para continuar.
+                              </p>
+                            )}
+                          </section>
+                        ) : null}
+
+                        {originChoice === "base" ? (
+                          <section
+                            className={s.recipeOriginDetail}
+                            aria-label="Bases tipológicas"
+                          >
+                            <div className={s.recipeOriginChipRow}>
+                              {COMMERCIAL_PENDING_BASES.map((template) => (
+                                <button
+                                  key={template.id}
+                                  type="button"
+                                  className={s.recipeOriginChip}
+                                  onClick={() =>
+                                    handleStartFromPath("base", template.id)
+                                  }
+                                >
+                                  {template.title}
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null}
+
+                        {originChoice === "propia" ? (
+                          <section
+                            className={s.recipeOriginDetail}
+                            aria-label="Crear receta desde cero"
+                          >
+                            <button
+                              type="button"
+                              className={s.primaryButton}
+                              onClick={() => handleStartFromPath("propia")}
+                            >
+                              Iniciar receta manual
+                            </button>
+                          </section>
+                        ) : null}
+                      </div>
+                    )
                   ) : (
                     <p className={s.fieldHint}>
                       Para cristal solo se estima vidrio. No se configuran perfiles de aluminio.
@@ -1182,13 +1482,15 @@ export function LineTemplateFormWizard({
             >
               {renderStepHeader(
                 4,
-                "Valida con un trabajo real",
-                "Compara cada componente calculado con tus cortes reales",
+                "Validación",
+                "Revisa estado, prueba con un vano real y valida para tu taller",
                 step4Summary,
                 false
               )}
               {openStep === 4 ? (
-                <div className={`${s.wizardStepBody} ${s.wizardStepBodyTall}`}>
+                <div
+                  className={`${s.wizardStepBody} ${s.wizardStepBodyTall} ${s.wizardStepBodyWorkspace}`}
+                >
                   {!isGlassDraft ? (
                     <FabricationRecipeEditor
                       mode="validate"
@@ -1198,6 +1500,10 @@ export function LineTemplateFormWizard({
                       onRecipeChange={handleRecipeChange}
                       onVanoWidthChange={onCalibrationVanoWidthMmChange}
                       onVanoHeightChange={onCalibrationVanoHeightMmChange}
+                      onRequestConfigureComponent={(componentId) => {
+                        setRecipeFocusComponentId(componentId);
+                        onWizardStepChange(3);
+                      }}
                     />
                   ) : (
                     <p className={s.fieldHint}>
@@ -1232,14 +1538,21 @@ export function LineTemplateFormWizard({
               className={s.primaryButton}
               onClick={onSave}
               disabled={saveDisabled || isSaving}
+              title={
+                recipeStatus === "validada"
+                  ? "Guarda la línea con pauta habilitada"
+                  : "Puedes guardar borrador y cotizar; la pauta se habilita al validar"
+              }
             >
               {isSaving
                 ? "Guardando..."
                 : isGlassDraft
                   ? "Guardar producto"
-                  : sheetMode === "edit"
-                    ? "Guardar línea"
-                    : "Guardar línea"}
+                  : recipeStatus === "validada"
+                    ? sheetMode === "edit"
+                      ? "Guardar línea"
+                      : "Guardar línea"
+                    : "Guardar borrador"}
             </button>
           </div>
         </footer>

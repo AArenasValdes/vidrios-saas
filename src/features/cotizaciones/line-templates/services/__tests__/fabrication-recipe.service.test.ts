@@ -12,11 +12,18 @@ import {
   createRecipeComponent,
   deriveRecipeStatus,
   duplicateRecipeAsVariant,
+  getFabricationRecipePackFromMetadata,
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
+  mergeFabricationRecipePackIntoMetadata,
   recipeDisplayProfile,
+  selectRecipeForQuote,
   type FabricationRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import {
+  createCommercialPendingBaseRecipe,
+  createCommercialSuggestedRecipe,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
 import { createStructuralRecipeTemplate } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-templates";
 import {
   buildCubicationSnapshotFromCatalogMetadata,
@@ -130,6 +137,87 @@ describe("fabrication recipe domain", () => {
       ),
     });
     expect(dirty.status).toBe("requiere_revision");
+  });
+
+  it("bump de versión solo en el primer cambio post-validada", () => {
+    const recipe = createStructuralRecipeTemplate("corredera_2_hojas");
+    recipe.status = "validada";
+    recipe.validatedAt = new Date().toISOString();
+    recipe.recipeVersion = 1;
+    recipe.versionBumpedSinceValidation = false;
+    const first = markRecipeDirtyAfterEdit({
+      ...recipe,
+      variant: "ajustada",
+    });
+    expect(first.recipeVersion).toBe(2);
+    expect(first.versionBumpedSinceValidation).toBe(true);
+    const second = markRecipeDirtyAfterEdit({
+      ...first,
+      variant: "ajustada-2",
+    });
+    expect(second.recipeVersion).toBe(2);
+  });
+
+  it("migra fabricationRecipe legacy a pack de 1 y espeja default", () => {
+    const legacy = createStructuralRecipeTemplate("corredera_2_hojas");
+    const metadata = { fabricationRecipe: legacy };
+    const pack = getFabricationRecipePackFromMetadata(metadata);
+    expect(pack?.recipes).toHaveLength(1);
+    expect(pack?.defaultRecipeId).toBe(legacy.id);
+    const mirrored = mergeFabricationRecipePackIntoMetadata({}, pack);
+    expect(mirrored.fabricationRecipe).toMatchObject({ id: legacy.id });
+    expect(mirrored.fabricationRecipePack).toBeTruthy();
+  });
+
+  it("en cotización pide variante solo si hay varias activas compatibles", () => {
+    const a = createStructuralRecipeTemplate("corredera_2_hojas");
+    const b = duplicateRecipeAsVariant(a, "open lock", { herrajeTipo: "open_lock" });
+    b.herrajeTipo = "open_lock";
+    const pack = {
+      v: 1 as const,
+      recipes: [
+        { ...a, herrajeTipo: "caracol" as const, isActive: true },
+        { ...b, isActive: true },
+      ],
+      defaultRecipeId: a.id,
+      lastUsedRecipeId: null,
+    };
+    const multi = selectRecipeForQuote({
+      pack,
+      apertura: "corredera",
+    });
+    expect(multi.needsVariantChoice).toBe(true);
+    expect(multi.recipe).toBeNull();
+    const chosen = selectRecipeForQuote({
+      pack,
+      apertura: "corredera",
+      preferredRecipeId: b.id,
+    });
+    expect(chosen.needsVariantChoice).toBe(true);
+    expect(chosen.recipe?.id).toBe(b.id);
+    const single = selectRecipeForQuote({
+      pack: { ...pack, recipes: [pack.recipes[0]!] },
+      apertura: "corredera",
+    });
+    expect(single.needsVariantChoice).toBe(false);
+    expect(single.recipe?.id).toBe(a.id);
+  });
+
+  it("plantillas L5000/L20/L25 son iniciales sugeridas con herraje caracol", () => {
+    const l5000 = createCommercialSuggestedRecipe("sugerida_l5000_corredera_caracol");
+    expect(l5000?.sourceKind).toBe("plantilla_sugerida");
+    expect(l5000?.herrajeTipo).toBe("caracol");
+    const jamba = l5000?.components.find((c) => c.functionKey === "jamba");
+    expect(jamba?.adjustMm).toBe(3);
+    const pierna = l5000?.components.find((c) => c.functionKey === "pierna");
+    expect(pierna?.adjustMm).toBe(18);
+    const l20 = createCommercialSuggestedRecipe("sugerida_l20_corredera_caracol");
+    expect(l20?.components.find((c) => c.functionKey === "riel_superior")?.adjustMm).toBe(12);
+    const l25 = createCommercialSuggestedRecipe("sugerida_l25_corredera_caracol");
+    expect(l25?.components.find((c) => c.functionKey === "pierna")?.adjustMm).toBe(35);
+    const base = createCommercialPendingBaseRecipe("base_abatible_1_hoja");
+    expect(base?.sourceKind).toBe("base_tipologica");
+    expect(base?.components.every((c) => c.adjustMm === 0)).toBe(true);
   });
 
   it("duplica como variante sin heredar validación", () => {

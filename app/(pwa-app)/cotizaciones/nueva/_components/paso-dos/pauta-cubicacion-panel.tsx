@@ -29,6 +29,11 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import {
   RECIPE_STATUS_LABELS,
+  getFabricationRecipePackFromMetadata,
+  herrajeDisplayLabel,
+  inferAperturaFromPiece,
+  selectRecipeForQuote,
+  type FabricationRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import { resolveRecipeFromMetadata } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 
@@ -39,6 +44,10 @@ export type PautaCubicacionFormSlice = {
   alto: string;
   cantidad: string;
   lineTemplateId: string;
+  tipo?: string;
+  sistema?: string;
+  /** Variante/herraje elegido cuando hay varias recetas activas compatibles. */
+  fabricationRecipeId?: string;
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
 };
 
@@ -47,6 +56,7 @@ type Props = {
   selectedTemplate: CotizacionLineTemplate | null;
   savedCubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   onCubicationSnapshotChange: (value: CotizacionItemCubicationSnapshot | null) => void;
+  onFabricationRecipeIdChange?: (recipeId: string) => void;
   onSaveCubicationLineAdjustment?: (input?: {
     snapshot?: CotizacionItemCubicationSnapshot | null;
   }) => Promise<void> | void;
@@ -114,20 +124,44 @@ function resolveActiveCubicationSnapshotInternal(input: {
     dims
   );
   const recipe = input.selectedTemplate
-    ? resolveRecipeFromMetadata(input.selectedTemplate.catalogMetadata)
+    ? resolveRecipeFromMetadata(input.selectedTemplate.catalogMetadata, {
+        preferredRecipeId: input.componentForm.fabricationRecipeId ?? null,
+        apertura: inferAperturaFromPiece(
+          input.componentForm.tipo,
+          input.componentForm.sistema
+        ),
+      })
     : null;
   const catalogHasRecipe = Boolean(recipe && recipe.components.length > 0);
 
   const autoSnapshot =
-    input.selectedTemplate && widthMm > 0 && heightMm > 0
+    input.selectedTemplate && widthMm > 0 && heightMm > 0 && recipe
       ? buildCubicationSnapshotFromCatalogMetadata({
           lineTemplateId,
           catalogMetadata: input.selectedTemplate.catalogMetadata,
           widthMm,
           heightMm,
           quantity,
+          preferredRecipeId: recipe.id,
+          apertura: inferAperturaFromPiece(
+            input.componentForm.tipo,
+            input.componentForm.sistema
+          ),
         })
-      : null;
+      : input.selectedTemplate && widthMm > 0 && heightMm > 0
+        ? buildCubicationSnapshotFromCatalogMetadata({
+            lineTemplateId,
+            catalogMetadata: input.selectedTemplate.catalogMetadata,
+            widthMm,
+            heightMm,
+            quantity,
+            preferredRecipeId: input.componentForm.fabricationRecipeId ?? null,
+            apertura: inferAperturaFromPiece(
+              input.componentForm.tipo,
+              input.componentForm.sistema
+            ),
+          })
+        : null;
 
   // Receta de fabricación: nunca mostrar Marco/División genérico si la línea la tiene.
   if (catalogHasRecipe) {
@@ -208,6 +242,7 @@ export function PautaCubicacionPanel({
   selectedTemplate,
   savedCubicationSnapshot,
   onCubicationSnapshotChange,
+  onFabricationRecipeIdChange,
   onSaveCubicationLineAdjustment,
   isSavingCubicationLineAdjustment,
   lineSelectionHint = "precio",
@@ -227,9 +262,31 @@ export function PautaCubicacionPanel({
   const cubicationConfig = selectedTemplate
     ? getLineTemplateCubicationConfig(selectedTemplate.catalogMetadata)
     : null;
-  const fabricationRecipe = selectedTemplate
-    ? resolveRecipeFromMetadata(selectedTemplate.catalogMetadata)
+  const pieceApertura = inferAperturaFromPiece(componentForm.tipo, componentForm.sistema);
+  const recipePack = selectedTemplate
+    ? getFabricationRecipePackFromMetadata(
+        selectedTemplate.catalogMetadata as Record<string, unknown>
+      )
     : null;
+  const recipeSelection =
+    recipePack && recipePack.recipes.length > 0
+      ? selectRecipeForQuote({
+          pack: recipePack,
+          apertura: pieceApertura,
+          preferredRecipeId: componentForm.fabricationRecipeId ?? null,
+        })
+      : null;
+  const fabricationRecipe =
+    recipeSelection?.recipe ??
+    (selectedTemplate
+      ? resolveRecipeFromMetadata(selectedTemplate.catalogMetadata, {
+          preferredRecipeId: componentForm.fabricationRecipeId ?? null,
+          apertura: pieceApertura,
+        })
+      : null);
+  const needsVariantChoice = Boolean(
+    recipeSelection?.needsVariantChoice && !componentForm.fabricationRecipeId
+  );
   const dims = { lineTemplateId, widthMm, heightMm, quantity };
   const draftMatches = cubicationSnapshotMatchesDimensions(
     componentForm.cubicationSnapshot,
@@ -239,15 +296,19 @@ export function PautaCubicacionPanel({
   const autoSnapshot =
     !personalizadoAssistMode &&
     selectedTemplate &&
-    rules?.enabled &&
+    (rules?.enabled || Boolean(fabricationRecipe)) &&
     widthMm > 0 &&
-    heightMm > 0
+    heightMm > 0 &&
+    !needsVariantChoice
       ? buildCubicationSnapshotFromCatalogMetadata({
           lineTemplateId,
           catalogMetadata: selectedTemplate.catalogMetadata,
           widthMm,
           heightMm,
           quantity,
+          preferredRecipeId:
+            componentForm.fabricationRecipeId ?? fabricationRecipe?.id ?? null,
+          apertura: pieceApertura,
         })
       : null;
   useEffect(() => {
@@ -521,7 +582,9 @@ export function PautaCubicacionPanel({
     ? `${profilesCutUnits} ${profilesCutUnits === 1 ? "corte" : "cortes"}`
     : null;
 
-  const waitingReason = !selectedTemplate
+  const waitingReason = needsVariantChoice
+    ? "Elige el herraje o variante de fabricación para esta tipología."
+    : !selectedTemplate
     ? lineSelectionHint === "medidas"
       ? personalizadoAssistMode
         ? "Elige una línea comercial en Terminaciones para armar el borrador de pauta."
@@ -529,13 +592,66 @@ export function PautaCubicacionPanel({
       : personalizadoAssistMode
         ? "Elige una línea comercial en Precio para armar el borrador de pauta."
         : "Elige una línea comercial en Precio para generar la pauta de esta pieza."
-    : !personalizadoAssistMode && !rules?.enabled
+    : !personalizadoAssistMode && !rules?.enabled && !fabricationRecipe
       ? "Esta línea no tiene pauta activa. Actívala en Líneas y precios."
       : widthMm <= 0 || heightMm <= 0
         ? "Completa ancho y alto para ver vidrio, perfiles y cortes."
         : !hasCuts
           ? "Con estas medidas aún no hay cortes para mostrar."
           : null;
+
+  if (needsVariantChoice && selectedTemplate && recipeSelection) {
+    return (
+      <section
+        className={`${editor.cubicacionCard} ${
+          layout === "compact" ? editor.cubicacionCardCompact : editor.cubicacionCardWorkspace
+        }`}
+        aria-label="Cubicación y pauta"
+      >
+        <header className={editor.cubicacionCardHead}>
+          <div>
+            <small>{layout === "compact" ? "Estimación" : "Despiece"}</small>
+            <strong>Cubicación y pauta</strong>
+            <p>
+              Tipología ya elegida
+              {pieceApertura ? ` · ${pieceApertura.replaceAll("_", " ")}` : ""}. Elige solo
+              herraje o variante.
+            </p>
+          </div>
+          <em className={editor.cubicacionStatusMuted}>Elegir variante</em>
+        </header>
+        <label className={editor.cubicacionWaiting}>
+          <span>Herraje / variante</span>
+          <select
+            value={componentForm.fabricationRecipeId ?? ""}
+            onChange={(event) => {
+              const recipeId = event.target.value;
+              onFabricationRecipeIdChange?.(recipeId);
+              if (!selectedTemplate || !recipeId || widthMm <= 0 || heightMm <= 0) return;
+              const next = buildCubicationSnapshotFromCatalogMetadata({
+                lineTemplateId: String(selectedTemplate.id),
+                catalogMetadata: selectedTemplate.catalogMetadata,
+                widthMm,
+                heightMm,
+                quantity,
+                preferredRecipeId: recipeId,
+                apertura: pieceApertura,
+              });
+              onCubicationSnapshotChange(next);
+            }}
+          >
+            <option value="">Selecciona…</option>
+            {recipeSelection.candidates.map((candidate: FabricationRecipe) => (
+              <option key={candidate.id} value={candidate.id}>
+                {herrajeDisplayLabel(candidate.herrajeTipo, candidate.herrajeLabel)}
+                {candidate.variant ? ` · ${candidate.variant}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+    );
+  }
 
   if (waitingReason) {
     return (
@@ -780,7 +896,7 @@ export function PautaCubicacionPanel({
           {showBarUsageInline ? (
             <div className={editor.cubicacionBars}>
               <span className={editor.cubicacionBarsNote}>
-                Distribución sugerida por perfil (pauta referencial)
+                Distribución referencial de barras
               </span>
               {preview.bars.slice(0, 3).map((bar) => (
                 <span key={bar.index}>

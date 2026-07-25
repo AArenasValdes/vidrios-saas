@@ -56,32 +56,31 @@ Skill recomendada: `premium-ui`. Agente: modo Agent (implementacion). Opcional: 
 
 ## Si la tarea es sobre catálogo / líneas y precios, revisar primero:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 2A + estado operativo
-2. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios`
-3. `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
-4. `src/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates.ts`
-5. `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
+1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md` — capas producto + dónde están las plantillas
+2. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 V1 vendible
+3. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios`
+4. `lineas-precios-page-client.tsx` + `line-template-form-wizard.tsx` + `fabrication-recipe-editor.tsx`
+5. `fabrication-recipe.ts` / `fabrication-recipe-commercial-templates.ts`
 
 Reglas:
 
-- UX ficha desktop está en Fase 4 V1: esenciales + Más detalles + proveedor/sistema + Cubicación asistida + pauta sin precio;
-- Fase 2A/2B de import **ya cerradas** (no reabrir como “falta 2B”);
-- Fase 4 aprobada en alcance acotado: cubicación simple y pauta revisable en `catalog_metadata`; no abrir optimización, nesting, CAD, inventario, fabricación automática ni precios/costos/margen;
-- no romper import revisable ni writes multi-tenant;
-- mobile sheet no debe degradarse al pulir desktop.
+- Plantillas L5000/L20/L25 se eligen en wizard Fabricación (origen), **no** como filas del listado;
+- Fase 2A/2B import **cerradas**;
+- Pack en `catalog_metadata`; no optimización/nesting/CAD/inventario; no llamar “verificadas” a sugeridas;
+- no romper import ni multi-tenant; mobile sheet intacto.
 
 ---
 
 ## Si la tarea es sobre cubicación asistida / pauta de corte, revisar primero:
 
 0. **`docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`** — handoff completo (pegar a otra IA)
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 + decisión Camino 2
-2. `docs/agent-map/FEATURES_MAP.md` — bloque Cotizaciones / Fase 4
-3. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios` y `/cotizaciones/nueva`
-4. `docs/agent-map/DATA_MODEL_MAP.md` — `cotizacion_line_templates.catalog_metadata`
-5. `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`
-6. `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
-7. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`
+0b. **`docs/VENTORA_GIRO_PRODUCTO_2026-07.md`** — giro + go-to-market
+1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 V1 vendible
+2. `docs/agent-map/FEATURES_MAP.md` / `DATA_MODEL_MAP.md` — pack + snapshot
+3. `fabrication-recipe.ts`, `fabrication-recipe.service.ts`, `fabrication-recipe-commercial-templates.ts`
+4. `line-template-form-wizard.tsx` / `fabrication-recipe-editor.tsx`
+5. `pauta-cubicacion-panel.tsx` + `cotizacion-line-template-cubication-snapshot.ts`
+6. Print: `app/print/cotizaciones/[id]/fabricacion/`
 
 ### Decisión Camino 2 (2026-07-19) — obligatoria
 

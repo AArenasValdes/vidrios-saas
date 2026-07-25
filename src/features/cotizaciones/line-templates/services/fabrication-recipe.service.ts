@@ -13,6 +13,7 @@ import {
   createRecipeComponent,
   deriveRecipeStatus,
   getFabricationRecipeFromMetadata,
+  getFabricationRecipePackFromMetadata,
   hasWorkshopProfileCode,
   isComponentConfigured,
   markRecipeDirtyAfterEdit,
@@ -23,7 +24,10 @@ import {
   resolveComponentBarLengthMm,
   resolveRecipeKerfMm,
   sanitizeWorkshopProfileCode,
+  selectRecipeForQuote,
+  type AperturaTipo,
   type FabricationRecipe,
+  type FabricationType,
   type RecipeComponent,
   type RecipeMeasureContext,
   type RecipeStatus,
@@ -791,8 +795,33 @@ export function migrateLegacyCubicationToRecipe(
 }
 
 export function resolveRecipeFromMetadata(
-  metadata: CotizacionLineTemplateCatalogMetadata | Record<string, unknown> | null | undefined
+  metadata: CotizacionLineTemplateCatalogMetadata | Record<string, unknown> | null | undefined,
+  options?: {
+    apertura?: AperturaTipo | null;
+    fabricationType?: FabricationType | null;
+    preferredRecipeId?: string | null;
+  }
 ): FabricationRecipe | null {
+  const pack = getFabricationRecipePackFromMetadata(metadata as Record<string, unknown>);
+  if (pack && pack.recipes.length > 0) {
+    if (
+      options?.apertura ||
+      options?.fabricationType ||
+      options?.preferredRecipeId
+    ) {
+      const selected = selectRecipeForQuote({
+        pack,
+        apertura: options.apertura,
+        fabricationType: options.fabricationType,
+        preferredRecipeId: options.preferredRecipeId,
+      });
+      if (selected.recipe) return selected.recipe;
+      if (selected.needsVariantChoice) return null;
+    }
+    const preferred = getFabricationRecipeFromMetadata(metadata as Record<string, unknown>);
+    if (preferred) return preferred;
+  }
+
   const parsed = getFabricationRecipeFromMetadata(metadata as Record<string, unknown>);
   if (parsed) return parsed;
   if (!metadata) return null;
@@ -863,6 +892,7 @@ export function confirmRecipeValidated(recipe: FabricationRecipe): FabricationRe
     ...recipe,
     status: "validada",
     validatedAt: new Date().toISOString(),
+    versionBumpedSinceValidation: false,
   };
 }
 

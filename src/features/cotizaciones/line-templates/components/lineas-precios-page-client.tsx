@@ -62,7 +62,11 @@ import {
   resolveLineUsageMode,
   type LineTemplateFormDraft,
 } from "./line-template-form-wizard";
-import { mergeFabricationRecipeIntoMetadata } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import {
+  mergeFabricationRecipePackIntoMetadata,
+  getFabricationRecipeFromMetadata,
+  getFabricationRecipePackFromMetadata,
+} from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import {
   buildRecipeCuttingPreview,
   migrateLegacyCubicationToRecipe,
@@ -150,7 +154,13 @@ function buildDraft(template?: CotizacionLineTemplate): LineTemplateFormDraft {
     cuttingSashCount: String(cuttingRules.sashCount),
     isActive: template?.isActive ?? true,
     fabricationRecipe: template
-      ? migrateLegacyCubicationToRecipe(template.catalogMetadata)
+      ? getFabricationRecipeFromMetadata(template.catalogMetadata as Record<string, unknown>) ??
+        migrateLegacyCubicationToRecipe(template.catalogMetadata)
+      : null,
+    fabricationRecipePack: template
+      ? getFabricationRecipePackFromMetadata(
+          template.catalogMetadata as Record<string, unknown>
+        )
       : null,
   };
 }
@@ -699,6 +709,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           }
         ),
         {
+          // Intent de pauta: se persiste aunque la receta aún no esté validada.
+          // getLineTemplateCuttingRules solo habilita la pauta operativa si status === validada.
           enabled: draft.estimationEnabled && draft.cuttingEnabled && !isGlassDraft,
           mode: isGlassDraft ? "sin_corte" : draft.cuttingMode,
           barLengthMm: draft.fabricationRecipe?.defaultBarLengthMm
@@ -714,9 +726,17 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       pricePerM2
     );
 
-    const withRecipe = mergeFabricationRecipeIntoMetadata(
+    const withRecipe = mergeFabricationRecipePackIntoMetadata(
       catalogMetadata,
-      draft.fabricationRecipe
+      draft.fabricationRecipePack ??
+        (draft.fabricationRecipe
+          ? {
+              v: 1 as const,
+              recipes: [draft.fabricationRecipe],
+              defaultRecipeId: draft.fabricationRecipe.id,
+              lastUsedRecipeId: null,
+            }
+          : null)
     ) as typeof catalogMetadata;
     Object.assign(catalogMetadata, withRecipe);
     if (pricePerM2 <= 0) {

@@ -1,6 +1,6 @@
 # Handoff autocontenido — Cubicación y pauta (Ventora)
 
-**Fecha:** 2026-07-21  
+**Fecha:** 2026-07-24  
 **Para:** IA web / ChatGPT / Claude / Gemini / agente sin acceso al repo  
 **Cómo usar:** copia **TODO este archivo** y pégalo en el chat. No necesita abrir otros archivos.  
 **Idioma de respuesta esperado:** español.
@@ -20,6 +20,9 @@ Reglas:
 3. No propongas nesting, CAD libre, optimizador de barras, inventario, fabricación automática ni CRM/Kanban.
 4. No propongas ampliar el selector de “partida” con tipologías (bow, abatible ventana, proyectante, etc.).
 5. Distingue siempre: **precio (línea)** ≠ **estimación (partida)** ≠ **tipología (constructor)**.
+6. L5000 / L20 / L25 = **“Plantillas iniciales sugeridas”**, no “verificadas”, hasta probar fabricaciones reales.
+7. Abatible / proyectante / puertas / paño fijo como base = **“Base pendiente de validación del taller”** — no vender como cubicación lista sin fórmulas validadas.
+8. En cotización: filtrar por tipología ya elegida en la pieza; pedir solo herraje/variante si hay varias recetas activas.
 
 ---
 
@@ -45,11 +48,22 @@ Ventora **no** es:
 
 ---
 
-## 2. Decisión vigente: Recetas de fabricación (2026-07-21)
+## 2. Decisión vigente: Recetas de fabricación (2026-07-24)
 
 **Supersede Camino 2** respecto a “solo 3 partidas genéricas Marco/Hoja”.
 
 El modelo de cubicación pasa a **recetas de componentes reales** (riel, jamba, cabezal, zócalo, pierna, traslapo, etc.) con reglas de corte guiadas. Las 3 partidas V1 quedan como **compatibilidad/migración** al leer líneas antiguas.
+
+**V1 vendible multi-tipología (2026-07-24):**
+- Pack `fabricationRecipePack` en metadata (variantes por línea); `fabricationRecipe` espeja la activa/default.
+- Identidad: material + línea + tipología + hojas + módulos + `aperturaTipo` + `herrajeTipo` (+ `herrajeLabel` si otro) + variante.
+- Wizard: Usar plantilla sugerida | Partir de base tipológica | Configurar propia.
+- Plantillas L5000/L20/L25 = iniciales sugeridas (corredera caracol), no verificadas.
+- Bases tipológicas (paño fijo, abatible, proyectante, puertas) = pendientes, sin mm inventados.
+- Cotización: no re-pide tipología; pide herraje/variante solo si hay varias activas compatibles.
+- Versionado: bump solo en el **primer** cambio post-`validada`; snapshot protege cotizaciones.
+- Resumen fabricación interno: `/print/cotizaciones/[id]/fabricacion` (separado del PDF cliente).
+- FFD = “Distribución referencial de barras”.
 
 | Capa | Rol | Obligatorio para cotizar |
 |---|---|---|
@@ -61,10 +75,11 @@ El modelo de cubicación pasa a **recetas de componentes reales** (riel, jamba, 
 ### Mejor solución
 
 1. Cotizar con precio **no requiere** cubicación.
-2. Tipo de fabricación → **plantilla estructural** editable (no motor único marco/hoja).
-3. El taller vincula perfiles y valida con un trabajo real.
+2. Tipo de fabricación → plantilla sugerida / base tipológica / propia editable.
+3. El taller vincula perfiles y valida con un trabajo real (“Validé esta receta para mi taller”).
 4. Tipologías complejas → **constructor**; la **receta** define cortes.
-5. No abrir optimizador / nesting / CAD / ERP técnico. La distribución de barras es **sugerida / referencial**.
+5. No abrir optimizador / nesting / CAD / ERP técnico. La distribución de barras es **referencial**.
+6. No promocionar “fabricaciones más comunes” hasta validación real de correderas + fórmulas de otras tipologías.
 
 ---
 
@@ -103,28 +118,35 @@ el campo “Sistema que fabrica” parecía un catálogo de tipologías (bow, ab
 
 ```text
 A) Catálogo privado (configuración)
-   Ruta conceptual: Configuración → Líneas y precios
-   1. Crear línea comercial: nombre, categoría, material, precio, mínimo, redondeo
-   2. Elegir uso: Solo cotizar | Estimación | Cubicación y pauta
-   3. Si activa cubicación: tipo de fabricación → plantilla estructural (riel, jamba, cabezal…)
-   4. Asignar códigos de perfil reales del taller + descuentos mm
-   5. Validar con un trabajo real (estados de receta hasta Validada)
-   Nota: partidas Marco/Hoja V1 solo migran líneas antiguas; no son la UI principal.
+   Ruta: Configuración → Empresa → Catálogo / Líneas y precios
+   1. Crear línea: nombre, precio, mínimo, redondeo (esto alcanza para cotizar)
+   2. Uso: Solo cotizar | Estimación | Cubicación y pauta
+   3. Fabricación — primero ORIGEN (arriba en UI):
+      - Plantilla inicial sugerida (L5000 / L20 / L25 corredera caracol) — NO verificada
+      - Base tipológica (paño fijo, abatible, proyectante, puertas) — pendiente de taller
+      - Configurar propia
+   4. Tipología + herraje + hojas → perfiles (códigos reales) → barras referenciales
+   5. Validar: “Validé esta receta para mi taller”
+   Nota: las plantillas NO son filas del listado de 21 líneas; se eligen al editar Fabricación.
+   Pack: varias variantes (herraje) por línea en fabricationRecipePack.
 
 B) Cotizar (Quote Studio desktop)
-   1. Elegir componente (ventana, puerta, etc.)
-   2. Elegir línea del catálogo (esto trae el precio)
-   3. Composición / tipología en constructor si aplica
-   4. Ingresar medidas
-   5. Si la línea tiene pauta activa: ver “Cubicación y pauta” / despiece revisable
-   6. Al guardar la pieza: se congela un snapshot histórico v2 (incluye receta)
+   1. Tipología de la pieza (ventana corredera, etc.) — ya elegida
+   2. Línea del catálogo (precio)
+   3. Constructor si la composición es compleja
+   4. Medidas → panel Cubicación y pauta
+   5. Si varias recetas activas compatibles → pedir solo herraje/variante
+   6. Guardar → snapshot [cub:] v2 (congela pauta + receta)
 
-C) Ajuste
-   - Se puede editar la pauta solo para esa cotización
-   - Se puede “guardar ajuste” de vuelta a la línea (con cuidado de estado)
-   - Se puede ver pauta consolidada de toda la cotización
-   - Barras = distribución sugerida / referencial (no optimizador)
+C) Ajuste y documentos
+   - Editar pauta solo esta cotización; opcional guardar ajuste a la línea
+   - Pauta consolidada de la cotización
+   - Barras = “Distribución referencial de barras” (no optimizador)
+   - Resumen fabricación interno: /print/cotizaciones/[id]/fabricacion
+   - PDF cliente: comercial, sin técnico
 ```
+
+Giro de producto completo: `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 
 ### Preguntas típicas del usuario → respuesta correcta
 

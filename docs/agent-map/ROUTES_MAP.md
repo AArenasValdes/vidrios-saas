@@ -225,7 +225,7 @@
 - **Proposito**: Formulario guiado de nueva cotizacion y escritorio desktop para construir cotizaciones completas.
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Formulario multi-paso (Cliente, Componentes, Resumen), selector `por_item` / `total_global`, guardado de borrador y presupuesto. En desktop `>=1024px`, Paso 2 ofrece **Presupuesto** y **Constructor** sobre el mismo `draft.items`. Constructor incluye siete presets — Fijo, Corredera, Abatible, Oscilobatiente, Proyectante, Puerta y Paño libre —, tablero cuadriculado, tarjetas seleccionables, medidas/cantidad/nombre editables, duplicado, eliminación, reordenamiento, progreso e inspector de línea, vidrio, material, color, apertura y precio. La paleta reutiliza `COLOR_OPTIONS`. El editor avanzado de una pieza sigue disponible mediante **Personalizado -> Abrir constructor**. Los productos de cristal guardados (`categoria='vidrio'`) pueden agregarse sin perfilería. En **Espejo** y **Cubierta de mesa** no se pide material ni color de perfil. Mobile conserva el wizard anterior.
-- **Fase 4 visible en desktop**: panel **Cubicacion y pauta** con tabla editable `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, acciones Recalcular / Restaurar / Agregar corte y persistencia `[cub:]` (`source` auto|manual). Snapshot por cotización, ajuste manual, guardado confirmado en línea y pauta consolidada están implementados; la calibración con ejemplos reales de taller sigue pendiente.
+- **Fase 4 visible en desktop (V1 vendible 2026-07-24)**: panel **Cubicacion y pauta** con tabla editable, Recalcular / Restaurar / Agregar corte, snapshot [cub:] v2. Filtra recetas del pack por tipología de la pieza; pide herraje/variante solo si hay varias activas. Barras = distribución referencial. Calibración con piloto real sigue pendiente.
 - **Componentes principales**: `PasoDosSeccion`, `QuoteConstructorWorkspace`, `GuidedVisualComposer` e internos de la página.
 - **Nota onboarding 2026-06-19**: La entrada inicial debe priorizar `Cotizacion rapida` (`total_global`) y mostrar exito/resumen de PDF antes de pedir datos de empresa. No volver a montar Joyride contextual en esta ruta.
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
@@ -395,15 +395,15 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: CRUD del catálogo privado comercial y técnico V1 (proveedor, sistema, línea, precios comerciales cuando existan, y reglas simples de cubicación/pauta revisable)
+- **Proposito**: CRUD del catálogo privado (precios) + configuración de **recetas de fabricación** (pack en `catalog_metadata`)
 - **Usuario objetivo**: Admin autenticado
-- **Componentes principales**: `LineasPreciosPageClient` en `src/features/cotizaciones/line-templates/components/`
+- **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`, `FabricationRecipeEditor`
 - **Hooks**: `useCotizacionLineTemplates`
 - **Tablas Supabase relacionadas**: `cotizacion_line_templates`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas, agrupar por proveedor/sistema, configurar cubicación y pauta V1, ir a importación
-- **UX desktop (≥1024, 2026-07-18)**: modal ancho; esenciales (identidad + precio venta/costo + activa); **Agregar más detalles** (mínimo, redondeo, merma, margen, proveedor, sistema, vigencia, vidrio/cristal); aside con vista previa + Cubicación asistida. Fase 4 permite elegir sistema V1, estado de validacion y perfiles por rol; pauta de corte sin precio queda como calculo referencial; scroll interno controlado
-- **Archivos a tocar para modificar**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`, `lineas-precios-page-client.module.css`, resto de `src/features/cotizaciones/line-templates/**`
-- **Riesgos**: Requiere migración `20260709153000_extend_cotizacion_line_templates_catalog.sql` en el entorno. Sin migración, writes de campos de catálogo fallan con mensaje explícito. Fase 4 V1 permite cubicación y pauta revisable guardadas en `catalog_metadata`, pero no precios/costos/margen, optimización de pérdida, nesting, CAD, inventario ni fabricación automática. No mostrar formulas, JSON ni variables libres al usuario.
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas; wizard Fabricación: plantilla sugerida (L5000/L20/L25) | base tipológica | propia; validar receta; importar
+- **UX (2026-07-24)**: paso Fabricación con identidad de receta arriba + origen plantilla/base/propia. Las plantillas **no** aparecen como filas del listado: se eligen al editar una línea en uso “Cubicación y pauta”.
+- **Archivos a tocar**: `lineas-precios-page-client.tsx`, `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`, `fabrication-recipe*.ts`, resto de `line-templates/**`
+- **Riesgos**: Migración catalog extendida requerida. No precios en pauta, no optimizador/nesting/CAD/inventario. No llamar “verificadas” a L5000/L20/L25. No mostrar formulas/JSON al usuario.
 
 ---
 
@@ -518,4 +518,5 @@
 
 | Ruta | Proposito | Archivo |
 |---|---|---|
+| `/print/cotizaciones/[id]/fabricacion` | Resumen interno de fabricación / pauta (sin precios). Separado del PDF cliente. Enlace desde detalle de cotización. | `app/print/cotizaciones/[id]/fabricacion/page.tsx`, `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts` |
 | `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. Usa el renderer compartido: croquis protagonista (`maxH: 260`, marco hasta 248 px), perfiles, cotas y aperturas. Preview/export HTML revisados; falta rasterizar un PDF descargado real. Características vía `buildCotizacionItemPrintSpecs()` (sin Material/Color en Espejo/Cubierta de mesa). | `app/print/cotizaciones/[id]/page.tsx`, `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`, `src/features/cotizaciones/visual-composer/` |

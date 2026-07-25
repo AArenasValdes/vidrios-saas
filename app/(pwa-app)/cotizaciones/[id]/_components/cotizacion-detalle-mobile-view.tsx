@@ -29,6 +29,7 @@ type Props = {
   updatedLabel: string;
   editHref: string;
   editComponentsHref: string;
+  fabricacionHref: string;
   copyFeedback: string | null;
   onDelete: () => Promise<void> | void;
   onCopyApprovalLink: () => Promise<void> | void;
@@ -49,6 +50,7 @@ export function CotizacionDetalleMobileView({
   updatedLabel,
   editHref,
   editComponentsHref,
+  fabricacionHref,
   copyFeedback,
   onDelete,
   onCopyApprovalLink,
@@ -150,6 +152,10 @@ export function CotizacionDetalleMobileView({
             <LuEye aria-hidden />
             {isPreparingPdf ? "Preparando PDF..." : "Ver PDF"}
           </button>
+
+          <Link className={s.ghostButton} href={fabricacionHref}>
+            Resumen fabricación
+          </Link>
 
           <Link className={s.ghostButton} href={editHref}>
             <LuPencil aria-hidden />

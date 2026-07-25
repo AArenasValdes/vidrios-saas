@@ -47,13 +47,89 @@ export const RECIPE_STATUSES = [
 export type RecipeStatus = (typeof RECIPE_STATUSES)[number];
 
 export const RECIPE_STATUS_LABELS: Record<RecipeStatus, string> = {
-  sin_configurar: "Sin configurar",
-  en_configuracion: "En configuración",
-  lista_para_validar: "Lista para validar",
-  en_validacion: "En validación",
-  validada: "Validada",
+  sin_configurar: "Borrador",
+  en_configuracion: "Borrador",
+  lista_para_validar: "Lista para probar",
+  en_validacion: "Lista para probar",
+  validada: "Validada por la empresa",
   requiere_revision: "Requiere revisión",
 };
+
+/** Apertura / tipología de movimiento de la receta. */
+export const APERTURA_TIPOS = [
+  "fija",
+  "corredera",
+  "abatible",
+  "proyectante",
+  "puerta_abatible",
+  "puerta_corredera",
+  "otro",
+] as const;
+
+export type AperturaTipo = (typeof APERTURA_TIPOS)[number];
+
+export const APERTURA_TIPO_LABELS: Record<AperturaTipo, string> = {
+  fija: "Paño fijo",
+  corredera: "Corredera",
+  abatible: "Abatible",
+  proyectante: "Proyectante",
+  puerta_abatible: "Puerta abatible",
+  puerta_corredera: "Puerta corredera",
+  otro: "Otra apertura",
+};
+
+/** Herraje / cierre de la receta (separado de apertura). */
+export const HERRAJE_TIPOS = [
+  "caracol",
+  "open_lock",
+  "manilla",
+  "cremona",
+  "cerradura",
+  "ninguno",
+  "otro",
+] as const;
+
+export type HerrajeTipo = (typeof HERRAJE_TIPOS)[number];
+
+export const HERRAJE_TIPO_LABELS: Record<HerrajeTipo, string> = {
+  caracol: "Caracol",
+  open_lock: "Open Lock",
+  manilla: "Manilla",
+  cremona: "Cremona",
+  cerradura: "Cerradura",
+  ninguno: "Sin herraje",
+  otro: "Otro",
+};
+
+export function herrajeDisplayLabel(
+  herrajeTipo: HerrajeTipo,
+  herrajeLabel?: string | null
+): string {
+  if (herrajeTipo === "otro") {
+    const custom = (herrajeLabel ?? "").trim();
+    return custom || "Otro (sin nombre)";
+  }
+  return HERRAJE_TIPO_LABELS[herrajeTipo];
+}
+
+export function aperturaFromFabricationType(type: FabricationType): AperturaTipo {
+  if (type === "pano_fijo") return "fija";
+  if (type.startsWith("corredera") || type === "shower_corredera" || type === "cierre_logia") {
+    return "corredera";
+  }
+  if (type === "abatible" || type === "shower_abatible") return "abatible";
+  if (type === "proyectante") return "proyectante";
+  if (type === "puerta_abatible") return "puerta_abatible";
+  if (type === "puerta_corredera") return "puerta_corredera";
+  return "otro";
+}
+
+export function fabricationTypeMatchesApertura(
+  type: FabricationType,
+  apertura: AperturaTipo
+): boolean {
+  return aperturaFromFabricationType(type) === apertura;
+}
 
 export const RECIPE_COMPONENT_FUNCTIONS = [
   "riel_superior",
@@ -222,7 +298,15 @@ export type RecipeValidationCase = {
 
 export type FabricationRecipe = {
   v: 1;
+  /** Id estable de la variante dentro del pack de la línea. */
+  id: string;
+  /** Versión de contenido; sube en el primer cambio tras validar (V1 sin historial navegable). */
+  recipeVersion: number;
   fabricationType: FabricationType;
+  aperturaTipo: AperturaTipo;
+  herrajeTipo: HerrajeTipo;
+  /** Obligatorio cuando herrajeTipo === "otro". */
+  herrajeLabel: string;
   variant: RecipeVariant;
   sashCount: number;
   moduleCount: number;
@@ -230,10 +314,24 @@ export type FabricationRecipe = {
   defaultBarLengthMm: number;
   /** Pérdida por corte / kerf (mm). Aplica a todos los perfiles. */
   defaultKerfMm: number;
+  isActive: boolean;
+  usageCount: number;
+  lastUsedAt: string | null;
   status: RecipeStatus;
   components: RecipeComponent[];
   validatedAt: string | null;
   validationCase: RecipeValidationCase | null;
+  /** Origen comercial: plantilla sugerida | base tipológica | propia. */
+  sourceKind: "plantilla_sugerida" | "base_tipologica" | "propia" | "migrada";
+  /** true si ya se hizo bump de versión en el ciclo actual post-validación. */
+  versionBumpedSinceValidation: boolean;
+};
+
+export type FabricationRecipePack = {
+  v: 1;
+  recipes: FabricationRecipe[];
+  defaultRecipeId: string | null;
+  lastUsedRecipeId: string | null;
 };
 
 export type WorkshopProfile = {
@@ -280,27 +378,42 @@ function createId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+export function createRecipeId() {
+  return createId("recipe");
+}
+
 export function createEmptyRecipe(
   fabricationType: FabricationType = "personalizado"
 ): FabricationRecipe {
+  const aperturaTipo = aperturaFromFabricationType(fabricationType);
   return {
     v: 1,
+    id: createRecipeId(),
+    recipeVersion: 1,
     fabricationType,
+    aperturaTipo,
+    herrajeTipo: "ninguno",
+    herrajeLabel: "",
     variant: "estandar",
     sashCount: fabricationType.includes("corredera_3")
       ? 3
       : fabricationType.includes("corredera_4")
         ? 4
-        : fabricationType.includes("corredera") || fabricationType.includes("puerta")
+        : fabricationType.includes("corredera") || fabricationType === "puerta_corredera"
           ? 2
           : 1,
     moduleCount: 1,
     defaultBarLengthMm: 6000,
     defaultKerfMm: 3,
+    isActive: true,
+    usageCount: 0,
+    lastUsedAt: null,
     status: "sin_configurar",
     components: [],
     validatedAt: null,
     validationCase: null,
+    sourceKind: "propia",
+    versionBumpedSinceValidation: false,
   };
 }
 
@@ -355,6 +468,19 @@ export function parseFabricationRecipe(value: unknown): FabricationRecipe | null
   const status = RECIPE_STATUSES.includes(value.status as RecipeStatus)
     ? (value.status as RecipeStatus)
     : "sin_configurar";
+  const aperturaTipo = APERTURA_TIPOS.includes(value.aperturaTipo as AperturaTipo)
+    ? (value.aperturaTipo as AperturaTipo)
+    : aperturaFromFabricationType(fabricationType);
+  const herrajeTipo = HERRAJE_TIPOS.includes(value.herrajeTipo as HerrajeTipo)
+    ? (value.herrajeTipo as HerrajeTipo)
+    : "ninguno";
+  const sourceKind =
+    value.sourceKind === "plantilla_sugerida" ||
+    value.sourceKind === "base_tipologica" ||
+    value.sourceKind === "propia" ||
+    value.sourceKind === "migrada"
+      ? value.sourceKind
+      : "migrada";
 
   const components = Array.isArray(value.components)
     ? value.components
@@ -364,16 +490,26 @@ export function parseFabricationRecipe(value: unknown): FabricationRecipe | null
 
   return {
     v: 1,
+    id: asText(value.id) || createRecipeId(),
+    recipeVersion: asPositiveInt(value.recipeVersion, 1),
     fabricationType,
+    aperturaTipo,
+    herrajeTipo,
+    herrajeLabel: asText(value.herrajeLabel),
     variant: asText(value.variant, "estandar") || "estandar",
     sashCount: asPositiveInt(value.sashCount, 1),
     moduleCount: asPositiveInt(value.moduleCount, 1),
     defaultBarLengthMm: asPositiveInt(value.defaultBarLengthMm, 6000),
     defaultKerfMm: asNonNeg(value.defaultKerfMm, 3),
+    isActive: value.isActive !== false,
+    usageCount: asNonNeg(value.usageCount, 0),
+    lastUsedAt: asText(value.lastUsedAt) || null,
     status,
     components,
     validatedAt: asText(value.validatedAt) || null,
     validationCase: parseValidationCase(value.validationCase),
+    sourceKind,
+    versionBumpedSinceValidation: value.versionBumpedSinceValidation === true,
   };
 }
 
@@ -472,7 +608,16 @@ export function getFabricationRecipeFromMetadata(
   metadata: Record<string, unknown> | null | undefined
 ): FabricationRecipe | null {
   if (!metadata) return null;
-  return parseFabricationRecipe(metadata.fabricationRecipe);
+  const pack = getFabricationRecipePackFromMetadata(metadata);
+  if (!pack || pack.recipes.length === 0) return null;
+  const defaultId = pack.defaultRecipeId;
+  const fromDefault = defaultId
+    ? pack.recipes.find((recipe) => recipe.id === defaultId && recipe.isActive)
+    : null;
+  if (fromDefault) return fromDefault;
+  const active = listActiveRecipes(pack);
+  if (active.length === 0) return pack.recipes[0] ?? null;
+  return pickPreferredActiveRecipe(pack, active);
 }
 
 export function mergeFabricationRecipeIntoMetadata(
@@ -482,10 +627,205 @@ export function mergeFabricationRecipeIntoMetadata(
   const next: Record<string, unknown> = { ...(metadata ?? {}) };
   if (!recipe) {
     delete next.fabricationRecipe;
+    delete next.fabricationRecipePack;
     return next;
   }
-  next.fabricationRecipe = recipe;
+  const existing = getFabricationRecipePackFromMetadata(metadata);
+  const recipes = existing
+    ? existing.recipes.some((entry) => entry.id === recipe.id)
+      ? existing.recipes.map((entry) => (entry.id === recipe.id ? recipe : entry))
+      : [...existing.recipes, recipe]
+    : [recipe];
+  const pack: FabricationRecipePack = {
+    v: 1,
+    recipes,
+    defaultRecipeId: existing?.defaultRecipeId ?? recipe.id,
+    lastUsedRecipeId: existing?.lastUsedRecipeId ?? null,
+  };
+  return mergeFabricationRecipePackIntoMetadata(next, pack);
+}
+
+export function parseFabricationRecipePack(value: unknown): FabricationRecipePack | null {
+  if (!isRecord(value) || value.v !== 1) return null;
+  const recipes = Array.isArray(value.recipes)
+    ? value.recipes
+        .map((entry) => parseFabricationRecipe(entry))
+        .filter((entry): entry is FabricationRecipe => Boolean(entry))
+    : [];
+  if (recipes.length === 0) return null;
+  const defaultRecipeId = asText(value.defaultRecipeId) || null;
+  const lastUsedRecipeId = asText(value.lastUsedRecipeId) || null;
+  return {
+    v: 1,
+    recipes,
+    defaultRecipeId:
+      defaultRecipeId && recipes.some((recipe) => recipe.id === defaultRecipeId)
+        ? defaultRecipeId
+        : recipes.find((recipe) => recipe.isActive)?.id ?? recipes[0]?.id ?? null,
+    lastUsedRecipeId:
+      lastUsedRecipeId && recipes.some((recipe) => recipe.id === lastUsedRecipeId)
+        ? lastUsedRecipeId
+        : null,
+  };
+}
+
+export function getFabricationRecipePackFromMetadata(
+  metadata: Record<string, unknown> | null | undefined
+): FabricationRecipePack | null {
+  if (!metadata) return null;
+  const pack = parseFabricationRecipePack(metadata.fabricationRecipePack);
+  if (pack) return pack;
+  const legacy = parseFabricationRecipe(metadata.fabricationRecipe);
+  if (!legacy) return null;
+  return {
+    v: 1,
+    recipes: [{ ...legacy, sourceKind: legacy.sourceKind === "propia" ? "migrada" : legacy.sourceKind }],
+    defaultRecipeId: legacy.id,
+    lastUsedRecipeId: null,
+  };
+}
+
+export function mergeFabricationRecipePackIntoMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+  pack: FabricationRecipePack | null
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(metadata ?? {}) };
+  if (!pack || pack.recipes.length === 0) {
+    delete next.fabricationRecipePack;
+    delete next.fabricationRecipe;
+    return next;
+  }
+  const normalized = normalizeRecipePack(pack);
+  next.fabricationRecipePack = normalized;
+  const mirror =
+    (normalized.defaultRecipeId
+      ? normalized.recipes.find(
+          (recipe) => recipe.id === normalized.defaultRecipeId && recipe.isActive
+        )
+      : null) ??
+    listActiveRecipes(normalized)[0] ??
+    normalized.recipes[0] ??
+    null;
+  if (mirror) next.fabricationRecipe = mirror;
+  else delete next.fabricationRecipe;
   return next;
+}
+
+export function listActiveRecipes(pack: FabricationRecipePack): FabricationRecipe[] {
+  return pack.recipes
+    .filter((recipe) => recipe.isActive)
+    .sort((left, right) => {
+      if (right.usageCount !== left.usageCount) return right.usageCount - left.usageCount;
+      const leftUsed = left.lastUsedAt ? Date.parse(left.lastUsedAt) : 0;
+      const rightUsed = right.lastUsedAt ? Date.parse(right.lastUsedAt) : 0;
+      return rightUsed - leftUsed;
+    });
+}
+
+export function pickPreferredActiveRecipe(
+  pack: FabricationRecipePack,
+  active = listActiveRecipes(pack)
+): FabricationRecipe | null {
+  if (active.length === 0) return null;
+  if (pack.defaultRecipeId) {
+    const preferred = active.find((recipe) => recipe.id === pack.defaultRecipeId);
+    if (preferred) return preferred;
+  }
+  if (pack.lastUsedRecipeId) {
+    const last = active.find((recipe) => recipe.id === pack.lastUsedRecipeId);
+    if (last) return last;
+  }
+  return active[0] ?? null;
+}
+
+export function normalizeRecipePack(pack: FabricationRecipePack): FabricationRecipePack {
+  const recipes = pack.recipes.map((recipe) => ({
+    ...recipe,
+    id: recipe.id || createRecipeId(),
+  }));
+  const active = recipes.filter((recipe) => recipe.isActive);
+  let defaultRecipeId = pack.defaultRecipeId;
+  if (defaultRecipeId && !active.some((recipe) => recipe.id === defaultRecipeId)) {
+    defaultRecipeId = active.sort((a, b) => b.usageCount - a.usageCount)[0]?.id ?? null;
+  }
+  if (!defaultRecipeId && active.length === 1) {
+    defaultRecipeId = active[0]?.id ?? null;
+  }
+  return {
+    v: 1,
+    recipes,
+    defaultRecipeId,
+    lastUsedRecipeId:
+      pack.lastUsedRecipeId && recipes.some((recipe) => recipe.id === pack.lastUsedRecipeId)
+        ? pack.lastUsedRecipeId
+        : null,
+  };
+}
+
+export function canDeactivateRecipe(
+  pack: FabricationRecipePack,
+  recipeId: string
+): { ok: boolean; warning: string | null } {
+  const target = pack.recipes.find((recipe) => recipe.id === recipeId);
+  if (!target) return { ok: false, warning: "Receta no encontrada." };
+  if (!target.isActive) return { ok: true, warning: null };
+  const activeCount = pack.recipes.filter((recipe) => recipe.isActive).length;
+  if (activeCount <= 1) {
+    return {
+      ok: false,
+      warning: "No puedes desactivar la única receta activa de esta línea.",
+    };
+  }
+  return { ok: true, warning: null };
+}
+
+export function recipesCompatibleWithApertura(
+  pack: FabricationRecipePack,
+  apertura: AperturaTipo
+): FabricationRecipe[] {
+  return listActiveRecipes(pack).filter((recipe) => recipe.aperturaTipo === apertura);
+}
+
+export function recipesCompatibleWithFabricationType(
+  pack: FabricationRecipePack,
+  fabricationType: FabricationType
+): FabricationRecipe[] {
+  return listActiveRecipes(pack).filter(
+    (recipe) =>
+      recipe.fabricationType === fabricationType ||
+      fabricationTypeMatchesApertura(fabricationType, recipe.aperturaTipo)
+  );
+}
+
+export function isHerrajeLabelValid(recipe: Pick<FabricationRecipe, "herrajeTipo" | "herrajeLabel">) {
+  if (recipe.herrajeTipo !== "otro") return true;
+  return recipe.herrajeLabel.trim().length > 0;
+}
+
+export function canValidateRecipe(recipe: FabricationRecipe): {
+  ok: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  if (!isHerrajeLabelValid(recipe)) {
+    errors.push("Indica el nombre del herraje cuando eliges “Otro”.");
+  }
+  const required = recipe.components.filter((component) => component.required);
+  if (required.length === 0) {
+    errors.push("Agrega al menos un componente obligatorio.");
+  }
+  required.forEach((component) => {
+    if (!isComponentConfigured(component)) {
+      errors.push(`${component.functionLabel}: falta configurar medida o cantidad.`);
+    }
+    if (
+      component.kind === "profile" &&
+      !hasWorkshopProfileAssigned(component)
+    ) {
+      errors.push(`${component.functionLabel}: falta código o nombre de perfil de taller.`);
+    }
+  });
+  return { ok: errors.length === 0, errors };
 }
 
 export function hasWorkshopProfileAssigned(component: RecipeComponent): boolean {
@@ -539,37 +879,193 @@ export function deriveRecipeStatus(recipe: FabricationRecipe): RecipeStatus {
 }
 
 export function markRecipeDirtyAfterEdit(recipe: FabricationRecipe): FabricationRecipe {
-  const nextStatus =
-    recipe.status === "validada" || recipe.status === "requiere_revision"
-      ? "requiere_revision"
-      : deriveRecipeStatus({ ...recipe, status: "en_configuracion" });
+  const leavingValidated =
+    recipe.status === "validada" || recipe.status === "requiere_revision";
+  const shouldBump =
+    recipe.status === "validada" &&
+    Boolean(recipe.validatedAt) &&
+    !recipe.versionBumpedSinceValidation;
+
+  const nextStatus = leavingValidated
+    ? "requiere_revision"
+    : deriveRecipeStatus({ ...recipe, status: "en_configuracion" });
 
   return {
     ...recipe,
     status: nextStatus === "lista_para_validar" ? "lista_para_validar" : nextStatus,
-    validatedAt:
-      nextStatus === "requiere_revision" || nextStatus === "validada"
-        ? recipe.validatedAt
-        : null,
+    recipeVersion: shouldBump ? recipe.recipeVersion + 1 : recipe.recipeVersion,
+    versionBumpedSinceValidation:
+      shouldBump || recipe.versionBumpedSinceValidation || leavingValidated,
+    validatedAt: leavingValidated ? recipe.validatedAt : null,
   };
 }
 
 export function duplicateRecipeAsVariant(
   recipe: FabricationRecipe,
-  variantName: string
+  variantName: string,
+  patch: Partial<
+    Pick<FabricationRecipe, "herrajeTipo" | "herrajeLabel" | "aperturaTipo" | "fabricationType">
+  > = {}
 ): FabricationRecipe {
   return {
     ...recipe,
+    id: createRecipeId(),
+    recipeVersion: 1,
     variant: variantName.trim() || "variante",
+    herrajeTipo: patch.herrajeTipo ?? recipe.herrajeTipo,
+    herrajeLabel: patch.herrajeLabel ?? recipe.herrajeLabel,
+    aperturaTipo: patch.aperturaTipo ?? recipe.aperturaTipo,
+    fabricationType: patch.fabricationType ?? recipe.fabricationType,
     status: "en_configuracion",
     validatedAt: null,
     validationCase: null,
+    usageCount: 0,
+    lastUsedAt: null,
+    isActive: true,
+    sourceKind: "propia",
+    versionBumpedSinceValidation: false,
     components: recipe.components.map((component) => ({
       ...component,
       id: createId(component.functionKey),
     })),
   };
 }
+
+export function touchRecipeUsage(recipe: FabricationRecipe): FabricationRecipe {
+  return {
+    ...recipe,
+    usageCount: Math.max(0, recipe.usageCount) + 1,
+    lastUsedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Infiera apertura desde tipología ya elegida en la pieza (tipo + sistema).
+ * No re-pide tipología en cotización.
+ */
+export function inferAperturaFromPiece(
+  tipo: string | null | undefined,
+  sistema: string | null | undefined
+): AperturaTipo | null {
+  const t = (tipo ?? "").trim().toLocaleLowerCase("es");
+  const s = (sistema ?? "").trim().toLocaleLowerCase("es");
+
+  if (t.includes("puerta")) {
+    if (s.includes("corredera")) return "puerta_corredera";
+    if (s.includes("abatible") || !s) return "puerta_abatible";
+  }
+  if (t.includes("ventana") || t.includes("ventana corredera") || !t) {
+    if (s.includes("corredera") || s.includes("bow")) return "corredera";
+    if (s.includes("proyectante")) return "proyectante";
+    if (s.includes("abatible")) return "abatible";
+    if (
+      s.includes("paño fijo") ||
+      s.includes("pano fijo") ||
+      s.includes("fijo") ||
+      s === "paño fijo"
+    ) {
+      return "fija";
+    }
+  }
+  if (t.includes("paño") || t.includes("pano")) return "fija";
+  if (s.includes("corredera")) return "corredera";
+  if (s.includes("proyectante")) return "proyectante";
+  if (s.includes("abatible")) return "abatible";
+  return null;
+}
+
+export type SelectRecipeForQuoteInput = {
+  pack: FabricationRecipePack;
+  /** Tipología de la pieza (ya elegida). */
+  apertura?: AperturaTipo | null;
+  fabricationType?: FabricationType | null;
+  preferredRecipeId?: string | null;
+};
+
+export type SelectRecipeForQuoteResult = {
+  recipe: FabricationRecipe | null;
+  candidates: FabricationRecipe[];
+  /** true si la UI debe pedir solo herraje/variante. */
+  needsVariantChoice: boolean;
+};
+
+/**
+ * Cotización: filtra por tipología de pieza; auto-usa si hay 1; pide variante si hay varias.
+ */
+export function selectRecipeForQuote(
+  input: SelectRecipeForQuoteInput
+): SelectRecipeForQuoteResult {
+  const { pack, preferredRecipeId } = input;
+  let candidates = listActiveRecipes(pack);
+
+  if (input.apertura) {
+    const byApertura = candidates.filter((recipe) => recipe.aperturaTipo === input.apertura);
+    if (byApertura.length > 0) candidates = byApertura;
+  } else if (input.fabricationType) {
+    const byType = candidates.filter(
+      (recipe) =>
+        recipe.fabricationType === input.fabricationType ||
+        fabricationTypeMatchesApertura(input.fabricationType!, recipe.aperturaTipo)
+    );
+    if (byType.length > 0) candidates = byType;
+  }
+
+  if (candidates.length === 0) {
+    return { recipe: null, candidates: [], needsVariantChoice: false };
+  }
+
+  if (preferredRecipeId) {
+    const preferred = candidates.find((recipe) => recipe.id === preferredRecipeId);
+    if (preferred) {
+      return {
+        recipe: preferred,
+        candidates,
+        needsVariantChoice: candidates.length > 1,
+      };
+    }
+  }
+
+  if (candidates.length === 1) {
+    return { recipe: candidates[0] ?? null, candidates, needsVariantChoice: false };
+  }
+
+  // Varias activas: pedir herraje/variante; no forzar default.
+  return {
+    recipe: null,
+    candidates,
+    needsVariantChoice: true,
+  };
+}
+
+export function upsertRecipeInPack(
+  pack: FabricationRecipePack | null,
+  recipe: FabricationRecipe,
+  options?: { setAsDefault?: boolean }
+): FabricationRecipePack {
+  const base: FabricationRecipePack = pack ?? {
+    v: 1,
+    recipes: [],
+    defaultRecipeId: null,
+    lastUsedRecipeId: null,
+  };
+  const exists = base.recipes.some((entry) => entry.id === recipe.id);
+  const recipes = exists
+    ? base.recipes.map((entry) => (entry.id === recipe.id ? recipe : entry))
+    : [...base.recipes, recipe];
+  return normalizeRecipePack({
+    ...base,
+    recipes,
+    defaultRecipeId: options?.setAsDefault
+      ? recipe.id
+      : base.defaultRecipeId ?? recipe.id,
+  });
+}
+
+export const PLANTILLA_SUGERIDA_COPY =
+  "Plantilla inicial sugerida por Ventora. Revísala y valídala según tu proveedor y forma de fabricación.";
+
+export const BASE_TIPOLOGICA_COPY =
+  "Base pendiente de validación del taller";
 
 /** Largo comercial efectivo del perfil: override o default de la receta. */
 export function resolveComponentBarLengthMm(

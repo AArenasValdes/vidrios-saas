@@ -356,6 +356,7 @@ export default function CotizacionDetallePage() {
     updatedLabel: formatCotizacionDate(cotizacion.updatedAt),
     editHref: `/cotizaciones/nueva?edit=${cotizacion.id}`,
     editComponentsHref: `/cotizaciones/nueva?edit=${cotizacion.id}&step=2`,
+    fabricacionHref: `/print/cotizaciones/${cotizacion.id}/fabricacion`,
     copyFeedback,
     onDelete: handleDelete,
     onCopyApprovalLink: handleCopyApprovalLink,

@@ -12,30 +12,34 @@ Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones a
 
 Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.
 
+Si la tarea toca el giro de producto jul 2026 (recetas, plantillas, posicionamiento), leer `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
+
 Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/design/FASE_5_DASHBOARD_BRIEF.md` (ya implementado en desktop; no reabrir CRM/seguimiento).
 
 ## Orden recomendado de lectura
 
 1. **`../VENTORA_DESKTOP_TALLER_ROADMAP.md`** - Documento rector de desktop taller y orden de milestones
-2. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
-3. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
-4. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
-5. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
-6. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
-7. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
-8. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
-9. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
-10. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
-11. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
-12. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta / partidas V1 (pegar a otra IA)
-13. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF (leer antes de continuar esta superficie)
+2. **`../VENTORA_GIRO_PRODUCTO_2026-07.md`** - Giro de producto: capas, V1 vendible, go-to-market
+3. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
+4. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
+5. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
+6. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
+7. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
+8. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
+9. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
+10. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
+11. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
+12. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
+13. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta (pegar a otra IA)
+14. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF
+15. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
 
 ## Foco actual
 
 - Desktop taller, no CRM generico.
-- **Fase actual = Fase 4 — Cubicación y pauta revisable**. Modelo vigente (2026-07-21): **recetas de fabricación** (componentes reales + reglas guiadas) en el wizard de línea; snapshot cotización v2. Camino 2 (3 partidas Marco/Hoja) queda como migración. Handoff: `CUBICACION_PAUTA_HANDOFF.md`.
-- Cortes Fase 4: receta en `catalog_metadata.fabricationRecipe`; validación por componente; pauta por perfil; snapshot `[cub:]` v2; editor en pasos 3–4 del modal Nueva línea.
-- Fuera de alcance: optimizador real de barras, nesting, CAD, inventario, fabricación automática.
+- **Fase actual = Fase 4 — Cubicación V1 vendible multi-tipología** (2026-07-24). Pack `fabricationRecipePack` + espejo `fabricationRecipe`; plantillas L5000/L20/L25 iniciales sugeridas; bases tipológicas pendientes; filtro por tipología en cotizar; print `/print/cotizaciones/[id]/fabricacion`. Giro: `../VENTORA_GIRO_PRODUCTO_2026-07.md`. Handoff: `CUBICACION_PAUTA_HANDOFF.md`.
+- Camino 2 (3 partidas Marco/Hoja) = solo migración.
+- Fuera de alcance: optimizador real, nesting, CAD, inventario, fabricación automática, marketing de “más comunes” antes de validación piloto.
 - No reinventar 2B ni Quote Studio sin bug concreto. CRM/Kanban fuera.
 
 ## Advertencia critica
@@ -57,18 +61,21 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 ## Ubicacion
 
 ```
-docs/agent-map/
-  README.md                 <- Este archivo
-  ../VENTORA_DESKTOP_TALLER_ROADMAP.md <- Documento rector de desktop taller
-  PROJECT_OVERVIEW.md       <- Stack, arquitectura, carpetas
-  ROUTES_MAP.md             <- Mapa completo de rutas
-  FEATURES_MAP.md           <- Organizacion por feature
-  DATA_MODEL_MAP.md         <- Tablas, relaciones, campos
-  COMPONENTS_MAP.md         <- Componentes reutilizables
-  AGENT_TASK_GUIDE.md       <- Guia practica por tarea
-  CONSTRUCTOR_DESKTOP_HANDOFF.md <- Handoff Constructor desktop / SVG / PDF
-  CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (para otras IAs)
-  TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
-  CHANGELOG_AGENT_MAP.md    <- Historial de cambios
-  ACTIVATION_ONBOARDING.md  <- Onboarding /activacion (primera cotizacion)
+docs/
+  VENTORA_DESKTOP_TALLER_ROADMAP.md <- Documento rector de desktop taller
+  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Giro de producto jul 2026
+  manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md
+  agent-map/
+    README.md                 <- Este archivo
+    PROJECT_OVERVIEW.md       <- Stack, arquitectura, carpetas
+    ROUTES_MAP.md             <- Mapa completo de rutas
+    FEATURES_MAP.md           <- Organizacion por feature
+    DATA_MODEL_MAP.md         <- Tablas, relaciones, campos
+    COMPONENTS_MAP.md         <- Componentes reutilizables
+    AGENT_TASK_GUIDE.md       <- Guia practica por tarea
+    CONSTRUCTOR_DESKTOP_HANDOFF.md <- Handoff Constructor desktop / SVG / PDF
+    CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (para otras IAs)
+    TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
+    CHANGELOG_AGENT_MAP.md    <- Historial de cambios
+    ACTIVATION_ONBOARDING.md  <- Onboarding /activacion (primera cotizacion)
 ```

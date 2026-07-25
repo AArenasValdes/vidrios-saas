@@ -1,6 +1,6 @@
 # AGENTS.md - Ventora
 
-Lee antes de editar. Ultima consolidacion: 2026-06-30.
+Lee antes de editar. Ultima consolidacion: 2026-07-24.
 
 ## Regla principal
 
@@ -18,33 +18,41 @@ Si dos documentos se contradicen, manda este orden:
 2. `AGENTS.md`
 3. `docs/agent-map/README.md`
 4. mapas tecnicos en `docs/agent-map/`
-5. briefs de apoyo (`docs/ventora-master-brief.md`, `docs/COTIZACION_FLOW_CONTEXT.md`, `docs/salida-beta-checklist.md`, `README.md`)
+5. briefs de apoyo (`docs/VENTORA_GIRO_PRODUCTO_2026-07.md`, `docs/ventora-master-brief.md`, `docs/COTIZACION_FLOW_CONTEXT.md`, `docs/salida-beta-checklist.md`, `README.md`)
 
 ## Producto
 
 **Software comercial para empresas de vidrios, aluminio y PVC que ayuda a cotizar desde el celular, preparar mejor la cotizacion desde desktop, enviar PDF profesional, ordenar clientes/obras/cotizaciones y dar seguimiento comercial real.**
 
+- Giro consolidado (jul 2026): `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
+- Capas: captacion → cierre comercial → catalogo de precios → constructor (si hace falta) → **pauta/receta opcional**
 - La cotizacion existe como herramienta de cierre, no como identidad del producto
 - Frase clave: "Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."
-- No reintroducir cotizador tecnico, ERP, logistica ni motor de compatibilidades
-- La prioridad de desktop ya no es un CRM generico. El foco es escritorio de cotizacion, configuracion visual guiada, catalogo privado futuro y control comercial real para talleres.
-- Para marketing, growth, contenido, campanas, mensajes, guiones, prospeccion o cambios de posicionamiento, leer primero `AGENTS_MARKETING.md` y respetar su seccion **Direccion central de marketing**.
+- No reintroducir cotizador tecnico universal, ERP, logistica ni motor de compatibilidades
+- Desktop: escritorio de cotizacion + catalogo privado + constructor + cubicacion revisable; **no** CRM generico
+- Plantillas L5000/L20/L25 = **iniciales sugeridas** (no verificadas). Bases tipologicas = pendientes de taller
+- PDF cliente sin tecnico; resumen fabricacion interno en `/print/cotizaciones/[id]/fabricacion`
+- Para marketing/growth: `AGENTS_MARKETING.md`
 - Mensaje comercial vigente: "Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."
 
 ## Mapa tecnico
 
 ```text
-docs/agent-map/
-  README.md                   <- Indice maestro (EMPEZAR AQUI)
-  CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (pegar a otra IA)
-  PROJECT_OVERVIEW.md         <- Stack, arquitectura, carpetas
-  ROUTES_MAP.md               <- 17+ rutas con archivos y riesgos
-  FEATURES_MAP.md             <- 14 features con archivos criticos
-  DATA_MODEL_MAP.md           <- Tablas, relaciones, RLS, issues
-  COMPONENTS_MAP.md           <- Componentes reutilizables
-  AGENT_TASK_GUIDE.md         <- Guia practica por tipo de tarea
-  TOKEN_SAVING_RULES.md       <- Reglas para ahorrar tokens
-  CHANGELOG_AGENT_MAP.md      <- Historial de cambios
+docs/
+  VENTORA_DESKTOP_TALLER_ROADMAP.md <- Rector desktop / fases
+  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Giro de producto jul 2026
+  agent-map/
+    README.md                   <- Indice maestro (EMPEZAR AQUI)
+    CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (pegar a otra IA)
+    PROJECT_OVERVIEW.md         <- Stack, arquitectura, carpetas
+    ROUTES_MAP.md               <- Rutas con archivos y riesgos
+    FEATURES_MAP.md             <- Features con archivos criticos
+    DATA_MODEL_MAP.md           <- Tablas, relaciones, RLS, issues
+    COMPONENTS_MAP.md           <- Componentes reutilizables
+    AGENT_TASK_GUIDE.md         <- Guia practica por tipo de tarea
+    TOKEN_SAVING_RULES.md       <- Reglas para ahorrar tokens
+    CHANGELOG_AGENT_MAP.md      <- Historial de cambios
+  manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md <- Manual corto taller
 ```
 
 ## Comandos principales
@@ -58,59 +66,28 @@ docs/agent-map/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-07-21
+Ultima actualizacion operativa: 2026-07-24
 
-- **Paso actual**: **Fase 4 — Cubicación y pauta revisable con recetas de fabricación**. Fase 5 + diseño desktop cerrados para demo; Quote Studio (1), catálogo 2A/2B y constructor V2/cuaderno cerrados o en pulido controlado. Handoffs: `CUBICACION_PAUTA_HANDOFF.md` + `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
-- **Modelo vigente (2026-07-21)**: supersede Camino 2 como UI principal. Catálogo = precio; **receta opcional** (riel/jamba/cabezal/…) = cubicación/pauta; tipologías complejas = constructor. Partidas Marco/Hoja V1 = solo migración. Handoff: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
-- **Corte Fase 4 ya implementado**:
-  - `catalog_metadata.fabricationRecipe` + wizard Nueva línea pasos 3–4;
-  - estados de receta: `sin_configurar` → `validada` / `requiere_revision`;
-  - motor `buildRecipeCuttingPreview()` (cortes por perfil/función, vidrio, barras referenciales);
-  - snapshot cotización **v2** `[cub:]`; panel desktop en `/cotizaciones/nueva`;
-  - placeholders `Marco`/`Hoja` ya no se muestran como código de perfil (UI: `Por asignar`).
-- **Alcance activo Fase 4**: cubicar sin precios y mostrar pauta interna revisable. Permitido: m² vidrio, ml perfiles, cantidad, accesorios, tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, barras y desperdicio solo como referencia.
-- **Fuera de alcance Fase 4 V1**: precios/costos de pauta, inventario, compras, fabricación automática, optimización de pérdida, nesting, CAD y prometer manuales técnicos reales sin calibración de taller.
-- **No abrir por inercia**: CRM/seguimiento, Kanban.
-- **Hitos cerrados (ver roadmap; el orden numérico ≠ orden de ejecución)**:
-  - Fase 1 Quote Studio — cerrada con QA
-  - Fase 2A catálogo + import XLSX/CSV — cerrada
-  - Fase 2B import PDF / cruce técnico — **cerrada** (2026-07-17)
-  - Fase 3 constructor V2/cuaderno — usable; QA responsive y PDF visual OK, con brechas registradas en el handoff
-  - Fase 5 dashboard + pasada diseño desktop — implementada / cerrada por ahora
-- **Estado Constructor 2026-07-20**: modos desktop **Cotización rápida** / **Cotización guiada** sobre el mismo `draft.items`; contrato `quote-piece-domain.ts`; guiada en 5 pasos con Despiece; rápida con resumen técnico + pauta en inspector. Preferencia de modo en localStorage (default rápida). Sin migracion nueva y mobile no monta el workspace rápido.
-- **Estado de validacion actual**: `npm run build` y `npx tsc --noEmit --pretty false --incremental false` pasan; lint puntual de Constructor/renderer pasa. QA navegador 1024/1280/1440/1920 y mobile 390/430 completado. `npm run lint` global esta bloqueado por deuda preexistente de reglas React Compiler; `npm test` esta bloqueado por Jest global `this._moduleMocker.clearMocksOnScope is not a function`.
-- **Rutas ya estabilizadas en pasadas previas**:
-  - `/api/solicitud/[empresa]`
-  - `/presupuesto/[token]`
-  - `/api/dashboard/summary`
-  - `/api/cotizaciones/resumen`
-  - `/api/clientes/resumen`
-  - `/api/solicitudes`
-  - `/api/solicitudes/resumen`
-  - `/api/pwa/push-subscriptions`
-- **Seguridad DB ya endurecida en pasadas previas**:
-  - `web_push_subscriptions` ahora tiene policies RLS para `authenticated`
-- **Hardening adicional ya cerrado**:
-  - helper comun de auth resuelve primero por `auth_user_id` y cae a correo solo por compatibilidad
-  - `/api/pwa/push-subscriptions` ahora desactiva suscripciones por `organization_id + auth_user_id`
-  - `proxy.ts` ahora protege tambien `/solicitudes` y `/configuracion/*`
-- **QA autenticado ya cerrado**:
-  - smoke real completado en `next start` con login valido sobre `/dashboard`, `/clientes`, `/cotizaciones`, `/solicitudes` y `/configuracion/empresa`
-  - `dashboard` navega a `cotizaciones/nueva`
-  - busquedas base de `clientes` y `cotizaciones` responden
-  - `solicitudes` navega a `canales`
-  - `app/layout.tsx` ya no monta `Analytics` ni `SpeedInsights` fuera de Vercel, eliminando errores de consola locales/self-hosted
-- **Smoke cubicación (2026-07-21)**: `admin@test.com` / `1234` — línea con pauta → cotizar → Recalcular → Abrir despiece muestra cortes por función (Riel/Jamba/Cabezal) y resumen ml/barras.
+- **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
+- **Modelo vigente**: `fabricationRecipePack` + espejo `fabricationRecipe`; `aperturaTipo`/`herrajeTipo`; bump solo 1er cambio post-validada; snapshot `[cub:]` v2; print `/print/cotizaciones/[id]/fabricacion`.
+- **Plantillas**: L5000/L20/L25 = iniciales sugeridas (wizard Fabricación, no listado de líneas). Bases tipológicas = pendientes.
+- **Cotizar**: filtra por tipología de pieza; pide herraje solo si hay varias activas.
+- **Handoffs**: `CUBICACION_PAUTA_HANDOFF.md` + `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
 - **Cómo seguir**:
-  1. Fase 4: calibrar con códigos de perfil reales de un piloto (dejar `Por asignar`);
-  2. Constructor/PDF: rasterizar PDF real con Poppler si se toca croquis;
-  3. no reabrir 2B, CRM/Kanban ni inventar tipologías en el catálogo.
-- **Nueva pasada cerrada en cotizaciones**:
-  - Paso 2 ahora soporta cotizacion asistida por linea comercial + medidas
-  - nueva tabla activa `cotizacion_line_templates`
-  - `/configuracion/empresa` ahora expone bloque compacto `Lineas y precios base`
-  - override manual protegido con accion `Recalcular con plantilla`
-  - calculadora integrada secundaria en edicion rapida
+ 1. Calibrar L5000/L20/L25 con fabricaciones reales (piloto);
+ 2. Fórmulas reales paño fijo / abatible / puerta antes de marketing de cobertura amplia;
+ 3. Constructor/PDF: rasterizar PDF real con Poppler si se toca croquis;
+ 4. no reabrir 2B, CRM/Kanban ni inventar tipologías en el catálogo.
+
+### Ya resuelto en pasada 2026-07-24 (Cubicación V1 vendible)
+
+- Pack multi-variante + migración legacy + espejo `fabricationRecipe`
+- Biblioteca comercial (3 sugeridas + 5 bases pendientes)
+- Wizard origen plantilla/base/propia + UX identidad arriba
+- Filtro tipología / selector herraje en pauta de cotización
+- Resumen fabricación print interno separado del PDF cliente
+- Tests de pack, bump versión, plantillas y selección
+- Docs: roadmap, giro producto, handoff, mapas, manual
 
 ### Ya resuelto en pasada 2026-06-11 (Espejo y Cubierta de mesa sin perfileria)
 
@@ -208,8 +185,8 @@ Ultima actualizacion operativa: 2026-07-21
   - flujos profundos de `/cotizaciones/nueva`
   - acciones de edicion/eliminacion en `/clientes`
 - Correr smoke visual de Espejo/Cubierta de mesa en cotizacion y PDF si se toca `shouldRequireProfileMaterialForComponent` o `item-print-specs.ts`
-- Mantener foco en Fase 4 con **recetas de fabricación**: pauta revisable, snapshot v2, calibración con perfiles reales; tipologías complejas en constructor; no abrir Kanban, CRM genérico, inventario, compras ni fabricación automática
-- Antes de tocar cubicación/pauta con otra IA: pegar `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`
+- Mantener foco en Fase 4 V1 vendible: calibrar plantillas sugeridas; no vender bases tipológicas como listas; no abrir Kanban/CRM/inventario/compras/fabricación automática/optimizador
+- Antes de tocar cubicación/pauta con otra IA: pegar `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md` (+ opcional `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`)
 
 ## Notas de QA
 

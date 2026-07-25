@@ -1029,6 +1029,9 @@ function TabDespiece({
           onCubicationSnapshotChange={(value) =>
             onComponentChange("cubicationSnapshot", value)
           }
+          onFabricationRecipeIdChange={(recipeId) =>
+            onComponentChange("fabricationRecipeId", recipeId)
+          }
           onSaveCubicationLineAdjustment={onSaveCubicationLineAdjustment}
           isSavingCubicationLineAdjustment={isSavingCubicationLineAdjustment}
           lineSelectionHint="precio"

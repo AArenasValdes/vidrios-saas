@@ -230,20 +230,24 @@
 ### Componente: LineasPreciosPageClient
 
 - **Archivo**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
-- **Proposito**: CRUD del catalogo privado de lineas/productos. En Fase 4 tambien configura cubicacion asistida V1: sistema, estado de validacion, perfiles por rol, pauta de corte sin precio y preview referencial.
+- **Proposito**: CRUD del catalogo privado. Persiste pack `fabricationRecipePack` (+ espejo `fabricationRecipe`) al guardar la linea.
 - **Usado en**: `/configuracion/empresa/lineas-precios`
-- **Dependencias**: `useCotizacionLineTemplates`, helpers de `cotizacion-line-template.ts`, importadores de catalogo.
-- **Cuando modificarlo**: UX de ficha de linea, reglas simples en `catalog_metadata`, configuracion por proveedor/sistema/linea o preparacion del asistente guiado de calibracion.
-- **Riesgos**: No mostrar formulas/JSON/variables libres. No mezclar cubicacion con precios/costos/margen. No crear migraciones ni reactivar tablas legacy sin aprobacion.
+- **Dependencias**: wizard, `useCotizacionLineTemplates`, helpers de receta/pack.
+- **Riesgos**: No formulas/JSON. No mezclar pauta con precios/margen. No migraciones legacy sin aprobacion.
+
+### Componente: LineTemplateFormWizard / FabricationRecipeEditor
+
+- **Archivos**: `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`
+- **Proposito**: Wizard de linea. Paso Fabricación: origen (plantilla L5000/L20/L25 | base tipológica | propia) → tipología/herraje → perfiles → barras; validación “Validé esta receta para mi taller”.
+- **Cuando modificarlos**: UX de origen/identidad de receta, variantes, estados. Plantillas viven en `fabrication-recipe-commercial-templates.ts`.
 
 ### Componente interno: PautaCubicacionPanel
 
-- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-editor-desktop.tsx`
-- **Proposito**: Panel desktop secundario **Cubicacion y pauta** para Fase 4. Aparece cuando la pieza tiene linea con pauta activa y medidas. Muestra estado de validacion, vidrio estimado, ml de perfiles, accesorios, barras referenciales y tabla `Perfil / Funcion / Medida mm / Cantidad / Total lineal`.
-- **Usado en**: `PasoDosEditorDesktop` tab Medidas.
-- **Dependencias**: `getLineTemplateCuttingRules()`, `getLineTemplateCubicationConfig()`, `buildLineTemplateCuttingPreview()` desde `src/features/cotizaciones/line-templates/types/cotizacion-line-template.ts`.
-- **Cuando modificarlo**: UX de pauta editable por pieza, snapshot `[cub:]` auto/manual, o flujo `Guardar ajuste para esta linea` / pauta consolidada.
-- **Riesgos**: Solo desktop. No mover a mobile sin aprobacion. No agregar precios/costos/margen ni prometer optimizacion; barras/sobrante son referencia.
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/pauta-cubicacion-panel.tsx`
+- **Proposito**: Panel **Cubicacion y pauta**. Resuelve receta del pack por tipología de pieza; selector herraje/variante si hay varias activas; tabla de cortes + barras referenciales; snapshot.
+- **Usado en**: `PasoDosEditorDesktop`, despiece, sheets.
+- **Dependencias**: `selectRecipeForQuote`, `resolveRecipeFromMetadata`, snapshot helpers.
+- **Riesgos**: No re-pedir tipología. No precios en pauta. Barras = referencial.
 
 ### Componente: GuidedVisualComposer
 
