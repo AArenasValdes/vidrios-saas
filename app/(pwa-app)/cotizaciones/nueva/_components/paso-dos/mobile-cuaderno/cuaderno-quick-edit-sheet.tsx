@@ -32,6 +32,11 @@ function getColorOptionsForMaterial(material: ProfileMaterial) {
   return material === "PVC" ? PVC_COLOR_OPTIONS : ALUMINUM_COLOR_OPTIONS;
 }
 
+function isIosViewport(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.platform) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 type Props = {
   item: CotizacionWorkflowItem;
   lineTemplates: CotizacionLineTemplate[];
@@ -124,9 +129,11 @@ export function CuadernoQuickEditSheet({
     if (!panel || typeof window === "undefined" || !window.visualViewport) return;
 
     const viewport = window.visualViewport;
+    const shouldCapKeyboardLift = isIosViewport();
     const syncKeyboardOffset = () => {
       const keyboardOffset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      panel.style.setProperty("--cq-keyboard-offset", `${keyboardOffset}px`);
+      const nextOffset = shouldCapKeyboardLift ? Math.min(keyboardOffset, 88) : keyboardOffset;
+      panel.style.setProperty("--cq-keyboard-offset", `${nextOffset}px`);
     };
 
     syncKeyboardOffset();

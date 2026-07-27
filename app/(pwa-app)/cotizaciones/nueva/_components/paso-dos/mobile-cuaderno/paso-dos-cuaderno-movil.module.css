@@ -980,6 +980,7 @@
 }
 
 .sheetPanel {
+  --cq-keyboard-offset: 0px;
   position: relative;
   z-index: 1;
   display: flex;
@@ -1034,6 +1035,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.78rem;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1285,8 +1288,11 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  min-height: 64px;
-  padding: 0.5rem 1rem;
+  min-height: calc(64px + env(safe-area-inset-top, 0px));
+  padding:
+    calc(0.5rem + env(safe-area-inset-top, 0px))
+    1rem
+    0.5rem;
   background: var(--cq-surface);
   border-bottom: 1px solid var(--cq-border);
 }
