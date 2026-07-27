@@ -58,6 +58,10 @@ import { PasoDosModoCotizacion } from "./paso-dos-modo-cotizacion";
 import { PasoDosFormularioComponente } from "../paso-dos-formulario-componente";
 import { PasoDosFormularioAcciones } from "./paso-dos-formulario-acciones";
 import { PasoDosItemLibreForm } from "./paso-dos-item-libre-form";
+import {
+  PasoDosCuadernoMovil,
+  type PasoDosCuadernoMovilProps,
+} from "./mobile-cuaderno/paso-dos-cuaderno-movil";
 import s from "../../page.module.css";
 
 export type WizardActions = {
@@ -159,6 +163,18 @@ type Props = {
   onOpenFreeValueItemForm: () => void;
   wizard: WizardActions;
   quoteModeChosen: boolean;
+  /** Marca modalidad elegida sin abrir cuaderno (flujo guiado principal). */
+  onQuoteModeChosen?: () => void;
+  /** Abre el cuaderno constructor (secundario, no es el modo rápido/cuadernillo). */
+  onEnterCuaderno?: () => void;
+  /** Si true, monta el cuaderno constructor sobre la modalidad por ítems. */
+  mobileCuadernoActive?: boolean;
+  /** Vuelve al selector por ítems vs modo rápido (total / cuadernillo). */
+  onReturnToModeSelector: () => void;
+  cuaderno?: Omit<
+    PasoDosCuadernoMovilProps,
+    "items" | "quotePricingMode" | "onGoToSummary" | "formatCurrencyInput"
+  > | null;
   onGlobalTotalClienteChange: (value: string) => void;
   onMostrarIvaChange: () => void;
   onInternalObservationChange: (value: string) => void;
@@ -237,6 +253,11 @@ export function PasoDosWizardMovil({
   onOpenFreeValueItemForm,
   wizard,
   quoteModeChosen,
+  onQuoteModeChosen,
+  onEnterCuaderno,
+  mobileCuadernoActive = false,
+  onReturnToModeSelector,
+  cuaderno,
   onGlobalTotalClienteChange,
   onMostrarIvaChange,
   onInternalObservationChange,
@@ -275,12 +296,14 @@ export function PasoDosWizardMovil({
   const handleSelectModeAndOpen = (mode: typeof quotePricingMode) => {
     formulario.onQuotePricingModeChange(mode);
     if (mode === "por_item") {
+      onQuoteModeChosen?.();
       handleOpenWizard();
     }
   };
 
   const handleSelectFreeTotalMode = () => {
     formulario.onQuotePricingModeChange("total_global");
+    onQuoteModeChosen?.();
     resetLocalWizardState();
     wizard.onOpenFreeTotalNotebook();
   };
@@ -289,6 +312,19 @@ export function PasoDosWizardMovil({
     resetLocalWizardState();
     wizard.onClose();
   };
+
+  const handleOpenCuadernoFromGuiada = () => {
+    if (!onEnterCuaderno || !cuaderno || quotePricingMode !== "por_item") {
+      return;
+    }
+    if (wizard.isOpen) {
+      handleCloseWizard();
+    }
+    onEnterCuaderno();
+  };
+
+  const canOpenCuaderno =
+    quotePricingMode === "por_item" && Boolean(cuaderno) && Boolean(onEnterCuaderno);
 
   const subtypePreviewMarkup = useMemo(
     () =>
@@ -419,23 +455,24 @@ export function PasoDosWizardMovil({
   const materialColorOptions =
     wizard.draft.material === "PVC" ? PVC_COLOR_OPTIONS : ALUMINUM_COLOR_OPTIONS;
 
-  const footerMarkup = (
-    <PasoDosWizardFooterMovil
-      canContinueFromQuantity={canContinueFromQuantity}
-      canSubmitGroup={effectiveCanSubmitGroup}
-      isCompactDataStep={isCompactDataStep}
-      isFreeValueItem={isFreeValueComponentType(wizard.draft.subtipo)}
-      isTotalGlobal={quotePricingMode === "total_global"}
-      precioFormateado={formatCurrencyInput(wizard.draft.precio)}
-      onBack={wizard.onBack}
-      onClose={handleCloseWizard}
-      onConfirm={wizard.onConfirm}
-      onNext={wizard.onNext}
-      isSingleStepFreeTotal={isSingleStepFreeTotal}
-      visualStage={visualStage}
-      wizardStep={wizard.paso}
-    />
-  );
+  const footerMarkup =
+    visualStage === 1 && !isSingleStepFreeTotal ? null : (
+      <PasoDosWizardFooterMovil
+        canContinueFromQuantity={canContinueFromQuantity}
+        canSubmitGroup={effectiveCanSubmitGroup}
+        isCompactDataStep={isCompactDataStep}
+        isFreeValueItem={isFreeValueComponentType(wizard.draft.subtipo)}
+        isTotalGlobal={quotePricingMode === "total_global"}
+        precioFormateado={formatCurrencyInput(wizard.draft.precio)}
+        onBack={wizard.onBack}
+        onClose={handleCloseWizard}
+        onConfirm={wizard.onConfirm}
+        onNext={wizard.onNext}
+        isSingleStepFreeTotal={isSingleStepFreeTotal}
+        visualStage={visualStage}
+        wizardStep={wizard.paso}
+      />
+    );
 
   if (variationQuickEdit) {
     return (
@@ -491,14 +528,37 @@ export function PasoDosWizardMovil({
     );
   }
 
+  const showCuaderno =
+    Boolean(cuaderno) &&
+    quotePricingMode === "por_item" &&
+    quoteModeChosen &&
+    mobileCuadernoActive;
+
+  if (showCuaderno && cuaderno) {
+    return (
+      <PasoDosCuadernoMovil
+        items={items}
+        quotePricingMode={quotePricingMode}
+        formatCurrencyInput={formatCurrencyInput}
+        onGoToSummary={onGoToSummary}
+        {...cuaderno}
+        onClose={() => {
+          cuaderno.onClose();
+          // Guiada = vuelve al wizard guiado, no solo a la lista tapada.
+          handleOpenWizard();
+        }}
+      />
+    );
+  }
+
   return (
     <section className={s.stepTwoMobileExperience}>
-      {!wizard.isOpen && items.length === 0 && !quoteModeChosen ? (
+      {!wizard.isOpen && !quoteModeChosen ? (
         <PasoDosModoCotizacion
           onSelectMode={handleSelectModeAndOpen}
           onSelectFreeTotalMode={handleSelectFreeTotalMode}
         />
-      ) : (
+      ) : !wizard.isOpen ? (
         <PasoDosListaMovil
           isWizardOpen={wizard.isOpen}
           items={items}
@@ -514,8 +574,10 @@ export function PasoDosWizardMovil({
           onOpenFreeValueItemForm={onOpenFreeValueItemForm}
           onRemoveItem={onRemoveItem}
           onSaveAndExit={formulario.onSaveAndExit}
+          onReturnToModeSelector={onReturnToModeSelector}
+          onOpenCuaderno={canOpenCuaderno ? handleOpenCuadernoFromGuiada : undefined}
         />
-      )}
+      ) : null}
 
       {wizard.isOpen ? (
         <div className={s.stepTwoMobileCreatorOverlay}>
@@ -524,34 +586,38 @@ export function PasoDosWizardMovil({
               isCompactDataStep ? s.stepTwoMobileCreatorShellCompact : ""
             }`}
           >
-            <PasoDosWizardEncabezadoMovil
-              stages={wizardStages}
-              hideStages={isSingleStepFreeTotal}
-              centerStages={wizardStages.length === 2}
-              visualStage={visualStage}
-              title={
-                isSingleStepFreeTotal
-                  ? "Cotiza libre por total"
-                  : shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
-                    ? "Datos del trabajo"
-                    : getStageTitle(visualStage)
-              }
-              subtitle={
-                isSingleStepFreeTotal
-                  ? "Describe el trabajo, agrega detalles y define el precio final."
-                  : visualStage === 1
-                    ? "Elige el tipo base del componente."
-                    : visualStage === 2
-                      ? "Indica cuantas unidades iguales van en este grupo."
-                      : shouldSkipCantidadStep
-                        ? "Redacta el trabajo y define el valor."
-                        : quotePricingMode === "total_global"
-                          ? "Completa datos comerciales y precio final antes de agregar."
-                          : "Completa sistema, medidas y valor antes de agregar."
-              }
-              onClose={handleCloseWizard}
-              onGoToStep={wizard.onGoToStep}
-            />
+            <div className={s.stepTwoMobileCreatorHeaderBlock}>
+              <PasoDosWizardEncabezadoMovil
+                stages={wizardStages}
+                hideStages={isSingleStepFreeTotal}
+                centerStages={wizardStages.length === 2}
+                visualStage={visualStage}
+                title={
+                  isSingleStepFreeTotal
+                    ? "Cotiza libre por total"
+                    : shouldSkipCantidadStep && quotePricingMode === "total_global" && visualStage === 3
+                      ? "Datos del trabajo"
+                      : getStageTitle(visualStage)
+                }
+                subtitle={
+                  isSingleStepFreeTotal
+                    ? "Describe el trabajo, agrega detalles y define el precio final."
+                    : visualStage === 1
+                      ? "Elige el tipo base del componente."
+                      : visualStage === 2
+                        ? "Indica cuantas unidades iguales van en este grupo."
+                        : shouldSkipCantidadStep
+                          ? "Redacta el trabajo y define el valor."
+                          : quotePricingMode === "total_global"
+                            ? "Completa datos comerciales y precio final antes de agregar."
+                            : "Completa sistema, medidas y valor antes de agregar."
+                }
+                onClose={handleCloseWizard}
+                onGoToStep={wizard.onGoToStep}
+                showWorkspaceToggle={canOpenCuaderno}
+                onOpenCuaderno={canOpenCuaderno ? handleOpenCuadernoFromGuiada : undefined}
+              />
+            </div>
 
             <div
               className={`${s.stepTwoMobileCreatorBody} ${

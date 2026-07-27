@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   Suspense,
+  startTransition,
   type KeyboardEvent,
   useEffect,
   useLayoutEffect,
@@ -106,6 +107,7 @@ import {
 import {
   QUOTE_CONSTRUCTOR_PRESETS,
   createQuoteConstructorPresetConfig,
+  getQuoteConstructorItemConfig,
   moveQuoteConstructorItem,
   type QuoteConstructorItemPatch,
   type QuoteConstructorPresetId,
@@ -202,17 +204,22 @@ function NuevaCotizacionPageContent() {
   const [editingFormSnapshot, setEditingFormSnapshot] = useState<ComponentFormState | null>(null);
   const [hasUnsavedProgress, setHasUnsavedProgress] = useState(false);
   const [quoteModeChosen, setQuoteModeChosen] = useState(false);
+  const [mobileCuadernoActive, setMobileCuadernoActive] = useState(false);
   const [duplicateSourceCode, setDuplicateSourceCode] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const customGlassOrganizationId = organizationProfile?.organizationId ?? null;
 
   useEffect(() => {
-    setCustomGlassOptions(readCustomGlassOptions(customGlassOrganizationId));
+    startTransition(() => {
+      setCustomGlassOptions(readCustomGlassOptions(customGlassOrganizationId));
+    });
   }, [customGlassOrganizationId]);
 
   useEffect(() => {
     if (draft.items.length > 0) {
-      setQuoteModeChosen(true);
+      startTransition(() => {
+        setQuoteModeChosen(true);
+      });
     }
   }, [draft.items.length]);
   const [recordMeta, setRecordMeta] = useState<{
@@ -234,7 +241,9 @@ function NuevaCotizacionPageContent() {
   } = useCotizacionesStore({ autoLoadSummary: false });
 
   useEffect(() => {
-    setSourceSolicitudId(getNuevaCotizacionSolicitudSourceId());
+    startTransition(() => {
+      setSourceSolicitudId(getNuevaCotizacionSolicitudSourceId());
+    });
   }, []);
 
   const suggestionProvider: PreferredProvider = "";
@@ -407,10 +416,12 @@ function NuevaCotizacionPageContent() {
       draft.totalClienteManual !== undefined &&
       resolveSyncedPorItemTotalClienteManual(draft.items, draft.totalClienteManual) === null
     ) {
-      setDraft((current) => ({
-        ...current,
-        totalClienteManual: null,
-      }));
+      startTransition(() => {
+        setDraft((current) => ({
+          ...current,
+          totalClienteManual: null,
+        }));
+      });
     }
   }, [draft.items, draft.totalClienteManual, quotePricingMode]);
 
@@ -637,7 +648,7 @@ function NuevaCotizacionPageContent() {
   ) => {
     if (mode === quotePricingMode) {
       setQuoteModeChosen(true);
-      if (mode === "por_item" && draft.items.length === 0) {
+      if (mode === "por_item" && draft.items.length === 0 && (!isMobileViewport || quoteModeChosen)) {
         handleOpenAddGroupSheet();
       }
       return;
@@ -673,7 +684,7 @@ function NuevaCotizacionPageContent() {
     setEditingFreeValueItemId(null);
     setFreeValueItemForm(createEmptyFreeValueItemForm());
 
-    if (isMobileViewport && mode === "por_item" && draft.items.length === 0) {
+    if (isMobileViewport && mode === "por_item" && draft.items.length === 0 && quoteModeChosen) {
       handleOpenAddGroupSheet();
     }
   };
@@ -1648,6 +1659,7 @@ function NuevaCotizacionPageContent() {
     setEditingItemId(null);
     setIsFreeValueItemFormOpen(false);
     setEditingFreeValueItemId(null);
+    setMobileCuadernoActive(false);
     setQuoteModeChosen(false);
   };
 
@@ -1833,6 +1845,29 @@ function NuevaCotizacionPageContent() {
     openItemForEditing(item);
   };
 
+  const duplicateItemInPlace = (item: CotizacionWorkflowItem) => {
+    const sourceIndex = draft.items.findIndex((current) => current.id === item.id);
+    if (sourceIndex === -1) return;
+
+    const nextCode = buildNextComponentCode(draft.items, item.tipo);
+    const clone: CotizacionWorkflowItem = {
+      ...item,
+      id: `item-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
+      codigo: nextCode,
+    };
+    const nextItems = [...draft.items];
+    nextItems.splice(sourceIndex + 1, 0, clone);
+
+    setDraft((current) => ({ ...current, items: nextItems }));
+    setEditingItemId(null);
+    setEditingFreeValueItemId(null);
+    setIsFreeValueItemFormOpen(false);
+    setFieldErrors({});
+    setGlobalError(null);
+    setToastMessage(`${nextCode} duplicada correctamente`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const handleDuplicateItem = (item: CotizacionWorkflowItem) => {
     setQuoteModeChosen(true);
     pasoDosVariaciones.setVariationQuickEditDraft(null);
@@ -1840,26 +1875,7 @@ function NuevaCotizacionPageContent() {
     pasoDosAgregarGrupoMovil.closeSheet();
 
     if (!isMobileViewport) {
-      const sourceIndex = draft.items.findIndex((current) => current.id === item.id);
-      if (sourceIndex === -1) return;
-
-      const nextCode = buildNextComponentCode(draft.items, item.tipo);
-      const clone: CotizacionWorkflowItem = {
-        ...item,
-        id: `item-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
-        codigo: nextCode,
-      };
-      const nextItems = [...draft.items];
-      nextItems.splice(sourceIndex + 1, 0, clone);
-
-      setDraft((current) => ({ ...current, items: nextItems }));
-      setEditingItemId(null);
-      setEditingFreeValueItemId(null);
-      setIsFreeValueItemFormOpen(false);
-      setFieldErrors({});
-      setGlobalError(null);
-      setToastMessage(`${nextCode} duplicada correctamente`);
-      setTimeout(() => setToastMessage(null), 3000);
+      duplicateItemInPlace(item);
       return;
     }
 
@@ -1873,6 +1889,14 @@ function NuevaCotizacionPageContent() {
       setFieldErrors({});
       setGlobalError(null);
       setStep(2);
+      return;
+    }
+
+    const isCuadernoConstructorPiece =
+      quotePricingMode === "por_item" && getQuoteConstructorItemConfig(item) !== null;
+
+    if (isCuadernoConstructorPiece) {
+      duplicateItemInPlace(item);
       return;
     }
 
@@ -1976,6 +2000,19 @@ function NuevaCotizacionPageContent() {
       if (patch.material) {
         form.catalogCategoria = patch.material === "PVC" ? "pvc" : "aluminio";
         form.colorHex = resolveMaterialColorHex(patch.material, form.colorHex);
+        if (patch.lineTemplateId === undefined && form.lineTemplateId) {
+          form = {
+            ...form,
+            lineTemplateId: "",
+            referencia: "",
+            precioPorM2: "",
+            minimoCobrable: "",
+            precioPlantillaSugerido: "",
+            precioAjustadoManual: false,
+            origenPrecio: "manual",
+            cubicationSnapshot: null,
+          };
+        }
       }
       if (markPriceManual) {
         form.pricingMode = "precio_directo";
@@ -2000,6 +2037,29 @@ function NuevaCotizacionPageContent() {
           candidate.id === itemId ? nextItem : candidate
         ),
       };
+    });
+  };
+
+  const handleApplyConstructorLineToItems = (lineTemplateId: string) => {
+    const template = activeLineTemplates.find(
+      (candidate) => String(candidate.id) === lineTemplateId
+    );
+    if (!template) return;
+
+    setDraft((current) => {
+      const nextItems = current.items.map((item) =>
+        buildItemFromForm(
+          applyLineTemplateToComponentForm(mapItemToForm(item), template),
+          current.items,
+          item.id,
+          {
+            quotePricingMode: current.quotePricingMode,
+            lineTemplates: activeLineTemplates,
+          }
+        )
+      );
+
+      return { ...current, items: nextItems };
     });
   };
 
@@ -2067,7 +2127,8 @@ function NuevaCotizacionPageContent() {
         margenGlobalPct: undefined,
       }));
 
-      if (quotePricingMode !== "total_global") {
+      // En móvil el cuaderno permanece vacío; no abrir el wizard guiado legado.
+      if (quotePricingMode !== "total_global" && !isMobileViewport) {
         handleOpenAddGroupSheet();
       }
     }
@@ -2537,7 +2598,8 @@ function goNextFromStep1() {
     }
   };
 
-  onAddGroupSheetClosedRef.current = (itemCount: number) => {
+  useEffect(() => {
+    onAddGroupSheetClosedRef.current = (itemCount: number) => {
     setDuplicateSourceCode("");
 
     if (returnToModeSelectorAfterSheetCloseRef.current) {
@@ -2624,7 +2686,8 @@ function goNextFromStep1() {
     if (isMobileViewport) {
       setQuoteModeChosen(false);
     }
-  };
+    };
+  });
 
   const handleCloseAddGroupSheetDesktop = () => {
     if (!isMobileViewport && pasoDosAgregarGrupo.entryMode === "free_total_single") {
@@ -2919,6 +2982,29 @@ function goNextFromStep1() {
             onRemoveItem: handleRemoveItem,
             onOpenFreeValueItemForm: handleOpenFreeValueItemForm,
             quoteModeChosen,
+            onQuoteModeChosen: () => setQuoteModeChosen(true),
+            mobileCuadernoActive,
+            onReturnToModeSelector: returnToModeSelector,
+            onEnterCuaderno: () => {
+              setQuoteModeChosen(true);
+              setMobileCuadernoActive(true);
+            },
+            cuaderno: {
+              lineTemplates: activeLineTemplates,
+              glassOptions: pasoDosAgregarGrupoMovil.glassOptions,
+              contextCliente: draft.clienteNombre,
+              contextObra: draft.obra,
+              onAddPreset: handleAddConstructorPreset,
+              onUpdateItem: handleUpdateConstructorItem,
+              onApplyLineToItems: handleApplyConstructorLineToItems,
+              onDuplicateItem: (item) => {
+                setQuoteModeChosen(true);
+                duplicateItemInPlace(item);
+              },
+              onRemoveItem: handleRemoveItem,
+              onClose: () => setMobileCuadernoActive(false),
+              onReturnToModeSelector: returnToModeSelector,
+            },
             wizard: {
               isOpen: pasoDosAgregarGrupoMovil.isOpen,
               paso: pasoDosAgregarGrupoMovil.paso,

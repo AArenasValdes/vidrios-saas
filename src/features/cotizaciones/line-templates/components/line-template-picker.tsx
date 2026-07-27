@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuCheck, LuChevronDown, LuSearch, LuX } from "react-icons/lu";
 
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getLineTemplateSystemMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import {
-  groupLineTemplatesByProvider,
-  LINE_TEMPLATE_GROUP_NO_PROVIDER,
-} from "@/features/cotizaciones/line-templates/services/line-template-group.service";
 import { CLP } from "@/features/cotizaciones/new-quote/workflow-ui";
 
 import styles from "./line-template-picker.module.css";
 
-type MaterialFilter = "todos" | "Aluminio" | "PVC";
+type MaterialFilter = "todos" | "Aluminio" | "PVC" | "Cristal";
 type ProviderFilter = "todos" | "sin_proveedor" | string;
 
 type LineTemplatePickerProps = {
@@ -22,6 +18,7 @@ type LineTemplatePickerProps = {
   value: string;
   onChange: (templateId: string) => void;
   mode?: "profile" | "glass";
+  preferredMaterial?: MaterialFilter | null;
   ariaLabel?: string;
   className?: string;
 };
@@ -50,7 +47,8 @@ function renderTemplateOption(
   onSelect: (next: string) => void
 ) {
   const selectedOption = String(template.id) === value;
-  const material = isGlass ? "Cristal" : template.material;
+  const material =
+    template.categoria === "vidrio" ? "Cristal" : isGlass ? "Cristal" : template.material;
   const provider = normalizeProvider(template.proveedor);
   const system = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
 
@@ -110,6 +108,7 @@ export function LineTemplatePicker({
   value,
   onChange,
   mode = "profile",
+  preferredMaterial = null,
   ariaLabel,
   className,
 }: LineTemplatePickerProps) {
@@ -119,10 +118,31 @@ export function LineTemplatePicker({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [materialFilter, setMaterialFilter] = useState<MaterialFilter>("todos");
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>("todos");
+
+  const resetFilters = useCallback(() => {
+    setQuery("");
+    setMaterialFilter("todos");
+    setProviderFilter("todos");
+  }, []);
+
+  const closePicker = useCallback(() => {
+    setOpen(false);
+    resetFilters();
+  }, [resetFilters]);
+
+  const togglePicker = () => {
+    if (open) {
+      closePicker();
+      return;
+    }
+    setQuery("");
+    setProviderFilter("todos");
+    setMaterialFilter(!isGlass && preferredMaterial ? preferredMaterial : "todos");
+    setOpen(true);
+  };
 
   const isGlass = mode === "glass";
   const emptyLabel = isGlass ? "Precio manual o sin cristal" : "Precio manual o sin línea";
@@ -154,7 +174,9 @@ export function LineTemplatePicker({
     const normalizedQuery = query.trim().toLowerCase();
 
     return templates.filter((template) => {
-      if (!isGlass && materialFilter !== "todos" && template.material !== materialFilter) {
+      const templateMaterial =
+        template.categoria === "vidrio" ? "Cristal" : template.material;
+      if (!isGlass && materialFilter !== "todos" && templateMaterial !== materialFilter) {
         return false;
       }
 
@@ -186,18 +208,6 @@ export function LineTemplatePicker({
     });
   }, [isGlass, materialFilter, providerFilter, query, templates]);
 
-  const providerGroups = useMemo(
-    () => groupLineTemplatesByProvider(filteredTemplates),
-    [filteredTemplates]
-  );
-
-  const showProviderGroups =
-    !isGlass && providerFilter === "todos" && providerGroups.length > 1;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   useEffect(() => {
     if (!open) {
       return;
@@ -208,7 +218,7 @@ export function LineTemplatePicker({
 
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        closePicker();
       }
     };
 
@@ -220,32 +230,26 @@ export function LineTemplatePicker({
       window.removeEventListener("keydown", handleKey);
       window.clearTimeout(focusTimer);
     };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setMaterialFilter("todos");
-      setProviderFilter("todos");
-    }
-  }, [open]);
+  }, [closePicker, open]);
 
   const selectValue = (next: string) => {
     onChange(next);
-    setOpen(false);
+    closePicker();
   };
 
-  const dialogTitle = isGlass ? "Elegir cristal" : "Elegir línea comercial";
+  const dialogTitle = isGlass ? "Elegir cristal" : "Elegir línea";
+  const activeMaterialLabel =
+    !isGlass && materialFilter !== "todos" ? `${materialFilter} primero` : null;
 
   const overlay =
-    open && mounted
+    open
       ? createPortal(
           <div className={styles.overlay} role="presentation">
             <button
               type="button"
               className={styles.backdrop}
               aria-label="Cerrar selector"
-              onClick={() => setOpen(false)}
+              onClick={closePicker}
             />
             <div
               ref={dialogRef}
@@ -263,14 +267,14 @@ export function LineTemplatePicker({
                   <p>
                     {isGlass
                       ? "Busca por nombre y elige el cristal con precio."
-                      : "Elige proveedor y línea. El catálogo está ordenado para encontrar rápido."}
+                      : activeMaterialLabel ?? "Elige una línea del catálogo."}
                   </p>
                 </div>
                 <button
                   type="button"
                   className={styles.closeButton}
                   aria-label="Cerrar"
-                  onClick={() => setOpen(false)}
+                  onClick={closePicker}
                 >
                   <LuX aria-hidden />
                 </button>
@@ -304,6 +308,7 @@ export function LineTemplatePicker({
                             ["todos", "Todas"],
                             ["Aluminio", "Aluminio"],
                             ["PVC", "PVC"],
+                            ["Cristal", "Cristal"],
                           ] as const
                         ).map(([key, label]) => (
                           <button
@@ -410,38 +415,11 @@ export function LineTemplatePicker({
                   {!value ? <LuCheck className={styles.optionCheck} aria-hidden /> : null}
                 </button>
 
-                {showProviderGroups
-                  ? providerGroups.map((group) => (
-                      <section
-                        key={group.provider}
-                        className={styles.providerGroup}
-                        aria-label={group.provider}
-                      >
-                        <header className={styles.providerGroupHeader}>
-                          <strong>
-                            {group.provider === LINE_TEMPLATE_GROUP_NO_PROVIDER
-                              ? "Sin proveedor"
-                              : group.provider}
-                          </strong>
-                          <span>
-                            {group.templates.length}{" "}
-                            {group.templates.length === 1 ? "línea" : "líneas"}
-                          </span>
-                        </header>
-                        <div className={styles.optionGrid}>
-                          {group.templates.map((template) =>
-                            renderTemplateOption(template, value, isGlass, selectValue)
-                          )}
-                        </div>
-                      </section>
-                    ))
-                  : (
-                      <div className={styles.optionGrid}>
-                        {filteredTemplates.map((template) =>
-                          renderTemplateOption(template, value, isGlass, selectValue)
-                        )}
-                      </div>
-                    )}
+                <div className={styles.optionGrid}>
+                  {filteredTemplates.map((template) =>
+                    renderTemplateOption(template, value, isGlass, selectValue)
+                  )}
+                </div>
 
                 {filteredTemplates.length === 0 ? (
                   <div className={styles.empty}>
@@ -473,7 +451,7 @@ export function LineTemplatePicker({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel ?? (isGlass ? "Seleccionar cristal" : "Seleccionar línea comercial")}
-        onClick={() => setOpen((current) => !current)}
+        onClick={togglePicker}
       >
         {selected ? (
           <span className={styles.triggerBody}>

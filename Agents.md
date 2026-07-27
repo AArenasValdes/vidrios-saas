@@ -66,7 +66,7 @@ docs/
 
 ## Estado actual
 
-Ultima actualizacion operativa: 2026-07-24
+Ultima actualizacion operativa: 2026-07-27
 
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 - **Modelo vigente**: `fabricationRecipePack` + espejo `fabricationRecipe`; `aperturaTipo`/`herrajeTipo`; bump solo 1er cambio post-validada; snapshot `[cub:]` v2; print `/print/cotizaciones/[id]/fabricacion`.
@@ -109,6 +109,13 @@ Ultima actualizacion operativa: 2026-07-24
 
 ### Ya resuelto en esta pasada
 
+- Se pulio el Paso 2 mobile de `/cotizaciones/nueva` para `por_item`:
+  - selector inicial **Cotizar por items** / **Cuadernillo digital**
+  - toggle **Guiada | Constructor** solo en Tipo/lista, no en Cantidad/Datos
+  - Constructor mobile propio en `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/`
+  - lista compacta de piezas, linea global compacta, edicion rapida, material Aluminio/PVC, lineas Aluminio/PVC/Cristal y preview con color
+  - editor de composicion full-screen con `Reflejar` contextual solo para aperturas laterales
+  - sin cambios en PDF, WhatsApp, pricing, tablas ni persistencia
 - Se aislo `lint` y `jest` para que no escaneen worktrees auxiliares ni caches ajenas al repo principal
 - Se endurecio la entrada publica de solicitudes:
   - validacion de slug de empresa

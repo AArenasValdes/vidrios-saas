@@ -1,6 +1,7 @@
 "use client";
 
-import { LuFileText, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
+import { useState } from "react";
+import { LuArrowLeft, LuFileText, LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
 
 import {
   COLOR_OPTIONS,
@@ -16,6 +17,7 @@ import {
   isItemIncomplete,
   repairBrokenText,
 } from "./paso-dos-wizard-movil.utils";
+import { PasoDosCambiarModoDialog } from "./paso-dos-cambiar-modo-dialog";
 import s from "../../page.module.css";
 
 type Props = {
@@ -33,6 +35,10 @@ type Props = {
   onSaveAndExit: () => void;
   onEditItem: (item: CotizacionWorkflowItem) => void;
   onRemoveItem: (itemId: string) => void;
+  /** Vuelve al selector: por items vs modo rapido (cuadernillo / total). */
+  onReturnToModeSelector: () => void;
+  /** Disponible solo en por items: abre el cuaderno de piezas. */
+  onOpenCuaderno?: () => void;
 };
 
 export function PasoDosListaMovil({
@@ -50,7 +56,10 @@ export function PasoDosListaMovil({
   onSaveAndExit,
   onEditItem,
   onRemoveItem,
+  onReturnToModeSelector,
+  onOpenCuaderno,
 }: Props) {
+  const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
   const pendingCount = isGlobalPricing
     ? 0
@@ -64,10 +73,25 @@ export function PasoDosListaMovil({
       : `${items.length} trabajo${items.length !== 1 ? "s" : ""} agregado${items.length !== 1 ? "s" : ""}`;
   const totalGlobalFooterValue =
     totalClienteManual && totalClienteManual > 0 ? `Total ${total}` : "Precio final pendiente";
+  const requestReturnToModeSelector = () => {
+    if (items.length > 0) {
+      setIsCambiarModoDialogOpen(true);
+      return;
+    }
+    onReturnToModeSelector();
+  };
 
   return (
     <>
       <section className={s.stepTwoMobileLoadedSection} id="component-list">
+        <button
+          type="button"
+          className={s.stepTwoMobileBackToMode}
+          onClick={requestReturnToModeSelector}
+        >
+          <LuArrowLeft size={16} aria-hidden />
+          Cambiar modalidad
+        </button>
         <div className={s.stepTwoMobileLoadedHeader}>
           <div className={s.stepTwoMobileLoadedHeaderCopy}>
             <span className={s.cardLabel}>Paso 2 / Componentes</span>
@@ -120,6 +144,15 @@ export function PasoDosListaMovil({
                 ? "Empieza por el tipo y luego completa la descripcion del alcance."
                 : "Empieza por el tipo y luego completa medidas, vidrio y valor."}
             </span>
+            {onOpenCuaderno && !isGlobalPricing ? (
+              <button
+                type="button"
+                className={s.stepTwoMobileEmptySecondary}
+                onClick={onOpenCuaderno}
+              >
+                Usar constructor visual
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className={s.stepTwoMobileItemStack}>
@@ -300,6 +333,17 @@ export function PasoDosListaMovil({
           </div>
         </footer>
       ) : null}
+
+      <PasoDosCambiarModoDialog
+        isOpen={isCambiarModoDialogOpen}
+        hasLoadedItems={items.length > 0}
+        hasDraftInProgress={false}
+        onClose={() => setIsCambiarModoDialogOpen(false)}
+        onConfirm={() => {
+          setIsCambiarModoDialogOpen(false);
+          onReturnToModeSelector();
+        }}
+      />
     </>
   );
 }

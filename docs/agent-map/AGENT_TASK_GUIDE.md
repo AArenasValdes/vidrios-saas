@@ -182,6 +182,9 @@ Reglas:
 2. `app/(pwa-app)/cotizaciones/nueva/page.tsx` y `page.module.css` - modo y layout desktop.
 3. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx` - integración Presupuesto/Constructor.
 4. `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx` - cuaderno multipieza.
+   - Desktop workspace: `QuoteConstructorWorkspace` solo bajo `>=1024px`.
+   - Mobile Constructor: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/`.
+   - Selector de lineas compartido en mobile: `src/features/cotizaciones/line-templates/components/line-template-picker.tsx`.
 5. `src/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service.ts` - presets, compatibilidad y sincronización.
 6. `src/features/cotizaciones/visual-composer/` - tipos V2, normalización, renderer y `GuidedVisualComposer`.
 7. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx` y `paso-dos-editor-desktop.tsx` - editor avanzado vía Personalizado.
@@ -192,9 +195,12 @@ Reglas:
 Reglas:
 
 - no construir CAD libre;
-- modo cuaderno solo desktop `>=1024px`; no alterar ni exponerlo en mobile;
+- `QuoteConstructorWorkspace` sigue siendo solo desktop `>=1024px`; mobile usa una superficie propia en `mobile-cuaderno/`, no el workspace desktop;
 - **Constructor** y **Presupuesto** operan sobre el mismo `draft.items`; no crear una segunda persistencia ni guardar en Supabase antes de guardar la cotización;
 - el editor avanzado de una pieza se ofrece tras elegir **Personalizado**; es distinto del modo cuaderno multipieza;
+- en mobile, **Guiada | Constructor** solo aparece en subpaso Tipo y en la lista de piezas; no repetirlo en Cantidad/Datos;
+- en mobile, la linea global debe mantenerse compacta y aplicar sobre items existentes solo con accion explicita;
+- en mobile, `Reflejar` solo se habilita para modulos con apertura lateral (`abatible`, `oscilobatiente`, `puerta`, `shower_frontal`);
 - mantener los siete presets, el límite de seis módulos internos por composición y piezas de cotización sin límite compartido;
 - reutilizar `COLOR_OPTIONS` y preservar overrides manuales de precio;
 - no tocar PDF ni renderer publico sin revisar compatibilidad;

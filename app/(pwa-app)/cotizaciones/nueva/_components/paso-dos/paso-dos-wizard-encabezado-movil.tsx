@@ -24,6 +24,9 @@ type Props = {
   subtitle: string;
   onClose: () => void;
   onGoToStep: (paso: PasoDosGrupoPasoMovil) => void;
+  /** Toggle Guiada|Cuaderno dentro del overlay (solo por ítems). */
+  showWorkspaceToggle?: boolean;
+  onOpenCuaderno?: () => void;
 };
 
 export function PasoDosWizardEncabezadoMovil({
@@ -35,7 +38,12 @@ export function PasoDosWizardEncabezadoMovil({
   subtitle,
   onClose,
   onGoToStep,
+  showWorkspaceToggle = false,
+  onOpenCuaderno,
 }: Props) {
+  const shouldShowWorkspaceToggle =
+    showWorkspaceToggle && Boolean(onOpenCuaderno) && visualStage === 1;
+
   return (
     <>
       <header className={s.stepTwoMobileCreatorHeader}>
@@ -44,7 +52,12 @@ export function PasoDosWizardEncabezadoMovil({
           <h2 className={s.stepTwoMobileTitle}>{title}</h2>
           <p className={s.stepTwoMobileSubtle}>{subtitle}</p>
         </div>
-        <button className={s.stepTwoMobileHeaderAction} onClick={onClose} type="button">
+        <button
+          className={s.stepTwoMobileHeaderAction}
+          onClick={onClose}
+          type="button"
+          aria-label="Cerrar"
+        >
           <LuX aria-hidden />
         </button>
       </header>
@@ -76,6 +89,32 @@ export function PasoDosWizardEncabezadoMovil({
           })}
         </div>
       )}
+
+      {shouldShowWorkspaceToggle && onOpenCuaderno ? (
+        <div
+          className={s.stepTwoMobileWorkspaceTabs}
+          role="tablist"
+          aria-label="Cómo armar las piezas"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected
+            className={`${s.stepTwoMobileWorkspaceTab} ${s.stepTwoMobileWorkspaceTabActive}`}
+          >
+            Guiada
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={false}
+            className={s.stepTwoMobileWorkspaceTab}
+            onClick={onOpenCuaderno}
+          >
+            Constructor
+          </button>
+        </div>
+      ) : null}
     </>
   );
 }

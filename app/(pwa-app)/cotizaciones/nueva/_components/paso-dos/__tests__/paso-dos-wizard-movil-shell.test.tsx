@@ -173,6 +173,7 @@ const baseProps = {
   onRemoveItem: jest.fn(),
   onOpenFreeValueItemForm: jest.fn(),
   quoteModeChosen: true,
+  onReturnToModeSelector: jest.fn(),
   onGlobalTotalClienteChange: jest.fn(),
   onMostrarIvaChange: jest.fn(),
   onInternalObservationChange: jest.fn(),
@@ -202,19 +203,209 @@ describe("PasoDosWizardMovil", () => {
       screen.getByRole("heading", { name: /como quieres calcular el presupuesto/i })
     ).toBeInTheDocument();
     expect(screen.getByText("Cotizar por items")).toBeInTheDocument();
-    expect(screen.getByText("Cotizar libre por total")).toBeInTheDocument();
+    expect(screen.getByText("Cuadernillo digital")).toBeInTheDocument();
     expect(screen.queryByText("Componentes cargados")).not.toBeInTheDocument();
   });
 
-  it("debe mostrar etapa 1 con CTA cancelar", () => {
+  it("desde la lista permite volver a elegir modalidad", () => {
+    const onReturnToModeSelector = jest.fn();
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen
+        onReturnToModeSelector={onReturnToModeSelector}
+        wizard={createWizard({ isOpen: false })}
+      />
+    );
+
+    expect(screen.getByText("Componentes cargados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /cambiar modalidad/i }));
+    expect(onReturnToModeSelector).toHaveBeenCalledTimes(1);
+  });
+
+  it("en por ítems muestra toggle Guiada|Constructor y abre el constructor", () => {
+    const onEnterCuaderno = jest.fn();
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen
+        onEnterCuaderno={onEnterCuaderno}
+        mobileCuadernoActive={false}
+        cuaderno={{
+          lineTemplates: [],
+          glassOptions: [],
+          onAddPreset: jest.fn(),
+          onUpdateItem: jest.fn(),
+          onDuplicateItem: jest.fn(),
+          onRemoveItem: jest.fn(),
+          onClose: jest.fn(),
+        }}
+        wizard={createWizard({ isOpen: false })}
+      />
+    );
+
+    expect(screen.queryByRole("tab", { name: "Guiada" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Usar constructor visual" }));
+    expect(onEnterCuaderno).toHaveBeenCalledTimes(1);
+  });
+
+  it("muestra cuaderno móvil solo cuando mobileCuadernoActive está activo", () => {
+    const { rerender } = render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen
+        mobileCuadernoActive={false}
+        onEnterCuaderno={jest.fn()}
+        cuaderno={{
+          lineTemplates: [],
+          glassOptions: [],
+          onAddPreset: jest.fn(),
+          onUpdateItem: jest.fn(),
+          onDuplicateItem: jest.fn(),
+          onRemoveItem: jest.fn(),
+          onClose: jest.fn(),
+        }}
+        wizard={createWizard({ isOpen: false })}
+      />
+    );
+
+    expect(screen.getByText("Componentes cargados")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Constructor de piezas" })).not.toBeInTheDocument();
+
+    rerender(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen
+        mobileCuadernoActive
+        onEnterCuaderno={jest.fn()}
+        cuaderno={{
+          lineTemplates: [],
+          glassOptions: [],
+          onAddPreset: jest.fn(),
+          onUpdateItem: jest.fn(),
+          onDuplicateItem: jest.fn(),
+          onRemoveItem: jest.fn(),
+          onClose: jest.fn(),
+        }}
+        wizard={createWizard({ isOpen: false })}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Constructor de piezas" })).toBeInTheDocument();
+    expect(screen.queryByText("Componentes cargados")).not.toBeInTheDocument();
+  });
+
+  it("al elegir cotizar por ítems aterriza en la lista con Guiada|Constructor", () => {
+    const onQuoteModeChosen = jest.fn();
+    const onEnterCuaderno = jest.fn();
+    const wizard = createWizard({ isOpen: false });
+
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        quoteModeChosen={false}
+        onQuoteModeChosen={onQuoteModeChosen}
+        onEnterCuaderno={onEnterCuaderno}
+        mobileCuadernoActive={false}
+        cuaderno={{
+          lineTemplates: [],
+          glassOptions: [],
+          onAddPreset: jest.fn(),
+          onUpdateItem: jest.fn(),
+          onDuplicateItem: jest.fn(),
+          onRemoveItem: jest.fn(),
+          onClose: jest.fn(),
+        }}
+        wizard={wizard}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Usar items" }));
+    expect(onQuoteModeChosen).toHaveBeenCalled();
+    expect(wizard.onOpen).toHaveBeenCalled();
+  });
+
+  it("debe mostrar etapa 1 con pasos y toggle guiada|constructor", () => {
+    const onEnterCuaderno = jest.fn();
     const wizard = createWizard({ paso: 1 });
-    render(<PasoDosWizardMovil {...baseProps} wizard={wizard} />);
+    render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        onEnterCuaderno={onEnterCuaderno}
+        cuaderno={{
+          lineTemplates: [],
+          glassOptions: [],
+          onAddPreset: jest.fn(),
+          onUpdateItem: jest.fn(),
+          onDuplicateItem: jest.fn(),
+          onRemoveItem: jest.fn(),
+          onClose: jest.fn(),
+        }}
+        wizard={wizard}
+      />
+    );
 
     expect(screen.getByText("Que vas a agregar?")).toBeInTheDocument();
-    expect(screen.getByText("Cancelar")).toBeInTheDocument();
+    expect(screen.getByText("Tipo")).toBeInTheDocument();
+    expect(screen.getByText("Cantidad")).toBeInTheDocument();
+    expect(screen.getByText("Datos")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Guiada" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Constructor" })).toBeInTheDocument();
+    expect(screen.queryByText("Cancelar")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Cancelar"));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(wizard.onClose).toHaveBeenCalled();
+  });
+
+  it("oculta el toggle Guiada|Constructor en cantidad y datos", () => {
+    const onEnterCuaderno = jest.fn();
+    const cuaderno = {
+      lineTemplates: [],
+      glassOptions: [],
+      onAddPreset: jest.fn(),
+      onUpdateItem: jest.fn(),
+      onDuplicateItem: jest.fn(),
+      onRemoveItem: jest.fn(),
+      onClose: jest.fn(),
+    };
+
+    const { rerender } = render(
+      <PasoDosWizardMovil
+        {...baseProps}
+        onEnterCuaderno={onEnterCuaderno}
+        cuaderno={cuaderno}
+        wizard={createWizard({ paso: 2 })}
+      />
+    );
+
+    expect(screen.getByText("Cuantas unidades?")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Guiada" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Constructor" })).not.toBeInTheDocument();
+
+    rerender(
+      <PasoDosWizardMovil
+        {...baseProps}
+        onEnterCuaderno={onEnterCuaderno}
+        cuaderno={cuaderno}
+        wizard={createWizard({ paso: 3 })}
+      />
+    );
+
+    expect(screen.getByText("Datos del grupo")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Guiada" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Constructor" })).not.toBeInTheDocument();
+
+    rerender(
+      <PasoDosWizardMovil
+        {...baseProps}
+        onEnterCuaderno={onEnterCuaderno}
+        cuaderno={cuaderno}
+        wizard={createWizard({ paso: 1 })}
+      />
+    );
+
+    expect(screen.getByRole("tab", { name: "Guiada" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Constructor" })).toBeInTheDocument();
   });
 
   it("debe mostrar etapa 2 con CTA continuar", () => {

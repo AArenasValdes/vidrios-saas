@@ -218,8 +218,39 @@
 ### Componente: PasoDosModoCotizacion
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-modo-cotizacion.tsx`
-- **Proposito**: Fallback/pantalla inicial de Paso 2 con 2 tarjetas: "Cotizar por items" y "Presupuesto por total". En desktop nuevo, la modalidad se elige en Paso 1; este componente sigue activo como fallback y para mobile.
+- **Proposito**: Fallback/pantalla inicial de Paso 2 con 2 tarjetas: "Cotizar por items" y "Cuadernillo digital" (modo rapido `total_global`). En desktop nuevo, la modalidad se elige en Paso 1; este componente sigue activo como fallback y para mobile.
 - **Usado en**: `PasoDosSeccion` (fallback desktop), `PasoDosWizardMovil` (mobile)
+
+### Componente: PasoDosCuadernoMovil
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/paso-dos-cuaderno-movil.tsx`
+- **Proposito**: Superficie mobile **Constructor de piezas** para `por_item`. Lista piezas compactas, agrega presets, muestra estado `Lista/Falta precio/Faltan datos`, aplica linea global y abre edicion rapida o composicion full-screen.
+- **Usado en**: `PasoDosWizardMovil` cuando `mobileCuadernoActive` esta activo. Comparte `draft.items`, callbacks de `page.tsx`, `sessionStorage` y renderer `guided-visual-renderer.service.ts`.
+- **Dependencias**: `CuadernoQuickEditSheet`, `CuadernoComposicionMovil`, `cuaderno-piece-status.ts`, `LineTemplatePicker`, `quote-constructor-workspace.service.ts`.
+- **Riesgos**: No crear persistencia paralela ni guardar antes de la cotizacion. La línea global aplica solo perfiles y debe actualizar todas las piezas en una sola transacción de `draft.items`; los cristales se eligen por pieza. El nombre visible es **Constructor**; `mobile-cuaderno` es nombre interno heredado. No agregar panel financiero desktop ni duplicar revision/PDF/WhatsApp.
+
+### Componente: CuadernoQuickEditSheet
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/cuaderno-quick-edit-sheet.tsx`
+- **Proposito**: Bottom sheet de edicion mobile de una pieza. Reordena el flujo como datos base -> material/color -> linea/precio -> vidrio -> forma/apertura. Permite elegir Aluminio/PVC, color visible compacto, linea de perfil o Cristal, duplicar/eliminar y guardar cambios.
+- **Usado en**: `PasoDosCuadernoMovil`.
+- **Dependencias**: `mapItemToForm`, `LineTemplatePicker`, `COLOR_OPTIONS`, `ALUMINUM_COLOR_OPTIONS`, `PVC_COLOR_OPTIONS`, `encodeCotizacionItemPresentationMeta`.
+- **Riesgos**: Es transaccional: línea, vidrio, material, color y precio se mantienen locales hasta **Guardar cambios**; cerrar no puede persistir cambios parciales. Cambios confirmados de material/color deben previsualizarse con `colorHex` en miniatura y no conservar una línea incompatible. Las líneas se filtran por material preferido pero deben permitir Cristal cuando el usuario lo elige.
+
+### Componente: CuadernoComposicionMovil
+
+- **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/cuaderno-composicion-movil.tsx`
+- **Proposito**: Editor full-screen mobile de composicion visual. Permite partir lado/alto, seleccionar modulo, cambiar tipo, editar medidas, palillos/formas y aplicar la `GuidedVisualConfig` resultante.
+- **Usado en**: `PasoDosCuadernoMovil` y `CuadernoQuickEditSheet` via accion de forma/apertura.
+- **Dependencias**: `useGuidedVisualHistory`, `guided-visual-config.ts`, `guided-visual-renderer.service.ts`, presets de `quote-constructor-workspace.service.ts`.
+- **Riesgos**: `Reflejar` solo debe estar activo para modulos con apertura lateral (`abatible`, `oscilobatiente`, `puerta`, `shower_frontal`); en fijos/correderas simetricas debe verse deshabilitado para evitar una accion muda. El preview es referencial, no CAD ni cubicacion automatica.
+
+### Componente: LineTemplatePicker
+
+- **Archivo**: `src/features/cotizaciones/line-templates/components/line-template-picker.tsx`
+- **Proposito**: Selector modal de lineas comerciales. En mobile se usa para linea de pieza y linea global; soporta `mode="profile"`, material preferido, busqueda, filtros Aluminio/PVC/Cristal y seleccion visual compacta.
+- **Usado en**: `CuadernoQuickEditSheet`, `CuadernoConstructorMovil` y superficies de cotizacion que requieren elegir linea.
+- **Riesgos**: No ocultar Cristal permanentemente cuando el material preferido sea Aluminio/PVC; el usuario debe poder cambiar filtro. Mantener el modal liviano para mobile y sin pasos redundantes.
 
 ### Componente: PasoDosAgregarGrupoSheet
 

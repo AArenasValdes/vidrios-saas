@@ -61,16 +61,18 @@ export function PasoDosWizardFooterMovil({
         isIphoneViewport ? s.stepTwoMobileCreatorFooterIphone : ""
       }`}
     >
-      {visualStage === 1 || isSingleStepFreeTotal ? (
-        <button className={s.btnGhost} onClick={onClose} type="button">
-          Cancelar
-        </button>
-      ) : (
+      {visualStage === 1 || isSingleStepFreeTotal ? null : (
         <button className={s.btnGhost} onClick={onBack} type="button">
           <LuChevronLeft aria-hidden />
           Atras
         </button>
       )}
+
+      {visualStage === 1 && isSingleStepFreeTotal ? (
+        <button className={s.btnGhost} onClick={onClose} type="button">
+          Cancelar
+        </button>
+      ) : null}
 
       {wizardStep === 2 ? (
         <button

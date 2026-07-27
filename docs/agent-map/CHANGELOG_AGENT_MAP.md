@@ -11,6 +11,18 @@ Historial de cambios en la documentacion del mapa tecnico.
 - Docs: `ROUTES_MAP` (`/admin`, `/auth/logout`), `FEATURES_MAP` (Auth + Centro de Operaciones), `COMPONENTS_MAP` (`AdminSidebar`).
 - Archivos: `admin-sidebar.tsx`, `admin-nav.config.ts`, `admin-sidebar.module.css`, test de regresion del sidebar.
 
+## 2026-07-27 - Constructor móvil Paso 2 (cotizar por items)
+
+- **Qué**: Experiencia móvil nativa del Paso 2 en `/cotizaciones/nueva`, sobre el mismo `draft.items`, sin portar `QuoteConstructorWorkspace` desktop.
+- **Alcance**: viewport móvil (`max-width: 860`) y flujo `por_item`; desktop `>=1024` intacto. No cambia PDF, WhatsApp, pricing formulas, tablas ni guardado.
+- **Modo**: selector inicial móvil queda en **Cotizar por items** / **Cuadernillo digital** (`total_global`). Dentro de `por_item`, el toggle visible es **Guiada | Constructor**; solo aparece en subpaso **Tipo** y en la lista de piezas, no en **Cantidad** ni **Datos**.
+- **Constructor mobile**: `mobile-cuaderno/` muestra **Constructor de piezas**, botón principal **Agregar pieza**, lista compacta con miniaturas `guidedVisualConfig`, línea global compacta, estado de pieza y edición rápida.
+- **Edición rápida**: material del perfil Aluminio/PVC arriba de línea/precio, colores compactos por material, selector de líneas con Aluminio/PVC/Cristal, preview con `colorHex`, vidrio/color y acción **Forma y apertura** hacia composición.
+- **Composición**: full-screen con `Partir lado`, `Partir alto`, selección de módulo, medidas contenidas, tipos de módulo y `Reflejar` contextual; `Reflejar` solo se habilita para aperturas laterales y muestra `Abre izq./der.`.
+- **Archivos**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/*`, `paso-dos-wizard-movil-shell.tsx`, `paso-dos-wizard-encabezado-movil.tsx`, `paso-dos-lista-movil.tsx`, `page.tsx`, `page.module.css`, `line-template-picker.tsx`.
+- **Tests/validación**: `paso-dos-cuaderno-movil.test.tsx`, `paso-dos-wizard-movil-shell.test.tsx`, lint focal y `npm run build`.
+- **Hardening posterior**: selector inicial `por_item` no abre el wizard guiado por accidente; edición rápida confirma cambios al guardar, cambio de material descarta una línea incompatible, la línea global se aplica por lote y se eliminaron miniaturas ocultas/reagrupaciones de catálogo que seguían consumiendo render.
+
 ## 2026-07-25 - Selector visual de tipologias en Cotizacion rapida
 
 - `QuoteConstructorWorkspace` mantiene seis accesos principales y mueve tipologias especiales a menus compactos de Puerta y Mas tipologias.

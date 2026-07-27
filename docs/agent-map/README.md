@@ -37,6 +37,7 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 ## Foco actual
 
 - Desktop taller, no CRM generico.
+- Paso 2 mobile (2026-07-27): `por_item` ofrece **Guiada | Constructor** sobre el mismo `draft.items`; el Constructor mobile vive en `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/mobile-cuaderno/` y no reutiliza el workspace desktop.
 - **Fase actual = Fase 4 — Cubicación V1 vendible multi-tipología** (2026-07-24). Pack `fabricationRecipePack` + espejo `fabricationRecipe`; plantillas L5000/L20/L25 iniciales sugeridas; bases tipológicas pendientes; filtro por tipología en cotizar; print `/print/cotizaciones/[id]/fabricacion`. Giro: `../VENTORA_GIRO_PRODUCTO_2026-07.md`. Handoff: `CUBICACION_PAUTA_HANDOFF.md`.
 - Camino 2 (3 partidas Marco/Hoja) = solo migración.
 - Fuera de alcance: optimizador real, nesting, CAD, inventario, fabricación automática, marketing de “más comunes” antes de validación piloto.

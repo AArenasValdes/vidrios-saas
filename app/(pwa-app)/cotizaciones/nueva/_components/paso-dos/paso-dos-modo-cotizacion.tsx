@@ -111,8 +111,11 @@ export function PasoDosModoCotizacion({
           </>
         ) : (
           <>
-            <article
+            <button
+              type="button"
               className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardRecommended}`}
+              aria-label="Usar items"
+              onClick={selectItems}
             >
               <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeRecommended}`}>
                 Recomendado
@@ -124,15 +127,20 @@ export function PasoDosModoCotizacion({
 
               <div className={s.stepTwoModeChoiceCardCopy}>
                 <strong>Cotizar por items</strong>
-                <p>Para ventanas, puertas, shower o varios trabajos.</p>
+                <p>Para ventanas, puertas, shower o varios trabajos con precio por pieza.</p>
               </div>
 
-              <button type="button" className={s.btnPrimary} onClick={selectItems}>
+              <span className={s.stepTwoModeChoiceMobileCta}>
                 Usar items
-              </button>
-            </article>
+              </span>
+            </button>
 
-            <article className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}>
+            <button
+              type="button"
+              className={`${s.stepTwoModeChoiceCard} ${s.stepTwoModeChoiceCardFast}`}
+              aria-label="Usar modo rapido"
+              onClick={onSelectFreeTotalMode}
+            >
               <span className={`${s.stepTwoModeChoiceBadge} ${s.stepTwoModeChoiceBadgeFast}`}>
                 Modo rapido
               </span>
@@ -145,14 +153,16 @@ export function PasoDosModoCotizacion({
               </div>
 
               <div className={s.stepTwoModeChoiceCardCopy}>
-                <strong>Cotizar libre por total</strong>
-                <p>Para reparaciones, cambios de vidrio o trabajos personalizados.</p>
+                <strong>Cuadernillo digital</strong>
+                <p>
+                  Escribe el trabajo, agrega detalles si quieres y define el precio al final.
+                </p>
               </div>
 
-              <button type="button" className={s.btnPrimary} onClick={onSelectFreeTotalMode}>
-                Usar total final
-              </button>
-            </article>
+              <span className={s.stepTwoModeChoiceMobileCta}>
+                Usar modo rapido
+              </span>
+            </button>
           </>
         )}
       </div>
