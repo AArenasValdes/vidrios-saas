@@ -138,8 +138,8 @@
 - **Datos que consume**: Resumen server-side via `adminSummaryService`
 - **Tablas Supabase relacionadas**: `organizations`, `organization_profile`, `users`, `pagos_suscripcion`
 - **Acciones principales**: Navegar a clientes SaaS, abrir prospectos `/admin/growth`, revisar urgencias
-- **Archivos a tocar para modificar**: `app/admin/layout.tsx`, `app/admin/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/components/*`, `src/features/admin/services/admin-summary.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`, `proxy.ts`
-- **Riesgos**: No reutilizar `AppShell`. No abrir esta ruta a admins normales de una organizacion. No exponer `service_role` ni datos multi-tenant al cliente.
+- **Archivos a tocar para modificar**: `app/admin/layout.tsx`, `app/admin/page.tsx`, `app/admin/admin.module.css`, `src/features/admin/components/*`, `src/features/admin/config/admin-nav.config.ts`, `src/features/admin/services/admin-summary.service.ts`, `src/features/admin/repositories/admin-clients.repository.ts`, `proxy.ts`
+- **Riesgos**: No reutilizar `AppShell`. No abrir esta ruta a admins normales de una organizacion. No exponer `service_role` ni datos multi-tenant al cliente. `AdminSidebar` debe cerrar sesion con hard nav (`navigateToLogoutRoute` -> `/auth/logout`), nunca con `<Link href="/auth/logout">` (prefetch/soft-nav borra cookies y parece logout en cada accion).
 
 ---
 
@@ -489,10 +489,10 @@
 - **Tipo**: Interna
 - **Archivo principal**: `app/(auth-public)/auth/logout/route.ts`
 - **Proposito**: Cierre server-side de sesion para limpiar cookies SSR y redirigir de forma segura a `/login`
-- **Usuario objetivo**: Usuario autenticado saliendo del panel
+- **Usuario objetivo**: Usuario autenticado saliendo del panel cliente o del panel founder `/admin`
 - **Acciones principales**: Expirar cookies Supabase activas y redirigir al login sin pasar por una navegacion SPA protegida
-- **Archivos a tocar para modificar**: `app/(auth-public)/auth/logout/route.ts`, `src/components/layout/app-shell.tsx`
-- **Riesgos**: No dejar cookies de sesion vivas en dominios compartidos (`.ventorap.cl`). No redirigir de vuelta a rutas privadas durante el logout.
+- **Archivos a tocar para modificar**: `app/(auth-public)/auth/logout/route.ts`, `src/components/layout/app-shell.tsx`, `src/features/admin/components/admin-sidebar.tsx`, `src/features/auth/services/logout-navigation.service.ts`
+- **Riesgos**: No dejar cookies de sesion vivas en dominios compartidos (`.ventorap.cl`). No redirigir de vuelta a rutas privadas durante el logout. No exponer `/auth/logout` como `Link` prefetchable en `AdminSidebar` ni `AppShell`; ambos deben salir por `navigateToLogoutRoute()` (hard nav).
 
 ---
 

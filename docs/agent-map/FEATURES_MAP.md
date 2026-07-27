@@ -31,7 +31,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no. El prompt de instalacion PWA tiene fallback visual para Opera/Android con mockup simple del navegador y highlight orientativo del `menu O`.
-- **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas.
+- **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas. El logout de `AppShell` y `AdminSidebar` debe usar `navigateToLogoutRoute()` (hard nav a `/auth/logout`); un `Link` a esa ruta puede prefetchar, borrar cookies y expulsar la sesion en cada accion.
 
 ---
 
@@ -223,9 +223,11 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/admin/admin.module.css`
   - `src/features/admin/components/admin-shell.tsx`
   - `src/features/admin/components/admin-sidebar.tsx`
+  - `src/features/admin/config/admin-nav.config.ts`
   - `src/features/admin/components/admin-kpi-card.tsx`
   - `src/features/admin/components/client-status-badge.tsx`
   - `src/features/admin/components/source-badge.tsx`
+  - `src/features/auth/services/logout-navigation.service.ts`
   - `src/features/admin/services/admin-access.service.ts`
   - `src/features/admin/services/admin-summary.service.ts`
   - `src/features/admin/services/admin-clients.service.ts`
@@ -245,8 +247,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/admin/*`, `src/features/admin/components/*`
 - **Donde editar logica**: `src/features/admin/services/*`
 - **Donde editar persistencia**: `src/features/admin/repositories/admin-clients.repository.ts`
-- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth` con datos en Supabase (`growth_*`).
-- **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor.
+- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth` con datos en Supabase (`growth_*`). El footer de `AdminSidebar` cierra sesion con boton + `navigateToLogoutRoute()` (mismo contrato que `AppShell`), no con `Link` a `/auth/logout`.
+- **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor. No volver a poner `<Link href="/auth/logout">` en el sidebar founder (invalida cookies por prefetch/soft-nav).
 
 ---
 

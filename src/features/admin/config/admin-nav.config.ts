@@ -17,6 +17,12 @@ export type AdminNavItem = {
   exact?: boolean;
 };
 
+export type AdminFooterAction = {
+  id: "logout";
+  title: string;
+  icon: IconType;
+};
+
 export const ADMIN_PRIMARY_NAV: AdminNavItem[] = [
   {
     href: "/admin",
@@ -56,15 +62,18 @@ export const ADMIN_PRIMARY_NAV: AdminNavItem[] = [
   },
 ];
 
-export const ADMIN_FOOTER_NAV = [
+export const ADMIN_FOOTER_NAV: AdminNavItem[] = [
   {
     href: "/dashboard",
     title: "Ir a Ventora",
     icon: LuLayoutDashboard,
   },
+];
+
+export const ADMIN_FOOTER_ACTIONS: AdminFooterAction[] = [
   {
-    href: "/auth/logout",
+    id: "logout",
     title: "Cerrar sesión",
     icon: LuLogOut,
   },
-] as const;
+];

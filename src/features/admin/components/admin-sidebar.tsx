@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ADMIN_FOOTER_ACTIONS,
   ADMIN_FOOTER_NAV,
   ADMIN_PRIMARY_NAV,
   type AdminNavItem,
 } from "@/features/admin/config/admin-nav.config";
+import { navigateToLogoutRoute } from "@/features/auth/services/logout-navigation.service";
 import tokens from "@/features/admin/styles/admin-design-tokens.module.css";
 import s from "./admin-sidebar.module.css";
 
@@ -79,12 +81,32 @@ export function AdminSidebar({ mobileOpen, onNavigate }: AdminSidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={s.footerLink}
                 onClick={onNavigate}
               >
                 <Icon aria-hidden className={s.navIcon} />
                 <span>{item.title}</span>
               </Link>
+            );
+          })}
+
+          {ADMIN_FOOTER_ACTIONS.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={s.footerLink}
+                onClick={() => {
+                  onNavigate?.();
+                  navigateToLogoutRoute();
+                }}
+              >
+                <Icon aria-hidden className={s.navIcon} />
+                <span>{item.title}</span>
+              </button>
             );
           })}
         </div>

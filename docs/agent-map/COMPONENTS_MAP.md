@@ -17,12 +17,12 @@
 ### Componente: AdminSidebar
 
 - **Archivo**: `src/features/admin/components/admin-sidebar.tsx`
-- **Proposito**: Navegacion interna founder para `Resumen`, `Clientes SaaS` y `Prospectos`.
+- **Proposito**: Navegacion interna founder para Resumen, Clientes, Pagos, Activacion, Tareas y Marketing.
 - **Usado en**: `AdminShell`
-- **Props importantes**: `founderEmail: string | null`
-- **Dependencias**: `usePathname`, `SourceBadge`
+- **Props importantes**: `mobileOpen: boolean`, `onNavigate?: () => void`
+- **Dependencias**: `usePathname`, `admin-nav.config` (`ADMIN_PRIMARY_NAV`, `ADMIN_FOOTER_NAV`, `ADMIN_FOOTER_ACTIONS`), `navigateToLogoutRoute`
 - **Cuando modificarlo**: Cambios de IA/nav interna de `/admin`
-- **Riesgos**: Mantener claro que `Prospectos` sigue siendo local y no datos SaaS reales.
+- **Riesgos**: "Cerrar sesion" es boton + hard nav a `/auth/logout` (nunca `Link` prefetchable). Links del footer usan `prefetch={false}`.
 
 ### Componente: AppShell
 

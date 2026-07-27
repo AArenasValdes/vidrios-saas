@@ -44,8 +44,19 @@ export async function POST(request: Request) {
     }
 
     console.error("Fallo el provision admin.", error);
+
+    const message =
+      error instanceof Error ? error.message : "No pudimos crear la cuenta.";
+    const missingServiceRole =
+      /SUPABASE_SERVICE_ROLE_KEY/i.test(message) ||
+      /createAdminClient/i.test(message);
+
     return NextResponse.json(
-      { error: "No pudimos crear la cuenta." },
+      {
+        error: missingServiceRole
+          ? "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor. Sin esa clave no se pueden crear cuentas desde /admin."
+          : "No pudimos crear la cuenta.",
+      },
       { status: 500 }
     );
   }

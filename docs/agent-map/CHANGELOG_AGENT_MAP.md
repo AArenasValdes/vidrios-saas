@@ -4,6 +4,13 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-26 - Logout duro en AdminSidebar (sesion founder)
+
+- Causa: el footer de `/admin` usaba `<Link href="/auth/logout">`. Prefetch/soft-nav invocaba `GET /auth/logout`, borraba cookies `sb-*` y el layout founder redirigia a `/login` en cada accion.
+- Fix: `AdminSidebar` cierra sesion con boton + `navigateToLogoutRoute()` (mismo contrato que `AppShell`). `ADMIN_FOOTER_ACTIONS` separa logout del nav de links; footer links con `prefetch={false}`.
+- Docs: `ROUTES_MAP` (`/admin`, `/auth/logout`), `FEATURES_MAP` (Auth + Centro de Operaciones), `COMPONENTS_MAP` (`AdminSidebar`).
+- Archivos: `admin-sidebar.tsx`, `admin-nav.config.ts`, `admin-sidebar.module.css`, test de regresion del sidebar.
+
 ## 2026-07-25 - Selector visual de tipologias en Cotizacion rapida
 
 - `QuoteConstructorWorkspace` mantiene seis accesos principales y mueve tipologias especiales a menus compactos de Puerta y Mas tipologias.
