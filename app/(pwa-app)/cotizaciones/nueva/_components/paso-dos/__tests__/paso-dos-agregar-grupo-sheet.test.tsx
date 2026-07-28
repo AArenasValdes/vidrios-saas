@@ -152,8 +152,9 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     const progress = screen.getByRole("list", { name: /Pasos de la pieza/i });
 
     expect(within(progress).getByText("Tipo")).toBeInTheDocument();
-    expect(within(progress).getByText("Sistema y composición")).toBeInTheDocument();
-    expect(within(progress).getByText("Medidas y detalles")).toBeInTheDocument();
+    expect(within(progress).getByText("Sistema")).toBeInTheDocument();
+    expect(within(progress).getByText("Medidas")).toBeInTheDocument();
+    expect(within(progress).getByText("Despiece")).toBeInTheDocument();
     expect(within(progress).getByText("Precio")).toBeInTheDocument();
     expect(screen.queryByText("Paso 2 de 5")).not.toBeInTheDocument();
   });
@@ -183,7 +184,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     expect(screen.getByRole("button", { name: /Ver todos los trabajos/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /\u00bfQu\u00e9 est\u00e1s cotizando/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Vidrio \/ Cristal/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Continuar a composición/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continuar a sistema/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Finalizar pieza/i })).not.toBeInTheDocument();
   });
 
@@ -222,7 +223,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
         {...baseProps}
         quotePricingMode="por_item"
         entryMode="normal"
-        paso={4}
+        paso={5}
         draft={{
           ...draft,
           categoria: "Ventanas",
@@ -356,6 +357,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
           alto: "1500",
           vidrio: "Cristal templado 10 mm",
           precio: "",
+          priceInputMode: "line_m2",
         }}
         visibleLineTemplates={[
           {
@@ -383,10 +385,12 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
     expect(screen.queryByLabelText("Seleccionar linea comercial")).not.toBeInTheDocument();
 
     const selector = screen.getByLabelText("Seleccionar producto de cristal");
-    expect(selector).toHaveValue("");
-    expect(screen.getByText(/Cristal templado 10 mm - Cristal/)).toBeInTheDocument();
+    expect(selector).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getAllByText(/Cristal templado 10 mm/i).length).toBeGreaterThan(0);
 
-    fireEvent.change(selector, { target: { value: "cr-1" } });
+    fireEvent.click(selector);
+    const picker = screen.getByRole("dialog", { name: /Elegir cristal/i });
+    fireEvent.click(within(picker).getByRole("option", { name: /Cristal templado 10 mm/i }));
     expect(onSelectLineTemplate).toHaveBeenCalledWith("cr-1");
   });
 
@@ -396,7 +400,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
         {...baseProps}
         quotePricingMode="por_item"
         entryMode="normal"
-        paso={4}
+        paso={5}
         globalError="No se pudo agregar el grupo"
         draft={{
           ...draft,
@@ -431,7 +435,7 @@ describe("PasoDosAgregarGrupoSheet desktop embebido", () => {
         {...baseProps}
         quotePricingMode="por_item"
         entryMode="normal"
-        paso={4}
+        paso={5}
         onConfirm={onConfirm}
         draft={{
           ...draft,

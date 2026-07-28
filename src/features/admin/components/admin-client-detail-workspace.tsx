@@ -238,9 +238,39 @@ export function AdminClientDetailWorkspace({
         </section>
 
         <section className={s.panel}>
+          <h2>Contacto de registro</h2>
+          <dl className={s.summaryGrid}>
+            <div>
+              <dt>Nombre</dt>
+              <dd>{client.principalUser?.nombre ?? "Sin informar"}</dd>
+            </div>
+            <div>
+              <dt>Correo</dt>
+              <dd>{client.principalUser?.correo ?? client.organizationEmail ?? "Sin informar"}</dd>
+            </div>
+            <div>
+              <dt>WhatsApp</dt>
+              <dd>{client.principalUser?.whatsapp ?? client.organizationPhone ?? "Sin informar"}</dd>
+            </div>
+            <div>
+              <dt>Ciudad o comuna</dt>
+              <dd>{client.principalUser?.ciudadComuna ?? client.profile.publicZone ?? "Sin informar"}</dd>
+            </div>
+            <div>
+              <dt>Registro</dt>
+              <dd>{formatDate(client.principalUser?.createdAt ?? client.createdAt)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className={s.panel}>
           <h2>Uso del producto</h2>
           <dl className={s.summaryGrid}>
             <div><dt>Cotizaciones</dt><dd>{client.usage.cotizacionesCount}</dd></div>
+            <div>
+              <dt>Primera cotizacion</dt>
+              <dd>{client.usage.firstQuoteAt ? formatDate(client.usage.firstQuoteAt) : "Aun no creada"}</dd>
+            </div>
             <div><dt>PDFs generados</dt><dd>{client.usage.pdfsGeneradosCount}</dd></div>
             <div><dt>Clientes registrados</dt><dd>{client.usage.clientesRegistradosCount}</dd></div>
             <div><dt>Página pública</dt><dd>{client.publicChannel.pageStatusLabel}</dd></div>

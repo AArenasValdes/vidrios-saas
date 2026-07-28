@@ -136,6 +136,10 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function fieldText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function getPiecePresentationMeta(item: CotizacionWorkflowItem) {
   return decodeCotizacionItemPresentationMeta(item.observaciones);
 }
@@ -148,11 +152,12 @@ export function isPieceCommerciallyComplete(
   item: CotizacionWorkflowItem,
   pricingMode: QuotePricingMode
 ) {
+  const nombre = fieldText(item.nombre);
   if (item.tipoItem === "item_libre_con_valor") {
-    return Boolean(item.nombre.trim()) && (pricingMode !== "por_item" || item.precioUnitario > 0);
+    return Boolean(nombre) && (pricingMode !== "por_item" || item.precioUnitario > 0);
   }
   return (
-    Boolean(item.nombre.trim()) &&
+    Boolean(nombre) &&
     Boolean(item.ancho) &&
     Boolean(item.alto) &&
     item.cantidad >= 1 &&
@@ -168,20 +173,23 @@ export function derivePieceCommercialStatus(
   item: CotizacionWorkflowItem,
   pricingMode: QuotePricingMode
 ): PieceCommercialStatus {
+  const nombre = fieldText(item.nombre);
+  const lineaComercial = fieldText(item.lineaComercial);
+  const vidrio = fieldText(item.vidrio);
   if (item.tipoItem === "item_libre_con_valor") {
-    if (!item.nombre.trim()) return "falta_nombre";
+    if (!nombre) return "falta_nombre";
     if (pricingMode === "por_item" && item.precioUnitario <= 0) return "falta_precio";
     return "completa";
   }
 
-  if (!item.nombre.trim()) return "falta_nombre";
+  if (!nombre) return "falta_nombre";
   if (!item.ancho || !item.alto) return "falta_medidas";
   if (item.cantidad < 1) return "falta_cantidad";
   if (pricingMode === "por_item" && item.precioUnitario <= 0) return "falta_precio";
 
   const meta = getPiecePresentationMeta(item);
-  if (!meta.lineTemplateId && !item.lineaComercial.trim()) return "falta_linea";
-  if (!item.vidrio.trim()) return "falta_vidrio";
+  if (!meta.lineTemplateId && !lineaComercial) return "falta_linea";
+  if (!vidrio) return "falta_vidrio";
   return "completa";
 }
 

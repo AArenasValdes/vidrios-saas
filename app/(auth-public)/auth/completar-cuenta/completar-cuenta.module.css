@@ -1,0 +1,79 @@
+.formShell {
+  width: min(100%, 640px);
+}
+
+.formCard {
+  padding-block: 28px;
+}
+
+.form {
+  gap: 18px;
+}
+
+.stepLabel {
+  margin: 0 0 6px;
+  color: #1e88ff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.email {
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 0;
+  padding: 7px 10px;
+  overflow: hidden;
+  border: 1px solid rgba(30, 136, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(30, 136, 255, 0.06);
+  color: #4e6687;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 14px;
+}
+
+.consent {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 11px;
+  align-items: flex-start;
+  padding: 13px;
+  border: 1px solid rgba(164, 182, 214, 0.2);
+  border-radius: 12px;
+  background: rgba(11, 15, 23, 0.42);
+  color: #aebdd2;
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.consent input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: #1e88ff;
+}
+
+.consent:focus-within {
+  border-color: rgba(30, 136, 255, 0.48);
+  box-shadow: 0 0 0 3px rgba(30, 136, 255, 0.12);
+}
+
+@media (max-width: 680px) {
+  .formCard {
+    padding-block: 22px;
+  }
+
+  .fieldGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

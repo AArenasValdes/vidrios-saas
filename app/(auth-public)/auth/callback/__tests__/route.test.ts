@@ -57,6 +57,7 @@ describe("GET /auth/callback", () => {
       status: "linked",
       organizationId: 77,
       userId: 9,
+      accountComplete: true,
       syncedAuthUserId: false,
     });
 

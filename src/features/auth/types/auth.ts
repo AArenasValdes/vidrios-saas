@@ -24,7 +24,7 @@ export interface AuthSignInInput {
 
 export type AuthOAuthIntent = "login" | "signup";
 
-export type AuthOAuthProvider = "google" | "facebook";
+export type AuthOAuthProvider = "google";
 
 export interface AuthSignInWithOAuthInput {
   provider: AuthOAuthProvider;

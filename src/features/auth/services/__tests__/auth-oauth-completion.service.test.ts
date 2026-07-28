@@ -4,26 +4,38 @@ jest.mock("@/lib/supabase/admin", () => ({
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getOAuthAccountCompletionState,
   provisionOrganizationFromOAuthUser,
   resolveOAuthIdentity,
 } from "../auth-oauth-completion.service";
 
-function createUsersTableMock(options: {
-  authRow?: unknown;
-  emailRow?: unknown;
-}) {
-  let lookup: "auth" | "email" = "auth";
-
+function createMaybeSingleQuery(data: unknown) {
   return {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    ilike: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({ data, error: null }),
+  };
+}
+
+function createCompletionAdmin(input: {
+  userByAuth?: unknown;
+  userByEmail?: unknown;
+  organization?: unknown;
+  profile?: unknown;
+}) {
+  let userLookup: "auth" | "email" = "auth";
+  const usersQuery = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn(function (field: string) {
       if (field === "auth_user_id") {
-        lookup = "auth";
+        userLookup = "auth";
       }
       return this;
     }),
     ilike: jest.fn(function () {
-      lookup = "email";
+      userLookup = "email";
       return this;
     }),
     is: jest.fn().mockReturnThis(),
@@ -32,176 +44,188 @@ function createUsersTableMock(options: {
         is: jest.fn().mockResolvedValue({ error: null }),
       }),
     }),
-    insert: jest.fn().mockReturnValue({
-      select: jest.fn().mockReturnValue({
-        single: jest.fn().mockResolvedValue({
-          data: { id: 12 },
-          error: null,
-        }),
-      }),
-    }),
     maybeSingle: jest.fn(async () => ({
-      data: lookup === "auth" ? options.authRow ?? null : options.emailRow ?? null,
+      data:
+        userLookup === "auth"
+          ? input.userByAuth ?? null
+          : input.userByEmail ?? null,
       error: null,
     })),
   };
+
+  return {
+    usersQuery,
+    admin: {
+      from: jest.fn((table: string) => {
+        if (table === "users") return usersQuery;
+        if (table === "organizations") {
+          return createMaybeSingleQuery(input.organization ?? null);
+        }
+        if (table === "organization_profile") {
+          return createMaybeSingleQuery(input.profile ?? null);
+        }
+        throw new Error(`tabla inesperada: ${table}`);
+      }),
+    },
+  };
 }
+
+const completeUser = {
+  id: 9,
+  correo: "maestro@test.com",
+  auth_user_id: "auth-1",
+  organization_id: 77,
+  eliminado_en: null,
+  nombre: "Maestro Uno",
+  whatsapp: "+56912345678",
+  ciudad_comuna: "Puente Alto",
+  data_sharing_accepted_at: "2026-07-28T10:00:00.000Z",
+};
 
 describe("auth-oauth-completion.service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("vincula auth_user_id solo cuando esta null", async () => {
-    const usersTable = createUsersTableMock({
-      authRow: null,
-      emailRow: {
-        id: 9,
-        correo: "maestro@test.com",
-        auth_user_id: null,
-        organization_id: 77,
-        eliminado_en: null,
-      },
+  it("reconoce una cuenta Google completa y no repite el formulario", async () => {
+    const { admin } = createCompletionAdmin({
+      userByAuth: completeUser,
+      organization: { nombre: "Vidrios Test" },
+      profile: { empresa_nombre: "Vidrios Test" },
     });
-
-    (createAdminClient as jest.Mock).mockReturnValue({
-      from: jest.fn((table: string) => {
-        if (table === "users") {
-          return usersTable;
-        }
-
-        throw new Error(`tabla inesperada: ${table}`);
-      }),
-    });
+    (createAdminClient as jest.Mock).mockReturnValue(admin);
 
     const result = await resolveOAuthIdentity({
-      authUserId: "auth-new",
+      authUserId: "auth-1",
       email: "maestro@test.com",
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: "linked",
       organizationId: 77,
-      userId: 9,
-      syncedAuthUserId: true,
+      accountComplete: true,
     });
-    expect(usersTable.update).toHaveBeenCalledWith({ auth_user_id: "auth-new" });
   });
 
-  it("devuelve identity_conflict si auth_user_id ya apunta a otro usuario", async () => {
-    const usersTable = createUsersTableMock({
-      authRow: null,
-      emailRow: {
-        id: 9,
-        correo: "maestro@test.com",
-        auth_user_id: "auth-existing",
-        organization_id: 77,
-        eliminado_en: null,
+  it("detecta los datos pendientes de un usuario Google existente", async () => {
+    const { admin } = createCompletionAdmin({
+      userByAuth: {
+        ...completeUser,
+        whatsapp: null,
+        data_sharing_accepted_at: null,
       },
+      organization: { nombre: "Vidrios Test" },
+      profile: { empresa_nombre: "Vidrios Test" },
     });
+    (createAdminClient as jest.Mock).mockReturnValue(admin);
 
-    (createAdminClient as jest.Mock).mockReturnValue({
-      from: jest.fn(() => usersTable),
-    });
-
-    const result = await resolveOAuthIdentity({
-      authUserId: "auth-new",
+    const state = await getOAuthAccountCompletionState({
+      authUserId: "auth-1",
       email: "maestro@test.com",
     });
 
-    expect(result).toEqual({ status: "identity_conflict" });
-  });
-
-  it("provisiona organizacion nueva para usuario OAuth sin perfil", async () => {
-    const usersTable = createUsersTableMock({
-      authRow: null,
-      emailRow: null,
-    });
-
-    (createAdminClient as jest.Mock).mockReturnValue({
-      from: jest.fn((table: string) => {
-        if (table === "users") {
-          return usersTable;
-        }
-
-        if (table === "organizations") {
-          return {
-            insert: jest.fn().mockReturnValue({
-              select: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({
-                  data: { id: 88 },
-                  error: null,
-                }),
-              }),
-            }),
-            delete: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null }),
-            }),
-          };
-        }
-
-        if (table === "organization_profile") {
-          const upsert = jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: { plan_code: "trial", trial_ends_at: "2026-07-01" },
-                error: null,
-              }),
-            }),
-          });
-
-          return {
-            upsert,
-            select: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                maybeSingle: jest.fn().mockResolvedValue({
-                  data: { plan_code: "trial", trial_ends_at: "2026-07-01" },
-                  error: null,
-                }),
-              }),
-            }),
-          };
-        }
-
-        throw new Error(`tabla inesperada: ${table}`);
-      }),
-    });
-
-    const result = await provisionOrganizationFromOAuthUser({
-      authUserId: "auth-new",
-      email: "nuevo@test.com",
+    expect(state.isComplete).toBe(false);
+    expect(state.values).toMatchObject({
+      nombre: "Maestro Uno",
       empresaNombre: "Vidrios Test",
+      whatsapp: "",
+      consentimientoAceptado: false,
     });
-
-    expect(result.organizationId).toBe(88);
-    expect(result.alreadyProvisioned).toBe(false);
-    expect(result.trialEndsAt).toBe("2026-07-01");
   });
 
-  it("no crea organizacion si el correo ya existe con otro auth_user_id", async () => {
-    const usersTable = createUsersTableMock({
-      authRow: null,
-      emailRow: {
-        id: 3,
-        correo: "nuevo@test.com",
+  it("rechaza un correo vinculado a otro auth_user_id", async () => {
+    const { admin } = createCompletionAdmin({
+      userByAuth: null,
+      userByEmail: {
+        ...completeUser,
         auth_user_id: "auth-other",
-        organization_id: 5,
-        eliminado_en: null,
       },
     });
+    (createAdminClient as jest.Mock).mockReturnValue(admin);
 
-    (createAdminClient as jest.Mock).mockReturnValue({
-      from: jest.fn(() => usersTable),
+    await expect(
+      getOAuthAccountCompletionState({
+        authUserId: "auth-new",
+        email: "maestro@test.com",
+      })
+    ).rejects.toMatchObject({ code: "identity_conflict" });
+  });
+
+  it("normaliza datos y delega el alta atomica a la RPC", async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [
+        {
+          result_organization_id: 88,
+          result_user_id: 12,
+          result_trial_ends_at: "2026-08-04T00:00:00.000Z",
+          result_already_provisioned: false,
+          result_account_complete: true,
+        },
+      ],
+      error: null,
     });
+    (createAdminClient as jest.Mock).mockReturnValue({ rpc });
+
+    const result = await provisionOrganizationFromOAuthUser({
+      authUserId: " auth-new ",
+      email: " NUEVO@Test.com ",
+      nombre: "  Alessandro   Gonzalez ",
+      empresaNombre: " Vidrios   Test ",
+      whatsapp: "9 1234 5678",
+      ciudadComuna: " Puente   Alto ",
+      consentimientoAceptado: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("complete_google_oauth_account", {
+      p_auth_user_id: "auth-new",
+      p_email: "nuevo@test.com",
+      p_nombre: "Alessandro Gonzalez",
+      p_empresa_nombre: "Vidrios Test",
+      p_whatsapp: "+56912345678",
+      p_ciudad_comuna: "Puente Alto",
+      p_consent: true,
+    });
+    expect(result).toMatchObject({
+      organizationId: 88,
+      userId: 12,
+      alreadyProvisioned: false,
+      accountComplete: true,
+    });
+  });
+
+  it.each([
+    {
+      label: "nombre vacio",
+      patch: { nombre: "" },
+      message: "Ingresa tu nombre.",
+    },
+    {
+      label: "WhatsApp invalido",
+      patch: { whatsapp: "123" },
+      message: "Ingresa un WhatsApp chileno valido.",
+    },
+    {
+      label: "sin consentimiento",
+      patch: { consentimientoAceptado: false },
+      message: "Debes aceptar",
+    },
+  ])("rechaza $label antes de llamar a la RPC", async ({ patch, message }) => {
+    const rpc = jest.fn();
+    (createAdminClient as jest.Mock).mockReturnValue({ rpc });
 
     await expect(
       provisionOrganizationFromOAuthUser({
         authUserId: "auth-new",
         email: "nuevo@test.com",
+        nombre: "Alessandro",
         empresaNombre: "Vidrios Test",
+        whatsapp: "+56912345678",
+        ciudadComuna: "Santiago",
+        consentimientoAceptado: true,
+        ...patch,
       })
-    ).rejects.toMatchObject({
-      code: "identity_conflict",
-    });
+    ).rejects.toThrow(message);
+
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

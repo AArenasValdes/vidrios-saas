@@ -107,6 +107,7 @@ describe("PasoDosSeccion desktop", () => {
             paso: 1,
             onClose: jest.fn(),
           } as unknown as PasoDosSeccionProps["addGroupSheetProps"],
+          preferredWorkspaceMode: "guiada",
         })}
       />
     );
@@ -141,6 +142,7 @@ describe("PasoDosSeccion desktop", () => {
             },
             onClose: jest.fn(),
           } as unknown as PasoDosSeccionProps["addGroupSheetProps"],
+          preferredWorkspaceMode: "guiada",
         })}
       />
     );
@@ -166,6 +168,7 @@ describe("PasoDosSeccion desktop", () => {
             },
             onClose: jest.fn(),
           } as unknown as PasoDosSeccionProps["addGroupSheetProps"],
+          preferredWorkspaceMode: "guiada",
         })}
       />
     );
@@ -178,10 +181,10 @@ describe("PasoDosSeccion desktop", () => {
   });
 
   it("muestra la superficie comercial cuando el wizard esta cerrado", () => {
-    render(<PasoDosSeccion {...buildProps()} />);
+    render(<PasoDosSeccion {...buildProps({ preferredWorkspaceMode: "guiada" })} />);
 
     expect(screen.getByText("Crea la primera pieza")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Por componentes · Cambiar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cambiar modalidad/i })).toBeInTheDocument();
     expect(screen.queryByTestId("technical-form")).not.toBeInTheDocument();
   });
 
@@ -192,6 +195,7 @@ describe("PasoDosSeccion desktop", () => {
           formulario: {
             editingItemId: "item-1",
           } as unknown as PasoDosSeccionProps["formulario"],
+          preferredWorkspaceMode: "guiada",
         })}
       />
     );
@@ -212,7 +216,7 @@ describe("PasoDosSeccion desktop", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Por componentes · Cambiar/i })
+      screen.getByRole("button", { name: /Cambiar modalidad/i })
     );
 
     expect(onReturnToModeSelector).toHaveBeenCalledTimes(1);
@@ -234,7 +238,7 @@ describe("PasoDosSeccion desktop", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Por componentes · Cambiar/i })
+      screen.getByRole("button", { name: /Cambiar modalidad/i })
     );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -246,7 +250,7 @@ describe("PasoDosSeccion desktop", () => {
     expect(onReturnToModeSelector).toHaveBeenCalledTimes(1);
   });
 
-  it("abre el wizard automaticamente al elegir por items en desktop", () => {
+  it("elige por items sin abrir automaticamente el editor en desktop", () => {
     const onOpenCreator = jest.fn();
     const onSelectMode = jest.fn();
 
@@ -263,7 +267,7 @@ describe("PasoDosSeccion desktop", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cotizar por ítems/i }));
 
     expect(onSelectMode).toHaveBeenCalledWith("por_item");
-    expect(onOpenCreator).toHaveBeenCalledTimes(1);
+    expect(onOpenCreator).not.toHaveBeenCalled();
   });
 
   it("oculta el panel de componentes mientras no se elige modalidad", () => {

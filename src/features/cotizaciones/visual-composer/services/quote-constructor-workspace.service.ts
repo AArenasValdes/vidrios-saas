@@ -57,6 +57,10 @@ export const QUOTE_CONSTRUCTOR_MORE_PRESETS =
     return preset ? [preset] : [];
   });
 
+function textField(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export type QuoteConstructorItemPatch = Partial<
   Pick<
     ComponentFormState,
@@ -108,8 +112,7 @@ export function resolveQuoteConstructorCommercialName(
 
 /** True si el nombre es exactamente el default de un preset del constructor (auto, no custom). */
 export function isQuoteConstructorPresetDefaultName(nombre: string) {
-  const normalized = nombre
-    .trim()
+  const normalized = textField(nombre)
     .toLocaleLowerCase("es")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -135,7 +138,7 @@ export function getQuoteConstructorItemConfig(
 export function isQuoteConstructorCompatibleItem(item: CotizacionWorkflowItem) {
   if (item.tipoItem === "item_libre_con_valor") return false;
   if (getQuoteConstructorItemConfig(item)) return true;
-  const type = item.tipo.trim().toLocaleLowerCase("es");
+  const type = textField(item.tipo).toLocaleLowerCase("es");
   return type === "ventana" || type === "puerta" || type === "trabajo personalizado";
 }
 

@@ -50,6 +50,10 @@ function mapUser(row: AdminOrganizationUserRow): AdminClientUser {
     correo: row.correo ?? "sin-correo",
     rol: row.rol ?? "sin-rol",
     authUserId: row.auth_user_id ?? null,
+    nombre: row.nombre?.trim() || null,
+    whatsapp: row.whatsapp?.trim() || null,
+    ciudadComuna: row.ciudad_comuna?.trim() || null,
+    dataSharingAcceptedAt: row.data_sharing_accepted_at ?? null,
     createdAt: row.creado_en ?? null,
   };
 }
@@ -121,9 +125,11 @@ function buildEmpresaNombre(
 
 function buildQuickLinks(
   organizationPhone: string | null,
-  profile: AdminOrganizationProfileRow | null
+  profile: AdminOrganizationProfileRow | null,
+  privateWhatsapp?: string | null
 ) {
-  const phone = profile?.empresa_telefono ?? organizationPhone ?? null;
+  const phone =
+    privateWhatsapp ?? profile?.empresa_telefono ?? organizationPhone ?? null;
 
   return {
     publicPageUrl: profile?.solicitud_publica_slug
@@ -171,16 +177,24 @@ function buildAdminClientListItem(input: {
   };
   const quickLinks = buildQuickLinks(
     input.organization.telefono ?? null,
-    input.profile
+    input.profile,
+    principalUser?.whatsapp
   );
 
   return {
     organizationId: Number(input.organization.id),
     empresaNombre: buildEmpresaNombre(input.organization, input.profile),
+    nombrePrincipal: principalUser?.nombre ?? null,
     correoPrincipal:
       principalUser?.correo ?? input.profile?.empresa_email ?? input.organization.correo ?? null,
     telefonoPrincipal:
-      input.profile?.empresa_telefono ?? input.organization.telefono ?? null,
+      principalUser?.whatsapp ??
+      input.profile?.empresa_telefono ??
+      input.organization.telefono ??
+      null,
+    whatsappPrincipal: principalUser?.whatsapp ?? null,
+    ciudadComuna:
+      principalUser?.ciudadComuna ?? input.profile?.public_zone ?? null,
     planCode: subscription.planCode,
     planLabel: getPlanLabel(subscription.planCode),
     estadoSuscripcion: subscription.subscriptionStatus,
@@ -311,7 +325,8 @@ export async function getAdminClientDetail(
   };
   const quickLinks = buildQuickLinks(
     snapshot.organization.telefono ?? null,
-    snapshot.profile
+    snapshot.profile,
+    principalUserRow?.whatsapp ?? null
   );
   const [usageSnapshot, publicChannel] = await Promise.all([
     fetchAdminClientUsage(organizationId),

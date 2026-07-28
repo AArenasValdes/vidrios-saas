@@ -20,11 +20,12 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 ### Tabla: users
 
 - **Proposito**: Empleados de la organizacion vinculados a auth.users
-- **Campos importantes**: `id` (bigint PK), `correo` (UNIQUE), `organization_id` (FK), `rol` (admin/tecnico/viewer por convencion, sin CHECK), `auth_user_id` (FK auth.users), `eliminado_en`
+- **Campos importantes**: `id` (bigint PK), `correo` (UNIQUE), `organization_id` (FK), `rol`, `auth_user_id` (UNIQUE partial), `nombre`, `whatsapp` (`+569XXXXXXXX`), `ciudad_comuna`, `data_sharing_accepted_at`, `eliminado_en`
 - **Relaciones**: N:1 organizations, N:1 auth.users
-- **Usada por**: Auth (perfil post-login), RLS (`get_org_id()`), solicitudes access control
+- **Usada por**: Auth (perfil post-login y completar cuenta), RLS (`get_org_id()`), solicitudes access control y panel founder
 - **Archivos donde aparece**: `src/features/auth/repositories/auth.repository.ts`, `src/features/solicitudes/services/solicitudes-contacto-access.ts`
-- **Riesgos**: `rol` no tiene CHECK constraint. Si se agrega un rol nuevo, actualizar `UserRole` type en `src/features/auth/types/auth.ts`
+- **Riesgos**: Nombre, WhatsApp y ciudad son datos privados de la cuenta SaaS; no mezclarlos con `clients`. El consentimiento se fecha en servidor y no autoriza campanas masivas. `authenticated` no tiene SELECT sobre estas cuatro columnas; usar `service_role` solo desde servidor.
+- **Integridad**: `users_correo_normalized_unique` evita duplicados por mayusculas/espacios. Nombre y ciudad tienen limites 2..120; WhatsApp usa `+569XXXXXXXX`.
 
 ---
 
@@ -306,6 +307,7 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 | `reserve_next_cotizacion_code(org_id, date)` | PLPGSQL SECURITY DEFINER | Generacion atomica de codigo COT-DDMMYY-NNN |
 | `admin_purgar_clientes_eliminados(retention_days)` | PLPGSQL SECURITY DEFINER | Purga hard de registros soft-deleted > retention |
 | `rls_auto_enable()` | EVENT TRIGGER | Auto-habilita RLS en nuevas tablas publicas |
+| `complete_google_oauth_account(...)` | PLPGSQL SECURITY INVOKER | Alta Google atomica e idempotente; EXECUTE solo `service_role` |
 
 ---
 
@@ -328,6 +330,8 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 ### organization_profile - trial y activacion hibrida
 
 - Cada organizacion nueva debe arrancar con fila de `organization_profile` y trial de 7 dias
+- El alta Google usa `complete_google_oauth_account`: transaccion idempotente que crea o vincula organizacion, usuario y perfil. El trial lo crea el trigger vigente de `organizations`; la RPC no reinicia planes ni fechas. Los datos comerciales se precargan solo cuando estan vacios.
+- Migracion remota verificada: `20260728083604_google_oauth_account_completion`.
 - La migracion `20260525121500_trial_subscriptions_manual_activation.sql` agrega columnas y trigger de defaults
 - El estado efectivo debe salir de `src/features/subscriptions/services/subscription-status.service.ts`, no de comparaciones sueltas en componentes
 - Comercialmente hoy se usa modelo hibrido:
@@ -385,4 +389,4 @@ Migracion: `supabase/migrations/20260627120000_growth_workspace.sql`
 | INC-5 | cotizacion_code_counters sin FK a organizations | Baja |
 | INC-10 | quote_item_breakdown sin RLS policies | Alta |
 | INC-13 | Sin CHECK en cotizaciones.estado, projects.estado, users.rol | Media |
-| INC-14 | Grants ALL a anon en todas las tablas | Media |
+| INC-14 | Grants amplios legacy en tablas distintas de `users`; revisar por superficie | Media |

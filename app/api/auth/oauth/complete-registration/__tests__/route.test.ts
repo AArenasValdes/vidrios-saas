@@ -40,7 +40,13 @@ describe("POST /api/auth/oauth/complete-registration", () => {
     const response = await POST(
       new Request("http://localhost/api/auth/oauth/complete-registration", {
         method: "POST",
-        body: JSON.stringify({ empresaNombre: "Vidrios Test" }),
+        body: JSON.stringify({
+          nombre: "Alessandro",
+          empresaNombre: "Vidrios Test",
+          whatsapp: "+56912345678",
+          ciudadComuna: "Santiago",
+          consentimientoAceptado: true,
+        }),
       })
     );
 
@@ -66,6 +72,7 @@ describe("POST /api/auth/oauth/complete-registration", () => {
       organizationId: 88,
       alreadyProvisioned: false,
       trialEndsAt: "2026-07-01",
+      accountComplete: true,
     });
 
     const response = await POST(
@@ -74,7 +81,13 @@ describe("POST /api/auth/oauth/complete-registration", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ empresaNombre: "Vidrios Test" }),
+        body: JSON.stringify({
+          nombre: "Alessandro",
+          empresaNombre: "Vidrios Test",
+          whatsapp: "+56912345678",
+          ciudadComuna: "Santiago",
+          consentimientoAceptado: true,
+        }),
       })
     );
 
@@ -84,6 +97,16 @@ describe("POST /api/auth/oauth/complete-registration", () => {
       organizationId: 88,
       alreadyProvisioned: false,
       trialEndsAt: "2026-07-01",
+      accountComplete: true,
+    });
+    expect(provisionOrganizationFromOAuthUser).toHaveBeenCalledWith({
+      authUserId: "auth-1",
+      email: "nuevo@test.com",
+      nombre: "Alessandro",
+      empresaNombre: "Vidrios Test",
+      whatsapp: "+56912345678",
+      ciudadComuna: "Santiago",
+      consentimientoAceptado: true,
     });
   });
 });

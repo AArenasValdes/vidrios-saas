@@ -21,6 +21,10 @@ export type AdminClientUser = {
   correo: string;
   rol: string;
   authUserId: string | null;
+  nombre: string | null;
+  whatsapp: string | null;
+  ciudadComuna: string | null;
+  dataSharingAcceptedAt: string | null;
   createdAt: string | null;
 };
 
@@ -64,8 +68,11 @@ export type AdminClientSubscription = {
 export type AdminClientListItem = {
   organizationId: number;
   empresaNombre: string;
+  nombrePrincipal: string | null;
   correoPrincipal: string | null;
   telefonoPrincipal: string | null;
+  whatsappPrincipal: string | null;
+  ciudadComuna: string | null;
   planCode: PlanCode | null;
   planLabel: string;
   estadoSuscripcion: SubscriptionStatus | null;

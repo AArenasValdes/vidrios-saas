@@ -9,6 +9,13 @@
 -- `cotizacion_line_templates.material` fue expandido por migracion aditiva
 -- para aceptar `Cristal` ademas de `Aluminio` y `PVC`. Este dump no incluye
 -- esa tabla porque sigue pendiente de regeneracion.
+-- NOTE 2026-07-28:
+-- La migracion remota `20260728083604_google_oauth_account_completion`
+-- agrega a `public.users`: nombre, whatsapp, ciudad_comuna y
+-- data_sharing_accepted_at; tambien agrega constraints, email normalizado
+-- unico, grants por columna y la RPC `complete_google_oauth_account`.
+-- Este dump no incorpora aun ese DDL. Consultar la migracion y los addendums
+-- de database_map.md/rls_policies.md hasta regenerar el dump completo.
 
 
 

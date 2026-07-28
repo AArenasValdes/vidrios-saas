@@ -1,7 +1,7 @@
 # Agent Database Notes - Ventora
 
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
-Fuente de verdad: `current_schema.sql` cuando este regenerado. Nota 2026-05-31: `current_schema.sql` y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar addendums en `database_map.md` y `rls_policies.md`.
+Fuente de verdad: `current_schema.sql` cuando este regenerado. Nota 2026-07-28: `current_schema.sql` y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
 
 ---
 
@@ -191,6 +191,20 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Migraciones remotas registradas actualmente: `20260317154500`, `20260427103000`, `20260517053830`, `20260517054151`, `20260518040656`, `20260531212114`, `20260531212250`.
 - Hay drift historico: la base remota contiene tablas recientes que no aparecen como migraciones remotas antiguas; conservar esta nota hasta normalizar historial con Supabase CLI.
 - `database.types.ts` local sigue marcado como atrasado porque MCP genero tipos pero CLI local aun no puede escribirlos sin `SUPABASE_DB_PASSWORD`; regenerar cuando se normalice acceso CLI.
+
+---
+
+## Addendum 2026-07-28 - completar cuenta Google
+
+- MCP Supabase autenticado y verificado contra `yrtrwgkaopfumpidjthk`.
+- Migracion remota registrada: `20260728083604_google_oauth_account_completion`.
+- No usar `db push` para esta pasada: existe drift historico entre archivos locales y el historial remoto. La migracion fue aplicada de forma individual con `apply_migration`.
+- `complete_google_oauth_account(...)` es la unica operacion autorizada para completar atomicamente el alta Google. Solo se llama desde servidor con `service_role`.
+- La idempotencia depende de cuatro barreras: unique exact existente, unique normalizado nuevo, unique parcial de `auth_user_id` y advisory locks por identidad/correo.
+- Los campos `users.nombre`, `users.whatsapp`, `users.ciudad_comuna` y `users.data_sharing_accepted_at` son privados. No agregarlos a grants de columna para `authenticated` ni consultarlos desde browser.
+- El consentimiento se fecha con `now()` dentro de Postgres. Nunca aceptar un timestamp entregado por cliente.
+- No insertar trials manualmente desde la RPC. El trigger de `organizations` crea o conserva `organization_profile` y sus defaults de trial dentro de la misma transaccion.
+- Security Advisor no reporta la RPC nueva. Permanecen avisos previos sobre `touch_growth_updated_at`, `get_org_id()`, `reserve_next_cotizacion_code()` y leaked password protection.
 
 ---
 

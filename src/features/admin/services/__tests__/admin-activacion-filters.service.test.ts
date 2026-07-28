@@ -11,8 +11,11 @@ function buildClient(partial: Partial<AdminClientListItem>): AdminClientListItem
   return {
     organizationId: 1,
     empresaNombre: "Vidriería Demo",
+    nombrePrincipal: "Usuario Demo",
     correoPrincipal: "demo@test.com",
     telefonoPrincipal: "+56912345678",
+    whatsappPrincipal: "+56912345678",
+    ciudadComuna: "Santiago",
     planCode: "trial",
     planLabel: "Prueba gratis",
     estadoSuscripcion: "trial_active",

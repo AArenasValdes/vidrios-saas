@@ -22,6 +22,6 @@ export function buildOAuthAnalyticsEvent(
 
 export function resolveOAuthProvider(
   value: string | null | undefined
-): AuthOAuthProvider {
-  return value === "facebook" ? "facebook" : "google";
+): AuthOAuthProvider | null {
+  return value === "google" ? "google" : null;
 }

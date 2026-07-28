@@ -9,7 +9,11 @@ import {
 import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type CompleteRegistrationBody = Record<string, unknown> & {
+  nombre?: string;
   empresaNombre?: string;
+  whatsapp?: string;
+  ciudadComuna?: string;
+  consentimientoAceptado?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -45,7 +49,11 @@ export async function POST(request: Request) {
     const result = await provisionOrganizationFromOAuthUser({
       authUserId: user.id,
       email: user.email,
+      nombre: body.nombre ?? "",
       empresaNombre: body.empresaNombre ?? "",
+      whatsapp: body.whatsapp ?? "",
+      ciudadComuna: body.ciudadComuna ?? "",
+      consentimientoAceptado: body.consentimientoAceptado === true,
     });
 
     return NextResponse.json({
@@ -53,6 +61,7 @@ export async function POST(request: Request) {
       organizationId: result.organizationId,
       alreadyProvisioned: result.alreadyProvisioned,
       trialEndsAt: result.trialEndsAt,
+      accountComplete: result.accountComplete,
     });
   } catch (error) {
     if (error instanceof AuthOAuthCompletionError) {

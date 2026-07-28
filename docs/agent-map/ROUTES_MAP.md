@@ -58,15 +58,15 @@
 - **Tipo**: Publica (con redireccion si autenticado)
 - **Archivo principal**: `app/(auth-public)/login/page.tsx`
 - **Layout usado**: `app/layout.tsx` (root layout)
-- **Proposito**: Autenticacion email/password
+- **Proposito**: Autenticacion email/password y Google como unico proveedor OAuth
 - **Usuario objetivo**: Usuario no autenticado
-- **Funcionalidades visibles**: Formulario login, manejo de errores, ver/ocultar contrasena, reinicio local de app en dispositivo, redireccion post-login
+- **Funcionalidades visibles**: Google, formulario email/password, manejo de errores, ver/ocultar contrasena, reinicio local de app en dispositivo, redireccion post-login
 - **Componentes principales**: `LoginView` (interno de la pagina)
 - **Datos que consume**: `auth.users`, `public.users`
 - **Tablas Supabase relacionadas**: `auth.users`, `public.users`
-- **Acciones principales**: `signIn` via `authService`
+- **Acciones principales**: `signIn` y `signInWithGoogle` via `authService`
 - **Archivos a tocar para modificar**: `app/(auth-public)/login/page.tsx`, `src/features/auth/hooks/useAuth.ts`, `src/features/auth/services/auth.service.ts`, `src/features/auth/repositories/auth.repository.ts`
-- **Riesgos**: No romper flujo PKCE. El proxy redirige usuarios autenticados a `/dashboard`. No cambiar manejo de `?next=` param. No volver a colapsar errores distintos bajo "correo o contrasena incorrecta"; el login ahora clasifica timeout, cookie no lista, perfil faltante, red y permisos.
+- **Riesgos**: No romper flujo PKCE. Facebook no es provider OAuth valido. No pedir telefono en login. No cambiar manejo de `?next=` ni colapsar errores distintos bajo "correo o contrasena incorrecta".
 
 ---
 
@@ -76,13 +76,26 @@
 - **Archivo principal**: `app/(auth-public)/registro/page.tsx`
 - **Componente principal**: `app/(auth-public)/registro/registro-view.tsx`
 - **API usada**: `app/api/auth/register/route.ts`
-- **Proposito**: Solicitar cuenta de prueba asistida. Captura nombre, empresa, WhatsApp, ciudad/comuna y mensaje opcional.
+- **Proposito**: Crear cuenta con Google o solicitar una prueba asistida. El formulario asistido captura nombre, empresa, WhatsApp, ciudad/comuna y mensaje opcional.
 - **Usuario objetivo**: Prospecto SaaS que necesita onboarding asistido
 - **Datos que consume/escribe**: Inserta lead en `solicitudes_contacto` con `contexto = registro-saas`, `organization_id = null`
 - **Tablas Supabase relacionadas**: `solicitudes_contacto`
-- **Acciones principales**: Enviar solicitud y mostrar confirmacion. No crea usuario Supabase Auth, organizacion, perfil ni trial.
+- **Acciones principales**: Google inicia el alta autoservicio; el formulario asistido solo crea una solicitud y muestra confirmacion.
 - **Archivos a tocar para modificar**: `app/(auth-public)/registro/registro-view.tsx`, `app/api/auth/register/route.ts`, `src/features/solicitudes/services/solicitudes-contacto.service.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`
-- **Riesgos**: Mantener cerrado el autoservicio. No reintroducir creacion directa de Auth/organizacion desde esta ruta. Si se cambia `contexto`, revisar constraint/RLS de `solicitudes_contacto`.
+- **Riesgos**: Google es el unico OAuth visible. El formulario asistido no crea Auth/organizacion. Si se cambia `contexto`, revisar constraint/RLS de `solicitudes_contacto`.
+
+---
+
+## Ruta: /auth/completar-cuenta
+
+- **Tipo**: Privada transitoria (sesion OAuth valida, antes de activacion)
+- **Archivo principal**: `app/(auth-public)/auth/completar-cuenta/page.tsx`
+- **API usada**: `POST /api/auth/oauth/complete-registration`
+- **Proposito**: Completar una sola vez el perfil SaaS iniciado con Google antes de `/activacion`.
+- **Campos obligatorios**: Nombre personal, taller, WhatsApp chileno, ciudad/comuna y consentimiento de cuenta/contacto directo.
+- **Persistencia**: RPC `complete_google_oauth_account` actualiza atomicamente `users`, `organizations` y `organization_profile`; el trigger de `organizations` crea el trial una sola vez y la RPC no reinicia estados existentes.
+- **Navegacion**: `next` usa allowlist interna; rechaza URLs externas, `/login`, `/registro` y `/auth/*`. Una cuenta completa omite el formulario.
+- **Riesgos**: RPC exclusiva de `service_role`. No usar metadata Google para autorizacion ni volver a pedir telefono en onboarding.
 
 ---
 
@@ -150,7 +163,7 @@
 - **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
 - **Proposito**: Tabla global de organizaciones SaaS con plan, estado, trial, suscripcion y ultimo pago.
 - **Usuario objetivo**: Founder/admin interno allowlist por correo
-- **Funcionalidades visibles**: Tabla con empresa, correo principal, telefono, plan, estado de suscripcion, `trial_ends_at`, `subscription_ends_at`, ultimo pago y acceso a ficha
+- **Funcionalidades visibles**: Taller, nombre personal, correo, WhatsApp, ciudad, plan, trial/suscripcion, primera cotizacion y acceso a ficha
 - **Componentes principales**: `ClientStatusBadge`, `SourceBadge`
 - **Hooks**: Ninguno en Fase 1
 - **Datos que consume**: Listado server-side via `adminClientsService`
@@ -168,7 +181,7 @@
 - **Layout usado**: `app/admin/layout.tsx` -> `AdminShell`
 - **Proposito**: Ficha interna de una organizacion SaaS con datos de empresa, usuario principal, estado de trial/suscripcion y ledger de pagos.
 - **Usuario objetivo**: Founder/admin interno allowlist por correo
-- **Funcionalidades visibles**: Datos `organizations` + `organization_profile`, usuario principal, estado efectivo de trial/suscripcion, historial `pagos_suscripcion`, links rapidos a pagina publica y WhatsApp, placeholders visuales para extender trial / activar pago / cambiar plan
+- **Funcionalidades visibles**: Organizacion, contacto privado principal, trial/suscripcion, primera cotizacion, pagos y links a pagina publica/WhatsApp
 - **Componentes principales**: `ClientStatusBadge`, `SourceBadge`
 - **Hooks**: Ninguno en Fase 1
 - **Datos que consume**: Detalle server-side via `adminClientsService`

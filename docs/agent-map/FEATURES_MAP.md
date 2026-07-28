@@ -6,24 +6,29 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Autenticacion
 
-- **Que hace**: Login email/password con Supabase Auth, PKCE, sesion persistida, perfil de usuario con organizacion y rol. Revalida sesion al volver a foco/rehidratar pesta?a o PWA para evitar estado viejo.
-- **Rutas involucradas**: `/login`, `/auth` (callback), `/auth/logout`, `/cuenta-vencida`
+- **Que hace**: Login email/password y Google OAuth unico, PKCE, sesion persistida y alta SaaS con datos obligatorios antes de activacion.
+- **Rutas involucradas**: `/login`, `/registro`, `/auth/callback`, `/auth/completar-cuenta`, `/auth/logout`, `/cuenta-vencida`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
+  - `app/(auth-public)/auth/callback/route.ts`
+  - `app/(auth-public)/auth/completar-cuenta/page.tsx`
+  - `app/api/auth/oauth/complete-registration/route.ts`
   - `app/(auth-public)/auth/logout/route.ts`
   - `src/features/auth/hooks/useAuth.ts`
   - `src/features/auth/services/auth.service.ts`
   - `src/features/auth/services/auth-login-error.service.ts`
   - `src/features/auth/services/auth-login-diagnostics.service.ts`
   - `src/features/auth/services/auth-server.service.ts`
+  - `src/features/auth/services/auth-oauth-completion.service.ts`
   - `src/features/auth/repositories/auth.repository.ts`
   - `src/features/auth/repositories/auth-server.repository.ts`
   - `src/features/auth/types/auth.ts`
   - `proxy.ts` (middleware auth)
-- **Componentes principales**: LoginView (interno en pagina)
+- **Componentes principales**: `LoginView`, `RegistroView`, `CompletarCuentaView`
 - **Hooks/servicios/actions**: `useAuth()`, `authService`, `authServerService`
-- **Tablas Supabase**: `auth.users`, `public.users`
+- **Tablas Supabase**: `auth.users`, `public.users`, `organizations`, `organization_profile`
 - **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol) -> diagnostico local + eventos `login_success` / `login_failure`
+- **Flujo Google nuevo/incompleto**: Google -> callback -> `/auth/completar-cuenta?next=/activacion` -> API autenticada -> RPC transaccional -> `/activacion`
 - **Estados importantes**: `cargando`, authenticated, unauthenticated
 - **Donde editar UI**: `app/(auth-public)/login/page.tsx`
 - **Donde editar logica**: `src/features/auth/services/auth.service.ts`
@@ -31,7 +36,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no. El prompt de instalacion PWA tiene fallback visual para Opera/Android con mockup simple del navegador y highlight orientativo del `menu O`.
-- **Riesgos al modificar**: No romper flujo PKCE ni cache de perfil en localStorage/sessionStorage. No volver a disparar logout por navegacion SPA directa a `/login` desde rutas privadas. El logout de `AppShell` y `AdminSidebar` debe usar `navigateToLogoutRoute()` (hard nav a `/auth/logout`); un `Link` a esa ruta puede prefetchar, borrar cookies y expulsar la sesion en cada accion.
+- **Riesgos al modificar**: Google es el unico OAuth; Facebook legacy solo permanece como dato social fuera de auth. La RPC usa `service_role`, lock transaccional y upsert; no exponerla a `anon`/`authenticated`. No pedir telefono nuevamente en login u onboarding.
 
 ---
 
@@ -247,7 +252,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `app/admin/*`, `src/features/admin/components/*`
 - **Donde editar logica**: `src/features/admin/services/*`
 - **Donde editar persistencia**: `src/features/admin/repositories/admin-clients.repository.ts`
-- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve un shell interno sobrio y separado. `Prospectos` enlaza a `/admin/growth` con datos en Supabase (`growth_*`). El footer de `AdminSidebar` cierra sesion con boton + `navigateToLogoutRoute()` (mismo contrato que `AppShell`), no con `Link` a `/auth/logout`.
+- **Consideraciones UX**: No reutiliza `AppShell`. Founder ve organizaciones SaaS separadas de `clients`, con nombre del registro, taller, correo, WhatsApp privado, ciudad, fecha, trial y primera cotizacion.
 - **Riesgos al modificar**: No permitir acceso a admins normales de una organizacion. No mezclar esta capa con CRUD de clientes finales `/clientes`. Mantener `service_role` solo en servidor. No volver a poner `<Link href="/auth/logout">` en el sidebar founder (invalida cookies por prefetch/soft-nav).
 
 ---

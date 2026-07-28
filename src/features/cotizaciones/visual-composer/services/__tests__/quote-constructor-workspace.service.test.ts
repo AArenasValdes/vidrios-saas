@@ -97,6 +97,13 @@ describe("quote constructor workspace service", () => {
     expect(isQuoteConstructorCompatibleItem(item({ tipoItem: "item_libre_con_valor" }))).toBe(false);
   });
 
+  it("tolera piezas legacy sin tipo al validar compatibilidad", () => {
+    const legacy = item({ tipo: undefined as unknown as string });
+
+    expect(() => isQuoteConstructorCompatibleItem(legacy)).not.toThrow();
+    expect(isQuoteConstructorCompatibleItem(legacy)).toBe(false);
+  });
+
   it("reordena sin mutar arreglo original", () => {
     const items = [item({ id: "a" }), item({ id: "b" }), item({ id: "c" })];
     const moved = moveQuoteConstructorItem(items, "b", -1);

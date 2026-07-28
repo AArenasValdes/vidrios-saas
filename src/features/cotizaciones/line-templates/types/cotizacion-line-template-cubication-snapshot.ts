@@ -140,7 +140,7 @@ function parseCut(value: unknown): CotizacionLineTemplateCut | null {
     quantity,
     lengthMm,
     totalLinealMm: normalizePositiveInteger(value.totalLinealMm, lengthMm * quantity),
-    measureExplanation,
+    ...(measureExplanation ? { measureExplanation } : {}),
   };
 }
 
@@ -285,7 +285,7 @@ function normalizeEditableCut(cut: Partial<CotizacionLineTemplateCut>): Cotizaci
     quantity,
     lengthMm,
     totalLinealMm: lengthMm * quantity,
-    measureExplanation,
+    ...(measureExplanation ? { measureExplanation } : {}),
   };
 }
 
@@ -668,20 +668,19 @@ export function resolveCubicationSnapshotForSave(input: {
     recipeFromCatalog && recipeFromCatalog.components.length > 0
   );
 
-  const preserveManualRecipeAdjustment = (
+  const preserveManualAdjustment = (
     snapshot: CotizacionItemCubicationSnapshot | null | undefined
   ) =>
     Boolean(
       snapshot &&
         cubicationSnapshotMatchesDimensions(snapshot, dims) &&
         snapshot.source === "manual" &&
-        snapshotUsesFabricationRecipe(snapshot) &&
         !isGeometricFallbackSnapshot(snapshot)
     );
 
   // Receta de línea: siempre manda sobre el croquis / modo Personalizado.
   if (catalogHasRecipe && input.catalogMetadata) {
-    if (preserveManualRecipeAdjustment(input.draftSnapshot)) {
+    if (preserveManualAdjustment(input.draftSnapshot)) {
       return rebuildCubicationSnapshotWithCuts(
         input.draftSnapshot!,
         input.draftSnapshot!.cuts,
@@ -691,7 +690,7 @@ export function resolveCubicationSnapshotForSave(input: {
         }
       );
     }
-    if (preserveManualRecipeAdjustment(input.previousSnapshot)) {
+    if (preserveManualAdjustment(input.previousSnapshot)) {
       return input.previousSnapshot ?? null;
     }
     return buildCubicationSnapshotFromCatalogMetadata({
@@ -745,10 +744,7 @@ export function resolveCubicationSnapshotForSave(input: {
     cubicationSnapshotMatchesDimensions(input.draftSnapshot, dims) &&
     input.draftSnapshot
   ) {
-    if (
-      input.draftSnapshot.source === "manual" &&
-      !isGeometricFallbackSnapshot(input.draftSnapshot)
-    ) {
+    if (input.draftSnapshot.source === "manual") {
       return rebuildCubicationSnapshotWithCuts(input.draftSnapshot, input.draftSnapshot.cuts, {
         source: "manual",
         capturedAt: input.draftSnapshot.capturedAt,
@@ -770,8 +766,7 @@ export function resolveCubicationSnapshotForSave(input: {
 
   if (
     cubicationSnapshotMatchesDimensions(input.previousSnapshot, dims) &&
-    input.previousSnapshot?.source === "manual" &&
-    !isGeometricFallbackSnapshot(input.previousSnapshot)
+    input.previousSnapshot?.source === "manual"
   ) {
     return input.previousSnapshot;
   }

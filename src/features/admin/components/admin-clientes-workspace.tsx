@@ -784,7 +784,14 @@ export function AdminClientesWorkspace() {
                       <td>
                         #{client.organizationId} · {client.empresaNombre}
                         {client.isTestAccount ? <span className={s.testBadge}>Prueba</span> : null}
-                        <div className={s.mobileMeta}>{client.correoPrincipal ?? "—"}</div>
+                        <div className={s.mobileMeta}>
+                          {client.nombrePrincipal ?? "Sin nombre personal"} ·{" "}
+                          {client.correoPrincipal ?? "—"}
+                        </div>
+                        <div className={s.subtleMeta}>
+                          {client.whatsappPrincipal ?? client.telefonoPrincipal ?? "Sin WhatsApp"}
+                          {client.ciudadComuna ? ` · ${client.ciudadComuna}` : ""}
+                        </div>
                       </td>
                       <td><ClientStatusBadge status={client.estadoEfectivo} /></td>
                       <td>{client.planLabel}</td>
@@ -820,6 +827,11 @@ export function AdminClientesWorkspace() {
                   <strong>{client.empresaNombre}</strong>
                   <ClientStatusBadge status={client.estadoEfectivo} />
                   <div className={s.mobileMeta}>
+                    <span>{client.nombrePrincipal ?? client.correoPrincipal ?? "Sin contacto"}</span>
+                    <span>
+                      {client.whatsappPrincipal ?? client.telefonoPrincipal ?? "Sin WhatsApp"}
+                      {client.ciudadComuna ? ` · ${client.ciudadComuna}` : ""}
+                    </span>
                     <span>{client.planLabel}</span>
                     <span>{pluralizeCotizaciones(client.cotizacionesCount)}</span>
                     <span>

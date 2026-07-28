@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, PlayCircle, RefreshCcw } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { FacebookAuthButton } from "../_components/facebook-auth-button";
 import { GoogleAuthButton } from "../_components/google-auth-button";
 import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
@@ -54,7 +53,6 @@ const copy = {
   identityConflictError:
     "Este correo ya esta vinculado a otra cuenta de acceso. Usa el metodo con el que te dieron acceso o contactanos.",
   googleContinue: "Continuar con Google",
-  facebookContinue: "Continuar con Facebook",
   divider: "o",
   authCodeLabel: "Codigo de acceso:",
   passwordShow: "Mostrar",
@@ -193,7 +191,7 @@ export default function LoginView({
   nextPath,
   appResetDone,
 }: LoginViewProps) {
-  const { signIn, signInWithGoogle, signInWithFacebook } = useAuth({ passive: true });
+  const { signIn, signInWithGoogle } = useAuth({ passive: true });
   const router = useRouter();
 
   const [correo, setCorreo] = useState("");
@@ -236,10 +234,7 @@ export default function LoginView({
     });
 
     try {
-      const signInFn =
-        provider === "facebook" ? signInWithFacebook : signInWithGoogle;
-
-      await signInFn({
+      await signInWithGoogle({
         intent: "login",
         nextPath,
       });
@@ -477,15 +472,6 @@ export default function LoginView({
                 disabled={cargando || Boolean(cargandoOAuth) || rateLimitRemainingMs > 0}
                 onClick={() => {
                   void handleOAuthSignIn("google");
-                }}
-              />
-
-              <FacebookAuthButton
-                label={copy.facebookContinue}
-                loading={cargandoOAuth === "facebook"}
-                disabled={cargando || Boolean(cargandoOAuth) || rateLimitRemainingMs > 0}
-                onClick={() => {
-                  void handleOAuthSignIn("facebook");
                 }}
               />
 

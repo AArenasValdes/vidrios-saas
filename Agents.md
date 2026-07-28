@@ -109,6 +109,13 @@ Ultima actualizacion operativa: 2026-07-27
 
 ### Ya resuelto en esta pasada
 
+- Se implemento y migro el alta Google unica con `/auth/completar-cuenta`:
+  - migracion remota `20260728083604_google_oauth_account_completion`
+  - perfil privado en `users` con WhatsApp chileno y consentimiento server-side
+  - RPC atomica/idempotente solo `service_role`
+  - correo normalizado unico y locks por identidad/correo
+  - grants de columna para no exponer nombre, WhatsApp, ciudad ni consentimiento al cliente autenticado
+  - panel founder separado de `clients` comerciales
 - Se pulio el Paso 2 mobile de `/cotizaciones/nueva` para `por_item`:
   - selector inicial **Cotizar por items** / **Cuadernillo digital**
   - toggle **Guiada | Constructor** solo en Tipo/lista, no en Cantidad/Datos

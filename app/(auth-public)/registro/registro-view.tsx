@@ -16,16 +16,14 @@ import {
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { AuthOAuthProvider } from "@/features/auth/types/auth";
-import { FacebookAuthButton } from "../_components/facebook-auth-button";
 import { GoogleAuthButton } from "../_components/google-auth-button";
 import s from "../login/login.module.css";
 
 const copy = {
   title: "Empieza tu prueba gratis",
   subtitle:
-    "Crea tu cuenta en segundos con Google o Facebook, o solicita configuracion asistida por WhatsApp.",
+    "Crea tu cuenta en segundos con Google o solicita configuracion asistida por WhatsApp.",
   googlePrimary: "Crear prueba gratis con Google",
-  facebookPrimary: "Crear prueba gratis con Facebook",
   assistedTitle: "Prefieres onboarding asistido?",
   assistedSubtitle:
     "Completa el formulario y te contactamos por WhatsApp para dejar Ventora listo.",
@@ -44,7 +42,7 @@ const copy = {
   loginPrompt: "Ya tienes acceso?",
   loginAction: "Iniciar sesion",
   trialNote:
-    "Con Google o Facebook activas tu prueba al instante. El formulario es solo si prefieres que te configuremos la cuenta.",
+    "Con Google activas tu prueba al instante. El formulario es solo si prefieres que te configuremos la cuenta.",
   successTitle: "Solicitud recibida",
   successMessage:
     "Recibimos tus datos. Te contactaremos por WhatsApp para dejar tu cuenta configurada.",
@@ -56,7 +54,7 @@ const copy = {
 };
 
 export default function RegistroView() {
-  const { signInWithGoogle, signInWithFacebook } = useAuth({ passive: true });
+  const { signInWithGoogle } = useAuth({ passive: true });
   const [nombre, setNombre] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [whatsapp, setWhatsapp] = useState("+56 9 ");
@@ -83,17 +81,12 @@ export default function RegistroView() {
     });
 
     try {
-      const signInFn =
-        provider === "facebook" ? signInWithFacebook : signInWithGoogle;
-
-      await signInFn({
+      await signInWithGoogle({
         intent: "signup",
         nextPath: "/activacion",
       });
     } catch {
-      setError(
-        `No pudimos iniciar el registro con ${provider === "facebook" ? "Facebook" : "Google"}. Intenta de nuevo.`
-      );
+      setError("No pudimos iniciar el registro con Google. Intenta de nuevo.");
       googleTagService.trackEvent(`${provider}_signup_abandoned`, {
         event_category: "auth",
         event_label: "oauth_start_failed",
@@ -187,15 +180,6 @@ export default function RegistroView() {
                     disabled={cargando || Boolean(cargandoOAuth)}
                     onClick={() => {
                       void handleOAuthSignup("google");
-                    }}
-                  />
-
-                  <FacebookAuthButton
-                    label={copy.facebookPrimary}
-                    loading={cargandoOAuth === "facebook"}
-                    disabled={cargando || Boolean(cargandoOAuth)}
-                    onClick={() => {
-                      void handleOAuthSignup("facebook");
                     }}
                   />
 

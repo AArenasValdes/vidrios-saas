@@ -232,7 +232,6 @@ function ActivacionPageContent() {
   const [showCompanyMore, setShowCompanyMore] = useState(false);
 
   const [empresaNombre, setEmpresaNombre] = useState(profile?.empresaNombre ?? "");
-  const [empresaTelefono, setEmpresaTelefono] = useState(profile?.empresaTelefono ?? "");
   const [empresaDireccion, setEmpresaDireccion] = useState(profile?.empresaDireccion ?? "");
   const [empresaEmail, setEmpresaEmail] = useState(profile?.empresaEmail ?? "");
   const [formaPago, setFormaPago] = useState(profile?.formaPago ?? "");
@@ -300,7 +299,6 @@ function ActivacionPageContent() {
 
     hasHydratedCompanyFormRef.current = true;
     setEmpresaNombre(profile.empresaNombre ?? "");
-    setEmpresaTelefono(profile.empresaTelefono ?? "");
     setEmpresaDireccion(profile.empresaDireccion ?? "");
     setEmpresaEmail(profile.empresaEmail ?? "");
     setFormaPago(profile.formaPago ?? "");
@@ -654,8 +652,8 @@ function ActivacionPageContent() {
 
     setError(null);
 
-    if (!empresaNombre.trim() || !empresaTelefono.trim()) {
-      setError("Nombre y telefono son obligatorios.");
+    if (!empresaNombre.trim()) {
+      setError("El nombre de empresa es obligatorio.");
       return;
     }
 
@@ -664,7 +662,7 @@ function ActivacionPageContent() {
         buildEmpresaProfileInput({
           ...profile,
           empresaNombre: empresaNombre.trim(),
-          empresaTelefono: empresaTelefono.trim(),
+          empresaTelefono: profile.empresaTelefono.trim(),
           empresaDireccion: empresaDireccion.trim(),
           empresaEmail: empresaEmail.trim(),
           formaPago: formaPago.trim(),
@@ -685,7 +683,6 @@ function ActivacionPageContent() {
     empresaDireccion,
     empresaEmail,
     empresaNombre,
-    empresaTelefono,
     formaPago,
     logoPreview,
     profile,
@@ -1667,15 +1664,6 @@ function ActivacionPageContent() {
               value={empresaNombre}
               onChange={(event) => setEmpresaNombre(event.target.value)}
               placeholder="Ej: Vidrieria San Marco"
-            />
-          </label>
-          <label className={s.activationField}>
-            <span className={s.activationLabel}>Telefono</span>
-            <input
-              className={s.activationInput}
-              value={empresaTelefono}
-              onChange={(event) => setEmpresaTelefono(event.target.value)}
-              placeholder="+56 9 1234 5678"
             />
           </label>
           <label className={s.activationLogoUpload}>

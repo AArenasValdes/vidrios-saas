@@ -1,5 +1,7 @@
 # Database Map - Ventora
 
+> Verificacion remota parcial: 2026-07-28. Mientras `current_schema.sql` siga marcado como atrasado, las migraciones remotas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
+
 Fuente de verdad: `current_schema.sql`. Referencia complementaria: `database.types.ts`.
 Fecha de generación: 2026-05-30.
 
@@ -11,7 +13,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 
 **Total de tablas:** 26 versionadas por migraciones recientes. Este mapa tiene secciones completas para el core y addendums para tablas agregadas después del último dump completo.
 **Total de vistas:** 1
-**Total de funciones:** 4
+**Total de funciones documentadas en este mapa:** 5 core, mas funciones agregadas por migraciones posteriores al dump
 **Esquema:** `public` exclusivamente
 
 ---
@@ -42,6 +44,8 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 ---
 
 ### 2. `users`
+
+> Extendido por `20260728083604_google_oauth_account_completion`: agrega `nombre`, `whatsapp`, `ciudad_comuna`, `data_sharing_accepted_at`, unique sobre `lower(btrim(correo))` y grants de columna que mantienen estos cuatro campos fuera del acceso cliente.
 
 **Propósito:** Empleados de una organización. Vínculo con `auth.users`.
 
@@ -877,6 +881,20 @@ auth.users (1) ──── (N) users
 - `pagos_suscripcion`: 16 filas; estados observados `aprobado=2`, `pendiente=3`, `fallido=11`.
 - `pagos_suscripcion` ahora solo expone `SELECT` a `authenticated`; escritura queda reservada para rutas server con `service_role`.
 - Performance Advisor aun reporta FKs sin indice y un indice duplicado en `solicitudes_contacto`; revisar despues de estabilizar pagos/produccion.
+
+---
+
+## Addendum 2026-07-28 - Google OAuth y alta SaaS
+
+- Migracion aplicada en remoto: `20260728083604_google_oauth_account_completion`.
+- `public.users` incorpora perfil privado de alta SaaS: `nombre`, `whatsapp`, `ciudad_comuna` y `data_sharing_accepted_at`.
+- `users_correo_normalized_unique` evita cuentas duplicadas por mayusculas o espacios en correo.
+- `complete_google_oauth_account(...)` usa `SECURITY INVOKER`, `search_path=''`, locks transaccionales de 64 bits por `auth_user_id` y correo, y upsert de `organization_profile`.
+- La RPC solo tiene EXECUTE para `service_role`; `anon` y `authenticated` no pueden invocarla.
+- Los grants de `users` exponen a `authenticated` solo columnas operativas. Las cuatro columnas privadas no tienen SELECT cliente.
+- El trigger `ensure_organization_profile_trial_defaults` sigue siendo la unica fuente de creacion del trial. La RPC no reinicia planes ni fechas existentes.
+- Datos comerciales de contacto, responsable y zona se precargan solo cuando estan vacios. El nombre del taller se sincroniza con el valor confirmado.
+- Verificacion remota posterior: 23 usuarios, 0 correos normalizados duplicados, 0 `auth_user_id` duplicados, 0 organizaciones activas sin perfil y 0 perfiles con fechas de trial nulas.
 
 ---
 

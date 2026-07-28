@@ -457,6 +457,7 @@ describe("use-paso-dos-agregar-grupo helpers", () => {
       "Bow Window",
       "Guillotina",
       "Celosía",
+      "Personalizado",
     ]);
     expect(getSystemOptionsForSubtype("Ventana 1 hoja")).toEqual(["Fijo"]);
   });

@@ -71,8 +71,8 @@ import s from "./quote-constructor-workspace.module.css";
 type Props = {
   items: CotizacionWorkflowItem[];
   quotePricingMode: QuotePricingMode;
-  lineTemplates: CotizacionLineTemplate[];
-  glassOptions: readonly string[];
+  lineTemplates?: CotizacionLineTemplate[];
+  glassOptions?: readonly string[];
   activeItemId: string | null;
   totalClienteManual: number | null;
   formatCurrencyInput: (value: string) => string;
@@ -140,6 +140,10 @@ function parseQuantityValue(raw: string): number | null {
 function itemHasLocalFieldErrors(drafts: ItemFieldDrafts | undefined) {
   if (!drafts) return false;
   return Boolean(drafts.ancho?.error || drafts.alto?.error || drafts.cantidad?.error);
+}
+
+function itemText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function getCommittedFieldText(
@@ -265,16 +269,16 @@ function getInspectorSectionStatus(
   if (sectionId === "precio" && pricingMode === "total_global") return "optional";
 
   if (sectionId === "identificacion") {
-    return item.nombre.trim() ? "ready" : "pending";
+    return itemText(item.nombre) ? "ready" : "pending";
   }
 
   if (sectionId === "sistema") {
     const meta = getPiecePresentationMeta(item);
-    return meta.lineTemplateId || item.lineaComercial.trim() ? "ready" : "pending";
+    return meta.lineTemplateId || itemText(item.lineaComercial) ? "ready" : "pending";
   }
 
   if (sectionId === "vidrio") {
-    return item.vidrio.trim() ? "ready" : "pending";
+    return itemText(item.vidrio) ? "ready" : "pending";
   }
 
   if (sectionId === "precio") {
@@ -297,7 +301,7 @@ function listPieceGaps(params: {
   const { item, view, pricingMode, hasLocalErrors } = params;
   const gaps: PieceGap[] = [];
 
-  if (!item.nombre.trim()) {
+  if (!itemText(item.nombre)) {
     gaps.push({
       id: "nombre",
       label: "Nombre",
@@ -325,7 +329,7 @@ function listPieceGaps(params: {
   }
 
   const meta = getPiecePresentationMeta(item);
-  if (!meta.lineTemplateId && !item.lineaComercial.trim()) {
+  if (!meta.lineTemplateId && !itemText(item.lineaComercial)) {
     gaps.push({
       id: "linea",
       label: "Línea comercial",
@@ -334,7 +338,7 @@ function listPieceGaps(params: {
     });
   }
 
-  if (!item.vidrio.trim()) {
+  if (!itemText(item.vidrio)) {
     gaps.push({
       id: "vidrio",
       label: "Vidrio",
@@ -472,8 +476,8 @@ function InspectorAccordionSection({
 export function QuoteConstructorWorkspace({
   items,
   quotePricingMode,
-  lineTemplates,
-  glassOptions,
+  lineTemplates = [],
+  glassOptions = [],
   activeItemId,
   totalClienteManual,
   formatCurrencyInput,
@@ -618,7 +622,7 @@ export function QuoteConstructorWorkspace({
     const suggested = resolveQuoteConstructorCommercialName(activeForm.guidedVisualConfig);
     if (!suggested) return;
     if (
-      activeItem.nombre.trim().toLocaleLowerCase("es") ===
+      itemText(activeItem.nombre).toLocaleLowerCase("es") ===
       suggested.trim().toLocaleLowerCase("es")
     ) {
       return;

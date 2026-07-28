@@ -13,7 +13,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <LoginView
-      oauthError={params.error === "oauth"}
+      oauthError={
+        params.error === "oauth" || params.error === "oauth_provider"
+      }
       oauthNoEmailError={params.error === "oauth_no_email"}
       identityConflictError={params.error === "identity_conflict"}
       nextPath={params.next ?? null}

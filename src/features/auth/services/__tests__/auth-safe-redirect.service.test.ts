@@ -11,7 +11,16 @@ describe("auth-safe-redirect.service", () => {
     expect(sanitizeAuthNextPath("https://evil.com")).toBe("/dashboard");
     expect(sanitizeAuthNextPath("//evil.com")).toBe("/dashboard");
     expect(sanitizeAuthNextPath("/evil")).toBe("/dashboard");
+    expect(sanitizeAuthNextPath("/login")).toBe("/dashboard");
+    expect(sanitizeAuthNextPath("/registro")).toBe("/dashboard");
+    expect(sanitizeAuthNextPath("/auth/completar-cuenta")).toBe("/dashboard");
     expect(sanitizeAuthNextPath(null)).toBe("/dashboard");
+  });
+
+  it("permite usar activacion como fallback del alta", () => {
+    expect(
+      sanitizeAuthNextPath("https://evil.com", "/activacion")
+    ).toBe("/activacion");
   });
 
   it("construye callback OAuth con intent y next seguro", () => {

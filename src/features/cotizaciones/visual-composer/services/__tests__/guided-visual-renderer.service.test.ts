@@ -40,10 +40,13 @@ describe("guided-visual-renderer V2", () => {
 
     const svg = renderGuidedVisualSvg(config, { maxW: 300, maxH: 220, variant: "thumbnail" });
     expect(svg).toContain("<svg");
-    expect(layout.modules[0].widthMm + layout.modules[1].widthMm).toBeCloseTo(
-      layout.modules[0].widthMm + layout.modules[2].widthMm > 0
-        ? layout.widthMm
-        : layout.widthMm,
+    expect(layout.modules[0].widthMm).toBeCloseTo(layout.widthMm, -1);
+    expect(layout.modules[1].widthMm + layout.modules[2].widthMm).toBeCloseTo(
+      layout.widthMm,
+      -1
+    );
+    expect(layout.modules[0].heightMm + layout.modules[1].heightMm).toBeCloseTo(
+      layout.heightMm,
       -1
     );
   });

@@ -4,6 +4,19 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-28 - Google OAuth unico + Completa tu cuenta
+
+- Google queda como unico provider OAuth visible y valido; email/password continua disponible.
+- `/auth/completar-cuenta` solicita nombre, taller, WhatsApp, ciudad/comuna y consentimiento antes de `/activacion`.
+- Migracion aditiva agrega perfil privado en `users` y RPC transaccional/idempotente protegida para organizacion, perfil y trial.
+- Migracion aplicada y verificada en Supabase remoto como `20260728083604_google_oauth_account_completion`.
+- Se agrego correo normalizado unico, locks de 64 bits y validaciones consistentes de largo/formato.
+- Grants de `users` endurecidos: las cuatro columnas privadas quedan fuera de SELECT cliente; RPC solo `service_role`.
+- Auditoria post-migracion: 23 usuarios, cero duplicados de correo/auth, cero organizaciones sin perfil y cero trials incompletos; sin advisor nuevo para la RPC.
+- `/activacion` reutiliza el telefono precargado y deja de volver a solicitarlo.
+- Panel founder muestra contacto del registro, ciudad, fecha y primera cotizacion sin mezclar `clients`.
+- Facebook permanece solo como dato legacy/social fuera del auth.
+
 ## 2026-07-26 - Logout duro en AdminSidebar (sesion founder)
 
 - Causa: el footer de `/admin` usaba `<Link href="/auth/logout">`. Prefetch/soft-nav invocaba `GET /auth/logout`, borraba cookies `sb-*` y el layout founder redirigia a `/login` en cada accion.

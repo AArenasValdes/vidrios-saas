@@ -68,8 +68,11 @@ describe("admin-tareas-derivation.service", () => {
     const client: AdminClientListItem = {
       organizationId: 7,
       empresaNombre: "Dimasoli",
+      nombrePrincipal: "Usuario Demo",
       correoPrincipal: "demo@dimasoli.cl",
       telefonoPrincipal: null,
+      whatsappPrincipal: null,
+      ciudadComuna: "Santiago",
       planCode: "founder_monthly" as PlanCode,
       planLabel: "Founder",
       estadoSuscripcion: "trial_active",

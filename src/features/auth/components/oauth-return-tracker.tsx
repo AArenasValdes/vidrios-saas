@@ -14,19 +14,8 @@ function isTrackedOAuthEvent(event: string) {
   );
 }
 
-function resolveProvider(
-  providerParam: string | null,
-  event: string
-): AuthOAuthProvider {
-  if (providerParam === "facebook" || providerParam === "google") {
-    return providerParam;
-  }
-
-  if (event.startsWith("facebook_")) {
-    return "facebook";
-  }
-
-  return "google";
+function resolveProvider(providerParam: string | null): AuthOAuthProvider | null {
+  return providerParam === "google" ? "google" : null;
 }
 
 export function OAuthReturnTracker() {
@@ -41,7 +30,11 @@ export function OAuthReturnTracker() {
       return;
     }
 
-    const provider = resolveProvider(oauthProvider, oauthEvent);
+    const provider = resolveProvider(oauthProvider);
+
+    if (!provider || !oauthEvent.startsWith("google_")) {
+      return;
+    }
     const returnedEvent = `${provider}_oauth_returned`;
 
     googleTagService.trackEvent(returnedEvent, {

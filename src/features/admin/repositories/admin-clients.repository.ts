@@ -47,6 +47,10 @@ export type AdminOrganizationUserRow = {
   correo: string | null;
   rol: string | null;
   auth_user_id: string | null;
+  nombre: string | null;
+  whatsapp: string | null;
+  ciudad_comuna: string | null;
+  data_sharing_accepted_at: string | null;
   creado_en: string | null;
   eliminado_en: string | null;
 };
@@ -119,7 +123,7 @@ export async function listAdminOrganizationsSnapshot(): Promise<AdminOrganizatio
     admin
       .from("users")
       .select(
-        "id, organization_id, correo, rol, auth_user_id, creado_en, eliminado_en"
+        "id, organization_id, correo, rol, auth_user_id, nombre, whatsapp, ciudad_comuna, data_sharing_accepted_at, creado_en, eliminado_en"
       )
       .in("organization_id", organizationIds)
       .is("eliminado_en", null)
@@ -192,7 +196,7 @@ export async function getAdminOrganizationSnapshot(
     admin
       .from("users")
       .select(
-        "id, organization_id, correo, rol, auth_user_id, creado_en, eliminado_en"
+        "id, organization_id, correo, rol, auth_user_id, nombre, whatsapp, ciudad_comuna, data_sharing_accepted_at, creado_en, eliminado_en"
       )
       .eq("organization_id", organizationId)
       .is("eliminado_en", null)

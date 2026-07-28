@@ -119,7 +119,10 @@ function mapIdentityToCallbackResolution(input: {
     };
   }
 
-  if (input.identity.status === "linked") {
+  if (
+    input.identity.status === "linked" &&
+    input.identity.accountComplete
+  ) {
     return {
       kind: "redirect",
       path: input.safeNext,
@@ -134,9 +137,7 @@ function mapIdentityToCallbackResolution(input: {
   }
 
   const signupParams = new URLSearchParams({
-    next: input.safeNext,
-    intent: input.intent,
-    provider: input.provider,
+    next: "/activacion",
   });
 
   return {

@@ -82,6 +82,12 @@ Riesgo residual:
 Riesgo:
 - No hay diferenciación por `rol`. Un usuario autenticado de la org puede ver y editar otros usuarios de su misma org.
 
+**Grants vigentes desde 2026-07-28:**
+- La advertencia anterior describe la policy aislada; no representa el acceso efectivo despues del hardening de grants.
+- Las policies siguen sin diferenciar por `rol`, pero `authenticated` ya no tiene privilegios de INSERT/UPDATE/DELETE sobre la tabla.
+- `authenticated` solo puede seleccionar columnas operativas no privadas.
+- `nombre`, `whatsapp`, `ciudad_comuna` y `data_sharing_accepted_at` no tienen SELECT cliente; solo se acceden server-side con `service_role`.
+
 ### 6. `materials`
 
 | Policy | Operación | USING | WITH CHECK |
@@ -320,6 +326,18 @@ Notas:
 - `payment_provider` ahora acepta `flow`, `manual_transfer`, `webpay_plus`.
 - `organization_profile.payment_method` ahora acepta `flow`.
 - `provider_response` contiene respuesta raw del provider y no debe devolverse en endpoints cliente.
+
+## Addendum 2026-07-28 - grants de `users` y RPC de alta
+
+- Migracion remota: `20260728083604_google_oauth_account_completion`.
+- Se revocaron privilegios de tabla de `public`, `anon` y `authenticated` sobre `public.users`.
+- Se restituyo a `authenticated` SELECT por columna solo para `id`, `correo`, `organization_id`, `rol`, timestamps operativos, `eliminado_en`, `auth_user_id` y campos legacy de setup.
+- Campos privados sin SELECT cliente: `nombre`, `whatsapp`, `ciudad_comuna`, `data_sharing_accepted_at`.
+- `service_role` conserva privilegios completos porque el callback, completar cuenta y panel founder son operaciones server-side.
+- `complete_google_oauth_account(...)`: `SECURITY INVOKER`, `search_path=''`, EXECUTE solo `service_role`.
+- Verificacion MCP: `authenticated` puede leer `users.id` y no puede leer ninguna de las cuatro columnas privadas; `anon` y `authenticated` no pueden ejecutar la RPC.
+
+---
 
 ## Addendum 2026-06-02 - cuentas internas gratis
 

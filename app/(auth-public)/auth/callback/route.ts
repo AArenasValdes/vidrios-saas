@@ -220,6 +220,10 @@ export async function GET(request: NextRequest) {
   const provider = resolveOAuthProvider(searchParams.get("provider"));
   const nextPath = sanitizeAuthNextPath(searchParams.get("next"));
 
+  if (!provider) {
+    return NextResponse.redirect(`${origin}/login?error=oauth_provider`);
+  }
+
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=oauth`);
   }

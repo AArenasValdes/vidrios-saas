@@ -24,7 +24,7 @@ const STEP_DEFINITIONS: OnboardingStepDefinition[] = [
   {
     key: "company_ready",
     title: "Agrega tus datos de empresa",
-    helper: "Nombre, telefono y logo para dejar el PDF listo para enviar.",
+    helper: "Revisa el nombre del taller y agrega un logo opcional para dejar el PDF listo.",
     ctaLabel: "Agregar mis datos de empresa",
   },
   {

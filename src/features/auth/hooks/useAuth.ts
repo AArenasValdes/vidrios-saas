@@ -469,12 +469,6 @@ export function useAuth(options: { passive?: boolean } = {}) {
     await signInWithOAuth({ ...input, provider: "google" });
   };
 
-  const signInWithFacebook = async (
-    input: Omit<AuthSignInWithOAuthInput, "provider">
-  ) => {
-    await signInWithOAuth({ ...input, provider: "facebook" });
-  };
-
   const signOut = async () => {
     invalidateAuthResolution("signOut");
     authStateHydratedFromNetwork = true;
@@ -496,7 +490,6 @@ export function useAuth(options: { passive?: boolean } = {}) {
     signIn,
     signInWithOAuth,
     signInWithGoogle,
-    signInWithFacebook,
     signOut,
   };
 }

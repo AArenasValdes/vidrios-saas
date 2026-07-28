@@ -1,3 +1,5 @@
+import type { AuthOAuthProvider } from "@/features/auth/types/auth";
+
 const ALLOWED_NEXT_PREFIXES = [
   "/dashboard",
   "/activacion",
@@ -59,7 +61,7 @@ export function sanitizeAuthNextPath(
 export function buildOAuthCallbackUrl(options: {
   origin: string;
   intent: "login" | "signup";
-  provider: "google" | "facebook";
+  provider: AuthOAuthProvider;
   nextPath?: string | null;
 }) {
   const safeNext = sanitizeAuthNextPath(options.nextPath);

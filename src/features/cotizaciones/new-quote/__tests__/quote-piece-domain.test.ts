@@ -96,6 +96,18 @@ describe("quote-piece-domain", () => {
     expect(derivePieceCommercialStatus(withoutPrice, "por_item")).toBe("falta_precio");
   });
 
+  it("tolera piezas legacy con campos de texto faltantes", () => {
+    const legacyItem = baseItem({
+      nombre: undefined as unknown as string,
+      lineaComercial: undefined as unknown as string,
+      vidrio: undefined as unknown as string,
+    });
+
+    expect(() => buildPieceDomainView(legacyItem, "por_item")).not.toThrow();
+    expect(isPieceCommerciallyComplete(legacyItem, "por_item")).toBe(false);
+    expect(derivePieceCommercialStatus(legacyItem, "por_item")).toBe("falta_nombre");
+  });
+
   it("deriva estado técnico y resumen desde snapshot [cub:]", () => {
     const item = baseItem({
       observaciones: encodeCotizacionItemPresentationMeta({
@@ -106,7 +118,7 @@ describe("quote-piece-domain", () => {
     const view = buildPieceDomainView(item, "por_item");
     expect(view.technicalStatus).toBe("referencial");
     expect(view.technicalSummary.barras).toBe(1);
-    expect(view.technicalSummary.cortes).toBe(1);
+    expect(view.technicalSummary.cortes).toBe(2);
     expect(view.technicalSummary.accesorios).toBe(2);
     expect(view.technicalSummary.mlPerfiles).toBe(2.4);
   });

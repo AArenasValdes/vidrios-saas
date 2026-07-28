@@ -4,54 +4,119 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, Building2 } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  MapPin,
+  Phone,
+  UserRound,
+} from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
-import type { AuthOAuthProvider } from "@/features/auth/types/auth";
+import type { OAuthAccountCompletionValues } from "@/features/auth/services/auth-oauth-completion.service";
+import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
 import s from "../../login/login.module.css";
+import cs from "./completar-cuenta.module.css";
 
 interface CompletarCuentaViewProps {
   nextPath: string;
   email: string;
-  provider: AuthOAuthProvider;
+  initialValues: OAuthAccountCompletionValues;
 }
 
 const copy = {
-  title: "Completa tu empresa",
+  title: "Completa tu cuenta",
   subtitle:
-    "Ya validamos tu correo. Solo falta el nombre de tu empresa para activar tu prueba.",
-  empresaLabel: "Nombre de la empresa",
+    "Estos datos dejan tu taller listo para cotizar y permiten ayudarte si lo necesitas.",
+  nombreLabel: "Tu nombre",
+  nombrePlaceholder: "Ej: Alessandro Gonzalez",
+  empresaLabel: "Nombre del taller",
   empresaPlaceholder: "Ej: Vidrios del Sur",
-  submit: "Activar prueba gratis",
-  submitting: "Creando tu cuenta...",
-  loginPrompt: "¿Quieres usar otra cuenta?",
+  whatsappLabel: "WhatsApp",
+  whatsappPlaceholder: "+56 9 1234 5678",
+  ciudadLabel: "Ciudad o comuna",
+  ciudadPlaceholder: "Ej: Puente Alto",
+  consent:
+    "Acepto crear mi cuenta y que Ventora me contacte directamente por soporte o ayuda comercial. Esto no incluye campanas masivas.",
+  submit: "Continuar a Ventora",
+  submitting: "Guardando tu cuenta...",
+  loginPrompt: "Quieres usar otra cuenta?",
   loginAction: "Volver al inicio de sesion",
-  errorGeneric: "No pudimos crear tu cuenta. Intenta de nuevo.",
+  errorGeneric: "No pudimos completar tu cuenta. Intenta de nuevo.",
   identityConflict:
     "Este correo ya esta vinculado a otra cuenta de acceso. Contactanos si necesitas ayuda.",
 };
 
+function normalizeRequiredText(value: string) {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
 export default function CompletarCuentaView({
   nextPath,
   email,
-  provider,
+  initialValues,
 }: CompletarCuentaViewProps) {
   const router = useRouter();
-  const [empresaNombre, setEmpresaNombre] = useState("");
+  const [nombre, setNombre] = useState(initialValues.nombre);
+  const [empresaNombre, setEmpresaNombre] = useState(
+    initialValues.empresaNombre
+  );
+  const [whatsapp, setWhatsapp] = useState(initialValues.whatsapp);
+  const [ciudadComuna, setCiudadComuna] = useState(
+    initialValues.ciudadComuna
+  );
+  const [consentimientoAceptado, setConsentimientoAceptado] = useState(
+    initialValues.consentimientoAceptado
+  );
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    googleTagService.trackEvent(`${provider}_signup_started`, {
+    googleTagService.trackEvent("google_signup_started", {
       event_category: "auth",
       event_label: "completar_cuenta_view",
       next_path: nextPath,
-      oauth_provider: provider,
+      oauth_provider: "google",
     });
-  }, [nextPath, provider]);
+  }, [nextPath]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (cargando) {
+      return;
+    }
+
+    const normalizedNombre = normalizeRequiredText(nombre);
+    const normalizedEmpresa = normalizeRequiredText(empresaNombre);
+    const normalizedCiudad = normalizeRequiredText(ciudadComuna);
+    const normalizedWhatsapp = normalizeChileMobilePhone(whatsapp);
+
+    if (normalizedNombre.length < 2) {
+      setError("Ingresa tu nombre.");
+      return;
+    }
+
+    if (normalizedEmpresa.length < 2) {
+      setError("Ingresa el nombre del taller.");
+      return;
+    }
+
+    if (!normalizedWhatsapp) {
+      setError("Ingresa un WhatsApp chileno valido.");
+      return;
+    }
+
+    if (normalizedCiudad.length < 2) {
+      setError("Ingresa tu ciudad o comuna.");
+      return;
+    }
+
+    if (!consentimientoAceptado) {
+      setError("Debes aceptar la creacion de la cuenta para continuar.");
+      return;
+    }
+
     setError(null);
     setCargando(true);
 
@@ -62,57 +127,68 @@ export default function CompletarCuentaView({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          empresaNombre,
+          nombre: normalizedNombre,
+          empresaNombre: normalizedEmpresa,
+          whatsapp: normalizedWhatsapp,
+          ciudadComuna: normalizedCiudad,
+          consentimientoAceptado: true,
         }),
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; code?: string; alreadyProvisioned?: boolean }
+        | {
+            error?: string;
+            code?: string;
+            alreadyProvisioned?: boolean;
+            accountComplete?: boolean;
+          }
         | null;
 
-      if (!response.ok) {
+      if (!response.ok || !payload?.accountComplete) {
         if (payload?.code === "identity_conflict") {
           setError(copy.identityConflict);
-          googleTagService.trackEvent(`${provider}_signup_abandoned`, {
+          googleTagService.trackEvent("google_signup_abandoned", {
             event_category: "auth",
             event_label: "identity_conflict",
-            oauth_provider: provider,
+            oauth_provider: "google",
           });
           return;
         }
 
         setError(payload?.error ?? copy.errorGeneric);
-        googleTagService.trackEvent(`${provider}_signup_abandoned`, {
+        googleTagService.trackEvent("google_signup_abandoned", {
           event_category: "auth",
           event_label: payload?.code ?? "unknown",
-          oauth_provider: provider,
+          oauth_provider: "google",
         });
         return;
       }
 
-      if (!payload?.alreadyProvisioned) {
+      if (!payload.alreadyProvisioned) {
         googleTagService.trackEvent("trial_started", {
           event_category: "auth",
-          event_label: `${provider}_oauth_signup`,
-          next_path: "/activacion",
-          oauth_provider: provider,
+          event_label: "google_oauth_signup",
+          next_path: nextPath,
+          oauth_provider: "google",
         });
       }
 
-      googleTagService.trackEvent(`${provider}_signup_completed`, {
+      googleTagService.trackEvent("google_signup_completed", {
         event_category: "auth",
-        event_label: payload?.alreadyProvisioned ? "already_provisioned" : "new_org",
-        next_path: "/activacion",
-        oauth_provider: provider,
+        event_label: payload.alreadyProvisioned
+          ? "existing_org_completed"
+          : "new_org",
+        next_path: nextPath,
+        oauth_provider: "google",
       });
 
-      router.replace("/activacion");
+      router.replace(nextPath);
     } catch {
       setError(copy.errorGeneric);
-      googleTagService.trackEvent(`${provider}_signup_abandoned`, {
+      googleTagService.trackEvent("google_signup_abandoned", {
         event_category: "auth",
         event_label: "network_error",
-        oauth_provider: provider,
+        oauth_provider: "google",
       });
     } finally {
       setCargando(false);
@@ -122,7 +198,7 @@ export default function CompletarCuentaView({
   return (
     <main className={s.root}>
       <section className={s.formPanel}>
-        <div className={s.formShell}>
+        <div className={`${s.formShell} ${cs.formShell}`}>
           <Link href="/" className={s.brand} aria-label="Ventora">
             <Image
               src="/brand/ventora-logo-premium-dark.svg"
@@ -134,43 +210,143 @@ export default function CompletarCuentaView({
             />
           </Link>
 
-          <div className={s.formCard}>
+          <div className={`${s.formCard} ${cs.formCard}`}>
             <header className={s.formHeader}>
+              <p className={cs.stepLabel}>Un ultimo paso</p>
               <h1 className={s.formTitle}>{copy.title}</h1>
               <p className={s.formSubtitle}>{copy.subtitle}</p>
-              <p className={s.helperText}>{email}</p>
+              <p className={cs.email}>{email}</p>
             </header>
 
             <form
-              className={s.form}
+              className={`${s.form} ${cs.form}`}
               onSubmit={onSubmit}
               noValidate
-              method="post"
-              action="javascript:void(0)"
             >
-              <div className={s.field}>
-                <label className={s.fieldLabel} htmlFor="empresaNombre">
-                  {copy.empresaLabel}
-                </label>
-                <div className={s.fieldControl}>
-                  <Building2 size={18} aria-hidden />
-                  <input
-                    id="empresaNombre"
-                    name="empresaNombre"
-                    type="text"
-                    className={s.fieldInput}
-                    placeholder={copy.empresaPlaceholder}
-                    value={empresaNombre}
-                    onChange={(event) => {
-                      setEmpresaNombre(event.target.value);
-                      setError(null);
-                    }}
-                    autoComplete="organization"
-                    required
-                    minLength={2}
-                  />
+              <div className={cs.fieldGrid}>
+                <div className={s.field}>
+                  <label className={s.fieldLabel} htmlFor="nombre">
+                    {copy.nombreLabel}
+                  </label>
+                  <div className={s.fieldControl}>
+                    <UserRound size={18} aria-hidden />
+                    <input
+                      id="nombre"
+                      name="nombre"
+                      type="text"
+                      className={s.fieldInput}
+                      placeholder={copy.nombrePlaceholder}
+                      value={nombre}
+                      onChange={(event) => {
+                        setNombre(event.target.value);
+                        setError(null);
+                      }}
+                      autoComplete="name"
+                      required
+                      minLength={2}
+                      maxLength={120}
+                      disabled={cargando}
+                    />
+                  </div>
+                </div>
+
+                <div className={s.field}>
+                  <label className={s.fieldLabel} htmlFor="empresaNombre">
+                    {copy.empresaLabel}
+                  </label>
+                  <div className={s.fieldControl}>
+                    <Building2 size={18} aria-hidden />
+                    <input
+                      id="empresaNombre"
+                      name="empresaNombre"
+                      type="text"
+                      className={s.fieldInput}
+                      placeholder={copy.empresaPlaceholder}
+                      value={empresaNombre}
+                      onChange={(event) => {
+                        setEmpresaNombre(event.target.value);
+                        setError(null);
+                      }}
+                      autoComplete="organization"
+                      required
+                      minLength={2}
+                      maxLength={160}
+                      disabled={cargando}
+                    />
+                  </div>
+                </div>
+
+                <div className={s.field}>
+                  <label className={s.fieldLabel} htmlFor="whatsapp">
+                    {copy.whatsappLabel}
+                  </label>
+                  <div className={s.fieldControl}>
+                    <Phone size={18} aria-hidden />
+                    <input
+                      id="whatsapp"
+                      name="whatsapp"
+                      type="tel"
+                      inputMode="tel"
+                      className={s.fieldInput}
+                      placeholder={copy.whatsappPlaceholder}
+                      value={whatsapp}
+                      onChange={(event) => {
+                        setWhatsapp(event.target.value);
+                        setError(null);
+                      }}
+                      onBlur={() => {
+                        const normalized = normalizeChileMobilePhone(whatsapp);
+                        if (normalized) {
+                          setWhatsapp(normalized);
+                        }
+                      }}
+                      autoComplete="tel"
+                      required
+                      maxLength={24}
+                      disabled={cargando}
+                    />
+                  </div>
+                </div>
+
+                <div className={s.field}>
+                  <label className={s.fieldLabel} htmlFor="ciudadComuna">
+                    {copy.ciudadLabel}
+                  </label>
+                  <div className={s.fieldControl}>
+                    <MapPin size={18} aria-hidden />
+                    <input
+                      id="ciudadComuna"
+                      name="ciudadComuna"
+                      type="text"
+                      className={s.fieldInput}
+                      placeholder={copy.ciudadPlaceholder}
+                      value={ciudadComuna}
+                      onChange={(event) => {
+                        setCiudadComuna(event.target.value);
+                        setError(null);
+                      }}
+                      autoComplete="address-level2"
+                      required
+                      minLength={2}
+                      maxLength={120}
+                      disabled={cargando}
+                    />
+                  </div>
                 </div>
               </div>
+
+              <label className={cs.consent}>
+                <input
+                  type="checkbox"
+                  checked={consentimientoAceptado}
+                  onChange={(event) => {
+                    setConsentimientoAceptado(event.target.checked);
+                    setError(null);
+                  }}
+                  disabled={cargando}
+                />
+                <span>{copy.consent}</span>
+              </label>
 
               {error ? (
                 <div className={s.errorBox} role="alert" aria-live="polite">
@@ -215,9 +391,12 @@ export default function CompletarCuentaView({
 
         <div className={s.visualCopy}>
           <p className={s.visualEyebrow}>Prueba gratuita</p>
-          <h2 className={s.visualTitle}>Empieza a cotizar con Ventora en minutos</h2>
+          <h2 className={s.visualTitle}>
+            Tu taller listo para crear la primera cotizacion
+          </h2>
           <p className={s.visualDescription}>
-            Tu cuenta queda lista con 7 dias de prueba para captar, ordenar y cerrar trabajos desde el celular.
+            Guardaremos estos datos una sola vez y los dejaremos precargados en
+            la configuracion de tu empresa.
           </p>
         </div>
       </section>

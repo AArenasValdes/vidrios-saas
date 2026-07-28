@@ -49,6 +49,7 @@ describe("authServerService.handleOAuthCallback", () => {
       organizationId: 77,
       userId: 9,
       syncedAuthUserId: false,
+      accountComplete: true,
     });
 
     const service = createAuthServerService({ repository });
@@ -72,7 +73,7 @@ describe("authServerService.handleOAuthCallback", () => {
     });
   });
 
-  it("redirige a completar cuenta para Facebook sin signOut", async () => {
+  it("redirige a completar cuenta para un usuario Google nuevo", async () => {
     const repository = {
       exchangeCodeForSession: jest.fn().mockImplementation(async () => {
         const user = createUser();
@@ -91,20 +92,53 @@ describe("authServerService.handleOAuthCallback", () => {
     const result = await service.handleOAuthCallback({
       code: "oauth-code",
       intent: "signup",
-      provider: "facebook",
+      provider: "google",
       nextPath: "https://evil.com/path",
     });
 
     expect(result).toEqual({
       kind: "redirect",
-      path: "/auth/completar-cuenta?next=%2Fdashboard&intent=signup&provider=facebook",
+      path: "/auth/completar-cuenta?next=%2Factivacion",
       analytics: {
-        event: "facebook_signup_started",
-        provider: "facebook",
+        event: "google_signup_started",
+        provider: "google",
         intent: "signup",
         syncedAuthUserId: false,
       },
       session: createSession(createUser()),
+    });
+  });
+
+  it("redirige a completar cuenta si el usuario vinculado tiene datos pendientes", async () => {
+    const repository = {
+      exchangeCodeForSession: jest.fn().mockImplementation(async () => {
+        const user = createUser();
+        return {
+          user,
+          session: createSession(user),
+        };
+      }),
+    };
+
+    (resolveOAuthIdentity as jest.Mock).mockResolvedValue({
+      status: "linked",
+      organizationId: 77,
+      userId: 9,
+      syncedAuthUserId: false,
+      accountComplete: false,
+    });
+
+    const service = createAuthServerService({ repository });
+    const result = await service.handleOAuthCallback({
+      code: "oauth-code",
+      intent: "login",
+      provider: "google",
+      nextPath: "/dashboard",
+    });
+
+    expect(result).toMatchObject({
+      kind: "redirect",
+      path: "/auth/completar-cuenta?next=%2Factivacion",
     });
   });
 
@@ -123,7 +157,7 @@ describe("authServerService.handleOAuthCallback", () => {
     const result = await service.handleOAuthCallback({
       code: "oauth-code",
       intent: "login",
-      provider: "facebook",
+      provider: "google",
       nextPath: "/dashboard",
     });
 
@@ -131,8 +165,8 @@ describe("authServerService.handleOAuthCallback", () => {
       kind: "error_redirect",
       path: "/login?error=oauth_no_email",
       analytics: {
-        event: "facebook_oauth_returned",
-        provider: "facebook",
+        event: "google_oauth_returned",
+        provider: "google",
         intent: "login",
       },
     });

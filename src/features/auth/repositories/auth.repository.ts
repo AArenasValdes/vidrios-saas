@@ -470,27 +470,18 @@ export function createAuthRepository(
         throw new Error("No pudimos iniciar el acceso social.");
       }
 
-      const oauthOptions =
-        input.provider === "google"
-          ? {
-              queryParams: {
-                prompt: "select_account",
-              },
-            }
-          : {
-              scopes: "email public_profile",
-            };
-
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: input.provider,
+        provider: "google",
         options: {
           redirectTo: buildOAuthCallbackUrl({
             origin,
             intent: input.intent,
-            provider: input.provider,
+            provider: "google",
             nextPath: input.nextPath,
           }),
-          ...oauthOptions,
+          queryParams: {
+            prompt: "select_account",
+          },
         },
       });
 

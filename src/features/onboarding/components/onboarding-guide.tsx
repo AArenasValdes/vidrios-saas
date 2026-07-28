@@ -136,7 +136,7 @@ function resolveGuideCopy(stepKey: OnboardingStepKey) {
   if (stepKey === "company_ready") {
     return {
       title: "Deja tu cotizacion lista para enviar",
-      text: "Agrega nombre, telefono y logo opcional para mejorar el PDF.",
+      text: "Revisa el nombre del taller y agrega un logo opcional para mejorar el PDF.",
       ctaLabel: "Agregar datos",
     };
   }

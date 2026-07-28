@@ -120,12 +120,12 @@ describe("guided visual shapes V1", () => {
       showSelection: true,
     });
 
-    const selectionFillCount = (svg.match(/rgba\(30, 136, 255, 0\.1\)/g) ?? []).length;
+    const selectionFillCount = (svg.match(/rgba\(30, 136, 255, 0\.045\)/g) ?? []).length;
     expect(selectionFillCount).toBeGreaterThan(0);
     expect(svg).not.toMatch(
-      /rgba\(30, 136, 255, 0\.1\)[^<]*<\/rect>/
+      /rgba\(30, 136, 255, 0\.045\)[^<]*<\/rect>/
     );
-    expect(svg).toContain('fill="rgba(30, 136, 255, 0.1)"');
-    expect(svg).toMatch(/<path d="[^"]*Q [^"]*" fill="rgba\(30, 136, 255, 0\.1\)"/);
+    expect(svg).toContain('fill="rgba(30, 136, 255, 0.045)"');
+    expect(svg).toMatch(/<path d="[^"]*Q [^"]*" fill="rgba\(30, 136, 255, 0\.045\)"/);
   });
 });
