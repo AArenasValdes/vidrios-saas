@@ -3568,12 +3568,23 @@
 
 .recipeOriginPicker {
   display: grid;
-  gap: 16px;
-  max-width: 920px;
+  gap: 14px;
+  max-width: 960px;
 }
 
 .recipeOriginHeader {
+  display: grid;
+  gap: 6px;
   padding: 2px 0 0;
+}
+
+.recipeOriginEyebrow {
+  color: #1e88ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .recipeOriginTitle {
@@ -3583,6 +3594,62 @@
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.2;
+}
+
+.recipeOriginHeader p {
+  max-width: 68ch;
+  margin: 0;
+  color: #52637a;
+  font-size: 13px;
+  font-weight: 520;
+  line-height: 1.45;
+}
+
+.recipeCurrentCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.recipeCurrentCopy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.recipeCurrentCopy span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recipeCurrentCopy strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+}
+
+.recipeCurrentCopy p {
+  margin: 0;
+  color: #52637a;
+  font-size: 12.5px;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.recipeCurrentCard .primaryButton {
+  min-height: 42px;
+  padding: 0 18px;
+  white-space: nowrap;
 }
 
 .recipeOriginChoiceGrid {
@@ -3803,6 +3870,14 @@
 @media (max-width: 720px) {
   .recipeOriginTemplateGrid {
     grid-template-columns: 1fr;
+  }
+
+  .recipeCurrentCard {
+    display: grid;
+  }
+
+  .recipeCurrentCard .primaryButton {
+    width: 100%;
   }
 
   .recipeOriginConfirm {

@@ -397,6 +397,7 @@ export function LineTemplateFormWizard({
     "plantilla" | "base" | "propia" | null
   >(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [isRecipeWorkspaceOpen, setIsRecipeWorkspaceOpen] = useState(false);
 
   const usageMode = resolveLineUsageMode(draft);
   const maxStep = getWizardMaxStep(usageMode);
@@ -520,6 +521,7 @@ export function LineTemplateFormWizard({
                 ? "lista_para_probar"
                 : "sin_configurar",
     });
+    setIsRecipeWorkspaceOpen(true);
   };
 
   const handleRecipeChange = (recipe: FabricationRecipe) => {
@@ -574,11 +576,22 @@ export function LineTemplateFormWizard({
 
   const handleOriginChoice = (choice: "plantilla" | "base" | "propia") => {
     setOriginChoice(choice);
+    setIsRecipeWorkspaceOpen(false);
     if (choice === "plantilla") {
       setPendingTemplateId((current) => current ?? suggestedMatchId ?? null);
       return;
     }
     setPendingTemplateId(null);
+  };
+
+  const handleChangeRecipeOrigin = () => {
+    setIsRecipeWorkspaceOpen(false);
+    setOriginChoice(null);
+    setPendingTemplateId(suggestedMatchId ?? null);
+    onDraftPatch({
+      fabricationRecipe: null,
+      fabricationRecipePack: null,
+    });
   };
 
   const renderStepHeader = (
@@ -1256,7 +1269,7 @@ export function LineTemplateFormWizard({
               {openStep === 3 ? (
                 <div className={`${s.wizardStepBody} ${s.wizardStepBodyWorkspace}`}>
                   {!isGlassDraft ? (
-                    draft.fabricationRecipe ? (
+                    draft.fabricationRecipe && isRecipeWorkspaceOpen ? (
                       <>
                         {(draft.fabricationRecipePack?.recipes.length ?? 0) > 1 ? (
                           <label className={`${s.fieldBlock} ${s.recipeVariantPicker}`}>
@@ -1292,19 +1305,49 @@ export function LineTemplateFormWizard({
                             applyRecipeToDraft(variant, { setAsDefault: true })
                           }
                           focusComponentId={recipeFocusComponentId}
-                          onChangeRecipeOrigin={() =>
-                            onDraftPatch({
-                              fabricationRecipe: null,
-                              fabricationRecipePack: null,
-                            })
-                          }
+                          onChangeRecipeOrigin={handleChangeRecipeOrigin}
                         />
                       </>
                     ) : (
                       <div className={s.recipeOriginPicker} aria-label="Origen de la receta">
                         <header className={s.recipeOriginHeader}>
+                          <span className={s.recipeOriginEyebrow}>
+                            Pauta de corte interna
+                          </span>
                           <h3 className={s.recipeOriginTitle}>¿Cómo quieres comenzar?</h3>
+                          <p>
+                            Primero elige el punto de partida. Después Ventora muestra la
+                            pauta para revisar perfiles, fórmulas, códigos y cortes con
+                            medidas reales.
+                          </p>
                         </header>
+
+                        {draft.fabricationRecipe ? (
+                          <section className={s.recipeCurrentCard} aria-label="Pauta actual">
+                            <div className={s.recipeCurrentCopy}>
+                              <span>Pauta actual</span>
+                              <strong>
+                                {draft.fabricationRecipe.variant || "Receta en borrador"}
+                              </strong>
+                              <p>
+                                {RECIPE_STATUS_LABELS[recipeStatus ?? "sin_configurar"]} ·{" "}
+                                {draft.fabricationRecipe.components.length} componentes ·{" "}
+                                {draft.fabricationRecipe.sourceKind === "plantilla_sugerida"
+                                  ? "plantilla sugerida"
+                                  : draft.fabricationRecipe.sourceKind === "base_tipologica"
+                                    ? "base tipológica"
+                                    : "receta propia"}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className={s.primaryButton}
+                              onClick={() => setIsRecipeWorkspaceOpen(true)}
+                            >
+                              Revisar pauta
+                            </button>
+                          </section>
+                        ) : null}
 
                         <div
                           className={s.recipeOriginChoiceGrid}
@@ -1502,6 +1545,7 @@ export function LineTemplateFormWizard({
                       onVanoHeightChange={onCalibrationVanoHeightMmChange}
                       onRequestConfigureComponent={(componentId) => {
                         setRecipeFocusComponentId(componentId);
+                        setIsRecipeWorkspaceOpen(true);
                         onWizardStepChange(3);
                       }}
                     />

@@ -71,6 +71,7 @@ type PasoDosSeccionProps = {
   onGlobalTotalClienteChange: (value: string) => void;
   onClosePieceEditors?: () => void;
   isSaving?: boolean;
+  preferredWorkspaceMode?: QuoteDesktopWorkspaceMode | null;
 };
 
 export function PasoDosSeccion({
@@ -98,12 +99,13 @@ export function PasoDosSeccion({
   onGlobalTotalClienteChange,
   onClosePieceEditors,
   isSaving = false,
+  preferredWorkspaceMode = null,
 }: PasoDosSeccionProps) {
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const [isFullBudgetPreviewOpen, setIsFullBudgetPreviewOpen] = useState(false);
   const [pendingRemoveItemId, setPendingRemoveItemId] = useState<string | null>(null);
   const [desktopWorkspaceMode, setDesktopWorkspaceMode] = useState<QuoteDesktopWorkspaceMode>(
-    () => readQuoteDesktopWorkspaceModePreference()
+    () => preferredWorkspaceMode ?? readQuoteDesktopWorkspaceModePreference()
   );
   const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
   const [constructorDefaultLineTemplateId, setConstructorDefaultLineTemplateId] = useState("");

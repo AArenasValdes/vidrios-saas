@@ -1671,6 +1671,13 @@
 
 .pageContentCreateFlow {}
 
+/* Activation is a full-bleed conversion flow, not a standard app page. */
+.pageContent.pageContentActivation {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
 .tabBarHidden {
   display: none !important;
 }

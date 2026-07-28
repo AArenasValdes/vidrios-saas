@@ -56,6 +56,7 @@ export type OnboardingNextAction = {
 
 export type OnboardingChecklistViewModel = {
   steps: OnboardingStepViewModel[];
+  activationState?: OnboardingStepState;
   progressPct: number;
   completedCount: number;
   totalCount: number;

@@ -23,7 +23,6 @@ import {
 import type { LandingGalleryItem } from "@/features/landing-gallery/types/landing-gallery";
 
 import { useLandingGallery } from "@/features/landing-gallery/hooks/useLandingGallery";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { usePublicLandingTestimonials } from "@/features/public-landing-testimonials/hooks/usePublicLandingTestimonials";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -672,8 +671,6 @@ export default function PaginaVentaPage() {
 
   return (
     <div className={s.root}>
-      <OnboardingGuide controller={onboarding} routeKey="pagina_venta" />
-
       <div className={s.header}>
         <div>
           <p className={s.headerEyebrow}>Ajuste comercial</p>

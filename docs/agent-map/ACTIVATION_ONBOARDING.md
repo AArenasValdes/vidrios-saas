@@ -81,7 +81,8 @@ proxy.ts                                             <- Protege /activacion
 | `welcome` | Bienvenida | Empezar / Entrar sin guia |
 | `choose` | Elegir camino | Demo vs cotizacion real |
 | `demo` | Ejemplo fijo | Genera borrador demo (por_item, ventana 1200x1000, $180.000) |
-| `real_mode` | Modo real | Rapida por total vs Con componentes |
+| `real_mode` | Modo real | Rapida por total vs Guiada por items |
+| `component_method` | Guia por items | Elegir una pieza del catalogo o describir una pieza libre |
 | `real_total` | Form corto | Cliente, trabajo, descripcion, total |
 | `real_component` | Form corto | Cliente, trabajo, componente, medidas, cantidad, total |
 | `result` | Cotizacion lista | Ver PDF, descargar, datos empresa, entrar |
@@ -116,6 +117,8 @@ proxy.ts                                             <- Protege /activacion
 - Metadata de catalogo: sistema, configuracion, `displayMode: componente`
 - Precio directo (`precio_directo`) para sobrevivir `reconcileWorkflowItemsPricing`
 - IVA incluido en totales como flujo productivo (`mostrarIva: true`)
+
+El **Constructor de piezas** no forma parte de la primera cotizacion del onboarding: permanece disponible dentro de la aplicacion para trabajos con composiciones o formas especiales, despues de completar la activacion.
 
 ---
 

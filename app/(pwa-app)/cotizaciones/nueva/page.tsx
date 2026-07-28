@@ -155,8 +155,11 @@ function NuevaCotizacionPageContent() {
   const editId = searchParams.get("edit");
   const duplicateId = searchParams.get("duplicate");
   const requestedStepParam = searchParams.get("step");
+  const requestedModeParam = searchParams.get("modo");
   const requestedStep: StepKey | null =
     requestedStepParam === "2" ? 2 : requestedStepParam === "3" ? 3 : null;
+  const requestedConstructorMode = requestedModeParam === "constructor";
+  const requestedConstructorEntry = requestedConstructorMode && !editId && !duplicateId;
   const glassCloseTimeoutRef = useRef<number | null>(null);
   const pendingNextDraftRef = useRef(false);
   const step1InputRefs = useRef<Record<Step1FieldKey, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>>({
@@ -169,8 +172,13 @@ function NuevaCotizacionPageContent() {
     observaciones: null,
   });
 
-  const [draft, setDraft] = useState<CotizacionWorkflowDraft>(createCotizacionWorkflowDraft);
-  const [step, setStep] = useState<StepKey>(1);
+  const [draft, setDraft] = useState<CotizacionWorkflowDraft>(() => ({
+    ...createCotizacionWorkflowDraft(),
+    quotePricingMode: requestedConstructorEntry ? "por_item" : undefined,
+  }));
+  const [step, setStep] = useState<StepKey>(() =>
+    requestedStep ?? (requestedConstructorEntry ? 2 : 1)
+  );
   const { profile: organizationProfile } = useOrganizationProfile();
   const {
     activeTemplates: activeLineTemplates,
@@ -203,7 +211,7 @@ function NuevaCotizacionPageContent() {
   const [isDesktopQuoteStudio, setIsDesktopQuoteStudio] = useState(false);
   const [editingFormSnapshot, setEditingFormSnapshot] = useState<ComponentFormState | null>(null);
   const [hasUnsavedProgress, setHasUnsavedProgress] = useState(false);
-  const [quoteModeChosen, setQuoteModeChosen] = useState(false);
+  const [quoteModeChosen, setQuoteModeChosen] = useState(requestedConstructorEntry);
   const [mobileCuadernoActive, setMobileCuadernoActive] = useState(false);
   const [duplicateSourceCode, setDuplicateSourceCode] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -222,6 +230,7 @@ function NuevaCotizacionPageContent() {
       });
     }
   }, [draft.items.length]);
+
   const [recordMeta, setRecordMeta] = useState<{
     id?: string;
     codigo?: string;
@@ -299,7 +308,13 @@ function NuevaCotizacionPageContent() {
 
   useLayoutEffect(() => {
     const mobileQuery = window.matchMedia("(max-width: 860px)");
-    const syncViewport = () => setIsMobileViewport(mobileQuery.matches);
+    const syncViewport = () => {
+      const isMobile = mobileQuery.matches;
+      setIsMobileViewport(isMobile);
+      if (requestedConstructorEntry && isMobile) {
+        setMobileCuadernoActive(true);
+      }
+    };
 
     syncViewport();
     if (typeof mobileQuery.addEventListener === "function") {
@@ -329,7 +344,7 @@ function NuevaCotizacionPageContent() {
         desktopQuery.removeListener(syncDesktop);
       }
     };
-  }, []);
+  }, [requestedConstructorEntry]);
 
   useEffect(() => {
     if (!isMobileViewport && step === 2) {
@@ -3150,6 +3165,7 @@ function goNextFromStep1() {
               setEditingFreeValueItemId(null);
             },
             isSaving,
+            preferredWorkspaceMode: requestedConstructorEntry ? "rapida" : null,
           }}
           stepThreeProps={{ ...flujo.propsPasoTres, saveIntent: pasoTresGuardado.saveIntent }}
           sideSummaryProps={flujo.propsResumenDesktop}

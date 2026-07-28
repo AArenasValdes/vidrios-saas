@@ -42,6 +42,48 @@
   max-width: 34ch;
 }
 
+.activationHeroBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #0b4fb3;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.activationModeStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  margin: 0 0 12px;
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.activationModeStrip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
 @keyframes activationStepIn {
   from {
     opacity: 0;
@@ -397,6 +439,10 @@
   gap: 12px;
 }
 
+.activationQuoteModeGrid {
+  gap: 10px;
+}
+
 .activationOptionCard {
   border: 1px solid #dbeafe;
   border-radius: 16px;
@@ -410,6 +456,17 @@
     transform 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
+}
+
+.activationModeIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #1d6fd8;
 }
 
 .activationOptionCard:has(.activationPrimary:hover),
@@ -1111,3 +1168,625 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (min-width: 860px) {
+  .activationRoot {
+    align-items: center;
+  }
+
+  .activationPage {
+    max-width: 760px;
+  }
+
+  .activationWelcomePage {
+    max-width: 520px;
+  }
+
+  .activationQuoteModeGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+
+/* First-quote onboarding: a dedicated responsive composition, separate from the form steps below. */
+.activationRoot {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 2% 8%, rgba(30, 136, 255, 0.08) 0 1px, transparent 1.5px) 0 0 / 9px 9px,
+    #f7f9fc;
+}
+
+.activationWelcomePage,
+.activationModePage {
+  max-width: 1520px;
+}
+
+.activationWelcomePage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  width: min(100%, 440px);
+  padding-bottom: 10px;
+}
+
+.activationWelcomeHero {
+  margin: 0;
+  gap: 12px;
+}
+
+.activationBrandWelcome {
+  margin-bottom: 8px;
+}
+
+.activationHeroBadge {
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 13px;
+  border-color: #d9e9ff;
+  background: #f4f8ff;
+  color: #146fe7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.activationTitle {
+  color: #101b33;
+  letter-spacing: 0;
+}
+
+.activationWelcomeHero .activationTitle {
+  max-width: 13ch;
+  font-size: clamp(2.05rem, 8.8vw, 2.85rem);
+  line-height: 1.08;
+}
+
+.activationTitle span {
+  color: #1e7df2;
+}
+
+.activationWelcomeHero .activationText,
+.activationModePage > .activationText {
+  max-width: 37ch;
+  color: #60708a;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.activationWelcomePreview {
+  gap: 14px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #dce5f1;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(22, 43, 77, 0.08);
+}
+
+.activationWelcomePreviewTop {
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5ebf3;
+}
+
+.activationWelcomeDocumentBrand img {
+  display: block;
+  width: 106px;
+  height: auto;
+}
+
+.activationWelcomeDocumentNumber {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.activationWelcomeDocumentNumber span,
+.activationWelcomeDocumentMeta span,
+.activationWelcomeDocumentTotal span {
+  color: #65748c;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.activationWelcomeDocumentNumber strong {
+  color: #176fe7;
+  font-size: 0.72rem;
+}
+
+.activationWelcomeDocumentMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+
+.activationWelcomeDocumentMeta > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.activationWelcomeDocumentMeta strong {
+  color: #1a2941;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.activationWelcomeDocumentProject small,
+.activationWelcomeDocumentTotal small {
+  color: #71809a;
+  font-size: 0.68rem;
+}
+
+.activationWelcomeDocumentTotal {
+  padding: 9px 10px;
+  border: 1px solid #d9e4f2;
+  border-radius: 10px;
+  background: #f9fbfe;
+}
+
+.activationWelcomeDocumentTotal strong {
+  color: #14213a;
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.activationWelcomeDocumentDetails {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.activationWindowPreview {
+  position: relative;
+  width: auto;
+  height: auto;
+  min-height: 116px;
+  padding: 11px;
+  border: 2px solid #607087;
+  border-radius: 0;
+  background: #f8fbfe;
+}
+
+.activationWindowPreview span {
+  border-color: #718299;
+  background: #e7f0fd;
+}
+
+.activationWindowPreview small,
+.activationWindowPreview strong {
+  position: absolute;
+  color: #526178;
+  font-size: 0.54rem;
+  font-weight: 700;
+}
+
+.activationWindowPreview small { bottom: -16px; left: 50%; transform: translateX(-50%); }
+.activationWindowPreview strong { right: -24px; top: 50%; transform: rotate(-90deg) translateX(50%); }
+
+.activationWelcomeDocumentTable {
+  display: grid;
+  border: 1px solid #dce5f0;
+  background: #ffffff;
+}
+
+.activationWelcomeDocumentTable > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid #e3eaf3;
+  color: #526178;
+  font-size: 0.64rem;
+}
+
+.activationWelcomeDocumentTable > div:first-child,
+.activationWelcomeDocumentTable > div:last-child {
+  color: #176fe7;
+  background: #f5f9ff;
+  font-weight: 700;
+}
+
+.activationWelcomeDocumentTable > div:last-child { border-bottom: 0; }
+.activationWelcomeDocumentTable strong { color: #24334b; font-size: inherit; }
+
+.activationValueProof {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  padding-top: 13px;
+  border-top: 1px solid #e5ebf3;
+}
+
+.activationValueProof span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #526178;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.activationValueProof svg { color: #176fe7; }
+
+.activationWelcomeActions {
+  gap: 11px;
+  padding-top: 0;
+}
+
+.activationPrimary {
+  min-height: 54px;
+  border-radius: 14px;
+  background: #1e7df2;
+  box-shadow: 0 10px 22px rgba(30, 125, 242, 0.24);
+}
+
+.activationPrimary:hover { background: #126fe0; }
+
+.activationSecondary,
+.activationWelcomeExampleButton {
+  min-height: 50px;
+  border: 1px solid #1e7df2;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #176fe7;
+}
+
+.activationWelcomeExampleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.activationGhost { color: #43607e; }
+
+.activationModePage {
+  width: min(100%, 440px);
+  align-items: stretch;
+  text-align: center;
+}
+
+.activationModeHero {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+.activationModeHero .activationTitle {
+  margin: 0;
+  max-width: 14ch;
+  font-size: clamp(2rem, 8.6vw, 2.85rem);
+  line-height: 1.08;
+}
+
+.activationHeroBadge i { font-style: normal; opacity: 0.62; }
+
+.activationQuoteModeGrid {
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.activationOptionCard {
+  position: relative;
+  min-height: 232px;
+  padding: 22px;
+  border-color: #dce6f3;
+  border-radius: 20px;
+  gap: 12px;
+  box-shadow: 0 6px 16px rgba(22, 43, 77, 0.035);
+}
+
+.activationOptionCardFast {
+  border-color: #a7dfc0;
+  background: #ffffff;
+}
+
+.activationOptionCardRecommended { border-color: #cfe0fa; }
+
+.activationModeIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #eef5ff;
+  color: #176fe7;
+}
+
+.activationOptionCardFast .activationModeIcon {
+  background: #e8f9ef;
+  color: #16a25b;
+}
+
+.activationModeIconNeutral { background: #f1f4f8; color: #64748b; }
+
+.activationBadge { margin-top: 3px; }
+.activationBadgeNeutral { background: #f1f4f8; color: #64748b; }
+
+.activationOptionTitle { font-size: 1.28rem; }
+.activationOptionText { font-size: 0.95rem; line-height: 1.45; }
+.activationOptionFinePrint { display: none; }
+
+.activationOptionCard .activationPrimary,
+.activationOptionCard .activationSecondary { margin-top: auto; }
+
+.activationOptionCard:has(.activationPrimary:hover),
+.activationOptionCard:has(.activationSecondary:hover) {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(22, 43, 77, 0.1);
+}
+
+.activationPrimary:focus-visible,
+.activationSecondary:focus-visible,
+.activationWelcomeExampleButton:focus-visible,
+.activationGhost:focus-visible {
+  outline: 3px solid rgba(30, 125, 242, 0.35);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .activationRoot { padding-inline: 20px; }
+  .activationWelcomeActions {
+    position: static;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .activationValueProof { grid-template-columns: repeat(3, auto); justify-content: space-between; }
+}
+
+@media (min-width: 1024px) {
+  .activationRoot { padding: 42px 56px; }
+
+  .activationWelcomePage {
+    width: min(100%, 1280px);
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.62fr) minmax(330px, 0.82fr);
+    grid-template-areas:
+      "hero actions"
+      "preview actions";
+    gap: 26px 64px;
+    align-content: center;
+    padding: 42px 58px;
+    border: 1px solid #dfe7f1;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.93);
+    box-shadow: 0 22px 48px rgba(22, 43, 77, 0.08);
+  }
+
+  .activationWelcomeHero { grid-area: hero; align-items: flex-start; text-align: left; }
+  .activationWelcomeHero .activationTitle { max-width: 21ch; font-size: clamp(2.55rem, 3.55vw, 3.5rem); }
+  .activationWelcomeHero .activationText { max-width: 48ch; font-size: 1.12rem; }
+  .activationWelcomePreview { grid-area: preview; max-width: 700px; padding: 22px 28px; }
+  .activationWelcomeDocumentBrand img { width: 138px; }
+  .activationWelcomeDocumentMeta strong { font-size: 0.9rem; }
+  .activationWelcomeDocumentDetails { gap: 24px; }
+  .activationWindowPreview { min-height: 148px; }
+  .activationWelcomeDocumentTable > div { padding: 12px 14px; font-size: 0.8rem; }
+  .activationWelcomeActions {
+    grid-area: actions;
+    align-self: center;
+    padding: 30px 38px;
+    border: 1px solid #dce6f3;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(22, 43, 77, 0.06);
+  }
+  .activationWelcomeActions::before {
+    content: "Comienza ahora";
+    color: #14213a;
+    font-size: 1.55rem;
+    font-weight: 750;
+    text-align: center;
+  }
+  .activationWelcomeActions::after {
+    content: "La forma mas rapida de conocer Ventora es crear tu primera cotizacion y ver el PDF listo para enviar.";
+    order: 1;
+    margin: -2px 0 12px;
+    color: #60708a;
+    font-size: 0.94rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .activationWelcomeActions .activationPrimary { order: 2; }
+  .activationWelcomeActions .activationWelcomeExampleButton { order: 3; }
+  .activationWelcomeActions .activationGhost { order: 4; }
+
+  .activationModePage {
+    width: min(100%, 1280px);
+    min-height: 760px;
+    align-items: center;
+    justify-content: center;
+    padding: 44px 48px;
+    border: 1px solid #dfe7f1;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.93);
+    box-shadow: 0 22px 48px rgba(22, 43, 77, 0.08);
+  }
+  .activationModeHero .activationTitle { max-width: none; font-size: clamp(2.7rem, 4vw, 4rem); }
+  .activationModePage > .activationText { max-width: 57ch; font-size: 1.15rem; }
+  .activationQuoteModeGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 18px; }
+  .activationOptionCard { min-height: 390px; padding: 34px; }
+  .activationOptionTitle { font-size: 1.42rem; }
+  .activationOptionText { font-size: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activationPage,
+  .activationOptionCard,
+  .activationPrimary,
+  .activationSecondary { animation: none; transition: none; }
+}
+
+/* Desktop activation has its own composition. Keep the mobile hierarchy intact. */
+@media (min-width: 1024px) {
+  .activationRoot {
+    align-items: center;
+    justify-content: center;
+    padding: 30px 48px 38px;
+  }
+
+  .activationWelcomePage,
+  .activationModePage {
+    position: relative;
+    width: min(100%, 1520px);
+    margin-top: 62px;
+    overflow: visible;
+  }
+
+  .activationWelcomePage .activationBrandWelcome,
+  .activationModePage > .activationBrand {
+    position: absolute;
+    bottom: calc(100% + 18px);
+    left: 50%;
+    z-index: 1;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    transform: translateX(-50%);
+  }
+
+  .activationBrandLogoWelcome,
+  .activationModePage .activationBrandLogo {
+    height: 50px;
+    max-width: 260px;
+  }
+
+  .activationWelcomePage {
+    grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.74fr);
+    grid-template-areas:
+      "hero actions"
+      "preview actions";
+    gap: 22px 64px;
+    padding: 38px 68px 42px;
+  }
+
+  .activationWelcomeHero {
+    gap: 10px;
+    padding-top: 0;
+  }
+
+  .activationWelcomeHero .activationTitle {
+    max-width: 19ch;
+    font-size: clamp(2.45rem, 3vw, 3.35rem);
+    line-height: 1.07;
+  }
+
+  .activationWelcomeHero .activationText {
+    max-width: 52ch;
+    font-size: 1rem;
+    line-height: 1.48;
+  }
+
+  .activationWelcomePreview {
+    width: min(100%, 780px);
+    padding: 22px 26px;
+    border-radius: 16px;
+    box-shadow: 0 14px 30px rgba(22, 43, 77, 0.07);
+  }
+
+  .activationWelcomeDocumentBrand img { width: 118px; }
+  .activationWelcomeDocumentMeta { gap: 9px 16px; }
+  .activationWelcomeDocumentMeta strong { font-size: 0.78rem; }
+  .activationWelcomeDocumentDetails { gap: 18px; }
+  .activationWindowPreview { min-height: 142px; }
+  .activationWelcomeDocumentTable > div { padding: 9px 12px; font-size: 0.73rem; }
+  .activationValueProof { padding-top: 10px; }
+
+  .activationWelcomeActions {
+    width: 100%;
+    max-width: 386px;
+    justify-self: end;
+    padding: 36px 34px;
+    border-radius: 16px;
+  }
+
+  .activationWelcomeActions::before { font-size: 1.38rem; }
+  .activationWelcomeActions::after { font-size: 0.9rem; }
+  .activationWelcomeActions .activationPrimary,
+  .activationWelcomeActions .activationWelcomeExampleButton { min-height: 50px; }
+
+  .activationModePage {
+    min-height: 0;
+    padding: 38px 64px 34px;
+    gap: 16px;
+  }
+
+  .activationModeHero { gap: 12px; }
+  .activationModeHero .activationTitle { font-size: clamp(2.45rem, 3.35vw, 3.2rem); }
+  .activationModePage > .activationText { max-width: 58ch; font-size: 1rem; }
+  .activationQuoteModeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 980px);
+    gap: 26px;
+    margin-top: 12px;
+  }
+  .activationOptionCard { min-height: 326px; padding: 30px; }
+  .activationOptionTitle { font-size: 1.28rem; }
+  .activationOptionText { font-size: 0.94rem; }
+  .activationOptionCard .activationPrimary,
+  .activationOptionCard .activationSecondary { min-height: 48px; }
+
+  .activationPage:not(.activationWelcomePage):not(.activationModePage) {
+    width: min(100%, 760px);
+    flex: 0 1 auto;
+    margin: auto;
+    padding: 36px 40px;
+    border: 1px solid #dfe7f1;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 18px 40px rgba(22, 43, 77, 0.07);
+  }
+
+  .activationPage:not(.activationWelcomePage):not(.activationModePage) .activationBrand {
+    margin-bottom: 10px;
+  }
+
+  .activationProgressCompact {
+    align-self: flex-start;
+    grid-template-columns: auto auto auto auto;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid #d9e9ff;
+    border-radius: 999px;
+    background: #f4f8ff;
+    color: #176fe7;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .activationProgressCompact svg { width: 16px; height: 16px; }
+  .activationProgressCompact i { color: #7b8aa1; font-style: normal; }
+  .activationProgressCompact strong { color: #526178; }
+  .activationProgressCompact .activationProgressTop,
+  .activationProgressCompact .activationProgressTrack { display: none; }
+}
+
+.activationProgressCompact {
+  display: inline-grid;
+  grid-template-columns: auto auto auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid #d9e9ff;
+  border-radius: 999px;
+  background: #f4f8ff;
+  color: #176fe7;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.activationProgressCompact i { color: #7b8aa1; font-style: normal; }
+.activationProgressCompact strong { color: #526178; }

@@ -189,6 +189,7 @@ export function buildOnboardingChecklistViewModel(input: {
 
   return {
     steps,
+    activationState: effectiveStates.activation_complete,
     progressPct: Math.round((completedCount / totalCount) * 100),
     completedCount,
     totalCount,

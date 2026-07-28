@@ -32,7 +32,8 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 12. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
 13. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta (pegar a otra IA)
 14. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF
-15. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
+15. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
+16. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
 
 ## Foco actual
 
@@ -75,6 +76,7 @@ docs/
     COMPONENTS_MAP.md         <- Componentes reutilizables
     AGENT_TASK_GUIDE.md       <- Guia practica por tarea
     CONSTRUCTOR_DESKTOP_HANDOFF.md <- Handoff Constructor desktop / SVG / PDF
+    MOBILE_COTIZACION_FLOW_HANDOFF.md <- Handoff flujo movil por items / Constructor
     CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (para otras IAs)
     TOKEN_SAVING_RULES.md     <- Reglas para ahorrar tokens
     CHANGELOG_AGENT_MAP.md    <- Historial de cambios

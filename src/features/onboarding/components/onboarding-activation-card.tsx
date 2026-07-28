@@ -29,7 +29,10 @@ export function OnboardingActivationCard({
     !controller.isVisible ||
     controller.error ||
     !checklist ||
-    (!controller.isPreviewMode && checklist.isComplete)
+    (!controller.isPreviewMode &&
+      (checklist.isComplete ||
+        checklist.activationState === "completado" ||
+        checklist.activationState === "omitido"))
   ) {
     return null;
   }

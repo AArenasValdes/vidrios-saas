@@ -16,8 +16,6 @@ import {
 import { PremiumPageReveal, PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { persistNuevaCotizacionSolicitudPrefill } from "@/features/cotizaciones/new-quote/solicitud-prefill";
-import { OnboardingGuide } from "@/features/onboarding/components/onboarding-guide";
-import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useSolicitudesContacto } from "@/features/solicitudes/hooks/useSolicitudesContacto";
 import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
@@ -210,7 +208,6 @@ function getInitials(value: string) {
 export default function SolicitudesPage() {
   const router = useRouter();
   const { rol, user, organizacionId } = useAuth();
-  const onboarding = useOnboardingChecklist();
   const { profile } = useOrganizationProfile();
   const solicitudesCacheKey = String(user?.id ?? profile?.organizationId ?? "default");
   const [busqueda, setBusqueda] = useState("");
@@ -626,8 +623,6 @@ export default function SolicitudesPage() {
           </Link>
         </div>
       </PremiumPageSection>
-
-      <OnboardingGuide controller={onboarding} routeKey="solicitudes" />
 
       <PremiumPageSection className={s.filtersSection}>
         <div className={s.searchBar}>

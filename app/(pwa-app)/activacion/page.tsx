@@ -7,10 +7,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Building2,
+  CheckCircle2,
   Download,
   Eye,
   ImagePlus,
   MessageCircle,
+  PenLine,
+  Rocket,
+  Route,
   Sparkles,
 } from "lucide-react";
 
@@ -68,21 +72,6 @@ const ACTIVATION_COMPONENT_CATEGORIES = [
   "Cierre de balcon",
   "Otro trabajo",
 ] as const;
-
-const ACTIVATION_STEP_ORDER: ActivationStep[] = [
-  "welcome",
-  "choose",
-  "demo",
-  "real_mode",
-  "real_total",
-  "component_method",
-  "line_setup",
-  "line_work",
-  "real_component",
-  "result",
-  "company",
-  "done",
-];
 
 const ACTIVATION_LAST_RESULT_STORAGE_KEY = "ventora:activation:last-result";
 
@@ -168,18 +157,19 @@ function ActivationBrand({ welcome = false }: { welcome?: boolean }) {
 }
 
 function ActivationProgress({ step }: { step: ActivationStep }) {
-  const currentIndex = Math.max(0, ACTIVATION_STEP_ORDER.indexOf(step));
-  const progressPct = Math.round(((currentIndex + 1) / ACTIVATION_STEP_ORDER.length) * 100);
+  const milestone =
+    step === "result" || step === "company" || step === "done"
+      ? { label: "Tu primera cotizacion", current: 3 }
+      : step === "welcome" || step === "choose" || step === "demo" || step === "real_mode"
+        ? { label: "Tu primera cotizacion", current: 1 }
+        : { label: "Tu primera cotizacion", current: 2 };
 
   return (
-    <div className={s.activationProgress} aria-label={`Paso ${currentIndex + 1} de ${ACTIVATION_STEP_ORDER.length}`}>
-      <div className={s.activationProgressTop}>
-        <span>Paso {currentIndex + 1} de {ACTIVATION_STEP_ORDER.length}</span>
-        <strong>{progressPct}%</strong>
-      </div>
-      <div className={s.activationProgressTrack} aria-hidden>
-        <span style={{ width: `${progressPct}%` }} />
-      </div>
+    <div className={`${s.activationProgress} ${s.activationProgressCompact}`} aria-label={`${milestone.label}, ${milestone.current} de 3`}>
+      <Rocket size={16} aria-hidden />
+      <span>{milestone.label}</span>
+      <i aria-hidden>·</i>
+      <strong>{milestone.current} de 3</strong>
     </div>
   );
 }
@@ -493,6 +483,7 @@ function ActivacionPageContent() {
     setError(null);
 
     if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
       window.history.replaceState(
         null,
         "",
@@ -736,30 +727,72 @@ function ActivacionPageContent() {
         <section className={`${s.activationPage} ${s.activationWelcomePage}`}>
           <div className={s.activationWelcomeHero}>
             <ActivationBrand welcome />
-            <h1 className={s.activationTitle}>Crea tu primera cotización</h1>
+            <span className={s.activationHeroBadge}>
+              <Rocket size={16} aria-hidden />
+              Empieza aqui
+            </span>
+            <h1 className={s.activationTitle}>
+              Crea tu primera cotizacion <span>en menos de 2 minutos</span>
+            </h1>
             <p className={s.activationText}>
-              Sin configurar precios ni líneas todavía. En menos de 2 minutos tendrás un PDF
-              listo para enviar por WhatsApp.
+              No necesitas configurar precios ni lineas todavia. Genera un PDF profesional listo
+              para enviar por WhatsApp.
             </p>
           </div>
-          <div className={s.activationWelcomePreview} aria-label="Vista previa del PDF">
+          <div className={s.activationWelcomePreview} aria-label="Vista previa de una cotizacion en PDF">
             <div className={s.activationWelcomePreviewTop}>
-              <span>EJEMPLO DE COTIZACIÓN</span>
-            </div>
-            <div className={s.activationWelcomePreviewBody}>
-              <div className={s.activationWindowPreview} aria-hidden="true">
-                <span />
-                <span />
+              <div className={s.activationWelcomeDocumentBrand}>
+                <Image
+                  alt="Ventora"
+                  src="/brand/ventora-logo-boot.svg"
+                  width={132}
+                  height={32}
+                  unoptimized
+                />
               </div>
-              <div className={s.activationWelcomePreviewInfo}>
-                <span>Cliente de prueba</span>
+              <div className={s.activationWelcomeDocumentNumber}>
+                <span>Cotizacion</span>
+                <strong>N° 000124</strong>
+              </div>
+            </div>
+            <div className={s.activationWelcomeDocumentMeta}>
+              <div>
+                <span>Cliente</span>
+                <strong>Cliente de prueba</strong>
+              </div>
+              <div>
+                <span>Fecha</span>
+                <strong>24 de mayo de 2024</strong>
+              </div>
+              <div className={s.activationWelcomeDocumentProject}>
+                <span>Proyecto</span>
                 <strong>Ventana corredera</strong>
                 <small>1200 × 1000 mm</small>
               </div>
+              <div className={s.activationWelcomeDocumentTotal}>
+                <span>Total</span>
+                <strong>$180.000</strong>
+                <small>IVA incluido</small>
+              </div>
             </div>
-            <div className={s.activationWelcomePreviewTotal}>
-              <span>Total</span>
-              <strong>$180.000</strong>
+            <div className={s.activationWelcomeDocumentDetails}>
+              <div className={s.activationWindowPreview} aria-label="Dibujo tecnico de una ventana corredera">
+                <span />
+                <span />
+                <small>1200 mm</small>
+                <strong>1000 mm</strong>
+              </div>
+              <div className={s.activationWelcomeDocumentTable}>
+                <div><span>Item</span><span>Total</span></div>
+                <div><strong>Ventana corredera</strong><strong>$180.000</strong></div>
+                <div><span>IVA incluido</span><span>-</span></div>
+                <div><strong>Total</strong><strong>$180.000</strong></div>
+              </div>
+            </div>
+            <div className={s.activationValueProof}>
+              <span><Download size={16} aria-hidden /> PDF profesional</span>
+              <span><MessageCircle size={16} aria-hidden /> Listo para WhatsApp</span>
+              <span><CheckCircle2 size={16} aria-hidden /> Sin configuracion inicial</span>
             </div>
           </div>
           <div className={`${s.activationActions} ${s.activationWelcomeActions}`}>
@@ -768,7 +801,7 @@ function ActivacionPageContent() {
               className={s.activationPrimary}
               onClick={startRealQuote}
             >
-              Crear mi primera cotización
+              Crear mi primera cotizacion
               <ArrowRight size={18} aria-hidden />
             </button>
             <button
@@ -776,10 +809,11 @@ function ActivacionPageContent() {
               className={s.activationWelcomeExampleButton}
               onClick={() => setStep("demo")}
             >
-              Ver ejemplo de cotización
+              <Eye size={18} aria-hidden />
+              Ver ejemplo primero
             </button>
             <button type="button" className={s.activationGhost} onClick={() => void skipActivation()}>
-              Entrar sin guía
+              Ya conozco Ventora, entrar al panel
             </button>
           </div>
         </section>
@@ -902,26 +936,56 @@ function ActivacionPageContent() {
   if (step === "real_mode") {
     return (
       <div className={s.activationRoot}>
-        <section className={s.activationPage}>
+        <section className={`${s.activationPage} ${s.activationModePage}`}>
           <ActivationBrand />
-          <ActivationProgress step={step} />
-          <h1 className={s.activationTitle}>Como quieres crear tu cotizacion?</h1>
+          <div className={s.activationModeHero}>
+            <span className={s.activationHeroBadge}>
+              <Rocket size={16} aria-hidden />
+              Tu primera cotizacion <i aria-hidden>·</i> 1 de 3
+            </span>
+            <h1 className={s.activationTitle}>Elige como quieres <span>empezar</span></h1>
+          </div>
           <p className={s.activationText}>
-            Elige solo un camino. Puedes cambiar despues dentro de Ventora.
+            Parte rapido o agrega componentes con guia. El constructor queda disponible cuando necesites una pieza especial.
           </p>
-          <div className={s.activationOptionGrid}>
-            <article className={`${s.activationOptionCard} ${s.activationOptionCardRecommended}`}>
-              <h2 className={s.activationOptionTitle}>Cotizar con medidas y componentes</h2>
+          <div className={`${s.activationOptionGrid} ${s.activationQuoteModeGrid}`}>
+            <article className={`${s.activationOptionCard} ${s.activationOptionCardFast}`}>
+              <span className={s.activationModeIcon} aria-hidden>
+                <PenLine size={18} />
+              </span>
+              <span className={`${s.activationBadge} ${s.activationBadgeFast}`}>Mas rapido</span>
+              <h2 className={s.activationOptionTitle}>Rapida por total</h2>
               <p className={s.activationOptionText}>
-                Para ventanas, puertas, shower y otros trabajos. Agrega medidas,
-                cantidades y detalles del trabajo.
-              </p>
-              <p className={s.activationOptionFinePrint}>
-                Tambien puedes usar tus lineas con precio por m2, minimo cobrable y redondeo.
+                Escribe lo que vas a cotizar, coloca el precio final y genera el PDF.
               </p>
               <button
                 type="button"
                 className={s.activationPrimary}
+                onClick={() => {
+                  setDescripcion("");
+                  setTotalTrabajo("");
+                  setComponenteNombre("");
+                  setStep("real_total");
+                }}
+              >
+                Cotizar rapido
+              </button>
+            </article>
+            <article className={`${s.activationOptionCard} ${s.activationOptionCardRecommended}`}>
+              <span className={s.activationModeIcon} aria-hidden>
+                <Route size={18} />
+              </span>
+              <span className={s.activationBadge}>Recomendado</span>
+              <h2 className={s.activationOptionTitle}>Guiada por items</h2>
+              <p className={s.activationOptionText}>
+                Define cliente, componentes y obten un resumen claro de tu cotizacion.
+              </p>
+              <p className={s.activationOptionFinePrint}>
+                Puedes usar lineas con precio por m2, minimo cobrable y redondeo.
+              </p>
+              <button
+                type="button"
+                className={s.activationSecondary}
                 onClick={() => {
                   setDescripcion("");
                   setTotalTrabajo("");
@@ -932,30 +996,11 @@ function ActivacionPageContent() {
                   setStep("component_method");
                 }}
               >
-                Usar medidas
-              </button>
-            </article>
-            <article className={`${s.activationOptionCard} ${s.activationOptionCardFast}`}>
-              <h2 className={s.activationOptionTitle}>Cotizacion libre por total</h2>
-              <p className={s.activationOptionText}>
-                Como un cuaderno digital: escribe el trabajo, agrega el valor final
-                y genera un PDF profesional.
-              </p>
-              <button
-                type="button"
-                className={s.activationSecondary}
-                onClick={() => {
-                  setDescripcion("");
-                  setComponenteNombre("");
-                  setTotalTrabajo("");
-                  setStep("real_total");
-                }}
-              >
-                Ingresar precio final
+                Crear con guia
               </button>
             </article>
           </div>
-          <button type="button" className={s.activationGhost} onClick={() => setStep("choose")}>
+          <button type="button" className={s.activationGhost} onClick={() => setStep("welcome")}>
             Volver
           </button>
         </section>

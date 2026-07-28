@@ -12,14 +12,6 @@ const RegisterServiceWorker = dynamic(
   { ssr: false },
 );
 
-const InstallAppPrompt = dynamic(
-  () =>
-    import("@/components/pwa/install-app-prompt").then((m) => ({
-      default: m.InstallAppPrompt,
-    })),
-  { ssr: false },
-);
-
 function isMarketingPublicPath(pathname: string | null) {
   if (!pathname) return false;
   if (pathname === "/") return true;
@@ -44,14 +36,20 @@ export function DynamicPwaComponents() {
   const [allowPwa, setAllowPwa] = useState(!marketing);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!marketing) {
-      setAllowPwa(true);
-      return;
+      queueMicrotask(() => {
+        if (!cancelled) setAllowPwa(true);
+      });
+
+      return () => {
+        cancelled = true;
+      };
     }
 
     let idleId: number | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
 
     const enable = () => {
       if (!cancelled) setAllowPwa(true);
@@ -86,7 +84,6 @@ export function DynamicPwaComponents() {
   return (
     <>
       <RegisterServiceWorker />
-      {marketing ? null : <InstallAppPrompt />}
     </>
   );
 }

@@ -159,4 +159,18 @@ describe("onboarding-checklist.service", () => {
     expect(nextAction?.href).toBe("/configuracion/empresa?inicio=1");
     expect(nextAction?.openInNewTab).toBe(false);
   });
+
+  it("expone la activacion inicial para no duplicar guias dentro de la app", () => {
+    const checklist = buildOnboardingChecklistViewModel({
+      records: [buildRecord("activation_complete", "omitido")],
+      context: {
+        profile: buildProfile(),
+        leadCount: 0,
+        quoteStates: [],
+        latestQuoteId: null,
+      },
+    });
+
+    expect(checklist.activationState).toBe("omitido");
+  });
 });
