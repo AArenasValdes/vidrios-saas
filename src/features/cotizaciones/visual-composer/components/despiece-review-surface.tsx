@@ -209,6 +209,51 @@ function parsePositiveIntegerInput(value: string, fallback = 0) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function resolveReviewCubicationSnapshot(input: {
+  item: CotizacionWorkflowItem;
+  template: CotizacionLineTemplate | null;
+  quotePricingMode: QuotePricingMode;
+}) {
+  const { item, template, quotePricingMode } = input;
+  const form = mapItemToForm(item);
+  const view = buildPieceDomainView(item, quotePricingMode, template);
+  const personalizado = isCubicationPersonalizadoAssistMode({
+    tipo: form.tipo,
+    sistema: form.sistema,
+    sheetScheme: form.sheetScheme,
+    configuracion: form.configuracion,
+    isCustomScheme: form.isCustomScheme,
+  });
+  const snapshot = resolveActiveCubicationSnapshot({
+    componentForm: {
+      ancho: form.ancho,
+      alto: form.alto,
+      cantidad: form.cantidad,
+      lineTemplateId: form.lineTemplateId,
+      cubicationSnapshot: form.cubicationSnapshot,
+    },
+    selectedTemplate: template,
+    savedCubicationSnapshot: view.cubicationSnapshot,
+    personalizadoAssistMode: personalizado,
+  });
+  if (snapshot) return snapshot;
+
+  const widthMm = parsePositiveIntegerInput(form.ancho);
+  const heightMm = parsePositiveIntegerInput(form.alto);
+  const quantity = parsePositiveIntegerInput(form.cantidad, 1);
+  if (!template || !form.lineTemplateId || widthMm <= 0 || heightMm <= 0) {
+    return null;
+  }
+
+  return buildPersonalizadoManualCubicationDraft({
+    lineTemplateId: form.lineTemplateId,
+    catalogMetadata: template.catalogMetadata,
+    widthMm,
+    heightMm,
+    quantity,
+  });
+}
+
 export function DespieceReviewSurface({
   open,
   items,
@@ -253,18 +298,13 @@ export function DespieceReviewSurface({
       })
     : false;
   const activeSnapshot = selectedForm
-    ? resolveActiveCubicationSnapshot({
-        componentForm: {
-          ancho: selectedForm.ancho,
-          alto: selectedForm.alto,
-          cantidad: selectedForm.cantidad,
-          lineTemplateId: selectedForm.lineTemplateId,
-          cubicationSnapshot: selectedForm.cubicationSnapshot,
-        },
-        selectedTemplate,
-        savedCubicationSnapshot: selectedView?.cubicationSnapshot,
-        personalizadoAssistMode,
-      })
+    ? selectedItem
+      ? resolveReviewCubicationSnapshot({
+          item: selectedItem,
+          template: selectedTemplate,
+          quotePricingMode,
+        })
+      : null
     : null;
   const preview = activeSnapshot ? cubicationSnapshotToPreview(activeSnapshot) : null;
   const rules = selectedTemplate
@@ -316,25 +356,10 @@ export function DespieceReviewSurface({
       .map((item) => {
         const form = mapItemToForm(item);
         const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
-        const view = buildPieceDomainView(item, quotePricingMode, template);
-        const personalizado = isCubicationPersonalizadoAssistMode({
-          tipo: form.tipo,
-          sistema: form.sistema,
-          sheetScheme: form.sheetScheme,
-          configuracion: form.configuracion,
-          isCustomScheme: form.isCustomScheme,
-        });
-        const snapshot = resolveActiveCubicationSnapshot({
-          componentForm: {
-            ancho: form.ancho,
-            alto: form.alto,
-            cantidad: form.cantidad,
-            lineTemplateId: form.lineTemplateId,
-            cubicationSnapshot: form.cubicationSnapshot,
-          },
-          selectedTemplate: template,
-          savedCubicationSnapshot: view.cubicationSnapshot,
-          personalizadoAssistMode: personalizado,
+        const snapshot = resolveReviewCubicationSnapshot({
+          item,
+          template,
+          quotePricingMode,
         });
         if (!snapshot) return null;
         return {
@@ -363,24 +388,10 @@ export function DespieceReviewSurface({
         const form = mapItemToForm(item);
         const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
         const view = buildPieceDomainView(item, quotePricingMode, template);
-        const personalizado = isCubicationPersonalizadoAssistMode({
-          tipo: form.tipo,
-          sistema: form.sistema,
-          sheetScheme: form.sheetScheme,
-          configuracion: form.configuracion,
-          isCustomScheme: form.isCustomScheme,
-        });
-        const snapshot = resolveActiveCubicationSnapshot({
-          componentForm: {
-            ancho: form.ancho,
-            alto: form.alto,
-            cantidad: form.cantidad,
-            lineTemplateId: form.lineTemplateId,
-            cubicationSnapshot: form.cubicationSnapshot,
-          },
-          selectedTemplate: template,
-          savedCubicationSnapshot: view.cubicationSnapshot,
-          personalizadoAssistMode: personalizado,
+        const snapshot = resolveReviewCubicationSnapshot({
+          item,
+          template,
+          quotePricingMode,
         });
         const previewForItem = snapshot ? cubicationSnapshotToPreview(snapshot) : null;
         const uiStatus = resolveDespieceUiStatus({

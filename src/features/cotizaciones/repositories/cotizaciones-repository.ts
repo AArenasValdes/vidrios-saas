@@ -8,6 +8,7 @@ import type {
 } from "@/features/cotizaciones/types/cotizacion-item";
 import type { EntityId } from "@/types/common";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 type CotizacionesRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -76,6 +77,7 @@ type CotizacionItemRow = {
   descripcion: string | null;
   unidad: string | null;
   observaciones: string | null;
+  fabricacion_snapshot?: unknown;
   tipo_item: string | null;
   creado_en: string | null;
   product_type_id: EntityId | null;
@@ -112,7 +114,7 @@ const COTIZACION_LIST_SELECT =
 const COTIZACION_LIST_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, creado_en, actualizado_en, total";
 const COTIZACION_ITEM_SELECT =
-  "id, cotizacion_id, codigo, tipo_componente, orden, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
+  "id, cotizacion_id, codigo, tipo_componente, orden, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, fabricacion_snapshot, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
 const COTIZACION_ITEM_SELECT_LEGACY =
   "id, cotizacion_id, cantidad, precio_unitario, subtotal, organization_id, ancho, alto, area_m2, linea, color, vidrio, nombre, actualizado_en, eliminado_en, descripcion, unidad, observaciones, tipo_item, creado_en, product_type_id, system_line_id, configuration_id, costo_unitario, costo_total, margen_pct, utilidad";
 const COTIZACION_BREAKDOWN_SELECT =
@@ -221,7 +223,8 @@ function isMissingComponentFieldsError(error: unknown) {
   return (
     (haystack.includes("codigo") ||
       haystack.includes("tipo_componente") ||
-      haystack.includes("orden")) &&
+      haystack.includes("orden") ||
+      haystack.includes("fabricacion_snapshot")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -265,6 +268,33 @@ function isMissingApprovalFieldsError(error: unknown) {
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
   );
+}
+
+function parseFabricacionSnapshot(
+  value: unknown
+): FabricacionCotizacionSnapshot | null {
+  if (value === null || value === undefined || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    record.schemaVersion !== 1 ||
+    record.tipo !== "fabricacion_receta_snapshot" ||
+    typeof record.recipeId !== "string" ||
+    typeof record.recipeVersion !== "number" ||
+    typeof record.recipeIdentity !== "object" ||
+    typeof record.input !== "object" ||
+    typeof record.result !== "object" ||
+    !Array.isArray(record.pauta) ||
+    !Array.isArray(record.vidrios) ||
+    !Array.isArray(record.advertencias) ||
+    typeof record.calculatedAt !== "string"
+  ) {
+    return null;
+  }
+
+  return value as FabricacionCotizacionSnapshot;
 }
 
 function isMissingCodeSequenceFunctionError(error: unknown) {
@@ -341,6 +371,7 @@ function mapCotizacionItem(
     descripcion: row.descripcion,
     unidad: row.unidad,
     observaciones: row.observaciones,
+    fabricacionSnapshot: parseFabricacionSnapshot(row.fabricacion_snapshot),
     tipoItem: row.tipo_item,
     creadoEn: row.creado_en,
     productTypeId: row.product_type_id,
@@ -520,6 +551,7 @@ function buildItemInsert(
     descripcion: input.descripcion ?? null,
     unidad: input.unidad ?? null,
     observaciones: input.observaciones ?? null,
+    fabricacion_snapshot: input.fabricacionSnapshot ?? null,
     tipo_item: input.tipoItem ?? null,
     product_type_id: input.productTypeId ?? null,
     system_line_id: input.systemLineId ?? null,
@@ -693,6 +725,7 @@ function mapSnapshotItemToCreateInput(item: CotizacionItem): CrearCotizacionItem
     descripcion: item.descripcion,
     unidad: item.unidad,
     observaciones: item.observaciones,
+    fabricacionSnapshot: item.fabricacionSnapshot,
     tipoItem: item.tipoItem,
     productTypeId: item.productTypeId,
     systemLineId: item.systemLineId,

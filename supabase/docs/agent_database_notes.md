@@ -214,3 +214,55 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Todas las FKs tienen covering index confirmado por SQL.
 - Avisos `unused_index` quedan documentados como no accionables hasta tener uso real.
 - `auth_leaked_password_protection` queda aceptado como limitacion de Supabase Free; re-evaluar al pasar a Pro.
+
+---
+
+## Addendum 2026-07-29 - Supabase remoto y Fabricacion Fase 2
+
+- MCP Supabase fue agregado y autenticado para el proyecto `yrtrwgkaopfumpidjthk`.
+- En esta sesion las herramientas MCP no quedaron inyectadas al listado de tools, por lo que la auditoria remota se ejecuto con Supabase CLI `--linked`.
+- Proyecto remoto reportado por `supabase projects list`: `ACTIVE_HEALTHY`, region `us-west-2`, Postgres `17.6.1.063`.
+- Nota historica: al 2026-07-29 la migracion local `20260729230407_fabrication_recipes_persistence.sql` no estaba aplicada en remoto. Fue aplicada y verificada el 2026-07-30; ver addendum de cierre abajo.
+- No usar `db push` a ciegas por el drift historico ya documentado. Para futuras migraciones, preferir aplicacion controlada de la migracion especifica y luego verificar tablas, RLS, policies, triggers e indices.
+- Nuevas tablas de Fase 2 esperadas:
+  - `fabrication_recipes`: recetas versionadas, `organization_id bigint nullable`, `line_template_id bigint nullable`, `scope`, `status`, `definition jsonb`, soft delete.
+  - `fabrication_recipe_tests`: casos de prueba por receta, input/salida esperada/salida real, `passed`, soft delete.
+- Estado legacy remoto actualizado:
+  - `quote_item_breakdown` ya tiene policies RLS por `organization_id`.
+  - `formula_variables` tiene deny-all para `anon`/`authenticated`.
+  - `materials` tiene policies por `organization_id`, pero con rol `public` y UPDATE sin `WITH CHECK`.
+  - `system_lines` tiene SELECT por `organization_id IS NULL OR organization_id = get_org_id()`, con rol `public`.
+- Advisors remotos activos:
+  - Security: `touch_growth_updated_at` sin `search_path`; `get_org_id()` y `reserve_next_cotizacion_code(...)` son `SECURITY DEFINER` ejecutables por `authenticated`; leaked password protection desactivado.
+  - Performance: faltan covering indexes en FKs `growth_activities.workspace_id`, `growth_prospects.converted_organization_id`, `growth_tasks.prospect_id`.
+- Antes de afirmar que la base esta lista para produccion tecnica, resolver o aceptar explicitamente esos advisors y volver a correr `supabase db advisors --linked --type security` y `--type performance`.
+
+---
+
+## Addendum 2026-07-29 - Fabricacion Fase 3 snapshot por item
+
+- Migracion local nueva: `20260729234019_cotizacion_items_fabricacion_snapshot.sql`.
+- Agrega `cotizacion_items.fabricacion_snapshot jsonb` con CHECK de objeto e indice parcial `(organization_id, cotizacion_id)` para filas activas con snapshot.
+- La columna hereda las policies RLS de `cotizacion_items`; no se agregaron grants ni policies nuevas.
+- El flujo nuevo guarda snapshots tecnicos formales en JSONB y deja `[cub:]` solo como lectura legacy.
+- Nota historica: al 2026-07-29 esta migracion no estaba aplicada/verificada en remoto. Fue aplicada y verificada el 2026-07-30; ver addendum de cierre abajo.
+
+---
+
+## Addendum 2026-07-30 - Cierre remoto Fabricacion Fase 3
+
+- Migraciones aplicadas y registradas en Supabase remoto `yrtrwgkaopfumpidjthk`: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot` y `20260730001306_harden_fabrication_recipe_grants`.
+- Se aplicaron con `npx supabase db query --linked --file ...` y se registraron con `npx supabase migration repair --linked --status applied ...` por drift historico; no se uso `db push`.
+- `fabrication_recipes` y `fabrication_recipe_tests` tienen RLS habilitado y policies para `authenticated`; `anon` no tiene privilegios sobre esas tablas despues del hardening.
+- Grants finales verificados: `authenticated` y `service_role` tienen solo `INSERT,SELECT,UPDATE` en las tablas nuevas; no tienen `DELETE/TRUNCATE`.
+- Smoke remoto con dos empresas QA temporales verifico:
+  - una organizacion lee su receta privada y no lee ni edita la privada de otra;
+  - ambas organizaciones leen una receta Ventora;
+  - una cotizacion sin receta queda sin `fabricacion_snapshot`;
+  - una cotizacion con una receta validada compatible guarda `fabricacion_snapshot`;
+  - una cotizacion con multiples recetas validadas compatibles queda sin snapshot automatico;
+  - una receta `validated` no se edita directamente;
+  - el snapshot historico no cambia al archivar/versionar la receta.
+- Datos QA creados durante el smoke quedaron limpiados con soft delete: cotizaciones/items, recetas, lineas, clients/projects/users/organizations; los usuarios Auth QA se eliminaron.
+- `supabase db advisors --linked --type performance` no reporta issues.
+- `supabase db advisors --linked --type security` conserva solo avisos previos: `touch_growth_updated_at` sin `search_path`, `get_org_id()` y `reserve_next_cotizacion_code(...)` como SECURITY DEFINER ejecutables por authenticated, y leaked password protection desactivado.

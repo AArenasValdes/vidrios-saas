@@ -39,6 +39,11 @@ import {
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
+import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
@@ -180,7 +185,8 @@ function mapDatabaseItemToWorkflowItem(
       item.subtotal ??
       0;
 
-    return calculateFreeValueItem({
+    return {
+      ...calculateFreeValueItem({
       id: String(item.id),
       codigo,
       nombre: item.nombre?.trim() || `Item libre ${index + 1}`,
@@ -190,7 +196,9 @@ function mapDatabaseItemToWorkflowItem(
       ivaMode: presentation.ivaMode ?? "total_incluye_iva",
       observaciones: presentation.raw,
       allowZeroValue: presentation.displayMode === "item_libre",
-    });
+      }),
+      fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    };
   }
 
   const tipo =
@@ -242,10 +250,14 @@ function mapDatabaseItemToWorkflowItem(
       precioTotal: round(storedSubtotal, 2),
       precioAjustadoManual: true,
       origenPrecio: presentation.origenPrecio ?? "manual",
+      fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     };
   }
 
-  return calculatedItem;
+  return {
+    ...calculatedItem,
+    fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+  };
 }
 
 function mapCotizacionToWorkflowRecord(input: {
@@ -380,6 +392,7 @@ function mapWorkflowItemToRepositoryItem(
     descripcion: item.descripcion,
     unidad: item.unidad,
     observaciones: item.observaciones || null,
+    fabricacionSnapshot: item.fabricacionSnapshot ?? null,
     tipoItem: isFreeValueItem ? "item_libre_con_valor" : "componente",
     productTypeId: null,
     systemLineId: null,
@@ -390,6 +403,176 @@ function mapWorkflowItemToRepositoryItem(
     utilidad: isFreeValueItem ? 0 : utilidad,
     breakdown: [],
   };
+}
+
+function normalizeOrganizationIdForFabricacion(organizationId: EntityId): number | null {
+  const parsed = Number(organizationId);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeLineTemplateIdForFabricacion(value: string): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function hasSupabaseBrowserEnv() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
+function resolveFabricacionTipologia(item: CotizacionWorkflowItem): FabricacionTipologia | null {
+  const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
+  if (source.includes("corredera")) return "corredera";
+  if (source.includes("abatible") && source.includes("puerta")) return "puerta_abatible";
+  if (source.includes("puerta") && source.includes("corredera")) return "puerta_corredera";
+  if (source.includes("abatible")) return "abatible";
+  if (source.includes("proyectante")) return "proyectante";
+  if (source.includes("fijo") || source.includes("paño fijo") || source.includes("pano fijo")) {
+    return "pano_fijo";
+  }
+  if (source.includes("shower")) return "shower";
+  return null;
+}
+
+function resolveLeavesCount(item: CotizacionWorkflowItem, fallback: number | null) {
+  if (fallback && fallback > 0) return fallback;
+  const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
+  const match = source.match(/(\d+)\s*(?:hoja|hojas|h)/);
+  if (!match) return null;
+  const parsed = Number(match[1]);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function buildFabricacionSnapshotForItem(input: {
+  item: CotizacionWorkflowItem;
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): FabricacionCotizacionSnapshot | null {
+  if (input.item.tipoItem === "item_libre_con_valor") return null;
+  if (!input.item.ancho || !input.item.alto || input.item.cantidad <= 0) return null;
+
+  const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
+  const lineTemplateId = normalizeLineTemplateIdForFabricacion(presentation.lineTemplateId);
+  const tipologia = resolveFabricacionTipologia(input.item);
+  if (!lineTemplateId || !tipologia) return null;
+
+  const selected = resolverRecetaFabricacionCompatible(input.recipes, {
+    organizationId: input.organizationId,
+    lineTemplateId,
+    tipologia,
+    hojas: resolveLeavesCount(input.item, presentation.hojasBase),
+    modulos: null,
+    apertura: presentation.sistema || null,
+    herraje: null,
+    variante: null,
+  });
+
+  if (selected.estado !== "receta_unica") {
+    return null;
+  }
+
+  const receta = selected.receta.definition;
+  return construirSnapshotFabricacionCotizacion({
+    recipe: selected.receta,
+    entrada: {
+      anchoTotalMm: Math.round(input.item.ancho),
+      altoTotalMm: Math.round(input.item.alto),
+      cantidad: Math.round(input.item.cantidad),
+      hojas: receta.identidad.hojas,
+      modulos: receta.identidad.modulos,
+      variante: receta.identidad.variante,
+    },
+  });
+}
+
+type FabricationRecipeQuoteRow = {
+  id: string;
+  organization_id: number | null;
+  line_template_id: number | null;
+  scope: "ventora" | "organization";
+  provider_name: string;
+  line_name: string;
+  typology: string;
+  leaves_count: number | null;
+  variant: string | null;
+  version: number;
+  status: "draft" | "testing" | "validated" | "review_required" | "archived";
+  definition: unknown;
+  source_type: "manual" | "copied" | "imported_ai" | "legacy";
+  source_reference: string | null;
+  parent_recipe_id: string | null;
+  validated_at: string | null;
+  created_at: string;
+  updated_at: string;
+  eliminado_en: string | null;
+};
+
+function isFabricacionReceta(value: unknown): value is FabricationRecipeRecord["definition"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  const identidad = record.identidad as Record<string, unknown> | undefined;
+  return (
+    record.schemaVersion === 1 &&
+    typeof record.version === "number" &&
+    identidad !== undefined &&
+    typeof identidad.recetaId === "string" &&
+    typeof identidad.tipologia === "string" &&
+    Array.isArray(record.perfiles) &&
+    Array.isArray(record.vidrios) &&
+    Array.isArray(record.accesorios)
+  );
+}
+
+function mapFabricationRecipeQuoteRow(
+  row: FabricationRecipeQuoteRow
+): FabricationRecipeRecord | null {
+  if (!isFabricacionReceta(row.definition)) return null;
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    lineTemplateId: row.line_template_id,
+    scope: row.scope,
+    providerName: row.provider_name,
+    lineName: row.line_name,
+    typology: row.typology,
+    leavesCount: row.leaves_count,
+    variant: row.variant,
+    version: row.version,
+    status: row.status,
+    definition: row.definition,
+    sourceType: row.source_type,
+    sourceReference: row.source_reference,
+    parentRecipeId: row.parent_recipe_id,
+    validatedAt: row.validated_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    eliminadoEn: row.eliminado_en,
+  };
+}
+
+async function listValidatedFabricationRecipesForQuote(input: {
+  organizationId: number | null;
+}) {
+  const supabase = createClient();
+  let query = supabase
+    .from("fabrication_recipes")
+    .select(
+      "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en"
+    )
+    .eq("status", "validated")
+    .is("eliminado_en", null);
+
+  query =
+    input.organizationId === null
+      ? query.eq("scope", "ventora")
+      : query.or(`scope.eq.ventora,organization_id.eq.${input.organizationId}`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return ((data as FabricationRecipeQuoteRow[] | null) ?? [])
+    .map(mapFabricationRecipeQuoteRow)
+    .filter((row): row is FabricationRecipeRecord => row !== null);
 }
 
 export function createCotizacionesAppService(
@@ -841,7 +1024,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       ? await cotizacionesRepo.getById(input.existingId, input.organizationId)
       : null;
     const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
-    const normalizedItems = reconcileWorkflowItemsPricing(
+    let normalizedItems = reconcileWorkflowItemsPricing(
       input.draft.items,
       quotePricingMode
     );
@@ -858,6 +1041,33 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       !hasTotalGlobalManualTotal
     ) {
       throw new Error("La cotizacion debe tener al menos un componente");
+    }
+
+    if (normalizedItems.length > 0 && hasSupabaseBrowserEnv()) {
+      const organizationIdForFabricacion = normalizeOrganizationIdForFabricacion(
+        input.organizationId
+      );
+
+      try {
+        const recipes = await listValidatedFabricationRecipesForQuote({
+          organizationId: organizationIdForFabricacion,
+        });
+        normalizedItems = normalizedItems.map((item) => ({
+          ...item,
+          fabricacionSnapshot:
+            item.fabricacionSnapshot ??
+            buildFabricacionSnapshotForItem({
+              item,
+              recipes,
+              organizationId: organizationIdForFabricacion,
+            }),
+        }));
+      } catch (recipeError) {
+        console.error(
+          "No se pudo calcular snapshot tecnico de fabricacion; se guarda la cotizacion sin bloquear.",
+          recipeError
+        );
+      }
     }
 
     const isAnonymousClient =

@@ -5,8 +5,10 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-adjustment";
 import { getLineTemplateCubicationConfig } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { buildConsolidatedCubicationPauta } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
-import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
-import { buildCubicationSnapshotFromCatalogMetadata } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import {
+  buildCubicationSnapshotFromCatalogMetadata,
+  serializeCubicationSnapshot,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 const BASE_METADATA = {
@@ -161,13 +163,8 @@ describe("pauta consolidada", () => {
     });
     expect(snapshot).not.toBeNull();
 
-    const observaciones = encodeCotizacionItemPresentationMeta({
-      colorHex: "#a8a8a8",
-      material: "Aluminio",
-      referencia: "Serie 5 mil",
-      lineTemplateId: "tpl-1",
-      cubicationSnapshot: snapshot,
-    });
+    const observaciones =
+      `[r:Serie 5 mil][lti:tpl-1][cub:${serializeCubicationSnapshot(snapshot!)}]`;
 
     const items = [
       {

@@ -1,5 +1,5 @@
 /**
- * Resumen interno de fabricación para print técnico (no PDF cliente).
+ * Resumen interno de fabricacion para print tecnico (no PDF cliente).
  */
 
 import {
@@ -9,6 +9,8 @@ import {
   type RecipeStatus,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 export type FabricationSummaryItem = {
@@ -41,7 +43,19 @@ type QuoteItemLike = {
   codigo?: string | null;
   nombre?: string | null;
   observaciones?: string | null;
+  fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
+
+function formatStatusLabel(status: RecipeStatus | string) {
+  if (typeof status === "string" && status in RECIPE_STATUS_LABELS) {
+    return RECIPE_STATUS_LABELS[status as RecipeStatus];
+  }
+  if (status === "validated") return "Validada";
+  if (status === "review_required") return "Requiere revision";
+  if (status === "testing") return "En prueba";
+  if (status === "draft") return "Borrador";
+  return String(status);
+}
 
 export function buildFabricationQuoteSummary(
   items: QuoteItemLike[]
@@ -50,14 +64,19 @@ export function buildFabricationQuoteSummary(
 
   for (const item of items) {
     const meta = decodeCotizacionItemPresentationMeta(item.observaciones ?? "");
-    const snapshot = meta.cubicationSnapshot;
+    const snapshot = item.fabricacionSnapshot
+      ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
+      : meta.cubicationSnapshot;
     if (!snapshot || snapshot.cuts.length === 0) continue;
 
     const recipe = snapshot.recipe ?? null;
-    const status = (recipe?.status ?? snapshot.status) as RecipeStatus | string;
+    const status = item.fabricacionSnapshot
+      ? item.fabricacionSnapshot.recipeStatus
+      : ((recipe?.status ?? snapshot.status) as RecipeStatus | string);
+
     rows.push({
       itemId: String(item.id),
-      codigo: (item.codigo ?? "").trim() || "—",
+      codigo: (item.codigo ?? "").trim() || "-",
       nombre: (item.nombre ?? "").trim() || "Pieza",
       widthMm: snapshot.widthMm,
       heightMm: snapshot.heightMm,
@@ -66,11 +85,8 @@ export function buildFabricationQuoteSummary(
       recipe,
       herrajeLabel: recipe
         ? herrajeDisplayLabel(recipe.herrajeTipo, recipe.herrajeLabel)
-        : "—",
-      statusLabel:
-        typeof status === "string" && status in RECIPE_STATUS_LABELS
-          ? RECIPE_STATUS_LABELS[status as RecipeStatus]
-          : String(status),
+        : (item.fabricacionSnapshot?.recipeIdentity.herraje ?? "-"),
+      statusLabel: formatStatusLabel(status),
       profilesMl: snapshot.totalProfilesLinealMm / 1000,
       glassM2: snapshot.glass?.totalM2 ?? 0,
       accessoryUnits: snapshot.accessoryUnits,

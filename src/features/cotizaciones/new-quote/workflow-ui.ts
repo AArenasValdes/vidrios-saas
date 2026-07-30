@@ -15,6 +15,9 @@ import {
   type CotizacionLineTemplateCatalogMetadata,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
+  fabricacionSnapshotToLegacyCubicationSnapshot,
+} from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import {
   resolveCubicationSnapshotForSave,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
@@ -2167,6 +2170,9 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     cubicationSnapshot,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
+  const formalCubicationSnapshot = item.fabricacionSnapshot
+    ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
+    : null;
 
   const referenceParts = splitComponentReference(
     referencia || item.lineaComercial || "",
@@ -2247,7 +2253,7 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorInteriorLine,
     mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
     guidedVisualConfig,
-    cubicationSnapshot,
+    cubicationSnapshot: formalCubicationSnapshot ?? cubicationSnapshot,
   };
 }
 
@@ -2438,7 +2444,7 @@ export function buildItemFromForm(
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
       guidedVisualConfig: syncedForm.guidedVisualConfig ?? null,
-      cubicationSnapshot,
+      cubicationSnapshot: null,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",
@@ -2484,10 +2490,10 @@ export function applyQuotePricingToItems(
       mirrorPaneDirection,
       mirrorInteriorLine,
       guidedVisualConfig,
-      cubicationSnapshot,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
-    return calculateComponentItem({
+    return {
+      ...calculateComponentItem({
       id: item.id,
       codigo: item.codigo,
       tipo: item.tipo,
@@ -2540,10 +2546,12 @@ export function applyQuotePricingToItems(
         mirrorPaneDirection,
         mirrorInteriorLine,
         guidedVisualConfig,
-        cubicationSnapshot,
+        cubicationSnapshot: null,
         raw,
       }),
-    });
+      }),
+      fabricacionSnapshot: item.fabricacionSnapshot ?? null,
+    };
   });
 
   if (pricingMode === "precio_directo") {

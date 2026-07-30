@@ -25,7 +25,7 @@ const SAMPLE_METADATA = {
 } as const;
 
 describe("cotizacion line template cubication snapshot", () => {
-  it("congela la pauta y sobrevive encode/decode en observaciones", () => {
+  it("lee snapshots legacy [cub:] desde observaciones", () => {
     const snapshot = buildCubicationSnapshotFromCatalogMetadata({
       lineTemplateId: "tpl-ventana-s60",
       catalogMetadata: { ...SAMPLE_METADATA },
@@ -40,13 +40,8 @@ describe("cotizacion line template cubication snapshot", () => {
     expect(snapshot?.system).toBe("corredera_2_hojas");
     expect(snapshot?.status).toBe("validada");
 
-    const encoded = encodeCotizacionItemPresentationMeta({
-      colorHex: "#a8a8a8",
-      material: "Aluminio",
-      lineTemplateId: "tpl-ventana-s60",
-      cubicationSnapshot: snapshot,
-      raw: "Pieza living",
-    });
+    const encoded =
+      `[lti:tpl-ventana-s60][cub:${serializeCubicationSnapshot(snapshot!)}] Pieza living`;
 
     expect(encoded).toContain("[cub:");
     const decoded = decodeCotizacionItemPresentationMeta(encoded);
@@ -60,6 +55,26 @@ describe("cotizacion line template cubication snapshot", () => {
     });
     expect(decoded.cubicationSnapshot?.cuts).toEqual(snapshot?.cuts);
     expect(decoded.raw).toBe("Pieza living");
+  });
+
+  it("no escribe nuevos snapshots con bridge [cub:] desde el encoder comercial", () => {
+    const snapshot = buildCubicationSnapshotFromCatalogMetadata({
+      lineTemplateId: "tpl-ventana-s60",
+      catalogMetadata: { ...SAMPLE_METADATA },
+      widthMm: 1200,
+      heightMm: 1000,
+      quantity: 1,
+    });
+
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      lineTemplateId: "tpl-ventana-s60",
+      cubicationSnapshot: snapshot,
+      raw: "Pieza living",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded).cubicationSnapshot).toBeNull();
   });
 
   it("no cambia el snapshot histórico si la metadata de línea cambia después", () => {

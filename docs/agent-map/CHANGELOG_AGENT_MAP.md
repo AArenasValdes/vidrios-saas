@@ -4,6 +4,61 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-30 - Cierre remoto Fase 3 fabricacion
+
+- Se aplicaron en Supabase remoto `yrtrwgkaopfumpidjthk` las migraciones `20260729230407_fabrication_recipes_persistence` y `20260729234019_cotizacion_items_fabricacion_snapshot`.
+- Se agrego y aplico `20260730001306_harden_fabrication_recipe_grants` para revocar grants heredados en `fabrication_recipes`/`fabrication_recipe_tests` y dejar solo `SELECT/INSERT/UPDATE` a `authenticated` y `service_role`.
+- Smoke remoto con dos empresas QA confirmo: recetas privadas aisladas por organizacion, recetas Ventora visibles para ambas, bloqueo de update cruzado, cotizacion sin receta sin snapshot, cotizacion con receta unica con snapshot y multiples recetas sin snapshot automatico.
+- Se confirmo que una receta `validated` no se edita directamente y que un snapshot historico en `cotizacion_items.fabricacion_snapshot` no cambia al archivar/versionar la receta.
+- Performance Advisor remoto queda limpio; Security Advisor conserva solo avisos conocidos previos (`touch_growth_updated_at`, `get_org_id()`, `reserve_next_cotizacion_code(...)`, leaked password protection).
+
+---
+
+## 2026-07-29 - Fase 3 fabricacion: recetas en cotizacion y snapshot formal
+
+- Se agrego `cotizacion_items.fabricacion_snapshot` como JSONB aditivo para congelar resultado tecnico por pieza sin usar precios comerciales.
+- Se conecto el guardado de cotizacion a `fabrication_recipes`: solo una receta `validated` compatible por `line_template_id` se calcula automaticamente con `calcularCubicacionYPauta()`.
+- Se agregaron servicios puros de resolucion de receta compatible y construccion de snapshot inmutable en `src/features/fabricacion/`.
+- El resumen interno de fabricacion ahora lee primero el snapshot formal y mantiene fallback de lectura `[cub:]` para cotizaciones antiguas.
+- El flujo nuevo deja de escribir snapshots tecnicos `[cub:]`; `fabricationRecipePack` y `fabricationRecipe` permanecen como compatibilidad legacy.
+- Remoto aplicado/verificado el 2026-07-30. Sigue pendiente construir UI final para multiples variantes/herrajes.
+
+---
+
+## 2026-07-29 - Supabase remoto conectado y auditoria DB
+
+- Se agrego y autentico el MCP Supabase para `yrtrwgkaopfumpidjthk`; en esta sesion las tools MCP no se inyectaron, por lo que se uso Supabase CLI remoto `--linked`.
+- `supabase projects list` confirma proyecto `ACTIVE_HEALTHY`, Postgres `17.6.1.063`, region `us-west-2`.
+- Nota historica: en esa auditoria `fabrication_recipes` y `fabrication_recipe_tests` aun no existian en remoto. Estado supersedido por el cierre remoto del 2026-07-30.
+- Se documentaron advisors remotos: security warnings en `touch_growth_updated_at`, `get_org_id()`, `reserve_next_cotizacion_code(...)` y leaked password protection; performance warnings por FKs sin covering index en tablas Growth.
+- Se actualizo documentacion Supabase: `database_map.md`, `rls_policies.md`, `agent_database_notes.md`.
+- Se corrigio el mapa tecnico para no presentar la persistencia Fase 2 como ya aplicada en remoto.
+
+---
+
+## 2026-07-29 - Persistencia versionada de recetas de fabricacion
+
+- Se agrego la migracion `20260729230407_fabrication_recipes_persistence` con `fabrication_recipes` y `fabrication_recipe_tests`.
+- Las recetas quedan multiempresa y versionadas: `scope='ventora'` para base global de lectura authenticated y `scope='organization'` para recetas privadas por `organization_id`.
+- Se agregaron RLS, FKs, indices, soft delete, trigger de `updated_at`, sincronizacion de `organization_id` en tests y bloqueo DB para no editar recetas ya `validated` directamente.
+- Se implementaron repositorios y servicio en `src/features/fabricacion/` para crear, listar, actualizar borradores, duplicar, versionar, archivar, ejecutar tests y validar recetas solo cuando todos los casos pasan.
+- `definition`, `input`, `expected_output` y `actual_output` se validan con los schemas Zod existentes del dominio tecnico.
+- Compatibilidad preservada: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshots `[cub:]` siguen como lectura/compatibilidad; esta fase no migra ni escribe esos formatos.
+- No se conecto a UI, cotizacion, PDF, WhatsApp, DeepSeek, carga de archivos, Storage, Edge Functions ni tablas tecnicas legacy.
+
+---
+
+## 2026-07-29 - Dominio tecnico puro de fabricacion
+
+- Se agrego `src/features/fabricacion/` como modulo autocontenido para recetas de fabricacion y motor deterministico de cubicacion/pauta.
+- Alcance: tipos de dominio, schemas Zod, validacion, motor puro, fixture de corredera 2 hojas marcada como `ejemplo_no_validado`, tests unitarios.
+- Reutiliza decisiones actuales: receta separada de linea comercial, estados de validacion, funciones de perfiles, compatibilidad futura con snapshot `[cub:]`.
+- Queda como compatibilidad: `fabricationRecipePack`, espejo `fabricationRecipe`, motor legacy en `src/features/cotizaciones/line-templates/`, y partidas historicas `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`.
+- Reemplazo futuro aditivo: las formulas acopladas a cotizacion/catalogo deben migrar gradualmente a `src/features/fabricacion/` cuando se conecte UI o persistencia.
+- No se tocaron rutas, PDF, WhatsApp, Supabase, DeepSeek, carga de archivos, tablas legacy, optimizacion de barras, nesting ni fabricacion automatica.
+
+---
+
 ## 2026-07-28 - Google OAuth unico + Completa tu cuenta
 
 - Google queda como unico provider OAuth visible y valido; email/password continua disponible.

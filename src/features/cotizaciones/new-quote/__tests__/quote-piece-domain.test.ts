@@ -1,5 +1,8 @@
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import {
+  serializeCubicationSnapshot,
+  type CotizacionItemCubicationSnapshot,
+} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
@@ -73,6 +76,10 @@ function snapshot(overrides: Partial<CotizacionItemCubicationSnapshot> = {}): Co
   };
 }
 
+function legacyCubObservaciones(value: CotizacionItemCubicationSnapshot) {
+  return `[lti:line-1][cub:${serializeCubicationSnapshot(value)}]`;
+}
+
 describe("quote-piece-domain", () => {
   it("lee preferencia de modo con default Cotización rápida", () => {
     expect(isQuoteDesktopWorkspaceMode("rapida")).toBe(true);
@@ -110,10 +117,7 @@ describe("quote-piece-domain", () => {
 
   it("deriva estado técnico y resumen desde snapshot [cub:]", () => {
     const item = baseItem({
-      observaciones: encodeCotizacionItemPresentationMeta({
-        cubicationSnapshot: snapshot(),
-        lineTemplateId: "line-1",
-      }),
+      observaciones: legacyCubObservaciones(snapshot()),
     });
     const view = buildPieceDomainView(item, "por_item");
     expect(view.technicalStatus).toBe("referencial");
@@ -126,10 +130,7 @@ describe("quote-piece-domain", () => {
   it("marca requiere revisión cuando el snapshot no coincide con medidas", () => {
     const item = baseItem({
       ancho: 1500,
-      observaciones: encodeCotizacionItemPresentationMeta({
-        cubicationSnapshot: snapshot({ widthMm: 1200 }),
-        lineTemplateId: "line-1",
-      }),
+      observaciones: legacyCubObservaciones(snapshot({ widthMm: 1200 })),
     });
     expect(derivePieceTechnicalStatus(item)).toBe("requiere_revision");
   });

@@ -10,7 +10,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 - **Proposito**: Raiz del multi-tenant. Cada empresa cliente SaaS es una organizacion.
 - **Campos importantes**: `id` (bigint PK), `nombre`, `correo`, `telefono`, `direccion`, `logo_url`, `plan`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
+- **Relaciones**: 1:N con users, clients, projects, cotizaciones, cotizacion_items, cotizacion_line_templates, fabrication_recipes privadas, fabrication_recipe_tests privadas, materials, historial_precios, organization_profile, solicitudes_contacto, labor_costs, web_push_subscriptions, cotizacion_code_counters, public_landing_gallery, public_landing_testimonials, pagos_suscripcion
 - **Usada por**: Auth (resolver org), todas las features (filtro tenant)
 - **Archivos donde aparece**: Todos los repositories, `src/features/auth/repositories/auth.repository.ts`
 - **Riesgos**: No hacer hard delete de organizaciones con datos asociados. `clients`, `projects`, `cotizaciones` y otras tablas pueden bloquear por FK; el flujo correcto es soft delete con `eliminado_en`.
@@ -75,6 +75,8 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
   - `linea`, `color`, `vidrio` = "" (no tienen datos tecnicos).
   - Metadata en `observaciones` via `encodeCotizacionItemPresentationMeta`: incluye `ivaMode` (`total_incluye_iva` / `neto_mas_iva`), `displayMode: "item_libre"`, `netoCalculado`, `ivaCalculado`, `totalClienteVisible`.
 - **Nota de roadmap**: `observaciones` ya concentra metadata comercial y visual derivada del workflow actual. No seguir cargando configuracion visual compleja ahi sin una estructura aditiva aprobada.
+- **Snapshot tecnico Fase 3 (2026-07-29)**: `fabricacion_snapshot` (jsonb nullable) guarda snapshot estructurado e inmutable de `calcularCubicacionYPauta()` por item cuando existe una receta `fabrication_recipes.status='validated'` compatible. No participa en precios comerciales.
+- **Compatibilidad cubicacion**: `observaciones [cub:]` queda como lectura legacy para cotizaciones antiguas; el flujo nuevo no debe escribir snapshots tecnicos con ese bridge.
 - **Relaciones**: N:1 cotizaciones, N:1 organizations, 1:N quote_item_breakdown, FKs legacy a product_types, system_lines, system_configurations
 - **Usada por**: Cotizaciones, PDF, presupuesto publico
 - **Archivos donde aparece**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`, `src/features/cotizaciones/services/cotizaciones-workflow.service.ts`
@@ -94,12 +96,38 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
   - Snapshot cotización: bridge `[cub:]` v2 en `cotizacion_items.observaciones` (incluye receta congelada).
 - **No ampliar** tipologías de venta en el catálogo (bow, etc.): van al constructor. Plantillas comerciales L5000/L20/L25 viven en código (`fabrication-recipe-commercial-templates.ts`), no como filas de catálogo.
 - **No confundir**: `catalog_metadata.lineSystem` (texto comercial opcional) ≠ `cubicationSystem` (partida de estimación V1).
-- **Snapshot por pieza (sin tabla nueva)**: pauta congelada en `cotizacion_items.observaciones` via bridge `[cub:]` (JSON base64url). Helpers: `cotizacion-line-template-cubication-snapshot.ts`. No recalcular historicos desde `catalog_metadata` actual.
+- **Snapshot por pieza**: nuevo `cotizacion_items.fabricacion_snapshot` para recetas de `src/features/fabricacion/`; fallback de lectura `[cub:]` para historicos. Helpers nuevos: `fabricacion-cotizacion-snapshot.service.ts` y `fabrication-quote-summary.ts`.
 - **Handoff agentes**: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
 - **Relaciones**: N:1 organizations
 - **Usada por**: `/cotizaciones/nueva`, `/configuracion/empresa`, `/configuracion/empresa/lineas-precios`, `/configuracion/empresa/lineas-precios/importar`
 - **Archivos donde aparece**: `src/features/cotizaciones/line-templates/`, `src/features/cotizaciones/new-quote/workflow-ui.ts`, `app/(pwa-app)/configuracion/empresa/page.tsx`
 - **Riesgos**: No crear FK viva desde `cotizacion_items`; la cotizacion debe guardar snapshot textual en `cotizacion_items.linea` y metadata codificada en `observaciones` para que cotizaciones antiguas no cambien. Multi-tenant estricto y soft delete obligatorio. Migración remota aplicada 2026-07-09 (`extend_cotizacion_line_templates_catalog`) y migración aditiva 2026-07-13 expande `material` a `Cristal`.
+
+---
+
+### Tabla: fabrication_recipes
+
+- **Estado**: Implementada y aplicada en Supabase remoto `yrtrwgkaopfumpidjthk` el 2026-07-30 con `20260729230407_fabrication_recipes_persistence`; grants endurecidos por `20260730001306_harden_fabrication_recipe_grants`. Fase 3 conecta seleccion/calculo al snapshot de cotizacion, pero no conecta IA ni UI final.
+- **Proposito**: Persistir recetas de fabricacion versionadas para el dominio `src/features/fabricacion/`. Separa linea comercial (`cotizacion_line_templates`) de receta tecnica.
+- **Campos importantes**: `id` (uuid PK), `organization_id` (bigint nullable), `line_template_id` (bigint nullable FK a `cotizacion_line_templates`), `scope` (`ventora|organization`), `provider_name`, `line_name`, `typology`, `leaves_count`, `variant`, `version`, `status` (`draft|testing|validated|review_required|archived`), `definition` (jsonb validado con Zod antes de guardar), `source_type` (`manual|copied|imported_ai|legacy`), `source_reference`, `parent_recipe_id`, `validated_at`, `created_at`, `updated_at`, `eliminado_en`.
+- **Reglas**: `scope='ventora'` exige `organization_id IS NULL`; `scope='organization'` exige `organization_id`. Una receta validada no se modifica directamente: cambios deben crear una nueva version privada con `parent_recipe_id`.
+- **RLS**: lectura authenticated de recetas Ventora activas y recetas privadas de la organizacion; insert/update solo recetas `organization` con `organization_id = get_org_id()`. No hay delete directo; archivar usa soft delete + `status='archived'`.
+- **Relaciones**: N:1 organizations para privadas, N:1 cotizacion_line_templates opcional, self-FK por version/derivacion, 1:N fabrication_recipe_tests.
+- **Usada por**: `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`, `src/features/fabricacion/services/fabrication-recipes.service.ts`, `src/features/fabricacion/services/fabricacion-receta-resolver.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`.
+- **Compatibilidad**: no migra ni escribe `fabricationRecipePack`, espejo `fabricationRecipe` ni snapshots `[cub:]`; esos formatos siguen solo como lectura/compatibilidad hasta una fase posterior de migracion asistida.
+- **Riesgos**: No guardar formulas libres, JS, SQL, `eval`, payloads de IA como fuente de calculo final ni datos legacy. La conexion actual a cotizacion es solo snapshot tecnico cuando hay una receta validada unica; no usar como fabricacion real sin validacion de taller.
+
+---
+
+### Tabla: fabrication_recipe_tests
+
+- **Estado**: Implementada y aplicada en Supabase remoto `yrtrwgkaopfumpidjthk` el 2026-07-30 con `20260729230407_fabrication_recipes_persistence`; grants endurecidos por `20260730001306_harden_fabrication_recipe_grants`.
+- **Proposito**: Guardar casos de prueba versionados por receta. Permite ejecutar `calcularCubicacionYPauta()` contra inputs conocidos y bloquear validacion si algun caso falla.
+- **Campos importantes**: `id` (uuid PK), `recipe_id` (uuid FK), `organization_id` (bigint nullable sincronizado desde la receta), `name`, `input` (jsonb validado con schema de entrada), `expected_output` (jsonb validado con schema de resultado), `actual_output`, `passed`, `validated_by` (auth.users), `created_at`, `updated_at`, `eliminado_en`.
+- **RLS**: lectura authenticated si la receta visible es Ventora o privada de la organizacion. Insert/update solo en pruebas de recetas privadas de la organizacion. Tests de recetas Ventora quedan para seed/admin con service role.
+- **Relaciones**: N:1 fabrication_recipes, N:1 organizations para recetas privadas, N:1 auth.users en `validated_by`.
+- **Usada por**: `src/features/fabricacion/repositories/fabrication-recipe-tests.repository.ts`, `src/features/fabricacion/services/fabrication-recipes.service.ts`.
+- **Riesgos**: `expected_output` debe representar el resultado deterministico esperado; si cambia el motor por una correccion real, actualizar casos y versionar recetas, no sobreescribir historicos validados sin revision.
 
 ---
 
@@ -320,7 +348,7 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 | Subquery a users | organization_profile, public_landing_gallery |
 | Cross-table subquery | configuration_materials, line_glass_compatibility |
 | SELECT publico | product_types |
-| **Sin policies** | formula_variables, material_types, quote_item_breakdown |
+| **Deny-all / acceso restringido** | formula_variables, material_types |
 
 ### solicitudes_contacto - RLS especial
 
@@ -354,6 +382,7 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 | cotizaciones | `(organization_id, numero)` | Unique |
 | cotizaciones | `approval_token` WHERE NOT NULL | Unique partial |
 | cotizacion_items | `(organization_id, cotizacion_id, orden, creado_en)` WHERE eliminado_en IS NULL | Partial btree |
+| cotizacion_items | `(organization_id, cotizacion_id)` WHERE fabricacion_snapshot IS NOT NULL AND eliminado_en IS NULL | Partial btree |
 | solicitudes_contacto | `(organization_id, creado_en DESC)` | btree |
 | solicitudes_contacto | `(utm_source)` | btree |
 | organization_profile | `lower(solicitud_publica_slug)` WHERE non-empty | Unique partial |
@@ -387,6 +416,6 @@ Migracion: `supabase/migrations/20260627120000_growth_workspace.sql`
 | INC-3 | Reaparicion de `unique_correo_clients` global en `clients.correo` | Alta |
 | INC-4 | web_push_subscriptions sin FKs a organizations/auth.users | Media |
 | INC-5 | cotizacion_code_counters sin FK a organizations | Baja |
-| INC-10 | quote_item_breakdown sin RLS policies | Alta |
+| INC-10 | quote_item_breakdown ya tiene RLS policies en remoto; mantener queries filtradas por `organization_id` | Media |
 | INC-13 | Sin CHECK en cotizaciones.estado, projects.estado, users.rol | Media |
 | INC-14 | Grants amplios legacy en tablas distintas de `users`; revisar por superficie | Media |

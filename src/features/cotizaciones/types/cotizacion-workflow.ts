@@ -1,4 +1,5 @@
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 export type EstadoCotizacionWorkflow =
   | "borrador"
@@ -55,6 +56,7 @@ export type CotizacionWorkflowItem = {
   precioAjustadoManual: boolean;
   origenPrecio: "margen" | "plantilla" | "manual";
   observaciones: string;
+  fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
 
 export type CotizacionWorkflowRecord = {

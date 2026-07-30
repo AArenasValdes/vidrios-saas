@@ -10,8 +10,8 @@ Fecha de generación: 2026-05-30.
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
 **Total tablas con RLS habilitado:** 26 versionadas por migraciones recientes.
-**Total tablas con policies definidas:** 24+ segun migraciones locales; confirmar con `supabase db advisors --linked` cuando exista `SUPABASE_DB_PASSWORD`.
-**Total tablas con RLS habilitado pero sin acceso cliente efectivo:** `formula_variables` y `material_types` tienen policies deny-all; confirmar estado real en remoto con SQL/advisors.
+**Total tablas con policies definidas:** 24+ segun migraciones locales; verificacion remota parcial con CLI el 2026-07-29.
+**Total tablas con RLS habilitado pero sin acceso cliente efectivo:** `formula_variables` tiene deny-all confirmado en remoto; `material_types` debe re-verificarse si vuelve a exponerse.
 **Función de aislamiento principal:** `get_org_id()`
 
 ---
@@ -344,3 +344,46 @@ Notas:
 - `20260602065826_founder_free_internal_accounts.sql` solo actualiza `organization_profile` para organizaciones `3` y `4` si existen los usuarios esperados.
 - No agrega policies ni grants nuevos.
 - Mantiene RLS existente; el cambio es data/estado de suscripcion para evitar bloqueo por no pago.
+
+---
+
+## Addendum 2026-07-29 - Verificacion remota RLS y advisors
+
+- Proyecto remoto: `yrtrwgkaopfumpidjthk`.
+- MCP Supabase agregado y autenticado; las herramientas MCP no quedaron disponibles dentro de este turno, por lo que se verifico con Supabase CLI remoto (`--linked`).
+- `supabase projects list` reporta estado `ACTIVE_HEALTHY`, Postgres `17.6.1.063`.
+- Nota historica: al 2026-07-29 `fabrication_recipes` y `fabrication_recipe_tests` no existian aun en remoto. Fueron aplicadas/verificadas el 2026-07-30; ver addendum siguiente.
+- RLS remoto confirmado para: `cotizacion_line_templates`, `formula_variables`, `materials`, `quote_item_breakdown`, `system_lines`.
+- Policies remotas confirmadas:
+  - `cotizacion_line_templates`: SELECT/INSERT/UPDATE para `authenticated` por `organization_id = get_org_id()`.
+  - `quote_item_breakdown`: SELECT/INSERT/UPDATE para `authenticated` por `organization_id = get_org_id()`.
+  - `formula_variables`: deny-all para `anon`/`authenticated`.
+  - `materials`: SELECT/INSERT/UPDATE por `organization_id = get_org_id()`, pero con rol `public`; UPDATE no tiene `WITH CHECK`.
+  - `system_lines`: SELECT con `organization_id IS NULL OR organization_id = get_org_id()`, tambien con rol `public`.
+- Security Advisor remoto devuelve warnings activos:
+  - `touch_growth_updated_at` sin `search_path` fijo.
+  - `get_org_id()` como `SECURITY DEFINER` ejecutable por `authenticated`.
+  - `reserve_next_cotizacion_code(...)` como `SECURITY DEFINER` ejecutable por `authenticated`.
+  - Leaked password protection desactivado en Supabase Auth.
+- Criterio de hardening recomendado:
+  - Mantener `get_org_id()` y `reserve_next_cotizacion_code(...)` si son RPC intencionales, pero documentar que estan expuestas a authenticated y probar que no permiten escalada de organizacion.
+  - Agregar `set search_path = public` a `touch_growth_updated_at`.
+  - Cambiar policies legacy de `materials`/`system_lines` desde rol `public` a `authenticated` si no existe caso de lectura anon.
+  - Agregar `WITH CHECK (organization_id = (select public.get_org_id()))` a `materials_update`.
+  - Usar `(select public.get_org_id())` en nuevas policies por performance RLS.
+
+---
+
+## Addendum 2026-07-30 - RLS Fabricacion Fase 3 remoto
+
+- Migraciones remotas registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot`, `20260730001306_harden_fabrication_recipe_grants`.
+- `fabrication_recipes`:
+  - RLS habilitado.
+  - Policies: SELECT visible para `authenticated` si `scope='ventora'` o `organization_id = get_org_id()`; INSERT/UPDATE solo `scope='organization'` y `organization_id = get_org_id()`.
+  - Grants finales: `authenticated` y `service_role` solo `INSERT,SELECT,UPDATE`; `anon` sin privilegios.
+- `fabrication_recipe_tests`:
+  - RLS habilitado.
+  - Policies: SELECT si la receta asociada es Ventora o privada visible; INSERT/UPDATE solo para tests de recetas privadas de la organizacion.
+  - Grants finales: `authenticated` y `service_role` solo `INSERT,SELECT,UPDATE`; `anon` sin privilegios.
+- `cotizacion_items.fabricacion_snapshot` hereda RLS de `cotizacion_items` por `organization_id = get_org_id()` y mantiene indice parcial `cotizacion_items_fabricacion_snapshot_active_idx`.
+- Smoke remoto con dos empresas QA confirmo aislamiento privado, lectura de receta Ventora, bloqueo de update cruzado y persistencia real de snapshot por item.

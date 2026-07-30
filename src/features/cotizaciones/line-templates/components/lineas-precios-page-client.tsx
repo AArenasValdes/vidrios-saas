@@ -30,9 +30,6 @@ import {
   clearNeedsCommercialPriceFlag,
   lineTemplateNeedsCommercialPrice,
   CotizacionLineTemplate,
-  CotizacionLineTemplateCubicationStatus,
-  CotizacionLineTemplateCubicationSystem,
-  CotizacionLineTemplateCuttingMode,
   CotizacionLineTemplateCategoria,
   CotizacionLineTemplateEstimationMode,
   CotizacionLineTemplateMaterial,
@@ -60,9 +57,11 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import {
+  deriveRecipeStatus,
   mergeFabricationRecipePackIntoMetadata,
   getFabricationRecipeFromMetadata,
   getFabricationRecipePackFromMetadata,
+  RECIPE_STATUS_LABELS,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import {
   buildRecipeCuttingPreview,
@@ -195,6 +194,72 @@ function buildRoundingLabel(value: number) {
   return value > 0 ? formatCurrency(value) : "Sin redondeo";
 }
 
+type TechnicalCardStatusTone =
+  | "quote_only"
+  | "estimation"
+  | "draft"
+  | "testing"
+  | "validated"
+  | "review";
+
+function buildTechnicalCardStatus(template: CotizacionLineTemplate): {
+  tone: TechnicalCardStatusTone;
+  label: string;
+  detail: string;
+} {
+  const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
+  const estimationRules = getLineTemplateEstimationRules(template.catalogMetadata);
+  const wantsCutting = metadata?.cuttingEnabled === true;
+  const recipe = getFabricationRecipeFromMetadata(metadata);
+  const recipeStatus = recipe ? deriveRecipeStatus(recipe) : null;
+
+  if (recipeStatus === "validada") {
+    return {
+      tone: "validated",
+      label: "Pauta validada",
+      detail: "Lista para cubicación y despiece",
+    };
+  }
+
+  if (recipeStatus === "requiere_revision") {
+    return {
+      tone: "review",
+      label: "Revisar pauta",
+      detail: "Cambió después de validar",
+    };
+  }
+
+  if (recipeStatus === "lista_para_validar" || recipeStatus === "en_validacion") {
+    return {
+      tone: "testing",
+      label: "Pauta por probar",
+      detail: RECIPE_STATUS_LABELS[recipeStatus],
+    };
+  }
+
+  if (recipeStatus || wantsCutting) {
+    return {
+      tone: "draft",
+      label: "Pauta incompleta",
+      detail: "Faltan datos de taller",
+    };
+  }
+
+  if (estimationRules.enabled) {
+    return {
+      tone: "estimation",
+      label: "Estimación",
+      detail: "Material referencial, sin cortes",
+    };
+  }
+
+  return {
+    tone: "quote_only",
+    label: "Solo cotizar",
+    detail: "Sin cubicación ni pauta",
+  };
+}
+
 function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
   return Boolean(
     draft.minimoCobrable ||
@@ -296,14 +361,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     [templates]
   );
 
-  useEffect(() => {
-    if (providerFilter === LINE_TEMPLATE_PROVIDER_FILTER_ALL) {
-      return;
-    }
-    if (!providerFilterOptions.includes(providerFilter)) {
-      setProviderFilter(LINE_TEMPLATE_PROVIDER_FILTER_ALL);
-    }
-  }, [providerFilter, providerFilterOptions]);
+  const effectiveProviderFilter =
+    providerFilter === LINE_TEMPLATE_PROVIDER_FILTER_ALL ||
+    providerFilterOptions.includes(providerFilter)
+      ? providerFilter
+      : LINE_TEMPLATE_PROVIDER_FILTER_ALL;
 
   const filteredTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -319,9 +381,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             : !template.isActive;
       const providerLabel = getLineTemplateProviderLabel(template.proveedor);
       const matchesProvider =
-        providerFilter === LINE_TEMPLATE_PROVIDER_FILTER_ALL
+        effectiveProviderFilter === LINE_TEMPLATE_PROVIDER_FILTER_ALL
           ? true
-          : providerLabel === providerFilter;
+          : providerLabel === effectiveProviderFilter;
       const matchesQuery = normalizedQuery
         ? template.nombre.toLowerCase().includes(normalizedQuery)
           || (template.proveedor ?? "").toLowerCase().includes(normalizedQuery)
@@ -332,7 +394,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       return matchesCategory && matchesStatus && matchesProvider && matchesQuery;
     });
-  }, [categoryFilter, providerFilter, query, statusFilter, templates]);
+  }, [categoryFilter, effectiveProviderFilter, query, statusFilter, templates]);
   const groupedTemplates = useMemo(() => {
     const groups = new Map<
       string,
@@ -955,7 +1017,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 <span className={s.providerFilterLabel}>Proveedores</span>
                 <select
                   className={s.providerFilterSelect}
-                  value={providerFilter}
+                  value={effectiveProviderFilter}
                   onChange={(event) => setProviderFilter(event.target.value)}
                   aria-label="Filtrar por proveedor"
                 >
@@ -1055,6 +1117,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 const needsPrice = lineTemplateNeedsCommercialPrice(template);
                 const lineSystem = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
                 const lineContext = [template.proveedor, lineSystem].filter(Boolean).join(" · ");
+                const technicalStatus = buildTechnicalCardStatus(template);
 
                 return (
                   <article
@@ -1063,6 +1126,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       isMenuOpen ? s.cardMenuOpen : ""
                     }`}
                     data-material={template.material}
+                    data-tech-status={technicalStatus.tone}
                     onClick={() => openEditSheet(template)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -1155,6 +1219,16 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                           ? formatCurrency(template.minimoCobrable)
                           : "Sin mínimo"}
                       </span>
+                    </div>
+
+                    <div className={s.technicalStatusRow}>
+                      <span
+                        className={s.technicalStatusPill}
+                        data-tech-status={technicalStatus.tone}
+                      >
+                        {technicalStatus.label}
+                      </span>
+                      <span>{technicalStatus.detail}</span>
                     </div>
 
                     <div className={s.cardDivider} />

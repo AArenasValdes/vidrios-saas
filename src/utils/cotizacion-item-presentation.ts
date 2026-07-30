@@ -1,7 +1,6 @@
 import { normalizePricingMode, type PricingMode } from "@/types/pricing-mode";
 import {
   parseCubicationSnapshot,
-  serializeCubicationSnapshot,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import {
@@ -285,9 +284,8 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const guidedVisualConfig = input.guidedVisualConfig
     ? serializeGuidedVisualConfig(input.guidedVisualConfig).replace(/\]/g, "")
     : "";
-  const cubicationSnapshot = input.cubicationSnapshot
-    ? serializeCubicationSnapshot(input.cubicationSnapshot).replace(/\]/g, "")
-    : "";
+  void input.cubicationSnapshot;
+  const cubicationSnapshot = "";
   const raw = (input.raw ?? "").trim();
   const meta =
     `[c:${colorHex}]` +

@@ -1,6 +1,6 @@
 # Database Map - Ventora
 
-> Verificacion remota parcial: 2026-07-28. Mientras `current_schema.sql` siga marcado como atrasado, las migraciones remotas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
+> Verificacion remota parcial: 2026-07-29. Mientras `current_schema.sql` siga marcado como atrasado, las migraciones remotas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
 
 Fuente de verdad: `current_schema.sql`. Referencia complementaria: `database.types.ts`.
 Fecha de generación: 2026-05-30.
@@ -203,6 +203,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `system_line_id` | bigint | FK → system_lines |
 | `configuration_id` | bigint | FK → system_configurations |
 | `observaciones` | text | |
+| `fabricacion_snapshot` | jsonb | Snapshot tecnico formal Fase 3; lectura preferente para resumen interno |
 | `orden` | integer | Orden visual |
 | `creado_en` | timestamptz | |
 | `actualizado_en` | timestamptz | |
@@ -215,6 +216,11 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 - `product_type_id` → `product_types.id`
 - `system_line_id` → `system_lines.id`
 - `configuration_id` → `system_configurations.id`
+
+**Notas Fase 3 fabricacion:**
+- Migracion aplicada/verificada en remoto el 2026-07-30: `20260729234019_cotizacion_items_fabricacion_snapshot.sql`.
+- `fabricacion_snapshot` guarda resultado inmutable de `calcularCubicacionYPauta()` cuando hay receta validada compatible.
+- `[cub:]` dentro de `observaciones` queda como fallback legacy de lectura; el flujo nuevo no debe escribir nuevos snapshots con ese bridge.
 
 ---
 
@@ -905,3 +911,37 @@ auth.users (1) ──── (N) users
 - Consulta directa a `pg_constraint`/`pg_index` devuelve 0 foreign keys sin indice covering.
 - Se elimino el indice duplicado exacto `solicitudes_contacto_organization_id_creado_en_idx`; se conserva `solicitudes_contacto_org_created_idx`.
 - Performance Advisor queda solo con avisos `unused_index`; no se eliminan por ahora porque varios indices son nuevos o de rutas con poco trafico.
+
+---
+
+## Addendum 2026-07-30 - Fabricacion Fase 2/3 aplicada en remoto
+
+- Migraciones remotas aplicadas y registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot` y `20260730001306_harden_fabrication_recipe_grants`.
+- `fabrication_recipes` guarda recetas versionadas con `id uuid`, `organization_id bigint nullable`, `line_template_id bigint nullable`, `scope`, `status`, `definition jsonb`, `source_type`, `parent_recipe_id`, timestamps y soft delete.
+- `fabrication_recipe_tests` guarda casos de prueba por receta con input/salida esperada/salida real y `passed`.
+- RLS verificada: lectura authenticated de recetas Ventora (`scope='ventora'`) y recetas privadas de la organizacion; insert/update solo recetas privadas por `organization_id = get_org_id()`.
+- Grants verificados despues del hardening: `anon` sin privilegios sobre las tablas nuevas; `authenticated` y `service_role` solo con `SELECT/INSERT/UPDATE`.
+- Smoke remoto con dos empresas QA confirmo aislamiento, lectura Ventora, bloqueo de update cruzado, guardado real de `cotizacion_items.fabricacion_snapshot`, ausencia de snapshot sin receta o con multiples recetas y snapshot historico estable tras archivar/versionar receta.
+- Compatibilidad: `cotizacion_line_templates.catalog_metadata.fabricationRecipePack`, espejo `fabricationRecipe` y snapshots `[cub:]` siguen como formatos legacy de lectura/compatibilidad. No migrar ni escribir esos formatos desde la Fase 2.
+- No tocar ni reactivar `materials`, `system_lines`, `formula_variables` ni `quote_item_breakdown` para esta funcionalidad.
+
+---
+
+## Addendum 2026-07-29 - Auditoria remota Supabase
+
+- MCP Supabase agregado y autenticado para `yrtrwgkaopfumpidjthk`; en esta sesion las herramientas MCP no quedaron inyectadas, por lo que la verificacion se hizo con Supabase CLI remoto.
+- `supabase projects list` reporta proyecto `ACTIVE_HEALTHY`, region `us-west-2`, Postgres `17.6.1.063`.
+- Advisors security remoto (`supabase db advisors --linked --type security --level warn`) devuelve 4 warnings:
+  - `touch_growth_updated_at` sin `search_path` fijo.
+  - `get_org_id()` como `SECURITY DEFINER` ejecutable por `authenticated`.
+  - `reserve_next_cotizacion_code(...)` como `SECURITY DEFINER` ejecutable por `authenticated`.
+  - Leaked password protection desactivado en Supabase Auth.
+- Advisors performance remoto devuelve 3 FKs sin covering index: `growth_activities.workspace_id`, `growth_prospects.converted_organization_id`, `growth_tasks.prospect_id`.
+- Advisors performance tambien reporta varios `unused_index` informativos; no eliminarlos sin revisar trafico real y planes de consulta.
+- Estado RLS remoto confirmado: `cotizacion_line_templates`, `formula_variables`, `materials`, `quote_item_breakdown` y `system_lines` tienen RLS habilitado.
+- Policies remotas confirmadas:
+  - `quote_item_breakdown` ya tiene SELECT/INSERT/UPDATE por `organization_id = get_org_id()`.
+  - `formula_variables` tiene policy deny-all para `anon`/`authenticated`.
+  - `materials` tiene SELECT/INSERT/UPDATE por `organization_id = get_org_id()`, pero las policies aparecen para rol `public` y UPDATE no tiene `WITH CHECK`.
+  - `system_lines` tiene SELECT para `organization_id IS NULL OR organization_id = get_org_id()` con rol `public`.
+- Recomendacion: antes de aplicar Fase 2 en remoto, crear una migracion de hardening chica para `materials`/`system_lines` si se decide reducir rol `public` a `authenticated` y agregar `WITH CHECK` en UPDATE de `materials`.

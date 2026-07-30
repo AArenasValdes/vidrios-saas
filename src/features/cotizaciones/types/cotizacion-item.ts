@@ -1,4 +1,5 @@
 import type { EntityId } from "@/types/common";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
 export type TipoCotizacionItem =
   | "configurado"
@@ -44,6 +45,7 @@ export type CotizacionItem = {
   descripcion: string | null;
   unidad: string | null;
   observaciones: string | null;
+  fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
   tipoItem: TipoCotizacionItem | string | null;
   creadoEn: string | null;
   productTypeId: EntityId | null;
@@ -86,6 +88,7 @@ export type CrearCotizacionItemInput = {
   descripcion?: string | null;
   unidad?: string | null;
   observaciones?: string | null;
+  fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
   tipoItem?: TipoCotizacionItem | string | null;
   productTypeId?: EntityId | null;
   systemLineId?: EntityId | null;

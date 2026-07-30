@@ -1235,13 +1235,13 @@ export function FabricationRecipeEditor({
           <article className={s.recipeReviewCard} aria-label="Comparación de cortes">
             <header className={s.recipeSectionHead}>
               <strong>Comparación de cortes</strong>
-              <span>Ingresa la medida real de cada perfil</span>
+              <span>Ingresa la medida que cortó o midió el taller para comparar contra el cálculo</span>
             </header>
             <div className={s.recipeCompareTable} role="table" aria-label="Cálculo de prueba">
               <div className={s.recipeCompareTableHead} role="row">
                 <span role="columnheader">Componente</span>
                 <span role="columnheader">Calculada</span>
-                <span role="columnheader">Real</span>
+                <span role="columnheader">Medida taller</span>
                 <span role="columnheader">Diferencia</span>
                 <span role="columnheader">Estado</span>
                 <span role="columnheader"> </span>
@@ -1270,7 +1270,7 @@ export function FabricationRecipeEditor({
                         <input
                           className={`${s.textInput} ${s.recipeCompareInput}`}
                           inputMode="numeric"
-                          aria-label={`Medida real ${row.functionLabel}`}
+                          aria-label={`Medida de taller ${row.functionLabel}`}
                           value={real != null ? String(real) : ""}
                           onChange={(event) => {
                             const lengthMm = Math.max(

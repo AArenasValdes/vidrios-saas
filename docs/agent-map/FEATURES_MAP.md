@@ -380,6 +380,51 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ---
 
+## Feature: Fabricacion tecnica esencial
+
+- **Que hace**: Dominio puro y autocontenido para recetas de fabricacion y motor deterministico de cubicacion/pauta. Calcula perfiles, funciones, medidas, cantidades, vidrio, accesorios, advertencias y trazabilidad desde `receta + dimensiones + cantidad + variante/configuracion`. No cotiza precios.
+- **Fase 3 (2026-07-29)**: integra recetas validadas al guardado de `/cotizaciones/nueva` sin redisenar UI final. El flujo resuelve receta compatible por `line_template_id`, tipologia, hojas, modulos, herraje/variante cuando existan; si hay una receta `validated` unica calcula con `calcularCubicacionYPauta()` y guarda `cotizacion_items.fabricacion_snapshot`. Si no hay receta unica validada, la cotizacion comercial sigue funcionando sin bloquear.
+- **Resumen interno**: `/print/cotizaciones/[id]/fabricacion` lee primero `fabricacionSnapshot` formal; si no existe usa fallback legacy `[cub:]`.
+- **Compatibilidad Fase 3**: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshot `[cub:]` siguen como lectura/compatibilidad, pero el flujo nuevo no escribe snapshots tecnicos en `[cub:]`.
+- **Archivos Fase 3**:
+  - `src/features/fabricacion/types/fabricacion-snapshot.ts`
+  - `src/features/fabricacion/schemas/fabricacion-snapshot-schemas.ts`
+  - `src/features/fabricacion/services/fabricacion-receta-resolver.service.ts`
+  - `src/features/fabricacion/services/fabricacion-cotizacion-snapshot.service.ts`
+  - `src/features/fabricacion/__tests__/fabricacion-receta-integracion-cotizacion.test.ts`
+  - `supabase/migrations/20260729234019_cotizacion_items_fabricacion_snapshot.sql`
+  - `supabase/migrations/20260730001306_harden_fabrication_recipe_grants.sql`
+  - `src/features/cotizaciones/services/cotizaciones.service.ts`
+  - `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
+  - `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts`
+- **Rutas involucradas**: No agrega rutas nuevas. Se conecta de forma interna al guardado de cotizacion para snapshot tecnico; no cambia UI final, PDF comercial, WhatsApp, rutas publicas ni IA.
+- **Archivos principales**:
+  - `src/features/fabricacion/types/fabricacion-domain.ts`
+  - `src/features/fabricacion/types/fabricacion-persistence.ts`
+  - `src/features/fabricacion/schemas/fabricacion-schemas.ts`
+  - `src/features/fabricacion/services/fabricacion-calculo.service.ts`
+  - `src/features/fabricacion/services/fabricacion-validacion.service.ts`
+  - `src/features/fabricacion/services/fabrication-recipes.service.ts`
+  - `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`
+  - `src/features/fabricacion/repositories/fabrication-recipe-tests.repository.ts`
+  - `src/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture.ts`
+  - `src/features/fabricacion/__tests__/fabricacion-calculo.service.test.ts`
+  - `src/features/fabricacion/__tests__/fabrication-recipes.service.test.ts`
+  - `src/features/fabricacion/__tests__/fabrication-recipes-rls-migration.contract.test.ts`
+  - `src/features/fabricacion/index.ts`
+- **Tablas Supabase**: `fabrication_recipes`, `fabrication_recipe_tests` (migracion `20260729230407_fabrication_recipes_persistence` aplicada/verificada en remoto el 2026-07-30; grants endurecidos por `20260730001306_harden_fabrication_recipe_grants`). No toca tablas legacy.
+- **Flujo de datos**: Consumidor futuro -> `calcularCubicacionYPauta()` -> validacion Zod + helpers -> resultado puro con `perfiles`, `vidrios`, `accesorios`, `advertencias`, `trazabilidad`.
+- **Persistencia Fase 2**: repositorios sin UI para recetas y casos de prueba. Servicio crea, duplica, versiona, archiva, ejecuta tests con `calcularCubicacionYPauta()` y solo pasa a `validated` cuando todos los casos activos pasan.
+- **RLS Fase 2**: recetas Ventora son lectura authenticated para todas las organizaciones; recetas privadas y tests quedan acotados por `organization_id = get_org_id()`. `organization_id` y `line_template_id` usan `bigint` para respetar el schema real.
+- **Verificacion remota Fase 3**: smoke con dos empresas QA confirmo aislamiento privado, lectura Ventora, bloqueo de update cruzado, snapshot guardado con receta unica, ausencia de snapshot sin receta o con multiples recetas y estabilidad del snapshot historico tras archivar/versionar receta.
+- **Reutiliza actual**: la separacion de receta vs linea comercial, estados de validacion, componentes reales por funcion, snapshot historico `[cub:]` como contrato de salida futuro, y `fabricationRecipePack` como compatibilidad de metadata existente.
+- **Compatibilidad preservada**: `fabricationRecipePack`, `fabricationRecipe`, `buildRecipeCuttingPreview()`, `buildLineTemplateCuttingPreview()`, partidas legacy `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja` y snapshot `[cub:]` siguen vivos en `src/features/cotizaciones/line-templates/`.
+- **Debe reemplazar de forma aditiva**: formulas acopladas al catalogo/cotizacion deben migrar gradualmente al dominio `fabricacion` cuando se conecte UI/cotizacion. La Fase 2 no migra datos legacy ni escribe nuevos datos en `fabricationRecipePack`, `fabricationRecipe` o `[cub:]`. El motor nuevo no depende de React, Supabase, SQL, eval, strings libres ejecutables ni codigo de usuario.
+- **Fixture V1**: `RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO` es solo ejemplo deterministico; no representa una linea real validada por taller.
+- **Riesgos al modificar**: No agregar IA, carga PDF, optimizador de barras, nesting, CNC, inventario, ERP ni reactivar `materials`, `system_lines`, `formula_variables` o `quote_item_breakdown`. No conectar a cotizacion ni usar este resultado como fabricacion real hasta validar recetas con taller.
+
+---
+
 ## Feature: PDF de Cotizacion
 
 - **Que hace**: Genera PDF A4/legal a partir de HTML con html2canvas + jsPDF. Headers, paginacion, bloques protegidos, branding empresa. Al descargar/abrir el PDF desde el visor interno, registra `pdf_descargado_en` en silencio y muestra toast "PDF descargado" sin modal ni cambio de estado comercial. Las caracteristicas de cada item se arman con `buildCotizacionItemPrintSpecs()`; **Espejo** y **Cubierta de mesa** omiten Material y Color en la grilla sin romper el layout.
