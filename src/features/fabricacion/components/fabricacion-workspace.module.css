@@ -1,0 +1,687 @@
+.workspace {
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 24px;
+  color: #13213a;
+}
+
+.workspaceHeader {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.55fr) minmax(320px, 1.5fr) minmax(220px, 0.8fr);
+  gap: 24px;
+  align-items: center;
+  min-height: 96px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #dce4ef;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: #3f587b;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.headerTitle {
+  min-width: 0;
+}
+
+.headerTitle > span,
+.sectionHeading span,
+.summaryStrip span,
+.resultBands span {
+  color: #607694;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.headerTitle h1 {
+  margin: 4px 0 5px;
+  overflow-wrap: anywhere;
+  color: #0d1b33;
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.headerTitle p,
+.sectionHeading p {
+  margin: 0;
+  color: #60708a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.headerActions,
+.actionRow,
+.recipeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.primaryButton,
+.secondaryButton,
+.validateButton,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primaryButton {
+  color: #fff;
+  background: #1877e8;
+  border: 1px solid #1877e8;
+  box-shadow: 0 6px 16px rgb(24 119 232 / 16%);
+}
+
+.secondaryButton {
+  color: #174b87;
+  background: #fff;
+  border: 1px solid #bfcfe2;
+}
+
+.validateButton {
+  color: #0e5d3a;
+  background: #eef9f2;
+  border: 1px solid #93d2ab;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.validateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.iconButton {
+  width: 38px;
+  padding: 0;
+  color: #526983;
+  background: #fff;
+  border: 1px solid #ced9e7;
+}
+
+.noticeBand,
+.successBand,
+.errorBand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0;
+  padding: 12px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.noticeBand {
+  color: #80520e;
+  background: #fff8e9;
+  border: 1px solid #eed39a;
+}
+
+.successBand {
+  color: #12603d;
+  background: #eef9f2;
+  border: 1px solid #a5d8b8;
+}
+
+.errorBand {
+  color: #9c2f2f;
+  background: #fff1f1;
+  border: 1px solid #efb6b6;
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(2, minmax(150px, 0.5fr));
+  margin: 20px 0 28px;
+  border-block: 1px solid #dce4ef;
+}
+
+.summaryStrip > div {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-right: 1px solid #dce4ef;
+}
+
+.summaryStrip > div:last-child {
+  border-right: 0;
+}
+
+.summaryStrip strong {
+  color: #11213b;
+  font-size: 17px;
+}
+
+.recipeSection,
+.editorSection {
+  padding: 24px 0;
+  border-bottom: 1px solid #dce4ef;
+}
+
+.sectionHeading {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sectionHeading h2 {
+  margin: 3px 0 0;
+  color: #10203a;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.recipeList,
+.componentList,
+.testRows {
+  display: grid;
+  gap: 10px;
+}
+
+.recipeRow {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(420px, 1.9fr) minmax(200px, auto);
+  gap: 18px;
+  align-items: center;
+  min-height: 116px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #d8e1ec;
+  border-left: 4px solid #9aaabe;
+  border-radius: 8px;
+}
+
+.recipeRow[data-tone="validated"] {
+  border-left-color: #2d9b62;
+}
+
+.recipeRow[data-tone="testing"] {
+  border-left-color: #cc8b1d;
+}
+
+.recipeRow[data-tone="draft"] {
+  border-left-color: #5d7fa9;
+}
+
+.recipeRow[data-tone="review"] {
+  border-left-color: #d05a40;
+}
+
+.recipeRow[data-tone="ventora"] {
+  border-left-color: #1877e8;
+  background: #f8fbff;
+}
+
+.recipeIdentity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.recipeIdentity strong {
+  overflow-wrap: anywhere;
+  color: #10203a;
+  font-size: 15px;
+}
+
+.recipeIdentity small {
+  color: #67778e;
+  font-size: 12px;
+}
+
+.statusPill,
+.matchStatus {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #526983;
+  background: #edf2f7;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.statusPill[data-tone="validated"],
+.matchStatus[data-match="true"] {
+  color: #12603d;
+  background: #e8f7ee;
+}
+
+.statusPill[data-tone="testing"] {
+  color: #82520c;
+  background: #fff3d9;
+}
+
+.statusPill[data-tone="review"],
+.matchStatus[data-match="false"] {
+  color: #9a3d2d;
+  background: #fff0e9;
+}
+
+.statusPill[data-tone="ventora"] {
+  color: #1459a5;
+  background: #e7f1ff;
+}
+
+.recipeFacts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(80px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.recipeFacts div {
+  min-width: 0;
+}
+
+.recipeFacts dt {
+  margin-bottom: 4px;
+  color: #73839a;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.recipeFacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #263952;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.emptyState,
+.emptyInline {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  padding: 24px;
+  color: #60728c;
+  text-align: center;
+  background: #f7f9fc;
+  border: 1px dashed #bfcde0;
+  border-radius: 8px;
+}
+
+.emptyState strong {
+  margin-top: 8px;
+  color: #253a56;
+}
+
+.emptyState p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.emptyInline {
+  min-height: 84px;
+  place-items: center start;
+  text-align: left;
+}
+
+.editorFlow,
+.labFlow {
+  display: grid;
+}
+
+.formGrid,
+.formGridDense,
+.testInputGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.formGridDense {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+}
+
+.testInputGrid {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
+.formGrid label,
+.formGridDense label,
+.testInputGrid label,
+.inlineRule label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.formGrid label > span,
+.formGridDense label > span,
+.testInputGrid label > span,
+.inlineRule label > span {
+  color: #4d627f;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.formGrid input,
+.formGrid select,
+.formGridDense input,
+.formGridDense select,
+.testInputGrid input,
+.testInputGrid select,
+.expectedInputs input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  color: #14243c;
+  background: #fff;
+  border: 1px solid #c8d5e5;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.formGrid input:focus,
+.formGrid select:focus,
+.formGridDense input:focus,
+.formGridDense select:focus,
+.testInputGrid input:focus,
+.expectedInputs input:focus {
+  border-color: #287fe5;
+  outline: 3px solid rgb(40 127 229 / 12%);
+}
+
+.formGrid input:disabled,
+.formGrid select:disabled,
+.formGridDense input:disabled,
+.formGridDense select:disabled {
+  color: #5f6f84;
+  background: #f2f5f8;
+}
+
+.checkboxField {
+  display: flex !important;
+  flex-direction: row;
+  gap: 8px !important;
+  align-items: center;
+  align-self: end;
+  min-height: 38px;
+}
+
+.checkboxField input {
+  width: 16px !important;
+  height: 16px !important;
+  padding: 0;
+  accent-color: #1877e8;
+}
+
+.componentCard {
+  padding: 15px;
+  background: #fbfcfe;
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+}
+
+.componentCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+
+.componentCardHeader strong {
+  color: #1b2e49;
+  font-size: 14px;
+}
+
+.inlineRule {
+  display: grid;
+  grid-template-columns: 1.5fr 0.7fr;
+  gap: 8px;
+}
+
+.actionRow {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+.feedbackText {
+  color: #55708f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.comparisonTableWrap {
+  overflow-x: auto;
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+}
+
+.comparisonTable {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+.comparisonTable th,
+.comparisonTable td {
+  padding: 11px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e4eaf2;
+  font-size: 12px;
+}
+
+.comparisonTable th {
+  color: #60718a;
+  background: #f3f6fa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.comparisonTable tr[data-match="false"] td {
+  background: #fffaf6;
+}
+
+.comparisonTable td strong,
+.comparisonTable td small {
+  display: block;
+}
+
+.comparisonTable td small {
+  margin-top: 3px;
+  color: #74849a;
+}
+
+.expectedInputs {
+  display: grid;
+  grid-template-columns: 72px auto 62px;
+  gap: 6px;
+  align-items: center;
+}
+
+.expectedInputsGlass {
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  gap: 6px;
+}
+
+.expectedInputsAccessory {
+  width: 74px;
+}
+
+.expectedInputs input {
+  height: 32px;
+}
+
+.expectedInputsGlass input,
+.expectedInputsAccessory input {
+  width: 100%;
+  height: 32px;
+  min-width: 0;
+  padding: 0 7px;
+  border: 1px solid #c8d5e5;
+  border-radius: 6px;
+}
+
+.resultBands {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 14px;
+  border-block: 1px solid #dce4ef;
+}
+
+.resultBands > div {
+  padding: 14px;
+  border-right: 1px solid #dce4ef;
+}
+
+.resultBands > div:last-child {
+  border-right: 0;
+}
+
+.resultBands p {
+  margin: 7px 0 0;
+  color: #4b5f79;
+  font-size: 12px;
+}
+
+.traceDetails {
+  margin-top: 14px;
+  color: #4a607d;
+  font-size: 12px;
+}
+
+.traceDetails summary {
+  color: #1a4f89;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.testRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #dce4ef;
+  border-radius: 7px;
+}
+
+.testRow > div {
+  display: grid;
+  gap: 3px;
+}
+
+.testRow span {
+  color: #687990;
+  font-size: 12px;
+}
+
+.loadingState {
+  display: grid;
+  gap: 10px;
+  place-items: center;
+  min-height: 50vh;
+  color: #5c6f89;
+}
+
+@media (max-width: 1100px) {
+  .workspaceHeader {
+    grid-template-columns: 1fr auto;
+  }
+
+  .backButton {
+    grid-column: 1 / -1;
+  }
+
+  .recipeRow {
+    grid-template-columns: 1fr;
+  }
+
+  .recipeFacts {
+    grid-template-columns: repeat(3, minmax(100px, 1fr));
+  }
+
+  .recipeActions {
+    justify-content: flex-start;
+  }
+
+  .formGrid,
+  .formGridDense,
+  .testInputGrid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .workspace {
+    padding: 16px;
+  }
+
+  .workspaceHeader {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .headerActions {
+    justify-content: flex-start;
+  }
+
+  .summaryStrip,
+  .resultBands {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryStrip > div,
+  .resultBands > div {
+    border-right: 0;
+    border-bottom: 1px solid #dce4ef;
+  }
+
+  .sectionHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .recipeFacts,
+  .formGrid,
+  .formGridDense,
+  .testInputGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .testRow {
+    grid-template-columns: 1fr;
+  }
+
+  .testRow .secondaryButton {
+    width: 100%;
+  }
+}

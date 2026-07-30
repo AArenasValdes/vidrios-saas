@@ -4,6 +4,8 @@ export * from "@/features/fabricacion/schemas/fabricacion-snapshot-schemas";
 export * from "@/features/fabricacion/services/fabricacion-calculo.service";
 export * from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 export * from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+export * from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
+export * from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 export * from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 export * from "@/features/fabricacion/services/fabricacion-validacion.service";
 export * from "@/features/fabricacion/types/fabricacion-persistence";

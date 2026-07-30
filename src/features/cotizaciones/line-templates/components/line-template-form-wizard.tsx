@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   LuBadgeDollarSign,
@@ -365,6 +366,7 @@ type Props = {
   estimationSampleFrameMl: number;
   estimationSampleSashMl: number;
   estimationAccessoryUnits: number;
+  technicalAdminHref?: string | null;
 };
 
 export function LineTemplateFormWizard({
@@ -389,6 +391,7 @@ export function LineTemplateFormWizard({
   onCalibrationVanoWidthMmChange,
   onCalibrationVanoHeightMmChange,
   estimationSampleAreaM2,
+  technicalAdminHref,
 }: Props) {
   const sheetBodyRef = useRef<HTMLDivElement | null>(null);
   const moreDetailsButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -561,14 +564,6 @@ export function LineTemplateFormWizard({
   const suggestedMatchId =
     matchSuggestedTemplateIdByLineName(draft.nombre) ||
     matchSuggestedTemplateIdByLineName(draft.lineSystem);
-
-  useEffect(() => {
-    if (draft.fabricationRecipe || openStep !== 3) return;
-    if (originChoice != null) return;
-    if (!suggestedMatchId) return;
-    setOriginChoice("plantilla");
-    setPendingTemplateId(suggestedMatchId);
-  }, [draft.fabricationRecipe, openStep, originChoice, suggestedMatchId]);
 
   const pendingTemplate =
     COMMERCIAL_SUGGESTED_TEMPLATES.find((entry) => entry.id === pendingTemplateId) ??
@@ -1268,6 +1263,25 @@ export function LineTemplateFormWizard({
               )}
               {openStep === 3 ? (
                 <div className={`${s.wizardStepBody} ${s.wizardStepBodyWorkspace}`}>
+                  <div className={s.technicalRecipeNotice}>
+                    <div>
+                      <span>Recetas versionadas</span>
+                      <strong>La línea comercial y la receta se guardan por separado.</strong>
+                      <p>
+                        Guarda primero esta línea. Después administra perfiles, vidrios,
+                        accesorios y reglas controladas en el módulo técnico.
+                      </p>
+                    </div>
+                    {technicalAdminHref ? (
+                      <Link href={technicalAdminHref} className={s.primaryButton}>
+                        Administrar recetas
+                      </Link>
+                    ) : (
+                      <small>La opción Administrar aparecerá en la tarjeta de la línea.</small>
+                    )}
+                  </div>
+                  <fieldset className={s.legacyRecipeCompatibility} disabled>
+                    <legend>Configuración anterior, solo lectura</legend>
                   {!isGlassDraft ? (
                     draft.fabricationRecipe && isRecipeWorkspaceOpen ? (
                       <>
@@ -1510,6 +1524,7 @@ export function LineTemplateFormWizard({
                       Para cristal solo se estima vidrio. No se configuran perfiles de aluminio.
                     </p>
                   )}
+                  </fieldset>
                 </div>
               ) : (
                 <p className={s.wizardStepSummary}>{step3Summary}</p>
@@ -1534,6 +1549,25 @@ export function LineTemplateFormWizard({
                 <div
                   className={`${s.wizardStepBody} ${s.wizardStepBodyTall} ${s.wizardStepBodyWorkspace}`}
                 >
+                  <div className={s.technicalRecipeNotice}>
+                    <div>
+                      <span>Laboratorio técnico</span>
+                      <strong>Las pruebas y la validación viven en la receta versionada.</strong>
+                      <p>
+                        Una versión solo se habilita para cotizar cuando sus casos
+                        obligatorios coinciden con un trabajo real.
+                      </p>
+                    </div>
+                    {technicalAdminHref ? (
+                      <Link href={technicalAdminHref} className={s.primaryButton}>
+                        Abrir laboratorio
+                      </Link>
+                    ) : (
+                      <small>Guarda la línea para abrir su laboratorio.</small>
+                    )}
+                  </div>
+                  <fieldset className={s.legacyRecipeCompatibility} disabled>
+                    <legend>Validación anterior, solo lectura</legend>
                   {!isGlassDraft ? (
                     <FabricationRecipeEditor
                       mode="validate"
@@ -1554,6 +1588,7 @@ export function LineTemplateFormWizard({
                       El cristal no usa pauta de perfiles. Puedes guardar la línea solo con precio.
                     </p>
                   )}
+                  </fieldset>
                 </div>
               ) : (
                 <p className={s.wizardStepSummary}>{step4Summary}</p>
@@ -1582,21 +1617,15 @@ export function LineTemplateFormWizard({
               className={s.primaryButton}
               onClick={onSave}
               disabled={saveDisabled || isSaving}
-              title={
-                recipeStatus === "validada"
-                  ? "Guarda la línea con pauta habilitada"
-                  : "Puedes guardar borrador y cotizar; la pauta se habilita al validar"
-              }
+              title="Guarda los datos comerciales de la línea. La receta técnica se administra por separado."
             >
               {isSaving
                 ? "Guardando..."
                 : isGlassDraft
                   ? "Guardar producto"
-                  : recipeStatus === "validada"
-                    ? sheetMode === "edit"
-                      ? "Guardar línea"
-                      : "Guardar línea"
-                    : "Guardar borrador"}
+                  : sheetMode === "edit"
+                    ? "Guardar línea"
+                    : "Crear línea"}
             </button>
           </div>
         </footer>

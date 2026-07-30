@@ -914,11 +914,12 @@ auth.users (1) ──── (N) users
 
 ---
 
-## Addendum 2026-07-30 - Fabricacion Fase 2/3 aplicada en remoto
+## Addendum 2026-07-30 - Fabricacion Fase 2/3/4 aplicada en remoto
 
-- Migraciones remotas aplicadas y registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot` y `20260730001306_harden_fabrication_recipe_grants`.
-- `fabrication_recipes` guarda recetas versionadas con `id uuid`, `organization_id bigint nullable`, `line_template_id bigint nullable`, `scope`, `status`, `definition jsonb`, `source_type`, `parent_recipe_id`, timestamps y soft delete.
-- `fabrication_recipe_tests` guarda casos de prueba por receta con input/salida esperada/salida real y `passed`.
+- Migraciones remotas aplicadas y registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot`, `20260730001306_harden_fabrication_recipe_grants` y `20260730003756_fabrication_recipe_validation_metadata`.
+- `fabrication_recipes` guarda recetas versionadas y ahora incluye `validated_by uuid` para trazabilidad de la version validada.
+- `fabrication_recipe_tests` guarda casos de prueba por receta e incluye `is_required boolean not null default true` para distinguir pruebas obligatorias y opcionales.
+- Triggers Fase 4 exigen `validated_at` al validar y vinculan `validated_by` con `auth.uid()` en validaciones/pruebas aprobadas desde sesiones authenticated.
 - RLS verificada: lectura authenticated de recetas Ventora (`scope='ventora'`) y recetas privadas de la organizacion; insert/update solo recetas privadas por `organization_id = get_org_id()`.
 - Grants verificados despues del hardening: `anon` sin privilegios sobre las tablas nuevas; `authenticated` y `service_role` solo con `SELECT/INSERT/UPDATE`.
 - Smoke remoto con dos empresas QA confirmo aislamiento, lectura Ventora, bloqueo de update cruzado, guardado real de `cotizacion_items.fabricacion_snapshot`, ausencia de snapshot sin receta o con multiples recetas y snapshot historico estable tras archivar/versionar receta.

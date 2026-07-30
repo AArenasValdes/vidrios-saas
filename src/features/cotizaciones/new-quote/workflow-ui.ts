@@ -17,6 +17,7 @@ import {
 import {
   fabricacionSnapshotToLegacyCubicationSnapshot,
 } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import {
   resolveCubicationSnapshotForSave,
   type CotizacionItemCubicationSnapshot,
@@ -106,6 +107,14 @@ export type ComponentFormState = {
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
   /** Variante de receta elegida cuando hay varias activas compatibles. */
   fabricationRecipeId?: string;
+  /** Contexto tecnico explicito; los items antiguos pueden seguir sin estos datos. */
+  fabricacionTipologia?: string;
+  fabricacionHojas?: number | null;
+  fabricacionModulos?: number | null;
+  fabricacionApertura?: string;
+  fabricacionHerraje?: string;
+  fabricacionVariante?: string;
+  fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
 
 export type FieldErrors = Partial<
@@ -1906,6 +1915,9 @@ export function applyLineTemplateToComponentForm(
       origenPrecio: preserveManualPrice ? "manual" : "plantilla",
       cubicationSnapshot: null,
       fabricationRecipeId: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+      fabricacionSnapshot: null,
     },
     { forceSuggestedPrice: !preserveManualPrice }
   );
@@ -2017,6 +2029,13 @@ export function buildSuggestedComponentForm(
     guidedVisualConfig: current.guidedVisualConfig ?? null,
     cubicationSnapshot: current.cubicationSnapshot ?? null,
     fabricationRecipeId: current.fabricationRecipeId ?? "",
+    fabricacionTipologia: current.fabricacionTipologia ?? "",
+    fabricacionHojas: current.fabricacionHojas ?? null,
+    fabricacionModulos: current.fabricacionModulos ?? null,
+    fabricacionApertura: current.fabricacionApertura ?? "",
+    fabricacionHerraje: current.fabricacionHerraje ?? "",
+    fabricacionVariante: current.fabricacionVariante ?? "",
+    fabricacionSnapshot: current.fabricacionSnapshot ?? null,
   };
 }
 
@@ -2168,6 +2187,13 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorInteriorLine,
     guidedVisualConfig,
     cubicationSnapshot,
+    fabricacionTipologia,
+    fabricacionHojas,
+    fabricacionModulos,
+    fabricacionApertura,
+    fabricacionHerraje,
+    fabricacionVariante,
+    fabricationRecipeId,
   } =
     decodeCotizacionItemPresentationMeta(item.observaciones);
   const formalCubicationSnapshot = item.fabricacionSnapshot
@@ -2254,6 +2280,33 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     mirrorCustomPaneCount: mirrorPaneCount !== null && mirrorPaneCount > 6 ? String(mirrorPaneCount) : "",
     guidedVisualConfig,
     cubicationSnapshot: formalCubicationSnapshot ?? cubicationSnapshot,
+    fabricationRecipeId:
+      fabricationRecipeId || item.fabricacionSnapshot?.recipeId || "",
+    fabricacionTipologia:
+      fabricacionTipologia ||
+      item.fabricacionSnapshot?.recipeIdentity.tipologia ||
+      "",
+    fabricacionHojas:
+      fabricacionHojas ??
+      item.fabricacionSnapshot?.input.hojas ??
+      null,
+    fabricacionModulos:
+      fabricacionModulos ??
+      item.fabricacionSnapshot?.input.modulos ??
+      null,
+    fabricacionApertura:
+      fabricacionApertura ||
+      item.fabricacionSnapshot?.recipeIdentity.apertura ||
+      "",
+    fabricacionHerraje:
+      fabricacionHerraje ||
+      item.fabricacionSnapshot?.recipeIdentity.herraje ||
+      "",
+    fabricacionVariante:
+      fabricacionVariante ||
+      item.fabricacionSnapshot?.selectedVariant ||
+      "",
+    fabricacionSnapshot: item.fabricacionSnapshot ?? null,
   };
 }
 
@@ -2389,8 +2442,29 @@ export function buildItemFromForm(
     previousSnapshot: previousPresentation?.cubicationSnapshot ?? null,
     personalizadoAssistMode,
   });
+  const formalFabricationSnapshot =
+    syncedForm.fabricacionSnapshot &&
+    syncedForm.fabricacionSnapshot.lineTemplateId ===
+      (syncedForm.lineTemplateId ? Number(syncedForm.lineTemplateId) : null) &&
+    syncedForm.fabricacionSnapshot.input.anchoTotalMm ===
+      (syncedForm.ancho ? Math.round(Number(syncedForm.ancho)) : 0) &&
+    syncedForm.fabricacionSnapshot.input.altoTotalMm ===
+      (syncedForm.alto ? Math.round(Number(syncedForm.alto)) : 0) &&
+    syncedForm.fabricacionSnapshot.input.cantidad ===
+      Math.round(Number(syncedForm.cantidad || 1)) &&
+    (!syncedForm.fabricacionTipologia ||
+      syncedForm.fabricacionSnapshot.recipeIdentity.tipologia ===
+        syncedForm.fabricacionTipologia) &&
+    (!syncedForm.fabricacionVariante ||
+      syncedForm.fabricacionSnapshot.selectedVariant ===
+        syncedForm.fabricacionVariante) &&
+    (!syncedForm.fabricationRecipeId ||
+      syncedForm.fabricacionSnapshot.recipeId === syncedForm.fabricationRecipeId)
+      ? syncedForm.fabricacionSnapshot
+      : null;
 
-  return calculateComponentItem({
+  return {
+    ...calculateComponentItem({
     id: editingItemId ?? undefined,
     codigo: syncedForm.codigo.trim() || buildNextComponentCode(items, syncedForm.tipo),
     tipo: syncedForm.tipo,
@@ -2444,11 +2518,20 @@ export function buildItemFromForm(
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
       guidedVisualConfig: syncedForm.guidedVisualConfig ?? null,
-      cubicationSnapshot: null,
+      fabricacionTipologia: syncedForm.fabricacionTipologia,
+      fabricacionHojas: syncedForm.fabricacionHojas,
+      fabricacionModulos: syncedForm.fabricacionModulos,
+      fabricacionApertura: syncedForm.fabricacionApertura,
+      fabricacionHerraje: syncedForm.fabricacionHerraje,
+      fabricacionVariante: syncedForm.fabricacionVariante,
+      fabricationRecipeId: syncedForm.fabricationRecipeId,
+      cubicationSnapshot: formalFabricationSnapshot ? null : cubicationSnapshot,
       raw: syncedForm.observaciones,
     }),
     tipoItem: "componente",
-  });
+    }),
+    fabricacionSnapshot: formalFabricationSnapshot,
+  };
 }
 
 export function applyQuotePricingToItems(
@@ -2490,6 +2573,13 @@ export function applyQuotePricingToItems(
       mirrorPaneDirection,
       mirrorInteriorLine,
       guidedVisualConfig,
+      fabricacionTipologia,
+      fabricacionHojas,
+      fabricacionModulos,
+      fabricacionApertura,
+      fabricacionHerraje,
+      fabricacionVariante,
+      fabricationRecipeId,
     } = decodeCotizacionItemPresentationMeta(item.observaciones);
 
     return {
@@ -2546,6 +2636,13 @@ export function applyQuotePricingToItems(
         mirrorPaneDirection,
         mirrorInteriorLine,
         guidedVisualConfig,
+        fabricacionTipologia,
+        fabricacionHojas,
+        fabricacionModulos,
+        fabricacionApertura,
+        fabricacionHerraje,
+        fabricacionVariante,
+        fabricationRecipeId,
         cubicationSnapshot: null,
         raw,
       }),

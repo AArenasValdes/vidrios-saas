@@ -55,6 +55,13 @@ export type CotizacionItemPresentationMeta = {
   mirrorInteriorLine: CotizacionMirrorInteriorLine;
   guidedVisualConfig: GuidedVisualConfig | null;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
+  fabricacionTipologia: string;
+  fabricacionHojas: number | null;
+  fabricacionModulos: number | null;
+  fabricacionApertura: string;
+  fabricacionHerraje: string;
+  fabricacionVariante: string;
+  fabricationRecipeId: string;
   raw: string;
 };
 
@@ -215,6 +222,13 @@ export function encodeCotizacionItemPresentationMeta(input: {
   mirrorInteriorLine?: CotizacionMirrorInteriorLine;
   guidedVisualConfig?: GuidedVisualConfig | null;
   cubicationSnapshot?: CotizacionItemCubicationSnapshot | null;
+  fabricacionTipologia?: string | null;
+  fabricacionHojas?: number | null;
+  fabricacionModulos?: number | null;
+  fabricacionApertura?: string | null;
+  fabricacionHerraje?: string | null;
+  fabricacionVariante?: string | null;
+  fabricationRecipeId?: string | null;
   raw?: string;
 }) {
   const material = normalizeMaterial(input.material);
@@ -284,6 +298,29 @@ export function encodeCotizacionItemPresentationMeta(input: {
   const guidedVisualConfig = input.guidedVisualConfig
     ? serializeGuidedVisualConfig(input.guidedVisualConfig).replace(/\]/g, "")
     : "";
+  const fabricacionTipologia = (input.fabricacionTipologia ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionHojas =
+    input.fabricacionHojas != null && input.fabricacionHojas > 0
+      ? String(Math.round(input.fabricacionHojas))
+      : "";
+  const fabricacionModulos =
+    input.fabricacionModulos != null && input.fabricacionModulos > 0
+      ? String(Math.round(input.fabricacionModulos))
+      : "";
+  const fabricacionApertura = (input.fabricacionApertura ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionHerraje = (input.fabricacionHerraje ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricacionVariante = (input.fabricacionVariante ?? "")
+    .trim()
+    .replace(/\]/g, "");
+  const fabricationRecipeId = (input.fabricationRecipeId ?? "")
+    .trim()
+    .replace(/\]/g, "");
   void input.cubicationSnapshot;
   const cubicationSnapshot = "";
   const raw = (input.raw ?? "").trim();
@@ -323,6 +360,13 @@ export function encodeCotizacionItemPresentationMeta(input: {
     `[mpd:${mirrorPaneDirection}]` +
     `[mil:${mirrorInteriorLine}]` +
     `[gvc:${guidedVisualConfig}]` +
+    `[ft:${fabricacionTipologia}]` +
+    `[fh:${fabricacionHojas}]` +
+    `[fmo:${fabricacionModulos}]` +
+    `[fap:${fabricacionApertura}]` +
+    `[fhe:${fabricacionHerraje}]` +
+    `[fv:${fabricacionVariante}]` +
+    `[frid:${fabricationRecipeId}]` +
     `[cub:${cubicationSnapshot}]`;
 
   return raw ? `${meta} ${raw}` : meta;
@@ -398,6 +442,21 @@ export function decodeCotizacionItemPresentationMeta(
   const guidedVisualConfig = parseGuidedVisualConfig(
     source.match(/\[gvc:([^\]]*)\]/)?.[1]
   );
+  const fabricacionTipologia = source.match(/\[ft:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionHojas = parseOptionalNumber(
+    source.match(/\[fh:([^\]]*)\]/)?.[1]
+  );
+  const fabricacionModulos = parseOptionalNumber(
+    source.match(/\[fmo:([^\]]*)\]/)?.[1]
+  );
+  const fabricacionApertura =
+    source.match(/\[fap:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionHerraje =
+    source.match(/\[fhe:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricacionVariante =
+    source.match(/\[fv:([^\]]*)\]/)?.[1]?.trim() ?? "";
+  const fabricationRecipeId =
+    source.match(/\[frid:([^\]]*)\]/)?.[1]?.trim() ?? "";
   const cubicationSnapshot = parseCubicationSnapshot(
     source.match(/\[cub:([^\]]*)\]/)?.[1]
   );
@@ -441,6 +500,13 @@ export function decodeCotizacionItemPresentationMeta(
     .replace(/\[mpd:[^\]]*\]/g, "")
     .replace(/\[mil:[^\]]*\]/g, "")
     .replace(/\[gvc:[^\]]*\]/g, "")
+    .replace(/\[ft:[^\]]*\]/g, "")
+    .replace(/\[fh:[^\]]*\]/g, "")
+    .replace(/\[fmo:[^\]]*\]/g, "")
+    .replace(/\[fap:[^\]]*\]/g, "")
+    .replace(/\[fhe:[^\]]*\]/g, "")
+    .replace(/\[fv:[^\]]*\]/g, "")
+    .replace(/\[frid:[^\]]*\]/g, "")
     .replace(/\[cub:[^\]]*\]/g, "")
     .trim();
 
@@ -481,6 +547,13 @@ export function decodeCotizacionItemPresentationMeta(
     mirrorInteriorLine,
     guidedVisualConfig,
     cubicationSnapshot,
+    fabricacionTipologia,
+    fabricacionHojas,
+    fabricacionModulos,
+    fabricacionApertura,
+    fabricacionHerraje,
+    fabricacionVariante,
+    fabricationRecipeId,
     raw,
   };
 }

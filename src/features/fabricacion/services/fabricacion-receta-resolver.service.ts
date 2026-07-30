@@ -13,6 +13,7 @@ export type FabricacionRecetaResolucionInput = {
   apertura?: string | null;
   herraje?: string | null;
   variante?: string | null;
+  preferredRecipeId?: string | null;
   allowNonValidatedRecipeId?: string | null;
 };
 
@@ -104,6 +105,14 @@ export function resolverRecetaFabricacionCompatible(
       descartadas.push(discard(recipe, "La cantidad de modulos no coincide."));
       return false;
     }
+    if (
+      input.apertura &&
+      identidad.apertura &&
+      normalizeText(identidad.apertura) !== normalizeText(input.apertura)
+    ) {
+      descartadas.push(discard(recipe, "La apertura no coincide."));
+      return false;
+    }
     if (input.herraje && identidad.herraje && normalizeText(identidad.herraje) !== normalizeText(input.herraje)) {
       descartadas.push(discard(recipe, "El herraje no coincide."));
       return false;
@@ -133,7 +142,30 @@ export function resolverRecetaFabricacionCompatible(
     };
   }
 
-  const validated = compatible.filter((recipe) => statusAllowsAutomaticUse(recipe.status));
+  const validatedByIdentity = new Map<string, FabricationRecipeRecord>();
+  compatible
+    .filter((recipe) => statusAllowsAutomaticUse(recipe.status))
+    .forEach((recipe) => {
+      const key = recipe.definition.identidad.recetaId;
+      const current = validatedByIdentity.get(key);
+      if (!current || recipe.version > current.version) {
+        validatedByIdentity.set(key, recipe);
+      }
+    });
+  const validated = Array.from(validatedByIdentity.values());
+
+  const preferred = validated.find(
+    (recipe) => recipe.id === input.preferredRecipeId
+  );
+  if (preferred) {
+    return {
+      estado: "receta_unica",
+      receta: preferred,
+      candidatas: validated,
+      descartadas,
+      advertencias: [],
+    };
+  }
 
   if (validated.length === 0) {
     return {

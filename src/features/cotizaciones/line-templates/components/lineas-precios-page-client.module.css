@@ -60,6 +60,74 @@
   }
 }
 
+.technicalRecipeNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #b8d3f6;
+  border-left: 4px solid #1677e8;
+  border-radius: 8px;
+  background: #f5f9ff;
+}
+
+.technicalRecipeNotice > div {
+  display: grid;
+  gap: 4px;
+}
+
+.technicalRecipeNotice span,
+.technicalRecipeNotice small {
+  color: #52647a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.technicalRecipeNotice strong {
+  color: #14233a;
+  font-size: 14px;
+}
+
+.technicalRecipeNotice p {
+  margin: 0;
+  color: #52647a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.technicalRecipeNotice .primaryButton {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.legacyRecipeCompatibility {
+  min-width: 0;
+  margin: 0;
+  padding: 14px 0 0;
+  border: 0;
+  opacity: 0.58;
+}
+
+.legacyRecipeCompatibility legend {
+  padding: 0 0 8px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@media (max-width: 720px) {
+  .technicalRecipeNotice {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .technicalRecipeNotice .primaryButton {
+    width: 100%;
+  }
+}
+
 .backButton,
 .addButton,
 .menuButton,
@@ -543,6 +611,7 @@
 }
 
 .menuAction {
+  width: 100%;
   min-height: 38px;
   padding: 0 10px;
   border: 0;
@@ -555,10 +624,34 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .menuActionDanger {
   color: #ad283e;
+}
+
+.technicalStatusRow > div {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.technicalManageLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  align-items: center;
+  color: #1765bf;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.technicalManageLink svg {
+  width: 14px;
+  height: 14px;
 }
 
 .priceRow {

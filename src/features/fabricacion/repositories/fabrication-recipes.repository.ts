@@ -15,7 +15,7 @@ import type {
 
 const TABLE_NAME = "fabrication_recipes";
 const SELECT_FIELDS =
-  "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, created_at, updated_at, eliminado_en";
+  "id, organization_id, line_template_id, scope, provider_name, line_name, typology, leaves_count, variant, version, status, definition, source_type, source_reference, parent_recipe_id, validated_at, validated_by, created_at, updated_at, eliminado_en";
 
 type FabricationRecipeRow = {
   id: string;
@@ -34,6 +34,7 @@ type FabricationRecipeRow = {
   source_reference: string | null;
   parent_recipe_id: string | null;
   validated_at: string | null;
+  validated_by: string | null;
   created_at: string;
   updated_at: string;
   eliminado_en: string | null;
@@ -57,6 +58,7 @@ function mapRecipeRow(row: FabricationRecipeRow): FabricationRecipeRecord {
     sourceReference: row.source_reference,
     parentRecipeId: row.parent_recipe_id,
     validatedAt: row.validated_at,
+    validatedBy: row.validated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     eliminadoEn: row.eliminado_en,
@@ -82,6 +84,7 @@ function buildInsertPayload(input: CreateFabricationRecipeInput) {
     source_reference: input.sourceReference ?? null,
     parent_recipe_id: input.parentRecipeId ?? null,
     validated_at: input.validatedAt ?? null,
+    validated_by: input.validatedBy ?? null,
   };
 }
 
@@ -102,6 +105,7 @@ function buildUpdatePayload(input: UpdateFabricationRecipeInput) {
     payload.source_reference = input.sourceReference;
   }
   if (input.validatedAt !== undefined) payload.validated_at = input.validatedAt;
+  if (input.validatedBy !== undefined) payload.validated_by = input.validatedBy;
 
   return payload;
 }

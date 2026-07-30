@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricacion-schemas";
+import { validarRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-validacion.service";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipesRepository } from "@/features/fabricacion/repositories/fabrication-recipes.repository";
 import type { FabricationRecipeTestsRepository } from "@/features/fabricacion/repositories/fabrication-recipe-tests.repository";
@@ -29,6 +30,12 @@ type CreateRecipeVersionInput = {
   status?: Extract<FabricationRecipeStatus, "draft" | "review_required" | "testing">;
   definition?: FabricacionReceta;
   sourceReference?: string | null;
+};
+
+type DuplicateRecipeOptions = {
+  lineTemplateId?: number | null;
+  providerName?: string;
+  lineName?: string;
 };
 
 function statusToDomainEstado(status: FabricationRecipeStatus) {
@@ -95,6 +102,19 @@ function areJsonEqual(left: unknown, right: unknown) {
     JSON.stringify(normalizeForComparison(left)) ===
     JSON.stringify(normalizeForComparison(right))
   );
+}
+
+function normalizeRecipeTestOutput(
+  output: ReturnType<typeof calcularCubicacionYPauta>
+) {
+  return {
+    ...output,
+    // El estado cambia de borrador a testing sin alterar la geometria esperada.
+    estadoReceta: "borrador" as const,
+    advertencias: output.advertencias.filter(
+      (warning) => warning.codigo !== "RECETA_NO_VALIDADA"
+    ),
+  };
 }
 
 function assertOrganizationAccess(
@@ -199,7 +219,11 @@ export function createFabricationRecipesService(
     }
   }
 
-  async function duplicateRecipe(id: string, organizationId: number) {
+  async function duplicateRecipe(
+    id: string,
+    organizationId: number,
+    options: DuplicateRecipeOptions = {}
+  ) {
     const recipe = await deps.recipesRepository.getById(id, { organizationId });
     if (!recipe) {
       throw new FabricationRecipeServiceError(
@@ -223,10 +247,10 @@ export function createFabricationRecipesService(
 
     return deps.recipesRepository.create({
       organizationId,
-      lineTemplateId: recipe.lineTemplateId,
+      lineTemplateId: options.lineTemplateId ?? recipe.lineTemplateId,
       scope: "organization",
-      providerName: recipe.providerName,
-      lineName: recipe.lineName,
+      providerName: options.providerName ?? recipe.providerName,
+      lineName: options.lineName ?? recipe.lineName,
       typology: recipe.typology,
       leavesCount: recipe.leavesCount,
       variant: recipe.variant,
@@ -325,6 +349,10 @@ export function createFabricationRecipesService(
     return deps.testsRepository.update(id, input);
   }
 
+  async function listRecipeTests(recipeId: string) {
+    return deps.testsRepository.listByRecipeId(recipeId);
+  }
+
   async function runRecipeTest(testId: string, validatedBy?: string | null) {
     const test = await deps.testsRepository.getById(testId);
     if (!test) {
@@ -345,7 +373,10 @@ export function createFabricationRecipesService(
     }
 
     const actualOutput = calcularCubicacionYPauta(recipe.definition, test.input);
-    const passed = areJsonEqual(actualOutput, test.expectedOutput);
+    const passed = areJsonEqual(
+      normalizeRecipeTestOutput(actualOutput),
+      normalizeRecipeTestOutput(test.expectedOutput)
+    );
 
     return deps.testsRepository.update(test.id, {
       actualOutput,
@@ -381,15 +412,39 @@ export function createFabricationRecipesService(
     assertOrganizationAccess(recipe, organizationId);
     assertEditable(recipe);
 
-    const results = await runAllRecipeTests(id, validatedBy);
-    if (results.length === 0) {
+    const validationDefinition = normalizeDefinition(
+      recipe.definition,
+      recipe.version,
+      "validated"
+    );
+    const definitionValidation = validarRecetaFabricacion(validationDefinition);
+    const requiredProfilesWithoutCode = validationDefinition.perfiles.filter(
+      (profile) => profile.requerido && !profile.codigoPerfil.trim()
+    );
+    const criticalWarnings = definitionValidation.advertencias.filter(
+      (warning) => warning.nivel === "error"
+    );
+    if (requiredProfilesWithoutCode.length > 0 || criticalWarnings.length > 0) {
       throw new FabricationRecipeServiceError(
-        "VALIDACION_SIN_CASOS",
-        "La receta necesita al menos un caso de prueba antes de validarse."
+        "VALIDACION_COMPONENTES_INCOMPLETOS",
+        "La receta tiene componentes criticos incompletos.",
+        {
+          profileIds: requiredProfilesWithoutCode.map((profile) => profile.id),
+          warnings: criticalWarnings,
+        }
       );
     }
 
-    const failed = results.filter((test) => !test.passed);
+    const results = await runAllRecipeTests(id, validatedBy);
+    const requiredResults = results.filter((test) => test.isRequired !== false);
+    if (requiredResults.length === 0) {
+      throw new FabricationRecipeServiceError(
+        "VALIDACION_SIN_CASOS",
+        "La receta necesita al menos un caso de prueba obligatorio antes de validarse."
+      );
+    }
+
+    const failed = requiredResults.filter((test) => !test.passed);
     if (failed.length > 0) {
       throw new FabricationRecipeServiceError(
         "VALIDACION_CON_FALLOS",
@@ -401,7 +456,8 @@ export function createFabricationRecipesService(
     return deps.recipesRepository.update(id, {
       status: "validated",
       validatedAt: now().toISOString(),
-      definition: normalizeDefinition(recipe.definition, recipe.version, "validated"),
+      validatedBy: validatedBy ?? null,
+      definition: validationDefinition,
     });
   }
 
@@ -414,6 +470,7 @@ export function createFabricationRecipesService(
     createRecipeVersion,
     archiveRecipe,
     createRecipeTest,
+    listRecipeTests,
     updateRecipeTest,
     runRecipeTest,
     runAllRecipeTests,

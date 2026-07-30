@@ -261,23 +261,31 @@
 ### Componente: LineasPreciosPageClient
 
 - **Archivo**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
-- **Proposito**: CRUD del catalogo privado. Persiste pack `fabricationRecipePack` (+ espejo `fabricationRecipe`) al guardar la linea.
+- **Proposito**: CRUD del catalogo privado y estado visual de recetas persistidas. Abre el administrador tecnico por linea; no escribe nuevas recetas en metadata legacy.
 - **Usado en**: `/configuracion/empresa/lineas-precios`
-- **Dependencias**: wizard, `useCotizacionLineTemplates`, helpers de receta/pack.
+- **Dependencias**: wizard, `useCotizacionLineTemplates`, `useFabricationRecipes`.
 - **Riesgos**: No formulas/JSON. No mezclar pauta con precios/margen. No migraciones legacy sin aprobacion.
 
 ### Componente: LineTemplateFormWizard / FabricationRecipeEditor
 
 - **Archivos**: `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`
-- **Proposito**: Wizard de linea. Paso Fabricación: origen (plantilla L5000/L20/L25 | base tipológica | propia) → tipología/herraje → perfiles → barras; validación “Validé esta receta para mi taller”.
-- **Cuando modificarlos**: UX de origen/identidad de receta, variantes, estados. Plantillas viven en `fabrication-recipe-commercial-templates.ts`.
+- **Proposito**: Wizard comercial de linea. La configuracion `fabricationRecipePack` anterior se muestra deshabilitada como compatibilidad y deriva al administrador versionado.
+- **Cuando modificarlos**: Solo compatibilidad/lectura legacy. La escritura tecnica nueva vive en `src/features/fabricacion/components/`.
+
+### Componentes: FabricacionLineWorkspace / RecipeGuidedEditor / RecipeTestLab
+
+- **Archivos**: `src/features/fabricacion/components/fabricacion-line-workspace.tsx`, `recipe-guided-editor.tsx`, `recipe-test-lab.tsx`
+- **Proposito**: Administrar versiones por linea, editar identidad/perfiles/vidrios/accesorios con primitivas controladas y comparar esperado vs calculado con el motor deterministico.
+- **Usado en**: `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion`
+- **Dependencias**: `useFabricationRecipes`, schemas Zod, `calcularCubicacionYPauta()`.
+- **Riesgos**: No agregar textarea JSON, expresiones libres, `eval`, SQL, IA ni edicion directa de una version validada.
 
 ### Componente interno: PautaCubicacionPanel
 
 - **Archivo**: `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/pauta-cubicacion-panel.tsx`
-- **Proposito**: Panel **Cubicacion y pauta**. Resuelve receta del pack por tipología de pieza; selector herraje/variante si hay varias activas; tabla de cortes + barras referenciales; snapshot.
+- **Proposito**: Panel **Cubicacion y pauta**. Prioriza recetas persistidas `validated`, autoselecciona una compatible o muestra selector si hay varias, calcula snapshot formal y conserva adapter/fallback legacy.
 - **Usado en**: `PasoDosEditorDesktop`, despiece, sheets.
-- **Dependencias**: `selectRecipeForQuote`, `resolveRecipeFromMetadata`, snapshot helpers.
+- **Dependencias**: `useFabricationRecipes`, `resolverRecetasCompatibles`, `construirSnapshotFabricacion`, adapters y snapshot helpers legacy.
 - **Riesgos**: No re-pedir tipología. No precios en pauta. Barras = referencial.
 
 ### Componente: GuidedVisualComposer

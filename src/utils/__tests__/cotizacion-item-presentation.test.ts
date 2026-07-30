@@ -93,6 +93,13 @@ describe("cotizacion-item-presentation", () => {
       mirrorPaneCount: null,
       mirrorPaneDirection: "vertical",
       mirrorInteriorLine: "fine",
+      fabricacionTipologia: "",
+      fabricacionHojas: null,
+      fabricacionModulos: null,
+      fabricacionApertura: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+      fabricationRecipeId: "",
       raw: "Ventana living con vidrio claro",
     });
   });
@@ -137,6 +144,13 @@ describe("cotizacion-item-presentation", () => {
       mirrorPaneCount: null,
       mirrorPaneDirection: "vertical",
       mirrorInteriorLine: "fine",
+      fabricacionTipologia: "",
+      fabricacionHojas: null,
+      fabricacionModulos: null,
+      fabricacionApertura: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+      fabricationRecipeId: "",
       raw: "Cierre de terraza",
     });
   });
@@ -333,6 +347,13 @@ describe("cotizacion-item-presentation", () => {
       mirrorPaneCount: null,
       mirrorPaneDirection: "vertical",
       mirrorInteriorLine: "fine",
+      fabricacionTipologia: "",
+      fabricacionHojas: null,
+      fabricacionModulos: null,
+      fabricacionApertura: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+      fabricationRecipeId: "",
       raw: "",
     });
   });
@@ -377,6 +398,13 @@ describe("cotizacion-item-presentation", () => {
       mirrorPaneCount: null,
       mirrorPaneDirection: "vertical",
       mirrorInteriorLine: "fine",
+      fabricacionTipologia: "",
+      fabricacionHojas: null,
+      fabricacionModulos: null,
+      fabricacionApertura: "",
+      fabricacionHerraje: "",
+      fabricacionVariante: "",
+      fabricationRecipeId: "",
       raw: "Ventana corredera",
     });
   });
@@ -425,5 +453,31 @@ describe("cotizacion-item-presentation", () => {
     expect(decoded.guidedVisualConfig?.widthMm).toBe(1500);
     expect(decoded.guidedVisualConfig?.heightMm).toBe(1200);
     expect(decoded.guidedVisualConfig && countLeafModules(decoded.guidedVisualConfig.root)).toBe(1);
+  });
+
+  it("conserva el contexto tecnico explicito de la receta elegida", () => {
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#a8a8a8",
+      material: "Aluminio",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionModulos: 2,
+      fabricacionApertura: "corredera",
+      fabricacionHerraje: "caracol",
+      fabricacionVariante: "termopanel",
+      fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+    });
+
+    expect(decodeCotizacionItemPresentationMeta(encoded)).toEqual(
+      expect.objectContaining({
+        fabricacionTipologia: "corredera",
+        fabricacionHojas: 2,
+        fabricacionModulos: 2,
+        fabricacionApertura: "corredera",
+        fabricacionHerraje: "caracol",
+        fabricacionVariante: "termopanel",
+        fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+      })
+    );
   });
 });

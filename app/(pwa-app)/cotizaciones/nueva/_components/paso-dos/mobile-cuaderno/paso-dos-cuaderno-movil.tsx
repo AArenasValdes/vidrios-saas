@@ -57,6 +57,10 @@ const PRIMARY_CHIPS = [
   QUOTE_CONSTRUCTOR_DOOR_PRESETS[0],
 ].filter(Boolean);
 
+const MOBILE_MORE_PRESETS = QUOTE_CONSTRUCTOR_MORE_PRESETS.filter(
+  (preset) => preset.id !== "puerta_corredera"
+);
+
 function badgeClass(status: string) {
   if (status === "lista") return s.badgeLista;
   if (status === "falta_precio") return s.badgeFaltaPrecio;
@@ -572,7 +576,7 @@ export function PasoDosCuadernoMovil({
               <span>Elige el tipo de pieza para sumarla al constructor.</span>
             </div>
             <div className={s.presetSheetGrid}>
-              {[...PRIMARY_CHIPS, ...QUOTE_CONSTRUCTOR_MORE_PRESETS].map((preset) =>
+              {[...PRIMARY_CHIPS, ...MOBILE_MORE_PRESETS].map((preset) =>
                 preset ? (
                   <button
                     key={preset.id}

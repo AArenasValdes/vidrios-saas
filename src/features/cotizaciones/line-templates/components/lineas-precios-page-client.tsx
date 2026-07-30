@@ -11,9 +11,12 @@ import {
   LuEllipsisVertical,
   LuPlus,
   LuSearch,
+  LuSettings2,
   LuTrash2,
   LuUpload,
 } from "react-icons/lu";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import {
   buildLineTemplateCuttingPreview,
@@ -58,7 +61,6 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import {
   deriveRecipeStatus,
-  mergeFabricationRecipePackIntoMetadata,
   getFabricationRecipeFromMetadata,
   getFabricationRecipePackFromMetadata,
   RECIPE_STATUS_LABELS,
@@ -202,7 +204,10 @@ type TechnicalCardStatusTone =
   | "validated"
   | "review";
 
-function buildTechnicalCardStatus(template: CotizacionLineTemplate): {
+function buildTechnicalCardStatus(
+  template: CotizacionLineTemplate,
+  persistedRecipes: FabricationRecipeRecord[] = []
+): {
   tone: TechnicalCardStatusTone;
   label: string;
   detail: string;
@@ -212,6 +217,56 @@ function buildTechnicalCardStatus(template: CotizacionLineTemplate): {
   const wantsCutting = metadata?.cuttingEnabled === true;
   const recipe = getFabricationRecipeFromMetadata(metadata);
   const recipeStatus = recipe ? deriveRecipeStatus(recipe) : null;
+  const activePersisted = persistedRecipes.filter(
+    (entry) => entry.status !== "archived" && entry.eliminadoEn === null
+  );
+  const validatedPersisted = activePersisted.filter(
+    (entry) => entry.status === "validated"
+  );
+  const reviewPersisted = activePersisted.filter(
+    (entry) => entry.status === "review_required"
+  );
+  const testingPersisted = activePersisted.filter(
+    (entry) => entry.status === "testing"
+  );
+
+  if (validatedPersisted.length > 0) {
+    return {
+      tone: "validated",
+      label: "Pauta validada",
+      detail: `${validatedPersisted.length} ${
+        validatedPersisted.length === 1 ? "receta lista" : "recetas listas"
+      }`,
+    };
+  }
+
+  if (reviewPersisted.length > 0) {
+    return {
+      tone: "review",
+      label: "Revisar pauta",
+      detail: "Una version cambio despues de validar",
+    };
+  }
+
+  if (testingPersisted.length > 0) {
+    return {
+      tone: "testing",
+      label: "Pauta por probar",
+      detail: `${testingPersisted.length} ${
+        testingPersisted.length === 1 ? "receta en prueba" : "recetas en prueba"
+      }`,
+    };
+  }
+
+  if (activePersisted.length > 0) {
+    return {
+      tone: "draft",
+      label: "Pauta incompleta",
+      detail: `${activePersisted.length} ${
+        activePersisted.length === 1 ? "borrador" : "borradores"
+      }`,
+    };
+  }
 
   if (recipeStatus === "validada") {
     return {
@@ -304,6 +359,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     duplicateTemplate,
     deleteTemplate,
   } = useCotizacionLineTemplates();
+  const { recipes: fabricationRecipes } = useFabricationRecipes();
 
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("Todo");
@@ -805,19 +861,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       pricePerM2
     );
 
-    const withRecipe = mergeFabricationRecipePackIntoMetadata(
-      catalogMetadata,
-      draft.fabricationRecipePack ??
-        (draft.fabricationRecipe
-          ? {
-              v: 1 as const,
-              recipes: [draft.fabricationRecipe],
-              defaultRecipeId: draft.fabricationRecipe.id,
-              lastUsedRecipeId: null,
-            }
-          : null)
-    ) as typeof catalogMetadata;
-    Object.assign(catalogMetadata, withRecipe);
     if (pricePerM2 <= 0) {
       catalogMetadata.needsCommercialPrice = true;
     }
@@ -1117,7 +1160,15 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 const needsPrice = lineTemplateNeedsCommercialPrice(template);
                 const lineSystem = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
                 const lineContext = [template.proveedor, lineSystem].filter(Boolean).join(" · ");
-                const technicalStatus = buildTechnicalCardStatus(template);
+                const persistedRecipes = fabricationRecipes.filter(
+                  (recipe) =>
+                    recipe.scope === "organization" &&
+                    recipe.lineTemplateId === Number(template.id)
+                );
+                const technicalStatus = buildTechnicalCardStatus(
+                  template,
+                  persistedRecipes
+                );
 
                 return (
                   <article
@@ -1178,6 +1229,14 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                             className={s.menuPanel}
                             onClick={(event) => event.stopPropagation()}
                           >
+                            <Link
+                              href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
+                              className={s.menuAction}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <LuSettings2 aria-hidden />
+                              Cubicacion y pauta
+                            </Link>
                             <button
                               type="button"
                               className={s.menuAction}
@@ -1222,13 +1281,23 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                     </div>
 
                     <div className={s.technicalStatusRow}>
-                      <span
-                        className={s.technicalStatusPill}
-                        data-tech-status={technicalStatus.tone}
+                      <div>
+                        <span
+                          className={s.technicalStatusPill}
+                          data-tech-status={technicalStatus.tone}
+                        >
+                          {technicalStatus.label}
+                        </span>
+                        <span>{technicalStatus.detail}</span>
+                      </div>
+                      <Link
+                        href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
+                        className={s.technicalManageLink}
+                        onClick={(event) => event.stopPropagation()}
                       >
-                        {technicalStatus.label}
-                      </span>
-                      <span>{technicalStatus.detail}</span>
+                        Administrar
+                        <LuChevronRight aria-hidden />
+                      </Link>
                     </div>
 
                     <div className={s.cardDivider} />
@@ -1315,6 +1384,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           estimationSampleFrameMl={estimationSampleFrameMl}
           estimationSampleSashMl={estimationSampleSashMl}
           estimationAccessoryUnits={estimationAccessoryUnits}
+          technicalAdminHref={
+            sheetMode === "edit" && editingTemplateId !== null
+              ? `/configuracion/empresa/lineas-precios/${editingTemplateId}/fabricacion`
+              : null
+          }
         />
       ) : null}
     </div>

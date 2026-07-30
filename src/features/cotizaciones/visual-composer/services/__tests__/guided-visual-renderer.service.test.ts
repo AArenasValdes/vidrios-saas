@@ -164,6 +164,42 @@ describe("guided-visual-renderer V2", () => {
     expect(thumb).not.toContain("rgba(30, 136, 255");
   });
 
+  it("mantiene seleccion y label contenidos en modulos delgados", () => {
+    let config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+    const rootId = listLeafModules(config.root)[0].id;
+    config = splitModule(config, rootId, "horizontal", 0.28);
+    const topId = listLeafModules(config.root)[0].id;
+    const bottomId = listLeafModules(config.root)[1].id;
+
+    const layout = calculateGuidedVisualLayout(config, {
+      maxW: 360,
+      maxH: 268,
+      variant: "editor",
+      showSelection: true,
+    });
+    const top = layout.modules[0];
+    const selectedTop = renderGuidedVisualSvg(selectGuidedNode(config, topId), {
+      maxW: 360,
+      maxH: 268,
+      variant: "editor",
+      showSelection: true,
+    });
+    const selectedBottom = renderGuidedVisualSvg(selectGuidedNode(config, bottomId), {
+      maxW: 360,
+      maxH: 268,
+      variant: "editor",
+      showSelection: true,
+    });
+
+    const selectionMatch = selectedTop.match(/data-guided-selection="stroke" d="([^"]+)"/);
+    const originalTopLeft = `M ${Math.round(top.x * 10) / 10} ${Math.round(top.y * 10) / 10}`;
+    const centeredLabelY = Math.round((top.y + top.h / 2 + 4) * 10) / 10;
+    expect(selectionMatch?.[1]).toBeTruthy();
+    expect(selectionMatch?.[1]).not.toContain(originalTopLeft);
+    expect(selectedBottom).toContain(">Fijo</text>");
+    expect(selectedBottom).toContain(`y="${centeredLabelY}"`);
+  });
+
   it("dibuja una corredera con hojas de aluminio y encuentro central robusto", () => {
     let config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
     const moduleId = listLeafModules(config.root)[0].id;

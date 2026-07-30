@@ -158,6 +158,15 @@ describe("PasoDosCuadernoMovil", () => {
     expect(onAddPreset).toHaveBeenCalledWith("corredera", undefined);
   });
 
+  it("no ofrece puerta corredera como preset redundante en movil", () => {
+    render(<PasoDosCuadernoMovil {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Agregar pieza" }));
+
+    expect(screen.getByRole("button", { name: "Puerta abatible" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Puerta corredera" })).not.toBeInTheDocument();
+  });
+
   it("aplica la linea comun a piezas existentes", () => {
     render(
       <PasoDosCuadernoMovil
@@ -449,6 +458,57 @@ describe("PasoDosCuadernoMovil", () => {
       type: "abatible",
       openingSide: "right",
     });
+  });
+
+  it("ofrece puerta abatible en mas tipos y oculta puerta corredera en composicion", () => {
+    render(<PasoDosCuadernoMovil {...defaultProps} items={[baseItem()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mas tipos" }));
+
+    expect(
+      screen.getByRole("button", { name: "Cambiar modulo M1 a Puerta abatible" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Cambiar modulo M1 a Puerta corredera" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("permite ajustar el tamano de la division seleccionada", () => {
+    render(<PasoDosCuadernoMovil {...defaultProps} items={[baseItem()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partir alto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agrandar M2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Usar esta composicion" }));
+
+    const patch = onUpdateItem.mock.calls.at(-1)?.[1] as { guidedVisualConfig: GuidedVisualConfig };
+    expect(patch.guidedVisualConfig.root).toMatchObject({
+      kind: "split",
+      direction: "horizontal",
+      ratio: expect.any(Number),
+    });
+    expect((patch.guidedVisualConfig.root as { ratio: number }).ratio).toBeLessThan(0.5);
+  });
+
+  it("crea mampara abatible con fijo superior y dos hojas desde plantilla movil", () => {
+    render(<PasoDosCuadernoMovil {...defaultProps} items={[baseItem()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
+    expect(screen.queryByRole("button", { name: "Fijo arriba + 2 puertas" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar modulo M1 a Abatible" }));
+    fireEvent.click(screen.getByRole("button", { name: "Fijo arriba + 2 puertas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Usar esta composicion" }));
+
+    const patch = onUpdateItem.mock.calls.at(-1)?.[1] as { guidedVisualConfig: GuidedVisualConfig };
+    const modules = listLeafModules(patch.guidedVisualConfig.root);
+    expect(modules).toHaveLength(3);
+    expect(modules[0]?.type).toBe("fijo");
+    expect(modules[1]).toMatchObject({ type: "puerta", openingSide: "left" });
+    expect(modules[2]).toMatchObject({ type: "puerta", openingSide: "right" });
   });
 
   it("el menu permite pedir eliminacion", () => {

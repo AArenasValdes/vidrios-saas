@@ -238,7 +238,7 @@
 - **Proposito**: Formulario guiado de nueva cotizacion y escritorio desktop para construir cotizaciones completas.
 - **Usuario objetivo**: Admin/vendedor autenticado
 - **Funcionalidades visibles**: Formulario multi-paso (Cliente, Componentes, Resumen), selector `por_item` / `total_global`, guardado de borrador y presupuesto. En desktop `>=1024px`, Paso 2 ofrece **Cotización rápida** (cuaderno) y **Cotización guiada** sobre el mismo `draft.items`. Rápida incluye siete presets — Fijo, Corredera, Abatible, Oscilobatiente, Proyectante, Puerta y Paño libre —, línea base opcional para nuevas piezas y aplicación explícita a piezas existentes, tablero cuadriculado, tarjetas seleccionables, medidas/cantidad/nombre editables, duplicado, eliminación, reordenamiento, progreso e inspector de línea, vidrio, material, color, apertura y precio. Entre 1024 y 1279 px el inspector baja bajo el tablero; el panel financiero usa scroll natural. La paleta reutiliza `COLOR_OPTIONS`. El editor avanzado de una pieza sigue disponible mediante **Personalizado -> Abrir constructor**. Los productos de cristal guardados (`categoria='vidrio'`) pueden agregarse sin perfilería. En **Espejo** y **Cubierta de mesa** no se pide material ni color de perfil. En mobile, Paso 2 tiene selector inicial **Cotizar por items** / **Cuadernillo digital**; en `por_item` se puede trabajar como **Guiada** o **Constructor**. El Constructor mobile monta `mobile-cuaderno/`, lista piezas compactas, aplica línea global, edita material/color/línea/vidrio/precio y abre composición full-screen sobre el mismo `draft.items`.
-- **Fase 4 visible en desktop (V1 vendible 2026-07-24)**: panel **Cubicacion y pauta** con tabla editable, Recalcular / Restaurar / Agregar corte, snapshot [cub:] v2. Filtra recetas del pack por tipología de la pieza; pide herraje/variante solo si hay varias activas. Barras = distribución referencial. Calibración con piloto real sigue pendiente.
+- **Fase 4 tecnica (2026-07-30)**: el panel **Cubicacion y pauta** consulta primero `fabrication_recipes` validadas. Con una compatible la selecciona automaticamente; con varias exige elegir receta/variante/herraje; sin receta no bloquea la cotizacion. Guarda contexto tecnico explicito y `fabricacion_snapshot` inmutable. `[cub:]` queda como fallback legacy.
 - **Componentes principales**: `PasoDosSeccion`, `QuoteConstructorWorkspace`, `GuidedVisualComposer`, `PasoDosWizardMovil`, `PasoDosCuadernoMovil`, `CuadernoQuickEditSheet`, `CuadernoComposicionMovil` e internos de la página.
 - **Nota onboarding 2026-06-19**: La entrada inicial debe priorizar `Cotizacion rapida` (`total_global`) y mostrar exito/resumen de PDF antes de pedir datos de empresa. No volver a montar Joyride contextual en esta ruta.
 - **Hooks**: `useCotizacionesStore`, `useOrganizationProfile`
@@ -408,15 +408,28 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: CRUD del catálogo privado (precios) + configuración de **recetas de fabricación** (pack en `catalog_metadata`)
+- **Proposito**: CRUD del catálogo privado (precios) y acceso al administrador separado de recetas de fabricación.
 - **Usuario objetivo**: Admin autenticado
-- **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`, `FabricationRecipeEditor`
-- **Hooks**: `useCotizacionLineTemplates`
-- **Tablas Supabase relacionadas**: `cotizacion_line_templates`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas; wizard Fabricación: plantilla sugerida (L5000/L20/L25) | base tipológica | propia; validar receta; importar
-- **UX (2026-07-24)**: paso Fabricación con identidad de receta arriba + origen plantilla/base/propia. Las plantillas **no** aparecen como filas del listado: se eligen al editar una línea en uso “Cubicación y pauta”.
+- **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`
+- **Hooks**: `useCotizacionLineTemplates`, `useFabricationRecipes`
+- **Tablas Supabase relacionadas**: `cotizacion_line_templates`, `fabrication_recipes`
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas; distinguir visualmente Sin configurar / En prueba / Validada; abrir **Administrar**.
+- **UX (2026-07-30)**: linea comercial y receta quedan separadas. El wizard no escribe nuevas recetas en `catalog_metadata`; muestra la configuracion antigua como solo lectura y deriva al modulo versionado.
 - **Archivos a tocar**: `lineas-precios-page-client.tsx`, `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`, `fabrication-recipe*.ts`, resto de `line-templates/**`
 - **Riesgos**: Migración catalog extendida requerida. No precios en pauta, no optimizador/nesting/CAD/inventario. No llamar “verificadas” a L5000/L20/L25. No mostrar formulas/JSON al usuario.
+
+---
+
+## Ruta: /configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion
+
+- **Tipo**: Privada (autenticada), dinamica
+- **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion/page.tsx`
+- **Proposito**: Administrar recetas versionadas de una linea, duplicar bases Ventora, editar componentes con reglas controladas, ejecutar casos reales y validar versiones.
+- **Componentes principales**: `FabricacionLineWorkspace`, `RecipeGuidedEditor`, `RecipeTestLab`
+- **Hooks**: `useFabricationRecipes`, `useCotizacionLineTemplates`
+- **Tablas Supabase relacionadas**: `fabrication_recipes`, `fabrication_recipe_tests`, `cotizacion_line_templates`
+- **Acciones principales**: Crear, editar borrador, duplicar, versionar, archivar, guardar casos obligatorios/opcionales, ejecutar motor deterministico y validar.
+- **Riesgos**: No exponer JSON, formulas libres ni codigo ejecutable. Una version `validated` es solo lectura. No confundir receta Ventora con receta validada por el taller.
 
 ---
 

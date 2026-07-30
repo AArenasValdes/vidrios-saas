@@ -71,7 +71,7 @@ pagina/componente -> hook -> service -> repository -> Supabase
   2. Fase 3 constructor V2/cuaderno — usable; handoff `CONSTRUCTOR_DESKTOP_HANDOFF.md`;
   2b. Mobile Paso 2 tiene Constructor propio para `por_item` en `mobile-cuaderno/`, separado del workspace desktop y sobre el mismo `draft.items`;
   3. Pasada diseño desktop (shell/listados/detalles/catálogo) cerrada por ahora;
-  4. **Fase actual:** Fase 4 — **V1 vendible multi-tipología** (pack de recetas, plantillas L5000/L20/L25 sugeridas, bases pendientes, print fabricación). Giro: `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`. Handoff: `CUBICACION_PAUTA_HANDOFF.md`;
+  4. **Fase actual:** Fase 4 — **módulo técnico esencial** (`fabrication_recipes`, laboratorio, versionado, selector de receta validada y snapshot formal). Pack metadata y `[cub:]` quedan como compatibilidad; sin IA ni optimización de barras;
   5. CRM/Kanban — no abrir.
 - Desktop no esta abriendo pipeline CRM, oportunidades, cobros ni multiusuario en esta etapa.
 

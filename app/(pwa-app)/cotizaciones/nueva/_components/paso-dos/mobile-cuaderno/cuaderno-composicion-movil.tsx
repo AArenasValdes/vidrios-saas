@@ -28,6 +28,7 @@ import {
   splitModule,
   updateModuleGlassShape,
   updateModuleOpeningSide,
+  updateSplitRatio,
   updateModuleType,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
@@ -43,6 +44,11 @@ type Props = {
 const PRIMARY_CHIPS = QUOTE_CONSTRUCTOR_PRIMARY_PRESETS.filter(
   (preset) => preset.id !== "pano_libre"
 );
+
+const MOBILE_MORE_TYPE_CHIPS = [
+  ...QUOTE_CONSTRUCTOR_MORE_PRESETS.filter((preset) => preset.id !== "puerta_corredera"),
+  { id: "puerta" as const, label: "Puerta abatible" },
+];
 
 const REFLECTABLE_MODULE_TYPES = new Set<QuoteConstructorPresetId>([
   "abatible",
@@ -99,6 +105,18 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
   const openingSide = selectedModule?.openingSide === "right" ? "right" : "left";
   const openingSideLabel = openingSide === "right" ? "der." : "izq.";
   const nextOpeningSideLabel = openingSide === "right" ? "izq." : "der.";
+  const showDoubleDoorTemplate =
+    selectedModule?.type === "abatible" || selectedModule?.type === "puerta";
+  const parentSplit = selectedModule ? findParentSplit(config.root, selectedModule.id) : null;
+  const selectedIsFirstChild = Boolean(
+    parentSplit && selectedModule && parentSplit.first.id === selectedModule.id
+  );
+  const selectedModuleShare = parentSplit
+    ? selectedIsFirstChild
+      ? parentSplit.ratio
+      : 1 - parentSplit.ratio
+    : 1;
+  const selectedModuleShareLabel = Math.round(selectedModuleShare * 100);
 
   const svg = useMemo(
     () =>
@@ -147,6 +165,13 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     history.setConfig(splitModule(configWithDraftDimensions(), selectedModule.id, orientation, 0.5));
   };
 
+  const resizeSelectedModule = (delta: number) => {
+    if (!selectedModule || !parentSplit) return;
+    const nextShare = Math.max(0.12, Math.min(0.88, selectedModuleShare + delta));
+    const nextRatio = selectedIsFirstChild ? nextShare : 1 - nextShare;
+    history.setConfig(updateSplitRatio(configWithDraftDimensions(), parentSplit.id, nextRatio));
+  };
+
   const selectModule = (moduleId: string) => {
     history.setConfig(selectGuidedNode(configWithDraftDimensions(), moduleId));
   };
@@ -177,6 +202,28 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     setWidthDraft(null);
     setHeightDraft(null);
     history.setConfig(resetGuidedComposition(config));
+  };
+
+  const applyTopFixedDoubleDoorPreset = () => {
+    const base = resetGuidedComposition(configWithDraftDimensions());
+    const rootModule = listLeafModules(base.root)[0];
+    if (!rootModule) return;
+
+    let next = splitModule(base, rootModule.id, "horizontal", 0.28);
+    const bottomModule = listLeafModules(next.root)[1];
+    if (!bottomModule) return;
+
+    next = splitModule(next, bottomModule.id, "vertical", 0.5);
+    const leaves = listLeafModules(next.root);
+    const leftDoor = leaves[1];
+    const rightDoor = leaves[2];
+    if (!leftDoor || !rightDoor) return;
+
+    next = updateModuleType(next, leftDoor.id, "puerta");
+    next = updateModuleType(next, rightDoor.id, "puerta");
+    next = updateModuleOpeningSide(next, leftDoor.id, "left");
+    next = updateModuleOpeningSide(next, rightDoor.id, "right");
+    history.setConfig(selectGuidedNode(next, leftDoor.id));
   };
 
   const setFrameShape = (shape: "rect" | "arch_top" | "rounded") => {
@@ -292,6 +339,25 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
                 Igualar
               </button>
             </div>
+            {parentSplit ? (
+              <div className={s.resizeStrip} aria-label={`Ajustar tamano de M${moduleIndex}`}>
+                <button
+                  type="button"
+                  className={s.resizeBtn}
+                  onClick={() => resizeSelectedModule(-0.08)}
+                >
+                  Achicar M{moduleIndex}
+                </button>
+                <span>{selectedModuleShareLabel}%</span>
+                <button
+                  type="button"
+                  className={s.resizeBtn}
+                  onClick={() => resizeSelectedModule(0.08)}
+                >
+                  Agrandar M{moduleIndex}
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className={s.compPreviewBlock}>
@@ -408,7 +474,7 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
 
           {showMore ? (
             <div className={s.morePanel}>
-              {QUOTE_CONSTRUCTOR_MORE_PRESETS.map((preset) => (
+              {MOBILE_MORE_TYPE_CHIPS.map((preset) => (
                 <button
                   key={preset.id}
                   type="button"
@@ -424,6 +490,22 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
             </div>
           ) : null}
         </div>
+
+        {showDoubleDoorTemplate ? (
+          <div className={s.constructorControlGroup}>
+            <div className={s.sheetSectionHead}>
+              <strong>Composicion rapida</strong>
+              <span>Para mampara abatible con fijo superior.</span>
+            </div>
+            <button
+              type="button"
+              className={s.wideTemplateBtn}
+              onClick={applyTopFixedDoubleDoorPreset}
+            >
+              Fijo arriba + 2 puertas
+            </button>
+          </div>
+        ) : null}
 
         <div className={s.constructorControlGroup}>
           <div className={s.sheetSectionHead}>

@@ -88,12 +88,13 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 - **Proposito**: Catálogo privado comercial por organización: líneas, costos, precios, mínimos y reglas de cobro para cotización asistida
 - **Campos importantes**: `id` (bigint PK), `organization_id` (FK), `nombre`, `categoria` (CHECK: aluminio/pvc/vidrio/shower/accesorios/otros), `unidad_cobro` (CHECK: m2/metro_lineal/unidad/valor_manual), `material` (Aluminio/PVC/Cristal), `costo_base`, `precio_m2_sugerido`, `minimo_cobrable`, `redondeo_precio` (DEFAULT 1000), `merma_pct`, `margen_objetivo_pct`, `proveedor`, `vigencia_desde`, `vigencia_hasta`, `catalog_metadata` (jsonb; para `categoria='vidrio'` guarda `espesor` y `terminacion`), `vidrio_principal_recomendado`, `is_active`, `sort_order`, `creado_en`, `actualizado_en`, `eliminado_en`
-- **Metadata Fase 4 vigente (`catalog_metadata`, sin tabla nueva)**:
+- **Metadata tecnica legacy (`catalog_metadata`, solo lectura/compatibilidad desde Fase 4 2026-07-30)**:
   - **Pack de recetas (2026-07-24)**: `fabricationRecipePack` `{ v:1, recipes[], defaultRecipeId, lastUsedRecipeId }`; espejo `fabricationRecipe` (receta activa/default).
   - Por receta: `id`, `recipeVersion`, `aperturaTipo`, `herrajeTipo`, `herrajeLabel`, `isActive`, `usageCount`/`lastUsedAt`, `sourceKind`, componentes, barras, estados de receta.
   - Helpers: `getFabricationRecipePackFromMetadata()`, `mergeFabricationRecipePackIntoMetadata()`, `selectRecipeForQuote()`, `parseFabricationRecipe()`.
   - Legacy Camino 2 (migración): `cubicationSystem`, `cubicationStatus`, perfiles por rol, deductions, `cuttingEnabled`… — helpers `getLineTemplateCubicationConfig()` / `buildLineTemplateCuttingPreview()`.
-  - Snapshot cotización: bridge `[cub:]` v2 en `cotizacion_items.observaciones` (incluye receta congelada).
+  - Snapshot historico: bridge `[cub:]` v2 en `cotizacion_items.observaciones`.
+- **Escritura tecnica vigente**: recetas/versiones en `fabrication_recipes`, casos en `fabrication_recipe_tests` y snapshot por pieza en `cotizacion_items.fabricacion_snapshot`. No escribir nuevas recetas en `catalog_metadata`.
 - **No ampliar** tipologías de venta en el catálogo (bow, etc.): van al constructor. Plantillas comerciales L5000/L20/L25 viven en código (`fabrication-recipe-commercial-templates.ts`), no como filas de catálogo.
 - **No confundir**: `catalog_metadata.lineSystem` (texto comercial opcional) ≠ `cubicationSystem` (partida de estimación V1).
 - **Snapshot por pieza**: nuevo `cotizacion_items.fabricacion_snapshot` para recetas de `src/features/fabricacion/`; fallback de lectura `[cub:]` para historicos. Helpers nuevos: `fabricacion-cotizacion-snapshot.service.ts` y `fabrication-quote-summary.ts`.
@@ -107,10 +108,10 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ### Tabla: fabrication_recipes
 
-- **Estado**: Implementada y aplicada en Supabase remoto `yrtrwgkaopfumpidjthk` el 2026-07-30 con `20260729230407_fabrication_recipes_persistence`; grants endurecidos por `20260730001306_harden_fabrication_recipe_grants`. Fase 3 conecta seleccion/calculo al snapshot de cotizacion, pero no conecta IA ni UI final.
+- **Estado**: Implementada en remoto con `20260729230407_fabrication_recipes_persistence`, grants `20260730001306_harden_fabrication_recipe_grants` y metadatos Fase 4 `20260730003756_fabrication_recipe_validation_metadata`. Fase 4 agrega UI guiada y selector en cotizacion; no conecta IA.
 - **Proposito**: Persistir recetas de fabricacion versionadas para el dominio `src/features/fabricacion/`. Separa linea comercial (`cotizacion_line_templates`) de receta tecnica.
-- **Campos importantes**: `id` (uuid PK), `organization_id` (bigint nullable), `line_template_id` (bigint nullable FK a `cotizacion_line_templates`), `scope` (`ventora|organization`), `provider_name`, `line_name`, `typology`, `leaves_count`, `variant`, `version`, `status` (`draft|testing|validated|review_required|archived`), `definition` (jsonb validado con Zod antes de guardar), `source_type` (`manual|copied|imported_ai|legacy`), `source_reference`, `parent_recipe_id`, `validated_at`, `created_at`, `updated_at`, `eliminado_en`.
-- **Reglas**: `scope='ventora'` exige `organization_id IS NULL`; `scope='organization'` exige `organization_id`. Una receta validada no se modifica directamente: cambios deben crear una nueva version privada con `parent_recipe_id`.
+- **Campos importantes**: `id` (uuid PK), `organization_id` (bigint nullable), `line_template_id` (bigint nullable FK a `cotizacion_line_templates`), `scope` (`ventora|organization`), `provider_name`, `line_name`, `typology`, `leaves_count`, `variant`, `version`, `status` (`draft|testing|validated|review_required|archived`), `definition` (jsonb validado con Zod antes de guardar), `source_type` (`manual|copied|imported_ai|legacy`), `source_reference`, `parent_recipe_id`, `validated_at`, `validated_by` (auth.users), `created_at`, `updated_at`, `eliminado_en`.
+- **Reglas**: `scope='ventora'` exige `organization_id IS NULL`; `scope='organization'` exige `organization_id`. Una receta validada no se modifica directamente: cambios deben crear una nueva version privada con `parent_recipe_id`. Al pasar a `validated`, se exige `validated_at` y, para sesiones autenticadas, `validated_by = auth.uid()`.
 - **RLS**: lectura authenticated de recetas Ventora activas y recetas privadas de la organizacion; insert/update solo recetas `organization` con `organization_id = get_org_id()`. No hay delete directo; archivar usa soft delete + `status='archived'`.
 - **Relaciones**: N:1 organizations para privadas, N:1 cotizacion_line_templates opcional, self-FK por version/derivacion, 1:N fabrication_recipe_tests.
 - **Usada por**: `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`, `src/features/fabricacion/services/fabrication-recipes.service.ts`, `src/features/fabricacion/services/fabricacion-receta-resolver.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`.
@@ -121,13 +122,13 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ### Tabla: fabrication_recipe_tests
 
-- **Estado**: Implementada y aplicada en Supabase remoto `yrtrwgkaopfumpidjthk` el 2026-07-30 con `20260729230407_fabrication_recipes_persistence`; grants endurecidos por `20260730001306_harden_fabrication_recipe_grants`.
+- **Estado**: Implementada en remoto con migracion base `20260729230407`, grants `20260730001306` y flag obligatorio/opcional `20260730003756`.
 - **Proposito**: Guardar casos de prueba versionados por receta. Permite ejecutar `calcularCubicacionYPauta()` contra inputs conocidos y bloquear validacion si algun caso falla.
-- **Campos importantes**: `id` (uuid PK), `recipe_id` (uuid FK), `organization_id` (bigint nullable sincronizado desde la receta), `name`, `input` (jsonb validado con schema de entrada), `expected_output` (jsonb validado con schema de resultado), `actual_output`, `passed`, `validated_by` (auth.users), `created_at`, `updated_at`, `eliminado_en`.
+- **Campos importantes**: `id` (uuid PK), `recipe_id` (uuid FK), `organization_id` (bigint nullable sincronizado desde la receta), `name`, `input` (jsonb validado con schema de entrada), `expected_output` (jsonb validado con schema de resultado), `actual_output`, `passed`, `is_required`, `validated_by` (auth.users), `created_at`, `updated_at`, `eliminado_en`.
 - **RLS**: lectura authenticated si la receta visible es Ventora o privada de la organizacion. Insert/update solo en pruebas de recetas privadas de la organizacion. Tests de recetas Ventora quedan para seed/admin con service role.
 - **Relaciones**: N:1 fabrication_recipes, N:1 organizations para recetas privadas, N:1 auth.users en `validated_by`.
 - **Usada por**: `src/features/fabricacion/repositories/fabrication-recipe-tests.repository.ts`, `src/features/fabricacion/services/fabrication-recipes.service.ts`.
-- **Riesgos**: `expected_output` debe representar el resultado deterministico esperado; si cambia el motor por una correccion real, actualizar casos y versionar recetas, no sobreescribir historicos validados sin revision.
+- **Riesgos**: `expected_output` debe representar el resultado deterministico esperado; solo casos `is_required=true` bloquean validacion. Una prueba aprobada por sesion autenticada exige `validated_by = auth.uid()`. Si cambia el motor por una correccion real, actualizar casos y versionar recetas.
 
 ---
 

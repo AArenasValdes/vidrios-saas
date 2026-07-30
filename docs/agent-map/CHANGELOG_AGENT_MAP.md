@@ -4,6 +4,17 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-07-30 - Fase 4 fabricacion: administrador guiado y selector de receta
+
+- Se agrego `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` con listado de versiones, duplicado Ventora, editor guiado, laboratorio esperado/calculado, casos obligatorios/opcionales, versionado, archivo y validacion.
+- Las tarjetas de lineas distinguen Sin configurar / En prueba / Validada y derivan al administrador. El wizard comercial deja la receta legacy como solo lectura y ya no escribe nuevos `fabricationRecipePack`/`fabricationRecipe`.
+- `/cotizaciones/nueva` usa recetas persistidas `validated`: autoselecciona una compatible, pide eleccion cuando hay varias y no bloquea cuando no existe receta. Persiste tipologia/hojas/modulos/apertura/herraje/variante/recipe id y snapshot formal inmutable.
+- Se aplico remotamente `20260730003756_fabrication_recipe_validation_metadata`: `fabrication_recipes.validated_by`, `fabrication_recipe_tests.is_required` y triggers de identidad del validador.
+- Compatibilidad preservada: lectura de `fabricationRecipePack`, `fabricationRecipe` y `[cub:]`; sin cambios en PDF comercial, WhatsApp, precios, IA, Storage ni tablas tecnicas legacy.
+- QA: TypeScript y lint focalizado pasan; suite completa 170/170 y 1007/1007; build Next de produccion pasa. El lint global mantiene deuda previa fuera de esta fase.
+
+---
+
 ## 2026-07-30 - Cierre remoto Fase 3 fabricacion
 
 - Se aplicaron en Supabase remoto `yrtrwgkaopfumpidjthk` las migraciones `20260729230407_fabrication_recipes_persistence` y `20260729234019_cotizacion_items_fabricacion_snapshot`.

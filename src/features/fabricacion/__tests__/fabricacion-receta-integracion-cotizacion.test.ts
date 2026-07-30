@@ -43,6 +43,7 @@ function recipeRecord(
     sourceReference: overrides.sourceReference ?? null,
     parentRecipeId: overrides.parentRecipeId ?? null,
     validatedAt: overrides.validatedAt ?? "2026-07-29T00:00:00.000Z",
+    validatedBy: overrides.validatedBy ?? null,
     createdAt: overrides.createdAt ?? "2026-07-29T00:00:00.000Z",
     updatedAt: overrides.updatedAt ?? "2026-07-29T00:00:00.000Z",
     eliminadoEn: overrides.eliminadoEn ?? null,
@@ -84,6 +85,46 @@ describe("integracion receta fabricacion -> cotizacion", () => {
 
     expect(result.estado).toBe("multiples_recetas");
     expect(result.candidatas).toHaveLength(2);
+  });
+
+  it("respeta la receta elegida y conserva solo la version validada mas nueva", () => {
+    const oldVersion = recipeRecord({ id: "old", version: 1 });
+    const newVersion = recipeRecord({ id: "new", version: 2 });
+    const termopanel = recipeRecord({
+      id: "termopanel",
+      definition: validatedDefinition({
+        recetaId: "termopanel",
+        variante: "termopanel",
+      }),
+      variant: "termopanel",
+    });
+
+    const automatic = resolverRecetaFabricacionCompatible(
+      [oldVersion, newVersion],
+      {
+        organizationId: 1,
+        lineTemplateId: 10,
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+      }
+    );
+    const selected = resolverRecetaFabricacionCompatible(
+      [newVersion, termopanel],
+      {
+        organizationId: 1,
+        lineTemplateId: 10,
+        tipologia: "corredera",
+        hojas: 2,
+        modulos: 2,
+        preferredRecipeId: "termopanel",
+      }
+    );
+
+    expect(automatic.estado).toBe("receta_unica");
+    expect(automatic.receta?.id).toBe("new");
+    expect(selected.estado).toBe("receta_unica");
+    expect(selected.receta?.id).toBe("termopanel");
   });
 
   it("nunca usa una receta incompatible como fallback silencioso", () => {

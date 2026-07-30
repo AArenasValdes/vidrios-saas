@@ -602,34 +602,45 @@ function drawSelectionChrome(
   const baseY = module.y;
   const baseW = module.w;
   const baseH = module.h;
-  const pad = Math.max(1.5, scale.halo * 0.28);
+  const maxInset = Math.min(baseW, baseH) * 0.22;
+  const inset = Math.max(2.5, Math.min(maxInset, scale.sash * 0.55 + 2));
+  const haloStroke = Math.max(2, Math.min(scale.halo, inset * 0.72));
   const fillPath = buildGuidedGlassPathPx(
-    baseX,
-    baseY,
-    baseW,
-    baseH,
+    baseX + inset,
+    baseY + inset,
+    Math.max(0, baseW - inset * 2),
+    Math.max(0, baseH - inset * 2),
     module.glassShape,
     pxPerMm
   );
   const strokePath = buildGuidedGlassPathPx(
-    baseX + pad,
-    baseY + pad,
-    Math.max(0, baseW - pad * 2),
-    Math.max(0, baseH - pad * 2),
+    baseX + inset,
+    baseY + inset,
+    Math.max(0, baseW - inset * 2),
+    Math.max(0, baseH - inset * 2),
     module.glassShape,
     pxPerMm
   );
-  const badgeH = 18;
-  const badgeW = 34;
-  const badgeX = baseX + 8;
-  const badgeY = baseY + 8;
-  return [
-    `<path d="${fillPath}" fill="${palette.selectionFill}" stroke="none" />`,
-    `<path d="${strokePath}" fill="none" stroke="#FFFFFF" stroke-width="${px(scale.halo)}" ${PROFILE_JOIN} />`,
-    `<path d="${strokePath}" fill="none" stroke="${palette.selection}" stroke-width="${px(scale.selection)}" ${PROFILE_JOIN} />`,
-    `<rect x="${px(badgeX)}" y="${px(badgeY)}" width="${px(badgeW)}" height="${px(badgeH)}" rx="0" ry="0" fill="${palette.selection}" stroke="none" />`,
-    `<text x="${px(badgeX + badgeW / 2)}" y="${px(badgeY + 13)}" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF" font-family="ui-sans-serif, system-ui, sans-serif">M${module.leafIndex + 1}</text>`,
-  ].join("");
+  const parts = [
+    `<path data-guided-selection="fill" d="${fillPath}" fill="${palette.selectionFill}" stroke="none" />`,
+    `<path data-guided-selection="halo" d="${strokePath}" fill="none" stroke="#FFFFFF" stroke-width="${px(haloStroke)}" ${PROFILE_JOIN} />`,
+    `<path data-guided-selection="stroke" d="${strokePath}" fill="none" stroke="${palette.selection}" stroke-width="${px(scale.selection)}" ${PROFILE_JOIN} />`,
+  ];
+
+  if (baseW > 54 && baseH > 44) {
+    const compact = baseH < 62;
+    const badgeH = compact ? 14 : 18;
+    const badgeW = compact ? 28 : 34;
+    const fontSize = compact ? 9 : 11;
+    const badgeX = baseX + inset + 2;
+    const badgeY = baseY + inset + 2;
+    parts.push(
+      `<rect data-guided-selection="badge" x="${px(badgeX)}" y="${px(badgeY)}" width="${px(badgeW)}" height="${px(badgeH)}" rx="0" ry="0" fill="${palette.selection}" stroke="none" />`,
+      `<text x="${px(badgeX + badgeW / 2)}" y="${px(badgeY + (compact ? 10 : 13))}" text-anchor="middle" font-size="${fontSize}" font-weight="700" fill="#FFFFFF" font-family="ui-sans-serif, system-ui, sans-serif">M${module.leafIndex + 1}</text>`
+    );
+  }
+
+  return parts.join("");
 }
 
 function drawModuleCue(
@@ -1287,8 +1298,12 @@ export function renderGuidedVisualSvg(
           `<text x="${px(layoutModule.x + 8)}" y="${px(layoutModule.y + 16)}" font-size="11" font-weight="700" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">M${layoutModule.leafIndex + 1}</text>`
         );
         if (layoutModule.w > 78 && layoutModule.h > 48) {
+          const labelY =
+            layoutModule.h < 72
+              ? layoutModule.y + layoutModule.h / 2 + 4
+              : layoutModule.y + Math.min(28, layoutModule.h * 0.24);
           body.push(
-            `<text x="${px(layoutModule.x + layoutModule.w / 2)}" y="${px(layoutModule.y + Math.min(28, layoutModule.h * 0.24))}" text-anchor="middle" font-size="11" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">${escapeXml(layoutModule.label)}</text>`
+            `<text x="${px(layoutModule.x + layoutModule.w / 2)}" y="${px(labelY)}" text-anchor="middle" font-size="11" fill="${palette.label}" font-family="ui-sans-serif, system-ui, sans-serif">${escapeXml(layoutModule.label)}</text>`
           );
         }
       } else if (variant === "pdf" || variant === "summary") {

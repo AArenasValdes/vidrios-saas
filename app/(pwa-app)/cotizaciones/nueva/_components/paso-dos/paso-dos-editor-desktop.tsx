@@ -1032,6 +1032,17 @@ function TabDespiece({
           onFabricationRecipeIdChange={(recipeId) =>
             onComponentChange("fabricationRecipeId", recipeId)
           }
+          onFabricacionSnapshotChange={(snapshot) =>
+            onComponentChange("fabricacionSnapshot", snapshot)
+          }
+          onFabricacionContextoChange={(context) => {
+            onComponentChange("fabricacionTipologia", context.tipologia);
+            onComponentChange("fabricacionHojas", context.hojas);
+            onComponentChange("fabricacionModulos", context.modulos);
+            onComponentChange("fabricacionApertura", context.apertura);
+            onComponentChange("fabricacionHerraje", context.herraje);
+            onComponentChange("fabricacionVariante", context.variante);
+          }}
           onSaveCubicationLineAdjustment={onSaveCubicationLineAdjustment}
           isSavingCubicationLineAdjustment={isSavingCubicationLineAdjustment}
           lineSelectionHint="precio"

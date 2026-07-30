@@ -32,6 +32,7 @@ export type FabricacionIdentidadReceta = {
   tipologia: FabricacionTipologia;
   hojas: number;
   modulos: number;
+  apertura?: string | null;
   herraje: string | null;
   variante: string;
 };
@@ -83,6 +84,7 @@ export type FabricacionComponentePerfil = {
   codigoPerfil: string;
   nombrePerfil: string;
   funcion: string;
+  largoComercialMm?: number | null;
   reglaMedida: FabricacionReglaMedida;
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;

@@ -1766,6 +1766,36 @@
   cursor: not-allowed;
 }
 
+.resizeStrip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.resizeStrip span {
+  min-width: 42px;
+  color: var(--cq-blue);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.resizeBtn {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.45rem 0.44rem;
+  border: 1px solid var(--cq-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--cq-navy);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.05;
+  cursor: pointer;
+}
+
 .compCanvas {
   margin: 0;
   min-height: 214px;
@@ -2067,6 +2097,19 @@
   border: 1px solid var(--cq-border);
   border-radius: var(--cq-radius-sm);
   background: var(--cq-surface);
+}
+
+.wideTemplateBtn {
+  width: 100%;
+  min-height: var(--cq-tap);
+  padding: 0.68rem 0.8rem;
+  border: 1px solid rgba(47, 111, 237, 0.35);
+  border-radius: 11px;
+  background: var(--cq-blue-soft);
+  color: var(--cq-blue);
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .segmentedGrid {

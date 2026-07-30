@@ -374,16 +374,18 @@ Notas:
 
 ---
 
-## Addendum 2026-07-30 - RLS Fabricacion Fase 3 remoto
+## Addendum 2026-07-30 - RLS Fabricacion Fase 3/4 remoto
 
-- Migraciones remotas registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot`, `20260730001306_harden_fabrication_recipe_grants`.
+- Migraciones remotas registradas: `20260729230407_fabrication_recipes_persistence`, `20260729234019_cotizacion_items_fabricacion_snapshot`, `20260730001306_harden_fabrication_recipe_grants`, `20260730003756_fabrication_recipe_validation_metadata`.
 - `fabrication_recipes`:
   - RLS habilitado.
   - Policies: SELECT visible para `authenticated` si `scope='ventora'` o `organization_id = get_org_id()`; INSERT/UPDATE solo `scope='organization'` y `organization_id = get_org_id()`.
   - Grants finales: `authenticated` y `service_role` solo `INSERT,SELECT,UPDATE`; `anon` sin privilegios.
+  - Integridad Fase 4: transición a `validated` exige fecha y, si existe `auth.uid()`, el mismo UUID en `validated_by`.
 - `fabrication_recipe_tests`:
   - RLS habilitado.
   - Policies: SELECT si la receta asociada es Ventora o privada visible; INSERT/UPDATE solo para tests de recetas privadas de la organizacion.
   - Grants finales: `authenticated` y `service_role` solo `INSERT,SELECT,UPDATE`; `anon` sin privilegios.
+  - Integridad Fase 4: un caso con `passed=true` exige `validated_by = auth.uid()` cuando se ejecuta con sesion authenticated.
 - `cotizacion_items.fabricacion_snapshot` hereda RLS de `cotizacion_items` por `organization_id = get_org_id()` y mantiene indice parcial `cotizacion_items_fabricacion_snapshot_active_idx`.
 - Smoke remoto con dos empresas QA confirmo aislamiento privado, lectura de receta Ventora, bloqueo de update cruzado y persistencia real de snapshot por item.

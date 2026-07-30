@@ -7,6 +7,12 @@ const MIGRATION_PATH = path.join(
   "migrations",
   "20260729230407_fabrication_recipes_persistence.sql"
 );
+const VALIDATION_METADATA_MIGRATION_PATH = path.join(
+  process.cwd(),
+  "supabase",
+  "migrations",
+  "20260730003756_fabrication_recipe_validation_metadata.sql"
+);
 
 describe("fabrication recipes migration", () => {
   const sql = readFileSync(MIGRATION_PATH, "utf8");
@@ -53,5 +59,24 @@ describe("fabrication recipes migration", () => {
     expect(sql).toContain("sync_fabrication_recipe_test_organization");
     expect(sql).toContain("new.organization_id = recipe_org_id");
     expect(sql).toContain("new.organization_id = null");
+  });
+});
+
+describe("fabrication recipe validation metadata migration", () => {
+  const sql = readFileSync(VALIDATION_METADATA_MIGRATION_PATH, "utf8");
+
+  it("registra usuario validador y casos obligatorios de forma aditiva", () => {
+    expect(sql).toContain("add column if not exists validated_by uuid");
+    expect(sql).toContain("references auth.users(id) on delete set null");
+    expect(sql).toContain(
+      "add column if not exists is_required boolean not null default true"
+    );
+  });
+
+  it("vincula la aprobacion con la sesion autenticada", () => {
+    expect(sql).toContain("new.validated_by is distinct from auth.uid()");
+    expect(sql).toContain("new.validated_at is null");
+    expect(sql).toContain("enforce_fabrication_recipe_test_validator");
+    expect(sql).toContain("fabrication_recipe_tests_enforce_validator");
   });
 });

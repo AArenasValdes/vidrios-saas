@@ -12,7 +12,7 @@ import type {
 
 const TABLE_NAME = "fabrication_recipe_tests";
 const SELECT_FIELDS =
-  "id, recipe_id, organization_id, name, input, expected_output, actual_output, passed, validated_by, created_at, updated_at, eliminado_en";
+  "id, recipe_id, organization_id, name, input, expected_output, actual_output, passed, is_required, validated_by, created_at, updated_at, eliminado_en";
 
 type FabricationRecipeTestRow = {
   id: string;
@@ -23,6 +23,7 @@ type FabricationRecipeTestRow = {
   expected_output: unknown;
   actual_output: unknown | null;
   passed: boolean;
+  is_required: boolean;
   validated_by: string | null;
   created_at: string;
   updated_at: string;
@@ -42,6 +43,7 @@ function mapTestRow(row: FabricationRecipeTestRow): FabricationRecipeTestRecord 
         ? null
         : fabricacionResultadoCubicacionSchema.parse(row.actual_output),
     passed: row.passed,
+    isRequired: row.is_required,
     validatedBy: row.validated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -61,6 +63,7 @@ function buildInsertPayload(input: CreateFabricationRecipeTestInput) {
         ? null
         : fabricacionResultadoCubicacionSchema.parse(input.actualOutput),
     passed: input.passed ?? false,
+    is_required: input.isRequired ?? true,
     validated_by: input.validatedBy ?? null,
   };
 }
@@ -84,6 +87,7 @@ function buildUpdatePayload(input: UpdateFabricationRecipeTestInput) {
         : fabricacionResultadoCubicacionSchema.parse(input.actualOutput);
   }
   if (input.passed !== undefined) payload.passed = input.passed;
+  if (input.isRequired !== undefined) payload.is_required = input.isRequired;
   if (input.validatedBy !== undefined) payload.validated_by = input.validatedBy;
 
   return payload;

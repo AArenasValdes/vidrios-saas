@@ -59,6 +59,7 @@ function createMemoryRepositories(initialRecipes: FabricationRecipeRecord[] = []
         sourceReference: input.sourceReference ?? null,
         parentRecipeId: input.parentRecipeId ?? null,
         validatedAt: input.validatedAt ?? null,
+        validatedBy: input.validatedBy ?? null,
         createdAt: NOW,
         updatedAt: NOW,
         eliminadoEn: null,
@@ -120,6 +121,8 @@ function createMemoryRepositories(initialRecipes: FabricationRecipeRecord[] = []
             : input.sourceReference,
         validatedAt:
           input.validatedAt === undefined ? recipes[index].validatedAt : input.validatedAt,
+        validatedBy:
+          input.validatedBy === undefined ? recipes[index].validatedBy : input.validatedBy,
         updatedAt: NOW,
       };
       return clone(recipes[index]);
@@ -148,6 +151,7 @@ function createMemoryRepositories(initialRecipes: FabricationRecipeRecord[] = []
         expectedOutput: clone(input.expectedOutput),
         actualOutput: input.actualOutput ? clone(input.actualOutput) : null,
         passed: input.passed ?? false,
+        isRequired: input.isRequired ?? true,
         validatedBy: input.validatedBy ?? null,
         createdAt: NOW,
         updatedAt: NOW,
@@ -182,6 +186,8 @@ function createMemoryRepositories(initialRecipes: FabricationRecipeRecord[] = []
               ? null
               : clone(input.actualOutput),
         passed: input.passed ?? tests[index].passed,
+        isRequired:
+          input.isRequired === undefined ? tests[index].isRequired : input.isRequired,
         validatedBy:
           input.validatedBy === undefined ? tests[index].validatedBy : input.validatedBy,
         updatedAt: NOW,
@@ -220,6 +226,7 @@ function recipeRecord(
     sourceReference: null,
     parentRecipeId: null,
     validatedAt: null,
+    validatedBy: null,
     createdAt: NOW,
     updatedAt: NOW,
     eliminadoEn: null,
@@ -365,7 +372,55 @@ describe("fabrication-recipes.service", () => {
 
     expect(validated.status).toBe("validated");
     expect(validated.validatedAt).toBe(NOW);
+    expect(validated.validatedBy).toBe("user-1");
     expect(validated.definition.estado).toBe("validada");
+  });
+
+  it("ignora un caso opcional fallido si todos los obligatorios pasan", async () => {
+    const { service } = createService([recipeRecord()]);
+    const input = baseInput();
+    const expected = calcularCubicacionYPauta(
+      RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
+      input
+    );
+
+    await service.createRecipeTest({
+      recipeId: "receta-base",
+      organizationId: 10,
+      name: "Caso obligatorio",
+      input,
+      expectedOutput: expected,
+      isRequired: true,
+    });
+    await service.createRecipeTest({
+      recipeId: "receta-base",
+      organizationId: 10,
+      name: "Caso opcional con diferencia",
+      input,
+      expectedOutput: { ...expected, totalLinealMm: expected.totalLinealMm + 1 },
+      isRequired: false,
+    });
+
+    await expect(service.validateRecipe("receta-base", 10)).resolves.toMatchObject({
+      status: "validated",
+    });
+  });
+
+  it("impide validar cuando falta el codigo de un perfil obligatorio", async () => {
+    const incomplete = recipeRecord({
+      definition: {
+        ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
+        perfiles: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.perfiles.map(
+          (profile, index) =>
+            index === 0 ? { ...profile, codigoPerfil: "" } : profile
+        ),
+      },
+    });
+    const { service } = createService([incomplete]);
+
+    await expect(service.validateRecipe("receta-base", 10)).rejects.toMatchObject({
+      code: "VALIDACION_COMPONENTES_INCOMPLETOS",
+    });
   });
 
   it("soft delete archiva la receta y la excluye del listado", async () => {

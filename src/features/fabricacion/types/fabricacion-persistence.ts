@@ -43,6 +43,7 @@ export type FabricationRecipeRecord = {
   sourceReference: string | null;
   parentRecipeId: string | null;
   validatedAt: string | null;
+  validatedBy: string | null;
   createdAt: string;
   updatedAt: string;
   eliminadoEn: string | null;
@@ -57,6 +58,7 @@ export type FabricationRecipeTestRecord = {
   expectedOutput: FabricacionResultadoCubicacion;
   actualOutput: FabricacionResultadoCubicacion | null;
   passed: boolean;
+  isRequired: boolean;
   validatedBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -79,6 +81,7 @@ export type CreateFabricationRecipeInput = {
   sourceReference?: string | null;
   parentRecipeId?: string | null;
   validatedAt?: string | null;
+  validatedBy?: string | null;
 };
 
 export type UpdateFabricationRecipeInput = Partial<
@@ -94,6 +97,7 @@ export type UpdateFabricationRecipeInput = Partial<
     | "definition"
     | "sourceReference"
     | "validatedAt"
+    | "validatedBy"
   >
 >;
 
@@ -111,6 +115,7 @@ export type CreateFabricationRecipeTestInput = {
   input: FabricacionEntradaCalculo;
   expectedOutput: FabricacionResultadoCubicacion;
   passed?: boolean;
+  isRequired?: boolean;
   actualOutput?: FabricacionResultadoCubicacion | null;
   validatedBy?: string | null;
 };
@@ -118,7 +123,13 @@ export type CreateFabricationRecipeTestInput = {
 export type UpdateFabricationRecipeTestInput = Partial<
   Pick<
     CreateFabricationRecipeTestInput,
-    "name" | "input" | "expectedOutput" | "actualOutput" | "passed" | "validatedBy"
+    | "name"
+    | "input"
+    | "expectedOutput"
+    | "actualOutput"
+    | "passed"
+    | "isRequired"
+    | "validatedBy"
   >
 >;
 
@@ -131,6 +142,7 @@ export type FabricationRecipeErrorCode =
   | "CASO_PRUEBA_NO_ENCONTRADO"
   | "VALIDACION_SIN_CASOS"
   | "VALIDACION_CON_FALLOS"
+  | "VALIDACION_COMPONENTES_INCOMPLETOS"
   | "ACCESO_ORGANIZACION_INVALIDO";
 
 export class FabricationRecipeServiceError extends Error {

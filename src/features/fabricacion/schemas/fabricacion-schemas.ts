@@ -74,6 +74,7 @@ export const fabricacionIdentidadRecetaSchema = z
     tipologia: z.enum(FABRICACION_TIPOLOGIAS),
     hojas: integerPositiveSchema,
     modulos: integerPositiveSchema,
+    apertura: z.string().min(1).nullable().optional(),
     herraje: z.string().min(1).nullable(),
     variante: z.string().min(1),
   })
@@ -85,6 +86,7 @@ export const fabricacionComponentePerfilSchema = z
     codigoPerfil: z.string(),
     nombrePerfil: z.string(),
     funcion: z.string().min(1),
+    largoComercialMm: integerPositiveSchema.nullable().optional(),
     reglaMedida: fabricacionReglaMedidaSchema,
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),

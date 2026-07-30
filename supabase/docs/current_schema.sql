@@ -16,6 +16,17 @@
 -- unico, grants por columna y la RPC `complete_google_oauth_account`.
 -- Este dump no incorpora aun ese DDL. Consultar la migracion y los addendums
 -- de database_map.md/rls_policies.md hasta regenerar el dump completo.
+-- NOTE 2026-07-30:
+-- Fabricacion tecnica esta aplicada en remoto mediante:
+--   20260729230407_fabrication_recipes_persistence
+--   20260729234019_cotizacion_items_fabricacion_snapshot
+--   20260730001306_harden_fabrication_recipe_grants
+--   20260730003756_fabrication_recipe_validation_metadata
+-- Este dump aun no incluye fabrication_recipes, fabrication_recipe_tests,
+-- cotizacion_items.fabricacion_snapshot, validated_by ni is_required.
+-- La regeneracion automatica no se completo porque Supabase CLI requiere
+-- Docker/pg_dump en esta maquina. Usar esas migraciones y los mapas como delta
+-- autoritativo hasta regenerar el dump.
 
 
 

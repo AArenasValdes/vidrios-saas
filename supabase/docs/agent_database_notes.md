@@ -266,3 +266,13 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Datos QA creados durante el smoke quedaron limpiados con soft delete: cotizaciones/items, recetas, lineas, clients/projects/users/organizations; los usuarios Auth QA se eliminaron.
 - `supabase db advisors --linked --type performance` no reporta issues.
 - `supabase db advisors --linked --type security` conserva solo avisos previos: `touch_growth_updated_at` sin `search_path`, `get_org_id()` y `reserve_next_cotizacion_code(...)` como SECURITY DEFINER ejecutables por authenticated, y leaked password protection desactivado.
+
+---
+
+## Addendum 2026-07-30 - Fabricacion Fase 4
+
+- Aplicada y registrada en remoto `20260730003756_fabrication_recipe_validation_metadata`.
+- Agrega `fabrication_recipes.validated_by` y `fabrication_recipe_tests.is_required` sin modificar datos ni policies existentes.
+- Verificacion remota: ambas tablas mantienen RLS habilitado y tres policies; columnas y triggers `fabrication_recipes_prevent_validated_update` / `fabrication_recipe_tests_enforce_validator` existen.
+- Las operaciones authenticated no pueden atribuir una validacion o prueba aprobada a otro usuario: `validated_by` debe coincidir con `auth.uid()`.
+- El aislamiento con dos empresas, lectura de recetas Ventora y estabilidad del snapshot historico ya fueron comprobados en el smoke Fase 3; esta migracion no cambia esas policies.

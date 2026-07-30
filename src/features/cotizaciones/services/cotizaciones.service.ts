@@ -40,8 +40,8 @@ import {
 } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { buildQuoteStudioFinancialSummary } from "@/features/cotizaciones/services/quote-studio-financial.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
+import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
-import type { FabricacionTipologia } from "@/features/fabricacion/types/fabricacion-domain";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 
@@ -421,20 +421,6 @@ function hasSupabaseBrowserEnv() {
   );
 }
 
-function resolveFabricacionTipologia(item: CotizacionWorkflowItem): FabricacionTipologia | null {
-  const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
-  if (source.includes("corredera")) return "corredera";
-  if (source.includes("abatible") && source.includes("puerta")) return "puerta_abatible";
-  if (source.includes("puerta") && source.includes("corredera")) return "puerta_corredera";
-  if (source.includes("abatible")) return "abatible";
-  if (source.includes("proyectante")) return "proyectante";
-  if (source.includes("fijo") || source.includes("paño fijo") || source.includes("pano fijo")) {
-    return "pano_fijo";
-  }
-  if (source.includes("shower")) return "shower";
-  return null;
-}
-
 function resolveLeavesCount(item: CotizacionWorkflowItem, fallback: number | null) {
   if (fallback && fallback > 0) return fallback;
   const source = `${item.tipo} ${item.nombre} ${item.descripcion}`.toLowerCase();
@@ -454,18 +440,28 @@ function buildFabricacionSnapshotForItem(input: {
 
   const presentation = decodeCotizacionItemPresentationMeta(input.item.observaciones);
   const lineTemplateId = normalizeLineTemplateIdForFabricacion(presentation.lineTemplateId);
-  const tipologia = resolveFabricacionTipologia(input.item);
+  const tipologia =
+    presentation.fabricacionTipologia ||
+    inferirTipologiaFabricacionPieza({
+      tipo: input.item.tipo,
+      nombre: input.item.nombre,
+      descripcion: input.item.descripcion,
+    });
   if (!lineTemplateId || !tipologia) return null;
 
   const selected = resolverRecetaFabricacionCompatible(input.recipes, {
     organizationId: input.organizationId,
     lineTemplateId,
     tipologia,
-    hojas: resolveLeavesCount(input.item, presentation.hojasBase),
-    modulos: null,
-    apertura: presentation.sistema || null,
-    herraje: null,
-    variante: null,
+    hojas:
+      presentation.fabricacionHojas ??
+      resolveLeavesCount(input.item, presentation.hojasBase),
+    modulos: presentation.fabricacionModulos,
+    apertura:
+      presentation.fabricacionApertura || presentation.sistema || null,
+    herraje: presentation.fabricacionHerraje || null,
+    variante: presentation.fabricacionVariante || null,
+    preferredRecipeId: presentation.fabricationRecipeId || null,
   });
 
   if (selected.estado !== "receta_unica") {
@@ -545,6 +541,7 @@ function mapFabricationRecipeQuoteRow(
     sourceReference: row.source_reference,
     parentRecipeId: row.parent_recipe_id,
     validatedAt: row.validated_at,
+    validatedBy: null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     eliminadoEn: row.eliminado_en,
