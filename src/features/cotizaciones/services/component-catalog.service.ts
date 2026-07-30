@@ -77,6 +77,7 @@ export const COMPONENT_CATALOG = [
           Abatible: [
             "1 hoja",
             "2 hojas / puerta doble",
+            "2 hojas + fijo superior",
             "1 hoja + fijo lateral",
             "2 hojas + fijo lateral",
             "2 hojas + 2 fijos laterales",

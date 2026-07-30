@@ -498,9 +498,9 @@ describe("PasoDosCuadernoMovil", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
-    expect(screen.queryByRole("button", { name: "Fijo arriba + 2 puertas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "2 hojas + fijo superior" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cambiar modulo M1 a Abatible" }));
-    fireEvent.click(screen.getByRole("button", { name: "Fijo arriba + 2 puertas" }));
+    fireEvent.click(screen.getByRole("button", { name: "2 hojas + fijo superior" }));
     fireEvent.click(screen.getByRole("button", { name: "Usar esta composicion" }));
 
     const patch = onUpdateItem.mock.calls.at(-1)?.[1] as { guidedVisualConfig: GuidedVisualConfig };

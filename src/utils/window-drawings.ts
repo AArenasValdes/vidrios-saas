@@ -2797,6 +2797,7 @@ const DOOR_OPENING_BLUE = "#1E88FF";
 const ABATIBLE_DOOR_CONFIGS = new Set([
   "1_hoja",
   "2_hojas_puerta_doble",
+  "2_hojas_fijo_superior",
   "4_hojas_abatibles",
   "1_hoja_fijo_lateral",
   "2_hojas_fijo_lateral",
@@ -3320,6 +3321,16 @@ function composeAbatibleSystem(
       addSwing(doorX + leafW + gap, doorY, leafW, doorH, "right", "left");
       break;
     }
+    case "2_hojas_fijo_superior": {
+      const topH = doorH * 0.26;
+      const swingH = doorH - topH - gap;
+      const swingY = doorY + topH + gap;
+      const leafW = (doorW - gap) / 2;
+      addFixed(doorX, doorY, doorW, topH);
+      addSwing(doorX, swingY, leafW, swingH, "left", "right");
+      addSwing(doorX + leafW + gap, swingY, leafW, swingH, "right", "left");
+      break;
+    }
     case "4_hojas_abatibles": {
       const leafW = (doorW - gap * 3) / 4;
       for (let i = 0; i < 4; i++) {
@@ -3512,6 +3523,7 @@ const CONFIG_MAP: Record<string, string> = {
   "Triple riel": "triple_riel",
   "Elevadora corredera / HS": "elevadora_corredera_hs",
   "2 hojas / puerta doble": "2_hojas_puerta_doble",
+  "2 hojas + fijo superior": "2_hojas_fijo_superior",
   "1 hoja + fijo lateral": "1_hoja_fijo_lateral",
   "2 hojas + fijo lateral": "2_hojas_fijo_lateral",
   "2 hojas + 2 fijos laterales": "2_hojas_2_fijos_laterales",
@@ -3631,6 +3643,29 @@ function drawPuertaComposite(
         pdFrame(x + m + hw, y + m, hw, dh, sw, frameColor),
         pdHandleH(handleR, y + m + dh * 0.45, "L", HANDLE_STROKE),
         pdSwingArc(x + m + hw * 2, y + m + dh, hw * 0.65, -90, 180, frameColor),
+      ].join("\n");
+    }
+    case "2_hojas_fijo_superior": {
+      const topH = Math.floor((h - m * 2) * 0.26);
+      const botH = h - m * 2 - topH;
+      const dw = w - m * 2;
+      const hw = Math.floor(dw / 2);
+      const handleL = x + m + hw - fw - 1;
+      const handleR = x + m + hw + fw + 1;
+      const bottomY = y + m + topH;
+      return [
+        pdGlassFixed(x + m + fw, y + m + fw, dw - fw * 2, topH - fw * 2, frameColor),
+        pdFrame(x + m, y + m, dw, topH, sw - 0.5, frameColor),
+        pdGlass(x + m + fw, bottomY + fw, hw - fw * 2, botH - fw * 2, frameColor),
+        pdPalillo(x + m + fw, bottomY + fw, hw - fw * 2, botH - fw * 2, palType, frameColor),
+        pdFrame(x + m, bottomY, hw, botH, sw, frameColor),
+        pdHandleH(handleL, bottomY + botH * 0.45, "R", HANDLE_STROKE),
+        pdSwingArc(x + m, bottomY + botH, hw * 0.65, -90, 0, frameColor),
+        pdGlass(x + m + hw + fw, bottomY + fw, hw - fw * 2, botH - fw * 2, frameColor),
+        pdPalillo(x + m + hw + fw, bottomY + fw, hw - fw * 2, botH - fw * 2, palType, frameColor),
+        pdFrame(x + m + hw, bottomY, hw, botH, sw, frameColor),
+        pdHandleH(handleR, bottomY + botH * 0.45, "L", HANDLE_STROKE),
+        pdSwingArc(x + m + hw * 2, bottomY + botH, hw * 0.65, -90, 180, frameColor),
       ].join("\n");
     }
     case "4_hojas_abatibles": {

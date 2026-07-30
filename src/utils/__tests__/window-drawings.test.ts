@@ -780,6 +780,7 @@ describe("generateComponentSVG", () => {
     const configuraciones = [
       "1 hoja",
       "2 hojas / puerta doble",
+      "2 hojas + fijo superior",
       "4 hojas abatibles",
       "1 hoja + fijo lateral",
       "2 hojas + fijo lateral",
@@ -866,6 +867,25 @@ describe("generateComponentSVG", () => {
     expect(svg).toContain('data-door-config="2_hojas_2_fijos_laterales"');
     expect(svg).toContain("#7d5536");
     expect((svg.match(/data-door-fixed-panel="true"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-door-swing-leaf="true"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-door-handle="true"/g) ?? []).length).toBe(2);
+    expect((svg.match(/data-door-opening-arrow="true"/g) ?? []).length).toBe(2);
+  });
+
+  it("dibuja puerta abatible de 2 hojas con fijo superior", () => {
+    const svg = generateComponentSVG({
+      tipo: "Puerta",
+      sistema: "Abatible",
+      configuracion: "2 hojas + fijo superior",
+      ancho: 1600,
+      alto: 2100,
+      colorHex: "#8B5E3C",
+      variant: "pdf",
+    });
+
+    expect(svg).toContain('data-door-config="2_hojas_fijo_superior"');
+    expect(svg).toContain("#7d5536");
+    expect((svg.match(/data-door-fixed-panel="true"/g) ?? []).length).toBe(1);
     expect((svg.match(/data-door-swing-leaf="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-handle="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-opening-arrow="true"/g) ?? []).length).toBe(2);

@@ -65,6 +65,16 @@ describe("component-catalog service", () => {
     ]);
   });
 
+  it("debe ofrecer 2 hojas + fijo superior en Puerta Abatible", () => {
+    const configs = getConfigurationOptionsForComponentSistema("Puerta", "Abatible");
+
+    expect(configs).toContain("2 hojas / puerta doble");
+    expect(configs).toContain("2 hojas + fijo superior");
+    expect(configs.indexOf("2 hojas + fijo superior")).toBe(
+      configs.indexOf("2 hojas / puerta doble") + 1
+    );
+  });
+
   it("debe ofrecer oscilobatiente para ventanas y reconocerlo en referencias", () => {
     expect(getSystemOptionsForComponent("Ventana")).toEqual([
       "Corredera",

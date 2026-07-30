@@ -495,14 +495,14 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
           <div className={s.constructorControlGroup}>
             <div className={s.sheetSectionHead}>
               <strong>Composicion rapida</strong>
-              <span>Para mampara abatible con fijo superior.</span>
+              <span>Dos hojas abatibles inferiores y fijo superior.</span>
             </div>
             <button
               type="button"
               className={s.wideTemplateBtn}
               onClick={applyTopFixedDoubleDoorPreset}
             >
-              Fijo arriba + 2 puertas
+              2 hojas + fijo superior
             </button>
           </div>
         ) : null}
