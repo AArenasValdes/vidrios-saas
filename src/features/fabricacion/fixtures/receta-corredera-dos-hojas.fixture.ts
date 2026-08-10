@@ -20,6 +20,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
   perfiles: [
     {
       id: "riel-superior",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-RS",
       nombrePerfil: "Riel superior ejemplo",
       funcion: "Riel superior",
@@ -29,6 +30,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "riel-inferior",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-RI",
       nombrePerfil: "Riel inferior ejemplo",
       funcion: "Riel inferior",
@@ -38,6 +40,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "jamba",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-J",
       nombrePerfil: "Jamba ejemplo",
       funcion: "Jamba",
@@ -47,6 +50,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "cabezal",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-C",
       nombrePerfil: "Cabezal ejemplo",
       funcion: "Cabezal",
@@ -56,6 +60,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "zocalo",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-Z",
       nombrePerfil: "Zocalo ejemplo",
       funcion: "Zócalo",
@@ -65,6 +70,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "pierna",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-P",
       nombrePerfil: "Pierna ejemplo",
       funcion: "Pierna",
@@ -74,6 +80,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "traslapo",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-T",
       nombrePerfil: "Traslapo ejemplo",
       funcion: "Traslapo",
@@ -83,6 +90,7 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
     },
     {
       id: "refuerzo-termopanel",
+      largoComercialMm: 6000,
       codigoPerfil: "EJ-REF",
       nombrePerfil: "Refuerzo termopanel ejemplo",
       funcion: "Refuerzo",
@@ -130,6 +138,11 @@ export const RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO: FabricacionReceta =
       condicion: { variante: "termopanel" },
     },
   ],
+  configuracionCorte: {
+    perdidaCorteMm: 3,
+    despunteInicialMm: 0,
+    sobranteMinimoAprovechableMm: 300,
+  },
   notasValidacion: [
     "Ejemplo interno no validado con proveedor ni taller. No usar como fabricación real.",
   ],

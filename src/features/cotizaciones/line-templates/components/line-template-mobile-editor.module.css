@@ -1,0 +1,424 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100dvh;
+  color: #0f1b2d;
+  background: #f6f8fb;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 16px 8px;
+  background: #fff;
+  border-bottom: 1px solid #e4eaf2;
+}
+
+.headerButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  color: #17304f;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+}
+
+.headerButton svg {
+  width: 21px;
+  height: 21px;
+}
+
+.header h2 {
+  margin: 0;
+  font: 700 19px/1.15 var(--font-syne), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.header p {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.stepCount {
+  color: #66758a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px 16px 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px -24px rgb(20 45 75 / 55%);
+}
+
+.stepper button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  color: #738197;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stepper button > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #66758a;
+  background: #edf1f6;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.stepper .stepActive {
+  color: #0b59c7;
+  background: #eef6ff;
+}
+
+.stepper .stepActive > span,
+.stepper .stepDone > span {
+  color: #fff;
+  background: #1e88ff;
+}
+
+.stepper svg {
+  width: 13px;
+  height: 13px;
+}
+
+.scrollArea {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 16px 28px;
+}
+
+.form,
+.usageContent {
+  display: grid;
+  gap: 18px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field > span,
+.fieldset legend,
+.usageList legend {
+  color: #34445b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 13px;
+  color: #0f1b2d;
+  background: #fff;
+  border: 1px solid #dbe3ed;
+  border-radius: 12px;
+  outline: 0;
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #1e88ff;
+  box-shadow: 0 0 0 3px rgb(30 136 255 / 13%);
+}
+
+.fieldset,
+.usageList {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend,
+.usageList legend {
+  margin-bottom: 8px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: #e9eef5;
+  border-radius: 13px;
+}
+
+.segmented button {
+  min-height: 44px;
+  color: #5c6a7e;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.segmented .segmentActive {
+  color: #0f1b2d;
+  background: #fff;
+  box-shadow: 0 4px 12px -9px rgb(15 27 45 / 65%);
+}
+
+.moneyGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.moneyInput {
+  position: relative;
+}
+
+.moneyInput > span {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  z-index: 1;
+  color: #607087;
+  transform: translateY(-50%);
+  font-weight: 700;
+}
+
+.moneyInput input {
+  padding-left: 31px;
+}
+
+.details {
+  overflow: clip;
+  background: #fff;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+}
+
+.details summary {
+  display: grid;
+  min-height: 58px;
+  padding: 12px 14px;
+  align-content: center;
+  cursor: pointer;
+  list-style: none;
+  color: #1c2b40;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.details summary::-webkit-details-marker {
+  display: none;
+}
+
+.details summary span {
+  margin-top: 2px;
+  color: #718096;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.detailsBody {
+  display: grid;
+  gap: 16px;
+  padding: 4px 14px 16px;
+}
+
+.activeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 64px;
+  padding: 12px 2px;
+}
+
+.activeRow > span {
+  display: grid;
+  gap: 3px;
+}
+
+.activeRow strong {
+  color: #1b2a3d;
+  font-size: 13px;
+}
+
+.activeRow small {
+  color: #718096;
+  font-size: 11px;
+}
+
+.activeRow input {
+  width: 22px;
+  height: 22px;
+  accent-color: #1e88ff;
+}
+
+.explainer {
+  display: flex;
+  gap: 10px;
+  padding: 13px 14px;
+  color: #39516f;
+  background: #edf5ff;
+  border-radius: 12px;
+}
+
+.explainer svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #1e88ff;
+}
+
+.explainer p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.usageList {
+  display: grid;
+  gap: 10px;
+}
+
+.usageList > button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px;
+  color: #26364c;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dfe6ef;
+  border-radius: 14px;
+}
+
+.usageList > button.usageSelected {
+  border-color: #1e88ff;
+  box-shadow: 0 8px 22px -20px rgb(30 100 190 / 80%);
+}
+
+.usageList button > span:last-child {
+  display: grid;
+  gap: 5px;
+}
+
+.usageList strong {
+  font-size: 14px;
+}
+
+.usageList small {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.radio {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  place-items: center;
+  border: 2px solid #aeb9c8;
+  border-radius: 50%;
+}
+
+.usageSelected .radio {
+  border-color: #1e88ff;
+}
+
+.radio span {
+  width: 10px;
+  height: 10px;
+  background: #1e88ff;
+  border-radius: 50%;
+}
+
+.technicalLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  color: #075fcf;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.technicalLink svg {
+  width: 18px;
+  height: 18px;
+}
+
+.footer {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #e0e7ef;
+  box-shadow: 0 -14px 28px -26px rgb(15 35 60 / 70%);
+}
+
+.primaryButton {
+  display: flex;
+  width: min(100%, 560px);
+  min-height: 50px;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fff;
+  background: #1677e8;
+  border: 0;
+  border-radius: 13px;
+  font-weight: 800;
+  box-shadow: 0 12px 24px -18px rgb(14 101 205 / 90%);
+}
+
+.primaryButton:disabled {
+  color: #8a97a9;
+  background: #dfe5ec;
+  box-shadow: none;
+}
+
+.primaryButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (min-width: 500px) {
+  .moneyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .screen {
+    display: none;
+  }
+}

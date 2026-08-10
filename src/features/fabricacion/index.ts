@@ -2,6 +2,7 @@ export * from "@/features/fabricacion/types/fabricacion-domain";
 export * from "@/features/fabricacion/schemas/fabricacion-schemas";
 export * from "@/features/fabricacion/schemas/fabricacion-snapshot-schemas";
 export * from "@/features/fabricacion/services/fabricacion-calculo.service";
+export * from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 export * from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 export * from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 export * from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";

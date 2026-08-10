@@ -181,6 +181,24 @@ const SPECIAL_SCREENS: ContextItem[] = [
     mobileLabel: "Canales",
     description: "Comparte tu página y marca de dónde llega cada solicitud",
   },
+  {
+    href: "/biblioteca-lineas",
+    label: "Biblioteca técnica",
+    mobileLabel: "Catálogo",
+    description: "Plantillas técnicas vinculadas a líneas comerciales.",
+  },
+  {
+    href: "/mis-recetas",
+    label: "Recetas del catálogo",
+    mobileLabel: "Catálogo",
+    description: "Recetas técnicas vinculadas a líneas comerciales.",
+  },
+  {
+    href: "/configuracion/empresa/lineas-precios/",
+    label: "Receta técnica",
+    mobileLabel: "Catálogo",
+    description: "Configuración técnica de una línea comercial.",
+  },
 ];
 
 const ALERTS_SEEN_STORAGE_PREFIX = "vidrios-saas:alerts-seen:";
@@ -400,7 +418,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     });
   const isNuevaCotizacionRoute = pathname.startsWith("/cotizaciones/nueva");
   const isPerformanceSensitiveRoute =
-    isNuevaCotizacionRoute || pathname.startsWith("/configuracion/empresa/lineas-precios");
+    isNuevaCotizacionRoute ||
+    pathname.startsWith("/configuracion/empresa/lineas-precios");
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<
     "sidebar" | "mobile" | "topbar" | null
@@ -491,6 +510,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
     pathname === "/configuracion/empresa" ||
     pathname === "/configuracion/pagina-venta" ||
     pathname.startsWith("/configuracion/empresa/lineas-precios") ||
+    pathname.startsWith("/biblioteca-lineas") ||
+    pathname.startsWith("/mis-recetas") ||
     isCotizacionDetailRoute ||
     isClienteDetailRoute;
   const trialDaysRemaining = subscription.daysRemaining ?? 0;

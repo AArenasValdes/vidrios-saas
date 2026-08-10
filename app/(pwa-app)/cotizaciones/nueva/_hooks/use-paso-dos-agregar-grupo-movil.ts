@@ -37,6 +37,7 @@ import {
   type PasoDosGrupoCategoria,
   type PasoDosGrupoEntryMode,
 } from "./use-paso-dos-agregar-grupo";
+import { useMobileViewportStability } from "./use-mobile-viewport-stability";
 
 export type PasoDosGrupoPasoMovil = 1 | 2 | 3;
 
@@ -68,24 +69,13 @@ export function usePasoDosAgregarGrupoMovil(params: Params) {
     createInitialPasoDosGrupoDraft(params)
   );
 
+  useMobileViewportStability({ active: isOpen });
+
   const resetFreeTotalEditState = () => {
     setEditingFreeTotalMainItemId(null);
     setEditingFreeTotalItemIds(null);
     setFreeTotalNotebookNestedItemIds([]);
   };
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
 
   const subtypeOptions = useMemo(
     () => getSubtypeOptionsForCategory(draft.categoria),

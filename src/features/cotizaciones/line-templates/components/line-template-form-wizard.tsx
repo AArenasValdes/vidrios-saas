@@ -54,6 +54,7 @@ import {
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
 import { formatCurrency } from "@/utils/formatCurrency";
 
+import { LineTemplateMobileEditor } from "./line-template-mobile-editor";
 import s from "./lineas-precios-page-client.module.css";
 
 export type LineTemplateFormDraft = {
@@ -237,20 +238,7 @@ export function applyLineUsageMode(
     cuttingEnabled: true,
     estimationMode: getEstimationModeForSystem(draft.cubicationSystem),
     cuttingMode: typology.defaultCuttingMode,
-    fabricationRecipe:
-      draft.fabricationRecipe ??
-      createStructuralRecipeTemplate(
-        draft.cubicationSystem === "pano_fijo"
-          ? "pano_fijo"
-          : draft.cubicationSystem === "puerta_abatible_1_hoja"
-            ? "puerta_abatible"
-            : "corredera_2_hojas"
-      ),
   };
-}
-
-function getWizardMaxStep(usageMode: LineUsageMode) {
-  return usageMode === "solo_cotizar" ? 2 : 4;
 }
 
 function getUsageModeLabel(mode: LineUsageMode) {
@@ -335,6 +323,7 @@ type Props = {
   saveDisabled: boolean;
   isSaving: boolean;
   onSave: () => void;
+  onSaveAndConfigure?: () => void;
   onClose: () => void;
   pricePerM2: number;
   minimum: number;
@@ -383,6 +372,7 @@ export function LineTemplateFormWizard({
   saveDisabled,
   isSaving,
   onSave,
+  onSaveAndConfigure,
   onClose,
   pricePerM2,
   unidadCobro,
@@ -401,11 +391,24 @@ export function LineTemplateFormWizard({
   >(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const [isRecipeWorkspaceOpen, setIsRecipeWorkspaceOpen] = useState(false);
+  const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
 
   const usageMode = resolveLineUsageMode(draft);
-  const maxStep = getWizardMaxStep(usageMode);
+  const maxStep = isDesktopLayout === false
+    ? 2
+    : isDesktopLayout && usageMode === "cubicacion_pauta"
+      ? 3
+      : 2;
   const openStep = Math.min(wizardStep, maxStep);
   const pricingCopy = pricingUnitCopy(unidadCobro);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const syncViewport = () => setIsDesktopLayout(media.matches);
+    syncViewport();
+    media.addEventListener("change", syncViewport);
+    return () => media.removeEventListener("change", syncViewport);
+  }, []);
 
   useEffect(() => {
     const body = sheetBodyRef.current;
@@ -427,7 +430,7 @@ export function LineTemplateFormWizard({
     ...(maxStep > 2
       ? [
           { id: 3, label: "Fabricación" },
-          { id: 4, label: "Validación" },
+          ...(!isDesktopLayout ? [{ id: 4, label: "Validación" }] : []),
         ]
       : []),
   ];
@@ -617,6 +620,33 @@ export function LineTemplateFormWizard({
       </button>
     );
   };
+
+  if (isDesktopLayout === null) {
+    return (
+      <div className={s.wizardLoadingOverlay} role="status" aria-live="polite">
+        <div className={s.wizardLoading}>Preparando editor...</div>
+      </div>
+    );
+  }
+
+  if (!isDesktopLayout) {
+    return (
+      <LineTemplateMobileEditor
+        sheetMode={sheetMode}
+        step={openStep}
+        onStepChange={onWizardStepChange}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        onDraftPatch={onDraftPatch}
+        isGlassDraft={isGlassDraft}
+        saveDisabled={saveDisabled}
+        isSaving={isSaving}
+        onSave={onSave}
+        onClose={onClose}
+        technicalAdminHref={technicalAdminHref}
+      />
+    );
+  }
 
   return (
     <div className={s.overlay} role="presentation" onClick={onClose}>
@@ -1257,12 +1287,58 @@ export function LineTemplateFormWizard({
               {renderStepHeader(
                 3,
                 "Fabricación",
-                "Elige origen, revisa componentes y edita solo lo necesario",
+                isDesktopLayout
+                  ? "Guarda la línea y abre su receta técnica"
+                  : "Elige origen, revisa componentes y edita solo lo necesario",
                 step3Summary,
                 openStep > 3
               )}
               {openStep === 3 ? (
                 <div className={`${s.wizardStepBody} ${s.wizardStepBodyWorkspace}`}>
+                  {isDesktopLayout ? (
+                    <section className={s.desktopTechnicalLaunch}>
+                      <div>
+                        <h3>La receta se configura en un espacio técnico separado.</h3>
+                        <p>
+                          Primero guardamos esta línea comercial. Luego defines perfiles,
+                          vidrios y accesorios; pruebas una medida real y validas la versión
+                          para generar despiece interno.
+                        </p>
+                      </div>
+                      <ol className={s.desktopTechnicalPath}>
+                        <li>
+                          <span>1</span>
+                          <div>
+                            <strong>Guardar la línea</strong>
+                            <small>El precio queda disponible para cotizar desde ahora.</small>
+                          </div>
+                        </li>
+                        <li>
+                          <span>2</span>
+                          <div>
+                            <strong>Configurar receta</strong>
+                            <small>Elige una base, una sugerida o crea una receta propia.</small>
+                          </div>
+                        </li>
+                        <li>
+                          <span>3</span>
+                          <div>
+                            <strong>Probar y validar</strong>
+                            <small>Solo una receta validada se usa para el despiece interno.</small>
+                          </div>
+                        </li>
+                      </ol>
+                      {technicalAdminHref ? (
+                        <Link href={technicalAdminHref} className={s.desktopTechnicalLink}>
+                          Abrir administración técnica
+                        </Link>
+                      ) : (
+                        <p className={s.desktopTechnicalNote}>
+                          El botón final guardará esta línea y abrirá su receta automáticamente.
+                        </p>
+                      )}
+                    </section>
+                  ) : null}
                   <div className={s.technicalRecipeNotice}>
                     <div>
                       <span>Recetas versionadas</span>
@@ -1280,7 +1356,10 @@ export function LineTemplateFormWizard({
                       <small>La opción Administrar aparecerá en la tarjeta de la línea.</small>
                     )}
                   </div>
-                  <fieldset className={s.legacyRecipeCompatibility} disabled>
+                  <fieldset
+                    className={`${s.legacyRecipeCompatibility} ${s.legacyTechnicalWorkspace}`}
+                    disabled
+                  >
                     <legend>Configuración anterior, solo lectura</legend>
                   {!isGlassDraft ? (
                     draft.fabricationRecipe && isRecipeWorkspaceOpen ? (
@@ -1532,7 +1611,7 @@ export function LineTemplateFormWizard({
             </article>
           ) : null}
 
-          {maxStep > 2 ? (
+          {!isDesktopLayout && maxStep > 2 ? (
             <article
               className={`${s.wizardStep} ${openStep === 4 ? s.wizardStepOpen : ""} ${
                 openStep !== 4 ? s.wizardStepCollapsed : ""
@@ -1615,14 +1694,33 @@ export function LineTemplateFormWizard({
             <button
               type="button"
               className={s.primaryButton}
-              onClick={onSave}
+              onClick={
+                isDesktopLayout &&
+                !isGlassDraft &&
+                usageMode === "cubicacion_pauta" &&
+                sheetMode === "new" &&
+                onSaveAndConfigure
+                  ? onSaveAndConfigure
+                  : onSave
+              }
               disabled={saveDisabled || isSaving}
-              title="Guarda los datos comerciales de la línea. La receta técnica se administra por separado."
+              title={
+                isDesktopLayout &&
+                !isGlassDraft &&
+                usageMode === "cubicacion_pauta" &&
+                sheetMode === "new"
+                  ? "Guarda la línea comercial y abre su receta técnica."
+                  : "Guarda los datos comerciales de la línea."
+              }
             >
               {isSaving
                 ? "Guardando..."
                 : isGlassDraft
                   ? "Guardar producto"
+                  : isDesktopLayout &&
+                      usageMode === "cubicacion_pauta" &&
+                      sheetMode === "new"
+                    ? "Crear y configurar receta"
                   : sheetMode === "edit"
                     ? "Guardar línea"
                     : "Crear línea"}

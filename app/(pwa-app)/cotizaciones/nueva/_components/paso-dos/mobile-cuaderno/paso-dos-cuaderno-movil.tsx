@@ -22,6 +22,7 @@ import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/s
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
+import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
 import { CuadernoComposicionMovil } from "./cuaderno-composicion-movil";
 import { CuadernoConstructorMovil } from "./cuaderno-constructor-movil";
 import {
@@ -122,6 +123,7 @@ export function PasoDosCuadernoMovil({
   onGoToSummary,
   onClose,
 }: PasoDosCuadernoMovilProps) {
+  useMobileViewportStability();
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [quickEditItemId, setQuickEditItemId] = useState<string | null>(null);
   const [constructorItemId, setConstructorItemId] = useState<string | null>(null);

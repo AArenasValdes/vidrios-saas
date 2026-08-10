@@ -52,6 +52,8 @@ En la ficha de la línea:
    - **Configurar propia** → estructura editable.
 3. Revisa **qué fabricas** (apertura, herraje, hojas).
 4. Completa **perfiles** (códigos reales del taller) y descuentos.
+   - También puedes usar **Crear con asistente** y describir tus reglas. Ventora agrega un borrador y marca cada dato pendiente; no lo valida por ti.
+   - Completa largo comercial, pérdida por corte, despunte inicial y sobrante mínimo para ver la distribución referencial de barras.
 5. En validación: **Validé esta receta para mi taller** cuando confíes.
 6. Guarda la línea.
 
@@ -88,6 +90,7 @@ Si ya tienes receta y quieres otra plantilla: **Cambiar plantilla u origen** (ar
 4. Bow / módulos raros → **constructor**.
 5. La pauta es ayuda revisable, no plano de máquina ni cero desperdicio.
 6. No digas “verificada” a L5000/L20/L25 hasta probarlas en tu taller.
+7. Las líneas SODAL reconocidas no traen receta ejecutable mientras falten fórmulas y cantidades verificables.
 
 ---
 

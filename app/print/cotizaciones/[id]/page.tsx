@@ -49,6 +49,7 @@ import {
   buildTotalGlobalPrintPlan,
   type TotalGlobalPrintPagePlan,
 } from "./_utils/total-global-print-plan";
+import { resolveTotalGlobalDetailDrawingSvg } from "./_utils/total-global-detail-drawing";
 import s from "./page.module.css";
 
 const APP_NAME = "Ventora";
@@ -569,7 +570,7 @@ export default function CotizacionPrintPage() {
     } finally {
       setIsHydratingRecord(false);
     }
-  }, [loadCotizacionById, params.id]);
+  }, [loadCotizacionById, params.id, setHasResolvedDetailRecord, setIsHydratingRecord, setRecordLoadError]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof ResizeObserver === "undefined") {
@@ -1075,7 +1076,15 @@ export default function CotizacionPrintPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [buildPdfFile, exportFileName, markPdfDownloadInBackground, setShowExportRender]);
+  }, [
+    buildPdfFile,
+    exportFileName,
+    markPdfDownloadInBackground,
+    setExportError,
+    setIsExporting,
+    setShowExportRender,
+    setShowWhatsappFallbackActions,
+  ]);
 
   const handleWhatsappShare = useCallback(async () => {
     try {
@@ -1109,6 +1118,10 @@ export default function CotizacionPrintPage() {
     }
   }, [
     markQuoteAsSentInBackground,
+    setCopyFeedback,
+    setExportError,
+    setIsExporting,
+    setShowWhatsappFallbackActions,
     whatsappUrl,
   ]);
 
@@ -1129,7 +1142,7 @@ export default function CotizacionPrintPage() {
         "No pudimos copiar el mensaje automaticamente en este navegador."
       );
     }
-  }, [whatsappMessage]);
+  }, [setCopyFeedback, setExportError, whatsappMessage]);
 
   const handleOpenWhatsappMessage = useCallback(() => {
     if (!whatsappUrl) {
@@ -1146,7 +1159,12 @@ export default function CotizacionPrintPage() {
     }
 
     markQuoteAsSentInBackground();
-  }, [markQuoteAsSentInBackground, whatsappUrl]);
+  }, [
+    markQuoteAsSentInBackground,
+    setExportError,
+    setShowWhatsappFallbackActions,
+    whatsappUrl,
+  ]);
 
   const renderPrintPages = useCallback(
     (mode: "preview" | "export"): ReactNode => {
@@ -1322,8 +1340,12 @@ export default function CotizacionPrintPage() {
                       const absoluteIndex = detailStartIndex + itemIndex + 1;
                       const dimensions = item.ancho && item.alto ? formatDimensions(item.ancho, item.alto) : null;
                       const description = item.descripcion?.trim();
-                      const presentationSvg = itemPresentationMap.get(item.id)?.drawingSvg?.trim() ?? "";
-                      const hasDrawing = presentationSvg.length > 0;
+                      const presentationSvg = itemPresentationMap.get(item.id)?.drawingSvg ?? "";
+                      const drawingSvg = resolveTotalGlobalDetailDrawingSvg({
+                        item,
+                        presentationSvg,
+                      }) || resolveTotalGlobalReferenceSvg(item.tipo, description);
+                      const hasDrawing = drawingSvg.length > 0;
 
                       return (
                         <article
@@ -1338,7 +1360,7 @@ export default function CotizacionPrintPage() {
                           {hasDrawing ? (
                             <div
                               className={s.totalGlobalMiniDrawing}
-                              dangerouslySetInnerHTML={{ __html: presentationSvg }}
+                              dangerouslySetInnerHTML={{ __html: drawingSvg }}
                             />
                           ) : null}
                           <div className={s.totalGlobalDetailBody}>

@@ -145,6 +145,7 @@ describe("motor determinístico de fabricación", () => {
       perfiles: [
         {
           ...cloneRecipe().perfiles[0]!,
+          funcion: "",
           codigoPerfil: "",
           nombrePerfil: "",
         },
@@ -158,6 +159,23 @@ describe("motor determinístico de fabricación", () => {
     expect(resultado.advertencias.some((entry) => entry.codigo === "PERFIL_SIN_IDENTIFICACION")).toBe(
       true
     );
+  });
+
+  it("código comercial vacío no bloquea cálculo si hay función", () => {
+    const receta: FabricacionReceta = {
+      ...cloneRecipe(),
+      estado: "validada",
+      perfiles: cloneRecipe().perfiles.map((profile) => ({
+        ...profile,
+        codigoPerfil: "",
+      })),
+    };
+    const validacion = validarRecetaFabricacion(receta);
+    const resultado = calcularCubicacionYPauta(receta, entradaBase);
+
+    expect(validacion.ok).toBe(true);
+    expect(resultado.calculable).toBe(true);
+    expect(resultado.totalLinealMm).toBeGreaterThan(0);
   });
 
   it("reporta medidas inválidas sin usar valores negativos", () => {

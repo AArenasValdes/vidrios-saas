@@ -73,17 +73,59 @@ export function validarRecetaFabricacion(value: unknown): FabricacionValidacionR
   }
 
   receta.perfiles.forEach((perfil) => {
-    if (perfil.requerido && !perfil.codigoPerfil.trim() && !perfil.nombrePerfil.trim()) {
+    const hasIdentity = Boolean(
+      perfil.funcion.trim() ||
+        perfil.nombrePerfil.trim() ||
+        perfil.codigoPerfil.trim()
+    );
+    // El código comercial es opcional: basta función/nombre/referencia.
+    if (perfil.requerido && !hasIdentity) {
       advertencias.push({
         codigo: "PERFIL_SIN_IDENTIFICACION",
         nivel: receta.estado === "validada" ? "error" : "advertencia",
-        mensaje: `${perfil.funcion}: falta codigo o nombre de perfil.`,
+        mensaje: `${perfil.funcion || "Perfil"}: falta una función, nombre o referencia.`,
+        componenteId: perfil.id,
+      });
+    }
+    // Largo comercial: progresivo (habilita barras), nunca bloquea validación geométrica.
+    if (perfil.requerido && !perfil.largoComercialMm) {
+      advertencias.push({
+        codigo: "PERFIL_SIN_LARGO_COMERCIAL",
+        nivel: "advertencia",
+        mensaje: `${perfil.funcion || "Perfil"}: agrega el largo comercial para calcular barras.`,
         componenteId: perfil.id,
       });
     }
   });
 
+  [...receta.perfiles, ...receta.vidrios, ...receta.accesorios].forEach(
+    (componente) => {
+      if ((componente.datosPendientes?.length ?? 0) > 0) {
+        advertencias.push({
+          codigo: "COMPONENTE_CON_DATOS_PENDIENTES",
+          nivel: "advertencia",
+          mensaje: `Datos opcionales por confirmar: ${componente.datosPendientes?.join(", ")}.`,
+          componenteId: componente.id,
+        });
+      }
+    }
+  );
+
   if (receta.estado === "validada") {
+    const corte = receta.configuracionCorte;
+    if (
+      receta.perfiles.length > 0 &&
+      (corte?.perdidaCorteMm == null ||
+        corte.despunteInicialMm == null ||
+        corte.sobranteMinimoAprovechableMm == null)
+    ) {
+      advertencias.push({
+        codigo: "PAUTA_BARRAS_INCOMPLETA",
+        nivel: "advertencia",
+        mensaje:
+          "Agrega pérdida por corte, despunte y sobrante mínimo para refinar la pauta de barras.",
+      });
+    }
     if (
       receta.perfiles.length === 0 &&
       receta.vidrios.length === 0 &&

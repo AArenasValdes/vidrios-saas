@@ -75,6 +75,7 @@ export type QuoteConstructorItemPatch = Partial<
     | "costoProveedorUnitario"
     | "guidedVisualConfig"
     | "cubicationSnapshot"
+    | "fabricacionSnapshot"
   >
 > & {
   markPriceManual?: boolean;

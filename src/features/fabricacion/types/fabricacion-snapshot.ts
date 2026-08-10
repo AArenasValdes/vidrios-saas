@@ -13,6 +13,35 @@ import type {
 
 export const FABRICACION_COTIZACION_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 
+export type FabricacionCorteBarra = {
+  componenteId: string;
+  codigoPerfil: string;
+  funcion: string;
+  largoMm: number;
+};
+
+export type FabricacionBarraPauta = {
+  codigoPerfil: string;
+  nombrePerfil: string;
+  indice: number;
+  largoComercialMm: number;
+  despunteInicialMm: number;
+  usadoMm: number;
+  perdidaCortesMm: number;
+  sobranteMm: number;
+  sobranteAprovechable: boolean;
+  cortes: FabricacionCorteBarra[];
+};
+
+export type FabricacionPautaBarras = {
+  calculable: boolean;
+  barras: FabricacionBarraPauta[];
+  advertencias: FabricacionAdvertencia[];
+  totalUsadoMm: number;
+  totalPerdidaCortesMm: number;
+  totalSobranteMm: number;
+};
+
 export type FabricacionCotizacionSnapshot = {
   schemaVersion: typeof FABRICACION_COTIZACION_SNAPSHOT_SCHEMA_VERSION;
   tipo: "fabricacion_receta_snapshot";
@@ -29,6 +58,7 @@ export type FabricacionCotizacionSnapshot = {
   pauta: FabricacionFilaPauta[];
   vidrios: FabricacionVidrioResultado[];
   advertencias: FabricacionAdvertencia[];
+  pautaBarras?: FabricacionPautaBarras;
   calculatedAt: string;
 };
 

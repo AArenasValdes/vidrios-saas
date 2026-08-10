@@ -63,6 +63,46 @@ export type CotizacionLineTemplateCatalogMetadata = Record<
   CotizacionLineTemplateCatalogMetadataValue
 >;
 
+export type CotizacionLineTemplateProfilePreview = {
+  assetUrl: string;
+  sourceLabel: string;
+  sourcePage: number | null;
+};
+
+function isMetadataRecord(
+  value: CotizacionLineTemplateCatalogMetadataValue | undefined
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Preview visual opcional de una sección real. Nunca se genera ni se infiere:
+ * sin URL HTTPS/ruta interna y procedencia explícita, la tarjeta no muestra imagen.
+ */
+export function getLineTemplateProfilePreview(
+  metadata: CotizacionLineTemplateCatalogMetadata | null | undefined
+): CotizacionLineTemplateProfilePreview | null {
+  const rawPreview = metadata?.profilePreview;
+  if (!isMetadataRecord(rawPreview)) return null;
+
+  const assetUrl = typeof rawPreview.assetUrl === "string" ? rawPreview.assetUrl.trim() : "";
+  const sourceLabel =
+    typeof rawPreview.sourceLabel === "string" ? rawPreview.sourceLabel.trim() : "";
+  const sourcePage =
+    typeof rawPreview.sourcePage === "number" && Number.isInteger(rawPreview.sourcePage)
+      ? rawPreview.sourcePage
+      : null;
+
+  const hasAllowedAssetUrl =
+    assetUrl.startsWith("https://") || (assetUrl.startsWith("/") && !assetUrl.startsWith("//"));
+
+  if (!sourceLabel || !hasAllowedAssetUrl) {
+    return null;
+  }
+
+  return { assetUrl, sourceLabel, sourcePage };
+}
+
 export type CotizacionGlassProductMetadata = {
   espesor: string | null;
   terminacion: string | null;

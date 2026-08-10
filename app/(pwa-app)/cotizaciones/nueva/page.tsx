@@ -2037,9 +2037,11 @@ function NuevaCotizacionPageContent() {
       // Medidas/cantidad invalidan el snapshot salvo que el patch traiga uno nuevo explícito.
       if (
         patch.cubicationSnapshot === undefined &&
+        patch.fabricacionSnapshot === undefined &&
         (patch.ancho !== undefined || patch.alto !== undefined || patch.cantidad !== undefined)
       ) {
         form.cubicationSnapshot = null;
+        form.fabricacionSnapshot = null;
       }
 
       const nextItem = buildItemFromForm(form, current.items, itemId, {
@@ -3220,6 +3222,9 @@ function goNextFromStep1() {
             onAnchoChange: pasoDosAgregarGrupo.updateAncho,
             onAltoChange: pasoDosAgregarGrupo.updateAlto,
             onCubicationSnapshotChange: pasoDosAgregarGrupo.updateCubicationSnapshot,
+            onFabricationRecipeIdChange: pasoDosAgregarGrupo.updateFabricationRecipeId,
+            onFabricacionSnapshotChange: pasoDosAgregarGrupo.updateFabricacionSnapshot,
+            onFabricacionContextoChange: pasoDosAgregarGrupo.updateFabricacionContexto,
             onPrecioChange: pasoDosAgregarGrupo.updatePrecio,
             onPrecioPorM2Change: pasoDosAgregarGrupo.updatePrecioPorM2,
             onMinimoCobrableChange: pasoDosAgregarGrupo.updateMinimoCobrable,

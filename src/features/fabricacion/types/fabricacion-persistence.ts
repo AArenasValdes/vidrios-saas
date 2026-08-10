@@ -95,6 +95,7 @@ export type UpdateFabricationRecipeInput = Partial<
     | "variant"
     | "status"
     | "definition"
+    | "sourceType"
     | "sourceReference"
     | "validatedAt"
     | "validatedBy"

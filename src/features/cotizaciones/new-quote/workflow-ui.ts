@@ -552,12 +552,28 @@ export function loadPersistedWorkflowState(
   }
 }
 
+export function safelySetWorkflowStorageValue(storageKey: string, value: string): boolean {
+  if (typeof window === "undefined") return false;
+
+  try {
+    window.localStorage.setItem(storageKey, value);
+    return true;
+  } catch {
+    // Safari privado, cuota llena o storage deshabilitado no deben romper el wizard.
+    return false;
+  }
+}
+
 export function clearPersistedWorkflowState(storageKey: string) {
   if (typeof window === "undefined") {
     return;
   }
 
-  window.localStorage.removeItem(storageKey);
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    // La limpieza es opcional; el flujo actual sigue siendo utilizable sin storage.
+  }
 }
 
 export function buildWorkflowDirtySignature(input: {

@@ -23,6 +23,7 @@ Reglas:
 6. L5000 / L20 / L25 = **“Plantillas iniciales sugeridas”**, no “verificadas”, hasta probar fabricaciones reales.
 7. Abatible / proyectante / puertas / paño fijo como base = **“Base pendiente de validación del taller”** — no vender como cubicación lista sin fórmulas validadas.
 8. En cotización: filtrar por tipología ya elegida en la pieza; pedir solo herraje/variante si hay varias recetas activas.
+9. El reporte `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` solo define catálogo reconocido y prioridad de integración; no autoriza fórmulas, descuentos ni cortes.
 
 ---
 
@@ -207,6 +208,23 @@ Esas tipologías se resuelven en el **constructor visual** al cotizar.
 
 Regla UX: solo **Validada** se trata como confiable. El resto muestra pauta **referencial**.
 
+### Estados de catálogo reconocido (investigación documental)
+
+Usar estos estados para separar “conocemos el nombre” de “podemos cubicar”:
+
+| Estado | Significado |
+|---|---|
+| `reconocida` | Nombre/familia identificada por investigación o cliente |
+| `documentacion_encontrada` | Hay catálogo o ficha útil para extraer componentes |
+| `borrador_generado` | Existe borrador revisable, sin uso confiable en cotización |
+| `validada_por_taller` | El taller probó la receta con casos reales propios |
+| `validada_por_ventora` | Ventora revisó y probó la receta con evidencia trazable |
+| `descontinuada_o_sin_documentacion` | No hay base suficiente para integración activa |
+
+Prioridad documental cerrada: lanzamiento aluminio Serie 20, Serie 25, Serie 32, Serie 42, Serie 4800, Serie 5000 y Puerta 3200; expansión aluminio Sodal 3800, Indalum S24/S33, X27, X43, X69 y Plexa 49; PVC posterior DVP Aspen/Advance, Winhouse Sliding y Deceuninck SL/DL322. Winsa, Veratec, Proline y Tehmco quedan bajo demanda.
+
+No convertir esta prioridad en fórmulas: cada descuento, cantidad, ancho de hoja, mecanizado o corte necesita manual/pauta real y pruebas.
+
 ---
 
 ## 6. Qué guarda el sistema (contrato de datos, sin código)
@@ -279,6 +297,7 @@ La pauta revisable muestra, por pieza:
 - ayuda interna para el maestro,
 - estimativa y editable,
 - usable para conversar materiales sin costear todavía.
+- distribución FFD determinística y referencial por código de perfil, usando pérdida por corte y despunte confirmados por el taller.
 
 ### NO es
 - optimizador de pérdida,
@@ -289,6 +308,15 @@ La pauta revisable muestra, por pieza:
 
 Si el usuario pide “que optimice barras” o “que anide vidrios”:  
 responde que está **fuera de alcance** de Fase 4 V1 / Camino 2.
+
+### Asistente de texto (solo configuración)
+
+- `/api/fabricacion/asistente-texto` requiere sesión y organización activa.
+- Usa DeepSeek JSON Output y valida la respuesta con Zod; no acepta fórmulas libres ni código ejecutable.
+- Código, cantidad, ajuste y largo solo se aplican si estaban explícitamente en el texto.
+- Cualquier ausencia queda en `datosPendientes` y bloquea `validated`.
+- Cotización, despiece y pauta usan solo el motor determinístico guardado; costo IA cero por cotización.
+- Fotos/PDF siguen fuera de alcance.
 
 ---
 

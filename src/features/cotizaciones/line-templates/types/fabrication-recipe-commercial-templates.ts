@@ -4,6 +4,9 @@
  *
  * Naming: L5000 / L20 / L25 = “Plantillas iniciales sugeridas”, no verificadas
  * hasta pruebas reales de fabricación.
+ *
+ * Investigación documental externa solo prioriza catálogo/líneas. No agregar
+ * seeds, adjustMm ni reglas de corte desde presencia en catálogos públicos.
  */
 
 import {

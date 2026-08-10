@@ -1,0 +1,314 @@
+/* Desktop-only catalogue composition. The mobile route keeps the incumbent module untouched. */
+@media (min-width: 1024px) {
+  .page {
+    width: min(calc(100% - 48px), 1480px) !important;
+    gap: 28px !important;
+  }
+
+  .header {
+    min-height: 78px;
+    padding-bottom: 16px;
+  }
+
+  .toolbar {
+    margin: 0 !important;
+  }
+
+  .desktopToolbar {
+    display: grid;
+    gap: 12px;
+    padding: 20px;
+    border: 1px solid #e0e7f0;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 18px 34px rgba(18, 34, 58, 0.055);
+  }
+
+  .toolbarMain {
+    display: grid !important;
+    grid-template-columns: minmax(260px, 2.15fr) minmax(165px, 0.92fr) minmax(150px, 0.78fr) minmax(175px, 0.95fr) auto !important;
+    align-items: end;
+    gap: 12px;
+  }
+
+  .searchField {
+    height: 50px;
+  }
+
+  .filterField {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+  }
+
+  .filterField > span {
+    color: #687991;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .filterField > select {
+    min-height: 42px;
+    border-radius: 11px;
+    background-color: #ffffff;
+  }
+
+  .filtersTrigger {
+    min-height: 42px;
+    border-radius: 11px;
+    box-shadow: none;
+  }
+
+  .filtersPanel {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 16px;
+    padding: 14px 0 0 !important;
+    border-top: 1px solid #edf1f5;
+  }
+
+  .filtersPanel > :not(.availabilityGroup):not(.filtersReset) {
+    display: none;
+  }
+
+  .availabilityGroup {
+    display: grid;
+    gap: 7px;
+  }
+
+  .availabilityGroup > div {
+    width: fit-content;
+    margin: 0;
+  }
+
+  .filtersReset {
+    align-self: end;
+  }
+
+  .list {
+    gap: 32px !important;
+    margin: 0 !important;
+  }
+
+  .catalogGroup {
+    gap: 10px !important;
+    border: 0 !important;
+  }
+
+  .groupHeader {
+    min-height: 28px;
+    padding: 0 2px !important;
+  }
+
+  .groupHeader > div {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .groupHeader span {
+    color: #102039;
+    font-size: 16px;
+  }
+
+  .groupHeader strong {
+    color: #102039;
+    font-size: 16px;
+  }
+
+  .groupHeader small {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #65758a;
+  }
+
+  .groupCards {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+    gap: 12px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "identity"
+      "price"
+      "technical"
+      "details"
+      "state" !important;
+    align-content: start;
+    min-height: 238px !important;
+    padding: 20px !important;
+    border: 1px solid #dde5ee !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    box-shadow: 0 8px 22px rgba(18, 34, 58, 0.045) !important;
+  }
+
+  .card:hover {
+    border-color: #c7d7e9 !important;
+    background: #ffffff !important;
+    box-shadow: 0 16px 30px rgba(18, 34, 58, 0.075) !important;
+  }
+
+  .cardTop {
+    grid-area: identity !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 12px;
+    padding: 0 !important;
+  }
+
+  .cardTop:has(.profilePreview) {
+    grid-template-columns: 96px minmax(0, 1fr) auto !important;
+  }
+
+  .profilePreview {
+    display: grid !important;
+    align-content: center;
+    min-height: 112px;
+    margin: 0 !important;
+    padding: 10px !important;
+    border: 1px solid #e5ebf2 !important;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+
+  .profilePreview img {
+    width: 100% !important;
+    height: 78px !important;
+    object-fit: contain;
+  }
+
+  .profilePreview figcaption {
+    display: none;
+  }
+
+  .cardTitleBlock {
+    gap: 6px;
+  }
+
+  .cardTitleBlock strong {
+    color: #0d1b30;
+    font-size: 17px;
+  }
+
+  .cardActions {
+    align-items: start;
+  }
+
+  .priceRow {
+    grid-area: price !important;
+    min-height: 0 !important;
+    padding: 18px 0 14px !important;
+    border: 0 !important;
+  }
+
+  .priceRow strong {
+    font-size: 22px !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .technicalStatusRow {
+    grid-area: technical !important;
+    min-height: 0 !important;
+    padding: 13px 0 12px !important;
+    border: 0 !important;
+    border-top: 1px solid #e8edf3 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .technicalStatusRow[data-tech-status] {
+    border-left: 0 !important;
+    background: transparent !important;
+  }
+
+  .detailMeta {
+    grid-area: details !important;
+    padding: 0 !important;
+  }
+
+  .cardBottom {
+    grid-area: state !important;
+    min-height: 28px !important;
+    padding: 8px 0 0 !important;
+    border: 0 !important;
+  }
+
+  .cardBottom > span {
+    display: none;
+  }
+
+  .groupCardsSingle {
+    width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .groupCardsSingle .card {
+    grid-template-columns: minmax(260px, 1.35fr) minmax(200px, 0.86fr) minmax(260px, 1fr) auto !important;
+    grid-template-areas: "identity price technical state" !important;
+    align-items: center;
+    min-height: 146px !important;
+    padding: 20px !important;
+  }
+
+  .groupCardsSingle .priceRow {
+    padding: 0 24px !important;
+    border-left: 1px solid #e8edf3 !important;
+  }
+
+  .groupCardsSingle .technicalStatusRow {
+    padding: 0 0 0 24px !important;
+    border-top: 0 !important;
+    border-left: 1px solid #e8edf3 !important;
+  }
+
+  .groupCardsSingle .cardBottom {
+    align-self: center;
+    padding: 0 0 0 18px !important;
+    border-left: 1px solid #e8edf3 !important;
+  }
+
+  .groupCardsSingle .detailMeta {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .toolbarMain {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr) auto !important;
+  }
+
+  .searchField {
+    grid-column: 1 / -1;
+  }
+
+  .filtersTrigger {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .groupCardsSingle .card {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr) !important;
+    grid-template-areas:
+      "identity price"
+      "technical state" !important;
+    gap: 14px 0;
+  }
+
+  .groupCardsSingle .technicalStatusRow {
+    padding-top: 14px !important;
+    border-top: 1px solid #e8edf3 !important;
+  }
+}

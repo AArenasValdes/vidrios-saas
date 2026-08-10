@@ -1,0 +1,463 @@
+.page {
+  min-height: 100%;
+  padding: 0 14px calc(var(--tabbar-h, 72px) + 30px + env(safe-area-inset-bottom, 0px));
+  color: #102038;
+  background: #f5f7fa;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 0 8px;
+  margin-top: 8px;
+}
+
+.backButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: #31445f;
+  background: #fff;
+  border: 1px solid #dfe6ee;
+  border-radius: 12px;
+}
+
+.backButton svg {
+  width: 21px;
+  height: 21px;
+}
+
+.header h1 {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 20px/1.15 var(--font-syne), sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.header p {
+  margin: 3px 0 0;
+  color: #718096;
+  font-size: 12px;
+}
+
+.errorBand {
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  color: #a22d2d;
+  background: #fff0f0;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.desktopNotice {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 16px;
+  padding: 14px 14px 13px;
+  border: 1px solid #d7e5f7;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7fbff 0%, #eef5fd 100%);
+}
+
+.desktopNoticeIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: #1677e8;
+  background: #fff;
+  border: 1px solid #d5e5f8;
+  border-radius: 11px;
+}
+
+.desktopNoticeIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.desktopNotice strong {
+  display: block;
+  color: #12325a;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.desktopNotice p {
+  margin: 4px 0 0;
+  color: #5d7190;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.commercialSection,
+.currentRecipe,
+.emptyRecipe {
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 10px 26px -24px rgb(19 42 71 / 75%);
+}
+
+.commercialSection {
+  padding: 15px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionHeading h2,
+.fabricationHeading h2 {
+  margin: 0;
+  font: 700 15px/1.2 var(--font-syne), sans-serif;
+  letter-spacing: -0.015em;
+}
+
+.sectionHeading > span {
+  color: #237657;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.priceRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 16px;
+}
+
+.priceRow > div {
+  display: grid;
+  gap: 5px;
+}
+
+.priceRow strong {
+  font: 700 21px/1 var(--font-syne), sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.priceRow small {
+  color: #6b7b91;
+  font-size: 11px;
+}
+
+.editCommercialButton {
+  display: flex;
+  min-height: 44px;
+  padding: 0 12px;
+  align-items: center;
+  gap: 6px;
+  color: #145faa;
+  background: #edf5ff;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.editCommercialButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fabricationSection {
+  margin-top: 26px;
+}
+
+.fabricationHeading {
+  margin-bottom: 12px;
+}
+
+.fabricationHeading p {
+  margin: 5px 0 0;
+  color: #6c7b90;
+  font-size: 11px;
+}
+
+.emptyRecipe {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.emptyIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  color: #1677e8;
+  background: #eaf4ff;
+  border-radius: 12px;
+}
+
+.emptyIcon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.emptyRecipe strong {
+  font-size: 14px;
+}
+
+.emptyRecipe p {
+  margin: 5px 0 0;
+  color: #66758a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.validatedMark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: #198058;
+}
+
+.readOnlyHint {
+  margin: 0 17px 16px;
+  padding-top: 12px;
+  border-top: 1px solid #edf0f4;
+  color: #6b7b91;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.currentRecipe {
+  overflow: clip;
+}
+
+.recipeTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 17px 17px 13px;
+}
+
+.recipeTop > div {
+  min-width: 0;
+}
+
+.recipeTop span {
+  color: #9a6514;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.currentRecipe[data-status="testing"] .recipeTop span {
+  color: #126ac8;
+}
+
+.currentRecipe[data-status="validated"] .recipeTop span {
+  color: #198058;
+}
+
+.recipeTop h3 {
+  overflow: hidden;
+  margin: 6px 0 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 16px/1.2 var(--font-syne), sans-serif;
+}
+
+.recipeTop p {
+  margin: 4px 0 0;
+  color: #748195;
+  font-size: 11px;
+}
+
+.archiveButton {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
+  color: #708095;
+  background: transparent;
+  border: 0;
+  border-radius: 11px;
+}
+
+.archiveButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.progressList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 17px;
+  padding: 4px 0 8px;
+  border-top: 1px solid #edf0f4;
+}
+
+.progressList div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid #f1f4f8;
+}
+
+.progressList div:nth-child(2n) {
+  padding-right: 0;
+  padding-left: 12px;
+  border-left: 1px solid #edf0f4;
+}
+
+.progressList div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.progressList dt {
+  color: #7a8798;
+  font-size: 10px;
+}
+
+.progressList dd {
+  margin: 0;
+  color: #263850;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.history {
+  margin-top: 12px;
+  overflow: clip;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.history > summary {
+  display: flex;
+  min-height: 54px;
+  padding: 0 15px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.history > summary::-webkit-details-marker {
+  display: none;
+}
+
+.history summary span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #5d6d82;
+  background: #eef2f6;
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+.historyList {
+  display: grid;
+  padding: 0 15px 10px;
+}
+
+.historyList article {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #edf0f4;
+}
+
+.historyList article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.historyList strong {
+  font-size: 12px;
+}
+
+.historyList span {
+  color: #718096;
+  font-size: 10px;
+}
+
+.historyList button {
+  display: flex;
+  min-height: 44px;
+  padding: 0 2px 0 12px;
+  align-items: center;
+  gap: 4px;
+  color: #1266c0;
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.historyList button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.libraryAction {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  margin-top: 22px;
+  padding: 10px 8px;
+  color: #24364d;
+  text-decoration: none;
+}
+
+.libraryAction > svg:first-child {
+  width: 20px;
+  height: 20px;
+  color: #1677e8;
+}
+
+.libraryAction > svg:last-child {
+  width: 18px;
+  height: 18px;
+  color: #718096;
+}
+
+.libraryAction span {
+  display: grid;
+  gap: 3px;
+}
+
+.libraryAction strong {
+  font-size: 12px;
+}
+
+.libraryAction small {
+  color: #718096;
+  font-size: 10px;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    display: none;
+  }
+}

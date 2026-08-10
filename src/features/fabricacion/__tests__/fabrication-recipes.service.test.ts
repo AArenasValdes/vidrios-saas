@@ -406,20 +406,28 @@ describe("fabrication-recipes.service", () => {
     });
   });
 
-  it("impide validar cuando falta el codigo de un perfil obligatorio", async () => {
-    const incomplete = recipeRecord({
-      definition: {
-        ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
-        perfiles: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.perfiles.map(
-          (profile, index) =>
-            index === 0 ? { ...profile, codigoPerfil: "" } : profile
-        ),
-      },
-    });
-    const { service } = createService([incomplete]);
+  it("permite validar aunque falte el código comercial de un perfil obligatorio", async () => {
+    const definition = {
+      ...RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO,
+      perfiles: RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO.perfiles.map(
+        (profile) => ({ ...profile, codigoPerfil: "" })
+      ),
+    };
+    const { service } = createService([recipeRecord({ definition })]);
+    const input = baseInput();
+    const expected = calcularCubicacionYPauta(definition, input);
 
-    await expect(service.validateRecipe("receta-base", 10)).rejects.toMatchObject({
-      code: "VALIDACION_COMPONENTES_INCOMPLETOS",
+    await service.createRecipeTest({
+      recipeId: "receta-base",
+      organizationId: 10,
+      name: "Caso sin códigos comerciales",
+      input,
+      expectedOutput: expected,
+      isRequired: true,
+    });
+
+    await expect(service.validateRecipe("receta-base", 10)).resolves.toMatchObject({
+      status: "validated",
     });
   });
 

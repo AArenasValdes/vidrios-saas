@@ -4,6 +4,46 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-08-08 - Inicio inteligente de recetas por tipologia
+
+- El administrador desktop ya no obliga a crear una receta vacia: ofrece Base de Ventora, Crear con IA o Empezar desde cero antes de persistir el borrador.
+- Se agregaron seis bases estructurales universales (corredera, abatible, proyectante, pano fijo, puerta abatible y shower) ajustables por hojas y modulos.
+- Las bases solo sugieren funciones, componentes habituales y dimensiones base. Codigos, descuentos, cantidades tecnicas, largos comerciales y pauta quedan Por confirmar y bloquean validacion.
+- El taller puede reutilizar hasta tres recetas propias validadas similares. La copia conserva estructura y reglas, pero vuelve a borrador y debe revisarse, probarse y validarse.
+- El asistente de texto sigue usando el endpoint y esquema existentes; ahora resume componentes detectados, reglas completas y datos pendientes antes de crear el borrador editable.
+- Sin migracion SQL, cambios de RLS, formulas libres, PDF comercial, precios ni seleccion de recetas en cotizacion.
+
+---
+
+## 2026-08-04 - Corrección de navegación de líneas y recetas
+
+- Se retiraron Biblioteca de líneas y Mis recetas del sidebar. Catálogo privado vuelve a ser la única entrada principal para precio comercial y receta técnica.
+- Las tarjetas del catálogo ahora muestran un bloque compacto de Fabricación y filtros por estado técnico. Cada acción abre la receta ligada a su `line_template_id`.
+- Biblioteca técnica y Mis recetas permanecen como rutas internas con regreso explícito al catálogo. Desde una línea, una plantilla sugerida se copia como receta privada vinculada y abre su editor.
+- La biblioteca abierta sin línea permite explorar, pero deriva a seleccionar una línea comercial antes de copiar. Las rutas internas usan contexto técnico y no heredan encabezado de Dashboard.
+- Las tarjetas del Catálogo privado separan precio y estado comercial de un bloque compacto de Receta técnica. Solo muestran Sin receta, Borrador, Lista para probar o Validada, con faltantes persistidos cuando existen y acciones independientes para editar la línea o administrar su receta.
+- Sin cambios en motor, fórmulas, plantillas, IA, base de datos ni pauta de corte.
+
+---
+
+## 2026-08-03 - Asistente estructurado y barras en recetas formales
+
+- Se agrego asistente de texto autenticado con DeepSeek JSON Output y validacion Zod. Solo produce borradores; datos no explicitados quedan pendientes y bloquean validacion.
+- El editor ahora incluye observaciones, datos pendientes y parametros confirmables de barra: perdida por corte, despunte inicial y sobrante minimo aprovechable.
+- El snapshot formal incorpora distribucion FFD referencial por codigo/largo comercial y la adapta al consolidado existente; cotizar no llama IA.
+- Biblioteca: ALAR L20/L25/L5000 se copia como borrador sugerido. SODAL Serie 20/4800/S-33/42/3200 queda reconocida sin `definition` ejecutable hasta contar con formulas verificables.
+- Sin migracion SQL: los campos nuevos viven de forma aditiva en `definition`/snapshot JSON. Se preservan RLS, soft delete, versionado y compatibilidad.
+
+---
+
+## 2026-08-01 - Catalogo prioritario desde investigacion documental
+
+- Se incorporo `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` como fuente de apoyo para catalogo reconocido y prioridad de integracion, no para formulas de cubicacion.
+- Prioridad cerrada: aluminio lanzamiento Serie 20/25/32/42/4800/5000/Puerta 3200; expansion Sodal 3800, Indalum S24/S33/X27/X43/X69/Plexa; PVC posterior DVP Aspen/Advance, Winhouse Sliding y Deceuninck SL/DL322; Winsa/Veratec/Proline/Tehmco bajo demanda.
+- Se reforzo que recetas ejecutables requieren manual/pauta real y pruebas de taller; el reporte no habilita descuentos, cortes, cantidades, mecanizados ni `definition` de `fabrication_recipes`.
+
+---
+
 ## 2026-07-30 - Fase 4 fabricacion: administrador guiado y selector de receta
 
 - Se agrego `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` con listado de versiones, duplicado Ventora, editor guiado, laboratorio esperado/calculado, casos obligatorios/opcionales, versionado, archivo y validacion.
@@ -1989,3 +2029,10 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 - Se agrego migracion `20260602065826_founder_free_internal_accounts`.
 - Organizaciones `3` y `4` quedan como `active/founder/founder_full` sin fecha de vencimiento.
 - Se documenta que hard delete de organizations con datos asociados no es el flujo correcto; usar soft delete por `eliminado_en`.
+## 2026-08-03 - Biblioteca y flujo técnico de cubicación
+
+- Se agregaron `/biblioteca-lineas` y `/mis-recetas` como entradas técnicas independientes del catálogo de precios. Ambas reutilizan líneas comerciales y recetas persistidas; las plantillas sugeridas o líneas solo reconocidas no inventan códigos, cantidades ni fórmulas.
+- El administrador de receta ahora presenta las etapas Identidad, Componentes, Prueba y Validación, con resumen lateral de datos/política de corte en milímetros.
+- El laboratorio conserva el cálculo puro y expone una pauta de barras FFD referencial a partir de largos comerciales y pérdidas documentadas. No agrega optimizador industrial ni bloquea la cotización comercial cuando no existe receta validada.
+
+---

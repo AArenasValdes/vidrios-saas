@@ -27,8 +27,8 @@ describe("orden de taller L5000 / pauta", () => {
       "Riel superior",
       "Riel inferior",
       "Jamba",
-      "Cabezal",
       "Zócalo",
+      "Cabezal",
       "Pierna",
       "Traslapo",
     ]);
@@ -126,8 +126,8 @@ describe("orden de taller L5000 / pauta", () => {
       "Riel superior",
       "Riel inferior",
       "Jamba",
-      "Cabezal",
       "Zócalo",
+      "Cabezal",
       "Pierna",
       "Traslapo",
     ]);

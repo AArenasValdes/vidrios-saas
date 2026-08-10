@@ -1,0 +1,10 @@
+{
+  "hook": {
+    "enabled": true
+  },
+  "detector": {
+    "designSystem": {
+      "enabled": true
+    }
+  }
+}

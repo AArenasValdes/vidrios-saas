@@ -408,15 +408,25 @@
 - **Tipo**: Privada (autenticada)
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx`
 - **Layout usado**: `app/(pwa-app)/layout.tsx` -> `AppShell`
-- **Proposito**: CRUD del catálogo privado (precios) y acceso al administrador separado de recetas de fabricación.
+- **Proposito**: Entrada única para CRUD del catálogo privado: precios, estado para cotizar y acceso contextual a la receta de fabricación de cada línea.
 - **Usuario objetivo**: Admin autenticado
 - **Componentes principales**: `LineasPreciosPageClient`, `LineTemplateFormWizard`
 - **Hooks**: `useCotizacionLineTemplates`, `useFabricationRecipes`
 - **Tablas Supabase relacionadas**: `cotizacion_line_templates`, `fabrication_recipes`
-- **Acciones principales**: Crear/editar/duplicar/pausar líneas; distinguir visualmente Sin configurar / En prueba / Validada; abrir **Administrar**.
+- **Acciones principales**: Crear/editar/duplicar/pausar líneas; filtrar por estado técnico; distinguir Sin configurar / Borrador / Lista para probar / Validada; abrir la receta vinculada.
 - **UX (2026-07-30)**: linea comercial y receta quedan separadas. El wizard no escribe nuevas recetas en `catalog_metadata`; muestra la configuracion antigua como solo lectura y deriva al modulo versionado.
 - **Archivos a tocar**: `lineas-precios-page-client.tsx`, `line-template-form-wizard.tsx`, `fabrication-recipe-editor.tsx`, `fabrication-recipe*.ts`, resto de `line-templates/**`
 - **Riesgos**: Migración catalog extendida requerida. No precios en pauta, no optimizador/nesting/CAD/inventario. No llamar “verificadas” a L5000/L20/L25. No mostrar formulas/JSON al usuario.
+
+---
+
+## Ruta: /biblioteca-lineas y /mis-recetas
+
+- **Tipo**: Privadas (autenticadas)
+- **Archivos principales**: `app/(pwa-app)/biblioteca-lineas/page.tsx`, `app/(pwa-app)/mis-recetas/page.tsx`, `src/features/fabricacion/components/fabricacion-library.tsx`
+- **Propósito**: Vistas internas abiertas desde Catálogo privado o desde una línea. No aparecen en el sidebar ni reemplazan al catálogo comercial como entrada principal.
+- **Datos**: Lee `cotizacion_line_templates`, `fabrication_recipes` y `BIBLIOTECA_RECETAS_PRIORIZADAS`. Las líneas reconocidas sin reglas solo exponen sus datos pendientes; no crean recetas.
+- **Riesgos**: No mezclar precios con receta, ni presentar sugeridas/reconocidas como validadas. La navegación hacia una receta concreta conserva la ruta por `lineTemplateId`.
 
 ---
 
@@ -424,7 +434,7 @@
 
 - **Tipo**: Privada (autenticada), dinamica
 - **Archivo principal**: `app/(pwa-app)/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion/page.tsx`
-- **Proposito**: Administrar recetas versionadas de una linea, duplicar bases Ventora, editar componentes con reglas controladas, ejecutar casos reales y validar versiones.
+- **Proposito**: Administrar recetas versionadas de una linea, duplicar bases Ventora, editar componentes con reglas controladas, ejecutar casos reales y validar versiones. Incluye el flujo visual Identidad -> Componentes -> Prueba -> Validación y la pauta FFD referencial de barras.
 - **Componentes principales**: `FabricacionLineWorkspace`, `RecipeGuidedEditor`, `RecipeTestLab`
 - **Hooks**: `useFabricationRecipes`, `useCotizacionLineTemplates`
 - **Tablas Supabase relacionadas**: `fabrication_recipes`, `fabrication_recipe_tests`, `cotizacion_line_templates`

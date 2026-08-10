@@ -27,10 +27,6 @@ import {
 } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
-import {
-  buildCubicationSnapshotFromCatalogMetadata,
-} from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
-import { getLineTemplateCuttingRules } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import {
   buildPieceDomainView,
@@ -45,6 +41,8 @@ import {
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import { GuidedVisualComposer } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
 import { QuoteConstructorPresetSelector } from "@/features/cotizaciones/visual-composer/components/quote-constructor-preset-selector";
 import {
@@ -516,9 +514,68 @@ export function QuoteConstructorWorkspace({
         (item) => mapItemToForm(item).lineTemplateId !== defaultLineTemplateId
       )
     : [];
+  const { organizationId, recipes: fabricationRecipes } = useFabricationRecipes({
+    enabled: true,
+  });
+  const activeFabricationResolution = useMemo(() => {
+    if (!activeItem) return null;
+    return resolveFabricacionDespieceForQuoteItem({
+      item: activeItem,
+      recipes: fabricationRecipes,
+      organizationId,
+    });
+  }, [activeItem, fabricationRecipes, organizationId]);
   const activeView = activeItem
     ? buildPieceDomainView(activeItem, quotePricingMode, activeTemplate)
     : null;
+  useEffect(() => {
+    if (!activeItem || !activeFabricationResolution) return;
+    if (
+      activeFabricationResolution.estado !== "calculado" ||
+      !activeFabricationResolution.formal
+    ) {
+      return;
+    }
+    const current = activeItem.fabricacionSnapshot;
+    const next = activeFabricationResolution.formal;
+    const alreadySynced =
+      current?.recipeId === next.recipeId &&
+      current.input.anchoTotalMm === next.input.anchoTotalMm &&
+      current.input.altoTotalMm === next.input.altoTotalMm &&
+      current.input.cantidad === next.input.cantidad &&
+      current.result.totalLinealMm === next.result.totalLinealMm;
+    if (alreadySynced) return;
+    onUpdateItem(activeItem.id, {
+      fabricacionSnapshot: next,
+      cubicationSnapshot: activeFabricationResolution.cubication,
+    });
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "post-fix",
+        hypothesisId: "A_C",
+        location: "quote-constructor-workspace.tsx:syncFabricacion",
+        message: "Card sincronizó snapshot formal",
+        data: {
+          itemId: activeItem.id,
+          totalMm: next.result.totalLinealMm,
+          cuts: next.result.perfiles.reduce(
+            (sum, row) => sum + row.cantidadPiezas,
+            0
+          ),
+          barsAvailable: activeFabricationResolution.barsAvailable,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [activeItem, activeFabricationResolution, onUpdateItem]);
   const selectedColor = activeForm
     ? COLOR_OPTIONS.find(
         (option) => option.hex.toLowerCase() === activeForm.colorHex.toLowerCase()
@@ -819,20 +876,17 @@ export function QuoteConstructorWorkspace({
   };
 
   const recalculateActiveCubication = () => {
-    if (!activeItem || !activeForm || !activeTemplate || activeForm.isCustomScheme) return;
-    const widthMm = Math.round(Number(activeForm.ancho));
-    const heightMm = Math.round(Number(activeForm.alto));
-    const quantity = Math.max(1, Math.round(Number(activeForm.cantidad)) || 1);
-    const rules = getLineTemplateCuttingRules(activeTemplate.catalogMetadata);
-    if (!rules?.enabled || widthMm <= 0 || heightMm <= 0) return;
-    const next = buildCubicationSnapshotFromCatalogMetadata({
-      lineTemplateId: String(activeTemplate.id),
-      catalogMetadata: activeTemplate.catalogMetadata,
-      widthMm,
-      heightMm,
-      quantity,
+    if (!activeItem || !activeForm || activeForm.isCustomScheme) return;
+    const resolution = resolveFabricacionDespieceForQuoteItem({
+      item: activeItem,
+      recipes: fabricationRecipes,
+      organizationId,
     });
-    if (next) onUpdateItem(activeItem.id, { cubicationSnapshot: next });
+    if (resolution.estado !== "calculado" || !resolution.formal) return;
+    onUpdateItem(activeItem.id, {
+      fabricacionSnapshot: resolution.formal,
+      cubicationSnapshot: resolution.cubication,
+    });
   };
 
   const addPreset = (preset: QuoteConstructorPresetId) => {
@@ -1459,12 +1513,18 @@ export function QuoteConstructorWorkspace({
                     canRecalculate={Boolean(
                       activeTemplate &&
                         !activeForm.isCustomScheme &&
-                        getLineTemplateCuttingRules(activeTemplate.catalogMetadata)?.enabled &&
                         Number(activeForm.ancho) > 0 &&
-                        Number(activeForm.alto) > 0
+                        Number(activeForm.alto) > 0 &&
+                        activeFabricationResolution?.estado === "calculado"
                     )}
                     onOpenReview={() => openDespieceReview(activeItem.id)}
                     onRecalculate={recalculateActiveCubication}
+                    barsHint={
+                      activeFabricationResolution?.estado === "calculado" &&
+                      !activeFabricationResolution.barsAvailable
+                        ? "Agrega largos comerciales para calcular barras."
+                        : null
+                    }
                   />
                 </InspectorAccordionSection>
 

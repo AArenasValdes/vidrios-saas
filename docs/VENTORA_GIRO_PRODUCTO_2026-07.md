@@ -104,6 +104,20 @@ docs/manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md
 
 Hasta (2)+(3): marketing y demos deben decir **plantillas iniciales / bases pendientes**, nunca “verificadas” ni “listas para cualquier taller”.
 
+### Catálogo prioritario desde investigación documental (2026-08-01)
+
+Fuente de apoyo: `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md`. Usar este reporte para decidir **qué nombres reconocer y en qué orden integrarlos**, no para deducir descuentos, cortes, cantidades ni fórmulas de cubicación.
+
+**Aluminio de lanzamiento:** Serie 20, Serie 25, Serie 32, Serie 42, Serie 4800, Serie 5000 y Puerta 3200.
+
+**Primeras recetas a validar, cuando haya casos reales:** Serie 20 dos hojas monolítico pierna abierta/cerrada/DVH; Serie 25 dos hojas monolítico pierna abierta/cerrada/DVH; Serie 32 fijo/proyectante; Serie 42 fijo/proyectante; Serie 4800 o 5000 dos hojas monolítico; Puerta 3200 una hoja.
+
+**Aluminio de expansión:** Sodal 3800; Indalum S24 y S33 monolítico/DVH; X27; X43 ventana/puerta; X69 antepecho/piso a cielo; Plexa 49.
+
+**PVC posterior:** DVP Aspen/Advance, Winhouse Sliding y Deceuninck SL/DL322. Winsa CD73/CD92, Veratec 7400/5200, Proline SLD70/SLD84 y Tehmco histórico quedan bajo demanda con manual o caso real aportado por el taller.
+
+**Regla cerrada:** la biblioteca puede mostrar líneas reconocidas con estado, pero solo se marca como “Lista para cubicar” una receta validada con manual/pauta real y pruebas de taller. El reporte no habilita crear fórmulas.
+
 ---
 
 ## 6. Mensajes comerciales vigentes

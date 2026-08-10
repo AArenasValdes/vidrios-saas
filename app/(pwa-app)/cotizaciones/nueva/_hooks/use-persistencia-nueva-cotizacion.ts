@@ -17,6 +17,7 @@ import {
   createEmptyComponentForm,
   loadPersistedWorkflowState,
   mapRecordToDraft,
+  safelySetWorkflowStorageValue,
   type ComponentFormState,
   type PersistedWorkflowState,
   type QuickEditFieldKey,
@@ -233,7 +234,7 @@ export function usePersistenciaNuevaCotizacion(
         showStep1MoreData: input.showStep1MoreData,
       };
 
-      window.localStorage.setItem(storageKey, JSON.stringify(snapshot));
+      safelySetWorkflowStorageValue(storageKey, JSON.stringify(snapshot));
     },
     [storageKey]
   );
@@ -425,7 +426,7 @@ export function usePersistenciaNuevaCotizacion(
     }
 
     persistTimeoutRef.current = window.setTimeout(() => {
-      window.localStorage.setItem(storageKey, persistedSnapshotJson);
+      safelySetWorkflowStorageValue(storageKey, persistedSnapshotJson);
       persistTimeoutRef.current = null;
     }, 250);
   }, [persistedSnapshotJson, storageKey]);

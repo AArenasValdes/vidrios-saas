@@ -33,6 +33,7 @@ import {
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
+import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
 import s from "./paso-dos-cuaderno-movil.module.css";
 
 type Props = {
@@ -65,6 +66,7 @@ function commitDimension(raw: string, fallback: number) {
 
 export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Props) {
   const history = useGuidedVisualHistory(initialConfig);
+  useMobileViewportStability();
   const [showMore, setShowMore] = useState(false);
   const [widthDraft, setWidthDraft] = useState<string | null>(null);
   const [heightDraft, setHeightDraft] = useState<string | null>(null);
@@ -74,14 +76,6 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     // Solo al montar / cambiar pieza.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialConfig]);
-
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
 
   const config = history.config;
   const widthValue = widthDraft ?? String(config.widthMm);

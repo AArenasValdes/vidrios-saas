@@ -46,6 +46,7 @@ import {
   getStageTitle,
   sortGlassOptions,
 } from "./paso-dos-wizard-movil.utils";
+import { useMobileViewportStability } from "../../_hooks/use-mobile-viewport-stability";
 import { buildPasoDosWizardMovilState } from "./paso-dos-wizard-movil.state";
 import { PasoDosListaMovil } from "./paso-dos-lista-movil";
 import { PasoDosVariacionRapidaMovil } from "./paso-dos-variacion-rapida-movil";
@@ -262,6 +263,7 @@ export function PasoDosWizardMovil({
   onMostrarIvaChange,
   onInternalObservationChange,
 }: Props) {
+  useMobileViewportStability({ active: wizard.isOpen, lockBodyScroll: false });
   const [showAllSystems, setShowAllSystems] = useState(false);
   const [showAllConfigurations, setShowAllConfigurations] = useState(false);
   const [vidSearch, setVidSearch] = useState("");

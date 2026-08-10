@@ -9,6 +9,11 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
     (sum, entry) => sum + entry.cantidadUnidades,
     0
   );
+  const barras = snapshot.pautaBarras?.barras ?? [];
+  const totalAvailableMm = barras.reduce(
+    (sum, barra) => sum + barra.largoComercialMm,
+    0
+  );
 
   return {
     v: 2,
@@ -28,10 +33,24 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
       totalLinealMm: row.totalLinealMm,
       measureExplanation: row.trazabilidad.map((trace) => trace.formula).join(" / "),
     })),
-    bars: [],
-    totalUsedMm: 0,
-    totalWasteMm: 0,
-    wastePct: 0,
+    bars: barras.map((barra, index) => ({
+      index: index + 1,
+      usedMm: barra.usadoMm,
+      wasteMm: barra.sobranteMm,
+      cuts: barra.cortes.map((corte) => ({
+        label: corte.codigoPerfil,
+        functionLabel: corte.funcion,
+        quantity: 1,
+        lengthMm: corte.largoMm,
+        totalLinealMm: corte.largoMm,
+      })),
+    })),
+    totalUsedMm: snapshot.pautaBarras?.totalUsadoMm ?? 0,
+    totalWasteMm: snapshot.pautaBarras?.totalSobranteMm ?? 0,
+    wastePct:
+      totalAvailableMm > 0
+        ? ((snapshot.pautaBarras?.totalSobranteMm ?? 0) / totalAvailableMm) * 100
+        : 0,
     totalProfilesLinealMm: snapshot.result.totalLinealMm,
     glass: firstGlass
       ? {

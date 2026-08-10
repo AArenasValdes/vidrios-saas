@@ -325,6 +325,8 @@ export function PautaCubicacionPanel({
       herraje: componentForm.fabricacionHerraje || null,
       variante: componentForm.fabricacionVariante || null,
       preferredRecipeId: componentForm.fabricationRecipeId || null,
+      allowNonValidatedRecipeId: componentForm.fabricationRecipeId || null,
+      allowPreliminaryNonValidated: true,
     });
   }, [
     componentForm.fabricacionApertura,
@@ -353,10 +355,38 @@ export function PautaCubicacionPanel({
       heightMm <= 0 ||
       quantity <= 0
     ) {
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "2c9a42",
+        },
+        body: JSON.stringify({
+          sessionId: "2c9a42",
+          runId: "pre-fix",
+          hypothesisId: "B_E",
+          location: "pauta-cubicacion-panel.tsx:formalSnapshotNull",
+          message: "Sin snapshot formal de fabrication_recipes",
+          data: {
+            lineTemplateId: numericLineTemplateId,
+            resolutionEstado: formalResolution?.estado ?? null,
+            recipesCount: persistedRecipes.length,
+            selectedRecipeId: selectedPersistedRecipe?.id ?? null,
+            selectedRecipeStatus: selectedPersistedRecipe?.status ?? null,
+            widthMm,
+            heightMm,
+            quantity,
+            tipologia: explicitTipologia,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       return null;
     }
 
-    return construirSnapshotFabricacionCotizacion({
+    const built = construirSnapshotFabricacionCotizacion({
       recipe: selectedPersistedRecipe,
       entrada: {
         anchoTotalMm: widthMm,
@@ -367,7 +397,42 @@ export function PautaCubicacionPanel({
         variante: selectedPersistedRecipe.definition.identidad.variante,
       },
     });
-  }, [heightMm, quantity, selectedPersistedRecipe, widthMm]);
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "pre-fix",
+        hypothesisId: "B_E",
+        location: "pauta-cubicacion-panel.tsx:formalSnapshotBuilt",
+        message: "Snapshot formal con motor Paso 3",
+        data: {
+          recipeId: selectedPersistedRecipe.id,
+          status: selectedPersistedRecipe.status,
+          totalMm: built.result.totalLinealMm,
+          functions: built.result.perfiles
+            .slice(0, 12)
+            .map((row) => `${row.funcion}:${row.medidaMm}x${row.cantidadPiezas}`),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    return built;
+  }, [
+    explicitTipologia,
+    formalResolution?.estado,
+    heightMm,
+    numericLineTemplateId,
+    persistedRecipes.length,
+    quantity,
+    selectedPersistedRecipe,
+    widthMm,
+  ]);
   const formalLegacySnapshot = useMemo(
     () =>
       formalSnapshot
@@ -845,6 +910,8 @@ export function PautaCubicacionPanel({
       ? formalResolution.candidatas.length > 0
         ? "Hay recetas para esta linea, pero ninguna validada coincide con esta pieza."
         : "Esta linea todavia no tiene una receta compatible validada."
+    : useFormalDomain && isLoadingPersistedRecipes
+      ? "Cargando receta de fabricación…"
     : !useFormalDomain &&
         !personalizadoAssistMode &&
         !rules?.enabled &&
@@ -855,6 +922,52 @@ export function PautaCubicacionPanel({
         : !hasCuts
           ? "Con estas medidas aún no hay cortes para mostrar."
           : null;
+
+  // #region agent log
+  useEffect(() => {
+    if (layout !== "workspace") return;
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "guiada-paso4",
+        hypothesisId: "H_empty_step4",
+        location: "pauta-cubicacion-panel.tsx:renderGate",
+        message: "Estado UI panel despiece",
+        data: {
+          layout,
+          lineTemplateId,
+          widthMm,
+          heightMm,
+          recipes: persistedRecipes.length,
+          loading: isLoadingPersistedRecipes,
+          useFormalDomain,
+          formalEstado: formalResolution?.estado ?? null,
+          hasCuts,
+          waitingReason,
+          totalMm: formalSnapshot?.result.totalLinealMm ?? null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }, [
+    layout,
+    lineTemplateId,
+    widthMm,
+    heightMm,
+    persistedRecipes.length,
+    isLoadingPersistedRecipes,
+    useFormalDomain,
+    formalResolution?.estado,
+    hasCuts,
+    waitingReason,
+    formalSnapshot?.result.totalLinealMm,
+  ]);
+  // #endregion
 
   if (
     needsVariantChoice &&

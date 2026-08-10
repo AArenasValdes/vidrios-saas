@@ -135,8 +135,8 @@ export const RECIPE_COMPONENT_FUNCTIONS = [
   "riel_superior",
   "riel_inferior",
   "jamba",
-  "cabezal",
   "zocalo",
+  "cabezal",
   "pierna",
   "traslapo",
   "marco",
@@ -170,9 +170,9 @@ export const RECIPE_COMPONENT_FUNCTION_LABELS: Record<RecipeComponentFunction, s
 };
 
 /**
- * Orden de taller / pauta (marco → hoja → vidrio).
- * Corredera L5000 típica: Riel sup → Riel inf → Jamba → Cabezal → Zócalo → Pierna → Traslapo.
- * No ordenar alfabetico en despiece consolidado.
+ * Orden de taller / pauta Corredera 2 hojas:
+ * Riel sup → Riel inf → Jamba → Zócalo → Cabezal → Pierna → Traslapo.
+ * No ordenar alfabético en despiece consolidado.
  */
 export function recipeFunctionWorkshopOrder(
   functionKeyOrLabel: string | null | undefined
@@ -194,8 +194,8 @@ export function recipeFunctionWorkshopOrder(
   if (raw.includes("riel") && raw.includes("sup")) return 0;
   if (raw.includes("riel") && raw.includes("inf")) return 1;
   if (raw.startsWith("jamba")) return 2;
-  if (raw.startsWith("cabezal")) return 3;
-  if (raw.startsWith("zócalo") || raw.startsWith("zocalo")) return 4;
+  if (raw.startsWith("zócalo") || raw.startsWith("zocalo")) return 3;
+  if (raw.startsWith("cabezal")) return 4;
   if (raw.startsWith("pierna") || raw.startsWith("batiente")) return 5;
   if (raw.startsWith("traslapo") || raw.startsWith("enganche")) return 6;
 

@@ -18,6 +18,7 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 /** Modos de trabajo desktop (Paso 2). Misma pieza; distinta presentación. */
@@ -197,12 +198,41 @@ export function derivePieceTechnicalSummary(
   item: CotizacionWorkflowItem
 ): PieceTechnicalSummary {
   const meta = getPiecePresentationMeta(item);
-  const snapshot = meta.cubicationSnapshot;
+  const formal = item.fabricacionSnapshot ?? null;
+  const snapshot = formal
+    ? null
+    : meta.cubicationSnapshot;
   const areaVanoM2 =
     item.areaM2 ??
     (item.ancho && item.alto
-      ? round2((item.ancho * item.alto * Math.max(1, item.cantidad)) / 1_000_000)
+      ? round2((item.ancho * item.alto) / 1_000_000)
       : null);
+
+  if (formal) {
+    const barsAvailable = Boolean(
+      formal.pautaBarras?.calculable &&
+        (formal.pautaBarras.barras?.length ?? 0) > 0
+    );
+    return {
+      areaVanoM2,
+      areaVidrioM2: formal.result.totalVidrioM2 || null,
+      mlPerfiles: round2((formal.result.totalLinealMm || 0) / 1000),
+      barras: barsAvailable ? formal.pautaBarras?.barras.length ?? 0 : 0,
+      cortes: formal.result.perfiles.reduce(
+        (sum, row) => sum + Math.max(1, Math.round(row.cantidadPiezas)),
+        0
+      ),
+      accesorios: formal.result.accesorios.reduce(
+        (sum, row) => sum + Math.max(0, Math.round(row.cantidadUnidades)),
+        0
+      ),
+      sobranteMm: barsAvailable
+        ? Math.max(0, Math.round(formal.pautaBarras?.totalSobranteMm || 0))
+        : 0,
+      source: "auto",
+      hasSnapshot: true,
+    };
+  }
 
   if (!snapshot) {
     return {
@@ -241,7 +271,8 @@ export function derivePieceTechnicalStatus(
   if (item.tipoItem === "item_libre_con_valor") return "sin_reglas";
 
   const meta = getPiecePresentationMeta(item);
-  const snapshot = meta.cubicationSnapshot;
+  const formal = item.fabricacionSnapshot ?? null;
+  const snapshot = formal ? null : meta.cubicationSnapshot;
   const widthMm = item.ancho ?? 0;
   const heightMm = item.alto ?? 0;
   const quantity = Math.max(1, item.cantidad);
@@ -256,6 +287,17 @@ export function derivePieceTechnicalStatus(
     meta.sistema.trim().toLocaleLowerCase("es") === "personalizado" ||
     meta.configuracion.trim().toLocaleLowerCase("es") === "personalizado";
 
+  if (formal) {
+    if (
+      formal.input.anchoTotalMm !== Math.round(widthMm) ||
+      formal.input.altoTotalMm !== Math.round(heightMm) ||
+      formal.input.cantidad !== quantity
+    ) {
+      return "requiere_revision";
+    }
+    return formal.recipeStatus === "validated" ? "configurado" : "referencial";
+  }
+
   if (snapshot) {
     const dimsMatch = cubicationSnapshotMatchesDimensions(snapshot, {
       lineTemplateId: lineTemplateId || snapshot.lineTemplateId,
@@ -266,7 +308,11 @@ export function derivePieceTechnicalStatus(
     if (!dimsMatch) return "requiere_revision";
     if (snapshot.status === "revisar_cambios") return "requiere_revision";
     if (snapshot.source === "manual") return "configurado";
-    if (snapshot.status === "validada") return "configurado";
+    if (snapshot.status === "validada" || snapshot.status === "validated") {
+      return "configurado";
+    }
+    // Snapshot legacy genérico: no presentarlo como configuración completa.
+    if (snapshot.estimationKind === "legacy_partida") return "sin_configurar";
     return "referencial";
   }
 
@@ -286,6 +332,9 @@ export function buildPieceDomainView(
   const meta = getPiecePresentationMeta(item);
   const commercialStatus = derivePieceCommercialStatus(item, pricingMode);
   const technicalStatus = derivePieceTechnicalStatus(item, lineTemplate);
+  const formalCubication = item.fabricacionSnapshot
+    ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
+    : null;
 
   return {
     itemId: item.id,
@@ -295,7 +344,7 @@ export function buildPieceDomainView(
     technicalStatus,
     technicalLabel: PIECE_TECHNICAL_STATUS_LABELS[technicalStatus],
     technicalSummary: derivePieceTechnicalSummary(item),
-    cubicationSnapshot: meta.cubicationSnapshot,
+    cubicationSnapshot: formalCubication ?? meta.cubicationSnapshot,
     lineTemplateId: meta.lineTemplateId,
     guidedVisualConfigPresent: Boolean(meta.guidedVisualConfig),
   };

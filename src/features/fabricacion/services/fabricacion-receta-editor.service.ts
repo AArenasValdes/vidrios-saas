@@ -28,6 +28,11 @@ export function crearRecetaFabricacionVacia(input: {
     perfiles: [],
     vidrios: [],
     accesorios: [],
+    configuracionCorte: {
+      perdidaCorteMm: null,
+      despunteInicialMm: null,
+      sobranteMinimoAprovechableMm: null,
+    },
     notasValidacion: [],
   };
 }
@@ -38,7 +43,7 @@ export function crearPerfilFabricacionVacio(id: string): FabricacionComponentePe
     codigoPerfil: "",
     nombrePerfil: "",
     funcion: "Perfil",
-    largoComercialMm: 6000,
+    largoComercialMm: null,
     reglaMedida: {
       base: "ancho_total",
       ajusteMm: 0,
@@ -74,13 +79,71 @@ export function crearAccesorioFabricacionVacio(id: string): FabricacionAccesorio
   };
 }
 
+export function reorderFabricacionItems<T>(
+  items: T[],
+  fromIndex: number,
+  toIndex: number
+): T[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+
+  const next = items.slice();
+  const [moved] = next.splice(fromIndex, 1);
+  if (moved === undefined) return items;
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
+export function patchFabricacionPerfil(
+  receta: FabricacionReceta,
+  profileId: string,
+  patch: (profile: FabricacionComponentePerfil) => FabricacionComponentePerfil
+): FabricacionReceta {
+  let changed = false;
+  const perfiles = receta.perfiles.map((profile) => {
+    if (profile.id !== profileId) return profile;
+    const next = patch(profile);
+    if (next !== profile) changed = true;
+    return next;
+  });
+  return changed ? { ...receta, perfiles } : receta;
+}
+
+function profileHasWorkshopIdentity(profile: FabricacionComponentePerfil): boolean {
+  return Boolean(
+    profile.funcion.trim() ||
+      profile.nombrePerfil.trim() ||
+      profile.codigoPerfil.trim()
+  );
+}
+
+/**
+ * Bloqueos que impiden probar/validar geométricamente.
+ * El código comercial y el largo comercial NO son críticos:
+ * - código: opcional (basta función/nombre/referencia)
+ * - largo comercial: progresivo (habilita barras, no bloquea despiece)
+ */
 export function contarBloqueosCriticosReceta(receta: FabricacionReceta) {
-  const requiredProfilesWithoutCode = receta.perfiles.filter(
-    (profile) => profile.requerido && !profile.codigoPerfil.trim()
+  const requiredProfilesWithoutIdentity = receta.perfiles.filter(
+    (profile) => profile.requerido && !profileHasWorkshopIdentity(profile)
   ).length;
   const emptyRequiredGlass = receta.vidrios.filter(
     (glass) => glass.requerido && !glass.nombre.trim()
   ).length;
 
-  return requiredProfilesWithoutCode + emptyRequiredGlass;
+  return requiredProfilesWithoutIdentity + emptyRequiredGlass;
+}
+
+/** Aviso secundario: falta largo comercial para pauta de barras. */
+export function tieneLargosComercialesPendientes(receta: FabricacionReceta) {
+  return receta.perfiles.some(
+    (profile) => profile.requerido && !profile.largoComercialMm
+  );
 }

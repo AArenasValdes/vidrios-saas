@@ -3,25 +3,35 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuArrowLeft,
+  LuBookOpen,
   LuChevronRight,
   LuCopyPlus,
   LuEllipsisVertical,
   LuPlus,
   LuSearch,
+  LuSlidersHorizontal,
   LuSettings2,
   LuTrash2,
   LuUpload,
 } from "react-icons/lu";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
-import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
+import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
+import {
+  buildFabricationRecipeInputFromInicioRapido,
+  buildLineTemplatePayloadFromInicioRapido,
+  listarInicioRapidoCatalogo,
+  type CatalogoInicioRapidoItem,
+} from "@/features/cotizaciones/line-templates/services/catalogo-usar-base-ventora.service";
+import { CatalogoBasesVentoraSection } from "@/features/cotizaciones/line-templates/components/catalogo-bases-ventora-section";
 import {
   buildLineTemplateCuttingPreview,
   getLineTemplateCubicationConfig,
   getLineTemplateGlassMetadata,
+  getLineTemplateProfilePreview,
   getLineTemplateCuttingRules,
   getLineTemplateEstimationRules,
   getLineTemplateSystemMetadata,
@@ -60,10 +70,8 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 import type { LineTemplateFormDraft } from "./line-template-form-wizard";
 import {
-  deriveRecipeStatus,
   getFabricationRecipeFromMetadata,
   getFabricationRecipePackFromMetadata,
-  RECIPE_STATUS_LABELS,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import {
   buildRecipeCuttingPreview,
@@ -71,6 +79,10 @@ import {
   recipePreviewToLegacyCuttingPreview,
 } from "@/features/cotizaciones/line-templates/services/fabrication-recipe.service";
 import s from "./lineas-precios-page-client.module.css";
+import desktop from "./lineas-precios-page-client.desktop.module.css";
+import {
+  LineasPreciosMobileView,
+} from "./lineas-precios-mobile-view";
 
 const LineTemplateFormWizard = dynamic(
   () =>
@@ -95,6 +107,12 @@ function formatDeductionInput(value: number) {
 
 type StatusFilterValue = "todas" | "activas" | "inactivas";
 type CategoryFilterValue = "Todo" | "aluminio" | "pvc" | "vidrio";
+type TechnicalFilterValue =
+  | "todas"
+  | "solo_cotizar"
+  | "borradores"
+  | "listas_para_probar"
+  | "validadas";
 
 type Props = {
   openNewByDefault?: boolean;
@@ -196,125 +214,6 @@ function buildRoundingLabel(value: number) {
   return value > 0 ? formatCurrency(value) : "Sin redondeo";
 }
 
-type TechnicalCardStatusTone =
-  | "quote_only"
-  | "estimation"
-  | "draft"
-  | "testing"
-  | "validated"
-  | "review";
-
-function buildTechnicalCardStatus(
-  template: CotizacionLineTemplate,
-  persistedRecipes: FabricationRecipeRecord[] = []
-): {
-  tone: TechnicalCardStatusTone;
-  label: string;
-  detail: string;
-} {
-  const metadata = template.catalogMetadata as Record<string, unknown> | null | undefined;
-  const estimationRules = getLineTemplateEstimationRules(template.catalogMetadata);
-  const wantsCutting = metadata?.cuttingEnabled === true;
-  const recipe = getFabricationRecipeFromMetadata(metadata);
-  const recipeStatus = recipe ? deriveRecipeStatus(recipe) : null;
-  const activePersisted = persistedRecipes.filter(
-    (entry) => entry.status !== "archived" && entry.eliminadoEn === null
-  );
-  const validatedPersisted = activePersisted.filter(
-    (entry) => entry.status === "validated"
-  );
-  const reviewPersisted = activePersisted.filter(
-    (entry) => entry.status === "review_required"
-  );
-  const testingPersisted = activePersisted.filter(
-    (entry) => entry.status === "testing"
-  );
-
-  if (validatedPersisted.length > 0) {
-    return {
-      tone: "validated",
-      label: "Pauta validada",
-      detail: `${validatedPersisted.length} ${
-        validatedPersisted.length === 1 ? "receta lista" : "recetas listas"
-      }`,
-    };
-  }
-
-  if (reviewPersisted.length > 0) {
-    return {
-      tone: "review",
-      label: "Revisar pauta",
-      detail: "Una version cambio despues de validar",
-    };
-  }
-
-  if (testingPersisted.length > 0) {
-    return {
-      tone: "testing",
-      label: "Pauta por probar",
-      detail: `${testingPersisted.length} ${
-        testingPersisted.length === 1 ? "receta en prueba" : "recetas en prueba"
-      }`,
-    };
-  }
-
-  if (activePersisted.length > 0) {
-    return {
-      tone: "draft",
-      label: "Pauta incompleta",
-      detail: `${activePersisted.length} ${
-        activePersisted.length === 1 ? "borrador" : "borradores"
-      }`,
-    };
-  }
-
-  if (recipeStatus === "validada") {
-    return {
-      tone: "validated",
-      label: "Pauta validada",
-      detail: "Lista para cubicación y despiece",
-    };
-  }
-
-  if (recipeStatus === "requiere_revision") {
-    return {
-      tone: "review",
-      label: "Revisar pauta",
-      detail: "Cambió después de validar",
-    };
-  }
-
-  if (recipeStatus === "lista_para_validar" || recipeStatus === "en_validacion") {
-    return {
-      tone: "testing",
-      label: "Pauta por probar",
-      detail: RECIPE_STATUS_LABELS[recipeStatus],
-    };
-  }
-
-  if (recipeStatus || wantsCutting) {
-    return {
-      tone: "draft",
-      label: "Pauta incompleta",
-      detail: "Faltan datos de taller",
-    };
-  }
-
-  if (estimationRules.enabled) {
-    return {
-      tone: "estimation",
-      label: "Estimación",
-      detail: "Material referencial, sin cortes",
-    };
-  }
-
-  return {
-    tone: "quote_only",
-    label: "Solo cotizar",
-    detail: "Sin cubicación ni pauta",
-  };
-}
-
 function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
   return Boolean(
     draft.minimoCobrable ||
@@ -359,14 +258,22 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     duplicateTemplate,
     deleteTemplate,
   } = useCotizacionLineTemplates();
-  const { recipes: fabricationRecipes } = useFabricationRecipes();
+  const { recipes: fabricationRecipes, createRecipe } = useFabricationRecipes();
+  const ventoraBaseRecommendations = useMemo(
+    () => listarInicioRapidoCatalogo(),
+    []
+  );
+  const [usingBaseId, setUsingBaseId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>("Todo");
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("todas");
+  const [technicalFilter, setTechnicalFilter] =
+    useState<TechnicalFilterValue>("todas");
   const [providerFilter, setProviderFilter] = useState<string>(
     LINE_TEMPLATE_PROVIDER_FILTER_ALL
   );
+  const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [sheetMode, setSheetMode] = useState<"new" | "edit" | null>(() =>
     openNewByDefault ? "new" : null
@@ -384,6 +291,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(
     null
   );
+  const openedEditQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -422,6 +330,56 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     providerFilterOptions.includes(providerFilter)
       ? providerFilter
       : LINE_TEMPLATE_PROVIDER_FILTER_ALL;
+  const desktopFilterCount = [
+    categoryFilter !== "Todo",
+    statusFilter !== "todas",
+    technicalFilter !== "todas",
+    effectiveProviderFilter !== LINE_TEMPLATE_PROVIDER_FILTER_ALL,
+  ].filter(Boolean).length;
+
+  const technicalStatusesByTemplateId = useMemo(
+    () =>
+      new Map(
+        templates.map((template) => [
+          String(template.id),
+          buildTechnicalCardStatus(
+            template,
+            fabricationRecipes.filter(
+              (recipe) =>
+                recipe.scope === "organization" &&
+                recipe.lineTemplateId === Number(template.id)
+            )
+          ),
+        ])
+      ),
+    [fabricationRecipes, templates]
+  );
+  const technicalFilterCounts = useMemo(
+    () => ({
+      todas: templates.length,
+      solo_cotizar: templates.filter(
+        (template) =>
+          technicalStatusesByTemplateId.get(String(template.id))?.filter ===
+          "solo_cotizar"
+      ).length,
+      borradores: templates.filter(
+        (template) =>
+          technicalStatusesByTemplateId.get(String(template.id))?.filter ===
+          "borradores"
+      ).length,
+      listas_para_probar: templates.filter(
+        (template) =>
+          technicalStatusesByTemplateId.get(String(template.id))?.filter ===
+          "listas_para_probar"
+      ).length,
+      validadas: templates.filter(
+        (template) =>
+          technicalStatusesByTemplateId.get(String(template.id))?.filter ===
+          "validadas"
+      ).length,
+    }),
+    [technicalStatusesByTemplateId, templates]
+  );
 
   const filteredTemplates = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -435,6 +393,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           : statusFilter === "activas"
             ? template.isActive
             : !template.isActive;
+      const matchesTechnical =
+        technicalFilter === "todas"
+          ? true
+          : technicalStatusesByTemplateId.get(String(template.id))?.filter ===
+            technicalFilter;
       const providerLabel = getLineTemplateProviderLabel(template.proveedor);
       const matchesProvider =
         effectiveProviderFilter === LINE_TEMPLATE_PROVIDER_FILTER_ALL
@@ -448,9 +411,23 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             .includes(normalizedQuery)
         : true;
 
-      return matchesCategory && matchesStatus && matchesProvider && matchesQuery;
+      return (
+        matchesCategory &&
+        matchesStatus &&
+        matchesTechnical &&
+        matchesProvider &&
+        matchesQuery
+      );
     });
-  }, [categoryFilter, effectiveProviderFilter, query, statusFilter, templates]);
+  }, [
+    categoryFilter,
+    effectiveProviderFilter,
+    query,
+    statusFilter,
+    technicalFilter,
+    technicalStatusesByTemplateId,
+    templates,
+  ]);
   const groupedTemplates = useMemo(() => {
     const groups = new Map<
       string,
@@ -588,7 +565,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         : "Nueva línea";
 
   const resetQueryFlag = () => {
-    if (!searchParams.get("nueva")) return;
+    if (!searchParams.get("nueva") && !searchParams.get("editar")) return;
     router.replace(pathname, { scroll: false });
   };
 
@@ -609,7 +586,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setSheetMode("new");
   };
 
-  const openEditSheet = (template: CotizacionLineTemplate) => {
+  const openEditSheet = useCallback((template: CotizacionLineTemplate) => {
     const nextDraft = buildDraft(template);
     setDraft(nextDraft);
     setWizardStep(1);
@@ -624,7 +601,19 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setOpenMenuId(null);
     setFeedback(null);
     setSheetMode("edit");
-  };
+  }, []);
+
+  useEffect(() => {
+    const requestedId = searchParams.get("editar");
+    if (!requestedId || isLoading || openedEditQueryRef.current === requestedId) return;
+    const requestedTemplate = templates.find(
+      (template) => String(template.id) === requestedId
+    );
+    if (!requestedTemplate) return;
+    openedEditQueryRef.current = requestedId;
+    const timeoutId = window.setTimeout(() => openEditSheet(requestedTemplate), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading, openEditSheet, searchParams, templates]);
 
   const closeSheet = () => {
     setSheetMode(null);
@@ -632,6 +621,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setWizardStep(1);
     setShowAdvancedDetails(false);
     setDraft(buildDraft());
+    openedEditQueryRef.current = null;
     resetQueryFlag();
   };
 
@@ -778,7 +768,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     setDraft((current) => ({ ...current, ...patch }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (options?: { openTechnicalWorkspace?: boolean }) => {
     if (saveDisabled) return;
 
     // Mantener material alineado a categoría: evita líneas PVC guardadas como
@@ -894,7 +884,14 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           message: isGlassDraft ? "Producto de cristal actualizado." : "Línea actualizada.",
         });
       } else {
-        await createTemplate(payload);
+        const created = await createTemplate(payload);
+        if (options?.openTechnicalWorkspace && !isGlassDraft) {
+          closeSheet();
+          router.push(
+            `/configuracion/empresa/lineas-precios/${created.id}/fabricacion`
+          );
+          return;
+        }
         setFeedback({
           kind: "success",
           message: isGlassDraft ? "Producto de cristal guardado." : "Línea guardada.",
@@ -908,6 +905,45 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         message:
           saveError instanceof Error ? saveError.message : "No pudimos guardar este producto.",
       });
+    }
+  };
+
+  const handleUseVentoraBase = async (item: CatalogoInicioRapidoItem) => {
+    if (usingBaseId) return;
+    setUsingBaseId(item.id);
+    setFeedback(null);
+
+    try {
+      const linePayload = buildLineTemplatePayloadFromInicioRapido({
+        item,
+        existingNames: templates.map((template) => template.nombre),
+      });
+      const created = await createTemplate(linePayload);
+      const recipePayload = buildFabricationRecipeInputFromInicioRapido({
+        item,
+        lineTemplateId: Number(created.id),
+        lineName: created.nombre,
+      });
+      await createRecipe(recipePayload);
+      setFeedback({
+        kind: "success",
+        message:
+          item.kind === "plantilla_ventora"
+            ? `Se creó “${created.nombre}” con ajustes de la plantilla. Continúa la configuración.`
+            : `Se creó “${created.nombre}” en tu catálogo. Continúa la configuración.`,
+      });
+      router.push(
+        `/configuracion/empresa/lineas-precios/${created.id}/fabricacion`
+      );
+    } catch (useBaseError) {
+      setFeedback({
+        kind: "error",
+        message:
+          useBaseError instanceof Error
+            ? useBaseError.message
+            : "No pudimos crear la línea desde esta opción.",
+      });
+      setUsingBaseId(null);
     }
   };
 
@@ -969,8 +1005,39 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const inactiveCount = templates.length - activeCount;
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
+    <>
+      <LineasPreciosMobileView
+        templates={templates}
+        filteredTemplates={filteredTemplates}
+        activeCount={activeCount}
+        inactiveCount={inactiveCount}
+        query={query}
+        onQueryChange={setQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        technicalFilter={technicalFilter}
+        onTechnicalFilterChange={setTechnicalFilter}
+        providerFilter={effectiveProviderFilter}
+        providerFilterAll={LINE_TEMPLATE_PROVIDER_FILTER_ALL}
+        providerOptions={providerFilterOptions}
+        onProviderFilterChange={setProviderFilter}
+        technicalStatuses={technicalStatusesByTemplateId}
+        technicalCounts={technicalFilterCounts}
+        isLoading={isLoading}
+        error={error}
+        feedback={feedback}
+        onNew={openNewSheet}
+        onEdit={openEditSheet}
+        baseRecommendations={ventoraBaseRecommendations}
+        isUsingBase={usingBaseId !== null}
+        usingBaseId={usingBaseId}
+        onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
+      />
+
+      <div className={`${s.page} ${s.desktopCatalog} ${desktop.page}`}>
+      <header className={`${s.header} ${desktop.header}`}>
         <Link href="/configuracion/empresa" className={s.backButton}>
           <LuArrowLeft aria-hidden />
         </Link>
@@ -983,6 +1050,14 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </div>
 
         <div className={s.headerActions}>
+          <Link
+            href="/biblioteca-lineas"
+            className={s.importButton}
+            aria-label="Abrir biblioteca de líneas y recetas"
+          >
+            <LuBookOpen aria-hidden />
+            <span className={s.headerActionLabel}>Biblioteca técnica</span>
+          </Link>
           <Link
             href="/configuracion/empresa/lineas-precios/importar"
             className={s.importButton}
@@ -1018,19 +1093,232 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </div>
       </section>
 
-      <section className={s.toolbar}>
-        <label className={s.searchWrap}>
-          <LuSearch className={s.searchIcon} aria-hidden />
-          <input
-            className={s.searchInput}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar líneas..."
-            aria-label="Buscar líneas"
-          />
-        </label>
+      <section className={`${s.toolbar} ${desktop.toolbar}`}>
+        <div className={`${s.desktopToolbar} ${desktop.desktopToolbar}`}>
+          <div className={`${s.desktopToolbarMain} ${desktop.toolbarMain}`}>
+            <label className={`${s.searchWrap} ${desktop.searchField}`}>
+              <LuSearch className={s.searchIcon} aria-hidden />
+              <input
+                className={s.searchInput}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar por línea, proveedor o sistema"
+                aria-label="Buscar líneas"
+              />
+            </label>
 
-        <div className={s.filterStack}>
+            {providerFilterOptions.length > 0 ? (
+              <label className={`${s.providerFilter} ${desktop.filterField}`}>
+                <span className={s.providerFilterLabel}>Proveedor</span>
+                <select
+                  className={s.providerFilterSelect}
+                  value={effectiveProviderFilter}
+                  onChange={(event) => setProviderFilter(event.target.value)}
+                  aria-label="Filtrar por proveedor"
+                >
+                  <option value={LINE_TEMPLATE_PROVIDER_FILTER_ALL}>
+                    Todos los proveedores
+                  </option>
+                  {providerFilterOptions.map((provider) => (
+                    <option key={provider} value={provider}>
+                      {provider}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            <label className={desktop.filterField}>
+              <span className={s.providerFilterLabel}>Material</span>
+              <select
+                className={s.providerFilterSelect}
+                value={categoryFilter}
+                onChange={(event) =>
+                  setCategoryFilter(event.target.value as CategoryFilterValue)
+                }
+                aria-label="Filtrar por material"
+              >
+                <option value="Todo">Todos</option>
+                <option value="aluminio">Aluminio</option>
+                <option value="pvc">PVC</option>
+                <option value="vidrio">Cristales</option>
+              </select>
+            </label>
+
+            <label className={desktop.filterField}>
+              <span className={s.providerFilterLabel}>Fabricación</span>
+              <select
+                className={s.providerFilterSelect}
+                value={technicalFilter}
+                onChange={(event) =>
+                  setTechnicalFilter(event.target.value as TechnicalFilterValue)
+                }
+                aria-label="Filtrar por estado de fabricación"
+              >
+                <option value="todas">Todas</option>
+                <option value="solo_cotizar">Sin configurar</option>
+                <option value="borradores">Borradores</option>
+                <option value="listas_para_probar">Lista para probar</option>
+                <option value="validadas">Validadas</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className={`${s.desktopFiltersTrigger} ${desktop.filtersTrigger} ${
+                desktopFiltersOpen ? s.desktopFiltersTriggerActive : ""
+              }`}
+              onClick={() => setDesktopFiltersOpen((current) => !current)}
+              aria-expanded={desktopFiltersOpen}
+              aria-controls="catalogo-filtros-avanzados"
+            >
+              <LuSlidersHorizontal aria-hidden />
+              Filtros
+              {desktopFilterCount > 0 ? (
+                <span className={s.desktopFilterCount}>{desktopFilterCount}</span>
+              ) : null}
+            </button>
+          </div>
+
+          {desktopFiltersOpen ? (
+            <div
+              className={`${s.desktopFiltersPanel} ${desktop.filtersPanel}`}
+              id="catalogo-filtros-avanzados"
+            >
+              <div className={s.desktopFilterGroup}>
+                <span className={s.desktopFilterLabel}>Material</span>
+                <div className={s.materialSegment} role="tablist" aria-label="Filtrar por categoría">
+                  {[
+                    { value: "Todo" as const, label: "Todo" },
+                    { value: "aluminio" as const, label: "Aluminio" },
+                    { value: "pvc" as const, label: "PVC" },
+                    { value: "vidrio" as const, label: "Cristales" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${s.materialSegmentButton} ${
+                        categoryFilter === option.value ? s.materialSegmentButtonActive : ""
+                      }`}
+                      data-material={option.value === "vidrio" ? "Cristal" : option.label}
+                      onClick={() => setCategoryFilter(option.value)}
+                      aria-pressed={categoryFilter === option.value}
+                    >
+                      <span>{option.label}</span>
+                      <small>{categoryCounts[option.value]}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`${s.desktopFilterGroup} ${desktop.availabilityGroup}`}>
+                <span className={s.desktopFilterLabel}>Disponibilidad</span>
+                <div className={s.statusChips} role="tablist" aria-label="Filtrar por estado comercial">
+                  {[
+                    { value: "todas" as const, label: "Todas" },
+                    { value: "activas" as const, label: "Activas" },
+                    { value: "inactivas" as const, label: "Inactivas" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${s.statusChip} ${
+                        statusFilter === option.value ? s.statusChipActive : ""
+                      }`}
+                      onClick={() => setStatusFilter(option.value)}
+                      aria-pressed={statusFilter === option.value}
+                    >
+                      <span>{option.label}</span>
+                      <small>
+                        {option.value === "todas"
+                          ? templates.length
+                          : option.value === "activas"
+                            ? activeCount
+                            : inactiveCount}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`${s.desktopFilterGroup} ${s.desktopRecipeFilterGroup}`}>
+                <span className={s.desktopFilterLabel}>Fabricación</span>
+                <div className={s.statusChips} role="tablist" aria-label="Filtrar por estado de fabricación">
+                  {[
+                    { value: "todas" as const, label: "Todas" },
+                    { value: "solo_cotizar" as const, label: "Sin configurar" },
+                    { value: "borradores" as const, label: "Borradores" },
+                    { value: "listas_para_probar" as const, label: "Lista para probar" },
+                    { value: "validadas" as const, label: "Validadas" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${s.statusChip} ${
+                        technicalFilter === option.value ? s.statusChipActive : ""
+                      }`}
+                      onClick={() => setTechnicalFilter(option.value)}
+                      aria-pressed={technicalFilter === option.value}
+                    >
+                      <span>{option.label}</span>
+                      <small>{technicalFilterCounts[option.value]}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {desktopFilterCount > 0 ? (
+                <button
+                  type="button"
+                  className={`${s.desktopFiltersReset} ${desktop.filtersReset}`}
+                  onClick={() => {
+                    setCategoryFilter("Todo");
+                    setStatusFilter("todas");
+                    setTechnicalFilter("todas");
+                    setProviderFilter(LINE_TEMPLATE_PROVIDER_FILTER_ALL);
+                  }}
+                >
+                  Restablecer
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className={s.mobileToolbar}>
+        <div className={s.filterPrimaryRow}>
+          <label className={s.searchWrap}>
+            <LuSearch className={s.searchIcon} aria-hidden />
+            <input
+              className={s.searchInput}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar líneas..."
+              aria-label="Buscar líneas"
+            />
+          </label>
+
+          {providerFilterOptions.length > 0 ? (
+            <label className={s.providerFilter}>
+              <span className={s.providerFilterLabel}>Proveedor</span>
+              <select
+                className={s.providerFilterSelect}
+                value={effectiveProviderFilter}
+                onChange={(event) => setProviderFilter(event.target.value)}
+                aria-label="Filtrar por proveedor"
+              >
+                <option value={LINE_TEMPLATE_PROVIDER_FILTER_ALL}>
+                  Todos los proveedores
+                </option>
+                {providerFilterOptions.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {provider}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <div className={s.materialSegment} role="tablist" aria-label="Filtrar por categoría">
             {[
               { value: "Todo" as const, label: "Todo" },
@@ -1054,55 +1342,67 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             ))}
           </div>
 
-          <div className={s.filterMetaRow}>
-            {providerFilterOptions.length > 0 ? (
-              <label className={s.providerFilter}>
-                <span className={s.providerFilterLabel}>Proveedores</span>
-                <select
-                  className={s.providerFilterSelect}
-                  value={effectiveProviderFilter}
-                  onChange={(event) => setProviderFilter(event.target.value)}
-                  aria-label="Filtrar por proveedor"
-                >
-                  <option value={LINE_TEMPLATE_PROVIDER_FILTER_ALL}>
-                    Todos los proveedores
-                  </option>
-                  {providerFilterOptions.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-
-            <div className={s.statusChips} role="tablist" aria-label="Filtrar por estado">
-              {[
-                { value: "todas" as const, label: "Todas" },
-                { value: "activas" as const, label: "Activas" },
-                { value: "inactivas" as const, label: "Inactivas" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${s.statusChip} ${
-                    statusFilter === option.value ? s.statusChipActive : ""
-                  }`}
-                  onClick={() => setStatusFilter(option.value)}
-                  aria-pressed={statusFilter === option.value}
-                >
-                  <span>{option.label}</span>
-                  <small>
-                    {option.value === "todas"
-                      ? templates.length
-                      : option.value === "activas"
-                        ? activeCount
-                        : inactiveCount}
-                  </small>
-                </button>
-              ))}
-            </div>
+          <div
+            className={`${s.statusChips} ${s.commercialStatusChips}`}
+            role="tablist"
+            aria-label="Filtrar por estado comercial"
+          >
+            {[
+              { value: "todas" as const, label: "Todas" },
+              { value: "activas" as const, label: "Activas" },
+              { value: "inactivas" as const, label: "Inactivas" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`${s.statusChip} ${
+                  statusFilter === option.value ? s.statusChipActive : ""
+                }`}
+                onClick={() => setStatusFilter(option.value)}
+                aria-pressed={statusFilter === option.value}
+              >
+                <span>{option.label}</span>
+                <small>
+                  {option.value === "todas"
+                    ? templates.length
+                    : option.value === "activas"
+                      ? activeCount
+                      : inactiveCount}
+                </small>
+              </button>
+            ))}
           </div>
+        </div>
+
+        <div className={s.technicalFilterRow}>
+          <span className={s.filterGroupLabel}>Fabricación</span>
+          <div
+            className={`${s.statusChips} ${s.technicalStatusChips}`}
+            role="tablist"
+            aria-label="Filtrar por estado de fabricación"
+          >
+            {[
+              { value: "todas" as const, label: "Todas" },
+              { value: "solo_cotizar" as const, label: "Sin configurar" },
+              { value: "borradores" as const, label: "Borradores" },
+              { value: "listas_para_probar" as const, label: "Lista para probar" },
+              { value: "validadas" as const, label: "Validadas" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`${s.statusChip} ${
+                  technicalFilter === option.value ? s.statusChipActive : ""
+                }`}
+                onClick={() => setTechnicalFilter(option.value)}
+                aria-pressed={technicalFilter === option.value}
+              >
+                <span>{option.label}</span>
+                <small>{technicalFilterCounts[option.value]}</small>
+              </button>
+            ))}
+          </div>
+        </div>
         </div>
       </section>
 
@@ -1118,10 +1418,21 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       {error ? <div className={`${s.feedback} ${s.feedbackError}`}>{error}</div> : null}
 
+      <CatalogoBasesVentoraSection
+        recommendations={ventoraBaseRecommendations}
+        privateLineCount={templates.length}
+        isUsingBase={usingBaseId !== null}
+        usingBaseId={usingBaseId}
+        onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
+      />
+
       {isEmpty ? (
         <section className={s.emptyState}>
-          <strong>Aún no tienes líneas guardadas</strong>
-          <p>Agrega una línea con precio, mínimo y redondeo para reutilizarla en tus cotizaciones.</p>
+          <strong>Aún no tienes líneas en tu catálogo privado</strong>
+          <p>
+            Usa una Base Ventora arriba o crea una línea con precio, mínimo y
+            redondeo para reutilizarla en tus cotizaciones.
+          </p>
           <button type="button" className={s.primaryButton} onClick={openNewSheet}>
             <LuPlus aria-hidden />
             Crear línea
@@ -1137,10 +1448,10 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       ) : null}
 
       {!isEmpty && !hasNoResults ? (
-        <section className={s.list}>
+        <section className={`${s.list} ${desktop.list}`}>
           {groupedTemplates.map((group) => (
-            <Fragment key={group.key}>
-              <div className={s.groupHeader}>
+            <section className={`${s.catalogGroup} ${desktop.catalogGroup}`} key={group.key}>
+              <div className={`${s.groupHeader} ${desktop.groupHeader}`}>
                 <div>
                   <span>{group.provider}</span>
                   <strong>{group.system}</strong>
@@ -1151,45 +1462,60 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                 </small>
               </div>
 
+              <div
+                className={`${s.groupCards} ${
+                  desktop.groupCards
+                } ${
+                  group.templates.length === 1
+                    ? `${s.groupCardsSingle} ${desktop.groupCardsSingle}`
+                    : ""
+                }`}
+              >
               {group.templates.map((template) => {
                 const isMenuOpen = openMenuId === template.id;
                 const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
                 const glassDescription = [glassMetadata.espesor, glassMetadata.terminacion]
                   .filter(Boolean)
                   .join(" · ");
+                const profilePreview = getLineTemplateProfilePreview(template.catalogMetadata);
                 const needsPrice = lineTemplateNeedsCommercialPrice(template);
                 const lineSystem = getLineTemplateSystemMetadata(template.catalogMetadata).lineSystem;
                 const lineContext = [template.proveedor, lineSystem].filter(Boolean).join(" · ");
-                const persistedRecipes = fabricationRecipes.filter(
-                  (recipe) =>
-                    recipe.scope === "organization" &&
-                    recipe.lineTemplateId === Number(template.id)
+                const technicalStatus = technicalStatusesByTemplateId.get(
+                  String(template.id)
                 );
-                const technicalStatus = buildTechnicalCardStatus(
-                  template,
-                  persistedRecipes
-                );
+                if (!technicalStatus) return null;
 
                 return (
                   <article
                     key={template.id}
-                    className={`${s.card} ${template.isActive ? "" : s.cardInactive} ${
+                    className={`${s.card} ${desktop.card} ${template.isActive ? "" : s.cardInactive} ${
                       isMenuOpen ? s.cardMenuOpen : ""
                     }`}
                     data-material={template.material}
-                    data-tech-status={technicalStatus.tone}
-                    onClick={() => openEditSheet(template)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openEditSheet(template);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
                   >
-                    <div className={s.cardTop}>
-                      <div className={s.cardTitleBlock}>
+                    <div
+                      className={`${s.cardTop} ${desktop.cardTop} ${
+                        profilePreview ? s.cardTopWithProfilePreview : ""
+                      }`}
+                    >
+                      {profilePreview ? (
+                        <figure className={`${s.profilePreview} ${desktop.profilePreview}`}>
+                          {/* Asset técnico externo o interno, definido por proveedor. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={profilePreview.assetUrl}
+                            alt={`Sección técnica de ${template.nombre}`}
+                          />
+                          <figcaption>
+                            {profilePreview.sourceLabel}
+                            {profilePreview.sourcePage !== null
+                              ? ` · pág. ${profilePreview.sourcePage}`
+                              : ""}
+                          </figcaption>
+                        </figure>
+                      ) : null}
+                      <div className={`${s.cardTitleBlock} ${desktop.cardTitleBlock}`}>
                         <div className={s.cardTitleText}>
                           <strong>{template.nombre}</strong>
                           <span className={s.materialPill} data-material={template.material}>
@@ -1199,66 +1525,73 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                             <span className={s.pendingPricePill}>Sin precio</span>
                           ) : null}
                         </div>
-                        <span className={s.cardTapHint}>
-                          Editar
-                          <LuChevronRight aria-hidden />
-                        </span>
                         {lineContext ? (
                           <span className={s.cardHierarchy}>{lineContext}</span>
                         ) : null}
                       </div>
 
-                      <div className={s.menuWrap}>
+                      <div className={`${s.cardActions} ${desktop.cardActions}`}>
                         <button
                           type="button"
-                          className={s.menuButton}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenMenuId((current) =>
-                              current === template.id ? null : template.id
-                            );
-                          }}
-                          aria-expanded={isMenuOpen}
-                          aria-label={`Acciones para ${template.nombre}`}
+                          className={s.cardTapHint}
+                          onClick={() => openEditSheet(template)}
                         >
-                          <LuEllipsisVertical aria-hidden />
+                          Editar
+                          <LuChevronRight aria-hidden />
                         </button>
 
-                        {isMenuOpen ? (
-                          <div
-                            className={s.menuPanel}
-                            onClick={(event) => event.stopPropagation()}
+                        <div className={s.menuWrap}>
+                          <button
+                            type="button"
+                            className={s.menuButton}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenMenuId((current) =>
+                                current === template.id ? null : template.id
+                              );
+                            }}
+                            aria-expanded={isMenuOpen}
+                            aria-label={`Acciones para ${template.nombre}`}
                           >
-                            <Link
-                              href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                              className={s.menuAction}
+                            <LuEllipsisVertical aria-hidden />
+                          </button>
+
+                          {isMenuOpen ? (
+                            <div
+                              className={s.menuPanel}
                               onClick={(event) => event.stopPropagation()}
                             >
-                              <LuSettings2 aria-hidden />
-                              Cubicacion y pauta
-                            </Link>
-                            <button
-                              type="button"
-                              className={s.menuAction}
-                              onClick={() => void handleDuplicate(template.id)}
-                            >
-                              <LuCopyPlus aria-hidden />
-                              Duplicar
-                            </button>
-                            <button
-                              type="button"
-                              className={`${s.menuAction} ${s.menuActionDanger}`}
-                              onClick={() => void handleDelete(template.id)}
-                            >
-                              <LuTrash2 aria-hidden />
-                              Eliminar
-                            </button>
-                          </div>
-                        ) : null}
+                              <Link
+                                href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
+                                className={s.menuAction}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <LuSettings2 aria-hidden />
+                                Administrar fabricación
+                              </Link>
+                              <button
+                                type="button"
+                                className={s.menuAction}
+                                onClick={() => void handleDuplicate(template.id)}
+                              >
+                                <LuCopyPlus aria-hidden />
+                                Duplicar línea
+                              </button>
+                              <button
+                                type="button"
+                                className={`${s.menuAction} ${s.menuActionDanger}`}
+                                onClick={() => void handleDelete(template.id)}
+                              >
+                                <LuTrash2 aria-hidden />
+                                Eliminar línea
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
-                    <div className={s.priceRow}>
+                    <div className={`${s.priceRow} ${desktop.priceRow}`}>
                       <strong>
                         {needsPrice
                           ? "Completar precio"
@@ -1280,22 +1613,30 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                       </span>
                     </div>
 
-                    <div className={s.technicalStatusRow}>
-                      <div>
-                        <span
-                          className={s.technicalStatusPill}
-                          data-tech-status={technicalStatus.tone}
-                        >
-                          {technicalStatus.label}
-                        </span>
-                        <span>{technicalStatus.detail}</span>
+                    <div
+                      className={`${s.technicalStatusRow} ${desktop.technicalStatusRow}`}
+                      data-tech-status={technicalStatus.tone}
+                    >
+                      <div className={s.technicalStatusCopy}>
+                        <span className={s.technicalStatusLabel}>Fabricación</span>
+                        <div className={s.technicalStatusMeta}>
+                          <span
+                            className={s.technicalStatusPill}
+                            data-tech-status={technicalStatus.tone}
+                          >
+                            {technicalStatus.label}
+                          </span>
+                          <span className={s.technicalStatusDetail}>
+                            {technicalStatus.detail}
+                          </span>
+                        </div>
                       </div>
                       <Link
                         href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
                         className={s.technicalManageLink}
                         onClick={(event) => event.stopPropagation()}
                       >
-                        Administrar
+                        {technicalStatus.actionLabel}
                         <LuChevronRight aria-hidden />
                       </Link>
                     </div>
@@ -1303,14 +1644,14 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                     <div className={s.cardDivider} />
 
                     {template.categoria === "vidrio" && glassDescription ? (
-                      <span className={s.roundingMeta}>{glassDescription}</span>
+                      <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>{glassDescription}</span>
                     ) : template.vidrioPrincipalRecomendado ? (
-                      <span className={s.roundingMeta}>
+                      <span className={`${s.roundingMeta} ${desktop.detailMeta}`}>
                         Vidrio habitual: {template.vidrioPrincipalRecomendado}
                       </span>
                     ) : null}
 
-                    <div className={s.cardBottom}>
+                    <div className={`${s.cardBottom} ${desktop.cardBottom}`}>
                       <span className={s.roundingMeta}>
                         Redondeo: {buildRoundingLabel(template.redondeoPrecio)}
                       </span>
@@ -1333,10 +1674,13 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                   </article>
                 );
               })}
-            </Fragment>
+              </div>
+            </section>
           ))}
         </section>
       ) : null}
+
+      </div>
 
       {sheetMode ? (
         <LineTemplateFormWizard
@@ -1353,6 +1697,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           saveDisabled={saveDisabled}
           isSaving={isSaving}
           onSave={() => void handleSave()}
+          onSaveAndConfigure={() =>
+            void handleSave({ openTechnicalWorkspace: true })
+          }
           onClose={closeSheet}
           pricePerM2={pricePerM2}
           minimum={minimum}
@@ -1391,6 +1738,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
           }
         />
       ) : null}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -20,6 +21,7 @@ export function construirSnapshotFabricacionCotizacion(input: {
 }): FabricacionCotizacionSnapshot {
   const definition = cloneReceta(input.recipe.definition);
   const result = calcularCubicacionYPauta(definition, input.entrada);
+  const pautaBarras = construirPautaBarrasFabricacion({ receta: definition, resultado: result });
 
   return {
     schemaVersion: FABRICACION_COTIZACION_SNAPSHOT_SCHEMA_VERSION,
@@ -39,7 +41,8 @@ export function construirSnapshotFabricacionCotizacion(input: {
     result,
     pauta: result.perfiles,
     vidrios: result.vidrios,
-    advertencias: result.advertencias,
+    advertencias: [...result.advertencias, ...pautaBarras.advertencias],
+    pautaBarras,
     calculatedAt: input.calculatedAt ?? new Date().toISOString(),
   };
 }

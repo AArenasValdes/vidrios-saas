@@ -101,6 +101,9 @@ function buildUpdatePayload(input: UpdateFabricationRecipeInput) {
   if (input.definition !== undefined) {
     payload.definition = fabricacionRecetaSchema.parse(input.definition);
   }
+  if (input.sourceType !== undefined) {
+    payload.source_type = input.sourceType;
+  }
   if (input.sourceReference !== undefined) {
     payload.source_reference = input.sourceReference;
   }
@@ -111,6 +114,17 @@ function buildUpdatePayload(input: UpdateFabricationRecipeInput) {
 }
 
 export function createFabricationRecipesRepository(supabase: SupabaseClient) {
+  async function getCurrentOrganizationId() {
+    const { data, error } = await supabase.rpc("get_org_id");
+
+    if (error) throw error;
+
+    const organizationId = Number(data);
+    return Number.isInteger(organizationId) && organizationId > 0
+      ? organizationId
+      : null;
+  }
+
   async function create(input: CreateFabricationRecipeInput) {
     const { data, error } = await supabase
       .from(TABLE_NAME)
@@ -194,19 +208,18 @@ export function createFabricationRecipesRepository(supabase: SupabaseClient) {
 
   async function softDelete(id: string) {
     const now = new Date().toISOString();
-    const { data, error } = await supabase
+    // La fila archivada deja de ser visible para SELECT por la policy RLS.
+    const { error } = await supabase
       .from(TABLE_NAME)
       .update({ status: "archived", eliminado_en: now })
       .eq("id", id)
-      .is("eliminado_en", null)
-      .select(SELECT_FIELDS)
-      .single();
+      .is("eliminado_en", null);
 
     if (error) throw error;
-    return mapRecipeRow(data as FabricationRecipeRow);
   }
 
   return {
+    getCurrentOrganizationId,
     create,
     getById,
     list,

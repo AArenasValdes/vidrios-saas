@@ -11,6 +11,10 @@ import {
 
 const integerPositiveSchema = z.number().int().positive();
 const integerNonNegativeSchema = z.number().int().nonnegative();
+const componentNotesShape = {
+  observaciones: z.string().optional(),
+  datosPendientes: z.array(z.string().min(1)).optional(),
+};
 
 export const fabricacionCondicionSchema = z
   .object({
@@ -83,6 +87,7 @@ export const fabricacionIdentidadRecetaSchema = z
 export const fabricacionComponentePerfilSchema = z
   .object({
     id: z.string().min(1),
+    tallerPerfilId: z.string().min(1).nullable().optional(),
     codigoPerfil: z.string(),
     nombrePerfil: z.string(),
     funcion: z.string().min(1),
@@ -90,6 +95,7 @@ export const fabricacionComponentePerfilSchema = z
     reglaMedida: fabricacionReglaMedidaSchema,
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
+    ...componentNotesShape,
   })
   .strict();
 
@@ -102,6 +108,7 @@ export const fabricacionVidrioSchema = z
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
     condicion: fabricacionCondicionSchema.optional(),
+    ...componentNotesShape,
   })
   .strict();
 
@@ -113,6 +120,15 @@ export const fabricacionAccesorioSchema = z
     reglaCantidad: fabricacionReglaCantidadSchema,
     requerido: z.boolean(),
     condicion: fabricacionCondicionSchema.optional(),
+    ...componentNotesShape,
+  })
+  .strict();
+
+export const fabricacionConfiguracionCorteSchema = z
+  .object({
+    perdidaCorteMm: integerNonNegativeSchema.nullable(),
+    despunteInicialMm: integerNonNegativeSchema.nullable(),
+    sobranteMinimoAprovechableMm: integerNonNegativeSchema.nullable(),
   })
   .strict();
 
@@ -125,6 +141,7 @@ export const fabricacionRecetaSchema = z
     perfiles: z.array(fabricacionComponentePerfilSchema),
     vidrios: z.array(fabricacionVidrioSchema),
     accesorios: z.array(fabricacionAccesorioSchema),
+    configuracionCorte: fabricacionConfiguracionCorteSchema.optional(),
     notasValidacion: z.array(z.string()),
   })
   .strict();

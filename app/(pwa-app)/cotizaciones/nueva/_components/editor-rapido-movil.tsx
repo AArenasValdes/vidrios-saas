@@ -183,7 +183,9 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
     }
 
     const frame = window.requestAnimationFrame(() => {
-      node.focus({ preventScroll: true });
+      // En movil Safari debe poder desplazar el contenedor para dejar el campo
+      // sobre el teclado; en desktop conservamos el foco sin saltar el scroll.
+      node.focus({ preventScroll: !isMobileViewport });
       if (!isMobileViewport && !isAndroidDevice) {
         node.select();
       }
@@ -236,7 +238,7 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
   const focusNextField = useCallback(
     (field: QuickEditFieldKey) => {
       if (field === "ancho") {
-        inputRefs.current.alto?.focus({ preventScroll: true });
+        inputRefs.current.alto?.focus({ preventScroll: !isMobileViewport });
         if (!isMobileViewport && !isAndroidDevice) {
           inputRefs.current.alto?.select();
         }
@@ -248,7 +250,9 @@ export const EditorRapidoMovil = memo(function EditorRapidoMovil({
           handleBlur();
           return;
         }
-        inputRefs.current.costoProveedorUnitario?.focus({ preventScroll: true });
+        inputRefs.current.costoProveedorUnitario?.focus({
+          preventScroll: !isMobileViewport,
+        });
         if (!isMobileViewport && !isAndroidDevice) {
           inputRefs.current.costoProveedorUnitario?.select();
         }

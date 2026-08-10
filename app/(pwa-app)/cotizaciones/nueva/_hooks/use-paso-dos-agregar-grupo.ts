@@ -33,6 +33,8 @@ import {
   getLineTemplateGlassMetadata,
   type CotizacionLineTemplate,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
+import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { calculateLineTemplatePricing } from "@/features/cotizaciones/services/cotizacion-line-pricing.service";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import {
@@ -57,7 +59,6 @@ import {
 } from "@/features/cotizaciones/services/component-catalog.service";
 import { mergeGlassOptions } from "@/features/cotizaciones/new-quote/custom-glass-options";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
-import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 
 export type PasoDosGrupoCategoria = ComponentCategoryTitle;
 
@@ -119,6 +120,14 @@ export type PasoDosGrupoDraft = {
   vidrio: string;
   lineTemplateId: string;
   cubicationSnapshot: CotizacionItemCubicationSnapshot | null;
+  fabricationRecipeId: string;
+  fabricacionTipologia: string;
+  fabricacionHojas: number | null;
+  fabricacionModulos: number | null;
+  fabricacionApertura: string;
+  fabricacionHerraje: string;
+  fabricacionVariante: string;
+  fabricacionSnapshot: FabricacionCotizacionSnapshot | null;
   referencia: string;
   ancho: string;
   alto: string;
@@ -568,6 +577,14 @@ export function applyLineTemplateToGrupoDraft(
     catalogTerminacion: glassMetadata.terminacion ?? "",
     lineTemplateId: String(template.id),
     cubicationSnapshot: null,
+    fabricationRecipeId: "",
+    fabricacionTipologia: "",
+    fabricacionHojas: null,
+    fabricacionModulos: null,
+    fabricacionApertura: "",
+    fabricacionHerraje: "",
+    fabricacionVariante: "",
+    fabricacionSnapshot: null,
     referencia: template.nombre,
     vidrio:
       template.categoria === "vidrio"
@@ -863,6 +880,14 @@ export function createInitialPasoDosGrupoDraft({
     vidrio: seedForm?.vidrio?.trim() || suggestedForm.vidrio,
     lineTemplateId: seedForm?.lineTemplateId ?? "",
     cubicationSnapshot: seedForm?.cubicationSnapshot ?? null,
+    fabricationRecipeId: seedForm?.fabricationRecipeId ?? "",
+    fabricacionTipologia: seedForm?.fabricacionTipologia ?? "",
+    fabricacionHojas: seedForm?.fabricacionHojas ?? null,
+    fabricacionModulos: seedForm?.fabricacionModulos ?? null,
+    fabricacionApertura: seedForm?.fabricacionApertura ?? "",
+    fabricacionHerraje: seedForm?.fabricacionHerraje ?? "",
+    fabricacionVariante: seedForm?.fabricacionVariante ?? "",
+    fabricacionSnapshot: seedForm?.fabricacionSnapshot ?? null,
     referencia,
     ancho: sanitizeDigits(seedForm?.ancho ?? ""),
     alto: sanitizeDigits(seedForm?.alto ?? ""),
@@ -961,6 +986,14 @@ export function buildPasoDosGrupoComponentForm({
     descripcion: syncedDraft.descripcion ?? "",
     lineTemplateId: syncedDraft.lineTemplateId,
     cubicationSnapshot: syncedDraft.cubicationSnapshot,
+    fabricationRecipeId: syncedDraft.fabricationRecipeId,
+    fabricacionTipologia: syncedDraft.fabricacionTipologia,
+    fabricacionHojas: syncedDraft.fabricacionHojas,
+    fabricacionModulos: syncedDraft.fabricacionModulos,
+    fabricacionApertura: syncedDraft.fabricacionApertura,
+    fabricacionHerraje: syncedDraft.fabricacionHerraje,
+    fabricacionVariante: syncedDraft.fabricacionVariante,
+    fabricacionSnapshot: syncedDraft.fabricacionSnapshot,
     pricingMode: syncedDraft.pricingMode,
     vidrio: syncedDraft.vidrio,
     ancho: syncedDraft.ancho,
@@ -1619,12 +1652,42 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     setDraft((current) => ({ ...current, cubicationSnapshot }));
   };
 
+  const updateFabricationRecipeId = (fabricationRecipeId: string) => {
+    setDraft((current) => ({ ...current, fabricationRecipeId }));
+  };
+
+  const updateFabricacionSnapshot = (
+    fabricacionSnapshot: FabricacionCotizacionSnapshot | null
+  ) => {
+    setDraft((current) => ({ ...current, fabricacionSnapshot }));
+  };
+
+  const updateFabricacionContexto = (value: {
+    tipologia: string;
+    hojas: number;
+    modulos: number;
+    apertura: string;
+    herraje: string;
+    variante: string;
+  }) => {
+    setDraft((current) => ({
+      ...current,
+      fabricacionTipologia: value.tipologia,
+      fabricacionHojas: value.hojas,
+      fabricacionModulos: value.modulos,
+      fabricacionApertura: value.apertura,
+      fabricacionHerraje: value.herraje,
+      fabricacionVariante: value.variante,
+    }));
+  };
+
   const updateAncho = (value: string) => {
     setDraft((current) =>
       syncDraftTemplatePricing({
         ...current,
         ancho: sanitizeDigits(value),
         cubicationSnapshot: null,
+        fabricacionSnapshot: null,
       })
     );
   };
@@ -1635,6 +1698,7 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
         ...current,
         alto: sanitizeDigits(value),
         cubicationSnapshot: null,
+        fabricacionSnapshot: null,
       })
     );
   };
@@ -1954,6 +2018,9 @@ export function usePasoDosAgregarGrupo(params: CreateInitialDraftParams) {
     updateCobraPrecioSeparado,
     updateVidrio,
     updateCubicationSnapshot,
+    updateFabricationRecipeId,
+    updateFabricacionSnapshot,
+    updateFabricacionContexto,
     updateAncho,
     updateAlto,
     updatePrecio,

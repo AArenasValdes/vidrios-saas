@@ -47,6 +47,34 @@ export default function CotizacionFabricacionPrintPage() {
     [cotizacion?.items]
   );
 
+  useEffect(() => {
+    if (!cotizacion) return;
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "fabricacion-print-mobile",
+        hypothesisId: "F",
+        location: "fabricacion/page.tsx:summaryMounted",
+        message: "Resumen fabricación montado",
+        data: {
+          width: window.innerWidth,
+          isMobileLayout: window.innerWidth < 720,
+          itemCount: summary.items.length,
+          cutCount: summary.items.reduce((acc, row) => acc + row.snapshot.cuts.length, 0),
+          totalBars: summary.totalBars,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [cotizacion, summary.items, summary.totalBars]);
+
   if (!isReady && !cotizacion) {
     return <p className={s.loadingState}>Cargando resumen de fabricación…</p>;
   }
@@ -74,7 +102,7 @@ export default function CotizacionFabricacionPrintPage() {
       <div className={s.toolbar} data-print-hide="1">
         <Link href={`/cotizaciones/${params.id}`} className={s.backLink}>
           <LuArrowLeft aria-hidden />
-          Volver
+          <span>Volver</span>
         </Link>
         <div className={s.toolbarActions}>
           <Link href={`/print/cotizaciones/${params.id}`} className={s.secondaryButton}>
@@ -82,33 +110,41 @@ export default function CotizacionFabricacionPrintPage() {
           </Link>
           <button type="button" className={s.primaryButton} onClick={() => window.print()}>
             <LuPrinter aria-hidden />
-            Imprimir pauta
+            <span>Imprimir</span>
           </button>
         </div>
       </div>
 
       <article className={s.document}>
         <header className={s.docHeader}>
-          <div>
+          <div className={s.docHeaderCopy}>
             <p className={s.docEyebrow}>Uso interno · no enviar al cliente</p>
             <h1>Resumen de fabricación</h1>
-            <p>
-              {cotizacion.codigo} · {cotizacion.clienteNombre || "Sin cliente"}
-              {cotizacion.obra ? ` · ${cotizacion.obra}` : ""}
+            <p className={s.docContext}>
+              {cotizacion.codigo}
+              <span aria-hidden>·</span>
+              {cotizacion.clienteNombre || "Sin cliente"}
+              {cotizacion.obra ? (
+                <>
+                  <span aria-hidden>·</span>
+                  {cotizacion.obra}
+                </>
+              ) : null}
             </p>
           </div>
           <div className={s.docMeta}>
             <strong>{summary.items.length}</strong>
-            <span>piezas con pauta</span>
+            <span>con pauta</span>
           </div>
         </header>
 
         <section className={s.totalsStrip} aria-label="Totales de fabricación">
           <div>
-            <strong>{summary.totalProfilesMl.toFixed(2)} ml</strong>
             <span>Perfiles</span>
+            <strong>{summary.totalProfilesMl.toFixed(2)} ml</strong>
           </div>
           <div>
+            <span>Vidrio</span>
             <strong>
               {summary.totalGlassM2.toLocaleString("es-CL", {
                 minimumFractionDigits: 2,
@@ -116,15 +152,14 @@ export default function CotizacionFabricacionPrintPage() {
               })}{" "}
               m²
             </strong>
-            <span>Vidrio</span>
           </div>
           <div>
-            <strong>{summary.totalAccessoryUnits}</strong>
             <span>Accesorios</span>
+            <strong>{summary.totalAccessoryUnits}</strong>
           </div>
           <div>
+            <span>Barras ref.</span>
             <strong>{summary.totalBars}</strong>
-            <span>Barras referenciales</span>
           </div>
         </section>
 
@@ -137,9 +172,14 @@ export default function CotizacionFabricacionPrintPage() {
             <section key={row.itemId} className={s.itemBlock}>
               <header className={s.itemHead}>
                 <div>
-                  <strong>
-                    {row.codigo} · {row.nombre}
-                  </strong>
+                  <div className={s.itemTitleRow}>
+                    <strong>
+                      {row.codigo} · {row.nombre}
+                    </strong>
+                    <em data-tone={row.statusLabel === "Validada" ? "ok" : "neutral"}>
+                      {row.statusLabel}
+                    </em>
+                  </div>
                   <p>
                     {row.widthMm} × {row.heightMm} mm · {row.quantity}{" "}
                     {row.quantity === 1 ? "unidad" : "unidades"}
@@ -151,31 +191,63 @@ export default function CotizacionFabricacionPrintPage() {
                       : ""}
                   </p>
                 </div>
-                <em>{row.statusLabel}</em>
               </header>
 
-              <table className={s.cutsTable}>
-                <thead>
-                  <tr>
-                    <th>Perfil</th>
-                    <th>Función</th>
-                    <th>Medida mm</th>
-                    <th>Cant.</th>
-                    <th>Total lineal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {row.snapshot.cuts.map((cut, index) => (
-                    <tr key={`${row.itemId}-${cut.label}-${index}`}>
-                      <td>{cut.label || "Por asignar"}</td>
-                      <td>{cut.functionLabel || "—"}</td>
-                      <td>{Math.round(cut.lengthMm).toLocaleString("es-CL")}</td>
-                      <td>{cut.quantity}</td>
-                      <td>{Math.round(cut.totalLinealMm).toLocaleString("es-CL")}</td>
+              <ul className={s.cutsList} aria-label={`Cortes de ${row.codigo}`}>
+                {row.snapshot.cuts.map((cut, index) => (
+                  <li key={`${row.itemId}-m-${cut.label}-${index}`}>
+                    <div className={s.cutMain}>
+                      <strong>{cut.functionLabel || cut.label || "Corte"}</strong>
+                      <span>
+                        {cut.label && cut.functionLabel && cut.label !== "Por asignar"
+                          ? cut.label
+                          : cut.label === "Por asignar"
+                            ? "Perfil por asignar"
+                            : cut.label || "Perfil"}
+                      </span>
+                    </div>
+                    <dl className={s.cutMetrics}>
+                      <div>
+                        <dt>Medida</dt>
+                        <dd>{Math.round(cut.lengthMm).toLocaleString("es-CL")} mm</dd>
+                      </div>
+                      <div>
+                        <dt>Cant.</dt>
+                        <dd>{cut.quantity}</dd>
+                      </div>
+                      <div>
+                        <dt>Total</dt>
+                        <dd>{Math.round(cut.totalLinealMm).toLocaleString("es-CL")} mm</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+
+              <div className={s.tableScroll}>
+                <table className={s.cutsTable}>
+                  <thead>
+                    <tr>
+                      <th>Perfil</th>
+                      <th>Función</th>
+                      <th>Medida mm</th>
+                      <th>Cant.</th>
+                      <th>Total lineal</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {row.snapshot.cuts.map((cut, index) => (
+                      <tr key={`${row.itemId}-${cut.label}-${index}`}>
+                        <td>{cut.label || "Por asignar"}</td>
+                        <td>{cut.functionLabel || "—"}</td>
+                        <td>{Math.round(cut.lengthMm).toLocaleString("es-CL")}</td>
+                        <td>{cut.quantity}</td>
+                        <td>{Math.round(cut.totalLinealMm).toLocaleString("es-CL")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {row.snapshot.bars.length > 0 ? (
                 <div className={s.barsBlock}>

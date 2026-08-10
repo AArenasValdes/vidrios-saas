@@ -579,6 +579,30 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     if (preview.cuts.length === 0 && preview.accessoryUnits <= 0 && !preview.glass) {
       return null;
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "pre-fix",
+        hypothesisId: "B_E",
+        location:
+          "cotizacion-line-template-cubication-snapshot.ts:catalogRecipePath",
+        message: "Usó receta legacy de catalogMetadata",
+        data: {
+          lineTemplateId,
+          recipeId: recipe.id,
+          totalMm: preview.totalProfilesLinealMm,
+          functions: preview.cuts.slice(0, 12).map((cut) => cut.functionLabel),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return {
       v: COTIZACION_CUBICATION_SNAPSHOT_VERSION,
       source: "auto",
@@ -611,6 +635,37 @@ export function buildCubicationSnapshotFromCatalogMetadata(input: {
     { widthMm, heightMm, quantity },
     cubicationConfig
   );
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "2c9a42",
+    },
+    body: JSON.stringify({
+      sessionId: "2c9a42",
+      runId: "pre-fix",
+      hypothesisId: "A_D",
+      location:
+        "cotizacion-line-template-cubication-snapshot.ts:legacyCuttingPath",
+      message: "Usó motor legacy Marco/Hoja/Junquillo",
+      data: {
+        lineTemplateId,
+        hasCatalogRecipe: hasRecipe,
+        recipeValidated,
+        rulesEnabled: rules.enabled,
+        rulesMode: rules.mode,
+        system: cubicationConfig.system,
+        widthMm,
+        heightMm,
+        quantity,
+        totalMm: preview.totalProfilesLinealMm,
+        functions: preview.cuts.slice(0, 12).map((cut) => cut.functionLabel),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   if (preview.cuts.length === 0) {
     return null;

@@ -15,6 +15,8 @@ export type FabricacionRecetaResolucionInput = {
   variante?: string | null;
   preferredRecipeId?: string | null;
   allowNonValidatedRecipeId?: string | null;
+  /** Cotización/UI: si no hay validada, permite una compatible en borrador/prueba. */
+  allowPreliminaryNonValidated?: boolean;
 };
 
 export type FabricacionRecetaDescartada = {
@@ -59,6 +61,26 @@ function normalizeText(value: string | null | undefined) {
 
 function statusAllowsAutomaticUse(status: FabricationRecipeStatus) {
   return status === "validated";
+}
+
+function statusAllowsPreliminaryUse(status: FabricationRecipeStatus) {
+  return (
+    status === "draft" ||
+    status === "testing" ||
+    status === "review_required"
+  );
+}
+
+function pickNewestByIdentity(recipes: FabricationRecipeRecord[]) {
+  const byIdentity = new Map<string, FabricationRecipeRecord>();
+  recipes.forEach((recipe) => {
+    const key = recipe.definition.identidad.recetaId;
+    const current = byIdentity.get(key);
+    if (!current || recipe.version > current.version) {
+      byIdentity.set(key, recipe);
+    }
+  });
+  return Array.from(byIdentity.values());
 }
 
 function discard(recipe: FabricationRecipeRecord, motivo: string): FabricacionRecetaDescartada {
@@ -168,6 +190,34 @@ export function resolverRecetaFabricacionCompatible(
   }
 
   if (validated.length === 0) {
+    if (input.allowPreliminaryNonValidated) {
+      const preliminary = pickNewestByIdentity(
+        compatible.filter((recipe) => statusAllowsPreliminaryUse(recipe.status))
+      );
+      if (preliminary.length === 1) {
+        return {
+          estado: "receta_no_validada",
+          receta: preliminary[0],
+          candidatas: preliminary,
+          descartadas,
+          advertencias: [
+            "Receta en prueba: cálculo preliminar, no como pauta validada.",
+          ],
+        };
+      }
+      if (preliminary.length > 1) {
+        return {
+          estado: "multiples_recetas",
+          receta: null,
+          candidatas: preliminary,
+          descartadas,
+          advertencias: [
+            "Hay mas de una receta compatible sin validar; elige variante o herraje.",
+          ],
+        };
+      }
+    }
+
     return {
       estado: "sin_receta",
       receta: null,

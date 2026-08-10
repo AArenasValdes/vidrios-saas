@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { LuChevronDown, LuChevronLeft, LuEllipsis, LuPencilRuler } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
@@ -26,6 +26,7 @@ import {
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
+import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
 import { CuadernoComposicionMovil } from "./cuaderno-composicion-movil";
 import s from "./paso-dos-cuaderno-movil.module.css";
 
@@ -110,6 +111,7 @@ export function CuadernoConstructorMovil({
   onDuplicate,
   onRemove,
 }: Props) {
+  useMobileViewportStability();
   const [openSection, setOpenSection] = useState<SectionId | null>("identificacion");
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -133,14 +135,6 @@ export function CuadernoConstructorMovil({
       (section) => sectionStatus(section.id, item, quotePricingMode) === "pending"
     ).length;
   }, [item, quotePricingMode]);
-
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
 
   const svg = useMemo(
     () =>

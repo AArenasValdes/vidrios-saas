@@ -383,7 +383,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 ## Feature: Fabricacion tecnica esencial
 
 - **Que hace**: Dominio puro y autocontenido para recetas de fabricacion y motor deterministico de cubicacion/pauta. Calcula perfiles, funciones, medidas, cantidades, vidrio, accesorios, advertencias y trazabilidad desde `receta + dimensiones + cantidad + variante/configuracion`. No cotiza precios.
-- **Fase 4 (2026-07-30)**: agrega administracion guiada por linea, editor sin JSON ni formulas libres, laboratorio de pruebas esperado/calculado, validacion con casos obligatorios y selector explicito de receta en la cotizacion cuando existen varias compatibles. Una receta validada queda bloqueada y solo cambia mediante nueva version.
+- **Fase 4 (2026-08-04)**: Catálogo privado vuelve a ser la única entrada principal para líneas, precios y recetas. Biblioteca técnica y Mis recetas quedan como vistas internas sin sidebar; las tarjetas muestran estado de fabricación y enlazan a la receta de su línea. Reutiliza `cotizacion_line_templates` + `fabrication_recipes`, muestra sugeridas/reconocidas sin inventar reglas, y deriva siempre a la receta versionada de la línea. El editor conserva controles estructurados sin JSON/fórmulas libres; el laboratorio muestra despiece, comparación esperado/calculado y una pauta FFD referencial de barras. Una receta validada queda bloqueada y solo cambia mediante nueva versión.
 - **Fase 3 (2026-07-29)**: integra recetas validadas al guardado de `/cotizaciones/nueva` sin redisenar UI final. El flujo resuelve receta compatible por `line_template_id`, tipologia, hojas, modulos, herraje/variante cuando existan; si hay una receta `validated` unica calcula con `calcularCubicacionYPauta()` y guarda `cotizacion_items.fabricacion_snapshot`. Si no hay receta unica validada, la cotizacion comercial sigue funcionando sin bloquear.
 - **Resumen interno**: `/print/cotizaciones/[id]/fabricacion` lee primero `fabricacionSnapshot` formal; si no existe usa fallback legacy `[cub:]`.
 - **Compatibilidad Fase 3**: `fabricationRecipePack`, espejo `fabricationRecipe` y snapshot `[cub:]` siguen como lectura/compatibilidad, pero el flujo nuevo no escribe snapshots tecnicos en `[cub:]`.
@@ -398,29 +398,34 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/cotizaciones/services/cotizaciones.service.ts`
   - `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
   - `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts`
-- **Rutas involucradas**: `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` administra recetas y pruebas; `/cotizaciones/nueva` selecciona receta formal solo en el panel tecnico desktop. No cambia PDF comercial, WhatsApp, rutas publicas ni IA.
+- **Rutas involucradas**: `/configuracion/empresa/lineas-precios` concentra la entrada técnica/comercial; `/biblioteca-lineas` y `/mis-recetas` son vistas internas; `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` administra recetas, asistente de texto y pruebas; `/api/fabricacion/asistente-texto` genera propuestas JSON autenticadas; `/cotizaciones/nueva` selecciona receta formal solo en el panel tecnico desktop. No cambia PDF comercial, WhatsApp ni rutas publicas.
 - **Archivos principales**:
   - `src/features/fabricacion/types/fabricacion-domain.ts`
   - `src/features/fabricacion/types/fabricacion-persistence.ts`
   - `src/features/fabricacion/schemas/fabricacion-schemas.ts`
   - `src/features/fabricacion/services/fabricacion-calculo.service.ts`
+  - `src/features/fabricacion/services/fabricacion-asistente.service.ts`
+  - `src/features/fabricacion/services/fabricacion-pauta-barras.service.ts`
   - `src/features/fabricacion/services/fabricacion-validacion.service.ts`
   - `src/features/fabricacion/services/fabrication-recipes.service.ts`
   - `src/features/fabricacion/services/fabricacion-receta-editor.service.ts`
   - `src/features/fabricacion/services/fabricacion-contexto-pieza.service.ts`
   - `src/features/fabricacion/hooks/use-fabrication-recipes.ts`
   - `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
+  - `src/features/fabricacion/components/fabricacion-library.tsx`
   - `src/features/fabricacion/components/recipe-guided-editor.tsx`
   - `src/features/fabricacion/components/recipe-test-lab.tsx`
+  - `src/features/fabricacion/components/recipe-text-assistant.tsx`
   - `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`
   - `src/features/fabricacion/repositories/fabrication-recipe-tests.repository.ts`
   - `src/features/fabricacion/fixtures/receta-corredera-dos-hojas.fixture.ts`
+  - `src/features/fabricacion/fixtures/bases-tipologicas-ventora.ts`
   - `src/features/fabricacion/__tests__/fabricacion-calculo.service.test.ts`
   - `src/features/fabricacion/__tests__/fabrication-recipes.service.test.ts`
   - `src/features/fabricacion/__tests__/fabrication-recipes-rls-migration.contract.test.ts`
   - `src/features/fabricacion/index.ts`
 - **Tablas Supabase**: `fabrication_recipes`, `fabrication_recipe_tests` (migracion base `20260729230407`, grants `20260730001306` y metadatos de validacion `20260730003756`, todas aplicadas/verificadas en remoto). No toca tablas legacy.
-- **Flujo de datos**: Consumidor futuro -> `calcularCubicacionYPauta()` -> validacion Zod + helpers -> resultado puro con `perfiles`, `vidrios`, `accesorios`, `advertencias`, `trazabilidad`.
+- **Flujo de datos**: editor opcional -> `/api/fabricacion/asistente-texto` -> JSON Schema estricto -> borrador con `datosPendientes`; guardado -> `calcularCubicacionYPauta()` -> resultado puro -> `construirPautaBarrasFabricacion()` FFD referencial -> snapshot congelado. Cotizar nunca llama IA.
 - **Persistencia Fase 2**: repositorios sin UI para recetas y casos de prueba. Servicio crea, duplica, versiona, archiva, ejecuta tests con `calcularCubicacionYPauta()` y solo pasa a `validated` cuando todos los casos activos pasan.
 - **RLS Fase 2**: recetas Ventora son lectura authenticated para todas las organizaciones; recetas privadas y tests quedan acotados por `organization_id = get_org_id()`. `organization_id` y `line_template_id` usan `bigint` para respetar el schema real.
 - **Verificacion remota Fase 3**: smoke con dos empresas QA confirmo aislamiento privado, lectura Ventora, bloqueo de update cruzado, snapshot guardado con receta unica, ausencia de snapshot sin receta o con multiples recetas y estabilidad del snapshot historico tras archivar/versionar receta.
@@ -428,8 +433,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Reutiliza actual**: la separacion de receta vs linea comercial, estados de validacion, componentes reales por funcion, snapshot historico `[cub:]` como contrato de salida futuro, y `fabricationRecipePack` como compatibilidad de metadata existente.
 - **Compatibilidad preservada**: `fabricationRecipePack`, `fabricationRecipe`, `buildRecipeCuttingPreview()`, `buildLineTemplateCuttingPreview()`, partidas legacy `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja` y snapshot `[cub:]` siguen vivos en `src/features/cotizaciones/line-templates/`.
 - **Debe reemplazar de forma aditiva**: el administrador Fase 4 es la unica superficie nueva de escritura tecnica. El wizard comercial deja `fabricationRecipePack`/`fabricationRecipe` en solo lectura de compatibilidad; `[cub:]` sigue como fallback historico. El motor nuevo no depende de React, Supabase, SQL, eval, strings libres ejecutables ni codigo de usuario.
+- **Investigación documental (2026-08-01)**: `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` define catálogo reconocido y orden de integración: aluminio lanzamiento Serie 20/25/32/42/4800/5000/Puerta 3200; expansión Sodal 3800, Indalum S24/S33/X27/X43/X69/Plexa; PVC posterior DVP Aspen/Advance, Winhouse Sliding y Deceuninck SL/DL322. No usar ese reporte para crear fórmulas, descuentos ni cortes.
 - **Fixture V1**: `RECETA_CORREDERA_DOS_HOJAS_EJEMPLO_NO_VALIDADO` es solo ejemplo deterministico; no representa una linea real validada por taller.
-- **Riesgos al modificar**: No agregar IA, carga PDF, optimizador de barras, nesting, CNC, inventario, ERP ni reactivar `materials`, `system_lines`, `formula_variables` o `quote_item_breakdown`. No presentar una receta en prueba como lista para fabricar; la seleccion en cotizacion solo admite versiones `validated`.
+- **Biblioteca priorizada**: ALAR L20/L25/L5000 se copian como borradores sugeridos bloqueados hasta completar codigos, datos de barra y pruebas. SODAL Serie 20/4800/S-33/42/3200 solo aparece como linea reconocida; no tiene `definition` ejecutable porque faltan formulas verificables.
+- **Asistente de texto**: usa `DEEPSEEK_API_KEY`, `DEEPSEEK_FABRICATION_MODEL` opcional (default `deepseek-v4-flash`) y JSON Output. La respuesta se valida con Zod dentro de Ventora. Descarta codigo/cantidad/ajuste/largo si el modelo no los marca como explicitamente presentes; la propuesta nunca valida ni ejecuta formulas libres.
+- **Inicio asistido de receta (2026-08-08)**: cuando una linea aun no tiene receta, desktop ofrece `Usar base de Ventora` (recomendado), `Crear con IA` o `Empezar desde cero`. Las bases universales cubren corredera, abatible, proyectante, pano fijo, puerta abatible y shower; dependen de hojas/modulos y solo precargan funciones, componentes habituales y dimensiones base controladas. Codigos, ajustes/descuentos, cantidades a confirmar, largos comerciales y politica de corte permanecen bloqueados como `datosPendientes`.
+- **Conocimiento del taller**: el inicio muestra hasta tres recetas privadas `validated` de la misma tipologia y hojas para duplicarlas con `source_type='copied'`; la copia queda como borrador de la linea destino y nunca hereda la validacion.
+- **Riesgos al modificar**: La IA solo puede asistir creacion/edicion; nunca llamar IA al cotizar ni guardar su texto como formula ejecutable. No agregar carga PDF, optimizador industrial, nesting, CNC, inventario, ERP ni reactivar `materials`, `system_lines`, `formula_variables` o `quote_item_breakdown`. FFD sigue siendo distribucion referencial. No presentar una receta en prueba como lista para fabricar; la seleccion en cotizacion solo admite versiones `validated`.
 
 ---
 

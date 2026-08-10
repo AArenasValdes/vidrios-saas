@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { LuArrowRight, LuX } from "react-icons/lu";
 
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
@@ -17,6 +17,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
 import type { QuoteConstructorItemPatch } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 
+import { useMobileViewportStability } from "../../../_hooks/use-mobile-viewport-stability";
 import s from "./paso-dos-cuaderno-movil.module.css";
 
 const QUICK_QTY = [1, 2, 4, 6] as const;
@@ -30,11 +31,6 @@ function normalizeProfileMaterial(material: ComponentFormState["material"]): Pro
 
 function getColorOptionsForMaterial(material: ProfileMaterial) {
   return material === "PVC" ? PVC_COLOR_OPTIONS : ALUMINUM_COLOR_OPTIONS;
-}
-
-function isIosViewport(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.platform) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 type Props = {
@@ -61,7 +57,7 @@ export function CuadernoQuickEditSheet({
   onRemove,
 }: Props) {
   const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
+  useMobileViewportStability();
   const form = useMemo(() => mapItemToForm(item), [item]);
   const [nombre, setNombre] = useState(item.nombre);
   const [ancho, setAncho] = useState(item.ancho ? String(item.ancho) : "");
@@ -116,36 +112,6 @@ export function CuadernoQuickEditSheet({
       : "";
   };
 
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
-
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel || typeof window === "undefined" || !window.visualViewport) return;
-
-    const viewport = window.visualViewport;
-    const shouldCapKeyboardLift = isIosViewport();
-    const syncKeyboardOffset = () => {
-      const keyboardOffset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      const nextOffset = shouldCapKeyboardLift ? Math.min(keyboardOffset, 88) : keyboardOffset;
-      panel.style.setProperty("--cq-keyboard-offset", `${nextOffset}px`);
-    };
-
-    syncKeyboardOffset();
-    viewport.addEventListener("resize", syncKeyboardOffset);
-    viewport.addEventListener("scroll", syncKeyboardOffset);
-    return () => {
-      viewport.removeEventListener("resize", syncKeyboardOffset);
-      viewport.removeEventListener("scroll", syncKeyboardOffset);
-      panel.style.removeProperty("--cq-keyboard-offset");
-    };
-  }, []);
-
   const handleSave = () => {
     const patch: QuoteConstructorItemPatch = {
       nombre: nombre.trim().slice(0, 120) || item.nombre,
@@ -199,7 +165,7 @@ export function CuadernoQuickEditSheet({
   return (
     <div className={s.sheetRoot} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" className={s.sheetScrim} aria-label="Cerrar" onClick={onClose} />
-      <div ref={panelRef} className={s.sheetPanel}>
+      <div className={s.sheetPanel}>
         <div className={s.sheetHandle} aria-hidden />
         <div className={s.sheetHeader}>
           <div>

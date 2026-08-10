@@ -457,8 +457,21 @@ function buildFabricacionSnapshotForItem(input: {
       presentation.fabricacionHojas ??
       resolveLeavesCount(input.item, presentation.hojasBase),
     modulos: presentation.fabricacionModulos,
-    apertura:
-      presentation.fabricacionApertura || presentation.sistema || null,
+    apertura: (() => {
+      for (const candidate of [
+        presentation.fabricacionApertura,
+        presentation.sistema,
+      ]) {
+        const value = (candidate ?? "").trim();
+        if (!value) continue;
+        const normalized = value.toLowerCase();
+        if (normalized === "personalizado" || normalized === "personalizada") {
+          continue;
+        }
+        return value;
+      }
+      return null;
+    })(),
     herraje: presentation.fabricacionHerraje || null,
     variante: presentation.fabricacionVariante || null,
     preferredRecipeId: presentation.fabricationRecipeId || null,

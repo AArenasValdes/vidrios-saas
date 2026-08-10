@@ -81,6 +81,8 @@ export type FabricacionReglaCantidad = {
 
 export type FabricacionComponentePerfil = {
   id: string;
+  /** Identidad interna del perfil real del taller (compartible entre funciones). */
+  tallerPerfilId?: string | null;
   codigoPerfil: string;
   nombrePerfil: string;
   funcion: string;
@@ -88,6 +90,8 @@ export type FabricacionComponentePerfil = {
   reglaMedida: FabricacionReglaMedida;
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
+  observaciones?: string;
+  datosPendientes?: string[];
 };
 
 export type FabricacionVidrio = {
@@ -98,6 +102,8 @@ export type FabricacionVidrio = {
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
   condicion?: FabricacionCondicion;
+  observaciones?: string;
+  datosPendientes?: string[];
 };
 
 export type FabricacionAccesorio = {
@@ -107,6 +113,14 @@ export type FabricacionAccesorio = {
   reglaCantidad: FabricacionReglaCantidad;
   requerido: boolean;
   condicion?: FabricacionCondicion;
+  observaciones?: string;
+  datosPendientes?: string[];
+};
+
+export type FabricacionConfiguracionCorte = {
+  perdidaCorteMm: number | null;
+  despunteInicialMm: number | null;
+  sobranteMinimoAprovechableMm: number | null;
 };
 
 export type FabricacionReceta = {
@@ -117,6 +131,7 @@ export type FabricacionReceta = {
   perfiles: FabricacionComponentePerfil[];
   vidrios: FabricacionVidrio[];
   accesorios: FabricacionAccesorio[];
+  configuracionCorte?: FabricacionConfiguracionCorte;
   notasValidacion: string[];
 };
 

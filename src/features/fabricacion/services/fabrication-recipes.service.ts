@@ -156,6 +156,10 @@ export function createFabricationRecipesService(
   const createRecipeIdentityId =
     deps.createRecipeIdentityId ?? (() => crypto.randomUUID());
 
+  async function getCurrentOrganizationId() {
+    return deps.recipesRepository.getCurrentOrganizationId();
+  }
+
   async function createRecipe(input: CreateFabricationRecipeInput) {
     try {
       const status = input.status ?? "draft";
@@ -418,18 +422,14 @@ export function createFabricationRecipesService(
       "validated"
     );
     const definitionValidation = validarRecetaFabricacion(validationDefinition);
-    const requiredProfilesWithoutCode = validationDefinition.perfiles.filter(
-      (profile) => profile.requerido && !profile.codigoPerfil.trim()
-    );
     const criticalWarnings = definitionValidation.advertencias.filter(
       (warning) => warning.nivel === "error"
     );
-    if (requiredProfilesWithoutCode.length > 0 || criticalWarnings.length > 0) {
+    if (criticalWarnings.length > 0) {
       throw new FabricationRecipeServiceError(
         "VALIDACION_COMPONENTES_INCOMPLETOS",
         "La receta tiene componentes criticos incompletos.",
         {
-          profileIds: requiredProfilesWithoutCode.map((profile) => profile.id),
           warnings: criticalWarnings,
         }
       );
@@ -462,6 +462,7 @@ export function createFabricationRecipesService(
   }
 
   return {
+    getCurrentOrganizationId,
     createRecipe,
     getRecipeById,
     listRecipes,

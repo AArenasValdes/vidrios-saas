@@ -17,18 +17,74 @@ type UseFabricationRecipesOptions = {
   lineTemplateId?: number;
 };
 
+function getMutationErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    if (/row-level security policy/i.test(error.message)) {
+      return "No pudimos confirmar el acceso de esta sesión al taller. Recarga la página e inténtalo nuevamente.";
+    }
+    return error.message;
+  }
+  if (error && typeof error === "object") {
+    const candidate = error as Record<string, unknown>;
+    if (typeof candidate.message === "string" && candidate.message.trim()) {
+      if (/row-level security policy/i.test(candidate.message)) {
+        return "No pudimos confirmar el acceso de esta sesión al taller. Recarga la página e inténtalo nuevamente.";
+      }
+      return candidate.message;
+    }
+  }
+  return "No se pudo completar la accion.";
+}
+
 export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}) {
-  const { organizacionId, user } = useAuth();
-  const organizationId =
-    organizacionId != null && Number.isInteger(Number(organizacionId))
-      ? Number(organizacionId)
-      : null;
+  const { cargando, user } = useAuth();
+  const userId = user?.id ?? null;
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const [resolvedOrganizationId, setResolvedOrganizationId] = useState<number | null>(null);
+  const organizationId = resolvedUserId === userId ? resolvedOrganizationId : null;
+  const isResolvingOrganization = Boolean(
+    userId && !cargando && resolvedUserId !== userId
+  );
   const [recipes, setRecipes] = useState<FabricationRecipeRecord[]>([]);
   const [tests, setTests] = useState<Record<string, FabricationRecipeTestRecord[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadIdRef = useRef(0);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    if (cargando || !userId) {
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    void Promise.resolve()
+      .then(() => {
+        setError(null);
+        return getFabricationRecipesClientService().getCurrentOrganizationId();
+      })
+      .then((resolvedOrganizationId) => {
+        if (!isCurrent) return;
+        setResolvedOrganizationId(resolvedOrganizationId);
+        setResolvedUserId(userId);
+        if (!resolvedOrganizationId) {
+          setError("No pudimos identificar el taller de esta sesión. Recarga la página e inténtalo nuevamente.");
+        }
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+        setResolvedOrganizationId(null);
+        setResolvedUserId(userId);
+        setError("No pudimos confirmar el acceso de esta sesión al taller. Recarga la página e inténtalo nuevamente.");
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [cargando, userId]);
 
   const loadRecipes = useCallback(async () => {
     if (!organizationId || options.enabled === false) {
@@ -69,22 +125,36 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
   }, [loadRecipes]);
 
   const runMutation = useCallback(
-    async <T,>(action: () => Promise<T>) => {
-      setIsSaving(true);
+    async <T,>(
+      action: () => Promise<T>,
+      options?: {
+        quiet?: boolean;
+        replaceRecipe?: (result: T) => FabricationRecipeRecord | null;
+      }
+    ) => {
+      const quiet = options?.quiet === true;
+      if (!quiet) setIsSaving(true);
       setError(null);
       try {
         const result = await action();
-        await loadRecipes();
+        const patched = options?.replaceRecipe?.(result) ?? null;
+        if (patched) {
+          setRecipes((current) => {
+            const index = current.findIndex((recipe) => recipe.id === patched.id);
+            if (index < 0) return current;
+            const next = current.slice();
+            next[index] = patched;
+            return next;
+          });
+        } else {
+          await loadRecipes();
+        }
         return result;
       } catch (mutationError) {
-        setError(
-          mutationError instanceof Error
-            ? mutationError.message
-            : "No se pudo completar la accion."
-        );
+        setError(getMutationErrorMessage(mutationError));
         throw mutationError;
       } finally {
-        setIsSaving(false);
+        if (!quiet) setIsSaving(false);
       }
     },
     [loadRecipes]
@@ -105,14 +175,23 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
   );
 
   const updateRecipe = useCallback(
-    (id: string, input: UpdateFabricationRecipeInput) => {
+    (
+      id: string,
+      input: UpdateFabricationRecipeInput,
+      options?: { quiet?: boolean }
+    ) => {
       if (!organizationId) throw new Error("No hay organizacion activa.");
-      return runMutation(() =>
-        getFabricationRecipesClientService().updateDraftRecipe(
-          id,
-          organizationId,
-          input
-        )
+      return runMutation(
+        () =>
+          getFabricationRecipesClientService().updateDraftRecipe(
+            id,
+            organizationId,
+            input
+          ),
+        {
+          quiet: options?.quiet,
+          replaceRecipe: (result) => result,
+        }
       );
     },
     [organizationId, runMutation]
@@ -223,6 +302,7 @@ export function useFabricationRecipes(options: UseFabricationRecipesOptions = {}
 
   return {
     organizationId,
+    isResolvingOrganization,
     recipes,
     tests,
     isLoading,

@@ -47,9 +47,11 @@ import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templa
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import {
   formatCubicationMm,
+  PautaCubicacionPanel,
   resolveActiveCubicationPreview,
 } from "./pauta-cubicacion-panel";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { getGlassRecommendations } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import {
@@ -138,6 +140,16 @@ type Props = {
   onAnchoChange: (value: string) => void;
   onAltoChange: (value: string) => void;
   onCubicationSnapshotChange?: (value: CotizacionItemCubicationSnapshot | null) => void;
+  onFabricationRecipeIdChange?: (recipeId: string) => void;
+  onFabricacionSnapshotChange?: (snapshot: FabricacionCotizacionSnapshot | null) => void;
+  onFabricacionContextoChange?: (value: {
+    tipologia: string;
+    hojas: number;
+    modulos: number;
+    apertura: string;
+    herraje: string;
+    variante: string;
+  }) => void;
   /** Abre la revisión de despiece desktop compartida (rápida/guiada). */
   onOpenDespieceReview?: () => void;
   onPrecioChange: (value: string) => void;
@@ -398,6 +410,9 @@ export function PasoDosAgregarGrupoSheet({
   onAnchoChange,
   onAltoChange,
   onCubicationSnapshotChange,
+  onFabricationRecipeIdChange,
+  onFabricacionSnapshotChange,
+  onFabricacionContextoChange,
   onOpenDespieceReview,
   onPrecioChange,
   onPrecioPorM2Change,
@@ -2181,22 +2196,56 @@ export function PasoDosAgregarGrupoSheet({
           {!totalGlobalDetailMode && desktopStep === 4 ? (
             <div className={d.despieceWorkspace}>
               {!isFreeValue ? (
-                <div className={d.despieceReviewLaunch}>
-                  <div>
-                    <strong>Revisión de despiece</strong>
-                    <p>
-                      Revisa cortes, barras y sobrantes en una superficie amplia. Los ajustes
-                      manuales solo afectan esta cotización.
-                    </p>
+                <>
+                  <div className={d.despieceReviewLaunch}>
+                    <div>
+                      <strong>Revisión de despiece</strong>
+                      <p>
+                        Revisa cortes, barras y sobrantes. Los ajustes manuales solo afectan
+                        esta cotización.
+                      </p>
+                    </div>
+                    {onOpenDespieceReview ? (
+                      <button
+                        type="button"
+                        className={d.despieceReviewLaunchButton}
+                        onClick={() => onOpenDespieceReview()}
+                      >
+                        Abrir despiece
+                      </button>
+                    ) : null}
                   </div>
-                  <button
-                    type="button"
-                    className={d.despieceReviewLaunchButton}
-                    onClick={() => onOpenDespieceReview?.()}
-                  >
-                    Abrir despiece
-                  </button>
-                </div>
+                  <PautaCubicacionPanel
+                    componentForm={{
+                      ancho: draft.ancho,
+                      alto: draft.alto,
+                      cantidad: getQuantityInputValue(draft) || "1",
+                      lineTemplateId: draft.lineTemplateId,
+                      tipo: draft.subtipo,
+                      sistema: draft.sistema,
+                      fabricationRecipeId: draft.fabricationRecipeId,
+                      fabricacionTipologia: draft.fabricacionTipologia,
+                      fabricacionHojas: draft.fabricacionHojas,
+                      fabricacionModulos: draft.fabricacionModulos,
+                      fabricacionApertura: draft.fabricacionApertura,
+                      fabricacionHerraje: draft.fabricacionHerraje,
+                      fabricacionVariante: draft.fabricacionVariante,
+                      fabricacionSnapshot: draft.fabricacionSnapshot,
+                      cubicationSnapshot: draft.cubicationSnapshot,
+                    }}
+                    selectedTemplate={selectedLineTemplate}
+                    onCubicationSnapshotChange={(value) =>
+                      onCubicationSnapshotChange?.(value)
+                    }
+                    onFabricationRecipeIdChange={onFabricationRecipeIdChange}
+                    onFabricacionSnapshotChange={onFabricacionSnapshotChange}
+                    onFabricacionContextoChange={onFabricacionContextoChange}
+                    lineSelectionHint="medidas"
+                    showBarUsageInline
+                    personalizadoAssistMode={personalizadoAssistMode}
+                    layout="workspace"
+                  />
+                </>
               ) : null}
             </div>
           ) : null}

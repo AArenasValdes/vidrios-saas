@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Play, Save, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Pencil,
+  Play,
+  Ruler,
+} from "lucide-react";
 
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
+import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import type {
   FabricacionEntradaCalculo,
+  FabricacionReceta,
   FabricacionResultadoCubicacion,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import type {
@@ -26,10 +37,7 @@ function recalculateExpectedTotals(result: FabricacionResultadoCubicacion) {
       (sum, profile) => sum + profile.totalLinealMm,
       0
     ),
-    totalVidrioM2: result.vidrios.reduce(
-      (sum, glass) => sum + glass.totalM2,
-      0
-    ),
+    totalVidrioM2: result.vidrios.reduce((sum, glass) => sum + glass.totalM2, 0),
   };
 }
 
@@ -38,39 +46,146 @@ function positiveNumber(value: string, fallback = 1) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function formatLinealMeters(totalLinealMm: number) {
+  return `${(totalLinealMm / 1000).toLocaleString("es-CL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3,
+  })} m`;
+}
+
+function buildOptionalPendingGroups(recipe: FabricacionReceta) {
+  const items: string[] = [];
+  const withoutLength = recipe.perfiles.filter(
+    (profile) => profile.requerido && !profile.largoComercialMm
+  ).length;
+  if (withoutLength > 0) {
+    items.push(
+      `${withoutLength} ${
+        withoutLength === 1 ? "perfil sin largo comercial" : "perfiles sin largo comercial"
+      }`
+    );
+  }
+
+  const withoutCode = recipe.perfiles.filter(
+    (profile) => profile.requerido && !profile.codigoPerfil.trim()
+  ).length;
+  if (withoutCode > 0) {
+    items.push("referencias/códigos pendientes");
+  }
+
+  const glassPending = recipe.vidrios.some(
+    (glass) => (glass.datosPendientes?.length ?? 0) > 0
+  );
+  if (glassPending || recipe.vidrios.some((glass) => glass.requerido && !glass.nombre.trim())) {
+    items.push("vidrio pendiente de confirmar");
+  }
+
+  const accessoryPending = recipe.accesorios.some(
+    (accessory) => (accessory.datosPendientes?.length ?? 0) > 0
+  );
+  if (accessoryPending) {
+    items.push("accesorios con información opcional");
+  }
+
+  return items;
+}
+
+function profilesAllMatch(
+  actual: FabricacionResultadoCubicacion,
+  expected: FabricacionResultadoCubicacion
+) {
+  if (actual.perfiles.length !== expected.perfiles.length) return false;
+  return actual.perfiles.every((row, index) => {
+    const expectedRow = expected.perfiles[index];
+    return (
+      expectedRow &&
+      row.medidaMm === expectedRow.medidaMm &&
+      row.cantidadPiezas === expectedRow.cantidadPiezas
+    );
+  });
+}
+
 type Props = {
   recipe: FabricationRecipeRecord;
   tests: FabricationRecipeTestRecord[];
   isSaving: boolean;
+  isActivated?: boolean;
+  /** Casos obligatorios ya aprobados: permite activar sin recalcular en esta sesión. */
+  canActivateFromSaved?: boolean;
+  desktopActiveStep?: "test" | "plan" | "validation";
   onSaveTest: (input: {
     name: string;
     input: FabricacionEntradaCalculo;
     expectedOutput: FabricacionResultadoCubicacion;
     isRequired: boolean;
   }) => Promise<void>;
-  onRunTest: (testId: string) => Promise<void>;
+  onRunTest?: (testId: string) => Promise<void>;
+  onBackToRecipe?: () => void;
+  onConfigureLengths?: () => void;
+  onActivate?: () => Promise<void> | void;
 };
 
 export function RecipeTestLab({
   recipe,
   tests,
   isSaving,
+  isActivated = false,
+  canActivateFromSaved = false,
+  desktopActiveStep,
   onSaveTest,
-  onRunTest,
+  onBackToRecipe,
+  onConfigureLengths,
+  onActivate,
 }: Props) {
-  const [name, setName] = useState("Trabajo real");
-  const [input, setInput] = useState<FabricacionEntradaCalculo>({
-    anchoTotalMm: 1200,
-    altoTotalMm: 1000,
-    cantidad: 1,
-    hojas: recipe.definition.identidad.hojas,
-    modulos: recipe.definition.identidad.modulos,
-    variante: recipe.definition.identidad.variante,
-  });
+  const identity = recipe.definition.identidad;
+  const [name, setName] = useState("");
+  const [anchoMm, setAnchoMm] = useState(1200);
+  const [altoMm, setAltoMm] = useState(1000);
+  const [cantidad, setCantidad] = useState(1);
   const [actual, setActual] = useState<FabricacionResultadoCubicacion | null>(null);
   const [expected, setExpected] = useState<FabricacionResultadoCubicacion | null>(null);
-  const [isRequired, setIsRequired] = useState(true);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isActivating, setIsActivating] = useState(false);
+
+  const input = useMemo<FabricacionEntradaCalculo>(
+    () => ({
+      anchoTotalMm: anchoMm,
+      altoTotalMm: altoMm,
+      cantidad,
+      hojas: identity.hojas,
+      modulos: identity.modulos,
+      variante: identity.variante,
+    }),
+    [anchoMm, altoMm, cantidad, identity.hojas, identity.modulos, identity.variante]
+  );
+
+  const missingCommercialLengths = tieneLargosComercialesPendientes(
+    recipe.definition
+  );
+  const optionalPending = buildOptionalPendingGroups(recipe.definition);
+  const barPlan = actual
+    ? construirPautaBarrasFabricacion({
+        receta: recipe.definition,
+        resultado: actual,
+      })
+    : null;
+
+  const allMatch =
+    actual != null &&
+    expected != null &&
+    actual.calculable &&
+    profilesAllMatch(actual, expected);
+  const readyToActivate =
+    (allMatch && Boolean(actual)) ||
+    (canActivateFromSaved && actual == null) ||
+    (canActivateFromSaved && allMatch);
+
+  const glassPieces = actual
+    ? actual.vidrios.reduce((sum, glass) => sum + glass.cantidadPiezas, 0)
+    : 0;
+  const accessoryUnits = actual
+    ? actual.accesorios.reduce((sum, item) => sum + item.cantidadUnidades, 0)
+    : 0;
 
   const calculate = () => {
     const next = calcularCubicacionYPauta(recipe.definition, input);
@@ -78,50 +193,82 @@ export function RecipeTestLab({
     setExpected(cloneResult(next));
     setFeedback(
       next.calculable
-        ? "Calculo listo. Ajusta Esperado con las medidas del trabajo real."
+        ? null
         : "La receta no pudo calcularse con estas medidas."
     );
   };
 
-  const save = async () => {
-    if (!actual || !expected) return;
-    await onSaveTest({
-      name: name.trim() || "Trabajo real",
-      input,
-      expectedOutput: expected,
-      isRequired,
-    });
-    setFeedback("Caso guardado. Ejecutalo para confirmar la coincidencia.");
+  const handleActivate = async () => {
+    if (!onActivate || !readyToActivate) return;
+    setIsActivating(true);
+    try {
+      if (actual && expected && allMatch) {
+        await onSaveTest({
+          name: name.trim() || `Prueba ${anchoMm}×${altoMm}`,
+          input,
+          expectedOutput: expected,
+          isRequired: true,
+        });
+      }
+      await onActivate();
+    } finally {
+      setIsActivating(false);
+    }
   };
 
+  if (isActivated || recipe.status === "validated") {
+    return (
+      <div className={s.labFlow} data-guided-desktop={desktopActiveStep ? "true" : "false"}>
+        <section className={`${s.editorSection} ${s.activateSuccessCard}`}>
+          <div className={s.activateSuccessIcon} aria-hidden="true">
+            <CheckCircle2 size={28} />
+          </div>
+          <h2>Receta validada</h2>
+          <p>Ya puedes generar despiece y pauta desde tus cotizaciones.</p>
+          {onBackToRecipe ? (
+            <button
+              type="button"
+              className={s.secondaryButton}
+              onClick={onBackToRecipe}
+            >
+              <ArrowLeft size={16} />
+              Volver a receta
+            </button>
+          ) : null}
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className={s.labFlow}>
+    <div className={s.labFlow} data-guided-desktop={desktopActiveStep ? "true" : "false"}>
       <section className={s.editorSection}>
         <div className={s.sectionHeading}>
           <div>
-            <span>Probar receta</span>
-            <h2>Usa una medida que ya hayas fabricado</h2>
+            <span>Probar y activar</span>
+            <h2>Prueba tu receta con una medida real</h2>
           </div>
-          <p>La columna Esperado debe reflejar el resultado real de tu taller.</p>
+          <p>Comprueba que Ventora obtiene el mismo despiece que utilizas en taller.</p>
         </div>
 
-        <div className={s.testInputGrid}>
+        <div className={`${s.testInputGrid} ${s.testInputGridCompact}`}>
           <label>
-            <span>Nombre del caso</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} />
+            <span>Nombre del caso (opcional)</span>
+            <input
+              value={name}
+              placeholder="Ej. Ventana living"
+              onChange={(event) => setName(event.target.value)}
+              aria-label="Nombre del caso"
+            />
           </label>
           <label>
             <span>Ancho (mm)</span>
             <input
               type="number"
               min="1"
-              value={input.anchoTotalMm}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  anchoTotalMm: positiveNumber(event.target.value),
-                }))
-              }
+              value={anchoMm}
+              aria-label="Ancho (mm)"
+              onChange={(event) => setAnchoMm(positiveNumber(event.target.value))}
             />
           </label>
           <label>
@@ -129,13 +276,9 @@ export function RecipeTestLab({
             <input
               type="number"
               min="1"
-              value={input.altoTotalMm}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  altoTotalMm: positiveNumber(event.target.value),
-                }))
-              }
+              value={altoMm}
+              aria-label="Alto (mm)"
+              onChange={(event) => setAltoMm(positiveNumber(event.target.value))}
             />
           </label>
           <label>
@@ -143,101 +286,48 @@ export function RecipeTestLab({
             <input
               type="number"
               min="1"
-              value={input.cantidad}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  cantidad: positiveNumber(event.target.value),
-                }))
-              }
+              value={cantidad}
+              aria-label="Cantidad"
+              onChange={(event) => setCantidad(positiveNumber(event.target.value))}
             />
-          </label>
-          <label>
-            <span>Hojas</span>
-            <input
-              type="number"
-              min="1"
-              value={input.hojas}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  hojas: positiveNumber(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            <span>Modulos</span>
-            <input
-              type="number"
-              min="1"
-              value={input.modulos}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  modulos: positiveNumber(event.target.value),
-                }))
-              }
-            />
-          </label>
-          <label>
-            <span>Variante</span>
-            <input
-              value={input.variante ?? ""}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  variante: event.target.value.trim() || null,
-                }))
-              }
-            />
-          </label>
-          <label className={s.checkboxField}>
-            <input
-              type="checkbox"
-              checked={isRequired}
-              onChange={(event) => setIsRequired(event.target.checked)}
-            />
-            <span>Caso obligatorio para validar</span>
           </label>
         </div>
 
         <div className={s.actionRow}>
           <button type="button" className={s.primaryButton} onClick={calculate}>
             <Play size={16} />
-            Calcular pauta
-          </button>
-          <button
-            type="button"
-            className={s.secondaryButton}
-            disabled={!actual || !expected || isSaving}
-            onClick={() => void save()}
-          >
-            <Save size={16} />
-            Guardar caso
+            Calcular fabricación
           </button>
           {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
         </div>
+
+        {missingCommercialLengths ? (
+          <p className={s.labSoftHint}>
+            Barras no disponibles · agrega largos comerciales si quieres calcularlas.
+          </p>
+        ) : null}
       </section>
 
       {actual && expected ? (
-        <section className={s.editorSection}>
+        <section className={`${s.editorSection} ${s.labResultHero}`}>
           <div className={s.sectionHeading}>
             <div>
-              <span>Comparacion</span>
-              <h2>Esperado y calculado</h2>
+              <span>Resultado</span>
+              <h2>Compara con tu taller</h2>
             </div>
-            <p>Verde coincide. Naranjo requiere revisar la receta o el dato esperado.</p>
+            <p>
+              {anchoMm.toLocaleString("es-CL")} × {altoMm.toLocaleString("es-CL")} mm
+              {cantidad > 1 ? ` · ${cantidad} unidades` : ""}
+            </p>
           </div>
 
           <div className={s.comparisonTableWrap}>
-            <table className={s.comparisonTable}>
+            <table className={`${s.comparisonTable} ${s.comparisonTableCompact}`}>
               <thead>
                 <tr>
-                  <th>Perfil / funcion</th>
-                  <th>Calculado</th>
-                  <th>Esperado</th>
-                  <th>Diferencia</th>
+                  <th>Función</th>
+                  <th>Ventora calculó</th>
+                  <th>En mi taller uso</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -245,21 +335,23 @@ export function RecipeTestLab({
                 {actual.perfiles.map((row, index) => {
                   const expectedRow = expected.perfiles[index];
                   const lengthDifference =
-                    row.medidaMm - (expectedRow?.medidaMm ?? row.medidaMm);
+                    (expectedRow?.medidaMm ?? row.medidaMm) - row.medidaMm;
                   const quantityDifference =
-                    row.cantidadPiezas -
-                    (expectedRow?.cantidadPiezas ?? row.cantidadPiezas);
+                    (expectedRow?.cantidadPiezas ?? row.cantidadPiezas) -
+                    row.cantidadPiezas;
                   const matches =
                     lengthDifference === 0 && quantityDifference === 0;
 
                   return (
-                    <tr key={row.componenteId} data-match={matches ? "true" : "false"}>
+                    <tr
+                      key={row.componenteId}
+                      data-match={matches ? "true" : "false"}
+                    >
                       <td>
                         <strong>{row.funcion}</strong>
-                        <small>{row.codigoPerfil || "Por asignar"}</small>
                       </td>
                       <td>
-                        {row.medidaMm} mm x {row.cantidadPiezas}
+                        {row.medidaMm.toLocaleString("es-CL")} mm × {row.cantidadPiezas}
                       </td>
                       <td>
                         <div className={s.expectedInputs}>
@@ -273,44 +365,50 @@ export function RecipeTestLab({
                                 if (!current) return current;
                                 return recalculateExpectedTotals({
                                   ...current,
-                                  perfiles: current.perfiles.map((entry, entryIndex) =>
-                                    entryIndex === index
-                                      ? {
-                                          ...entry,
-                                          medidaMm: positiveNumber(event.target.value),
-                                          totalLinealMm:
-                                            positiveNumber(event.target.value) *
-                                            entry.cantidadPiezas,
-                                        }
-                                      : entry
+                                  perfiles: current.perfiles.map(
+                                    (entry, entryIndex) =>
+                                      entryIndex === index
+                                        ? {
+                                            ...entry,
+                                            medidaMm: positiveNumber(
+                                              event.target.value
+                                            ),
+                                            totalLinealMm:
+                                              positiveNumber(event.target.value) *
+                                              entry.cantidadPiezas,
+                                          }
+                                        : entry
                                   ),
                                 });
                               })
                             }
                           />
-                          <span>mm x</span>
+                          <span>mm ×</span>
                           <input
                             aria-label={`Cantidad esperada ${row.funcion}`}
                             type="number"
                             min="1"
-                            value={expectedRow?.cantidadPiezas ?? row.cantidadPiezas}
+                            value={
+                              expectedRow?.cantidadPiezas ?? row.cantidadPiezas
+                            }
                             onChange={(event) =>
                               setExpected((current) => {
                                 if (!current) return current;
                                 return recalculateExpectedTotals({
                                   ...current,
-                                  perfiles: current.perfiles.map((entry, entryIndex) =>
-                                    entryIndex === index
-                                      ? {
-                                          ...entry,
-                                          cantidadPiezas: positiveNumber(
-                                            event.target.value
-                                          ),
-                                          totalLinealMm:
-                                            entry.medidaMm *
-                                            positiveNumber(event.target.value),
-                                        }
-                                      : entry
+                                  perfiles: current.perfiles.map(
+                                    (entry, entryIndex) =>
+                                      entryIndex === index
+                                        ? {
+                                            ...entry,
+                                            cantidadPiezas: positiveNumber(
+                                              event.target.value
+                                            ),
+                                            totalLinealMm:
+                                              entry.medidaMm *
+                                              positiveNumber(event.target.value),
+                                          }
+                                        : entry
                                   ),
                                 });
                               })
@@ -319,150 +417,23 @@ export function RecipeTestLab({
                         </div>
                       </td>
                       <td>
-                        {lengthDifference > 0 ? "+" : ""}
-                        {lengthDifference} mm / {quantityDifference > 0 ? "+" : ""}
-                        {quantityDifference} u.
-                      </td>
-                      <td>
-                        <span className={s.matchStatus} data-match={matches ? "true" : "false"}>
-                          {matches ? <Check size={14} /> : <X size={14} />}
-                          {matches ? "Coincide" : "Revisar"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {actual.vidrios.map((glass, index) => {
-                  const expectedGlass = expected.vidrios[index];
-                  const widthDifference =
-                    glass.anchoMm - (expectedGlass?.anchoMm ?? glass.anchoMm);
-                  const heightDifference =
-                    glass.altoMm - (expectedGlass?.altoMm ?? glass.altoMm);
-                  const quantityDifference =
-                    glass.cantidadPiezas -
-                    (expectedGlass?.cantidadPiezas ?? glass.cantidadPiezas);
-                  const matches =
-                    widthDifference === 0 &&
-                    heightDifference === 0 &&
-                    quantityDifference === 0;
-
-                  return (
-                    <tr key={glass.vidrioId} data-match={matches ? "true" : "false"}>
-                      <td>
-                        <strong>{glass.nombre}</strong>
-                        <small>Vidrio</small>
-                      </td>
-                      <td>
-                        {glass.anchoMm} x {glass.altoMm} mm · {glass.cantidadPiezas}
-                      </td>
-                      <td>
-                        <div className={s.expectedInputsGlass}>
-                          {(["anchoMm", "altoMm", "cantidadPiezas"] as const).map(
-                            (field) => (
-                              <input
-                                key={field}
-                                aria-label={`${field} esperado ${glass.nombre}`}
-                                type="number"
-                                min="1"
-                                value={expectedGlass?.[field] ?? glass[field]}
-                                onChange={(event) =>
-                                  setExpected((current) => {
-                                    if (!current) return current;
-                                    return recalculateExpectedTotals({
-                                      ...current,
-                                      vidrios: current.vidrios.map(
-                                        (entry, entryIndex) => {
-                                          if (entryIndex !== index) return entry;
-                                          const next = {
-                                            ...entry,
-                                            [field]: positiveNumber(event.target.value),
-                                          };
-                                          return {
-                                            ...next,
-                                            totalM2:
-                                              (next.anchoMm *
-                                                next.altoMm *
-                                                next.cantidadPiezas) /
-                                              1_000_000,
-                                          };
-                                        }
-                                      ),
-                                    });
-                                  })
-                                }
-                              />
-                            )
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {widthDifference} / {heightDifference} mm · {quantityDifference} u.
-                      </td>
-                      <td>
-                        <span className={s.matchStatus} data-match={matches ? "true" : "false"}>
-                          {matches ? <Check size={14} /> : <X size={14} />}
-                          {matches ? "Coincide" : "Revisar"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {actual.accesorios.map((accessory, index) => {
-                  const expectedAccessory = expected.accesorios[index];
-                  const difference =
-                    accessory.cantidadUnidades -
-                    (expectedAccessory?.cantidadUnidades ??
-                      accessory.cantidadUnidades);
-                  const matches = difference === 0;
-
-                  return (
-                    <tr
-                      key={accessory.accesorioId}
-                      data-match={matches ? "true" : "false"}
-                    >
-                      <td>
-                        <strong>{accessory.nombre}</strong>
-                        <small>{accessory.codigo || "Accesorio"}</small>
-                      </td>
-                      <td>{accessory.cantidadUnidades} unidades</td>
-                      <td>
-                        <div className={s.expectedInputsAccessory}>
-                          <input
-                            aria-label={`Cantidad esperada ${accessory.nombre}`}
-                            type="number"
-                            min="1"
-                            value={
-                              expectedAccessory?.cantidadUnidades ??
-                              accessory.cantidadUnidades
-                            }
-                            onChange={(event) =>
-                              setExpected((current) => {
-                                if (!current) return current;
-                                return {
-                                  ...current,
-                                  accesorios: current.accesorios.map(
-                                    (entry, entryIndex) =>
-                                      entryIndex === index
-                                        ? {
-                                            ...entry,
-                                            cantidadUnidades: positiveNumber(
-                                              event.target.value
-                                            ),
-                                          }
-                                        : entry
-                                  ),
-                                };
-                              })
-                            }
-                          />
-                        </div>
-                      </td>
-                      <td>{difference} unidades</td>
-                      <td>
-                        <span className={s.matchStatus} data-match={matches ? "true" : "false"}>
-                          {matches ? <Check size={14} /> : <X size={14} />}
-                          {matches ? "Coincide" : "Revisar"}
-                        </span>
+                        {matches ? (
+                          <span className={s.matchStatusQuiet} data-match="true">
+                            <Check size={14} aria-hidden="true" />
+                            Coincide
+                          </span>
+                        ) : (
+                          <span className={s.matchStatus} data-match="false">
+                            <AlertTriangle size={14} aria-hidden="true" />
+                            Diferencia
+                            {lengthDifference !== 0
+                              ? ` de ${Math.abs(lengthDifference)} mm`
+                              : ""}
+                            {quantityDifference !== 0
+                              ? ` · ${Math.abs(quantityDifference)} u.`
+                              : ""}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -471,99 +442,208 @@ export function RecipeTestLab({
             </table>
           </div>
 
-          <div className={s.resultBands}>
+          <div className={s.labResultSummary} aria-label="Resumen del cálculo">
             <div>
-              <span>Vidrios</span>
-              {actual.vidrios.length === 0 ? (
-                <p>Sin vidrios calculados.</p>
-              ) : (
-                actual.vidrios.map((glass) => (
-                  <p key={glass.vidrioId}>
-                    <strong>{glass.nombre}</strong> {glass.anchoMm} x {glass.altoMm} mm ·{" "}
-                    {glass.cantidadPiezas} u.
-                  </p>
-                ))
-              )}
+              <span>Perfiles</span>
+              <strong>{formatLinealMeters(actual.totalLinealMm)}</strong>
+            </div>
+            <div>
+              <span>Vidrio</span>
+              <strong>
+                {glassPieces} {glassPieces === 1 ? "pieza" : "piezas"}
+              </strong>
             </div>
             <div>
               <span>Accesorios</span>
-              {actual.accesorios.length === 0 ? (
-                <p>Sin accesorios calculados.</p>
-              ) : (
-                actual.accesorios.map((accessory) => (
-                  <p key={accessory.accesorioId}>
-                    <strong>{accessory.nombre}</strong> · {accessory.cantidadUnidades} u.
-                  </p>
-                ))
-              )}
-            </div>
-            <div>
-              <span>Advertencias</span>
-              {actual.advertencias.length === 0 ? (
-                <p>Sin advertencias.</p>
-              ) : (
-                actual.advertencias.map((warning) => (
-                  <p key={`${warning.codigo}-${warning.componenteId ?? ""}`}>
-                    {warning.mensaje}
-                  </p>
-                ))
-              )}
+              <strong>
+                {accessoryUnits}{" "}
+                {accessoryUnits === 1 ? "unidad" : "unidades"}
+              </strong>
             </div>
           </div>
 
-          <details className={s.traceDetails}>
-            <summary>Trazabilidad legible</summary>
-            {actual.perfiles.flatMap((profile) =>
-              profile.trazabilidad.map((trace) => (
-                <p key={trace.reglaId}>
-                  <strong>{profile.funcion}:</strong> {trace.formula} = {trace.resultado}
-                </p>
-              ))
+          {optionalPending.length > 0 ? (
+            <div className={s.optionalPendingCard}>
+              <div>
+                <strong>Datos opcionales pendientes</strong>
+                <ul>
+                  {optionalPending.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              {onConfigureLengths || onBackToRecipe ? (
+                <button
+                  type="button"
+                  className={s.secondaryButton}
+                  onClick={onConfigureLengths ?? onBackToRecipe}
+                >
+                  <Pencil size={15} />
+                  Revisar receta
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <section className={s.barPlanSection} aria-labelledby="bar-plan-heading">
+            <div className={s.sectionHeading}>
+              <div>
+                <span>Opcional</span>
+                <h2 id="bar-plan-heading">Barras y sobrantes</h2>
+              </div>
+            </div>
+            {barPlan?.barras.length ? (
+              <div className={s.barPlanList}>
+                {barPlan.barras.map((bar) => (
+                  <article
+                    className={s.barRow}
+                    key={`${bar.codigoPerfil}-${bar.indice}`}
+                  >
+                    <div className={s.barLabel}>
+                      <strong>
+                        Barra {bar.indice} · {bar.codigoPerfil}
+                      </strong>
+                      <span>
+                        {bar.largoComercialMm.toLocaleString("es-CL")} mm
+                      </span>
+                    </div>
+                    <div
+                      className={s.barTrack}
+                      aria-label={`Cortes de barra ${bar.indice}`}
+                    >
+                      {bar.cortes.map((cut, index) => (
+                        <span
+                          key={`${cut.componenteId}-${index}`}
+                          style={{ flexGrow: cut.largoMm, flexBasis: 0 }}
+                          title={`${cut.funcion}: ${cut.largoMm} mm`}
+                        >
+                          {cut.largoMm}
+                        </span>
+                      ))}
+                      {bar.sobranteMm > 0 ? (
+                        <i style={{ flexGrow: bar.sobranteMm, flexBasis: 0 }}>
+                          Sobrante {bar.sobranteMm} mm
+                        </i>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className={s.barEmptyCard}>
+                <p>Agrega los largos comerciales para obtener la distribución de barras.</p>
+                {onConfigureLengths || onBackToRecipe ? (
+                  <button
+                    type="button"
+                    className={s.secondaryButton}
+                    onClick={onConfigureLengths ?? onBackToRecipe}
+                  >
+                    <Ruler size={15} />
+                    Configurar largos
+                  </button>
+                ) : null}
+              </div>
             )}
-          </details>
+          </section>
+
+          {allMatch ? (
+            <div className={s.labReadyCard}>
+              <CheckCircle2 size={22} aria-hidden="true" />
+              <div>
+                <strong>Todo coincide con tu fabricación</strong>
+                <p>Esta receta está lista para usar.</p>
+              </div>
+            </div>
+          ) : (
+            <div className={s.labDiffCard}>
+              <AlertTriangle size={18} aria-hidden="true" />
+              <div>
+                <strong>Hay diferencias con tu taller</strong>
+                <p>
+                  Ajusta los valores esperados o vuelve a la receta para corregir
+                  medidas y ajustes.
+                </p>
+              </div>
+              {onBackToRecipe ? (
+                <button
+                  type="button"
+                  className={s.secondaryButton}
+                  onClick={onBackToRecipe}
+                >
+                  <Pencil size={15} />
+                  Corregir receta
+                </button>
+              ) : null}
+            </div>
+          )}
+        </section>
+      ) : canActivateFromSaved ? (
+        <section className={`${s.editorSection} ${s.labReadyCard}`}>
+          <CheckCircle2 size={22} aria-hidden="true" />
+          <div>
+            <strong>Todo coincide con tu fabricación</strong>
+            <p>Esta receta está lista para usar.</p>
+          </div>
         </section>
       ) : null}
 
-      <section className={s.editorSection}>
-        <div className={s.sectionHeading}>
-          <div>
-            <span>Casos guardados</span>
-            <h2>Pruebas de esta version</h2>
-          </div>
-          <p>{tests.length} casos registrados</p>
-        </div>
-
-        {tests.length === 0 ? (
-          <div className={s.emptyInline}>Todavia no hay casos guardados.</div>
+      <div className={s.guidedFooter}>
+        {onBackToRecipe ? (
+          <button
+            type="button"
+            className={s.secondaryButton}
+            onClick={onBackToRecipe}
+          >
+            <ArrowLeft size={16} />
+            Volver a receta
+          </button>
         ) : (
+          <span />
+        )}
+        {onActivate ? (
+          <button
+            type="button"
+            className={s.validateButton}
+            disabled={!readyToActivate || isSaving || isActivating}
+            onClick={() => void handleActivate()}
+          >
+            <CheckCircle2 size={17} />
+            Activar receta
+          </button>
+        ) : null}
+      </div>
+
+      {tests.length > 0 ? (
+        <details className={s.labSavedCases}>
+          <summary>
+            Casos guardados <span>{tests.length}</span>
+          </summary>
           <div className={s.testRows}>
             {tests.map((test) => (
               <div key={test.id} className={s.testRow}>
                 <div>
                   <strong>{test.name}</strong>
                   <span>
-                    {test.input.anchoTotalMm} x {test.input.altoTotalMm} mm ·{" "}
-                    {test.isRequired ? "Obligatorio" : "Opcional"}
+                    {test.input.anchoTotalMm} × {test.input.altoTotalMm} mm
                   </span>
                 </div>
-                <span className={s.matchStatus} data-match={test.passed ? "true" : "false"}>
-                  {test.passed ? <Check size={14} /> : <X size={14} />}
-                  {test.passed ? "Coincide" : "Sin aprobar"}
-                </span>
-                <button
-                  type="button"
-                  className={s.secondaryButton}
-                  disabled={isSaving}
-                  onClick={() => void onRunTest(test.id)}
+                <span
+                  className={s.matchStatusQuiet}
+                  data-match={test.passed ? "true" : "false"}
                 >
-                  <Play size={15} />
-                  Ejecutar
-                </button>
+                  {test.passed ? (
+                    <>
+                      <Check size={14} /> Coincide
+                    </>
+                  ) : (
+                    "Sin aprobar"
+                  )}
+                </span>
               </div>
             ))}
           </div>
-        )}
-      </section>
+        </details>
+      ) : null}
     </div>
   );
 }

@@ -96,6 +96,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
   - Snapshot historico: bridge `[cub:]` v2 en `cotizacion_items.observaciones`.
 - **Escritura tecnica vigente**: recetas/versiones en `fabrication_recipes`, casos en `fabrication_recipe_tests` y snapshot por pieza en `cotizacion_items.fabricacion_snapshot`. No escribir nuevas recetas en `catalog_metadata`.
 - **No ampliar** tipologías de venta en el catálogo (bow, etc.): van al constructor. Plantillas comerciales L5000/L20/L25 viven en código (`fabrication-recipe-commercial-templates.ts`), no como filas de catálogo.
+- **Catálogo reconocido (2026-08-01)**: el reporte externo `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md` puede alimentar nombres, proveedor/ecosistema, familia, revisión, prioridad y estado documental. No debe alimentar descuentos, cantidades, cortes, fórmulas ni `definition` ejecutable de `fabrication_recipes`.
 - **No confundir**: `catalog_metadata.lineSystem` (texto comercial opcional) ≠ `cubicationSystem` (partida de estimación V1).
 - **Snapshot por pieza**: nuevo `cotizacion_items.fabricacion_snapshot` para recetas de `src/features/fabricacion/`; fallback de lectura `[cub:]` para historicos. Helpers nuevos: `fabricacion-cotizacion-snapshot.service.ts` y `fabrication-quote-summary.ts`.
 - **Handoff agentes**: `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`.
@@ -108,7 +109,7 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 
 ### Tabla: fabrication_recipes
 
-- **Estado**: Implementada en remoto con `20260729230407_fabrication_recipes_persistence`, grants `20260730001306_harden_fabrication_recipe_grants` y metadatos Fase 4 `20260730003756_fabrication_recipe_validation_metadata`. Fase 4 agrega UI guiada y selector en cotizacion; no conecta IA.
+- **Estado**: Implementada en remoto con `20260729230407_fabrication_recipes_persistence`, grants `20260730001306_harden_fabrication_recipe_grants` y metadatos Fase 4 `20260730003756_fabrication_recipe_validation_metadata`. La UI guiada incorpora asistente de texto solo para producir borradores JSON; no cambia el schema SQL.
 - **Proposito**: Persistir recetas de fabricacion versionadas para el dominio `src/features/fabricacion/`. Separa linea comercial (`cotizacion_line_templates`) de receta tecnica.
 - **Campos importantes**: `id` (uuid PK), `organization_id` (bigint nullable), `line_template_id` (bigint nullable FK a `cotizacion_line_templates`), `scope` (`ventora|organization`), `provider_name`, `line_name`, `typology`, `leaves_count`, `variant`, `version`, `status` (`draft|testing|validated|review_required|archived`), `definition` (jsonb validado con Zod antes de guardar), `source_type` (`manual|copied|imported_ai|legacy`), `source_reference`, `parent_recipe_id`, `validated_at`, `validated_by` (auth.users), `created_at`, `updated_at`, `eliminado_en`.
 - **Reglas**: `scope='ventora'` exige `organization_id IS NULL`; `scope='organization'` exige `organization_id`. Una receta validada no se modifica directamente: cambios deben crear una nueva version privada con `parent_recipe_id`. Al pasar a `validated`, se exige `validated_at` y, para sesiones autenticadas, `validated_by = auth.uid()`.
@@ -117,6 +118,8 @@ Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_ma
 - **Usada por**: `src/features/fabricacion/repositories/fabrication-recipes.repository.ts`, `src/features/fabricacion/services/fabrication-recipes.service.ts`, `src/features/fabricacion/services/fabricacion-receta-resolver.service.ts`, `src/features/cotizaciones/services/cotizaciones.service.ts`.
 - **Compatibilidad**: no migra ni escribe `fabricationRecipePack`, espejo `fabricationRecipe` ni snapshots `[cub:]`; esos formatos siguen solo como lectura/compatibilidad hasta una fase posterior de migracion asistida.
 - **Riesgos**: No guardar formulas libres, JS, SQL, `eval`, payloads de IA como fuente de calculo final ni datos legacy. La conexion actual a cotizacion es solo snapshot tecnico cuando hay una receta validada unica; no usar como fabricacion real sin validacion de taller.
+- **Definition JSON aditivo**: componentes pueden guardar `observaciones` y `datosPendientes`; `configuracionCorte` guarda perdida por corte, despunte inicial y sobrante minimo aprovechable. La validacion de taller bloquea datos pendientes, codigos/largos comerciales ausentes y configuracion de barras incompleta. DeepSeek solo propone; Zod valida antes de aplicar.
+- **Fuente documental**: usar investigación pública solo para priorizar integración y poblar metadatos trazables (`provider_name`, `line_name`, `source_reference`, estado). Una receta con `definition` ejecutable requiere manual/pauta/caso real, no inferencia desde ranking o presencia en catálogos.
 
 ---
 
