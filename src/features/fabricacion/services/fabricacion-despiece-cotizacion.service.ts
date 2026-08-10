@@ -72,7 +72,7 @@ function resolveLeavesCount(
 }
 
 /** El Constructor guarda sistema/config como "Personalizado"; no es apertura de receta. */
-function resolveAperturaForRecipeMatch(
+export function resolveAperturaForRecipeMatch(
   fabricacionApertura: string | null | undefined,
   sistema: string | null | undefined
 ) {
@@ -194,35 +194,6 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
     allowPreliminaryNonValidated: true,
   });
 
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "2c9a42",
-    },
-    body: JSON.stringify({
-      sessionId: "2c9a42",
-      runId: "post-fix",
-      hypothesisId: "H_apertura",
-      location: "fabricacion-despiece-cotizacion.service.ts:resolve",
-      message: "Resolver despiece cotización",
-      data: {
-        lineTemplateId,
-        tipologia,
-        sistema: presentation.sistema,
-        aperturaRaw: presentation.fabricacionApertura,
-        aperturaResolved: apertura,
-        hojas,
-        recipes: input.recipes.length,
-        org: input.organizationId,
-        resolutionEstado: resolution.estado,
-        descartes: resolution.descartadas?.slice(0, 8).map((row) => row.motivo),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   if (resolution.estado === "multiples_recetas") {
     return {

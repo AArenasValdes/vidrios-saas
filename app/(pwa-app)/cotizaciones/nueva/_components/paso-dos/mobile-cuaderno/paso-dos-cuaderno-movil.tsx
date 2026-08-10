@@ -51,6 +51,8 @@ export type PasoDosCuadernoMovilProps = {
   onClose: () => void;
   /** Vuelve al selector por ítems vs cuadernillo. */
   onReturnToModeSelector?: () => void;
+  /** Abre la revisión de despiece (solo lectura / misma superficie desktop). */
+  onOpenDespieceReview?: (itemId?: string) => void;
 };
 
 const PRIMARY_CHIPS = [
@@ -122,6 +124,7 @@ export function PasoDosCuadernoMovil({
   onRemoveItem,
   onGoToSummary,
   onClose,
+  onOpenDespieceReview,
 }: PasoDosCuadernoMovilProps) {
   useMobileViewportStability();
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -650,6 +653,7 @@ export function PasoDosCuadernoMovil({
           onSaved={() => setActiveItemId(constructorItem.id)}
           onDuplicate={() => onDuplicateItem(constructorItem)}
           onRemove={() => requestRemoveItem(constructorItem.id)}
+          onOpenDespieceReview={onOpenDespieceReview}
         />
       ) : null}
 

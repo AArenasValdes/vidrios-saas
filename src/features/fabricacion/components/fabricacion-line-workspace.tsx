@@ -148,31 +148,6 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function getPendingDetails(recipe: FabricacionReceta) {
-  const pending = [
-    ...(recipe.perfiles.length === 0
-      ? ["Agrega los perfiles que usa esta línea"]
-      : []),
-    ...recipe.perfiles.flatMap((profile) => {
-      const details = (profile.datosPendientes ?? []).filter(
-        (detail) => !/código|codigo|largo comercial/i.test(detail)
-      );
-      if (
-        profile.requerido &&
-        !profile.funcion.trim() &&
-        !profile.nombrePerfil.trim() &&
-        !profile.codigoPerfil.trim()
-      ) {
-        details.push("Identifica el perfil con una función o referencia");
-      }
-      return details;
-    }),
-    ...recipe.notasValidacion,
-  ].filter((detail) => detail.trim());
-
-  return Array.from(new Set(pending)).slice(0, 5);
-}
-
 function getRecipeStage(
   recipe: FabricationRecipeRecord,
   recipeTests: FabricationRecipeTestRecord[] = []
@@ -543,34 +518,6 @@ function LineSetupSidebar({
   );
 }
 
-function RecipeLegacySummaryPanel({ recipe, providerName, lineName }: {
-  recipe: FabricacionReceta;
-  providerName: string;
-  lineName: string;
-}) {
-  const pending = getPendingDetails(recipe);
-  const cutConfig = recipe.configuracionCorte;
-  return (
-    <aside className={s.recipeSummaryPanel}>
-      <div className={s.summaryPanelHeading}><h2>Resumen de la receta</h2><span>Información editable</span></div>
-      <dl>
-        <div><dt>Proveedor</dt><dd>{providerName || "Por confirmar"}</dd></div>
-        <div><dt>Línea</dt><dd>{lineName || "Por confirmar"}</dd></div>
-        <div><dt>Tipología</dt><dd>{recipe.identidad.tipologia.replaceAll("_", " ")}</dd></div>
-        <div><dt>Hojas</dt><dd>{recipe.identidad.hojas}</dd></div>
-        <div><dt>Componentes</dt><dd>{recipe.perfiles.length + recipe.vidrios.length + recipe.accesorios.length}</dd></div>
-      </dl>
-      <div className={s.policySummary}>
-        <h3>Política de corte</h3>
-        <p>Pérdida por corte: {cutConfig?.perdidaCorteMm ?? "Por confirmar"}{cutConfig?.perdidaCorteMm != null ? " mm" : ""}</p>
-        <p>Despunte inicial: {cutConfig?.despunteInicialMm ?? "Por confirmar"}{cutConfig?.despunteInicialMm != null ? " mm" : ""}</p>
-        <p>Sobrante mínimo: {cutConfig?.sobranteMinimoAprovechableMm ?? "Por confirmar"}{cutConfig?.sobranteMinimoAprovechableMm != null ? " mm" : ""}</p>
-      </div>
-      {pending.length > 0 ? <div className={s.pendingSummary}><h3>Para continuar</h3><ul>{pending.map((detail) => <li key={detail}>{detail}</li>)}</ul></div> : <div className={s.readySummary}><CheckCircle2 size={16} /> Materiales cargados. Prueba una medida real antes de validar.</div>}
-    </aside>
-  );
-}
-
 export function FabricacionLineWorkspace({
   lineTemplateId,
   initialSuggestedRecipeId = null,
@@ -633,27 +580,6 @@ export function FabricacionLineWorkspace({
       const matches = mediaQuery.matches;
       setIsDesktopWorkspace(matches);
       setHasResolvedWorkspaceViewport(true);
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "2c9a42",
-        },
-        body: JSON.stringify({
-          sessionId: "2c9a42",
-          runId: "mobile-readonly",
-          hypothesisId: "D",
-          location: "fabricacion-line-workspace.tsx:syncViewport",
-          message: "Viewport fabricación resuelto",
-          data: {
-            isDesktop: matches,
-            width: window.innerWidth,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     };
 
     syncViewport();
@@ -664,24 +590,6 @@ export function FabricacionLineWorkspace({
   useEffect(() => {
     if (!hasResolvedWorkspaceViewport || isDesktopWorkspace) return;
     if (view === "list") return;
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "mobile-readonly",
-        hypothesisId: "A",
-        location: "fabricacion-line-workspace.tsx:forceMobileList",
-        message: "Forzando hub móvil: saliendo de editor",
-        data: { view, width: window.innerWidth },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setView("list");
     setSelectedId(null);
     setDraft(null);
@@ -1173,6 +1081,24 @@ export function FabricacionLineWorkspace({
 
   // Móvil: solo resumen de lo configurado en desktop (sin wizard ni IA).
   if (hasResolvedWorkspaceViewport && !isDesktopWorkspace) {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "despiece-mobile-wire",
+        hypothesisId: "H5",
+        location: "fabricacion-line-workspace.tsx:mobileHub",
+        message: "fabricacion mobile hub only (no legacy editor)",
+        data: { view, recipeId: focusRecipe?.id ?? null },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return (
       <FabricacionLineMobileHub
         template={template}
@@ -1230,31 +1156,6 @@ export function FabricacionLineWorkspace({
                 href="/configuracion/empresa/lineas-precios"
                 className={s.lineSetupBackLink}
                 onClick={() => {
-                  // #region agent log
-                  if (typeof globalThis.fetch === "function") {
-                    void globalThis
-                      .fetch(
-                        "http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            "X-Debug-Session-Id": "2c9a42",
-                          },
-                          body: JSON.stringify({
-                            sessionId: "2c9a42",
-                            runId: "volver-lineas",
-                            hypothesisId: "N1",
-                            location: "fabricacion-line-workspace.tsx:lineSetupBack",
-                            message: "Click volver a líneas desde Paso 1",
-                            data: { lineTemplateId, step: "base" },
-                            timestamp: Date.now(),
-                          }),
-                        }
-                      )
-                      .catch(() => {});
-                  }
-                  // #endregion
                 }}
               >
                 <ArrowLeft size={16} aria-hidden />
@@ -1477,20 +1378,6 @@ export function FabricacionLineWorkspace({
         </div>
         </>
         )}
-        <div className={s.mobileLegacyEditor}>
-          <div className={s.editorLayout}>
-            <RecipeGuidedEditor
-              recipe={draft}
-              providerName={providerName}
-              lineName={lineName}
-              readOnly={readOnly}
-              onRecipeChange={setDraft}
-              onProviderNameChange={setProviderName}
-              onLineNameChange={setLineName}
-            />
-            <RecipeLegacySummaryPanel recipe={draft} providerName={providerName} lineName={lineName} />
-          </div>
-        </div>
       </main>
     );
   }
@@ -1617,22 +1504,6 @@ export function FabricacionLineWorkspace({
             activeStep={labStep}
             readyToActivate={showActivateReady}
             onStep={(step) => navigateToRecipeStep(workingSelected, step)}
-          />
-        </div>
-        <div className={s.mobileLegacyEditor}>
-          <RecipeTestLab
-            recipe={workingSelected}
-            tests={selectedTests}
-            isSaving={isSaving}
-            isActivated={workingSelected.status === "validated"}
-            canActivateFromSaved={canValidate}
-            onBackToRecipe={goToRecipe}
-            onConfigureLengths={goToRecipe}
-            onActivate={() => void handleValidate({ stayOnStep: true })}
-            onSaveTest={saveLabTest}
-            onRunTest={async (testId) => {
-              await runRecipeTest(workingSelected.id, testId);
-            }}
           />
         </div>
       </main>

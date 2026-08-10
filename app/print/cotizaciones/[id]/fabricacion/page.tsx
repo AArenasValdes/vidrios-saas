@@ -47,34 +47,6 @@ export default function CotizacionFabricacionPrintPage() {
     [cotizacion?.items]
   );
 
-  useEffect(() => {
-    if (!cotizacion) return;
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "fabricacion-print-mobile",
-        hypothesisId: "F",
-        location: "fabricacion/page.tsx:summaryMounted",
-        message: "Resumen fabricación montado",
-        data: {
-          width: window.innerWidth,
-          isMobileLayout: window.innerWidth < 720,
-          itemCount: summary.items.length,
-          cutCount: summary.items.reduce((acc, row) => acc + row.snapshot.cuts.length, 0),
-          totalBars: summary.totalBars,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [cotizacion, summary.items, summary.totalBars]);
-
   if (!isReady && !cotizacion) {
     return <p className={s.loadingState}>Cargando resumen de fabricación…</p>;
   }

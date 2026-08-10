@@ -657,27 +657,25 @@ export function PasoDosSeccion({
         onCancel={cancelRemoveItem}
       />
 
-      {!isMobileViewport ? (
-        <DespieceReviewSurface
-          open={despieceReviewOpen}
-          items={panel.items}
-          lineTemplates={constructorLineTemplates}
-          quotePricingMode={quotePricingMode}
-          activeItemId={constructorActiveItemId}
-          onActiveItemChange={(itemId) => {
-            setConstructorActiveItemId(itemId);
-            panel.onSelectQuickEditItem(itemId);
-          }}
-          onUpdateItem={onUpdateConstructorItem}
-          onClose={() => setDespieceReviewOpen(false)}
-          onContinueToSummary={() => {
-            setDespieceReviewOpen(false);
-            panel.onGoToSummary();
-          }}
-          onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
-          isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
-        />
-      ) : null}
+      <DespieceReviewSurface
+        open={despieceReviewOpen}
+        items={panel.items}
+        lineTemplates={constructorLineTemplates}
+        quotePricingMode={quotePricingMode}
+        activeItemId={constructorActiveItemId}
+        onActiveItemChange={(itemId) => {
+          setConstructorActiveItemId(itemId);
+          panel.onSelectQuickEditItem(itemId);
+        }}
+        onUpdateItem={onUpdateConstructorItem}
+        onClose={() => setDespieceReviewOpen(false)}
+        onContinueToSummary={() => {
+          setDespieceReviewOpen(false);
+          panel.onGoToSummary();
+        }}
+        onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
+        isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+      />
     </div>
   );
 }

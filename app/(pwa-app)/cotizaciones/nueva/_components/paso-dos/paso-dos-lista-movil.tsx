@@ -39,6 +39,8 @@ type Props = {
   onReturnToModeSelector: () => void;
   /** Disponible solo en por items: abre el cuaderno de piezas. */
   onOpenCuaderno?: () => void;
+  /** Abre la revisión de despiece de la cotización. */
+  onOpenDespieceReview?: () => void;
 };
 
 export function PasoDosListaMovil({
@@ -58,6 +60,7 @@ export function PasoDosListaMovil({
   onRemoveItem,
   onReturnToModeSelector,
   onOpenCuaderno,
+  onOpenDespieceReview,
 }: Props) {
   const [isCambiarModoDialogOpen, setIsCambiarModoDialogOpen] = useState(false);
   const isGlobalPricing = quotePricingMode === "total_global";
@@ -321,6 +324,11 @@ export function PasoDosListaMovil({
               <button className={s.btnGhost} onClick={onOpenFreeValueItemForm} type="button">
                 <LuPlus aria-hidden />
                 Item libre
+              </button>
+            ) : null}
+            {onOpenDespieceReview ? (
+              <button className={s.btnGhost} onClick={onOpenDespieceReview} type="button">
+                Ver despiece
               </button>
             ) : null}
             <button

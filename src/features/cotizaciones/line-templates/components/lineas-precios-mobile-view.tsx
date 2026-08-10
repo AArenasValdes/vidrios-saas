@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   LuArrowLeft,
   LuChevronRight,
@@ -184,32 +184,6 @@ export function LineasPreciosMobileView({
     technicalFilter !== "todas",
     providerFilter !== providerFilterAll,
   ].filter(Boolean).length;
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "mobile-readonly",
-        hypothesisId: "C",
-        location: "lineas-precios-mobile-view.tsx:mount",
-        message: "Lista móvil sin card Plantillas",
-        data: {
-          templateCount: templates.length,
-          plantillasOcultas: true,
-          recommendationCount: baseRecommendations.length,
-          width: window.innerWidth,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [baseRecommendations.length, templates.length]);
 
   const clearSecondaryFilters = () => {
     onCategoryFilterChange("Todo");

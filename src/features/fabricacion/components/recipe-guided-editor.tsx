@@ -530,32 +530,6 @@ export function RecipeGuidedEditor({
     updateProfile(profileId, (entry) =>
       applyTallerPerfilToComponent(entry, tallerPerfil, { prefillLargo: true })
     );
-    // #region agent log
-    if (typeof globalThis.fetch === "function") {
-      void globalThis
-        .fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "2c9a42",
-          },
-          body: JSON.stringify({
-            sessionId: "2c9a42",
-            runId: "paso2-perfil",
-            hypothesisId: "P2",
-            location: "recipe-guided-editor.tsx:assignTallerPerfil",
-            message: "Perfil asignado a función",
-            data: {
-              profileId,
-              tallerPerfilId: tallerPerfil.id,
-              prefillLargo: tallerPerfil.largoComercialMm,
-            },
-            timestamp: Date.now(),
-          }),
-        })
-        .catch(() => {});
-    }
-    // #endregion
   };
 
   const reorderProfiles = (fromIndex: number, toIndex: number) => {

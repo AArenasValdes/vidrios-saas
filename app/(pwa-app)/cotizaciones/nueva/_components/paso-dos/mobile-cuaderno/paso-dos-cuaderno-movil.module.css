@@ -1192,6 +1192,45 @@
   box-shadow: 0 6px 16px rgba(15, 31, 58, 0.08);
 }
 
+.despieceMobileBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.despieceMobileMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.despieceMobileMetrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--cq-border);
+  border-radius: var(--cq-radius-sm);
+  background: #fff;
+}
+
+.despieceMobileMetrics dt {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--cq-muted);
+}
+
+.despieceMobileMetrics dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--cq-navy);
+}
+
 .constructorLink {
   display: flex;
   align-items: center;

@@ -31,10 +31,7 @@ import {
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { RECIPE_MISSING_PROFILE_LABEL } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
-import {
-  buildPieceDomainView,
-  type PieceDomainView,
-} from "@/features/cotizaciones/new-quote/quote-piece-domain";
+import { buildPieceDomainView } from "@/features/cotizaciones/new-quote/quote-piece-domain";
 import {
   isCubicationPersonalizadoAssistMode,
   mapItemToForm,
@@ -268,11 +265,18 @@ export function DespieceReviewSurface({
     () => items.filter(isQuoteConstructorCompatibleItem),
     [items]
   );
-  const { organizationId, recipes: persistedRecipes } = useFabricationRecipes({
+  const {
+    organizationId,
+    recipes: persistedRecipes,
+    isLoading: isLoadingRecipes,
+    error: recipesError,
+  } = useFabricationRecipes({
     enabled: open,
   });
+  const recipesReady = !isLoadingRecipes && organizationId != null;
   const pieceResolutions = useMemo(() => {
     const map = new Map<string, FabricacionDespieceCotizacionResult>();
+    if (!recipesReady) return map;
     visualItems.forEach((item) => {
       map.set(
         item.id,
@@ -284,7 +288,45 @@ export function DespieceReviewSurface({
       );
     });
     return map;
-  }, [visualItems, persistedRecipes, organizationId]);
+  }, [visualItems, persistedRecipes, organizationId, recipesReady]);
+
+  useEffect(() => {
+    if (!open) return;
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "despiece-mobile-wire",
+        hypothesisId: "H4",
+        location: "despiece-review-surface.tsx:open",
+        message: "despiece surface open state",
+        data: {
+          open,
+          isLoadingRecipes,
+          recipesReady,
+          recipesCount: persistedRecipes.length,
+          visualItems: visualItems.length,
+          hasRecipesError: Boolean(recipesError),
+          activeItemId,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [
+    open,
+    isLoadingRecipes,
+    recipesReady,
+    persistedRecipes.length,
+    visualItems.length,
+    recipesError,
+    activeItemId,
+  ]);
   const selectedItem =
     visualItems.find((item) => item.id === activeItemId) ?? visualItems[0] ?? null;
   const selectedForm = selectedItem ? mapItemToForm(selectedItem) : null;
@@ -321,37 +363,6 @@ export function DespieceReviewSurface({
           template: selectedTemplate,
         })
       : null);
-  // #region agent log
-  useEffect(() => {
-    if (!open || !selectedItem || !activeResolution) return;
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "post-fix",
-        hypothesisId: "A_C_D",
-        location: "despiece-review-surface.tsx:activeResolution",
-        message: "Modal usa resolver formal de fabricación",
-        data: {
-          itemId: selectedItem.id,
-          estado: activeResolution.estado,
-          totalMm: activeResolution.formal?.result.totalLinealMm ?? null,
-          cuts: activeResolution.formal?.result.perfiles.map(
-            (row) => `${row.funcion}:${row.medidaMm}x${row.cantidadPiezas}`
-          ),
-          barsAvailable: activeResolution.barsAvailable,
-          preliminary: activeResolution.preliminary,
-          recipesLoaded: persistedRecipes.length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }, [open, selectedItem, activeResolution, persistedRecipes.length]);
-  // #endregion
   const preview = activeSnapshot ? cubicationSnapshotToPreview(activeSnapshot) : null;
   const rules = selectedTemplate
     ? getLineTemplateCuttingRules(selectedTemplate.catalogMetadata)
@@ -706,7 +717,18 @@ export function DespieceReviewSurface({
           </button>
         </header>
 
-        {tab === "pieza" ? (
+        {isLoadingRecipes ? (
+          <div className={styles.loadingState} role="status">
+            Cargando recetas de fabricación…
+          </div>
+        ) : null}
+        {recipesError ? (
+          <div className={styles.errorState} role="alert">
+            {recipesError}
+          </div>
+        ) : null}
+
+        {!isLoadingRecipes && tab === "pieza" ? (
           <div className={styles.pieceLayout}>
             <aside className={styles.pieceList} aria-label="Piezas de la cotización">
               <p className={styles.listEyebrow}>Piezas</p>
@@ -1138,7 +1160,9 @@ export function DespieceReviewSurface({
               ) : null}
             </aside>
           </div>
-        ) : (
+        ) : null}
+
+        {!isLoadingRecipes && tab === "consolidado" ? (
           <div className={styles.consolidatedLayout}>
             <header className={styles.consolidatedHead}>
               <div>
@@ -1307,7 +1331,7 @@ export function DespieceReviewSurface({
               </span>
             </div>
           </div>
-        )}
+        ) : null}
 
         <footer className={styles.footer}>
           <button type="button" className={styles.secondaryFooter} onClick={onClose}>
@@ -1357,100 +1381,4 @@ export function DespieceReviewSurface({
   );
 }
 
-/** Resumen compacto para el inspector (sin tabla). */
-export function DespieceInspectorSummary({
-  view,
-  canRecalculate,
-  onOpenReview,
-  onRecalculate,
-  barsHint,
-}: {
-  view: PieceDomainView;
-  canRecalculate: boolean;
-  onOpenReview: () => void;
-  onRecalculate: () => void;
-  barsHint?: string | null;
-}) {
-  const summary = view.technicalSummary;
-  const barsCalculableHere = summary.hasSnapshot && summary.barras > 0;
-  const badgeStatus: DespieceUiStatus =
-    view.technicalStatus === "sin_reglas"
-      ? "sin_reglas"
-      : view.cubicationSnapshot && isGeometricFallbackSnapshot(view.cubicationSnapshot)
-        ? "estimacion_geometrica"
-        : summary.hasSnapshot
-          ? "calculado_con_receta"
-          : view.technicalStatus === "sin_configurar"
-            ? "sin_reglas"
-            : "sin_reglas";
-
-  return (
-    <div className={styles.inspectorSummary}>
-      <em className={despieceStatusToneClass(badgeStatus)}>
-        {DESPIECE_UI_STATUS_LABELS[badgeStatus]}
-      </em>
-      <dl className={styles.inspectorMetrics}>
-        <div>
-          <dt>Área</dt>
-          <dd>
-            {summary.areaVanoM2 != null
-              ? formatM2(summary.areaVanoM2)
-              : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>Perfiles</dt>
-          <dd>
-            {summary.hasSnapshot ? formatMl(summary.mlPerfiles) : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>Barras</dt>
-          <dd className={!barsCalculableHere ? styles.notCalculable : undefined}>
-            {summary.hasSnapshot
-              ? barsCalculableHere
-                ? summary.barras
-                : "—"
-              : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>Cortes</dt>
-          <dd>{summary.hasSnapshot ? summary.cortes : "—"}</dd>
-        </div>
-        <div>
-          <dt>Accesorios</dt>
-          <dd>{summary.hasSnapshot ? summary.accesorios : "—"}</dd>
-        </div>
-        <div>
-          <dt>Sobrantes</dt>
-          <dd className={!barsCalculableHere ? styles.notCalculable : undefined}>
-            {summary.hasSnapshot
-              ? barsCalculableHere
-                ? formatMm(summary.sobranteMm)
-                : "—"
-              : "—"}
-          </dd>
-        </div>
-      </dl>
-      {summary.hasSnapshot && !barsCalculableHere ? (
-        <p className={styles.compactWarning} role="status">
-          {barsHint || BARS_NOT_CALCULABLE_HINT}
-        </p>
-      ) : null}
-      <div className={styles.inspectorActions}>
-        <button type="button" className={styles.inspectorPrimary} onClick={onOpenReview}>
-          Abrir despiece
-        </button>
-        <button
-          type="button"
-          className={styles.inspectorSecondary}
-          onClick={onRecalculate}
-          disabled={!canRecalculate}
-        >
-          Recalcular
-        </button>
-      </div>
-    </div>
-  );
-}
+export { DespieceInspectorSummary } from "./despiece-inspector-summary";

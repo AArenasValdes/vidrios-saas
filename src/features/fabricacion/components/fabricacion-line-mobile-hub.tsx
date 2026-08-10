@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -57,32 +56,6 @@ export function FabricacionLineMobileHub({
   error,
 }: Props) {
   const summary = currentRecipe ? summarizeRecipe(currentRecipe) : null;
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "mobile-readonly",
-        hypothesisId: "B",
-        location: "fabricacion-line-mobile-hub.tsx:mount",
-        message: "Hub fabricación solo lectura montado",
-        data: {
-          lineId: template.id,
-          hasRecipe: Boolean(currentRecipe),
-          recipeStatus: currentRecipe?.status ?? null,
-          width: window.innerWidth,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [currentRecipe, template.id]);
 
   return (
     <main className={s.page}>

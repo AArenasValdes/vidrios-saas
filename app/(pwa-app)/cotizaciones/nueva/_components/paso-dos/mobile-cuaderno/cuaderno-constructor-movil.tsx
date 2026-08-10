@@ -51,6 +51,7 @@ type Props = {
   onSaved: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  onOpenDespieceReview?: (itemId: string) => void;
 };
 
 const SECTIONS: { id: SectionId; title: string }[] = [
@@ -110,6 +111,7 @@ export function CuadernoConstructorMovil({
   onSaved,
   onDuplicate,
   onRemove,
+  onOpenDespieceReview,
 }: Props) {
   useMobileViewportStability();
   const [openSection, setOpenSection] = useState<SectionId | null>("identificacion");
@@ -135,6 +137,11 @@ export function CuadernoConstructorMovil({
       (section) => sectionStatus(section.id, item, quotePricingMode) === "pending"
     ).length;
   }, [item, quotePricingMode]);
+
+  const cubicacionDomain = useMemo(
+    () => buildPieceDomainView(item, quotePricingMode),
+    [item, quotePricingMode]
+  );
 
   const svg = useMemo(
     () =>
@@ -416,10 +423,59 @@ export function CuadernoConstructorMovil({
                     ) : null}
 
                     {section.id === "cubicacion" ? (
-                      <p className={s.emptyHelp} style={{ textAlign: "left" }}>
-                        {buildPieceDomainView(item, quotePricingMode).technicalLabel}. La
-                        pauta detallada se revisa en desktop o al recalcular con plantilla.
-                      </p>
+                      <div className={s.despieceMobileBlock}>
+                        <p className={s.emptyHelp} style={{ textAlign: "left", margin: 0 }}>
+                          {cubicacionDomain.technicalLabel}
+                        </p>
+                        {cubicacionDomain.technicalSummary.hasSnapshot ? (
+                          <dl className={s.despieceMobileMetrics}>
+                            <div>
+                              <dt>Cortes</dt>
+                              <dd>{cubicacionDomain.technicalSummary.cortes}</dd>
+                            </div>
+                            <div>
+                              <dt>Perfiles</dt>
+                              <dd>
+                                {cubicacionDomain.technicalSummary.mlPerfiles.toLocaleString(
+                                  "es-CL",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}{" "}
+                                ml
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Barras</dt>
+                              <dd>
+                                {cubicacionDomain.technicalSummary.barras > 0
+                                  ? cubicacionDomain.technicalSummary.barras
+                                  : "—"}
+                              </dd>
+                            </div>
+                          </dl>
+                        ) : null}
+                        {onOpenDespieceReview ? (
+                          <button
+                            type="button"
+                            className={s.constructorLink}
+                            onClick={() => onOpenDespieceReview(item.id)}
+                          >
+                            <span>
+                              <p className={s.constructorLinkTitle}>Ver despiece</p>
+                              <p className={s.constructorLinkHelp}>
+                                Pauta de corte y consolidado (solo lectura).
+                              </p>
+                            </span>
+                            <LuPencilRuler size={18} aria-hidden />
+                          </button>
+                        ) : (
+                          <p className={s.emptyHelp} style={{ textAlign: "left" }}>
+                            La pauta detallada se revisa al abrir el despiece o en desktop.
+                          </p>
+                        )}
+                      </div>
                     ) : null}
 
                     {section.id === "precio" && quotePricingMode === "por_item" ? (

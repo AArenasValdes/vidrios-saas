@@ -80,32 +80,6 @@ export function RecipeProfileReferencePicker({
       });
       upsertStoredTallerPerfil(created);
       onSelect(created);
-      // #region agent log
-      if (typeof globalThis.fetch === "function") {
-        void globalThis
-          .fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "2c9a42",
-            },
-            body: JSON.stringify({
-              sessionId: "2c9a42",
-              runId: "paso2-perfil",
-              hypothesisId: "P1",
-              location: "recipe-profile-reference-picker.tsx:create",
-              message: "Perfil taller creado",
-              data: {
-                id: created.id,
-                hasCodigo: Boolean(created.codigoComercial),
-                largo: created.largoComercialMm,
-              },
-              timestamp: Date.now(),
-            }),
-          })
-          .catch(() => {});
-      }
-      // #endregion
       setOpen(false);
       setMode("list");
       setNombre("");

@@ -22,9 +22,7 @@ import {
   LuTrash2,
 } from "react-icons/lu";
 
-import {
-  DespieceInspectorSummary,
-} from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
+import { DespieceInspectorSummary } from "@/features/cotizaciones/visual-composer/components/despiece-inspector-summary";
 import { LineTemplatePicker } from "@/features/cotizaciones/line-templates/components/line-template-picker";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { GlassOptionPicker } from "@/features/cotizaciones/visual-composer/components/glass-option-picker";
@@ -549,32 +547,6 @@ export function QuoteConstructorWorkspace({
       fabricacionSnapshot: next,
       cubicationSnapshot: activeFabricationResolution.cubication,
     });
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "post-fix",
-        hypothesisId: "A_C",
-        location: "quote-constructor-workspace.tsx:syncFabricacion",
-        message: "Card sincronizó snapshot formal",
-        data: {
-          itemId: activeItem.id,
-          totalMm: next.result.totalLinealMm,
-          cuts: next.result.perfiles.reduce(
-            (sum, row) => sum + row.cantidadPiezas,
-            0
-          ),
-          barsAvailable: activeFabricationResolution.barsAvailable,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }, [activeItem, activeFabricationResolution, onUpdateItem]);
   const selectedColor = activeForm
     ? COLOR_OPTIONS.find(

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useMemo, useState, type ReactNode } from "react";
 import { LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -27,6 +28,14 @@ import {
 } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
+
+const DespieceReviewSurface = dynamic(
+  () =>
+    import("@/features/cotizaciones/visual-composer/components/despiece-review-surface").then(
+      (mod) => mod.DespieceReviewSurface
+    ),
+  { ssr: false }
+);
 
 import type {
   PasoDosFormularioComponenteProps,
@@ -267,8 +276,63 @@ export function PasoDosWizardMovil({
   const [showAllSystems, setShowAllSystems] = useState(false);
   const [showAllConfigurations, setShowAllConfigurations] = useState(false);
   const [vidSearch, setVidSearch] = useState("");
+  const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
+  const [despieceActiveItemId, setDespieceActiveItemId] = useState<string | null>(null);
 
   const quotePricingMode = formulario.quotePricingMode;
+
+  const openDespieceReview = (itemId?: string) => {
+    const nextId = itemId ?? items[0]?.id ?? null;
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "2c9a42",
+      },
+      body: JSON.stringify({
+        sessionId: "2c9a42",
+        runId: "despiece-mobile-wire",
+        hypothesisId: "H1",
+        location: "paso-dos-wizard-movil-shell.tsx:openDespieceReview",
+        message: "mobile open despiece review",
+        data: {
+          itemId: nextId,
+          itemsCount: items.length,
+          hasCuaderno: Boolean(cuaderno),
+          lineTemplates: cuaderno?.lineTemplates?.length ?? 0,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    setDespieceActiveItemId(nextId);
+    setDespieceReviewOpen(true);
+  };
+
+  const withDespieceHost = (node: ReactNode) => (
+    <>
+      {node}
+      {cuaderno && despieceReviewOpen ? (
+        <DespieceReviewSurface
+          open
+          items={items}
+          lineTemplates={cuaderno.lineTemplates}
+          quotePricingMode={quotePricingMode}
+          activeItemId={despieceActiveItemId}
+          onActiveItemChange={setDespieceActiveItemId}
+          onUpdateItem={cuaderno.onUpdateItem}
+          onClose={() => setDespieceReviewOpen(false)}
+          onContinueToSummary={() => {
+            setDespieceReviewOpen(false);
+            onGoToSummary();
+          }}
+          onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
+          isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+        />
+      ) : null}
+    </>
+  );
   const isCompactDataStep = wizard.paso === 3;
   const visualStage = wizard.paso;
   const normalizedCategoryOptions = useMemo(() => {
@@ -477,7 +541,7 @@ export function PasoDosWizardMovil({
     );
 
   if (variationQuickEdit) {
-    return (
+    return withDespieceHost(
       <PasoDosVariacionRapidaMovil
         baseCode={variationQuickEdit.baseCode}
         tipo={variationQuickEdit.tipo}
@@ -493,7 +557,7 @@ export function PasoDosWizardMovil({
   }
 
   if (formulario.editingItemId) {
-    return (
+    return withDespieceHost(
       <section className={`${s.stepTwoMobileExperience} ${s.stepTwoMobilePointEditShell}`}>
         <div className={s.stepTwoMobileEditingHeader}>
           <div>
@@ -523,7 +587,7 @@ export function PasoDosWizardMovil({
   }
 
   if (itemLibreForm.isOpen) {
-    return (
+    return withDespieceHost(
       <section className={s.stepTwoMobileExperience}>
         <PasoDosItemLibreForm {...itemLibreForm} />
       </section>
@@ -537,13 +601,14 @@ export function PasoDosWizardMovil({
     mobileCuadernoActive;
 
   if (showCuaderno && cuaderno) {
-    return (
+    return withDespieceHost(
       <PasoDosCuadernoMovil
         items={items}
         quotePricingMode={quotePricingMode}
         formatCurrencyInput={formatCurrencyInput}
         onGoToSummary={onGoToSummary}
         {...cuaderno}
+        onOpenDespieceReview={openDespieceReview}
         onClose={() => {
           cuaderno.onClose();
           // Guiada = vuelve al wizard guiado, no solo a la lista tapada.
@@ -553,7 +618,7 @@ export function PasoDosWizardMovil({
     );
   }
 
-  return (
+  return withDespieceHost(
     <section className={s.stepTwoMobileExperience}>
       {!wizard.isOpen && !quoteModeChosen ? (
         <PasoDosModoCotizacion
@@ -578,6 +643,11 @@ export function PasoDosWizardMovil({
           onSaveAndExit={formulario.onSaveAndExit}
           onReturnToModeSelector={onReturnToModeSelector}
           onOpenCuaderno={canOpenCuaderno ? handleOpenCuadernoFromGuiada : undefined}
+          onOpenDespieceReview={
+            items.length > 0 && quotePricingMode === "por_item"
+              ? () => openDespieceReview()
+              : undefined
+          }
         />
       ) : null}
 
