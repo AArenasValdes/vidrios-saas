@@ -776,6 +776,28 @@ describe("generateComponentSVG", () => {
     expect(svg).toContain('rx="0"');
   });
 
+  it("dibuja palillo horizontal y mantiene negro solido en todo el perfil de puerta", () => {
+    const svg = generateComponentSVG({
+      tipo: "Puerta",
+      sistema: "Abatible",
+      configuracion: "1 hoja",
+      ancho: 750,
+      alto: 2100,
+      colorHex: "#2a2a2a",
+      palilloEnabled: true,
+      palilloType: "1 horizontal",
+      variant: "pdf",
+    });
+
+    expect(svg).toMatch(
+      /data-door-palillo="true"[^>]*stroke="#2a2a2a"[^>]*stroke-width="2\.2"/
+    );
+    expect(svg).toContain('data-door-handle-clearance="true"');
+    expect(svg).toContain('data-door-aluminum-fill="true"');
+    expect(svg).not.toMatch(/data-door-(?:aluminum|swing)[^>]*opacity=/);
+    expect(svg).not.toContain('stroke="#262626"');
+  });
+
   it("aplica la base comun a todas las variantes abatibles de puerta", () => {
     const configuraciones = [
       "1 hoja",
@@ -865,7 +887,7 @@ describe("generateComponentSVG", () => {
     });
 
     expect(svg).toContain('data-door-config="2_hojas_2_fijos_laterales"');
-    expect(svg).toContain("#7d5536");
+    expect(svg).toContain("#8B5E3C");
     expect((svg.match(/data-door-fixed-panel="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-swing-leaf="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-handle="true"/g) ?? []).length).toBe(2);
@@ -884,7 +906,7 @@ describe("generateComponentSVG", () => {
     });
 
     expect(svg).toContain('data-door-config="2_hojas_fijo_superior"');
-    expect(svg).toContain("#7d5536");
+    expect(svg).toContain("#8B5E3C");
     expect((svg.match(/data-door-fixed-panel="true"/g) ?? []).length).toBe(1);
     expect((svg.match(/data-door-swing-leaf="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-handle="true"/g) ?? []).length).toBe(2);
@@ -906,7 +928,7 @@ describe("generateComponentSVG", () => {
 
     expect(svg).toContain('data-door-sliding-base="true"');
     expect(svg).toContain('data-door-config="2_hojas_moviles_encuentro_central"');
-    expect(svg).toContain("#7d5536");
+    expect(svg).toContain("#8B5E3C");
     expect((svg.match(/data-door-sliding-leaf="sliding"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-sliding-handle="true"/g) ?? []).length).toBe(2);
     expect((svg.match(/data-door-sliding-arrow="true"/g) ?? []).length).toBe(2);
@@ -1000,7 +1022,7 @@ describe("generateComponentSVG", () => {
       expect(svg).toContain('data-door-aluminum-fill="true"');
       expect(svg).toContain('data-door-general-aluminum-fill="true"');
       expect((svg.match(/data-door-aluminum-band=/g) ?? []).length).toBe(4);
-      expect(svg).toContain("#e6e6e6");
+      expect(svg).toContain("#ffffff");
     });
   });
 });

@@ -1,4 +1,5 @@
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import {
   ensureGuidedVisualConfig,
   type GuidedVisualConfig,
@@ -41,7 +42,12 @@ export function resolveCotizacionItemDrawingSvg(
 
   try {
     if (input.guidedVisualConfig) {
-      return renderGuidedVisualSvg(ensureGuidedVisualConfig(input.guidedVisualConfig), {
+      const guidedVisualConfig = applyCommercialPalilloToGuidedVisualConfig({
+        config: ensureGuidedVisualConfig(input.guidedVisualConfig),
+        palilloEnabled: input.palilloEnabled,
+        palilloType: input.palilloType,
+      });
+      return renderGuidedVisualSvg(guidedVisualConfig, {
         maxW,
         maxH,
         variant: guidedVariant,

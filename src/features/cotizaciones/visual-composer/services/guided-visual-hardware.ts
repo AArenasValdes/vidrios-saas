@@ -29,6 +29,8 @@ export type GuidedHardwareDrawInput = {
   strokeWidth: number;
   /** Relleno suave para huecos de tirador embutido. */
   recessFill?: string;
+  /** Fondo que separa visualmente la manilla de palillos o perfiles cercanos. */
+  clearanceFill?: string;
 };
 
 /**
@@ -48,7 +50,15 @@ export function drawGuidedHardware(input: GuidedHardwareDrawInput): string {
 
   switch (input.kind) {
     case "manilla_abatible":
-      return drawManillaAbatible(input.cx, input.cy, size, input.freeSide, attrs, input.stroke);
+      return drawManillaAbatible(
+        input.cx,
+        input.cy,
+        size,
+        input.freeSide,
+        attrs,
+        input.stroke,
+        input.clearanceFill
+      );
     case "cremona_ventana":
       return drawCremonaVentana(input.cx, input.cy, size, attrs, input.stroke);
     case "manilla_oscilobatiente":
@@ -83,7 +93,8 @@ function drawManillaAbatible(
   size: number,
   freeSide: GuidedOpeningSide,
   attrs: string,
-  strokeColor: string
+  strokeColor: string,
+  clearanceFill?: string
 ): string {
   const plateW = size * 0.34;
   const plateH = size;
@@ -102,6 +113,15 @@ function drawManillaAbatible(
   const leverWidth = Math.abs(leverEndX - leverStartX);
 
   return [
+    clearanceFill
+      ? [
+          `<g data-guided-hardware-clearance="manilla_abatible" fill="${clearanceFill}" stroke="${clearanceFill}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">`,
+          `<rect x="${r2(plateX)}" y="${r2(plateY)}" width="${r2(plateW)}" height="${r2(plateH)}" rx="${r2(rx)}" ry="${r2(rx)}" />`,
+          `<circle cx="${r2(cx)}" cy="${r2(hubCy)}" r="${r2(hubR)}" />`,
+          `<rect x="${r2(leverX)}" y="${r2(leverY - leverH / 2)}" width="${r2(leverWidth)}" height="${r2(leverH)}" rx="${r2(leverH / 2)}" ry="${r2(leverH / 2)}" />`,
+          `</g>`,
+        ].join("")
+      : "",
     `<g data-guided-hardware="manilla_abatible">`,
     `<rect x="${r2(plateX)}" y="${r2(plateY)}" width="${r2(plateW)}" height="${r2(plateH)}" rx="${r2(rx)}" ry="${r2(rx)}" ${attrs} />`,
     `<circle cx="${r2(cx)}" cy="${r2(hubCy)}" r="${r2(hubR)}" ${attrs} />`,

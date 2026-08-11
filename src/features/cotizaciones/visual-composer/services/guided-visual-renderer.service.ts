@@ -584,9 +584,10 @@ export function drawPalilloLine(
   x2: number,
   y2: number,
   palette: ProfilePalette,
-  stroke: number
+  stroke: number,
+  role: "standard" | "door" = "standard"
 ): string {
-  return `<line x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${palette.palillo}" stroke-width="${px(stroke)}" ${PROFILE_JOIN} />`;
+  return `<line data-guided-palillo="${role}" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${palette.palillo}" stroke-width="${px(stroke)}" ${PROFILE_JOIN} />`;
 }
 
 function drawSelectionChrome(
@@ -641,6 +642,21 @@ function drawSelectionChrome(
   }
 
   return parts.join("");
+}
+
+function isDoorModuleType(type: GuidedModuleType) {
+  return type === "puerta" || type === "puerta_corredera";
+}
+
+function resolveSolidDoorPalette(palette: ProfilePalette): ProfilePalette {
+  return {
+    ...palette,
+    frameInner: palette.frame,
+    frameOutline: null,
+    div: palette.frame,
+    divInner: palette.frame,
+    palillo: palette.frame,
+  };
 }
 
 function drawModuleCue(
@@ -785,6 +801,7 @@ function drawModuleCue(
         freeSide,
         stroke: detail,
         strokeWidth: Math.max(1.05, stroke),
+        clearanceFill: palette.glassFill,
       })
     );
     return parts.join("");
@@ -1130,6 +1147,10 @@ export function renderGuidedVisualSvg(
           frame: `url(#${profileGradientId})`,
           div: `url(#${profileGradientId})`,
         };
+  const solidDoorPalette = resolveSolidDoorPalette(palette);
+  const structuralPalette = layout.modules.every((module) => isDoorModuleType(module.type))
+    ? solidDoorPalette
+    : renderedPalette;
 
   const body: string[] = [];
 
@@ -1203,7 +1224,7 @@ export function renderGuidedVisualSvg(
           split.dividerX,
           split.y,
           split.y + split.h,
-          renderedPalette,
+          structuralPalette,
           scale.mullion,
           Boolean(split.selected && variant === "editor")
         )
@@ -1215,7 +1236,7 @@ export function renderGuidedVisualSvg(
           split.dividerY,
           split.x,
           split.x + split.w,
-          renderedPalette,
+          structuralPalette,
           scale.mullion,
           Boolean(split.selected && variant === "editor")
         )
@@ -1225,6 +1246,13 @@ export function renderGuidedVisualSvg(
 
   // 4) Palillos (árbol) + cues + labels
   for (const layoutModule of layout.modules) {
+    const isDoorModule = isDoorModuleType(layoutModule.type);
+    const modulePalette = isDoorModule
+      ? solidDoorPalette
+      : renderedPalette;
+    const palilloStroke = isDoorModule
+      ? Math.max(scale.palillo * 1.5, scale.palillo + 1.2)
+      : scale.palillo;
     const sash = resolveModuleSashRect(layoutModule, scale);
     const segments =
       layoutModule.palilloSegments.length > 0
@@ -1255,8 +1283,9 @@ export function renderGuidedVisualSvg(
           segment.y1,
           segment.x2,
           segment.y2,
-          palette,
-          scale.palillo
+          modulePalette,
+          palilloStroke,
+          isDoorModule ? "door" : "standard"
         )
       );
     }
@@ -1285,7 +1314,7 @@ export function renderGuidedVisualSvg(
         sash.y,
         sash.w,
         sash.h,
-        renderedPalette,
+        modulePalette,
         scale,
         variant
       ),
@@ -1332,7 +1361,7 @@ export function renderGuidedVisualSvg(
       layout.originY,
       layout.drawW,
       layout.drawH,
-      renderedPalette,
+      structuralPalette,
       scale.frame,
       layout.frameShape,
       layout.pxPerMm

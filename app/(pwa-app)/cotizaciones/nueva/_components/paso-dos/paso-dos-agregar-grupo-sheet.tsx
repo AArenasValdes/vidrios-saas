@@ -59,6 +59,7 @@ import {
   ensureGuidedVisualDraft,
 } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import {
   describeGuidedVisualConfig,
   type GuidedVisualConfig,
@@ -309,7 +310,11 @@ function getDesktopTypePreview(draft: PasoDosGrupoDraft, maxW = 128, maxH = 64) 
 
 function getDesktopPiecePreview(draft: PasoDosGrupoDraft, maxW = 170, maxH = 92) {
   if (draft.guidedVisualConfig) {
-    return renderGuidedVisualSvg(draft.guidedVisualConfig, {
+    return renderGuidedVisualSvg(applyCommercialPalilloToGuidedVisualConfig({
+      config: draft.guidedVisualConfig,
+      palilloEnabled: draft.palilloEnabled,
+      palilloType: draft.palilloType,
+    }), {
       maxW,
       maxH,
       colorHex: draft.colorHex,
@@ -334,6 +339,8 @@ function getDesktopPiecePreview(draft: PasoDosGrupoDraft, maxW = 170, maxH = 92)
     colorHex: draft.colorHex,
     maxW,
     maxH,
+    palilloEnabled: draft.palilloEnabled,
+    palilloType: draft.palilloType,
     mirrorFormat: draft.mirrorFormat,
     mirrorPaneCount: draft.mirrorPaneCount,
     mirrorPaneDirection: draft.mirrorPaneDirection,

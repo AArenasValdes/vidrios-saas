@@ -37,9 +37,7 @@ import {
   shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
-import { generateComponentSVG } from "@/utils/window-drawings";
-import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
-import { ensureGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
 import { splitDescriptionChecklistItems } from "./_utils/description-checklist";
@@ -860,26 +858,7 @@ export default function CotizacionPrintPage() {
         specs,
         drawingSvg: isFreePrintItem(item)
           ? ""
-          : (() => {
-              try {
-                if (guidedVisualConfig) {
-                  return renderGuidedVisualSvg(
-                    ensureGuidedVisualConfig(guidedVisualConfig),
-                    {
-                      maxW: 470,
-                      maxH: 260,
-                      variant: "pdf",
-                      colorHex,
-                      showSelection: false,
-                      showLabels: false,
-                      showDimensions: true,
-                    }
-                  );
-                }
-              } catch {
-                // fallback legacy abajo
-              }
-              return generateComponentSVG({
+          : resolveCotizacionItemDrawingSvg({
           tipo: item.tipo,
           sistema: resolvedSystem,
           configuracion: resolvedConfiguration,
@@ -901,8 +880,8 @@ export default function CotizacionPrintPage() {
           mirrorPaneCount,
           mirrorPaneDirection,
           mirrorInteriorLine,
-        });
-            })(),
+          guidedVisualConfig,
+        }),
       });
     }
 
@@ -1599,30 +1578,11 @@ export default function CotizacionPrintPage() {
                     systemLabel: "-",
                     lineLabel: "-",
                   });
+                const fallbackDrawingMeta =
+                  fallbackMeta ?? decodeCotizacionItemPresentationMeta(item.observaciones);
                 const drawingSvg =
                   presentation?.drawingSvg ??
-                  (() => {
-                    const fallbackDrawingMeta =
-                      fallbackMeta ?? decodeCotizacionItemPresentationMeta(item.observaciones);
-                    try {
-                      if (fallbackDrawingMeta.guidedVisualConfig) {
-                        return renderGuidedVisualSvg(
-                          ensureGuidedVisualConfig(fallbackDrawingMeta.guidedVisualConfig),
-                          {
-                            maxW: 470,
-                            maxH: 260,
-                            variant: "pdf",
-                            colorHex,
-                            showSelection: false,
-                            showLabels: false,
-                            showDimensions: true,
-                          }
-                        );
-                      }
-                    } catch {
-                      // legacy abajo
-                    }
-                    return generateComponentSVG({
+                  resolveCotizacionItemDrawingSvg({
                     tipo: item.tipo,
                     sistema: fallbackDrawingMeta.sistema || presentation?.sistema,
                     configuracion: fallbackDrawingMeta.configuracion || presentation?.configuracion,
@@ -1644,8 +1604,8 @@ export default function CotizacionPrintPage() {
                     mirrorPaneCount: fallbackDrawingMeta.mirrorPaneCount,
                     mirrorPaneDirection: fallbackDrawingMeta.mirrorPaneDirection,
                     mirrorInteriorLine: fallbackDrawingMeta.mirrorInteriorLine,
+                    guidedVisualConfig: fallbackDrawingMeta.guidedVisualConfig,
                   });
-                  })();
                 const itemBadgeLabel = `ITEM ${String(absoluteIndex).padStart(2, "0")}`;
 
                 return (

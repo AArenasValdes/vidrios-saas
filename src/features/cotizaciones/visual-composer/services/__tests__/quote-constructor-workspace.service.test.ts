@@ -97,6 +97,25 @@ describe("quote constructor workspace service", () => {
     expect(isQuoteConstructorCompatibleItem(item({ tipoItem: "item_libre_con_valor" }))).toBe(false);
   });
 
+  it("sincroniza la composicion persistida con las medidas comerciales vigentes", () => {
+    const staleConfig = createQuoteConstructorPresetConfig("fijo", {
+      widthMm: 1200,
+      heightMm: 1000,
+    });
+    const visual = item({
+      ancho: 1900,
+      alto: 1800,
+      observaciones: encodeCotizacionItemPresentationMeta({
+        guidedVisualConfig: staleConfig,
+      }),
+    });
+
+    expect(getQuoteConstructorItemConfig(visual)).toMatchObject({
+      widthMm: 1900,
+      heightMm: 1800,
+    });
+  });
+
   it("tolera piezas legacy sin tipo al validar compatibilidad", () => {
     const legacy = item({ tipo: undefined as unknown as string });
 

@@ -2171,6 +2171,10 @@
 }
 
 .segmentBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   min-height: 42px;
   padding: 0.45rem 0.5rem;
   border: 1px solid var(--cq-border);
@@ -2180,10 +2184,177 @@
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    background var(--cq-motion),
+    border-color var(--cq-motion),
+    color var(--cq-motion),
+    transform var(--cq-motion);
+}
+
+.segmentBtn:active {
+  transform: scale(0.97);
+}
+
+.segmentBtn:focus-visible,
+.palilloNudgeBtn:focus-visible,
+.palilloRange:focus-visible {
+  outline: 3px solid rgba(47, 111, 237, 0.24);
+  outline-offset: 2px;
 }
 
 .segmentBtnActive {
   border-color: var(--cq-blue);
   background: var(--cq-blue-soft);
   color: var(--cq-blue);
+}
+
+.palilloFeedback {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 28px;
+  padding: 0.35rem 0.52rem;
+  border-radius: 9px;
+  background: var(--cq-blue-soft);
+  color: var(--cq-blue);
+  font-size: 0.73rem;
+  font-weight: 850;
+}
+
+.palilloLivePreview {
+  position: sticky;
+  top: 0.25rem;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-height: 150px;
+  padding: 0.42rem 0.52rem 0.5rem;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 18px rgba(11, 31, 68, 0.1);
+}
+
+.palilloLivePreviewHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: var(--cq-navy);
+  font-size: 0.72rem;
+}
+
+.palilloLivePreviewHead strong {
+  font-weight: 900;
+}
+
+.palilloLivePreviewHead span {
+  color: var(--cq-blue);
+  font-weight: 900;
+}
+
+.palilloLivePreviewCanvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 118px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--cq-canvas);
+}
+
+.palilloLivePreviewCanvas svg {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: 118px;
+}
+
+.palilloPositionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.58rem;
+  padding-top: 0.12rem;
+}
+
+.palilloPositionHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.palilloPositionHeading strong {
+  color: var(--cq-navy);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.palilloPositionHeading span {
+  color: var(--cq-muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.palilloPositionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+  padding: 0.52rem;
+  border-radius: 11px;
+  background: var(--cq-canvas);
+}
+
+.palilloPositionMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: var(--cq-navy);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.palilloPositionMeta strong {
+  color: var(--cq-blue);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.palilloPositionControl {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  gap: 0.42rem;
+  align-items: center;
+}
+
+.palilloNudgeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-height: 42px;
+  border: 1px solid var(--cq-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--cq-blue);
+  cursor: pointer;
+  transition:
+    background var(--cq-motion),
+    border-color var(--cq-motion),
+    transform var(--cq-motion);
+}
+
+.palilloNudgeBtn:active {
+  transform: scale(0.95);
+  background: var(--cq-blue-soft);
+  border-color: var(--cq-blue);
+}
+
+.palilloRange {
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
+  accent-color: var(--cq-blue);
+  cursor: pointer;
+  touch-action: pan-y;
 }

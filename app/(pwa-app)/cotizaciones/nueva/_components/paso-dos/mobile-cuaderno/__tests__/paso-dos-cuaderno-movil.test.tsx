@@ -382,6 +382,22 @@ describe("PasoDosCuadernoMovil", () => {
     expect(screen.getByRole("dialog", { name: /Armar composici/i })).toBeInTheDocument();
   });
 
+  it("conserva las medidas comerciales al abrir una composicion con config antigua", () => {
+    render(
+      <PasoDosCuadernoMovil
+        {...defaultProps}
+        items={[baseItem({ ancho: 1900, alto: 1800 })]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
+
+    expect(screen.getByLabelText("Ancho de la composicion")).toHaveValue("1900");
+    expect(screen.getByLabelText("Alto de la composicion")).toHaveValue("1800");
+    expect(onUpdateItem).not.toHaveBeenCalled();
+  });
+
   it("edita medidas dentro de la composicion antes de usarla", () => {
     render(<PasoDosCuadernoMovil {...defaultProps} items={[baseItem()]} />);
 
@@ -439,6 +455,31 @@ describe("PasoDosCuadernoMovil", () => {
     expect(modules).toHaveLength(2);
     expect(modules.some((module) => module.type === "corredera")).toBe(true);
     expect(modules.some((module) => module.type === "fijo")).toBe(true);
+  });
+
+  it("guarda palillo horizontal al editar una composicion a medida", () => {
+    render(<PasoDosCuadernoMovil {...defaultProps} items={[baseItem()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /acciones de/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Editar composicion" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mas tipos" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar modulo M1 a Puerta abatible" }));
+    const horizontalButton = screen.getByRole("button", { name: "Horizontal" });
+    fireEvent.click(horizontalButton);
+    expect(horizontalButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Horizontal aplicado a M1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Vista en vivo de palillos en M1")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("slider", { name: "Mover palillo horizontal" }), {
+      target: { value: "65" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Usar esta composicion" }));
+
+    const patch = onUpdateItem.mock.calls.at(-1)?.[1] as { guidedVisualConfig: GuidedVisualConfig };
+    const leafModule = listLeafModules(patch.guidedVisualConfig.root)[0];
+    expect(leafModule.type).toBe("puerta");
+    expect(leafModule.palillos).toEqual([
+      expect.objectContaining({ axis: "horizontal", position: 0.65 }),
+    ]);
   });
 
   it("solo permite reflejar modulos con apertura lateral y guarda el lado elegido", () => {

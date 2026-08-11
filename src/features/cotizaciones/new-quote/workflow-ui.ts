@@ -39,6 +39,7 @@ import {
   type CotizacionItemFreeValueIvaMode,
 } from "@/utils/cotizacion-item-presentation";
 import type { GuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { resolveQuoteConstructorCommercialName, isQuoteConstructorPresetDefaultName } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import {
   normalizePricingMode,
@@ -2197,6 +2198,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     origenPrecio,
     encodedMargenPct,
     encodedCostInputScope,
+    palilloEnabled,
+    palilloType,
     mirrorFormat,
     mirrorPaneCount,
     mirrorPaneDirection,
@@ -2289,6 +2292,8 @@ export function mapItemToForm(item: CotizacionWorkflowItem): ComponentFormState 
     colorHex: normalizeLegacyAluminumColorHex(colorHex),
     loteCantidad: "1",
     costInputScope: (encodedCostInputScope || "unit") as CostInputScope,
+    palilloEnabled,
+    palilloType,
     mirrorFormat,
     mirrorPaneCount,
     mirrorPaneDirection,
@@ -2533,7 +2538,13 @@ export function buildItemFromForm(
       mirrorPaneCount: syncedForm.mirrorPaneCount,
       mirrorPaneDirection: syncedForm.mirrorPaneDirection,
       mirrorInteriorLine: syncedForm.mirrorInteriorLine,
-      guidedVisualConfig: syncedForm.guidedVisualConfig ?? null,
+      guidedVisualConfig: syncedForm.guidedVisualConfig
+        ? applyCommercialPalilloToGuidedVisualConfig({
+            config: syncedForm.guidedVisualConfig,
+            palilloEnabled: syncedForm.palilloEnabled,
+            palilloType: syncedForm.palilloType,
+          })
+        : null,
       fabricacionTipologia: syncedForm.fabricacionTipologia,
       fabricacionHojas: syncedForm.fabricacionHojas,
       fabricacionModulos: syncedForm.fabricacionModulos,
@@ -2584,6 +2595,8 @@ export function applyQuotePricingToItems(
       minimoCobrable,
       redondeoPrecio,
       precioAjustadoManual,
+      palilloEnabled,
+      palilloType,
       mirrorFormat,
       mirrorPaneCount,
       mirrorPaneDirection,
@@ -2647,6 +2660,8 @@ export function applyQuotePricingToItems(
             ? precioAjustadoManual || item.precioAjustadoManual
             : false,
         origenPrecio: pricingMode === "precio_directo" ? item.origenPrecio : "margen",
+        palilloEnabled,
+        palilloType,
         mirrorFormat,
         mirrorPaneCount,
         mirrorPaneDirection,

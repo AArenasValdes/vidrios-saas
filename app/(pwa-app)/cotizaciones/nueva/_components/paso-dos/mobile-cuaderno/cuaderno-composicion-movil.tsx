@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LuColumns2, LuFlipHorizontal2, LuRedo2, LuRows2, LuUndo2, LuX } from "react-icons/lu";
+import {
+  LuCheck,
+  LuChevronDown,
+  LuChevronLeft,
+  LuChevronRight,
+  LuChevronUp,
+  LuColumns2,
+  LuFlipHorizontal2,
+  LuRedo2,
+  LuRows2,
+  LuUndo2,
+  LuX,
+} from "react-icons/lu";
 
 import { useGuidedVisualHistory } from "@/features/cotizaciones/visual-composer/hooks/use-guided-visual-history";
 import {
@@ -16,6 +28,7 @@ import {
 import {
   applyPalilloPresetToModule,
   applyQuickSplitRatio,
+  calculatePalilloRects,
   clearModulePalillos,
   findNodeById,
   findParentSplit,
@@ -28,8 +41,11 @@ import {
   splitModule,
   updateModuleGlassShape,
   updateModuleOpeningSide,
+  updateModulePalilloSplitRatio,
   updateSplitRatio,
   updateModuleType,
+  type GuidedPalilloNode,
+  type GuidedPalilloPresetId,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 
@@ -57,6 +73,80 @@ const REFLECTABLE_MODULE_TYPES = new Set<QuoteConstructorPresetId>([
   "puerta",
   "shower_frontal",
 ]);
+
+type MobilePalilloPresetId = Extract<
+  GuidedPalilloPresetId,
+  "none" | "v1" | "h1" | "cross" | "grid3x2"
+>;
+
+type PalilloPositionControl = {
+  key: string;
+  direction: "vertical" | "horizontal";
+  ids: string[];
+  ratio: number;
+  dividerRatio: number;
+};
+
+const MOBILE_PALILLO_PRESETS: Array<{
+  id: MobilePalilloPresetId;
+  label: string;
+}> = [
+  { id: "none", label: "Sin" },
+  { id: "v1", label: "Vertical" },
+  { id: "h1", label: "Horizontal" },
+  { id: "cross", label: "Cruz" },
+  { id: "grid3x2", label: "Reticula" },
+];
+
+function resolveMobilePalilloPreset(
+  layout: GuidedPalilloNode | null
+): MobilePalilloPresetId | "custom" {
+  const splits = calculatePalilloRects(layout).filter((rect) => rect.kind === "split");
+  const verticalCount = splits.filter((split) => split.direction === "vertical").length;
+  const horizontalCount = splits.filter((split) => split.direction === "horizontal").length;
+
+  if (splits.length === 0) return "none";
+  if (verticalCount === 1 && horizontalCount === 0) return "v1";
+  if (verticalCount === 0 && horizontalCount === 1) return "h1";
+  if (verticalCount === 1 && horizontalCount === 2) return "cross";
+  if (verticalCount === 2 && horizontalCount === 3) return "grid3x2";
+  return "custom";
+}
+
+function buildPalilloPositionControls(
+  layout: GuidedPalilloNode | null
+): PalilloPositionControl[] {
+  const controls = new Map<string, PalilloPositionControl>();
+
+  for (const rect of calculatePalilloRects(layout)) {
+    if (
+      rect.kind !== "split" ||
+      !rect.direction ||
+      rect.ratio == null ||
+      rect.dividerRatio == null
+    ) {
+      continue;
+    }
+    const key = `${rect.direction}-${Math.round(rect.dividerRatio * 1000)}`;
+    const existing = controls.get(key);
+    if (existing) {
+      existing.ids.push(rect.id);
+      continue;
+    }
+    controls.set(key, {
+      key,
+      direction: rect.direction,
+      ids: [rect.id],
+      ratio: rect.ratio,
+      dividerRatio: rect.dividerRatio,
+    });
+  }
+
+  return [...controls.values()].sort((a, b) => {
+    if (a.direction !== b.direction) return a.direction === "vertical" ? -1 : 1;
+    return a.dividerRatio - b.dividerRatio;
+  });
+}
 
 function commitDimension(raw: string, fallback: number) {
   const value = Number.parseInt(raw.replace(/[^\d]/g, ""), 10);
@@ -87,6 +177,13 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     return node && isModuleNode(node) ? node : listLeafModules(config.root)[0] ?? null;
   }, [config, selectedId]);
   const leafModules = useMemo(() => listLeafModules(config.root), [config.root]);
+  const activePalilloPreset = resolveMobilePalilloPreset(
+    selectedModule?.palilloLayout ?? null
+  );
+  const palilloPositionControls = useMemo(
+    () => buildPalilloPositionControls(selectedModule?.palilloLayout ?? null),
+    [selectedModule?.palilloLayout]
+  );
 
   const moduleIndex = useMemo(() => {
     if (!selectedModule) return 1;
@@ -118,10 +215,25 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
         variant: "editor",
         showDimensions: false,
         showSelection: true,
+        palilloEditModuleId: config.selectedPalilloId ? selectedModule?.id : null,
         maxW: 360,
         maxH: 268,
       }),
-    [config]
+    [config, selectedModule?.id]
+  );
+  const palilloPreviewSvg = useMemo(
+    () =>
+      renderGuidedVisualSvg(config, {
+        variant: "editor",
+        showDimensions: false,
+        showLabels: false,
+        showSelection: true,
+        palilloEditModuleId: config.selectedPalilloId ? selectedModule?.id : null,
+        resourceKey: "mobile-palillo-live-preview",
+        maxW: 320,
+        maxH: 132,
+      }),
+    [config, selectedModule?.id]
   );
   const layout = useMemo(
     () =>
@@ -247,7 +359,7 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
     );
   };
 
-  const setPalillos = (preset: "none" | "v1" | "h1" | "cross" | "grid2x2") => {
+  const setPalillos = (preset: MobilePalilloPresetId) => {
     if (!selectedModule) return;
     const nextConfig = configWithDraftDimensions();
     history.setConfig(
@@ -255,6 +367,16 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
         ? clearModulePalillos(nextConfig, selectedModule.id)
         : applyPalilloPresetToModule(nextConfig, selectedModule.id, preset)
     );
+  };
+
+  const movePalillos = (control: PalilloPositionControl, ratio: number) => {
+    if (!selectedModule) return;
+    const nextConfig = control.ids.reduce(
+      (current, splitId) =>
+        updateModulePalilloSplitRatio(current, selectedModule.id, splitId, ratio),
+      configWithDraftDimensions()
+    );
+    history.setConfig(nextConfig);
   };
 
   return (
@@ -555,28 +677,132 @@ export function CuadernoComposicionMovil({ initialConfig, onApply, onClose }: Pr
             <div className={s.constructorControlGroup}>
               <div className={s.sheetSectionHead}>
                 <strong>Palillos</strong>
-                <span>Diseno rapido para el modulo seleccionado.</span>
+                <span>Elige un diseno. El cambio se muestra al instante.</span>
               </div>
+              {palilloPositionControls.length > 0 ? (
+                <div
+                  className={s.palilloLivePreview}
+                  aria-label={`Vista en vivo de palillos en M${moduleIndex}`}
+                >
+                  <div className={s.palilloLivePreviewHead}>
+                    <strong>Vista en vivo</strong>
+                    <span>M{moduleIndex}</span>
+                  </div>
+                  <div
+                    className={s.palilloLivePreviewCanvas}
+                    aria-hidden="true"
+                    dangerouslySetInnerHTML={{ __html: palilloPreviewSvg }}
+                  />
+                </div>
+              ) : null}
               <div className={s.segmentedGrid} role="group" aria-label="Palillos">
-                {[
-                  { id: "none", label: "Sin" },
-                  { id: "v1", label: "Vertical" },
-                  { id: "h1", label: "Horizontal" },
-                  { id: "cross", label: "Cruz" },
-                  { id: "grid2x2", label: "Reticula" },
-                ].map((preset) => (
+                {MOBILE_PALILLO_PRESETS.map((preset) => {
+                  const isActive = activePalilloPreset === preset.id;
+                  return (
                   <button
                     key={preset.id}
                     type="button"
-                    className={s.segmentBtn}
-                    onClick={() =>
-                      setPalillos(preset.id as "none" | "v1" | "h1" | "cross" | "grid2x2")
-                    }
+                    className={`${s.segmentBtn} ${isActive ? s.segmentBtnActive : ""}`}
+                    aria-pressed={isActive}
+                    onClick={() => setPalillos(preset.id)}
                   >
-                    {preset.label}
+                    <span>{preset.label}</span>
+                    {isActive ? <LuCheck size={15} aria-hidden /> : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
+              <div className={s.palilloFeedback} role="status" aria-live="polite">
+                <LuCheck size={15} aria-hidden />
+                <span>
+                  {activePalilloPreset === "custom"
+                    ? "Diseno personalizado aplicado"
+                    : `${
+                        MOBILE_PALILLO_PRESETS.find(
+                          (preset) => preset.id === activePalilloPreset
+                        )?.label ?? "Palillos"
+                      } aplicado a M${moduleIndex}`}
+                </span>
+              </div>
+
+              {palilloPositionControls.length > 0 ? (
+                <div className={s.palilloPositionPanel}>
+                  <div className={s.palilloPositionHeading}>
+                    <strong>Mover palillos</strong>
+                    <span>Arrastra la barra o usa las flechas.</span>
+                  </div>
+                  {palilloPositionControls.map((control, index) => {
+                    const sameDirection = palilloPositionControls.filter(
+                      (current) => current.direction === control.direction
+                    );
+                    const directionIndex = sameDirection.findIndex(
+                      (current) => current.key === control.key
+                    );
+                    const hasSeveral = sameDirection.length > 1;
+                    const directionLabel =
+                      control.direction === "vertical" ? "Vertical" : "Horizontal";
+                    const controlLabel = `${directionLabel}${
+                      hasSeveral ? ` ${directionIndex + 1}` : ""
+                    }`;
+                    const previousLabel =
+                      control.direction === "vertical" ? "Mover a la izquierda" : "Subir";
+                    const nextLabel =
+                      control.direction === "vertical" ? "Mover a la derecha" : "Bajar";
+                    const previousIcon =
+                      control.direction === "vertical" ? (
+                        <LuChevronLeft size={19} aria-hidden />
+                      ) : (
+                        <LuChevronUp size={19} aria-hidden />
+                      );
+                    const nextIcon =
+                      control.direction === "vertical" ? (
+                        <LuChevronRight size={19} aria-hidden />
+                      ) : (
+                        <LuChevronDown size={19} aria-hidden />
+                      );
+                    const percent = Math.round(control.ratio * 100);
+
+                    return (
+                      <div className={s.palilloPositionRow} key={`${control.key}-${index}`}>
+                        <div className={s.palilloPositionMeta}>
+                          <span>{controlLabel}</span>
+                          <strong>{percent}%</strong>
+                        </div>
+                        <div className={s.palilloPositionControl}>
+                          <button
+                            type="button"
+                            className={s.palilloNudgeBtn}
+                            aria-label={`${previousLabel} ${controlLabel.toLocaleLowerCase("es")}`}
+                            onClick={() => movePalillos(control, control.ratio - 0.05)}
+                          >
+                            {previousIcon}
+                          </button>
+                          <input
+                            className={s.palilloRange}
+                            type="range"
+                            min="12"
+                            max="88"
+                            step="1"
+                            value={percent}
+                            aria-label={`Mover palillo ${controlLabel.toLocaleLowerCase("es")}`}
+                            onChange={(event) =>
+                              movePalillos(control, Number(event.currentTarget.value) / 100)
+                            }
+                          />
+                          <button
+                            type="button"
+                            className={s.palilloNudgeBtn}
+                            aria-label={`${nextLabel} ${controlLabel.toLocaleLowerCase("es")}`}
+                            onClick={() => movePalillos(control, control.ratio + 0.05)}
+                          >
+                            {nextIcon}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </>
         ) : null}

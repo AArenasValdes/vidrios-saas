@@ -14,8 +14,10 @@ describe("guided visual hardware", () => {
       freeSide: "left",
       stroke: "#111827",
       strokeWidth: 1.2,
+      clearanceFill: "#ECF2F8",
     });
     expect(svg).toContain('data-guided-hardware="manilla_abatible"');
+    expect(svg).toContain('data-guided-hardware-clearance="manilla_abatible"');
     expect(svg).toContain("<rect");
     expect(svg).toContain("<circle");
   });

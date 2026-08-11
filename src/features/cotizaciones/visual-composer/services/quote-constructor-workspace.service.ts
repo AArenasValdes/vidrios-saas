@@ -3,10 +3,12 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import {
   createDefaultGuidedVisualConfig,
   listLeafModules,
+  setGuidedVisualDimensions,
   updateModuleType,
   type GuidedModuleType,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 export type QuoteConstructorPresetId = GuidedModuleType;
@@ -133,7 +135,17 @@ export function isQuoteConstructorPresetDefaultName(nombre: string) {
 export function getQuoteConstructorItemConfig(
   item: CotizacionWorkflowItem
 ): GuidedVisualConfig | null {
-  return decodeCotizacionItemPresentationMeta(item.observaciones).guidedVisualConfig;
+  const presentation = decodeCotizacionItemPresentationMeta(item.observaciones);
+  if (!presentation.guidedVisualConfig) return null;
+  const config = applyCommercialPalilloToGuidedVisualConfig({
+    config: presentation.guidedVisualConfig,
+    palilloEnabled: presentation.palilloEnabled,
+    palilloType: presentation.palilloType,
+  });
+  return setGuidedVisualDimensions(config, {
+    widthMm: item.ancho || config.widthMm,
+    heightMm: item.alto || config.heightMm,
+  });
 }
 
 export function isQuoteConstructorCompatibleItem(item: CotizacionWorkflowItem) {

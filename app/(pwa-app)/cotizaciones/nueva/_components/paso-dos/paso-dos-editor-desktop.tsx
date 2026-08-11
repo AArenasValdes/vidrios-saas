@@ -18,6 +18,7 @@ import {
   ensureGuidedVisualDraft,
 } from "@/features/cotizaciones/visual-composer/components/guided-visual-composer";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import {
   describeGuidedVisualConfig,
   type GuidedVisualConfig,
@@ -279,7 +280,11 @@ function TabConfiguracion({
   });
   const configPreviewSvg = useMemo(() => {
     if (componentForm.guidedVisualConfig) {
-      return renderGuidedVisualSvg(componentForm.guidedVisualConfig, {
+      return renderGuidedVisualSvg(applyCommercialPalilloToGuidedVisualConfig({
+        config: componentForm.guidedVisualConfig,
+        palilloEnabled: componentForm.palilloEnabled,
+        palilloType: componentForm.palilloType,
+      }), {
         maxW: 176,
         maxH: 118,
         colorHex: componentForm.colorHex,
@@ -304,6 +309,8 @@ function TabConfiguracion({
       colorHex: componentForm.colorHex,
       maxW: 176,
       maxH: 118,
+      palilloEnabled: componentForm.palilloEnabled,
+      palilloType: componentForm.palilloType,
       mirrorFormat: componentForm.mirrorFormat,
       mirrorPaneCount: componentForm.mirrorPaneCount,
       mirrorPaneDirection: componentForm.mirrorPaneDirection,

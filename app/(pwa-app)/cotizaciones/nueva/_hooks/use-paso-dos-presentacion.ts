@@ -21,6 +21,7 @@ import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotiz
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { generateComponentSVG } from "@/utils/window-drawings";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
+import { applyCommercialPalilloToGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/services/guided-visual-palillo-compat.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { getGlassOptionsForSubtype } from "./use-paso-dos-agregar-grupo";
 import { hasGlassOption, normalizeCustomGlassValue } from "@/features/cotizaciones/new-quote/custom-glass-options";
@@ -193,7 +194,11 @@ export function usePasoDosPresentacion(
 
   const currentComponentPreviewSvg = useMemo(() => {
     if (params.componentForm.guidedVisualConfig) {
-      return renderGuidedVisualSvg(params.componentForm.guidedVisualConfig, {
+      return renderGuidedVisualSvg(applyCommercialPalilloToGuidedVisualConfig({
+        config: params.componentForm.guidedVisualConfig,
+        palilloEnabled: params.componentForm.palilloEnabled,
+        palilloType: params.componentForm.palilloType,
+      }), {
         maxW: 92,
         maxH: 72,
         colorHex: params.componentForm.colorHex,
@@ -218,6 +223,8 @@ export function usePasoDosPresentacion(
       colorHex: params.componentForm.colorHex,
       maxW: 92,
       maxH: 72,
+      palilloEnabled: params.componentForm.palilloEnabled,
+      palilloType: params.componentForm.palilloType,
       mirrorFormat: params.componentForm.mirrorFormat,
       mirrorPaneCount: params.componentForm.mirrorPaneCount,
       mirrorPaneDirection: params.componentForm.mirrorPaneDirection,
@@ -228,6 +235,8 @@ export function usePasoDosPresentacion(
       params.componentForm.ancho,
       params.componentForm.colorHex,
       params.componentForm.configuracion,
+      params.componentForm.palilloEnabled,
+      params.componentForm.palilloType,
       params.componentForm.referencia,
       params.componentForm.sheetScheme,
       params.componentForm.sheetVariant,

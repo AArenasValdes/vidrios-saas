@@ -8,6 +8,7 @@ import {
   buildSuggestedComponentForm,
   createEmptyFreeValueItemForm,
   filterLineTemplatesForComponent,
+  mapItemToForm,
   mapRecordToDraft,
   reconcileWorkflowItemsPricing,
   getSheetSchemeOptions,
@@ -32,7 +33,12 @@ import { calculateComponentItem } from "../../services/cotizaciones-workflow.ser
 import type { CotizacionLineTemplate } from "../../line-templates/types/cotizacion-line-template";
 import type { CotizacionWorkflowItem } from "../../types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta, encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
-import { createDefaultGuidedVisualConfig } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+import {
+  countPalilloSplits,
+  createDefaultGuidedVisualConfig,
+  listLeafModules,
+  updateModuleType,
+} from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
 import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 
 function createLinePricingForm(
@@ -1471,6 +1477,37 @@ describe("workflow-ui paso 2", () => {
     const savedItem = buildItemFromForm(puertaForm, [], "item-puerta-1");
     expect(savedItem.tipo).toBe("Puerta");
     expect(savedItem.nombre.toLowerCase()).toContain("puerta");
+  });
+
+  it("conserva palillo de puerta al guardar, reabrir y editar en constructor", () => {
+    let guidedVisualConfig = createDefaultGuidedVisualConfig({
+      widthMm: 750,
+      heightMm: 2100,
+    });
+    const moduleId = listLeafModules(guidedVisualConfig.root)[0].id;
+    guidedVisualConfig = updateModuleType(guidedVisualConfig, moduleId, "puerta");
+
+    const savedItem = buildItemFromForm(
+      createLinePricingForm({
+        tipo: "Puerta",
+        sistema: "Abatible",
+        configuracion: "1 hoja",
+        ancho: "750",
+        alto: "2100",
+        palilloEnabled: true,
+        palilloType: "1 horizontal",
+        guidedVisualConfig,
+      }),
+      [],
+      "item-puerta-palillo"
+    );
+    const reopenedForm = mapItemToForm(savedItem);
+    const leafModule = listLeafModules(reopenedForm.guidedVisualConfig!.root)[0];
+
+    expect(reopenedForm.palilloEnabled).toBe(true);
+    expect(reopenedForm.palilloType).toBe("1 horizontal");
+    expect(countPalilloSplits(leafModule.palilloLayout)).toBe(1);
+    expect(leafModule.palillos[0]?.axis).toBe("horizontal");
   });
 
   it("debe recalcular precio por linea al cambiar medidas en edicion", () => {

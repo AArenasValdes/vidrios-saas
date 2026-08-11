@@ -1709,6 +1709,16 @@ function drawPanoFijo(x: number, y: number, w: number, h: number, v: string, p: 
   ].join("");
 }
 
+function resolveDoorPalette(colorHex: string | null | undefined): Palette {
+  const palette = resolvePalette(colorHex);
+  if (!isValidHex(colorHex)) return palette;
+  return {
+    ...palette,
+    frame: colorHex,
+    div: colorHex,
+  };
+}
+
 function drawCristalSimple(x: number, y: number, w: number, h: number, v: string, p: Palette): string {
   const GW = gsw(v);
   const edge = clamp(Math.min(w, h) * 0.018, 2.2, 4.5);
@@ -2665,7 +2675,12 @@ export function generateComponentSVG(params: ComponentSVGParams): string {
     params.sheetVariant,
     params.customSchemeDescription,
   ].filter(Boolean).join(" ");
-  const palette   = tipoNorm === "Ventana" ? resolveWindowPalette(params.colorHex) : resolvePalette(params.colorHex);
+  const palette =
+    tipoNorm === "Ventana"
+      ? resolveWindowPalette(params.colorHex)
+      : tipoNorm === "Puerta"
+        ? resolveDoorPalette(params.colorHex)
+        : resolvePalette(params.colorHex);
 
   const base  = baseSizeFor(tipoNorm);
   const isMesa  = tipoNorm === "Mesa";
@@ -2856,7 +2871,7 @@ function drawDoorOuterFrame(x: number, y: number, w: number, h: number, frameCol
   const innerOffset = 5.2;
   return [
     `<rect data-door-frame="outer" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="${sw}" stroke-linejoin="miter"/>`,
-    `<rect data-door-frame="inner-channel" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="1.2" opacity="0.55" stroke-linejoin="miter"/>`,
+    `<rect data-door-frame="inner-channel" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="1.2" stroke-linejoin="miter"/>`,
   ].join("\n");
 }
 
@@ -2869,7 +2884,7 @@ function drawDoorLeafFrame(x: number, y: number, w: number, h: number, frameColo
   const innerOffset = 3.4;
   return [
     `<rect data-door-${type}-frame="true" x="${px(x)}" y="${px(y)}" width="${px(w)}" height="${px(h)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="${sw}" stroke-linejoin="miter"/>`,
-    `<rect data-door-${type}-channel="true" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="0.9" opacity="0.5" stroke-linejoin="miter"/>`,
+    `<rect data-door-${type}-channel="true" x="${px(x + innerOffset)}" y="${px(y + innerOffset)}" width="${px(w - innerOffset * 2)}" height="${px(h - innerOffset * 2)}" rx="0" fill="none" stroke="${frameColor}" stroke-width="0.9" stroke-linejoin="miter"/>`,
   ].join("\n");
 }
 
@@ -2882,7 +2897,12 @@ function drawDoorHandle(x: number, cy: number, side: "left" | "right", scale = 1
   const plateY = cy - plateH / 2;
   const leverX = side === "right" ? plateX + plateW - 1 : plateX - leverW + 1;
   const keyX = plateX + plateW / 2;
+  const clearance = 2.2 * scale;
   return [
+    `<g data-door-handle-clearance="true" fill="#F3F6FA" stroke="#F3F6FA" stroke-width="${px(clearance * 2)}" stroke-linejoin="round">`,
+    `<rect x="${px(plateX)}" y="${px(plateY)}" width="${px(plateW)}" height="${px(plateH)}" rx="${px(3 * scale)}"/>`,
+    `<rect x="${px(leverX)}" y="${px(cy - leverH / 2)}" width="${px(leverW)}" height="${px(leverH)}" rx="${px(3 * scale)}"/>`,
+    `</g>`,
     `<g data-door-handle="true">`,
     `<rect x="${px(plateX)}" y="${px(plateY)}" width="${px(plateW)}" height="${px(plateH)}" rx="${px(3 * scale)}" fill="#D9DEE5" stroke="${DOOR_DETAIL}" stroke-width="${px(1.2 * scale)}"/>`,
     `<circle cx="${px(keyX)}" cy="${px(plateY + 7 * scale)}" r="${px(0.9 * scale)}" fill="#F8FAFC" stroke="${DOOR_DETAIL}" stroke-width="${px(0.7 * scale)}"/>`,
@@ -2993,11 +3013,11 @@ function drawDoorAluminumBase(
         ? "data-door-swing-aluminum-band"
         : "data-door-general-aluminum-band";
   return [
-    `<rect data-door-aluminum-fill="true"${familyFillAttr} x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(h - 5)}" rx="0" fill="${frameColor}" opacity="0.24" stroke="none"/>`,
-    `<rect data-door-aluminum-band="top" ${bandAttr}="top" x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" opacity="0.48" stroke="${frameColor}" stroke-width="0.9"/>`,
-    `<rect data-door-aluminum-band="bottom" ${bandAttr}="bottom" x="${px(x + 2.5)}" y="${px(y + h - 10.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" opacity="0.48" stroke="${frameColor}" stroke-width="0.9"/>`,
-    `<rect data-door-aluminum-band="left" ${bandAttr}="left" x="${px(x + 2.5)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" opacity="0.4" stroke="${frameColor}" stroke-width="0.8"/>`,
-    `<rect data-door-aluminum-band="right" ${bandAttr}="right" x="${px(x + w - 9)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" opacity="0.4" stroke="${frameColor}" stroke-width="0.8"/>`,
+    `<rect data-door-aluminum-fill="true"${familyFillAttr} x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(h - 5)}" rx="0" fill="${frameColor}" stroke="none"/>`,
+    `<rect data-door-aluminum-band="top" ${bandAttr}="top" x="${px(x + 2.5)}" y="${px(y + 2.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" stroke="${frameColor}" stroke-width="0.9"/>`,
+    `<rect data-door-aluminum-band="bottom" ${bandAttr}="bottom" x="${px(x + 2.5)}" y="${px(y + h - 10.5)}" width="${px(w - 5)}" height="${px(8)}" rx="0" fill="${frameColor}" stroke="${frameColor}" stroke-width="0.9"/>`,
+    `<rect data-door-aluminum-band="left" ${bandAttr}="left" x="${px(x + 2.5)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" stroke="${frameColor}" stroke-width="0.8"/>`,
+    `<rect data-door-aluminum-band="right" ${bandAttr}="right" x="${px(x + w - 9)}" y="${px(y + 8)}" width="${px(6.5)}" height="${px(h - 16)}" rx="0" fill="${frameColor}" stroke="${frameColor}" stroke-width="0.8"/>`,
   ].join("\n");
 }
 
@@ -3454,27 +3474,35 @@ function pdSwingArc(ox: number, oy: number, r: number, startDeg: number, endDeg:
 
 function pdPalillo(x: number, y: number, w: number, h: number, palilloType: string | undefined, frameColor: string): string {
   if (!palilloType || palilloType === "Personalizado") return "";
+  const drawPalillo = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    strokeWidth: number
+  ) =>
+    `<line data-door-palillo="true" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${frameColor}" stroke-width="${px(strokeWidth)}" stroke-linecap="square" vector-effect="non-scaling-stroke"/>`;
   const lines: string[] = [];
   switch (palilloType) {
     case "1 vertical":
-      lines.push(pdDiv(x + w / 2, y, x + w / 2, y + h, frameColor, 0.8));
+      lines.push(drawPalillo(x + w / 2, y, x + w / 2, y + h, 2.2));
       break;
     case "1 horizontal":
-      lines.push(pdDiv(x, y + h / 2, x + w, y + h / 2, frameColor, 0.8));
+      lines.push(drawPalillo(x, y + h / 2, x + w, y + h / 2, 2.2));
       break;
     case "Cruzado":
-      lines.push(pdDiv(x + w / 2, y, x + w / 2, y + h, frameColor, 0.8));
-      lines.push(pdDiv(x, y + h / 2, x + w, y + h / 2, frameColor, 0.8));
+      lines.push(drawPalillo(x + w / 2, y, x + w / 2, y + h, 2.2));
+      lines.push(drawPalillo(x, y + h / 2, x + w, y + h / 2, 2.2));
       break;
     case "Cuadricula / colonial": {
       const cols = 2, rows = 3;
       for (let c = 1; c < cols + 1; c++) {
         const px2 = x + (w / (cols + 1)) * c;
-        lines.push(pdDiv(px2, y, px2, y + h, frameColor, 0.7));
+        lines.push(drawPalillo(px2, y, px2, y + h, 1.8));
       }
       for (let r = 1; r < rows + 1; r++) {
         const py = y + (h / (rows + 1)) * r;
-        lines.push(pdDiv(x, py, x + w, py, frameColor, 0.7));
+        lines.push(drawPalillo(x, py, x + w, py, 1.8));
       }
       break;
     }

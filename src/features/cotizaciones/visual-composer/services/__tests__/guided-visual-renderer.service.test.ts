@@ -83,6 +83,26 @@ describe("guided-visual-renderer V2", () => {
     expect(pdf).not.toContain("rgba(30, 136, 255");
   });
 
+  it("mantiene perfiles y palillos de puerta en el color exacto elegido", () => {
+    let config = createDefaultGuidedVisualConfig({ widthMm: 750, heightMm: 2100 });
+    const moduleId = listLeafModules(config.root)[0].id;
+    config = updateModuleType(config, moduleId, "puerta");
+    config = addPalillo(config, moduleId, "horizontal", 0.5);
+
+    const svg = renderGuidedVisualSvg(config, {
+      variant: "pdf",
+      colorHex: "#2a2a2a",
+      showDimensions: false,
+    });
+
+    expect(svg).toMatch(/data-guided-profile="operable-sash"[^>]*stroke="#2a2a2a"/);
+    expect(svg).toMatch(
+      /data-guided-palillo="door"[^>]*stroke="#2a2a2a"[^>]*stroke-width="3\.4"/
+    );
+    expect(svg).toContain('data-guided-hardware-clearance="manilla_abatible"');
+    expect(svg).not.toContain('stroke="#656565"');
+  });
+
   it("aprovecha el espacio del PDF y mantiene las cotas fuera del aluminio", () => {
     const config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
     const layout = calculateGuidedVisualLayout(config, {
