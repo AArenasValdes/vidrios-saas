@@ -14,6 +14,7 @@ import {
   calculateGuidedVisualLayout,
   drawOuterAluminumFrame,
   getGuidedProfilePalette,
+  getGuidedResponsiveStrokeScale,
   getGuidedStrokeScale,
   renderGuidedVisualSvg,
   resolveModuleGlassRect,
@@ -96,9 +97,7 @@ describe("guided-visual-renderer V2", () => {
     });
 
     expect(svg).toMatch(/data-guided-profile="operable-sash"[^>]*stroke="#2a2a2a"/);
-    expect(svg).toMatch(
-      /data-guided-palillo="door"[^>]*stroke="#2a2a2a"[^>]*stroke-width="3\.4"/
-    );
+    expect(svg).toMatch(/data-guided-palillo="door"[^>]*stroke="#2a2a2a"/);
     expect(svg).toContain('data-guided-hardware-clearance="manilla_abatible"');
     expect(svg).not.toContain('stroke="#656565"');
   });
@@ -182,6 +181,36 @@ describe("guided-visual-renderer V2", () => {
       showSelection: false,
     });
     expect(thumb).not.toContain("rgba(30, 136, 255");
+  });
+
+  it("reduce perfiles en piezas muy altas sin deformar su proporcion", () => {
+    const tallConfig = createDefaultGuidedVisualConfig({ widthMm: 650, heightMm: 1980 });
+    const tallLayout = calculateGuidedVisualLayout(tallConfig, {
+      maxW: 360,
+      maxH: 268,
+      variant: "editor",
+    });
+    const base = getGuidedStrokeScale("editor");
+    const responsive = getGuidedResponsiveStrokeScale("editor", tallLayout);
+
+    expect(tallLayout.drawW / tallLayout.drawH).toBeCloseTo(650 / 1980, 3);
+    expect(responsive.frame).toBeLessThan(base.frame * 0.5);
+    expect(responsive.frame / tallLayout.drawW).toBeLessThanOrEqual(0.111);
+    expect(responsive.frame).toBeGreaterThan(responsive.sash);
+    expect(responsive.sash).toBeGreaterThan(responsive.palillo);
+  });
+
+  it("mantiene la escala normal en piezas de proporcion habitual", () => {
+    const regularConfig = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+    const regularLayout = calculateGuidedVisualLayout(regularConfig, {
+      maxW: 360,
+      maxH: 268,
+      variant: "editor",
+    });
+
+    expect(getGuidedResponsiveStrokeScale("editor", regularLayout)).toEqual(
+      getGuidedStrokeScale("editor")
+    );
   });
 
   it("mantiene seleccion y label contenidos en modulos delgados", () => {

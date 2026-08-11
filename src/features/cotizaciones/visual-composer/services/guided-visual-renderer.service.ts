@@ -258,6 +258,43 @@ export function getGuidedStrokeScale(variant: GuidedRenderVariant): StrokeScale 
 }
 
 /**
+ * Evita que los perfiles de ancho fijo consuman demasiado vidrio cuando una
+ * pieza muy alta o muy ancha se ajusta dentro de un preview compacto.
+ * El PDF conserva su escala estable; Constructor, resumen y miniaturas se
+ * adaptan al lado visible más estrecho sin alterar la proporción del vano.
+ */
+export function getGuidedResponsiveStrokeScale(
+  variant: GuidedRenderVariant,
+  layout: Pick<GuidedVisualLayout, "drawW" | "drawH">
+): StrokeScale {
+  const base = resolveStrokeScale(variant);
+  if (variant === "pdf") {
+    return base;
+  }
+
+  const narrowSide = Math.max(1, Math.min(layout.drawW, layout.drawH));
+  const frameFloor =
+    variant === "thumbnail" ? 2.6 : variant === "summary" ? 4.5 : 6;
+  const responsiveFrame = clamp(narrowSide * 0.11, frameFloor, base.frame);
+  const factor = responsiveFrame / base.frame;
+  if (factor >= 0.995) {
+    return base;
+  }
+
+  return {
+    frame: responsiveFrame,
+    mullion: Math.max(2.4, base.mullion * factor),
+    sash: Math.max(2.2, base.sash * factor),
+    meeting: Math.max(frameFloor, base.meeting * factor),
+    palillo: Math.max(1.2, base.palillo * factor),
+    cue: Math.max(0.9, base.cue * factor),
+    dim: base.dim,
+    selection: base.selection > 0 ? Math.max(1.4, base.selection * factor) : 0,
+    halo: base.halo > 0 ? Math.max(2.2, base.halo * factor) : 0,
+  };
+}
+
+/**
  * Vidrio = relleno de la celda del módulo. El aluminio (marco/encuentro)
  * se pinta encima con stroke centrado; no hay que “achicar” el vidrio con
  * insets asimétricos (eso dejaba huecos blancos y parecía desfasado).
@@ -1124,7 +1161,7 @@ export function renderGuidedVisualSvg(
   const variant = resolveVariant(options.variant);
   const layout = calculateGuidedVisualLayout(config, { ...options, variant });
   const palette = resolvePalette(options.colorHex, variant);
-  const scale = resolveStrokeScale(variant);
+  const scale = getGuidedResponsiveStrokeScale(variant, layout);
   const showLabels =
     options.showLabels ?? (variant === "editor" || variant === "summary");
   const showDimensions =
