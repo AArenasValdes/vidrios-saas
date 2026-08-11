@@ -792,6 +792,7 @@ describe("generateComponentSVG", () => {
     expect(svg).toMatch(
       /data-door-palillo="true"[^>]*stroke="#2a2a2a"[^>]*stroke-width="2\.2"/
     );
+    expect(svg).toContain('data-door-palillo-ratio="0.6"');
     expect(svg).toContain('data-door-handle-clearance="true"');
     expect(svg).toContain('data-door-aluminum-fill="true"');
     expect(svg).not.toMatch(/data-door-(?:aluminum|swing)[^>]*opacity=/);

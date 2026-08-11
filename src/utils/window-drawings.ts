@@ -3479,16 +3479,17 @@ function pdPalillo(x: number, y: number, w: number, h: number, palilloType: stri
     y1: number,
     x2: number,
     y2: number,
-    strokeWidth: number
+    strokeWidth: number,
+    positionRatio?: number
   ) =>
-    `<line data-door-palillo="true" x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${frameColor}" stroke-width="${px(strokeWidth)}" stroke-linecap="square" vector-effect="non-scaling-stroke"/>`;
+    `<line data-door-palillo="true"${positionRatio == null ? "" : ` data-door-palillo-ratio="${px(positionRatio)}"`} x1="${px(x1)}" y1="${px(y1)}" x2="${px(x2)}" y2="${px(y2)}" stroke="${frameColor}" stroke-width="${px(strokeWidth)}" stroke-linecap="square" vector-effect="non-scaling-stroke"/>`;
   const lines: string[] = [];
   switch (palilloType) {
     case "1 vertical":
       lines.push(drawPalillo(x + w / 2, y, x + w / 2, y + h, 2.2));
       break;
     case "1 horizontal":
-      lines.push(drawPalillo(x, y + h / 2, x + w, y + h / 2, 2.2));
+      lines.push(drawPalillo(x, y + h * 0.6, x + w, y + h * 0.6, 2.2, 0.6));
       break;
     case "Cruzado":
       lines.push(drawPalillo(x + w / 2, y, x + w / 2, y + h, 2.2));

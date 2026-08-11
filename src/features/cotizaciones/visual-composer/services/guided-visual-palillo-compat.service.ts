@@ -1,11 +1,15 @@
 import {
   applyPalilloPresetToModule,
+  calculatePalilloRects,
   countPalilloSplits,
   ensureGuidedVisualConfig,
   listLeafModules,
+  updateModulePalilloSplitRatio,
   type GuidedPalilloPresetId,
   type GuidedVisualConfig,
 } from "@/features/cotizaciones/visual-composer/types/guided-visual-config";
+
+const DOOR_HORIZONTAL_PALILLO_RATIO = 0.6;
 
 function resolveCommercialPalilloPreset(
   palilloType: string | null | undefined
@@ -44,6 +48,26 @@ export function applyCommercialPalilloToGuidedVisualConfig(input: {
     if (countPalilloSplits(module.palilloLayout) > 0) {
       return current;
     }
-    return applyPalilloPresetToModule(current, module.id, preset);
+    const withPreset = applyPalilloPresetToModule(current, module.id, preset);
+    const isDoor = module.type === "puerta" || module.type === "puerta_corredera";
+    if (preset !== "h1" || !isDoor) {
+      return withPreset;
+    }
+
+    const appliedModule = listLeafModules(withPreset.root).find(
+      (currentModule) => currentModule.id === module.id
+    );
+    const horizontalSplit = calculatePalilloRects(
+      appliedModule?.palilloLayout ?? null
+    ).find((node) => node.kind === "split" && node.direction === "horizontal");
+
+    return horizontalSplit
+      ? updateModulePalilloSplitRatio(
+          withPreset,
+          module.id,
+          horizontalSplit.id,
+          DOOR_HORIZONTAL_PALILLO_RATIO
+        )
+      : withPreset;
   }, config);
 }

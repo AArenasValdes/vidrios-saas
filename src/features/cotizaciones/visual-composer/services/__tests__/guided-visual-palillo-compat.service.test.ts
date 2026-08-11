@@ -19,6 +19,20 @@ describe("guided visual palillo compatibility", () => {
     });
 
     expect(listLeafModules(next.root)[0].palillos).toEqual([
+      expect.objectContaining({ axis: "horizontal", position: 0.6 }),
+    ]);
+  });
+
+  it("mantiene el palillo horizontal centrado en componentes que no son puerta", () => {
+    const config = createDefaultGuidedVisualConfig({ widthMm: 1200, heightMm: 1000 });
+
+    const next = applyCommercialPalilloToGuidedVisualConfig({
+      config,
+      palilloEnabled: true,
+      palilloType: "1 horizontal",
+    });
+
+    expect(listLeafModules(next.root)[0].palillos).toEqual([
       expect.objectContaining({ axis: "horizontal", position: 0.5 }),
     ]);
   });
