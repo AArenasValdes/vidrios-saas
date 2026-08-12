@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   LuCalendarDays,
   LuChevronDown,
+  LuChevronRight,
   LuCopy,
   LuEye,
   LuMapPin,
@@ -105,22 +106,44 @@ export function CotizacionDetalleMobileView({
               }
             />
           </div>
-
-          <div className={s.codeRow}>
-            <span className={s.quoteCode}>{model.code}</span>
-            <span className={`${s.statusBadge} ${s[model.statusClass]}`}>{model.statusLabel}</span>
-          </div>
         </header>
 
-        <section className={s.hero}>
-          <h1 className={s.heroAmount}>{model.total}</h1>
-          <p className={s.heroLabel}>
-            {model.isTotalGlobal ? "TOTAL CLIENTE" : "TOTAL Â· IVA INCLUIDO"}
-          </p>
-          <p className={s.heroSubtext}>{model.heroSubtext}</p>
+        <section className={s.summaryCard} aria-label="Resumen de la cotización">
+          <div className={s.summaryTop}>
+            <span className={s.quoteCode}>{model.code}</span>
+            <span className={`${s.statusBadge} ${s[model.statusClass]}`}>
+              {model.statusLabel}
+            </span>
+          </div>
+
+          <div className={s.summaryAmountBlock}>
+            <p className={s.heroLabel}>
+              {model.isTotalGlobal ? "Total cliente" : "Total · IVA incluido"}
+            </p>
+            <h1 className={s.heroAmount}>{model.total}</h1>
+            <p className={s.heroSubtext}>{model.heroSubtext}</p>
+          </div>
+
+          <button
+            type="button"
+            className={s.trackingRow}
+            onClick={() => setIsStatusSheetOpen(true)}
+            disabled={isSaving || isUpdatingResponse}
+          >
+            <div className={s.trackingRowCopy}>
+              <span className={s.trackingLabel}>Seguimiento</span>
+              <span className={`${s.statusBadge} ${s.statusBadgeCompact} ${s[model.responseStatusClass]}`}>
+                {model.responseStatusLabel}
+              </span>
+            </div>
+            <span className={s.trackingAction}>
+              Cambiar
+              <LuChevronRight aria-hidden />
+            </span>
+          </button>
         </section>
 
-        <section className={s.ctaBlock}>
+        <section className={s.actionsCard} aria-label="Acciones de cierre">
           <button
             type="button"
             className={`${s.primaryCta} ${whatsappDisabled ? s.btnDisabled : ""}`}
@@ -130,60 +153,44 @@ export function CotizacionDetalleMobileView({
             <LuMessageCircle aria-hidden />
             Enviar link por WhatsApp
           </button>
-        </section>
 
-        <section className={s.secondaryActions}>
-          <button
-            type="button"
-            className={s.ghostButton}
-            onClick={() => void onCopyApprovalLink()}
-            disabled={isSaving}
-          >
-            <LuCopy aria-hidden />
-            Copiar link
-          </button>
+          <div className={s.actionGrid}>
+            <button
+              type="button"
+              className={s.actionTile}
+              onClick={() => void onOpenPdf()}
+              disabled={isPreparingPdf}
+            >
+              <LuEye aria-hidden />
+              <span>{isPreparingPdf ? "Preparando…" : "Ver PDF"}</span>
+            </button>
 
-          <button
-            type="button"
-            className={s.ghostButton}
-            onClick={() => void onOpenPdf()}
-            disabled={isPreparingPdf}
-          >
-            <LuEye aria-hidden />
-            {isPreparingPdf ? "Preparando PDF..." : "Ver PDF"}
-          </button>
+            <button
+              type="button"
+              className={s.actionTile}
+              onClick={() => void onCopyApprovalLink()}
+              disabled={isSaving}
+            >
+              <LuCopy aria-hidden />
+              <span>Copiar link</span>
+            </button>
 
-          <Link className={s.ghostButton} href={fabricacionHref}>
-            Resumen fabricación
-          </Link>
+            <Link className={s.actionTile} href={editHref}>
+              <LuPencil aria-hidden />
+              <span>Editar</span>
+            </Link>
 
-          <Link className={s.ghostButton} href={editHref}>
-            <LuPencil aria-hidden />
-            Editar
-          </Link>
-        </section>
-
-        {copyFeedback ? <p className={s.copyFeedback}>{copyFeedback}</p> : null}
-
-        <section className={s.trackingInline}>
-          <div className={s.trackingInlineCopy}>
-            <div className={s.sectionLabel}>SEGUIMIENTO</div>
-            <span className={`${s.statusBadge} ${s[model.responseStatusClass]}`}>
-              {model.responseStatusLabel}
-            </span>
+            <Link className={s.actionTile} href={fabricacionHref}>
+              <span className={s.actionTileMark}>Fab.</span>
+              <span>Fabricación</span>
+            </Link>
           </div>
-          <button
-            type="button"
-            className={s.statusTrigger}
-            onClick={() => setIsStatusSheetOpen(true)}
-            disabled={isSaving || isUpdatingResponse}
-          >
-            Cambiar estado
-          </button>
+
+          {copyFeedback ? <p className={s.copyFeedback}>{copyFeedback}</p> : null}
         </section>
 
-        <section className={s.sectionPlain}>
-          <div className={s.sectionLabel}>CLIENTE</div>
+        <section className={s.panel}>
+          <div className={s.panelLabel}>Cliente</div>
           <div className={s.clientName}>{model.clientName}</div>
 
           <div className={s.clientLines}>
@@ -200,45 +207,42 @@ export function CotizacionDetalleMobileView({
           <div className={s.clientMeta}>
             <LuCalendarDays aria-hidden />
             <span>
-              Actualizada {updatedLabel} Â· Vigencia {model.validity}
+              Actualizada {updatedLabel} · Vigencia {model.validity}
             </span>
           </div>
         </section>
 
-        <section className={s.sectionPlain}>
-          <div className={s.sectionHeader}>
-            <div className={s.sectionLabel}>
-              {isHydratingItems ? "COMPONENTES" : `COMPONENTES Â· ${model.itemsCount}`}
+        <section className={s.panel}>
+          <div className={s.panelHeader}>
+            <div className={s.panelLabel}>
+              {isHydratingItems ? "Componentes" : `Componentes · ${model.itemsCount}`}
             </div>
-            <Link href={editComponentsHref} className={s.sectionAction}>
-              <LuPencil aria-hidden />
+            <Link href={editComponentsHref} className={s.panelAction}>
               Editar
             </Link>
           </div>
 
-          <div className={s.itemListScroll}>
-            <div className={s.itemList}>
-              {isHydratingItems ? (
-                <div className={s.componentLoadingState}>Cargando componentes...</div>
-              ) : (
-                model.items.map((item) => (
-                  <article key={item.id} className={s.componentRow}>
-                    <div className={s.componentCode}>{item.code}</div>
-                    <div className={s.componentBody}>
-                      <strong className={s.componentName}>{item.name}</strong>
-                      <span className={s.componentMeta}>{item.meta}</span>
-                    </div>
-                    {model.isTotalGlobal ? null : (
-                      <strong className={s.componentPrice}>{item.price}</strong>
-                    )}
-                  </article>
-                ))
-              )}
-            </div>
+          <div className={s.itemList}>
+            {isHydratingItems ? (
+              <div className={s.componentLoadingState}>Cargando componentes…</div>
+            ) : (
+              model.items.map((item) => (
+                <article key={item.id} className={s.componentRow}>
+                  <div className={s.componentCode}>{item.code}</div>
+                  <div className={s.componentBody}>
+                    <strong className={s.componentName}>{item.name}</strong>
+                    <span className={s.componentMeta}>{item.meta}</span>
+                  </div>
+                  {model.isTotalGlobal ? null : (
+                    <strong className={s.componentPrice}>{item.price}</strong>
+                  )}
+                </article>
+              ))
+            )}
           </div>
         </section>
 
-        <section className={s.totalsCard}>
+        <section className={s.totalsPanel} aria-label="Desglose del total">
           {model.isTotalGlobal ? null : (
             <>
               <div className={s.totalRow}>
@@ -256,8 +260,8 @@ export function CotizacionDetalleMobileView({
             </>
           )}
 
-          <div className={s.totalStrongRow}>
-            <span>TOTAL</span>
+          <div className={s.totalFinalRow}>
+            <span>Total</span>
             <strong>{model.total}</strong>
           </div>
         </section>
@@ -289,10 +293,10 @@ export function CotizacionDetalleMobileView({
         <div className={s.statusSheetHandle} />
         <div className={s.statusSheetHeader}>
           <div>
-            <div className={s.sectionLabel}>SEGUIMIENTO</div>
+            <div className={s.panelLabel}>Seguimiento</div>
             <h2 className={s.statusSheetTitle}>Cambiar estado</h2>
             <p className={s.statusSheetText}>
-              El PDF se sigue enviando igual. Aqui solo marcas el avance comercial.
+              El PDF se sigue enviando igual. Aquí solo marcas el avance comercial.
             </p>
           </div>
           <button
@@ -344,4 +348,3 @@ export function CotizacionDetalleMobileView({
     </div>
   );
 }
-

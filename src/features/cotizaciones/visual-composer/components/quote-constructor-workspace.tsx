@@ -538,10 +538,10 @@ export function QuoteConstructorWorkspace({
     const next = activeFabricationResolution.formal;
     const alreadySynced =
       current?.recipeId === next.recipeId &&
-      current.input.anchoTotalMm === next.input.anchoTotalMm &&
-      current.input.altoTotalMm === next.input.altoTotalMm &&
-      current.input.cantidad === next.input.cantidad &&
-      current.result.totalLinealMm === next.result.totalLinealMm;
+      current?.input.anchoTotalMm === next.input.anchoTotalMm &&
+      current?.input.altoTotalMm === next.input.altoTotalMm &&
+      current?.input.cantidad === next.input.cantidad &&
+      current?.result.totalLinealMm === next.result.totalLinealMm;
     if (alreadySynced) return;
     onUpdateItem(activeItem.id, {
       fabricacionSnapshot: next,

@@ -28,16 +28,22 @@ export const FABRICACION_CORTE_POR_DEFECTO: FabricacionConfiguracionCorte = {
 
 export function resolveConfiguracionCorteParaPauta(
   configuracion?: FabricacionConfiguracionCorte | null
-): FabricacionConfiguracionCorte {
+): {
+  perdidaCorteMm: number;
+  despunteInicialMm: number;
+  sobranteMinimoAprovechableMm: number;
+} {
   return {
     perdidaCorteMm:
-      configuracion?.perdidaCorteMm ?? FABRICACION_CORTE_POR_DEFECTO.perdidaCorteMm,
+      configuracion?.perdidaCorteMm ?? FABRICACION_CORTE_POR_DEFECTO.perdidaCorteMm ?? 0,
     despunteInicialMm:
       configuracion?.despunteInicialMm ??
-      FABRICACION_CORTE_POR_DEFECTO.despunteInicialMm,
+      FABRICACION_CORTE_POR_DEFECTO.despunteInicialMm ??
+      0,
     sobranteMinimoAprovechableMm:
       configuracion?.sobranteMinimoAprovechableMm ??
-      FABRICACION_CORTE_POR_DEFECTO.sobranteMinimoAprovechableMm,
+      FABRICACION_CORTE_POR_DEFECTO.sobranteMinimoAprovechableMm ??
+      0,
   };
 }
 

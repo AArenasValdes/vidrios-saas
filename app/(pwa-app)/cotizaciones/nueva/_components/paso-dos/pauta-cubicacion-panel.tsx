@@ -405,9 +405,9 @@ export function PautaCubicacionPanel({
     const current = componentForm.fabricacionSnapshot;
     const alreadySynced =
       current?.recipeId === formalSnapshot.recipeId &&
-      current.input.anchoTotalMm === formalSnapshot.input.anchoTotalMm &&
-      current.input.altoTotalMm === formalSnapshot.input.altoTotalMm &&
-      current.input.cantidad === formalSnapshot.input.cantidad;
+      current?.input.anchoTotalMm === formalSnapshot.input.anchoTotalMm &&
+      current?.input.altoTotalMm === formalSnapshot.input.altoTotalMm &&
+      current?.input.cantidad === formalSnapshot.input.cantidad;
     if (alreadySynced) return;
 
     onFabricationRecipeIdChange?.(selectedPersistedRecipe.id);

@@ -430,13 +430,13 @@ export function DespieceReviewSurface({
       const alreadySynced =
         current?.recipeId === resolution.formal.recipeId &&
         current?.recipeVersion === resolution.formal.recipeVersion &&
-        current.input.anchoTotalMm === resolution.formal.input.anchoTotalMm &&
-        current.input.altoTotalMm === resolution.formal.input.altoTotalMm &&
-        current.input.cantidad === resolution.formal.input.cantidad &&
-        current.result.totalLinealMm === resolution.formal.result.totalLinealMm &&
-        Boolean(current.pautaBarras?.calculable) ===
+        current?.input.anchoTotalMm === resolution.formal.input.anchoTotalMm &&
+        current?.input.altoTotalMm === resolution.formal.input.altoTotalMm &&
+        current?.input.cantidad === resolution.formal.input.cantidad &&
+        current?.result.totalLinealMm === resolution.formal.result.totalLinealMm &&
+        Boolean(current?.pautaBarras?.calculable) ===
           Boolean(resolution.formal.pautaBarras?.calculable) &&
-        (current.pautaBarras?.barras.length ?? 0) ===
+        (current?.pautaBarras?.barras.length ?? 0) ===
           (resolution.formal.pautaBarras?.barras.length ?? 0);
       if (alreadySynced) return;
       onUpdateItem(item.id, {
