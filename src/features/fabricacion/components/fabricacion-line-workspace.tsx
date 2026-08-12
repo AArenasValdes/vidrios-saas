@@ -1160,7 +1160,7 @@ export function FabricacionLineWorkspace({
               lineName={lineName}
               readOnly={readOnly}
               startMode={recipeStartMode}
-              preferAiAssist={recipeStartMode === "ai"}
+              preferAiAssist={false}
               desktopActiveStep={editorStep}
               pautaInput={selectedTests[0]?.input ?? null}
               workshopRecipes={recipes

@@ -92,6 +92,9 @@ import {
 
 import s from "./fabricacion-workspace.module.css";
 
+/** Asistente IA oculto temporalmente en la UI de fabricación. */
+const SHOW_FABRICATION_AI_ASSIST = false;
+
 const TYPOLOGY_OPTIONS = [
   { label: "Corredera 2H", tipologia: "corredera", supported: true, icon: Columns3 },
   { label: "Abatible", tipologia: "abatible", supported: true, icon: BookOpen },
@@ -362,7 +365,8 @@ export function RecipeGuidedEditor({
     () => new Set()
   );
   const [showAiHelperManual, setShowAiHelperManual] = useState(false);
-  const showAiHelper = preferAiAssist || showAiHelperManual;
+  const showAiHelper =
+    SHOW_FABRICATION_AI_ASSIST && (preferAiAssist || showAiHelperManual);
   const [showBaseIncludes, setShowBaseIncludes] = useState(false);
   const [draggingProfileIndex, setDraggingProfileIndex] = useState<number | null>(
     null
@@ -568,16 +572,17 @@ export function RecipeGuidedEditor({
       onStartModeChange?.("ventora");
       return;
     }
-    onStartModeChange?.(selectedStartMode === "ai" ? "ai" : "blank");
+    onStartModeChange?.("blank");
   };
 
   const selectStartMode = (mode: "ventora" | "ai" | "blank") => {
+    if (mode === "ai" && !SHOW_FABRICATION_AI_ASSIST) return;
     if (mode === "ventora" && !basePreview) return;
     onStartModeChange?.(mode);
     if (onStartModeChange) return;
     if (mode === "ventora") applyVentoraBase();
     else if (mode === "blank") resetToBlankStructure();
-    else setShowAiHelperManual(true);
+    else if (SHOW_FABRICATION_AI_ASSIST) setShowAiHelperManual(true);
   };
 
   const applyVentoraBase = () => {
@@ -1189,7 +1194,7 @@ export function RecipeGuidedEditor({
         {!isGuidedDesktop ? <p>Esto no cambia el precio ni el PDF del cliente.</p> : null}
       </section>
       ) : null}
-      {!readOnly && !isGuidedDesktop ? (
+      {!readOnly && !isGuidedDesktop && SHOW_FABRICATION_AI_ASSIST ? (
         <RecipeTextAssistant
           recipe={recipe}
           providerName={providerName}
@@ -1350,16 +1355,18 @@ export function RecipeGuidedEditor({
                 >
                   Configurar desde cero
                 </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={selectedStartMode === "ai"}
-                  data-selected={selectedStartMode === "ai"}
-                  disabled={readOnly}
-                  onClick={() => selectStartMode("ai")}
-                >
-                  Ayúdame con IA
-                </button>
+                {SHOW_FABRICATION_AI_ASSIST ? (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedStartMode === "ai"}
+                    data-selected={selectedStartMode === "ai"}
+                    disabled={readOnly}
+                    onClick={() => selectStartMode("ai")}
+                  >
+                    Ayúdame con IA
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -1412,32 +1419,36 @@ export function RecipeGuidedEditor({
               </small>
               <span className={s.fabStartPrimaryCta}>Configuración personalizada</span>
             </button>
-            <div className={s.fabStartSecondary}>
-              <button
-                type="button"
-                disabled={readOnly}
-                onClick={() => selectStartMode("ai")}
-              >
-                Ayúdame con IA
-              </button>
-            </div>
+            {SHOW_FABRICATION_AI_ASSIST ? (
+              <div className={s.fabStartSecondary}>
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => selectStartMode("ai")}
+                >
+                  Ayúdame con IA
+                </button>
+              </div>
+            ) : null}
           </section>
         ) : null}
 
         {!basePreview && selectedTypologyOption.tipologia !== "personalizada" ? (
           <section className={s.fabStartBlock}>
             <p className={s.lineSetupBaseEmpty}>
-              No hay una base preparada para esta combinación. Puedes continuar con
-              Ayúdame con IA o Configurar desde cero.
+              No hay una base preparada para esta combinación. Puedes continuar
+              configurando desde cero.
             </p>
             <div className={s.fabStartSecondary}>
-              <button
-                type="button"
-                disabled={readOnly}
-                onClick={() => selectStartMode("ai")}
-              >
-                Ayúdame con IA
-              </button>
+              {SHOW_FABRICATION_AI_ASSIST ? (
+                <button
+                  type="button"
+                  disabled={readOnly}
+                  onClick={() => selectStartMode("ai")}
+                >
+                  Ayúdame con IA
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={readOnly}
@@ -1503,7 +1514,7 @@ export function RecipeGuidedEditor({
             >
               <strong>{option.label}</strong>
               <span>
-                {option.supported ? "Base disponible" : "Pendiente / manual o IA"}
+                {option.supported ? "Base disponible" : "Pendiente / manual"}
               </span>
             </button>
           ))}
@@ -1582,7 +1593,7 @@ export function RecipeGuidedEditor({
           </section>
         ) : null}
 
-        {!readOnly && !basePreview ? (
+        {!readOnly && !basePreview && SHOW_FABRICATION_AI_ASSIST ? (
           <section className={s.baseSuggestionCard} data-muted="true">
             <div className={s.baseSuggestionHeader}>
               <div>
@@ -1607,7 +1618,7 @@ export function RecipeGuidedEditor({
           </section>
         ) : null}
 
-        {!readOnly && basePreview ? (
+        {!readOnly && basePreview && SHOW_FABRICATION_AI_ASSIST ? (
           <div className={s.aiAssistInline}>
             <button
               type="button"
@@ -1811,7 +1822,7 @@ export function RecipeGuidedEditor({
 
       {isRecipeWorkspaceDesktop() ? (
       <>
-      {!readOnly && (preferAiAssist || showAiHelper) ? (
+      {!readOnly && SHOW_FABRICATION_AI_ASSIST && (preferAiAssist || showAiHelper) ? (
         <section className={s.recipeBuildAiAssist} aria-label="Ayuda con IA">
           <div className={s.recipeBuildAiAssistHeading}>
             <BrainCircuit size={18} aria-hidden="true" />
