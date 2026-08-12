@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   BrainCircuit,
   CheckCircle2,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Columns3,
   DoorOpen,
   GripVertical,
-  Info,
   Layers3,
-  MoreVertical,
   Package,
   PanelTop,
   Pencil,
@@ -20,30 +19,41 @@ import {
   SlidersHorizontal,
   Square,
   Trash2,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
 import { RecipeTextAssistant } from "@/features/fabricacion/components/recipe-text-assistant";
 import { RecipeCommercialLengthPicker } from "@/features/fabricacion/components/recipe-commercial-length-picker";
 import { RecipeProfileReferencePicker } from "@/features/fabricacion/components/recipe-profile-reference-picker";
+import {
+  FabricacionTipologiaPreview,
+  resolvePreviewZoneFromFuncion,
+  type FabricacionPreviewZone,
+} from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 
 import {
   BASES_TIPOLOGICAS_VENTORA,
   crearBaseTipologicaVentora,
+  esBaseTipologicaEstructural,
+  esBaseTipologicaValidada,
   resolverBaseEstructuralVentora,
   resumirBaseEstructural,
+  tipologiaPideSelectorHojas,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
   crearAccesorioFabricacionVacio,
   crearPerfilFabricacionVacio,
   crearVidrioFabricacionVacio,
+  countProfilesReadyForPauta,
+  isProfileReadyForPauta,
   patchFabricacionPerfil,
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import {
-  applyLargoToProfilesWithoutLength,
+  applyLargoToAllProfiles,
   applyTallerPerfilToComponent,
   collectFrequentLargosMm,
   collectTallerPerfilesFromRecipes,
@@ -54,7 +64,18 @@ import {
   type TallerPerfilRef,
 } from "@/features/fabricacion/services/taller-perfiles.service";
 import {
-  LINE_TEMPLATE_MATERIALS,
+  describeAccesorioReglaHumana,
+  describeAccesorioSheetLabel,
+  describePerfilSheetMeasure,
+  describeProfileRuleLegacy,
+  formatLargoComercialCorto,
+  groupProfilesForSheet,
+  labelBaseMedida,
+  labelReglaCantidadTipo,
+  type FabricacionSheetGroupId,
+  VENTORA_LARGO_COMERCIAL_PRESET_MM,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
   type CotizacionLineTemplateMaterial,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import {
@@ -71,28 +92,12 @@ import {
 
 import s from "./fabricacion-workspace.module.css";
 
-const MEASURE_LABELS: Record<FabricacionBaseMedida, string> = {
-  ancho_total: "Ancho total",
-  alto_total: "Alto total",
-  ancho_modulo: "Ancho de modulo",
-  alto_modulo: "Alto de modulo",
-  ancho_por_hoja: "Ancho dividido por hojas",
-  alto_por_hoja: "Alto total por hoja",
-  fijo_mm: "Medida fija",
-};
-
-const QUANTITY_LABELS: Record<FabricacionReglaCantidadTipo, string> = {
-  fija: "Cantidad fija",
-  por_hoja: "Por hoja",
-  por_modulo: "Por modulo",
-};
-
 const TYPOLOGY_OPTIONS = [
-  { label: "Corredera", tipologia: "corredera", supported: true, icon: Columns3 },
-  { label: "Abatible", tipologia: "abatible", supported: false, icon: BookOpen },
-  { label: "Proyectante", tipologia: "proyectante", supported: false, icon: PanelTop },
-  { label: "Fija", tipologia: "pano_fijo", supported: false, icon: Square },
-  { label: "Puerta", tipologia: "puerta_abatible", supported: false, icon: DoorOpen },
+  { label: "Corredera 2H", tipologia: "corredera", supported: true, icon: Columns3 },
+  { label: "Abatible", tipologia: "abatible", supported: true, icon: BookOpen },
+  { label: "Proyectante", tipologia: "proyectante", supported: true, icon: PanelTop },
+  { label: "Fijo", tipologia: "pano_fijo", supported: true, icon: Square },
+  { label: "Puerta", tipologia: "puerta_abatible", supported: true, icon: DoorOpen },
   { label: "Personalizada", tipologia: "personalizada", supported: false, icon: SlidersHorizontal },
 ] satisfies Array<{
   label: string;
@@ -162,8 +167,47 @@ function hasDocumentedAdjustment(
   return AJUSTE_DOCUMENTADO_OBS_RE.test(profile.observaciones ?? "");
 }
 
+function resolveProfileGroupBadge(
+  funcion: string
+): { id: FabricacionSheetGroupId; label: string } {
+  const key = funcion.trim().toLocaleLowerCase("es");
+  if (
+    key.includes("riel superior") ||
+    key.includes("riel inferior") ||
+    key.includes("jamba") ||
+    key.includes("marco superior") ||
+    key.includes("marco inferior") ||
+    key.includes("marco lateral") ||
+    key.includes("marco horizontal") ||
+    key.includes("marco vertical") ||
+    key.includes("guía") ||
+    key.includes("guia") ||
+    key.includes("perfil lateral")
+  ) {
+    return { id: "marco", label: "Marco" };
+  }
+  if (
+    key.includes("zócalo") ||
+    key.includes("zocalo") ||
+    key.includes("cabezal") ||
+    key.includes("pierna") ||
+    key.includes("traslapo") ||
+    key.includes("hoja superior") ||
+    key.includes("hoja inferior") ||
+    key.includes("hoja lateral") ||
+    key.includes("hoja horizontal") ||
+    key.includes("hoja vertical") ||
+    key.includes("travesaño") ||
+    key.includes("travesano") ||
+    key.includes("perfil de hoja")
+  ) {
+    return { id: "hojas", label: "Hoja" };
+  }
+  return { id: "otros", label: "Pieza" };
+}
+
 /**
- * - pending: base estructural sin ajuste conocido → "Por confirmar", sin badge
+ * - pending: base estructural sin ajuste conocido → vacío/0, sin badge
  * - suggested: ajuste precargado de documentación/plantilla → valor + "Sugerido"
  * - custom: el taller cambió un valor sugerido → valor, sin "Sugerido"
  * - set: valor presente sin origen sugerido → valor sin badge
@@ -191,22 +235,7 @@ function isVentoraSuggestedAdjustment(
 }
 
 function describeProfileRule(profile: FabricacionReceta["perfiles"][number]) {
-  const base = MEASURE_LABELS[profile.reglaMedida.base].toLocaleLowerCase("es");
-  const multiplier = profile.reglaMedida.multiplicador ?? 1;
-  const adjustment = profile.reglaMedida.ajusteMm ?? 0;
-  const measure = [
-    multiplier !== 1 ? `${base} por ${multiplier}` : base,
-    adjustment < 0
-      ? `menos ${Math.abs(adjustment)} mm`
-      : adjustment > 0
-        ? `mas ${adjustment} mm`
-        : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return `Genera ${profile.reglaCantidad.cantidad} pieza(s) ${QUANTITY_LABELS[
-    profile.reglaCantidad.tipo
-  ].toLocaleLowerCase("es")} de ${measure}.`;
+  return describeProfileRuleLegacy(profile);
 }
 
 function ConditionFields({
@@ -302,6 +331,8 @@ type Props = {
   onMaterialChange?: (value: CotizacionLineTemplateMaterial) => void;
   onStartModeChange?: (value: "ventora" | "ai" | "blank") => void;
   onBaseApplied?: () => void;
+  /** Persiste el borrador actual (p. ej. al tocar Guardar en el drawer). */
+  onPersistRecipe?: (recipe: FabricacionReceta) => Promise<void> | void;
 };
 
 export function RecipeGuidedEditor({
@@ -319,9 +350,9 @@ export function RecipeGuidedEditor({
   onRecipeChange,
   onProviderNameChange,
   onLineNameChange,
-  onMaterialChange,
   onStartModeChange,
   onBaseApplied,
+  onPersistRecipe,
 }: Props) {
   const isGuidedDesktop = desktopActiveStep != null;
   const isRecipeWorkspaceDesktop = () =>
@@ -330,7 +361,8 @@ export function RecipeGuidedEditor({
   const [expandedComponents, setExpandedComponents] = useState<Set<string>>(
     () => new Set()
   );
-  const [showAiHelper, setShowAiHelper] = useState(preferAiAssist);
+  const [showAiHelperManual, setShowAiHelperManual] = useState(false);
+  const showAiHelper = preferAiAssist || showAiHelperManual;
   const [showBaseIncludes, setShowBaseIncludes] = useState(false);
   const [draggingProfileIndex, setDraggingProfileIndex] = useState<number | null>(
     null
@@ -338,9 +370,22 @@ export function RecipeGuidedEditor({
   const [dragOverProfileIndex, setDragOverProfileIndex] = useState<number | null>(
     null
   );
-  const [openProfileActionsId, setOpenProfileActionsId] = useState<string | null>(
-    null
+  const [drawerProfileId, setDrawerProfileId] = useState<string | null>(null);
+  const [editingAccessoryIds, setEditingAccessoryIds] = useState<Set<string>>(
+    () => new Set()
   );
+  const [showGlassEditor, setShowGlassEditor] = useState(false);
+  const [showHabitualLengthPicker, setShowHabitualLengthPicker] = useState(false);
+  const [habitualLengthOverrideMm, setHabitualLengthOverrideMm] = useState<
+    number | null
+  >(null);
+  const [hoverPreviewZone, setHoverPreviewZone] =
+    useState<FabricacionPreviewZone>(null);
+  const [isPersistingDrawer, setIsPersistingDrawer] = useState(false);
+  const drawerScrollRef = useRef<HTMLDivElement>(null);
+  const drawerAdjustmentRef = useRef<HTMLInputElement>(null);
+  const recipeRef = useRef(recipe);
+  recipeRef.current = recipe;
   const selectedTypologyOption =
     TYPOLOGY_OPTIONS.find(
       (option) => option.tipologia === recipe.identidad.tipologia
@@ -349,10 +394,11 @@ export function RecipeGuidedEditor({
     tipologia: recipe.identidad.tipologia,
     hojas: recipe.identidad.hojas,
   });
-  const leafLabel =
-    selectedTypologyOption.label === "Personalizada"
-      ? "Hoja personalizada"
-      : `Hoja ${selectedTypologyOption.label.toLowerCase()}`;
+  const isValidatedBase =
+    selectedTypologyBase != null && esBaseTipologicaValidada(selectedTypologyBase);
+  const isStructuralBase =
+    selectedTypologyBase != null && esBaseTipologicaEstructural(selectedTypologyBase);
+  const showHojasPicker = tipologiaPideSelectorHojas(recipe.identidad.tipologia);
   const [adjustedAwayFromSuggestion, setAdjustedAwayFromSuggestion] = useState<
     Set<string>
   >(() => new Set());
@@ -382,10 +428,12 @@ export function RecipeGuidedEditor({
     [basePreview]
   );
   const selectedStartMode = startMode ?? (basePreview ? "ventora" : "blank");
-
-  useEffect(() => {
-    if (preferAiAssist) setShowAiHelper(true);
-  }, [preferAiAssist]);
+  const recipeUsesStructuralBase =
+    isStructuralBase &&
+    recipe.perfiles.length > 0 &&
+    (recipe.notasValidacion ?? []).some((note) =>
+      /estructura preparada por ventora/i.test(note)
+    );
 
   const pautaPreview = useMemo(() => {
     if (!pautaInput || recipe.perfiles.length === 0) return null;
@@ -420,11 +468,71 @@ export function RecipeGuidedEditor({
       if (typeof largo !== "number" || largo <= 0) continue;
       counts.set(largo, (counts.get(largo) ?? 0) + 1);
     }
-    if (counts.size === 0) return null;
+    if (counts.size === 0) {
+      // Solo preset sugerido Ventora; el valor se persiste en la receta al aplicar.
+      return VENTORA_LARGO_COMERCIAL_PRESET_MM;
+    }
     return Array.from(counts.entries()).sort(
       (left, right) => right[1] - left[1] || left[0] - right[0]
-    )[0]?.[0] ?? null;
+    )[0]?.[0] ?? VENTORA_LARGO_COMERCIAL_PRESET_MM;
   }, [profilesWithoutLength, recipe.perfiles]);
+
+  const habitualLengthMm =
+    habitualLengthOverrideMm ??
+    applyLengthCandidate ??
+    VENTORA_LARGO_COMERCIAL_PRESET_MM;
+
+  const profileSheetGroups = useMemo(
+    () => groupProfilesForSheet(recipe.perfiles),
+    [recipe.perfiles]
+  );
+
+  const profileProgress = useMemo(() => {
+    const total = recipe.perfiles.length;
+    const ready = countProfilesReadyForPauta(recipe);
+    return {
+      total,
+      ready,
+      pending: total - ready,
+    };
+  }, [recipe.perfiles]);
+
+  const firstPendingProfileId = useMemo(() => {
+    for (const profile of recipe.perfiles) {
+      if (!isProfileReadyForPauta(profile)) return profile.id;
+    }
+    return null;
+  }, [recipe.perfiles]);
+
+  const drawerProfile = drawerProfileId
+    ? recipe.perfiles.find((entry) => entry.id === drawerProfileId) ?? null
+    : null;
+  const drawerProfileIndex = drawerProfile
+    ? recipe.perfiles.findIndex((entry) => entry.id === drawerProfile.id)
+    : -1;
+
+  useEffect(() => {
+    if (!drawerProfileId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerProfileId(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [drawerProfileId]);
+
+  useEffect(() => {
+    if (!drawerProfileId) return;
+    const scrollEl = drawerScrollRef.current;
+    if (scrollEl) scrollEl.scrollTop = 0;
+    const focusTimer = window.requestAnimationFrame(() => {
+      drawerAdjustmentRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(focusTimer);
+  }, [drawerProfileId]);
+
+  const sheetPreviewZone: FabricacionPreviewZone = drawerProfile
+    ? resolvePreviewZoneFromFuncion(drawerProfile.funcion)
+    : hoverPreviewZone;
 
   const updateIdentity = (
     patch: Partial<FabricacionReceta["identidad"]>
@@ -439,6 +547,9 @@ export function RecipeGuidedEditor({
     const catalogEntry = BASES_TIPOLOGICAS_VENTORA.find(
       (entry) => entry.tipologia === tipologia
     );
+    const typologyOption =
+      TYPOLOGY_OPTIONS.find((option) => option.tipologia === tipologia) ??
+      selectedTypologyOption;
     const nextHojas = catalogEntry?.hojasSugeridas ?? recipe.identidad.hojas;
     const nextModulos =
       catalogEntry?.modulosSugeridos ?? recipe.identidad.modulos;
@@ -447,6 +558,7 @@ export function RecipeGuidedEditor({
       apertura: tipologia === "personalizada" ? null : tipologia,
       hojas: nextHojas,
       modulos: nextModulos,
+      nombre: `${lineName.trim() || "Línea"} · ${typologyOption.label}`,
     });
     const resolved = resolverBaseEstructuralVentora({
       tipologia,
@@ -465,7 +577,7 @@ export function RecipeGuidedEditor({
     if (onStartModeChange) return;
     if (mode === "ventora") applyVentoraBase();
     else if (mode === "blank") resetToBlankStructure();
-    else setShowAiHelper(true);
+    else setShowAiHelperManual(true);
   };
 
   const applyVentoraBase = () => {
@@ -547,33 +659,11 @@ export function RecipeGuidedEditor({
     setDragOverProfileIndex(null);
   };
 
-  useEffect(() => {
-    if (!openProfileActionsId) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest(`.${s.recipeBuildRowActions}`)) return;
-      setOpenProfileActionsId(null);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenProfileActionsId(null);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [openProfileActionsId]);
-
   const removeProfile = (profileId: string) => {
     onRecipeChange({
       ...recipe,
       perfiles: recipe.perfiles.filter((entry) => entry.id !== profileId),
     });
-    setOpenProfileActionsId((current) =>
-      current === profileId ? null : current
-    );
   };
 
   const removeGlass = (glassId: string) => {
@@ -623,6 +713,459 @@ export function RecipeGuidedEditor({
     });
   };
 
+  const closeProfileDrawer = () => setDrawerProfileId(null);
+
+  const goToAdjacentProfile = (direction: -1 | 1) => {
+    if (drawerProfileIndex < 0) return;
+    const nextIndex = drawerProfileIndex + direction;
+    const next = recipe.perfiles[nextIndex];
+    if (!next) return;
+    setDrawerProfileId(next.id);
+  };
+
+  const openProfileDrawer = (profileId: string) => {
+    setDrawerProfileId(profileId);
+  };
+
+  const openNextPendingProfile = () => {
+    if (firstPendingProfileId) {
+      openProfileDrawer(firstPendingProfileId);
+      return;
+    }
+    const first = recipe.perfiles[0];
+    if (first) openProfileDrawer(first.id);
+  };
+
+  const persistDrawerRecipe = async (options?: {
+    close?: boolean;
+    goNext?: boolean;
+  }) => {
+    if (readOnly) {
+      if (options?.close) closeProfileDrawer();
+      return;
+    }
+    if (onPersistRecipe) {
+      setIsPersistingDrawer(true);
+      try {
+        await onPersistRecipe(recipeRef.current);
+      } finally {
+        setIsPersistingDrawer(false);
+      }
+    }
+    if (options?.goNext) {
+      goToAdjacentProfile(1);
+      return;
+    }
+    if (options?.close !== false) {
+      closeProfileDrawer();
+    }
+  };
+
+  const applyAdjustmentValue = (
+    profileId: string,
+    raw: string,
+    profile: FabricacionComponentePerfil
+  ) => {
+    if (!raw.trim()) {
+      updateProfile(profileId, (entry) => {
+        const pending = (entry.datosPendientes ?? []).filter(
+          (detail) => !AJUSTE_PENDIENTE_RE.test(detail)
+        );
+        return {
+          ...entry,
+          reglaMedida: {
+            ...entry.reglaMedida,
+            ajusteMm: 0,
+          },
+          datosPendientes: pending.length > 0 ? pending : undefined,
+        };
+      });
+      setAdjustedAwayFromSuggestion((prev) => {
+        if (!prev.has(profileId)) return prev;
+        const next = new Set(prev);
+        next.delete(profileId);
+        return next;
+      });
+      return;
+    }
+    const nextAdjustment = integerNumber(raw);
+    if (
+      suggestedAdjustmentIds.has(profileId) ||
+      hasDocumentedAdjustment(profile)
+    ) {
+      setAdjustedAwayFromSuggestion((prev) => {
+        const next = new Set(prev);
+        next.add(profileId);
+        return next;
+      });
+    }
+    updateProfile(profileId, (entry) => {
+      const pending = (entry.datosPendientes ?? []).filter(
+        (detail) => !AJUSTE_PENDIENTE_RE.test(detail)
+      );
+      return {
+        ...entry,
+        reglaMedida: {
+          ...entry.reglaMedida,
+          ajusteMm: nextAdjustment,
+        },
+        datosPendientes: pending.length > 0 ? pending : undefined,
+      };
+    });
+  };
+
+  const renderProfileDrawerFields = (
+    profile: FabricacionComponentePerfil,
+    index: number
+  ) => {
+    const adjustmentState = getAdjustmentDisplayState(
+      profile,
+      adjustedAwayFromSuggestion.has(profile.id)
+    );
+    const showSuggestedBadge = adjustmentState === "suggested";
+    const showCustomBadge = adjustmentState === "custom";
+    const currentAdjustment = profile.reglaMedida.ajusteMm;
+    const sheetMeasure = describePerfilSheetMeasure(profile);
+    const groupBadge = resolveProfileGroupBadge(profile.funcion);
+    const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
+    const isConfigured = isProfileReadyForPauta(profile);
+    const previewZone = resolvePreviewZoneFromFuncion(profile.funcion);
+    const hasPrev = index > 0;
+    const hasNext = index < recipe.perfiles.length - 1;
+
+    return (
+      <div
+        className={s.fabDrawerPiece}
+        role="group"
+        aria-label={`Editar ${pieceName}`}
+      >
+        <header className={s.fabDrawerPieceHeader}>
+          <div className={s.fabDrawerPieceHeaderMain}>
+            <div className={s.fabDrawerPieceBadges}>
+              <span className={s.fabDrawerBadge} data-group={groupBadge.id}>
+                {groupBadge.label}
+              </span>
+              <span
+                className={s.fabDrawerStatus}
+                data-tone={isConfigured ? "ready" : "pending"}
+              >
+                {isConfigured ? "Configurado" : "Pendiente"}
+              </span>
+            </div>
+            <h2>{pieceName}</h2>
+            <p>Edita cómo lo corta tu taller</p>
+          </div>
+          <button
+            type="button"
+            className={s.fabDrawerClose}
+            aria-label="Cerrar editor"
+            onClick={closeProfileDrawer}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className={s.fabDrawerNav}>
+          <button
+            type="button"
+            className={s.fabDrawerNavBtn}
+            disabled={!hasPrev}
+            onClick={() => goToAdjacentProfile(-1)}
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            Anterior
+          </button>
+          <span>
+            Pieza {index + 1} de {recipe.perfiles.length}
+          </span>
+          <button
+            type="button"
+            className={s.fabDrawerNavBtn}
+            disabled={!hasNext}
+            onClick={() => goToAdjacentProfile(1)}
+          >
+            Siguiente
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className={s.fabDrawerPreviewRow}>
+          <FabricacionTipologiaPreview
+            tipologia={recipe.identidad.tipologia}
+            hojas={recipe.identidad.hojas}
+            highlightZone={previewZone}
+            size="sm"
+          />
+          <dl className={s.fabDrawerSummary}>
+            <div>
+              <dt>Función</dt>
+              <dd>{pieceName}</dd>
+            </div>
+            <div>
+              <dt>Se calcula según</dt>
+              <dd>{labelBaseMedida(profile.reglaMedida.base, "human")}</dd>
+            </div>
+            <div>
+              <dt>Cantidad</dt>
+              <dd>
+                {Math.max(1, Math.round(profile.reglaCantidad.cantidad))}{" "}
+                {Math.max(1, Math.round(profile.reglaCantidad.cantidad)) === 1
+                  ? "pieza"
+                  : "piezas"}
+              </dd>
+            </div>
+            <div>
+              <dt>Largo comercial</dt>
+              <dd>
+                {formatLargoComercialCorto(profile.largoComercialMm) ??
+                  "Pendiente"}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className={s.fabDrawerScroll} ref={drawerScrollRef}>
+          <section className={s.fabDrawerSection}>
+            <h3>Medida de corte</h3>
+            <label>
+              <span>Calcular según</span>
+              <select
+                value={profile.reglaMedida.base}
+                onChange={(event) =>
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    reglaMedida: {
+                      ...entry.reglaMedida,
+                      base: event.target.value as FabricacionBaseMedida,
+                    },
+                  }))
+                }
+                disabled={readOnly}
+              >
+                {FABRICACION_BASES_MEDIDA.map((base) => (
+                  <option key={base} value={base}>
+                    {labelBaseMedida(base, "technical")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className={s.fabDrawerAdjustment}>
+              <label>
+                <span>Ajuste (mm)</span>
+                <input
+                  ref={drawerAdjustmentRef}
+                  type="number"
+                  value={currentAdjustment == null ? "" : currentAdjustment}
+                  placeholder="0"
+                  onChange={(event) =>
+                    applyAdjustmentValue(profile.id, event.target.value, profile)
+                  }
+                  disabled={readOnly}
+                />
+              </label>
+              {showSuggestedBadge ? (
+                <span className={s.recipeBuildSuggestedBadge}>Sugerido</span>
+              ) : null}
+              {showCustomBadge ? (
+                <span className={s.recipeBuildCustomBadge}>Personalizado</span>
+              ) : null}
+            </div>
+            <p className={s.fabDrawerHint}>
+              Usa negativo si tu taller descuenta mm al corte (ej. jamba −3 mm).
+            </p>
+          </section>
+
+          <section className={s.fabDrawerSection}>
+            <h3>Largo comercial</h3>
+            <div className={s.fabDrawerFieldBlock}>
+              <span className={s.fabDrawerFieldLabel}>Barra que compras</span>
+              <RecipeCommercialLengthPicker
+                value={profile.largoComercialMm}
+                usedByWorkshop={frequentLargos.usedByWorkshop}
+                otherFrequent={frequentLargos.otherFrequent}
+                readOnly={readOnly}
+                onChange={(nextValue) =>
+                  updateProfile(profile.id, (entry) => {
+                    const pending = (entry.datosPendientes ?? []).filter(
+                      (detail) => !/largo comercial/i.test(detail)
+                    );
+                    if (nextValue == null) {
+                      pending.push("Confirmar largo comercial");
+                    }
+                    return {
+                      ...entry,
+                      largoComercialMm: nextValue,
+                      datosPendientes: pending.length > 0 ? pending : undefined,
+                    };
+                  })
+                }
+              />
+            </div>
+            {!readOnly && profile.largoComercialMm == null ? (
+              <button
+                type="button"
+                className={s.fabDrawerQuickLargo}
+                onClick={() =>
+                  updateProfile(profile.id, (entry) => {
+                    const pending = (entry.datosPendientes ?? []).filter(
+                      (detail) => !/largo comercial/i.test(detail)
+                    );
+                    return {
+                      ...entry,
+                      largoComercialMm: habitualLengthMm,
+                      datosPendientes: pending.length > 0 ? pending : undefined,
+                    };
+                  })
+                }
+              >
+                Usar {habitualLengthLabel} en esta pieza
+              </button>
+            ) : null}
+          </section>
+
+          <section className={s.fabDrawerSection}>
+            <h3>Cantidad</h3>
+            <label>
+              <span>Cantidad de piezas</span>
+              <input
+                type="number"
+                min="1"
+                value={profile.reglaCantidad.cantidad}
+                onChange={(event) =>
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    reglaCantidad: {
+                      ...entry.reglaCantidad,
+                      cantidad: positiveNumber(event.target.value),
+                    },
+                  }))
+                }
+                disabled={readOnly}
+              />
+            </label>
+          </section>
+
+          <section className={s.fabDrawerSection}>
+            <h3>Identidad de la pieza</h3>
+            <label>
+              <span>Función</span>
+              <input
+                value={profile.funcion}
+                placeholder={`Perfil ${index + 1}`}
+                onChange={(event) =>
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    funcion: event.target.value,
+                  }))
+                }
+                disabled={readOnly}
+              />
+            </label>
+            <label>
+              <span>Nombre usado en taller</span>
+              <input
+                value={profile.nombrePerfil}
+                placeholder="Opcional"
+                onChange={(event) =>
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    nombrePerfil: event.target.value,
+                  }))
+                }
+                disabled={readOnly}
+              />
+            </label>
+            <div className={s.fabDrawerFieldBlock}>
+              <span className={s.fabDrawerFieldLabel}>Código / perfil</span>
+              <RecipeProfileReferencePicker
+                profile={profile}
+                recipe={recipe}
+                catalog={tallerPerfilCatalog}
+                readOnly={readOnly}
+                onSelect={(tallerPerfil) =>
+                  assignTallerPerfil(profile.id, tallerPerfil)
+                }
+              />
+            </div>
+          </section>
+
+          <section className={s.fabDrawerSection}>
+            <h3>Opciones</h3>
+            <label className={s.fabDrawerCheckbox}>
+              <input
+                type="checkbox"
+                checked={profile.requerido}
+                onChange={(event) =>
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    requerido: event.target.checked,
+                  }))
+                }
+                disabled={readOnly}
+              />
+              <span>Componente obligatorio</span>
+            </label>
+            {!readOnly ? (
+              <button
+                type="button"
+                className={`${s.dangerTextButton} ${s.fabDrawerDanger}`}
+                onClick={() => {
+                  removeProfile(profile.id);
+                  closeProfileDrawer();
+                }}
+              >
+                <Trash2 size={15} /> Eliminar perfil
+              </button>
+            ) : null}
+          </section>
+        </div>
+
+        <footer className={s.fabDrawerFooter}>
+          <button
+            type="button"
+            className={s.fabGhostAction}
+            disabled={isPersistingDrawer}
+            onClick={closeProfileDrawer}
+          >
+            Cancelar
+          </button>
+          <div className={s.fabDrawerFooterPrimary}>
+            {hasNext && !readOnly ? (
+              <button
+                type="button"
+                className={s.secondaryButton}
+                disabled={isPersistingDrawer}
+                onClick={() => void persistDrawerRecipe({ goNext: true })}
+              >
+                {isPersistingDrawer ? "Guardando…" : "Guardar y siguiente"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={`${s.primaryButton} ${s.fabPrimaryCta}`}
+              disabled={isPersistingDrawer}
+              onClick={() => void persistDrawerRecipe({ close: true })}
+            >
+              {isPersistingDrawer ? "Guardando…" : "Guardar cambios"}
+            </button>
+          </div>
+        </footer>
+      </div>
+    );
+  };
+
+  const habitualLengthLabel =
+    formatLargoComercialCorto(habitualLengthMm) ?? "6,00 m";
+
+  const allProfilesUseHabitualLength = useMemo(
+    () =>
+      recipe.perfiles.length > 0 &&
+      recipe.perfiles.every(
+        (profile) => profile.largoComercialMm === habitualLengthMm
+      ),
+    [recipe.perfiles, habitualLengthMm]
+  );
+
   return (
     <div
       className={s.editorFlow}
@@ -655,233 +1198,256 @@ export function RecipeGuidedEditor({
         />
       ) : null}
       {isGuidedDesktop && desktopActiveStep === "base" ? (
-      <section id="recipe-identity" className={`${s.editorSection} ${s.lineSetupCard}`}>
-        <div className={s.lineSetupCardHeading}>
-          <h2>1. Datos de la línea</h2>
-          <p>Define qué estás fabricando. Con esto basta para empezar.</p>
-        </div>
+      <section id="recipe-identity" className={`${s.editorSection} ${s.lineSetupCard} ${s.fabTypologyHero}`}>
+        <header className={s.fabSheetHeader}>
+          <h1>{lineName.trim() || "Tu línea"}</h1>
+          <p className={s.fabCompactMeta}>
+            {providerName ? <span>{providerName}</span> : null}
+            {providerName && material ? <span aria-hidden="true"> · </span> : null}
+            {material ? <span>{material}</span> : null}
+            {!providerName && !material ? (
+              <span>Completa los datos de la línea</span>
+            ) : null}
+          </p>
+        </header>
 
-        <div className={s.lineSetupPrimaryGrid}>
-          <label>
-            <span>Proveedor <em>(opcional)</em></span>
-            <select
-              value={providerName}
-              onChange={(event) => onProviderNameChange(event.target.value)}
-              disabled={readOnly}
-            >
-              <option value="">Sin definir</option>
-              {providerName && !providerOptions.includes(providerName) ? (
-                <option value={providerName}>{providerName}</option>
-              ) : null}
-              {providerOptions.map((provider) => (
-                <option key={provider} value={provider}>{provider}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Línea <b aria-hidden="true">*</b></span>
-            <input
-              value={lineName}
-              onChange={(event) => onLineNameChange(event.target.value)}
-              disabled={readOnly}
-              required
-            />
-          </label>
-          <label>
-            <span>Nombre interno de la receta <b aria-hidden="true">*</b></span>
-            <input
-              value={recipe.identidad.nombre}
-              onChange={(event) => updateIdentity({ nombre: event.target.value })}
-              disabled={readOnly}
-              required
-            />
-          </label>
-        </div>
-
-        <div className={s.lineSetupClassification}>
-          <label className={s.lineSetupMaterialField}>
-            <span>Material <b aria-hidden="true">*</b></span>
-            <select
-              value={material}
-              onChange={(event) =>
-                onMaterialChange?.(event.target.value as CotizacionLineTemplateMaterial)
-              }
-              disabled={readOnly || !onMaterialChange}
-              required
-            >
-              {LINE_TEMPLATE_MATERIALS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-
-          <fieldset className={s.lineSetupTypologyFieldset}>
-            <legend>Tipología <b aria-hidden="true">*</b></legend>
-            <div className={s.lineSetupTypologyGrid} role="radiogroup" aria-label="Tipología de la línea">
-              {TYPOLOGY_OPTIONS.map((option) => {
-                const Icon = option.icon;
-                const selected = selectedTypologyOption.tipologia === option.tipologia;
-                return (
-                  <button
-                    key={option.tipologia}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={s.lineSetupTypologyOption}
-                    data-selected={selected}
-                    onClick={() => selectTypology(option.tipologia)}
-                    disabled={readOnly}
-                  >
-                    <Icon size={28} strokeWidth={1.6} aria-hidden="true" />
-                    <strong>{option.label}</strong>
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        </div>
-
-        <div className={s.lineSetupSecondaryGrid}>
-          <label>
-            <span>Hojas <b aria-hidden="true">*</b></span>
-            <select
-              value={recipe.identidad.hojas}
-              onChange={(event) => updateIdentity({ hojas: positiveNumber(event.target.value) })}
-              disabled={readOnly}
-              required
-            >
-              {[1, 2, 3, 4, 5, 6].map((leaves) => (
-                <option key={leaves} value={leaves}>
-                  {leaves} {leaves === 1 ? "hoja" : "hojas"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Variante / apertura personalizada <em>(opcional)</em></span>
-            <input
-              value={recipe.identidad.variante}
-              placeholder="Ej. Corredera con traba multipunto"
-              onChange={(event) => updateIdentity({ variante: event.target.value })}
-              disabled={readOnly}
-            />
-          </label>
-        </div>
-
-        <section className={s.lineSetupBaseSection} aria-labelledby="line-setup-base-title">
-          <div>
-            <h3 id="line-setup-base-title">¿Cómo quieres comenzar?</h3>
-            <p>Parte con una estructura preparada o crea tu propia receta.</p>
+        {(!lineName.trim() || !providerName) ? (
+          <div className={s.fabCompactMeta}>
+            {!lineName.trim() ? (
+              <label>
+                <span className={s.srOnly}>Línea</span>
+                <input
+                  value={lineName}
+                  onChange={(event) => onLineNameChange(event.target.value)}
+                  placeholder="Nombre de la línea"
+                  disabled={readOnly}
+                  required
+                />
+              </label>
+            ) : null}
+            {!providerName ? (
+              <label>
+                <span className={s.srOnly}>Proveedor</span>
+                <select
+                  value={providerName}
+                  onChange={(event) => onProviderNameChange(event.target.value)}
+                  disabled={readOnly}
+                >
+                  <option value="">Proveedor</option>
+                  {providerOptions.map((provider) => (
+                    <option key={provider} value={provider}>{provider}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
-          <div className={s.lineSetupBaseChoices} role="radiogroup" aria-label="Cómo comenzar la receta">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={selectedStartMode === "ventora"}
-              className={s.lineSetupBaseChoice}
-              data-selected={selectedStartMode === "ventora"}
-              disabled={readOnly || !basePreview}
-              onClick={() => selectStartMode("ventora")}
-            >
-              <span className={s.lineSetupRadio} aria-hidden="true" />
-              <span className={s.lineSetupBaseChoiceIcon} aria-hidden="true">
-                <Layers3 size={18} strokeWidth={1.75} />
-              </span>
-              <span className={s.lineSetupBaseChoiceBody}>
-                <span className={s.lineSetupBaseChoiceTitle}>
-                  <strong>Usar base de Ventora</strong>
+        ) : null}
+
+        <h2 className={s.fabTypologyQuestion}>¿Qué fabricas con esta línea?</h2>
+        <div className={s.fabTypologyGrid} role="radiogroup" aria-label="Tipología de la línea">
+          {TYPOLOGY_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const selected = selectedTypologyOption.tipologia === option.tipologia;
+            return (
+              <button
+                key={option.tipologia}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={s.fabTypologyCard}
+                data-selected={selected}
+                onClick={() => selectTypology(option.tipologia)}
+                disabled={readOnly}
+              >
+                <span className={s.fabTypologyCardVisual} aria-hidden="true">
+                  {option.tipologia === "personalizada" ? (
+                    <Icon size={28} strokeWidth={1.5} />
+                  ) : (
+                    <FabricacionTipologiaPreview
+                      tipologia={option.tipologia}
+                      hojas={
+                        option.tipologia === "corredera"
+                          ? 2
+                          : option.tipologia === "abatible" ||
+                              option.tipologia === "puerta_abatible"
+                            ? recipe.identidad.hojas
+                            : 1
+                      }
+                      size="sm"
+                    />
+                  )}
+                </span>
+                <strong>{option.label}</strong>
+              </button>
+            );
+          })}
+        </div>
+
+        {showHojasPicker && selectedTypologyBase ? (
+          <section className={s.fabHojasPicker} aria-label="Número de hojas">
+            <h3>¿Cuántas hojas tiene esta tipología?</h3>
+            <div className={s.fabHojasPickerOptions} role="radiogroup">
+              {[1, 2].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  role="radio"
+                  aria-checked={recipe.identidad.hojas === count}
+                  data-selected={recipe.identidad.hojas === count ? "true" : "false"}
+                  disabled={readOnly}
+                  onClick={() => updateIdentity({ hojas: count })}
+                >
+                  {count} {count === 1 ? "hoja" : "hojas"}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {basePreview && selectedTypologyBase ? (
+          <section className={s.fabStartBlock} aria-labelledby="fab-start-title">
+            <h3 id="fab-start-title">Empezar con</h3>
+            <div role="radiogroup" aria-label="Cómo comenzar la fabricación">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={selectedStartMode === "ventora"}
+                className={s.fabStartPrimary}
+                data-selected={selectedStartMode === "ventora"}
+                disabled={readOnly || !basePreview}
+                onClick={() => selectStartMode("ventora")}
+              >
+                <span className={s.lineSetupRadio} aria-hidden="true" />
+                <span>
+                  <strong>
+                    {isValidatedBase
+                      ? "Base Ventora disponible"
+                      : "Estructura preparada"}
+                  </strong>
                   {basePreview ? (
-                    <em className={s.lineSetupRecommendedBadge}>Recomendado</em>
+                    <em className={s.lineSetupRecommendedBadge}>
+                      {isValidatedBase ? "Lista para revisar" : "Recomendado"}
+                    </em>
                   ) : null}
                 </span>
                 <small>
-                  Ventora prepara las funciones habituales para esta tipología. Tú
-                  revisas y ajustas lo que usa tu taller.
+                  {isValidatedBase
+                    ? "Ventora prepara las funciones habituales para esta tipología. Tú revisas y ajustas lo que usa tu taller."
+                    : "Ventora agregará las piezas habituales. Tú completas las medidas de corte."}
                 </small>
-              </span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={selectedStartMode === "ai"}
-              className={s.lineSetupBaseChoice}
-              data-selected={selectedStartMode === "ai"}
-              disabled={readOnly}
-              onClick={() => selectStartMode("ai")}
-            >
-              <span className={s.lineSetupRadio} aria-hidden="true" />
-              <span className={s.lineSetupBaseChoiceIcon} aria-hidden="true">
-                <BrainCircuit size={18} strokeWidth={1.75} />
-              </span>
-              <span className={s.lineSetupBaseChoiceBody}>
-                <span className={s.lineSetupBaseChoiceTitle}>
-                  <strong>Ayudarme con IA</strong>
+                <span className={s.fabStartPrimaryCta}>
+                  {isValidatedBase ? "Preparar fabricación" : "Preparar estructura"}
                 </span>
-                <small>
-                  Describe cómo fabricas y Ventora prepara un borrador para que lo
-                  revises.
-                </small>
-              </span>
-            </button>
+              </button>
+              <div className={s.fabStartSecondary}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedStartMode === "blank"}
+                  data-selected={selectedStartMode === "blank"}
+                  disabled={readOnly}
+                  onClick={() => selectStartMode("blank")}
+                >
+                  Configurar desde cero
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedStartMode === "ai"}
+                  data-selected={selectedStartMode === "ai"}
+                  disabled={readOnly}
+                  onClick={() => selectStartMode("ai")}
+                >
+                  Ayúdame con IA
+                </button>
+              </div>
+            </div>
+
+            {selectedStartMode === "ventora" && basePreview ? (
+              <div className={s.lineSetupBaseSummary}>
+                <div>
+                  <strong>{basePreviewSummary?.title}</strong>
+                  <span>{basePreviewSummary?.countsLabel}</span>
+                </div>
+                <button
+                  type="button"
+                  className={s.lineSetupBaseIncludesToggle}
+                  onClick={() => setShowBaseIncludes((current) => !current)}
+                  aria-expanded={showBaseIncludes}
+                >
+                  {showBaseIncludes ? "Ocultar detalle" : "Ver qué incluye"}
+                </button>
+                {showBaseIncludes ? (
+                  <ul className={s.lineSetupBaseIncludes}>
+                    {basePreview.perfiles.slice(0, 8).map((profile) => (
+                      <li key={profile.id}>{profile.funcion || profile.nombrePerfil}</li>
+                    ))}
+                    {basePreview.vidrios.map((glass) => (
+                      <li key={glass.id}>{glass.nombre || "Vidrio"}</li>
+                    ))}
+                    {basePreview.accesorios.map((accessory) => (
+                      <li key={accessory.id}>{accessory.nombre || "Accesorio"}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {!basePreview && selectedTypologyOption.tipologia === "personalizada" ? (
+          <section className={s.fabStartBlock}>
             <button
               type="button"
-              role="radio"
-              aria-checked={selectedStartMode === "blank"}
-              className={s.lineSetupBaseChoice}
-              data-selected={selectedStartMode === "blank"}
+              className={s.fabStartPrimary}
+              data-selected={selectedStartMode === "blank" ? "true" : "false"}
               disabled={readOnly}
               onClick={() => selectStartMode("blank")}
             >
-              <span className={s.lineSetupRadio} aria-hidden="true" />
-              <span className={s.lineSetupBaseChoiceIcon} aria-hidden="true">
-                <SlidersHorizontal size={18} strokeWidth={1.75} />
+              <span>
+                <strong>Empezar desde cero</strong>
               </span>
-              <span className={s.lineSetupBaseChoiceBody}>
-                <span className={s.lineSetupBaseChoiceTitle}>
-                  <strong>Empezar desde cero</strong>
-                </span>
-                <small>Para talleres que ya conocen completamente su receta.</small>
-              </span>
+              <small>
+                Agrega las piezas que usa tu taller y Ventora las reutilizará al cotizar.
+              </small>
+              <span className={s.fabStartPrimaryCta}>Configuración personalizada</span>
             </button>
-          </div>
-
-          {selectedStartMode === "ventora" && basePreview && selectedTypologyBase ? (
-            <div className={s.lineSetupBaseSummary}>
-              <div>
-                <strong>{basePreviewSummary?.title}</strong>
-                <span>{basePreviewSummary?.countsLabel}</span>
-              </div>
+            <div className={s.fabStartSecondary}>
               <button
                 type="button"
-                className={s.lineSetupBaseIncludesToggle}
-                onClick={() => setShowBaseIncludes((current) => !current)}
-                aria-expanded={showBaseIncludes}
+                disabled={readOnly}
+                onClick={() => selectStartMode("ai")}
               >
-                {showBaseIncludes ? "Ocultar detalle" : "Ver qué incluye"}
+                Ayúdame con IA
               </button>
-              {showBaseIncludes ? (
-                <ul className={s.lineSetupBaseIncludes}>
-                  {basePreview.perfiles.slice(0, 8).map((profile) => (
-                    <li key={profile.id}>{profile.funcion || profile.nombrePerfil}</li>
-                  ))}
-                  {basePreview.vidrios.map((glass) => (
-                    <li key={glass.id}>{glass.nombre || "Vidrio"}</li>
-                  ))}
-                  {basePreview.accesorios.map((accessory) => (
-                    <li key={accessory.id}>{accessory.nombre || "Accesorio"}</li>
-                  ))}
-                </ul>
-              ) : null}
             </div>
-          ) : null}
+          </section>
+        ) : null}
 
-          {selectedStartMode === "ventora" && !basePreview ? (
+        {!basePreview && selectedTypologyOption.tipologia !== "personalizada" ? (
+          <section className={s.fabStartBlock}>
             <p className={s.lineSetupBaseEmpty}>
               No hay una base preparada para esta combinación. Puedes continuar con
-              Ayudarme con IA o Empezar desde cero.
+              Ayúdame con IA o Configurar desde cero.
             </p>
-          ) : null}
-        </section>
+            <div className={s.fabStartSecondary}>
+              <button
+                type="button"
+                disabled={readOnly}
+                onClick={() => selectStartMode("ai")}
+              >
+                Ayúdame con IA
+              </button>
+              <button
+                type="button"
+                disabled={readOnly}
+                onClick={() => selectStartMode("blank")}
+              >
+                Configurar desde cero
+              </button>
+            </div>
+          </section>
+        ) : null}
       </section>
       ) : null}
 
@@ -975,12 +1541,18 @@ export function RecipeGuidedEditor({
           <section className={s.baseSuggestionCard}>
             <div className={s.baseSuggestionHeader}>
               <div>
-                <span>Base disponible en Ventora</span>
+                <span>
+                  {isValidatedBase ? "Base Ventora disponible" : "Estructura preparada"}
+                </span>
                 <h3>
                   {selectedTypologyBase?.label} · {recipe.identidad.hojas}{" "}
                   {recipe.identidad.hojas === 1 ? "hoja" : "hojas"}
                 </h3>
-                <p>Prepara una estructura orientativa. Los codigos, ajustes en mm y largos comerciales quedan como Por confirmar.</p>
+                <p>
+                  {isValidatedBase
+                    ? "Prepara una estructura orientativa. Los códigos, ajustes en mm y largos comerciales quedan como Por confirmar."
+                    : "Ventora agregará las piezas habituales. Tú completas las medidas de corte."}
+                </p>
               </div>
               <span className={s.baseSuggestionBadge}>
                 <Layers3 size={15} aria-hidden="true" />
@@ -1003,7 +1575,7 @@ export function RecipeGuidedEditor({
                   Empezar desde cero
                 </button>
                 <button type="button" className={s.primaryButton} onClick={applyVentoraBase}>
-                  Usar base y continuar
+                  {isValidatedBase ? "Usar base y continuar" : "Preparar estructura"}
                 </button>
               </div>
             </div>
@@ -1023,7 +1595,7 @@ export function RecipeGuidedEditor({
               <button
                 type="button"
                 className={s.secondaryButton}
-                onClick={() => setShowAiHelper((current) => !current)}
+                onClick={() => setShowAiHelperManual((current) => !current)}
               >
                 <BrainCircuit size={16} />
                 Ayudarme con IA
@@ -1040,7 +1612,7 @@ export function RecipeGuidedEditor({
             <button
               type="button"
               className={s.textButton}
-              onClick={() => setShowAiHelper((current) => !current)}
+              onClick={() => setShowAiHelperManual((current) => !current)}
             >
               <BrainCircuit size={15} />
               Ayudarme con IA para una fabricación distinta
@@ -1228,7 +1800,7 @@ export function RecipeGuidedEditor({
             ) : (
               <div className={s.emptyInline}>
                 {pautaInput
-                  ? "Confirma largo comercial y los tres parámetros de corte para generar la pauta."
+                  ? "Con largo comercial en los perfiles, las tiras se calculan desde los cortes."
                   : "Completa primero una prueba con medidas reales."}
               </div>
             )}
@@ -1257,404 +1829,460 @@ export function RecipeGuidedEditor({
           />
         </section>
       ) : null}
-      <section id="recipe-components" className={s.recipeBuildCard}>
-        <header className={s.recipeBuildHeader}>
-          <div>
-            <h2>2. Receta de fabricación</h2>
-            <p>Configura funciones, perfiles y descuentos sugeridos.</p>
-          </div>
-        </header>
-        <div className={s.recipeBuildNotice}>
-          <Info size={16} aria-hidden="true" />
-          Puedes avanzar sin códigos ni largos. El despiece sale con función + fórmula; el perfil une material; el largo habilita barras.
+      <section id="recipe-components" className={`${s.recipeBuildCard} ${s.fabSheet}`}>
+        <div className={s.fabSheetTop}>
+          <header className={s.fabSheetHeader}>
+            <h2>Así fabricas esta ventana</h2>
+            <p>
+              Revisa las medidas que usa tu taller. Toca una pieza sólo si necesitas
+              cambiarla.
+            </p>
+          </header>
+          <FabricacionTipologiaPreview
+            tipologia={recipe.identidad.tipologia}
+            hojas={recipe.identidad.hojas}
+            highlightZone={sheetPreviewZone}
+            size="md"
+            className={s.fabSheetPreview}
+          />
         </div>
-        <p className={s.recipeBuildFieldHint}>
-          Usa el mismo perfil en varias funciones si realmente se cortan de la misma barra.
-        </p>
 
-        <section className={s.recipeBuildGroup} aria-labelledby="recipe-build-marco">
-          <div className={s.recipeBuildGroupHeading}>
-            <h3 id="recipe-build-marco">Marco</h3>
-            <div className={s.recipeBuildGroupHeadingActions}>
-              {!readOnly && applyLengthCandidate != null ? (
+        {recipeUsesStructuralBase ? (
+          <aside className={s.fabStructuralBanner} aria-label="Estado de la base">
+            <div>
+              <strong>Estructura preparada por Ventora</strong>
+              <p>
+                Ya agregamos las piezas habituales de esta tipología. Revisa cómo las
+                corta tu taller antes de usarla en cotizaciones.
+              </p>
+            </div>
+            <span className={s.fabStructuralBadge}>
+              {profileProgress.pending > 0
+                ? `${profileProgress.pending} por configurar`
+                : "Lista para probar"}
+            </span>
+          </aside>
+        ) : null}
+
+        <div className={s.fabLengthBar}>
+          <div className={s.fabLengthBarMain}>
+            <div className={s.fabLengthBarCopy}>
+              <strong>Barra que compro</strong>
+              <span>
+                Compro tiras de <em>{habitualLengthLabel}</em>
+              </span>
+            </div>
+            {!readOnly ? (
+              <button
+                type="button"
+                className={s.fabLengthBarChange}
+                aria-expanded={showHabitualLengthPicker}
+                onClick={() => setShowHabitualLengthPicker((current) => !current)}
+              >
+                Cambiar largo
+              </button>
+            ) : null}
+          </div>
+          {!readOnly && recipe.perfiles.length > 0 ? (
+            allProfilesUseHabitualLength ? (
+              <p className={s.fabLengthBarDone} role="status">
+                Todos los perfiles usan {habitualLengthLabel}.
+              </p>
+            ) : (
+              <button
+                type="button"
+                className={`${s.secondaryButton} ${s.fabLengthBarApplyAll}`}
+                onClick={() =>
+                  onRecipeChange(
+                    applyLargoToAllProfiles(recipe, habitualLengthMm)
+                  )
+                }
+              >
+                Poner {habitualLengthLabel} en todos los perfiles
+              </button>
+            )
+          ) : null}
+          {!readOnly && showHabitualLengthPicker ? (
+            <div className={s.fabLengthBarPicker}>
+              <RecipeCommercialLengthPicker
+                value={habitualLengthMm}
+                usedByWorkshop={frequentLargos.usedByWorkshop}
+                otherFrequent={frequentLargos.otherFrequent}
+                readOnly={readOnly}
+                onChange={(nextValue) => {
+                  if (nextValue != null) setHabitualLengthOverrideMm(nextValue);
+                  setShowHabitualLengthPicker(false);
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {!readOnly && profileProgress.total > 0 ? (
+          <div className={s.fabSheetProgress} aria-label="Progreso de configuración">
+            <div className={s.fabSheetProgressCopy}>
+              <strong>
+                {profileProgress.ready} de {profileProgress.total} perfiles listos
+              </strong>
+              <span>
+                {profileProgress.pending > 0
+                  ? "Completa ajuste y largo comercial en cada pieza."
+                  : "Puedes probar con una medida real."}
+              </span>
+            </div>
+            <div
+              className={s.fabSheetProgressTrack}
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={profileProgress.total}
+              aria-valuenow={profileProgress.ready}
+              aria-label="Perfiles configurados"
+            >
+              <span
+                className={s.fabSheetProgressFill}
+                style={{
+                  width:
+                    profileProgress.total > 0
+                      ? `${(profileProgress.ready / profileProgress.total) * 100}%`
+                      : "0%",
+                }}
+              />
+            </div>
+            {profileProgress.pending > 0 ? (
+              <button
+                type="button"
+                className={`${s.primaryButton} ${s.fabSheetContinueBtn}`}
+                onClick={openNextPendingProfile}
+              >
+                {profileProgress.ready === 0
+                  ? "Empezar configuración"
+                  : "Continuar con pendientes"}
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={s.fabSheetGroupHeading}>
+          {!readOnly ? (
+            <button type="button" className={`${s.secondaryButton} ${s.recipeBuildAddButton}`} onClick={addProfile}>
+              <Plus size={15} />
+              Agregar perfil
+            </button>
+          ) : (
+            <span>{recipe.perfiles.length} {recipe.perfiles.length === 1 ? "perfil" : "perfiles"}</span>
+          )}
+        </div>
+
+        {recipe.perfiles.length === 0 ? (
+          recipe.identidad.tipologia === "personalizada" ? (
+            <div className={s.fabEmptyPersonalizada}>
+              <strong>Configuración personalizada</strong>
+              <p>
+                Agrega las piezas que usa tu taller y Ventora las reutilizará al cotizar.
+              </p>
+              {!readOnly ? (
                 <button
                   type="button"
-                  className={s.recipeBuildQuietAction}
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      `¿Aplicar ${applyLengthCandidate.toLocaleString("es-CL")} mm a los ${profilesWithoutLength} perfiles sin largo?`
-                    );
-                    if (!confirmed) return;
-                    onRecipeChange(
-                      applyLargoToProfilesWithoutLength(recipe, applyLengthCandidate)
-                    );
-                  }}
+                  className={s.primaryButton}
+                  onClick={addProfile}
                 >
-                  Aplicar {applyLengthCandidate.toLocaleString("es-CL")} mm a los perfiles sin largo
+                  <Plus size={15} />
+                  Agregar primera pieza
                 </button>
               ) : null}
-              {!readOnly ? (
-                <button type="button" className={`${s.secondaryButton} ${s.recipeBuildAddButton}`} onClick={addProfile}>
-                  <Plus size={15} />
-                  Agregar perfil
-                </button>
-              ) : (
-                <span>{recipe.perfiles.length} {recipe.perfiles.length === 1 ? "perfil" : "perfiles"}</span>
-              )}
             </div>
-          </div>
-          {recipe.perfiles.length === 0 ? (
-            <div className={s.emptyInline}>Agrega el primer perfil para preparar esta receta.</div>
           ) : (
-            <div className={s.recipeBuildTableWrap}>
-              <div className={s.recipeBuildTable} role="table" aria-label="Perfiles del marco">
-                <div className={s.recipeBuildTableHeader} role="row">
-                  <span aria-hidden="true" />
-                  <span aria-hidden="true" />
-                  <span>Función</span>
-                  <span title="Perfil real del taller. El código comercial es opcional.">
-                    Perfil / referencia
-                  </span>
-                  <span title="Define de qué medida sale este corte.">Calcular según</span>
-                  <span title="mm que se suman o restan a la medida base.">Ajuste</span>
-                  <span title="Cantidad de cortes de esta función por pieza.">Cantidad</span>
-                  <span title="Medida de la tira que compras.">Largo comercial</span>
-                  <span aria-hidden="true" />
-                </div>
-                {recipe.perfiles.map((profile, index) => {
-                  const adjustmentState = getAdjustmentDisplayState(
-                    profile,
-                    adjustedAwayFromSuggestion.has(profile.id)
-                  );
-                  const showSuggestedBadge = adjustmentState === "suggested";
-                  const showCustomBadge = adjustmentState === "custom";
-                  const adjustmentPending = adjustmentState === "pending";
-                  const currentAdjustment = profile.reglaMedida.ajusteMm;
+            <div className={s.emptyInline}>
+              Agrega el primer perfil para preparar esta fabricación.
+            </div>
+          )
+        ) : (
+          <div role="list" aria-label="Perfiles de fabricación" className={s.fabSheetProfileList}>
+            {profileSheetGroups.map((group) => (
+              <section key={group.id} className={s.fabSheetGroup} aria-label={group.label}>
+                <h3>{group.label}</h3>
+                {group.profiles.map((profile) => {
+                  const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
+                  const sheetMeasure = describePerfilSheetMeasure(profile);
+                  const largoCorto = formatLargoComercialCorto(profile.largoComercialMm);
                   const isDragging = draggingProfileIndex === index;
                   const isDropTarget =
                     dragOverProfileIndex === index &&
                     draggingProfileIndex != null &&
                     draggingProfileIndex !== index;
 
+                  const isEditing = drawerProfileId === profile.id;
+                  const isNextPending =
+                    firstPendingProfileId === profile.id && !isEditing;
+
                   return (
-                  <div
-                    key={profile.id}
-                    className={s.recipeBuildTableRow}
-                    role="row"
-                    data-dragging={isDragging}
-                    data-drop-target={isDropTarget}
-                    onDragOver={(event) => {
-                      if (readOnly || draggingProfileIndex == null) return;
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      if (dragOverProfileIndex !== index) {
-                        setDragOverProfileIndex(index);
+                    <article
+                      key={profile.id}
+                      className={s.fabSheetRow}
+                      role="listitem"
+                      data-dragging={isDragging}
+                      data-drop-target={isDropTarget}
+                      data-pending={sheetMeasure.pending ? "true" : "false"}
+                      data-editing={isEditing ? "true" : "false"}
+                      data-next-pending={isNextPending ? "true" : "false"}
+                      data-highlighted={
+                        hoverPreviewZone != null &&
+                        resolvePreviewZoneFromFuncion(profile.funcion) ===
+                          hoverPreviewZone
+                          ? "true"
+                          : "false"
                       }
-                    }}
-                    onDrop={(event) => {
-                      if (readOnly || draggingProfileIndex == null) return;
-                      event.preventDefault();
-                      reorderProfiles(draggingProfileIndex, index);
-                      clearProfileDragState();
-                    }}
-                    onDragEnd={clearProfileDragState}
-                  >
-                    <button
-                      type="button"
-                      className={s.recipeBuildGrip}
-                      draggable={!readOnly}
-                      aria-label={`Mover ${profile.funcion || `perfil ${index + 1}`}. Arrastra o usa Alt+flechas.`}
-                      title="Arrastra para reordenar"
-                      disabled={readOnly}
-                      onDragStart={(event) => {
-                        if (readOnly) {
-                          event.preventDefault();
-                          return;
-                        }
-                        event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.setData("text/plain", String(index));
-                        setDraggingProfileIndex(index);
-                        setDragOverProfileIndex(index);
-                      }}
-                      onKeyDown={(event) => {
-                        if (readOnly) return;
-                        if (!event.altKey) return;
-                        if (event.key === "ArrowUp") {
-                          event.preventDefault();
-                          reorderProfiles(index, index - 1);
-                        } else if (event.key === "ArrowDown") {
-                          event.preventDefault();
-                          reorderProfiles(index, index + 1);
+                      onMouseEnter={() =>
+                        setHoverPreviewZone(
+                          resolvePreviewZoneFromFuncion(profile.funcion)
+                        )
+                      }
+                      onMouseLeave={() => setHoverPreviewZone(null)}
+                      onFocus={() =>
+                        setHoverPreviewZone(
+                          resolvePreviewZoneFromFuncion(profile.funcion)
+                        )
+                      }
+                      onBlur={() => setHoverPreviewZone(null)}
+                      onDragOver={(event) => {
+                        if (readOnly || draggingProfileIndex == null) return;
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        if (dragOverProfileIndex !== index) {
+                          setDragOverProfileIndex(index);
                         }
                       }}
-                    >
-                      <GripVertical size={15} aria-hidden="true" />
-                    </button>
-                    <label className={s.recipeBuildCheckbox} aria-label={`Perfil ${profile.funcion || index + 1} obligatorio`}>
-                      <span className={s.srOnly}>Componente obligatorio</span>
-                      <input
-                        type="checkbox"
-                        checked={profile.requerido}
-                        onChange={(event) =>
-                          updateProfile(profile.id, (entry) => ({
-                            ...entry,
-                            requerido: event.target.checked,
-                          }))
-                        }
-                        disabled={readOnly}
-                      />
-                    </label>
-                    <label className={s.recipeBuildFunction}>
-                      <span className={s.srOnly}>Función</span>
-                      <input
-                        value={profile.funcion}
-                        placeholder={`Perfil ${index + 1}`}
-                        onChange={(event) =>
-                          updateProfile(profile.id, (entry) => ({
-                            ...entry,
-                            funcion: event.target.value,
-                          }))
-                        }
-                        disabled={readOnly}
-                      />
-                      {profile.codigoPerfil.trim() ? (
-                        <small>Cód. {profile.codigoPerfil}</small>
-                      ) : null}
-                    </label>
-                    <RecipeProfileReferencePicker
-                      profile={profile}
-                      recipe={recipe}
-                      catalog={tallerPerfilCatalog}
-                      readOnly={readOnly}
-                      onSelect={(tallerPerfil) =>
-                        assignTallerPerfil(profile.id, tallerPerfil)
-                      }
-                    />
-                    <label className={s.recipeBuildMeasure}>
-                      <span className={s.srOnly}>Calcular según</span>
-                      <select
-                        value={profile.reglaMedida.base}
-                        onChange={(event) =>
-                          updateProfile(profile.id, (entry) => ({
-                            ...entry,
-                            reglaMedida: {
-                              ...entry.reglaMedida,
-                              base: event.target.value as FabricacionBaseMedida,
-                            },
-                          }))
-                        }
-                        disabled={readOnly}
-                      >
-                        {FABRICACION_BASES_MEDIDA.map((base) => <option key={base} value={base}>{MEASURE_LABELS[base]}</option>)}
-                      </select>
-                    </label>
-                    <div className={s.recipeBuildAdjustment}>
-                      <label>
-                        <span className={s.srOnly}>Ajuste sugerido</span>
-                        <input
-                          type="number"
-                          value={
-                            adjustmentPending || currentAdjustment == null
-                              ? ""
-                              : currentAdjustment
-                          }
-                          placeholder="Por confirmar"
-                          title={
-                            adjustmentPending
-                              ? "Usa el descuento que realmente aplica tu taller."
-                              : undefined
-                          }
-                          onChange={(event) => {
-                            const raw = event.target.value;
-                            if (!raw.trim()) {
-                              updateProfile(profile.id, (entry) => {
-                                const pending = new Set(entry.datosPendientes ?? []);
-                                pending.add("Confirmar ajuste o descuento en mm");
-                                return {
-                                  ...entry,
-                                  reglaMedida: {
-                                    base: entry.reglaMedida.base,
-                                    valorFijoMm: entry.reglaMedida.valorFijoMm,
-                                    multiplicador: entry.reglaMedida.multiplicador,
-                                    condicion: entry.reglaMedida.condicion,
-                                  },
-                                  datosPendientes: Array.from(pending),
-                                };
-                              });
-                              setAdjustedAwayFromSuggestion((prev) => {
-                                if (!prev.has(profile.id)) return prev;
-                                const next = new Set(prev);
-                                next.delete(profile.id);
-                                return next;
-                              });
-                              return;
-                            }
-                            const nextAdjustment = integerNumber(raw);
-                            if (
-                              suggestedAdjustmentIds.has(profile.id) ||
-                              hasDocumentedAdjustment(profile)
-                            ) {
-                              setAdjustedAwayFromSuggestion((prev) => {
-                                const next = new Set(prev);
-                                next.add(profile.id);
-                                return next;
-                              });
-                            }
-                            updateProfile(profile.id, (entry) => {
-                              const pending = (entry.datosPendientes ?? []).filter(
-                                (detail) => !AJUSTE_PENDIENTE_RE.test(detail)
-                              );
-                              return {
-                                ...entry,
-                                reglaMedida: {
-                                  ...entry.reglaMedida,
-                                  ajusteMm: nextAdjustment,
-                                },
-                                datosPendientes:
-                                  pending.length > 0 ? pending : undefined,
-                              };
-                            });
-                          }}
-                          disabled={readOnly}
-                        />
-                        <small>mm</small>
-                      </label>
-                      {showSuggestedBadge ? (
-                        <span className={s.recipeBuildSuggestedBadge}>Sugerido</span>
-                      ) : null}
-                      {showCustomBadge ? (
-                        <span className={s.recipeBuildCustomBadge}>Personalizado</span>
-                      ) : null}
-                    </div>
-                    <label className={s.recipeBuildQuantity}>
-                      <span className={s.srOnly}>Cantidad</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={profile.reglaCantidad.cantidad}
-                        onChange={(event) =>
-                          updateProfile(profile.id, (entry) => ({
-                            ...entry,
-                            reglaCantidad: {
-                              ...entry.reglaCantidad,
-                              cantidad: positiveNumber(event.target.value),
-                            },
-                          }))
-                        }
-                        disabled={readOnly}
-                      />
-                    </label>
-                    <RecipeCommercialLengthPicker
-                      value={profile.largoComercialMm}
-                      usedByWorkshop={frequentLargos.usedByWorkshop}
-                      otherFrequent={frequentLargos.otherFrequent}
-                      readOnly={readOnly}
-                      onChange={(nextValue) =>
-                        updateProfile(profile.id, (entry) => {
-                          const pending = (entry.datosPendientes ?? []).filter(
-                            (detail) => !/largo comercial/i.test(detail)
-                          );
-                          if (nextValue == null) {
-                            pending.push("Confirmar largo comercial");
-                          }
-                          return {
-                            ...entry,
-                            largoComercialMm: nextValue,
-                            datosPendientes:
-                              pending.length > 0 ? pending : undefined,
-                          };
-                        })
-                      }
-                    />
-                    <div
-                      className={s.recipeBuildRowActions}
-                      data-open={openProfileActionsId === profile.id}
-                      data-drop-up={index >= Math.max(0, recipe.perfiles.length - 2)}
+                      onDrop={(event) => {
+                        if (readOnly || draggingProfileIndex == null) return;
+                        event.preventDefault();
+                        reorderProfiles(draggingProfileIndex, index);
+                        clearProfileDragState();
+                      }}
+                      onDragEnd={clearProfileDragState}
                     >
                       <button
                         type="button"
-                        className={s.recipeBuildRowActionsTrigger}
-                        aria-label={`Más opciones para ${profile.funcion || `perfil ${index + 1}`}`}
-                        aria-expanded={openProfileActionsId === profile.id}
-                        aria-haspopup="menu"
+                        className={s.recipeBuildGrip}
+                        draggable={!readOnly}
+                        aria-label={`Mover ${profile.funcion || `perfil ${index + 1}`}. Arrastra o usa Alt+flechas.`}
+                        title="Arrastra para reordenar"
                         disabled={readOnly}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenProfileActionsId((current) =>
-                            current === profile.id ? null : profile.id
-                          );
+                        onDragStart={(event) => {
+                          if (readOnly) {
+                            event.preventDefault();
+                            return;
+                          }
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/plain", String(index));
+                          setDraggingProfileIndex(index);
+                          setDragOverProfileIndex(index);
+                        }}
+                        onKeyDown={(event) => {
+                          if (readOnly) return;
+                          if (!event.altKey) return;
+                          if (event.key === "ArrowUp") {
+                            event.preventDefault();
+                            reorderProfiles(index, index - 1);
+                          } else if (event.key === "ArrowDown") {
+                            event.preventDefault();
+                            reorderProfiles(index, index + 1);
+                          }
                         }}
                       >
-                        <MoreVertical size={17} aria-hidden="true" />
+                        <GripVertical size={15} aria-hidden="true" />
                       </button>
-                      {openProfileActionsId === profile.id ? (
-                        <div
-                          className={s.recipeBuildRowActionsMenu}
-                          role="menu"
-                          aria-label={`Opciones de ${profile.funcion || `perfil ${index + 1}`}`}
-                        >
-                          <label>
-                            <span>Nombre usado en taller</span>
-                            <input
-                              value={profile.nombrePerfil}
-                              onChange={(event) =>
-                                updateProfile(profile.id, (entry) => ({
-                                  ...entry,
-                                  nombrePerfil: event.target.value,
-                                }))
-                              }
-                              disabled={readOnly}
-                            />
-                          </label>
-                          {!readOnly ? (
-                            <button
-                              type="button"
-                              className={s.dangerTextButton}
-                              role="menuitem"
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                removeProfile(profile.id);
-                              }}
-                            >
-                              <Trash2 size={15} /> Eliminar perfil
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                      <span className={s.fabSheetFunction}>
+                        {profile.funcion.trim() || `Perfil ${index + 1}`}
+                      </span>
+                      <span
+                        className={s.fabSheetMeasure}
+                        data-pending={sheetMeasure.pending ? "true" : "false"}
+                      >
+                        {sheetMeasure.measure}
+                      </span>
+                      <span className={s.fabSheetLength}>
+                        {largoCorto ?? "Largo comercial pendiente"}
+                      </span>
+                      <button
+                        type="button"
+                        className={s.fabSheetEdit}
+                        aria-expanded={drawerProfileId === profile.id}
+                        onClick={() => openProfileDrawer(profile.id)}
+                      >
+                        {sheetMeasure.pending ? "Configurar" : "Editar"}
+                      </button>
+                    </article>
                   );
                 })}
-              </div>
-            </div>
+              </section>
+            ))}
+          </div>
+        )}
+
+        <section className={s.fabSheetGroup} aria-label="Accesorios">
+          <h3>Accesorios</h3>
+          {recipe.accesorios.length === 0 ? (
+            <p className={s.emptyInline}>Sin accesorios configurados.</p>
+          ) : (
+            recipe.accesorios.map((accessory) => {
+              const isEditing = editingAccessoryIds.has(accessory.id);
+              const sheetLabel = describeAccesorioSheetLabel(accessory);
+              return (
+                <div
+                  key={accessory.id}
+                  className={s.fabAccessoryRow}
+                  data-pending={sheetLabel.pending ? "true" : "false"}
+                >
+                  <span className={s.fabSheetFunction}>
+                    {accessory.nombre.trim() || "Accesorio"}
+                  </span>
+                  <span
+                    className={s.fabSheetMeasure}
+                    data-pending={sheetLabel.pending ? "true" : "false"}
+                  >
+                    {sheetLabel.label}
+                  </span>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className={s.fabSheetEdit}
+                      aria-expanded={isEditing}
+                      onClick={() =>
+                        setEditingAccessoryIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(accessory.id)) next.delete(accessory.id);
+                          else next.add(accessory.id);
+                          return next;
+                        })
+                      }
+                    >
+                      Editar
+                    </button>
+                  ) : null}
+                  {isEditing ? (
+                    <div className={s.fabDrawerForm}>
+                      <label>
+                        <span>Nombre</span>
+                        <input
+                          value={accessory.nombre}
+                          onChange={(event) =>
+                            onRecipeChange({
+                              ...recipe,
+                              accesorios: recipe.accesorios.map((entry) =>
+                                entry.id === accessory.id
+                                  ? { ...entry, nombre: event.target.value }
+                                  : entry
+                              ),
+                            })
+                          }
+                          disabled={readOnly}
+                        />
+                      </label>
+                      <label>
+                        <span>Cantidad</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={accessory.reglaCantidad.cantidad}
+                          onChange={(event) =>
+                            onRecipeChange({
+                              ...recipe,
+                              accesorios: recipe.accesorios.map((entry) =>
+                                entry.id === accessory.id
+                                  ? {
+                                      ...entry,
+                                      reglaCantidad: {
+                                        ...entry.reglaCantidad,
+                                        cantidad: positiveNumber(event.target.value),
+                                      },
+                                    }
+                                  : entry
+                              ),
+                            })
+                          }
+                          disabled={readOnly}
+                        />
+                      </label>
+                      <label>
+                        <span>Según</span>
+                        <select
+                          value={accessory.reglaCantidad.tipo}
+                          onChange={(event) =>
+                            onRecipeChange({
+                              ...recipe,
+                              accesorios: recipe.accesorios.map((entry) =>
+                                entry.id === accessory.id
+                                  ? {
+                                      ...entry,
+                                      reglaCantidad: {
+                                        ...entry.reglaCantidad,
+                                        tipo: event.target
+                                          .value as (typeof FABRICACION_REGLAS_CANTIDAD)[number],
+                                      },
+                                    }
+                                  : entry
+                              ),
+                            })
+                          }
+                          disabled={readOnly}
+                        >
+                          {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
+                            <option key={rule} value={rule}>
+                              {labelReglaCantidadTipo(rule, "technical")}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className={s.dangerTextButton}
+                        onClick={() => removeAccessory(accessory.id)}
+                      >
+                        <Trash2 size={15} /> Eliminar
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
           )}
+          {!readOnly ? (
+            <button type="button" className={s.secondaryButton} onClick={addAccessory}>
+              <Plus size={16} /> Agregar accesorio
+            </button>
+          ) : null}
         </section>
 
-        <details className={`${s.recipeBuildDisclosure} ${s.recipeBuildLeaves}`}>
-          <summary>
-            <PanelTop size={16} aria-hidden="true" />
-            <strong id="recipe-build-hojas">Hojas</strong>
-            <em>{leafLabel}</em>
-            <b>{recipe.identidad.hojas} {recipe.identidad.hojas === 1 ? "unidad" : "unidades"}</b>
-            <span className={s.recipeBuildDisclosureChevron} aria-hidden="true"><ChevronDown size={15} /></span>
-          </summary>
-        </details>
-
-        <details className={s.recipeBuildDisclosure}>
-          <summary>
-            <PanelTop size={18} aria-hidden="true" />
-            <strong>Vidrio</strong>
-            <span>(opcional)</span>
-            <small>{recipe.vidrios.length}</small>
-            <span className={s.recipeBuildDisclosureChevron} aria-hidden="true"><ChevronDown size={16} /></span>
-          </summary>
-          <div className={s.recipeBuildDisclosureContent}>
-            {!readOnly ? <button type="button" className={s.secondaryButton} onClick={addGlass}><Plus size={16} />Agregar vidrio</button> : null}
-            {recipe.vidrios.length === 0 ? (
-              <p>Aún no agregas vidrios para esta receta.</p>
-            ) : (
-              recipe.vidrios.map((glass) => (
+        <section className={s.fabSheetGroup} aria-label="Vidrio">
+          <h3>Vidrio</h3>
+          <div className={s.fabAccessoryRow}>
+            <span>
+              {recipe.vidrios.length === 0
+                ? "Sin vidrio configurado"
+                : recipe.vidrios.length === 1
+                  ? "1 vidrio por hoja"
+                  : recipe.vidrios.map((glass) => glass.nombre || "Vidrio").join(", ")}
+            </span>
+            {!readOnly ? (
+              <button
+                type="button"
+                className={s.fabSheetEdit}
+                aria-expanded={showGlassEditor}
+                onClick={() => setShowGlassEditor((current) => !current)}
+              >
+                Editar
+              </button>
+            ) : null}
+          </div>
+          {showGlassEditor ? (
+            <div className={s.fabDrawerForm}>
+              {!readOnly ? (
+                <button type="button" className={s.secondaryButton} onClick={addGlass}>
+                  <Plus size={16} /> Agregar vidrio
+                </button>
+              ) : null}
+              {recipe.vidrios.map((glass) => (
                 <div key={glass.id} className={s.recipeBuildInlineItem}>
                   <label>
                     <span>Vidrio</span>
@@ -1683,57 +2311,29 @@ export function RecipeGuidedEditor({
                     </button>
                   ) : null}
                 </div>
-              ))
-            )}
-          </div>
-        </details>
+              ))}
+            </div>
+          ) : null}
+        </section>
 
-        <details className={s.recipeBuildDisclosure}>
-          <summary>
-            <Package size={18} aria-hidden="true" />
-            <strong>Accesorios</strong>
-            <span>(opcional)</span>
-            <small>{recipe.accesorios.length}</small>
-            <span className={s.recipeBuildDisclosureChevron} aria-hidden="true"><ChevronDown size={16} /></span>
-          </summary>
-          <div className={s.recipeBuildDisclosureContent}>
-            {!readOnly ? <button type="button" className={s.secondaryButton} onClick={addAccessory}><Plus size={16} />Agregar accesorio</button> : null}
-            {recipe.accesorios.length === 0 ? (
-              <p>Aún no agregas accesorios para esta receta.</p>
-            ) : (
-              recipe.accesorios.map((accessory) => (
-                <div key={accessory.id} className={s.recipeBuildInlineItem}>
-                  <label>
-                    <span>Accesorio</span>
-                    <input
-                      value={accessory.nombre}
-                      onChange={(event) =>
-                        onRecipeChange({
-                          ...recipe,
-                          accesorios: recipe.accesorios.map((entry) =>
-                            entry.id === accessory.id
-                              ? { ...entry, nombre: event.target.value }
-                              : entry
-                          ),
-                        })
-                      }
-                      disabled={readOnly}
-                    />
-                  </label>
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      className={s.dangerTextButton}
-                      onClick={() => removeAccessory(accessory.id)}
-                    >
-                      <Trash2 size={15} /> Eliminar
-                    </button>
-                  ) : null}
-                </div>
-              ))
-            )}
+        {drawerProfile && drawerProfileIndex >= 0 ? (
+          <div className={s.fabDrawer} role="presentation">
+            <button
+              type="button"
+              className={s.fabDrawerBackdrop}
+              aria-label="Cerrar editor"
+              onClick={closeProfileDrawer}
+            />
+            <aside
+              className={`${s.fabDrawerPanel} ${s.fabDrawerPanelPiece}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Editar ${drawerProfile.funcion || "perfil"}`}
+            >
+              {renderProfileDrawerFields(drawerProfile, drawerProfileIndex)}
+            </aside>
           </div>
-        </details>
+        ) : null}
       </section>
       </>
       ) : null}
@@ -1976,7 +2576,7 @@ export function RecipeGuidedEditor({
                     >
                       {FABRICACION_BASES_MEDIDA.map((base) => (
                         <option key={base} value={base}>
-                          {MEASURE_LABELS[base]}
+                          {labelBaseMedida(base, "technical")}
                         </option>
                       ))}
                     </select>
@@ -2135,7 +2735,7 @@ export function RecipeGuidedEditor({
                         >
                           {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
                             <option key={rule} value={rule}>
-                              {QUANTITY_LABELS[rule]}
+                              {labelReglaCantidadTipo(rule, "technical")}
                             </option>
                           ))}
                         </select>
@@ -2262,7 +2862,7 @@ export function RecipeGuidedEditor({
                     >
                       {FABRICACION_BASES_MEDIDA.map((base) => (
                         <option key={base} value={base}>
-                          {MEASURE_LABELS[base]}
+                          {labelBaseMedida(base, "technical")}
                         </option>
                       ))}
                     </select>
@@ -2369,7 +2969,7 @@ export function RecipeGuidedEditor({
                     >
                       {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
                         <option key={rule} value={rule}>
-                          {QUANTITY_LABELS[rule]}
+                          {labelReglaCantidadTipo(rule, "technical")}
                         </option>
                       ))}
                     </select>
@@ -2680,7 +3280,7 @@ export function RecipeGuidedEditor({
                       >
                         {FABRICACION_BASES_MEDIDA.map((base) => (
                           <option key={base} value={base}>
-                            {MEASURE_LABELS[base]}
+                            {labelBaseMedida(base, "technical")}
                           </option>
                         ))}
                       </select>
@@ -2764,7 +3364,7 @@ export function RecipeGuidedEditor({
                   >
                     {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
                       <option key={rule} value={rule}>
-                        {QUANTITY_LABELS[rule]}
+                        {labelReglaCantidadTipo(rule, "technical")}
                       </option>
                     ))}
                   </select>
@@ -3009,7 +3609,7 @@ export function RecipeGuidedEditor({
                   >
                     {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
                       <option key={rule} value={rule}>
-                        {QUANTITY_LABELS[rule]}
+                        {labelReglaCantidadTipo(rule, "technical")}
                       </option>
                     ))}
                   </select>

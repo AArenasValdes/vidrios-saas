@@ -70,9 +70,9 @@ const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
 };
 
 const BARS_NOT_CALCULABLE_HINT =
-  "Agrega largos comerciales para calcular barras y sobrantes.";
+  "Agrega largos comerciales en la receta para calcular tiras según la pauta sugerida.";
 const BARS_INCOMPLETE_WARNING =
-  "Agrega largos comerciales para calcular barras y sobrantes.";
+  "Agrega largos comerciales en la receta para calcular tiras según la pauta sugerida.";
 const GLASS_PRELIMINARY_WARNING =
   "Vidrio preliminar según la receta. Confirma descuentos si aplica.";
 const ACCESSORIES_PRELIMINARY_WARNING =
@@ -290,43 +290,6 @@ export function DespieceReviewSurface({
     return map;
   }, [visualItems, persistedRecipes, organizationId, recipesReady]);
 
-  useEffect(() => {
-    if (!open) return;
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "despiece-mobile-wire",
-        hypothesisId: "H4",
-        location: "despiece-review-surface.tsx:open",
-        message: "despiece surface open state",
-        data: {
-          open,
-          isLoadingRecipes,
-          recipesReady,
-          recipesCount: persistedRecipes.length,
-          visualItems: visualItems.length,
-          hasRecipesError: Boolean(recipesError),
-          activeItemId,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [
-    open,
-    isLoadingRecipes,
-    recipesReady,
-    persistedRecipes.length,
-    visualItems.length,
-    recipesError,
-    activeItemId,
-  ]);
   const selectedItem =
     visualItems.find((item) => item.id === activeItemId) ?? visualItems[0] ?? null;
   const selectedForm = selectedItem ? mapItemToForm(selectedItem) : null;
@@ -466,10 +429,15 @@ export function DespieceReviewSurface({
       const current = item.fabricacionSnapshot;
       const alreadySynced =
         current?.recipeId === resolution.formal.recipeId &&
+        current?.recipeVersion === resolution.formal.recipeVersion &&
         current.input.anchoTotalMm === resolution.formal.input.anchoTotalMm &&
         current.input.altoTotalMm === resolution.formal.input.altoTotalMm &&
         current.input.cantidad === resolution.formal.input.cantidad &&
-        current.result.totalLinealMm === resolution.formal.result.totalLinealMm;
+        current.result.totalLinealMm === resolution.formal.result.totalLinealMm &&
+        Boolean(current.pautaBarras?.calculable) ===
+          Boolean(resolution.formal.pautaBarras?.calculable) &&
+        (current.pautaBarras?.barras.length ?? 0) ===
+          (resolution.formal.pautaBarras?.barras.length ?? 0);
       if (alreadySynced) return;
       onUpdateItem(item.id, {
         fabricacionSnapshot: resolution.formal,
@@ -717,59 +685,61 @@ export function DespieceReviewSurface({
           </button>
         </header>
 
-        {isLoadingRecipes ? (
-          <div className={styles.loadingState} role="status">
-            Cargando recetas de fabricación…
-          </div>
-        ) : null}
-        {recipesError ? (
-          <div className={styles.errorState} role="alert">
-            {recipesError}
-          </div>
-        ) : null}
+        <div className={styles.body}>
+          {isLoadingRecipes ? (
+            <div className={styles.loadingState} role="status">
+              Cargando recetas de fabricación…
+            </div>
+          ) : null}
+          {recipesError ? (
+            <div className={styles.errorState} role="alert">
+              {recipesError}
+            </div>
+          ) : null}
 
-        {!isLoadingRecipes && tab === "pieza" ? (
-          <div className={styles.pieceLayout}>
-            <aside className={styles.pieceList} aria-label="Piezas de la cotización">
-              <p className={styles.listEyebrow}>Piezas</p>
-              <ul>
-                {visualItems.map((item) => {
-                  const form = mapItemToForm(item);
-                  const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
-                  const resolution = pieceResolutions.get(item.id) ?? null;
-                  const snapshot =
-                    resolution?.cubication ??
-                    resolvePersonalizadoFallbackSnapshot({ item, template });
-                  const itemPreview = snapshot
-                    ? cubicationSnapshotToPreview(snapshot)
-                    : null;
-                  const uiStatus = resolveDespieceUiStatus({
-                    snapshot,
-                    preview: itemPreview,
-                    resolution,
-                  });
-                  const selected = selectedItem?.id === item.id;
-                  return (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className={selected ? styles.pieceListItemActive : styles.pieceListItem}
-                        onClick={() => onActiveItemChange(item.id)}
-                      >
-                        <strong>
-                          {item.codigo} {item.nombre || "Sin nombre"}
-                        </strong>
-                        <em className={despieceStatusToneClass(uiStatus)}>
-                          {DESPIECE_UI_STATUS_LABELS[uiStatus]}
-                        </em>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </aside>
+          {!isLoadingRecipes && tab === "pieza" ? (
+            <div className={styles.pieceLayout}>
+              <aside className={styles.pieceList} aria-label="Piezas de la cotización">
+                <p className={styles.listEyebrow}>Piezas</p>
+                <ul>
+                  {visualItems.map((item) => {
+                    const form = mapItemToForm(item);
+                    const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
+                    const resolution = pieceResolutions.get(item.id) ?? null;
+                    const snapshot =
+                      resolution?.cubication ??
+                      resolvePersonalizadoFallbackSnapshot({ item, template });
+                    const itemPreview = snapshot
+                      ? cubicationSnapshotToPreview(snapshot)
+                      : null;
+                    const uiStatus = resolveDespieceUiStatus({
+                      snapshot,
+                      preview: itemPreview,
+                      resolution,
+                    });
+                    const selected = selectedItem?.id === item.id;
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          className={selected ? styles.pieceListItemActive : styles.pieceListItem}
+                          onClick={() => onActiveItemChange(item.id)}
+                        >
+                          <strong>
+                            {item.codigo} {item.nombre || "Sin nombre"}
+                          </strong>
+                          <em className={despieceStatusToneClass(uiStatus)}>
+                            {DESPIECE_UI_STATUS_LABELS[uiStatus]}
+                          </em>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </aside>
 
-            <section className={styles.pieceDetail} aria-label="Detalle de pieza">
+              <div className={styles.pieceMainScroll}>
+                <section className={styles.pieceDetail} aria-label="Detalle de pieza">
               {selectedItem && selectedView && selectedForm ? (
                 <>
                   <header className={styles.detailHead}>
@@ -852,7 +822,7 @@ export function DespieceReviewSurface({
                         </em>
                       </span>
                       <span>
-                        <small>Barras</small>
+                        <small>Tiras</small>
                         <strong className={!barsCalculable ? styles.notCalculable : undefined}>
                           {barsCalculable ? preview?.bars.length ?? 0 : "No calculable"}
                         </strong>
@@ -1095,74 +1065,75 @@ export function DespieceReviewSurface({
               ) : (
                 <div className={styles.emptyTable}>Selecciona una pieza para revisar su despiece.</div>
               )}
-            </section>
+                </section>
 
-            <aside className={styles.summaryRail} aria-label="Resumen de resultados">
-              <p className={styles.listEyebrow}>Resumen</p>
-              <div className={styles.summaryCard}>
-                <span>
-                  <small>Área calculada</small>
-                  <strong>{areaCalculated != null ? formatM2(areaCalculated) : "—"}</strong>
-                </span>
-                <span>
-                  <small>Área proyectada</small>
-                  <strong>{areaProjected != null ? formatM2(areaProjected) : "—"}</strong>
-                </span>
-                <span>
-                  <small>Aprovechamiento de vidrio</small>
-                  <strong>{glassYield != null ? `${glassYield}%` : "—"}</strong>
-                </span>
+                <aside className={styles.summaryRail} aria-label="Resumen de resultados">
+                  <p className={styles.listEyebrow}>Resumen</p>
+                  <div className={styles.summaryCard}>
+                    <span>
+                      <small>Área calculada</small>
+                      <strong>{areaCalculated != null ? formatM2(areaCalculated) : "—"}</strong>
+                    </span>
+                    <span>
+                      <small>Área proyectada</small>
+                      <strong>{areaProjected != null ? formatM2(areaProjected) : "—"}</strong>
+                    </span>
+                    <span>
+                      <small>Aprovechamiento de vidrio</small>
+                      <strong>{glassYield != null ? `${glassYield}%` : "—"}</strong>
+                    </span>
+                  </div>
+
+                  <div className={styles.summaryCard}>
+                    <span>
+                      <small>Cortes totales</small>
+                      <strong>{cutUnits}</strong>
+                    </span>
+                    <span>
+                      <small>Accesorios</small>
+                      <strong>{preview?.accessoryUnits ?? 0}</strong>
+                    </span>
+                    <span>
+                      <small>Tiras</small>
+                      <strong className={!barsCalculable ? styles.notCalculable : undefined}>
+                        {barsCalculable ? preview?.bars.length ?? 0 : "No calculable"}
+                      </strong>
+                    </span>
+                    <span>
+                      <small>Sobrantes</small>
+                      <strong className={!barsCalculable ? styles.notCalculable : undefined}>
+                        {barsCalculable
+                          ? formatMm(preview?.totalWasteMm ?? 0)
+                          : "No calculable"}
+                      </strong>
+                    </span>
+                    {!barsCalculable ? (
+                      <p className={styles.barMeta}>{BARS_NOT_CALCULABLE_HINT}</p>
+                    ) : null}
+                  </div>
+
+                  {warnings.length > 0 ? (
+                    <div className={styles.warnings}>
+                      <strong>
+                        <LuCircleAlert aria-hidden /> Atención
+                      </strong>
+                      <ul>
+                        {warnings.slice(0, 4).map(({ item, uiStatus }) => (
+                          <li key={item.id}>
+                            <button type="button" onClick={() => onActiveItemChange(item.id)}>
+                              {item.codigo}: {DESPIECE_UI_STATUS_LABELS[uiStatus]}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </aside>
               </div>
+            </div>
+          ) : null}
 
-              <div className={styles.summaryCard}>
-                <span>
-                  <small>Cortes totales</small>
-                  <strong>{cutUnits}</strong>
-                </span>
-                <span>
-                  <small>Accesorios</small>
-                  <strong>{preview?.accessoryUnits ?? 0}</strong>
-                </span>
-                <span>
-                  <small>Barras</small>
-                  <strong className={!barsCalculable ? styles.notCalculable : undefined}>
-                    {barsCalculable ? preview?.bars.length ?? 0 : "No calculable"}
-                  </strong>
-                </span>
-                <span>
-                  <small>Sobrantes</small>
-                  <strong className={!barsCalculable ? styles.notCalculable : undefined}>
-                    {barsCalculable
-                      ? formatMm(preview?.totalWasteMm ?? 0)
-                      : "No calculable"}
-                  </strong>
-                </span>
-                {!barsCalculable ? (
-                  <p className={styles.barMeta}>{BARS_NOT_CALCULABLE_HINT}</p>
-                ) : null}
-              </div>
-
-              {warnings.length > 0 ? (
-                <div className={styles.warnings}>
-                  <strong>
-                    <LuCircleAlert aria-hidden /> Atención
-                  </strong>
-                  <ul>
-                    {warnings.slice(0, 4).map(({ item, uiStatus }) => (
-                      <li key={item.id}>
-                        <button type="button" onClick={() => onActiveItemChange(item.id)}>
-                          {item.codigo}: {DESPIECE_UI_STATUS_LABELS[uiStatus]}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </aside>
-          </div>
-        ) : null}
-
-        {!isLoadingRecipes && tab === "consolidado" ? (
+          {!isLoadingRecipes && tab === "consolidado" ? (
           <div className={styles.consolidatedLayout}>
             <header className={styles.consolidatedHead}>
               <div>
@@ -1204,8 +1175,8 @@ export function DespieceReviewSurface({
                         <strong>{group.lineName}</strong>
                         <span>
                           {groupBarsCalculable
-                            ? `${group.bars} barras · sobra ${formatMm(group.wasteMm)}`
-                            : "Barras: No calculable"}
+                            ? `${group.bars} tiras · sobra ${formatMm(group.wasteMm)}`
+                            : "Tiras: no calculable"}
                           {" · "}
                           {group.accessories} accesorios (preliminar)
                         </span>
@@ -1309,7 +1280,7 @@ export function DespieceReviewSurface({
 
             <div className={styles.consolidatedTotals}>
               <span>
-                Barras necesarias:{" "}
+                Tiras necesarias según esta pauta:{" "}
                 <strong className={!consolidatedBarsCalculable ? styles.notCalculable : undefined}>
                   {consolidatedBarsCalculable ? consolidated.totalBars : "No calculable"}
                 </strong>
@@ -1332,6 +1303,7 @@ export function DespieceReviewSurface({
             </div>
           </div>
         ) : null}
+        </div>
 
         <footer className={styles.footer}>
           <button type="button" className={styles.secondaryFooter} onClick={onClose}>

@@ -84,15 +84,17 @@ describe("pauta referencial de barras", () => {
     );
   });
 
-  it("no asume parametros de corte ausentes", () => {
+  it("calcula tiras con largo comercial aunque no haya parámetros de sierra explícitos", () => {
     const definition = { ...recipe(), configuracionCorte: undefined };
     const result = construirPautaBarrasFabricacion({
       receta: definition,
       resultado: calcularCubicacionYPauta(definition, input),
     });
 
-    expect(result.calculable).toBe(false);
-    expect(result.barras).toEqual([]);
-    expect(result.advertencias[0]?.codigo).toBe("PAUTA_BARRAS_INCOMPLETA");
+    expect(result.calculable).toBe(true);
+    expect(result.barras.length).toBeGreaterThan(0);
+    expect(
+      result.advertencias.some((entry) => entry.codigo === "PAUTA_BARRAS_INCOMPLETA")
+    ).toBe(false);
   });
 });

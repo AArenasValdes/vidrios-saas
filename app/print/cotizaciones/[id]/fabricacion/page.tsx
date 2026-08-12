@@ -130,7 +130,7 @@ export default function CotizacionFabricacionPrintPage() {
             <strong>{summary.totalAccessoryUnits}</strong>
           </div>
           <div>
-            <span>Barras ref.</span>
+            <span>Tiras (pauta sugerida)</span>
             <strong>{summary.totalBars}</strong>
           </div>
         </section>
@@ -223,11 +223,11 @@ export default function CotizacionFabricacionPrintPage() {
 
               {row.snapshot.bars.length > 0 ? (
                 <div className={s.barsBlock}>
-                  <strong>Distribución referencial de barras</strong>
+                  <strong>Pauta sugerida de tiras</strong>
                   <ul>
                     {row.snapshot.bars.map((bar) => (
                       <li key={`${row.itemId}-bar-${bar.index}`}>
-                        Barra {bar.index}: usados {Math.round(bar.usedMm)} mm · sobra{" "}
+                        Tira {bar.index}: usados {Math.round(bar.usedMm)} mm · sobra{" "}
                         {Math.round(bar.wasteMm)} mm · {bar.cuts.length} cortes
                       </li>
                     ))}
@@ -240,8 +240,8 @@ export default function CotizacionFabricacionPrintPage() {
 
         <footer className={s.docFooter}>
           <p>
-            Documento interno de taller. No incluye precios. La distribución de barras es
-            referencial, no una optimización de nesting.
+            Documento interno de taller. No incluye precios. Las tiras siguen una pauta
+            sugerida físicamente válida (kerf/despunte); no es una optimización óptima.
           </p>
         </footer>
       </article>

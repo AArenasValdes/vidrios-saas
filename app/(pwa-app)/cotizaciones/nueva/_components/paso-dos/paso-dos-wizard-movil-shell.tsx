@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState, type ReactNode } from "react";
-import { LuX } from "react-icons/lu";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { LuPencilRuler, LuX } from "react-icons/lu";
 
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { PricingMode } from "@/features/cotizaciones/types/pricing-mode";
@@ -28,6 +28,7 @@ import {
 } from "@/features/cotizaciones/services/glass-recommendations.service";
 import { isFreeValueComponentType } from "@/features/cotizaciones/services/component-catalog.service";
 import { generateComponentSVG } from "@/utils/window-drawings";
+import { useQuoteDespiecePreview } from "@/features/fabricacion/hooks/use-quote-despiece-preview";
 
 const DespieceReviewSurface = dynamic(
   () =>
@@ -278,59 +279,97 @@ export function PasoDosWizardMovil({
   const [vidSearch, setVidSearch] = useState("");
   const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const [despieceActiveItemId, setDespieceActiveItemId] = useState<string | null>(null);
+  const [despiecePromptItemId, setDespiecePromptItemId] = useState<string | null>(null);
+  const itemIdsBeforeConfirmRef = useRef<Set<string> | null>(null);
+  const pendingNewItemIdsRef = useRef<string[]>([]);
 
   const quotePricingMode = formulario.quotePricingMode;
+  const {
+    isReady: isDespiecePreviewReady,
+    hasDespiecePreviewAvailable,
+    canOpenDespieceForItem,
+    resolveDefaultDespieceItemId,
+  } = useQuoteDespiecePreview({
+    items,
+    enabled: quotePricingMode === "por_item",
+    preload: wizard.isOpen,
+  });
 
-  const openDespieceReview = (itemId?: string) => {
-    const nextId = itemId ?? items[0]?.id ?? null;
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "despiece-mobile-wire",
-        hypothesisId: "H1",
-        location: "paso-dos-wizard-movil-shell.tsx:openDespieceReview",
-        message: "mobile open despiece review",
-        data: {
-          itemId: nextId,
-          itemsCount: items.length,
-          hasCuaderno: Boolean(cuaderno),
-          lineTemplates: cuaderno?.lineTemplates?.length ?? 0,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    setDespieceActiveItemId(nextId);
-    setDespieceReviewOpen(true);
-  };
+  const despiecePromptItem = despiecePromptItemId
+    ? items.find((item) => item.id === despiecePromptItemId) ?? null
+    : null;
+
+  const openDespieceReview = useCallback(
+    (itemId?: string) => {
+      if (!cuaderno?.onUpdateItem) return;
+      setDespieceActiveItemId(resolveDefaultDespieceItemId(itemId));
+      setDespieceReviewOpen(true);
+      setDespiecePromptItemId(null);
+    },
+    [cuaderno?.onUpdateItem, resolveDefaultDespieceItemId]
+  );
+
+  const handleWizardConfirm = useCallback(() => {
+    itemIdsBeforeConfirmRef.current = new Set(items.map((item) => item.id));
+    wizard.onConfirm();
+  }, [items, wizard.onConfirm]);
+
+  useEffect(() => {
+    if (
+      despiecePromptItemId &&
+      !items.some((item) => item.id === despiecePromptItemId)
+    ) {
+      setDespiecePromptItemId(null);
+    }
+  }, [items, despiecePromptItemId]);
+
+  useEffect(() => {
+    const before = itemIdsBeforeConfirmRef.current;
+    if (!before) return;
+
+    const newIds = items.filter((item) => !before.has(item.id)).map((item) => item.id);
+    if (newIds.length === 0) return;
+
+    itemIdsBeforeConfirmRef.current = null;
+    pendingNewItemIdsRef.current = newIds;
+  }, [items]);
+
+  useEffect(() => {
+    const pendingIds = pendingNewItemIdsRef.current;
+    if (pendingIds.length === 0 || !isDespiecePreviewReady) return;
+
+    const previewItemId = pendingIds.find((itemId) => canOpenDespieceForItem(itemId));
+    pendingNewItemIdsRef.current = [];
+
+    if (previewItemId) {
+      setDespiecePromptItemId(previewItemId);
+    }
+  }, [items, isDespiecePreviewReady, canOpenDespieceForItem]);
+
+  const despieceReviewMarkup =
+    despieceReviewOpen && cuaderno?.onUpdateItem ? (
+      <DespieceReviewSurface
+        open
+        items={items}
+        lineTemplates={cuaderno.lineTemplates}
+        quotePricingMode={quotePricingMode}
+        activeItemId={despieceActiveItemId}
+        onActiveItemChange={setDespieceActiveItemId}
+        onUpdateItem={cuaderno.onUpdateItem}
+        onClose={() => setDespieceReviewOpen(false)}
+        onContinueToSummary={() => {
+          setDespieceReviewOpen(false);
+          onGoToSummary();
+        }}
+        onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
+        isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
+      />
+    ) : null;
 
   const withDespieceHost = (node: ReactNode) => (
     <>
       {node}
-      {cuaderno && despieceReviewOpen ? (
-        <DespieceReviewSurface
-          open
-          items={items}
-          lineTemplates={cuaderno.lineTemplates}
-          quotePricingMode={quotePricingMode}
-          activeItemId={despieceActiveItemId}
-          onActiveItemChange={setDespieceActiveItemId}
-          onUpdateItem={cuaderno.onUpdateItem}
-          onClose={() => setDespieceReviewOpen(false)}
-          onContinueToSummary={() => {
-            setDespieceReviewOpen(false);
-            onGoToSummary();
-          }}
-          onSaveCubicationLineAdjustment={formulario.onSaveCubicationLineAdjustment}
-          isSavingCubicationLineAdjustment={formulario.isSavingCubicationLineAdjustment}
-        />
-      ) : null}
+      {despieceReviewMarkup}
     </>
   );
   const isCompactDataStep = wizard.paso === 3;
@@ -532,7 +571,7 @@ export function PasoDosWizardMovil({
         precioFormateado={formatCurrencyInput(wizard.draft.precio)}
         onBack={wizard.onBack}
         onClose={handleCloseWizard}
-        onConfirm={wizard.onConfirm}
+        onConfirm={handleWizardConfirm}
         onNext={wizard.onNext}
         isSingleStepFreeTotal={isSingleStepFreeTotal}
         visualStage={visualStage}
@@ -609,6 +648,9 @@ export function PasoDosWizardMovil({
         onGoToSummary={onGoToSummary}
         {...cuaderno}
         onOpenDespieceReview={openDespieceReview}
+        canOpenDespieceForItem={
+          isDespiecePreviewReady ? canOpenDespieceForItem : undefined
+        }
         onClose={() => {
           cuaderno.onClose();
           // Guiada = vuelve al wizard guiado, no solo a la lista tapada.
@@ -644,9 +686,18 @@ export function PasoDosWizardMovil({
           onReturnToModeSelector={onReturnToModeSelector}
           onOpenCuaderno={canOpenCuaderno ? handleOpenCuadernoFromGuiada : undefined}
           onOpenDespieceReview={
-            items.length > 0 && quotePricingMode === "por_item"
+            hasDespiecePreviewAvailable && cuaderno?.onUpdateItem
               ? () => openDespieceReview()
               : undefined
+          }
+          despiecePrompt={
+            despiecePromptItem
+              ? {
+                  itemLabel: despiecePromptItem.codigo || despiecePromptItem.tipo,
+                  onOpen: () => openDespieceReview(despiecePromptItem.id),
+                  onDismiss: () => setDespiecePromptItemId(null),
+                }
+              : null
           }
         />
       ) : null}

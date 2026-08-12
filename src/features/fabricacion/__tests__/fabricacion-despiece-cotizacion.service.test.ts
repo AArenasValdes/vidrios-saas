@@ -4,7 +4,14 @@ import {
   crearRecetaReferenciaL5000Corredera2H,
   type PlantillaVentoraCorrederaId,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
-import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import {
+  anyQuoteItemCanOpenDespiecePreview,
+  buildQuoteDespiecePreviewEligibility,
+  canOpenDespiecePreviewForQuoteItem,
+  findFirstQuoteItemWithDespiecePreview,
+  resolveFabricacionDespieceForQuoteItem,
+} from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
+import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
@@ -156,6 +163,33 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.message).toMatch(/no configurada/i);
   });
 
+  it("CASO 4b: con largos comerciales → despiece y tiras", () => {
+    const recipe = recipeRecord();
+    recipe.definition = {
+      ...recipe.definition,
+      perfiles: recipe.definition.perfiles.map((profile) => ({
+        ...profile,
+        largoComercialMm: 5950,
+      })),
+      configuracionCorte: {
+        perdidaCorteMm: null,
+        despunteInicialMm: null,
+        sobranteMinimoAprovechableMm: null,
+      },
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item: quoteItem({}),
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.formal?.result.totalLinealMm).toBe(10714);
+    expect(resolved.barsAvailable).toBe(true);
+    expect(resolved.formal?.pautaBarras?.barras.length ?? 0).toBeGreaterThan(0);
+  });
+
   it("CASO 4: sin largos comerciales → despiece sí, barras no", () => {
     const resolved = resolveFabricacionDespieceForQuoteItem({
       item: quoteItem({}),
@@ -253,5 +287,149 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
         0
       )
     ).toBe(12);
+  });
+
+  it("CASO 9: recalcula tiras aunque la pieza tenga un snapshot viejo sin barras", () => {
+    const recipe = recipeRecord();
+    recipe.definition = {
+      ...recipe.definition,
+      perfiles: recipe.definition.perfiles.map((profile) => ({
+        ...profile,
+        largoComercialMm: 5950,
+      })),
+    };
+    const staleSnapshot = construirSnapshotFabricacionCotizacion({
+      recipe: recipeRecord({
+        definition: crearRecetaReferenciaL5000Corredera2H(),
+      }),
+      entrada: {
+        anchoTotalMm: 1200,
+        altoTotalMm: 1000,
+        cantidad: 1,
+        hojas: 2,
+        modulos: 2,
+        variante: "estandar",
+      },
+    });
+
+    const item = quoteItem({});
+    item.fabricacionSnapshot = {
+      ...staleSnapshot,
+      pautaBarras: {
+        calculable: false,
+        barras: [],
+        advertencias: [],
+        totalUsadoMm: 0,
+        totalPerdidaCortesMm: 0,
+        totalSobranteMm: 0,
+      },
+    };
+
+    const resolved = resolveFabricacionDespieceForQuoteItem({
+      item,
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(resolved.estado).toBe("calculado");
+    expect(resolved.barsAvailable).toBe(true);
+    expect(resolved.formal?.pautaBarras?.barras.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("canOpenDespiecePreviewForQuoteItem es true solo con línea, receta y despiece calculable", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const item = quoteItem({});
+
+    expect(
+      canOpenDespiecePreviewForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(true);
+
+    expect(
+      canOpenDespiecePreviewForQuoteItem({
+        item: quoteItem({ withLine: false }),
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(false);
+
+    expect(
+      canOpenDespiecePreviewForQuoteItem({
+        item,
+        recipes: [recipe],
+        organizationId: null,
+      })
+    ).toBe(false);
+  });
+
+  it("buildQuoteDespiecePreviewEligibility indexa solo piezas elegibles", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const eligible = quoteItem({});
+    const map = buildQuoteDespiecePreviewEligibility({
+      items: [quoteItem({ withLine: false }), eligible],
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(map.size).toBe(1);
+    expect(map.get(eligible.id)).toBe(true);
+  });
+
+  it("findFirstQuoteItemWithDespiecePreview respeta el orden de la cotización", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const first = quoteItem({ lineTemplateId: "135" });
+    first.id = "item-first";
+    const second = quoteItem({ lineTemplateId: "135" });
+    second.id = "item-second";
+
+    const found = findFirstQuoteItemWithDespiecePreview({
+      items: [first, second],
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(found?.id).toBe("item-first");
+  });
+
+  it("canOpenDespiecePreviewForQuoteItem rechaza piezas sin medidas", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const item = quoteItem({});
+
+    expect(
+      canOpenDespiecePreviewForQuoteItem({
+        item: { ...item, ancho: 0 },
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(false);
+  });
+
+  it("anyQuoteItemCanOpenDespiecePreview detecta al menos una pieza elegible", () => {
+    const recipe = recipeRecord({}, "L5000");
+    const eligibility = buildQuoteDespiecePreviewEligibility({
+      items: [quoteItem({ withLine: false }), quoteItem({})],
+      recipes: [recipe],
+      organizationId: 1,
+    });
+
+    expect(
+      anyQuoteItemCanOpenDespiecePreview({
+        items: [],
+        recipes: [recipe],
+        organizationId: 1,
+        eligibilityByItemId: eligibility,
+      })
+    ).toBe(true);
+
+    expect(
+      anyQuoteItemCanOpenDespiecePreview({
+        items: [quoteItem({ withLine: false })],
+        recipes: [recipe],
+        organizationId: 1,
+      })
+    ).toBe(false);
   });
 });

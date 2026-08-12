@@ -21,7 +21,7 @@ const DESPIECE_UI_STATUS_LABELS: Record<DespieceUiStatus, string> = {
 };
 
 const BARS_NOT_CALCULABLE_HINT =
-  "Agrega largos comerciales para calcular barras y sobrantes.";
+  "Agrega largos comerciales en la receta para calcular tiras según la pauta sugerida.";
 
 function formatMm(value: number) {
   return `${Math.round(value).toLocaleString("es-CL")} mm`;
@@ -98,7 +98,7 @@ export function DespieceInspectorSummary({
           <dd>{summary.hasSnapshot ? formatMl(summary.mlPerfiles) : "—"}</dd>
         </div>
         <div>
-          <dt>Barras</dt>
+          <dt>Tiras</dt>
           <dd className={!barsCalculableHere ? styles.notCalculable : undefined}>
             {summary.hasSnapshot ? (barsCalculableHere ? summary.barras : "—") : "—"}
           </dd>

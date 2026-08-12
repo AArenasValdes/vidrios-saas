@@ -52,6 +52,7 @@ type Props = {
   onDuplicate: () => void;
   onRemove: () => void;
   onOpenDespieceReview?: (itemId: string) => void;
+  canOpenDespieceForItem?: (itemId: string) => boolean;
 };
 
 const SECTIONS: { id: SectionId; title: string }[] = [
@@ -112,6 +113,7 @@ export function CuadernoConstructorMovil({
   onDuplicate,
   onRemove,
   onOpenDespieceReview,
+  canOpenDespieceForItem,
 }: Props) {
   useMobileViewportStability();
   const [openSection, setOpenSection] = useState<SectionId | null>("identificacion");
@@ -456,23 +458,25 @@ export function CuadernoConstructorMovil({
                             </div>
                           </dl>
                         ) : null}
-                        {onOpenDespieceReview ? (
+                        {onOpenDespieceReview && canOpenDespieceForItem?.(item.id) ? (
                           <button
                             type="button"
                             className={s.constructorLink}
                             onClick={() => onOpenDespieceReview(item.id)}
                           >
                             <span>
-                              <p className={s.constructorLinkTitle}>Ver despiece</p>
+                              <p className={s.constructorLinkTitle}>Ver cortes y tiras</p>
                               <p className={s.constructorLinkHelp}>
-                                Pauta de corte y consolidado (solo lectura).
+                                Pauta de corte y consolidado (solo lectura, no va al PDF).
                               </p>
                             </span>
                             <LuPencilRuler size={18} aria-hidden />
                           </button>
                         ) : (
                           <p className={s.emptyHelp} style={{ textAlign: "left" }}>
-                            La pauta detallada se revisa al abrir el despiece o en desktop.
+                            {canOpenDespieceForItem
+                              ? "Configura la línea con fabricación y las medidas para ver cortes y tiras."
+                              : "La pauta detallada se revisa en desktop cuando la línea tiene fabricación."}
                           </p>
                         )}
                       </div>

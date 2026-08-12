@@ -6,6 +6,15 @@ import { createEmptyComponentForm } from "@/features/cotizaciones/new-quote/work
 
 import { PasoDosWizardMovil, type WizardActions } from "../paso-dos-wizard-movil-shell";
 
+jest.mock("@/features/fabricacion/hooks/use-quote-despiece-preview", () => ({
+  useQuoteDespiecePreview: () => ({
+    isReady: true,
+    hasDespiecePreviewAvailable: false,
+    canOpenDespieceForItem: () => false,
+    resolveDefaultDespieceItemId: () => null,
+  }),
+}));
+
 function createWizard(overrides: Partial<WizardActions> = {}): WizardActions {
   return {
     isOpen: true,

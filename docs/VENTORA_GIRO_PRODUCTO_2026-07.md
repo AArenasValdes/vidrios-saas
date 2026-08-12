@@ -8,7 +8,7 @@
 
 ## 1. En una frase
 
-Ventora es **software comercial para talleres de vidrios/aluminio/PVC**: cotizar y cerrar desde el celular, preparar mejor desde desktop, catálogo de precios propio, constructor visual cuando hace falta, y —opcionalmente— **pauta de fabricación revisable** con recetas del taller. **No** es ERP, CAD ni optimizador de cortes.
+Ventora es **software comercial para talleres de vidrios/aluminio/PVC**: cotizar y cerrar desde el celular, preparar mejor desde desktop, catálogo de precios propio, constructor visual cuando hace falta, y —opcionalmente— **receta de fabricación** que produce **tiras** y una **pauta sugerida** revisable. **No** es ERP, CAD ni optimizador óptimo de cortes.
 
 ---
 

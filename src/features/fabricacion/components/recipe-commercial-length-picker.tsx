@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+
 import s from "./fabricacion-workspace.module.css";
 
 type Props = {
@@ -12,8 +14,15 @@ type Props = {
   onChange: (value: number | null) => void;
 };
 
-function formatMm(value: number) {
-  return `${value.toLocaleString("es-CL")} mm`;
+function formatOptionLabel(value: number) {
+  const meters = `${(value / 1000).toLocaleString("es-CL", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} m`;
+  if (value === VENTORA_LARGO_COMERCIAL_PRESET_MM) {
+    return `${meters} · sugerido Ventora`;
+  }
+  return meters;
 }
 
 export function RecipeCommercialLengthPicker({
@@ -30,7 +39,9 @@ export function RecipeCommercialLengthPicker({
   const [customValue, setCustomValue] = useState("");
 
   const label =
-    typeof value === "number" && value > 0 ? formatMm(value) : "Por confirmar";
+    typeof value === "number" && value > 0
+      ? formatOptionLabel(value)
+      : "Por confirmar";
 
   useEffect(() => {
     if (!open) return;
@@ -97,14 +108,30 @@ export function RecipeCommercialLengthPicker({
         >
           {!customMode ? (
             <>
+              <div className={s.recipeBuildPickerGroup}>
+                <p>Sugerido Ventora</p>
+                <ul>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => applyValue(VENTORA_LARGO_COMERCIAL_PRESET_MM)}
+                    >
+                      <strong>{formatOptionLabel(VENTORA_LARGO_COMERCIAL_PRESET_MM)}</strong>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
               {usedByWorkshop.length > 0 ? (
                 <div className={s.recipeBuildPickerGroup}>
-                  <p>Usados por tu taller</p>
+                  <p>Usados en tus recetas</p>
                   <ul>
-                    {usedByWorkshop.map((largo) => (
+                    {usedByWorkshop
+                      .filter((largo) => largo !== VENTORA_LARGO_COMERCIAL_PRESET_MM)
+                      .map((largo) => (
                       <li key={`used-${largo}`}>
                         <button type="button" onClick={() => applyValue(largo)}>
-                          <strong>{formatMm(largo)}</strong>
+                          <strong>{formatOptionLabel(largo)}</strong>
                         </button>
                       </li>
                     ))}
@@ -114,12 +141,14 @@ export function RecipeCommercialLengthPicker({
 
               {otherFrequent.length > 0 ? (
                 <div className={s.recipeBuildPickerGroup}>
-                  <p>{usedByWorkshop.length > 0 ? "Otros frecuentes" : "Frecuentes"}</p>
+                  <p>{usedByWorkshop.length > 0 ? "Otros presets" : "Presets"}</p>
                   <ul>
-                    {otherFrequent.map((largo) => (
+                    {otherFrequent
+                      .filter((largo) => largo !== VENTORA_LARGO_COMERCIAL_PRESET_MM)
+                      .map((largo) => (
                       <li key={`freq-${largo}`}>
                         <button type="button" onClick={() => applyValue(largo)}>
-                          <strong>{formatMm(largo)}</strong>
+                          <strong>{formatOptionLabel(largo)}</strong>
                         </button>
                       </li>
                     ))}

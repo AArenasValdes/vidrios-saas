@@ -251,6 +251,46 @@ export function applyLargoToProfilesWithoutLength(
   return changed ? { ...recipe, perfiles } : recipe;
 }
 
+/** Aplica el mismo largo comercial a todos los perfiles de la receta. */
+export function applyLargoToAllProfiles(
+  recipe: FabricacionReceta,
+  largoComercialMm: number
+): FabricacionReceta {
+  const largo = Math.round(largoComercialMm);
+  if (!Number.isFinite(largo) || largo <= 0 || recipe.perfiles.length === 0) {
+    return recipe;
+  }
+
+  const perfiles = recipe.perfiles.map((profile) => {
+    const pending = (profile.datosPendientes ?? []).filter(
+      (detail) => !/largo comercial/i.test(detail)
+    );
+    return {
+      ...profile,
+      largoComercialMm: largo,
+      datosPendientes: pending.length > 0 ? pending : undefined,
+    };
+  });
+
+  return { ...recipe, perfiles };
+}
+
+/** Largo más usado en la receta; si ninguno, null. */
+export function inferDominantLargoComercialMm(recipe: FabricacionReceta): number | null {
+  const counts = new Map<number, number>();
+  for (const profile of recipe.perfiles) {
+    const largo = profile.largoComercialMm;
+    if (typeof largo !== "number" || largo <= 0) continue;
+    counts.set(largo, (counts.get(largo) ?? 0) + 1);
+  }
+  if (counts.size === 0) return null;
+  return (
+    Array.from(counts.entries()).sort(
+      (left, right) => right[1] - left[1] || left[0] - right[0]
+    )[0]?.[0] ?? null
+  );
+}
+
 export function countProfilesWithoutLength(recipe: FabricacionReceta) {
   return recipe.perfiles.filter(
     (profile) => profile.largoComercialMm == null || profile.largoComercialMm <= 0

@@ -1,6 +1,7 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
 import {
+  applyLargoToAllProfiles,
   applyLargoToProfilesWithoutLength,
   applyTallerPerfilToComponent,
   collectFrequentLargosMm,
@@ -106,6 +107,14 @@ describe("taller-perfiles.service", () => {
     const result = collectFrequentLargosMm([recipe]);
     expect(result.usedByWorkshop[0]).toBe(6000);
     expect(result.otherFrequent).toEqual([5800, 6400]);
+  });
+
+  it("aplica un largo a todos los perfiles", () => {
+    const recipe = baseRecipe();
+    const next = applyLargoToAllProfiles(recipe, 5950);
+    expect(next.perfiles.every((profile) => profile.largoComercialMm === 5950)).toBe(
+      true
+    );
   });
 
   it("aplica un largo solo a perfiles sin largo", () => {

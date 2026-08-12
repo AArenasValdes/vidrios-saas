@@ -4,6 +4,15 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ---
 
+## 2026-08-11 - UX fabricación “maestro en papel”
+
+- Configurar una vez / usar siempre: tipología visual, perfiles en lenguaje humano (“Medida de corte”, Editar regla), accesorios humanos, largo comercial persistido en receta (6 m = preset sugerido Ventora).
+- Probar: multi-medida consolida cortes y llama una sola vez a FFD; héroe = tiras; “Ver pauta sugerida” secundaria. Sin prometer óptimo.
+- Capa `fabricacion-regla-humana.service.ts` + `fabricacion-pauta-multi-medida.service.ts`. Despiece cotización/print alineados a tiras/pauta sugerida.
+- Docs handoff actualizados: tiras protagonista; tipologías pendienteCompletar sin fórmulas inventadas. Sin migración DB.
+
+---
+
 ## 2026-08-08 - Inicio inteligente de recetas por tipologia
 
 - El administrador desktop ya no obliga a crear una receta vacia: ofrece Base de Ventora, Crear con IA o Empezar desde cero antes de persistir el borrador.

@@ -1,3 +1,4 @@
+import { describePerfilSheetMeasure } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionAccesorio,
@@ -146,4 +147,16 @@ export function tieneLargosComercialesPendientes(receta: FabricacionReceta) {
   return receta.perfiles.some(
     (profile) => profile.requerido && !profile.largoComercialMm
   );
+}
+
+/** Perfil listo para cubicar: medida/ajuste definidos y largo comercial. */
+export function isProfileReadyForPauta(
+  profile: FabricacionComponentePerfil
+): boolean {
+  const sheetMeasure = describePerfilSheetMeasure(profile);
+  return !sheetMeasure.pending && profile.largoComercialMm != null;
+}
+
+export function countProfilesReadyForPauta(receta: FabricacionReceta) {
+  return receta.perfiles.filter(isProfileReadyForPauta).length;
 }

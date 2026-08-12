@@ -4527,9 +4527,9 @@
 .sheetWizard .sheetHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   align-items: start;
-  padding: 8px 14px 12px;
+  padding: 16px 20px 14px;
   border-bottom: 1px solid #eef2f7;
   background: #ffffff;
   flex-shrink: 0;
@@ -4590,6 +4590,26 @@
   align-items: start;
 }
 
+.wizardStep1Surface {
+  display: grid;
+  gap: 16px;
+  padding: 4px 2px 0;
+}
+
+.wizardStep1Section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wizardStep1ActiveRow {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e3ebf5;
+  border-radius: 12px;
+  background: #fff;
+}
+
 .wizardStep1PricingCol {
   display: grid;
   gap: 12px;
@@ -4612,12 +4632,17 @@
 .pricingFieldsWide .pricingCostField {
   width: 100%;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 12px 14px;
+  border: 1px solid #e8eef6;
+  border-radius: 12px;
+  background: #fff;
 }
 
 .pricingFieldsWide .pricingSaleField {
   display: grid;
   gap: 8px;
+  border-color: rgba(30, 136, 255, 0.22);
+  background: #fafcff;
 }
 
 .pricingFieldsWide .moneyWrap {
@@ -4639,25 +4664,25 @@
 
 .wizardCompactSummary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid #e3ebf5;
-  border-radius: 12px;
-  background: #f7f9fc;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .wizardCompactSummary span {
   display: grid;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #eef2f7;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e8eef6;
   color: #1a2b44;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 650;
   line-height: 1.25;
 }
 
@@ -4671,31 +4696,39 @@
 
 .wizardProgress {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .wizardProgressItem {
-  min-height: 40px;
-  padding: 6px 8px;
-  border: 1px solid #e4eaf2;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
   border-radius: 10px;
-  background: #f8fafc;
-  color: #5f7086;
+  background: transparent;
+  color: #64748b;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   cursor: pointer;
   text-align: left;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.wizardProgressItem:hover:not(.wizardProgressItemActive) {
+  background: #f8fafc;
+  border-color: #e8eef6;
 }
 
 .wizardProgressItemActive {
-  border-color: rgba(30, 136, 255, 0.45);
-  background: #eef6ff;
+  border-color: rgba(30, 136, 255, 0.35);
+  background: #f3f8ff;
   color: #0f3f86;
-  box-shadow: inset 0 0 0 1px rgba(30, 136, 255, 0.12);
 }
 
 .wizardProgressItemDone {
@@ -4977,6 +5010,29 @@
   cursor: not-allowed;
 }
 
+.wizardTertiaryButton {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5b6b82;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wizardTertiaryButton:hover:not(:disabled) {
+  color: #1e88ff;
+}
+
+.wizardTertiaryButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .sheetWizard .wizardFooter .primaryButton {
   min-height: 44px;
   border-radius: 12px;
@@ -5062,8 +5118,17 @@
   }
 
   .wizardStep1Layout {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .wizardStep1Surface {
+    padding: 8px 4px 0;
+  }
+
+  .wizardCompactSummary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .pricingSecondaryRow {

@@ -7,31 +7,21 @@ import {
   ArrowLeft,
   ArrowRight,
   Beaker,
-  Box,
-  Building2,
   CheckCircle2,
-  CircleDot,
   Copy,
-  Layers3,
-  Layers2,
   Pencil,
   Plus,
   RotateCcw,
-  Ruler,
   Save,
   ShieldCheck,
-  Sparkles,
-  Tag,
 } from "lucide-react";
 
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import type { CotizacionLineTemplateMaterial } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { RecipeGuidedEditor } from "@/features/fabricacion/components/recipe-guided-editor";
 import { FabricacionLineMobileHub } from "@/features/fabricacion/components/fabricacion-line-mobile-hub";
-import {
-  isRecipeReadyToActivate,
-  RecipeActivateSidebarTip,
-} from "@/features/fabricacion/components/recipe-activate-panel";
+import { isRecipeReadyToActivate } from "@/features/fabricacion/components/recipe-activate-panel";
+import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { RecipeTestLab } from "@/features/fabricacion/components/recipe-test-lab";
 import {
   BIBLIOTECA_RECETAS_PRIORIZADAS,
@@ -44,7 +34,6 @@ import {
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import {
   buildProcedenciaPersistence,
-  FABRICACION_RECETA_PROCEDENCIA_LABEL,
   resolveProcedenciaFromSource,
 } from "@/features/fabricacion/types/fabricacion-receta-procedencia";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
@@ -52,6 +41,8 @@ import {
   contarBloqueosCriticosReceta,
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -73,16 +64,16 @@ const STATUS_COPY: Record<
 > = {
   draft: {
     label: "Borrador",
-    detail: "Receta lista para completar",
+    detail: "Fabricación por completar",
     tone: "draft",
   },
   testing: {
     label: "En prueba",
-    detail: "Receta lista para probar",
+    detail: "Lista para probar con una medida",
     tone: "testing",
   },
   validated: {
-    label: "Validada para el taller",
+    label: "Lista para cotizar",
     detail: "Validada por tu taller",
     tone: "validated",
   },
@@ -114,8 +105,8 @@ type RecipeWorkflowStepId = (typeof WORKFLOW_STEPS)[number]["id"];
 
 const PRIMARY_WORKFLOW_STEPS = [
   { id: "line", label: "Línea" },
-  { id: "recipe", label: "Receta" },
-  { id: "activate", label: "Probar y activar" },
+  { id: "recipe", label: "Fabricación" },
+  { id: "activate", label: "Probar" },
 ] as const;
 
 type PrimaryWorkflowStepId = (typeof PRIMARY_WORKFLOW_STEPS)[number]["id"];
@@ -127,8 +118,7 @@ function getPrimaryWorkflowStep(step: RecipeWorkflowStepId): PrimaryWorkflowStep
 }
 
 function getInternalStepForPrimary(
-  step: PrimaryWorkflowStepId,
-  _progress: ReturnType<typeof getRecipeStage>
+  step: PrimaryWorkflowStepId
 ): RecipeWorkflowStepId {
   if (step === "line") return "base";
   if (step === "activate") return "test";
@@ -186,7 +176,7 @@ function getRecipeStage(
     plan: hasTest,
     validation: recipe.status === "validated",
   } satisfies Record<RecipeWorkflowStepId, boolean>;
-  // Flujo primario: Línea → Receta → Probar y activar (sin paso Pauta).
+  // Flujo primario: Línea → Fabricación → Probar (sin paso Pauta).
   const currentStep: RecipeWorkflowStepId = !hasComponents
     ? "components"
     : !hasTest
@@ -195,10 +185,10 @@ function getRecipeStage(
         ? "validation"
         : "test";
 
-  let nextLabel = "Probar fabricación";
-  if (!hasComponents) nextLabel = "Continuar a receta";
-  else if (!hasTest) nextLabel = "Probar fabricación";
-  else if (canValidate) nextLabel = "Validar receta";
+  let nextLabel = "Probar con una medida real";
+  if (!hasComponents) nextLabel = "Preparar fabricación";
+  else if (!hasTest) nextLabel = "Probar con una medida real";
+  else if (canValidate) nextLabel = "Dejar lista para cotizar";
 
   return {
     componentCount,
@@ -230,7 +220,7 @@ function RecipeWorkflowStepper({
   );
 
   return (
-    <nav className={s.workflowStepper} aria-label="Etapas de la receta">
+    <nav className={s.workflowStepper} aria-label="Etapas de fabricación">
       {PRIMARY_WORKFLOW_STEPS.map((step, index) => {
         const isComplete = index < currentIndex;
         const isCurrent = currentPrimaryStep === step.id;
@@ -246,7 +236,7 @@ function RecipeWorkflowStepper({
             disabled={!onStep || isLockedFromLine}
             onClick={() => {
               if (!onStep || !progress) return;
-              onStep(getInternalStepForPrimary(step.id, progress));
+              onStep(getInternalStepForPrimary(step.id));
             }}
           >
             <span>{isComplete ? <CheckCircle2 aria-hidden /> : index + 1}</span>
@@ -256,45 +246,6 @@ function RecipeWorkflowStepper({
       })}
     </nav>
   );
-}
-
-const NEXT_STEP_COPY: Record<RecipeWorkflowStepId, string> = {
-  base: "Confirma los datos de la línea para continuar con sus materiales.",
-  components: "Agrega los perfiles principales y los demás materiales que realmente usa el taller.",
-  rules: "Define cómo se mide y cuántas piezas genera cada componente.",
-  test: "Prueba una medida conocida y compárala con un trabajo real.",
-  plan: "Confirma los parámetros de corte y revisa la distribución de barras.",
-  validation: "Revisa los casos obligatorios y valida esta versión para el taller.",
-};
-
-function formatRecipeLastEdited(value: string | null) {
-  if (!value) return "Última edición: Sin guardar";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Última edición: Sin guardar";
-
-  const now = new Date();
-  const isToday =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-
-  if (isToday) {
-    const time = new Intl.DateTimeFormat("es-CL", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date);
-    return `Última edición: Hoy ${time}`;
-  }
-
-  const formatted = new Intl.DateTimeFormat("es-CL", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
-  return `Última edición: ${formatted}`;
 }
 
 function formatTypologyLabel(tipologia: string) {
@@ -324,103 +275,37 @@ function RecipeSummaryPanel({
 }) {
   const isRecipeStage = activeStep === "components" || activeStep === "rules";
   const isActivateStage = activeStep === "test" || activeStep === "validation";
-  const stageLabel = progress.hasRules
-    ? "Lista para prueba"
-    : progress.hasComponents
-      ? "En configuración"
-      : "Pendiente de configurar";
-  const stageTone = progress.hasRules
-    ? "ready"
-    : progress.hasComponents
-      ? "progress"
-      : "pending";
+  void progress;
+  void readyToActivate;
+  void updatedAt;
+  void isRecipeStage;
+  void isActivateStage;
+  // Sidebar: preview técnica + meta compacta (no panel administrativo).
   return (
-    <aside
-      className={s.guidedSidebar}
-      data-recipe-stage={isRecipeStage}
-      data-activate-stage={isActivateStage}
-    >
-      <section className={s.recipeSummaryPanel}>
-        <div className={s.summaryPanelHeading}>
-          <h2>Resumen de la receta</h2>
-          {isRecipeStage ? (
-            <span className={s.recipeStagePill} data-tone={stageTone}>
-              {stageLabel}
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={s.summaryEditButton}
-              onClick={() => onStep(isActivateStage ? "components" : "base")}
-            >
-              Editar <Pencil size={13} />
-            </button>
-          )}
-        </div>
-        <dl>
-          <div><dt>Proveedor</dt><dd>{providerName || "Por confirmar"}</dd></div>
-          <div><dt>Línea</dt><dd>{lineName || "Por confirmar"}</dd></div>
-          <div><dt>Tipología</dt><dd>{formatTypologyLabel(recipe.identidad.tipologia)}</dd></div>
-          <div><dt>Hojas</dt><dd>{recipe.identidad.hojas}</dd></div>
-          {isRecipeStage ? <div><dt>Funciones</dt><dd>{recipe.perfiles.length}</dd></div> : null}
-          <div><dt>Perfiles</dt><dd>{recipe.perfiles.length}</dd></div>
-          <div><dt>Vidrios</dt><dd>{recipe.vidrios.length}</dd></div>
-          <div><dt>Accesorios</dt><dd>{recipe.accesorios.length}</dd></div>
-        </dl>
-        {isRecipeStage ? (
-          <p className={s.recipeSummaryUpdated}>{formatRecipeLastEdited(updatedAt ?? null)}</p>
-        ) : null}
-        {isActivateStage ? (
-          <span
-            className={s.recipeStagePill}
-            data-tone={readyToActivate ? "ready" : "progress"}
-          >
-            {readyToActivate ? "Lista para activar" : "En prueba"}
-          </span>
-        ) : null}
+    <aside className={`${s.guidedSidebar} ${s.fabCompactSidebar}`}>
+      <section className={s.fabSidebarCard} aria-label="Resumen de fabricación">
+        <FabricacionTipologiaPreview
+          tipologia={recipe.identidad.tipologia}
+          hojas={recipe.identidad.hojas}
+          size="sm"
+        />
+        <strong>
+          {lineName || "Línea"} · {formatTypologyLabel(recipe.identidad.tipologia)}
+          {recipe.identidad.hojas > 1 ? ` ${recipe.identidad.hojas}H` : ""}
+        </strong>
+        <span>
+          {[providerName, `${recipe.perfiles.length} perfiles`, `${recipe.accesorios.length} accesorios`]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+        <button
+          type="button"
+          className={s.fabCompactMetaEdit}
+          onClick={() => onStep(isActivateStage ? "components" : "base")}
+        >
+          Cambiar
+        </button>
       </section>
-      {isRecipeStage ? (
-      <section className={s.recipePracticesPanel}>
-        <h2>Buenas prácticas</h2>
-        <ul>
-          <li><span><Layers3 size={17} /></span><div><strong>El código comercial es opcional</strong><p>Identifica cada perfil con su función o una referencia del taller.</p></div></li>
-          <li><span><Ruler size={17} /></span><div><strong>Usa los ajustes sugeridos</strong><p>Revisa cada medida antes de probarla con una fabricación real.</p></div></li>
-          <li><span><Box size={17} /></span><div><strong>Largo comercial cuando puedas</strong><p>No bloquea la prueba; habilita el cálculo de barras y sobrantes.</p></div></li>
-        </ul>
-      </section>
-      ) : <section className={s.recipeProgressPanel}>
-        <h2>Progreso</h2>
-        <ol>
-          {PRIMARY_WORKFLOW_STEPS.map((step, index) => {
-            const primaryActive = getPrimaryWorkflowStep(activeStep);
-            const primaryIndex = PRIMARY_WORKFLOW_STEPS.findIndex(
-              (entry) => entry.id === primaryActive
-            );
-            const complete = recipe.estado === "validada" || index < primaryIndex;
-            const current = primaryActive === step.id;
-            return (
-              <li key={step.id} data-complete={complete} data-current={current}>
-                <button
-                  type="button"
-                  onClick={() => onStep(getInternalStepForPrimary(step.id, progress))}
-                >
-                  <span>{complete ? <CheckCircle2 size={14} /> : index + 1}</span>
-                  <strong>{step.label}</strong>
-                  <small>{complete ? "Completado" : current ? "En curso" : "Pendiente"}</small>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-      }
-      {isActivateStage ? <RecipeActivateSidebarTip /> : null}
-      {!isRecipeStage && !isActivateStage ? (
-        <section className={s.nextStepPanel}>
-          <span><Sparkles size={15} /> Próximo paso</span>
-          <p>{NEXT_STEP_COPY[activeStep]}</p>
-        </section>
-      ) : null}
     </aside>
   );
 }
@@ -430,15 +315,12 @@ function LineSetupSidebar({
   providerName,
   lineName,
   material,
-  startMode,
-  origenLabel,
-  origenDetail,
 }: {
   recipe: FabricacionReceta;
   providerName: string;
   lineName: string;
   material: CotizacionLineTemplateMaterial;
-  startMode: RecipeStartMode;
+  startMode?: RecipeStartMode;
   origenLabel?: string | null;
   origenDetail?: string | null;
 }) {
@@ -446,73 +328,19 @@ function LineSetupSidebar({
     BASES_TIPOLOGICAS_VENTORA.find(
       (entry) => entry.tipologia === recipe.identidad.tipologia
     )?.label ?? "Personalizada";
-  const procedenciaLabel =
-    origenLabel ||
-    (startMode === "ventora"
-      ? FABRICACION_RECETA_PROCEDENCIA_LABEL.base_ventora
-      : startMode === "ai"
-        ? FABRICACION_RECETA_PROCEDENCIA_LABEL.borrador_ia
-        : FABRICACION_RECETA_PROCEDENCIA_LABEL.receta_taller);
-  const summaryRows = [
-    { label: "Proveedor", value: providerName || "Sin definir", icon: Building2 },
-    { label: "Línea", value: lineName || "Sin definir", icon: Tag },
-    { label: "Tipología", value: typologyLabel, icon: Layers2 },
-    {
-      label: "Hojas",
-      value: `${recipe.identidad.hojas} ${recipe.identidad.hojas === 1 ? "hoja" : "hojas"}`,
-      icon: CircleDot,
-    },
-    { label: "Material", value: material, icon: Box },
-  ];
 
   return (
-    <aside className={`${s.guidedSidebar} ${s.lineSetupSidebar}`}>
-      <section className={s.lineSummaryCard}>
-        <h2>Resumen de la línea</h2>
-        <dl>
-          {summaryRows.map((row) => {
-            const Icon = row.icon;
-            return (
-              <div key={row.label}>
-                <dt><Icon size={16} aria-hidden="true" />{row.label}</dt>
-                <dd>{row.value}</dd>
-              </div>
-            );
-          })}
-        </dl>
-        <div className={s.lineSetupStatus}>
-          <span><CircleDot size={15} aria-hidden="true" /> Estado</span>
-          <strong>En preparación</strong>
-        </div>
-        <p className={s.lineSetupProcedencia}>
-          Origen: {procedenciaLabel}
-          {origenDetail ? (
-            <>
-              <br />
-              <small>{origenDetail}</small>
-            </>
-          ) : null}
-        </p>
-      </section>
-
-      <section className={s.lineNextStepsCard}>
-        <h2>Qué pasará después</h2>
-        <ol>
-          <li data-current="true">
-            <span>2</span>
-            <div>
-              <strong>Receta</strong>
-              <p>Configura los perfiles, medidas y ajustes que realmente usa tu taller.</p>
-            </div>
-          </li>
-          <li>
-            <span>3</span>
-            <div>
-              <strong>Probar y activar</strong>
-              <p>Prueba una medida conocida y activa la receta cuando el resultado sea correcto.</p>
-            </div>
-          </li>
-        </ol>
+    <aside className={`${s.guidedSidebar} ${s.fabCompactSidebar}`}>
+      <section className={s.fabSidebarCard} aria-label="Línea en preparación">
+        <FabricacionTipologiaPreview
+          tipologia={recipe.identidad.tipologia}
+          hojas={recipe.identidad.hojas}
+          size="sm"
+        />
+        <strong>{lineName || "Línea"} · {typologyLabel}</strong>
+        <span>
+          {[providerName, material].filter(Boolean).join(" · ") || "Configura qué fabricas"}
+        </span>
       </section>
     </aside>
   );
@@ -778,18 +606,20 @@ export function FabricacionLineWorkspace({
     view,
   ]);
 
-  const prepareLineSetupDraft = () => {
-    if (!draft) return null;
+  const prepareLineSetupDraft = (sourceDraft: FabricacionReceta | null = draft) => {
+    if (!sourceDraft) return null;
     const componentCount =
-      draft.perfiles.length + draft.vidrios.length + draft.accesorios.length;
+      sourceDraft.perfiles.length +
+      sourceDraft.vidrios.length +
+      sourceDraft.accesorios.length;
     const shouldPrepareStructure =
       hasChangedRecipeStartMode || componentCount === 0;
 
-    if (!shouldPrepareStructure) return draft;
+    if (!shouldPrepareStructure) return sourceDraft;
 
     if (recipeStartMode === "blank" || recipeStartMode === "ai") {
       return {
-        ...draft,
+        ...sourceDraft,
         perfiles: [],
         vidrios: [],
         accesorios: [],
@@ -803,12 +633,12 @@ export function FabricacionLineWorkspace({
     }
 
     const base = resolverBaseEstructuralVentora({
-      tipologia: draft.identidad.tipologia,
-      hojas: draft.identidad.hojas,
+      tipologia: sourceDraft.identidad.tipologia,
+      hojas: sourceDraft.identidad.hojas,
     });
     if (!base) {
       return {
-        ...draft,
+        ...sourceDraft,
         perfiles: [],
         vidrios: [],
         accesorios: [],
@@ -823,25 +653,27 @@ export function FabricacionLineWorkspace({
 
     const prepared = crearBaseTipologicaVentora({
       tipologia: base.tipologia,
-      hojas: draft.identidad.hojas,
-      modulos: draft.identidad.modulos,
+      hojas: sourceDraft.identidad.hojas,
+      modulos: sourceDraft.identidad.modulos,
       lineName,
     });
     return {
       ...prepared,
-      version: draft.version,
+      version: sourceDraft.version,
       // Una base precargada nunca hereda "validada" por el solo hecho de existir.
       estado:
-        draft.estado === "validada" ? draft.estado : "ejemplo_no_validado",
+        sourceDraft.estado === "validada"
+          ? sourceDraft.estado
+          : "ejemplo_no_validado",
       identidad: {
         ...prepared.identidad,
-        recetaId: draft.identidad.recetaId,
-        codigo: draft.identidad.codigo,
-        nombre: draft.identidad.nombre,
-        hojas: draft.identidad.hojas,
-        modulos: draft.identidad.modulos,
-        variante: draft.identidad.variante,
-        herraje: draft.identidad.herraje,
+        recetaId: sourceDraft.identidad.recetaId,
+        codigo: sourceDraft.identidad.codigo,
+        nombre: sourceDraft.identidad.nombre,
+        hojas: sourceDraft.identidad.hojas,
+        modulos: sourceDraft.identidad.modulos,
+        variante: sourceDraft.identidad.variante,
+        herraje: sourceDraft.identidad.herraje,
       },
     } satisfies FabricacionReceta;
   };
@@ -951,24 +783,45 @@ export function FabricacionLineWorkspace({
       setLineSetupError("Escribe el nombre de la línea para continuar.");
       return;
     }
-    if (!draft.identidad.nombre.trim()) {
-      setLineSetupError("Escribe el nombre interno de la receta para continuar.");
-      return;
-    }
     if (!draft.identidad.tipologia || draft.identidad.hojas < 1) {
-      setLineSetupError("Selecciona la tipología y la cantidad de hojas.");
+      setLineSetupError("Selecciona qué fabricas con esta línea.");
       return;
     }
 
-    const prepared = selected.status === "validated" ? draft : prepareLineSetupDraft();
+    const typologyLabel =
+      BASES_TIPOLOGICAS_VENTORA.find(
+        (entry) => entry.tipologia === draft.identidad.tipologia
+      )?.label ??
+      draft.identidad.tipologia.replaceAll("_", " ");
+    const derivedName =
+      draft.identidad.nombre.trim() ||
+      `${lineName.trim()} · ${typologyLabel}`;
+
+    const withName: FabricacionReceta = {
+      ...draft,
+      identidad: { ...draft.identidad, nombre: derivedName },
+    };
+    setDraft(withName);
+
+    const prepared =
+      selected.status === "validated"
+        ? withName
+        : prepareLineSetupDraft(withName);
     if (!prepared) return;
-    setDraft(prepared);
+    const preparedNamed: FabricacionReceta = {
+      ...prepared,
+      identidad: {
+        ...prepared.identidad,
+        nombre: prepared.identidad.nombre.trim() || derivedName,
+      },
+    };
+    setDraft(preparedNamed);
     setLineSetupError(null);
     setFeedback(null);
     setActiveStep("components");
     window.scrollTo({ top: 0, behavior: "auto" });
     if (selected.status !== "validated") {
-      void handleSave(prepared, { silent: true }).catch(() => undefined);
+      void handleSave(preparedNamed, { silent: true }).catch(() => undefined);
     }
   };
 
@@ -1054,7 +907,7 @@ export function FabricacionLineWorkspace({
   };
 
   if (isLoadingTemplates || isLoading || isResolvingOrganization) {
-    return <div className={s.loadingState}>Cargando recetas de fabricacion...</div>;
+    return <div className={s.loadingState}>Cargando fabricación...</div>;
   }
 
   if (!template) {
@@ -1072,7 +925,7 @@ export function FabricacionLineWorkspace({
     hasResolvedWorkspaceViewport &&
     isDesktopWorkspace
   ) {
-    return <div className={s.loadingState}>Abriendo receta de fabricacion...</div>;
+    return <div className={s.loadingState}>Abriendo fabricación...</div>;
   }
 
   if (!hasResolvedWorkspaceViewport) {
@@ -1081,24 +934,6 @@ export function FabricacionLineWorkspace({
 
   // Móvil: solo resumen de lo configurado en desktop (sin wizard ni IA).
   if (hasResolvedWorkspaceViewport && !isDesktopWorkspace) {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "2c9a42",
-      },
-      body: JSON.stringify({
-        sessionId: "2c9a42",
-        runId: "despiece-mobile-wire",
-        hypothesisId: "H5",
-        location: "fabricacion-line-workspace.tsx:mobileHub",
-        message: "fabricacion mobile hub only (no legacy editor)",
-        data: { view, recipeId: focusRecipe?.id ?? null },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return (
       <FabricacionLineMobileHub
         template={template}
@@ -1310,14 +1145,14 @@ export function FabricacionLineWorkspace({
             className={s.primaryButton}
             onClick={handleContinueToRecipe}
           >
-            Continuar a receta
+            Preparar fabricación
             <ArrowRight size={18} />
           </button>
         </div>
         </>
         ) : (
         <>
-        <div className={s.desktopGuidedLayout}>
+        <div className={`${s.desktopGuidedLayout} ${s.fabSheetLayout}`}>
           <div className={s.guidedMainColumn}>
             <RecipeGuidedEditor
               recipe={draft}
@@ -1338,8 +1173,12 @@ export function FabricacionLineWorkspace({
                 setRecipeStartMode(mode);
                 setHasChangedRecipeStartMode(true);
               }}
+              onPersistRecipe={async (nextRecipe) => {
+                setDraft(nextRecipe);
+                await handleSave(nextRecipe, { silent: true });
+              }}
               onBaseApplied={() => {
-                setFeedback("Base aplicada. Revisa los componentes sugeridos.");
+                setFeedback("Fabricación preparada. Revisa cómo trabaja tu taller.");
                 setActiveStep("components");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
@@ -1371,7 +1210,7 @@ export function FabricacionLineWorkspace({
               className={s.primaryButton}
               onClick={() => navigateToRecipeStep(selected, recipeNextStep)}
             >
-              {isRecipeStage ? "Continuar a probar" : `Continuar a ${WORKFLOW_STEPS.find((step) => step.id === recipeNextStep)?.label.toLocaleLowerCase("es")}`}
+              {isRecipeStage ? "Probar con una medida real" : "Continuar"}
               <ArrowRight size={17} />
             </button>
           ) : null}
@@ -1489,6 +1328,14 @@ export function FabricacionLineWorkspace({
               desktopActiveStep={labStep}
               onBackToRecipe={goToRecipe}
               onConfigureLengths={goToRecipe}
+              onApplyPresetLengths={async () => {
+                const next = applyLargoToProfilesWithoutLength(
+                  workingSelected.definition,
+                  VENTORA_LARGO_COMERCIAL_PRESET_MM
+                );
+                setDraft(next);
+                await handleSave(next, { silent: true });
+              }}
               onActivate={() => void handleValidate({ stayOnStep: true })}
               onSaveTest={saveLabTest}
               onRunTest={async (testId) => {
@@ -1521,7 +1368,7 @@ export function FabricacionLineWorkspace({
         <div className={s.headerTitle}>
           <span>Fabricación</span>
           <h1>{template.nombre}</h1>
-          <p>Receta interna de esta línea.</p>
+          <p>Configuración de fabricación de esta línea.</p>
         </div>
         <div className={s.headerActions}>
           <Link
@@ -1567,7 +1414,8 @@ export function FabricacionLineWorkspace({
       />
 
       <p className={s.workspaceHelp}>
-        Cotizar no depende de esta configuración. La receta sirve para cubicación y pauta.
+        Cotizar no depende de esta configuración. Sirve para cubicación y pauta
+        automática al cotizar.
       </p>
 
       <section className={s.recipeSection}>
@@ -1576,7 +1424,10 @@ export function FabricacionLineWorkspace({
             <div>
               <h2>Continúa donde quedaste</h2>
             </div>
-            <p>La receta activa concentra el trabajo. Las versiones anteriores quedan guardadas abajo.</p>
+            <p>
+              La fabricación activa concentra el trabajo. Las versiones anteriores
+              quedan guardadas abajo.
+            </p>
           </div>
         ) : null}
 
@@ -1597,14 +1448,14 @@ export function FabricacionLineWorkspace({
                       <strong>{focusRecipe.definition.identidad.nombre}</strong>
                       <small>Versión {focusRecipe.version} · {status.detail}</small>
                     </div>
-                    <button type="button" className={s.iconButton} aria-label={`Archivar ${focusRecipe.definition.identidad.nombre}`} title="Archivar receta" onClick={() => void handleArchive(focusRecipe)}>
+                    <button type="button" className={s.iconButton} aria-label={`Archivar ${focusRecipe.definition.identidad.nombre}`} title="Archivar fabricación" onClick={() => void handleArchive(focusRecipe)}>
                       <Archive size={16} />
                     </button>
                   </div>
                   <dl className={s.recipeFocusProgress}>
                     <div><dt>Línea</dt><dd>Definida</dd></div>
-                    <div><dt>Receta</dt><dd>{stage.hasComponents ? `${stage.componentCount} funciones` : "Pendiente"}</dd></div>
-                    <div><dt>Probar y activar</dt><dd>{focusRecipe.status === "validated" ? "Validada" : stage.hasTest ? (stage.canValidate ? "Lista para validar" : "En prueba") : "Pendiente"}</dd></div>
+                    <div><dt>Fabricación</dt><dd>{stage.hasComponents ? `${stage.componentCount} piezas` : "Pendiente"}</dd></div>
+                    <div><dt>Probar</dt><dd>{focusRecipe.status === "validated" ? "Lista para cotizar" : stage.hasTest ? (stage.canValidate ? "Lista para validar" : "En prueba") : "Pendiente"}</dd></div>
                   </dl>
                   <div className={s.recipeFocusActions}>
                     {focusRecipe.status === "validated" ? (
@@ -1708,7 +1559,7 @@ export function FabricacionLineWorkspace({
                     onClick={() => void handleDuplicate(recipe)}
                   >
                     <Copy size={15} />
-                    Usar receta disponible
+                    Usar fabricación disponible
                   </button>
                 </div>
               </article>
@@ -1753,7 +1604,7 @@ export function FabricacionLineWorkspace({
           {suggestedRecipesForLine.length === 0 ? (
             <p className={s.emptyInline}>
               No hay plantilla sugerida compatible con esta línea. Puedes usar el
-              asistente o configurar la receta manualmente.
+              asistente o configurar la fabricación manualmente.
             </p>
           ) : null}
         </div>

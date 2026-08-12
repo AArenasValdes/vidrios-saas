@@ -1,9 +1,20 @@
 # Handoff autocontenido — Cubicación y pauta (Ventora)
 
-**Fecha:** 2026-07-24  
+**Fecha:** 2026-08-11 (actualización UX maestro)  
 **Para:** IA web / ChatGPT / Claude / Gemini / agente sin acceso al repo  
 **Cómo usar:** copia **TODO este archivo** y pégalo en el chat. No necesita abrir otros archivos.  
 **Idioma de respuesta esperado:** español.
+
+### Actualización UX 2026-08-11 (vigente)
+
+- **Configurar una vez:** línea + tipología → perfiles (lenguaje humano) → medida de corte → accesorios → largo comercial **persistido en la receta** → probar → activar.
+- **Usar siempre:** tipología + línea + ancho + alto + cantidad → despiece y tiras automáticos.
+- **Tiras** son el protagonista UX (“Tiras necesarias según esta pauta”). **Pauta sugerida** (cortes por tira, kerf/despunte) es secundaria.
+- **6,00 m** = solo preset sugerido Ventora en UI; nunca “largo de empresa” fijo. El cálculo activado usa `largoComercialMm` de la receta, no localStorage.
+- **Multi-medida en Probar:** despiece por fila → consolidar cortes → **una** `construirPautaBarrasFabricacion` (compartir tira entre medidas). No sumar tiras por fila.
+- FFD se mantiene; UI **no** promete optimización óptima. Lenguaje: “pauta sugerida”, no “óptimo/nesting”.
+- Frases de regla: `fabricacion-regla-humana.service.ts`. Preferir “Medida de corte” a “descuento”.
+- Tipologías `pendienteCompletar`: cargar base estructural; **nunca inventar fórmulas**.
 
 ---
 
@@ -64,7 +75,7 @@ El modelo de cubicación pasa a **recetas de componentes reales** (riel, jamba, 
 - Cotización: no re-pide tipología; pide herraje/variante solo si hay varias activas compatibles.
 - Versionado: bump solo en el **primer** cambio post-`validada`; snapshot protege cotizaciones.
 - Resumen fabricación interno: `/print/cotizaciones/[id]/fabricacion` (separado del PDF cliente).
-- FFD = “Distribución referencial de barras”.
+- FFD = motor de **pauta sugerida de tiras** (válida con kerf/despunte; no óptima).
 
 | Capa | Rol | Obligatorio para cotizar |
 |---|---|---|

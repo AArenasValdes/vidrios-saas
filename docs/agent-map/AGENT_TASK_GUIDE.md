@@ -94,8 +94,8 @@ Estado implementado:
 - Partidas V1 (únicas): `pano_fijo`, `corredera_2_hojas`, `puerta_abatible_1_hoja`.
 - Estados V1: `sin_configurar`, `lista_para_probar`, `en_calibracion`, `validada`, `revisar_cambios`.
 - `catalog_metadata` guarda perfiles por rol (`profileFrame`, `profileSash`, `profileMeeting`, `profileGlazingBead`, `profileSill`, `profileAccessory`) y descuentos/calibracion iniciales.
-- `buildLineTemplateCuttingPreview()` devuelve pauta `Perfil / Funcion / Medida mm / Cantidad / Total lineal`, vidrio, ml perfiles, accesorios y barras referenciales.
-- Quote Studio desktop muestra **Cubicacion y pauta** como seccion secundaria colapsable cuando hay linea con pauta activa + medidas.
+- `buildLineTemplateCuttingPreview()` / snapshot formal: cortes + **tiras según pauta sugerida** (FFD válido con kerf/despunte; no óptimo).
+- En Probar/despiece el héroe son **tiras**; la tabla de cortes es “Ver pauta sugerida”. Cotizar sigue siendo línea + tipología + AxHxQ tras activar.
 - Modal línea: estimación colapsada; perfiles/descuentos/calibración en segundo paso opcional.
 
 Siguiente corte seguro:
@@ -112,7 +112,7 @@ Reglas:
 - no mostrar formulas, JSON, variables libres ni editor tecnico al usuario;
 - no crear tablas tecnicas nuevas ni migraciones sin aprobacion explicita;
 - no implementar precios, costos, margen, inventario, compras, fabricacion automatica, optimizacion avanzada, nesting ni CAD;
-- no llamar al calculo "optimizador"; barras/sobrante son referencia simple;
+- no llamar al calculo "optimizador"; usar “pauta sugerida” / “tiras necesarias según esta pauta”;
 - solo configuraciones `validada` se usan sin advertencia; el resto debe mostrar pauta referencial;
 - composición **Personalizado** (`guidedVisualConfig` o flag Personalizado): pauta en modo borrador manual (`buildPersonalizadoManualCubicationDraft`); no usar auto de línea ni venderla como fabricación;
 - cambios de perfiles o descuentos despues de validar deben volver a `revisar_cambios`;

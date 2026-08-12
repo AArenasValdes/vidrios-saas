@@ -53,6 +53,8 @@ export type PasoDosCuadernoMovilProps = {
   onReturnToModeSelector?: () => void;
   /** Abre la revisión de despiece (solo lectura / misma superficie desktop). */
   onOpenDespieceReview?: (itemId?: string) => void;
+  /** Indica si la pieza tiene línea con fabricación y despiece calculable. */
+  canOpenDespieceForItem?: (itemId: string) => boolean;
 };
 
 const PRIMARY_CHIPS = [
@@ -125,6 +127,7 @@ export function PasoDosCuadernoMovil({
   onGoToSummary,
   onClose,
   onOpenDespieceReview,
+  canOpenDespieceForItem,
 }: PasoDosCuadernoMovilProps) {
   useMobileViewportStability();
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -654,6 +657,7 @@ export function PasoDosCuadernoMovil({
           onDuplicate={() => onDuplicateItem(constructorItem)}
           onRemove={() => requestRemoveItem(constructorItem.id)}
           onOpenDespieceReview={onOpenDespieceReview}
+          canOpenDespieceForItem={canOpenDespieceForItem}
         />
       ) : null}
 

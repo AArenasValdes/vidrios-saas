@@ -31,8 +31,8 @@ function buildRecipeRecord(): FabricationRecipeRecord {
   };
 }
 
-describe("RecipeTestLab smoke — Probar y activar", () => {
-  it("calcula fabricación, compara con taller y permite activar", async () => {
+describe("RecipeTestLab smoke — Probar fabricación", () => {
+  it("calcula fabricación, compara con taller y permite dejar lista para cotizar", async () => {
     const onSaveTest = jest.fn().mockResolvedValue(undefined);
     const onActivate = jest.fn().mockResolvedValue(undefined);
 
@@ -50,33 +50,41 @@ describe("RecipeTestLab smoke — Probar y activar", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /Prueba tu receta con una medida real/i,
+        name: /Prueba tu fabricación/i,
       })
     ).toBeInTheDocument();
     expect(screen.queryByLabelText(/Hojas/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Módulos/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Variante/i)).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Ancho (mm)"), {
+    fireEvent.change(screen.getByLabelText("Ancho mm"), {
       target: { value: "1500" },
     });
-    fireEvent.change(screen.getByLabelText("Alto (mm)"), {
+    fireEvent.change(screen.getByLabelText("Alto mm"), {
       target: { value: "1200" },
     });
     fireEvent.click(
-      screen.getByRole("button", { name: /Calcular fabricación/i })
+      screen.getByRole("button", { name: /Calcular materiales/i })
     );
 
     expect(
-      await screen.findByRole("heading", { name: /Compara con tu taller/i })
+      await screen.findByRole("heading", {
+        name: /Necesitas \d+ tiras? de/i,
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Tiras y cortes/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /¿Coincide con tu taller\?/i })
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Todo coincide con tu fabricación/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/Ventora calculó/i)).toBeInTheDocument();
-    expect(screen.getByText(/En mi taller uso/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Coincide/i).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/Medida esperada/i)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Activar receta/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Dejar lista para cotizar/i })
+    );
 
     await waitFor(() => {
       expect(onSaveTest).toHaveBeenCalledTimes(1);

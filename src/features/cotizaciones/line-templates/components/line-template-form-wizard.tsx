@@ -678,28 +678,30 @@ export function LineTemplateFormWizard({
             </button>
           </div>
 
-          <div className={s.wizardCompactSummary} aria-label="Resumen de la línea">
-            <span>
-              <strong>Precio</strong>
-              {pricePerM2 > 0
-                ? formatLineTemplatePriceLabel(unidadCobro, pricePerM2, formatCurrency)
-                : "Pendiente"}
-            </span>
-            <span>
-              <strong>Uso</strong>
-              {getUsageModeLabel(usageMode)}
-            </span>
-            <span>
-              <strong>Técnico</strong>
-              {draft.estimationEnabled
-                ? RECIPE_STATUS_LABELS[recipeStatus ?? "sin_configurar"]
-                : "Sin configurar"}
-            </span>
-            <span>
-              <strong>Estado</strong>
-              {commercialStateLabel}
-            </span>
-          </div>
+          {openStep > 1 ? (
+            <div className={s.wizardCompactSummary} aria-label="Resumen de la línea">
+              <span>
+                <strong>Precio</strong>
+                {pricePerM2 > 0
+                  ? formatLineTemplatePriceLabel(unidadCobro, pricePerM2, formatCurrency)
+                  : "Pendiente"}
+              </span>
+              <span>
+                <strong>Uso</strong>
+                {getUsageModeLabel(usageMode)}
+              </span>
+              <span>
+                <strong>Técnico</strong>
+                {draft.estimationEnabled
+                  ? RECIPE_STATUS_LABELS[recipeStatus ?? "sin_configurar"]
+                  : "Sin configurar"}
+              </span>
+              <span>
+                <strong>Estado</strong>
+                {commercialStateLabel}
+              </span>
+            </div>
+          ) : null}
 
           <nav className={s.wizardProgress} aria-label="Progreso del asistente">
             {wizardSteps.map((step) => {
@@ -731,17 +733,20 @@ export function LineTemplateFormWizard({
               openStep !== 1 ? s.wizardStepCollapsed : ""
             }`}
           >
-            {renderStepHeader(
-              1,
-              "Datos básicos",
-              "Nombre, categoría y precio de venta",
-              step1Summary,
-              openStep > 1
-            )}
+            {openStep !== 1
+              ? renderStepHeader(
+                  1,
+                  "Datos básicos",
+                  "Nombre, categoría y precio de venta",
+                  step1Summary,
+                  openStep > 1
+                )
+              : null}
             {openStep === 1 ? (
               <div className={`${s.wizardStepBody} ${s.wizardStepBodyWide}`}>
+                <div className={s.wizardStep1Surface}>
                 <div className={s.wizardStep1Layout}>
-                  <div className={s.wizardFieldGroup}>
+                  <section className={s.wizardStep1Section}>
                     <div className={s.wizardFieldGroupHead}>
                       <LuTag aria-hidden />
                       <div>
@@ -834,19 +839,18 @@ export function LineTemplateFormWizard({
                         </label>
                       ) : null}
                     </div>
-                  </div>
+                  </section>
 
-                  <div className={s.wizardStep1PricingCol}>
-                    <div className={s.wizardFieldGroup}>
-                      <div className={s.wizardFieldGroupHead}>
-                        <LuBadgeDollarSign aria-hidden />
-                        <div>
-                          <strong>Precio y rentabilidad</strong>
-                          <span>
-                            Define cuánto cobrarás y, opcionalmente, tu costo y mínimo.
-                          </span>
-                        </div>
+                  <section className={s.wizardStep1Section}>
+                    <div className={s.wizardFieldGroupHead}>
+                      <LuBadgeDollarSign aria-hidden />
+                      <div>
+                        <strong>Precio y rentabilidad</strong>
+                        <span>
+                          Define cuánto cobrarás y, opcionalmente, tu costo y mínimo.
+                        </span>
                       </div>
+                    </div>
 
                       <div className={`${s.pricingFieldsStack} ${s.pricingFieldsWide}`}>
                         <label
@@ -957,24 +961,24 @@ export function LineTemplateFormWizard({
                           </label>
                         </div>
                       </div>
-                    </div>
+                  </section>
+                </div>
 
-                    <div className={`${s.activeCard} ${s.activeCardInline}`}>
-                      <div className={s.activeCardCopy}>
-                        <strong>Usar en cotizaciones</strong>
-                        <span>Si está apagada, no aparece al cotizar.</span>
-                      </div>
-                      <button
-                        type="button"
-                        className={`${s.switch} ${draft.isActive ? s.switchOn : ""}`}
-                        onClick={() => onDraftChange("isActive", !draft.isActive)}
-                        aria-pressed={draft.isActive}
-                        aria-label="Cambiar estado de la línea"
-                      >
-                        <span className={s.switchThumb} />
-                      </button>
-                    </div>
+                <div className={`${s.activeCard} ${s.activeCardInline} ${s.wizardStep1ActiveRow}`}>
+                  <div className={s.activeCardCopy}>
+                    <strong>Usar en cotizaciones</strong>
+                    <span>Si está apagada, no aparece al cotizar.</span>
                   </div>
+                  <button
+                    type="button"
+                    className={`${s.switch} ${draft.isActive ? s.switchOn : ""}`}
+                    onClick={() => onDraftChange("isActive", !draft.isActive)}
+                    aria-pressed={draft.isActive}
+                    aria-label="Cambiar estado de la línea"
+                  >
+                    <span className={s.switchThumb} />
+                  </button>
+                </div>
                 </div>
 
                 <button
@@ -1236,13 +1240,15 @@ export function LineTemplateFormWizard({
               openStep !== 2 ? s.wizardStepCollapsed : ""
             }`}
           >
-            {renderStepHeader(
-              2,
-              "Uso de la línea",
-              "Elige cómo quieres usar esta línea al cotizar",
-              step2Summary,
-              openStep > 2
-            )}
+            {openStep !== 2
+              ? renderStepHeader(
+                  2,
+                  "Uso de la línea",
+                  "Elige cómo quieres usar esta línea al cotizar",
+                  step2Summary,
+                  openStep > 2
+                )
+              : null}
             {openStep === 2 ? (
               <div className={s.wizardStepBody}>
                 <div className={s.wizardUsageGrid}>
@@ -1284,15 +1290,17 @@ export function LineTemplateFormWizard({
                 openStep !== 3 ? s.wizardStepCollapsed : ""
               }`}
             >
-              {renderStepHeader(
-                3,
-                "Fabricación",
-                isDesktopLayout
-                  ? "Guarda la línea y abre su receta técnica"
-                  : "Elige origen, revisa componentes y edita solo lo necesario",
-                step3Summary,
-                openStep > 3
-              )}
+              {openStep !== 3
+                ? renderStepHeader(
+                    3,
+                    "Fabricación",
+                    isDesktopLayout
+                      ? "Guarda la línea y abre su receta técnica"
+                      : "Elige origen, revisa componentes y edita solo lo necesario",
+                    step3Summary,
+                    openStep > 3
+                  )
+                : null}
               {openStep === 3 ? (
                 <div className={`${s.wizardStepBody} ${s.wizardStepBodyWorkspace}`}>
                   {isDesktopLayout ? (
@@ -1617,13 +1625,15 @@ export function LineTemplateFormWizard({
                 openStep !== 4 ? s.wizardStepCollapsed : ""
               }`}
             >
-              {renderStepHeader(
-                4,
-                "Validación",
-                "Revisa estado, prueba con un vano real y valida para tu taller",
-                step4Summary,
-                false
-              )}
+              {openStep !== 4
+                ? renderStepHeader(
+                    4,
+                    "Validación",
+                    "Revisa estado, prueba con un vano real y valida para tu taller",
+                    step4Summary,
+                    false
+                  )
+                : null}
               {openStep === 4 ? (
                 <div
                   className={`${s.wizardStepBody} ${s.wizardStepBodyTall} ${s.wizardStepBodyWorkspace}`}
@@ -1687,44 +1697,68 @@ export function LineTemplateFormWizard({
           </button>
           <div className={s.wizardFooterActions}>
             {openStep < maxStep ? (
-              <button type="button" className={s.wizardSecondaryButton} onClick={handleNext}>
-                Siguiente
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={s.primaryButton}
-              onClick={
+              <>
+                {openStep === 1 &&
                 isDesktopLayout &&
                 !isGlassDraft &&
                 usageMode === "cubicacion_pauta" &&
                 sheetMode === "new" &&
-                onSaveAndConfigure
-                  ? onSaveAndConfigure
-                  : onSave
-              }
-              disabled={saveDisabled || isSaving}
-              title={
-                isDesktopLayout &&
-                !isGlassDraft &&
-                usageMode === "cubicacion_pauta" &&
-                sheetMode === "new"
-                  ? "Guarda la línea comercial y abre su receta técnica."
-                  : "Guarda los datos comerciales de la línea."
-              }
-            >
-              {isSaving
-                ? "Guardando..."
-                : isGlassDraft
-                  ? "Guardar producto"
-                  : isDesktopLayout &&
-                      usageMode === "cubicacion_pauta" &&
-                      sheetMode === "new"
-                    ? "Crear y configurar receta"
-                  : sheetMode === "edit"
-                    ? "Guardar línea"
-                    : "Crear línea"}
-            </button>
+                onSaveAndConfigure ? (
+                  <button
+                    type="button"
+                    className={s.wizardTertiaryButton}
+                    onClick={onSaveAndConfigure}
+                    disabled={saveDisabled || isSaving}
+                  >
+                    Crear y configurar receta
+                  </button>
+                ) : null}
+                {openStep > 1 ? (
+                  <button
+                    type="button"
+                    className={s.wizardSecondaryButton}
+                    onClick={onSave}
+                    disabled={saveDisabled || isSaving}
+                  >
+                    {sheetMode === "edit" ? "Guardar línea" : "Crear línea"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={s.primaryButton}
+                  onClick={handleNext}
+                >
+                  Siguiente
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className={s.primaryButton}
+                onClick={
+                  isDesktopLayout &&
+                  !isGlassDraft &&
+                  usageMode === "cubicacion_pauta" &&
+                  sheetMode === "new" &&
+                  onSaveAndConfigure
+                    ? onSaveAndConfigure
+                    : onSave
+                }
+                disabled={saveDisabled || isSaving}
+              >
+                {isSaving
+                  ? "Guardando..."
+                  : isGlassDraft
+                    ? "Guardar producto"
+                    : isDesktopLayout &&
+                        usageMode === "cubicacion_pauta" &&
+                        sheetMode === "new"
+                      ? "Crear y configurar receta"
+                      : sheetMode === "edit"
+                        ? "Guardar línea"
+                        : "Crear línea"}
+              </button>
+            )}
           </div>
         </footer>
       </section>

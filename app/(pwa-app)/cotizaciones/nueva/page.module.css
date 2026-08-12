@@ -7495,6 +7495,45 @@
   z-index: 6;
 }
 
+.stepTwoMobileDespiecePrompt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+  padding: 0.82rem 0.88rem;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 136, 255, 0.18);
+  background: linear-gradient(180deg, rgba(30, 136, 255, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.stepTwoMobileDespiecePromptCopy strong {
+  display: block;
+  color: #243b6b;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.stepTwoMobileDespiecePromptCopy p {
+  margin: 0.28rem 0 0;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.stepTwoMobileDespiecePromptActions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+  gap: 0.55rem;
+}
+
+.stepTwoMobileDespiecePromptActions .btnPrimary,
+.stepTwoMobileDespiecePromptActions .btnGhost {
+  min-height: 2.85rem;
+  width: 100%;
+  justify-content: center;
+}
+
 .stepTwoMobileFooterActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,5 +1,6 @@
 import type {
   FabricacionAdvertencia,
+  FabricacionConfiguracionCorte,
   FabricacionReceta,
   FabricacionResultadoCubicacion,
 } from "@/features/fabricacion/types/fabricacion-domain";
@@ -18,14 +19,25 @@ type CorteExpandido = {
   largoComercialMm: number;
 };
 
-function emptyResult(advertencias: FabricacionAdvertencia[]): FabricacionPautaBarras {
+/** Sin valores explícitos: el ajuste mm de cada perfil ya descuenta la sierra. */
+export const FABRICACION_CORTE_POR_DEFECTO: FabricacionConfiguracionCorte = {
+  perdidaCorteMm: 0,
+  despunteInicialMm: 0,
+  sobranteMinimoAprovechableMm: 0,
+};
+
+export function resolveConfiguracionCorteParaPauta(
+  configuracion?: FabricacionConfiguracionCorte | null
+): FabricacionConfiguracionCorte {
   return {
-    calculable: false,
-    barras: [],
-    advertencias,
-    totalUsadoMm: 0,
-    totalPerdidaCortesMm: 0,
-    totalSobranteMm: 0,
+    perdidaCorteMm:
+      configuracion?.perdidaCorteMm ?? FABRICACION_CORTE_POR_DEFECTO.perdidaCorteMm,
+    despunteInicialMm:
+      configuracion?.despunteInicialMm ??
+      FABRICACION_CORTE_POR_DEFECTO.despunteInicialMm,
+    sobranteMinimoAprovechableMm:
+      configuracion?.sobranteMinimoAprovechableMm ??
+      FABRICACION_CORTE_POR_DEFECTO.sobranteMinimoAprovechableMm,
   };
 }
 
@@ -33,21 +45,9 @@ export function construirPautaBarrasFabricacion(input: {
   receta: FabricacionReceta;
   resultado: FabricacionResultadoCubicacion;
 }): FabricacionPautaBarras {
-  const configuracion = input.receta.configuracionCorte;
-  if (
-    configuracion?.perdidaCorteMm == null ||
-    configuracion.despunteInicialMm == null ||
-    configuracion.sobranteMinimoAprovechableMm == null
-  ) {
-    return emptyResult([
-      {
-        codigo: "PAUTA_BARRAS_INCOMPLETA",
-        nivel: "advertencia",
-        mensaje:
-          "Configura perdida por corte, despunte inicial y sobrante minimo para distribuir barras.",
-      },
-    ]);
-  }
+  const configuracion = resolveConfiguracionCorteParaPauta(
+    input.receta.configuracionCorte
+  );
 
   const advertencias: FabricacionAdvertencia[] = [];
   const cortes: CorteExpandido[] = [];
@@ -85,9 +85,8 @@ export function construirPautaBarrasFabricacion(input: {
   const ordenados = cortes.sort((left, right) => right.largoMm - left.largoMm);
 
   ordenados.forEach((corte) => {
-    const consumo = corte.largoMm + configuracion.perdidaCorteMm!;
-    const capacidadUtil =
-      corte.largoComercialMm - configuracion.despunteInicialMm!;
+    const consumo = corte.largoMm + configuracion.perdidaCorteMm;
+    const capacidadUtil = corte.largoComercialMm - configuracion.despunteInicialMm;
 
     if (consumo > capacidadUtil) {
       advertencias.push({
@@ -114,21 +113,21 @@ export function construirPautaBarrasFabricacion(input: {
           barras.filter((entry) => entry.codigoPerfil === corte.codigoPerfil)
             .length + 1,
         largoComercialMm: corte.largoComercialMm,
-        despunteInicialMm: configuracion.despunteInicialMm!,
-        usadoMm: configuracion.despunteInicialMm!,
+        despunteInicialMm: configuracion.despunteInicialMm,
+        usadoMm: configuracion.despunteInicialMm,
         perdidaCortesMm: 0,
         sobranteMm: capacidadUtil,
         sobranteAprovechable:
-          capacidadUtil >= configuracion.sobranteMinimoAprovechableMm!,
+          capacidadUtil >= configuracion.sobranteMinimoAprovechableMm,
         cortes: [],
       } satisfies FabricacionBarraPauta);
 
     if (!existente) barras.push(barra);
     barra.usadoMm += consumo;
-    barra.perdidaCortesMm += configuracion.perdidaCorteMm!;
+    barra.perdidaCortesMm += configuracion.perdidaCorteMm;
     barra.sobranteMm = Math.max(barra.largoComercialMm - barra.usadoMm, 0);
     barra.sobranteAprovechable =
-      barra.sobranteMm >= configuracion.sobranteMinimoAprovechableMm!;
+      barra.sobranteMm >= configuracion.sobranteMinimoAprovechableMm;
     barra.cortes.push({
       componenteId: corte.componenteId,
       codigoPerfil: corte.codigoPerfil,

@@ -88,6 +88,8 @@ export const BASES_TIPOLOGICAS_VENTORA: BaseTipologicaVentora[] = [
     description: "Marco perimetral, hoja abatible, vidrio y accesorios opcionales.",
     hojasSugeridas: 1,
     modulosSugeridos: 1,
+    hojasMin: 1,
+    hojasMax: 2,
     pendienteCompletar: true,
   },
   {
@@ -117,6 +119,8 @@ export const BASES_TIPOLOGICAS_VENTORA: BaseTipologicaVentora[] = [
       "Marco, hoja de puerta, vidrio o panel y accesorios opcionales.",
     hojasSugeridas: 1,
     modulosSugeridos: 1,
+    hojasMin: 1,
+    hojasMax: 2,
     pendienteCompletar: true,
   },
   {
@@ -214,32 +218,48 @@ const DEFINITIONS: Record<BaseTipologicaVentora["tipologia"], DefinitionBase> = 
   abatible: {
     perfiles: [
       {
-        nombre: "Marco horizontal",
-        funcion: "Marco horizontal",
+        nombre: "Marco superior",
+        funcion: "Marco superior",
         medida: "ancho_total",
         cantidadTipo: "fija",
-        cantidad: 2,
+        cantidad: 1,
         grupo: "marco",
       },
       {
-        nombre: "Marco vertical",
-        funcion: "Marco vertical",
+        nombre: "Marco inferior",
+        funcion: "Marco inferior",
+        medida: "ancho_total",
+        cantidadTipo: "fija",
+        cantidad: 1,
+        grupo: "marco",
+      },
+      {
+        nombre: "Marco lateral",
+        funcion: "Marco lateral",
         medida: "alto_total",
         cantidadTipo: "fija",
         cantidad: 2,
         grupo: "marco",
       },
       {
-        nombre: "Hoja horizontal",
-        funcion: "Hoja horizontal",
+        nombre: "Hoja superior",
+        funcion: "Hoja superior",
         medida: "ancho_por_hoja",
         cantidadTipo: "por_hoja",
-        cantidad: 2,
+        cantidad: 1,
         grupo: "hoja",
       },
       {
-        nombre: "Hoja vertical",
-        funcion: "Hoja vertical",
+        nombre: "Hoja inferior",
+        funcion: "Hoja inferior",
+        medida: "ancho_por_hoja",
+        cantidadTipo: "por_hoja",
+        cantidad: 1,
+        grupo: "hoja",
+      },
+      {
+        nombre: "Hoja lateral",
+        funcion: "Hoja lateral",
         medida: "alto_por_hoja",
         cantidadTipo: "por_hoja",
         cantidad: 2,
@@ -264,32 +284,48 @@ const DEFINITIONS: Record<BaseTipologicaVentora["tipologia"], DefinitionBase> = 
   proyectante: {
     perfiles: [
       {
-        nombre: "Marco horizontal",
-        funcion: "Marco horizontal",
+        nombre: "Marco superior",
+        funcion: "Marco superior",
         medida: "ancho_total",
         cantidadTipo: "fija",
-        cantidad: 2,
+        cantidad: 1,
         grupo: "marco",
       },
       {
-        nombre: "Marco vertical",
-        funcion: "Marco vertical",
+        nombre: "Marco inferior",
+        funcion: "Marco inferior",
+        medida: "ancho_total",
+        cantidadTipo: "fija",
+        cantidad: 1,
+        grupo: "marco",
+      },
+      {
+        nombre: "Marco lateral",
+        funcion: "Marco lateral",
         medida: "alto_total",
         cantidadTipo: "fija",
         cantidad: 2,
         grupo: "marco",
       },
       {
-        nombre: "Hoja horizontal",
-        funcion: "Hoja horizontal",
+        nombre: "Hoja superior",
+        funcion: "Hoja superior",
         medida: "ancho_por_hoja",
         cantidadTipo: "por_hoja",
-        cantidad: 2,
+        cantidad: 1,
         grupo: "hoja",
       },
       {
-        nombre: "Hoja vertical",
-        funcion: "Hoja vertical",
+        nombre: "Hoja inferior",
+        funcion: "Hoja inferior",
+        medida: "ancho_por_hoja",
+        cantidadTipo: "por_hoja",
+        cantidad: 1,
+        grupo: "hoja",
+      },
+      {
+        nombre: "Hoja lateral",
+        funcion: "Hoja lateral",
         medida: "alto_por_hoja",
         cantidadTipo: "por_hoja",
         cantidad: 2,
@@ -468,6 +504,34 @@ const commonPending = [
   "Confirmar largo comercial",
 ];
 
+const structuralAccessoryPending = [
+  "Confirmar accesorio usado por el taller",
+  "Confirmar cantidad con el taller",
+  "Confirmar codigo y cantidad",
+];
+
+/** Tipologías que piden 1 o 2 hojas antes de preparar la estructura. */
+export const TIPOLOGIAS_CON_SELECTOR_HOJAS: BaseTipologicaVentora["tipologia"][] = [
+  "abatible",
+  "puerta_abatible",
+];
+
+export function esBaseTipologicaValidada(meta: BaseTipologicaVentora): boolean {
+  return !meta.pendienteCompletar;
+}
+
+export function esBaseTipologicaEstructural(meta: BaseTipologicaVentora): boolean {
+  return meta.pendienteCompletar === true;
+}
+
+export function tipologiaPideSelectorHojas(
+  tipologia: FabricacionTipologia
+): boolean {
+  return TIPOLOGIAS_CON_SELECTOR_HOJAS.includes(
+    tipologia as BaseTipologicaVentora["tipologia"]
+  );
+}
+
 function matchesHojas(base: BaseTipologicaVentora, hojas: number): boolean {
   const count = Math.max(1, hojas);
   if (base.hojasMin != null && count < base.hojasMin) return false;
@@ -476,8 +540,9 @@ function matchesHojas(base: BaseTipologicaVentora, hojas: number): boolean {
 }
 
 /**
- * Resuelve si existe una base estructural Ventora lista para usar.
- * Tipologías pendientes (Fija, Abatible, etc.) → null: no se ofrecen como listas.
+ * Resuelve la base tipológica Ventora para una tipología y cantidad de hojas.
+ * Incluye bases estructurales (pendienteCompletar) y la Corredera validada.
+ * Personalizada → null.
  */
 export function resolverBaseEstructuralVentora(input: {
   tipologia: FabricacionTipologia;
@@ -488,7 +553,6 @@ export function resolverBaseEstructuralVentora(input: {
     (entry) => entry.tipologia === input.tipologia
   );
   if (!base) return null;
-  if (base.pendienteCompletar) return null;
   if (!matchesHojas(base, input.hojas)) return null;
   return base;
 }
@@ -750,26 +814,30 @@ export function crearBaseTipologicaVentora(input: {
         multiplicador: 1,
       },
       requerido: false,
-      observaciones:
-        "Accesorio opcional sugerido. Confirmar modelo y cantidad en el Paso 2.",
-      datosPendientes: [
-        "Confirmar accesorio usado por el taller",
-        "Confirmar codigo y cantidad",
-      ],
+      observaciones: meta.pendienteCompletar
+        ? "Accesorio estructural sugerido. Confirmar modelo y cantidad real en el Paso 2."
+        : "Accesorio opcional sugerido. Confirmar modelo y cantidad en el Paso 2.",
+      datosPendientes: meta.pendienteCompletar
+        ? [...structuralAccessoryPending]
+        : [
+            "Confirmar accesorio usado por el taller",
+            "Confirmar codigo y cantidad",
+          ],
     })),
     configuracionCorte: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
     },
-    notasValidacion: [
-      "Base estructural Ventora: tipología habitual, no línea de fabricante.",
-      "No está técnicamente validada. El maestro revisa, prueba una medida y activa en el Paso 3.",
-      ...(meta.pendienteCompletar
-        ? [
-            "Esta tipología queda marcada como pendiente de completar con los perfiles reales del taller.",
-          ]
-        : []),
-    ],
+    notasValidacion: meta.pendienteCompletar
+      ? [
+          "Estructura preparada por Ventora: piezas habituales de la tipología.",
+          "Falta configurar medidas de corte, ajustes y referencias comerciales.",
+          "No está técnicamente validada. El maestro revisa, prueba una medida y activa en el Paso 3.",
+        ]
+      : [
+          "Base estructural Ventora: tipología habitual, no línea de fabricante.",
+          "No está técnicamente validada. El maestro revisa, prueba una medida y activa en el Paso 3.",
+        ],
   };
 }

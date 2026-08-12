@@ -63,11 +63,6 @@ describe("código comercial opcional y largo progresivo", () => {
         nombrePerfil: `${profile.funcion} L5000`,
         largoComercialMm: 6000,
       })),
-      configuracionCorte: {
-        perdidaCorteMm: 3,
-        despunteInicialMm: 0,
-        sobranteMinimoAprovechableMm: 300,
-      },
     };
 
     const resultado = calcularCubicacionYPauta(withLengths, {

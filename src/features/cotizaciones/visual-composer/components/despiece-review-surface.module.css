@@ -31,8 +31,8 @@
 }
 
 .surface {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   width: min(1440px, calc(100vw - 2.5rem));
   height: min(900px, calc(100vh - 2.5rem));
   overflow: hidden;
@@ -42,11 +42,20 @@
   box-shadow: 0 28px 64px rgba(15, 23, 42, 0.22);
 }
 
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .header {
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 1rem;
   align-items: center;
+  flex-shrink: 0;
   padding: 0.95rem 1.25rem;
   border-bottom: 1px solid #e5ebf2;
 }
@@ -116,8 +125,13 @@
 .pieceLayout {
   display: grid;
   grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) minmax(220px, 260px);
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+}
+
+.pieceMainScroll {
+  display: contents;
 }
 
 .pieceList,
@@ -724,6 +738,7 @@
 .consolidatedLayout {
   display: grid;
   gap: 0.75rem;
+  flex: 1 1 auto;
   min-height: 0;
   padding: 1rem 1.25rem 1.15rem;
   overflow: auto;
@@ -873,6 +888,7 @@
   gap: 0.65rem;
   align-items: center;
   justify-content: flex-end;
+  flex-shrink: 0;
   padding: 0.85rem 1.25rem;
   border-top: 1px solid #e5ebf2;
   background: #ffffff;
@@ -1016,8 +1032,7 @@
 
 @media (max-width: 1023px) {
   .overlay {
-    display: grid;
-    place-items: stretch;
+    display: block;
     padding: 0;
     background: #0b0f17;
   }
@@ -1033,13 +1048,21 @@
   }
 
   .header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.55rem 0.75rem;
-    padding: max(0.75rem, env(safe-area-inset-top, 0px)) 0.9rem 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.55rem 0.65rem;
+    padding: max(0.7rem, env(safe-area-inset-top, 0px)) 0.85rem 0.7rem;
+  }
+
+  .header > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .header .tabs {
-    grid-column: 1 / -1;
+    order: 3;
+    flex: 1 1 100%;
     width: 100%;
     justify-content: stretch;
   }
@@ -1050,42 +1073,210 @@
     justify-content: center;
   }
 
+  .closeButton {
+    order: 2;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .loadingState,
+  .errorState {
+    margin: 0.65rem 0.85rem 0;
+  }
+
   .pieceLayout {
-    grid-template-columns: 1fr;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pieceMainScroll {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .pieceList {
-    max-height: 168px;
+    flex: 0 0 auto;
+    max-height: none;
     border-right: 0;
     border-bottom: 1px solid #e5ebf2;
+    padding: 0.65rem 0.85rem 0.7rem;
+    overflow: visible;
   }
 
   .pieceList ul {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(148px, 72%);
+    grid-auto-columns: minmax(148px, 78%);
     gap: 0.45rem;
     overflow-x: auto;
-    padding-bottom: 0.15rem;
+    padding-bottom: 0.1rem;
+    scroll-snap-type: x proximity;
   }
 
   .pieceListItem,
   .pieceListItemActive {
     margin-bottom: 0;
     min-width: 148px;
+    scroll-snap-align: start;
   }
 
   .pieceDetail {
-    padding: 0.9rem;
+    flex: 0 0 auto;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    overflow: visible;
+  }
+
+  .detailHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .visualMetrics {
+    gap: 0.65rem;
+  }
+
+  .drawingCard {
+    min-height: 140px;
+    padding: 0.5rem;
+  }
+
+  .drawing {
+    max-width: 220px;
+  }
+
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .metricGrid span {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .tableToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .tableActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .tableActions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tableBlock {
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tableReading .tableHead,
+  .tableReading .tableRow {
+    grid-template-columns: minmax(0, 1.15fr) 5.25rem 2.75rem;
+  }
+
+  .tableReading .tableHead span:nth-child(4),
+  .tableReading .tableRow .totalCell {
+    display: none;
+  }
+
+  .tableReadingDetail .tableHead,
+  .tableReadingDetail .tableRow {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr) 5rem 2.5rem;
+  }
+
+  .tableReadingDetail .tableHead span:nth-child(5),
+  .tableReadingDetail .tableRow .totalCell {
+    display: none;
+  }
+
+  .tableHead span,
+  .tableRow label,
+  .tableRow strong,
+  .tableRow button,
+  .tableRow .readCell,
+  .tableRow .functionReadCell,
+  .tableRow .functionEditCell,
+  .tableRow .totalCell {
+    padding: 0.55rem 0.45rem;
+    font-size: 0.74rem;
   }
 
   .summaryRail {
+    flex: 0 0 auto;
     border-left: 0;
     border-top: 1px solid #e5ebf2;
+    padding: 0.75rem 0.85rem 1rem;
+    overflow: visible;
+    background: #f8fafc;
+  }
+
+  .summaryCard {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0.65rem;
+  }
+
+  .summaryCard > span {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .summaryCard > span:nth-child(odd):last-child {
+    grid-column: 1 / -1;
+  }
+
+  .summaryCard .barMeta {
+    grid-column: 1 / -1;
+    margin-top: 0.15rem;
   }
 
   .footer {
-    padding: 0.75rem 0.9rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .secondaryFooter,
+  .primaryFooter {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .consolidatedLayout {
+    padding: 0.85rem;
+  }
+
+  .consolidatedTable {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .consolidatedHeadRow,
+  .consolidatedRow {
+    min-width: 34rem;
   }
 }

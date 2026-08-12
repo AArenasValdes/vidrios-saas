@@ -1,6 +1,8 @@
 import {
   BASES_TIPOLOGICAS_VENTORA,
   crearBaseTipologicaVentora,
+  esBaseTipologicaEstructural,
+  esBaseTipologicaValidada,
   resolverBaseEstructuralVentora,
   resumirBaseEstructural,
 } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
@@ -8,28 +10,43 @@ import { fabricacionRecetaSchema } from "@/features/fabricacion/schemas/fabricac
 import { contarBloqueosCriticosReceta } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 
 describe("bases estructurales universales de Ventora", () => {
-  it("solo ofrece Corredera como base lista; el resto queda pendiente", () => {
+  it("solo Corredera está marcada como base validada; el resto es estructural", () => {
     expect(
-      BASES_TIPOLOGICAS_VENTORA.filter((entry) => !entry.pendienteCompletar).map(
+      BASES_TIPOLOGICAS_VENTORA.filter((entry) => esBaseTipologicaValidada(entry)).map(
         (entry) => entry.tipologia
       )
     ).toEqual(["corredera"]);
 
     expect(
+      BASES_TIPOLOGICAS_VENTORA.filter((entry) => esBaseTipologicaEstructural(entry)).map(
+        (entry) => entry.tipologia
+      )
+    ).toEqual([
+      "abatible",
+      "proyectante",
+      "pano_fijo",
+      "puerta_abatible",
+      "shower",
+    ]);
+  });
+
+  it("resuelve bases estructurales para tipologías no corredera", () => {
+    expect(
       resolverBaseEstructuralVentora({ tipologia: "corredera", hojas: 2 })?.id
     ).toBe("base-ventora-corredera");
     expect(
-      resolverBaseEstructuralVentora({ tipologia: "abatible", hojas: 1 })
-    ).toBeNull();
+      resolverBaseEstructuralVentora({ tipologia: "abatible", hojas: 1 })?.id
+    ).toBe("base-ventora-abatible");
     expect(
-      resolverBaseEstructuralVentora({ tipologia: "pano_fijo", hojas: 1 })
-    ).toBeNull();
+      resolverBaseEstructuralVentora({ tipologia: "pano_fijo", hojas: 1 })?.id
+    ).toBe("base-ventora-fija");
     expect(
-      resolverBaseEstructuralVentora({ tipologia: "proyectante", hojas: 1 })
-    ).toBeNull();
+      resolverBaseEstructuralVentora({ tipologia: "proyectante", hojas: 1 })?.id
+    ).toBe("base-ventora-proyectante");
     expect(
       resolverBaseEstructuralVentora({ tipologia: "puerta_abatible", hojas: 1 })
-    ).toBeNull();
+        ?.id
+    ).toBe("base-ventora-puerta");
     expect(
       resolverBaseEstructuralVentora({ tipologia: "personalizada", hojas: 2 })
     ).toBeNull();
@@ -67,7 +84,6 @@ describe("bases estructurales universales de Ventora", () => {
     expect(
       recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)
     ).toBe(true);
-    // Código y largo comercial ya no bloquean prueba/validación geométrica.
     expect(contarBloqueosCriticosReceta(recipe)).toBe(0);
 
     const summary = resumirBaseEstructural(recipe);
@@ -75,17 +91,54 @@ describe("bases estructurales universales de Ventora", () => {
     expect(summary.countsLabel).toBe(
       "7 funciones · 1 vidrio · accesorios sugeridos"
     );
-    expect(summary.countsLabel).not.toMatch(/perfil/i);
   });
 
-  it("no permite crear tipologías pendientes como base lista", () => {
-    expect(() =>
-      crearBaseTipologicaVentora({
-        tipologia: "abatible",
-        hojas: 1,
-        modulos: 1,
-        lineName: "Serie X",
-      })
-    ).toThrow(/No hay una base preparada/);
+  it("crea Abatible 1 hoja con estructura marco/hoja sin ajustes inventados", () => {
+    let nextId = 0;
+    const recipe = crearBaseTipologicaVentora({
+      tipologia: "abatible",
+      hojas: 1,
+      modulos: 1,
+      lineName: "Serie X",
+      createId: () => `id-${nextId++}`,
+    });
+
+    expect(recipe.perfiles.length).toBe(6);
+    expect(recipe.perfiles.map((profile) => profile.funcion)).toEqual([
+      "Marco superior",
+      "Marco inferior",
+      "Marco lateral",
+      "Hoja superior",
+      "Hoja inferior",
+      "Hoja lateral",
+    ]);
+    expect(recipe.vidrios).toHaveLength(1);
+    expect(recipe.accesorios.length).toBeGreaterThan(0);
+    expect(
+      recipe.perfiles.every((profile) => profile.reglaMedida.ajusteMm == null)
+    ).toBe(true);
+    expect(recipe.notasValidacion?.[0]).toMatch(/Estructura preparada por Ventora/i);
+    expect(
+      recipe.accesorios.every((accessory) =>
+        (accessory.datosPendientes ?? []).some((detail) => /cantidad/i.test(detail))
+      )
+    ).toBe(true);
+  });
+
+  it("crea Fijo con marco perimetral y vidrio único", () => {
+    const recipe = crearBaseTipologicaVentora({
+      tipologia: "pano_fijo",
+      hojas: 1,
+      modulos: 1,
+      lineName: "Serie F",
+    });
+
+    expect(recipe.perfiles.map((profile) => profile.funcion)).toEqual([
+      "Marco superior",
+      "Marco inferior",
+      "Marco lateral",
+    ]);
+    expect(recipe.vidrios[0]?.nombre).toBe("Vidrio fijo");
+    expect(recipe.accesorios).toHaveLength(1);
   });
 });

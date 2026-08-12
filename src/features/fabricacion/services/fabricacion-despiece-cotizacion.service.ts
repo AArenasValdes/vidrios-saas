@@ -7,8 +7,8 @@
 import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/services/fabricacion-contexto-pieza.service";
 import { construirSnapshotFabricacionCotizacion } from "@/features/fabricacion/services/fabricacion-cotizacion-snapshot.service";
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
+import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
-import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
@@ -38,23 +38,6 @@ function normalizeLineTemplateId(value: string | number | null | undefined): num
     if (Number.isInteger(parsed) && parsed > 0) return parsed;
   }
   return null;
-}
-
-function snapshotMatchesItem(
-  snapshot: FabricacionCotizacionSnapshot,
-  input: {
-    lineTemplateId: number;
-    ancho: number;
-    alto: number;
-    cantidad: number;
-  }
-) {
-  return (
-    snapshot.lineTemplateId === input.lineTemplateId &&
-    snapshot.input.anchoTotalMm === input.ancho &&
-    snapshot.input.altoTotalMm === input.alto &&
-    snapshot.input.cantidad === input.cantidad
-  );
 }
 
 function resolveLeavesCount(
@@ -121,32 +104,6 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
       barsAvailable: false,
       preliminary: false,
       message: "Fabricación no configurada para esta línea.",
-    };
-  }
-
-  if (
-    input.item.fabricacionSnapshot &&
-    snapshotMatchesItem(input.item.fabricacionSnapshot, {
-      lineTemplateId,
-      ancho,
-      alto,
-      cantidad,
-    })
-  ) {
-    const formal = input.item.fabricacionSnapshot;
-    const barsAvailable = Boolean(
-      formal.pautaBarras?.calculable && (formal.pautaBarras.barras?.length ?? 0) > 0
-    );
-    return {
-      estado: "calculado",
-      formal,
-      cubication: fabricacionSnapshotToLegacyCubicationSnapshot(formal),
-      recipe: null,
-      barsAvailable,
-      preliminary: formal.recipeStatus !== "validated",
-      message: barsAvailable
-        ? null
-        : "Agrega largos comerciales para calcular barras.",
     };
   }
 
@@ -251,6 +208,78 @@ export function resolveFabricacionDespieceForQuoteItem(input: {
       ? preliminary
         ? "Cálculo preliminar: la receta aún no está validada."
         : null
-      : "Agrega largos comerciales para calcular barras.",
+      : tieneLargosComercialesPendientes(recipe.definition)
+        ? "Agrega largos comerciales para calcular tiras."
+        : "No se pudo armar la pauta de tiras con esta receta.",
   };
+}
+
+/** Pieza con línea + receta de fabricación y despiece calculable (uso interno, no PDF cliente). */
+export function canOpenDespiecePreviewForQuoteItem(input: {
+  item: CotizacionWorkflowItem;
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): boolean {
+  if (input.organizationId == null) return false;
+  const resolution = resolveFabricacionDespieceForQuoteItem(input);
+  if (resolution.estado !== "calculado") return false;
+  const perfiles = resolution.formal?.result.perfiles ?? [];
+  if (perfiles.length === 0) return false;
+  return resolution.formal?.result.calculable === true;
+}
+
+export function buildQuoteDespiecePreviewEligibility(input: {
+  items: CotizacionWorkflowItem[];
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+}): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  if (input.organizationId == null || input.items.length === 0) {
+    return map;
+  }
+
+  for (const item of input.items) {
+    if (
+      canOpenDespiecePreviewForQuoteItem({
+        item,
+        recipes: input.recipes,
+        organizationId: input.organizationId,
+      })
+    ) {
+      map.set(item.id, true);
+    }
+  }
+
+  return map;
+}
+
+export function anyQuoteItemCanOpenDespiecePreview(input: {
+  items: CotizacionWorkflowItem[];
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+  eligibilityByItemId?: Map<string, boolean>;
+}): boolean {
+  if (input.eligibilityByItemId) {
+    return input.eligibilityByItemId.size > 0;
+  }
+  return buildQuoteDespiecePreviewEligibility(input).size > 0;
+}
+
+export function findFirstQuoteItemWithDespiecePreview(input: {
+  items: CotizacionWorkflowItem[];
+  recipes: FabricationRecipeRecord[];
+  organizationId: number | null;
+  eligibilityByItemId?: Map<string, boolean>;
+}): CotizacionWorkflowItem | null {
+  const eligibility =
+    input.eligibilityByItemId ??
+    buildQuoteDespiecePreviewEligibility(input);
+
+  for (const item of input.items) {
+    if (eligibility.get(item.id)) {
+      return item;
+    }
+  }
+
+  return null;
 }

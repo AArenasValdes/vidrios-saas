@@ -123,7 +123,7 @@ export function validarRecetaFabricacion(value: unknown): FabricacionValidacionR
         codigo: "PAUTA_BARRAS_INCOMPLETA",
         nivel: "advertencia",
         mensaje:
-          "Agrega pérdida por corte, despunte y sobrante mínimo para refinar la pauta de barras.",
+          "Puedes refinar despunte o sobrante mínimo si tu taller lo usa además del ajuste mm.",
       });
     }
     if (

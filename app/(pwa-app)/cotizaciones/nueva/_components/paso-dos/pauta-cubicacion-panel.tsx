@@ -1024,9 +1024,9 @@ export function PautaCubicacionPanel({
           {profilesCutsLabel ? <em>{profilesCutsLabel}</em> : null}
         </span>
         <span>
-          <small>Barras ref.</small>
+          <small>Tiras</small>
           <strong>{preview.bars.length}</strong>
-          <em>sobra {formatMm(preview.totalWasteMm)}</em>
+          <em>según pauta sugerida · sobra {formatMm(preview.totalWasteMm)}</em>
         </span>
         <span>
           <small>Accesorios</small>
@@ -1060,7 +1060,7 @@ export function PautaCubicacionPanel({
         </p>
       ) : !isValidated ? (
         <p className={editor.cubicacionNotice}>
-          Pauta referencial. Revisa la línea antes de usarla como fabricación.
+          Pauta sugerida. Revisa la línea antes de usarla como fabricación.
         </p>
       ) : null}
 
@@ -1213,16 +1213,16 @@ export function PautaCubicacionPanel({
           {showBarUsageInline ? (
             <div className={editor.cubicacionBars}>
               <span className={editor.cubicacionBarsNote}>
-                Distribución referencial de barras
+                Pauta sugerida de tiras
               </span>
               {preview.bars.slice(0, 3).map((bar) => (
                 <span key={bar.index}>
-                  Barra {bar.index}: usado {formatMm(bar.usedMm)} · sobra{" "}
+                  Tira {bar.index}: usado {formatMm(bar.usedMm)} · sobra{" "}
                   {formatMm(bar.wasteMm)}
                 </span>
               ))}
               {preview.bars.length > 3 ? (
-                <span>+ {preview.bars.length - 3} barras más</span>
+                <span>+ {preview.bars.length - 3} tiras más</span>
               ) : null}
             </div>
           ) : null}
