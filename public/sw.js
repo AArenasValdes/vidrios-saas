@@ -3,7 +3,7 @@ const CACHE_NAME = `vidrios-saas-${VERSION}`;
 const APP_SHELL = [
   "/",
   "/login",
-  "/planes",
+  "/registro",
   "/offline",
   "/manifest.webmanifest",
   "/icons/favicon-16.png",
@@ -15,7 +15,7 @@ const APP_SHELL = [
   "/icons/pwa-maskable-512.png",
   "/icons/pwa-maskable.svg",
 ];
-const PUBLIC_NAVIGATION_ROUTES = new Set(["/", "/login", "/planes", "/offline"]);
+const PUBLIC_NAVIGATION_ROUTES = new Set(["/", "/login", "/registro", "/offline"]);
 
 function isPublicNavigation(pathname) {
   return PUBLIC_NAVIGATION_ROUTES.has(pathname);

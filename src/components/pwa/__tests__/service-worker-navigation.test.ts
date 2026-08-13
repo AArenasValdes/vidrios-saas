@@ -10,7 +10,7 @@ describe("service worker navigation boundaries", () => {
     );
 
     expect(publicRoutesMatch).not.toBeNull();
-    expect(publicRoutesMatch?.[1]).toBe('["/", "/login", "/planes", "/offline"]');
+    expect(publicRoutesMatch?.[1]).toBe('["/", "/login", "/registro", "/offline"]');
     expect(content).toContain("if (event.request.mode === \"navigate\") {");
     expect(content).toContain("if (isPublicNavigation(requestUrl.pathname)) {");
     expect(content).toContain("event.respondWith(networkFirstNavigation(event.request));");

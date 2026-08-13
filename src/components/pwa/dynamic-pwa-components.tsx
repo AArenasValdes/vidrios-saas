@@ -16,7 +16,6 @@ function isMarketingPublicPath(pathname: string | null) {
   if (!pathname) return false;
   if (pathname === "/") return true;
   return (
-    pathname.startsWith("/planes") ||
     pathname.startsWith("/solicitud/") ||
     pathname.startsWith("/privacy") ||
     pathname.startsWith("/terms") ||

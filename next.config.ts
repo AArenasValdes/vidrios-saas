@@ -99,6 +99,20 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
   },
+  async redirects() {
+    return [
+      {
+        source: "/planes",
+        destination: "/registro",
+        permanent: true,
+      },
+      {
+        source: "/planes/:path*",
+        destination: "/registro",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       {
