@@ -83,3 +83,4 @@ docs/VENTORA_DESKTOP_TALLER_ROADMAP.md
 .impeccable/live/*.png
 
 .vercel
+.env*.local

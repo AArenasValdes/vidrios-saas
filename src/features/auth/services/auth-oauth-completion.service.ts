@@ -4,7 +4,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OrganizacionId } from "@/features/auth/types/auth";
-import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
+import {
+  getWhatsappValidationHint,
+  normalizePhoneToE164,
+  resolveAuthWhatsapp,
+} from "@/features/organization-region/services/phone-number.service";
 import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
 import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 
@@ -13,6 +17,7 @@ export class AuthOAuthCompletionError extends Error {
     message: string,
     readonly code:
       | "invalid_input"
+      | "invalid_whatsapp"
       | "identity_conflict"
       | "email_taken"
       | "unauthenticated"
@@ -383,7 +388,7 @@ export async function provisionOrganizationFromOAuthUser(
   const empresaNombre = normalizeText(input.empresaNombre ?? "");
   const ciudadComuna = normalizeText(input.ciudadComuna ?? "");
   const countryCode = normalizeSupportedCountryCode(input.countryCode);
-  const whatsapp = normalizePhoneToE164(input.whatsapp ?? "", countryCode);
+  const whatsapp = resolveAuthWhatsapp(input.whatsapp ?? "", countryCode);
 
   if (!authUserId || !email) {
     throw new AuthOAuthCompletionError(
@@ -426,8 +431,8 @@ export async function provisionOrganizationFromOAuthUser(
 
   if (!whatsapp) {
     throw new AuthOAuthCompletionError(
-      "Ingresa un WhatsApp valido con codigo de pais.",
-      "invalid_input",
+      getWhatsappValidationHint(countryCode),
+      "invalid_whatsapp",
     );
   }
 
@@ -473,7 +478,14 @@ export async function provisionOrganizationFromOAuthUser(
     }
 
     if (error.code === "22023") {
-      throw new AuthOAuthCompletionError(error.message, "invalid_input");
+      const message = error.message ?? "";
+      if (/whatsapp/i.test(message)) {
+        throw new AuthOAuthCompletionError(
+          getWhatsappValidationHint(countryCode),
+          "invalid_whatsapp",
+        );
+      }
+      throw new AuthOAuthCompletionError(message, "invalid_input");
     }
 
     if (error.code === "28000") {

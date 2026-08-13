@@ -67,3 +67,38 @@ export function normalizePhoneToE164(
 
   return /^[1-9]\d{7,14}$/.test(localDigits) ? `+${localDigits}` : null;
 }
+
+/** Resuelve WhatsApp para auth usando varios formatos de entrada habituales. */
+export function resolveAuthWhatsapp(
+  input: string,
+  countryCode: SupportedCountryCode | string = "CL",
+): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const preset = getCountryPreset(countryCode);
+  const candidates = [
+    trimmed,
+    `${preset.phoneCountryCode} ${trimmed}`,
+    `${preset.phoneCountryCode}${trimmed}`,
+    extractLocalPhoneDigits(trimmed, countryCode),
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalized =
+      buildPhoneE164FromLocalDigits(candidate, countryCode) ??
+      normalizePhoneToE164(candidate, countryCode);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
+export function getWhatsappValidationHint(
+  countryCode: SupportedCountryCode | string = "CL",
+): string {
+  const preset = getCountryPreset(countryCode);
+  const example = preset.phonePlaceholder.replace(/^\+\d+\s*/u, "");
+  return `Ingresa un WhatsApp valido para ${preset.label}. Ejemplo: ${example}. No incluyas el prefijo ${preset.phoneCountryCode}; ya aparece en el campo.`;
+}

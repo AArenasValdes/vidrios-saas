@@ -255,7 +255,7 @@ describe("auth-oauth-completion.service", () => {
     {
       label: "WhatsApp invalido",
       patch: { whatsapp: "123" },
-      message: "Ingresa un WhatsApp valido con codigo de pais.",
+      message: "Ingresa un WhatsApp valido para Chile",
     },
     {
       label: "sin consentimiento",

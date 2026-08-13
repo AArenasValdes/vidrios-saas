@@ -28,9 +28,8 @@ import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import {
-  buildPhoneE164FromLocalDigits,
-  extractLocalPhoneDigits,
-  normalizePhoneToE164,
+  getWhatsappValidationHint,
+  resolveAuthWhatsapp,
 } from "@/features/organization-region/services/phone-number.service";
 import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
 import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
@@ -88,6 +87,13 @@ const copy = {
   errorGeneric: "No pudimos crear tu cuenta. Intenta de nuevo.",
 };
 
+type SignupApiPayload = {
+  error?: string;
+  code?: string;
+  field?: string;
+  accountComplete?: boolean;
+};
+
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/gu, " ");
 }
@@ -96,29 +102,22 @@ function sanitizeLocalPhoneInput(value: string) {
   return value.replace(/[^\d\s()-]/g, "");
 }
 
-function resolveWhatsappE164(
-  rawValue: string,
+function resolveSignupErrorMessage(
+  payload: SignupApiPayload | null,
   countryCode: SupportedCountryCode,
 ) {
-  const trimmed = rawValue.trim();
-  if (!trimmed) return null;
+  if (!payload?.error) return copy.errorGeneric;
 
-  const preset = getCountryPreset(countryCode);
-  const candidates = [
-    trimmed,
-    `${preset.phoneCountryCode} ${trimmed}`,
-    `${preset.phoneCountryCode}${trimmed}`,
-    extractLocalPhoneDigits(trimmed, countryCode),
-  ];
-
-  for (const candidate of candidates) {
-    const normalized =
-      buildPhoneE164FromLocalDigits(candidate, countryCode) ??
-      normalizePhoneToE164(candidate, countryCode);
-    if (normalized) return normalized;
+  switch (payload.code) {
+    case "invalid_whatsapp":
+      return payload.error ?? getWhatsappValidationHint(countryCode);
+    case "email_taken":
+    case "identity_conflict":
+      return payload.error ??
+        "Este correo ya tiene una cuenta. Inicia sesion para continuar.";
+    default:
+      return payload.error;
   }
-
-  return null;
 }
 
 function Progress({
@@ -250,14 +249,14 @@ export default function RegistroView() {
       whatsappInput?.value ??
       whatsappInputRef.current?.value ??
       "";
-    const normalizedWhatsapp = resolveWhatsappE164(rawWhatsapp, countryCode);
+    const normalizedWhatsapp = resolveAuthWhatsapp(rawWhatsapp, countryCode);
 
     if (normalizedEmpresa.length < 2) {
       setError("Ingresa el nombre de tu empresa o taller.");
       return;
     }
     if (!normalizedWhatsapp) {
-      setError("Ingresa un WhatsApp valido con codigo de pais.");
+      setError(getWhatsappValidationHint(countryCode));
       return;
     }
     if (normalizedCiudad.length === 1) {
@@ -283,13 +282,10 @@ export default function RegistroView() {
           consentimientoAceptado: true,
         }),
       });
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-        accountComplete?: boolean;
-      } | null;
+      const payload = (await response.json().catch(() => null)) as SignupApiPayload | null;
 
       if (!response.ok || !payload?.accountComplete) {
-        setError(payload?.error ?? copy.errorGeneric);
+        setError(resolveSignupErrorMessage(payload, countryCode));
         return;
       }
 

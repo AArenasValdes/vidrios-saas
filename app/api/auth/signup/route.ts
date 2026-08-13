@@ -7,6 +7,11 @@ import {
   provisionOrganizationFromOAuthUser,
 } from "@/features/auth/services/auth-oauth-completion.service";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
+import {
+  getWhatsappValidationHint,
+  resolveAuthWhatsapp,
+} from "@/features/organization-region/services/phone-number.service";
+import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
 import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type SignupBody = Record<string, unknown> & {
@@ -35,6 +40,14 @@ function getAdminAuthErrorMessage(error: {
   }
 
   return "No pudimos crear tu acceso. Intenta de nuevo.";
+}
+
+function mapSignupErrorField(
+  code: AuthOAuthCompletionError["code"] | "email_taken" | "auth_create_failed",
+) {
+  if (code === "invalid_whatsapp") return "whatsapp";
+  if (code === "email_taken" || code === "identity_conflict") return "email";
+  return undefined;
 }
 
 export async function POST(request: Request) {
@@ -73,6 +86,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const countryCode = normalizeSupportedCountryCode(body.countryCode ?? "");
+  const whatsapp = resolveAuthWhatsapp(body.whatsapp ?? "", countryCode);
+
+  if (!whatsapp) {
+    return NextResponse.json(
+      {
+        error: getWhatsappValidationHint(countryCode),
+        code: "invalid_whatsapp",
+        field: "whatsapp",
+      },
+      { status: 400 },
+    );
+  }
+
   const admin = createAdminClient();
   const { data: createdAuth, error: createAuthError } =
     await admin.auth.admin.createUser({
@@ -83,7 +110,11 @@ export async function POST(request: Request) {
 
   if (createAuthError || !createdAuth.user) {
     return NextResponse.json(
-      { error: getAdminAuthErrorMessage(createAuthError ?? {}) },
+      {
+        error: getAdminAuthErrorMessage(createAuthError ?? {}),
+        code:
+          createAuthError?.status === 422 ? "email_taken" : "auth_create_failed",
+      },
       { status: createAuthError?.status === 422 ? 409 : 500 },
     );
   }
@@ -95,9 +126,9 @@ export async function POST(request: Request) {
         email,
         nombre: body.nombre ?? "",
         empresaNombre: body.empresaNombre ?? "",
-        whatsapp: body.whatsapp ?? "",
+        whatsapp,
         ciudadComuna: body.ciudadComuna ?? "",
-        countryCode: body.countryCode ?? "",
+        countryCode,
         consentimientoAceptado: body.consentimientoAceptado === true,
       },
       { admin },
@@ -141,7 +172,7 @@ export async function POST(request: Request) {
             : 500;
 
       return NextResponse.json(
-        { error: error.message, code: error.code },
+        { error: error.message, code: error.code, field: mapSignupErrorField(error.code) },
         { status },
       );
     }

@@ -6,7 +6,9 @@ import {
 import {
   buildPhoneE164FromLocalDigits,
   extractLocalPhoneDigits,
+  getWhatsappValidationHint,
   normalizePhoneToE164,
+  resolveAuthWhatsapp,
 } from "../phone-number.service";
 
 describe("organization region", () => {
@@ -60,5 +62,16 @@ describe("organization region", () => {
     expect(buildPhoneE164FromLocalDigits("977338906", "CL")).toBe("+56977338906");
     expect(buildPhoneE164FromLocalDigits("9 1234 5678", "CL")).toBe("+56912345678");
     expect(buildPhoneE164FromLocalDigits("", "CL")).toBeNull();
+  });
+
+  it("resuelve WhatsApp para auth desde distintos formatos", () => {
+    expect(resolveAuthWhatsapp("977338906", "CL")).toBe("+56977338906");
+    expect(resolveAuthWhatsapp("+56 977338906", "CL")).toBe("+56977338906");
+    expect(resolveAuthWhatsapp("", "CL")).toBeNull();
+  });
+
+  it("describe el formato esperado por pais", () => {
+    expect(getWhatsappValidationHint("CL")).toContain("Chile");
+    expect(getWhatsappValidationHint("CL")).toContain("9 1234 5678");
   });
 });
