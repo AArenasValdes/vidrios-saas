@@ -82,7 +82,7 @@ export async function POST(request: Request) {
           ? 409
           : error.code === "email_taken"
             ? 409
-            : error.code === "invalid_input"
+            : error.code === "invalid_input" || error.code === "invalid_whatsapp"
               ? 400
               : error.code === "unauthenticated"
                 ? 401

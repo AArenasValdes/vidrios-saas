@@ -11,6 +11,8 @@ import {
   getWhatsappValidationHint,
   normalizePhoneToE164,
   resolveAuthWhatsapp,
+  resolveSignupWhatsapp,
+  sanitizeAuthWhatsappLocalInput,
 } from "../phone-number.service";
 
 describe("organization region", () => {
@@ -77,6 +79,23 @@ describe("organization region", () => {
     expect(getWhatsappValidationHint("CL")).toContain("9 1234 5678");
     expect(getWhatsappValidationHint("CL", "")).toContain("Ingresa tu numero movil");
     expect(getWhatsappValidationHint("CL", "123")).toContain("no es valido");
+    expect(getWhatsappValidationHint("CL", "977338906")).toContain(
+      "No pudimos confirmar tu WhatsApp",
+    );
+  });
+
+  it("resuelve signup desde E.164 o parte local", () => {
+    expect(
+      resolveSignupWhatsapp("+56977338906", "977338906", "CL"),
+    ).toBe("+56977338906");
+    expect(resolveSignupWhatsapp("", "977338906", "CL")).toBe("+56977338906");
+    expect(resolveSignupWhatsapp("56977338906", "", "CL")).toBe("+56977338906");
+  });
+
+  it("normaliza digitos unicode en la parte local", () => {
+    expect(sanitizeAuthWhatsappLocalInput("９77338906")).toBe("977338906");
+    expect(extractLocalPhoneDigits("９77338906", "CL")).toBe("977338906");
+    expect(resolveAuthWhatsapp("９77338906", "CL")).toBe("+56977338906");
   });
 
   it("compone E.164 con el prefijo del pais seleccionado", () => {

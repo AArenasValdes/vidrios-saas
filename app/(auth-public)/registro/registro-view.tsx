@@ -28,8 +28,9 @@ import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import {
-  composeAuthWhatsappFromLocalInput,
   getWhatsappValidationHint,
+  resolveAuthWhatsapp,
+  sanitizeAuthWhatsappLocalInput,
 } from "@/features/organization-region/services/phone-number.service";
 import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
 import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
@@ -96,10 +97,6 @@ type SignupApiPayload = {
 
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/gu, " ");
-}
-
-function sanitizeLocalPhoneInput(value: string) {
-  return value.replace(/[^\d\s()-]/g, "");
 }
 
 function resolveSignupErrorMessage(
@@ -254,39 +251,7 @@ export default function RegistroView() {
       whatsappInput?.value.trim() ||
       whatsappInputRef.current?.value.trim() ||
       "";
-    const normalizedWhatsapp = composeAuthWhatsappFromLocalInput(
-      rawWhatsapp,
-      countryCode,
-    );
-
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6b77cd",
-      },
-      body: JSON.stringify({
-        sessionId: "6b77cd",
-        runId: "pre-fix",
-        hypothesisId: "A,E",
-        location: "registro-view.tsx:handleBusinessSubmit",
-        message: "client whatsapp validation",
-        data: {
-          countryCode,
-          rawLen: rawWhatsapp.length,
-          digitCount: rawWhatsapp.replace(/\D/g, "").length,
-          normalizedOk: Boolean(normalizedWhatsapp),
-          source: whatsappLocal.trim()
-            ? "state"
-            : whatsappInput?.value.trim()
-              ? "querySelector"
-              : "ref",
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    const normalizedWhatsapp = resolveAuthWhatsapp(rawWhatsapp, countryCode);
 
     if (normalizedEmpresa.length < 2) {
       setError("Ingresa el nombre de tu empresa o taller.");
@@ -321,32 +286,6 @@ export default function RegistroView() {
         }),
       });
       const payload = (await response.json().catch(() => null)) as SignupApiPayload | null;
-
-      // #region agent log
-      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "6b77cd",
-        },
-        body: JSON.stringify({
-          sessionId: "6b77cd",
-          runId: "pre-fix",
-          hypothesisId: "B,C,D",
-          location: "registro-view.tsx:handleBusinessSubmit:response",
-          message: "signup api response",
-          data: {
-            status: response.status,
-            ok: response.ok,
-            code: payload?.code ?? null,
-            field: payload?.field ?? null,
-            accountComplete: payload?.accountComplete ?? null,
-            clientNormalizedOk: Boolean(normalizedWhatsapp),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
 
       if (!response.ok || !payload?.accountComplete) {
         setError(resolveSignupErrorMessage(payload, countryCode, rawWhatsapp));
@@ -720,7 +659,7 @@ export default function RegistroView() {
                     value={whatsappLocal}
                     onChange={(event) => {
                       setWhatsappLocal(
-                        sanitizeLocalPhoneInput(event.target.value),
+                        sanitizeAuthWhatsappLocalInput(event.target.value),
                       );
                       setError(null);
                     }}

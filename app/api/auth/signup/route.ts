@@ -8,9 +8,8 @@ import {
 } from "@/features/auth/services/auth-oauth-completion.service";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
 import {
-  composeAuthWhatsappFromLocalInput,
   getWhatsappValidationHint,
-  resolveAuthWhatsapp,
+  resolveSignupWhatsapp,
 } from "@/features/organization-region/services/phone-number.service";
 import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
 import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
@@ -89,36 +88,18 @@ export async function POST(request: Request) {
   }
 
   const countryCode = normalizeSupportedCountryCode(body.countryCode ?? "");
-  const whatsapp =
-    resolveAuthWhatsapp(body.whatsapp ?? "", countryCode) ??
-    composeAuthWhatsappFromLocalInput(
-      body.whatsappLocal ?? body.whatsapp ?? "",
-      countryCode,
-    );
+  const whatsapp = resolveSignupWhatsapp(
+    String(body.whatsapp ?? ""),
+    String(body.whatsappLocal ?? body.whatsapp ?? ""),
+    countryCode,
+  );
 
   if (!whatsapp) {
-    // #region agent log
-    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6b77cd",
-      },
-      body: JSON.stringify({
-        sessionId: "6b77cd",
-        runId: "pre-fix",
-        hypothesisId: "B",
-        location: "signup/route.ts:early-whatsapp",
-        message: "server early whatsapp rejected",
-        data: {
-          countryCode,
-          bodyWhatsappLen: String(body.whatsapp ?? "").length,
-          bodyLocalLen: String(body.whatsappLocal ?? "").length,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    console.error("[signup] invalid whatsapp", {
+      countryCode,
+      bodyWhatsappLen: String(body.whatsapp ?? "").length,
+      bodyLocalLen: String(body.whatsappLocal ?? "").length,
+    });
     return NextResponse.json(
       {
         error: getWhatsappValidationHint(
@@ -133,28 +114,6 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  // #region agent log
-  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "6b77cd",
-    },
-    body: JSON.stringify({
-      sessionId: "6b77cd",
-      runId: "pre-fix",
-      hypothesisId: "B,D",
-      location: "signup/route.ts:post-whatsapp",
-      message: "server whatsapp accepted, proceeding auth",
-      data: {
-        countryCode,
-        resolvedLen: whatsapp.length,
-        hasPlusPrefix: whatsapp.startsWith("+"),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   const { data: createdAuth, error: createAuthError } =
     await admin.auth.admin.createUser({
       email,
@@ -219,7 +178,7 @@ export async function POST(request: Request) {
 
     if (error instanceof AuthOAuthCompletionError) {
       const status =
-        error.code === "invalid_input"
+        error.code === "invalid_input" || error.code === "invalid_whatsapp"
           ? 400
           : error.code === "identity_conflict" || error.code === "email_taken"
             ? 409
