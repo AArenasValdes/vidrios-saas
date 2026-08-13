@@ -192,69 +192,72 @@ export function LandingBelowFold() {
           <div className={s.pricingGrid}>
             {pricingPlans.map((plan) => {
               const isFeatured = plan.tone === "featured";
+              const isAnchor = plan.tone === "anchor";
               const cardToneClass =
                 plan.tone === "featured"
                   ? s.pricingCardFeatured
                   : plan.tone === "highlight"
                     ? s.pricingCardHighlight
-                    : plan.tone === "anchor"
+                    : isAnchor
                       ? s.pricingCardAnchor
                       : s.pricingCardSecondary;
 
               return (
-                <article
+                <div
                   key={plan.name}
-                  className={`${s.pricingCard} ${cardToneClass}`}
+                  className={`${s.pricingReveal}${isAnchor ? ` ${s.pricingRevealAnchor}` : ""}`}
                 >
-                  <div className={s.pricingCardTop}>
-                    <div>
-                      <h3>{plan.name}</h3>
-                      <div className={s.pricingAmount}>
-                        <strong>{plan.price}</strong>
-                        <span>{plan.period}</span>
+                  <article className={`${s.pricingCard} ${cardToneClass}`}>
+                    <div className={s.pricingCardTop}>
+                      <div>
+                        <h3>{plan.name}</h3>
+                        <div className={s.pricingAmount}>
+                          <strong>{plan.price}</strong>
+                          <span>{plan.period}</span>
+                        </div>
                       </div>
+                      {plan.badge ? <span className={s.pricingBadge}>{plan.badge}</span> : null}
                     </div>
-                    {plan.badge ? <span className={s.pricingBadge}>{plan.badge}</span> : null}
-                  </div>
 
-                  <p className={s.pricingDescription}>{plan.description}</p>
-                  {plan.helper ? <p className={s.pricingHelper}>{plan.helper}</p> : null}
-                  {plan.savings ? <p className={s.pricingSavings}>{plan.savings}</p> : null}
+                    <p className={s.pricingDescription}>{plan.description}</p>
+                    {plan.helper ? <p className={s.pricingHelper}>{plan.helper}</p> : null}
+                    {plan.savings ? <p className={s.pricingSavings}>{plan.savings}</p> : null}
 
-                  {plan.ctaKind === "whatsapp" ? (
-                    <a
-                      href={plan.href}
-                      className={`${s.pricingCta} ${s.pricingCtaSecondary}`}
-                      onClick={() => trackLandingCta(plan.trackingLocation, "whatsapp")}
-                    >
-                      {plan.ctaLabel}
-                      <ArrowUpRight size={17} aria-hidden />
-                    </a>
-                  ) : (
-                    <Link
-                      href={plan.href}
-                      className={`${s.pricingCta} ${
-                        isFeatured ? s.pricingCtaPrimary : s.pricingCtaSecondary
-                      }`}
-                      prefetch={false}
-                      onClick={() => trackLandingCta(plan.trackingLocation, "internal")}
-                    >
-                      {plan.ctaLabel}
-                      <ArrowRight size={17} aria-hidden />
-                    </Link>
-                  )}
+                    {plan.ctaKind === "whatsapp" ? (
+                      <a
+                        href={plan.href}
+                        className={`${s.pricingCta} ${s.pricingCtaSecondary}`}
+                        onClick={() => trackLandingCta(plan.trackingLocation, "whatsapp")}
+                      >
+                        {plan.ctaLabel}
+                        <ArrowUpRight size={17} aria-hidden />
+                      </a>
+                    ) : (
+                      <Link
+                        href={plan.href}
+                        className={`${s.pricingCta} ${
+                          isFeatured ? s.pricingCtaPrimary : s.pricingCtaSecondary
+                        }`}
+                        prefetch={false}
+                        onClick={() => trackLandingCta(plan.trackingLocation, "internal")}
+                      >
+                        {plan.ctaLabel}
+                        <ArrowRight size={17} aria-hidden />
+                      </Link>
+                    )}
 
-                  {plan.benefits ? (
-                    <ul className={s.pricingBenefits}>
-                      {plan.benefits.map((benefit) => (
-                        <li key={benefit}>
-                          <CircleCheck size={15} aria-hidden />
-                          <span>{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </article>
+                    {plan.benefits ? (
+                      <ul className={s.pricingBenefits}>
+                        {plan.benefits.map((benefit) => (
+                          <li key={benefit}>
+                            <CircleCheck size={15} aria-hidden />
+                            <span>{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </article>
+                </div>
               );
             })}
           </div>

@@ -28,39 +28,44 @@ export const PRICING_IMPLEMENTATION_HREF = `https://wa.me/56977338906?text=${enc
 )}`;
 
 export const founderPlanBenefits = [
-  "Todo lo del cotizador",
-  "Página pública para recibir solicitudes",
-  "Bandeja de solicitudes centralizada",
-  "Links por canal y QR",
-  "Seguimiento comercial completo",
-  "PDF con imagen comercial",
-  "Link público para revisión del presupuesto",
-  "Aprobación o rechazo del cliente",
+  "Cotizador en celular, tablet y computador",
+  "Misma cuenta en varios dispositivos",
+  "PDF profesional y envío por WhatsApp",
+  "Clientes y cotizaciones ordenadas",
+  "Líneas para cubicación y despiece (opcional)",
+  "Seguimiento comercial y aprobación del cliente",
+  "Página pública para solicitudes (si la activas)",
+  "Bandeja, links por canal y QR",
   "Configuración inicial incluida",
   "Soporte de arranque por WhatsApp",
 ] as const;
 
 export const monthlyPlanBenefits = [
-  "Incluye cotizador y página pública completa",
+  "Cotizador completo en cualquier dispositivo",
+  "Líneas para cubicación y despiece (opcional)",
+  "PDF, WhatsApp y seguimiento comercial",
+  "Página pública disponible (si la activas)",
   "Pago mensual flexible",
   "15 días gratis",
   "Puedes pasar al anual cuando quieras",
 ] as const;
 
 export const quoteOnlyPlanBenefits = [
-  "Cotizador desde el celular",
+  "Cotizador en celular, tablet y computador",
+  "Misma cuenta en varios dispositivos",
   "PDF profesional",
   "Envío por WhatsApp",
   "Clientes y cotizaciones ordenadas",
-  "Ideal si no necesitas página pública todavía",
+  "Líneas para cubicación y despiece (opcional)",
+  "Sin página pública: solo cotizar y enviar",
 ] as const;
 
 export const accompaniedPlanBenefits = [
   "Todo lo del Plan Fundador",
   "Configuración asistida completa",
-  "Revisión de tu página pública",
   "Capacitación inicial",
   "Soporte prioritario de arranque",
+  "Revisión de página pública (si la usas)",
 ] as const;
 
 export function formatClp(value: number) {
@@ -104,7 +109,7 @@ export const pricingPlans: readonly PricingPlan[] = [
     tone: "featured",
     trackingLocation: "precios-fundador",
     badge: "Recomendado",
-    helper: "Cotizador completo más página pública y solicitudes.",
+    helper: "Multi-dispositivo, cubicación opcional y captación cuando la necesites.",
     savings: `Ahorras ${formatClp(annualSavingsVsMonthly)} al año frente al pago mensual`,
     benefits: founderPlanBenefits,
   },
@@ -118,14 +123,14 @@ export const pricingPlans: readonly PricingPlan[] = [
     ctaKind: "internal",
     tone: "highlight",
     trackingLocation: "precios-solo-cotizacion",
-    helper: "Ideal para quien no necesita página pública todavía.",
+    helper: "Ideal si aún no necesitas página pública.",
     benefits: quoteOnlyPlanBenefits,
   },
   {
     name: "Plan Mensual",
     price: formatClp(monthlyPrice),
     period: "/ mes",
-    description: "Opción flexible mes a mes con Ventora completo, sin compromiso anual.",
+    description: "Ventora completo mes a mes: cotizador, dispositivos y cubicación opcional.",
     ctaLabel: "Probar 15 días gratis",
     href: REGISTRO_HREF,
     ctaKind: "internal",

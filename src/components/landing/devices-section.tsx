@@ -23,21 +23,30 @@ export function DevicesSection() {
         </div>
 
         <div className={s.stage} aria-hidden>
-          <Image
-            src="/ventora-landing-page/dashboard-cotizaciones.webp"
-            alt=""
-            width={1920}
-            height={1080}
-            className={s.desktop}
-            sizes="(max-width: 900px) 92vw, 560px"
-          />
+          <div className={s.laptop}>
+            <div className={s.laptopLid}>
+              <div className={s.laptopCamera} />
+              <div className={s.laptopScreen}>
+                <Image
+                  src="/ventora-landing-page/dashboard-desktop.png"
+                  alt=""
+                  width={1024}
+                  height={492}
+                  className={s.desktopShot}
+                  sizes="(max-width: 900px) 92vw, 560px"
+                />
+              </div>
+            </div>
+            <div className={s.laptopDeck} />
+          </div>
+
           <Image
             src="/ventora-landing-page/capturalanding-pdf-800.webp"
             alt=""
             width={800}
             height={1600}
-            className={s.phone}
-            sizes="(max-width: 900px) 42vw, 220px"
+            className={s.phoneFront}
+            sizes="(max-width: 900px) 38vw, 196px"
           />
         </div>
       </div>
