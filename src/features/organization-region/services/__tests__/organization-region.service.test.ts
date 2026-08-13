@@ -3,7 +3,10 @@ import {
   resolveOrganizationPricingSettings,
   resolveOrganizationRegionSettings,
 } from "../organization-region.service";
-import { normalizePhoneToE164 } from "../phone-number.service";
+import {
+  extractLocalPhoneDigits,
+  normalizePhoneToE164,
+} from "../phone-number.service";
 
 describe("organization region", () => {
   it("usa Chile como compatibilidad cuando no hay configuracion persistida", () => {
@@ -39,8 +42,16 @@ describe("organization region", () => {
 
   it("normaliza telefonos locales e internacionales en E.164", () => {
     expect(normalizePhoneToE164("9 1234 5678", "CL")).toBe("+56912345678");
+    expect(normalizePhoneToE164("977338906", "CL")).toBe("+56977338906");
     expect(normalizePhoneToE164("912 345 678", "PE")).toBe("+51912345678");
     expect(normalizePhoneToE164("+52 55 1234 5678", "MX")).toBe("+525512345678");
     expect(normalizePhoneToE164("123", "CL")).toBeNull();
+  });
+
+  it("extrae la parte local cuando el usuario pega el prefijo del pais", () => {
+    expect(extractLocalPhoneDigits("+56 977338906", "CL")).toBe("977338906");
+    expect(extractLocalPhoneDigits("+56977338906", "CL")).toBe("977338906");
+    expect(extractLocalPhoneDigits("977338906", "CL")).toBe("977338906");
+    expect(extractLocalPhoneDigits("+57 300 123 4567", "CO")).toBe("3001234567");
   });
 });
