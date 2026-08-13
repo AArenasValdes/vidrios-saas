@@ -4,6 +4,7 @@ import {
   resolveOrganizationRegionSettings,
 } from "../organization-region.service";
 import {
+  buildPhoneE164FromLocalDigits,
   extractLocalPhoneDigits,
   normalizePhoneToE164,
 } from "../phone-number.service";
@@ -53,5 +54,11 @@ describe("organization region", () => {
     expect(extractLocalPhoneDigits("+56977338906", "CL")).toBe("977338906");
     expect(extractLocalPhoneDigits("977338906", "CL")).toBe("977338906");
     expect(extractLocalPhoneDigits("+57 300 123 4567", "CO")).toBe("3001234567");
+  });
+
+  it("construye E.164 desde la parte local del telefono", () => {
+    expect(buildPhoneE164FromLocalDigits("977338906", "CL")).toBe("+56977338906");
+    expect(buildPhoneE164FromLocalDigits("9 1234 5678", "CL")).toBe("+56912345678");
+    expect(buildPhoneE164FromLocalDigits("", "CL")).toBeNull();
   });
 });

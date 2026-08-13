@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +28,7 @@ import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import {
+  buildPhoneE164FromLocalDigits,
   extractLocalPhoneDigits,
   normalizePhoneToE164,
 } from "@/features/organization-region/services/phone-number.service";
@@ -91,6 +92,35 @@ function normalizeText(value: string) {
   return value.trim().replace(/\s+/gu, " ");
 }
 
+function sanitizeLocalPhoneInput(value: string) {
+  return value.replace(/[^\d\s()-]/g, "");
+}
+
+function resolveWhatsappE164(
+  rawValue: string,
+  countryCode: SupportedCountryCode,
+) {
+  const trimmed = rawValue.trim();
+  if (!trimmed) return null;
+
+  const preset = getCountryPreset(countryCode);
+  const candidates = [
+    trimmed,
+    `${preset.phoneCountryCode} ${trimmed}`,
+    `${preset.phoneCountryCode}${trimmed}`,
+    extractLocalPhoneDigits(trimmed, countryCode),
+  ];
+
+  for (const candidate of candidates) {
+    const normalized =
+      buildPhoneE164FromLocalDigits(candidate, countryCode) ??
+      normalizePhoneToE164(candidate, countryCode);
+    if (normalized) return normalized;
+  }
+
+  return null;
+}
+
 function Progress({
   step,
   onBack,
@@ -146,7 +176,7 @@ export default function RegistroView() {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [countryCode, setCountryCode] = useState<SupportedCountryCode>("CL");
-  const [whatsappLocal, setWhatsappLocal] = useState("");
+  const whatsappInputRef = useRef<HTMLInputElement>(null);
   const [ciudadComuna, setCiudadComuna] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
@@ -158,10 +188,6 @@ export default function RegistroView() {
 
   const selectedCountry = getCountryPreset(countryCode);
   const disabled = cargando || Boolean(cargandoOAuth);
-
-  function resolveWhatsappLocal(rawValue: string) {
-    return extractLocalPhoneDigits(rawValue, countryCode);
-  }
 
   const handleOAuthSignup = async (provider: AuthOAuthProvider) => {
     if (disabled) return;
@@ -217,15 +243,14 @@ export default function RegistroView() {
     const normalizedEmpresa = normalizeText(empresaNombre);
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedCiudad = normalizeText(ciudadComuna);
-    const formData = new FormData(event.currentTarget);
-    const whatsappFromDom = formData.get("whatsappLocal")?.toString() ?? "";
-    const resolvedWhatsappLocal = resolveWhatsappLocal(
-      whatsappFromDom || whatsappLocal,
-    );
-    const normalizedWhatsapp = normalizePhoneToE164(
-      resolvedWhatsappLocal,
-      countryCode,
-    );
+    const whatsappInput = event.currentTarget.elements.namedItem(
+      "whatsappLocal",
+    ) as HTMLInputElement | null;
+    const rawWhatsapp =
+      whatsappInput?.value ??
+      whatsappInputRef.current?.value ??
+      "";
+    const normalizedWhatsapp = resolveWhatsappE164(rawWhatsapp, countryCode);
 
     if (normalizedEmpresa.length < 2) {
       setError("Ingresa el nombre de tu empresa o taller.");
@@ -580,6 +605,9 @@ export default function RegistroView() {
                         const nextCountry = event.target
                           .value as SupportedCountryCode;
                         setCountryCode(nextCountry);
+                        if (whatsappInputRef.current) {
+                          whatsappInputRef.current.value = "";
+                        }
                         setError(null);
                       }}
                       disabled={disabled}
@@ -627,27 +655,28 @@ export default function RegistroView() {
                     {selectedCountry.phoneCountryCode}
                   </span>
                   <input
+                    ref={whatsappInputRef}
                     id="whatsapp"
                     name="whatsappLocal"
                     className={s.fieldInput}
-                    value={whatsappLocal}
-                    onChange={(event) => {
-                      setWhatsappLocal(
-                        resolveWhatsappLocal(event.target.value),
-                      );
+                    defaultValue=""
+                    onChange={() => {
                       setError(null);
                     }}
-                    onBlur={(event) => {
-                      setWhatsappLocal(
-                        resolveWhatsappLocal(event.target.value),
-                      );
+                    onInput={(event) => {
+                      const input = event.currentTarget;
+                      const sanitized = sanitizeLocalPhoneInput(input.value);
+                      if (sanitized !== input.value) {
+                        input.value = sanitized;
+                      }
+                      setError(null);
                     }}
                     placeholder={selectedCountry.phonePlaceholder.replace(
                       /^\+\d+\s*/u,
                       "",
                     )}
-                    autoComplete="tel"
-                    inputMode="tel"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
                     type="tel"
                     required
                     disabled={disabled}

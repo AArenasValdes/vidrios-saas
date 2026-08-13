@@ -35,6 +35,20 @@ export function extractLocalPhoneDigits(
   return digitsOnly(normalized).replace(/^0/, "");
 }
 
+/** Arma E.164 desde la parte local visible del input de registro. */
+export function buildPhoneE164FromLocalDigits(
+  input: string,
+  countryCode: SupportedCountryCode | string = "CL",
+): string | null {
+  const localDigits = extractLocalPhoneDigits(input, countryCode);
+  if (!localDigits) return null;
+
+  const preset = getCountryPreset(countryCode);
+  const e164Digits = `${preset.phoneCountryCode.slice(1)}${localDigits.replace(/^0/, "")}`;
+
+  return /^[1-9]\d{7,14}$/.test(e164Digits) ? `+${e164Digits}` : null;
+}
+
 /** Conserva solo numeros E.164 plausibles; no reemplaza una validacion telecom por pais. */
 export function normalizePhoneToE164(
   input: string,
