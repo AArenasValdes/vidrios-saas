@@ -12,7 +12,7 @@
 - **Componentes principales**: `ProblemSection`, `ProblemCard`, `TestimonialsSection`, `FooterSection`, `PremiumPageReveal`
 - **Datos que consume**: Estatico (no consulta Supabase)
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: Navegacion, CTA a demo/login
+- **Acciones principales**: Navegacion, CTA a `/registro` (15 días) y `/login`
 - **Archivos a tocar para modificar**: `app/(landing-web)/page.tsx`, `app/(landing-web)/landing.module.css`, `src/components/landing/*`, `src/components/footer-section.tsx`, `src/components/testimonials-with-marquee.tsx`
 - **Riesgos**: Es la cara publica del producto. Cambios de copy afectan conversion. No romper links de navegacion.
 
@@ -20,19 +20,18 @@
 
 ## Ruta: /planes
 
-- **Tipo**: Publica
+- **Tipo**: Publica (redirect)
 - **Archivo principal**: `app/(landing-web)/planes/page.tsx`
 - **Layout usado**: `app/layout.tsx` (root layout)
-- **CSS**: `app/(landing-web)/planes/page.module.css`
-- **Proposito**: Pagina de planes/precios del SaaS
-- **Usuario objetivo**: Visitante evaluando planes
-- **Funcionalidades visibles**: Cards de planes, CTA
-- **Componentes principales**: Internos de la pagina
-- **Datos que consume**: Estatico
+- **Proposito**: Redirect permanente a `/registro`. El CTA de prueba ya no pasa por una pagina extra.
+- **Usuario objetivo**: Visitante que llega por un link antiguo a `/planes`
+- **Funcionalidades visibles**: Ninguna; redirige a crear cuenta
+- **Componentes principales**: Ninguno
+- **Datos que consume**: Ninguno
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: Navegacion, CTA a solicitar cuenta
-- **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`, `app/(landing-web)/planes/page.module.css`
-- **Riesgos**: Copy comercial sensible. No cambiar precios sin instruccion.
+- **Acciones principales**: `permanentRedirect("/registro")`
+- **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`
+- **Riesgos**: No reintroducir una pagina intermedia entre el CTA de prueba y `/registro`. Los precios viven en `/#precios`.
 
 ---
 

@@ -141,6 +141,7 @@
 }
 
 .submit,
+.trial,
 .whatsapp {
   min-height: 48px;
   width: 100%;
@@ -185,6 +186,20 @@
 
 .feedbackError {
   color: #fda29b;
+}
+
+.trial {
+  margin-top: 12px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #3ea4ff 0%, #1e88ff 52%, #1162d1 100%);
+  border: 1px solid transparent;
+  box-shadow:
+    0 12px 28px rgba(30, 136, 255, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.trial:hover {
+  transform: translateY(-1px);
 }
 
 .whatsapp {

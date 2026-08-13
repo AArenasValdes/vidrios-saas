@@ -43,6 +43,7 @@ export type CrearSolicitudContactoInput = {
   correo: string;
   telefono: string;
   ayuda: AyudaSolicitudContacto;
+  countryCode?: string | null;
   origen?: string;
   ip?: string | null;
   userAgent?: string | null;

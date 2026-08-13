@@ -9,7 +9,7 @@ import type {
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
 
-export const TRIAL_DURATION_DAYS = 7;
+export const TRIAL_DURATION_DAYS = 15;
 export const TRIAL_EXPIRING_SOON_DAYS = 2;
 export const VENTORA_MONTHLY_PRICE = 8_990;
 export const VENTORA_YEARLY_PRICE = 79_990;

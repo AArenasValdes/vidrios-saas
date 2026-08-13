@@ -3,12 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
-
-import { heroTrustItems, WHATSAPP_LANDING_HREF } from "./landing-shared";
+import { heroTrustItems, LOGIN_HREF, REGISTRO_HREF } from "./landing-shared";
 import s from "./landing.module.css";
 
-// bundle-dynamic-imports: mockup animado fuera del chunk crítico del texto LCP.
 const HeroPhoneMockup = nextDynamic(
   () =>
     import("@/components/landing/hero-phone-mockup").then((mod) => ({
@@ -17,10 +14,6 @@ const HeroPhoneMockup = nextDynamic(
   { ssr: true }
 );
 
-/**
- * Hero RSC: el HTML del LCP/FCP sale sin esperar el bundle client de toda la landing.
- * CTAs usan links reales; tracking WhatsApp vía isla TrackedExternalLink.
- */
 export function LandingHeroServer() {
   return (
     <section id="top" className={s.heroSection}>
@@ -40,33 +33,30 @@ export function LandingHeroServer() {
       <div className={s.container}>
         <div className={s.heroLayout}>
           <div className={s.heroContent}>
-            <p className={s.heroKicker}>Ventora para vidrio y aluminio</p>
-
             <h1 className={s.heroTitle}>
               Cotiza vidrios y aluminio
               <span className={s.heroTitleAccent}>desde el celular</span>
             </h1>
 
             <p className={s.heroDescription}>
-              Crea presupuestos profesionales, envía PDF por WhatsApp y mantén tus
-              clientes ordenados en un solo lugar.
+              15 días gratis en celular, tablet y computador. Hecho para talleres
+              de Latinoamérica. Envía un PDF profesional por WhatsApp y deja de
+              llegar a casa a hacer presupuestos.
             </p>
 
             <div className={s.heroActions}>
-              <Link href="/planes" className={s.primaryButton} prefetch={false}>
-                Probar cotizador gratis
+              <Link href={REGISTRO_HREF} className={s.primaryButton} prefetch={false}>
+                Empezar 15 días gratis
                 <ArrowRight size={18} aria-hidden />
               </Link>
-              <TrackedExternalLink
-                href={WHATSAPP_LANDING_HREF}
-                className={s.secondaryButton}
-                trackingSource="landing"
-                trackingLocation="hero-whatsapp"
-                trackingLabel="landing:hero-whatsapp"
-              >
-                Ver demo por WhatsApp
-              </TrackedExternalLink>
+              <Link href={LOGIN_HREF} className={s.secondaryButton} prefetch={false}>
+                Ya tengo cuenta
+              </Link>
             </div>
+
+            <p className={s.heroNote}>
+              Sin tarjeta · varios dispositivos, la misma cuenta
+            </p>
 
             <div className={s.heroTrust}>
               {heroTrustItems.map((item) => (

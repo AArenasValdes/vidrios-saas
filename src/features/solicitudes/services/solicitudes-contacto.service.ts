@@ -4,6 +4,7 @@ import { webPushNotificationsService } from "@/features/notificaciones/services/
 import type { WebPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 import { resolvePublicLandingConfig } from "@/features/organization-profile/services/organization-profile.service";
 import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { normalizeLatamMobilePhone } from "@/utils/latam-mobile-phone";
 import type {
   AyudaSolicitudContacto,
   EstadoSolicitudContacto,
@@ -211,7 +212,7 @@ export function createSolicitudesContactoService(
       const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
       const correo = limitText(normalizeText(input.correo).toLowerCase(), FIELD_LIMITS.correo);
       const telefonoRaw = limitText(normalizePhone(input.telefono), FIELD_LIMITS.telefono);
-      const telefono = normalizeChileMobilePhone(telefonoRaw) ?? telefonoRaw;
+      const telefono = normalizeLatamMobilePhone(telefonoRaw, input.countryCode);
       const ayuda = normalizeText(input.ayuda) as AyudaSolicitudContacto;
 
       if (nombre.length < 3) {
@@ -226,7 +227,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("El correo no es válido.");
       }
 
-      if (!isValidChileMobilePhone(telefonoRaw)) {
+      if (!telefono) {
         throw new SolicitudContactoValidationError("Ingresa un WhatsApp válido.");
       }
 

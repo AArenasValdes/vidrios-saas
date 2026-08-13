@@ -62,7 +62,6 @@ export function ProblemFlowSection() {
 
       <div className={s.container}>
         <header className={s.header}>
-          <p className={s.badge}>EL PROBLEMA DE COTIZAR A MANO</p>
           <h2 id="problem-flow-title" className={s.title}>
             Cotizas tarde y el cliente no espera.
           </h2>
