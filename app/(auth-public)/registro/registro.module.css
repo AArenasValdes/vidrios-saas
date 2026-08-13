@@ -343,12 +343,17 @@
   gap: 14px;
 }
 
-.fieldGrid > label {
+.fieldGrid > label,
+.businessFieldGrid > label {
   align-content: start;
 }
 
 .fieldGrid .fieldHint {
   min-height: 16px;
+}
+
+.businessFieldGridHint {
+  margin: -4px 0 0;
 }
 
 .fieldHint {
@@ -376,15 +381,18 @@
   left: 48px;
   top: 50%;
   transform: translateY(-50%);
-  min-width: 70px;
-  padding-right: 16px;
+  min-width: 3.25rem;
+  padding-right: 12px;
   border-right: 1px solid rgba(164, 186, 217, 0.2);
   color: #e8f0fb;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .phoneControl input {
-  padding-left: 145px;
+  padding-left: 132px;
+  padding-right: 16px;
 }
 
 .loginPrompt,
@@ -547,6 +555,11 @@
   .card select {
     padding-left: 44px;
     padding-right: 44px;
+  }
+
+  .card .phoneControl input {
+    padding-left: 132px;
+    padding-right: 16px;
   }
 
   .card label svg {

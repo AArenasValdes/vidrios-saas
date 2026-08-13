@@ -586,7 +586,6 @@ export default function RegistroView() {
                     </select>
                     <ChevronDown size={18} aria-hidden />
                   </span>
-                  <span className={rs.fieldHint}>{copy.countryHint}</span>
                 </label>
                 <label className={s.field} htmlFor="ciudadComuna">
                   <span className={s.fieldLabel}>{copy.ciudadLabel}</span>
@@ -608,6 +607,9 @@ export default function RegistroView() {
                   </span>
                 </label>
               </div>
+              <p className={`${rs.fieldHint} ${rs.businessFieldGridHint}`}>
+                {copy.countryHint}
+              </p>
               <label className={s.field} htmlFor="whatsapp">
                 <span className={s.fieldLabel}>{copy.whatsappLabel}</span>
                 <span className={`${s.fieldControl} ${rs.phoneControl}`}>
