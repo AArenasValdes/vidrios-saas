@@ -59,7 +59,7 @@ Entrega diagnostico, semaforo, hipotesis y 3 acciones concretas para la semana s
 Actua como Agente de Conversion de Ventora.
 Prepara una demo de 5 a 10 minutos para una empresa de [rubro] en Chile.
 Debe cubrir consulta -> WhatsApp -> cotizacion -> PDF/link -> cierre.
-Incluye guion, preguntas de descubrimiento y cierre al piloto de 7 dias.
+Incluye guion, preguntas de descubrimiento y cierre al piloto de 15 dias.
 ```
 
 ## Mejorar onboarding

@@ -9,6 +9,7 @@ import type {
 import type { EntityId } from "@/types/common";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import { parseQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 
 type CotizacionesRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -51,6 +52,7 @@ type CotizacionRow = {
   cliente_respondio_en: string | null;
   cliente_respuesta_canal: string | null;
   pdf_descargado_en: string | null;
+  regional_snapshot?: unknown;
   creado_en: string | null;
   total: number;
 };
@@ -106,7 +108,7 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
@@ -423,6 +425,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     clienteRespondioEn: row.cliente_respondio_en ?? null,
     clienteRespuestaCanal: row.cliente_respuesta_canal ?? null,
     pdfDescargadoEn: row.pdf_descargado_en ?? null,
+    regionalSnapshot: parseQuoteRegionSnapshot(row.regional_snapshot),
     creadoEn: row.creado_en,
     items: [],
     total: row.total,
@@ -648,6 +651,7 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     cliente_vio_en: input.clienteVioEn ?? null,
     cliente_respondio_en: input.clienteRespondioEn ?? null,
     cliente_respuesta_canal: input.clienteRespuestaCanal ?? null,
+    regional_snapshot: input.regionalSnapshot ?? null,
     total: input.total,
     actualizado_en: new Date().toISOString(),
   };

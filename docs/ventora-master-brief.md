@@ -1,6 +1,6 @@
 # Ventora - Documento Maestro para IAs, BI y Marketing
 
-Actualizado: 2026-07-24
+Actualizado: 2026-08-13
 
 Este archivo es la referencia corta y ejecutiva para cualquier IA, consultor, analista, marketer o colaborador que necesite entender rapidamente que es Ventora, en que fase va, que funcionalidades tiene hoy y cual es el norte real del producto.
 
@@ -18,6 +18,7 @@ Este archivo es la referencia corta y ejecutiva para cualquier IA, consultor, an
 - ayuda a responder rapido por WhatsApp
 - convierte el avance comercial en cliente + cotizacion + cierre
 - en desktop: catálogo de precios propio, constructor visual cuando hace falta, y **pauta de fabricación revisable** (opcional) con recetas del taller
+- además: cubicacion, despiece, tiras y pauta interna por linea cuando la empresa configura y valida sus recetas
 
 No es:
 
@@ -26,7 +27,7 @@ No es:
 - un software de producción / CAD / optimizador de cortes
 - un cotizador técnico universal de perfilería
 
-La cotización es **herramienta de cierre comercial**. La cubicación es **ayuda interna revisable**, no promesa de máquina.
+La cotización es **herramienta de cierre comercial**. La cubicación es **ayuda interna revisable**, configurada por la empresa y separada del PDF cliente; no es promesa de máquina.
 
 ### Frases clave
 
@@ -106,7 +107,7 @@ Ventora resuelve eso en un flujo simple:
 
 ### Fase actual
 
-**Fase 2: estabilizacion de cotizacion desktop, dashboard comercial real y consolidacion de captacion + cierre**
+**Fase 4: cubicacion V1 vendible multi-tipologia, calibracion de recetas y consolidacion de captacion + cierre**
 
 Esto significa que hoy el foco fuerte esta en:
 
@@ -534,8 +535,8 @@ De llegar a casa a hacer presupuestos en el computador, a cotizar desde el celul
 Ventora no debe venderse como:
 
 - “cotizador técnico barato”
-- “sistema de cubicación”
-- “software que calcula perfiles, cortes, herrajes o desperdicio”
+- “sistema de cubicación universal”
+- “software que entrega cortes exactos, optimiza barras, hace nesting o reemplaza producción”
 - promesa de “ganarás más clientes” o “cerrarás más ventas”
 
 Debe venderse como:
@@ -571,7 +572,7 @@ Debe venderse como:
 
 ### Fase actual exacta
 
-**Fase 2.**
+**Fase 4 — Cubicacion V1 vendible multi-tipologia.**
 
 Ya no estamos en definición conceptual.
 Ya no estamos en “MVP solo para probar idea”.
@@ -580,8 +581,8 @@ Estamos en:
 
 - consolidar el producto comercial
 - estabilizar cotizacion desktop
-- dejar dashboard comercial con datos reales
-- preparar Quote Studio desktop vendible
+- calibrar recetas con medidas reales de taller
+- mantener cubicacion, despiece, tiras y pauta interna separadas del precio comercial
 - preparar salida piloto seria
 
 ### Qué sigue después de esta fase
@@ -602,7 +603,7 @@ Lo siguiente correcto es:
 
 Si necesitas una versión ultra corta, usa esto:
 
-> Ventora es un cotizador móvil y una capa comercial para maestros e instaladores de vidrios, aluminio, ventanas, PVC, shower y cierres. Su objetivo de marketing no es competir como cotizador técnico barato ni prometer cubicación, perfiles, cortes, herrajes o desperdicio. El mensaje central es: "Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos." La fase actual es Fase 2: estabilización, hardening, rendimiento, simplificación de configuración y preparación para piloto. Las rutas más críticas son `/solicitud/[empresa]` y `/presupuesto/[token]`. Toda propuesta debe fortalecer cotización móvil, PDF profesional, orden de clientes/cotizaciones, respuesta rápida o seguimiento.
+> Ventora es un cotizador móvil y una capa comercial para maestros e instaladores de vidrios, aluminio, ventanas, PVC, shower y cierres. Calcula precios por línea y, cuando la empresa configura y valida sus recetas, genera cubicación, despiece, tiras y pauta interna revisable en desktop. No es un optimizador industrial ni promete cortes universales para máquina. El mensaje central es: "Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos." La fase actual es Fase 4: cubicación V1 vendible multi-tipología con calibración piloto. Toda propuesta debe fortalecer cotización móvil, PDF profesional, orden de clientes/cotizaciones y revisión técnica interna.
 
 ---
 

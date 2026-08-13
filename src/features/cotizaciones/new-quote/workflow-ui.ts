@@ -1504,12 +1504,12 @@ export function normalizeCurrencyInput(value: string) {
   return digits.replace(/^0+(?=\d)/, "");
 }
 
-export function formatCurrencyInput(value: string) {
+export function formatCurrencyInput(value: string, locale = "es-CL") {
   if (!value) {
     return "";
   }
 
-  return new Intl.NumberFormat("es-CL", {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   }).format(Number(value));
 }
@@ -1688,7 +1688,7 @@ export function buildFreeValueItemFromForm(
   form: FreeValueItemFormState,
   items: CotizacionWorkflowItem[],
   editingItemId: string | null,
-  options?: { allowZeroValue?: boolean }
+  options?: { allowZeroValue?: boolean; taxRatePct?: number }
 ) {
   const normalizedValue = normalizeCurrencyInput(form.valor);
   const existingIndex = editingItemId
@@ -1710,6 +1710,7 @@ export function buildFreeValueItemFromForm(
     cantidad: Number.isFinite(cantidad) && cantidad > 0 ? Math.round(cantidad) : 1,
     ivaMode: form.ivaMode,
     allowZeroValue: options?.allowZeroValue,
+    taxRatePct: options?.taxRatePct,
   });
 }
 

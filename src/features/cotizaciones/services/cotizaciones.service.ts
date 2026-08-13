@@ -44,11 +44,18 @@ import { inferirTipologiaFabricacionPieza } from "@/features/fabricacion/service
 import { resolverRecetaFabricacionCompatible } from "@/features/fabricacion/services/fabricacion-receta-resolver.service";
 import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import {
+  organizationProfileRepository,
+  type OrganizationProfileRepository,
+} from "@/features/organization-profile/repositories/organization-profile.repository";
+import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
+import { resolveQuotePricingSettings } from "@/features/organization-region/services/quote-region-display.service";
 
 type CotizacionesAppServiceDeps = {
   clientesRepository?: ClientesRepository;
   projectsRepository?: ProjectsRepository;
   cotizacionesRepository?: CotizacionesRepository;
+  organizationProfileRepository?: OrganizationProfileRepository;
 };
 
 type EnsuredEntity<T> = {
@@ -282,7 +289,7 @@ function mapCotizacionToWorkflowRecord(input: {
     margenGlobalPct: input.cotizacion.margenPct ?? 0,
     totalClienteManual: quotePricingMode === "total_global" ? input.cotizacion.total : null,
     mostrarIva: input.cotizacion.iva ? input.cotizacion.iva > 0 : true,
-  });
+  }, resolveQuotePricingSettings(input.cotizacion.regionalSnapshot));
   const subtotal = workflowTotals.subtotal;
   const neto = input.cotizacion.subtotalNeto ?? workflowTotals.neto;
   const descuentoValor = workflowTotals.descuentoValor;
@@ -320,6 +327,7 @@ function mapCotizacionToWorkflowRecord(input: {
     clienteRespondioEn: input.cotizacion.clienteRespondioEn,
     clienteRespuestaCanal: input.cotizacion.clienteRespuestaCanal,
     pdfDescargadoEn: input.cotizacion.pdfDescargadoEn,
+    regionalSnapshot: input.cotizacion.regionalSnapshot ?? null,
     createdAt: input.cotizacion.creadoEn ?? new Date().toISOString(),
     updatedAt:
       input.cotizacion.actualizadoEn ??
@@ -591,6 +599,8 @@ export function createCotizacionesAppService(
   const clientesRepo = deps.clientesRepository ?? clientesRepository;
   const projectsRepo = deps.projectsRepository ?? projectsRepository;
   const cotizacionesRepo = deps.cotizacionesRepository ?? cotizacionesRepository;
+  const organizationProfileRepo =
+    deps.organizationProfileRepository ?? organizationProfileRepository;
 
   async function ensureClient(input: {
     organizationId: EntityId;
@@ -1136,12 +1146,16 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
       }
       const proyectoId = projectResult?.record?.id ?? null;
 
+      const regionalSnapshot = existingCotizacion?.regionalSnapshot ?? createQuoteRegionSnapshot({
+        region: await organizationProfileRepo.getByOrganizationId(input.organizationId),
+      });
+      const regionalPricing = resolveQuotePricingSettings(regionalSnapshot);
       const quotePricingMode = normalizeQuotePricingMode(input.draft.quotePricingMode);
       const totals = calculateWorkflowTotalsForPricingMode({
         ...input.draft,
         quotePricingMode,
         items: normalizedItems,
-      });
+      }, regionalPricing);
       const descuentoPct =
         totals.subtotal > 0 ? round(Math.min(100, (totals.descuentoValor / totals.subtotal) * 100), 6) : 0;
       const financialDraft = createQuoteStudioFinancialDraft(input.draft.quoteStudioFinancial);
@@ -1166,7 +1180,6 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         input.existingCode ??
         (await cotizacionesRepo.reserveNextCode(input.organizationId)) ??
         buildCotizacionCode();
-
       const cotizacionInput: CrearCotizacionInput = {
         organizationId: input.organizationId,
         proyectoId,
@@ -1204,6 +1217,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         clienteVioEn: existingCotizacion?.clienteVioEn ?? null,
         clienteRespondioEn: existingCotizacion?.clienteRespondioEn ?? null,
         clienteRespuestaCanal: existingCotizacion?.clienteRespuestaCanal ?? null,
+        regionalSnapshot,
         iva: totals.iva,
         flete: quotePricingMode === "total_global" ? 0 : totals.flete,
         total: totals.total,

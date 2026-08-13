@@ -38,6 +38,11 @@ import {
 } from "@/utils/cotizacion-item-presentation";
 import { buildCotizacionWhatsappMessage, buildCotizacionWhatsappUrl } from "@/utils/whatsapp";
 import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
+import {
+  formatQuoteCurrency,
+  formatQuoteTaxLabel,
+  resolveQuoteRegionSnapshotForDisplay,
+} from "@/features/organization-region/services/quote-region-display.service";
 
 import { VisorPdfLoadingShell } from "./_components/visor-pdf-loading-shell";
 import { splitDescriptionChecklistItems } from "./_utils/description-checklist";
@@ -51,13 +56,6 @@ import { resolveTotalGlobalDetailDrawingSvg } from "./_utils/total-global-detail
 import s from "./page.module.css";
 
 const APP_NAME = "Ventora";
-const clpFormatter = new Intl.NumberFormat("es-CL", {
-  style: "currency",
-  currency: "CLP",
-  maximumFractionDigits: 0,
-});
-
-const CLP = (value: number) => clpFormatter.format(value);
 type CotizacionPdfModule = typeof import("@/utils/cotizacion-pdf");
 
 function resolveTotalGlobalIvaLabel(input: {
@@ -617,6 +615,9 @@ export default function CotizacionPrintPage() {
     rawOrganizationProfile
   );
   const visibleCotizacion = renderableCotizacion;
+  const quoteRegion = resolveQuoteRegionSnapshotForDisplay(visibleCotizacion?.regionalSnapshot);
+  const formatMoney = (value: number) => formatQuoteCurrency(value, visibleCotizacion?.regionalSnapshot);
+  const taxLabel = formatQuoteTaxLabel(visibleCotizacion?.regionalSnapshot);
   const companyName = buildDocumentCompanyName(organizationProfile.empresaNombre);
   const commercialResponsibleDisplay = organizationProfile.responsableComercial.trim()
     ? `Cotiza: ${organizationProfile.responsableComercial.trim()}`
@@ -1374,26 +1375,26 @@ export default function CotizacionPrintPage() {
                       <span className={s.summaryLabel}>RESUMEN FINAL</span>
                       <div className={s.totalRow}>
                         <span>Subtotal</span>
-                        <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                        <strong>{formatMoney(visibleCotizacion.subtotal)}</strong>
                       </div>
                       <div className={s.totalRow}>
                         <span>Descuento</span>
-                        <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                        <strong>- {formatMoney(visibleCotizacion.descuentoValor)}</strong>
                       </div>
                       <div className={`${s.totalRow} ${s.totalRowStrong}`}>
                         <span>Neto</span>
-                        <strong>{CLP(visibleCotizacion.neto)}</strong>
+                        <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                       </div>
                       <div className={s.totalRow}>
-                        <span>IVA 19%</span>
-                        <strong>{CLP(visibleCotizacion.iva)}</strong>
+                        <span>{taxLabel}</span>
+                        <strong>{formatMoney(visibleCotizacion.iva)}</strong>
                       </div>
                     </aside>
                   </section>
 
                   <section className={s.grandTotal}>
                     <span>Precio final</span>
-                    <strong>{CLP(visibleCotizacion.total)}</strong>
+                    <strong>{formatMoney(visibleCotizacion.total)}</strong>
                   </section>
                 </>
               ) : null}
@@ -1661,11 +1662,11 @@ export default function CotizacionPrintPage() {
                                 {showItemPrices ? (
                                 <aside className={s.pricesColumn}>
                           <div className={s.pricesHeading}>VALOR COMERCIAL</div>
-                          <div className={s.pricesSubheading}>MONTOS EN CLP</div>
+                          <div className={s.pricesSubheading}>MONTOS EN {quoteRegion.currencyCode}</div>
 
                           <div className={s.priceRow}>
                             <span>Precio unitario</span>
-                            <strong>{CLP(item.precioUnitario)}</strong>
+                            <strong>{formatMoney(item.precioUnitario)}</strong>
                           </div>
                           <div className={s.priceRow}>
                             <span>Cantidad</span>
@@ -1674,7 +1675,7 @@ export default function CotizacionPrintPage() {
 
                           <div className={s.priceTotal}>
                             <span>Total ítem</span>
-                            <strong>{CLP(item.precioTotal)}</strong>
+                            <strong>{formatMoney(item.precioTotal)}</strong>
                           </div>
                                 </aside>
                                 ) : null}
@@ -1702,7 +1703,7 @@ export default function CotizacionPrintPage() {
                         <div className={s.freeItemBody}>
                           <div className={s.freeItemTopLine}>
                             <strong className={s.freeItemName}>{item.nombre}</strong>
-                            <strong className={s.freeItemPrice}>{CLP(item.precioTotal)}</strong>
+                            <strong className={s.freeItemPrice}>{formatMoney(item.precioTotal)}</strong>
                           </div>
                           {description ? (
                             descriptionLines.length > 1 ? (
@@ -1718,7 +1719,7 @@ export default function CotizacionPrintPage() {
                           <div className={s.freeItemMeta}>
                             <span className={s.freeItemBadge}>{item.tipoItem === "item_libre_con_valor" ? "Servicio" : "Item libre"}</span>
                             {item.cantidad > 1 ? <span>Cantidad: {item.cantidad}</span> : null}
-                            {item.precioUnitario !== item.precioTotal ? <span>Unitario: {CLP(item.precioUnitario)}</span> : null}
+                            {item.precioUnitario !== item.precioTotal ? <span>Unitario: {formatMoney(item.precioUnitario)}</span> : null}
                           </div>
                         </div>
                       </article>
@@ -1753,45 +1754,45 @@ export default function CotizacionPrintPage() {
                       <>
                         <div className={s.totalRow}>
                           <span>Subtotal</span>
-                          <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                          <strong>{formatMoney(visibleCotizacion.subtotal)}</strong>
                         </div>
                         <div className={s.totalRow}>
                           <span>Descuento</span>
-                          <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                          <strong>- {formatMoney(visibleCotizacion.descuentoValor)}</strong>
                         </div>
                         <div className={`${s.totalRow} ${s.totalRowStrong}`}>
                           <span>Neto</span>
-                          <strong>{CLP(visibleCotizacion.neto)}</strong>
+                          <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                         </div>
                         <div className={s.totalRow}>
-                          <span>IVA 19%</span>
-                          <strong>{CLP(visibleCotizacion.iva)}</strong>
+                          <span>{taxLabel}</span>
+                          <strong>{formatMoney(visibleCotizacion.iva)}</strong>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className={s.totalRow}>
                           <span>Subtotal</span>
-                          <strong>{CLP(visibleCotizacion.subtotal)}</strong>
+                          <strong>{formatMoney(visibleCotizacion.subtotal)}</strong>
                         </div>
                         <div className={s.totalRow}>
                           <span>Descuento</span>
-                          <strong>- {CLP(visibleCotizacion.descuentoValor)}</strong>
+                          <strong>- {formatMoney(visibleCotizacion.descuentoValor)}</strong>
                         </div>
                         <div className={`${s.totalRow} ${s.totalRowStrong}`}>
                           <span>Neto</span>
-                          <strong>{CLP(visibleCotizacion.neto)}</strong>
+                          <strong>{formatMoney(visibleCotizacion.neto)}</strong>
                         </div>
                         <div className={s.totalRow}>
-                          <span>IVA 19%</span>
-                          <strong>{CLP(visibleCotizacion.iva)}</strong>
+                          <span>{taxLabel}</span>
+                          <strong>{formatMoney(visibleCotizacion.iva)}</strong>
                         </div>
                       </>
                     )}
                     {showItemPrices && visibleCotizacion.flete > 0 ? (
                       <div className={s.totalRow}>
                         <span>Flete</span>
-                        <strong>{CLP(visibleCotizacion.flete)}</strong>
+                        <strong>{formatMoney(visibleCotizacion.flete)}</strong>
                       </div>
                     ) : null}
                     {showItemPrices ? (
@@ -1805,7 +1806,7 @@ export default function CotizacionPrintPage() {
 
                 <section className={s.grandTotal}>
                   <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
-                  <strong>{CLP(visibleCotizacion.total)}</strong>
+                  <strong>{formatMoney(visibleCotizacion.total)}</strong>
                 </section>
               </>
             ) : null}
@@ -1842,6 +1843,7 @@ export default function CotizacionPrintPage() {
       companyLogoUrl,
       commercialResponsibleDisplay,
       detailHeadingLabel,
+      formatMoney,
       freePrintItems,
       hasCompanyHeaderDetails,
       itemPresentationMap,
@@ -1856,6 +1858,8 @@ export default function CotizacionPrintPage() {
       totalGlobalPages,
       totalGlobalWorkName,
       totalSurfaceM2,
+      quoteRegion.currencyCode,
+      taxLabel,
       visibleCotizacion,
     ]
   );

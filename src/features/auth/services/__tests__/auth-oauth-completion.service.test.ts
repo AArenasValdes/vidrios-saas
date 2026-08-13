@@ -47,8 +47,8 @@ function createCompletionAdmin(input: {
     maybeSingle: jest.fn(async () => ({
       data:
         userLookup === "auth"
-          ? input.userByAuth ?? null
-          : input.userByEmail ?? null,
+          ? (input.userByAuth ?? null)
+          : (input.userByEmail ?? null),
       error: null,
     })),
   };
@@ -107,6 +107,23 @@ describe("auth-oauth-completion.service", () => {
     });
   });
 
+  it("considera completa una cuenta Google sin ciudad o comuna", async () => {
+    const { admin } = createCompletionAdmin({
+      userByAuth: { ...completeUser, ciudad_comuna: null },
+      organization: { nombre: "Vidrios Test" },
+      profile: { empresa_nombre: "Vidrios Test" },
+    });
+    (createAdminClient as jest.Mock).mockReturnValue(admin);
+
+    const state = await getOAuthAccountCompletionState({
+      authUserId: "auth-1",
+      email: "maestro@test.com",
+    });
+
+    expect(state.isComplete).toBe(true);
+    expect(state.values.ciudadComuna).toBe("");
+  });
+
   it("detecta los datos pendientes de un usuario Google existente", async () => {
     const { admin } = createCompletionAdmin({
       userByAuth: {
@@ -147,7 +164,7 @@ describe("auth-oauth-completion.service", () => {
       getOAuthAccountCompletionState({
         authUserId: "auth-new",
         email: "maestro@test.com",
-      })
+      }),
     ).rejects.toMatchObject({ code: "identity_conflict" });
   });
 
@@ -173,6 +190,7 @@ describe("auth-oauth-completion.service", () => {
       empresaNombre: " Vidrios   Test ",
       whatsapp: "9 1234 5678",
       ciudadComuna: " Puente   Alto ",
+      countryCode: "CL",
       consentimientoAceptado: true,
     });
 
@@ -184,6 +202,7 @@ describe("auth-oauth-completion.service", () => {
       p_whatsapp: "+56912345678",
       p_ciudad_comuna: "Puente Alto",
       p_consent: true,
+      p_country_code: "CL",
     });
     expect(result).toMatchObject({
       organizationId: 88,
@@ -191,6 +210,40 @@ describe("auth-oauth-completion.service", () => {
       alreadyProvisioned: false,
       accountComplete: true,
     });
+  });
+
+  it("permite dejar ciudad o comuna sin informar", async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [
+        {
+          result_organization_id: 88,
+          result_user_id: 12,
+          result_trial_ends_at: "2026-08-04T00:00:00.000Z",
+          result_already_provisioned: false,
+          result_account_complete: true,
+        },
+      ],
+      error: null,
+    });
+    (createAdminClient as jest.Mock).mockReturnValue({ rpc });
+
+    await expect(
+      provisionOrganizationFromOAuthUser({
+        authUserId: "auth-new",
+        email: "nuevo@test.com",
+        nombre: "Alessandro",
+        empresaNombre: "Vidrios Test",
+        whatsapp: "+56912345678",
+        ciudadComuna: "",
+        countryCode: "CL",
+        consentimientoAceptado: true,
+      }),
+    ).resolves.toMatchObject({ accountComplete: true });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "complete_google_oauth_account",
+      expect.objectContaining({ p_ciudad_comuna: "" }),
+    );
   });
 
   it.each([
@@ -202,7 +255,7 @@ describe("auth-oauth-completion.service", () => {
     {
       label: "WhatsApp invalido",
       patch: { whatsapp: "123" },
-      message: "Ingresa un WhatsApp chileno valido.",
+      message: "Ingresa un WhatsApp valido con codigo de pais.",
     },
     {
       label: "sin consentimiento",
@@ -221,9 +274,10 @@ describe("auth-oauth-completion.service", () => {
         empresaNombre: "Vidrios Test",
         whatsapp: "+56912345678",
         ciudadComuna: "Santiago",
+        countryCode: "CL",
         consentimientoAceptado: true,
         ...patch,
-      })
+      }),
     ).rejects.toThrow(message);
 
     expect(rpc).not.toHaveBeenCalled();

@@ -7,7 +7,12 @@ import { Menu, X } from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 
-import { navLinks, WHATSAPP_LANDING_HREF } from "./landing-shared";
+import {
+  LOGIN_HREF,
+  navLinks,
+  REGISTRO_HREF,
+  WHATSAPP_LANDING_HREF,
+} from "./landing-shared";
 import s from "./landing.module.css";
 
 function trackLandingCta(location: string, kind: "internal" | "whatsapp") {
@@ -58,31 +63,32 @@ export function LandingNavClient() {
             </ul>
 
             <div className={s.navActions}>
-              <a
-                href={WHATSAPP_LANDING_HREF}
-                className={s.navGhost}
-                onClick={() => trackLandingCta("nav-whatsapp", "whatsapp")}
-              >
-                Hablar por WhatsApp
-              </a>
               <Link
-                href="/planes"
+                href={LOGIN_HREF}
+                className={s.navGhost}
+                prefetch={false}
+                onClick={() => trackLandingCta("nav-ingresar", "internal")}
+              >
+                Ingresar
+              </Link>
+              <Link
+                href={REGISTRO_HREF}
                 className={s.navPrimary}
                 prefetch={false}
                 onClick={() => trackLandingCta("nav-probar-demo", "internal")}
               >
-                Probar cotizador
+                15 días gratis
               </Link>
             </div>
 
             <div className={s.navMobile}>
               <Link
-                href="/planes"
+                href={REGISTRO_HREF}
                 className={s.navPrimaryMobile}
                 prefetch={false}
                 onClick={() => trackLandingCta("mobile-probar-demo", "internal")}
               >
-                Demo
+                15 días
               </Link>
               <button
                 type="button"
@@ -112,6 +118,16 @@ export function LandingNavClient() {
               {link.label}
             </Link>
           ))}
+          <Link
+            href={LOGIN_HREF}
+            prefetch={false}
+            onClick={() => {
+              trackLandingCta("mobile-menu-ingresar", "internal");
+              setMenuOpen(false);
+            }}
+          >
+            Ingresar
+          </Link>
           <a
             href={WHATSAPP_LANDING_HREF}
             onClick={() => {

@@ -9,7 +9,7 @@ import {
 describe("subscription-status.service", () => {
   const now = new Date("2026-05-25T12:00:00.000Z");
 
-  it("marca trial activo cuando aun quedan mas de 2 dias", () => {
+  it("marca trial activo cuando aun quedan mas de 3 dias", () => {
     const state = resolveOrganizationSubscriptionState(
       {
         subscriptionStatus: "trial_active",
@@ -25,12 +25,12 @@ describe("subscription-status.service", () => {
     expect(state.daysRemaining).toBe(6);
   });
 
-  it("marca trial por vencer cuando quedan 2 dias o menos", () => {
+  it("marca trial por vencer cuando quedan 3 dias o menos", () => {
     const state = resolveOrganizationSubscriptionState(
       {
         subscriptionStatus: "trial_active",
         trialStartedAt: "2026-05-20T12:00:00.000Z",
-        trialEndsAt: "2026-05-27T12:00:00.000Z",
+        trialEndsAt: "2026-05-28T12:00:00.000Z",
         planType: "trial",
       },
       now
@@ -38,7 +38,7 @@ describe("subscription-status.service", () => {
 
     expect(state.effectiveStatus).toBe("trial_expiring");
     expect(state.shouldShowTrialBanner).toBe(true);
-    expect(state.daysRemaining).toBe(2);
+    expect(state.daysRemaining).toBe(3);
   });
 
   it("marca trial vencido si no hay suscripcion activa y ya paso la fecha", () => {
@@ -92,7 +92,7 @@ describe("subscription-status.service", () => {
     const state = resolveOrganizationSubscriptionState(
       {
         subscriptionStatus: "past_due",
-        subscriptionEndsAt: "2026-05-24T12:00:00.000Z",
+        subscriptionEndsAt: "2026-05-20T12:00:00.000Z",
         planType: "monthly",
       },
       now
@@ -101,6 +101,22 @@ describe("subscription-status.service", () => {
     expect(() => assertSubscriptionAllowsWrite(state)).toThrow(
       SubscriptionWriteAccessError
     );
+  });
+
+  it("mantiene operativa una cuenta past_due durante el periodo de gracia", () => {
+    const state = resolveOrganizationSubscriptionState(
+      {
+        subscriptionStatus: "past_due",
+        subscriptionEndsAt: "2026-05-24T12:00:00.000Z",
+        planType: "monthly",
+      },
+      now
+    );
+
+    expect(state.effectiveStatus).toBe("past_due");
+    expect(state.isInPaymentGracePeriod).toBe(true);
+    expect(state.isWriteBlocked).toBe(false);
+    expect(state.paymentGraceEndsAt).toBe("2026-05-27T12:00:00.000Z");
   });
 
   it("arma el enlace de WhatsApp con el plan elegido", () => {

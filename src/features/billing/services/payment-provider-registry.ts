@@ -6,7 +6,7 @@ import { webpayPlusPaymentProvider } from "@/features/billing/providers/webpay-p
 import type { PaymentProvider } from "@/features/billing/types/payment-provider";
 import type { PaymentProvider as PaymentProviderCode } from "@/features/subscriptions/types/pago-suscripcion";
 
-const PROVIDERS: Record<PaymentProviderCode, PaymentProvider> = {
+const PROVIDERS: Partial<Record<PaymentProviderCode, PaymentProvider>> = {
   flow: flowPaymentProvider,
   manual_transfer: manualTransferPaymentProvider,
   webpay_plus: webpayPlusPaymentProvider,
@@ -19,5 +19,9 @@ export function isPaymentProviderCode(
 }
 
 export function getPaymentProvider(code: PaymentProviderCode): PaymentProvider {
-  return PROVIDERS[code];
+  const provider = PROVIDERS[code];
+  if (!provider) {
+    throw new Error(`Proveedor de checkout no implementado: ${code}`);
+  }
+  return provider;
 }

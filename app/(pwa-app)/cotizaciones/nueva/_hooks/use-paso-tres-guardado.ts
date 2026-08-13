@@ -11,6 +11,7 @@ import {
   type FieldErrors,
 } from "@/features/cotizaciones/new-quote/workflow-ui";
 import { calculateGlobalQuoteWorkflowTotals } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
+import type { QuotePricingOptions } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import type {
   CotizacionWorkflowDraft,
   CotizacionWorkflowItem,
@@ -35,6 +36,7 @@ type PreparePasoTresGuardadoParams = {
   draft: CotizacionWorkflowDraft;
   estado: SaveStatus;
   applyQuickEditDraftsToItems: (items: CotizacionWorkflowItem[]) => CotizacionWorkflowItem[];
+  pricingOptions?: QuotePricingOptions;
 };
 
 type PreparePasoTresGuardadoResult = {
@@ -77,6 +79,7 @@ type UsePasoTresGuardadoParams = {
   applyQuickEditDraftsToItems: (items: CotizacionWorkflowItem[]) => CotizacionWorkflowItem[];
   resetWorkflowToBlank: () => void;
   openQuotesList: () => void;
+  pricingOptions?: QuotePricingOptions;
   syncWizardWithRecord: (recordId: string) => void;
   setDraft: Dispatch<SetStateAction<CotizacionWorkflowDraft>>;
   setRecordMeta: Dispatch<SetStateAction<WorkflowRecordMeta>>;
@@ -91,6 +94,7 @@ export function preparePasoTresGuardado({
   draft,
   estado,
   applyQuickEditDraftsToItems,
+  pricingOptions,
 }: PreparePasoTresGuardadoParams): PreparePasoTresGuardadoResult {
   const nextItems = applyQuickEditDraftsToItems(draft.items);
   const draftToSave = withResolvedStep1QuickQuoteDefaults({
@@ -110,6 +114,7 @@ export function preparePasoTresGuardado({
     const totals = calculateGlobalQuoteWorkflowTotals({
       totalClienteManual: draftToSave.totalClienteManual,
       mostrarIva: draftToSave.mostrarIva,
+      ...pricingOptions,
     });
 
     if (totals.total <= 0) {
@@ -138,6 +143,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
     saveWorkflow,
     onQuoteCreated,
     applyQuickEditDraftsToItems,
+    pricingOptions,
     resetWorkflowToBlank,
     openQuotesList,
     syncWizardWithRecord,
@@ -159,6 +165,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
         draft,
         estado,
         applyQuickEditDraftsToItems,
+        pricingOptions,
       });
 
       setDraft(draftToSave);
@@ -245,6 +252,7 @@ export function usePasoTresGuardado(params: UsePasoTresGuardadoParams) {
     },
     [
       applyQuickEditDraftsToItems,
+      pricingOptions,
       clientQuery,
       componentForm,
       draft,

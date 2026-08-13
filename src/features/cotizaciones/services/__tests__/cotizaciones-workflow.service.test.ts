@@ -47,6 +47,23 @@ describe("cotizaciones-workflow.service", () => {
     expect(totals.total).toBe(343000);
   });
 
+  it("usa el impuesto y redondeo del pais de la empresa", () => {
+    const totals = calculateCotizacionWorkflowTotals(
+      [createItem({ precioUnitario: 1000, precioTotal: 1000 })],
+      0,
+      0,
+      {
+        taxRatePct: 18,
+        commercialRoundingIncrement: 1,
+      }
+    );
+
+    expect(totals.neto).toBe(1000);
+    expect(totals.iva).toBe(180);
+    expect(totals.total).toBe(1180);
+    expect(totals.redondeoComercial).toBe(0);
+  });
+
   it("deja precios finales sin sumar IVA al final", () => {
     const totals = calculateCotizacionWorkflowTotals([
       createItem({

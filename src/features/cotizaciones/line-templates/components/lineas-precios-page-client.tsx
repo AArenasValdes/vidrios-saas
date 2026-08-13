@@ -18,6 +18,7 @@ import {
   LuUpload,
 } from "react-icons/lu";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
+import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { buildTechnicalCardStatus } from "@/features/cotizaciones/line-templates/services/catalogo-fabricacion-card-status";
 import {
@@ -210,8 +211,8 @@ function parseMoney(value: string) {
   return digits ? Number(digits) : 0;
 }
 
-function buildRoundingLabel(value: number) {
-  return value > 0 ? formatCurrency(value) : "Sin redondeo";
+function buildRoundingLabel(value: number, formatMoney: (amount: number) => string) {
+  return value > 0 ? formatMoney(value) : "Sin redondeo";
 }
 
 function draftHasAdvancedDetails(draft: LineTemplateFormDraft) {
@@ -248,6 +249,11 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { profile } = useOrganizationProfile();
+  const formatMoney = useCallback(
+    (value: number) => formatCurrency(value, profile?.locale, profile?.currencyCode),
+    [profile?.currencyCode, profile?.locale]
+  );
   const {
     templates,
     isLoading,
@@ -1034,6 +1040,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         isUsingBase={usingBaseId !== null}
         usingBaseId={usingBaseId}
         onUseBase={(recommendation) => void handleUseVentoraBase(recommendation)}
+        formatMoney={formatMoney}
       />
 
       <div className={`${s.page} ${s.desktopCatalog} ${desktop.page}`}>
@@ -1598,17 +1605,17 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                           : formatLineTemplatePriceLabel(
                               template.unidadCobro,
                               template.precioM2Sugerido,
-                              formatCurrency
+                              formatMoney
                             )}
                       </strong>
                       <span>
                         {template.costoBase > 0
-                          ? `Costo ${formatCurrency(template.costoBase)}`
+                          ? `Costo ${formatMoney(template.costoBase)}`
                           : "Sin costo"}
                         {" · "}
                         Mín.{" "}
                         {template.minimoCobrable > 0
-                          ? formatCurrency(template.minimoCobrable)
+                          ? formatMoney(template.minimoCobrable)
                           : "Sin mínimo"}
                       </span>
                     </div>
@@ -1653,7 +1660,7 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
                     <div className={`${s.cardBottom} ${desktop.cardBottom}`}>
                       <span className={s.roundingMeta}>
-                        Redondeo: {buildRoundingLabel(template.redondeoPrecio)}
+                        Redondeo: {buildRoundingLabel(template.redondeoPrecio, formatMoney)}
                       </span>
 
                       <button

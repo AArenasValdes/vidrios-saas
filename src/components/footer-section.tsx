@@ -18,7 +18,7 @@ type FooterSectionProps = {
 };
 
 const accessLinks = [
-  { href: "/planes", label: "Probar demo" },
+  { href: "/registro", label: "15 días gratis" },
   { href: "/login", label: "Ingresar" },
   { href: "#contacto", label: "Solicitar contacto" },
 ];

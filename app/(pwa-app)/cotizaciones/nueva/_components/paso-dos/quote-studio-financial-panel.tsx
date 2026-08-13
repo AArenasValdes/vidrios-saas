@@ -47,7 +47,8 @@ export function canApplyQuoteStudioRecommendedPrice(summary: QuoteStudioFinancia
 
 /** Delta venta actual vs precio recomendado (solo display). */
 export function buildQuoteStudioRecommendedDeltaLabel(
-  summary: QuoteStudioFinancialSummary
+  summary: QuoteStudioFinancialSummary,
+  formatMoney: (value: number) => string = formatCurrency
 ): string | null {
   if (!canApplyQuoteStudioRecommendedPrice(summary)) {
     return null;
@@ -60,14 +61,15 @@ export function buildQuoteStudioRecommendedDeltaLabel(
   }
 
   if (delta > 0) {
-    return `Faltan ${formatCurrency(delta)} para el recomendado.`;
+    return `Faltan ${formatMoney(delta)} para el recomendado.`;
   }
 
-  return `Sobran ${formatCurrency(Math.abs(delta))} sobre el recomendado.`;
+  return `Sobran ${formatMoney(Math.abs(delta))} sobre el recomendado.`;
 }
 
 export function buildQuoteStudioApplyRecommendedLabel(
-  summary: QuoteStudioFinancialSummary
+  summary: QuoteStudioFinancialSummary,
+  formatMoney: (value: number) => string = formatCurrency
 ): string {
   if (!canApplyQuoteStudioRecommendedPrice(summary)) {
     return "Usar precio recomendado";
@@ -79,7 +81,7 @@ export function buildQuoteStudioApplyRecommendedLabel(
     return "Usar precio recomendado";
   }
 
-  const signed = delta > 0 ? `+${formatCurrency(delta)}` : formatCurrency(delta);
+  const signed = delta > 0 ? `+${formatMoney(delta)}` : formatMoney(delta);
   return `Usar precio recomendado · ${signed}`;
 }
 
@@ -180,10 +182,11 @@ export function QuoteStudioFinancialPanel({
   initialDetailOpen = false,
 }: QuoteStudioFinancialPanelProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(initialDetailOpen);
+  const formatMoney = (value: number) => formatCurrencyInput(String(Math.round(value)));
   const hasCostBasis = summary.hasCostBasis;
   const canApplyRecommended = canApplyQuoteStudioRecommendedPrice(summary);
-  const recommendedDeltaLabel = buildQuoteStudioRecommendedDeltaLabel(summary);
-  const applyRecommendedLabel = buildQuoteStudioApplyRecommendedLabel(summary);
+  const recommendedDeltaLabel = buildQuoteStudioRecommendedDeltaLabel(summary, formatMoney);
+  const applyRecommendedLabel = buildQuoteStudioApplyRecommendedLabel(summary, formatMoney);
   const marginValueClass = resolveQuoteStudioMarginValueClass(summary, {
     muted: d.financialValueMuted,
     danger: d.financialValueDanger,
@@ -222,16 +225,16 @@ export function QuoteStudioFinancialPanel({
           <div className={d.financialSummaryList} aria-label="Resumen de rentabilidad">
             <FinancialSummaryRow
               label="Precio de venta"
-              value={formatCurrency(summary.precioFinalNeto)}
+              value={formatMoney(summary.precioFinalNeto)}
               tone="primary"
             />
             <FinancialSummaryRow
               label="Costo estimado"
-              value={formatCurrency(summary.costoTotal)}
+              value={formatMoney(summary.costoTotal)}
             />
             <FinancialSummaryRow
               label="Utilidad"
-              value={formatCurrency(summary.utilidadEstimada)}
+              value={formatMoney(summary.utilidadEstimada)}
               tone="highlight"
               valueClassName={utilityValueClass}
             />
@@ -243,7 +246,7 @@ export function QuoteStudioFinancialPanel({
             />
             <FinancialSummaryRow
               label="Precio recomendado"
-              value={formatCurrency(summary.precioRecomendadoNeto)}
+              value={formatMoney(summary.precioRecomendadoNeto)}
               tone="recommended"
             />
             {canApplyRecommended ? (
@@ -289,7 +292,7 @@ export function QuoteStudioFinancialPanel({
               <div className={d.financialReadRow}>
                 <span className={d.financialReadLabel}>Materiales</span>
                 <strong className={d.financialReadValue}>
-                  {hasCostBasis ? formatCurrency(summary.costoMateriales) : UNAVAILABLE_LABEL}
+                  {hasCostBasis ? formatMoney(summary.costoMateriales) : UNAVAILABLE_LABEL}
                 </strong>
               </div>
             </div>

@@ -15,6 +15,7 @@ import type {
   UpdateOrganizationProfileInput,
 } from "@/features/organization-profile/types/organization-profile";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
+import { resolveOrganizationRegionSettings } from "@/features/organization-region/services/organization-region.service";
 
 type OrganizationProfileServiceDeps = {
   organizationProfileRepository?: OrganizationProfileRepository;
@@ -405,6 +406,7 @@ function buildNormalizedProfileInput(
   const resolved = resolveOrganizationProfile(profile?.organizationId ?? null, profile ?? null);
 
   return {
+    ...resolveOrganizationRegionSettings(resolved),
     empresaNombre: resolved.empresaNombre,
     empresaLogoUrl: resolved.empresaLogoUrl,
     responsableComercial: resolved.responsableComercial,
@@ -463,6 +465,7 @@ export function buildPaginaVentaProfileInput(profile?: Partial<OrganizationProfi
 }
 
 export function resolvePublicLandingConfig(source: {
+  countryCode?: string;
   organizationId: EntityId | string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;
@@ -509,6 +512,9 @@ export function resolvePublicLandingConfig(source: {
   planCode?: string | null;
 }): ResolvedPublicLandingConfig {
   const resolved = resolveOrganizationProfile(source.organizationId, {
+    countryCode: resolveOrganizationRegionSettings({
+      countryCode: source.countryCode,
+    }).countryCode,
     organizationId: source.organizationId,
     empresaNombre: source.empresaNombre,
     empresaLogoUrl: source.empresaLogoUrl,
@@ -561,6 +567,7 @@ export function resolvePublicLandingConfig(source: {
   });
 
   return {
+    countryCode: resolved.countryCode,
     organizationId: source.organizationId,
     empresaNombre: resolved.empresaNombre,
     empresaLogoUrl: resolved.empresaLogoUrl,
@@ -640,6 +647,7 @@ export function resolveOrganizationProfile(
   const legacyHorario = extractLegacyHorarioFields(solicitudPublicaHorarioPorDia);
 
   return {
+    ...resolveOrganizationRegionSettings(profile),
     organizationId,
     empresaNombre,
     empresaLogoUrl: profile?.empresaLogoUrl ?? null,
@@ -732,6 +740,7 @@ export function createOrganizationProfileService(
       input: UpdateOrganizationProfileInput
     ) {
       const empresaNombre = normalizeText(input.empresaNombre);
+      const region = resolveOrganizationRegionSettings(input);
 
       if (!empresaNombre) {
         throw new Error("El nombre de la empresa es obligatorio");
@@ -759,6 +768,7 @@ export function createOrganizationProfileService(
 
       try {
         const persisted = await repository.upsertByOrganizationId(organizationId, {
+          ...region,
           empresaNombre,
           empresaLogoUrl: input.empresaLogoUrl,
           responsableComercial: normalizeText(input.responsableComercial),

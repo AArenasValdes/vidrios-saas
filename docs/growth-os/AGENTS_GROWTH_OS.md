@@ -306,7 +306,7 @@ Rutas de verificacion, no de montaje del onboarding:
 - tiempo a primera solicitud
 - tiempo a primera cotizacion si existe medicion manual o futura
 - porcentaje de clientes que comparten primer link o PDF si se registra manualmente
-- porcentaje de pilotos que llegan a valor real en 7 dias
+- porcentaje de pilotos que llegan a valor real en 15 dias
 
 ### Tareas que puede ejecutar
 

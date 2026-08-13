@@ -111,7 +111,7 @@ Cada KPI tiene:
 
 ## pilotos iniciados
 
-- definicion: cantidad de empresas que comenzaron un piloto real de 7 dias
+- definicion: cantidad de empresas que comenzaron un piloto real de 15 dias
 - formula: `count(pilotos_iniciados)`
 - fuente de datos: tablero comercial manual; no existe tabla nativa hoy
 - estado de medicion: manual hoy, nativo requiere implementacion

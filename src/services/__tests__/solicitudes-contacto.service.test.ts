@@ -143,6 +143,26 @@ describe("solicitudes-contacto.service", () => {
     });
   });
 
+  it("debe aceptar un WhatsApp de Latinoamérica con countryCode", async () => {
+    const repository = createSolicitudesContactoRepositoryMock();
+    const service = createSolicitudesContactoService({ repository });
+
+    await service.createSolicitud({
+      nombre: "Ana Soto",
+      empresa: "Vidrios Norte",
+      correo: "ana@empresa.mx",
+      telefono: "+52 55 1234 5678",
+      countryCode: "MX",
+      ayuda: "demo",
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        telefono: "+525512345678",
+      })
+    );
+  });
+
   it("debe rechazar correos invalidos", async () => {
     const service = createSolicitudesContactoService({
       repository: createSolicitudesContactoRepositoryMock(),

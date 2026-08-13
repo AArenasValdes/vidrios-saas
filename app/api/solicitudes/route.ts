@@ -73,6 +73,7 @@ async function parseLeadRequestBody(request: Request) {
     empresa?: string;
     correo?: string;
     telefono?: string;
+    countryCode?: string;
     ayuda?: "demo" | "cotizacion" | "ventas";
   }>(request);
 }
@@ -234,6 +235,7 @@ export async function POST(request: Request) {
       empresa: body.empresa ?? "",
       correo: body.correo ?? "",
       telefono: body.telefono ?? "",
+      countryCode: body.countryCode,
       ayuda: body.ayuda ?? "demo",
       origen: "landing",
       ip,

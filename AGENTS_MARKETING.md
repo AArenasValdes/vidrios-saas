@@ -2,17 +2,17 @@
 
 Lee antes de proponer acciones de growth, marketing, prospeccion, contenido, WhatsApp o pilotos.
 
-Ultima actualizacion: 2026-06-26.
+Ultima actualizacion: 2026-08-13.
 
 ## Objetivo de este archivo
 
 Dar contexto suficiente para que cualquier agente de IA pueda trabajar crecimiento comercial de Ventora sin volver a pedir el contexto base del producto.
 
-Ventora no compite como ERP, software de produccion ni cotizador tecnico barato. Su centro de marketing es ayudar al maestro a cotizar desde el celular, enviar un PDF profesional y dejar de llegar a casa a preparar presupuestos.
+Ventora no compite como ERP, software de produccion ni cotizador tecnico universal. Su centro de marketing es ayudar al maestro a cotizar desde el celular, enviar un PDF profesional y, cuando la empresa configura sus recetas, revisar cubicacion, despiece, tiras y pauta interna desde computador.
 
 ## Direccion central de marketing
 
-Ventora no debe posicionarse como un cotizador tecnico barato ni competir directamente con sistemas de cubicacion, perfiles, cortes, herrajes o desperdicio.
+Ventora no debe posicionarse como un cotizador tecnico universal ni competir directamente con software industrial de optimizacion, nesting, CNC o produccion. Si puede comunicar su capacidad de cubicacion, debe hacerlo como una funcion configurada por la empresa y revisable por el taller.
 
 Ventora es un cotizador movil y una capa comercial para maestros e instaladores que hoy:
 
@@ -39,14 +39,28 @@ Promesas permitidas:
 - responder mas rapido
 - dar una mejor impresion frente al cliente
 - convertir precios, medidas o calculos ya realizados en una cotizacion lista para enviar
+- configurar lineas y recetas propias para obtener cubicacion, despiece, tiras y una pauta interna revisable en computador
 
 Promesas prohibidas:
 
 - "Ganaras mas clientes."
 - "Cerraras mas ventas."
-- "Ventora cubica."
-- "Ventora calcula perfiles, cortes, herrajes o desperdicio."
+- "Ventora cubica cualquier linea sin configuracion ni validacion."
+- "Ventora entrega cortes exactos para maquina, optimiza barras o reemplaza un sistema de produccion."
 - comparar Ventora como reemplazo barato de un cotizador tecnico
+
+## Como hablar de cubicacion y pauta
+
+Mensaje permitido:
+
+> Ventora calcula precios comerciales por linea y, si tu empresa configura sus recetas, genera cubicacion, despiece, tiras y una pauta interna revisable desde computador.
+
+Siempre aclarar:
+
+- la empresa configura perfiles, medidas, reglas, largos comerciales y variantes;
+- el taller valida la receta con casos reales antes de tratarla como confiable;
+- la pauta es interna, editable y referencial, y queda separada del PDF comercial del cliente;
+- no es optimizacion de barras, nesting de vidrio, CNC ni fabricacion automatica.
 
 ## Cliente objetivo
 
@@ -93,7 +107,7 @@ Toda accion de marketing debe respetar este embudo:
 
 Oferta comercial sugerida para etapa piloto:
 
-- piloto de 7 dias
+- piloto de 15 dias
 - feedback directo con el cliente
 - implementacion rapida y acompanamiento cercano
 - precio sugerido de `CLP 8.990 mensual`
@@ -219,7 +233,7 @@ Un agente no debe:
 
 - presentar Ventora como ERP
 - presentar Ventora como cotizador tecnico barato
-- prometer cubicacion, perfiles, cortes, herrajes o desperdicio
+- prometer cubicacion universal, cortes exactos de maquina, optimizacion, nesting, CNC o desperdicio garantizado
 - prometer que el usuario ganara mas clientes o cerrara mas ventas
 - prometer automatizaciones invasivas
 - depender de anuncios pagados al inicio
@@ -277,7 +291,7 @@ Si el agente propone cambios dentro de la app, debe respetar el proyecto Ventora
 
 - leer `AGENTS.md`
 - leer `docs/agent-map/README.md`
-- mantener foco en Fase 2
+- mantener foco en Fase 4: cubicacion configurada, pauta interna revisable y cierre comercial
 - no romper rutas criticas de captacion y cierre
 - respetar arquitectura, multi-tenant y `organization_id`
 

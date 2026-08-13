@@ -5,7 +5,7 @@ import {
   normalizeDocumentText,
   truncateDocumentText,
 } from "@/utils/cotizacion-document";
-import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 function extractValidezDays(validez: string) {
@@ -15,36 +15,9 @@ function extractValidezDays(validez: string) {
   return match?.[0] ?? normalized;
 }
 
-export function normalizeWhatsappPhone(phone: string) {
-  const normalizedChileMobile = normalizeChileMobilePhone(phone);
-
-  if (normalizedChileMobile) {
-    return normalizedChileMobile.replace(/^\+/, "");
-  }
-
-  const digits = phone.replace(/\D/g, "");
-
-  if (!digits) {
-    return null;
-  }
-
-  if (digits.startsWith("56") && digits.length >= 11) {
-    return digits;
-  }
-
-  if (digits.startsWith("9") && digits.length === 9) {
-    return `56${digits}`;
-  }
-
-  if (digits.startsWith("09") && digits.length === 10) {
-    return `56${digits.slice(1)}`;
-  }
-
-  if (digits.length >= 8) {
-    return digits;
-  }
-
-  return null;
+export function normalizeWhatsappPhone(phone: string, countryCode = "CL") {
+  const normalized = normalizePhoneToE164(phone, countryCode);
+  return normalized ? normalized.replace(/^\+/, "") : null;
 }
 
 type BuildPublicLeadWhatsappOptions = {
@@ -80,9 +53,10 @@ export function buildPublicLeadWhatsappMessage(
 
 export function buildPublicLeadWhatsappUrl(
   phone: string,
-  options: BuildPublicLeadWhatsappOptions = {}
+  options: BuildPublicLeadWhatsappOptions = {},
+  countryCode = "CL"
 ) {
-  const normalizedPhone = normalizeWhatsappPhone(phone);
+  const normalizedPhone = normalizeWhatsappPhone(phone, countryCode);
 
   if (!normalizedPhone) {
     return null;
@@ -137,7 +111,11 @@ export function buildCotizacionWhatsappMessage(
     "",
     `Te enviamos tu cotizacion${quoteContext}`,
     "",
-    `Total: ${formatCurrency(record.total ?? 0)}`,
+    `Total: ${formatCurrency(
+      record.total ?? 0,
+      record.regionalSnapshot?.locale,
+      record.regionalSnapshot?.currencyCode
+    )}`,
     `Vigencia: ${validezDays} dias`,
     "",
     publicLinkBlock,

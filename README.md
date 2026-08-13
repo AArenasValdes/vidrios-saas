@@ -62,8 +62,8 @@ Pensado principalmente para:
 - un ERP
 - un CRM enterprise
 - un sistema logistico
-- un software de produccion
-- un cotizador tecnico de perfiles, compatibilidades o despiece
+- un software de produccion automatizada
+- un cotizador tecnico universal de perfiles, compatibilidades, optimizacion o despiece sin configuracion
 
 ## Que ya esta implementado
 
@@ -87,6 +87,7 @@ Base funcional actual del repo:
 - base multi-tenant por `organization_id`
 - PWA base y offline page
 - tests en services, hooks y utils
+- cubicacion, despiece, tiras y pauta interna revisable para lineas con recetas configuradas por la empresa
 
 ## Flujo principal del producto
 

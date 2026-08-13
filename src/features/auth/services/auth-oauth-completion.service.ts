@@ -4,7 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OrganizacionId } from "@/features/auth/types/auth";
-import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
+import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
+import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 
 export class AuthOAuthCompletionError extends Error {
   constructor(
@@ -14,7 +16,7 @@ export class AuthOAuthCompletionError extends Error {
       | "identity_conflict"
       | "email_taken"
       | "unauthenticated"
-      | "provision_failed" = "provision_failed"
+      | "provision_failed" = "provision_failed",
   ) {
     super(message);
     this.name = "AuthOAuthCompletionError";
@@ -26,6 +28,7 @@ export type OAuthAccountCompletionValues = {
   empresaNombre: string;
   whatsapp: string;
   ciudadComuna: string;
+  countryCode: SupportedCountryCode;
   consentimientoAceptado: boolean;
 };
 
@@ -79,6 +82,7 @@ type OrganizationRow = {
 
 type OrganizationProfileRow = {
   empresa_nombre: string | null;
+  country_code?: string | null;
 };
 
 type OAuthCompletionRpcRow = {
@@ -117,13 +121,14 @@ function buildEmptyCompletionValues(): OAuthAccountCompletionValues {
     empresaNombre: "",
     whatsapp: "",
     ciudadComuna: "",
+    countryCode: "CL",
     consentimientoAceptado: false,
   };
 }
 
 async function getPublicUserByAuthUserId(
   supabase: SupabaseClient,
-  authUserId: string
+  authUserId: string,
 ): Promise<PublicUserRow | null> {
   const { data, error } = await supabase
     .from("users")
@@ -134,7 +139,7 @@ async function getPublicUserByAuthUserId(
 
   if (error) {
     throw new AuthOAuthCompletionError(
-      `No pudimos validar tu acceso: ${error.message}`
+      `No pudimos validar tu acceso: ${error.message}`,
     );
   }
 
@@ -143,7 +148,7 @@ async function getPublicUserByAuthUserId(
 
 async function getPublicUserByEmail(
   supabase: SupabaseClient,
-  email: string
+  email: string,
 ): Promise<PublicUserRow | null> {
   const { data, error } = await supabase
     .from("users")
@@ -154,7 +159,7 @@ async function getPublicUserByEmail(
 
   if (error) {
     throw new AuthOAuthCompletionError(
-      `No pudimos validar tu correo: ${error.message}`
+      `No pudimos validar tu correo: ${error.message}`,
     );
   }
 
@@ -163,11 +168,11 @@ async function getPublicUserByEmail(
 
 async function resolvePublicUser(
   admin: SupabaseClient,
-  input: { authUserId: string; email: string }
+  input: { authUserId: string; email: string },
 ) {
   const linkedByAuthUserId = await getPublicUserByAuthUserId(
     admin,
-    input.authUserId
+    input.authUserId,
   );
 
   if (linkedByAuthUserId) {
@@ -182,7 +187,7 @@ export async function getOAuthAccountCompletionState(
     authUserId: string;
     email: string;
   },
-  deps: { admin?: SupabaseClient } = {}
+  deps: { admin?: SupabaseClient } = {},
 ): Promise<OAuthAccountCompletionState> {
   const authUserId = input.authUserId.trim();
   const email = normalizeEmail(input.email);
@@ -190,7 +195,7 @@ export async function getOAuthAccountCompletionState(
   if (!authUserId || !email) {
     throw new AuthOAuthCompletionError(
       "No pudimos validar tu sesion de Google.",
-      "unauthenticated"
+      "unauthenticated",
     );
   }
 
@@ -206,13 +211,10 @@ export async function getOAuthAccountCompletionState(
     };
   }
 
-  if (
-    publicUser.auth_user_id &&
-    publicUser.auth_user_id !== authUserId
-  ) {
+  if (publicUser.auth_user_id && publicUser.auth_user_id !== authUserId) {
     throw new AuthOAuthCompletionError(
       "Este correo ya esta vinculado a otra cuenta de acceso.",
-      "identity_conflict"
+      "identity_conflict",
     );
   }
 
@@ -230,20 +232,20 @@ export async function getOAuthAccountCompletionState(
         .maybeSingle(),
       admin
         .from("organization_profile")
-        .select("empresa_nombre")
+        .select("empresa_nombre, country_code")
         .eq("organization_id", organizationId)
         .maybeSingle(),
     ]);
 
     if (organizationResult.error) {
       throw new AuthOAuthCompletionError(
-        `No pudimos leer tu taller: ${organizationResult.error.message}`
+        `No pudimos leer tu taller: ${organizationResult.error.message}`,
       );
     }
 
     if (profileResult.error) {
       throw new AuthOAuthCompletionError(
-        `No pudimos leer la configuracion del taller: ${profileResult.error.message}`
+        `No pudimos leer la configuracion del taller: ${profileResult.error.message}`,
       );
     }
 
@@ -254,10 +256,15 @@ export async function getOAuthAccountCompletionState(
   const values: OAuthAccountCompletionValues = {
     nombre: normalizeText(publicUser.nombre ?? ""),
     empresaNombre: normalizeText(
-      profile?.empresa_nombre ?? organization?.nombre ?? ""
+      profile?.empresa_nombre ?? organization?.nombre ?? "",
     ),
-    whatsapp: normalizeChileMobilePhone(publicUser.whatsapp ?? "") ?? "",
+    whatsapp:
+      normalizePhoneToE164(
+        publicUser.whatsapp ?? "",
+        normalizeSupportedCountryCode(profile?.country_code),
+      ) ?? "",
     ciudadComuna: normalizeText(publicUser.ciudad_comuna ?? ""),
+    countryCode: normalizeSupportedCountryCode(profile?.country_code),
     consentimientoAceptado: Boolean(publicUser.data_sharing_accepted_at),
   };
 
@@ -266,7 +273,6 @@ export async function getOAuthAccountCompletionState(
     hasRequiredText(values.nombre) &&
     hasRequiredText(values.empresaNombre) &&
     Boolean(values.whatsapp) &&
-    hasRequiredText(values.ciudadComuna) &&
     values.consentimientoAceptado;
 
   return {
@@ -282,7 +288,7 @@ export async function resolveOAuthIdentity(
     authUserId: string;
     email: string;
   },
-  deps: { admin?: SupabaseClient } = {}
+  deps: { admin?: SupabaseClient } = {},
 ): Promise<OAuthIdentityResolution> {
   const authUserId = input.authUserId.trim();
   const email = normalizeEmail(input.email);
@@ -290,7 +296,7 @@ export async function resolveOAuthIdentity(
   if (!authUserId || !email) {
     throw new AuthOAuthCompletionError(
       "No pudimos validar tu sesion de Google.",
-      "unauthenticated"
+      "unauthenticated",
     );
   }
 
@@ -300,7 +306,7 @@ export async function resolveOAuthIdentity(
   if (linkedByAuthUserId?.organization_id != null) {
     const completion = await getOAuthAccountCompletionState(
       { authUserId, email },
-      { admin }
+      { admin },
     );
 
     return {
@@ -318,10 +324,7 @@ export async function resolveOAuthIdentity(
     return { status: "needs_signup" };
   }
 
-  if (
-    linkedByEmail.auth_user_id &&
-    linkedByEmail.auth_user_id !== authUserId
-  ) {
+  if (linkedByEmail.auth_user_id && linkedByEmail.auth_user_id !== authUserId) {
     return { status: "identity_conflict" };
   }
 
@@ -336,7 +339,7 @@ export async function resolveOAuthIdentity(
 
     if (syncError) {
       throw new AuthOAuthCompletionError(
-        `No pudimos vincular tu acceso: ${syncError.message}`
+        `No pudimos vincular tu acceso: ${syncError.message}`,
       );
     }
 
@@ -349,7 +352,7 @@ export async function resolveOAuthIdentity(
 
   const completion = await getOAuthAccountCompletionState(
     { authUserId, email },
-    { admin }
+    { admin },
   );
 
   return {
@@ -369,28 +372,30 @@ export async function provisionOrganizationFromOAuthUser(
     empresaNombre: string;
     whatsapp: string;
     ciudadComuna: string;
+    countryCode: SupportedCountryCode | string;
     consentimientoAceptado: boolean;
   },
-  deps: { admin?: SupabaseClient } = {}
+  deps: { admin?: SupabaseClient } = {},
 ): Promise<ProvisionOAuthOrganizationResult> {
   const authUserId = input.authUserId.trim();
   const email = normalizeEmail(input.email);
   const nombre = normalizeText(input.nombre ?? "");
   const empresaNombre = normalizeText(input.empresaNombre ?? "");
   const ciudadComuna = normalizeText(input.ciudadComuna ?? "");
-  const whatsapp = normalizeChileMobilePhone(input.whatsapp ?? "");
+  const countryCode = normalizeSupportedCountryCode(input.countryCode);
+  const whatsapp = normalizePhoneToE164(input.whatsapp ?? "", countryCode);
 
   if (!authUserId || !email) {
     throw new AuthOAuthCompletionError(
       "No pudimos validar tu sesion.",
-      "unauthenticated"
+      "unauthenticated",
     );
   }
 
   if (email.length > COMPLETION_FIELD_LIMITS.email) {
     throw new AuthOAuthCompletionError(
       "El correo supera el largo permitido.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
@@ -401,49 +406,49 @@ export async function provisionOrganizationFromOAuthUser(
   if (nombre.length > COMPLETION_FIELD_LIMITS.nombre) {
     throw new AuthOAuthCompletionError(
       "Tu nombre es demasiado largo.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
   if (!hasRequiredText(empresaNombre)) {
     throw new AuthOAuthCompletionError(
       "Ingresa el nombre del taller.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
   if (empresaNombre.length > COMPLETION_FIELD_LIMITS.empresaNombre) {
     throw new AuthOAuthCompletionError(
       "El nombre del taller es demasiado largo.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
   if (!whatsapp) {
     throw new AuthOAuthCompletionError(
-      "Ingresa un WhatsApp chileno valido.",
-      "invalid_input"
+      "Ingresa un WhatsApp valido con codigo de pais.",
+      "invalid_input",
     );
   }
 
-  if (!hasRequiredText(ciudadComuna)) {
+  if (ciudadComuna.length > 0 && ciudadComuna.length < 2) {
     throw new AuthOAuthCompletionError(
-      "Ingresa tu ciudad o comuna.",
-      "invalid_input"
+      "La ciudad o comuna debe tener al menos 2 caracteres.",
+      "invalid_input",
     );
   }
 
   if (ciudadComuna.length > COMPLETION_FIELD_LIMITS.ciudadComuna) {
     throw new AuthOAuthCompletionError(
       "La ciudad o comuna es demasiado larga.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
   if (!input.consentimientoAceptado) {
     throw new AuthOAuthCompletionError(
       "Debes aceptar la creacion de la cuenta y el contacto directo.",
-      "invalid_input"
+      "invalid_input",
     );
   }
 
@@ -456,13 +461,14 @@ export async function provisionOrganizationFromOAuthUser(
     p_whatsapp: whatsapp,
     p_ciudad_comuna: ciudadComuna,
     p_consent: true,
+    p_country_code: countryCode,
   });
 
   if (error) {
     if (error.code === "23505") {
       throw new AuthOAuthCompletionError(
         "Este correo ya esta vinculado a otra cuenta de acceso.",
-        "identity_conflict"
+        "identity_conflict",
       );
     }
 
@@ -473,22 +479,22 @@ export async function provisionOrganizationFromOAuthUser(
     if (error.code === "28000") {
       throw new AuthOAuthCompletionError(
         "No pudimos validar tu sesion.",
-        "unauthenticated"
+        "unauthenticated",
       );
     }
 
     throw new AuthOAuthCompletionError(
-      `No pudimos completar tu cuenta: ${error.message}`
+      `No pudimos completar tu cuenta: ${error.message}`,
     );
   }
 
-  const result = (Array.isArray(data) ? data[0] : data) as
-    | OAuthCompletionRpcRow
-    | null;
+  const result = (
+    Array.isArray(data) ? data[0] : data
+  ) as OAuthCompletionRpcRow | null;
 
   if (!result?.result_organization_id || !result.result_user_id) {
     throw new AuthOAuthCompletionError(
-      "La cuenta no quedo vinculada a una organizacion valida."
+      "La cuenta no quedo vinculada a una organizacion valida.",
     );
   }
 

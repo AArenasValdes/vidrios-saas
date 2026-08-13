@@ -4,6 +4,8 @@ import { webPushNotificationsService } from "@/features/notificaciones/services/
 import type { WebPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
 import { resolvePublicLandingConfig } from "@/features/organization-profile/services/organization-profile.service";
 import { isValidChileMobilePhone, normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
+import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
 import type {
   AyudaSolicitudContacto,
   EstadoSolicitudContacto,
@@ -210,8 +212,9 @@ export function createSolicitudesContactoService(
       const nombre = limitText(normalizeText(input.nombre), FIELD_LIMITS.nombre);
       const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
       const correo = limitText(normalizeText(input.correo).toLowerCase(), FIELD_LIMITS.correo);
+      const countryCode = normalizeSupportedCountryCode(input.countryCode);
       const telefonoRaw = limitText(normalizePhone(input.telefono), FIELD_LIMITS.telefono);
-      const telefono = normalizeChileMobilePhone(telefonoRaw) ?? telefonoRaw;
+      const telefono = normalizePhoneToE164(telefonoRaw, countryCode);
       const ayuda = normalizeText(input.ayuda) as AyudaSolicitudContacto;
 
       if (nombre.length < 3) {
@@ -226,7 +229,7 @@ export function createSolicitudesContactoService(
         throw new SolicitudContactoValidationError("El correo no es válido.");
       }
 
-      if (!isValidChileMobilePhone(telefonoRaw)) {
+      if (!telefono) {
         throw new SolicitudContactoValidationError("Ingresa un WhatsApp válido.");
       }
 
@@ -315,7 +318,7 @@ export function createSolicitudesContactoService(
       const nombre = limitText(normalizeText(input.nombre), FIELD_LIMITS.nombre);
       const empresa = limitText(normalizeText(input.empresa), FIELD_LIMITS.empresa);
       const contactoRaw = limitText(normalizeText(input.contacto), FIELD_LIMITS.contacto);
-      const contacto = normalizeChileMobilePhone(contactoRaw);
+      const contacto = normalizePhoneToE164(contactoRaw, input.countryCode ?? "CL");
       const tipoTrabajo = limitText(normalizeText(input.tipoTrabajo), FIELD_LIMITS.tipoTrabajo);
       const mensaje = limitText(normalizeText(input.mensaje ?? ""), FIELD_LIMITS.mensaje);
 

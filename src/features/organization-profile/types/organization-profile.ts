@@ -9,6 +9,7 @@ import type {
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
 import type { EntityId } from "@/types/common";
+import type { OrganizationRegionSettings } from "@/features/organization-region/types/organization-region";
 
 export type HeroMode = "image" | "gradient";
 export type PublicScheduleDay = "0" | "1" | "2" | "3" | "4" | "5" | "6";
@@ -31,7 +32,7 @@ export type SolicitudPublicaHorarioDia = {
   to: string;
 };
 
-export type OrganizationProfile = {
+export type OrganizationProfile = OrganizationRegionSettings & {
   organizationId: EntityId | null;
   empresaNombre: string;
   empresaLogoUrl: string | null;
@@ -95,7 +96,7 @@ export type OrganizationProfile = {
   subscription: EffectiveSubscriptionState;
 };
 
-export type UpdateOrganizationProfileInput = {
+export type UpdateOrganizationProfileInput = OrganizationRegionSettings & {
   empresaNombre: string;
   empresaLogoUrl: string | null;
   responsableComercial: string;
@@ -145,6 +146,7 @@ export type UpdateOrganizationProfileInput = {
 };
 
 export type ResolvedPublicLandingConfig = {
+  countryCode: string;
   organizationId: EntityId | string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;

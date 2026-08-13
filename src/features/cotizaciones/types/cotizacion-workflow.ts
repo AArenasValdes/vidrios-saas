@@ -1,5 +1,6 @@
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 
 export type EstadoCotizacionWorkflow =
   | "borrador"
@@ -80,6 +81,7 @@ export type CotizacionWorkflowRecord = {
   clienteRespondioEn: string | null;
   clienteRespuestaCanal: string | null;
   pdfDescargadoEn: string | null;
+  regionalSnapshot?: QuoteRegionSnapshot | null;
   createdAt: string;
   updatedAt: string;
   items: CotizacionWorkflowItem[];

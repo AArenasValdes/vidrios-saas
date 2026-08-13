@@ -12,7 +12,10 @@ import {
   normalizeQuotePricingMode,
   type QuotePricingMode,
 } from "@/features/cotizaciones/types/quote-pricing-mode";
+import { parseQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
+import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeCotizacionItemPresentationForPublic } from "@/utils/cotizacion-item-presentation";
 
 type PublicCotizacionApprovalServiceDeps = {
   repository?: PublicCotizacionApprovalRepository;
@@ -37,6 +40,7 @@ export type PublicApprovalQuoteView = {
   iva: number;
   flete: number;
   total: number;
+  regionalSnapshot: QuoteRegionSnapshot | null;
   pricingMode: QuotePricingMode;
   approvalToken: string;
   approvalTokenExpiresAt: string | null;
@@ -177,6 +181,13 @@ async function buildPublicApprovalQuoteView(
     );
   }
 
+  items = items.map((item) => ({
+    ...item,
+    observaciones: sanitizeCotizacionItemPresentationForPublic(
+      item.observaciones
+    ),
+  }));
+
   const pricingMode = normalizeQuotePricingMode(payload.cotizacion.pricing_mode);
   const subtotal =
     pricingMode === "total_global"
@@ -207,6 +218,7 @@ async function buildPublicApprovalQuoteView(
     iva: Number(payload.cotizacion.iva ?? 0),
     flete: Number(payload.cotizacion.flete ?? 0),
     total: Number(payload.cotizacion.total ?? 0),
+    regionalSnapshot: parseQuoteRegionSnapshot(payload.cotizacion.regional_snapshot),
     pricingMode,
     approvalToken: payload.cotizacion.approval_token ?? normalized,
     approvalTokenExpiresAt: expiresAt,

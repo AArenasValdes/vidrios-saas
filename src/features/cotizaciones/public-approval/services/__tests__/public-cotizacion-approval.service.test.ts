@@ -16,6 +16,7 @@ import {
   createPublicCotizacionApprovalService,
 } from "../public-cotizacion-approval.service";
 import type { PublicCotizacionApprovalRepository } from "../../repositories/public-cotizacion-approval.repository";
+import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 function createRepositoryMock(): jest.Mocked<PublicCotizacionApprovalRepository> {
   return {
@@ -131,5 +132,34 @@ describe("public-cotizacion-approval.service", () => {
       "El link de aprobacion no es valido."
     );
     expect(repository.respond).not.toHaveBeenCalled();
+  });
+
+  it("no expone metadata tecnica ni financiera en la vista publica", async () => {
+    const repository = createRepositoryMock();
+    const payload = createPayload();
+    payload.items[0].observaciones = encodeCotizacionItemPresentationMeta({
+      colorHex: "#2a2a2a",
+      material: "Aluminio",
+      referencia: "Serie 25",
+      sistema: "Corredera",
+      lineTemplateId: "77",
+      precioPorM2: 145000,
+      margenPct: 42,
+      fabricacionTipologia: "corredera",
+      fabricacionHerraje: "caracol",
+      fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+      raw: "Instalacion incluida",
+    });
+    repository.getByApprovalToken.mockResolvedValue(payload);
+    const service = createPublicCotizacionApprovalService({ repository });
+
+    const result = await service.resolveByToken("a".repeat(24));
+    const publicObservaciones = result?.items[0]?.observaciones ?? "";
+
+    expect(publicObservaciones).toContain("[r:Serie 25]");
+    expect(publicObservaciones).toContain("Instalacion incluida");
+    expect(publicObservaciones).not.toMatch(
+      /\[(?:lti|pm2|mp|ft|fhe|frid|cub):/i
+    );
   });
 });

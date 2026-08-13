@@ -7,6 +7,7 @@ import {
   Suspense,
   startTransition,
   type KeyboardEvent,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -20,6 +21,7 @@ import {
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { resolveOrganizationPricingSettings } from "@/features/organization-region/services/organization-region.service";
 import {
   calculateWorkflowTotalsForPricingMode,
   createCotizacionWorkflowDraft,
@@ -260,6 +262,14 @@ function NuevaCotizacionPageContent() {
     organizationProfile?.modoPrecioPreferido
   );
   const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
+  const regionalPricing = useMemo(
+    () => resolveOrganizationPricingSettings(organizationProfile),
+    [organizationProfile]
+  );
+  const regionalCurrencyInput = useCallback(
+    (value: string) => formatCurrencyInput(value, organizationProfile?.locale),
+    [organizationProfile?.locale]
+  );
   const pasoDosEdicionRapida = usePasoDosEdicionRapida({
     items: draft.items,
     quotePricingMode,
@@ -390,8 +400,8 @@ function NuevaCotizacionPageContent() {
       calculateWorkflowTotalsForPricingMode({
         ...draft,
         items: effectiveWorkflowItems,
-      }),
-    [draft, effectiveWorkflowItems]
+      }, regionalPricing),
+    [draft, effectiveWorkflowItems, regionalPricing]
   );
   const quoteStudioFinancial = useMemo(
     () => createQuoteStudioFinancialDraft(draft.quoteStudioFinancial),
@@ -1512,7 +1522,8 @@ function NuevaCotizacionPageContent() {
       const item = buildFreeValueItemFromForm(
         freeValueItemForm,
         draft.items,
-        editingFreeValueItemId
+        editingFreeValueItemId,
+        { taxRatePct: regionalPricing.taxRatePct }
       );
       const nextItems = editingFreeValueItemId
         ? draft.items.map((current) => (current.id === editingFreeValueItemId ? item : current))
@@ -1712,7 +1723,10 @@ function NuevaCotizacionPageContent() {
           },
           nextItems,
           isEditingFreeTotalNotebook ? freeTotalEditMainId : null,
-          { allowZeroValue: !shouldChargeSeparately }
+          {
+            allowZeroValue: !shouldChargeSeparately,
+            taxRatePct: regionalPricing.taxRatePct,
+          }
         );
       } else {
         const nextForm = buildPasoDosGrupoComponentForm({
@@ -1778,7 +1792,10 @@ function NuevaCotizacionPageContent() {
                   },
                   nextItems,
                   null,
-                  { allowZeroValue: true }
+                  {
+                    allowZeroValue: true,
+                    taxRatePct: regionalPricing.taxRatePct,
+                  }
                 );
           nextItems.push(detalleItem);
         }
@@ -2295,6 +2312,7 @@ function NuevaCotizacionPageContent() {
       return true;
     },
     applyQuickEditDraftsToItems,
+    pricingOptions: regionalPricing,
     resetWorkflowToBlank,
     openQuotesList: () => {
       router.push("/cotizaciones");
@@ -2914,7 +2932,7 @@ function goNextFromStep1() {
     onCondicionesPagoChange: handleCondicionesPagoChange,
     onGlobalTotalClienteChange: handleGlobalTotalClienteChange,
     onMostrarIvaChange: handleMostrarIvaChange,
-    formatCurrencyInput,
+    formatCurrencyInput: regionalCurrencyInput,
     stepTwoListRef: pasoDosLista.listaRef,
     stepTwoSummaryRef: pasoDosLista.resumenRef,
     isDesktopQuoteStudio,
@@ -3151,7 +3169,7 @@ function goNextFromStep1() {
             constructorLineTemplates: activeLineTemplates,
             constructorGlassOptions: pasoDosAgregarGrupo.glassOptions,
             totalClienteManual: draft.totalClienteManual ?? null,
-            formatCurrencyInput,
+            formatCurrencyInput: regionalCurrencyInput,
             onAddConstructorPreset: handleAddConstructorPreset,
             onUpdateConstructorItem: handleUpdateConstructorItem,
             onMoveConstructorItem: handleMoveConstructorItem,

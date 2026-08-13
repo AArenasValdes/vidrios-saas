@@ -1,4 +1,3 @@
-import { impuestos } from "@/constants/impuestos";
 import {
   createQuoteStudioFinancialDraft,
   type CotizacionWorkflowDraft,
@@ -20,6 +19,8 @@ import {
 } from "@/features/cotizaciones/types/pricing-mode";
 
 const DEFAULT_FLETE = 0;
+const DEFAULT_TAX_RATE_PCT = 19;
+const DEFAULT_COMMERCIAL_ROUNDING_INCREMENT = 1000;
 const COTIZACION_CODE_STORAGE_PREFIX = "vidrios-saas:cotizacion-code:";
 const cotizacionCodeCounters = new Map<string, number>();
 
@@ -66,6 +67,12 @@ type CalculateFreeValueItemInput = {
   ivaMode?: CotizacionItemFreeValueIvaMode;
   observaciones?: string;
   allowZeroValue?: boolean;
+  taxRatePct?: number;
+};
+
+export type QuotePricingOptions = {
+  taxRatePct?: number;
+  commercialRoundingIncrement?: number;
 };
 
 type CreateCotizacionRecordInput = {
@@ -83,12 +90,36 @@ function round(value: number, digits = 2) {
   return Math.round(value * multiplier) / multiplier;
 }
 
-function roundCommercialTotal(value: number) {
+function resolveTaxRate(value: number | undefined) {
+  const normalized = Number(value);
+  const percentage =
+    Number.isFinite(normalized) && normalized >= 0 && normalized <= 100
+      ? normalized
+      : DEFAULT_TAX_RATE_PCT;
+
+  return percentage / 100;
+}
+
+function resolveCommercialRoundingIncrement(value: number | undefined) {
+  const normalized = Number(value);
+
+  return Number.isFinite(normalized) && normalized >= 1
+    ? Math.round(normalized)
+    : DEFAULT_COMMERCIAL_ROUNDING_INCREMENT;
+}
+
+function roundCommercialTotal(value: number, increment?: number) {
   if (!Number.isFinite(value) || value <= 0) {
     return 0;
   }
 
-  return Math.ceil(value / 1000) * 1000;
+  const resolvedIncrement = resolveCommercialRoundingIncrement(increment);
+
+  if (resolvedIncrement <= 1) {
+    return round(value, 2);
+  }
+
+  return Math.ceil(value / resolvedIncrement) * resolvedIncrement;
 }
 
 function normalizePositiveNumber(value: number | null | undefined) {
@@ -331,11 +362,12 @@ export function calculateFreeValueItem(input: CalculateFreeValueItemInput): Coti
   const precioTotal = round(valorUnitario * cantidad, 2);
   const codigo = input.codigo?.trim() || `L${Date.now()}`;
   const ivaMode = input.ivaMode ?? "total_incluye_iva";
+  const taxRate = resolveTaxRate(input.taxRatePct);
   const netoCalculado =
-    ivaMode === "neto_mas_iva" ? precioTotal : round(precioTotal / (1 + impuestos.iva), 2);
+    ivaMode === "neto_mas_iva" ? precioTotal : round(precioTotal / (1 + taxRate), 2);
   const ivaCalculado =
     ivaMode === "neto_mas_iva"
-      ? round(precioTotal * impuestos.iva, 2)
+      ? round(precioTotal * taxRate, 2)
       : round(precioTotal - netoCalculado, 2);
 
   if (!nombre) {
@@ -389,7 +421,11 @@ export function calculateCotizacionWorkflowTotals(
   items: CotizacionWorkflowItem[],
   descuentoPct = 0,
   flete = DEFAULT_FLETE,
-  options: { mostrarIva?: boolean; descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"]; descuentoMonto?: number } = {}
+  options: QuotePricingOptions & {
+    mostrarIva?: boolean;
+    descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"];
+    descuentoMonto?: number;
+  } = {}
 ) {
   const mostrarIva = options.mostrarIva ?? true;
   const subtotal = round(
@@ -404,9 +440,10 @@ export function calculateCotizacionWorkflowTotals(
   });
   const descuentoValor = round(subtotal * (effectiveDiscountPct / 100), 2);
   const neto = round(subtotal - descuentoValor, 2);
-  const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
+  const taxRate = resolveTaxRate(options.taxRatePct);
+  const iva = mostrarIva ? round(neto * taxRate, 2) : 0;
   const totalSinRedondeo = round(neto + iva + flete, 2);
-  const total = roundCommercialTotal(totalSinRedondeo);
+  const total = roundCommercialTotal(totalSinRedondeo, options.commercialRoundingIncrement);
   const redondeoComercial = round(total - totalSinRedondeo, 2);
 
   return {
@@ -430,6 +467,8 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   descuentoPct?: number | null;
   descuentoTipo?: CotizacionWorkflowDraft["descuentoTipo"];
   descuentoMonto?: number | null;
+  taxRatePct?: number;
+  commercialRoundingIncrement?: number;
 }) {
   const costoTotalFabricacion = round(
     normalizeNonNegativeNumber(input.costoTotalFabricacion),
@@ -458,9 +497,10 @@ export function calculateGlobalQuoteWorkflowTotals(input: {
   const neto = round(subtotal - descuentoValor, 2);
   const flete = round(normalizeNonNegativeNumber(input.flete), 2);
   const mostrarIva = input.mostrarIva ?? true;
-  const iva = mostrarIva ? round(neto * impuestos.iva, 2) : 0;
+  const taxRate = resolveTaxRate(input.taxRatePct);
+  const iva = mostrarIva ? round(neto * taxRate, 2) : 0;
   const totalSinRedondeo = round(neto + iva + flete, 2);
-  const total = roundCommercialTotal(totalSinRedondeo);
+  const total = roundCommercialTotal(totalSinRedondeo, input.commercialRoundingIncrement);
   const redondeoComercial = round(total - totalSinRedondeo, 2);
   const utilidadTotal = round(total - costoTotalFabricacion, 2);
   const margenGlobalPct =
@@ -526,7 +566,8 @@ export function calculateWorkflowTotalsForPricingMode(
     | "margenGlobalPct"
     | "totalClienteManual"
     | "mostrarIva"
-  >
+  >,
+  pricingOptions: QuotePricingOptions = {}
 ) {
   const quotePricingMode = normalizeQuotePricingMode(draft.quotePricingMode);
 
@@ -541,6 +582,7 @@ export function calculateWorkflowTotalsForPricingMode(
       descuentoPct: draft.descuentoPct,
       descuentoTipo: draft.descuentoTipo,
       descuentoMonto: draft.descuentoMonto,
+      ...pricingOptions,
     });
   }
 
@@ -548,6 +590,7 @@ export function calculateWorkflowTotalsForPricingMode(
     mostrarIva: draft.mostrarIva ?? true,
     descuentoTipo: draft.descuentoTipo,
     descuentoMonto: draft.descuentoMonto,
+    ...pricingOptions,
   });
   const mostrarIva = draft.mostrarIva ?? true;
   const syncedTotalClienteManual = resolveSyncedPorItemTotalClienteManual(
@@ -578,7 +621,8 @@ export function calculateWorkflowTotalsForPricingMode(
   );
 
   if (!mostrarIva) {
-    const netoReverse = round(manualAmount / (1 + impuestos.iva), 2);
+    const taxRate = resolveTaxRate(pricingOptions.taxRatePct);
+    const netoReverse = round(manualAmount / (1 + taxRate), 2);
     const ivaReverse = round(manualAmount - netoReverse, 2);
     const ajusteComercial = round(manualAmount - rawComponentSum, 2);
 
@@ -603,9 +647,13 @@ export function calculateWorkflowTotalsForPricingMode(
   }
 
   const netoManual = manualAmount;
-  const ivaManual = round(netoManual * impuestos.iva, 2);
+  const taxRate = resolveTaxRate(pricingOptions.taxRatePct);
+  const ivaManual = round(netoManual * taxRate, 2);
   const totalSinRedondeo = round(netoManual + ivaManual + fleteAmount, 2);
-  const totalFinal = roundCommercialTotal(totalSinRedondeo);
+  const totalFinal = roundCommercialTotal(
+    totalSinRedondeo,
+    pricingOptions.commercialRoundingIncrement
+  );
   const redondeo = round(totalFinal - totalSinRedondeo, 2);
   const ajusteComercialConIva = round(totalSinRedondeo - rawComponentSum, 2);
 

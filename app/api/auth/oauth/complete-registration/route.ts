@@ -14,6 +14,7 @@ type CompleteRegistrationBody = Record<string, unknown> & {
   whatsapp?: string;
   ciudadComuna?: string;
   consentimientoAceptado?: boolean;
+  countryCode?: string;
 };
 
 export async function POST(request: Request) {
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       whatsapp: body.whatsapp ?? "",
       ciudadComuna: body.ciudadComuna ?? "",
       consentimientoAceptado: body.consentimientoAceptado === true,
+      countryCode: body.countryCode ?? "",
     });
 
     return NextResponse.json({

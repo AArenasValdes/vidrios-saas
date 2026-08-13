@@ -12,6 +12,8 @@ type ActivationMoneyInputProps = {
   helpText?: string;
   placeholder?: string;
   suffix?: string;
+  locale?: string;
+  currency?: string;
 };
 
 function parseActivationMoney(value: string) {
@@ -27,9 +29,11 @@ export function ActivationMoneyInput({
   helpText,
   placeholder = "$0",
   suffix,
+  locale,
+  currency,
 }: ActivationMoneyInputProps) {
   const numericValue = parseActivationMoney(value);
-  const displayValue = numericValue > 0 ? formatCurrency(numericValue) : "";
+  const displayValue = numericValue > 0 ? formatCurrency(numericValue, locale, currency) : "";
 
   return (
     <label className={s.activationField} htmlFor={id}>

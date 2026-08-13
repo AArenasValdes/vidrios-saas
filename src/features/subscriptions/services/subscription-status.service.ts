@@ -9,8 +9,9 @@ import type {
   SubscriptionStatus,
 } from "@/features/subscriptions/types/subscription";
 
-export const TRIAL_DURATION_DAYS = 7;
-export const TRIAL_EXPIRING_SOON_DAYS = 2;
+export const TRIAL_DURATION_DAYS = 15;
+export const TRIAL_EXPIRING_SOON_DAYS = 3;
+export const DEFAULT_PAYMENT_GRACE_DAYS = 3;
 export const VENTORA_MONTHLY_PRICE = 8_990;
 export const VENTORA_YEARLY_PRICE = 79_990;
 export const VENTORA_QUOTE_ONLY_YEARLY_PRICE = 59_990;
@@ -51,6 +52,7 @@ const VALID_BILLING_PERIODS = new Set<BillingPeriod>([
   "none",
 ]);
 const VALID_PAYMENT_METHODS = new Set<PaymentMethod>([
+  "mercadopago",
   "manual_transfer",
   "manual_other",
   "none",
@@ -135,6 +137,20 @@ function resolveDaysRemaining(targetDate: Date | null, now: Date) {
   return Math.ceil(remainingMs / DAY_IN_MS);
 }
 
+function resolvePaymentGraceDays() {
+  const configuredDays = Number(process.env.NEXT_PUBLIC_SUBSCRIPTION_GRACE_DAYS);
+
+  if (!Number.isInteger(configuredDays) || configuredDays < 1 || configuredDays > 14) {
+    return DEFAULT_PAYMENT_GRACE_DAYS;
+  }
+
+  return configuredDays;
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * DAY_IN_MS);
+}
+
 export function normalizeOrganizationSubscriptionSnapshot(
   input?: Partial<OrganizationSubscriptionSnapshot> | null
 ): OrganizationSubscriptionSnapshot {
@@ -177,6 +193,12 @@ export function resolveOrganizationSubscriptionState(
     normalizedStatus === "active" &&
     (isFounderActive ||
       (subscriptionEndsAt !== null && subscriptionEndsAt.getTime() > now.getTime()));
+  const paymentGraceEndsAt =
+    normalizedStatus === "past_due" && subscriptionEndsAt
+      ? addDays(subscriptionEndsAt, resolvePaymentGraceDays())
+      : null;
+  const isInPaymentGracePeriod =
+    paymentGraceEndsAt !== null && paymentGraceEndsAt.getTime() > now.getTime();
   const daysRemaining = resolveDaysRemaining(
     hasActiveSubscription ? subscriptionEndsAt : trialEndsAt,
     now
@@ -204,7 +226,7 @@ export function resolveOrganizationSubscriptionState(
 
   const isExpired =
     effectiveStatus === "trial_expired" ||
-    effectiveStatus === "past_due" ||
+    (effectiveStatus === "past_due" && !isInPaymentGracePeriod) ||
     effectiveStatus === "cancelled";
   const isTrial =
     effectiveStatus === "trial_active" ||
@@ -226,6 +248,8 @@ export function resolveOrganizationSubscriptionState(
     isLastTrialDay,
     shouldShowTrialBanner: configured && isExpiringSoon,
     shouldShowExpiredBanner: configured && isExpired,
+    isInPaymentGracePeriod,
+    paymentGraceEndsAt: paymentGraceEndsAt?.toISOString() ?? null,
   };
 }
 
@@ -352,6 +376,12 @@ export function assertSubscriptionAllowsWrite(
   subscription: EffectiveSubscriptionState
 ) {
   if (subscription.isWriteBlocked) {
+    if (subscription.effectiveStatus === "past_due") {
+      throw new SubscriptionWriteAccessError(
+        "El periodo de gracia de tu pago vencio. Activa tu cuenta para volver a operar."
+      );
+    }
+
     throw new SubscriptionWriteAccessError(
       "Tu prueba gratuita ya vencio. Activa tu cuenta para volver a operar."
     );

@@ -10,6 +10,7 @@ export type PlanType = "trial" | "monthly" | "yearly" | "founder";
 export type PlanCode = "trial" | "founder_full" | "quote_only";
 export type BillingPeriod = "monthly" | "yearly" | "none";
 export type PaymentMethod =
+  | "mercadopago"
   | "manual_transfer"
   | "manual_other"
   | "none"
@@ -42,4 +43,6 @@ export type EffectiveSubscriptionState = OrganizationSubscriptionSnapshot & {
   isLastTrialDay: boolean;
   shouldShowTrialBanner: boolean;
   shouldShowExpiredBanner: boolean;
+  isInPaymentGracePeriod: boolean;
+  paymentGraceEndsAt: string | null;
 };

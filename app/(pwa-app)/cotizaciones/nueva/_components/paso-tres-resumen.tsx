@@ -489,21 +489,21 @@ export function PasoTresResumen({
 
                 <div className={s.rtAdjustRight}>
                   <div className={s.rtAdjustRow}>
-                    <span className={s.rtFieldLabel}>¿Cómo se muestra el IVA?</span>
+                    <span className={s.rtFieldLabel}>¿Cómo se muestra el impuesto?</span>
                     <div className={s.rtSegmented}>
                       <button
                         type="button"
                         className={`${s.rtSegmentedBtn} ${!mostrarIva ? s.rtSegmentedBtnActive : ""}`}
                         onClick={mostrarIva ? onMostrarIvaChange : undefined}
                       >
-                        Precio incluye IVA
+                        Precio incluye impuesto
                       </button>
                       <button
                         type="button"
                         className={`${s.rtSegmentedBtn} ${mostrarIva ? s.rtSegmentedBtnActive : ""}`}
                         onClick={mostrarIva ? undefined : onMostrarIvaChange}
                       >
-                        Agregar IVA al final
+                        Agregar impuesto al final
                       </button>
                     </div>
                   </div>
@@ -551,7 +551,7 @@ export function PasoTresResumen({
                       <span className={s.rtHint}>Suma de componentes</span>
                       <strong className={s.rtTotalAmount}>{total}</strong>
                       <span className={s.rtHintSecondary}>
-                        El total se calcula con las piezas, IVA, flete y redondeo.
+                        El total se calcula con las piezas, impuesto, flete y redondeo.
                       </span>
                     </div>
                     <button
@@ -571,7 +571,7 @@ export function PasoTresResumen({
 
                     <label className={s.rtManualInputBlock}>
                       <span className={s.rtManualInputLabel}>
-                        {!mostrarIva ? "Precio final acordado" : "Subtotal acordado · IVA no incluido"}
+                        {!mostrarIva ? "Precio final acordado" : "Subtotal acordado · impuesto no incluido"}
                       </span>
                       <div className={s.rtMoneyInputWrap}>
                         <span className={s.rtMoneyPrefix}>$</span>
@@ -602,7 +602,7 @@ export function PasoTresResumen({
                       <span className={s.rtHint}>
                         {!mostrarIva
                           ? "El monto ingresado sera el total que vera el cliente."
-                          : "Ventora sumara el IVA y aplicara el redondeo comercial al final."}
+                          : "Ventora sumará el impuesto y aplicará el redondeo comercial al final."}
                       </span>
                     </label>
 
@@ -616,7 +616,7 @@ export function PasoTresResumen({
                         <strong>{draft.descuentoPct > 0 || (draft.descuentoMonto ?? 0) > 0 ? `- ${descuento}` : "—"}</strong>
                       </div>
                       <div className={s.rtManualBreakdownRow}>
-                        <span>IVA{!mostrarIva ? " (calculado inverso)" : ""}</span>
+                        <span>Impuesto{!mostrarIva ? " (calculado inverso)" : ""}</span>
                         <strong>{iva}</strong>
                       </div>
                       <div className={s.rtManualBreakdownRow}>
@@ -678,7 +678,7 @@ export function PasoTresResumen({
                   <strong>{draft.descuentoPct > 0 || (draft.descuentoMonto ?? 0) > 0 ? `- ${descuento}` : "—"}</strong>
                 </div>
                 <div className={s.rtSummaryRow}>
-                  <span>IVA</span>
+                  <span>Impuesto</span>
                   <strong>{mostrarIva ? iva : "$0"}</strong>
                 </div>
                 <div className={s.rtSummaryRow}>

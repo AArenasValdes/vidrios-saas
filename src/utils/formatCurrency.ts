@@ -7,10 +7,10 @@ export const formatCurrency = (
     return "$0";
   }
 
-  return new Intl.NumberFormat(locale, {
+  const formatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: currency === "CLP" ? 0 : 2,
-    maximumFractionDigits: currency === "CLP" ? 0 : 2,
-  }).format(value);
+  });
+
+  return formatter.format(value);
 };

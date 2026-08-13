@@ -23,6 +23,14 @@ function normalizeBaseUrl(value: string | null | undefined) {
   }
 }
 
+function isShareableBaseUrl(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  return !isLocalHostname(new URL(value).hostname);
+}
+
 export function resolvePublicAppUrl(options?: { preferLocal?: boolean }) {
   const envUrl =
     normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ??
@@ -41,5 +49,9 @@ export function resolvePublicAppUrl(options?: { preferLocal?: boolean }) {
     }
   }
 
-  return envUrl ?? FALLBACK_PUBLIC_APP_URL;
+  if (options?.preferLocal && envUrl) {
+    return envUrl;
+  }
+
+  return isShareableBaseUrl(envUrl) ? envUrl! : FALLBACK_PUBLIC_APP_URL;
 }

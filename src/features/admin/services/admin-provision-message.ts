@@ -8,12 +8,12 @@ type BuildProvisionClientMessageInput = {
 
 function formatTrialEnd(value: string | null) {
   if (!value) {
-    return "7 dias desde hoy";
+    return "15 dias desde hoy";
   }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return "7 dias desde hoy";
+    return "15 dias desde hoy";
   }
 
   return date.toLocaleDateString("es-CL", {
@@ -45,6 +45,6 @@ export function buildProvisionWhatsAppMessage(input: BuildProvisionClientMessage
     `Entra aqui: ${loginUrl}`,
     `Completa tu empresa aqui: ${configUrl}`,
     "",
-    `Prueba gratis 7 dias (Founder Full) hasta ${trialLabel}.`,
+    `Prueba gratis 15 dias (Founder Full) hasta ${trialLabel}.`,
   ].join("\n");
 }

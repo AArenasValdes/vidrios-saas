@@ -4,7 +4,12 @@ export type PaymentStatus =
   | "fallido"
   | "cancelado"
   | "reembolsado";
-export type PaymentProvider = "flow" | "manual_transfer" | "webpay_plus";
+export type PaymentProvider =
+  | "mercadopago"
+  | "flow"
+  | "manual_transfer"
+  | "manual_other"
+  | "webpay_plus";
 
 export type PagoSuscripcionRow = {
   id: number;
@@ -12,7 +17,11 @@ export type PagoSuscripcionRow = {
   plan_code: string;
   billing_period: string;
   amount_clp: number;
+  amount: number;
   currency: string;
+  currency_code: string;
+  subscription_id: number | null;
+  provider_payment_id: string | null;
   payment_provider: PaymentProvider;
   provider_token: string | null;
   provider_order_id: string | null;

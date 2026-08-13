@@ -197,6 +197,12 @@
   color: #f4f7fc;
 }
 
+.passwordToggle svg {
+  position: static;
+  transform: none;
+  color: inherit;
+}
+
 .passwordToggle:focus-visible {
   outline: none;
   box-shadow: none;

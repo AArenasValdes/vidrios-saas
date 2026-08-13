@@ -11,8 +11,9 @@ import type {
 
 const TABLE = "pagos_suscripcion";
 const COLS = `
-  id, organization_id, plan_code, billing_period, amount_clp,
-  currency, payment_provider, provider_token, provider_order_id, provider_status,
+  id, organization_id, plan_code, billing_period, amount_clp, amount,
+  currency, currency_code, subscription_id, provider_payment_id,
+  payment_provider, provider_token, provider_order_id, provider_status,
   provider_response, checkout_url, buy_order, status, paid_at,
   period_starts_at, period_ends_at, creado_en, actualizado_en,
   eliminado_en
@@ -28,7 +29,11 @@ function mapRow(row: Record<string, unknown>): PagoSuscripcionRow {
     plan_code: row.plan_code as string,
     billing_period: row.billing_period as string,
     amount_clp: row.amount_clp as number,
+    amount: Number(row.amount),
     currency: row.currency as string,
+    currency_code: row.currency_code as string,
+    subscription_id: (row.subscription_id as number) ?? null,
+    provider_payment_id: (row.provider_payment_id as string) ?? null,
     payment_provider: row.payment_provider as PaymentProvider,
     provider_token: (row.provider_token as string) ?? null,
     provider_order_id: (row.provider_order_id as string) ?? null,
@@ -55,7 +60,9 @@ export function createPagoSuscripcionRepository() {
           plan_code: input.plan_code,
           billing_period: input.billing_period,
           amount_clp: input.amount_clp,
+          amount: input.amount_clp,
           currency: "CLP",
+          currency_code: "CLP",
           payment_provider: input.payment_provider ?? "webpay_plus",
           buy_order: input.buy_order,
           provider_token: input.provider_token ?? null,

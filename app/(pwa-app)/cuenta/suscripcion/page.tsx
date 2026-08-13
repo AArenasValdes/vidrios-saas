@@ -71,6 +71,7 @@ const SUBSCRIPTION_STATUS_CLASSES: Record<string, string> = {
 
 const PAYMENT_LABELS: Record<string, string> = {
   flow: "Flow",
+  mercadopago: "Mercado Pago",
   webpay_plus: "Webpay Plus",
   manual_transfer: "Transferencia manual",
   manual_other: "Otro",
@@ -157,6 +158,8 @@ export default function SuscripcionPage() {
   const [pagos, setPagos] = useState<PagoHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentAttempts, setShowPaymentAttempts] = useState(false);
+  const [isCancellingRenewal, setIsCancellingRenewal] = useState(false);
+  const [lifecycleMessage, setLifecycleMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubscriptionSummary()
@@ -200,6 +203,9 @@ export default function SuscripcionPage() {
     normalizedSubscriptionStatus === "trial_expired" ||
     normalizedSubscriptionStatus === "expired" ||
     normalizedSubscriptionStatus === "past_due";
+  const isInPaymentGracePeriod = Boolean(
+    subscription?.isInPaymentGracePeriod && normalizedSubscriptionStatus === "past_due"
+  );
   const isTrialSubscription =
     !isExpiredSubscription &&
     (planCode === "trial" || normalizedSubscriptionStatus.includes("trial"));
@@ -207,7 +213,61 @@ export default function SuscripcionPage() {
     subscription?.daysRemaining,
     subscriptionEndsAt
   );
-  const shouldShowActivationCard = isTrialSubscription || isExpiredSubscription;
+  const shouldShowActivationCard =
+    isTrialSubscription || (isExpiredSubscription && !isInPaymentGracePeriod);
+
+  async function cancelRenewal() {
+    if (
+      !window.confirm(
+        "Cancelarás la renovación automática. Podrás usar Ventora hasta terminar tu período ya pagado."
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    setLifecycleMessage(null);
+    setIsCancellingRenewal(true);
+
+    try {
+      const response = await fetch("/api/subscriptions/mercadopago/cancel", {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        currentPeriodEndsAt?: string | null;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "No pudimos cancelar la renovación.");
+      }
+
+      setSummary((current) =>
+        current
+          ? {
+              ...current,
+              recurringStatus: "cancelled",
+              cancelAtPeriodEnd: true,
+              canCancelRecurringSubscription: false,
+              nextPaymentAt: null,
+              currentPeriodEndsAt:
+                payload?.currentPeriodEndsAt ?? current.currentPeriodEndsAt,
+            }
+          : current
+      );
+      setLifecycleMessage(
+        "Renovación automática cancelada. Mantienes acceso hasta el final de tu período pagado."
+      );
+    } catch (cancelError) {
+      setError(
+        cancelError instanceof Error
+          ? cancelError.message
+          : "No pudimos cancelar la renovación."
+      );
+    } finally {
+      setIsCancellingRenewal(false);
+    }
+  }
 
   return (
     <div className={s.page}>
@@ -226,6 +286,26 @@ export default function SuscripcionPage() {
         <div className={s.errorBanner} role="alert">
           {error}
         </div>
+      ) : null}
+
+      {isInPaymentGracePeriod ? (
+        <section className={`${s.activationCard} ${s.graceCard}`} aria-labelledby="payment-grace-title">
+          <span className={s.activationIcon}>
+            <LuCircleDollarSign aria-hidden />
+          </span>
+          <div className={s.activationBody}>
+            <span className={s.activationEyebrow}>Pago pendiente</span>
+            <h2 id="payment-grace-title" className={s.activationTitle}>
+              Tu cuenta sigue operativa por ahora
+            </h2>
+            <p className={s.activationText}>
+              Mercado Pago no confirmó el último cobro. Conservas acceso hasta {formatDate(subscription?.paymentGraceEndsAt ?? null)} mientras se regulariza el pago.
+            </p>
+          </div>
+          <Link className={s.activationButton} href="/cuenta-vencida" prefetch={false}>
+            Revisar pago
+          </Link>
+        </section>
       ) : null}
 
       {shouldShowActivationCard ? (
@@ -305,6 +385,19 @@ export default function SuscripcionPage() {
               <span className={s.detailIcon}>
                 <LuCalendar aria-hidden />
               </span>
+              <span className={s.detailLabel}>Periodicidad</span>
+              <span className={s.detailValue}>
+                {summary?.billingPeriod === "monthly"
+                  ? "Mensual"
+                  : summary?.billingPeriod === "yearly"
+                    ? "Anual"
+                    : EMPTY_VALUE}
+              </span>
+            </div>
+            <div className={s.detailRow}>
+              <span className={s.detailIcon}>
+                <LuCalendar aria-hidden />
+              </span>
               <span className={s.detailLabel}>&Uacute;ltimo pago aprobado</span>
               <span className={s.detailValue}>{formatDate(lastApprovedPayment)}</span>
             </div>
@@ -312,8 +405,16 @@ export default function SuscripcionPage() {
               <span className={s.detailIcon}>
                 <LuCalendar aria-hidden />
               </span>
-              <span className={s.detailLabel}>Vence</span>
-              <span className={s.detailValue}>{formatDate(subscriptionEndsAt)}</span>
+              <span className={s.detailLabel}>
+                {summary?.cancelAtPeriodEnd ? "Acceso hasta" : "Próximo cobro"}
+              </span>
+              <span className={s.detailValue}>
+                {formatDate(
+                  summary?.cancelAtPeriodEnd
+                    ? summary.currentPeriodEndsAt ?? subscriptionEndsAt
+                    : summary?.nextPaymentAt ?? subscriptionEndsAt
+                )}
+              </span>
             </div>
             {summary?.founderPriceLocked ? (
               <div className={s.detailRow}>
@@ -325,6 +426,23 @@ export default function SuscripcionPage() {
               </div>
             ) : null}
           </div>
+
+          {lifecycleMessage ? <p className={s.lifecycleMessage}>{lifecycleMessage}</p> : null}
+          {summary?.cancelAtPeriodEnd ? (
+            <p className={s.lifecycleMessage}>
+              La renovación automática está cancelada. No habrá un nuevo cobro.
+            </p>
+          ) : null}
+          {summary?.canCancelRecurringSubscription ? (
+            <button
+              className={s.cancelRenewalButton}
+              type="button"
+              onClick={cancelRenewal}
+              disabled={isCancellingRenewal}
+            >
+              {isCancellingRenewal ? "Cancelando renovación…" : "Cancelar renovación automática"}
+            </button>
+          ) : null}
         </section>
       ) : null}
 

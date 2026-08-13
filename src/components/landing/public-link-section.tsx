@@ -12,7 +12,7 @@ const captures = [
   {
     label: "Tu link y QR",
     hint: "Página pública de tu empresa",
-    src: "/ventora-landing-page/minilanding1.png",
+    src: "/ventora-landing-page/minilanding1.webp",
     alt: "Página pública de Ventora con link y código QR para compartir",
     width: PHONE_WIDTH,
     height: PHONE_HEIGHT,
@@ -20,7 +20,7 @@ const captures = [
   {
     label: "Formulario del cliente",
     hint: "Pidieron presupuesto desde ahí",
-    src: "/ventora-landing-page/minilanding2.png",
+    src: "/ventora-landing-page/minilanding2.webp",
     alt: "Formulario público donde el cliente solicita cotización de vidrios y aluminio",
     width: 561,
     height: PHONE_HEIGHT,
@@ -32,12 +32,11 @@ export function PublicLinkSection() {
     <section id="captacion" className={s.section} aria-labelledby="public-link-title">
       <div className={s.container}>
         <header className={s.header}>
-          <p className={s.kicker}>Complemento opcional</p>
           <h2 id="public-link-title" className={s.title}>
             Link público para captar solicitudes
           </h2>
           <p className={s.subtitle}>
-            Comparte tu página. Tus clientes cotizan desde un formulario y tú las recibes ordenadas.
+            Compártelo. El cliente pide presupuesto y tú lo recibes ordenado.
           </p>
         </header>
 
@@ -60,7 +59,6 @@ export function PublicLinkSection() {
                 height={captures[0].height}
                 className={s.phone}
                 sizes="(max-width: 720px) 86vw, 320px"
-                unoptimized
               />
             </article>
 
@@ -86,7 +84,6 @@ export function PublicLinkSection() {
                 height={captures[1].height}
                 className={s.phone}
                 sizes="(max-width: 720px) 86vw, 320px"
-                unoptimized
               />
             </article>
           </div>

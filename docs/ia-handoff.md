@@ -37,7 +37,7 @@ Ya funciona:
 - PDF y WhatsApp
 - aprobacion publica en `/presupuesto/[token]`
 - branding de empresa y mini landing publica
-- trial gratis de 7 dias
+- trial gratis de 15 dias
 - cuenta en modo lectura cuando vence
 - activacion anual con Webpay Plus
 
@@ -150,7 +150,7 @@ Quiero una segunda opinion sobre la estrategia actual de activacion y pagos de V
 
 Contexto:
 - SaaS B2B para empresas de vidrios y aluminio
-- trial gratis de 7 dias
+- trial gratis de 15 dias
 - planes anuales con Webpay Plus ya implementados y probados
 - Founder Full Anual $79.990
 - Solo Cotizacion Anual $59.990

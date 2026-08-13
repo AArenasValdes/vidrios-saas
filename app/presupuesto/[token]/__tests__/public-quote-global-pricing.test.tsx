@@ -6,6 +6,7 @@ import { render, screen } from "@testing-library/react";
 
 import { PublicQuoteDocument } from "../documento/public-quote-document";
 import { PublicQuotePreview, type PublicPreviewQuote } from "../public-quote-preview";
+import { createQuoteRegionSnapshot } from "@/features/organization-region/services/quote-region-snapshot.service";
 
 const quote: PublicPreviewQuote = {
   codigo: "COT-040626-001",
@@ -103,5 +104,18 @@ describe("public quote total global", () => {
     expect(screen.queryByText("Precio unitario")).not.toBeInTheDocument();
     expect(screen.queryByText(/margen/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/utilidad/i)).not.toBeInTheDocument();
+  });
+
+  it("muestra el impuesto congelado del presupuesto", () => {
+    render(
+      <PublicQuotePreview
+        quote={{
+          ...quote,
+          regionalSnapshot: createQuoteRegionSnapshot({ region: { countryCode: "PE" } }),
+        }}
+      />
+    );
+
+    expect(screen.getAllByText("IGV 18%").length).toBeGreaterThan(0);
   });
 });

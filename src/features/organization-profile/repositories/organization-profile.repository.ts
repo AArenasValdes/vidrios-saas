@@ -20,6 +20,7 @@ import {
   buildFreshTrialRepairSnapshot,
   resolveOrganizationSubscriptionState,
 } from "@/features/subscriptions/services/subscription-status.service";
+import { resolveOrganizationRegionSettings } from "@/features/organization-region/services/organization-region.service";
 
 type OrganizationProfileRepositoryDeps = {
   clientFactory?: ReturnType<typeof createClient>;
@@ -30,6 +31,14 @@ type OrganizationProfileRow = {
   empresa_nombre: string | null;
   empresa_logo_url: string | null;
   responsable_comercial?: string | null;
+  country_code?: string | null;
+  currency_code?: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+  phone_country_code?: string | null;
+  tax_label?: string | null;
+  tax_rate_default?: number | null;
+  tax_id_label?: string | null;
   empresa_direccion: string | null;
   empresa_telefono: string | null;
   empresa_email: string | null;
@@ -140,7 +149,19 @@ function mapOrganizationProfile(
     return null;
   }
 
+  const region = resolveOrganizationRegionSettings({
+    countryCode: row.country_code,
+    currencyCode: row.currency_code ?? "",
+    locale: row.locale ?? "",
+    timezone: row.timezone ?? "",
+    phoneCountryCode: row.phone_country_code ?? "",
+    taxLabel: row.tax_label ?? "",
+    taxRateDefault: row.tax_rate_default ?? Number.NaN,
+    taxIdLabel: row.tax_id_label ?? "",
+  });
+
   return {
+    ...region,
     organizationId: row.organization_id,
     empresaNombre: row.empresa_nombre ?? "",
     empresaLogoUrl: row.empresa_logo_url,
@@ -304,6 +325,14 @@ export function createOrganizationProfileRepository(
           empresa_nombre: input.empresaNombre,
           empresa_logo_url: input.empresaLogoUrl,
           responsable_comercial: input.responsableComercial,
+          country_code: input.countryCode,
+          currency_code: input.currencyCode,
+          locale: input.locale,
+          timezone: input.timezone,
+          phone_country_code: input.phoneCountryCode,
+          tax_label: input.taxLabel,
+          tax_rate_default: input.taxRateDefault,
+          tax_id_label: input.taxIdLabel,
           empresa_direccion: input.empresaDireccion,
           empresa_telefono: input.empresaTelefono,
           empresa_email: input.empresaEmail,

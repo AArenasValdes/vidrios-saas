@@ -14,6 +14,7 @@ type CotizacionApprovalRow = {
   subtotal_neto: number | string | null;
   descuento_pct: number | string | null;
   pricing_mode?: string | null;
+  regional_snapshot?: unknown;
   flete: number | string | null;
   iva: number | string | null;
   total: number | string;
@@ -109,6 +110,7 @@ const COTIZACION_APPROVAL_SELECT = `
   subtotal_neto,
   descuento_pct,
   pricing_mode,
+  regional_snapshot,
   flete,
   iva,
   total,
@@ -166,7 +168,8 @@ function isMissingApprovalTrackingFieldsError(error: unknown) {
   return (
     (haystack.includes("cliente_vio_en") ||
       haystack.includes("cliente_respondio_en") ||
-      haystack.includes("cliente_respuesta_canal")) &&
+      haystack.includes("cliente_respuesta_canal") ||
+      haystack.includes("regional_snapshot")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -233,6 +236,7 @@ export function createPublicCotizacionApprovalRepository() {
               cliente_vio_en: null,
               cliente_respondio_en: null,
               cliente_respuesta_canal: null,
+              regional_snapshot: null,
             } as CotizacionApprovalRow)
           : null;
       }

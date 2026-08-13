@@ -11,16 +11,11 @@ import {
 import { formatCotizacionDate } from "@/features/cotizaciones/services/cotizaciones-workflow.service";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
+import { formatQuoteCurrency } from "@/features/organization-region/services/quote-region-display.service";
+import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 
 import s from "./public-quote-mobile.module.css";
 import { PublicQuoteActionButton } from "./public-quote-action-button";
-
-const CLP = (value: number) =>
-  new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
 
 type PublicQuoteMobileItem = {
   id: string;
@@ -48,6 +43,7 @@ type PublicQuoteMobileView = {
   obra: string;
   validez: string;
   total: number;
+  regionalSnapshot?: QuoteRegionSnapshot | null;
   pricingMode?: "por_item" | "total_global";
   subtotal: number;
   descuentoPct: number;
@@ -115,6 +111,7 @@ export function PublicQuoteMobile({
   rejectAction,
 }: PublicQuoteMobileProps) {
   const [showDetails, setShowDetails] = useState(true);
+  const formatMoney = (value: number) => formatQuoteCurrency(value, quote.regionalSnapshot);
 
   useEffect(() => {
     if (!decisionMessage) {
@@ -195,7 +192,7 @@ export function PublicQuoteMobile({
 
           <div className={s.totalBlock}>
             <span className={s.totalLabel}>MONTO TOTAL</span>
-            <strong className={s.totalValue}>{CLP(quote.total)}</strong>
+            <strong className={s.totalValue}>{formatMoney(quote.total)}</strong>
             <div className={s.metaLine}>
               <LuCalendarClock aria-hidden />
               <span>
@@ -224,7 +221,7 @@ export function PublicQuoteMobile({
           </div>
           <div className={s.summaryRow}>
             <span className={s.summaryLabel}>TOTAL</span>
-            <strong className={`${s.summaryValue} ${s.summaryValueTotal}`}>{CLP(quote.total)}</strong>
+            <strong className={`${s.summaryValue} ${s.summaryValueTotal}`}>{formatMoney(quote.total)}</strong>
           </div>
         </article>
 
@@ -275,7 +272,7 @@ export function PublicQuoteMobile({
                             : item.vidrio || "Vidrio por definir"}
                       </span>
                       {showItemPrices || (isFreeValueItem && item.precioTotal > 0) ? (
-                        <strong className={s.itemTotal}>{CLP(item.precioTotal)}</strong>
+                        <strong className={s.itemTotal}>{formatMoney(item.precioTotal)}</strong>
                       ) : null}
                     </div>
                   </div>

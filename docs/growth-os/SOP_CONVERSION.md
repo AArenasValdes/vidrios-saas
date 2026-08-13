@@ -29,7 +29,7 @@ Si te hace sentido, te muestro una cotizacion real en 7 minutos.
 
 ### Follow-up 2
 
-- plazo: 5 a 7 dias
+- plazo: 10 a 15 dias
 - objetivo: cerrar si hay interes o salir
 
 Formato sugerido:
@@ -68,7 +68,7 @@ Cierre de demo:
 - `Esto te serviria para dejar de armar presupuestos tarde en el computador?`
 - `Probemos creando tu primera cotizacion hoy`
 
-## Oferta piloto de 7 dias
+## Oferta piloto de 15 dias
 
 El piloto debe incluir:
 
@@ -102,7 +102,7 @@ Respuesta:
 
 Respuesta:
 
-`Nosotros tampoco estamos vendiendo eso. Ventora no cubica ni calcula cortes. Sirve para convertir tu precio, medidas o calculo final en una propuesta profesional y movil.`
+`Nosotros tampoco estamos vendiendo un ERP ni un sistema industrial. Ventora sirve para convertir precio, medidas o calculo en una propuesta profesional y movil; ademas, si tu empresa configura y valida sus recetas, genera cubicacion, despiece, tiras y una pauta interna revisable en computador.`
 
 ## Cierre comercial
 

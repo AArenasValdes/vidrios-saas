@@ -1,6 +1,6 @@
 # Giro de producto Ventora — Julio 2026
 
-**Fecha:** 2026-07-24  
+**Fecha:** 2026-08-13
 **Audiencia:** agentes, producto, marketing, demos a piloto  
 **Jerarquía:** subordinado al roadmap `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
 
@@ -9,6 +9,8 @@
 ## 1. En una frase
 
 Ventora es **software comercial para talleres de vidrios/aluminio/PVC**: cotizar y cerrar desde el celular, preparar mejor desde desktop, catálogo de precios propio, constructor visual cuando hace falta, y —opcionalmente— **receta de fabricación** que produce **tiras** y una **pauta sugerida** revisable. **No** es ERP, CAD ni optimizador óptimo de cortes.
+
+**Alcance comercial actualizado:** Ventora puede calcular precios comerciales por m² y, de forma separada, generar cubicación, despiece, tiras y pauta interna a partir de recetas configuradas por cada empresa. La empresa define sus perfiles, reglas, largos y variantes; el taller debe validar los resultados con casos reales.
 
 ---
 
@@ -124,7 +126,7 @@ Fuente de apoyo: `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md`. U
 
 - Principal: *“Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos.”*  
 - Captación: *“Capturo leads mientras estoy ocupado o dormido…”*  
-- Desktop taller: preparar cotización clara, catálogo propio, constructor si hace falta, pauta interna opcional.  
+- Desktop taller: preparar cotización clara, catálogo propio, constructor si hace falta, y revisar cubicación, despiece, tiras y pauta interna configurada.
 - **No** vender Ventora como sistema de producción, inventario o CAD.
 
 Para marketing: `AGENTS_MARKETING.md` + `docs/marketing/`.

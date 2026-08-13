@@ -19,5 +19,13 @@ export type SubscriptionSummary = {
   paymentMethod: string | null;
   subscriptionStatus: string | null;
   subscriptionEndsAt: string | null;
+  recurringProvider: string | null;
+  recurringStatus: string | null;
+  currentPeriodStartsAt: string | null;
+  currentPeriodEndsAt: string | null;
+  nextPaymentAt: string | null;
+  cancelAtPeriodEnd: boolean;
+  cancelledAt: string | null;
+  canCancelRecurringSubscription: boolean;
   founderPriceLocked: boolean;
 };

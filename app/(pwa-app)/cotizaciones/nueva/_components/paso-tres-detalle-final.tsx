@@ -135,7 +135,7 @@ export function PasoTresDetalleFinal({
     <section className={s.summaryAdjustmentCard}>
       <div className={s.summaryAdjustmentHeader}>
         <div>
-          <span className={s.summaryAdjustmentEyebrow}>IVA de la cotizacion</span>
+          <span className={s.summaryAdjustmentEyebrow}>Impuesto de la cotización</span>
           <strong>¿Cómo verá el cliente el precio?</strong>
         </div>
       </div>
@@ -152,7 +152,7 @@ export function PasoTresDetalleFinal({
           className={`${s.ivaPillOptionLight} ${mostrarIva ? s.ivaPillActiveLight : ""}`}
           onClick={mostrarIva ? undefined : onMostrarIvaChange}
         >
-          Sumar IVA al final
+          Sumar impuesto al final
         </button>
       </div>
       <span className={s.helpText}>
@@ -264,7 +264,7 @@ export function PasoTresDetalleFinal({
                 />
               </div>
               <span className={s.helpText}>
-                Se descuenta antes de calcular IVA, flete y redondeo.
+                Se descuenta antes de calcular el impuesto, flete y redondeo.
               </span>
             </label>
           </div>
@@ -287,7 +287,7 @@ export function PasoTresDetalleFinal({
       ) : null}
       {mostrarIva ? (
         <div className={s.totalRow}>
-          <span>IVA 19%</span>
+          <span>Impuesto</span>
           <strong>{iva}</strong>
         </div>
       ) : null}

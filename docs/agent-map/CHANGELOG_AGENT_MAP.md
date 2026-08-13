@@ -2,6 +2,60 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-13 - Cierre comercial regional y siguiente gate de cobro
+
+- La región dejó de ser sólo presentación: las cotizaciones nuevas usan la tasa y el redondeo comercial del snapshot regional; catálogo de líneas y activación formatean moneda/locale de la empresa.
+- Compatibilidad comprobada en la base remota: 31 perfiles existentes siguen en `CL` / `CLP` / `es-CL` / `IVA 19%`, sin organizaciones activas sin perfil regional.
+- El próximo gate para cobrar de verdad es únicamente Mercado Pago Chile: cargar credenciales productivas, crear/verificar los tres planes, configurar webhook y completar la matriz de pruebas reales antes de activar la bandera.
+- Los mercados adicionales siguen deliberadamente apagados: necesitan precio comercial, credenciales y QA propios; no hay FX automático.
+
+## 2026-08-13 - Billing LATAM Fase 6 preparacion de mercados
+
+- Se centralizo la configuracion server-side por mercado en `mercadopago-market.config.ts`: Chile, Peru, Colombia, Argentina, Uruguay y Mexico tienen flags, secretos y provider plan IDs separados.
+- No se agrego FX ni precios inventados. Solo Chile tiene catalogo comercial; los otros mercados quedan imposibles de habilitar hasta que exista precio deliberado y validacion real.
+- El checkout Mercado Pago actual sigue siendo Chile y comprueba `organization_profile.country_code` antes de reservar, bloqueando empresas de otro pais sin crear una suscripcion pendiente.
+- Runbook: `docs/billing/BILLING_PHASE_6_MULTI_MARKET.md`.
+
+---
+
+## 2026-08-13 - Billing LATAM Fase 5 snapshots regionales de cotizacion
+
+- Migracion remota `20260813023403_billing_phase_5_quote_region_snapshots.sql`: `cotizaciones.regional_snapshot jsonb` con CHECK de objeto, sin tablas ni policies nuevas.
+- Las cotizaciones nuevas congelan pais, moneda, locale y etiqueta/tasa tributaria comercial. Las ediciones preservan su snapshot.
+- PDF interno, PDF/enlace publico y WhatsApp usan el snapshot; cotizaciones antiguas mantienen CLP e IVA 19% sin consultar el perfil regional actual.
+- Pruebas enfocadas y TypeScript pasaron; baseline remoto `supabase/docs/current_schema.sql` regenerado.
+
+---
+
+## 2026-08-13 - Billing LATAM Fase 3 y trial de 15 dias
+
+- Las nuevas organizaciones pasan a prueba gratuita de 15 dias mediante `20260813002850_trial_fifteen_day_default.sql`; no hay `UPDATE`, por lo que los trials ya iniciados conservan su fecha.
+- Las migraciones de billing `20260812233117` y trial `20260813002850` se aplicaron y registraron en el proyecto Supabase vinculado. Antes se recuperaron las seis fuentes remotas faltantes con `supabase migration fetch --linked`; la deuda anterior de historial local/remoto queda separada y no se marco masivamente.
+- `subscription-status.service` centraliza un periodo de gracia de pago configurable por `NEXT_PUBLIC_SUBSCRIPTION_GRACE_DAYS` (3 dias por defecto). `past_due` permite escribir dentro de la gracia y vuelve a bloquear solo al vencerla; un webhook con pago aprobado proyecta nuevamente `active`.
+- `/cuenta/suscripcion` ahora muestra periodicidad, proximo cobro o acceso ya pagado, aviso de gracia y cancelacion de renovacion Mercado Pago. La cancelacion se hace desde un POST autenticado y nunca acepta `organizationId` del cliente.
+- La accion de cancelacion queda oculta e inoperante mientras Mercado Pago no tenga bandera, secretos e IDs de planes completos. Cancelar conserva el acceso hasta `current_period_ends_at`.
+- Runbook: `docs/billing/BILLING_PHASE_3_LIFECYCLE.md`.
+
+---
+
+## 2026-08-12 - Billing LATAM Fase 2 Mercado Pago Chile
+
+- Se implemento provider server-side Mercado Pago para Founder mensual/anual y Solo Cotizacion anual en CLP, desactivado por defecto.
+- La creacion autenticada deriva tenant/correo del servidor, valida monto/moneda contra el plan real y evita dos suscripciones abiertas por organizacion.
+- El webhook exige `x-signature`/`x-request-id`, consulta el recurso real y reconcilia suscripcion/ledger mediante RPC idempotentes solo `service_role`.
+- El retorno es informativo y no activa. `/cuenta-vencida` conserva WhatsApp cuando falta configuracion y no habilita doble checkout para founders activos sin vencimiento.
+- Migracion local `20260812233117_billing_phase_2_mercadopago_chile.sql`. No aplicada: el historial remoto tiene seis versiones ausentes del repositorio y `db push` queda bloqueado hasta reconciliar esa deuda.
+- Runbook: `docs/billing/BILLING_PHASE_2_MERCADOPAGO_CHILE.md`.
+
+---
+
+## 2026-08-12 - Cierre desktop cotizacion con receta
+
+- Se valido el recorrido desktop real: guardar cotizacion con receta validada, abrir visor cliente, generar PDF, abrir WhatsApp con link publico y revisar el croquis materializado.
+- La salida publica ahora sanea `cotizacion_items.observaciones` con una allowlist comercial/visual. Se eliminan del payload publico costos, margen, IDs de plantilla/receta y contexto de fabricacion, incluida metadata legacy no reconocida.
+- El PDF cliente conserva linea, material, vidrio, medidas y `GuidedVisualConfig`; pauta, cortes, barras, accesorios y `fabricacion_snapshot` siguen solo en el resumen interno.
+- Sin cambios de UI ni flujo mobile. TypeScript, lint focalizado, tests de metadata/publico/PDF/WhatsApp/snapshot y build de produccion pasan.
+
 ---
 
 ## 2026-08-11 - UX fabricación “maestro en papel”

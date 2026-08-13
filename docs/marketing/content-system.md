@@ -17,7 +17,7 @@ Crear contenido organico que ayude a:
 
 ## Tesis de contenido
 
-Ventora no debe comunicar complejidad ni competir como cotizador tecnico barato. Debe comunicar esta transformacion:
+Ventora no debe comunicar complejidad ni competir como cotizador tecnico universal. Debe comunicar esta transformacion:
 
 **"De llegar a casa a hacer presupuestos en el computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos."**
 
@@ -52,6 +52,7 @@ Temas:
 - generar PDF profesional
 - enviar por WhatsApp
 - revisar clientes y cotizaciones
+- mostrar en desktop la cubicacion, el despiece, las tiras y la pauta interna de una linea con receta configurada
 
 ### 3. Funciones complementarias
 
@@ -76,6 +77,8 @@ Temas:
 - "Cotiza un shower desde el celular antes de irte de la obra"
 - "Excel de noche vs cotizacion lista en terreno"
 - "Si ya tienes el precio final, Ventora lo convierte en propuesta"
+- "Configura tu linea una vez y revisa su despiece y pauta en computador"
+- "Precio por m2 para vender; cubicacion y tiras configuradas para trabajar"
 
 ## Estructura de contenido sugerida
 
@@ -101,7 +104,8 @@ Temas:
 - no usar lenguaje tecnico innecesario
 - no crear contenido generico de SaaS
 - no prometer "ganaras mas clientes" ni "cerraras mas ventas"
-- no decir que Ventora cubica o calcula perfiles, cortes, herrajes o desperdicio
+- no decir que Ventora cubica cualquier linea sin configuracion
+- no prometer cortes exactos de maquina, optimizacion de barras, nesting, CNC o desperdicio garantizado
 
 ## Indicadores de contenido
 

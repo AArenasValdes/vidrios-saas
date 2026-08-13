@@ -12,7 +12,7 @@
 - **Componentes principales**: `ProblemSection`, `ProblemCard`, `TestimonialsSection`, `FooterSection`, `PremiumPageReveal`
 - **Datos que consume**: Estatico (no consulta Supabase)
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: Navegacion, CTA a demo/login
+- **Acciones principales**: Navegacion, CTA a `/registro` (15 días) y `/login`
 - **Archivos a tocar para modificar**: `app/(landing-web)/page.tsx`, `app/(landing-web)/landing.module.css`, `src/components/landing/*`, `src/components/footer-section.tsx`, `src/components/testimonials-with-marquee.tsx`
 - **Riesgos**: Es la cara publica del producto. Cambios de copy afectan conversion. No romper links de navegacion.
 
@@ -20,19 +20,18 @@
 
 ## Ruta: /planes
 
-- **Tipo**: Publica
+- **Tipo**: Publica (redirect)
 - **Archivo principal**: `app/(landing-web)/planes/page.tsx`
 - **Layout usado**: `app/layout.tsx` (root layout)
-- **CSS**: `app/(landing-web)/planes/page.module.css`
-- **Proposito**: Pagina de planes/precios del SaaS
-- **Usuario objetivo**: Visitante evaluando planes
-- **Funcionalidades visibles**: Cards de planes, CTA
-- **Componentes principales**: Internos de la pagina
-- **Datos que consume**: Estatico
+- **Proposito**: Redirect permanente a `/registro`. El CTA de prueba ya no pasa por una pagina extra.
+- **Usuario objetivo**: Visitante que llega por un link antiguo a `/planes`
+- **Funcionalidades visibles**: Ninguna; redirige a crear cuenta
+- **Componentes principales**: Ninguno
+- **Datos que consume**: Ninguno
 - **Tablas Supabase relacionadas**: Ninguna
-- **Acciones principales**: Navegacion, CTA a solicitar cuenta
-- **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`, `app/(landing-web)/planes/page.module.css`
-- **Riesgos**: Copy comercial sensible. No cambiar precios sin instruccion.
+- **Acciones principales**: `permanentRedirect("/registro")`
+- **Archivos a tocar para modificar**: `app/(landing-web)/planes/page.tsx`
+- **Riesgos**: No reintroducir una pagina intermedia entre el CTA de prueba y `/registro`. Los precios viven en `/#precios`.
 
 ---
 
@@ -373,15 +372,15 @@
 - **Archivo principal**: `app/(subscription-gate)/cuenta-vencida/page.tsx`
 - **Layout usado**: `app/(subscription-gate)/layout.tsx` (sin `AppShell`; tipografías PWA únicamente)
 - **CSS**: `app/(subscription-gate)/cuenta-vencida/page.module.css`
-- **Proposito**: Pantalla de activacion/renovacion cuando el trial o la suscripcion de la organizacion vencio. Debe empujar planes anuales con Webpay Plus y dejar el mensual manual como opcion secundaria.
+- **Proposito**: Pantalla de activacion/renovacion. Mercado Pago Chile ofrece mensual y anuales solo cuando la configuracion server-side esta completa; sin ella conserva WhatsApp.
 - **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
 - **Funcionalidades visibles**: Flecha volver, hero de activacion, plan recomendado `Founder Full Anual`, opcion `Solo Cotizacion Anual`, opcion `Mensual` por WhatsApp, bloque consultivo `Plan Empresa Acompañado`, accion discreta `Seguir en modo lectura`
 - **Componentes principales**: Internos de la pagina
 - **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
-- **Tablas Supabase relacionadas**: `organization_profile`
-- **Acciones principales**: Iniciar Webpay anual, abrir WhatsApp para plan mensual manual, volver a lectura basica
+- **Tablas Supabase relacionadas**: `organization_profile`, `suscripciones_organizacion`, `pagos_suscripcion`
+- **Acciones principales**: Iniciar suscripcion Mercado Pago, abrir WhatsApp como fallback, volver a lectura basica
 - **Archivos a tocar para modificar**: `app/(subscription-gate)/cuenta-vencida/page.tsx`, `app/(subscription-gate)/cuenta-vencida/page.module.css`, `app/(subscription-gate)/layout.tsx`, `src/features/subscriptions/services/*`, `src/components/layout/app-shell.tsx`
-- **Riesgos**: No convertirla en logout forzado. Debe convivir con lectura basica del panel y no tocar rutas publicas `/solicitud/[empresa]` ni `/presupuesto/[token]`. Si la cuenta ya esta activa con vencimiento futuro, la UI debe deshabilitar Webpay y mostrar mensaje controlado para evitar doble pago accidental.
+- **Riesgos**: No convertirla en logout forzado. El retorno `/cuenta-vencida/mercadopago/retorno` es informativo y no debe escribir. La UI deshabilita checkout para cualquier cuenta pagada activa, incluso founder sin vencimiento.
 
 ---
 
@@ -489,7 +488,7 @@
 - **Tablas Supabase relacionadas**: `cotizaciones`, `cotizacion_items`, `clients`, `projects`, `organization_profile`
 - **Acciones principales**: `acceptPublicQuoteAction`, `rejectPublicQuoteAction` (server actions)
 - **Archivos a tocar para modificar**: `app/presupuesto/[token]/page.tsx`, `app/presupuesto/[token]/actions.ts`, `src/features/cotizaciones/public-approval/services/public-cotizacion-approval.service.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`
-- **Riesgos**: RUTA CRITICA de cierre. No romper aprobacion/rechazo. Token tiene expiracion. Push notification al vendedor tras decision. No cambiar logica de `approval_token`.
+- **Riesgos**: RUTA CRITICA de cierre. No romper aprobacion/rechazo. Token tiene expiracion. Push notification al vendedor tras decision. No cambiar logica de `approval_token`. La respuesta publica debe sanear `cotizacion_items.observaciones` con allowlist comercial/visual: nunca exponer costos, margen, IDs de plantilla/receta, selector tecnico ni snapshots de fabricacion.
 
 ---
 
@@ -547,6 +546,8 @@
 | `/api/billing/flow/confirmar` | GET/POST | Retorno/webhook Flow, verifica estado y activa suscripcion | `app/api/billing/flow/confirmar/route.ts` |
 | `/api/subscriptions/webpay/crear` | POST | Checkout Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/crear/route.ts` |
 | `/api/subscriptions/webpay/confirmar` | GET/POST | Retorno Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/confirmar/route.ts` |
+| `/api/subscriptions/mercadopago/create` | POST | Reserva y crea suscripcion MP Chile autenticada | `app/api/subscriptions/mercadopago/create/route.ts` |
+| `/api/subscriptions/mercadopago/webhook` | POST | Valida firma, consulta recurso MP y reconcilia idempotente | `app/api/subscriptions/mercadopago/webhook/route.ts` |
 
 ---
 

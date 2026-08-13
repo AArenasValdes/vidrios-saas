@@ -1,6 +1,6 @@
 # Data Model Map - Ventora
 
-Fuente de verdad: `supabase/docs/current_schema.sql`, `supabase/docs/database_map.md`, `supabase/docs/rls_policies.md`
+Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
 
 ---
 
@@ -191,7 +191,7 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 - **Relaciones**: 1:1 organizations, 1:N public_landing_gallery (ON DELETE CASCADE)
 - **Usada por**: Empresa config, Pagina venta, Solicitud publica, PDF (branding), Aprobacion publica, trial gratis y activacion manual
 - **Archivos donde aparece**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/organization-profile/services/organization-profile.service.ts`, `src/features/subscriptions/services/subscription-status.service.ts`, `src/features/subscriptions/services/subscription-route-access.service.ts`, `src/features/cotizaciones/public-approval/repositories/public-cotizacion-approval.repository.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`, `app/(landing-web)/solicitud/[empresa]/page.tsx`
-- **Riesgos**: Slug UNIQUE parcial. Cambios afectan landing publica, PDF y aprobacion simultaneamente. 30+ campos en mapping complejo. El trial de 7 dias y el estado de suscripcion efectiva salen desde aqui; no duplicar reglas de negocio en UI o APIs.
+- **Riesgos**: Slug UNIQUE parcial. Cambios afectan landing publica, PDF y aprobacion simultaneamente. 30+ campos en mapping complejo. El trial de 15 dias para altas nuevas y el estado de suscripcion efectiva salen desde aqui; no duplicar reglas de negocio en UI o APIs.
 - **Cuentas internas gratis permanentes**: organizaciones `3` y `4` deben quedar `active/founder/founder_full`, `subscription_ends_at = NULL`, `founder_price_locked = true` por `20260602065826_founder_free_internal_accounts.sql`.
 
 ---
@@ -229,6 +229,17 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 
 ---
 
+### Tabla: suscripciones_organizacion
+
+- **Proposito**: Fuente recurrente neutral por organizacion y proveedor. `organization_profile` es solo su proyeccion rapida de acceso.
+- **Campos importantes**: `organization_id`, `provider`, `provider_subscription_id`, `provider_plan_id`, `plan_code`, `billing_period`, `country_code`, `currency_code`, `amount`, `status`, periodos, `next_payment_at`, cancelacion y `external_reference`.
+- **Relaciones**: N:1 organizations; 1:N pagos_suscripcion.
+- **RLS/grants**: RLS forzada. `authenticated` solo SELECT del tenant; `anon` sin acceso; escrituras y RPC solo `service_role`.
+- **Idempotencia**: referencia externa unica, identidad `(provider, provider_subscription_id)` unica y una sola suscripcion Mercado Pago abierta por organizacion.
+- **Migraciones**: `20260812230428_billing_phase_1_recurring_core.sql` y `20260812233117_billing_phase_2_mercadopago_chile.sql`, aplicadas y registradas en remoto el 2026-08-13.
+
+---
+
 ### Tabla: pagos_suscripcion
 
 - **Proposito**: Registro de pagos de suscripción procesados por Webpay Plus (Transbank). Cada fila representa un intento de pago.
@@ -249,6 +260,14 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 - Idempotencia: `buy_order` interno y unique parcial `(payment_provider, provider_order_id)` para orden externa.
 - RLS/grants se mantienen: clientes autenticados solo leen pagos de su `organization_id`; writes solo server con `service_role`.
 - No exponer `provider_response` en respuestas cliente.
+
+### Addendum pagos_suscripcion - Mercado Pago Chile
+
+- `mercadopago` agrega pagos mensuales y anuales, `subscription_id`, monto/moneda neutrales y `provider_payment_id` unico.
+- `reconcile_mercadopago_payment` hace upsert idempotente solo con `service_role` y rechaza monto o moneda distintos del contrato local.
+- `reconcile_mercadopago_subscription` proyecta estados recurrentes y mantiene acceso hasta fin de periodo al cancelar.
+- Un evento antiguo puede registrarse en el ledger, pero no debe degradar un periodo mas reciente.
+- La URL de retorno no ejecuta ningun RPC; solo un webhook firmado y reconciliado contra el API del proveedor puede mutar.
 
 ---
 
@@ -361,15 +380,12 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 
 ### organization_profile - trial y activacion hibrida
 
-- Cada organizacion nueva debe arrancar con fila de `organization_profile` y trial de 7 dias
+- Cada organizacion nueva debe arrancar con fila de `organization_profile` y trial de 15 dias. `20260813002850_trial_fifteen_day_default.sql` fue aplicada y registrada en remoto el 2026-08-13; las cuentas creadas antes conservan sus fechas originales.
 - El alta Google usa `complete_google_oauth_account`: transaccion idempotente que crea o vincula organizacion, usuario y perfil. El trial lo crea el trigger vigente de `organizations`; la RPC no reinicia planes ni fechas. Los datos comerciales se precargan solo cuando estan vacios.
 - Migracion remota verificada: `20260728083604_google_oauth_account_completion`.
 - La migracion `20260525121500_trial_subscriptions_manual_activation.sql` agrega columnas y trigger de defaults
 - El estado efectivo debe salir de `src/features/subscriptions/services/subscription-status.service.ts`, no de comparaciones sueltas en componentes
-- Comercialmente hoy se usa modelo hibrido:
-  - anuales automatizados por Webpay Plus
-  - mensual manual por WhatsApp
-  - sin Oneclick, PatPass ni recurrencia automatica en esta etapa
+- Billing Mercado Pago Chile permanece detras de `MERCADOPAGO_BILLING_ENABLED`; sin configuracion completa la UI conserva WhatsApp. Flow/Webpay siguen como compatibilidad.
 
 ---
 
@@ -423,3 +439,18 @@ Migracion: `supabase/migrations/20260627120000_growth_workspace.sql`
 | INC-10 | quote_item_breakdown ya tiene RLS policies en remoto; mantener queries filtradas por `organization_id` | Media |
 | INC-13 | Sin CHECK en cotizaciones.estado, projects.estado, users.rol | Media |
 | INC-14 | Grants amplios legacy en tablas distintas de `users`; revisar por superficie | Media |
+
+---
+
+## Billing Fase 4 - region por organizacion (2026-08-13)
+
+- `organization_profile` agrega `country_code`, `currency_code`, `locale`, `timezone`, `phone_country_code`, `tax_label`, `tax_rate_default` y `tax_id_label` en la migracion remota `20260813015101_billing_phase_4_organization_region`.
+- Esta configuracion es editable y solo representa defaults comerciales. No es un motor tributario ni autoriza emision fiscal.
+- Los valores historicos de cotizacion sin snapshot regional se muestran explicitamente con el fallback Chile; nunca se formatean con el perfil actual.
+- `complete_google_oauth_account` toma `p_country_code` y persiste el preset dentro de su misma transaccion. Continua solo para `service_role`; no ampliar grants de `users`.
+
+## Billing Fase 5 - snapshot regional por cotizacion (2026-08-13)
+
+- `cotizaciones.regional_snapshot` fue agregado por `20260813023403_billing_phase_5_quote_region_snapshots.sql`; es JSONB opcional validado como objeto.
+- En altas nuevas guarda un objeto v1 con pais, moneda, locale, zona horaria y etiqueta/tasa tributaria. Una edicion conserva el snapshot original.
+- No hay backfill ni nuevas policies: el campo hereda aislamiento y acceso de `cotizaciones`. PDF interno, documento/enlace publico y WhatsApp consumen este valor congelado.

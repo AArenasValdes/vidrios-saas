@@ -1,7 +1,7 @@
 # RLS Policies - Ventora
 
-Fuente de verdad: `current_schema.sql`.
-Fecha de generación: 2026-05-30.
+Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es un dump historico pendiente de regeneracion.
+Ultima verificacion remota relevante: 2026-08-13.
 
 ---
 
@@ -389,3 +389,20 @@ Notas:
   - Integridad Fase 4: un caso con `passed=true` exige `validated_by = auth.uid()` cuando se ejecuta con sesion authenticated.
 - `cotizacion_items.fabricacion_snapshot` hereda RLS de `cotizacion_items` por `organization_id = get_org_id()` y mantiene indice parcial `cotizacion_items_fabricacion_snapshot_active_idx`.
 - Smoke remoto con dos empresas QA confirmo aislamiento privado, lectura de receta Ventora, bloqueo de update cruzado y persistencia real de snapshot por item.
+
+---
+
+## Addendum 2026-08-13 - RLS Billing Mercado Pago
+
+- `suscripciones_organizacion` tiene RLS habilitado y una sola policy cliente: `suscripciones_organizacion_select_own` para `authenticated`, limitada por `organization_id`.
+- `anon` no tiene SELECT sobre la tabla recurrente. Las escrituras de suscripcion y pago se ejecutan solo desde servidor mediante `service_role`.
+- Las RPC `reconcile_mercadopago_subscription` y `reconcile_mercadopago_payment` no son ejecutables por `authenticated`; procesan webhooks despues de verificar firma y consultar Mercado Pago desde servidor.
+- La migracion `20260812233117_billing_phase_2_mercadopago_chile` quedo aplicada y registrada. No agrega acceso directo cliente adicional.
+
+---
+
+## Addendum 2026-08-13 - RLS Billing Fase 4
+
+- `20260813015101_billing_phase_4_organization_region` agrega columnas a `organization_profile`, pero no agrega policies ni permisos nuevos.
+- La lectura y actualizacion siguen sujetas al aislamiento existente de `organization_profile` por organizacion. No exponer campos privados de `users` por esta fase.
+- La RPC `complete_google_oauth_account(..., p_country_code text)` continua revocada para `public`, `anon` y `authenticated`; solo `service_role` puede ejecutarla.

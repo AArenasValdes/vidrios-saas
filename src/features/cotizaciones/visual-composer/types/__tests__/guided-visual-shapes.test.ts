@@ -126,6 +126,8 @@ describe("guided visual shapes V1", () => {
       /rgba\(30, 136, 255, 0\.045\)[^<]*<\/rect>/
     );
     expect(svg).toContain('fill="rgba(30, 136, 255, 0.045)"');
-    expect(svg).toMatch(/<path d="[^"]*Q [^"]*" fill="rgba\(30, 136, 255, 0\.045\)"/);
+    expect(svg).toMatch(
+      /<path(?=[^>]*d="[^"]*Q [^"]*")(?=[^>]*fill="rgba\(30, 136, 255, 0\.045\)")[^>]*>/
+    );
   });
 });

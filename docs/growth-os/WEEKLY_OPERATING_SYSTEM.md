@@ -50,7 +50,7 @@
 - objetivo: recuperar interesados y empujar pilotos
 - tareas concretas:
   - follow-up 1 y 2
-  - cierre a piloto de 7 dias
+  - cierre a piloto de 15 dias
   - actualizar estados
 - agente responsable: Agente de Conversion
 - output esperado: respuestas y pilotos empujados
@@ -88,7 +88,7 @@
 - checklist de cierre:
   - 1 a 3 mejoras priorizadas
   - riesgo de QA identificado
-  - foco sigue en Fase 2
+  - foco sigue en Fase 4: cubicacion configurada, pauta interna revisable y cierre comercial
 
 ## Domingo: planificacion
 

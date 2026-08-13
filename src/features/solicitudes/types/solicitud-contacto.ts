@@ -43,6 +43,7 @@ export type CrearSolicitudContactoInput = {
   correo: string;
   telefono: string;
   ayuda: AyudaSolicitudContacto;
+  countryCode?: string | null;
   origen?: string;
   ip?: string | null;
   userAgent?: string | null;
@@ -65,6 +66,7 @@ export type CrearSolicitudRegistroSaasInput = {
 };
 
 export type SolicitudEmpresaPublicaConfig = {
+  countryCode: string;
   organizationId: string | number;
   empresaNombre: string;
   empresaLogoUrl: string | null;
@@ -111,6 +113,7 @@ export type SolicitudEmpresaPublicaConfig = {
 };
 
 export type CrearSolicitudEmpresaInput = {
+  countryCode?: string | null;
   organizationId: string | number;
   empresa: string;
   nombre: string;

@@ -172,6 +172,27 @@
   }
 }
 
+.ctaRow {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(28px, 4vw, 40px);
+}
+
+.cta {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #ffffff;
+  background: linear-gradient(180deg, #3ea4ff 0%, #1e88ff 52%, #1162d1 100%);
+  box-shadow: 0 16px 40px rgba(30, 136, 255, 0.28);
+}
+
 @media (max-width: 1080px) {
   .rail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -210,6 +231,11 @@
   .step {
     flex: 0 0 min(72vw, 280px);
     scroll-snap-align: center;
+  }
+
+  .cta {
+    width: 100%;
+    justify-content: center;
   }
 
   .device {

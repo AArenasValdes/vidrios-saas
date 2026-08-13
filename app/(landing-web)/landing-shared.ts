@@ -3,21 +3,25 @@ import { BILLING_PLANS } from "@/features/billing/types/plans";
 export const WHATSAPP_LANDING_HREF =
   "https://wa.me/56977338906?text=Hola%20Ventora%2C%20quiero%20mi%20demo.";
 
+export const REGISTRO_HREF = "/registro";
+export const LOGIN_HREF = "/login";
+
 export const navLinks = [
   { href: "#problema", label: "Problema" },
-  { href: "#solucion", label: "Flujo" },
-  { href: "#captacion", label: "Link público" },
+  { href: "#solucion", label: "Cómo" },
   { href: "#precios", label: "Precios" },
   { href: "#preguntas", label: "Preguntas" },
-  { href: "#contacto", label: "Contacto" },
 ] as const;
 
 export const heroTrustItems = [
+  "15 días gratis",
+  "Cualquier dispositivo",
+  "Latinoamérica",
   "PDF profesional",
-  "Envío por WhatsApp",
-  "Clientes ordenados",
-  "Link público opcional",
 ] as const;
+
+export const LATAM_COUNTRIES_LABEL =
+  "Chile, Argentina, Colombia, México, Perú y Uruguay";
 
 export const PRICING_IMPLEMENTATION_HREF = `https://wa.me/56977338906?text=${encodeURIComponent(
   "Hola Ventora, quiero solicitar implementación acompañada para mi empresa."
@@ -39,7 +43,7 @@ export const founderPlanBenefits = [
 export const monthlyPlanBenefits = [
   "Incluye cotizador y página pública completa",
   "Pago mensual flexible",
-  "7 días gratis",
+  "15 días gratis",
   "Puedes pasar al anual cuando quieras",
 ] as const;
 
@@ -94,8 +98,8 @@ export const pricingPlans: readonly PricingPlan[] = [
     price: formatClp(yearlyPrice),
     period: "/ año",
     description: `Equivale a ${formatClp(yearlyEquivalentMonthlyPrice)} al mes`,
-    ctaLabel: "Empezar 7 días gratis",
-    href: "/planes",
+    ctaLabel: "Empezar 15 días gratis",
+    href: REGISTRO_HREF,
     ctaKind: "internal",
     tone: "featured",
     trackingLocation: "precios-fundador",
@@ -110,7 +114,7 @@ export const pricingPlans: readonly PricingPlan[] = [
     period: "/ año",
     description: "Entrada simple para cotizar y enviar presupuestos profesionales.",
     ctaLabel: "Probar cotizador gratis",
-    href: "/planes",
+    href: REGISTRO_HREF,
     ctaKind: "internal",
     tone: "highlight",
     trackingLocation: "precios-solo-cotizacion",
@@ -122,8 +126,8 @@ export const pricingPlans: readonly PricingPlan[] = [
     price: formatClp(monthlyPrice),
     period: "/ mes",
     description: "Opción flexible mes a mes con Ventora completo, sin compromiso anual.",
-    ctaLabel: "Probar 7 días gratis",
-    href: "/planes",
+    ctaLabel: "Probar 15 días gratis",
+    href: REGISTRO_HREF,
     ctaKind: "internal",
     tone: "secondary",
     trackingLocation: "precios-mensual",
@@ -146,28 +150,42 @@ export const pricingPlans: readonly PricingPlan[] = [
 
 export const faqs = [
   {
+    question: "¿Ventora es un cotizador técnico?",
+    answer:
+      "No. Tu cotizador técnico te ayuda a fabricar. Ventora te ayuda a cotizar, enviar un PDF profesional y, si quieres, armar una pauta interna. No reemplaza perfiles, cortes ni un sistema de fábrica.",
+  },
+  {
+    question: "¿Sirve en cualquier dispositivo?",
+    answer:
+      "Sí. Funciona en celular, tablet y computador. Entras desde varios dispositivos con la misma cuenta: cotizas en terreno y sigues en el taller.",
+  },
+  {
+    question: "¿Está disponible en Latinoamérica?",
+    answer: `Sí. Ventora está hecho para talleres de ${LATAM_COUNTRIES_LABEL}. Al crear la cuenta eliges tu país. Los precios de esta página son de referencia en Chile.`,
+  },
+  {
+    question: "¿Puedo cubicar y hacer despiece?",
+    answer:
+      "Si quieres, agregas tus líneas para cubicación y despiece. Si no, cotizas igual. Hay plantillas iniciales sugeridas de líneas de aluminio habituales; las revisas y validas en tu taller.",
+  },
+  {
+    question: "¿Cuánto dura la prueba?",
+    answer:
+      "15 días gratis, con acceso completo, sin tarjeta. Cancelas cuando quieras.",
+  },
+  {
+    question: "¿Qué pasa si dejo mis datos en el formulario?",
+    answer:
+      "Guardamos tu consulta y te contactamos por WhatsApp. No te saca de la página. Si quieres partir ahora, crea tu cuenta y arranca los 15 días.",
+  },
+  {
     question: "¿Ventora reemplaza mi WhatsApp?",
     answer:
       "No. Ventora te ayuda a cotizar, generar PDF y enviar presupuestos por WhatsApp. También puedes recibir solicitudes con tu link público si lo activas.",
   },
   {
-    question: "¿Sirve si trabajo solo?",
-    answer:
-      "Sí. Cotiza desde el celular, envía presupuestos profesionales y mantén clientes ordenados aunque trabajes solo en terreno o taller.",
-  },
-  {
-    question: "¿Ventora calcula precios automáticamente?",
-    answer:
-      "No es motor técnico de perfilería. Te ayuda a armar cotizaciones comerciales con medidas, valores, PDF profesional y seguimiento.",
-  },
-  {
     question: "¿Necesito la página pública para usar Ventora?",
     answer:
       "No. Puedes empezar solo con el cotizador. La página pública es un complemento para captar solicitudes cuando no puedes responder.",
-  },
-  {
-    question: "¿El cliente necesita instalar algo?",
-    answer:
-      "No. Recibe el PDF por WhatsApp o revisa el presupuesto desde un link público.",
   },
 ] as const;

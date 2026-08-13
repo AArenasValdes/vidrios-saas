@@ -1,9 +1,13 @@
 "use client";
 
-import { type FormEvent, useRef, useState } from "react";
+import Link from "next/link";
+import { type FormEvent, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
+import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
+import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
+import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 
 import s from "./landing-contact-section.module.css";
 
@@ -12,11 +16,16 @@ const WHATSAPP_LANDING_HREF =
 
 export function LandingContactSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [countryCode, setCountryCode] = useState<SupportedCountryCode>("CL");
   const [feedback, setFeedback] = useState<{
     kind: "success" | "error";
     message: string;
   } | null>(null);
   const hasStartedFormRef = useRef(false);
+  const phonePlaceholder = useMemo(
+    () => getCountryPreset(countryCode).phonePlaceholder,
+    [countryCode]
+  );
 
   function trackCta(location: string, channel: "whatsapp" | "internal") {
     if (channel === "whatsapp") {
@@ -64,17 +73,8 @@ export function LandingContactSection() {
       const nombre = String(formData.get("nombre") ?? "").trim();
       const negocio = String(formData.get("empresa") ?? "").trim();
       const whatsapp = String(formData.get("telefono") ?? "").trim();
+      const pais = String(formData.get("pais") ?? countryCode).trim();
       const ayuda = String(formData.get("ayuda") ?? "demo").trim();
-      const mensaje = [
-        "Hola, quiero un piloto de Ventora para mi empresa.",
-        nombre ? `Nombre: ${nombre}` : "",
-        negocio ? `Tipo de negocio: ${negocio}` : "",
-        whatsapp ? `WhatsApp: ${whatsapp}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const href = `https://wa.me/56977338906?text=${encodeURIComponent(mensaje)}`;
 
       const response = await fetch("/api/solicitudes", {
         method: "POST",
@@ -86,6 +86,7 @@ export function LandingContactSection() {
           empresa: negocio,
           correo: "",
           telefono: whatsapp,
+          countryCode: pais,
           ayuda: ayuda === "cotizacion" || ayuda === "ventas" ? ayuda : "demo",
         }),
       });
@@ -102,12 +103,13 @@ export function LandingContactSection() {
         formName: "landing-demo",
         source: "landing",
       });
-      trackCta("formulario-demo", "whatsapp");
+      trackCta("formulario-demo", "internal");
+      form.reset();
+      setCountryCode("CL");
       setFeedback({
         kind: "success",
-        message: "Datos guardados. Abrimos WhatsApp para coordinar tu piloto.",
+        message: "Listo. Te escribimos a este WhatsApp. Si quieres partir ahora, crea tu cuenta.",
       });
-      window.location.href = href;
     } catch (error) {
       setFeedback({
         kind: "error",
@@ -130,18 +132,18 @@ export function LandingContactSection() {
       <div className={s.container}>
         <header className={s.header}>
           <h2 id="landing-contact-title" className={s.title}>
-            ¿Quieres ver Ventora funcionando en tu negocio?
+            ¿Quieres que te contactemos?
           </h2>
           <p className={s.subtitle}>
-            Te mostramos en 5 minutos cómo cotizar desde el celular, enviar el PDF por
-            WhatsApp y dejar todo ordenado.
+            Déjanos tus datos. Te escribimos por WhatsApp. Si quieres partir ahora,
+            crea tu cuenta y arranca 15 días gratis.
           </p>
         </header>
 
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3>Quiero que me contacten</h3>
-            <p>Déjame tus datos y te escribimos por WhatsApp.</p>
+            <p>Guardamos tu consulta y te respondemos. No te saca de esta página.</p>
           </div>
 
           <form className={s.form} onSubmit={handleSubmit}>
@@ -160,11 +162,30 @@ export function LandingContactSection() {
             </label>
 
             <label className={s.field}>
+              <span>País</span>
+              <select
+                name="pais"
+                value={countryCode}
+                onChange={(event) =>
+                  setCountryCode(event.target.value as SupportedCountryCode)
+                }
+                onFocus={trackFormStart}
+                required
+              >
+                {COUNTRY_PRESET_OPTIONS.map((preset) => (
+                  <option key={preset.countryCode} value={preset.countryCode}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={s.field}>
               <span>WhatsApp</span>
               <input
                 type="tel"
                 name="telefono"
-                placeholder="+56 9 0000 0000"
+                placeholder={phonePlaceholder}
                 autoComplete="tel"
                 inputMode="tel"
                 onFocus={trackFormStart}
@@ -191,7 +212,7 @@ export function LandingContactSection() {
               disabled={isSubmitting}
               aria-busy={isSubmitting}
             >
-              {isSubmitting ? "Enviando..." : "Quiero ver la demo"}
+              {isSubmitting ? "Enviando..." : "Quiero que me contacten"}
               <ArrowRight size={17} aria-hidden />
             </button>
           </form>
@@ -207,12 +228,22 @@ export function LandingContactSection() {
             </p>
           ) : null}
 
+          <Link
+            href="/registro"
+            className={s.trial}
+            prefetch={false}
+            onClick={() => trackCta("contacto-registro", "internal")}
+          >
+            Empezar 15 días gratis
+            <ArrowRight size={17} aria-hidden />
+          </Link>
+
           <a
             className={s.whatsapp}
             href={WHATSAPP_LANDING_HREF}
             onClick={() => trackCta("contacto-whatsapp", "whatsapp")}
           >
-            Hablar por WhatsApp
+            Escribir ahora por WhatsApp
           </a>
         </div>
       </div>

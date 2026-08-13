@@ -31,6 +31,9 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templates/hooks/useCotizacionLineTemplates";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
+import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
+import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 import { buildPublicRequestShareClipboardText } from "@/features/solicitudes/services/public-request-share.service";
 import {
   buildEmpresaProfileInput,
@@ -408,6 +411,21 @@ export default function ConfiguracionEmpresaPage() {
           };
         }
 
+        if (key === "countryCode") {
+          const preset = getCountryPreset(String(value));
+          return {
+            ...current,
+            countryCode: preset.countryCode,
+            currencyCode: preset.currencyCode,
+            locale: preset.locale,
+            timezone: preset.timezone,
+            phoneCountryCode: preset.phoneCountryCode,
+            taxLabel: preset.taxLabel,
+            taxRateDefault: preset.taxRateDefault,
+            taxIdLabel: preset.taxIdLabel,
+          };
+        }
+
         return { ...current, [key]: value };
       });
       setSectionFeedback(null);
@@ -655,12 +673,31 @@ export default function ConfiguracionEmpresaPage() {
                   />
                 </label>
                 <label className={s.field}>
+                  <span className={s.label}>Pais</span>
+                  <select
+                    className={s.input}
+                    value={form.countryCode}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "countryCode",
+                        event.target.value as SupportedCountryCode
+                      )
+                    }
+                  >
+                    {COUNTRY_PRESET_OPTIONS.map((preset) => (
+                      <option key={preset.countryCode} value={preset.countryCode}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={s.field}>
                   <span className={s.label}>Telefono</span>
                   <input
                     className={s.input}
                     value={form.empresaTelefono}
                     onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)}
-                    placeholder="+56 9 1234 5678"
+                    placeholder={getCountryPreset(form.countryCode).phonePlaceholder}
                   />
                 </label>
                 <div className={s.field}>
@@ -907,8 +944,17 @@ export default function ConfiguracionEmpresaPage() {
                   </label>
                 ) : null}
                 <label className={s.field}>
+                  <span className={s.label}>Pais</span>
+                  <select className={s.input} value={form.countryCode} onChange={(event) => handleFieldChange("countryCode", event.target.value as SupportedCountryCode)}>
+                    {COUNTRY_PRESET_OPTIONS.map((preset) => (
+                      <option key={preset.countryCode} value={preset.countryCode}>{preset.label}</option>
+                    ))}
+                  </select>
+                  <span className={s.inlineInfo}>Actualiza los valores regionales editables de abajo.</span>
+                </label>
+                <label className={s.field}>
                   <span className={s.label}>Telefono</span>
-                  <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder="+56 9 1234 5678" />
+                  <input className={s.input} value={form.empresaTelefono} onChange={(event) => handleFieldChange("empresaTelefono", event.target.value)} placeholder={getCountryPreset(form.countryCode).phonePlaceholder} />
                   <span className={s.inlineInfo}>Esto se usa en PDF, presupuesto y WhatsApp.</span>
                 </label>
                 <label className={s.field}>
@@ -920,6 +966,34 @@ export default function ConfiguracionEmpresaPage() {
                   <span className={s.label}>Email</span>
                   <input className={s.input} value={form.empresaEmail} onChange={(event) => handleFieldChange("empresaEmail", event.target.value)} placeholder="contacto@empresa.cl" />
                   <span className={s.inlineInfo}>Se usa como dato de contacto visible.</span>
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Moneda</span>
+                  <input className={s.input} value={form.currencyCode} onChange={(event) => handleFieldChange("currencyCode", event.target.value.toUpperCase())} maxLength={3} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Idioma regional</span>
+                  <input className={s.input} value={form.locale} onChange={(event) => handleFieldChange("locale", event.target.value)} placeholder="es-CL" maxLength={5} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Zona horaria</span>
+                  <input className={s.input} value={form.timezone} onChange={(event) => handleFieldChange("timezone", event.target.value)} placeholder="America/Santiago" maxLength={80} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Codigo telefonico</span>
+                  <input className={s.input} value={form.phoneCountryCode} onChange={(event) => handleFieldChange("phoneCountryCode", event.target.value)} placeholder="+56" maxLength={5} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Impuesto por defecto</span>
+                  <input className={s.input} value={form.taxLabel} onChange={(event) => handleFieldChange("taxLabel", event.target.value)} maxLength={40} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Tasa por defecto (%)</span>
+                  <input className={s.input} type="number" min="0" max="100" step="0.01" value={form.taxRateDefault} onChange={(event) => handleFieldChange("taxRateDefault", Number(event.target.value))} />
+                </label>
+                <label className={s.field}>
+                  <span className={s.label}>Identificador tributario</span>
+                  <input className={s.input} value={form.taxIdLabel} onChange={(event) => handleFieldChange("taxIdLabel", event.target.value)} maxLength={40} />
                 </label>
               </div>
               {sectionFeedback?.section === "empresa" ? <p className={sectionFeedback.kind === "error" ? s.error : s.success}>{sectionFeedback.message}</p> : null}

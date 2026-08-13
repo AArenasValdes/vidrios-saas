@@ -1,8 +1,8 @@
 # Database Map - Ventora
 
-> Verificacion remota parcial: 2026-07-29. Mientras `current_schema.sql` siga marcado como atrasado, las migraciones remotas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
+> Verificacion remota: 2026-08-13. Mientras `current_schema.sql` siga marcado como atrasado, la base remota verificada, las migraciones registradas y los addendums de este archivo prevalecen para cambios posteriores al ultimo dump.
 
-Fuente de verdad: `current_schema.sql`. Referencia complementaria: `database.types.ts`.
+Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es baseline historico hasta regenerarlo. Referencia complementaria: `database.types.ts`.
 Fecha de generación: 2026-05-30.
 
 ---
@@ -148,6 +148,7 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 | `descuento_pct` | numeric | |
 | `flete` | numeric | |
 | `iva` | numeric | |
+| `regional_snapshot` | jsonb | Snapshot regional inmutable v1: pais, moneda, locale e impuesto comercial al crear la cotizacion |
 | `notas` | text | |
 | `valido_hasta` | date | |
 | `approval_token` | text | UNIQUE parcial WHERE NOT NULL |
@@ -168,6 +169,8 @@ La base de datos soporta un SaaS multi-tenant para captación y cierre de leads 
 - `organization_id` → `organizations.id`
 
 **Addendum 2026-07-08 - Quote Studio financial snapshots (aplicado local y remoto):** la migracion `20260708033856_add_quote_studio_financial_snapshot.sql` fue aplicada y verificada en Postgres local y en el proyecto remoto Supabase `yrtrwgkaopfumpidjthk` el 2026-07-08. Agrega 12 columnas aditivas sobre `cotizaciones`, sin crear tablas nuevas. Los campos de costo, utilidad, margen real y precio recomendado se interpretan como valores netos; `iva`/`iva_pct` quedan como capa tributaria separada. Constraints: `cotizaciones_financial_costs_nonnegative`, `cotizaciones_cost_basis_status_check`. Backfill historico seguro: deriva `iva_pct` y `cost_basis_status` sin inventar desglose de costos ni setear `financial_snapshot_version` en cotizaciones historicas. RLS y grants existentes de `cotizaciones` siguen aplicando por `organization_id = get_org_id()` sin policies nuevas.
+
+**Addendum 2026-08-13 - Billing Fase 5 snapshot regional:** la migracion remota `20260813023403_billing_phase_5_quote_region_snapshots.sql` agrega `regional_snapshot jsonb` y el CHECK `cotizaciones_regional_snapshot_object_check`. No crea tablas, policies ni grants. El servicio captura el perfil regional al crear la cotizacion; sus ediciones conservan el valor existente. PDF, enlace publico y WhatsApp consumen ese snapshot. Las cotizaciones antiguas sin dato mantienen CLP e IVA 19% como compatibilidad, sin leer el perfil regional actual.
 
 ---
 
@@ -900,6 +903,12 @@ auth.users (1) ──── (N) users
 - Los grants de `users` exponen a `authenticated` solo columnas operativas. Las cuatro columnas privadas no tienen SELECT cliente.
 - El trigger `ensure_organization_profile_trial_defaults` sigue siendo la unica fuente de creacion del trial. La RPC no reinicia planes ni fechas existentes.
 - Datos comerciales de contacto, responsable y zona se precargan solo cuando estan vacios. El nombre del taller se sincroniza con el valor confirmado.
+
+### Addendum 2026-08-13 - Registro directo por correo
+
+- La misma RPC `complete_google_oauth_account(...)` tambien provisiona altas iniciadas con correo/contrasena: el Route Handler crea primero el usuario Auth confirmado y luego invoca la RPC solo con `service_role`.
+- El provisionamiento sigue siendo atomico dentro de Postgres para `users`, `organizations` y `organization_profile`; si falla, el handler elimina el usuario Auth recien creado como compensacion.
+- `ciudad_comuna` es opcional. Un valor vacio se normaliza a `NULL` en `users.ciudad_comuna` y `organization_profile.public_zone`; un valor informado debe tener entre 2 y 120 caracteres.
 - Verificacion remota posterior: 23 usuarios, 0 correos normalizados duplicados, 0 `auth_user_id` duplicados, 0 organizaciones activas sin perfil y 0 perfiles con fechas de trial nulas.
 
 ---
@@ -946,3 +955,30 @@ auth.users (1) ──── (N) users
   - `materials` tiene SELECT/INSERT/UPDATE por `organization_id = get_org_id()`, pero las policies aparecen para rol `public` y UPDATE no tiene `WITH CHECK`.
   - `system_lines` tiene SELECT para `organization_id IS NULL OR organization_id = get_org_id()` con rol `public`.
 - Recomendacion: antes de aplicar Fase 2 en remoto, crear una migracion de hardening chica para `materials`/`system_lines` si se decide reducir rol `public` a `authenticated` y agregar `WITH CHECK` en UPDATE de `materials`.
+
+---
+
+## Addendum 2026-08-13 - Historial reconciliado para billing
+
+- El historial remoto contenia seis versiones sin archivo local. Se recuperaron con `supabase migration fetch --linked`: `20260517053830`, `20260517054151`, `20260518040656`, `20260708173558`, `20260709195129` y `20260717071404`.
+- Corresponden a cambios ya documentados en este mapa (hardening multi-tenant, policies, catalogo, Quote Studio y configuracion visual), pero con timestamps remotos distintos de sus copias locales historicas. No implica que esas capacidades falten en produccion.
+- La base de datos remota confirma que existen las piezas recurrentes de Mercado Pago: tabla `suscripciones_organizacion`, indice unico de suscripcion abierta, RPCs de conciliacion y ledger de pagos.
+- Fase 2 de Mercado Pago `20260812233117` y el default de trial 15 dias `20260813002850` fueron aplicados y registrados en remoto. El cambio no actualiza trials existentes.
+- La deuda restante son versiones locales antiguas sin marca remota. Es un bloqueo de automatizacion para `db push`, no una autorizacion para ejecutar o marcar esas migraciones en bloque.
+
+---
+
+## Addendum 2026-08-13 - Billing Fase 4 regionalizacion
+
+- `organization_profile` remoto incorpora ocho campos regionales: `country_code`, `currency_code`, `locale`, `timezone`, `phone_country_code`, `tax_label`, `tax_rate_default` y `tax_id_label`.
+- La migracion `20260813015101_billing_phase_4_organization_region` deja Chile como default/backfill de compatibilidad y restringe los paises iniciales a `AR`, `CL`, `CO`, `MX`, `PE`, `UY`.
+- No se agregaron tablas, policies RLS ni grants cliente nuevos. La configuracion pertenece a la fila de perfil ya aislada por `organization_id`.
+- El dump remoto `current_schema.sql` fue regenerado el mismo dia. El diff migraciones-vs-remoto continua bloqueado porque la cadena local no tiene su migracion base de `organizations`; mantener ese trabajo separado de cambios de producto.
+
+---
+
+## Addendum 2026-08-13 - Billing Fase 5 snapshots regionales de cotizacion
+
+- `cotizaciones.regional_snapshot` guarda un objeto JSON v1 con pais, moneda, locale, zona horaria y etiqueta/tasa tributaria comercial.
+- La migracion `20260813023403_billing_phase_5_quote_region_snapshots.sql` fue aplicada y registrada en remoto; el dump `current_schema.sql` ya la incluye.
+- No se hace backfill: un registro sin snapshot se trata explicitamente como cotizacion Chile historica, para no reinterpretar documentos ni mensajes con el perfil actual de la empresa.

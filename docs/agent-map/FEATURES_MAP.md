@@ -6,7 +6,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Autenticacion
 
-- **Que hace**: Login email/password y Google OAuth unico, PKCE, sesion persistida y alta SaaS con datos obligatorios antes de activacion.
+- **Que hace**: Login email/password y Google OAuth unico, PKCE, sesion persistida y alta SaaS inmediata antes de activacion. `/registro` separa visualmente el alta en dos pasos: identidad/acceso y datos de empresa. Solo el segundo confirma la creacion de cuenta, organizacion, perfil regional y trial; Google conserva una pantalla breve solo para completar los datos que OAuth no entrega.
 - **Rutas involucradas**: `/login`, `/registro`, `/auth/callback`, `/auth/completar-cuenta`, `/auth/logout`, `/cuenta-vencida`
 - **Archivos principales**:
   - `app/(auth-public)/login/page.tsx`
@@ -24,7 +24,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `src/features/auth/repositories/auth-server.repository.ts`
   - `src/features/auth/types/auth.ts`
   - `proxy.ts` (middleware auth)
-- **Componentes principales**: `LoginView`, `RegistroView`, `CompletarCuentaView`
+- **Componentes principales**: `LoginView`, `RegistroView`, `CompletarCuentaView`. `RegistroView` conserva los datos del paso 1 en memoria hasta completar el paso 2; no crea Auth ni registros parciales al avanzar.
 - **Hooks/servicios/actions**: `useAuth()`, `authService`, `authServerService`
 - **Tablas Supabase**: `auth.users`, `public.users`, `organizations`, `organization_profile`
 - **Flujo de datos**: Login form -> `useAuth.signIn()` -> `authService.signIn()` -> `authRepository.signIn()` -> Supabase Auth -> `authRepository.getProfile()` -> `public.users` (organization_id, rol) -> diagnostico local + eventos `login_success` / `login_failure`
@@ -36,19 +36,24 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no.
 - **Consideraciones UX**: Proxy redirige autenticados a `/dashboard`, no autenticados a `/login?next=path`. El logout del shell sale por `/auth/logout` para evitar carreras entre App Router y cookies SSR. Al volver desde background/foco, el hook revalida sesion sin vaciar la UI. El login espera la cookie antes de redirigir y guarda un buffer local de diagnosticos para distinguir credencial invalida real vs cookie/PWA/red/perfil. La pantalla de login tambien permite ver/ocultar contrasena y reiniciar el estado local de la app en ese dispositivo cuando navegador web si entra pero la PWA instalada no. El prompt de instalacion PWA tiene fallback visual para Opera/Android con mockup simple del navegador y highlight orientativo del `menu O`.
-- **Riesgos al modificar**: Google es el unico OAuth; Facebook legacy solo permanece como dato social fuera de auth. La RPC usa `service_role`, lock transaccional y upsert; no exponerla a `anon`/`authenticated`. No pedir telefono nuevamente en login u onboarding.
+- **Riesgos al modificar**: Google es el unico OAuth; Facebook legacy solo permanece como dato social fuera de auth. La RPC usa `service_role`, lock transaccional y upsert; no exponerla a `anon`/`authenticated`. El alta por correo debe crear Auth y llamar la misma RPC en servidor, con compensacion si falla; no pedir telefono nuevamente en login u onboarding.
 
 ---
 
 ## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 7 dias por organizacion, la activacion anual automatizada via Flow como provider principal temporal, deja Webpay Plus directo como compatibilidad/futuro y mantiene la opcion mensual manual por WhatsApp. Permite login aun vencido, pero deja la cuenta en modo lectura y bloquea escrituras privadas con CTA de activacion.
+- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. Mercado Pago Chile cubre Founder mensual/anual y Solo Cotizacion anual detras de feature flag; Flow y Webpay Plus se preservan como compatibilidad. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Preparacion LATAM Fase 6**: `mercadopago-market.config.ts` separa secretos, plan IDs, bandera y moneda por mercado. Solo Chile tiene precios comerciales definidos; PE/CO/AR/UY/MX permanecen sin precio y apagados. El checkout actual rechaza en servidor organizaciones fuera de Chile para no cobrar CLP por error.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
 - **Archivos principales**:
   - `src/features/subscriptions/types/subscription.ts`
   - `src/features/subscriptions/services/subscription-status.service.ts`
   - `src/features/subscriptions/services/subscription-route-access.service.ts`
   - `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`
+  - `src/features/subscriptions/repositories/organization-subscription.repository.ts`
+  - `src/features/subscriptions/providers/mercadopago/*`
+  - `src/features/subscriptions/services/mercadopago-checkout.service.ts`
+  - `src/features/subscriptions/services/mercadopago-webhook.service.ts`
   - `src/features/billing/types/plans.ts`
   - `src/features/billing/types/payment-provider.ts`
   - `src/features/billing/hooks/useBillingCheckout.ts`
@@ -71,6 +76,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `app/api/billing/flow/confirmar/route.ts`
   - `app/api/subscriptions/webpay/crear/route.ts`
   - `app/api/subscriptions/webpay/confirmar/route.ts`
+  - `app/api/subscriptions/mercadopago/create/route.ts`
+  - `app/api/subscriptions/mercadopago/webhook/route.ts`
   - `app/api/solicitudes/route.ts`
   - `app/api/organization-assets/upload/route.ts`
   - `app/api/public-landing/revalidate/route.ts`
@@ -78,9 +85,11 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`
   - `supabase/migrations/20260530100000_pagos_suscripcion.sql`
   - `supabase/migrations/20260602062145_billing_flow_provider.sql`
+  - `supabase/migrations/20260812230428_billing_phase_1_recurring_core.sql`
+  - `supabase/migrations/20260812233117_billing_phase_2_mercadopago_chile.sql`
 - **Componentes principales**: `AppShell`, pantalla `Cuenta vencida`
 - **Hooks/servicios/actions**: `useOrganizationProfile()`, `resolveOrganizationSubscriptionState()`, `canAccessPrivatePathWithSubscription()`, `assertSubscriptionAllowsWrite()`
-- **Tablas Supabase**: `organization_profile`, `organizations`, `pagos_suscripcion`
+- **Tablas Supabase**: `organization_profile`, `organizations`, `suscripciones_organizacion`, `pagos_suscripcion`
 - **Flujo de datos**:
   - Login y rutas privadas -> `useOrganizationProfile()` -> `organizationProfileService` -> repository -> `organization_profile`
   - Snapshot crudo -> `resolveOrganizationSubscriptionState()` -> estado efectivo (`trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`)
@@ -88,12 +97,13 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
   - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
   - Flow: `/cuenta-vencida` -> `useBillingCheckout()` -> POST `/api/billing/checkout` -> provider `flow` -> redirect a Flow -> GET/POST `/api/billing/flow/confirmar` -> `payment/getStatus` -> `pagos_suscripcion` -> `organization_profile` actualizado solo si Flow confirma `status=2`
   - Webpay legacy: endpoints `/api/subscriptions/webpay/*` se mantienen como compatibilidad, pero la UI nueva usa `/api/billing/*`
+- Mercado Pago Chile: `/cuenta-vencida` -> POST create autenticado -> reserva recurrente unica -> plan/monto validados en API MP -> retorno informativo -> webhook HMAC -> GET de recurso real -> RPC idempotente -> suscripcion + ledger + proyeccion. `/cuenta/suscripcion` muestra periodo/cobro y permite cancelar renovacion solo con configuracion completa; un `past_due` conserva escritura durante una gracia configurable (3 dias por defecto) y un pago aprobado vuelve a `active`.
 - **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`
 - **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`
 - **Donde editar logica**: `src/features/subscriptions/services/`, `src/features/billing/`
 - **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`, `supabase/migrations/20260602062145_billing_flow_provider.sql`
-- **Consideraciones UX**: El usuario puede entrar y leer. Si faltan 3 dias o menos, el shell debe usar avisos progresivos y compactos; no una card grande permanente. `/cuenta-vencida` vende principalmente anuales: `Founder Full Anual` `$79.990` como recomendado y `Solo Cotizacion Anual` `$59.990` como opcion simple. El mensual `$8.990` queda como opcion manual secundaria por WhatsApp. Si la cuenta ya esta activa con `subscription_ends_at > now()`, la UI no debe permitir crear otro pago accidental y debe mostrar `Tu cuenta ya tiene una suscripcion activa.`.
-- **Riesgos al modificar**: No romper `/solicitud/[empresa]` ni `/presupuesto/[token]`. No bloquear lectura basica. No inferir permisos de escritura sin pasar por el helper de suscripcion. Flow depende de `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_ENVIRONMENT`, `FLOW_PAYMENT_METHOD` opcional y `NEXT_PUBLIC_APP_URL`; Webpay legacy depende de `TBK_ENVIRONMENT`, `TBK_API_KEY_ID`, `TBK_API_KEY_SECRET` y `NEXT_PUBLIC_APP_URL`. No exponer `provider_response` completo en logs/respuestas. No introducir Oneclick, PatPass ni recurrencia automatica sin redise?ar negocio, schema y operaciones.
+- **Consideraciones UX**: El usuario puede entrar y leer. Con Mercado Pago no configurado, la pantalla conserva WhatsApp. Con la bandera y todos los secretos/planes listos, ofrece los tres planes Chile. La URL de retorno solo informa que se esta confirmando; nunca activa. Una cuenta activa, incluso founder sin fecha final, no puede crear otro checkout. Cancelar renovacion no revoca el periodo ya pagado.
+- **Riesgos al modificar**: No romper rutas publicas ni lectura basica. Mercado Pago exige firma valida y consulta real antes de mutar; nunca confiar en body o query string. Monto/moneda/tenant solo servidor. No exponer secretos ni `provider_response`. Ver `docs/billing/BILLING_PHASE_2_MERCADOPAGO_CHILE.md` antes de habilitar.
 
 ### Addendum cuentas internas gratis permanentes
 
@@ -355,7 +365,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Tablas Supabase**: `cotizaciones`, `cotizacion_items`, `cotizacion_line_templates`, `clients`, `projects`, `cotizacion_code_counters`
 - **Flujo de datos**:
   - Listado: Page -> `useCotizacionesStore` -> API `/api/cotizaciones/resumen` -> server service -> repositories
-  - Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
+- Nueva: Page -> workflow state (sessionStorage) -> `useCotizacionesStore` -> `cotizacionesAppService` -> repository
+- Snapshot regional: al crear, `cotizacionesAppService` consulta `organization_profile` y persiste `cotizaciones.regional_snapshot`; al editar lo preserva. PDF, vista/enlace publico y WhatsApp usan ese snapshot; historicas sin valor quedan en fallback Chile.
   - Snapshot financiero Fase 1: `cotizacionesAppService.saveWorkflow()` -> `buildQuoteStudioFinancialSummary()` -> campos existentes `cotizaciones.costo_total`, `cotizaciones.margen_pct`, `cotizaciones.utilidad_total`
   - Item libre: wizard/sheet -> categoria "Proyecto libre y Mantencion" -> subtipo -> formulario simplificado (nombre, descripcion, valor, IVA) -> `buildFreeValueItemFromForm` -> `calculateFreeValueItem` -> `item_libre_con_valor`
   - Detalle: Page -> `useCotizacionesStore.getById()` -> repository
@@ -377,6 +388,7 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar persistencia**: `src/features/cotizaciones/repositories/cotizaciones-repository.ts`
 - **Consideraciones UX**: Paginas muy grandes (1000+ lineas). Workflow state persistido en sessionStorage. En desktop, Paso 1 integra el metodo de presupuesto y Paso 2 ofrece **Presupuesto** + **Constructor** sobre los mismos items; el Constructor no crea otra persistencia. Paso 2 soporta dos modos de pricing: `por_item` (cada item lleva su precio, incluyendo productos de cristal por m2 desde `cotizacion_line_templates`) y `total_global` (items descriptivos, total final en Paso 3). Mobile mantiene su wizard existente. Fase 1 Quote Studio es desktop-only: bajo 1024 px no agregar panel financiero ni campos visibles de costo, margen, traslado, merma o precio recomendado; tampoco cambiar orden de pasos, resumen, CTA, PDF, WhatsApp, copy, espaciados, cards, sticky panels ni navegacion mobile. Validar 390 px y 430 px como regresion bloqueante: cualquier diferencia visual mobile intencional queda fuera de alcance. Los snapshots financieros de Fase 1 se guardan en campos existentes a nivel cotizacion; no exponerlos en UI mobile. Item libre (`tipoItem = "item_libre_con_valor"`) no requiere linea, vidrio, color, sistema, configuracion, medidas ni croquis. El quick edit (edicion rapida) ignora items libres. Si la cuenta esta vencida, el listado sigue visible pero crear/editar/eliminar deben quedar bloqueados. **No interrumpir al maestro post-PDF**: descarga registra actividad en silencio; marcar aprobada/rechazada/terminada queda en detalle o menu secundario. **Componentes solo vidrio** (`Espejo`, `Cubierta de mesa`) y productos de catalogo `categoria='vidrio'`: no pedir Aluminio/PVC ni color de perfil; en Espejo mostrar seccion **Espejos** con recomendados 3-6 mm; el resto del catalogo (ventanas, puertas, etc.) sigue pidiendo material y color como antes.
 - **Riesgos al modificar**: No romper calculos de pricing (IVA una sola vez), auto-creacion de cliente/proyecto, ni generacion de codigo COT-DDMMYY-NNN. No romper PDF ni WhatsApp. No reintroducir "Pendiente" como estado dominante si hay PDF descargado. `cotizacion_items.linea` guarda snapshot comercial; para Cristales tambien se codifica categoria/espesor/terminacion en `observaciones`. En `total_global`, no mostrar precios $0 por item ni costo/margen/utilidad en PDF, vista publica, documento publico ni detalle interno. `isFreeValueComponentType` depende del catalogo; si se renombra un item, actualizar el flag `esItemLibre`. No saltarse `assertSubscriptionAllowsWrite()` en acciones privadas. Si se agrega otro componente solo vidrio, actualizar `shouldRequireProfileMaterialForComponent()` y la regresion `profile-material-regression.test.ts`; no ocultar material en ventanas/puertas por error.
+- **Contrato publico de metadata (2026-08-12)**: `/presupuesto/[token]` pasa `cotizacion_items.observaciones` por `sanitizeCotizacionItemPresentationForPublic()`. Solo conserva etiquetas comerciales/visuales; costos, margen, IDs de plantilla/receta, selectores tecnicos y snapshots quedan bloqueados por defecto.
 
 ---
 

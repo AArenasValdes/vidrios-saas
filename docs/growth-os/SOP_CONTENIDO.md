@@ -14,7 +14,7 @@ Distribucion:
 
 - 70% dolor y transformacion
 - 20% demostraciones reales del producto en celular
-- 10% funciones complementarias
+- 10% funciones complementarias, incluida la pauta interna configurada por el taller
 
 ### 1. Dolor y transformacion
 
@@ -30,6 +30,7 @@ Distribucion:
 - convertir medidas, precio o calculo final en propuesta
 - generar PDF profesional
 - enviar por WhatsApp
+- mostrar cubicacion, despiece, tiras y pauta interna en desktop cuando existe receta configurada
 
 ### 3. Funciones complementarias
 
@@ -37,6 +38,7 @@ Distribucion:
 - pagina publica
 - seguimiento
 - historial de cotizaciones
+- cubicacion y pauta interna revisable por linea/receta
 
 ## Calendario semanal
 
@@ -140,7 +142,7 @@ Por eso:
 - el CTA es claro
 - el CTA es unico
 - no suena a software generico
-- no promete ERP, produccion, cubicacion, perfiles, cortes, herrajes ni desperdicio
+- no promete ERP, produccion automatica, optimizacion, nesting, CNC ni cubicacion universal
 - no promete "ganaras mas clientes" ni "cerraras mas ventas"
 - la pieza se entiende sin audio cuando aplique
 - la captura no expone datos sensibles

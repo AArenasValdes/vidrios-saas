@@ -2,6 +2,7 @@ import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
   encodeCotizacionItemPresentationMeta,
+  sanitizeCotizacionItemPresentationForPublic,
   shouldShowCotizacionItemSheetSchemeSpec,
 } from "@/utils/cotizacion-item-presentation";
 import {
@@ -477,6 +478,58 @@ describe("cotizacion-item-presentation", () => {
         fabricacionHerraje: "caracol",
         fabricacionVariante: "termopanel",
         fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+      })
+    );
+  });
+
+  it("expone al cliente solo metadata comercial y visual", () => {
+    const guided = createDefaultGuidedVisualConfig({ widthMm: 1500, heightMm: 1200 });
+    const encoded = encodeCotizacionItemPresentationMeta({
+      colorHex: "#2a2a2a",
+      material: "Aluminio",
+      referencia: "Serie 25",
+      sistema: "Corredera",
+      configuracion: "2 hojas",
+      lineTemplateId: "77",
+      precioPorM2: 145000,
+      minimoCobrable: 95000,
+      precioPlantillaSugerido: 261000,
+      margenPct: 42,
+      costInputScope: "materiales",
+      fabricacionTipologia: "corredera",
+      fabricacionHojas: 2,
+      fabricacionHerraje: "caracol",
+      fabricacionVariante: "termopanel",
+      fabricationRecipeId: "11111111-1111-4111-8111-111111111111",
+      guidedVisualConfig: guided,
+      raw: "Instalacion incluida",
+    });
+    const sanitized = sanitizeCotizacionItemPresentationForPublic(
+      `${encoded}[future_recipe_id:no-publicar]`
+    );
+    const decoded = decodeCotizacionItemPresentationMeta(sanitized);
+
+    expect(sanitized).toContain("[r:Serie 25]");
+    expect(sanitized).toContain("[gvc:2|");
+    expect(sanitized).toContain("Instalacion incluida");
+    expect(sanitized).not.toMatch(
+      /\[(?:pm|lti|pm2|min|rnd|psu|man|po|tcv|net|iva|mp|csi|ft|fh|fmo|fap|fhe|fv|frid|cub):/i
+    );
+    expect(sanitized).not.toContain("future_recipe_id");
+    expect(decoded).toEqual(
+      expect.objectContaining({
+        referencia: "Serie 25",
+        sistema: "Corredera",
+        configuracion: "2 hojas",
+        guidedVisualConfig: expect.objectContaining({ widthMm: 1500, heightMm: 1200 }),
+        lineTemplateId: "",
+        precioPorM2: null,
+        minimoCobrable: null,
+        encodedMargenPct: null,
+        fabricacionTipologia: "",
+        fabricacionHerraje: "",
+        fabricationRecipeId: "",
+        raw: "Instalacion incluida",
       })
     );
   });

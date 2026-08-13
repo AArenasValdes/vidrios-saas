@@ -1,6 +1,7 @@
 import type { EntityId } from "@/types/common";
 import type { CotizacionItem, CrearCotizacionItemInput } from "./cotizacion-item";
 import type { QuotePricingMode } from "./quote-pricing-mode";
+import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
 
 export type EstadoCotizacion =
   | "borrador"
@@ -45,6 +46,7 @@ export type Cotizacion = {
   clienteRespondioEn: string | null;
   clienteRespuestaCanal: string | null;
   pdfDescargadoEn: string | null;
+  regionalSnapshot?: QuoteRegionSnapshot | null;
   creadoEn: string | null;
   actualizadoEn: string | null;
   eliminadoEn: string | null;
@@ -86,6 +88,7 @@ export type CrearCotizacionInput = {
   clienteRespondioEn?: string | null;
   clienteRespuestaCanal?: string | null;
   pdfDescargadoEn?: string | null;
+  regionalSnapshot?: QuoteRegionSnapshot | null;
   items: CrearCotizacionItemInput[];
   total: number;
 };

@@ -79,6 +79,48 @@ const DEFAULT_COLOR_BY_MATERIAL: Record<ComponentMaterial, string> = {
 const LEGACY_COLOR_HEX = "#b87333";
 const WOOD_COLOR = "#8b5e3c";
 
+const PUBLIC_PRESENTATION_META_TAGS = new Set([
+  "c",
+  "r",
+  "l",
+  "sys",
+  "cfg",
+  "hb",
+  "ss",
+  "sv",
+  "sc",
+  "isc",
+  "m",
+  "cat",
+  "ce",
+  "ct",
+  "ivm",
+  "dm",
+  "pe",
+  "pt",
+  "mf",
+  "mpc",
+  "mpd",
+  "mil",
+  "gvc",
+]);
+
+/**
+ * Conserva solo metadata comercial/visual apta para superficies de cliente.
+ * Evita serializar costos, margen, IDs de catalogo/receta y pauta tecnica en
+ * la respuesta publica, incluso si una etiqueta interna nueva aparece luego.
+ */
+export function sanitizeCotizacionItemPresentationForPublic(
+  observaciones: string | null | undefined
+): string {
+  return (observaciones ?? "")
+    .replace(/\[([a-z0-9_-]+):[^\]]*\]/gi, (token, tag: string) =>
+      PUBLIC_PRESENTATION_META_TAGS.has(tag.toLowerCase()) ? token : ""
+    )
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function normalizeMaterial(value: string | null | undefined): ComponentMaterial {
   if (value === "Cristal") {
     return "Cristal";

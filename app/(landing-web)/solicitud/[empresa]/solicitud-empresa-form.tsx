@@ -14,11 +14,8 @@ import {
   LuSend,
 } from "react-icons/lu";
 
-import {
-  formatChileMobilePhone,
-  isValidChileMobilePhone,
-  normalizeChileMobilePhone,
-} from "@/utils/chile-mobile-phone";
+import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 
 import s from "./page.module.css";
@@ -27,6 +24,7 @@ type Props = {
   slug: string;
   empresaTelefono: string;
   empresaEmail: string;
+  countryCode: string;
   privacidad: string;
   isAvailable: boolean;
   formTitle?: string;
@@ -159,12 +157,14 @@ function validateNombre(value: string) {
   return value.trim().length >= 3 ? null : "Ingresa tu nombre completo.";
 }
 
-function validateContacto(value: string) {
+function validateContacto(value: string, countryCode: string) {
   if (!value.trim()) {
     return "Ingresa tu WhatsApp.";
   }
 
-  return isValidChileMobilePhone(value) ? null : "Ingresa un WhatsApp valido.";
+  return normalizePhoneToE164(value, countryCode)
+    ? null
+    : "Ingresa un WhatsApp valido.";
 }
 
 function validateTipoTrabajo(value: string) {
@@ -179,6 +179,7 @@ export function SolicitudEmpresaForm({
   slug,
   empresaTelefono,
   empresaEmail,
+  countryCode,
   privacidad,
   isAvailable,
   formTitle,
@@ -261,23 +262,21 @@ export function SolicitudEmpresaForm({
   const errors = useMemo<FieldErrors>(
     () => ({
       nombre: validateNombre(form.nombre) ?? undefined,
-      contacto: validateContacto(form.contacto) ?? undefined,
+      contacto: validateContacto(form.contacto, countryCode) ?? undefined,
       tipoTrabajo: validateTipoTrabajo(form.tipoTrabajo) ?? undefined,
       consentimiento: validateConsentimiento(form.consentimiento) ?? undefined,
     }),
-    [form]
+    [countryCode, form]
   );
 
   const normalizedClienteWhatsapp = useMemo(
-    () => normalizeChileMobilePhone(form.contacto),
-    [form.contacto]
+    () => normalizePhoneToE164(form.contacto, countryCode),
+    [countryCode, form.contacto]
   );
 
   const displayWhatsapp = useMemo(
     () =>
-      normalizedClienteWhatsapp
-        ? formatChileMobilePhone(normalizedClienteWhatsapp)
-        : "",
+      normalizedClienteWhatsapp ?? "",
     [normalizedClienteWhatsapp]
   );
 
@@ -464,7 +463,7 @@ export function SolicitudEmpresaForm({
         <label className={s.field}>
           <span className={s.fieldLabel}>WhatsApp *</span>
           <div className={s.phoneField}>
-            <span className={s.phonePrefix}>+56</span>
+            <span className={s.phonePrefix}>{getCountryPreset(countryCode).phoneCountryCode}</span>
             <input
               className={s.phoneInput}
               value={form.contacto}
@@ -473,13 +472,13 @@ export function SolicitudEmpresaForm({
                 handleFieldChange("contacto", event.target.value);
               }}
               onBlur={() => handleBlur("contacto")}
-              placeholder="9 1234 5678"
+              placeholder={getCountryPreset(countryCode).phonePlaceholder.replace(/^\+\d+\s*/, "")}
               autoComplete="tel"
               inputMode="tel"
             />
           </div>
           {touched.contacto && displayWhatsapp && !errors.contacto ? (
-            <span className={s.fieldHint}>Formato detectado: +56 9 {displayWhatsapp}</span>
+            <span className={s.fieldHint}>Formato detectado: {displayWhatsapp}</span>
           ) : null}
           {touched.contacto && errors.contacto ? (
             <span className={s.fieldError}>{errors.contacto}</span>

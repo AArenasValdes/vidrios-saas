@@ -27,10 +27,7 @@ import {
 } from "@/features/organization-profile/services/organization-profile.service";
 import { TrackedExternalLink } from "@/features/analytics/components/tracked-external-link";
 import { getCachedPublicRequestConfig } from "@/features/solicitudes/services/solicitudes-public-cache.server";
-import {
-  formatChileMobilePhone,
-  normalizeChileMobilePhone,
-} from "@/utils/chile-mobile-phone";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
 import { buildPublicLeadWhatsappUrl } from "@/utils/whatsapp";
 
 import {
@@ -142,14 +139,8 @@ function resolveServiceItems(config: {
   return Array.from(new Set(fallback));
 }
 
-function formatPublicPhone(phone: string) {
-  const normalized = normalizeChileMobilePhone(phone);
-
-  if (!normalized) {
-    return phone.trim();
-  }
-
-  return `+56 9 ${formatChileMobilePhone(normalized)}`;
+function formatPublicPhone(phone: string, countryCode: string) {
+  return normalizePhoneToE164(phone, countryCode) ?? phone.trim();
 }
 
 function buildSocialLinks(config: {
@@ -229,7 +220,11 @@ export default async function SolicitudEmpresaPage({
   });
 
   const availabilityLabel = isAvailable ? "Abierto" : "Cerrado";
-  const whatsappUrl = buildPublicLeadWhatsappUrl(config.empresaTelefono);
+  const whatsappUrl = buildPublicLeadWhatsappUrl(
+    config.empresaTelefono,
+    {},
+    config.countryCode
+  );
   const horarioLabel = config.solicitudPublicaHorarioPorDia.length
     ? formatHorarioPorDiaLabel(config.solicitudPublicaHorarioPorDia)
     : `${formatDiasAtencionLabel(
@@ -248,7 +243,7 @@ export default async function SolicitudEmpresaPage({
   const showRating = config.showRating;
   const serviceItems = resolveServiceItems(config);
   const socialLinks = buildSocialLinks(config);
-  const formattedPhone = formatPublicPhone(config.empresaTelefono);
+  const formattedPhone = formatPublicPhone(config.empresaTelefono, config.countryCode);
   const isPreview = isPreviewEnabled(resolvedSearchParams.preview);
 
   const featuredServices = serviceItems.slice(0, 3);
@@ -546,6 +541,7 @@ export default async function SolicitudEmpresaPage({
               slug={config.solicitudPublicaSlug}
               empresaTelefono={config.empresaTelefono}
               empresaEmail={config.empresaEmail}
+              countryCode={config.countryCode}
               privacidad={config.solicitudPublicaPrivacidad}
               isAvailable={isAvailable}
               formTitle={formTitle}

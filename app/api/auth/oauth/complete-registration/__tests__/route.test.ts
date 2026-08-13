@@ -44,10 +44,11 @@ describe("POST /api/auth/oauth/complete-registration", () => {
           nombre: "Alessandro",
           empresaNombre: "Vidrios Test",
           whatsapp: "+56912345678",
+          countryCode: "CL",
           ciudadComuna: "Santiago",
           consentimientoAceptado: true,
         }),
-      })
+      }),
     );
 
     expect(response.status).toBe(401);
@@ -85,10 +86,11 @@ describe("POST /api/auth/oauth/complete-registration", () => {
           nombre: "Alessandro",
           empresaNombre: "Vidrios Test",
           whatsapp: "+56912345678",
+          countryCode: "CL",
           ciudadComuna: "Santiago",
           consentimientoAceptado: true,
         }),
-      })
+      }),
     );
 
     expect(response.status).toBe(200);
@@ -105,6 +107,7 @@ describe("POST /api/auth/oauth/complete-registration", () => {
       nombre: "Alessandro",
       empresaNombre: "Vidrios Test",
       whatsapp: "+56912345678",
+      countryCode: "CL",
       ciudadComuna: "Santiago",
       consentimientoAceptado: true,
     });

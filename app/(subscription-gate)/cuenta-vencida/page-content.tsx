@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
+import { useMercadoPagoSubscriptionCheckout } from "@/features/subscriptions/hooks/useMercadoPagoSubscriptionCheckout";
 import {
   buildPlanContractWhatsappHref,
   resolveOrganizationSubscriptionState,
@@ -22,7 +23,11 @@ const PLAN_LABELS = {
   enterprise: "Plan Empresa Acompanado",
 } as const;
 
-export function CuentaVencidaPageContent() {
+export function CuentaVencidaPageContent({
+  mercadoPagoEnabled,
+}: {
+  mercadoPagoEnabled: boolean;
+}) {
   const { profile } = useOrganizationProfile();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,9 +49,10 @@ export function CuentaVencidaPageContent() {
   });
   const hasActivePaidSubscription =
     subscriptionState.effectiveStatus === "active" &&
-    !subscriptionState.isTrial &&
-    Boolean(subscriptionState.subscriptionEndsAt);
+    !subscriptionState.isTrial;
   const whatsappDisabled = hasActivePaidSubscription;
+  const { startCheckout, loadingPlan, error: checkoutError } =
+    useMercadoPagoSubscriptionCheckout();
 
   const founderFullHref = buildPlanContractWhatsappHref({
     planLabel: PLAN_LABELS.founderFullAnnual,
@@ -85,6 +91,10 @@ export function CuentaVencidaPageContent() {
       ).toLocaleDateString("es-CL")}.`;
     }
 
+    if (hasActivePaidSubscription) {
+      return "Plan activo.";
+    }
+
     if (
       subscriptionState.isTrial &&
       !subscriptionState.isExpired &&
@@ -117,8 +127,9 @@ export function CuentaVencidaPageContent() {
           <span className={s.eyebrow}>Cuenta en modo lectura</span>
           <h1 className={s.title}>Activa Ventora y vuelve a operar sin cortes.</h1>
           <p className={s.text}>
-            Elige un plan y te contactamos por WhatsApp para activarlo. Todos los pagos se
-            confirman de forma manual por ahora.
+            {mercadoPagoEnabled
+              ? "Elige tu plan y completa la suscripcion de forma segura en Mercado Pago. La activacion se confirma automaticamente."
+              : "Elige un plan y te contactamos por WhatsApp para activarlo. Todos los pagos se confirman de forma manual por ahora."}
           </p>
         </div>
 
@@ -130,6 +141,12 @@ export function CuentaVencidaPageContent() {
           <div className={s.errorBanner} role="alert">
             No pudimos confirmar un pago automatico. Escríbenos por WhatsApp y te activamos el
             plan manualmente.
+          </div>
+        ) : null}
+
+        {checkoutError ? (
+          <div className={s.errorBanner} role="alert">
+            {checkoutError}
           </div>
         ) : null}
 
@@ -154,8 +171,19 @@ export function CuentaVencidaPageContent() {
             </p>
             {whatsappDisabled ? (
               <span className={`${s.webpayButton} ${s.buttonDisabled}`} aria-disabled="true">
-                Contratar por WhatsApp
+                Cuenta activa
               </span>
+            ) : mercadoPagoEnabled ? (
+              <button
+                className={s.webpayButton}
+                type="button"
+                disabled={loadingPlan !== null}
+                onClick={() => void startCheckout("founder_full_annual")}
+              >
+                {loadingPlan === "founder_full_annual"
+                  ? "Abriendo Mercado Pago..."
+                  : "Suscribirme con Mercado Pago"}
+              </button>
             ) : (
               <a
                 className={s.webpayButton}
@@ -183,8 +211,19 @@ export function CuentaVencidaPageContent() {
                 className={`${s.webpayButtonOutline} ${s.buttonDisabled}`}
                 aria-disabled="true"
               >
-                Contratar por WhatsApp
+                Cuenta activa
               </span>
+            ) : mercadoPagoEnabled ? (
+              <button
+                className={s.webpayButtonOutline}
+                type="button"
+                disabled={loadingPlan !== null}
+                onClick={() => void startCheckout("quote_only_annual")}
+              >
+                {loadingPlan === "quote_only_annual"
+                  ? "Abriendo Mercado Pago..."
+                  : "Suscribirme con Mercado Pago"}
+              </button>
             ) : (
               <a
                 className={s.webpayButtonOutline}
@@ -198,20 +237,37 @@ export function CuentaVencidaPageContent() {
           </article>
           <article className={`${s.priceCard} ${s.priceCardManual}`}>
             <div className={s.planTopline}>
-              <span className={s.priceLabel}>Mensual manual</span>
-              <span className={s.manualBadge}>WhatsApp</span>
+              <span className={s.priceLabel}>
+                {mercadoPagoEnabled ? "Founder Mensual" : "Mensual manual"}
+              </span>
+              <span className={s.manualBadge}>
+                {mercadoPagoEnabled ? "Mercado Pago" : "WhatsApp"}
+              </span>
             </div>
             <strong className={s.priceValue}>
               ${VENTORA_MONTHLY_PRICE.toLocaleString("es-CL")}
               <span>/ mes</span>
             </strong>
             <p className={s.priceHint}>
-              Pago mensual manual por WhatsApp. Ideal si quieres comenzar sin compromiso anual.
+              {mercadoPagoEnabled
+                ? "Suscripcion mensual recurrente. Ideal si quieres comenzar sin compromiso anual."
+                : "Pago mensual manual por WhatsApp. Ideal si quieres comenzar sin compromiso anual."}
             </p>
             {whatsappDisabled ? (
               <span className={`${s.whatsappButton} ${s.buttonDisabled}`} aria-disabled="true">
-                Contratar por WhatsApp
+                Cuenta activa
               </span>
+            ) : mercadoPagoEnabled ? (
+              <button
+                className={s.whatsappButton}
+                type="button"
+                disabled={loadingPlan !== null}
+                onClick={() => void startCheckout("founder_monthly")}
+              >
+                {loadingPlan === "founder_monthly"
+                  ? "Abriendo Mercado Pago..."
+                  : "Suscribirme con Mercado Pago"}
+              </button>
             ) : (
               <a
                 className={s.whatsappButton}

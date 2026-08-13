@@ -88,6 +88,7 @@ export async function POST(
 
     const solicitud = await solicitudesContactoService.createPublicRequest({
       organizationId: publicConfig.organizationId,
+      countryCode: publicConfig.countryCode,
       empresa: publicConfig.empresaNombre,
       nombre: body.nombre ?? "",
       contacto: body.contacto ?? "",

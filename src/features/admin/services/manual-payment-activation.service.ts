@@ -37,7 +37,9 @@ type PagoSuscripcionInsert = {
   plan_code: string;
   billing_period: string;
   amount_clp: number;
+  amount: number;
   currency: "CLP";
+  currency_code: "CLP";
   payment_provider: "manual_transfer";
   provider_status: "manual_approved";
   provider_response: {
@@ -174,7 +176,9 @@ export async function activateManualOrganizationPayment(input: {
       plan_code: plan.subscriptionPlanCode,
       billing_period: plan.billingPeriod,
       amount_clp: plan.amountClp,
+      amount: plan.amountClp,
       currency: "CLP",
+      currency_code: "CLP",
       payment_provider: "manual_transfer",
       provider_status: "manual_approved",
       provider_response: providerResponse,

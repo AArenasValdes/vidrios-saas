@@ -1,7 +1,7 @@
 # Agent Database Notes - Ventora
 
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
-Fuente de verdad: `current_schema.sql` cuando este regenerado. Nota 2026-07-28: `current_schema.sql` y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
+Fuente de verdad, en orden: base remota verificada; migraciones registradas en remoto; fuentes recuperadas con `supabase migration fetch --linked`; y, solo como baseline historico, `current_schema.sql`. El dump y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
 
 ---
 
@@ -9,13 +9,13 @@ Fuente de verdad: `current_schema.sql` cuando este regenerado. Nota 2026-07-28: 
 
 Un agente NO debe modificar queries, services, hooks, types, functions, migrations, seeds o RLS sin haber leído primero:
 
-1. **`supabase/docs/current_schema.sql`** — Fuente de verdad del modelo de datos actual. Contiene tablas, columnas, tipos, constraints, FKs, índices, RLS policies, funciones y grants.
+1. **`supabase/docs/current_schema.sql`** — Baseline histórico con tablas, columnas, tipos, constraints, FKs, índices, RLS policies, funciones y grants. Antes de usarlo como verdad actual, contrastarlo con migraciones registradas y la base remota.
 2. **`supabase/docs/database_map.md`** — Mapa completo de tablas, relaciones, flujo de negocio y riesgos.
 3. **`supabase/docs/rls_policies.md`** — Detalle de todas las policies RLS, mecanismos de aislamiento y riesgos de seguridad.
 4. **`supabase/docs/seed_order.md`** — Orden de carga de seed data y dependencias.
 5. **`AGENTS.md`** — Reglas generales del proyecto, convenciones y prioridades de producto.
 
-Si se detecta una diferencia entre el código y `current_schema.sql`, reportarla antes de modificar.
+Si se detecta una diferencia entre el codigo y `current_schema.sql`, verificar primero la base remota y las migraciones registradas. No modificar ni reparar el historial solo para hacer coincidir un dump antiguo.
 
 ---
 
@@ -276,3 +276,51 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Verificacion remota: ambas tablas mantienen RLS habilitado y tres policies; columnas y triggers `fabrication_recipes_prevent_validated_update` / `fabrication_recipe_tests_enforce_validator` existen.
 - Las operaciones authenticated no pueden atribuir una validacion o prueba aprobada a otro usuario: `validated_by` debe coincidir con `auth.uid()`.
 - El aislamiento con dos empresas, lectura de recetas Ventora y estabilidad del snapshot historico ya fueron comprobados en el smoke Fase 3; esta migracion no cambia esas policies.
+
+---
+
+## Addendum 2026-08-13 - Billing y deuda de historial confirmada
+
+- La deuda no representa una segunda base de datos: seis cambios remotos tienen fuentes locales equivalentes con otro timestamp, resultado de lineas historicas distintas. Las parejas son hardening multi-tenant, follow-up policies, vidrio recomendado, snapshot financiero, catalogo de lineas y configuracion visual de items.
+- `supabase migration fetch --linked` recupero las seis fuentes remotas para que el repositorio pueda auditarlas. No se marco como aplicada ninguna migracion local antigua de manera masiva.
+- Se aplicaron y registraron de forma controlada `20260812233117_billing_phase_2_mercadopago_chile` y `20260813002850_trial_fifteen_day_default` despues de confirmar que sus objetos no existian en remoto.
+- Verificacion remota: `organization_profile.trial_ends_at` y su trigger usan 15 dias para altas nuevas; el trigger conserva `plan_code='trial'`. `suscripciones_organizacion` tiene RLS y solo policy SELECT por tenant para `authenticated`; `anon` no puede leerla y las RPC Mercado Pago son solo `service_role`.
+- No usar `supabase db push` ni `migration repair` global mientras persistan versiones locales antiguas sin marca remota. Para una migracion nueva: aplicar el archivo especifico, verificar objetos/RLS/grants y registrar solo esa version.
+- `current_schema.sql` fue regenerado desde remoto el 2026-08-13 tras iniciar Docker Desktop. Incluye Fases 1-5 de billing y representa el baseline remoto actual.
+- `supabase db diff --from linked --to migrations` sigue bloqueado por deuda historica: el primer archivo local (`20260317154500_organization_profile.sql`) espera `public.organizations` pero no existe una migracion base local que la cree para la shadow database. No usar `db push` ni reparar versiones antiguas en bloque; resolver esa cadena en una tarea dedicada.
+- `supabase gen types --linked --schema public` funciona y confirma que los tipos remotos ya incluyen `country_code`, `tax_rate_default` y la nueva firma de `complete_google_oauth_account`.
+
+---
+
+## Addendum 2026-08-13 - Billing Fase 4 regionalizacion
+
+- Migracion aplicada y registrada en remoto: `20260813015101_billing_phase_4_organization_region`.
+- `organization_profile` ahora es la fuente de configuracion regional: pais, moneda, locale, zona horaria, codigo telefonico y defaults tributarios comerciales. Los perfiles existentes se backfillearon a Chile sin tocar cotizaciones.
+- `complete_google_oauth_account` mantiene `SECURITY INVOKER`, locks y EXECUTE solo para `service_role`; su nueva firma recibe `p_country_code text` y resuelve el preset en Postgres.
+- `users.whatsapp` valida E.164 generico. Sus columnas privadas y sus grants no se ampliaron.
+- El primer intento de aplicacion fue rechazado por una constraint regex antes de confirmar la transaccion. Se revirtio su fila de historial y el segundo intento se verifico con columnas y firma de RPC remotas.
+- No usar la configuracion regional actual para reinterpretar PDFs o cotizaciones historicas: Fase 5 ya congela un snapshot por cotizacion al crearla.
+
+## Addendum 2026-08-13 - Registro inmediato por correo
+
+- Migracion aplicada y registrada en remoto: `20260813033746_password_account_signup_and_optional_city`.
+- No crear una RPC paralela para correo/contrasena: `/api/auth/signup` crea el usuario Auth con `service_role`, llama a `complete_google_oauth_account(...)` y revierte ese Auth user si el provisionamiento falla.
+- `ciudad_comuna` puede ser vacia en la RPC y se persiste como `NULL`; mantiene el limite de 2 a 120 caracteres cuando el usuario si la informa.
+- Verificacion remota: la funcion sigue `SECURITY INVOKER`; `service_role` conserva EXECUTE y `anon` no lo tiene.
+
+---
+
+## Addendum 2026-08-13 - Billing Fase 5 snapshot regional de cotizacion
+
+- Migracion aplicada y registrada en remoto: `20260813023403_billing_phase_5_quote_region_snapshots.sql`.
+- `cotizaciones.regional_snapshot` es JSONB opcional con CHECK de objeto. No requiere tabla, RLS, policy ni grant nuevos porque hereda los controles de `cotizaciones` por `organization_id`.
+- `cotizacionesAppService.saveWorkflow()` crea el snapshot con el perfil regional vigente solo para una cotizacion nueva; al editar, conserva el snapshot ya guardado.
+- Las salidas PDF, publica y WhatsApp leen el snapshot. Si falta por ser historica, resuelven el fallback Chile (`CLP`, `es-CL`, `IVA 19%`) sin consultar el perfil actual.
+
+---
+
+## Addendum 2026-08-13 - Verificación de compatibilidad regional y cálculo comercial
+
+- Consulta remota posterior al backfill: 31 perfiles de organización existentes están en Chile (`CL`, `CLP`, `es-CL`, `IVA`, `19%`) y no hay organizaciones activas sin `organization_profile`.
+- La aplicación usa el snapshot regional al calcular totales de cotizaciones nuevas. Chile mantiene IVA 19% y redondeo comercial a $1.000; los otros presets usan su tasa propia y no heredan ese redondeo.
+- No se aplicó una migración adicional: el esquema de Fases 4 y 5 ya contenía los campos necesarios. La deuda histórica de versiones sigue impidiendo `supabase db push` global.

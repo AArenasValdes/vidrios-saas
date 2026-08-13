@@ -24,6 +24,12 @@ import {
 } from "@/utils/cotizacion-pdf";
 import { resolveCotizacionItemDrawingSvg } from "@/features/cotizaciones/visual-composer/services/resolve-item-drawing-svg";
 import {
+  formatQuoteCurrency,
+  formatQuoteTaxLabel,
+  resolveQuoteRegionSnapshotForDisplay,
+} from "@/features/organization-region/services/quote-region-display.service";
+import type { QuoteRegionSnapshot } from "@/features/organization-region/types/quote-region-snapshot";
+import {
   buildCotizacionItemSheetSchemeLabel,
   decodeCotizacionItemPresentationMeta,
   shouldShowCotizacionItemSheetSchemeSpec,
@@ -37,12 +43,6 @@ const FIRST_PAGE_COMPONENTS = 3;
 const NEXT_PAGE_COMPONENTS = 3;
 const APP_NAME = "Ventora";
 const DEFAULT_DOCUMENT_BRAND_COLOR = "#335ea9";
-
-const clpFormatter = new Intl.NumberFormat("es-CL", {
-  style: "currency",
-  currency: "CLP",
-  maximumFractionDigits: 0,
-});
 
 type PublicPreviewItem = {
   id: string;
@@ -72,6 +72,7 @@ type PublicPreviewQuote = {
   iva: number;
   flete: number;
   total: number;
+  regionalSnapshot?: QuoteRegionSnapshot | null;
   pricingMode?: "por_item" | "total_global";
   createdAt: string | null;
   updatedAt: string | null;
@@ -140,10 +141,6 @@ const COLOR_NAMES: Record<string, string> = {
   "#2968c8": "Azul (Alta presión)",
   "#e7842a": "Naranja (Ventilación)",
 };
-
-function CLP(value: number) {
-  return clpFormatter.format(value);
-}
 
 function getColorName(colorHex: string) {
   return resolveComponentColorName(colorHex);
@@ -278,6 +275,9 @@ export function PublicQuoteDocument({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLElement | null>(null);
   const didAutoDownloadRef = useRef(false);
+  const quoteRegion = resolveQuoteRegionSnapshotForDisplay(quote.regionalSnapshot);
+  const formatMoney = (value: number) => formatQuoteCurrency(value, quote.regionalSnapshot);
+  const taxLabel = formatQuoteTaxLabel(quote.regionalSnapshot);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const [embeddedScale, setEmbeddedScale] = useState(1);
@@ -900,11 +900,13 @@ export function PublicQuoteDocument({
                               {shouldShowItemPrice ? (
                               <aside className={printStyles.pricesColumn}>
                                 <div className={printStyles.pricesHeading}>VALOR COMERCIAL</div>
-                                <div className={printStyles.pricesSubheading}>MONTOS EN CLP</div>
+                                <div className={printStyles.pricesSubheading}>
+                                  MONTOS EN {quoteRegion.currencyCode}
+                                </div>
 
                                 <div className={printStyles.priceRow}>
                                   <span>Precio unitario</span>
-                                  <strong>{CLP(item.precioUnitario)}</strong>
+                                  <strong>{formatMoney(item.precioUnitario)}</strong>
                                 </div>
                                 <div className={printStyles.priceRow}>
                                   <span>Cantidad</span>
@@ -913,7 +915,7 @@ export function PublicQuoteDocument({
 
                                 <div className={printStyles.priceTotal}>
                                   <span>Total ítem</span>
-                                  <strong>{CLP(item.precioTotal)}</strong>
+                                  <strong>{formatMoney(item.precioTotal)}</strong>
                                 </div>
                               </aside>
                               ) : null}
@@ -949,24 +951,24 @@ export function PublicQuoteDocument({
                           <span className={printStyles.summaryLabel}>RESUMEN FINAL</span>
                           <div className={printStyles.totalRow}>
                             <span>Subtotal</span>
-                            <strong>{CLP(quote.subtotal)}</strong>
+                            <strong>{formatMoney(quote.subtotal)}</strong>
                           </div>
                           <div className={printStyles.totalRow}>
                             <span>Descuento</span>
-                            <strong>- {CLP(discountValue)}</strong>
+                            <strong>- {formatMoney(discountValue)}</strong>
                           </div>
                           <div className={`${printStyles.totalRow} ${printStyles.totalRowStrong}`}>
                             <span>Neto</span>
-                            <strong>{CLP(neto)}</strong>
+                            <strong>{formatMoney(neto)}</strong>
                           </div>
                           <div className={printStyles.totalRow}>
-                            <span>IVA 19%</span>
-                            <strong>{CLP(quote.iva)}</strong>
+                            <span>{taxLabel}</span>
+                            <strong>{formatMoney(quote.iva)}</strong>
                           </div>
                           {showItemPrices && quote.flete > 0 ? (
                             <div className={printStyles.totalRow}>
                               <span>Flete</span>
-                              <strong>{CLP(quote.flete)}</strong>
+                              <strong>{formatMoney(quote.flete)}</strong>
                             </div>
                           ) : null}
                           {showItemPrices ? (
@@ -980,7 +982,7 @@ export function PublicQuoteDocument({
 
                       <section className={printStyles.grandTotal}>
                         <span>{showItemPrices ? "Total presupuesto" : "Precio final"}</span>
-                        <strong>{CLP(quote.total)}</strong>
+                        <strong>{formatMoney(quote.total)}</strong>
                       </section>
                     </>
                   ) : null}

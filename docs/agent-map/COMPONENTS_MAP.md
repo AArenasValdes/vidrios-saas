@@ -122,25 +122,32 @@
 
 ## Landing
 
-### Componente: ProblemSection
+### Componente: ContrastSection / DevicesSection / PautaSection
 
-- **Archivo**: `src/components/landing/problem-section.tsx`
-- **Proposito**: Seccion "El problema" de la landing con 3 tarjetas
+- **Archivos**: `src/components/landing/contrast-section.tsx`, `devices-section.tsx`, `pauta-section.tsx`
+- **Proposito**: Contraste vs cotizador técnico, venta de cualquier dispositivo y pauta/cubicación opcional
+- **Usado en**: Landing principal (`LandingBelowFold`)
+- **Cuando modificarlo**: Copy de posicionamiento, dispositivos o plantillas sugeridas
+
+### Componente: ProblemFlowSection
+
+- **Archivo**: `src/components/landing/problem-flow-section.tsx`
+- **Proposito**: Relato del problema al cotizar a mano (WhatsApp → anotas → tarde → se pierde)
 - **Usado en**: Landing principal
 - **Cuando modificarlo**: Cambios en copy de problema de la landing
 
-### Componente: ProblemCard
+### Componente: QuoteFlowSection / PublicLinkSection / LandingContactSection
 
-- **Archivo**: `src/components/landing/problem-card.tsx`
-- **Proposito**: Tarjeta visual de problema con paneles decorativos animados (Excel, Chat, Money)
-- **Usado en**: `ProblemSection`
-- **Props importantes**: `title`, `description`, `variant: "excel" | "chat" | "money"`, `fullWidth?`
+- **Archivos**: `src/components/landing/quote-flow-section.tsx`, `public-link-section.tsx`, `landing-contact-section.tsx`
+- **Proposito**: Flujo de 4 pasos, link público y formulario de consulta (lead a `/solicitudes`, sin redirect a WhatsApp)
+- **Usado en**: Landing principal
+- **Cuando modificarlo**: Capturas del flujo, CTA a `/registro`, o validación Latam del formulario
 
 ### Componente: FooterSection
 
-- **Archivo**: `src/components/footer-section.tsx` (169 lineas)
-- **Proposito**: Footer de la landing con links de acceso, links legales, info de contacto
-- **Usado en**: Landing principal
+- **Archivo**: `src/components/footer-section.tsx`
+- **Proposito**: Footer reutilizable con links de acceso, legales e info de contacto
+- **Usado en**: Superficies que lo importan; la landing comercial usa el footer interno de `landing-page-client.tsx`
 - **Props importantes**: `navLinks: FooterNavLink[]`
 
 ### Componente: TestimonialsSection

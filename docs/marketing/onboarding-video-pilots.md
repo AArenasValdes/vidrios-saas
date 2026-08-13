@@ -1,6 +1,6 @@
 # Videos piloto de onboarding - Ventora
 
-Ultima actualizacion: 2026-06-13
+Ultima actualizacion: 2026-08-13
 
 ## Posicionamiento obligatorio
 
@@ -10,7 +10,7 @@ Frase central:
 
 > Tu cotizador tecnico te ayuda a fabricar. Ventora te ayuda a vender.
 
-Ventora no se explica como cotizador tecnico, sistema de pautas de corte, software de despiece, optimizador de perfiles, ERP ni sistema de produccion.
+Ventora no se explica como cotizador tecnico universal, optimizador de perfiles, ERP ni sistema de produccion. Si la empresa configura sus recetas, sí puede mostrar cubicacion, despiece, tiras y pauta interna revisable en computador.
 
 Promesa narrativa:
 
@@ -55,7 +55,7 @@ Publico: maestros, duenos y vendedores de vidrierias, aluminio, PVC, shower door
 | 0:22-0:35 | Texto comparativo simple, dos columnas | "Tecnico = fabricar" / "Ventora = propuesta" | "Tu cotizador tecnico te ayuda a fabricar. Ventora convierte el calculo final en una propuesta profesional." |
 | 0:35-0:50 | Listado de cotizaciones y cliente ordenado | "Clientes y cotizaciones ordenadas" | "Aqui ordenas clientes, solicitudes y cotizaciones sin depender de la memoria ni de chats sueltos." |
 | 0:50-1:05 | Detalle cotizacion con botones PDF/WhatsApp | "PDF profesional por WhatsApp" | "Creas una propuesta simple, generas PDF y la envias por WhatsApp." |
-| 1:05-1:20 | Pantalla con negaciones claras | "No es pauta de corte" | "Ventora no entrega pautas de corte, despiece ni optimizacion de perfiles. Para eso existen sistemas tecnicos." |
+| 1:05-1:20 | Pantalla desktop con receta y resumen interno | "Pauta interna configurada por tu taller" | "Ventora puede generar cubicacion, despiece, tiras y una pauta interna cuando tu empresa configura y valida sus recetas. No reemplaza un optimizador industrial." |
 | 1:20-1:30 | Logo Ventora + celular con cotizacion | "Cotiza desde el celular" | "Ventora complementa tu flujo: envia un PDF profesional sin llegar a casa a hacer presupuestos." |
 
 ### Version horizontal
@@ -92,7 +92,7 @@ Duracion objetivo: 90 a 140 segundos.
 ### Puntos que NO se deben decir
 
 - No decir "calculo tecnico exacto".
-- No mencionar despiece.
+- No presentar el despiece como universal, exacto para maquina o automatico sin receta validada.
 - No prometer optimizacion de perfiles.
 - No explicar costos/margenes internos.
 

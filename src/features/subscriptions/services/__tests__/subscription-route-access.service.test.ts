@@ -16,7 +16,7 @@ describe("subscription-route-access.service", () => {
     founderPriceLocked: false,
   };
 
-  it("repara un trial vencido solo si la organizacion fue creada hace menos de 7 dias", () => {
+  it("repara un trial vencido solo si la organizacion fue creada dentro de los 15 dias iniciales", () => {
     const repaired = buildFreshTrialRepairSnapshot({
       snapshot: expiredTrial,
       organizationCreatedAt: "2026-06-28T12:00:00.000Z",
@@ -25,7 +25,7 @@ describe("subscription-route-access.service", () => {
 
     expect(repaired).toMatchObject({
       subscriptionStatus: "trial_active",
-      trialEndsAt: "2026-07-05T12:00:00.000Z",
+      trialEndsAt: "2026-07-13T12:00:00.000Z",
       planType: "trial",
       planCode: "trial",
     });

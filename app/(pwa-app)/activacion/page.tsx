@@ -205,6 +205,7 @@ function ActivacionPageContent() {
     useActivationGate({ isReplayMode });
   const initialGateCheckedRef = useRef(false);
   const hasHydratedCompanyFormRef = useRef(false);
+  const hasAppliedRegionalLineDefaultsRef = useRef(false);
   const hasRestoredPersistedResultRef = useRef(false);
   const isStartingRealQuoteRef = useRef(false);
 
@@ -239,6 +240,11 @@ function ActivacionPageContent() {
     profile?.brandColor ?? DEFAULT_ORGANIZATION_BRAND_COLOR
   );
   const [logoPreview, setLogoPreview] = useState<string | null>(profile?.empresaLogoUrl ?? null);
+  const formatMoney = useCallback(
+    (value: number) => formatCurrency(value, profile?.locale, profile?.currencyCode),
+    [profile?.currencyCode, profile?.locale]
+  );
+  const taxDisplayLabel = `${profile?.taxLabel ?? "IVA"} ${profile?.taxRateDefault ?? 19}%`;
 
   const linePricingPreview = useMemo(
     () =>
@@ -304,6 +310,19 @@ function ActivacionPageContent() {
     setFormaPago(profile.formaPago ?? "");
     setBrandColor(profile.brandColor ?? DEFAULT_ORGANIZATION_BRAND_COLOR);
     setLogoPreview(profile.empresaLogoUrl ?? null);
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile || hasAppliedRegionalLineDefaultsRef.current) {
+      return;
+    }
+
+    hasAppliedRegionalLineDefaultsRef.current = true;
+
+    if (profile.countryCode !== "CL") {
+      setLineaNombre("");
+      setLineaPrecioM2("");
+    }
   }, [profile]);
 
   const activationReturnParams = useMemo(
@@ -578,7 +597,7 @@ function ActivacionPageContent() {
             descripcion:
               descripcion.trim() ||
               (componentPricingMode === "line"
-                ? `Calculado con ${lineaNombre.trim()} a ${formatCurrency(parseActivationMoney(lineaPrecioM2))} por m2.`
+                ? `Calculado con ${lineaNombre.trim()} a ${formatMoney(parseActivationMoney(lineaPrecioM2))} por m2.`
                 : buildActivationComponentSafeName(componentCategory)),
             lineaComercial:
               componentPricingMode === "line" ? lineaNombre.trim() : undefined,
@@ -904,11 +923,11 @@ function ActivacionPageContent() {
             </div>
             <div className={s.activationSummaryRow}>
               <span>Precio por m2</span>
-              <strong>{formatCurrency(150000)}</strong>
+              <strong>{formatMoney(150000)}</strong>
             </div>
             <div className={`${s.activationSummaryRow} ${s.activationSummaryTotal}`}>
               <span>Total</span>
-              <strong>{formatCurrency(ACTIVATION_DEMO.total)}</strong>
+              <strong>{formatMoney(ACTIVATION_DEMO.total)}</strong>
             </div>
           </div>
           {error ? <p className={s.activationError}>{error}</p> : null}
@@ -1155,6 +1174,8 @@ function ActivacionPageContent() {
             onChange={setLineaPrecioM2}
             suffix="por m²"
             helpText="Valor que normalmente cobras por cada m²."
+            locale={profile?.locale}
+            currency={profile?.currencyCode}
           />
 
           {!showLineAdvanced ? (
@@ -1172,6 +1193,8 @@ function ActivacionPageContent() {
                 value={lineaMinimo}
                 onChange={setLineaMinimo}
                 helpText="Solo si cobras un valor minimo aunque la medida sea pequena."
+                locale={profile?.locale}
+                currency={profile?.currencyCode}
               />
               <div className={s.activationField}>
                 <span className={s.activationLabelReadable}>Redondeo</span>
@@ -1233,7 +1256,7 @@ function ActivacionPageContent() {
     const precioM2 = parseActivationMoney(lineaPrecioM2);
     const suggestedPriceLabel =
       canGenerateLineWork && linePricingPreview.total > 0
-        ? `Ver cotizacion por ${formatCurrency(linePricingPreview.total)}`
+        ? `Ver cotizacion por ${formatMoney(linePricingPreview.total)}`
         : "Ver mi cotizacion";
 
     return (
@@ -1244,7 +1267,7 @@ function ActivacionPageContent() {
           <article className={s.activationLineCompactCard}>
             <div className={s.activationLineCompactCardCopy}>
               <strong>{lineaNombre.trim() || "Tu linea"}</strong>
-              <span>{formatCurrency(precioM2)} por m²</span>
+              <span>{formatMoney(precioM2)} por m²</span>
               <small>{lineSummaryMeta}</small>
             </div>
             <button
@@ -1332,11 +1355,11 @@ function ActivacionPageContent() {
 
           <div className={s.activationSuggestedPrice}>
             <span className={s.activationLabelReadable}>Precio sugerido</span>
-            <strong>{formatCurrency(linePricingPreview.total)}</strong>
+            <strong>{formatMoney(linePricingPreview.total)}</strong>
             {linePricingPreview.areaM2 > 0 && precioM2 > 0 ? (
               <p>
                 {formatActivationAreaM2(linePricingPreview.areaM2)} m² ×{" "}
-                {formatCurrency(precioM2)} por m²
+                {formatMoney(precioM2)} por m²
               </p>
             ) : (
               <p>Ingresa medidas validas para calcular el valor.</p>
@@ -1346,7 +1369,7 @@ function ActivacionPageContent() {
             ) : null}
             {linePricingPreview.roundingApplied ? (
               <p className={s.activationSuggestedPriceNote}>
-                Redondeado a {formatCurrency(Number(lineaRedondeo))}
+                Redondeado a {formatMoney(Number(lineaRedondeo))}
               </p>
             ) : null}
           </div>
@@ -1462,6 +1485,8 @@ function ActivacionPageContent() {
             value={totalTrabajo}
             onChange={setTotalTrabajo}
             helpText="Valor final que cobraras por este trabajo."
+            locale={profile?.locale}
+            currency={profile?.currencyCode}
           />
           {error ? <p className={s.activationError}>{error}</p> : null}
           <div className={s.activationActions}>
@@ -1526,14 +1551,14 @@ function ActivacionPageContent() {
                     <article key={item.id} className={s.activationSummaryItem}>
                       <div className={s.activationSummaryItemHead}>
                         <strong>{item.title}</strong>
-                        <span>{formatCurrency(item.precioTotal)}</span>
+                        <span>{formatMoney(item.precioTotal)}</span>
                       </div>
                       <p className={s.activationSummaryItemDetail}>{item.detail}</p>
                       {item.lineaComercial ? (
                         <p className={s.activationSummaryItemMeta}>Linea usada: {item.lineaComercial}</p>
                       ) : null}
                       <p className={s.activationSummaryItemMeta}>
-                        {item.cantidad} x {formatCurrency(item.precioUnitario)}
+                        {item.cantidad} x {formatMoney(item.precioUnitario)}
                       </p>
                     </article>
                   ))}
@@ -1547,41 +1572,41 @@ function ActivacionPageContent() {
                 <>
                   <div className={s.activationSummaryRow}>
                     <span>Subtotal trabajos</span>
-                    <strong>{formatCurrency(summary.subtotal)}</strong>
+                    <strong>{formatMoney(summary.subtotal)}</strong>
                   </div>
                   {summary.descuentoValor > 0 ? (
                     <div className={s.activationSummaryRow}>
                       <span>Descuento</span>
-                      <strong>-{formatCurrency(summary.descuentoValor)}</strong>
+                      <strong>-{formatMoney(summary.descuentoValor)}</strong>
                     </div>
                   ) : null}
                   {summary.descuentoValor > 0 ? (
                     <div className={s.activationSummaryRow}>
                       <span>Neto</span>
-                      <strong>{formatCurrency(summary.neto)}</strong>
+                      <strong>{formatMoney(summary.neto)}</strong>
                     </div>
                   ) : null}
                   {summary.flete > 0 ? (
                     <div className={s.activationSummaryRow}>
                       <span>Flete</span>
-                      <strong>{formatCurrency(summary.flete)}</strong>
+                      <strong>{formatMoney(summary.flete)}</strong>
                     </div>
                   ) : null}
                   {summary.includesIva ? (
                     <div className={s.activationSummaryRow}>
-                      <span>IVA 19%</span>
-                      <strong>{formatCurrency(summary.iva)}</strong>
+                      <span>{taxDisplayLabel}</span>
+                      <strong>{formatMoney(summary.iva)}</strong>
                     </div>
                   ) : null}
                 </>
               ) : null}
               <div className={`${s.activationSummaryRow} ${s.activationSummaryTotal}`}>
                 <span>{isSimpleTotal ? "Total final" : "Total presupuesto"}</span>
-                <strong>{formatCurrency(summary.total)}</strong>
+                <strong>{formatMoney(summary.total)}</strong>
               </div>
               {summary.includesIva && !isSimpleTotal ? (
                 <p className={s.activationSummaryNote}>
-                  El precio que ingresaste es el neto del trabajo. El total incluye IVA 19%.
+                  El precio que ingresaste es el neto del trabajo. El total incluye {taxDisplayLabel}.
                 </p>
               ) : isSimpleTotal ? (
                 <p className={s.activationSummaryNote}>

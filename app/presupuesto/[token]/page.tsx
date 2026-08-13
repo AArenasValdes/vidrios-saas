@@ -14,17 +14,11 @@ import { PublicQuoteActionButton } from "./public-quote-action-button";
 import { PublicQuoteMobile } from "./public-quote-mobile";
 import { PublicQuotePreviewLoader } from "./public-quote-preview-loader";
 import { publicCotizacionApprovalService } from "@/features/cotizaciones/public-approval/services/public-cotizacion-approval.service";
+import { formatQuoteCurrency } from "@/features/organization-region/services/quote-region-display.service";
 
 export const dynamic = "force-dynamic";
 
 import s from "./page.module.css";
-
-const CLP = (value: number) =>
-  new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -132,6 +126,7 @@ export default async function PresupuestoPublicoPage({
         : s.statusPendiente;
   const acceptAction = acceptPublicQuoteAction.bind(null, token);
   const rejectAction = rejectPublicQuoteAction.bind(null, token);
+  const formatMoney = (value: number) => formatQuoteCurrency(value, quote.regionalSnapshot);
 
   return (
     <main className={s.page} style={brandStyle} key={cacheBuster}>
@@ -226,7 +221,7 @@ export default async function PresupuestoPublicoPage({
             <aside className={s.heroAside}>
               <div className={s.heroAsideTop}>
                 <span className={s.heroAsideLabel}>Resumen ejecutivo</span>
-                <strong className={s.heroAsideTotal}>{CLP(quote.total)}</strong>
+                <strong className={s.heroAsideTotal}>{formatMoney(quote.total)}</strong>
               </div>
 
               <div className={s.heroAsideFacts}>
@@ -241,7 +236,7 @@ export default async function PresupuestoPublicoPage({
                   <LuWallet aria-hidden />
                   <div>
                     <span>Total oferta</span>
-                    <strong>{CLP(quote.total)}</strong>
+                    <strong>{formatMoney(quote.total)}</strong>
                   </div>
                 </div>
                 <div className={s.heroAsideFact}>
@@ -279,7 +274,7 @@ export default async function PresupuestoPublicoPage({
             <div className={s.finalStateMeta}>
               <span>{quote.codigo}</span>
               <span>{quote.obra}</span>
-              <strong>{CLP(quote.total)}</strong>
+              <strong>{formatMoney(quote.total)}</strong>
             </div>
           </article>
         ) : null}
@@ -300,7 +295,7 @@ export default async function PresupuestoPublicoPage({
                 <div className={s.responseFacts}>
                   <span>{quote.clienteNombre}</span>
                   <span>{quote.obra}</span>
-                  <strong>{CLP(quote.total)}</strong>
+                  <strong>{formatMoney(quote.total)}</strong>
                 </div>
                 <div className={s.responseSignal}>
                   <span className={s.responseSignalDot} aria-hidden />
@@ -331,7 +326,7 @@ export default async function PresupuestoPublicoPage({
                   </div>
                   <div className={s.summaryCard}>
                     <span>Total a confirmar</span>
-                    <strong>{CLP(quote.total)}</strong>
+                    <strong>{formatMoney(quote.total)}</strong>
                   </div>
                   <div className={s.summaryCard}>
                     <span>Valido hasta</span>

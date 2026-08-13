@@ -12,7 +12,7 @@ Guiar a un **admin nuevo sin cotizaciones** hasta su **primer resultado comercia
 
 1. Crear una cotizacion (demo o real)
 2. Ver el **PDF como lo vera su cliente**
-3. Opcionalmente dejar datos de empresa
+3. Revisar o complementar datos de empresa ya precargados desde el registro
 4. Entrar a Ventora
 
 Frase guia: *"En pocos minutos veras como Ventora te ayuda a generar un presupuesto profesional desde el celular."*
@@ -86,7 +86,7 @@ proxy.ts                                             <- Protege /activacion
 | `real_total` | Form corto | Cliente, trabajo, descripcion, total |
 | `real_component` | Form corto | Cliente, trabajo, componente, medidas, cantidad, total |
 | `result` | Cotizacion lista | Ver PDF, descargar, datos empresa, entrar |
-| `company` | Datos empresa | Obligatorio: nombre + telefono; opcional: direccion, email, forma pago, color, logo |
+| `company` | Datos empresa | Nombre, teléfono y correo llegan precargados desde registro; opcionalmente se complementan dirección, forma de pago, color y logo |
 | `done` | Cierre | Marca activacion completa -> `/dashboard` |
 
 ---
@@ -175,7 +175,7 @@ Helpers: `buildActivationPrintHref`, `buildActivationReturnHref`, `resolvePrintV
 - Validacion save: total_global permite `items: []` con `totalClienteManual`
 - PDF vuelve a guia, no a detalle productivo
 - Form con componentes limpia estado al entrar
-- Datos empresa ampliados (opcionales) + copy de "puedes editar despues en configuracion"
+- Datos empresa ampliados y precargados desde `organization_profile` + copy de "puedes editar despues en configuracion"
 
 ---
 

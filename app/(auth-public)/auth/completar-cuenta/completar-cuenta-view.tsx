@@ -4,17 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  ArrowRight,
-  Building2,
-  MapPin,
-  Phone,
-  UserRound,
-} from "lucide-react";
+import { ArrowRight, Building2, MapPin, Phone, UserRound } from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import type { OAuthAccountCompletionValues } from "@/features/auth/services/auth-oauth-completion.service";
-import { normalizeChileMobilePhone } from "@/utils/chile-mobile-phone";
+import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
+import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
+import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 import s from "../../login/login.module.css";
 import cs from "./completar-cuenta.module.css";
 
@@ -32,9 +29,9 @@ const copy = {
   nombrePlaceholder: "Ej: Alessandro Gonzalez",
   empresaLabel: "Nombre del taller",
   empresaPlaceholder: "Ej: Vidrios del Sur",
+  countryLabel: "Pais donde opera tu taller",
   whatsappLabel: "WhatsApp",
-  whatsappPlaceholder: "+56 9 1234 5678",
-  ciudadLabel: "Ciudad o comuna",
+  ciudadLabel: "Ciudad o comuna (opcional)",
   ciudadPlaceholder: "Ej: Puente Alto",
   consent:
     "Acepto crear mi cuenta y que Ventora me contacte directamente por soporte o ayuda comercial. Esto no incluye campanas masivas.",
@@ -59,14 +56,15 @@ export default function CompletarCuentaView({
   const router = useRouter();
   const [nombre, setNombre] = useState(initialValues.nombre);
   const [empresaNombre, setEmpresaNombre] = useState(
-    initialValues.empresaNombre
+    initialValues.empresaNombre,
   );
   const [whatsapp, setWhatsapp] = useState(initialValues.whatsapp);
-  const [ciudadComuna, setCiudadComuna] = useState(
-    initialValues.ciudadComuna
+  const [countryCode, setCountryCode] = useState<SupportedCountryCode>(
+    initialValues.countryCode,
   );
+  const [ciudadComuna, setCiudadComuna] = useState(initialValues.ciudadComuna);
   const [consentimientoAceptado, setConsentimientoAceptado] = useState(
-    initialValues.consentimientoAceptado
+    initialValues.consentimientoAceptado,
   );
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +88,7 @@ export default function CompletarCuentaView({
     const normalizedNombre = normalizeRequiredText(nombre);
     const normalizedEmpresa = normalizeRequiredText(empresaNombre);
     const normalizedCiudad = normalizeRequiredText(ciudadComuna);
-    const normalizedWhatsapp = normalizeChileMobilePhone(whatsapp);
+    const normalizedWhatsapp = normalizePhoneToE164(whatsapp, countryCode);
 
     if (normalizedNombre.length < 2) {
       setError("Ingresa tu nombre.");
@@ -103,12 +101,12 @@ export default function CompletarCuentaView({
     }
 
     if (!normalizedWhatsapp) {
-      setError("Ingresa un WhatsApp chileno valido.");
+      setError("Ingresa un WhatsApp valido con codigo de pais.");
       return;
     }
 
-    if (normalizedCiudad.length < 2) {
-      setError("Ingresa tu ciudad o comuna.");
+    if (normalizedCiudad.length === 1) {
+      setError("La ciudad o comuna debe tener al menos 2 caracteres.");
       return;
     }
 
@@ -130,19 +128,18 @@ export default function CompletarCuentaView({
           nombre: normalizedNombre,
           empresaNombre: normalizedEmpresa,
           whatsapp: normalizedWhatsapp,
+          countryCode,
           ciudadComuna: normalizedCiudad,
           consentimientoAceptado: true,
         }),
       });
 
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            error?: string;
-            code?: string;
-            alreadyProvisioned?: boolean;
-            accountComplete?: boolean;
-          }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        code?: string;
+        alreadyProvisioned?: boolean;
+        accountComplete?: boolean;
+      } | null;
 
       if (!response.ok || !payload?.accountComplete) {
         if (payload?.code === "identity_conflict") {
@@ -242,8 +239,6 @@ export default function CompletarCuentaView({
                         setError(null);
                       }}
                       autoComplete="name"
-                      required
-                      minLength={2}
                       maxLength={120}
                       disabled={cargando}
                     />
@@ -277,6 +272,38 @@ export default function CompletarCuentaView({
                 </div>
 
                 <div className={s.field}>
+                  <label className={s.fieldLabel} htmlFor="countryCode">
+                    {copy.countryLabel}
+                  </label>
+                  <div className={s.fieldControl}>
+                    <MapPin size={18} aria-hidden />
+                    <select
+                      id="countryCode"
+                      name="countryCode"
+                      className={s.fieldInput}
+                      value={countryCode}
+                      onChange={(event) => {
+                        setCountryCode(
+                          event.target.value as SupportedCountryCode,
+                        );
+                        setError(null);
+                      }}
+                      disabled={cargando}
+                      required
+                    >
+                      {COUNTRY_PRESET_OPTIONS.map((preset) => (
+                        <option
+                          key={preset.countryCode}
+                          value={preset.countryCode}
+                        >
+                          {preset.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className={s.field}>
                   <label className={s.fieldLabel} htmlFor="whatsapp">
                     {copy.whatsappLabel}
                   </label>
@@ -288,14 +315,19 @@ export default function CompletarCuentaView({
                       type="tel"
                       inputMode="tel"
                       className={s.fieldInput}
-                      placeholder={copy.whatsappPlaceholder}
+                      placeholder={
+                        getCountryPreset(countryCode).phonePlaceholder
+                      }
                       value={whatsapp}
                       onChange={(event) => {
                         setWhatsapp(event.target.value);
                         setError(null);
                       }}
                       onBlur={() => {
-                        const normalized = normalizeChileMobilePhone(whatsapp);
+                        const normalized = normalizePhoneToE164(
+                          whatsapp,
+                          countryCode,
+                        );
                         if (normalized) {
                           setWhatsapp(normalized);
                         }
@@ -326,8 +358,6 @@ export default function CompletarCuentaView({
                         setError(null);
                       }}
                       autoComplete="address-level2"
-                      required
-                      minLength={2}
                       maxLength={120}
                       disabled={cargando}
                     />

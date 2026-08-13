@@ -1,78 +1,169 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
+  ArrowLeft,
   ArrowRight,
   Building2,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Gift,
+  Globe2,
+  LockKeyhole,
+  Mail,
   MapPin,
-  MessageSquareText,
   Phone,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { AuthOAuthProvider } from "@/features/auth/types/auth";
+import { VENTORA_CONTACT } from "@/constants/ventora-brand";
+import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
+import { normalizePhoneToE164 } from "@/features/organization-region/services/phone-number.service";
+import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
+import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
 import { GoogleAuthButton } from "../_components/google-auth-button";
 import s from "../login/login.module.css";
+import rs from "./registro.module.css";
+
+type RegistrationStep = "account" | "business";
 
 const copy = {
-  title: "Empieza tu prueba gratis",
-  subtitle:
-    "Crea tu cuenta en segundos con Google o solicita configuracion asistida por WhatsApp.",
-  googlePrimary: "Crear prueba gratis con Google",
-  assistedTitle: "Prefieres onboarding asistido?",
-  assistedSubtitle:
-    "Completa el formulario y te contactamos por WhatsApp para dejar Ventora listo.",
-  nombreLabel: "Nombre",
-  nombrePlaceholder: "Tu nombre",
-  empresaLabel: "Nombre de la empresa",
+  accountTitle: "Crea tu cuenta gratis",
+  accountSubtitle:
+    "Empieza tu prueba de 15 días y descubre cómo Ventora puede impulsar tu taller.",
+  businessTitle: "Cuéntanos sobre tu empresa",
+  businessSubtitle:
+    "Usaremos esta información para dejar tus datos listos en Ventora y en tu primer PDF.",
+  googlePrimary: "Continuar con Google",
+  divider: "o",
+  nameLabel: "Tu nombre",
+  namePlaceholder: "Ej: Alessandro Gonzalez",
+  emailLabel: "Correo electrónico",
+  emailPlaceholder: "tu@empresa.cl",
+  passwordLabel: "Contraseña",
+  passwordHint: "Mínimo 8 caracteres.",
+  passwordConfirmLabel: "Repite tu contraseña",
+  empresaLabel: "Nombre de tu empresa o taller",
   empresaPlaceholder: "Ej: Vidrios del Sur",
+  countryLabel: "País donde operas",
+  countryHint: "No te preocupes, podrás cambiarlo más tarde.",
   whatsappLabel: "WhatsApp",
-  whatsappPlaceholder: "+56 9 0000 0000",
-  ciudadLabel: "Ciudad o comuna",
+  whatsappHint: "Te contactaremos por este medio sólo si lo necesitas.",
+  ciudadLabel: "Ciudad / localidad (opcional)",
   ciudadPlaceholder: "Ej: Puente Alto",
-  mensajeLabel: "Mensaje opcional",
-  mensajePlaceholder: "Algo especial para configurar tu cuenta?",
-  submit: "Solicitar configuracion asistida",
-  submitting: "Enviando solicitud...",
-  loginPrompt: "Ya tienes acceso?",
-  loginAction: "Iniciar sesion",
-  trialNote:
-    "Con Google activas tu prueba al instante. El formulario es solo si prefieres que te configuremos la cuenta.",
-  successTitle: "Solicitud recibida",
-  successMessage:
-    "Recibimos tus datos. Te contactaremos por WhatsApp para dejar tu cuenta configurada.",
-  visualEyebrow: "Prueba gratuita",
-  visualTitle: "Empieza con Ventora configurado para tu forma real de vender",
-  visualDescription:
-    "Pensado para maestros, talleres y empresas de vidrios y aluminio que necesitan captar, ordenar y cotizar sin improvisar.",
-  divider: "o solicita configuracion asistida",
+  accountSubmit: "Continuar",
+  businessSubmit: "Entrar a Ventora",
+  submitting: "Creando tu cuenta…",
+  loginPrompt: "¿Ya tienes una cuenta?",
+  loginAction: "Inicia sesión",
+  accountTerms: "Al continuar aceptas nuestros",
+  terms: "Términos de servicio",
+  and: "y",
+  privacy: "Política de privacidad.",
+  securityTitle: "Tu información está segura",
+  securityText: "Usamos cifrado de nivel empresarial para proteger tus datos.",
+  trialStarts: "Tu prueba de 15 días comienza ahora",
+  trialTitle: "Prueba todas las funciones",
+  trialItems: [
+    "15 días de acceso completo",
+    "Sin tarjeta de crédito",
+    "Cancela cuando quieras",
+  ],
+  assistanceTitle: "Necesitas ayuda para configurar Ventora?",
+  assistanceText: "Nuestro equipo puede ayudarte a dejar todo listo.",
+  assistanceAction: "Quiero ayuda para configurar",
+  errorGeneric: "No pudimos crear tu cuenta. Intenta de nuevo.",
 };
 
+function normalizeText(value: string) {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
+function Progress({
+  step,
+  onBack,
+}: {
+  step: RegistrationStep;
+  onBack: () => void;
+}) {
+  const isBusiness = step === "business";
+
+  return (
+    <div className={rs.progress} aria-label={`Paso ${isBusiness ? 2 : 1} de 2`}>
+      {isBusiness ? (
+        <button
+          type="button"
+          className={rs.backButton}
+          aria-label="Volver a crear cuenta"
+          onClick={onBack}
+        >
+          <ArrowLeft size={22} aria-hidden />
+        </button>
+      ) : null}
+      <span
+        className={`${rs.stepBadge} ${isBusiness ? rs.stepDone : rs.stepCurrent}`}
+      >
+        {isBusiness ? <Check size={17} aria-hidden /> : "1"}
+      </span>
+      <span className={rs.stepLabel}>
+        {isBusiness ? "Cuenta creada" : "Crear cuenta"}
+      </span>
+      <span
+        className={`${rs.progressLine} ${isBusiness ? rs.progressLineDone : ""}`}
+        aria-hidden
+      />
+      <span
+        className={`${rs.stepBadge} ${isBusiness ? rs.stepCurrent : rs.stepUpcoming}`}
+      >
+        2
+      </span>
+      {isBusiness ? (
+        <span className={rs.stepLabel}>Datos de tu empresa</span>
+      ) : null}
+    </div>
+  );
+}
+
 export default function RegistroView() {
-  const { signInWithGoogle } = useAuth({ passive: true });
+  const router = useRouter();
+  const { signIn, signInWithGoogle } = useAuth({ passive: true });
+  const [step, setStep] = useState<RegistrationStep>("account");
   const [nombre, setNombre] = useState("");
-  const [empresa, setEmpresa] = useState("");
-  const [whatsapp, setWhatsapp] = useState("+56 9 ");
+  const [empresaNombre, setEmpresaNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [countryCode, setCountryCode] = useState<SupportedCountryCode>("CL");
+  const [whatsapp, setWhatsapp] = useState("+56 ");
   const [ciudadComuna, setCiudadComuna] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [cargando, setCargando] = useState(false);
-  const [cargandoOAuth, setCargandoOAuth] = useState<AuthOAuthProvider | null>(null);
+  const [cargandoOAuth, setCargandoOAuth] = useState<AuthOAuthProvider | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState(false);
+
+  const selectedCountry = getCountryPreset(countryCode);
+  const disabled = cargando || Boolean(cargandoOAuth);
+  const phoneWithoutPrefix = whatsapp
+    .replace(selectedCountry.phoneCountryCode, "")
+    .trimStart();
 
   const handleOAuthSignup = async (provider: AuthOAuthProvider) => {
-    if (cargandoOAuth || cargando) {
-      return;
-    }
+    if (disabled) return;
 
     setCargandoOAuth(provider);
     setError(null);
-
     googleTagService.trackEvent(`${provider}_oauth_started`, {
       event_category: "auth",
       event_label: "signup",
@@ -81,291 +172,542 @@ export default function RegistroView() {
     });
 
     try {
-      await signInWithGoogle({
-        intent: "signup",
-        nextPath: "/activacion",
-      });
+      await signInWithGoogle({ intent: "signup", nextPath: "/activacion" });
     } catch {
       setError("No pudimos iniciar el registro con Google. Intenta de nuevo.");
-      googleTagService.trackEvent(`${provider}_signup_abandoned`, {
-        event_category: "auth",
-        event_label: "oauth_start_failed",
-        oauth_provider: provider,
-      });
       setCargandoOAuth(null);
     }
   };
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleAccountSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const normalizedNombre = normalizeText(nombre);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedNombre.length < 2) {
+      setError("Ingresa tu nombre.");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/u.test(normalizedEmail)) {
+      setError("Ingresa un correo valido.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Tu contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (password !== passwordConfirmation) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setError(null);
+    setStep("business");
+  }
+
+  async function handleBusinessSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (disabled) return;
+
+    const normalizedNombre = normalizeText(nombre);
+    const normalizedEmpresa = normalizeText(empresaNombre);
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCiudad = normalizeText(ciudadComuna);
+    const normalizedWhatsapp = normalizePhoneToE164(whatsapp, countryCode);
+
+    if (normalizedEmpresa.length < 2) {
+      setError("Ingresa el nombre de tu empresa o taller.");
+      return;
+    }
+    if (!normalizedWhatsapp) {
+      setError("Ingresa un WhatsApp válido con código de país.");
+      return;
+    }
+    if (normalizedCiudad.length === 1) {
+      setError("La ciudad o localidad debe tener al menos 2 caracteres.");
+      return;
+    }
+
     setError(null);
     setCargando(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre,
-          empresa,
-          whatsapp,
-          ciudadComuna,
-          mensaje,
+          nombre: normalizedNombre,
+          empresaNombre: normalizedEmpresa,
+          email: normalizedEmail,
+          password,
+          whatsapp: normalizedWhatsapp,
+          countryCode,
+          ciudadComuna: normalizedCiudad,
+          consentimientoAceptado: true,
         }),
       });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        accountComplete?: boolean;
+      } | null;
 
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-
-      if (!response.ok) {
-        setError(payload?.error ?? "No pudimos recibir tu solicitud.");
+      if (!response.ok || !payload?.accountComplete) {
+        setError(payload?.error ?? copy.errorGeneric);
         return;
       }
 
-      setEnviado(true);
+      googleTagService.trackEvent("trial_started", {
+        event_category: "auth",
+        event_label: "password_signup",
+        next_path: "/activacion",
+      });
+      await signIn({ email: normalizedEmail, password });
+      googleTagService.trackEvent("password_signup_completed", {
+        event_category: "auth",
+        event_label: "new_org",
+        next_path: "/activacion",
+      });
+      router.replace("/activacion");
     } catch {
-      setError("No pudimos recibir tu solicitud. Revisa tu conexion e intenta de nuevo.");
+      setError(
+        "Tu cuenta fue creada, pero no pudimos abrir la sesión. Inicia sesión con tu correo y contraseña.",
+      );
     } finally {
       setCargando(false);
     }
   }
 
   return (
-    <main className={s.root}>
-      <section className={s.formPanel}>
-        <div className={s.formShell}>
-          <Link href="/" className={s.brand} aria-label="Ventora">
-            <Image
-              src="/brand/ventora-logo-premium-dark.svg"
-              alt="Ventora"
-              width={348}
-              height={82}
-              className={s.brandLogo}
-              unoptimized
-            />
-          </Link>
-
-          <div className={s.formCard}>
-            <header className={s.formHeader}>
-              <h1 className={s.formTitle}>{copy.title}</h1>
-              <p className={s.formSubtitle}>{copy.subtitle}</p>
-            </header>
-
-            {enviado ? (
-              <div className={s.successState} role="status" aria-live="polite">
-                <CheckCircle2 size={28} aria-hidden />
-                <div>
-                  <h2>{copy.successTitle}</h2>
-                  <p>{copy.successMessage}</p>
-                </div>
-                <div className={s.successActions}>
-                  <Link className={s.primaryButton} href="/login">
-                    Ir a iniciar sesion
-                    <ArrowRight size={18} aria-hidden />
-                  </Link>
-                  <Link className={s.secondaryButton} href="/">
-                    Volver al inicio
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className={s.form}>
-                  <GoogleAuthButton
-                    label={copy.googlePrimary}
-                    loading={cargandoOAuth === "google"}
-                    disabled={cargando || Boolean(cargandoOAuth)}
-                    onClick={() => {
-                      void handleOAuthSignup("google");
-                    }}
-                  />
-
-                  <div className={s.divider}>
-                    <span aria-hidden />
-                    <p>{copy.divider}</p>
-                    <span aria-hidden />
-                  </div>
-
-                  <header className={s.formHeader}>
-                    <h2 className={s.formTitle}>{copy.assistedTitle}</h2>
-                    <p className={s.formSubtitle}>{copy.assistedSubtitle}</p>
-                  </header>
-                </div>
-
-                <form
-                  className={s.form}
-                  onSubmit={onSubmit}
-                  noValidate
-                  method="post"
-                  action="javascript:void(0)"
-                >
-                  <div className={`${s.field} ${s.fieldCompact}`}>
-                    <label className={s.fieldLabel} htmlFor="nombre">
-                      {copy.nombreLabel}
-                    </label>
-                    <div className={s.fieldControl}>
-                      <UserRound size={18} aria-hidden />
-                      <input
-                        id="nombre"
-                        name="nombre"
-                        type="text"
-                        className={s.fieldInput}
-                        placeholder={copy.nombrePlaceholder}
-                        value={nombre}
-                        onChange={(event) => {
-                          setNombre(event.target.value);
-                          setError(null);
-                        }}
-                        autoComplete="name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`${s.field} ${s.fieldCompact}`}>
-                    <label className={s.fieldLabel} htmlFor="empresa">
-                      {copy.empresaLabel}
-                    </label>
-                    <div className={s.fieldControl}>
-                      <Building2 size={18} aria-hidden />
-                      <input
-                        id="empresa"
-                        name="empresa"
-                        type="text"
-                        className={s.fieldInput}
-                        placeholder={copy.empresaPlaceholder}
-                        value={empresa}
-                        onChange={(event) => {
-                          setEmpresa(event.target.value);
-                          setError(null);
-                        }}
-                        autoComplete="organization"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`${s.field} ${s.fieldCompact}`}>
-                    <label className={s.fieldLabel} htmlFor="whatsapp">
-                      {copy.whatsappLabel}
-                    </label>
-                    <div className={s.fieldControl}>
-                      <Phone size={18} aria-hidden />
-                      <input
-                        id="whatsapp"
-                        name="whatsapp"
-                        type="tel"
-                        className={s.fieldInput}
-                        placeholder={copy.whatsappPlaceholder}
-                        value={whatsapp}
-                        onChange={(event) => {
-                          setWhatsapp(event.target.value);
-                          setError(null);
-                        }}
-                        autoComplete="tel"
-                        inputMode="tel"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`${s.field} ${s.fieldCompact}`}>
-                    <label className={s.fieldLabel} htmlFor="ciudadComuna">
-                      {copy.ciudadLabel}
-                    </label>
-                    <div className={s.fieldControl}>
-                      <MapPin size={18} aria-hidden />
-                      <input
-                        id="ciudadComuna"
-                        name="ciudadComuna"
-                        type="text"
-                        className={s.fieldInput}
-                        placeholder={copy.ciudadPlaceholder}
-                        value={ciudadComuna}
-                        onChange={(event) => {
-                          setCiudadComuna(event.target.value);
-                          setError(null);
-                        }}
-                        autoComplete="address-level2"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`${s.field} ${s.fieldOptional}`}>
-                    <label className={s.fieldLabel} htmlFor="mensaje">
-                      {copy.mensajeLabel}
-                    </label>
-                    <div className={s.fieldControl}>
-                      <MessageSquareText size={18} aria-hidden />
-                      <textarea
-                        id="mensaje"
-                        name="mensaje"
-                        className={`${s.fieldInput} ${s.fieldTextarea}`}
-                        placeholder={copy.mensajePlaceholder}
-                        value={mensaje}
-                        onChange={(event) => {
-                          setMensaje(event.target.value);
-                          setError(null);
-                        }}
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-
-                  <p className={s.helperText}>{copy.trialNote}</p>
-
-                  {error ? (
-                    <div className={s.errorBox} role="alert" aria-live="polite">
-                      <span className={s.errorMark} aria-hidden>
-                        !
-                      </span>
-                      <span>{error}</span>
-                    </div>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    className={s.secondaryButton}
-                    disabled={cargando || Boolean(cargandoOAuth)}
-                  >
-                    <span className={s.buttonContent}>
-                      {cargando ? <span className={s.spinner} aria-hidden /> : null}
-                      {cargando ? copy.submitting : copy.submit}
-                    </span>
-                    <ArrowRight size={18} aria-hidden />
-                  </button>
-                </form>
-              </>
-            )}
-
-            <p className={s.signupText}>
-              <span>{copy.loginPrompt}</span>{" "}
-              <Link href="/login">{copy.loginAction}</Link>
+    <main className={rs.root}>
+      <section className={rs.registrationShell}>
+        <aside className={rs.valuePanel} aria-label="Beneficios de Ventora">
+          <div className={rs.valuePanelTop}>
+            <p className={rs.eyebrow}>VENTORA · PRUEBA GRATIS</p>
+            <h2>Tu empresa lista para cotizar desde el primer dia.</h2>
+            <p className={rs.valueDescription}>
+              Registra tu negocio una vez. Ventora deja listos tus datos para
+              cotizar, enviar PDFs profesionales y atender nuevos trabajos.
             </p>
           </div>
-        </div>
-      </section>
 
-      <section className={s.visualPanel} aria-hidden>
-        <Image
-          src="/brand/login-hero-premium.png"
-          alt=""
-          fill
-          priority
-          sizes="(max-width: 920px) 100vw, 60vw"
-          className={s.visualImage}
-        />
-        <div className={s.visualOverlay} />
+          <ul className={rs.valueList}>
+            <li>
+              <span className={rs.valueIcon}>
+                <Check size={17} aria-hidden />
+              </span>
+              <span>
+                <strong>PDF con tu identidad</strong>
+                Tu empresa y datos de contacto ya aparecen preparados.
+              </span>
+            </li>
+            <li>
+              <span className={rs.valueIcon}>
+                <Check size={17} aria-hidden />
+              </span>
+              <span>
+                <strong>15 días para probarlo en serio</strong>
+                Acceso completo, sin tarjeta de crédito.
+              </span>
+            </li>
+            <li>
+              <span className={rs.valueIcon}>
+                <Check size={17} aria-hidden />
+              </span>
+              <span>
+                <strong>Soporte en español</strong>
+                Te ayudamos si necesitas dejar algo configurado.
+              </span>
+            </li>
+          </ul>
 
-        <div className={s.visualCopy}>
-          <p className={s.visualEyebrow}>{copy.visualEyebrow}</p>
-          <h2 className={s.visualTitle}>{copy.visualTitle}</h2>
-          <p className={s.visualDescription}>{copy.visualDescription}</p>
+          <div className={rs.previewCard}>
+            <div className={rs.previewCardTop}>
+              <span className={rs.previewMark}>V</span>
+              <span>
+                <strong>Tu primer PDF</strong>
+                <small>Quedara listo con tus datos</small>
+              </span>
+              <CheckCircle2 size={18} aria-hidden />
+            </div>
+            <span className={rs.previewLine} />
+            <span className={rs.previewLineShort} />
+            <div className={rs.previewMeta}>
+              <span>Empresa</span>
+              <span>WhatsApp</span>
+              <span>País</span>
+            </div>
+          </div>
+        </aside>
+
+        <div className={rs.card}>
+          <Progress
+            step={step}
+            onBack={() => {
+              setError(null);
+              setStep("account");
+            }}
+          />
+
+          {step === "account" ? (
+            <form className={rs.form} onSubmit={handleAccountSubmit} noValidate>
+              <header className={rs.header}>
+                <h1>{copy.accountTitle}</h1>
+                <p>{copy.accountSubtitle}</p>
+              </header>
+
+              <GoogleAuthButton
+                label={copy.googlePrimary}
+                loading={cargandoOAuth === "google"}
+                disabled={disabled}
+                onClick={() => void handleOAuthSignup("google")}
+              />
+
+              <div className={s.divider}>
+                <span aria-hidden />
+                <p>{copy.divider}</p>
+                <span aria-hidden />
+              </div>
+
+              <p className={rs.formSectionTitle}>Usa tu correo electrónico</p>
+              <div className={rs.fieldGrid}>
+                <label className={s.field} htmlFor="nombre">
+                  <span className={s.fieldLabel}>{copy.nameLabel}</span>
+                  <span className={s.fieldControl}>
+                    <UserRound size={18} aria-hidden />
+                    <input
+                      id="nombre"
+                      className={s.fieldInput}
+                      value={nombre}
+                      onChange={(event) => {
+                        setNombre(event.target.value);
+                        setError(null);
+                      }}
+                      placeholder={copy.namePlaceholder}
+                      autoComplete="name"
+                      minLength={2}
+                      maxLength={120}
+                      required
+                      disabled={disabled}
+                    />
+                  </span>
+                </label>
+                <label className={s.field} htmlFor="email">
+                  <span className={s.fieldLabel}>{copy.emailLabel}</span>
+                  <span className={s.fieldControl}>
+                    <Mail size={18} aria-hidden />
+                    <input
+                      id="email"
+                      className={s.fieldInput}
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setError(null);
+                      }}
+                      placeholder={copy.emailPlaceholder}
+                      autoComplete="email"
+                      inputMode="email"
+                      type="email"
+                      maxLength={320}
+                      required
+                      disabled={disabled}
+                    />
+                  </span>
+                </label>
+                <label className={s.field} htmlFor="password">
+                  <span className={s.fieldLabel}>{copy.passwordLabel}</span>
+                  <span className={s.fieldControl}>
+                    <LockKeyhole size={18} aria-hidden />
+                    <input
+                      id="password"
+                      className={s.fieldInput}
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setError(null);
+                      }}
+                      autoComplete="new-password"
+                      type={mostrarPassword ? "text" : "password"}
+                      minLength={8}
+                      required
+                      disabled={disabled}
+                    />
+                    <button
+                      className={s.passwordToggle}
+                      type="button"
+                      aria-label={
+                        mostrarPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
+                      onClick={() => setMostrarPassword((value) => !value)}
+                    >
+                      {mostrarPassword ? (
+                        <EyeOff size={18} aria-hidden />
+                      ) : (
+                        <Eye size={18} aria-hidden />
+                      )}
+                    </button>
+                  </span>
+                  <span className={rs.fieldHint}>{copy.passwordHint}</span>
+                </label>
+                <label className={s.field} htmlFor="passwordConfirmation">
+                  <span className={s.fieldLabel}>
+                    {copy.passwordConfirmLabel}
+                  </span>
+                  <span className={s.fieldControl}>
+                    <LockKeyhole size={18} aria-hidden />
+                    <input
+                      id="passwordConfirmation"
+                      className={s.fieldInput}
+                      value={passwordConfirmation}
+                      onChange={(event) => {
+                        setPasswordConfirmation(event.target.value);
+                        setError(null);
+                      }}
+                      autoComplete="new-password"
+                      type={mostrarConfirmacion ? "text" : "password"}
+                      minLength={8}
+                      required
+                      disabled={disabled}
+                    />
+                    <button
+                      className={s.passwordToggle}
+                      type="button"
+                      aria-label={
+                        mostrarConfirmacion
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
+                      onClick={() => setMostrarConfirmacion((value) => !value)}
+                    >
+                      {mostrarConfirmacion ? (
+                        <EyeOff size={18} aria-hidden />
+                      ) : (
+                        <Eye size={18} aria-hidden />
+                      )}
+                    </button>
+                  </span>
+                </label>
+              </div>
+
+              {error ? (
+                <div className={s.errorBox} role="alert">
+                  <span className={s.errorMark} aria-hidden>
+                    !
+                  </span>
+                  <span>{error}</span>
+                </div>
+              ) : null}
+              <button
+                type="submit"
+                className={s.primaryButton}
+                disabled={disabled}
+              >
+                {copy.accountSubmit}
+                <ArrowRight size={19} aria-hidden />
+              </button>
+              <p className={rs.loginPrompt}>
+                {copy.loginPrompt} <Link href="/login">{copy.loginAction}</Link>
+              </p>
+              <aside className={rs.securityNote}>
+                <span className={rs.noteIcon}>
+                  <ShieldCheck size={23} aria-hidden />
+                </span>
+                <span>
+                  <strong>{copy.securityTitle}</strong>
+                  {copy.securityText}
+                </span>
+              </aside>
+              <p className={rs.terms}>
+                {copy.accountTerms} <Link href="/terms">{copy.terms}</Link>{" "}
+                {copy.and} <Link href="/privacy">{copy.privacy}</Link>
+              </p>
+            </form>
+          ) : (
+            <form
+              className={rs.form}
+              onSubmit={handleBusinessSubmit}
+              noValidate
+            >
+              <header className={rs.header}>
+                <h1>{copy.businessTitle}</h1>
+                <p>{copy.businessSubtitle}</p>
+              </header>
+
+              <label className={s.field} htmlFor="empresaNombre">
+                <span className={s.fieldLabel}>{copy.empresaLabel}</span>
+                <span className={s.fieldControl}>
+                  <Building2 size={18} aria-hidden />
+                  <input
+                    id="empresaNombre"
+                    className={s.fieldInput}
+                    value={empresaNombre}
+                    onChange={(event) => {
+                      setEmpresaNombre(event.target.value);
+                      setError(null);
+                    }}
+                    placeholder={copy.empresaPlaceholder}
+                    autoComplete="organization"
+                    minLength={2}
+                    maxLength={160}
+                    required
+                    disabled={disabled}
+                  />
+                </span>
+              </label>
+              <div className={rs.businessFieldGrid}>
+                <label className={s.field} htmlFor="countryCode">
+                  <span className={s.fieldLabel}>{copy.countryLabel}</span>
+                  <span className={`${s.fieldControl} ${rs.selectControl}`}>
+                    <Globe2 size={18} aria-hidden />
+                    <select
+                      id="countryCode"
+                      className={s.fieldInput}
+                      value={countryCode}
+                      onChange={(event) => {
+                        const nextCountry = event.target
+                          .value as SupportedCountryCode;
+                        setCountryCode(nextCountry);
+                        setWhatsapp(
+                          `${getCountryPreset(nextCountry).phoneCountryCode} `,
+                        );
+                        setError(null);
+                      }}
+                      disabled={disabled}
+                    >
+                      {COUNTRY_PRESET_OPTIONS.map((country) => (
+                        <option
+                          key={country.countryCode}
+                          value={country.countryCode}
+                        >
+                          {country.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={18} aria-hidden />
+                  </span>
+                  <span className={rs.fieldHint}>{copy.countryHint}</span>
+                </label>
+                <label className={s.field} htmlFor="ciudadComuna">
+                  <span className={s.fieldLabel}>{copy.ciudadLabel}</span>
+                  <span className={s.fieldControl}>
+                    <MapPin size={18} aria-hidden />
+                    <input
+                      id="ciudadComuna"
+                      className={s.fieldInput}
+                      value={ciudadComuna}
+                      onChange={(event) => {
+                        setCiudadComuna(event.target.value);
+                        setError(null);
+                      }}
+                      placeholder={copy.ciudadPlaceholder}
+                      autoComplete="address-level2"
+                      maxLength={120}
+                      disabled={disabled}
+                    />
+                  </span>
+                </label>
+              </div>
+              <label className={s.field} htmlFor="whatsapp">
+                <span className={s.fieldLabel}>{copy.whatsappLabel}</span>
+                <span className={`${s.fieldControl} ${rs.phoneControl}`}>
+                  <Phone size={18} aria-hidden />
+                  <span className={rs.phonePrefix}>
+                    {selectedCountry.phoneCountryCode}
+                  </span>
+                  <input
+                    id="whatsapp"
+                    className={s.fieldInput}
+                    value={phoneWithoutPrefix}
+                    onChange={(event) => {
+                      setWhatsapp(
+                        `${selectedCountry.phoneCountryCode} ${event.target.value}`,
+                      );
+                      setError(null);
+                    }}
+                    placeholder={selectedCountry.phonePlaceholder.replace(
+                      /^\+\d+\s*/u,
+                      "",
+                    )}
+                    autoComplete="tel"
+                    inputMode="tel"
+                    type="tel"
+                    required
+                    disabled={disabled}
+                  />
+                </span>
+                <span className={rs.fieldHint}>{copy.whatsappHint}</span>
+              </label>
+
+              {error ? (
+                <div className={s.errorBox} role="alert">
+                  <span className={s.errorMark} aria-hidden>
+                    !
+                  </span>
+                  <span>{error}</span>
+                </div>
+              ) : null}
+              <button
+                type="submit"
+                className={s.primaryButton}
+                disabled={disabled}
+              >
+                <span className={s.buttonContent}>
+                  {cargando ? <span className={s.spinner} aria-hidden /> : null}
+                  {cargando ? copy.submitting : copy.businessSubmit}
+                </span>
+                <ArrowRight size={19} aria-hidden />
+              </button>
+              <p className={rs.trialStarts}>
+                <CheckCircle2 size={19} aria-hidden />
+                {copy.trialStarts}
+              </p>
+              <aside className={rs.trialCard}>
+                <span className={rs.noteIcon}>
+                  <Gift size={24} aria-hidden />
+                </span>
+                <span>
+                  <strong>{copy.trialTitle}</strong>
+                  <ul>
+                    {copy.trialItems.map((item) => (
+                      <li key={item}>
+                        <CheckCircle2 size={16} aria-hidden />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </span>
+              </aside>
+            </form>
+          )}
         </div>
+
+        <aside className={rs.assistance}>
+          <span>
+            <strong>{copy.assistanceTitle}</strong>
+            {copy.assistanceText}
+          </span>
+          <a
+            href={`${VENTORA_CONTACT.demoMailto}&body=Necesito%20ayuda%20para%20configurar%20Ventora.`}
+          >
+            {copy.assistanceAction}
+            <ArrowRight size={17} aria-hidden />
+          </a>
+        </aside>
+        <footer className={rs.footer}>
+          <span>
+            <ShieldCheck size={18} aria-hidden />
+            Datos protegidos
+          </span>
+          <span>
+            <LockKeyhole size={18} aria-hidden />
+            Sin compromiso
+          </span>
+          <span>
+            <Phone size={18} aria-hidden />
+            Soporte en español
+          </span>
+        </footer>
       </section>
     </main>
   );

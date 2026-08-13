@@ -214,7 +214,7 @@ export const config = {
     "/cotizaciones/:path*",
     "/solicitudes/:path*",
     "/configuracion/:path*",
-    "/cuenta-vencida",
+    "/cuenta-vencida/:path*",
     "/api/admin/:path*",
   ],
 };

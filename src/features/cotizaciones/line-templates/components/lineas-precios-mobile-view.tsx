@@ -23,7 +23,6 @@ import {
   formatLineTemplatePriceLabel,
   LINE_TEMPLATE_CATEGORIA_LABELS,
 } from "@/features/cotizaciones/line-templates/utils/catalog-labels";
-import { formatCurrency } from "@/utils/formatCurrency";
 
 import s from "./lineas-precios-mobile-view.module.css";
 
@@ -72,6 +71,7 @@ type Props = {
   isUsingBase: boolean;
   usingBaseId: string | null;
   onUseBase: (recommendation: CatalogoInicioRapidoItem) => void;
+  formatMoney: (value: number) => string;
 };
 
 const MATERIAL_OPTIONS: Array<{ value: MobileCategoryFilter; label: string }> = [
@@ -177,6 +177,7 @@ export function LineasPreciosMobileView({
   isUsingBase: _isUsingBase,
   usingBaseId: _usingBaseId,
   onUseBase: _onUseBase,
+  formatMoney,
 }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const appliedFilterCount = [
@@ -347,12 +348,12 @@ export function LineasPreciosMobileView({
                       : formatLineTemplatePriceLabel(
                           template.unidadCobro,
                           template.precioM2Sugerido,
-                          formatCurrency
+                          formatMoney
                         )}
                   </strong>
                   <span>
                     Mínimo {template.minimoCobrable > 0
-                      ? formatCurrency(template.minimoCobrable)
+                      ? formatMoney(template.minimoCobrable)
                       : "sin definir"}
                   </span>
                 </div>
