@@ -259,6 +259,35 @@ export default function RegistroView() {
       countryCode,
     );
 
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "6b77cd",
+      },
+      body: JSON.stringify({
+        sessionId: "6b77cd",
+        runId: "pre-fix",
+        hypothesisId: "A,E",
+        location: "registro-view.tsx:handleBusinessSubmit",
+        message: "client whatsapp validation",
+        data: {
+          countryCode,
+          rawLen: rawWhatsapp.length,
+          digitCount: rawWhatsapp.replace(/\D/g, "").length,
+          normalizedOk: Boolean(normalizedWhatsapp),
+          source: whatsappLocal.trim()
+            ? "state"
+            : whatsappInput?.value.trim()
+              ? "querySelector"
+              : "ref",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     if (normalizedEmpresa.length < 2) {
       setError("Ingresa el nombre de tu empresa o taller.");
       return;
@@ -292,6 +321,32 @@ export default function RegistroView() {
         }),
       });
       const payload = (await response.json().catch(() => null)) as SignupApiPayload | null;
+
+      // #region agent log
+      fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "6b77cd",
+        },
+        body: JSON.stringify({
+          sessionId: "6b77cd",
+          runId: "pre-fix",
+          hypothesisId: "B,C,D",
+          location: "registro-view.tsx:handleBusinessSubmit:response",
+          message: "signup api response",
+          data: {
+            status: response.status,
+            ok: response.ok,
+            code: payload?.code ?? null,
+            field: payload?.field ?? null,
+            accountComplete: payload?.accountComplete ?? null,
+            clientNormalizedOk: Boolean(normalizedWhatsapp),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
       if (!response.ok || !payload?.accountComplete) {
         setError(resolveSignupErrorMessage(payload, countryCode, rawWhatsapp));

@@ -45,8 +45,36 @@ export function buildPhoneE164FromLocalDigits(
 
   const preset = getCountryPreset(countryCode);
   const e164Digits = `${preset.phoneCountryCode.slice(1)}${localDigits.replace(/^0/, "")}`;
+  const regexPass = /^[1-9]\d{7,14}$/.test(e164Digits);
 
-  return /^[1-9]\d{7,14}$/.test(e164Digits) ? `+${e164Digits}` : null;
+  // #region agent log
+  if (!regexPass || !localDigits) {
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "6b77cd",
+      },
+      body: JSON.stringify({
+        sessionId: "6b77cd",
+        runId: "pre-fix",
+        hypothesisId: "A",
+        location: "phone-number.service.ts:buildPhoneE164FromLocalDigits",
+        message: "compose failed",
+        data: {
+          countryCode,
+          inputLen: input.trim().length,
+          localDigitCount: localDigits.length,
+          e164DigitCount: e164Digits.length,
+          regexPass,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
+  return regexPass ? `+${e164Digits}` : null;
 }
 
 /** Variante explicita para formularios con prefijo fijo fuera del input. */

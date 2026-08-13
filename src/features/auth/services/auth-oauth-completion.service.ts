@@ -469,6 +469,30 @@ export async function provisionOrganizationFromOAuthUser(
     );
   }
 
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "6b77cd",
+    },
+    body: JSON.stringify({
+      sessionId: "6b77cd",
+      runId: "pre-fix",
+      hypothesisId: "C",
+      location: "auth-oauth-completion.service.ts:before-rpc",
+      message: "calling complete_google_oauth_account",
+      data: {
+        countryCode,
+        whatsappLen: whatsappE164.length,
+        hasPlusPrefix: whatsappE164.startsWith("+"),
+        e164DigitCount: whatsappE164.replace(/\D/g, "").length,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   const admin = deps.admin ?? createAdminClient();
   const { data, error } = await admin.rpc("complete_google_oauth_account", {
     p_auth_user_id: authUserId,
@@ -482,6 +506,29 @@ export async function provisionOrganizationFromOAuthUser(
   });
 
   if (error) {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "6b77cd",
+      },
+      body: JSON.stringify({
+        sessionId: "6b77cd",
+        runId: "pre-fix",
+        hypothesisId: "C,D",
+        location: "auth-oauth-completion.service.ts:rpc-error",
+        message: "rpc failed",
+        data: {
+          code: error.code ?? null,
+          details: error.details ?? null,
+          hint: error.hint ?? null,
+          messageIncludesWhatsapp: /whatsapp/i.test(error.message ?? ""),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (error.code === "23505") {
       throw new AuthOAuthCompletionError(
         "Este correo ya esta vinculado a otra cuenta de acceso.",

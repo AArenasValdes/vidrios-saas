@@ -97,6 +97,28 @@ export async function POST(request: Request) {
     );
 
   if (!whatsapp) {
+    // #region agent log
+    fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "6b77cd",
+      },
+      body: JSON.stringify({
+        sessionId: "6b77cd",
+        runId: "pre-fix",
+        hypothesisId: "B",
+        location: "signup/route.ts:early-whatsapp",
+        message: "server early whatsapp rejected",
+        data: {
+          countryCode,
+          bodyWhatsappLen: String(body.whatsapp ?? "").length,
+          bodyLocalLen: String(body.whatsappLocal ?? "").length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     return NextResponse.json(
       {
         error: getWhatsappValidationHint(
@@ -111,6 +133,28 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+  // #region agent log
+  fetch("http://127.0.0.1:7423/ingest/e8861e2e-aed2-43f9-92a4-d0c0e41b1a08", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "6b77cd",
+    },
+    body: JSON.stringify({
+      sessionId: "6b77cd",
+      runId: "pre-fix",
+      hypothesisId: "B,D",
+      location: "signup/route.ts:post-whatsapp",
+      message: "server whatsapp accepted, proceeding auth",
+      data: {
+        countryCode,
+        resolvedLen: whatsapp.length,
+        hasPlusPrefix: whatsapp.startsWith("+"),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   const { data: createdAuth, error: createAuthError } =
     await admin.auth.admin.createUser({
       email,
