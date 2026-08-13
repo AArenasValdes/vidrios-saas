@@ -39,13 +39,14 @@ class EmailClientManager {
     const apiKey = process.env.EMAIL_API_KEY;
 
     if (emailProvider === "resend" && apiKey) {
-      // Lazy load Resend only if configured
-        try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { default: Resend } = require("resend");
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { default: Resend } = require("resend");
         const resend = new Resend(apiKey);
-        return new ResendEmailService(resend);
-      } catch {
+        this.provider = new ResendEmailService(resend);
+        return this.provider;
+      } catch (error) {
+        console.error("[email] No pudimos iniciar Resend. Usamos consola.", error);
         this.provider = new ConsoleEmailService();
         return this.provider;
       }
@@ -72,16 +73,33 @@ class ResendEmailService implements EmailService {
   }
 
   async send(input: SendEmailInput) {
-    try {
-      await (this.resend as { emails: { send: (args: SendEmailInput & { from: string }) => Promise<unknown> } }).emails.send({
-        from: process.env.EMAIL_FROM ?? "Ventora <notificaciones@ventorap.cl>",
-        to: input.to,
-        subject: input.subject,
-        html: input.html,
-        text: input.text,
-      });
-    } catch (error) {
-    console.error("Email send failed:", error);
+    const replyTo =
+      process.env.EMAIL_REPLY_TO?.trim() || "ventora.cl@gmail.com";
+
+    const result = (await (
+      this.resend as {
+        emails: {
+          send: (args: {
+            from: string;
+            to: string;
+            subject: string;
+            html: string;
+            text: string;
+            replyTo?: string;
+          }) => Promise<{ data?: unknown; error?: { message?: string } | null }>;
+        };
+      }
+    ).emails.send({
+      from: process.env.EMAIL_FROM ?? "Ventora <hola@ventorap.cl>",
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+      replyTo,
+    })) as { data?: unknown; error?: { message?: string } | null };
+
+    if (result?.error) {
+      throw new Error(result.error.message ?? "No pudimos enviar el correo.");
     }
   }
 }

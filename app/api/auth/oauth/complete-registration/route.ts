@@ -6,6 +6,7 @@ import {
   AuthOAuthCompletionError,
   provisionOrganizationFromOAuthUser,
 } from "@/features/auth/services/auth-oauth-completion.service";
+import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
 import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type CompleteRegistrationBody = Record<string, unknown> & {
@@ -57,6 +58,15 @@ export async function POST(request: Request) {
       consentimientoAceptado: body.consentimientoAceptado === true,
       countryCode: body.countryCode ?? "",
     });
+
+    if (!result.alreadyProvisioned) {
+      void sendWelcomeEmail({
+        to: user.email,
+        nombre: body.nombre ?? "",
+        empresaNombre: body.empresaNombre ?? result.empresaNombre ?? "",
+        trialEndsAt: result.trialEndsAt,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

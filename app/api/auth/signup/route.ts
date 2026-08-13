@@ -6,6 +6,7 @@ import {
   AuthOAuthCompletionError,
   provisionOrganizationFromOAuthUser,
 } from "@/features/auth/services/auth-oauth-completion.service";
+import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
 import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type SignupBody = Record<string, unknown> & {
@@ -101,6 +102,14 @@ export async function POST(request: Request) {
       },
       { admin },
     );
+
+    // No bloquea el alta si Resend falla.
+    void sendWelcomeEmail({
+      to: email,
+      nombre: body.nombre ?? "",
+      empresaNombre: body.empresaNombre ?? result.empresaNombre ?? "",
+      trialEndsAt: result.trialEndsAt,
+    });
 
     return NextResponse.json(
       {

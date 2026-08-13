@@ -235,9 +235,10 @@ Si se toca cotizaciones, hay que cuidar:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-EMAIL_PROVIDER=
+EMAIL_PROVIDER=resend
 EMAIL_API_KEY=
-EMAIL_FROM=
+EMAIL_FROM=Ventora <hola@ventorap.cl>
+EMAIL_REPLY_TO=ventora.cl@gmail.com
 ```
 
 Tambien se espera:
