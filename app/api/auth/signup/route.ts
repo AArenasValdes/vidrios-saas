@@ -8,6 +8,7 @@ import {
 } from "@/features/auth/services/auth-oauth-completion.service";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
 import {
+  composeAuthWhatsappFromLocalInput,
   getWhatsappValidationHint,
   resolveAuthWhatsapp,
 } from "@/features/organization-region/services/phone-number.service";
@@ -20,6 +21,7 @@ type SignupBody = Record<string, unknown> & {
   email?: string;
   password?: string;
   whatsapp?: string;
+  whatsappLocal?: string;
   ciudadComuna?: string;
   consentimientoAceptado?: boolean;
   countryCode?: string;
@@ -87,12 +89,20 @@ export async function POST(request: Request) {
   }
 
   const countryCode = normalizeSupportedCountryCode(body.countryCode ?? "");
-  const whatsapp = resolveAuthWhatsapp(body.whatsapp ?? "", countryCode);
+  const whatsapp =
+    resolveAuthWhatsapp(body.whatsapp ?? "", countryCode) ??
+    composeAuthWhatsappFromLocalInput(
+      body.whatsappLocal ?? body.whatsapp ?? "",
+      countryCode,
+    );
 
   if (!whatsapp) {
     return NextResponse.json(
       {
-        error: getWhatsappValidationHint(countryCode),
+        error: getWhatsappValidationHint(
+          countryCode,
+          String(body.whatsappLocal ?? body.whatsapp ?? ""),
+        ),
         code: "invalid_whatsapp",
         field: "whatsapp",
       },

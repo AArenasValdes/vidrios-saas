@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OrganizacionId } from "@/features/auth/types/auth";
 import {
+  composeAuthWhatsappFromLocalInput,
+  ensureAuthWhatsappE164,
   getWhatsappValidationHint,
   normalizePhoneToE164,
   resolveAuthWhatsapp,
@@ -388,7 +390,9 @@ export async function provisionOrganizationFromOAuthUser(
   const empresaNombre = normalizeText(input.empresaNombre ?? "");
   const ciudadComuna = normalizeText(input.ciudadComuna ?? "");
   const countryCode = normalizeSupportedCountryCode(input.countryCode);
-  const whatsapp = resolveAuthWhatsapp(input.whatsapp ?? "", countryCode);
+  const whatsapp =
+    resolveAuthWhatsapp(input.whatsapp ?? "", countryCode) ??
+    composeAuthWhatsappFromLocalInput(input.whatsapp ?? "", countryCode);
 
   if (!authUserId || !email) {
     throw new AuthOAuthCompletionError(
@@ -431,7 +435,15 @@ export async function provisionOrganizationFromOAuthUser(
 
   if (!whatsapp) {
     throw new AuthOAuthCompletionError(
-      getWhatsappValidationHint(countryCode),
+      getWhatsappValidationHint(countryCode, input.whatsapp ?? ""),
+      "invalid_whatsapp",
+    );
+  }
+
+  const whatsappE164 = ensureAuthWhatsappE164(whatsapp);
+  if (!whatsappE164) {
+    throw new AuthOAuthCompletionError(
+      getWhatsappValidationHint(countryCode, input.whatsapp ?? ""),
       "invalid_whatsapp",
     );
   }
@@ -463,7 +475,7 @@ export async function provisionOrganizationFromOAuthUser(
     p_email: email,
     p_nombre: nombre,
     p_empresa_nombre: empresaNombre,
-    p_whatsapp: whatsapp,
+    p_whatsapp: whatsappE164,
     p_ciudad_comuna: ciudadComuna,
     p_consent: true,
     p_country_code: countryCode,
@@ -481,7 +493,7 @@ export async function provisionOrganizationFromOAuthUser(
       const message = error.message ?? "";
       if (/whatsapp/i.test(message)) {
         throw new AuthOAuthCompletionError(
-          getWhatsappValidationHint(countryCode),
+          getWhatsappValidationHint(countryCode, input.whatsapp ?? ""),
           "invalid_whatsapp",
         );
       }

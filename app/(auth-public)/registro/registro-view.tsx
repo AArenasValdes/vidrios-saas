@@ -28,8 +28,8 @@ import type { AuthOAuthProvider } from "@/features/auth/types/auth";
 import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import {
+  composeAuthWhatsappFromLocalInput,
   getWhatsappValidationHint,
-  resolveAuthWhatsapp,
 } from "@/features/organization-region/services/phone-number.service";
 import { getCountryPreset } from "@/features/organization-region/services/organization-region.service";
 import type { SupportedCountryCode } from "@/features/organization-region/types/organization-region";
@@ -105,12 +105,15 @@ function sanitizeLocalPhoneInput(value: string) {
 function resolveSignupErrorMessage(
   payload: SignupApiPayload | null,
   countryCode: SupportedCountryCode,
+  localWhatsapp = "",
 ) {
   if (!payload?.error) return copy.errorGeneric;
 
   switch (payload.code) {
     case "invalid_whatsapp":
-      return payload.error ?? getWhatsappValidationHint(countryCode);
+      return (
+        payload.error ?? getWhatsappValidationHint(countryCode, localWhatsapp)
+      );
     case "email_taken":
     case "identity_conflict":
       return payload.error ??
@@ -175,6 +178,7 @@ export default function RegistroView() {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [countryCode, setCountryCode] = useState<SupportedCountryCode>("CL");
+  const [whatsappLocal, setWhatsappLocal] = useState("");
   const whatsappInputRef = useRef<HTMLInputElement>(null);
   const [ciudadComuna, setCiudadComuna] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -242,21 +246,25 @@ export default function RegistroView() {
     const normalizedEmpresa = normalizeText(empresaNombre);
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedCiudad = normalizeText(ciudadComuna);
-    const whatsappInput = event.currentTarget.elements.namedItem(
-      "whatsappLocal",
+    const whatsappInput = event.currentTarget.querySelector(
+      "#whatsapp",
     ) as HTMLInputElement | null;
     const rawWhatsapp =
-      whatsappInput?.value ??
-      whatsappInputRef.current?.value ??
+      whatsappLocal.trim() ||
+      whatsappInput?.value.trim() ||
+      whatsappInputRef.current?.value.trim() ||
       "";
-    const normalizedWhatsapp = resolveAuthWhatsapp(rawWhatsapp, countryCode);
+    const normalizedWhatsapp = composeAuthWhatsappFromLocalInput(
+      rawWhatsapp,
+      countryCode,
+    );
 
     if (normalizedEmpresa.length < 2) {
       setError("Ingresa el nombre de tu empresa o taller.");
       return;
     }
     if (!normalizedWhatsapp) {
-      setError(getWhatsappValidationHint(countryCode));
+      setError(getWhatsappValidationHint(countryCode, rawWhatsapp));
       return;
     }
     if (normalizedCiudad.length === 1) {
@@ -277,6 +285,7 @@ export default function RegistroView() {
           email: normalizedEmail,
           password,
           whatsapp: normalizedWhatsapp,
+          whatsappLocal: rawWhatsapp,
           countryCode,
           ciudadComuna: normalizedCiudad,
           consentimientoAceptado: true,
@@ -285,7 +294,7 @@ export default function RegistroView() {
       const payload = (await response.json().catch(() => null)) as SignupApiPayload | null;
 
       if (!response.ok || !payload?.accountComplete) {
-        setError(resolveSignupErrorMessage(payload, countryCode));
+        setError(resolveSignupErrorMessage(payload, countryCode, rawWhatsapp));
         return;
       }
 
@@ -601,9 +610,7 @@ export default function RegistroView() {
                         const nextCountry = event.target
                           .value as SupportedCountryCode;
                         setCountryCode(nextCountry);
-                        if (whatsappInputRef.current) {
-                          whatsappInputRef.current.value = "";
-                        }
+                        setWhatsappLocal("");
                         setError(null);
                       }}
                       disabled={disabled}
@@ -655,16 +662,11 @@ export default function RegistroView() {
                     id="whatsapp"
                     name="whatsappLocal"
                     className={s.fieldInput}
-                    defaultValue=""
-                    onChange={() => {
-                      setError(null);
-                    }}
-                    onInput={(event) => {
-                      const input = event.currentTarget;
-                      const sanitized = sanitizeLocalPhoneInput(input.value);
-                      if (sanitized !== input.value) {
-                        input.value = sanitized;
-                      }
+                    value={whatsappLocal}
+                    onChange={(event) => {
+                      setWhatsappLocal(
+                        sanitizeLocalPhoneInput(event.target.value),
+                      );
                       setError(null);
                     }}
                     placeholder={selectedCountry.phonePlaceholder.replace(

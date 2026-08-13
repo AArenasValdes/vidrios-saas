@@ -49,6 +49,21 @@ export function buildPhoneE164FromLocalDigits(
   return /^[1-9]\d{7,14}$/.test(e164Digits) ? `+${e164Digits}` : null;
 }
 
+/** Variante explicita para formularios con prefijo fijo fuera del input. */
+export function composeAuthWhatsappFromLocalInput(
+  input: string,
+  countryCode: SupportedCountryCode | string = "CL",
+): string | null {
+  return buildPhoneE164FromLocalDigits(input, countryCode);
+}
+
+export function ensureAuthWhatsappE164(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.startsWith("+") ? trimmed : `+${trimmed.replace(/^\+/, "")}`;
+  return /^\+[1-9]\d{7,14}$/.test(normalized) ? normalized : null;
+}
+
 /** Conserva solo numeros E.164 plausibles; no reemplaza una validacion telecom por pais. */
 export function normalizePhoneToE164(
   input: string,
@@ -76,19 +91,20 @@ export function resolveAuthWhatsapp(
   const trimmed = input.trim();
   if (!trimmed) return null;
 
+  const fromLocal = composeAuthWhatsappFromLocalInput(trimmed, countryCode);
+  if (fromLocal) return fromLocal;
+
   const preset = getCountryPreset(countryCode);
   const candidates = [
     trimmed,
     `${preset.phoneCountryCode} ${trimmed}`,
     `${preset.phoneCountryCode}${trimmed}`,
-    extractLocalPhoneDigits(trimmed, countryCode),
   ];
 
   for (const candidate of candidates) {
-    if (!candidate) continue;
     const normalized =
-      buildPhoneE164FromLocalDigits(candidate, countryCode) ??
-      normalizePhoneToE164(candidate, countryCode);
+      normalizePhoneToE164(candidate, countryCode) ??
+      ensureAuthWhatsappE164(candidate);
     if (normalized) return normalized;
   }
 
@@ -97,8 +113,15 @@ export function resolveAuthWhatsapp(
 
 export function getWhatsappValidationHint(
   countryCode: SupportedCountryCode | string = "CL",
+  localInput = "",
 ): string {
   const preset = getCountryPreset(countryCode);
   const example = preset.phonePlaceholder.replace(/^\+\d+\s*/u, "");
-  return `Ingresa un WhatsApp valido para ${preset.label}. Ejemplo: ${example}. No incluyas el prefijo ${preset.phoneCountryCode}; ya aparece en el campo.`;
+  const localDigits = extractLocalPhoneDigits(localInput, countryCode);
+
+  if (!localDigits) {
+    return `Ingresa tu numero movil para ${preset.label}. Ejemplo: ${example}. El prefijo ${preset.phoneCountryCode} ya esta incluido.`;
+  }
+
+  return `El numero ingresado no es valido para ${preset.label}. Ejemplo: ${example}. El prefijo ${preset.phoneCountryCode} ya esta incluido.`;
 }

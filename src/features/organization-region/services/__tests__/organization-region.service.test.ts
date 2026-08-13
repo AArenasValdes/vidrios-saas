@@ -5,6 +5,8 @@ import {
 } from "../organization-region.service";
 import {
   buildPhoneE164FromLocalDigits,
+  composeAuthWhatsappFromLocalInput,
+  ensureAuthWhatsappE164,
   extractLocalPhoneDigits,
   getWhatsappValidationHint,
   normalizePhoneToE164,
@@ -73,5 +75,14 @@ describe("organization region", () => {
   it("describe el formato esperado por pais", () => {
     expect(getWhatsappValidationHint("CL")).toContain("Chile");
     expect(getWhatsappValidationHint("CL")).toContain("9 1234 5678");
+    expect(getWhatsappValidationHint("CL", "")).toContain("Ingresa tu numero movil");
+    expect(getWhatsappValidationHint("CL", "123")).toContain("no es valido");
+  });
+
+  it("compone E.164 con el prefijo del pais seleccionado", () => {
+    expect(composeAuthWhatsappFromLocalInput("977338906", "CL")).toBe(
+      "+56977338906",
+    );
+    expect(ensureAuthWhatsappE164("56977338906")).toBe("+56977338906");
   });
 });
