@@ -9,7 +9,7 @@ Estado: implementada en codigo y aplicada al proyecto Supabase vinculado el 2026
 - Un trigger completa monto/moneda neutrales cuando una version anterior del codigo inserta solo `amount_clp/currency`; esto permite desplegar schema antes que aplicacion.
 - `organization_profile` sigue siendo la proyeccion rapida que usa el control de acceso actual.
 - `activate_subscription_from_payment(payment_id)` es el unico escritor del alta: valida pago aprobado, hace upsert idempotente de suscripcion, enlaza el pago y actualiza la proyeccion en una transaccion.
-- Flow, Webpay Plus y activacion manual se conservan. `mercadopago` queda permitido en el dominio, sin checkout ni webhook hasta las fases correspondientes.
+- Históricamente se conservaron Flow, Webpay Plus y activación manual. En el runtime actual están retirados; Mercado Pago es la única pasarela activa.
 
 ## Seguridad
 

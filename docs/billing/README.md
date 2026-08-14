@@ -13,7 +13,7 @@ La **pasarela de pago recurrente con Mercado Pago Chile está lista y operativa 
 |---|---|
 | Pasarela principal Chile (Mercado Pago) | **Operativa** |
 | Cobro automático fuera de Chile | No disponible (WhatsApp / activación manual) |
-| Flow / Webpay Plus legacy | Preservados en código; no son la UI principal de altas nuevas |
+| Flow / Webpay Plus legacy | Retirados del runtime; solo se conserva evidencia histórica |
 | Mi plan (`/cuenta/suscripcion`) | Operativo con cancelación de renovación MP |
 
 ## Alcance comercial vigente (Chile)
@@ -83,6 +83,13 @@ Topics mínimos: **Planes y suscripciones** (`subscription_preapproval`, `subscr
 | API webhook | `app/api/subscriptions/mercadopago/webhook/route.ts` |
 | UI activación | `app/(subscription-gate)/cuenta-vencida/` |
 | UI Mi plan | `app/(pwa-app)/cuenta/suscripcion/` |
+
+### Pasarelas retiradas
+
+Mercado Pago Chile es la única pasarela activa. El checkout provider-agnostic
+legacy, Flow y Webpay responden `410 Gone`; no deben volver a conectarse a la UI
+ni a nuevos servicios. Las columnas y registros históricos con esos providers
+se conservan únicamente para auditoría y compatibilidad de datos.
 
 ## Runbooks por fase
 

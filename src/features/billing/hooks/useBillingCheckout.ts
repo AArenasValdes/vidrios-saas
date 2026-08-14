@@ -2,26 +2,22 @@
 
 import { useCallback, useState } from "react";
 
-import type { BillingPlanCode } from "@/features/billing/types/plans";
-import type { PaymentProvider } from "@/features/subscriptions/types/pago-suscripcion";
+import type { MercadoPagoChilePlanCode } from "@/features/subscriptions/config/mercadopago-cl.config";
 
 export function useBillingCheckout() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pagar = useCallback(
-    async (planCode: BillingPlanCode, provider: PaymentProvider = "flow") => {
+    async (planCode: MercadoPagoChilePlanCode) => {
       setCargando(true);
       setError(null);
 
       try {
-        const response = await fetch("/api/billing/checkout", {
+        const response = await fetch("/api/subscriptions/mercadopago/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planCode,
-            provider,
-          }),
+          body: JSON.stringify({ planCode }),
         });
         const data = (await response.json()) as {
           checkout_url?: string;

@@ -576,10 +576,10 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 | `/api/clientes/resumen` | GET | Resumen clientes por org (auth) | `app/api/clientes/resumen/route.ts` |
 | `/api/dashboard/summary` | GET | Dashboard KPIs por org (auth) | `app/api/dashboard/summary/route.ts` |
 | `/api/pwa/push-subscriptions` | POST/DELETE | Registrar/eliminar suscripcion push | `app/api/pwa/push-subscriptions/route.ts` |
-| `/api/billing/checkout` | POST | Crear checkout provider-agnostic; v1 usa Flow | `app/api/billing/checkout/route.ts` |
-| `/api/billing/flow/confirmar` | GET/POST | Retorno/webhook Flow, verifica estado y activa suscripcion | `app/api/billing/flow/confirmar/route.ts` |
-| `/api/subscriptions/webpay/crear` | POST | Checkout Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/crear/route.ts` |
-| `/api/subscriptions/webpay/confirmar` | GET/POST | Retorno Webpay legacy/compatibilidad | `app/api/subscriptions/webpay/confirmar/route.ts` |
+| `/api/billing/checkout` | POST | Retirado; responde 410 y remite al checkout canónico de Mercado Pago | `app/api/billing/checkout/route.ts` |
+| `/api/billing/flow/confirmar` | GET/POST | Retirado; Flow no es una pasarela activa | `app/api/billing/flow/confirmar/route.ts` |
+| `/api/subscriptions/webpay/crear` | POST | Retirado; responde 410 y remite a Mercado Pago | `app/api/subscriptions/webpay/crear/route.ts` |
+| `/api/subscriptions/webpay/confirmar` | GET/POST | Retirado; Webpay no es una pasarela activa | `app/api/subscriptions/webpay/confirmar/route.ts` |
 | `/api/subscriptions/mercadopago/create` | POST | Reserva y crea suscripcion MP Chile autenticada | `app/api/subscriptions/mercadopago/create/route.ts` |
 | `/api/subscriptions/mercadopago/webhook` | POST | Valida firma, consulta recurso MP y reconcilia idempotente | `app/api/subscriptions/mercadopago/webhook/route.ts` |
 

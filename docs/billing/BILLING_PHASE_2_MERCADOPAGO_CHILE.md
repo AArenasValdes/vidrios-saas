@@ -11,7 +11,7 @@ Estado: **operativa en producción (Chile) desde 2026-08-14**. Implementada en c
 - Creacion autenticada: `POST /api/subscriptions/mercadopago/create`.
 - Webhook publico firmado: `POST /api/subscriptions/mercadopago/webhook`.
 - Retorno informativo: `/cuenta-vencida/mercadopago/retorno`.
-- Flow y Webpay Plus legacy siguen intactos.
+- Flow y Webpay Plus quedan como historial de esta fase; sus endpoints ya no son pasarelas activas y responden `410 Gone`.
 
 ## Variables de servidor
 

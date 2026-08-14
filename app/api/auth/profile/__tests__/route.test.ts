@@ -2,17 +2,30 @@ jest.mock("@/lib/supabase/admin", () => ({
   createAdminClient: jest.fn(),
 }));
 
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(),
+}));
+
 jest.mock("@/features/auth/services/active-user-profile.service", () => ({
   findActiveUserProfile: jest.fn(),
 }));
 
 import { GET } from "../route";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { findActiveUserProfile } from "@/features/auth/services/active-user-profile.service";
 
 describe("/api/auth/profile", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (createServerSupabaseClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error("No cookie session"),
+        }),
+      },
+    });
   });
 
   it("retorna el perfil activo del usuario autenticado usando token bearer", async () => {
@@ -51,6 +64,46 @@ describe("/api/auth/profile", () => {
         rol: "admin",
       },
     });
+  });
+
+  it("usa la sesión SSR de Supabase si el bearer local expiró", async () => {
+    (createAdminClient as jest.Mock).mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: new Error("Invalid JWT"),
+        }),
+      },
+    });
+    (createServerSupabaseClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: "user-cookie",
+              email: "admin@test.com",
+            },
+          },
+          error: null,
+        }),
+      },
+    });
+    (findActiveUserProfile as jest.Mock).mockResolvedValue({
+      organization_id: 3,
+      rol: "admin",
+    });
+
+    const response = await GET(
+      new Request("http://localhost/api/auth/profile", {
+        headers: { authorization: "Bearer expired-token" },
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(findActiveUserProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      { authUserId: "user-cookie", email: "admin@test.com" }
+    );
   });
 
   it("rechaza solicitudes sin bearer token", async () => {

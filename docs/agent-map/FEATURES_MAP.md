@@ -49,7 +49,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. **Mercado Pago Chile esta operativo en produccion** (desde 2026-08-14) para Founder mensual/anual y Solo Cotizacion anual; Flow y Webpay Plus se preservan como compatibilidad. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. **Mercado Pago Chile esta operativo en produccion** (desde 2026-08-14) para Founder mensual/anual y Solo Cotizacion anual; Flow y Webpay Plus estan retirados del runtime y solo se conservan como evidencia historica. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
 - **Estado pasarela**: `MERCADOPAGO_BILLING_ENABLED=true` + variables `MERCADOPAGO_CL_*` completas en Vercel. Fuente operativa: `docs/billing/README.md`.
 - **Preparacion LATAM Fase 6**: `mercadopago-market.config.ts` separa secretos, plan IDs, bandera y moneda por mercado. Solo Chile tiene precios comerciales definidos; PE/CO/AR/UY/MX permanecen sin precio y apagados. El checkout actual rechaza en servidor organizaciones fuera de Chile para no cobrar CLP por error.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
@@ -64,10 +64,10 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `src/features/subscriptions/services/mercadopago-webhook.service.ts`
   - `src/features/billing/types/plans.ts`
   - `src/features/billing/types/payment-provider.ts`
-  - `src/features/billing/hooks/useBillingCheckout.ts`
-  - `src/features/billing/providers/flow.provider.ts`
-  - `src/features/billing/providers/manual-transfer.provider.ts`
-  - `src/features/billing/providers/webpay-plus.provider.ts`
+  - `src/features/billing/hooks/useBillingCheckout.ts` (compatibilidad; delega a Mercado Pago)
+  - `src/features/billing/providers/flow.provider.ts` (legacy no registrado en runtime)
+  - `src/features/billing/providers/manual-transfer.provider.ts` (legacy no registrado en runtime)
+  - `src/features/billing/providers/webpay-plus.provider.ts` (legacy no registrado en runtime)
   - `src/features/billing/services/billing-checkout.service.ts`
   - `src/features/billing/services/billing-subscription.service.ts`
   - `src/features/billing/services/payment-provider-registry.ts`
@@ -81,9 +81,9 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - `app/(subscription-gate)/cuenta-vencida/page.module.css`
   - `app/(subscription-gate)/layout.tsx`
   - `app/api/billing/checkout/route.ts`
-  - `app/api/billing/flow/confirmar/route.ts`
-  - `app/api/subscriptions/webpay/crear/route.ts`
-  - `app/api/subscriptions/webpay/confirmar/route.ts`
+  - `app/api/billing/flow/confirmar/route.ts` (retirado; 410)
+  - `app/api/subscriptions/webpay/crear/route.ts` (retirado; 410)
+  - `app/api/subscriptions/webpay/confirmar/route.ts` (retirado; 410)
   - `app/api/subscriptions/mercadopago/create/route.ts`
   - `app/api/subscriptions/mercadopago/webhook/route.ts`
   - `app/api/solicitudes/route.ts`
@@ -103,8 +103,8 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - Snapshot crudo -> `resolveOrganizationSubscriptionState()` -> estado efectivo (`trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`)
   - Shell privado -> banner / redirect a `/cuenta-vencida` / guard de acciones
   - APIs privadas de escritura -> guard server-side -> `403` si la cuenta esta vencida
-  - Flow: `/cuenta-vencida` -> `useBillingCheckout()` -> POST `/api/billing/checkout` -> provider `flow` -> redirect a Flow -> GET/POST `/api/billing/flow/confirmar` -> `payment/getStatus` -> `pagos_suscripcion` -> `organization_profile` actualizado solo si Flow confirma `status=2`
-  - Webpay legacy: endpoints `/api/subscriptions/webpay/*` se mantienen como compatibilidad, pero la UI nueva usa `/api/billing/*`
+  - Mercado Pago Chile: `/cuenta-vencida` -> `useMercadoPagoSubscriptionCheckout()` -> POST `/api/subscriptions/mercadopago/create` -> redirect a Mercado Pago -> webhook firmado -> `pagos_suscripcion` / `suscripciones_organizacion` reconciliados server-side.
+  - Pasarelas legacy: Flow, Webpay Plus y el checkout provider-agnostic responden `410 Gone`; la unica pasarela activa es Mercado Pago Chile.
 - Mercado Pago Chile: `/cuenta-vencida` -> POST create autenticado -> reserva recurrente unica -> plan/monto validados en API MP -> retorno informativo -> webhook HMAC -> GET de recurso real -> RPC idempotente -> suscripcion + ledger + proyeccion. `/cuenta/suscripcion` muestra periodo/cobro y permite cancelar renovacion solo con configuracion completa; un `past_due` conserva escritura durante una gracia configurable (3 dias por defecto) y un pago aprobado vuelve a `active`.
 - **Estados importantes**: `trial_active`, `trial_expiring`, `trial_expired`, `active`, `past_due`, `cancelled`
 - **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`

@@ -1,10 +1,9 @@
 import "server-only";
 
 import {
-  getBillingPlan,
   type BillingPlanCode,
 } from "@/features/billing/types/plans";
-import { getPaymentProvider } from "@/features/billing/services/payment-provider-registry";
+import { createMercadoPagoChileCheckout } from "@/features/subscriptions/services/mercadopago-checkout.service";
 import type { PaymentProvider as PaymentProviderCode } from "@/features/subscriptions/types/pago-suscripcion";
 
 export async function createBillingCheckout(input: {
@@ -13,23 +12,15 @@ export async function createBillingCheckout(input: {
   planCode: BillingPlanCode;
   provider: PaymentProviderCode;
 }): Promise<{ checkout_url: string }> {
-  const plan = getBillingPlan(input.planCode);
-
-  if (!plan.checkoutEnabled) {
-    throw new Error("Este plan se activa por WhatsApp en esta version.");
+  if (input.provider !== "mercadopago") {
+    throw new Error("Mercado Pago es la unica pasarela activa.");
   }
 
-  const provider = getPaymentProvider(input.provider);
-
-  if (provider.code !== "flow") {
-    throw new Error("Proveedor de pago no disponible para checkout automatico.");
-  }
-
-  const result = await provider.createCheckout({
+  const result = await createMercadoPagoChileCheckout({
     organizationId: input.organizationId,
-    userEmail: input.userEmail,
-    plan,
+    payerEmail: input.userEmail,
+    planCode: input.planCode,
   });
 
-  return { checkout_url: result.checkoutUrl };
+  return { checkout_url: result.checkout_url };
 }
