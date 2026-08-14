@@ -1225,6 +1225,37 @@ export default function AppShell({ children }: { children: ReactNode }) {
     </>
   );
 
+  if (authBootStuck && isWorkspaceBooting && !isSigningOut) {
+    return (
+      <div className={s.bootRoot}>
+        <div className={s.bootCard}>
+          <div className={s.bootBadge}>Sesion detenida</div>
+          <h1 className={s.bootTitle}>No pudimos abrir tu espacio</h1>
+          <p className={s.bootText}>
+            La sesion guardada en este dispositivo no respondio. Puedes reintentar
+            o volver al ingreso para recuperarla sin quedar atrapado en esta pantalla.
+          </p>
+          <div className={s.bootActions}>
+            <button
+              className={s.primaryButton}
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              Reintentar
+            </button>
+            <button
+              className={s.bootSecondaryButton}
+              type="button"
+              onClick={navigateToLogoutRoute}
+            >
+              Volver al ingreso
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isWorkspaceBooting || (!cargando && !user && !isSigningOut)) {
     return (
       <div className={s.bootRoot}>
@@ -1244,28 +1275,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className={s.bootProgress} aria-hidden>
             <span className={s.bootProgressBar} />
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (authBootStuck && !user && !isSigningOut) {
-    return (
-      <div className={s.bootRoot}>
-        <div className={s.bootCard}>
-          <div className={s.bootBadge}>Error de conexion</div>
-          <h1 className={s.bootTitle}>No pudimos conectar con tu espacio</h1>
-          <p className={s.bootText}>
-            Tu conexion parece inestable o el servidor esta tardando en responder.
-            Intenta refrescar la pagina en unos segundos.
-          </p>
-          <button
-            className={s.primaryButton}
-            type="button"
-            onClick={() => window.location.reload()}
-          >
-            Reintentar
-          </button>
         </div>
       </div>
     );

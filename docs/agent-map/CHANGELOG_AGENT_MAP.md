@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-14 - Recuperacion de sesiones PWA tras migracion de cookies
+
+- Se corrigio la migracion de cookies Supabase compartidas en `.ventorap.cl` hacia cookies host-only en `www.ventorap.cl`; el proxy expira la variante legacy una sola vez por dispositivo.
+- El proxy valida acceso con `getClaims()` y conserva los `Set-Cookie` rotados por Supabase al responder con redirects, evitando reutilizar refresh tokens ya consumidos.
+- Las sesiones irrecuperables (`refresh_token_not_found`, refresh reutilizado o rate limit durante refresh) eliminan ambas variantes de cookie y vuelven al login sin bucle.
+- `AppShell` deja de mostrar un splash infinito: a los 10 segundos ofrece reintentar o volver al ingreso mediante el logout server-side.
+
 ## 2026-08-14 - Orden documental y Growth OS
 
 - Se agregó `docs/README.md` como índice general y `docs/agent-map/ROUTES_MANIFEST.json` como inventario generado desde `app/`.

@@ -5,16 +5,30 @@ jest.mock("@supabase/ssr", () => ({
 import { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { proxy } from "../proxy";
+import { SUPABASE_COOKIE_MIGRATION_MARKER } from "@/lib/supabase/cookie-options";
 
-function createSupabaseMock(user: { id: string; email?: string | null } | null) {
+function createSupabaseMock(
+  user: { id: string; email?: string | null } | null,
+  error: unknown = null
+) {
   return {
     auth: {
-      getUser: jest.fn().mockResolvedValue({
-        data: { user },
+      getClaims: jest.fn().mockResolvedValue({
+        data: {
+          claims: user
+            ? {
+                sub: user.id,
+                email: user.email ?? null,
+              }
+            : null,
+        },
+        error,
       }),
     },
   };
 }
+
+const migratedCookie = `${SUPABASE_COOKIE_MIGRATION_MARKER}=1`;
 
 describe("proxy", () => {
   beforeEach(() => {
@@ -87,7 +101,7 @@ describe("proxy", () => {
 
     const request = new NextRequest("http://localhost:3000/solicitudes", {
       headers: {
-        cookie: "sb-test-auth-token=abc123",
+        cookie: `sb-test-auth-token=abc123; ${migratedCookie}`,
       },
     });
     const response = await proxy(request);
@@ -106,7 +120,7 @@ describe("proxy", () => {
 
     const request = new NextRequest("http://localhost:3000/login", {
       headers: {
-        cookie: "sb-test-auth-token=abc123",
+        cookie: `sb-test-auth-token=abc123; ${migratedCookie}`,
       },
     });
     const response = await proxy(request);
@@ -151,7 +165,7 @@ describe("proxy", () => {
       {
         method: "POST",
         headers: {
-          cookie: "sb-test-auth-token=abc123",
+          cookie: `sb-test-auth-token=abc123; ${migratedCookie}`,
         },
       }
     );
@@ -185,7 +199,7 @@ describe("proxy", () => {
 
     const request = new NextRequest("http://localhost:3000/admin", {
       headers: {
-        cookie: "sb-test-auth-token=abc123",
+        cookie: `sb-test-auth-token=abc123; ${migratedCookie}`,
       },
     });
     const response = await proxy(request);
@@ -194,5 +208,116 @@ describe("proxy", () => {
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/dashboard"
     );
+  });
+
+  it("conserva en el redirect las cookies que Supabase rota", async () => {
+    (createServerClient as jest.Mock).mockImplementation(
+      (
+        _url: string,
+        _key: string,
+        options: {
+          cookies: {
+            setAll: (
+              cookies: Array<{
+                name: string;
+                value: string;
+                options: Record<string, unknown>;
+              }>
+            ) => void;
+          };
+        }
+      ) => {
+        const supabaseMock = createSupabaseMock({
+          id: "auth-founder",
+          email: "alessandroreal2.0@gmail.com",
+        });
+        supabaseMock.auth.getClaims.mockImplementation(async () => {
+          options.cookies.setAll([
+            {
+              name: "sb-test-auth-token",
+              value: "rotated-session",
+              options: { path: "/", sameSite: "lax", secure: true },
+            },
+          ]);
+
+          return {
+            data: {
+              claims: {
+                sub: "auth-founder",
+                email: "alessandroreal2.0@gmail.com",
+              },
+            },
+            error: null,
+          };
+        });
+
+        return supabaseMock;
+      }
+    );
+
+    const request = new NextRequest("https://www.ventorap.cl/login", {
+      headers: {
+        cookie: `sb-test-auth-token=old-session; ${migratedCookie}`,
+      },
+    });
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://www.ventorap.cl/admin");
+    expect(response.headers.getSetCookie().join("\n")).toContain(
+      "sb-test-auth-token=rotated-session"
+    );
+  });
+
+  it("elimina una vez la cookie compartida legacy antes de validar la sesion", async () => {
+    const request = new NextRequest("https://www.ventorap.cl/dashboard", {
+      headers: {
+        cookie: "sb-test-auth-token=legacy-session",
+      },
+    });
+
+    const response = await proxy(request);
+    const setCookies = response.headers.getSetCookie();
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://www.ventorap.cl/dashboard"
+    );
+    expect(setCookies.join("\n")).toContain("Domain=.ventorap.cl");
+    expect(setCookies.join("\n")).toContain(
+      `${SUPABASE_COOKIE_MIGRATION_MARKER}=1`
+    );
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it("limpia la sesion rota y vuelve al login sin mantener el loop", async () => {
+    (createServerClient as jest.Mock).mockReturnValue(
+      createSupabaseMock(null, {
+        status: 400,
+        code: "refresh_token_not_found",
+        message: "Invalid Refresh Token: Refresh Token Not Found",
+      })
+    );
+
+    const request = new NextRequest("https://www.ventorap.cl/dashboard", {
+      headers: {
+        cookie: `sb-test-auth-token=stale; ${migratedCookie}`,
+      },
+    });
+    const response = await proxy(request);
+    const setCookies = response.headers.getSetCookie().join("\n");
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://www.ventorap.cl/login?next=%2Fdashboard&session=expired"
+    );
+    expect(setCookies).toContain("sb-test-auth-token=");
+    expect(setCookies).toContain("Domain=.ventorap.cl");
+    expect(
+      response.headers
+        .getSetCookie()
+        .filter((cookie) => cookie.startsWith("sb-test-auth-token="))
+    ).toHaveLength(2);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });

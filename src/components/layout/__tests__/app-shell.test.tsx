@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import AppShell from "../app-shell";
 import type { CotizacionAlert } from "@/features/cotizaciones/services/cotizacion-alerts.service";
@@ -238,6 +238,38 @@ describe("AppShell", () => {
     expect(
       screen.getByRole("button", { name: /Ventora Test admin/i })
     ).toBeInTheDocument();
+  });
+
+  it("sale del splash y ofrece recuperar la sesion si auth no responde", () => {
+    jest.useFakeTimers();
+    authSnapshot = {
+      user: null,
+      rol: null,
+      organizacionId: null,
+      cargando: true,
+    };
+
+    render(
+      <AppShell>
+        <div>contenido</div>
+      </AppShell>
+    );
+
+    expect(screen.getByText("Preparando tu espacio de trabajo")).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(10050);
+    });
+
+    expect(screen.getByText("No pudimos abrir tu espacio")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Preparando tu espacio de trabajo")
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Volver al ingreso" }));
+    expect(mockWindowLocationReplace).toHaveBeenCalledWith("/auth/logout");
+
+    jest.useRealTimers();
   });
 
   it("sincroniza solicitudes vistas al abrir la bandeja para limpiar el badge rojo", async () => {

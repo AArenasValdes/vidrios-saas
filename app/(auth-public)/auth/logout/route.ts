@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import {
+  getSupabaseCookieOptions,
+  LEGACY_SUPABASE_COOKIE_DOMAIN,
+} from "@/lib/supabase/cookie-options";
 
 function isSupabaseSessionCookie(name: string) {
   return (
-    name.startsWith("sb-") ||
-    name.startsWith("supabase-auth-token") ||
-    name.includes("-auth-token")
+    /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u.test(name) &&
+    (name.startsWith("sb-") ||
+      name.startsWith("supabase-auth-token") ||
+      name.includes("-auth-token"))
   );
 }
 
@@ -18,11 +22,16 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(loginUrl);
   const cookieOptions = getSupabaseCookieOptions(request.nextUrl.hostname);
 
-  request.cookies.getAll().forEach(({ name }) => {
-    if (!isSupabaseSessionCookie(name)) {
-      return;
-    }
+  const sessionCookieNames = [
+    ...new Set(
+      request.cookies
+        .getAll()
+        .map(({ name }) => name)
+        .filter(isSupabaseSessionCookie)
+    ),
+  ];
 
+  sessionCookieNames.forEach((name) => {
     response.cookies.set({
       name,
       value: "",
@@ -34,6 +43,15 @@ export async function GET(request: NextRequest) {
       maxAge: 0,
     });
   });
+
+  if (request.nextUrl.hostname === "www.ventorap.cl") {
+    sessionCookieNames.forEach((name) => {
+      response.headers.append(
+        "Set-Cookie",
+        `${name}=; Path=/; Max-Age=0; Domain=${LEGACY_SUPABASE_COOKIE_DOMAIN}; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure`
+      );
+    });
+  }
 
   response.headers.set("Cache-Control", "no-store");
 

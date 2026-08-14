@@ -35,5 +35,18 @@ describe("/auth/logout", () => {
       ])
     );
     expect(cookies.find((cookie) => cookie.name === "theme")).toBeUndefined();
+    expect(response.headers.getSetCookie().join("\n")).toContain(
+      "Domain=.ventorap.cl"
+    );
+    expect(
+      response.headers
+        .getSetCookie()
+        .filter((cookie) => cookie.startsWith("sb-test-auth-token="))
+    ).toHaveLength(2);
+    expect(
+      response.headers
+        .getSetCookie()
+        .filter((cookie) => cookie.startsWith("sb-test-auth-token.0="))
+    ).toHaveLength(2);
   });
 });
