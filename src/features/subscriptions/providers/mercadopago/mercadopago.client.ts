@@ -10,6 +10,38 @@ import type {
 const API_BASE = "https://api.mercadopago.com";
 const REQUEST_TIMEOUT_MS = 12_000;
 
+function readMercadoPagoErrorMessage(body: unknown, status: number) {
+  if (!body || typeof body !== "object") {
+    return `Mercado Pago respondio con estado ${status}.`;
+  }
+
+  const payload = body as {
+    message?: unknown;
+    error?: unknown;
+    cause?: Array<{ description?: unknown; code?: unknown }>;
+  };
+
+  const parts = [
+    typeof payload.message === "string" ? payload.message : null,
+    typeof payload.error === "string" ? payload.error : null,
+    ...(payload.cause ?? [])
+      .map((item) =>
+        typeof item.description === "string"
+          ? item.description
+          : typeof item.code === "string"
+            ? item.code
+            : null
+      )
+      .filter(Boolean),
+  ].filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
+
+  return `Mercado Pago respondio con estado ${status}.`;
+}
+
 export class MercadoPagoApiError extends Error {
   status: number;
 
@@ -40,9 +72,17 @@ export function createMercadoPagoClient(accessToken: string) {
     });
 
     if (!response.ok) {
+      let errorBody: unknown = null;
+
+      try {
+        errorBody = await response.json();
+      } catch {
+        errorBody = null;
+      }
+
       throw new MercadoPagoApiError(
         response.status,
-        `Mercado Pago respondio con estado ${response.status}.`
+        readMercadoPagoErrorMessage(errorBody, response.status)
       );
     }
 
@@ -74,6 +114,9 @@ export function createMercadoPagoClient(accessToken: string) {
           back_url: input.returnUrl,
           notification_url: input.notificationUrl,
           reason: input.reason,
+          // Sin tarjeta tokenizada: el checkout hosted exige estado pending
+          // para devolver init_point y que el pagador cargue el medio de pago.
+          status: "pending",
         },
       });
     },

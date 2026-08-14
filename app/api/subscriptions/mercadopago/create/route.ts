@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof MercadoPagoApiError) {
-      console.error("[mercadopago:create]", error);
+      console.error("[mercadopago:create]", error.status, error.message);
       return NextResponse.json(
         {
           error:
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
               ? "Mercado Pago rechazo el access token configurado en Vercel."
               : error.status === 404
                 ? "No encontramos el plan de suscripcion en Mercado Pago. Revisa los PLAN_ID en Vercel."
-                : "Mercado Pago no pudo crear la suscripcion. Revisa credenciales y planes en produccion.",
+                : error.message,
         },
         { status: 502 }
       );
