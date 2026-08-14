@@ -7,6 +7,21 @@ import type {
 } from "../subscription-provider";
 import type { OrganizationRecurringStatus } from "@/features/subscriptions/types/organization-subscription";
 
+function normalizeTransactionAmount(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.replace(",", "."));
+    if (Number.isFinite(parsed)) {
+      return Math.round(parsed);
+    }
+  }
+
+  return null;
+}
+
 function mapStatus(status: string): OrganizationRecurringStatus {
   switch (status) {
     case "authorized":
@@ -46,8 +61,10 @@ export function createMercadoPagoSubscriptionProvider(input: {
     code: "mercadopago",
     async createSubscription(createInput) {
       const plan = await client.getPreapprovalPlan(createInput.providerPlanId);
-      const amount = plan.auto_recurring?.transaction_amount;
-      const currency = plan.auto_recurring?.currency_id;
+      const amount = normalizeTransactionAmount(
+        plan.auto_recurring?.transaction_amount
+      );
+      const currency = plan.auto_recurring?.currency_id?.trim().toUpperCase();
 
       if (
         plan.id !== createInput.providerPlanId ||
@@ -55,7 +72,9 @@ export function createMercadoPagoSubscriptionProvider(input: {
         amount !== input.expectedAmount ||
         currency !== input.expectedCurrency
       ) {
-        throw new Error("El plan configurado en Mercado Pago no coincide con Ventora.");
+        throw new Error(
+          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${amount ?? "sin monto"} ${currency ?? "sin moneda"}).`
+        );
       }
 
       const created = await client.createPreapproval({

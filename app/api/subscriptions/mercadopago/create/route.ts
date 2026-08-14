@@ -5,6 +5,7 @@ import {
   resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
 import { isMercadoPagoChilePlanCode } from "@/features/subscriptions/config/mercadopago-cl.config";
+import { MercadoPagoApiError } from "@/features/subscriptions/providers/mercadopago/mercadopago.client";
 import {
   createMercadoPagoChileCheckout,
   MercadoPagoCheckoutError,
@@ -67,11 +68,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
+    if (error instanceof MercadoPagoApiError) {
+      console.error("[mercadopago:create]", error);
+      return NextResponse.json(
+        {
+          error:
+            error.status === 401
+              ? "Mercado Pago rechazo el access token configurado en Vercel."
+              : error.status === 404
+                ? "No encontramos el plan de suscripcion en Mercado Pago. Revisa los PLAN_ID en Vercel."
+                : "Mercado Pago no pudo crear la suscripcion. Revisa credenciales y planes en produccion.",
+        },
+        { status: 502 }
+      );
+    }
+
     if (
       error instanceof Error &&
       error.message === "La cuenta ya tiene una suscripcion activa."
     ) {
       return NextResponse.json({ error: error.message }, { status: 409 });
+    }
+
+    if (error instanceof Error && error.message.startsWith("El plan configurado")) {
+      console.error("[mercadopago:create]", error);
+      return NextResponse.json({ error: error.message }, { status: 502 });
+    }
+
+    if (error instanceof Error && error.message.startsWith("Error al reservar")) {
+      console.error("[mercadopago:create]", error);
+      return NextResponse.json(
+        { error: "No pudimos reservar la suscripcion en Ventora. Intenta de nuevo." },
+        { status: 500 }
+      );
     }
 
     console.error("[mercadopago:create]", error);
