@@ -1,6 +1,6 @@
 # Billing LATAM - Fase 6 preparacion multi-mercado
 
-Estado: preparada en código el 2026-08-13. La regionalización comercial de Ventora ya está operativa; ningún mercado adicional de cobro está activado.
+Estado: preparada en código el 2026-08-13. Chile quedó **operativo** el 2026-08-14. Los demás mercados siguen apagados hasta precio, credenciales y QA propios.
 
 ## Contrato
 
@@ -16,7 +16,7 @@ Estado: preparada en código el 2026-08-13. La regionalización comercial de Ven
 Chile mantiene compatibilidad:
 
 ```text
-MERCADOPAGO_BILLING_ENABLED=false
+MERCADOPAGO_BILLING_ENABLED=true
 MERCADOPAGO_CL_ACCESS_TOKEN=
 MERCADOPAGO_CL_WEBHOOK_SECRET=
 MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID=
@@ -45,4 +45,4 @@ Repetir con `CO`, `AR`, `UY` o `MX`. Nunca exponer estas variables con `NEXT_PUB
 4. Probar alta, pago aprobado/rechazado, webhook duplicado, cancelacion y retorno informativo con una empresa del pais.
 5. Habilitar solo su flag de mercado y observar ledger/webhooks antes de pasar al siguiente pais.
 
-No activar estos mercados hasta terminar esas cinco validaciones. El siguiente hito operativo es habilitar primero Chile con credenciales reales; la expansión posterior conserva este gate por país.
+No activar mercados adicionales hasta terminar las cinco validaciones por país. Chile ya cumplió gate y está en producción; la expansión posterior conserva el mismo gate por país.

@@ -231,8 +231,8 @@ No salir si cualquiera de estos sigue pendiente:
 - [ ] analytics por vendedor
 - [ ] Zapier/Make
 - [ ] WhatsApp Business API
-- [ ] billing
 - [ ] OAuth real
+- ~~billing~~ — Mercado Pago Chile operativo (2026-08-14); ver `docs/billing/README.md`
 - [ ] escritorio desktop de cotizacion presentable
 - [ ] dashboard comercial con datos reales
 - [ ] Quote Studio desktop impecable

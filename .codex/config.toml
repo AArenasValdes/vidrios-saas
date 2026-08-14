@@ -1,2 +1,5 @@
 [features]
 codex_hooks = true
+
+[mcp_servers.mercadopago-mcp-server]
+url = "https://mcp.mercadopago.com/mcp"

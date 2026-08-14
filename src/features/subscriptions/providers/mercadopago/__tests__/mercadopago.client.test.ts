@@ -22,7 +22,7 @@ describe("Mercado Pago client", () => {
     await client.createPreapproval({
       payerEmail: "owner@ventora.cl",
       externalReference: "ventora:cl:7:uuid",
-      returnUrl: "https://www.ventorap.cl/cuenta-vencida/mercadopago/retorno",
+      returnUrl: "https://www.ventorap.cl/dashboard?mp=confirming",
       notificationUrl: "https://www.ventorap.cl/api/subscriptions/mercadopago/webhook",
       reason: "Ventora - Founder Mensual",
       idempotencyKey: "ventora:cl:7:uuid",
@@ -41,7 +41,7 @@ describe("Mercado Pago client", () => {
         body: JSON.stringify({
           payer_email: "owner@ventora.cl",
           external_reference: "ventora:cl:7:uuid",
-          back_url: "https://www.ventorap.cl/cuenta-vencida/mercadopago/retorno",
+          back_url: "https://www.ventorap.cl/dashboard?mp=confirming",
           notification_url:
             "https://www.ventorap.cl/api/subscriptions/mercadopago/webhook",
           reason: "Ventora - Founder Mensual",

@@ -14,7 +14,7 @@ Estado: implementada y aplicada en el proyecto Supabase vinculado el 2026-08-13 
 
 ## Limites intencionales
 
-- Esta fase no crea cobros Mercado Pago fuera de Chile, no activa `MERCADOPAGO_BILLING_ENABLED` y no resuelve impuestos legales ni emite factura fiscal.
+- Esta fase no crea cobros Mercado Pago fuera de Chile ni resuelve impuestos legales ni emite factura fiscal. El cobro automatico Chile queda en Fase 2 (`MERCADOPAGO_BILLING_ENABLED` + variables `MERCADOPAGO_CL_*`), operativo desde 2026-08-14.
 - No se cambia la representación de PDFs, enlaces públicos de presupuestos ni WhatsApp de cotizaciones ya guardadas. La Fase 5 ya guarda snapshots regionales por cotización antes de usar configuración actual en documentos históricos.
 - Los nombres y tasas tributarias son defaults editables de presentacion comercial; deben revisarse con asesoria local antes de usarse como regla fiscal.
 

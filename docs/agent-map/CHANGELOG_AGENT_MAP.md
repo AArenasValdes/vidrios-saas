@@ -2,6 +2,14 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-14 - Mercado Pago Chile operativo en produccion
+
+- La pasarela recurrente Mercado Pago Chile quedo **lista y activa** en produccion: checkout en `/cuenta-vencida`, webhook en `/api/subscriptions/mercadopago/webhook`, lifecycle en `/cuenta/suscripcion`.
+- Planes comerciales CLP: Founder mensual `$8.990`, Founder Full anual `$79.990`, Solo Cotizacion anual `$59.990`. Solo empresas con `country_code=CL`.
+- Indice operativo y variables: `docs/billing/README.md`. Runbook Fase 2 actualizado a estado operativo.
+- Comportamientos documentados: retorno navegador informativo, activacion solo por webhook, reutilizacion/liberacion de checkout pendiente al cambiar plan, mensajes amigables del proveedor.
+- Mercados adicionales (PE/CO/AR/UY/MX) siguen apagados; WhatsApp conserva fallback si falta configuracion MP.
+
 ## 2026-08-14 - Landing, registro y posicionamiento publico
 
 - La landing presenta cotizacion multidispositivo como nucleo y fabricacion configurable como capa opcional: cubicacion, despiece y pauta de corte revisable.
@@ -15,7 +23,7 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 - La región dejó de ser sólo presentación: las cotizaciones nuevas usan la tasa y el redondeo comercial del snapshot regional; catálogo de líneas y activación formatean moneda/locale de la empresa.
 - Compatibilidad comprobada en la base remota: 31 perfiles existentes siguen en `CL` / `CLP` / `es-CL` / `IVA 19%`, sin organizaciones activas sin perfil regional.
-- El próximo gate para cobrar de verdad es únicamente Mercado Pago Chile: cargar credenciales productivas, crear/verificar los tres planes, configurar webhook y completar la matriz de pruebas reales antes de activar la bandera.
+- El proximo gate para cobrar de verdad era Mercado Pago Chile; **quedo resuelto el 2026-08-14** con pasarela operativa. Ver `docs/billing/README.md`.
 - Los mercados adicionales siguen deliberadamente apagados: necesitan precio comercial, credenciales y QA propios; no hay FX automático.
 
 ## 2026-08-13 - Billing LATAM Fase 6 preparacion de mercados

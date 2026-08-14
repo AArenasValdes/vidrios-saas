@@ -18,6 +18,9 @@ import {
 } from "@/features/subscriptions/providers/mercadopago/mercadopago-reference";
 import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
 import type { OrganizationSubscriptionRow } from "@/features/subscriptions/types/organization-subscription";
+import {
+  buildMercadoPagoReturnUrl,
+} from "@/features/subscriptions/constants/mercadopago-return";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 export class MercadoPagoCheckoutError extends Error {
@@ -253,7 +256,7 @@ export async function createMercadoPagoChileCheckout(input: {
       externalReference: reservationSubscription.external_reference,
       providerPlanId: plan.providerPlanId,
       payerEmail: input.payerEmail,
-      returnUrl: `${publicAppUrl}/cuenta-vencida/mercadopago/retorno`,
+      returnUrl: buildMercadoPagoReturnUrl(publicAppUrl),
       notificationUrl: `${publicAppUrl}/api/subscriptions/mercadopago/webhook`,
     });
     const raw = created.rawResponse as Partial<MercadoPagoPreapproval>;

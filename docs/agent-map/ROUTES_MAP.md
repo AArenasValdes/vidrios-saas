@@ -372,9 +372,9 @@
 - **Archivo principal**: `app/(subscription-gate)/cuenta-vencida/page.tsx`
 - **Layout usado**: `app/(subscription-gate)/layout.tsx` (sin `AppShell`; tipografías PWA únicamente)
 - **CSS**: `app/(subscription-gate)/cuenta-vencida/page.module.css`
-- **Proposito**: Pantalla de activacion/renovacion. Mercado Pago Chile ofrece mensual y anuales solo cuando la configuracion server-side esta completa; sin ella conserva WhatsApp.
+- **Proposito**: Pantalla de activacion/renovacion. Mercado Pago Chile ofrece los tres planes en checkout cuando la configuracion server-side esta completa (estado operativo desde 2026-08-14); sin ella conserva WhatsApp.
 - **Usuario objetivo**: Admin/vendedor autenticado con cuenta en modo lectura
-- **Funcionalidades visibles**: Flecha volver, hero de activacion, plan recomendado `Founder Full Anual`, opcion `Solo Cotizacion Anual`, opcion `Mensual` por WhatsApp, bloque consultivo `Plan Empresa Acompañado`, accion discreta `Seguir en modo lectura`
+- **Funcionalidades visibles**: Flecha volver, hero de activacion, plan recomendado `Founder Full Anual`, opcion `Solo Cotizacion Anual`, opcion `Founder Mensual`, bloque consultivo `Plan Empresa Acompañado`, accion discreta `Seguir en modo lectura`
 - **Componentes principales**: Internos de la pagina
 - **Datos que consume**: `organization_profile` con snapshot calculado de suscripcion
 - **Tablas Supabase relacionadas**: `organization_profile`, `suscripciones_organizacion`, `pagos_suscripcion`

@@ -1,6 +1,6 @@
 # Billing LATAM — Fase 1
 
-Estado: implementada en codigo y aplicada al proyecto Supabase vinculado el 2026-08-12. Mercado Pago aun no conectado.
+Estado: implementada en codigo y aplicada al proyecto Supabase vinculado el 2026-08-12. Mercado Pago Chile se conecto en Fase 2 y quedo operativo en produccion el 2026-08-14. Ver `README.md`.
 
 ## Contrato
 

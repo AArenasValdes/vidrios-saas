@@ -43,7 +43,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 
 ## Feature: Trial, Suscripcion y Billing
 
-- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. Mercado Pago Chile cubre Founder mensual/anual y Solo Cotizacion anual detras de feature flag; Flow y Webpay Plus se preservan como compatibilidad. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Que hace**: Controla la prueba gratuita de 15 dias para altas nuevas, el contrato recurrente y su ledger. **Mercado Pago Chile esta operativo en produccion** (desde 2026-08-14) para Founder mensual/anual y Solo Cotizacion anual; Flow y Webpay Plus se preservan como compatibilidad. Una cuenta vencida conserva lectura y bloquea escrituras privadas.
+- **Estado pasarela**: `MERCADOPAGO_BILLING_ENABLED=true` + variables `MERCADOPAGO_CL_*` completas en Vercel. Fuente operativa: `docs/billing/README.md`.
 - **Preparacion LATAM Fase 6**: `mercadopago-market.config.ts` separa secretos, plan IDs, bandera y moneda por mercado. Solo Chile tiene precios comerciales definidos; PE/CO/AR/UY/MX permanecen sin precio y apagados. El checkout actual rechaza en servidor organizaciones fuera de Chile para no cobrar CLP por error.
 - **Rutas involucradas**: `/dashboard`, `/cotizaciones`, `/cotizaciones/nueva`, `/clientes`, `/clientes/nuevo`, `/clientes/[id]/editar`, `/solicitudes`, `/solicitudes/canales`, `/configuracion/*`, `/cuenta-vencida`
 - **Archivos principales**:
@@ -103,8 +104,8 @@ Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente
 - **Donde editar UI**: `src/components/layout/app-shell.tsx`, `app/(pwa-app)/cuenta-vencida/`
 - **Donde editar logica**: `src/features/subscriptions/services/`, `src/features/billing/`
 - **Donde editar persistencia**: `src/features/organization-profile/repositories/organization-profile.repository.ts`, `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`, `supabase/migrations/20260525121500_trial_subscriptions_manual_activation.sql`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`, `supabase/migrations/20260602062145_billing_flow_provider.sql`
-- **Consideraciones UX**: El usuario puede entrar y leer. Con Mercado Pago no configurado, la pantalla conserva WhatsApp. Con la bandera y todos los secretos/planes listos, ofrece los tres planes Chile. La URL de retorno solo informa que se esta confirmando; nunca activa. Una cuenta activa, incluso founder sin fecha final, no puede crear otro checkout. Cancelar renovacion no revoca el periodo ya pagado.
-- **Riesgos al modificar**: No romper rutas publicas ni lectura basica. Mercado Pago exige firma valida y consulta real antes de mutar; nunca confiar en body o query string. Monto/moneda/tenant solo servidor. No exponer secretos ni `provider_response`. Ver `docs/billing/BILLING_PHASE_2_MERCADOPAGO_CHILE.md` antes de habilitar.
+- **Consideraciones UX**: El usuario puede entrar y leer. Con Mercado Pago configurado, `/cuenta-vencida` ofrece checkout de los tres planes Chile. Sin configuracion completa conserva WhatsApp. Al volver atras y cambiar de plan se reutiliza el checkout del mismo plan o se libera la reserva pendiente. La URL de retorno solo informa que se esta confirmando; nunca activa. Una cuenta activa, incluso founder sin vencimiento, no puede crear otro checkout. Cancelar renovacion no revoca el periodo ya pagado.
+- **Riesgos al modificar**: No romper rutas publicas ni lectura basica. Mercado Pago exige firma valida y consulta real antes de mutar; nunca confiar en body o query string. Monto/moneda/tenant solo servidor. No exponer secretos ni `provider_response`. Ver `docs/billing/README.md` y `docs/billing/BILLING_PHASE_2_MERCADOPAGO_CHILE.md`.
 
 ### Addendum cuentas internas gratis permanentes
 

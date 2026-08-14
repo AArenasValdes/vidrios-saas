@@ -131,6 +131,12 @@ export function CuentaVencidaPageContent({
               ? "Elige tu plan y completa la suscripcion de forma segura en Mercado Pago. La activacion se confirma automaticamente."
               : "Elige un plan y te contactamos por WhatsApp para activarlo. Todos los pagos se confirman de forma manual por ahora."}
           </p>
+          {mercadoPagoEnabled ? (
+            <p className={s.text}>
+              Usa una cuenta Mercado Pago distinta a la que recibe los pagos de Ventora. Si pagas
+              con la misma cuenta vendedora, Mercado Pago puede bloquear el boton Confirmar.
+            </p>
+          ) : null}
         </div>
 
         <div className={s.activeBanner} role="status">

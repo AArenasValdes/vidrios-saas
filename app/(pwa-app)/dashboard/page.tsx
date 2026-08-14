@@ -1,6 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
+
 import { PremiumPageReveal } from "@/components/motion/premium-page-reveal";
+import { MercadoPagoReturnConfirmation } from "@/features/subscriptions/components/mercadopago-return-confirmation";
 import { SubscriptionBadge } from "@/features/subscriptions/components/subscription-badge";
 import { useActivationGate } from "@/features/onboarding/hooks/useActivationGate";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -57,6 +60,9 @@ export default function DashboardPage() {
   if (isDesktop) {
     return (
       <PremiumPageReveal>
+        <Suspense fallback={null}>
+          <MercadoPagoReturnConfirmation />
+        </Suspense>
         <DashboardDesktop {...viewModel.desktop} />
       </PremiumPageReveal>
     );
@@ -64,6 +70,9 @@ export default function DashboardPage() {
 
   return (
     <PremiumPageReveal>
+      <Suspense fallback={null}>
+        <MercadoPagoReturnConfirmation />
+      </Suspense>
       {mobileBadge}
       <DashboardMobile {...viewModel.mobile} />
     </PremiumPageReveal>

@@ -332,16 +332,16 @@ Reglas:
 
 ## Si la tarea es sobre billing/pagos/suscripcion, revisar primero:
 
-1. `docs/agent-map/FEATURES_MAP.md` - Seccion "Trial, Suscripcion y Billing"
-2. `src/features/billing/types/plans.ts`
-3. `src/features/billing/types/payment-provider.ts`
-4. `src/features/billing/providers/flow.provider.ts`
-5. `src/features/billing/services/billing-checkout.service.ts`
-6. `src/features/billing/services/billing-subscription.service.ts`
-7. `src/features/subscriptions/repositories/pago-suscripcion.repository.ts`
-8. `app/api/billing/checkout/route.ts`
-9. `app/api/billing/flow/confirmar/route.ts`
-10. `supabase/migrations/20260602062145_billing_flow_provider.sql`
+1. `docs/billing/README.md` - Estado operativo Mercado Pago Chile
+2. `docs/agent-map/FEATURES_MAP.md` - Seccion "Trial, Suscripcion y Billing"
+3. `docs/billing/BILLING_PHASE_2_MERCADOPAGO_CHILE.md`
+4. `src/features/subscriptions/config/mercadopago-cl.config.ts`
+5. `src/features/subscriptions/services/mercadopago-checkout.service.ts`
+6. `src/features/subscriptions/services/mercadopago-webhook.service.ts`
+7. `src/features/billing/types/plans.ts`
+8. `src/features/billing/services/billing-subscription.service.ts`
+9. `app/api/subscriptions/mercadopago/create/route.ts`
+10. `app/api/subscriptions/mercadopago/webhook/route.ts`
 
 ---
 

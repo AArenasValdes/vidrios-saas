@@ -31,8 +31,9 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 11. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
 12. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta (pegar a otra IA)
 13. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF
-14. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
-15. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
+14. **`../billing/README.md`** - Estado operativo pasarela Mercado Pago Chile
+15. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
+16. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
 
 ## Foco actual
 
@@ -64,6 +65,8 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 ```
 docs/
   VENTORA_GIRO_PRODUCTO_2026-07.md  <- Rector de producto y limites vigentes
+  billing/
+    README.md                 <- Estado operativo pasarela Mercado Pago Chile
   manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md
   agent-map/
     README.md                 <- Este archivo

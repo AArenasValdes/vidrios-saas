@@ -1,6 +1,6 @@
 # Billing LATAM - Fase 2 Mercado Pago Chile
 
-Estado: implementada en código y aplicada al proyecto Supabase vinculado el 2026-08-13. El único bloqueo para habilitar el cobro recurrente real en Chile es operativo: credenciales productivas, IDs de los tres planes, webhook y la prueba de ciclo completo en Mercado Pago. Permanece desactivada por defecto hasta completar ese gate.
+Estado: **operativa en producción (Chile) desde 2026-08-14**. Implementada en código, aplicada al proyecto Supabase vinculado el 2026-08-13 y habilitada con credenciales productivas, tres planes, webhook y `MERCADOPAGO_BILLING_ENABLED=true`. Resumen operativo: `README.md`.
 
 ## Alcance cerrado
 
@@ -16,7 +16,7 @@ Estado: implementada en código y aplicada al proyecto Supabase vinculado el 202
 ## Variables de servidor
 
 ```text
-MERCADOPAGO_BILLING_ENABLED=false
+MERCADOPAGO_BILLING_ENABLED=true
 MERCADOPAGO_CL_ACCESS_TOKEN=
 MERCADOPAGO_CL_WEBHOOK_SECRET=
 MERCADOPAGO_CL_FOUNDER_MONTHLY_PLAN_ID=
@@ -24,7 +24,7 @@ MERCADOPAGO_CL_FOUNDER_YEARLY_PLAN_ID=
 MERCADOPAGO_CL_QUOTE_ONLY_YEARLY_PLAN_ID=
 ```
 
-No usar prefijo `NEXT_PUBLIC_`. La pantalla solo recibe un booleano calculado en servidor. Mientras falte una variable o la bandera sea `false`, `/cuenta-vencida` conserva el flujo manual por WhatsApp.
+No usar prefijo `NEXT_PUBLIC_`. La pantalla solo recibe un booleano calculado en servidor. En produccion la bandera debe ser `true` con las seis variables completas. Si falta alguna, `/cuenta-vencida` conserva el flujo manual por WhatsApp.
 
 ## Contrato de seguridad
 
@@ -47,16 +47,22 @@ No usar prefijo `NEXT_PUBLIC_`. La pantalla solo recibe un booleano calculado en
 | `paused` | `paused` | segun recurso |
 | `cancelled` | `cancelled` con acceso hasta fin pagado | `cancelado` si corresponde |
 
-## Despliegue seguro
+## Despliegue y operación (completado 2026-08-14)
 
-1. Mantener `MERCADOPAGO_BILLING_ENABLED=false`.
+1. ~~Mantener `MERCADOPAGO_BILLING_ENABLED=false`~~ → **activo en producción**.
 2. Mantener auditada la deuda historica de migraciones anterior al billing; no ejecutar `migration repair` masivo sin comparar el esquema.
-3. Regenerar tipos Supabase si se requiere tipado generado para tablas nuevas.
-4. Crear/configurar los tres planes en el ambiente productivo de Mercado Pago Chile y cargar sus IDs.
-5. Cargar access token y webhook secret productivos, sin exponerlos al navegador.
-6. Configurar el webhook con URL canónica `https://www.ventorap.cl/api/subscriptions/mercadopago/webhook` y los tres topics soportados.
-7. Probar con credenciales de prueba: mensual, anual, webhook duplicado, pago rechazado, cancelación, doble clic y refresh del retorno.
-8. Repetir el mismo smoke controlado con una cuenta interna en producción y solo entonces cambiar la bandera a `true`.
+3. Tipos Supabase regenerados desde schema remoto cuando hubo cambios de billing.
+4. Tres planes productivos creados en Mercado Pago Chile; IDs cargados en Vercel.
+5. Access token y webhook secret productivos cargados; no expuestos al navegador.
+6. Webhook configurado en `https://www.ventorap.cl/api/subscriptions/mercadopago/webhook` con topics de suscripciones y pagos.
+7. Checkout validado end-to-end hasta pantalla de pago MP (incluye cambio de plan al volver atrás: reutiliza mismo plan o libera reserva pendiente al elegir otro).
+8. Activación de cuenta depende del webhook; el retorno del navegador no escribe estado.
+
+### Notas de integración MP Chile
+
+- La suscripción se crea con `POST /preapproval` en estado `pending`, copiando `auto_recurring` del plan validado (con fallback al catálogo Ventora si el plan del panel MP no trae recurrencia completa).
+- No se envía `preapproval_plan_id` en el alta para evitar exigencia de `card_token_id` en servidor; el plan se valida con `GET /preapproval_plan/{id}` antes de crear.
+- Mensajes de error del proveedor se traducen en `mercadopago-user-message.ts` (por ejemplo, cuenta pagadora igual a la vendedora).
 
 ## Estado de base de datos
 
