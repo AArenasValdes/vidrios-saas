@@ -155,7 +155,12 @@ async function reconcilePayment(input: {
   const paymentAmount = normalizeMercadoPagoTransactionAmount(input.amount);
   const paymentCurrency = input.currency?.trim().toUpperCase() ?? null;
 
-  if (paymentAmount !== local.amount || paymentCurrency !== local.currency_code) {
+  if (
+    paymentAmount === null ||
+    !paymentCurrency ||
+    paymentAmount !== local.amount ||
+    paymentCurrency !== local.currency_code
+  ) {
     throw new Error("El pago consultado no coincide con el contrato de Ventora.");
   }
 
@@ -198,8 +203,8 @@ async function reconcilePayment(input: {
     providerOrderId: input.providerOrderId,
     providerStatus: input.providerStatus,
     status: paymentStatus,
-    amount: input.amount,
-    currencyCode: input.currency,
+    amount: paymentAmount,
+    currencyCode: paymentCurrency,
     paidAt: paymentStatus === "aprobado" ? paidAt : null,
     periodStartsAt: paymentStatus === "aprobado" ? period.periodStartsAt : null,
     periodEndsAt: paymentStatus === "aprobado" ? period.periodEndsAt : null,
