@@ -17,6 +17,7 @@ import {
   resolveMercadoPagoCheckoutUrl,
 } from "@/features/subscriptions/providers/mercadopago/mercadopago-reference";
 import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
+import type { OrganizationSubscriptionRow } from "@/features/subscriptions/types/organization-subscription";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
 export class MercadoPagoCheckoutError extends Error {
@@ -57,9 +58,18 @@ function assertCreatedSubscriptionIdentity(input: {
   }
 }
 
+function isSameMercadoPagoPlan(
+  existing: OrganizationSubscriptionRow,
+  plan: ReturnType<typeof getMercadoPagoChilePlan>
+) {
+  return (
+    existing.plan_code === plan.subscriptionPlanCode &&
+    existing.billing_period === plan.billingPeriod &&
+    existing.provider_plan_id === plan.providerPlanId
+  );
+}
+
 async function assertOrganizationIsChile(organizationId: number) {
-  // La ruta actual sigue siendo el checkout Chile. La configuracion multi-pais
-  // no debe permitir cobrar CLP a una empresa de otro mercado por accidente.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createAdminClient() as any;
   const { data, error } = await admin
@@ -83,6 +93,85 @@ async function assertOrganizationIsChile(organizationId: number) {
   }
 }
 
+async function releasePendingMercadoPagoCheckout(input: {
+  subscription: OrganizationSubscriptionRow;
+  accessToken: string;
+  amount: number;
+  billingPeriod: "monthly" | "yearly";
+  repository: ReturnType<typeof createOrganizationSubscriptionRepository>;
+}) {
+  if (input.subscription.status !== "pending") {
+    throw new MercadoPagoCheckoutError(
+      409,
+      "Ya existe otra suscripcion Mercado Pago en proceso para esta cuenta."
+    );
+  }
+
+  if (input.subscription.provider_subscription_id) {
+    const provider = createMercadoPagoSubscriptionProvider({
+      accessToken: input.accessToken,
+      expectedAmount: input.amount,
+      expectedCurrency: "CLP",
+      billingPeriod: input.billingPeriod,
+      reason: "Ventora - liberar checkout pendiente",
+    });
+
+    await provider
+      .cancelSubscription(input.subscription.provider_subscription_id)
+      .catch(() => undefined);
+  }
+
+  await input.repository.releasePendingCheckout(input.subscription.id);
+}
+
+async function reusePendingCheckout(input: {
+  subscription: OrganizationSubscriptionRow;
+  accessToken: string;
+  amount: number;
+  billingPeriod: "monthly" | "yearly";
+  planLabel: string;
+}) {
+  if (!input.subscription.provider_subscription_id) {
+    return null;
+  }
+
+  const provider = createMercadoPagoSubscriptionProvider({
+    accessToken: input.accessToken,
+    expectedAmount: input.amount,
+    expectedCurrency: "CLP",
+    billingPeriod: input.billingPeriod,
+    reason: `Ventora - ${input.planLabel}`,
+  });
+  const current = await provider.getSubscription(
+    input.subscription.provider_subscription_id
+  );
+  const checkoutUrl =
+    current.checkoutUrl ?? checkoutUrlFromRaw(current.rawResponse);
+
+  if (!checkoutUrl) {
+    return null;
+  }
+
+  return {
+    checkout_url: checkoutUrl,
+    subscription_id: input.subscription.id,
+  };
+}
+
+function buildPendingReservationInput(input: {
+  organizationId: number;
+  plan: ReturnType<typeof getMercadoPagoChilePlan>;
+}) {
+  return {
+    organizationId: input.organizationId,
+    providerPlanId: input.plan.providerPlanId,
+    planCode: input.plan.subscriptionPlanCode,
+    billingPeriod: input.plan.billingPeriod,
+    amount: input.plan.amountClp,
+    externalReference: `ventora:cl:${input.organizationId}:${randomUUID()}`,
+  };
+}
+
 export async function createMercadoPagoChileCheckout(input: {
   organizationId: number;
   payerEmail: string;
@@ -101,71 +190,54 @@ export async function createMercadoPagoChileCheckout(input: {
   const config = getMercadoPagoChileConfig();
   const plan = getMercadoPagoChilePlan(input.planCode);
   const repository = createOrganizationSubscriptionRepository();
-  const externalReference = `ventora:cl:${input.organizationId}:${randomUUID()}`;
-  const reservation = await repository.createPending({
-    organizationId: input.organizationId,
-    providerPlanId: plan.providerPlanId,
-    planCode: plan.subscriptionPlanCode,
-    billingPeriod: plan.billingPeriod,
-    amount: plan.amountClp,
-    externalReference,
-  });
+  let reservation = await repository.createPending(
+    buildPendingReservationInput({
+      organizationId: input.organizationId,
+      plan,
+    })
+  );
 
   if (!reservation.created) {
     const existing = reservation.subscription;
 
-    if (
-      existing.plan_code !== plan.subscriptionPlanCode ||
-      existing.billing_period !== plan.billingPeriod ||
-      existing.provider_plan_id !== plan.providerPlanId
-    ) {
-      throw new MercadoPagoCheckoutError(
-        409,
-        "Ya existe otra suscripcion Mercado Pago en proceso para esta cuenta."
-      );
+    if (isSameMercadoPagoPlan(existing, plan)) {
+      const reused = await reusePendingCheckout({
+        subscription: existing,
+        accessToken: config.accessToken,
+        amount: plan.amountClp,
+        billingPeriod: plan.billingPeriod,
+        planLabel: plan.label,
+      });
+
+      if (reused) {
+        return reused;
+      }
     }
 
-    if (!existing.provider_subscription_id) {
-      await repository.cancelPending(existing.id).catch(() => undefined);
-    } else {
-      const provider = createMercadoPagoSubscriptionProvider({
-        accessToken: config.accessToken,
-        expectedAmount: plan.amountClp,
-        expectedCurrency: "CLP",
-        billingPeriod: plan.billingPeriod,
-        reason: `Ventora - ${plan.label}`,
-      });
-      const current = await provider.getSubscription(
-        existing.provider_subscription_id
+    await releasePendingMercadoPagoCheckout({
+      subscription: existing,
+      accessToken: config.accessToken,
+      amount: plan.amountClp,
+      billingPeriod: plan.billingPeriod,
+      repository,
+    });
+
+    reservation = await repository.createPending(
+      buildPendingReservationInput({
+        organizationId: input.organizationId,
+        plan,
+      })
+    );
+
+    if (!reservation.created) {
+      throw new MercadoPagoCheckoutError(
+        409,
+        "No pudimos preparar el checkout del plan seleccionado. Intenta nuevamente."
       );
-      const checkoutUrl =
-        current.checkoutUrl ?? checkoutUrlFromRaw(current.rawResponse);
-
-      if (!checkoutUrl) {
-        throw new MercadoPagoCheckoutError(
-          409,
-          "La suscripcion ya existe y esta esperando confirmacion de Mercado Pago."
-        );
-      }
-
-      return { checkout_url: checkoutUrl, subscription_id: existing.id };
     }
   }
 
-  const reservationSubscription =
-    reservation.created
-      ? reservation.subscription
-      : (
-          await repository.createPending({
-            organizationId: input.organizationId,
-            providerPlanId: plan.providerPlanId,
-            planCode: plan.subscriptionPlanCode,
-            billingPeriod: plan.billingPeriod,
-            amount: plan.amountClp,
-            externalReference: `ventora:cl:${input.organizationId}:${randomUUID()}`,
-          })
-        ).subscription;
-
+  const reservationSubscription = reservation.subscription;
   const provider = createMercadoPagoSubscriptionProvider({
     accessToken: config.accessToken,
     expectedAmount: plan.amountClp,
@@ -206,7 +278,7 @@ export async function createMercadoPagoChileCheckout(input: {
     return { checkout_url: created.checkoutUrl, subscription_id: saved.id };
   } catch (error) {
     await repository
-      .cancelPending(reservationSubscription.id)
+      .releasePendingCheckout(reservationSubscription.id)
       .catch(() => undefined);
     throw error;
   }

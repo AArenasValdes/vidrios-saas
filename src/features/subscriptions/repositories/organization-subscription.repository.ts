@@ -167,6 +167,24 @@ export function createOrganizationSubscriptionRepository() {
       }
     },
 
+    async releasePendingCheckout(id: number): Promise<void> {
+      const { error } = await db()
+        .update({
+          status: "cancelled",
+          provider_status: "checkout_replaced",
+          cancelled_at: new Date().toISOString(),
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("provider", "mercadopago")
+        .eq("status", "pending")
+        .is("eliminado_en", null);
+
+      if (error) {
+        throw new Error(`Error al liberar checkout pendiente: ${error.message}`);
+      }
+    },
+
     async reconcileMercadoPagoSubscription(input: {
       subscriptionId: number;
       providerSubscriptionId: string;
