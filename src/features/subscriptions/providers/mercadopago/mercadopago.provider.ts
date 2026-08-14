@@ -1,26 +1,12 @@
 import "server-only";
 
 import { createMercadoPagoClient } from "./mercadopago.client";
+import { buildPendingAutoRecurringFromPlan } from "./mercadopago-plan";
 import type {
   RecurringSubscriptionResult,
   SubscriptionProvider,
 } from "../subscription-provider";
 import type { OrganizationRecurringStatus } from "@/features/subscriptions/types/organization-subscription";
-
-function normalizeTransactionAmount(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.round(value);
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value.replace(",", "."));
-    if (Number.isFinite(parsed)) {
-      return Math.round(parsed);
-    }
-  }
-
-  return null;
-}
 
 function mapStatus(status: string): OrganizationRecurringStatus {
   switch (status) {
@@ -61,30 +47,30 @@ export function createMercadoPagoSubscriptionProvider(input: {
     code: "mercadopago",
     async createSubscription(createInput) {
       const plan = await client.getPreapprovalPlan(createInput.providerPlanId);
-      const amount = normalizeTransactionAmount(
-        plan.auto_recurring?.transaction_amount
-      );
-      const currency = plan.auto_recurring?.currency_id?.trim().toUpperCase();
+      const autoRecurring = buildPendingAutoRecurringFromPlan(plan);
 
       if (
         plan.id !== createInput.providerPlanId ||
         plan.status !== "active" ||
-        amount !== input.expectedAmount ||
-        currency !== input.expectedCurrency
+        autoRecurring.transaction_amount !== input.expectedAmount ||
+        autoRecurring.currency_id !== input.expectedCurrency
       ) {
         throw new Error(
-          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${amount ?? "sin monto"} ${currency ?? "sin moneda"}).`
+          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${autoRecurring.transaction_amount} ${autoRecurring.currency_id}).`
         );
       }
 
+      // Chile exige card_token_id si se envia preapproval_plan_id. Validamos el
+      // plan comercial via GET y creamos una suscripcion pending sin plan asociado
+      // para obtener init_point y cobrar en el checkout hosted de Mercado Pago.
       const created = await client.createPreapproval({
-        providerPlanId: createInput.providerPlanId,
         payerEmail: createInput.payerEmail,
         externalReference: createInput.externalReference,
         returnUrl: createInput.returnUrl,
         notificationUrl: createInput.notificationUrl,
         reason: input.reason,
         idempotencyKey: createInput.externalReference,
+        autoRecurring,
       });
 
       return result(created);

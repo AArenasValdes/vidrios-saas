@@ -145,8 +145,12 @@ export async function createMercadoPagoChileCheckout(input: {
     });
     const raw = created.rawResponse as Partial<MercadoPagoPreapproval>;
 
+    if (raw.external_reference !== reservation.subscription.external_reference) {
+      throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");
+    }
+
     if (
-      raw.external_reference !== reservation.subscription.external_reference ||
+      raw.preapproval_plan_id &&
       raw.preapproval_plan_id !== plan.providerPlanId
     ) {
       throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");

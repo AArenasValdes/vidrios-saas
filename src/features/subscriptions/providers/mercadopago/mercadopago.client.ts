@@ -6,6 +6,7 @@ import type {
   MercadoPagoPreapproval,
   MercadoPagoPreapprovalPlan,
 } from "./mercadopago.types";
+import { normalizeMercadoPagoTransactionAmount } from "./mercadopago-amount";
 
 const API_BASE = "https://api.mercadopago.com";
 const REQUEST_TIMEOUT_MS = 12_000;
@@ -96,27 +97,35 @@ export function createMercadoPagoClient(accessToken: string) {
       );
     },
     createPreapproval(input: {
-      providerPlanId: string;
       payerEmail: string;
       externalReference: string;
       returnUrl: string;
       notificationUrl: string;
       reason: string;
       idempotencyKey: string;
+      autoRecurring: {
+        frequency: number;
+        frequency_type: string;
+        transaction_amount: number;
+        currency_id: string;
+      };
     }) {
       return request<MercadoPagoPreapproval>("/preapproval", {
         method: "POST",
         idempotencyKey: input.idempotencyKey,
         body: {
-          preapproval_plan_id: input.providerPlanId,
           payer_email: input.payerEmail,
           external_reference: input.externalReference,
           back_url: input.returnUrl,
           notification_url: input.notificationUrl,
           reason: input.reason,
-          // Sin tarjeta tokenizada: el checkout hosted exige estado pending
-          // para devolver init_point y que el pagador cargue el medio de pago.
           status: "pending",
+          auto_recurring: {
+            frequency: input.autoRecurring.frequency,
+            frequency_type: input.autoRecurring.frequency_type,
+            transaction_amount: input.autoRecurring.transaction_amount,
+            currency_id: input.autoRecurring.currency_id,
+          },
         },
       });
     },

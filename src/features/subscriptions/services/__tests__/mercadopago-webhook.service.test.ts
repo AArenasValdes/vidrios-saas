@@ -190,6 +190,21 @@ describe("Mercado Pago webhook reconciliation", () => {
     );
   });
 
+  it("reconcilia una preapproval sin plan asociado cuando coincide monto y referencia", async () => {
+    getPreapproval.mockResolvedValue({
+      ...preapproval,
+      preapproval_plan_id: null,
+    });
+
+    const processed = await processMercadoPagoWebhook({
+      topic: "subscription_preapproval",
+      resourceId: "preapproval-1",
+    });
+
+    expect(processed).toBe(true);
+    expect(reconcileMercadoPagoSubscription).toHaveBeenCalled();
+  });
+
   it("no muta si el recurso real no pertenece a una suscripcion Ventora", async () => {
     getByProviderSubscriptionId.mockResolvedValue(null);
     getByExternalReference.mockResolvedValue(null);

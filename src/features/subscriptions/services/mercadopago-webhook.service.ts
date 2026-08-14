@@ -2,6 +2,7 @@ import "server-only";
 
 import { getMercadoPagoChileConfig } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { createMercadoPagoClient } from "@/features/subscriptions/providers/mercadopago/mercadopago.client";
+import { normalizeMercadoPagoTransactionAmount } from "@/features/subscriptions/providers/mercadopago/mercadopago-amount";
 import type {
   MercadoPagoAuthorizedPayment,
   MercadoPagoPayment,
@@ -54,15 +55,23 @@ function assertSubscriptionIdentity(input: {
   local: OrganizationSubscriptionRow;
   resource: MercadoPagoPreapproval;
 }) {
-  const amount = input.resource.auto_recurring?.transaction_amount;
-  const currency = input.resource.auto_recurring?.currency_id;
+  const amount = normalizeMercadoPagoTransactionAmount(
+    input.resource.auto_recurring?.transaction_amount
+  );
+  const currency = input.resource.auto_recurring?.currency_id?.trim().toUpperCase();
+
+  if (input.resource.external_reference !== input.local.external_reference) {
+    throw new Error("La suscripcion consultada no coincide con Ventora.");
+  }
 
   if (
-    input.resource.external_reference !== input.local.external_reference ||
-    input.resource.preapproval_plan_id !== input.local.provider_plan_id ||
-    amount !== input.local.amount ||
-    currency !== input.local.currency_code
+    input.resource.preapproval_plan_id &&
+    input.resource.preapproval_plan_id !== input.local.provider_plan_id
   ) {
+    throw new Error("La suscripcion consultada no coincide con Ventora.");
+  }
+
+  if (amount !== input.local.amount || currency !== input.local.currency_code) {
     throw new Error("La suscripcion consultada no coincide con Ventora.");
   }
 }
@@ -143,7 +152,10 @@ async function reconcilePayment(input: {
 
   assertSubscriptionIdentity({ local, resource: input.preapproval });
 
-  if (input.amount !== local.amount || input.currency !== local.currency_code) {
+  const paymentAmount = normalizeMercadoPagoTransactionAmount(input.amount);
+  const paymentCurrency = input.currency?.trim().toUpperCase() ?? null;
+
+  if (paymentAmount !== local.amount || paymentCurrency !== local.currency_code) {
     throw new Error("El pago consultado no coincide con el contrato de Ventora.");
   }
 
