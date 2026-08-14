@@ -15,7 +15,6 @@ import {
 
 import { PremiumPageSection } from "@/components/motion/premium-page-reveal";
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
-import { OnboardingActivationCard } from "@/features/onboarding/components/onboarding-activation-card";
 import { useOnboardingChecklist } from "@/features/onboarding/hooks/useOnboardingChecklist";
 import type { CotizacionWorkflowRecord } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { buildCotizacionApprovalUrl } from "@/utils/cotizacion-approval";
@@ -214,10 +213,6 @@ export const DashboardDesktop = memo(function DashboardDesktop({
             </span>
           </div>
         </div>
-      </PremiumPageSection>
-
-      <PremiumPageSection>
-        <OnboardingActivationCard controller={onboarding} />
       </PremiumPageSection>
 
       <PremiumPageSection className={`${styles.hero} ${styles.reveal} ${styles.revealDelay1}`}>
