@@ -132,6 +132,7 @@ export async function createMercadoPagoChileCheckout(input: {
         accessToken: config.accessToken,
         expectedAmount: plan.amountClp,
         expectedCurrency: "CLP",
+        billingPeriod: plan.billingPeriod,
         reason: `Ventora - ${plan.label}`,
       });
       const current = await provider.getSubscription(
@@ -169,6 +170,7 @@ export async function createMercadoPagoChileCheckout(input: {
     accessToken: config.accessToken,
     expectedAmount: plan.amountClp,
     expectedCurrency: "CLP",
+    billingPeriod: plan.billingPeriod,
     reason: `Ventora - ${plan.label}`,
   });
 

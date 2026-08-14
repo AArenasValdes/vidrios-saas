@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createMercadoPagoClient } from "./mercadopago.client";
-import { buildPendingAutoRecurringFromPlan } from "./mercadopago-plan";
+import { buildPendingAutoRecurringFromPlan, readMercadoPagoPlanAmount } from "./mercadopago-plan";
 import { resolveMercadoPagoCheckoutUrl } from "./mercadopago-reference";
 import type {
   RecurringSubscriptionResult,
@@ -41,6 +41,7 @@ export function createMercadoPagoSubscriptionProvider(input: {
   accessToken: string;
   expectedAmount: number;
   expectedCurrency: "CLP";
+  billingPeriod: "monthly" | "yearly";
   reason: string;
 }): SubscriptionProvider {
   const client = createMercadoPagoClient(input.accessToken);
@@ -49,16 +50,22 @@ export function createMercadoPagoSubscriptionProvider(input: {
     code: "mercadopago",
     async createSubscription(createInput) {
       const plan = await client.getPreapprovalPlan(createInput.providerPlanId);
-      const autoRecurring = buildPendingAutoRecurringFromPlan(plan);
+      const autoRecurring = buildPendingAutoRecurringFromPlan(plan, {
+        amount: input.expectedAmount,
+        currency: input.expectedCurrency,
+        billingPeriod: input.billingPeriod,
+      });
+      const planAmount = readMercadoPagoPlanAmount(plan);
 
       if (
         plan.id !== createInput.providerPlanId ||
         plan.status !== "active" ||
         autoRecurring.transaction_amount !== input.expectedAmount ||
-        autoRecurring.currency_id !== input.expectedCurrency
+        autoRecurring.currency_id !== input.expectedCurrency ||
+        (planAmount !== null && planAmount !== input.expectedAmount)
       ) {
         throw new Error(
-          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${autoRecurring.transaction_amount} ${autoRecurring.currency_id}).`
+          `El plan configurado en Mercado Pago no coincide con Ventora (esperado: ${input.expectedAmount} ${input.expectedCurrency}; recibido: ${planAmount ?? autoRecurring.transaction_amount} ${autoRecurring.currency_id}).`
         );
       }
 

@@ -51,6 +51,7 @@ export async function cancelMercadoPagoChileSubscription(input: {
     accessToken,
     expectedAmount: subscription.amount,
     expectedCurrency: "CLP",
+    billingPeriod: subscription.billing_period === "yearly" ? "yearly" : "monthly",
     reason: "Ventora - cancelacion de renovacion",
   });
   const cancelled = await provider.cancelSubscription(

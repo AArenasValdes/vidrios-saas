@@ -1,10 +1,12 @@
 export type MercadoPagoPreapprovalPlan = {
   id: string;
   status?: string;
+  reason?: string;
+  init_point?: string | null;
   auto_recurring?: {
-    frequency?: number;
+    frequency?: number | string;
     frequency_type?: string;
-    transaction_amount?: number;
+    transaction_amount?: number | string;
     currency_id?: string;
   };
 };
