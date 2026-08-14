@@ -46,6 +46,15 @@ describe("plantillas Ventora Corredera 2 hojas", () => {
     expect(
       receta.perfiles.every((profile) => profile.largoComercialMm == null)
     ).toBe(true);
+    expect(receta.configuracionCorte?.largoComercialDefaultMm).toBe(6000);
+    expect(
+      receta.perfiles.every(
+        (profile) =>
+          !(profile.datosPendientes ?? []).some((detail) =>
+            /largo comercial|codigo del perfil/i.test(detail)
+          )
+      )
+    ).toBe(true);
 
     const resultado = calcularCubicacionYPauta(receta, ENTRADA);
     expect(

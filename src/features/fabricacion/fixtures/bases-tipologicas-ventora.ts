@@ -5,6 +5,7 @@ import {
   type FabricacionReglaCantidadTipo,
   type FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 /**
  * Bases estructurales universales de Ventora.
@@ -498,10 +499,8 @@ const DEFINITIONS: Record<BaseTipologicaVentora["tipologia"], DefinitionBase> = 
 };
 
 const commonPending = [
-  "Confirmar codigo del perfil",
   "Confirmar ajuste o descuento en mm",
   "Confirmar cantidad con el taller",
-  "Confirmar largo comercial",
 ];
 
 const structuralAccessoryPending = [
@@ -675,12 +674,19 @@ export function aplicarAjustesPlantillaVentora(
           ajusteMm,
         },
         observaciones: [obsBase, obsDocumentado].filter(Boolean).join(" "),
-        datosPendientes:
-          pending.length > 0
-            ? pending
-            : ["Confirmar codigo del perfil", "Confirmar largo comercial"],
+        datosPendientes: pending.length > 0 ? pending : undefined,
       };
     }),
+    configuracionCorte: {
+      ...(recipe.configuracionCorte ?? {
+        perdidaCorteMm: null,
+        despunteInicialMm: null,
+        sobranteMinimoAprovechableMm: null,
+      }),
+      largoComercialDefaultMm:
+        recipe.configuracionCorte?.largoComercialDefaultMm ??
+        VENTORA_LARGO_COMERCIAL_PRESET_MM,
+    },
     notasValidacion: [
       `Plantilla Ventora ${plantillaId} · Corredera 2 hojas. Ajustes documentados; validar con fabricación real del taller.`,
       ...(recipe.notasValidacion ?? []).filter(
@@ -781,7 +787,7 @@ export function crearBaseTipologicaVentora(input: {
       observaciones: [
         `Grupo estructural: ${profile.grupo}.`,
         "Función y medida base sugeridas por Ventora.",
-        "Asignar perfil físico, ajuste y largo comercial en el Paso 2.",
+        "Opcional: asigna perfil físico o ajuste si tu taller trabaja distinto.",
       ].join(" "),
       datosPendientes: [...commonPending],
     })),
@@ -828,6 +834,7 @@ export function crearBaseTipologicaVentora(input: {
       perdidaCorteMm: null,
       despunteInicialMm: null,
       sobranteMinimoAprovechableMm: null,
+      largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
     },
     notasValidacion: meta.pendienteCompletar
       ? [

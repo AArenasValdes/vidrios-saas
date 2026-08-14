@@ -106,16 +106,6 @@ export function applyTallerPerfilToComponent(
       ? tallerPerfil.largoComercialMm
       : profile.largoComercialMm;
 
-  if (nextLargo == null || nextLargo <= 0) {
-    if (!pending.some((detail) => /largo comercial/i.test(detail))) {
-      pending.push("Confirmar largo comercial");
-    }
-  } else {
-    for (let index = pending.length - 1; index >= 0; index -= 1) {
-      if (/largo comercial/i.test(pending[index] ?? "")) pending.splice(index, 1);
-    }
-  }
-
   return {
     ...profile,
     tallerPerfilId: tallerPerfil.id,

@@ -184,9 +184,8 @@ describe("RecipeGuidedEditor", () => {
         nombrePerfil: "",
         largoComercialMm: null,
         datosPendientes: expect.arrayContaining([
-          "Confirmar codigo del perfil",
           "Confirmar ajuste o descuento en mm",
-          "Confirmar largo comercial",
+          "Confirmar cantidad con el taller",
         ]),
       })
     );
@@ -476,7 +475,7 @@ describe("RecipeGuidedEditor", () => {
     const cards = within(profileList).getAllByRole("listitem");
     expect(cards.length).toBeGreaterThanOrEqual(7);
     expect(
-      within(profileList).getAllByText(/Largo comercial pendiente/i).length
+      within(profileList).getAllByText(/Tira estándar/i).length
     ).toBeGreaterThanOrEqual(7);
     fireEvent.click(within(cards[0]!).getByRole("button", { name: /Configurar|Editar/i }));
     expect(screen.getByPlaceholderText("0")).toBeInTheDocument();

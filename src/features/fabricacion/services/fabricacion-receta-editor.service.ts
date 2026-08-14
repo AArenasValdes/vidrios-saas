@@ -1,4 +1,7 @@
-import { describePerfilSheetMeasure } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
+  describePerfilSheetMeasure,
+  resolveLargoComercialMm,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   FABRICACION_RECIPE_SCHEMA_VERSION,
   type FabricacionAccesorio,
@@ -142,21 +145,35 @@ export function contarBloqueosCriticosReceta(receta: FabricacionReceta) {
   return requiredProfilesWithoutIdentity + emptyRequiredGlass;
 }
 
-/** Aviso secundario: falta largo comercial para pauta de barras. */
+/** Aviso secundario: ningún perfil requerido resuelve largo comercial. */
 export function tieneLargosComercialesPendientes(receta: FabricacionReceta) {
   return receta.perfiles.some(
-    (profile) => profile.requerido && !profile.largoComercialMm
+    (profile) =>
+      profile.requerido && resolveLargoComercialMm(profile, receta) <= 0
   );
 }
 
-/** Perfil listo para cubicar: medida/ajuste definidos y largo comercial. */
+/** Perfil listo para cubicar: medida/ajuste definidos (largo se resuelve por defecto). */
 export function isProfileReadyForPauta(
-  profile: FabricacionComponentePerfil
+  profile: FabricacionComponentePerfil,
+  receta?: FabricacionReceta
 ): boolean {
   const sheetMeasure = describePerfilSheetMeasure(profile);
-  return !sheetMeasure.pending && profile.largoComercialMm != null;
+  if (sheetMeasure.pending) return false;
+  if (receta) {
+    return resolveLargoComercialMm(profile, receta) > 0;
+  }
+  return true;
 }
 
 export function countProfilesReadyForPauta(receta: FabricacionReceta) {
-  return receta.perfiles.filter(isProfileReadyForPauta).length;
+  return receta.perfiles.filter((profile) =>
+    isProfileReadyForPauta(profile, receta)
+  ).length;
+}
+
+export function countProfilesGeometricallyPending(receta: FabricacionReceta) {
+  return receta.perfiles.filter(
+    (profile) => describePerfilSheetMeasure(profile).pending
+  ).length;
 }

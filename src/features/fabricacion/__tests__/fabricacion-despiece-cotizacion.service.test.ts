@@ -190,7 +190,7 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
     expect(resolved.formal?.pautaBarras?.barras.length ?? 0).toBeGreaterThan(0);
   });
 
-  it("CASO 4: sin largos comerciales → despiece sí, barras no", () => {
+  it("CASO 4: sin largos persistidos → despiece y barras con tira estándar resuelta", () => {
     const resolved = resolveFabricacionDespieceForQuoteItem({
       item: quoteItem({}),
       recipes: [recipeRecord()],
@@ -199,9 +199,9 @@ describe("despiece cotización ← motor fabricación (fuente única)", () => {
 
     expect(resolved.estado).toBe("calculado");
     expect(resolved.formal?.result.totalLinealMm).toBe(10714);
-    expect(resolved.barsAvailable).toBe(false);
-    expect(resolved.formal?.pautaBarras?.barras ?? []).toHaveLength(0);
-    expect(resolved.message).toMatch(/largos comerciales/i);
+    expect(resolved.barsAvailable).toBe(true);
+    expect(resolved.formal?.pautaBarras?.barras.length ?? 0).toBeGreaterThan(0);
+    expect(resolved.message).toMatch(/preliminar/i);
   });
 
   it("CASO 5: código de perfil vacío no bloquea despiece", () => {

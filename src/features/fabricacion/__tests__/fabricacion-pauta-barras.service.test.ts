@@ -1,5 +1,6 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { crearRecetaPlantillaVentoraCorredera2H } from "@/features/fabricacion/fixtures/bases-tipologicas-ventora";
 import type { FabricacionReceta } from "@/features/fabricacion/types/fabricacion-domain";
 
 function recipe(cutLengthMm = 2000): FabricacionReceta {
@@ -82,6 +83,23 @@ describe("pauta referencial de barras", () => {
         expect.objectContaining({ codigo: "CORTE_SUPERA_BARRA_COMERCIAL" }),
       ])
     );
+  });
+
+  it("calcula tiras con largo resuelto aunque el perfil no tenga largo persistido", () => {
+    let nextId = 0;
+    const receta = crearRecetaPlantillaVentoraCorredera2H("L5000", {
+      createId: () => `resolver-${nextId++}`,
+    });
+    const result = construirPautaBarrasFabricacion({
+      receta,
+      resultado: calcularCubicacionYPauta(receta, input),
+    });
+
+    expect(result.calculable).toBe(true);
+    expect(result.barras.length).toBeGreaterThan(0);
+    expect(
+      result.advertencias.some((entry) => entry.codigo === "PERFIL_SIN_DATOS_DE_BARRA")
+    ).toBe(false);
   });
 
   it("calcula tiras con largo comercial aunque no haya parámetros de sierra explícitos", () => {

@@ -45,8 +45,8 @@ import {
   crearAccesorioFabricacionVacio,
   crearPerfilFabricacionVacio,
   crearVidrioFabricacionVacio,
+  countProfilesGeometricallyPending,
   countProfilesReadyForPauta,
-  isProfileReadyForPauta,
   patchFabricacionPerfil,
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
@@ -57,7 +57,6 @@ import {
   applyTallerPerfilToComponent,
   collectFrequentLargosMm,
   collectTallerPerfilesFromRecipes,
-  countProfilesWithoutLength,
   mergeTallerPerfilCatalogs,
   readStoredTallerPerfiles,
   upsertStoredTallerPerfil,
@@ -72,6 +71,9 @@ import {
   groupProfilesForSheet,
   labelBaseMedida,
   labelReglaCantidadTipo,
+  profileTieneOverrideLargoComercial,
+  resolveLargoComercialLabel,
+  resolveTiraEstandarRecetaLabel,
   type FabricacionSheetGroupId,
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
@@ -336,6 +338,7 @@ type Props = {
   onBaseApplied?: () => void;
   /** Persiste el borrador actual (p. ej. al tocar Guardar en el drawer). */
   onPersistRecipe?: (recipe: FabricacionReceta) => Promise<void> | void;
+  onContinueToTest?: () => void;
 };
 
 export function RecipeGuidedEditor({
@@ -356,6 +359,7 @@ export function RecipeGuidedEditor({
   onStartModeChange,
   onBaseApplied,
   onPersistRecipe,
+  onContinueToTest,
 }: Props) {
   const isGuidedDesktop = desktopActiveStep != null;
   const isRecipeWorkspaceDesktop = () =>
@@ -380,9 +384,7 @@ export function RecipeGuidedEditor({
   );
   const [showGlassEditor, setShowGlassEditor] = useState(false);
   const [showHabitualLengthPicker, setShowHabitualLengthPicker] = useState(false);
-  const [habitualLengthOverrideMm, setHabitualLengthOverrideMm] = useState<
-    number | null
-  >(null);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [hoverPreviewZone, setHoverPreviewZone] =
     useState<FabricacionPreviewZone>(null);
   const [isPersistingDrawer, setIsPersistingDrawer] = useState(false);
@@ -432,12 +434,6 @@ export function RecipeGuidedEditor({
     [basePreview]
   );
   const selectedStartMode = startMode ?? (basePreview ? "ventora" : "blank");
-  const recipeUsesStructuralBase =
-    isStructuralBase &&
-    recipe.perfiles.length > 0 &&
-    (recipe.notasValidacion ?? []).some((note) =>
-      /estructura preparada por ventora/i.test(note)
-    );
 
   const pautaPreview = useMemo(() => {
     if (!pautaInput || recipe.perfiles.length === 0) return null;
@@ -463,32 +459,22 @@ export function RecipeGuidedEditor({
     [recipe, workshopRecipes]
   );
 
-  const profilesWithoutLength = countProfilesWithoutLength(recipe);
-  const applyLengthCandidate = useMemo(() => {
-    if (profilesWithoutLength === 0) return null;
-    const counts = new Map<number, number>();
-    for (const profile of recipe.perfiles) {
-      const largo = profile.largoComercialMm;
-      if (typeof largo !== "number" || largo <= 0) continue;
-      counts.set(largo, (counts.get(largo) ?? 0) + 1);
-    }
-    if (counts.size === 0) {
-      // Solo preset sugerido Ventora; el valor se persiste en la receta al aplicar.
-      return VENTORA_LARGO_COMERCIAL_PRESET_MM;
-    }
-    return Array.from(counts.entries()).sort(
-      (left, right) => right[1] - left[1] || left[0] - right[0]
-    )[0]?.[0] ?? VENTORA_LARGO_COMERCIAL_PRESET_MM;
-  }, [profilesWithoutLength, recipe.perfiles]);
+  const tiraEstandar = useMemo(
+    () => resolveTiraEstandarRecetaLabel(recipe),
+    [recipe.configuracionCorte?.largoComercialDefaultMm, recipe]
+  );
 
-  const habitualLengthMm =
-    habitualLengthOverrideMm ??
-    applyLengthCandidate ??
-    VENTORA_LARGO_COMERCIAL_PRESET_MM;
+  const tiraEstandarMm = tiraEstandar.largoMm;
+  const tiraEstandarLabel = formatLargoComercialCorto(tiraEstandarMm) ?? "6,00 m";
 
   const profileSheetGroups = useMemo(
     () => groupProfilesForSheet(recipe.perfiles),
     [recipe.perfiles]
+  );
+
+  const geometricPendingCount = useMemo(
+    () => countProfilesGeometricallyPending(recipe),
+    [recipe]
   );
 
   const profileProgress = useMemo(() => {
@@ -498,12 +484,13 @@ export function RecipeGuidedEditor({
       total,
       ready,
       pending: total - ready,
+      geometricPending: geometricPendingCount,
     };
-  }, [recipe.perfiles]);
+  }, [recipe, geometricPendingCount]);
 
   const firstPendingProfileId = useMemo(() => {
     for (const profile of recipe.perfiles) {
-      if (!isProfileReadyForPauta(profile)) return profile.id;
+      if (describePerfilSheetMeasure(profile).pending) return profile.id;
     }
     return null;
   }, [recipe.perfiles]);
@@ -833,7 +820,7 @@ export function RecipeGuidedEditor({
     const sheetMeasure = describePerfilSheetMeasure(profile);
     const groupBadge = resolveProfileGroupBadge(profile.funcion);
     const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
-    const isConfigured = isProfileReadyForPauta(profile);
+    const isConfigured = !sheetMeasure.pending;
     const previewZone = resolvePreviewZoneFromFuncion(profile.funcion);
     const hasPrev = index > 0;
     const hasNext = index < recipe.perfiles.length - 1;
@@ -981,49 +968,38 @@ export function RecipeGuidedEditor({
           </section>
 
           <section className={s.fabDrawerSection}>
-            <h3>Largo comercial</h3>
+            <h3>Largo especial (opcional)</h3>
             <div className={s.fabDrawerFieldBlock}>
-              <span className={s.fabDrawerFieldLabel}>Barra que compras</span>
+              <span className={s.fabDrawerFieldLabel}>Excepción al largo estándar</span>
               <RecipeCommercialLengthPicker
                 value={profile.largoComercialMm}
                 usedByWorkshop={frequentLargos.usedByWorkshop}
                 otherFrequent={frequentLargos.otherFrequent}
                 readOnly={readOnly}
                 onChange={(nextValue) =>
-                  updateProfile(profile.id, (entry) => {
-                    const pending = (entry.datosPendientes ?? []).filter(
-                      (detail) => !/largo comercial/i.test(detail)
-                    );
-                    if (nextValue == null) {
-                      pending.push("Confirmar largo comercial");
-                    }
-                    return {
-                      ...entry,
-                      largoComercialMm: nextValue,
-                      datosPendientes: pending.length > 0 ? pending : undefined,
-                    };
-                  })
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    largoComercialMm: nextValue,
+                  }))
                 }
               />
             </div>
-            {!readOnly && profile.largoComercialMm == null ? (
+            <p className={s.fabDrawerHint}>
+              Si no defines uno, Ventora usa la tira estándar de la receta (
+              {tiraEstandarLabel}).
+            </p>
+            {!readOnly && profileTieneOverrideLargoComercial(profile) ? (
               <button
                 type="button"
                 className={s.fabDrawerQuickLargo}
                 onClick={() =>
-                  updateProfile(profile.id, (entry) => {
-                    const pending = (entry.datosPendientes ?? []).filter(
-                      (detail) => !/largo comercial/i.test(detail)
-                    );
-                    return {
-                      ...entry,
-                      largoComercialMm: habitualLengthMm,
-                      datosPendientes: pending.length > 0 ? pending : undefined,
-                    };
-                  })
+                  updateProfile(profile.id, (entry) => ({
+                    ...entry,
+                    largoComercialMm: null,
+                  }))
                 }
               >
-                Usar {habitualLengthLabel} en esta pieza
+                Quitar excepción · usar tira estándar
               </button>
             ) : null}
           </section>
@@ -1158,18 +1134,6 @@ export function RecipeGuidedEditor({
       </div>
     );
   };
-
-  const habitualLengthLabel =
-    formatLargoComercialCorto(habitualLengthMm) ?? "6,00 m";
-
-  const allProfilesUseHabitualLength = useMemo(
-    () =>
-      recipe.perfiles.length > 0 &&
-      recipe.perfiles.every(
-        (profile) => profile.largoComercialMm === habitualLengthMm
-      ),
-    [recipe.perfiles, habitualLengthMm]
-  );
 
   return (
     <div
@@ -1858,30 +1822,47 @@ export function RecipeGuidedEditor({
           />
         </div>
 
-        {recipeUsesStructuralBase ? (
-          <aside className={s.fabStructuralBanner} aria-label="Estado de la base">
-            <div>
-              <strong>Estructura preparada por Ventora</strong>
+        {recipe.perfiles.length > 0 ? (
+          <aside className={s.fabPreparedBanner} aria-label="Estado de fabricación">
+            <div className={s.fabPreparedCopy}>
+              <strong>Fabricación preparada</strong>
               <p>
-                Ya agregamos las piezas habituales de esta tipología. Revisa cómo las
-                corta tu taller antes de usarla en cotizaciones.
+                {selectedTypologyOption.label}
+                {recipe.identidad.hojas > 1 ? ` · ${recipe.identidad.hojas} hojas` : ""}
+                <br />
+                {recipe.perfiles.length}{" "}
+                {recipe.perfiles.length === 1 ? "función" : "funciones"} ·{" "}
+                {tiraEstandar.label}
+              </p>
+              <p className={s.fabPreparedHint}>
+                Ventora puede cubicar con esta configuración. Cambia algo solo si tu
+                taller trabaja distinto.
               </p>
             </div>
-            <span className={s.fabStructuralBadge}>
-              {profileProgress.pending > 0
-                ? `${profileProgress.pending} por configurar`
-                : "Lista para probar"}
-            </span>
+            {!readOnly && onContinueToTest ? (
+              <button
+                type="button"
+                className={`${s.primaryButton} ${s.fabPreparedCta}`}
+                onClick={onContinueToTest}
+              >
+                Continuar a probar
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            ) : null}
           </aside>
         ) : null}
 
         <div className={s.fabLengthBar}>
           <div className={s.fabLengthBarMain}>
             <div className={s.fabLengthBarCopy}>
-              <strong>Barra que compro</strong>
+              <strong>Tira estándar</strong>
               <span>
-                Compro tiras de <em>{habitualLengthLabel}</em>
+                <em>{tiraEstandarLabel}</em>
               </span>
+              <p className={s.fabLengthBarHelp}>
+                Ventora usa 6 m por defecto. Cámbialo solo si compras perfiles en otro
+                largo.
+              </p>
             </div>
             {!readOnly ? (
               <button
@@ -1890,38 +1871,33 @@ export function RecipeGuidedEditor({
                 aria-expanded={showHabitualLengthPicker}
                 onClick={() => setShowHabitualLengthPicker((current) => !current)}
               >
-                Cambiar largo
+                Cambiar
               </button>
             ) : null}
           </div>
-          {!readOnly && recipe.perfiles.length > 0 ? (
-            allProfilesUseHabitualLength ? (
-              <p className={s.fabLengthBarDone} role="status">
-                Todos los perfiles usan {habitualLengthLabel}.
-              </p>
-            ) : (
-              <button
-                type="button"
-                className={`${s.secondaryButton} ${s.fabLengthBarApplyAll}`}
-                onClick={() =>
-                  onRecipeChange(
-                    applyLargoToAllProfiles(recipe, habitualLengthMm)
-                  )
-                }
-              >
-                Poner {habitualLengthLabel} en todos los perfiles
-              </button>
-            )
-          ) : null}
           {!readOnly && showHabitualLengthPicker ? (
             <div className={s.fabLengthBarPicker}>
               <RecipeCommercialLengthPicker
-                value={habitualLengthMm}
+                value={tiraEstandarMm}
                 usedByWorkshop={frequentLargos.usedByWorkshop}
                 otherFrequent={frequentLargos.otherFrequent}
                 readOnly={readOnly}
                 onChange={(nextValue) => {
-                  if (nextValue != null) setHabitualLengthOverrideMm(nextValue);
+                  if (nextValue != null) {
+                    onRecipeChange({
+                      ...recipe,
+                      configuracionCorte: {
+                        perdidaCorteMm:
+                          recipe.configuracionCorte?.perdidaCorteMm ?? null,
+                        despunteInicialMm:
+                          recipe.configuracionCorte?.despunteInicialMm ?? null,
+                        sobranteMinimoAprovechableMm:
+                          recipe.configuracionCorte?.sobranteMinimoAprovechableMm ??
+                          null,
+                        largoComercialDefaultMm: nextValue,
+                      },
+                    });
+                  }
                   setShowHabitualLengthPicker(false);
                 }}
               />
@@ -1929,50 +1905,52 @@ export function RecipeGuidedEditor({
           ) : null}
         </div>
 
-        {!readOnly && profileProgress.total > 0 ? (
-          <div className={s.fabSheetProgress} aria-label="Progreso de configuración">
+        {!readOnly && profileProgress.geometricPending > 0 ? (
+          <div className={s.fabSheetProgress} aria-label="Medidas pendientes">
             <div className={s.fabSheetProgressCopy}>
               <strong>
-                {profileProgress.ready} de {profileProgress.total} perfiles listos
+                {profileProgress.geometricPending} pieza
+                {profileProgress.geometricPending === 1 ? "" : "s"} sin medida de corte
               </strong>
-              <span>
-                {profileProgress.pending > 0
-                  ? "Completa ajuste y largo comercial en cada pieza."
-                  : "Puedes probar con una medida real."}
-              </span>
+              <span>Completa el ajuste solo en las piezas que falten.</span>
             </div>
-            <div
-              className={s.fabSheetProgressTrack}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={profileProgress.total}
-              aria-valuenow={profileProgress.ready}
-              aria-label="Perfiles configurados"
+            <button
+              type="button"
+              className={`${s.secondaryButton} ${s.fabSheetContinueBtn}`}
+              onClick={openNextPendingProfile}
             >
-              <span
-                className={s.fabSheetProgressFill}
-                style={{
-                  width:
-                    profileProgress.total > 0
-                      ? `${(profileProgress.ready / profileProgress.total) * 100}%`
-                      : "0%",
-                }}
-              />
-            </div>
-            {profileProgress.pending > 0 ? (
-              <button
-                type="button"
-                className={`${s.primaryButton} ${s.fabSheetContinueBtn}`}
-                onClick={openNextPendingProfile}
-              >
-                {profileProgress.ready === 0
-                  ? "Empezar configuración"
-                  : "Continuar con pendientes"}
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            ) : null}
+              Revisar pendientes
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
           </div>
         ) : null}
+
+        <details
+          className={s.fabAdvancedSection}
+          open={showAdvancedOptions}
+          onToggle={(event) =>
+            setShowAdvancedOptions((event.currentTarget as HTMLDetailsElement).open)
+          }
+        >
+          <summary className={s.fabAdvancedSummary}>
+            <span>Opciones avanzadas</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </summary>
+          <p className={s.fabAdvancedHint}>
+            Solo necesitas esto si tu taller trabaja distinto a la configuración
+            estándar.
+          </p>
+          {!readOnly && recipe.perfiles.length > 0 ? (
+            <button
+              type="button"
+              className={`${s.secondaryButton} ${s.fabLengthBarApplyAll}`}
+              onClick={() =>
+                onRecipeChange(applyLargoToAllProfiles(recipe, tiraEstandarMm))
+              }
+            >
+              Poner {tiraEstandarLabel} en todos los perfiles
+            </button>
+          ) : null}
 
         <div className={s.fabSheetGroupHeading}>
           {!readOnly ? (
@@ -2016,7 +1994,9 @@ export function RecipeGuidedEditor({
                 {group.profiles.map((profile) => {
                   const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
                   const sheetMeasure = describePerfilSheetMeasure(profile);
-                  const largoCorto = formatLargoComercialCorto(profile.largoComercialMm);
+                  const largoLabel = profileTieneOverrideLargoComercial(profile)
+                    ? resolveLargoComercialLabel(profile, recipe)
+                    : null;
                   const isDragging = draggingProfileIndex === index;
                   const isDropTarget =
                     dragOverProfileIndex === index &&
@@ -2113,7 +2093,7 @@ export function RecipeGuidedEditor({
                         {sheetMeasure.measure}
                       </span>
                       <span className={s.fabSheetLength}>
-                        {largoCorto ?? "Largo comercial pendiente"}
+                        {largoLabel?.label ?? "Tira estándar"}
                       </span>
                       <button
                         type="button"
@@ -2326,6 +2306,7 @@ export function RecipeGuidedEditor({
             </div>
           ) : null}
         </section>
+        </details>
 
         {drawerProfile && drawerProfileIndex >= 0 ? (
           <div className={s.fabDrawer} role="presentation">

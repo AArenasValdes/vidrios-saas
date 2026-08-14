@@ -2,13 +2,15 @@ import {
   describeAccesorioReglaHumana,
   describePerfilReglaHumana,
   describePerfilSheetMeasure,
-  formatLargoComercialHumano,
+  resolveLargoComercialMm,
+  resolveRecetaLargoComercialDefaultMm,
   summarizeTirasPorPerfil,
   VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import type {
   FabricacionAccesorio,
   FabricacionComponentePerfil,
+  FabricacionReceta,
 } from "@/features/fabricacion/types/fabricacion-domain";
 
 function profile(
@@ -34,13 +36,6 @@ describe("fabricacion-regla-humana.service", () => {
     );
   });
 
-  it("marca tira por confirmar sin largo", () => {
-    expect(formatLargoComercialHumano(null)).toBe("tira por confirmar");
-    expect(
-      describePerfilReglaHumana(profile({ largoComercialMm: null }))
-    ).toContain("tira por confirmar");
-  });
-
   it("describe accesorio humano", () => {
     const accessory: FabricacionAccesorio = {
       id: "a1",
@@ -52,6 +47,25 @@ describe("fabricacion-regla-humana.service", () => {
     expect(describeAccesorioReglaHumana(accessory)).toBe(
       "2 cierres por ventana"
     );
+  });
+
+  it("resuelve largo comercial con prioridad perfil > receta > Ventora", () => {
+    const receta = {
+      configuracionCorte: { largoComercialDefaultMm: 5800 },
+    } as FabricacionReceta;
+    expect(resolveRecetaLargoComercialDefaultMm(receta)).toBe(5800);
+    expect(resolveLargoComercialMm(profile({ largoComercialMm: null }), receta)).toBe(
+      5800
+    );
+    expect(
+      resolveLargoComercialMm(profile({ largoComercialMm: 6100 }), receta)
+    ).toBe(6100);
+    expect(
+      resolveLargoComercialMm(
+        profile({ largoComercialMm: null }),
+        {} as FabricacionReceta
+      )
+    ).toBe(VENTORA_LARGO_COMERCIAL_PRESET_MM);
   });
 
   it("no marca medida pendiente por confirmar código o largo", () => {

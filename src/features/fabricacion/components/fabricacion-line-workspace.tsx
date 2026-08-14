@@ -41,7 +41,6 @@ import {
   contarBloqueosCriticosReceta,
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
-import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
 import type {
   FabricacionEntradaCalculo,
@@ -627,6 +626,7 @@ export function FabricacionLineWorkspace({
           perdidaCorteMm: null,
           despunteInicialMm: null,
           sobranteMinimoAprovechableMm: null,
+          largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
         },
         notasValidacion: [],
       } satisfies FabricacionReceta;
@@ -646,6 +646,7 @@ export function FabricacionLineWorkspace({
           perdidaCorteMm: null,
           despunteInicialMm: null,
           sobranteMinimoAprovechableMm: null,
+          largoComercialDefaultMm: VENTORA_LARGO_COMERCIAL_PRESET_MM,
         },
         notasValidacion: [],
       } satisfies FabricacionReceta;
@@ -1176,6 +1177,10 @@ export function FabricacionLineWorkspace({
               onPersistRecipe={async (nextRecipe) => {
                 setDraft(nextRecipe);
                 await handleSave(nextRecipe, { silent: true });
+              }}
+              onContinueToTest={() => {
+                if (!selected) return;
+                void navigateToRecipeStep(selected, "test");
               }}
               onBaseApplied={() => {
                 setFeedback("Fabricación preparada. Revisa cómo trabaja tu taller.");

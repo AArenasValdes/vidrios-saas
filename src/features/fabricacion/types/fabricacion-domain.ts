@@ -121,6 +121,8 @@ export type FabricacionConfiguracionCorte = {
   perdidaCorteMm: number | null;
   despunteInicialMm: number | null;
   sobranteMinimoAprovechableMm: number | null;
+  /** Largo comercial habitual de la receta (tira estándar del taller). */
+  largoComercialDefaultMm?: number | null;
 };
 
 export type FabricacionReceta = {

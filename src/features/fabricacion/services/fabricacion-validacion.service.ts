@@ -2,6 +2,7 @@ import type {
   FabricacionAdvertencia,
   FabricacionReceta,
 } from "@/features/fabricacion/types/fabricacion-domain";
+import { resolveLargoComercialMm } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 export type FabricacionValidacionResultado = {
   ok: boolean;
@@ -87,8 +88,8 @@ export function validarRecetaFabricacion(value: unknown): FabricacionValidacionR
         componenteId: perfil.id,
       });
     }
-    // Largo comercial: progresivo (habilita barras), nunca bloquea validación geométrica.
-    if (perfil.requerido && !perfil.largoComercialMm) {
+    // Largo comercial se resuelve por defecto; solo avisar si el resolver falla.
+    if (perfil.requerido && resolveLargoComercialMm(perfil, receta) <= 0) {
       advertencias.push({
         codigo: "PERFIL_SIN_LARGO_COMERCIAL",
         nivel: "advertencia",

@@ -20,7 +20,7 @@ describe("código comercial opcional y largo progresivo", () => {
       true
     );
     expect(contarBloqueosCriticosReceta(recipe)).toBe(0);
-    expect(tieneLargosComercialesPendientes(recipe)).toBe(true);
+    expect(tieneLargosComercialesPendientes(recipe)).toBe(false);
 
     const resultado = calcularCubicacionYPauta(recipe, {
       anchoTotalMm: 1200,
@@ -43,29 +43,18 @@ describe("código comercial opcional y largo progresivo", () => {
     ).toBe(false);
     expect(
       validation.advertencias.some(
-        (entry) =>
-          entry.codigo === "PERFIL_SIN_LARGO_COMERCIAL" &&
-          entry.nivel === "advertencia"
+        (entry) => entry.codigo === "PERFIL_SIN_LARGO_COMERCIAL"
       )
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("habilita pauta de barras con largo comercial aunque el código esté vacío", () => {
+  it("habilita pauta de barras con resolver aunque el código esté vacío", () => {
     let nextId = 0;
     const recipe = crearRecetaPlantillaVentoraCorredera2H("L5000", {
       createId: () => `bar-${nextId++}`,
     });
-    const withLengths = {
-      ...recipe,
-      perfiles: recipe.perfiles.map((profile) => ({
-        ...profile,
-        codigoPerfil: "",
-        nombrePerfil: `${profile.funcion} L5000`,
-        largoComercialMm: 6000,
-      })),
-    };
 
-    const resultado = calcularCubicacionYPauta(withLengths, {
+    const resultado = calcularCubicacionYPauta(recipe, {
       anchoTotalMm: 1200,
       altoTotalMm: 1000,
       cantidad: 1,
@@ -74,7 +63,7 @@ describe("código comercial opcional y largo progresivo", () => {
       variante: "estandar",
     });
     const pauta = construirPautaBarrasFabricacion({
-      receta: withLengths,
+      receta: recipe,
       resultado,
     });
 

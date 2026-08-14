@@ -17,11 +17,9 @@ import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
 import {
   formatMetersFromMm,
+  resolveTiraEstandarRecetaLabel,
   summarizeTirasPorPerfil,
-  VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
-import { tieneLargosComercialesPendientes } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
-import { countProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionResultadoCubicacion,
@@ -168,14 +166,20 @@ export function RecipeTestLab({
   );
   const [isApplyingLengths, setIsApplyingLengths] = useState(false);
 
-  const missingCommercialLengths = tieneLargosComercialesPendientes(
-    recipe.definition
+  const tiraEstandar = useMemo(
+    () => resolveTiraEstandarRecetaLabel(recipe.definition),
+    [recipe.definition]
   );
-  const profilesWithoutLength = countProfilesWithoutLength(recipe.definition);
-  const presetMeters = (VENTORA_LARGO_COMERCIAL_PRESET_MM / 1000).toLocaleString(
-    "es-CL",
-    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-  );
+  const tiraEstandarLabel =
+    tiraEstandar.esPersonalizado
+      ? `Tira del taller utilizada: ${(tiraEstandar.largoMm / 1000).toLocaleString("es-CL", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} m`
+      : `Tira estándar utilizada: ${(tiraEstandar.largoMm / 1000).toLocaleString("es-CL", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} m`;
 
   const tirasSummary = useMemo(
     () => (barPlan?.barras.length ? summarizeTirasPorPerfil(barPlan.barras) : []),
@@ -191,7 +195,7 @@ export function RecipeTestLab({
     0
   ) ?? 0;
   const dominantLengthMm =
-    tirasSummary[0]?.largoComercialMm ?? VENTORA_LARGO_COMERCIAL_PRESET_MM;
+    tirasSummary[0]?.largoComercialMm ?? tiraEstandar.largoMm;
 
   const allMatch =
     actualPrimary != null &&
@@ -224,15 +228,6 @@ export function RecipeTestLab({
   );
 
   const calculate = () => {
-    if (missingCommercialLengths) {
-      setFeedback(null);
-      setActualPrimary(null);
-      setExpected(null);
-      setConsolidado(null);
-      setBarPlan(null);
-      return;
-    }
-
     const validMeasures = measures.filter(
       (row) => row.anchoMm > 0 && row.altoMm > 0 && row.cantidad > 0
     );
@@ -447,6 +442,8 @@ export function RecipeTestLab({
           ))}
         </div>
 
+        <p className={s.fabLabTiraHint}>{tiraEstandarLabel}</p>
+
         <div className={s.fabLabActions}>
           <button
             type="button"
@@ -462,48 +459,15 @@ export function RecipeTestLab({
             type="button"
             className={`${s.primaryButton} ${s.fabPrimaryCta}`}
             onClick={calculate}
-            disabled={missingCommercialLengths}
           >
             <Play size={16} />
             Calcular materiales
           </button>
           {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
         </div>
-
-        {missingCommercialLengths ? (
-          <div className={s.fabLengthGate} role="status">
-            <strong>Faltan largos comerciales para calcular las tiras</strong>
-            <p>
-              Ventora ya sabe los cortes necesarios, pero necesita el largo
-              comercial de {profilesWithoutLength}{" "}
-              {profilesWithoutLength === 1 ? "perfil" : "perfiles"} para armar
-              la pauta sugerida.
-            </p>
-            <div className={s.fabLabActions}>
-              <button
-                type="button"
-                className={`${s.primaryButton} ${s.fabPrimaryCta}`}
-                disabled={isApplyingLengths || isSaving}
-                onClick={() => void handleApplyPresetLengths()}
-              >
-                <Ruler size={16} />
-                Usar {presetMeters} m en todos
-              </button>
-              {onConfigureLengths || onBackToRecipe ? (
-                <button
-                  type="button"
-                  className={s.fabGhostAction}
-                  onClick={onConfigureLengths ?? onBackToRecipe}
-                >
-                  Configurar individualmente
-                </button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </section>
 
-      {actualPrimary && expected && consolidado && !missingCommercialLengths ? (
+      {actualPrimary && expected && consolidado ? (
         <section
           className={`${s.editorSection} ${s.labResultHero} ${s.fabLabResult}`}
           data-reveal="true"

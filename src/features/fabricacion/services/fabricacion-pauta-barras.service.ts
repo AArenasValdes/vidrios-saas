@@ -9,6 +9,7 @@ import type {
   FabricacionPautaBarras,
 } from "@/features/fabricacion/types/fabricacion-snapshot";
 import { resolvePerfilMaterialKey } from "@/features/fabricacion/services/taller-perfiles.service";
+import { resolveLargoComercialMm } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 
 type CorteExpandido = {
   componenteId: string;
@@ -62,7 +63,10 @@ export function construirPautaBarrasFabricacion(input: {
     const perfil = input.receta.perfiles.find(
       (componente) => componente.id === fila.componenteId
     );
-    if (!perfil?.largoComercialMm) {
+    const largoComercialMm = perfil
+      ? resolveLargoComercialMm(perfil, input.receta)
+      : 0;
+    if (!perfil || largoComercialMm <= 0) {
       advertencias.push({
         codigo: "PERFIL_SIN_DATOS_DE_BARRA",
         nivel: "advertencia",
@@ -82,7 +86,7 @@ export function construirPautaBarrasFabricacion(input: {
         nombrePerfil: perfil.nombrePerfil.trim() || fila.nombrePerfil || fila.funcion,
         funcion: fila.funcion,
         largoMm: fila.medidaMm,
-        largoComercialMm: perfil.largoComercialMm,
+        largoComercialMm,
       });
     }
   });

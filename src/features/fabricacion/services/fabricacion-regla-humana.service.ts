@@ -7,6 +7,7 @@ import type {
   FabricacionAccesorio,
   FabricacionBaseMedida,
   FabricacionComponentePerfil,
+  FabricacionReceta,
   FabricacionReglaCantidad,
   FabricacionReglaCantidadTipo,
   FabricacionReglaMedida,
@@ -14,6 +15,101 @@ import type {
 
 /** Preset sugerido por Ventora en UI. Nunca es “largo de empresa” fijo. */
 export const VENTORA_LARGO_COMERCIAL_PRESET_MM = 6000;
+
+/** Reservado para default a nivel organización/taller (futuro). */
+export type FabricacionOrganizationLargoDefaults = {
+  largoComercialDefaultMm?: number | null;
+};
+
+function normalizeLargoComercialMm(
+  value: number | null | undefined
+): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return Math.round(value);
+}
+
+/** Default de tira para la receta (sin override por perfil). */
+export function resolveRecetaLargoComercialDefaultMm(
+  receta: FabricacionReceta,
+  organization?: FabricacionOrganizationLargoDefaults | null
+): number {
+  return (
+    normalizeLargoComercialMm(receta.configuracionCorte?.largoComercialDefaultMm) ??
+    normalizeLargoComercialMm(organization?.largoComercialDefaultMm) ??
+    VENTORA_LARGO_COMERCIAL_PRESET_MM
+  );
+}
+
+/** Fuente única de verdad del largo comercial efectivo por perfil. */
+export function resolveLargoComercialMm(
+  profile: FabricacionComponentePerfil,
+  receta: FabricacionReceta,
+  organization?: FabricacionOrganizationLargoDefaults | null
+): number {
+  return (
+    normalizeLargoComercialMm(profile.largoComercialMm) ??
+    resolveRecetaLargoComercialDefaultMm(receta, organization)
+  );
+}
+
+export function profileTieneOverrideLargoComercial(
+  profile: FabricacionComponentePerfil
+): boolean {
+  return normalizeLargoComercialMm(profile.largoComercialMm) != null;
+}
+
+/** Etiqueta humana para UI (resumen o excepción por perfil). */
+export function resolveLargoComercialLabel(
+  profile: FabricacionComponentePerfil,
+  receta: FabricacionReceta,
+  organization?: FabricacionOrganizationLargoDefaults | null
+): { label: string; esPersonalizado: boolean; largoMm: number } {
+  const largoMm = resolveLargoComercialMm(profile, receta, organization);
+  const recetaDefault = resolveRecetaLargoComercialDefaultMm(receta, organization);
+
+  if (profileTieneOverrideLargoComercial(profile)) {
+    return {
+      label: `${formatLargoComercialCorto(largoMm) ?? `${largoMm} mm`} · Personalizado`,
+      esPersonalizado: true,
+      largoMm,
+    };
+  }
+
+  if (recetaDefault !== VENTORA_LARGO_COMERCIAL_PRESET_MM) {
+    return {
+      label: `${formatLargoComercialCorto(recetaDefault) ?? `${recetaDefault} mm`} · Tira del taller`,
+      esPersonalizado: true,
+      largoMm,
+    };
+  }
+
+  return {
+    label: `Tira estándar · ${formatLargoComercialCorto(VENTORA_LARGO_COMERCIAL_PRESET_MM) ?? "6,00 m"}`,
+    esPersonalizado: false,
+    largoMm,
+  };
+}
+
+export function resolveTiraEstandarRecetaLabel(
+  receta: FabricacionReceta,
+  organization?: FabricacionOrganizationLargoDefaults | null
+): { label: string; largoMm: number; esPersonalizado: boolean } {
+  const largoMm = resolveRecetaLargoComercialDefaultMm(receta, organization);
+  if (largoMm === VENTORA_LARGO_COMERCIAL_PRESET_MM) {
+    return {
+      label: `Tira estándar · ${formatLargoComercialCorto(largoMm) ?? "6,00 m"}`,
+      largoMm,
+      esPersonalizado: false,
+    };
+  }
+  return {
+    label: `${formatLargoComercialCorto(largoMm) ?? `${largoMm} mm`} · Tira del taller`,
+    largoMm,
+    esPersonalizado: true,
+  };
+}
 
 const MEASURE_LABELS: Record<FabricacionBaseMedida, string> = {
   ancho_total: "Ancho",

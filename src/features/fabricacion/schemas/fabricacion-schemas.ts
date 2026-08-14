@@ -129,6 +129,7 @@ export const fabricacionConfiguracionCorteSchema = z
     perdidaCorteMm: integerNonNegativeSchema.nullable(),
     despunteInicialMm: integerNonNegativeSchema.nullable(),
     sobranteMinimoAprovechableMm: integerNonNegativeSchema.nullable(),
+    largoComercialDefaultMm: integerPositiveSchema.nullable().optional(),
   })
   .strict();
 
