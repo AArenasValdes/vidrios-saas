@@ -6,6 +6,7 @@ import {
 } from "@/features/auth/services/auth-route-access.service";
 import { isMercadoPagoChilePlanCode } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { MercadoPagoApiError } from "@/features/subscriptions/providers/mercadopago/mercadopago.client";
+import { mapMercadoPagoUserMessage } from "@/features/subscriptions/providers/mercadopago/mercadopago-user-message";
 import {
   createMercadoPagoChileCheckout,
   MercadoPagoCheckoutError,
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
 
     if (error instanceof MercadoPagoApiError) {
       console.error("[mercadopago:create]", error.status, error.message);
+      const mappedMessage = mapMercadoPagoUserMessage(error.message);
       return NextResponse.json(
         {
           error:
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
               ? "Mercado Pago rechazo el access token configurado en Vercel."
               : error.status === 404
                 ? "No encontramos el plan de suscripcion en Mercado Pago. Revisa los PLAN_ID en Vercel."
-                : error.message,
+                : mappedMessage,
         },
         { status: 502 }
       );
@@ -105,7 +107,10 @@ export async function POST(request: Request) {
 
     if (error instanceof Error) {
       console.error("[mercadopago:create]", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: mapMercadoPagoUserMessage(error.message) },
+        { status: 500 }
+      );
     }
 
     console.error("[mercadopago:create]", error);
