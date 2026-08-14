@@ -1,5 +1,9 @@
 # Weekly Operating System - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS
+
 ## Lunes: prospeccion
 
 - objetivo: llenar la parte alta del embudo

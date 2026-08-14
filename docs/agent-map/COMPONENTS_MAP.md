@@ -1,5 +1,15 @@
 # Components Map - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
+Los archivos descritos aquí deben seguir siendo reutilizables y coherentes con `FEATURES_MAP.md`; nuevos componentes compartidos requieren entrada y `pnpm docs:check`.
+
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
 ---
 
 ## Layout

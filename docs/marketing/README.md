@@ -1,8 +1,14 @@
 # Marketing Docs - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: marketing Ventora
+
 Esta carpeta reúne la documentacion operativa para crecimiento, prospeccion, contenido, metricas y WhatsApp de Ventora.
 
 Objetivo:
+
+La ejecución operativa vive en `docs/growth-os/README.md`. Esta carpeta conserva marca, contenido y playbooks tácticos; no crear aquí un segundo sistema de workflows.
 
 - evitar que futuros agentes pidan el mismo contexto una y otra vez
 - mantener foco comercial en captacion, centralizacion, WhatsApp, cotizacion y cierre

@@ -1,11 +1,17 @@
 # Ventora / Vidrios SaaS
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: proyecto Ventora
+
 Este documento resume el contexto operativo actual del proyecto.
 
 Importante:
 
 - Este `README.md` es un resumen.
-- La fuente interna mas completa del repo sigue siendo [`AGENTS.md`](/C:/Users/aless/vidrios-saas/Agents.md).
+- La fuente técnica de agentes es [`AGENTS.md`](AGENTS.md).
+- El índice documental es [`docs/README.md`](docs/README.md).
+- El sistema operativo de marketing es [`docs/growth-os/README.md`](docs/growth-os/README.md).
 - Si otra IA va a tocar codigo, deberia leer ambos.
 
 ## Resumen corto
@@ -263,17 +269,18 @@ Reglas:
 ## Como correr el proyecto
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Scripts utiles:
 
 ```bash
-npm run dev
-npm run build
-npm run test
-npm run lint
+pnpm run dev
+pnpm run build
+pnpm run test
+pnpm run lint
+pnpm docs:check
 ```
 
 ## Guia rapida para otras IAs

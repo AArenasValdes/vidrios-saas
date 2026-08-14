@@ -2,6 +2,9 @@
 
 **Última actualización:** 2026-08-14
 
+Estado: operativo
+Responsable: billing + ingeniería
+
 ## Resumen
 
 La **pasarela de pago recurrente con Mercado Pago Chile está lista y operativa en producción**. Las empresas chilenas con trial vencido o cuenta inactiva pueden contratar desde `/cuenta-vencida` sin depender de WhatsApp cuando la configuración server-side está completa.

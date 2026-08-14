@@ -19,6 +19,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
+    "docs:check": "node scripts/check-docs-drift.mjs",
     "test:e2e:auth-mobile": "playwright test tests/e2e/auth-logout.mobile.spec.ts --project=mobile-chromium",
     "test:e2e:list": "playwright test --list",
     "test:watch": "jest --watch",

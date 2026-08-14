@@ -1,5 +1,9 @@
 # Agent Task Guide - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
 Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la seccion correspondiente.
 
 ## Prelectura obligatoria
@@ -211,7 +215,7 @@ Reglas:
 
 ### Como probar (QA local)
 
-1. Desktop ≥1024; preferir `npm run build` + `npm run start` (o `pnpm`).
+1. Desktop ≥1024; preferir `pnpm run build` + `pnpm run start`.
 2. `/cotizaciones/nueva` -> Paso 2 -> **Constructor** -> agregar al menos tres presets -> editar, seleccionar, duplicar, reordenar y eliminar.
 3. Alternar Presupuesto/Constructor y confirmar que nombre, medidas, cantidad, color y precio no se pierden.
 4. Abrir el editor avanzado de una pieza mediante **Personalizado -> Abrir constructor**, aplicar y volver al cuaderno.
@@ -373,9 +377,9 @@ Reglas:
 
 ## Checklist despues de modificar codigo
 
-- [ ] Ejecutar `npm run lint`
-- [ ] Ejecutar `npm run build`
-- [ ] Ejecutar `npm test`
+- [ ] Ejecutar `pnpm run lint`
+- [ ] Ejecutar `pnpm run build`
+- [ ] Ejecutar `pnpm test`
 - [ ] Si se agrego/modifico una ruta: actualizar `ROUTES_MAP.md`
 - [ ] Si se agrego/modifico un componente reutilizable: actualizar `COMPONENTS_MAP.md`
 - [ ] Si se agrego/modifico una tabla o query: actualizar `DATA_MODEL_MAP.md`
@@ -386,12 +390,12 @@ Reglas:
 
 | Comando | Proposito |
 |---|---|
-| `npm run dev` | Servidor desarrollo (puerto 3000) |
-| `npm run dev:lan` | Servidor desarrollo en LAN (0.0.0.0:3000) |
-| `npm run build` | Build de produccion |
-| `npm run lint` | Linter ESLint |
-| `npm test` | Ejecutar tests Jest |
-| `npm run test:watch` | Tests en modo watch |
+| `pnpm run dev` | Servidor desarrollo (puerto 3000) |
+| `pnpm run dev:lan` | Servidor desarrollo en LAN (0.0.0.0:3000) |
+| `pnpm run build` | Build de produccion |
+| `pnpm run lint` | Linter ESLint |
+| `pnpm test` | Ejecutar tests Jest |
+| `pnpm run test:watch` | Tests en modo watch |
 | `npx supabase start` | Iniciar Supabase local |
 | `npx supabase db reset` | Reset DB local con migraciones |
 

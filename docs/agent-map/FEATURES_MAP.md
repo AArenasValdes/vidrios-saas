@@ -1,6 +1,12 @@
 # Features Map - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
 Organizacion por funcionalidad, no por carpetas. Cada feature indica exactamente donde editar UI, logica y persistencia.
+
+Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una feature agrega una ruta, actualizar este mapa y ejecutar `pnpm docs:check`.
 
 ---
 

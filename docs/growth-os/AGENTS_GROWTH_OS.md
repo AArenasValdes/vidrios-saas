@@ -1,5 +1,9 @@
 # AGENTS_GROWTH_OS - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS
+
 Este archivo define los agentes persistentes del Growth OS de Ventora.
 
 Cada agente tiene un rol claro dentro del embudo y no debe invadir territorios que abran Fase 3+ o conviertan a Ventora en ERP o CRM enterprise.

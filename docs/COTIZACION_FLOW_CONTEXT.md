@@ -650,9 +650,9 @@ Mejoras riesgosas:
 
 Automatizado:
 
-- `npm run lint`
-- `npm test`
-- `npm run build`
+- `pnpm run lint`
+- `pnpm test`
+- `pnpm run build`
 
 Tests relevantes existentes:
 

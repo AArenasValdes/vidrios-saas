@@ -1,5 +1,9 @@
 # AGENTS.md - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería + agentes del repositorio
+
 Lee antes de editar. Ultima consolidacion: 2026-08-14.
 
 ## Regla principal
@@ -38,18 +42,22 @@ Si dos documentos se contradicen, manda este orden:
 
 ```text
 docs/
+  README.md                   <- Indice documental general
   VENTORA_GIRO_PRODUCTO_2026-07.md  <- Rector de producto y limites vigentes
   agent-map/
     README.md                   <- Indice maestro (EMPEZAR AQUI)
     CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (pegar a otra IA)
     PROJECT_OVERVIEW.md         <- Stack, arquitectura, carpetas
     ROUTES_MAP.md               <- Rutas con archivos y riesgos
+    ROUTES_MANIFEST.json        <- Inventario generado desde app/
     FEATURES_MAP.md             <- Features con archivos criticos
     DATA_MODEL_MAP.md           <- Tablas, relaciones, RLS, issues
     COMPONENTS_MAP.md           <- Componentes reutilizables
     AGENT_TASK_GUIDE.md         <- Guia practica por tipo de tarea
     TOKEN_SAVING_RULES.md       <- Reglas para ahorrar tokens
     CHANGELOG_AGENT_MAP.md      <- Historial de cambios
+  growth-os/                    <- Workflows operativos de marketing y growth
+  archive/                      <- Historial no vigente
   manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md <- Manual corto taller
 ```
 
@@ -212,7 +220,7 @@ Ultima actualizacion operativa: 2026-08-14
 ## Notas de QA
 
 - Para QA automatizado confiable, preferir `pnpm run build` + `pnpm run start`.
-- El `npm run dev` actual en `:3000` puede quedar con HMR degradado (`webpack-hmr` handshake invalido) y falsear pruebas de login/client hydration.
+- El `pnpm run dev` actual en `:3000` puede quedar con HMR degradado (`webpack-hmr` handshake invalido) y falsear pruebas de login/client hydration.
 
 ## Convenciones criticas
 

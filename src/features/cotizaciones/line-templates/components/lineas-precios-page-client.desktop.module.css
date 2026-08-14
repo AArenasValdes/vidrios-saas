@@ -137,6 +137,15 @@
     background: transparent !important;
   }
 
+  .groupCards:has(.cardMenuOpen) {
+    overflow: visible !important;
+  }
+
+  .cardMenuOpen {
+    z-index: 24 !important;
+    overflow: visible !important;
+  }
+
   .card {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;

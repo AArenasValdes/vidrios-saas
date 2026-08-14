@@ -1,5 +1,23 @@
 # Routes Map - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
+Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las secciones detalladas siguen abajo; el bloque de inventario cubre también APIs y superficies internas.
+
+### Ownership por área
+
+| Área | Owner operativo | Riesgo/QA base |
+|---|---|---|
+| Pública/captación | Agente de Atracción | Smoke real de formulario, slug, UTM y WhatsApp |
+| Pública/cierre | Agente de Conversión | Smoke real de token, aprobación, PDF y WhatsApp |
+| Cotizaciones privadas | Agente de Conversión + Entrega | QA móvil 390/430, desktop, guardado y PDF |
+| Configuración/onboarding | Agente de Entrega y Éxito | Trial, organización, branding y primera cotización |
+| Admin/Growth | Operativa y Escalamiento | Sesión founder, tenant y acciones internas |
+| Billing/subscriptions | Billing + Operativa | Webhook firmado, ledger, plan y acceso |
+| APIs | Owner de la ruta consumidora | Contrato, auth, RLS y errores seguros |
+
 ## Ruta: / (Landing)
 
 - **Tipo**: Publica
@@ -559,3 +577,104 @@
 |---|---|---|
 | `/print/cotizaciones/[id]/fabricacion` | Resumen interno de fabricación / pauta (sin precios). Separado del PDF cliente. Enlace desde detalle de cotización. | `app/print/cotizaciones/[id]/fabricacion/page.tsx`, `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts` |
 | `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. Usa el renderer compartido: croquis protagonista (`maxH: 260`, marco hasta 248 px), perfiles, cotas y aperturas. Preview/export HTML revisados; falta rasterizar un PDF descargado real. Características vía `buildCotizacionItemPrintSpecs()` (sin Material/Color en Espejo/Cubierta de mesa). | `app/print/cotizaciones/[id]/page.tsx`, `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`, `src/features/cotizaciones/visual-composer/` |
+## Inventario exhaustivo de rutas
+
+Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de cada superficie está en las secciones específicas de este archivo.
+
+| Ruta | Tipo | Área | Archivo fuente |
+|---|---|---|---|
+| `/` | page | public | `app/(landing-web)/page.tsx` |
+| `/.well-known/assetlinks.json` | api | private | `app/.well-known/assetlinks.json/route.ts` |
+| `/activacion` | page | private | `app/(pwa-app)/activacion/page.tsx` |
+| `/admin` | page | admin | `app/admin/page.tsx` |
+| `/admin/activacion` | page | admin | `app/admin/activacion/page.tsx` |
+| `/admin/clientes` | page | admin | `app/admin/clientes/page.tsx` |
+| `/admin/clientes/[organizationId]` | page | admin | `app/admin/clientes/[organizationId]/page.tsx` |
+| `/admin/growth` | page | admin | `app/admin/growth/page.tsx` |
+| `/admin/marketing` | page | admin | `app/admin/marketing/page.tsx` |
+| `/admin/pagos-y-planes` | page | admin | `app/admin/pagos-y-planes/page.tsx` |
+| `/admin/prospectos` | page | admin | `app/admin/prospectos/page.tsx` |
+| `/admin/tareas` | page | admin | `app/admin/tareas/page.tsx` |
+| `/api/admin/activacion` | api | api | `app/api/admin/activacion/route.ts` |
+| `/api/admin/clientes` | api | api | `app/api/admin/clientes/route.ts` |
+| `/api/admin/clientes/activate-payment` | api | api | `app/api/admin/clientes/activate-payment/route.ts` |
+| `/api/admin/clientes/deactivate-trial` | api | api | `app/api/admin/clientes/deactivate-trial/route.ts` |
+| `/api/admin/clientes/extend-trial` | api | api | `app/api/admin/clientes/extend-trial/route.ts` |
+| `/api/admin/clientes/provision` | api | api | `app/api/admin/clientes/provision/route.ts` |
+| `/api/admin/clientes/set-test-account` | api | api | `app/api/admin/clientes/set-test-account/route.ts` |
+| `/api/admin/dashboard` | api | api | `app/api/admin/dashboard/route.ts` |
+| `/api/admin/growth/activities` | api | api | `app/api/admin/growth/activities/route.ts` |
+| `/api/admin/growth/import-excel` | api | api | `app/api/admin/growth/import-excel/route.ts` |
+| `/api/admin/growth/import-local-workspace` | api | api | `app/api/admin/growth/import-local-workspace/route.ts` |
+| `/api/admin/growth/prospects` | api | api | `app/api/admin/growth/prospects/route.ts` |
+| `/api/admin/growth/prospects/[id]` | api | api | `app/api/admin/growth/prospects/[id]/route.ts` |
+| `/api/admin/growth/prospects/[id]/contact` | api | api | `app/api/admin/growth/prospects/[id]/contact/route.ts` |
+| `/api/admin/growth/tasks` | api | api | `app/api/admin/growth/tasks/route.ts` |
+| `/api/admin/growth/work-today` | api | api | `app/api/admin/growth/work-today/route.ts` |
+| `/api/admin/growth/workspace` | api | api | `app/api/admin/growth/workspace/route.ts` |
+| `/api/admin/marketing` | api | api | `app/api/admin/marketing/route.ts` |
+| `/api/admin/pagos` | api | api | `app/api/admin/pagos/route.ts` |
+| `/api/admin/pagos/confirm` | api | api | `app/api/admin/pagos/confirm/route.ts` |
+| `/api/admin/pagos/reject` | api | api | `app/api/admin/pagos/reject/route.ts` |
+| `/api/admin/tareas` | api | api | `app/api/admin/tareas/route.ts` |
+| `/api/app-version` | api | api | `app/api/app-version/route.ts` |
+| `/api/auth/oauth/complete-registration` | api | api | `app/api/auth/oauth/complete-registration/route.ts` |
+| `/api/auth/profile` | api | api | `app/api/auth/profile/route.ts` |
+| `/api/auth/register` | api | api | `app/api/auth/register/route.ts` |
+| `/api/auth/signup` | api | api | `app/api/auth/signup/route.ts` |
+| `/api/billing/checkout` | api | api | `app/api/billing/checkout/route.ts` |
+| `/api/billing/flow/confirmar` | api | api | `app/api/billing/flow/confirmar/route.ts` |
+| `/api/clientes/resumen` | api | api | `app/api/clientes/resumen/route.ts` |
+| `/api/cotizaciones/[id]/pdf-descargado` | api | api | `app/api/cotizaciones/[id]/pdf-descargado/route.ts` |
+| `/api/cotizaciones/resumen` | api | api | `app/api/cotizaciones/resumen/route.ts` |
+| `/api/dashboard/summary` | api | api | `app/api/dashboard/summary/route.ts` |
+| `/api/fabricacion/asistente-texto` | api | api | `app/api/fabricacion/asistente-texto/route.ts` |
+| `/api/onboarding/activation/status` | api | api | `app/api/onboarding/activation/status/route.ts` |
+| `/api/organization-assets/upload` | api | api | `app/api/organization-assets/upload/route.ts` |
+| `/api/public-landing/revalidate` | api | api | `app/api/public-landing/revalidate/route.ts` |
+| `/api/pwa/push-subscriptions` | api | api | `app/api/pwa/push-subscriptions/route.ts` |
+| `/api/solicitud/[empresa]` | api | api | `app/api/solicitud/[empresa]/route.ts` |
+| `/api/solicitud/[empresa]/valoraciones` | api | api | `app/api/solicitud/[empresa]/valoraciones/route.ts` |
+| `/api/solicitudes` | api | api | `app/api/solicitudes/route.ts` |
+| `/api/solicitudes/resumen` | api | api | `app/api/solicitudes/resumen/route.ts` |
+| `/api/subscriptions/mercadopago/cancel` | api | api | `app/api/subscriptions/mercadopago/cancel/route.ts` |
+| `/api/subscriptions/mercadopago/create` | api | api | `app/api/subscriptions/mercadopago/create/route.ts` |
+| `/api/subscriptions/mercadopago/webhook` | api | api | `app/api/subscriptions/mercadopago/webhook/route.ts` |
+| `/api/subscriptions/pagos` | api | api | `app/api/subscriptions/pagos/route.ts` |
+| `/api/subscriptions/summary` | api | api | `app/api/subscriptions/summary/route.ts` |
+| `/api/subscriptions/webpay/confirmar` | api | api | `app/api/subscriptions/webpay/confirmar/route.ts` |
+| `/api/subscriptions/webpay/crear` | api | api | `app/api/subscriptions/webpay/crear/route.ts` |
+| `/auth/callback` | api | auth | `app/(auth-public)/auth/callback/route.ts` |
+| `/auth/completar-cuenta` | page | auth | `app/(auth-public)/auth/completar-cuenta/page.tsx` |
+| `/auth/logout` | api | auth | `app/(auth-public)/auth/logout/route.ts` |
+| `/biblioteca-lineas` | page | private | `app/(pwa-app)/biblioteca-lineas/page.tsx` |
+| `/clientes` | page | private | `app/(pwa-app)/clientes/page.tsx` |
+| `/clientes/[id]` | page | private | `app/(pwa-app)/clientes/[id]/page.tsx` |
+| `/clientes/[id]/editar` | page | private | `app/(pwa-app)/clientes/[id]/editar/page.tsx` |
+| `/clientes/nuevo` | page | private | `app/(pwa-app)/clientes/nuevo/page.tsx` |
+| `/configuracion/empresa` | page | private | `app/(pwa-app)/configuracion/empresa/page.tsx` |
+| `/configuracion/empresa/lineas-precios` | page | private | `app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx` |
+| `/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion` | page | private | `app/(pwa-app)/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion/page.tsx` |
+| `/configuracion/empresa/lineas-precios/importar` | page | private | `app/(pwa-app)/configuracion/empresa/lineas-precios/importar/page.tsx` |
+| `/configuracion/pagina-venta` | page | private | `app/(pwa-app)/configuracion/pagina-venta/page.tsx` |
+| `/cotizaciones` | page | private | `app/(pwa-app)/cotizaciones/page.tsx` |
+| `/cotizaciones/[id]` | page | private | `app/(pwa-app)/cotizaciones/[id]/page.tsx` |
+| `/cotizaciones/nueva` | page | private | `app/(pwa-app)/cotizaciones/nueva/page.tsx` |
+| `/cuenta-vencida` | page | private | `app/(subscription-gate)/cuenta-vencida/page.tsx` |
+| `/cuenta-vencida/mercadopago/retorno` | page | private | `app/(subscription-gate)/cuenta-vencida/mercadopago/retorno/page.tsx` |
+| `/cuenta/suscripcion` | page | private | `app/(pwa-app)/cuenta/suscripcion/page.tsx` |
+| `/dashboard` | page | private | `app/(pwa-app)/dashboard/page.tsx` |
+| `/login` | page | auth | `app/(auth-public)/login/page.tsx` |
+| `/mis-recetas` | page | private | `app/(pwa-app)/mis-recetas/page.tsx` |
+| `/offline` | page | private | `app/(landing-web)/offline/page.tsx` |
+| `/planes` | page | public | `app/(landing-web)/planes/page.tsx` |
+| `/presupuesto/[token]` | page | public | `app/presupuesto/[token]/page.tsx` |
+| `/presupuesto/[token]/documento` | page | public | `app/presupuesto/[token]/documento/page.tsx` |
+| `/print/cotizaciones/[id]` | page | print | `app/print/cotizaciones/[id]/page.tsx` |
+| `/print/cotizaciones/[id]/fabricacion` | page | print | `app/print/cotizaciones/[id]/fabricacion/page.tsx` |
+| `/privacy` | page | private | `app/(landing-web)/privacy/page.tsx` |
+| `/registro` | page | auth | `app/(auth-public)/registro/page.tsx` |
+| `/solicitud/[empresa]` | page | public | `app/(landing-web)/solicitud/[empresa]/page.tsx` |
+| `/solicitudes` | page | public | `app/(pwa-app)/solicitudes/page.tsx` |
+| `/solicitudes/canales` | page | public | `app/(pwa-app)/solicitudes/canales/page.tsx` |
+| `/terms` | page | private | `app/(landing-web)/terms/page.tsx` |

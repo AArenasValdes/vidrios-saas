@@ -1,5 +1,9 @@
 # AGENTS_MARKETING.md - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS + marketing Ventora
+
 Lee antes de proponer acciones de growth, marketing, prospeccion, contenido, WhatsApp o pilotos.
 
 Ultima actualizacion: 2026-08-13.

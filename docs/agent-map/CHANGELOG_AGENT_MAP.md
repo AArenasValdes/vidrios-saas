@@ -2,6 +2,15 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-14 - Orden documental y Growth OS
+
+- Se agregó `docs/README.md` como índice general y `docs/agent-map/ROUTES_MANIFEST.json` como inventario generado desde `app/`.
+- `ROUTES_MAP.md` ahora incluye inventario exhaustivo, ownership por área y cobertura de APIs/admin/print/auth.
+- `DATA_MODEL_MAP.md` separa tablas activas adicionales de tablas propuestas no implementadas.
+- Growth OS quedó como centro operativo de workflows; marketing conserva marca y playbooks tácticos.
+- Se archivaron documentos históricos bajo `docs/archive/` sin eliminar evidencia.
+- Se agregó `pnpm docs:check` para detectar drift, links rotos, rutas faltantes y documentación canónica incompleta.
+
 ## 2026-08-14 - Mercado Pago Chile operativo en produccion
 
 - La pasarela recurrente Mercado Pago Chile quedo **lista y activa** en produccion: checkout en `/cuenta-vencida`, webhook en `/api/subscriptions/mercadopago/webhook`, lifecycle en `/cuenta/suscripcion`.

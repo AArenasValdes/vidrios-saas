@@ -1,5 +1,16 @@
 # SOP Contenido - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Agente de Atracción
+
+Contrato: `WORKFLOW_STANDARD.md`
+Disparador: ciclo semanal o evidencia de un dolor comercial repetido.
+Salida: pieza publicada con un dolor, una demo y un CTA único.
+KPI: mensajes recibidos y demos; vistas solo como contexto.
+Rutas afectadas: landing y `/solicitud/[empresa]` si se toca producto.
+QA: revisar promesas contra `AGENTS_MARKETING.md`.
+
 ## Objetivo
 
 Crear contenido organico que muestre la transformacion central de Ventora: de llegar a casa a hacer presupuestos en computador, a cotizar desde el celular en terreno y enviar un PDF profesional en minutos.

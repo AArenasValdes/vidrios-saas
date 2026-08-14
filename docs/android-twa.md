@@ -32,7 +32,7 @@ ANDROID_TWA_SHA256_CERT_FINGERPRINTS=AA:BB:CC:...
 Instalar y preparar:
 
 ```bash
-npm install -g @bubblewrap/cli
+pnpm add -g @bubblewrap/cli
 bubblewrap doctor
 bubblewrap init --manifest https://www.ventorap.cl/manifest.webmanifest
 ```

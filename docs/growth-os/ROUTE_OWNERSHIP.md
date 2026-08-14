@@ -1,5 +1,9 @@
 # Route Ownership - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS
+
 Este documento asigna ownership comercial a las rutas criticas de Ventora.
 
 Regla:

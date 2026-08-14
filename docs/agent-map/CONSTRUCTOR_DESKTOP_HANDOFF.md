@@ -9,7 +9,7 @@ Este documento es la fuente operativa para continuar el modo **Constructor** de 
 Antes de editar, leer en este orden:
 
 1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
-2. `Agents.md`
+2. `AGENTS.md`
 3. este documento
 4. `docs/agent-map/FEATURES_MAP.md` - Cotizaciones y PDF
 5. `docs/agent-map/COMPONENTS_MAP.md` - `GuidedVisualComposer` y `QuoteConstructorWorkspace`
@@ -217,7 +217,7 @@ Toda persistencia formal debe seguir filtrando `organization_id` y respetando so
 - Jest de componente: 5/5 paso antes del ultimo ajuste PDF.
 - TypeScript: `npx tsc --noEmit --pretty false --incremental false` pasa.
 - ESLint focalizado del workspace pasa.
-- `npm run build` pasa.
+- `pnpm run build` pasa.
 - QA de navegador en build limpio:
   - 1024: inspector 380px, una columna;
   - 1280: inspector 390px, una columna;
@@ -257,7 +257,7 @@ Capturas:
 
 - Los tests focalizados de renderer/legacy agregados en el ultimo ajuste no alcanzan a ejecutarse por el bloqueo global de Jest:
   - `TypeError: this._moduleMocker.clearMocksOnScope is not a function`
-- `npm run lint` global mantiene deuda React Compiler en rutas ajenas y en callbacks preexistentes del visor PDF.
+- `pnpm run lint` global mantiene deuda React Compiler en rutas ajenas y en callbacks preexistentes del visor PDF.
 - No atribuir estos bloqueos al Constructor sin evidencia nueva.
 
 ## Brechas conocidas y siguientes cortes seguros
@@ -330,8 +330,8 @@ Completar cuando Jest global este reparado:
 npx tsc --noEmit --pretty false --incremental false
 npx eslint "src/features/cotizaciones/visual-composer/**/*.{ts,tsx}" "app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx"
 npx jest src/features/cotizaciones/visual-composer --runInBand
-npm run build
-npm run start
+pnpm run build
+pnpm run start
 ```
 
 Si Jest vuelve a fallar antes de ejecutar tests con `clearMocksOnScope`, registrarlo como bloqueo global y continuar con typecheck, build y QA manual proporcional.

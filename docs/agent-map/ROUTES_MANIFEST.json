@@ -1,0 +1,575 @@
+{
+  "generatedFrom": "app/**/(page|route)",
+  "routes": [
+    {
+      "path": "/",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/page.tsx"
+    },
+    {
+      "path": "/.well-known/assetlinks.json",
+      "type": "api",
+      "area": "public",
+      "source": "app/.well-known/assetlinks.json/route.ts"
+    },
+    {
+      "path": "/activacion",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/activacion/page.tsx"
+    },
+    {
+      "path": "/admin",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/page.tsx"
+    },
+    {
+      "path": "/admin/activacion",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/activacion/page.tsx"
+    },
+    {
+      "path": "/admin/clientes",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/clientes/page.tsx"
+    },
+    {
+      "path": "/admin/clientes/[organizationId]",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/clientes/[organizationId]/page.tsx"
+    },
+    {
+      "path": "/admin/growth",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/growth/page.tsx"
+    },
+    {
+      "path": "/admin/marketing",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/marketing/page.tsx"
+    },
+    {
+      "path": "/admin/pagos-y-planes",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/pagos-y-planes/page.tsx"
+    },
+    {
+      "path": "/admin/prospectos",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/prospectos/page.tsx"
+    },
+    {
+      "path": "/admin/tareas",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/tareas/page.tsx"
+    },
+    {
+      "path": "/api/admin/activacion",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/activacion/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes/activate-payment",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/activate-payment/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes/deactivate-trial",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/deactivate-trial/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes/extend-trial",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/extend-trial/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes/provision",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/provision/route.ts"
+    },
+    {
+      "path": "/api/admin/clientes/set-test-account",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/clientes/set-test-account/route.ts"
+    },
+    {
+      "path": "/api/admin/dashboard",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/dashboard/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/activities",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/activities/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/import-excel",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/import-excel/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/import-local-workspace",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/import-local-workspace/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/prospects",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/prospects/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/prospects/[id]",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/prospects/[id]/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/prospects/[id]/contact",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/prospects/[id]/contact/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/tasks",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/tasks/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/work-today",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/work-today/route.ts"
+    },
+    {
+      "path": "/api/admin/growth/workspace",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/growth/workspace/route.ts"
+    },
+    {
+      "path": "/api/admin/marketing",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/marketing/route.ts"
+    },
+    {
+      "path": "/api/admin/pagos",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/pagos/route.ts"
+    },
+    {
+      "path": "/api/admin/pagos/confirm",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/pagos/confirm/route.ts"
+    },
+    {
+      "path": "/api/admin/pagos/reject",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/pagos/reject/route.ts"
+    },
+    {
+      "path": "/api/admin/tareas",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/admin/tareas/route.ts"
+    },
+    {
+      "path": "/api/app-version",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/app-version/route.ts"
+    },
+    {
+      "path": "/api/auth/oauth/complete-registration",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/auth/oauth/complete-registration/route.ts"
+    },
+    {
+      "path": "/api/auth/profile",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/auth/profile/route.ts"
+    },
+    {
+      "path": "/api/auth/register",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/auth/register/route.ts"
+    },
+    {
+      "path": "/api/auth/signup",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/auth/signup/route.ts"
+    },
+    {
+      "path": "/api/billing/checkout",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/billing/checkout/route.ts"
+    },
+    {
+      "path": "/api/billing/flow/confirmar",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/billing/flow/confirmar/route.ts"
+    },
+    {
+      "path": "/api/clientes/resumen",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/clientes/resumen/route.ts"
+    },
+    {
+      "path": "/api/cotizaciones/[id]/pdf-descargado",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cotizaciones/[id]/pdf-descargado/route.ts"
+    },
+    {
+      "path": "/api/cotizaciones/resumen",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/cotizaciones/resumen/route.ts"
+    },
+    {
+      "path": "/api/dashboard/summary",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/dashboard/summary/route.ts"
+    },
+    {
+      "path": "/api/fabricacion/asistente-texto",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/fabricacion/asistente-texto/route.ts"
+    },
+    {
+      "path": "/api/onboarding/activation/status",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/onboarding/activation/status/route.ts"
+    },
+    {
+      "path": "/api/organization-assets/upload",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/organization-assets/upload/route.ts"
+    },
+    {
+      "path": "/api/public-landing/revalidate",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/public-landing/revalidate/route.ts"
+    },
+    {
+      "path": "/api/pwa/push-subscriptions",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/pwa/push-subscriptions/route.ts"
+    },
+    {
+      "path": "/api/solicitud/[empresa]",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/solicitud/[empresa]/route.ts"
+    },
+    {
+      "path": "/api/solicitud/[empresa]/valoraciones",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/solicitud/[empresa]/valoraciones/route.ts"
+    },
+    {
+      "path": "/api/solicitudes",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/solicitudes/route.ts"
+    },
+    {
+      "path": "/api/solicitudes/resumen",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/solicitudes/resumen/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/mercadopago/cancel",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/mercadopago/cancel/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/mercadopago/create",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/mercadopago/create/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/mercadopago/webhook",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/mercadopago/webhook/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/pagos",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/pagos/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/summary",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/summary/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/webpay/confirmar",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/webpay/confirmar/route.ts"
+    },
+    {
+      "path": "/api/subscriptions/webpay/crear",
+      "type": "api",
+      "area": "api",
+      "source": "app/api/subscriptions/webpay/crear/route.ts"
+    },
+    {
+      "path": "/auth/callback",
+      "type": "api",
+      "area": "auth",
+      "source": "app/(auth-public)/auth/callback/route.ts"
+    },
+    {
+      "path": "/auth/completar-cuenta",
+      "type": "page",
+      "area": "auth",
+      "source": "app/(auth-public)/auth/completar-cuenta/page.tsx"
+    },
+    {
+      "path": "/auth/logout",
+      "type": "api",
+      "area": "auth",
+      "source": "app/(auth-public)/auth/logout/route.ts"
+    },
+    {
+      "path": "/biblioteca-lineas",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/biblioteca-lineas/page.tsx"
+    },
+    {
+      "path": "/clientes",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/clientes/page.tsx"
+    },
+    {
+      "path": "/clientes/[id]",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/clientes/[id]/page.tsx"
+    },
+    {
+      "path": "/clientes/[id]/editar",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/clientes/[id]/editar/page.tsx"
+    },
+    {
+      "path": "/clientes/nuevo",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/clientes/nuevo/page.tsx"
+    },
+    {
+      "path": "/configuracion/empresa",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/empresa/page.tsx"
+    },
+    {
+      "path": "/configuracion/empresa/lineas-precios",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/empresa/lineas-precios/page.tsx"
+    },
+    {
+      "path": "/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/empresa/lineas-precios/[lineTemplateId]/fabricacion/page.tsx"
+    },
+    {
+      "path": "/configuracion/empresa/lineas-precios/importar",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/empresa/lineas-precios/importar/page.tsx"
+    },
+    {
+      "path": "/configuracion/pagina-venta",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/configuracion/pagina-venta/page.tsx"
+    },
+    {
+      "path": "/cotizaciones",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/cotizaciones/page.tsx"
+    },
+    {
+      "path": "/cotizaciones/[id]",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/cotizaciones/[id]/page.tsx"
+    },
+    {
+      "path": "/cotizaciones/nueva",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/cotizaciones/nueva/page.tsx"
+    },
+    {
+      "path": "/cuenta-vencida",
+      "type": "page",
+      "area": "private",
+      "source": "app/(subscription-gate)/cuenta-vencida/page.tsx"
+    },
+    {
+      "path": "/cuenta-vencida/mercadopago/retorno",
+      "type": "page",
+      "area": "private",
+      "source": "app/(subscription-gate)/cuenta-vencida/mercadopago/retorno/page.tsx"
+    },
+    {
+      "path": "/cuenta/suscripcion",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/cuenta/suscripcion/page.tsx"
+    },
+    {
+      "path": "/dashboard",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/dashboard/page.tsx"
+    },
+    {
+      "path": "/login",
+      "type": "page",
+      "area": "auth",
+      "source": "app/(auth-public)/login/page.tsx"
+    },
+    {
+      "path": "/mis-recetas",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/mis-recetas/page.tsx"
+    },
+    {
+      "path": "/offline",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/offline/page.tsx"
+    },
+    {
+      "path": "/planes",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/planes/page.tsx"
+    },
+    {
+      "path": "/presupuesto/[token]",
+      "type": "page",
+      "area": "public",
+      "source": "app/presupuesto/[token]/page.tsx"
+    },
+    {
+      "path": "/presupuesto/[token]/documento",
+      "type": "page",
+      "area": "public",
+      "source": "app/presupuesto/[token]/documento/page.tsx"
+    },
+    {
+      "path": "/print/cotizaciones/[id]",
+      "type": "page",
+      "area": "print",
+      "source": "app/print/cotizaciones/[id]/page.tsx"
+    },
+    {
+      "path": "/print/cotizaciones/[id]/fabricacion",
+      "type": "page",
+      "area": "print",
+      "source": "app/print/cotizaciones/[id]/fabricacion/page.tsx"
+    },
+    {
+      "path": "/privacy",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/privacy/page.tsx"
+    },
+    {
+      "path": "/registro",
+      "type": "page",
+      "area": "auth",
+      "source": "app/(auth-public)/registro/page.tsx"
+    },
+    {
+      "path": "/solicitud/[empresa]",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/solicitud/[empresa]/page.tsx"
+    },
+    {
+      "path": "/solicitudes",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/solicitudes/page.tsx"
+    },
+    {
+      "path": "/solicitudes/canales",
+      "type": "page",
+      "area": "private",
+      "source": "app/(pwa-app)/solicitudes/canales/page.tsx"
+    },
+    {
+      "path": "/terms",
+      "type": "page",
+      "area": "public",
+      "source": "app/(landing-web)/terms/page.tsx"
+    }
+  ]
+}

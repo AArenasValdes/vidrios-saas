@@ -1,5 +1,16 @@
 # SOP Conversion - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Agente de Conversión
+
+Contrato: `WORKFLOW_STANDARD.md`
+Disparador: mensaje nuevo, respuesta de prospecto o seguimiento pendiente.
+Salida: demo, prueba guiada o cierre explícito del contacto.
+KPI: mensaje → demo → prueba → primera cotización → pago.
+Rutas afectadas: `/solicitudes`, `/cotizaciones/nueva`, `/print/cotizaciones/[id]`, `/presupuesto/[token]`.
+QA: revisar WhatsApp, PDF y aprobación pública cuando aplique.
+
 ## Objetivo
 
 Convertir mensajes en demos, pruebas guiadas, primera cotizacion creada y pagos con velocidad, claridad y foco en valor comercial real.

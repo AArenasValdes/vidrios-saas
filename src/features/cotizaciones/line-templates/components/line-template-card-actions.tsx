@@ -59,6 +59,7 @@ export function LineTemplateCardActions({
           role="menu"
           aria-label={`Acciones de ${templateName}`}
           onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
           <Link
             href={`/configuracion/empresa/lineas-precios/${templateId}/fabricacion`}
@@ -77,7 +78,10 @@ export function LineTemplateCardActions({
             className={s.menuAction}
             role="menuitem"
             disabled={isBusy}
-            onClick={onDuplicate}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDuplicate();
+            }}
           >
             <LuCopyPlus aria-hidden />
             {pendingAction === "duplicate" ? "Duplicando..." : "Duplicar línea"}
@@ -87,7 +91,10 @@ export function LineTemplateCardActions({
             className={`${s.menuAction} ${s.menuActionDanger}`}
             role="menuitem"
             disabled={isBusy}
-            onClick={onRequestDelete}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRequestDelete();
+            }}
           >
             <LuTrash2 aria-hidden />
             Eliminar línea

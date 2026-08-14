@@ -1,6 +1,13 @@
 # Data Model Map - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería + Supabase
+
 Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
+
+Verificación documental remota: 2026-08-13.
+Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormidas y tablas propuestas separadas explícitamente abajo.
 
 ---
 
@@ -149,18 +156,9 @@ Fuente de verdad, en orden: base remota verificada, migraciones registradas, `su
 
 ---
 
-## Tablas propuestas no implementadas (solo documental)
+## Tablas activas adicionales
 
-Estas tablas no estan aprobadas para implementacion inmediata. Sirven solo como referencia del roadmap Desktop Taller.
-
-### Tablas no aprobadas en esta etapa
-
-- `oportunidades`
-- `cobros`
-
-Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar migraciones sin aprobacion explicita.
-
----
+Incluye onboarding, captación, perfil público, notificaciones y billing. No confundir esta sección con tablas propuestas.
 
 ### Tabla: onboarding_checklists
 
@@ -279,6 +277,15 @@ Quedan fuera del alcance activo. No documentarlas como tablas core ni planificar
 - **Usada por**: Landing publica `/solicitud/[empresa]`, formulario de valoraciones y configuracion pagina venta
 - **Archivos donde aparece**: `src/features/public-landing-testimonials/`, `app/api/solicitud/[empresa]/valoraciones/route.ts`, `supabase/migrations/20260515121000_public_landing_personalization_and_testimonials.sql`
 - **Riesgos**: `organization_id` debe ser bigint. La migracion `20260531050353_harden_public_landing_testimonials_org_id.sql` corrige/endurece el tipo si existe drift.
+
+---
+
+## Tablas propuestas no implementadas
+
+Estas tablas no están aprobadas para implementación inmediata. No crear migraciones sin aprobación explícita.
+
+- `oportunidades`
+- `cobros`
 
 ---
 

@@ -1,5 +1,16 @@
 # SOP Cobro Manual - Ventora
 
+Estado: vigente con fallback manual
+Actualizado: 2026-08-14
+Responsable: billing + Agente de Conversión
+
+Contrato: `WORKFLOW_STANDARD.md`
+Disparador: pago por transferencia mientras el proveedor automático no aplica.
+Salida: activación confirmada y registrada con referencia.
+KPI: pagos confirmados y tiempo de activación.
+Rutas afectadas: `/admin/clientes`, `/cuenta-vencida`, `/cuenta/suscripcion`.
+QA: validar organización, plan, monto, vencimiento y ledger; nunca guardar secretos.
+
 ## Cuando usar
 
 Mientras no haya cuenta bancaria de empresa para Flow o Transbank, todos los pagos se confirman manualmente por transferencia y WhatsApp.

@@ -1,5 +1,9 @@
 # Growth OS - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS
+
 ## Que es
 
 El Growth OS de Ventora es la capa operativa persistente para ejecutar crecimiento comercial dentro del repositorio sin depender de prompts sueltos.
@@ -98,6 +102,9 @@ Casos:
 - `growth-dashboard.html`: dashboard standalone con datos mock
 - `PROMPTS_LIBRARY.md`: prompts reutilizables
 - `WEEKLY_OPERATING_SYSTEM.md`: rutina semanal
+- `WORKFLOW_STANDARD.md`: contrato obligatorio de cada workflow
+- `WORKFLOW_PRODUCT_CHANGE.md`: workflow para cambios de producto originados por marketing
+- `DEMO_PLAYBOOK.md`: demo comercial vigente para pilotos
 - `PARTNERSHIPS_PLAYBOOK.md`: playbook de alianzas
 - `KAPSO_WHATSAPP_PLAN.md`: plan tecnico/comercial para evaluar Kapso
 - `ONBOARDING_FEATURE_BRIEF.md`: brief para onboarding guiado dentro del producto
@@ -126,3 +133,17 @@ Si una tarea de growth va a tocar producto:
 3. revisar riesgos
 4. definir QA manual obligatorio
 5. solo despues proponer implementacion
+
+## Workflow estándar
+
+Todo nuevo workflow debe seguir `WORKFLOW_STANDARD.md`. Los workflows existentes son:
+
+| Objetivo | Archivo |
+|---|---|
+| Prospección | `SOP_PROSPECCION.md` |
+| Contenido | `SOP_CONTENIDO.md` |
+| Conversión | `SOP_CONVERSION.md` |
+| Onboarding | `SOP_ONBOARDING.md` |
+| Cobro | `SOP_COBRO_MANUAL.md` + `docs/billing/README.md` |
+| Revisión semanal | `WEEKLY_OPERATING_SYSTEM.md` |
+| Cambio de producto | `WORKFLOW_PRODUCT_CHANGE.md` |

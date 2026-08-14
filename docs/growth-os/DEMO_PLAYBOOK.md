@@ -1,5 +1,9 @@
 # Demo comercial Ventora para clientes piloto
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Growth OS
+
 Actualizado: 2026-05-17
 
 ## Objetivo

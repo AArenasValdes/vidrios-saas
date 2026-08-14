@@ -1,5 +1,9 @@
 # Agent Map - Indice Maestro del Proyecto
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: ingeniería
+
 ## Proposito
 
 Esta documentacion sirve como **indice maestro** para que cualquier agente de codigo pueda entender rapidamente donde esta cada funcionalidad, que archivos tocar, y cuales evitar. El objetivo es **reducir gasto de tokens** evitando busquedas innecesarias en el proyecto.
@@ -18,7 +22,9 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 
 ## Orden recomendado de lectura
 
-1. **`../VENTORA_GIRO_PRODUCTO_2026-07.md`** - Rector de producto: capas, alcance tecnico revisable y go-to-market
+1. **`../README.md`** - Índice general de toda la documentación
+
+2. **`../VENTORA_GIRO_PRODUCTO_2026-07.md`** - Rector de producto: capas, alcance tecnico revisable y go-to-market
 2. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
 3. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
 4. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
@@ -72,6 +78,7 @@ docs/
     README.md                 <- Este archivo
     PROJECT_OVERVIEW.md       <- Stack, arquitectura, carpetas
     ROUTES_MAP.md             <- Mapa completo de rutas
+    ROUTES_MANIFEST.json      <- Inventario generado desde app/
     FEATURES_MAP.md           <- Organizacion por feature
     DATA_MODEL_MAP.md         <- Tablas, relaciones, campos
     COMPONENTS_MAP.md         <- Componentes reutilizables

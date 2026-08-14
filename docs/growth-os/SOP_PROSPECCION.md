@@ -1,5 +1,16 @@
 # SOP Prospeccion - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Agente de Atracción
+
+Contrato: `WORKFLOW_STANDARD.md`
+Disparador: falta de prospectos calificados o inicio de ciclo semanal.
+Salida: lista priorizada con siguiente paso y fecha de seguimiento.
+KPI: prospectos encontrados, contactados y respondidos.
+Rutas afectadas: `/solicitud/[empresa]`, `/solicitudes/canales`, `/configuracion/pagina-venta`.
+QA: validar links, fuente exacta y ausencia de spam.
+
 ## Objetivo
 
 Encontrar, priorizar y contactar prospectos del rubro vidrios/aluminio en Chile con bajo costo, alto contexto y cero spam.

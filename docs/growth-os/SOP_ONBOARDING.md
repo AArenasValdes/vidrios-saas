@@ -1,5 +1,16 @@
 # SOP Onboarding - Ventora
 
+Estado: vigente
+Actualizado: 2026-08-14
+Responsable: Agente de Entrega y Éxito
+
+Contrato: `WORKFLOW_STANDARD.md`
+Disparador: prueba iniciada o cuenta provisionada.
+Salida: empresa configurada y primera cotización creada.
+KPI: tiempo a primera cotización y conversión a pago.
+Rutas afectadas: `/configuracion/empresa`, `/configuracion/pagina-venta`, `/activacion`, `/cotizaciones/nueva`.
+QA: validar trial, tenant, PDF y no asignar `quote_only` durante trial.
+
 ## Objetivo
 
 Activar a un nuevo cliente para que llegue rapido a su primer resultado comercial dentro de Ventora.
