@@ -64,7 +64,7 @@ const copy = {
   ciudadLabel: "Ciudad / localidad (opcional)",
   ciudadPlaceholder: "Ej: Puente Alto",
   accountSubmit: "Continuar",
-  businessSubmit: "Entrar a Ventora",
+  businessSubmit: "Enviar enlace de activaciÃ³n",
   submitting: "Creando tu cuenta…",
   loginPrompt: "¿Ya tienes una cuenta?",
   loginAction: "Inicia sesión",
@@ -96,6 +96,7 @@ type SignupApiPayload = {
   code?: string;
   field?: string;
   accountComplete?: boolean;
+  verificationRequired?: boolean;
 };
 
 function normalizeText(value: string) {
@@ -188,6 +189,7 @@ export default function RegistroView() {
     null,
   );
   const [error, setError] = useState<string | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
 
   const selectedCountry = getCountryPreset(countryCode);
   const disabled = cargando || Boolean(cargandoOAuth);
@@ -290,7 +292,24 @@ export default function RegistroView() {
       });
       const payload = (await response.json().catch(() => null)) as SignupApiPayload | null;
 
-      if (!response.ok || !payload?.accountComplete) {
+      if (!response.ok) {
+        setError(resolveSignupErrorMessage(payload, countryCode, rawWhatsapp));
+        return;
+      }
+
+      if (payload?.verificationRequired) {
+        googleTagService.trackEvent("password_signup_verification_sent", {
+          event_category: "auth",
+          event_label: "email_verification",
+          next_path: "/activacion",
+        });
+        setPassword("");
+        setPasswordConfirmation("");
+        setVerificationEmail(normalizedEmail);
+        return;
+      }
+
+      if (!payload?.accountComplete) {
         setError(resolveSignupErrorMessage(payload, countryCode, rawWhatsapp));
         return;
       }
@@ -379,13 +398,29 @@ export default function RegistroView() {
         </aside>
 
         <div className={rs.card}>
-          <Progress
-            step={step}
-            onBack={() => {
-              setError(null);
-              setStep("account");
-            }}
-          />
+          {verificationEmail ? (
+            <section className={s.successState} aria-live="polite">
+              <CheckCircle2 size={44} aria-hidden />
+              <h2>Revisa tu correo para activar Ventora</h2>
+              <p>
+                Enviamos un enlace de un solo uso a <strong>{verificationEmail}</strong>.
+                Tu empresa y el trial se crearÃ¡n reciÃ©n cuando confirmes ese correo.
+              </p>
+              <div className={s.successActions}>
+                <Link href="/login" className={s.primaryButton}>
+                  Ir al inicio de sesiÃ³n
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <>
+              <Progress
+                step={step}
+                onBack={() => {
+                  setError(null);
+                  setStep("account");
+                }}
+              />
 
           {step === "account" ? (
             <form className={rs.form} onSubmit={handleAccountSubmit} noValidate>
@@ -720,6 +755,8 @@ export default function RegistroView() {
                 </span>
               </aside>
             </form>
+          )}
+            </>
           )}
         </div>
 

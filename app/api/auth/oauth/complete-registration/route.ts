@@ -7,7 +7,11 @@ import {
   provisionOrganizationFromOAuthUser,
 } from "@/features/auth/services/auth-oauth-completion.service";
 import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
-import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
+import {
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type CompleteRegistrationBody = Record<string, unknown> & {
   nombre?: string;
@@ -21,7 +25,14 @@ type CompleteRegistrationBody = Record<string, unknown> & {
 export async function POST(request: Request) {
   try {
     await assertAuthRegisterRateLimit(request);
-  } catch {
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "El registro esta temporalmente protegido. Intenta nuevamente." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       {
         error:
@@ -41,7 +52,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const body = await parseJsonObjectBody<CompleteRegistrationBody>(request);
+  let body: CompleteRegistrationBody | null;
+
+  try {
+    body = await parseJsonObjectBody<CompleteRegistrationBody>(request);
+  } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La solicitud es demasiado grande." },
+        { status: 413 }
+      );
+    }
+    throw error;
+  }
 
   if (!body) {
     return NextResponse.json({ error: "JSON invalido." }, { status: 400 });

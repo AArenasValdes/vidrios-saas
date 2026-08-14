@@ -2,6 +2,7 @@ import "server-only";
 
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { isIP } from "node:net";
 
 type SlidingWindowRateLimiterOptions = {
   windowMs: number;
@@ -11,15 +12,46 @@ type SlidingWindowRateLimiterOptions = {
 
 type SlidingWindowRateLimiter = {
   isRateLimited(key: string | null): Promise<boolean>;
-  mode: "upstash" | "memory";
+  mode: "upstash" | "memory" | "unavailable";
 };
 
 type InMemoryRateLimiterState = Map<string, number[]>;
 
 let rateLimiterSequence = 0;
-let upstashFallbackLogged = false;
 let upstashInitFailedLogged = false;
 let sharedRedisClient: Redis | null | undefined;
+
+export const DEFAULT_JSON_BODY_MAX_BYTES = 64 * 1024;
+
+export class RequestBodyTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`El cuerpo supera el limite de ${maxBytes} bytes.`);
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
+export class RateLimitUnavailableError extends Error {
+  constructor() {
+    super("El limitador distribuido no esta disponible.");
+    this.name = "RateLimitUnavailableError";
+  }
+}
+
+export function isRequestBodyTooLargeError(
+  error: unknown
+): error is RequestBodyTooLargeError {
+  return error instanceof RequestBodyTooLargeError;
+}
+
+export function isRateLimitUnavailableError(
+  error: unknown
+): error is RateLimitUnavailableError {
+  return error instanceof RateLimitUnavailableError;
+}
+
+function mustUseDistributedRateLimit() {
+  return process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+}
 
 const inMemoryRateLimiterStates = new Map<string, InMemoryRateLimiterState>();
 
@@ -46,14 +78,6 @@ function getUpstashRedisClient() {
 
   if (!url || !token) {
     sharedRedisClient = null;
-
-    if (!upstashFallbackLogged) {
-      upstashFallbackLogged = true;
-      console.warn(
-        "[RateLimit] Upstash Redis no esta configurado. Se usara un rate limiter local en memoria, sin cobertura entre instancias."
-      );
-    }
-
     return sharedRedisClient;
   }
 
@@ -95,45 +119,139 @@ function createInMemoryRateLimiter(
 }
 
 export function resolveRequestIp(request: Request) {
-  const cfConnectingIp = request.headers.get("cf-connecting-ip");
-
-  if (cfConnectingIp) {
-    return cfConnectingIp.trim();
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  const forwardedFor = request.headers.get("x-forwarded-for");
+  const isVercelRequest = process.env.VERCEL === "1";
+  const trustLocalProxy =
+    process.env.NODE_ENV === "test" ||
+    process.env.VENTORA_TRUST_PROXY_IP_HEADERS === "true";
+  const forwardedFor = isVercelRequest
+    ? request.headers.get("x-vercel-forwarded-for") ??
+      request.headers.get("x-forwarded-for")
+    : trustLocalProxy
+      ? request.headers.get("x-forwarded-for") ??
+        request.headers.get("x-real-ip")
+      : null;
 
   if (forwardedFor) {
-    const segments = forwardedFor.split(",").map((segment) => segment.trim()).filter(Boolean);
-    let trustedIndex = segments.length - 1;
-
-    if (trustedIndex >= 0 && segments[trustedIndex] === "127.0.0.1") {
-      trustedIndex -= 1;
-    }
-
-    return segments[Math.max(0, trustedIndex)] ?? null;
+    const candidate = forwardedFor.split(",")[0]?.trim() ?? "";
+    return isIP(candidate) ? candidate : null;
   }
 
   return null;
 }
 
+export async function readRequestBodyWithLimit(
+  request: Request,
+  maxBytes: number
+): Promise<Uint8Array> {
+  const contentLength = request.headers.get("content-length");
+  const declaredLength = contentLength ? Number(contentLength) : null;
+
+  if (
+    declaredLength !== null &&
+    (!Number.isSafeInteger(declaredLength) || declaredLength < 0)
+  ) {
+    throw new RequestBodyTooLargeError(maxBytes);
+  }
+
+  if (declaredLength !== null && declaredLength > maxBytes) {
+    throw new RequestBodyTooLargeError(maxBytes);
+  }
+
+  if (!request.body) {
+    return new Uint8Array();
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new RequestBodyTooLargeError(maxBytes);
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return body;
+}
+
 export async function parseJsonObjectBody<T extends Record<string, unknown>>(
-  request: Request
+  request: Request,
+  options: { maxBytes?: number } = {}
 ): Promise<T | null> {
   try {
-    const parsed = await request.json();
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (
+      contentType &&
+      !contentType.includes("application/json") &&
+      !contentType.includes("+json")
+    ) {
+      return null;
+    }
+
+    const bytes = await readRequestBodyWithLimit(
+      request,
+      options.maxBytes ?? DEFAULT_JSON_BODY_MAX_BYTES
+    );
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const parsed = JSON.parse(text);
 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return null;
     }
 
     return parsed as T;
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+export async function parseBoundedFormData(
+  request: Request,
+  maxBytes: number
+): Promise<FormData | null> {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  if (
+    !contentType.includes("multipart/form-data") &&
+    !contentType.includes("application/x-www-form-urlencoded")
+  ) {
+    return null;
+  }
+
+  const bytes = await readRequestBodyWithLimit(request, maxBytes);
+  const body = new Uint8Array(bytes.byteLength);
+  body.set(bytes);
+  const boundedRequest = new Request(request.url, {
+    method: "POST",
+    headers: request.headers,
+    body: body.buffer,
+  });
+
+  try {
+    return await boundedRequest.formData();
   } catch {
     return null;
   }
@@ -146,6 +264,15 @@ export function createSlidingWindowRateLimiter(
   const redis = getUpstashRedisClient();
 
   if (!redis) {
+    if (mustUseDistributedRateLimit()) {
+      return {
+        mode: "unavailable" as const,
+        async isRateLimited() {
+          throw new RateLimitUnavailableError();
+        },
+      };
+    }
+
     return createInMemoryRateLimiter(namespace, options);
   }
 
@@ -156,8 +283,6 @@ export function createSlidingWindowRateLimiter(
     prefix: namespace,
     analytics: false,
   });
-
-  const fallback = createInMemoryRateLimiter(namespace, options);
 
   return {
     mode: "upstash" as const,
@@ -171,12 +296,18 @@ export function createSlidingWindowRateLimiter(
         if (!upstashInitFailedLogged) {
           upstashInitFailedLogged = true;
           console.error(
-            "[RateLimit] Fallo la verificacion con Upstash Redis. Se usara fallback local en memoria.",
+            "[RateLimit] Fallo la verificacion con Upstash Redis.",
             error
           );
         }
 
-        return fallback.isRateLimited(normalizedKey);
+        if (mustUseDistributedRateLimit()) {
+          throw new RateLimitUnavailableError();
+        }
+
+        return createInMemoryRateLimiter(namespace, options).isRateLimited(
+          normalizedKey
+        );
       }
     },
   };

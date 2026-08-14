@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import {
   buildFlowSignature,
   mapFlowStatus,
+  redactFlowSensitiveText,
 } from "@/features/billing/providers/flow.provider";
 
 describe("flow provider helpers", () => {
@@ -25,5 +26,16 @@ describe("flow provider helpers", () => {
     expect(mapFlowStatus(3)).toBe("fallido");
     expect(mapFlowStatus(4)).toBe("cancelado");
     expect(mapFlowStatus(undefined)).toBe("fallido");
+  });
+
+  it("redacta credenciales y tokens de errores Flow", () => {
+    const text = redactFlowSensitiveText(
+      "https://www.flow.cl/api/payment/getStatus?apiKey=key_123&token=tok_123&s=abc token=tok_123",
+      ["key_123", "tok_123", "abc"]
+    );
+
+    expect(text).not.toContain("key_123");
+    expect(text).not.toContain("tok_123");
+    expect(text).not.toContain("s=abc");
   });
 });

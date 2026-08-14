@@ -11,6 +11,10 @@ import {
 } from "@/features/billing/types/plans";
 import { isPaymentProviderCode } from "@/features/billing/services/payment-provider-registry";
 import type { PaymentProvider } from "@/features/subscriptions/types/pago-suscripcion";
+import {
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +40,8 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: CheckoutBody;
-
-    try {
-      body = (await request.json()) as CheckoutBody;
-    } catch {
+    const body = await parseJsonObjectBody<CheckoutBody & Record<string, unknown>>(request);
+    if (!body) {
       return NextResponse.json(
         { error: "Cuerpo de solicitud invalido." },
         { status: 400 }
@@ -79,6 +80,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "Solicitud demasiado grande." }, { status: 413 });
+    }
+
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json(
         { error: error.message },

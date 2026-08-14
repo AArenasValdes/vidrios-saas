@@ -7,6 +7,10 @@ import {
 import { resolveVentoraAdminRouteContext } from "@/features/admin/services/admin-route-access.service";
 import { AuthRouteAccessError } from "@/features/auth/services/auth-route-access.service";
 import { isBillingPlanCode } from "@/features/billing/types/plans";
+import {
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type ActivatePaymentBody = {
   organizationId?: number;
@@ -17,9 +21,9 @@ type ActivatePaymentBody = {
 export async function POST(request: Request) {
   try {
     await resolveVentoraAdminRouteContext();
-    const body = (await request.json().catch(() => null)) as
-      | ActivatePaymentBody
-      | null;
+    const body = await parseJsonObjectBody<
+      ActivatePaymentBody & Record<string, unknown>
+    >(request);
     const planCode = body?.planCode?.trim() ?? "";
 
     if (!isBillingPlanCode(planCode)) {
@@ -34,6 +38,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, result });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "Solicitud demasiado grande." }, { status: 413 });
+    }
+
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }

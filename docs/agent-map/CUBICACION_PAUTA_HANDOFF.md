@@ -495,7 +495,7 @@ Luego pega **todo este archivo** debajo.
 
 ## 15. QA smoke (2026-07-21)
 
-- Credencial de prueba local: `admin@test.com` / `1234` (no `!1234`).
+- Credenciales de prueba: obtenerlas desde el gestor de secretos autorizado. Nunca documentarlas ni reutilizar cuentas de producción.
 - Flujo OK: Líneas y precios → uso Cubicación y pauta → guardar → `/cotizaciones/nueva` → línea + medidas → Recalcular → Abrir despiece.
 - Esperado: filas con **Función** real (Riel superior, Jamba, Cabezal…) y **Perfil** = código de taller o `Por asignar`.
 - Barras y sobrante son referenciales.

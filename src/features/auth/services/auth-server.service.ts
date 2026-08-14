@@ -3,6 +3,7 @@ import {
   type AuthServerRepository,
 } from "@/features/auth/repositories/auth-server.repository";
 import {
+  provisionOrganizationFromOAuthUser,
   resolveOAuthIdentity,
   type OAuthIdentityResolution,
 } from "@/features/auth/services/auth-oauth-completion.service";
@@ -11,9 +12,10 @@ import {
   resolveOAuthProvider,
 } from "@/features/auth/services/auth-oauth-analytics.service";
 import { sanitizeAuthNextPath } from "@/features/auth/services/auth-safe-redirect.service";
-import type { AuthOAuthIntent, AuthOAuthProvider } from "@/features/auth/types/auth";
+import type { AuthCallbackProvider, AuthOAuthIntent } from "@/features/auth/types/auth";
 import type { OAuthAnalyticsEvent } from "@/features/auth/services/auth-oauth-analytics.service";
 import type { Session } from "@supabase/supabase-js";
+import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
 
 type AuthServerServiceDeps = {
   repository?: AuthServerRepository;
@@ -25,7 +27,7 @@ export type OAuthCallbackResolution =
       path: string;
       analytics: {
         event: OAuthAnalyticsEvent;
-        provider: AuthOAuthProvider;
+        provider: AuthCallbackProvider;
         intent: AuthOAuthIntent;
         syncedAuthUserId: boolean;
       };
@@ -36,7 +38,7 @@ export type OAuthCallbackResolution =
       path: string;
       analytics?: {
         event: OAuthAnalyticsEvent;
-        provider: AuthOAuthProvider;
+        provider: AuthCallbackProvider;
         intent: AuthOAuthIntent;
       };
     };
@@ -50,7 +52,7 @@ export function createAuthServerService(
     async handleOAuthCallback(input: {
       code: string;
       intent: AuthOAuthIntent;
-      provider: AuthOAuthProvider;
+      provider: AuthCallbackProvider;
       nextPath?: string | null;
     }): Promise<OAuthCallbackResolution> {
       const normalizedCode = input.code.trim();
@@ -84,10 +86,42 @@ export function createAuthServerService(
         };
       }
 
-      const identity = await resolveOAuthIdentity({
+      let identity = await resolveOAuthIdentity({
         authUserId: user.id,
         email: user.email,
       });
+
+      if (
+        provider === "email" &&
+        identity.status === "needs_signup"
+      ) {
+        const pending = readPendingEmailSignup(user.user_metadata);
+
+        if (pending) {
+          const provisioned = await provisionOrganizationFromOAuthUser({
+            authUserId: user.id,
+            email: user.email,
+            ...pending,
+          });
+
+          identity = {
+            status: "linked",
+            organizationId: provisioned.organizationId,
+            userId: provisioned.userId,
+            syncedAuthUserId: false,
+            accountComplete: provisioned.accountComplete,
+          };
+
+          if (!provisioned.alreadyProvisioned) {
+            await sendWelcomeEmail({
+              to: user.email,
+              nombre: pending.nombre,
+              empresaNombre: provisioned.empresaNombre,
+              trialEndsAt: provisioned.trialEndsAt,
+            });
+          }
+        }
+      }
 
       return mapIdentityToCallbackResolution({
         identity,
@@ -103,7 +137,7 @@ export function createAuthServerService(
 function mapIdentityToCallbackResolution(input: {
   identity: OAuthIdentityResolution;
   intent: AuthOAuthIntent;
-  provider: AuthOAuthProvider;
+  provider: AuthCallbackProvider;
   safeNext: string;
   session: Session;
 }): OAuthCallbackResolution {
@@ -150,6 +184,29 @@ function mapIdentityToCallbackResolution(input: {
       syncedAuthUserId: false,
     },
     session: input.session,
+  };
+}
+
+function readPendingEmailSignup(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const pending = (value as Record<string, unknown>).ventora_signup;
+  if (!pending || typeof pending !== "object" || Array.isArray(pending)) {
+    return null;
+  }
+
+  const fields = pending as Record<string, unknown>;
+  if (fields.version !== 1) return null;
+
+  return {
+    nombre: typeof fields.nombre === "string" ? fields.nombre : "",
+    empresaNombre:
+      typeof fields.empresaNombre === "string" ? fields.empresaNombre : "",
+    whatsapp: typeof fields.whatsapp === "string" ? fields.whatsapp : "",
+    ciudadComuna:
+      typeof fields.ciudadComuna === "string" ? fields.ciudadComuna : "",
+    countryCode:
+      typeof fields.countryCode === "string" ? fields.countryCode : "",
+    consentimientoAceptado: fields.consentimientoAceptado === true,
   };
 }
 

@@ -1,9 +1,16 @@
 jest.mock("../auth-oauth-completion.service", () => ({
   resolveOAuthIdentity: jest.fn(),
+  provisionOrganizationFromOAuthUser: jest.fn(),
+}));
+jest.mock("../auth-welcome-email.service", () => ({
+  sendWelcomeEmail: jest.fn(),
 }));
 
 import { createAuthServerService } from "../auth-server.service";
-import { resolveOAuthIdentity } from "../auth-oauth-completion.service";
+import {
+  provisionOrganizationFromOAuthUser,
+  resolveOAuthIdentity,
+} from "../auth-oauth-completion.service";
 import type { Session, User } from "@supabase/supabase-js";
 
 function createUser(overrides: Partial<User> = {}): User {
@@ -106,6 +113,58 @@ describe("authServerService.handleOAuthCallback", () => {
         syncedAuthUserId: false,
       },
       session: createSession(createUser()),
+    });
+  });
+
+  it("provisiona solo despues de confirmar el enlace de correo", async () => {
+    const user = createUser({
+      user_metadata: {
+        ventora_signup: {
+          version: 1,
+          nombre: "Alessandro",
+          empresaNombre: "Vidrios Sur",
+          whatsapp: "+56912345678",
+          ciudadComuna: "Santiago",
+          countryCode: "CL",
+          consentimientoAceptado: true,
+        },
+      },
+    });
+    const repository = {
+      exchangeCodeForSession: jest.fn().mockResolvedValue({
+        user,
+        session: createSession(user),
+      }),
+    };
+    (resolveOAuthIdentity as jest.Mock).mockResolvedValue({
+      status: "needs_signup",
+    });
+    (provisionOrganizationFromOAuthUser as jest.Mock).mockResolvedValue({
+      organizationId: 77,
+      userId: 9,
+      empresaNombre: "Vidrios Sur",
+      trialEndsAt: "2026-08-29T00:00:00.000Z",
+      alreadyProvisioned: false,
+      accountComplete: true,
+    });
+
+    const result = await createAuthServerService({ repository }).handleOAuthCallback({
+      code: "verified-email-code",
+      intent: "signup",
+      provider: "email",
+      nextPath: "/activacion",
+    });
+
+    expect(provisionOrganizationFromOAuthUser).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authUserId: "auth-1",
+        email: "maestro@test.com",
+        empresaNombre: "Vidrios Sur",
+      })
+    );
+    expect(result).toMatchObject({
+      kind: "redirect",
+      path: "/activacion",
     });
   });
 

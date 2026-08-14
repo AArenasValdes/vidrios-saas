@@ -8,7 +8,12 @@ import {
 import {
   fabricacionAsistenteRespuestaSchema,
 } from "@/features/fabricacion/schemas/fabricacion-asistente.schema";
-import { createSlidingWindowRateLimiter } from "@/features/solicitudes/services/solicitudes-public-http.service";
+import {
+  createSlidingWindowRateLimiter,
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
@@ -71,14 +76,36 @@ export async function POST(request: Request) {
     );
   }
 
-  if (await assistantRateLimiter.isRateLimited(`user:${userId}`)) {
-    return NextResponse.json(
-      { error: "Alcanzaste el limite temporal del asistente. Intenta mas tarde." },
-      { status: 429 }
-    );
+  try {
+    if (await assistantRateLimiter.isRateLimited(`user:${userId}`)) {
+      return NextResponse.json(
+        { error: "Alcanzaste el limite temporal del asistente. Intenta mas tarde." },
+        { status: 429 }
+      );
+    }
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "El control de uso no esta disponible. Intenta nuevamente." },
+        { status: 503 }
+      );
+    }
+    throw error;
   }
 
-  const parsedBody = requestSchema.safeParse(await request.json().catch(() => null));
+  let requestBody: Record<string, unknown> | null;
+  try {
+    requestBody = await parseJsonObjectBody(request, { maxBytes: 16 * 1024 });
+  } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La explicacion es demasiado grande." },
+        { status: 413 }
+      );
+    }
+    throw error;
+  }
+  const parsedBody = requestSchema.safeParse(requestBody);
   if (!parsedBody.success) {
     return NextResponse.json(
       { error: "La explicacion debe tener entre 20 y 6000 caracteres." },

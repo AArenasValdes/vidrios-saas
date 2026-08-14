@@ -14,12 +14,18 @@ describe("admin-access.service", () => {
     process.env.VENTORA_FOUNDER_ADMIN_EMAILS = originalEnv;
   });
 
-  it("permite al founder allowlist aunque no tenga perfil SaaS con rol admin", () => {
+  it("exige allowlist y perfil DB enlazado con rol admin", () => {
     expect(isFounderAdminEmail("FOUNDER@test.com")).toBe(true);
     expect(
       canAccessFounderAdminPanel({
         email: "founder@test.com",
         rol: null,
+      })
+    ).toBe(false);
+    expect(
+      canAccessFounderAdminPanel({
+        email: "founder@test.com",
+        rol: "admin",
       })
     ).toBe(true);
   });

@@ -41,7 +41,7 @@ import {
   type ClientesKpiCard,
 } from "@/features/admin/services/admin-clientes-filters.service";
 import {
-  buildProvisionCredentialsText,
+  buildProvisionActivationText,
   buildProvisionWhatsAppMessage,
 } from "@/features/admin/services/admin-provision-message";
 import type { AdminClientListItem } from "@/features/admin/types/admin-client";
@@ -66,8 +66,8 @@ type ProvisionSuccess = {
   organizationId: number;
   empresaNombre: string;
   email: string;
-  password: string;
   trialEndsAt: string | null;
+  activationSent: true;
 };
 
 function formatDate(value: string | null) {
@@ -117,7 +117,6 @@ export function AdminClientesWorkspace() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [provisionForm, setProvisionForm] = useState({
     email: "",
-    password: "",
     empresaNombre: "",
     isTestAccount: false,
   });
@@ -275,12 +274,11 @@ export function AdminClientesWorkspace() {
     event.preventDefault();
     setIsSubmitting(true);
     setError(null);
-    const submittedCredentials = { ...provisionForm };
     try {
       const response = await fetch("/api/admin/clientes/provision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submittedCredentials),
+        body: JSON.stringify(provisionForm),
       });
       const payload = (await response.json()) as {
         error?: string;
@@ -288,13 +286,10 @@ export function AdminClientesWorkspace() {
       };
       if (!response.ok) throw new Error(payload.error ?? "No pudimos crear la cuenta.");
       if (payload.result) {
-        setProvisionSuccess({
-          ...payload.result,
-          password: submittedCredentials.password,
-        });
+        setProvisionSuccess(payload.result);
         setPaymentOrgId(String(payload.result.organizationId));
       }
-      setProvisionForm({ email: "", password: "", empresaNombre: "", isTestAccount: false });
+      setProvisionForm({ email: "", empresaNombre: "", isTestAccount: false });
       setIsTrialOpen(false);
       await loadClients();
     } catch (submitError) {
@@ -501,14 +496,13 @@ export function AdminClientesWorkspace() {
               className={s.secondaryBtn}
               onClick={() =>
                 void copyToClipboard(
-                  buildProvisionCredentialsText({
+                  buildProvisionActivationText({
                     email: provisionSuccess.email,
-                    password: provisionSuccess.password,
                   })
-                ).then(() => setCopyFeedback("Credenciales copiadas."))
+                ).then(() => setCopyFeedback("Datos de activaciÃ³n copiados."))
               }
             >
-              Copiar credenciales
+              Copiar activaciÃ³n
             </button>
             <button
               type="button"
@@ -516,10 +510,8 @@ export function AdminClientesWorkspace() {
               onClick={() =>
                 void copyToClipboard(
                   buildProvisionWhatsAppMessage({
-                    appOrigin,
                     empresaNombre: provisionSuccess.empresaNombre,
                     email: provisionSuccess.email,
-                    password: provisionSuccess.password,
                     trialEndsAt: provisionSuccess.trialEndsAt,
                   })
                 ).then(() => setCopyFeedback("Mensaje WhatsApp copiado."))
@@ -930,10 +922,10 @@ export function AdminClientesWorkspace() {
                 Correo admin
                 <input required type="email" value={provisionForm.email} onChange={(e) => setProvisionForm((c) => ({ ...c, email: e.target.value }))} />
               </label>
-              <label>
-                Contraseña inicial
-                <input required type="password" minLength={8} value={provisionForm.password} onChange={(e) => setProvisionForm((c) => ({ ...c, password: e.target.value }))} />
-              </label>
+              <p className={s.modalHint}>
+                Ventora enviará un enlace de activación de un solo uso al correo.
+                La contraseña nunca se muestra ni se comparte por WhatsApp.
+              </p>
               <label className={s.checkboxField}>
                 <input type="checkbox" checked={provisionForm.isTestAccount} onChange={(e) => setProvisionForm((c) => ({ ...c, isTestAccount: e.target.checked }))} />
                 Marcar como cuenta de prueba

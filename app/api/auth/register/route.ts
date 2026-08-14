@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { assertAuthRegisterRateLimit } from "@/features/auth/services/auth-register-rate-limit.service";
 import {
   resolveRequestIp,
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
   parseJsonObjectBody,
 } from "@/features/solicitudes/services/solicitudes-public-http.service";
 import {
@@ -21,7 +23,14 @@ type RegisterBody = Record<string, unknown> & {
 export async function POST(request: Request) {
   try {
     await assertAuthRegisterRateLimit(request);
-  } catch {
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "El registro esta temporalmente protegido. Intenta nuevamente." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       {
         error:
@@ -31,7 +40,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await parseJsonObjectBody<RegisterBody>(request);
+  let body: RegisterBody | null;
+
+  try {
+    body = await parseJsonObjectBody<RegisterBody>(request);
+  } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La solicitud es demasiado grande." },
+        { status: 413 }
+      );
+    }
+    throw error;
+  }
 
   if (!body) {
     return NextResponse.json({ error: "JSON invalido." }, { status: 400 });

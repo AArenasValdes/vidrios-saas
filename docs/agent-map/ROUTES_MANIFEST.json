@@ -380,6 +380,12 @@
       "source": "app/(auth-public)/auth/completar-cuenta/page.tsx"
     },
     {
+      "path": "/auth/definir-contrasena",
+      "type": "page",
+      "area": "auth",
+      "source": "app/(auth-public)/auth/definir-contrasena/page.tsx"
+    },
+    {
       "path": "/auth/logout",
       "type": "api",
       "area": "auth",

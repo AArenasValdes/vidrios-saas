@@ -31,7 +31,7 @@ export function canAccessFounderAdminPanel(input: {
   email: string | null | undefined;
   rol: UserRole | null | undefined;
 }) {
-  return isFounderAdminEmail(input.email);
+  return input.rol === "admin" && isFounderAdminEmail(input.email);
 }
 
 // Compat legacy. Mantiene imports existentes mientras migramos /admin.

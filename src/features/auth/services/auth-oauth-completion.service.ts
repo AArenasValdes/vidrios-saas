@@ -185,7 +185,16 @@ async function resolvePublicUser(
     return linkedByAuthUserId;
   }
 
-  return getPublicUserByEmail(admin, input.email);
+  const linkedByEmail = await getPublicUserByEmail(admin, input.email);
+
+  if (linkedByEmail) {
+    throw new AuthOAuthCompletionError(
+      "Este correo pertenece a una cuenta existente. Recupera el acceso o solicita ayuda.",
+      "identity_conflict",
+    );
+  }
+
+  return null;
 }
 
 export async function getOAuthAccountCompletionState(
@@ -330,44 +339,7 @@ export async function resolveOAuthIdentity(
     return { status: "needs_signup" };
   }
 
-  if (linkedByEmail.auth_user_id && linkedByEmail.auth_user_id !== authUserId) {
-    return { status: "identity_conflict" };
-  }
-
-  let syncedAuthUserId = false;
-
-  if (!linkedByEmail.auth_user_id) {
-    const { error: syncError } = await admin
-      .from("users")
-      .update({ auth_user_id: authUserId })
-      .eq("id", linkedByEmail.id)
-      .is("auth_user_id", null);
-
-    if (syncError) {
-      throw new AuthOAuthCompletionError(
-        `No pudimos vincular tu acceso: ${syncError.message}`,
-      );
-    }
-
-    syncedAuthUserId = true;
-  }
-
-  if (linkedByEmail.organization_id == null) {
-    return { status: "needs_signup" };
-  }
-
-  const completion = await getOAuthAccountCompletionState(
-    { authUserId, email },
-    { admin },
-  );
-
-  return {
-    status: "linked",
-    organizationId: linkedByEmail.organization_id,
-    userId: Number(linkedByEmail.id),
-    syncedAuthUserId,
-    accountComplete: completion.isComplete,
-  };
+  return { status: "identity_conflict" };
 }
 
 export async function provisionOrganizationFromOAuthUser(
@@ -467,7 +439,7 @@ export async function provisionOrganizationFromOAuthUser(
   }
 
   const admin = deps.admin ?? createAdminClient();
-  const { data, error } = await admin.rpc("complete_google_oauth_account", {
+  const { data, error } = await admin.rpc("complete_verified_auth_account", {
     p_auth_user_id: authUserId,
     p_email: email,
     p_nombre: nombre,

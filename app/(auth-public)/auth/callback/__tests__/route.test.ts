@@ -18,9 +18,11 @@ describe("GET /auth/callback", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
   });
 
-  it("escribe cookie de sesion Supabase en el redirect final aunque setAll no corra", async () => {
+  it("usa solo las cookies emitidas por Supabase SSR y las mantiene host-only", async () => {
     (createServerClient as jest.Mock).mockImplementation(
-      () => {
+      (_url: string, _key: string, options: {
+        cookies: { setAll: (cookies: Array<Record<string, unknown>>) => void };
+      }) => {
         const user = {
           id: "auth-1",
           email: "maestro@test.com",
@@ -31,17 +33,31 @@ describe("GET /auth/callback", () => {
         };
         return {
           auth: {
-            exchangeCodeForSession: jest.fn().mockResolvedValue({
-              data: {
-                session: {
-                  access_token: "access-token",
-                  refresh_token: "refresh-token",
-                  expires_in: 3600,
-                  token_type: "bearer",
-                  user,
+            exchangeCodeForSession: jest.fn().mockImplementation(async () => {
+              options.cookies.setAll([
+                {
+                  name: "sb-yrtrwgkaopfumpidjthk-auth-token",
+                  value: "official-ssr-session",
+                  options: {
+                    path: "/",
+                    sameSite: "lax",
+                    secure: true,
+                    maxAge: 3600,
+                  },
                 },
-              },
-              error: null,
+              ]);
+              return {
+                data: {
+                  session: {
+                    access_token: "access-token",
+                    refresh_token: "refresh-token",
+                    expires_in: 3600,
+                    token_type: "bearer",
+                    user,
+                  },
+                },
+                error: null,
+              };
             }),
             getUser: jest.fn().mockResolvedValue({
               data: {
@@ -71,11 +87,14 @@ describe("GET /auth/callback", () => {
     expect(response.headers.get("location")).toContain(
       "https://www.ventorap.cl/dashboard"
     );
-    expect(response.headers.getSetCookie().join("\n")).toContain(
+    const setCookie = response.headers.getSetCookie().join("\n");
+    expect(setCookie).toContain(
       "sb-yrtrwgkaopfumpidjthk-auth-token="
     );
-    expect(response.headers.getSetCookie().join("\n")).toContain(
-      "base64-"
-    );
+    expect(setCookie).toContain("official-ssr-session");
+    expect(setCookie).not.toContain("base64-");
+    expect(setCookie).not.toContain("Domain=.ventorap.cl");
+    expect(setCookie).not.toContain("Max-Age=34560000");
+    expect(response.headers.get("x-oauth-cookie-name")).toBeNull();
   });
 });

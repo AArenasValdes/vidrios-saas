@@ -105,7 +105,7 @@ describe("auth-route-access.service", () => {
     expect(usersQuery.ilike).not.toHaveBeenCalled();
   });
 
-  it("cae al lookup por correo cuando auth_user_id aun no esta sincronizado", async () => {
+  it("no reclama por correo un perfil cuyo auth_user_id no esta sincronizado", async () => {
     const usersQuery = createUsersQueryMock({
       authRow: null,
       emailRow: {
@@ -130,12 +130,9 @@ describe("auth-route-access.service", () => {
       from: jest.fn().mockReturnValue(usersQuery),
     });
 
-    const result = await resolveAuthenticatedRouteContext();
-
-    expect(usersQuery.ilike).toHaveBeenCalledWith("correo", "viewer@ventora.cl");
-    expect(result.profile).toEqual({
-      organizationId: "org-88",
-      rol: "viewer",
+    await expect(resolveAuthenticatedRouteContext()).rejects.toMatchObject({
+      status: 403,
     });
+    expect(usersQuery.ilike).not.toHaveBeenCalled();
   });
 });

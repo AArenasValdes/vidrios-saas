@@ -5,24 +5,12 @@ import {
   resolveAuthenticatedRouteContext,
 } from "@/features/auth/services/auth-route-access.service";
 import { webPushNotificationsService } from "@/features/notificaciones/services/web-push-notifications.service";
+import {
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
-
-async function parseJsonObjectBody<T extends Record<string, unknown>>(
-  request: Request
-): Promise<T | null> {
-  try {
-    const parsed = await request.json();
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-
-    return parsed as T;
-  } catch {
-    return null;
-  }
-}
 
 async function resolveAuthContext() {
   try {
@@ -94,6 +82,10 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "Solicitud demasiado grande." }, { status: 413 });
+    }
+
     console.error("No pudimos registrar la suscripcion push.", error);
 
     return NextResponse.json(
@@ -132,6 +124,10 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "Solicitud demasiado grande." }, { status: 413 });
+    }
+
     console.error("No pudimos desactivar la suscripcion push.", error);
 
     return NextResponse.json(

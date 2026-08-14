@@ -9,6 +9,10 @@ import {
   isWebpayPlanCode,
   webpaySuscripcionService,
 } from "@/features/subscriptions/services/webpay-suscripcion.service";
+import {
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +34,10 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: { plan_code?: string; billing_period?: string };
-
-    try {
-      body = await request.json();
-    } catch {
+    const body = await parseJsonObjectBody<
+      { plan_code?: string; billing_period?: string } & Record<string, unknown>
+    >(request);
+    if (!body) {
       return NextResponse.json(
         { error: "Cuerpo de solicitud invalido." },
         { status: 400 }
@@ -68,6 +71,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "Solicitud demasiado grande." }, { status: 413 });
+    }
+
     if (error instanceof AuthRouteAccessError) {
       return NextResponse.json(
         { error: error.message },

@@ -6,6 +6,10 @@ import type { CreateGrowthProspectInput } from "@/features/growth/types/growth-d
 
 type SpreadsheetRow = Record<string, string>;
 
+export const GROWTH_IMPORT_MAX_ROWS = 5_000;
+export const GROWTH_IMPORT_MAX_COLUMNS = 50;
+export const GROWTH_IMPORT_MAX_CELL_CHARS = 10_000;
+
 const HEADER_ALIASES: Record<
   keyof CreateGrowthProspectInput | "rubro" | "segmento",
   string[]
@@ -78,20 +82,28 @@ export function parseCsvTextToRows(text: string): SpreadsheetRow[] {
     return [];
   }
 
-  const lines = normalized.split(/\r?\n/).filter(Boolean);
+  const lines = normalized
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .slice(0, GROWTH_IMPORT_MAX_ROWS + 1);
   if (lines.length < 2) {
     return [];
   }
 
   const delimiter = lines[0].includes(";") ? ";" : ",";
-  const headers = parseCsvLine(lines[0], delimiter).map(normalizeHeader);
+  const headers = parseCsvLine(lines[0], delimiter)
+    .slice(0, GROWTH_IMPORT_MAX_COLUMNS)
+    .map(normalizeHeader);
 
   return lines.slice(1).map((line) => {
     const values = parseCsvLine(line, delimiter);
     const row: SpreadsheetRow = {};
 
     headers.forEach((header, index) => {
-      row[header] = values[index]?.trim() ?? "";
+      row[header] = (values[index]?.trim() ?? "").slice(
+        0,
+        GROWTH_IMPORT_MAX_CELL_CHARS
+      );
     });
 
     return row;
@@ -109,7 +121,11 @@ function stringifyCellValue(value: unknown) {
 }
 
 export function parseXlsxBufferToRows(buffer: ArrayBuffer): SpreadsheetRow[] {
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+  const workbook = XLSX.read(buffer, {
+    type: "array",
+    cellDates: true,
+    sheetRows: GROWTH_IMPORT_MAX_ROWS + 1,
+  });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
     return [];
@@ -131,10 +147,12 @@ export function parseXlsxBufferToRows(buffer: ArrayBuffer): SpreadsheetRow[] {
     return [];
   }
 
-  const headers = headerRow.map((cell) => normalizeHeader(stringifyCellValue(cell)));
+  const headers = headerRow
+    .slice(0, GROWTH_IMPORT_MAX_COLUMNS)
+    .map((cell) => normalizeHeader(stringifyCellValue(cell)));
   const rows: SpreadsheetRow[] = [];
 
-  for (const rawRow of matrix.slice(1)) {
+  for (const rawRow of matrix.slice(1, GROWTH_IMPORT_MAX_ROWS + 1)) {
     if (!Array.isArray(rawRow)) {
       continue;
     }
@@ -146,7 +164,10 @@ export function parseXlsxBufferToRows(buffer: ArrayBuffer): SpreadsheetRow[] {
       if (!header) {
         return;
       }
-      const value = stringifyCellValue(rawRow[index]);
+      const value = stringifyCellValue(rawRow[index]).slice(
+        0,
+        GROWTH_IMPORT_MAX_CELL_CHARS
+      );
       if (value) {
         hasValue = true;
       }

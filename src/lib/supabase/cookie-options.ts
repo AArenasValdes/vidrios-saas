@@ -1,7 +1,5 @@
 import type { CookieOptionsWithName } from "@supabase/ssr";
 
-const SHARED_COOKIE_DOMAIN = ".ventorap.cl";
-
 function normalizeHostname(hostname?: string | null) {
   return hostname?.trim().toLowerCase().replace(/:\d+$/u, "") ?? "";
 }
@@ -23,7 +21,6 @@ export function getSupabaseCookieOptions(
   }
 
   return {
-    domain: SHARED_COOKIE_DOMAIN,
     path: "/",
     sameSite: "lax",
     secure: true,

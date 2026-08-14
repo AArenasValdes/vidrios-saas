@@ -21,14 +21,14 @@ describe("/auth/logout", () => {
         expect.objectContaining({
           name: "sb-test-auth-token",
           value: "",
-          domain: ".ventorap.cl",
+          domain: undefined,
           path: "/",
           maxAge: 0,
         }),
         expect.objectContaining({
           name: "sb-test-auth-token.0",
           value: "",
-          domain: ".ventorap.cl",
+          domain: undefined,
           path: "/",
           maxAge: 0,
         }),

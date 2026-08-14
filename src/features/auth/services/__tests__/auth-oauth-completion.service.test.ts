@@ -168,6 +168,25 @@ describe("auth-oauth-completion.service", () => {
     ).rejects.toMatchObject({ code: "identity_conflict" });
   });
 
+  it("no reclama una fila legacy sin auth_user_id por coincidencia de correo", async () => {
+    const { admin, usersQuery } = createCompletionAdmin({
+      userByAuth: null,
+      userByEmail: {
+        ...completeUser,
+        auth_user_id: null,
+      },
+    });
+    (createAdminClient as jest.Mock).mockReturnValue(admin);
+
+    await expect(
+      resolveOAuthIdentity({
+        authUserId: "auth-attacker",
+        email: "maestro@test.com",
+      })
+    ).resolves.toEqual({ status: "identity_conflict" });
+    expect(usersQuery.update).not.toHaveBeenCalled();
+  });
+
   it("normaliza datos y delega el alta atomica a la RPC", async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: [
@@ -194,7 +213,7 @@ describe("auth-oauth-completion.service", () => {
       consentimientoAceptado: true,
     });
 
-    expect(rpc).toHaveBeenCalledWith("complete_google_oauth_account", {
+    expect(rpc).toHaveBeenCalledWith("complete_verified_auth_account", {
       p_auth_user_id: "auth-new",
       p_email: "nuevo@test.com",
       p_nombre: "Alessandro Gonzalez",
@@ -241,7 +260,7 @@ describe("auth-oauth-completion.service", () => {
     ).resolves.toMatchObject({ accountComplete: true });
 
     expect(rpc).toHaveBeenCalledWith(
-      "complete_google_oauth_account",
+      "complete_verified_auth_account",
       expect.objectContaining({ p_ciudad_comuna: "" }),
     );
   });

@@ -1,6 +1,8 @@
 import sharp from "sharp";
 
 import {
+  ORGANIZATION_ASSET_LOGO_MAX_EDGE,
+  ORGANIZATION_ASSET_MAX_INPUT_PIXELS,
   ORGANIZATION_ASSET_WEB_IMAGE_JPEG_QUALITY,
   ORGANIZATION_ASSET_WEB_IMAGE_MAX_EDGE,
 } from "@/features/organization-assets/constants/upload-constraints";
@@ -14,16 +16,13 @@ export type NormalizedOrganizationAsset = {
   normalized: boolean;
 };
 
-const MIME_EXTENSION_MAP: Record<string, string> = {
-  "image/avif": "avif",
-  "image/gif": "gif",
-  "image/heic": "heic",
-  "image/heif": "heif",
-  "image/jpeg": "jpg",
-  "image/jpg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+const SAFE_RASTER_INPUT_FORMATS = new Set([
+  "avif",
+  "heif",
+  "jpeg",
+  "png",
+  "webp",
+]);
 
 export class OrganizationAssetImageProcessingError extends Error {
   constructor(message = "No pudimos procesar esta imagen.") {
@@ -32,39 +31,45 @@ export class OrganizationAssetImageProcessingError extends Error {
   }
 }
 
-function resolveOriginalExtension(file: File) {
-  const fromName = file.name.split(".").pop()?.trim().toLowerCase();
-
-  if (fromName) {
-    return fromName;
-  }
-
-  return MIME_EXTENSION_MAP[file.type.toLowerCase()] ?? "jpg";
-}
-
-function shouldNormalizeToJpeg(kind: OrganizationAssetUploadKind) {
-  return kind === "hero" || kind === "gallery";
-}
-
 export async function normalizeOrganizationAssetImage(
   kind: OrganizationAssetUploadKind,
   file: File
 ): Promise<NormalizedOrganizationAsset> {
   const inputBuffer = Buffer.from(await file.arrayBuffer());
 
-  if (!shouldNormalizeToJpeg(kind)) {
-    return {
-      body: inputBuffer,
-      contentType: file.type || "application/octet-stream",
-      extension: resolveOriginalExtension(file),
-      normalized: false,
-    };
-  }
-
   try {
-    const outputBuffer = await sharp(inputBuffer, {
+    const image = sharp(inputBuffer, {
       failOn: "warning",
-    })
+      limitInputPixels: ORGANIZATION_ASSET_MAX_INPUT_PIXELS,
+      animated: false,
+    });
+    const metadata = await image.metadata();
+
+    if (!metadata.format || !SAFE_RASTER_INPUT_FORMATS.has(metadata.format)) {
+      throw new OrganizationAssetImageProcessingError();
+    }
+
+    if (kind === "logo") {
+      const outputBuffer = await image
+        .rotate()
+        .resize({
+          width: ORGANIZATION_ASSET_LOGO_MAX_EDGE,
+          height: ORGANIZATION_ASSET_LOGO_MAX_EDGE,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .png({ compressionLevel: 9, adaptiveFiltering: true })
+        .toBuffer();
+
+      return {
+        body: outputBuffer,
+        contentType: "image/png",
+        extension: "png",
+        normalized: true,
+      };
+    }
+
+    const outputBuffer = await image
       .rotate()
       .resize({
         width: ORGANIZATION_ASSET_WEB_IMAGE_MAX_EDGE,

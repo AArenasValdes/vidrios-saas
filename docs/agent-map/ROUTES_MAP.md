@@ -110,9 +110,23 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 - **API usada**: `POST /api/auth/oauth/complete-registration`
 - **Proposito**: Completar una sola vez el perfil SaaS iniciado con Google antes de `/activacion`.
 - **Campos obligatorios**: Nombre personal, taller, WhatsApp chileno, ciudad/comuna y consentimiento de cuenta/contacto directo.
-- **Persistencia**: RPC `complete_google_oauth_account` actualiza atomicamente `users`, `organizations` y `organization_profile`; el trigger de `organizations` crea el trial una sola vez y la RPC no reinicia estados existentes.
-- **Navegacion**: `next` usa allowlist interna; rechaza URLs externas, `/login`, `/registro` y `/auth/*`. Una cuenta completa omite el formulario.
+- **Persistencia**: RPC `complete_verified_auth_account` valida el vinculo por `auth_user_id` y delega la escritura atomica de `users`, `organizations` y `organization_profile`; el trigger de `organizations` crea el trial una sola vez y la RPC no reinicia estados existentes.
+- **Navegacion**: `next` usa allowlist interna; rechaza URLs externas y rutas auth no autorizadas. Una cuenta completa omite el formulario.
 - **Riesgos**: RPC exclusiva de `service_role`. No usar metadata Google para autorizacion ni volver a pedir telefono en onboarding.
+
+---
+
+## Ruta: /auth/definir-contrasena
+
+- **Tipo**: Privada transitoria (sesion de invitacion verificada)
+- **Archivo principal**: `app/(auth-public)/auth/definir-contrasena/page.tsx`
+- **Componente principal**: `app/(auth-public)/auth/definir-contrasena/define-password-view.tsx`
+- **Proposito**: Obligar a una cuenta provisionada por admin a definir su propia contraseña despues de abrir el enlace de activacion de un solo uso.
+- **Datos que consume/escribe**: Sesion Supabase verificada; actualiza solo la contraseña del usuario autenticado mediante `auth.updateUser`.
+- **Navegacion**: Invitacion → `/auth/callback` → esta ruta → `/activacion`.
+- **Ownership**: Auth + Operativa.
+- **QA**: Enlace valido, enlace vencido/usado, contraseñas distintas, longitud 8..72 y redireccion final.
+- **Riesgos**: Nunca aceptar una identidad por correo solamente, nunca mostrar o enviar contraseñas y no permitir `next` externo.
 
 ---
 
@@ -646,6 +660,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/api/subscriptions/webpay/crear` | api | api | `app/api/subscriptions/webpay/crear/route.ts` |
 | `/auth/callback` | api | auth | `app/(auth-public)/auth/callback/route.ts` |
 | `/auth/completar-cuenta` | page | auth | `app/(auth-public)/auth/completar-cuenta/page.tsx` |
+| `/auth/definir-contrasena` | page | auth | `app/(auth-public)/auth/definir-contrasena/page.tsx` |
 | `/auth/logout` | api | auth | `app/(auth-public)/auth/logout/route.ts` |
 | `/biblioteca-lineas` | page | private | `app/(pwa-app)/biblioteca-lineas/page.tsx` |
 | `/clientes` | page | private | `app/(pwa-app)/clientes/page.tsx` |

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { findActiveUserProfile } from "@/features/auth/services/active-user-profile.service";
 import {
   ORGANIZATION_ASSET_LOGO_MAX_BYTES,
+  ORGANIZATION_ASSET_MULTIPART_OVERHEAD_BYTES,
   ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES,
 } from "@/features/organization-assets/constants/upload-constraints";
 import {
@@ -21,9 +22,25 @@ import {
   SubscriptionWriteAccessError,
 } from "@/features/subscriptions/services/subscription-status.service";
 import { sanitizeFileName } from "@/utils/sanitize-file-name";
+import {
+  isRequestBodyTooLargeError,
+  parseBoundedFormData,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 const BUCKET_NAME = "organization-assets";
 const ALLOWED_KINDS = new Set(["logo", "hero", "gallery"]);
+const ALLOWED_RASTER_MIME_TYPES = new Set([
+  "image/avif",
+  "image/heic",
+  "image/heif",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_MULTIPART_BYTES =
+  ORGANIZATION_ASSET_WEB_IMAGE_MAX_BYTES +
+  ORGANIZATION_ASSET_MULTIPART_OVERHEAD_BYTES;
 
 function getBearerToken(request: Request) {
   const authorization = request.headers.get("authorization")?.trim() ?? "";
@@ -132,7 +149,20 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  const formData = await request.formData().catch(() => null);
+  let formData: FormData | null;
+
+  try {
+    formData = await parseBoundedFormData(request, MAX_MULTIPART_BYTES);
+  } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La solicitud de subida supera el limite permitido." },
+        { status: 413 }
+      );
+    }
+
+    throw error;
+  }
   const kindValue = formData?.get("kind");
   const fileValue = formData?.get("file");
 
@@ -151,7 +181,7 @@ export async function POST(request: Request) {
   const file = fileValue;
   const config = getKindConfig(kind);
 
-  if (!file.type.startsWith("image/")) {
+  if (!ALLOWED_RASTER_MIME_TYPES.has(file.type.toLowerCase())) {
     return NextResponse.json(
       { error: `${config.article} ${config.errorLabel} debe ser una imagen.` },
       { status: 400 }

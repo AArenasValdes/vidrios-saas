@@ -216,10 +216,46 @@ describe("/api/organization-assets/upload", () => {
     );
     const payload = await response.json();
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(413);
     expect(payload).toEqual({
-      error: "La foto de trabajo no puede pesar mas de 20 MB antes de optimizarse.",
+      error: "La solicitud de subida supera el limite permitido.",
     });
+  });
+
+  it("rechaza SVG activo antes de intentar publicarlo", async () => {
+    (createAdminClient as jest.Mock).mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1", email: "admin@test.com" } },
+          error: null,
+        }),
+      },
+      storage: { from: jest.fn() },
+    });
+    (findActiveUserProfile as jest.Mock).mockResolvedValue({
+      organization_id: 3,
+      rol: "admin",
+    });
+
+    const formData = new FormData();
+    formData.append("kind", "logo");
+    formData.append(
+      "file",
+      new File(["<svg><script>alert(1)</script></svg>"], "logo.svg", {
+        type: "image/svg+xml",
+      })
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/organization-assets/upload", {
+        method: "POST",
+        headers: { authorization: "Bearer token-123" },
+        body: formData,
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(normalizeOrganizationAssetImage).not.toHaveBeenCalled();
   });
 
   it("devuelve error preciso si no se puede procesar la imagen", async () => {

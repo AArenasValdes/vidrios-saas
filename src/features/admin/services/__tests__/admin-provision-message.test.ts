@@ -1,31 +1,27 @@
 import {
-  buildProvisionCredentialsText,
+  buildProvisionActivationText,
   buildProvisionWhatsAppMessage,
 } from "@/features/admin/services/admin-provision-message";
 
 describe("admin provision message helpers", () => {
-  it("arma texto de credenciales", () => {
+  it("arma texto de activacion sin secretos", () => {
     expect(
-      buildProvisionCredentialsText({
+      buildProvisionActivationText({
         email: "cliente@empresa.cl",
-        password: "clave1234",
       })
-    ).toBe("Correo: cliente@empresa.cl\nContrasena: clave1234");
+    ).toContain("Activacion: enviada al correo");
   });
 
   it("arma mensaje whatsapp con links", () => {
     const message = buildProvisionWhatsAppMessage({
-      appOrigin: "https://ventora.cl",
       empresaNombre: "Vidrios Sur",
       email: "cliente@empresa.cl",
-      password: "clave1234",
       trialEndsAt: "2026-06-16T12:00:00.000Z",
     });
 
     expect(message).toContain("Empresa: Vidrios Sur");
-    expect(message).toContain("Entra aqui: https://ventora.cl/login");
-    expect(message).toContain(
-      "Completa tu empresa aqui: https://ventora.cl/configuracion/empresa"
-    );
+    expect(message).not.toContain("clave1234");
+    expect(message).not.toContain("Contrasena:");
+    expect(message).toContain("correo de activacion de un solo uso");
   });
 });

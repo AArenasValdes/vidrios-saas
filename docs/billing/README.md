@@ -64,7 +64,11 @@ Topics mínimos: **Planes y suscripciones** (`subscription_preapproval`, `subscr
 - **Un checkout abierto por organización:** si el usuario vuelve atrás y elige **el mismo plan**, se reutiliza la URL pendiente; si elige **otro plan**, se libera la reserva anterior en MP y se crea una nueva.
 - **Cuenta vendedora MP:** la cuenta de Mercado Pago que recibe pagos de Ventora no puede suscribirse a sus propios planes; el error se traduce al español en UI.
 - **Activación:** solo vía webhook; nunca confiar en query/body del retorno del navegador.
+- **Replay:** cada webhook firmado se reclama primero en `payment_webhook_events`; duplicados procesados no vuelven a mutar billing.
+- **Ledger privado:** `pagos_suscripcion` se consulta solo desde servidor y la API visible omite tokens, checkout URL y payloads crudos.
 - **Gracia por pago fallido:** `NEXT_PUBLIC_SUBSCRIPTION_GRACE_DAYS` (default `3`).
+
+> Despliegue coordinado: el hardening depende de `20260814201536_security_hardening_payments_auth.sql`. Al 2026-08-14 su aplicacion remota esta pendiente de verificacion; aplicar la migracion antes de desplegar el codigo que llama `complete_verified_auth_account(...)`.
 
 ## Archivos críticos
 

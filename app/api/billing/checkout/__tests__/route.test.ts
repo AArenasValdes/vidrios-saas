@@ -34,6 +34,7 @@ describe("/api/billing/checkout", () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           planCode: "founder_full_annual",
           provider: "flow",
@@ -56,6 +57,7 @@ describe("/api/billing/checkout", () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: "{invalid",
       })
     );
@@ -73,6 +75,7 @@ describe("/api/billing/checkout", () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           planCode: "enterprise_setup",
           provider: "flow",
@@ -93,6 +96,7 @@ describe("/api/billing/checkout", () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           planCode: "founder_full_annual",
           provider: "stripe",
@@ -116,6 +120,7 @@ describe("/api/billing/checkout", () => {
     const response = await POST(
       new Request("http://localhost/api/billing/checkout", {
         method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           planCode: "founder_full_annual",
           provider: "flow",

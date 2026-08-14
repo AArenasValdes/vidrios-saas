@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getPaymentProvider } from "@/features/billing/services/payment-provider-registry";
 import type { ProviderReturnInput } from "@/features/billing/types/payment-provider";
+import { parseBoundedFormData } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,11 @@ async function extractToken(request: Request): Promise<string | null> {
   }
 
   try {
-    const formData = await request.formData();
+    const formData = await parseBoundedFormData(request, 8 * 1024);
+
+    if (!formData) {
+      return null;
+    }
 
     for (const key of FLOW_PARAM_KEYS) {
       const value = formData.get(key);

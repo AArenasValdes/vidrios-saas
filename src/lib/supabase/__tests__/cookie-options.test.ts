@@ -4,11 +4,10 @@ import {
 } from "../cookie-options";
 
 describe("supabase cookie options", () => {
-  it("comparte cookies entre ventorap.cl y www.ventorap.cl", () => {
+  it("mantiene cookies host-only en ventorap.cl y www", () => {
     expect(isSharedVentoraWebHost("ventorap.cl")).toBe(true);
     expect(isSharedVentoraWebHost("www.ventorap.cl")).toBe(true);
     expect(getSupabaseCookieOptions("ventorap.cl")).toEqual({
-      domain: ".ventorap.cl",
       path: "/",
       sameSite: "lax",
       secure: true,

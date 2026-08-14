@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
 
 export class OrganizationProvisionError extends Error {
   constructor(
@@ -19,7 +20,6 @@ export class OrganizationProvisionError extends Error {
 
 export type ProvisionOrganizationInput = {
   email: string;
-  password: string;
   empresaNombre: string;
   isTestAccount?: boolean;
 };
@@ -31,6 +31,7 @@ export type ProvisionOrganizationResult = {
   email: string;
   empresaNombre: string;
   trialEndsAt: string | null;
+  activationSent: true;
 };
 
 function normalizeEmail(email: string) {
@@ -45,19 +46,11 @@ export function validateProvisionOrganizationInput(
   input: ProvisionOrganizationInput
 ) {
   const email = normalizeEmail(input.email);
-  const password = input.password?.trim() ?? "";
   const empresaNombre = normalizeEmpresaNombre(input.empresaNombre ?? "");
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
     throw new OrganizationProvisionError(
       "Ingresa un correo valido.",
-      "invalid_input"
-    );
-  }
-
-  if (password.length < 8) {
-    throw new OrganizationProvisionError(
-      "La contrasena debe tener al menos 8 caracteres.",
       "invalid_input"
     );
   }
@@ -69,7 +62,22 @@ export function validateProvisionOrganizationInput(
     );
   }
 
-  return { email, password, empresaNombre };
+  return { email, empresaNombre };
+}
+
+function getActivationRedirect() {
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!appOrigin) {
+    throw new OrganizationProvisionError(
+      "Falta NEXT_PUBLIC_APP_URL para crear la invitacion."
+    );
+  }
+
+  const redirect = new URL("/auth/callback", appOrigin);
+  redirect.searchParams.set("intent", "signup");
+  redirect.searchParams.set("provider", "email");
+  redirect.searchParams.set("next", "/auth/definir-contrasena");
+  return redirect.toString();
 }
 
 async function findPublicUserByEmail(
@@ -95,7 +103,7 @@ export async function provisionOrganizationAccount(
   input: ProvisionOrganizationInput,
   deps: { admin?: SupabaseClient } = {}
 ): Promise<ProvisionOrganizationResult> {
-  const { email, password, empresaNombre } =
+  const { email, empresaNombre } =
     validateProvisionOrganizationInput(input);
   const admin = deps.admin ?? createAdminClient();
 
@@ -128,13 +136,15 @@ export async function provisionOrganizationAccount(
 
   try {
     const { data: authData, error: authError } =
-      await admin.auth.admin.createUser({
+      await admin.auth.admin.generateLink({
+        type: "invite",
         email,
-        password,
-        email_confirm: true,
+        options: {
+          redirectTo: getActivationRedirect(),
+        },
       });
 
-    if (authError || !authData.user) {
+    if (authError || !authData.user || !authData.properties?.action_link) {
       throw new OrganizationProvisionError(
         `No pudimos crear el usuario de acceso: ${authError?.message ?? "sin respuesta"}`
       );
@@ -201,6 +211,18 @@ export async function provisionOrganizationAccount(
       }
     }
 
+    const activationEmail = await sendAccountActivationEmail({
+      to: email,
+      empresaNombre,
+      actionLink: authData.properties.action_link,
+    });
+
+    if (!activationEmail.sent) {
+      throw new OrganizationProvisionError(
+        "No pudimos enviar la invitacion. Revisa la configuracion de correo."
+      );
+    }
+
     return {
       organizationId,
       authUserId,
@@ -208,6 +230,7 @@ export async function provisionOrganizationAccount(
       email,
       empresaNombre,
       trialEndsAt: profile?.trial_ends_at ?? null,
+      activationSent: true,
     };
   } catch (error) {
     if (authUserId) {

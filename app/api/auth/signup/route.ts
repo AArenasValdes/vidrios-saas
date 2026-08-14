@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assertAuthRegisterRateLimit } from "@/features/auth/services/auth-register-rate-limit.service";
 import {
-  AuthOAuthCompletionError,
-  provisionOrganizationFromOAuthUser,
-} from "@/features/auth/services/auth-oauth-completion.service";
-import { sendWelcomeEmail } from "@/features/auth/services/auth-welcome-email.service";
+  assertAuthRegisterIdentityRateLimit,
+  assertAuthRegisterRateLimit,
+} from "@/features/auth/services/auth-register-rate-limit.service";
+import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
 import {
   getWhatsappValidationHint,
   resolveSignupWhatsapp,
 } from "@/features/organization-region/services/phone-number.service";
 import { normalizeSupportedCountryCode } from "@/features/organization-region/services/organization-region.service";
-import { parseJsonObjectBody } from "@/features/solicitudes/services/solicitudes-public-http.service";
+import {
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
+  parseJsonObjectBody,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 type SignupBody = Record<string, unknown> & {
   nombre?: string;
@@ -43,18 +46,32 @@ function getAdminAuthErrorMessage(error: {
   return "No pudimos crear tu acceso. Intenta de nuevo.";
 }
 
-function mapSignupErrorField(
-  code: AuthOAuthCompletionError["code"] | "email_taken" | "auth_create_failed",
-) {
-  if (code === "invalid_whatsapp") return "whatsapp";
-  if (code === "email_taken" || code === "identity_conflict") return "email";
-  return undefined;
+function getVerificationRedirect(request: Request) {
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const origin = new URL(configuredOrigin || request.url).origin;
+
+  if (process.env.VERCEL === "1" && !configuredOrigin) {
+    throw new Error("NEXT_PUBLIC_APP_URL es obligatoria para activar cuentas.");
+  }
+
+  const redirect = new URL("/auth/callback", origin);
+  redirect.searchParams.set("intent", "signup");
+  redirect.searchParams.set("provider", "email");
+  redirect.searchParams.set("next", "/activacion");
+  return redirect.toString();
 }
 
 export async function POST(request: Request) {
   try {
     await assertAuthRegisterRateLimit(request);
-  } catch {
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "El registro esta temporalmente protegido. Intenta nuevamente en unos minutos." },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       {
         error:
@@ -64,7 +81,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await parseJsonObjectBody<SignupBody>(request);
+  let body: SignupBody | null;
+
+  try {
+    body = await parseJsonObjectBody<SignupBody>(request);
+  } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La solicitud de registro es demasiado grande." },
+        { status: 413 },
+      );
+    }
+
+    throw error;
+  }
 
   if (!body) {
     return NextResponse.json({ error: "JSON invalido." }, { status: 400 });
@@ -77,6 +107,22 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Ingresa un correo valido." },
       { status: 400 },
+    );
+  }
+
+  try {
+    await assertAuthRegisterIdentityRateLimit(email);
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "El registro esta temporalmente protegido. Intenta nuevamente en unos minutos." },
+        { status: 503 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Demasiados intentos para este correo. Espera un momento e intenta de nuevo." },
+      { status: 429 },
     );
   }
 
@@ -109,14 +155,31 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  const { data: createdAuth, error: createAuthError } =
-    await admin.auth.admin.createUser({
+  const { data: activation, error: createAuthError } =
+    await admin.auth.admin.generateLink({
+      type: "signup",
       email,
       password,
-      email_confirm: true,
+      options: {
+        redirectTo: getVerificationRedirect(request),
+        data: {
+          ventora_signup: {
+            version: 1,
+            nombre: body.nombre ?? "",
+            empresaNombre: body.empresaNombre ?? "",
+            whatsapp,
+            ciudadComuna: body.ciudadComuna ?? "",
+            countryCode,
+            consentimientoAceptado: body.consentimientoAceptado === true,
+          },
+        },
+      },
     });
 
-  if (createAuthError || !createdAuth.user) {
+  const createdUser = activation.user;
+  const actionLink = activation.properties?.action_link;
+
+  if (createAuthError || !createdUser || !actionLink) {
     return NextResponse.json(
       {
         error: getAdminAuthErrorMessage(createAuthError ?? {}),
@@ -128,47 +191,31 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await provisionOrganizationFromOAuthUser(
-      {
-        authUserId: createdAuth.user.id,
-        email,
-        nombre: body.nombre ?? "",
-        empresaNombre: body.empresaNombre ?? "",
-        whatsapp,
-        ciudadComuna: body.ciudadComuna ?? "",
-        countryCode,
-        consentimientoAceptado: body.consentimientoAceptado === true,
-      },
-      { admin },
-    );
-
-    // Esperamos el envio: en Vercel un void se corta al responder y el correo no sale.
-    const welcomeEmailResult = await sendWelcomeEmail({
+    const activationEmail = await sendAccountActivationEmail({
       to: email,
-      nombre: body.nombre ?? "",
-      empresaNombre: body.empresaNombre ?? result.empresaNombre ?? "",
-      trialEndsAt: result.trialEndsAt,
+      empresaNombre: body.empresaNombre ?? "",
+      actionLink,
     });
 
-    if (!welcomeEmailResult.sent) {
-      console.warn("[signup] Cuenta creada sin correo de bienvenida.", {
-        email,
-        reason: welcomeEmailResult.reason ?? "unknown",
-      });
+    if (!activationEmail.sent) {
+      await admin.auth.admin.deleteUser(createdUser.id);
+      return NextResponse.json(
+        { error: "No pudimos enviar el correo de activacion. Intenta nuevamente." },
+        { status: 503 },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
-        organizationId: result.organizationId,
-        trialEndsAt: result.trialEndsAt,
-        accountComplete: result.accountComplete,
+        verificationRequired: true,
+        accountComplete: false,
       },
-      { status: 201 },
+      { status: 202 },
     );
   } catch (error) {
     const { error: deleteAuthError } = await admin.auth.admin.deleteUser(
-      createdAuth.user.id,
+      createdUser.id,
     );
 
     if (deleteAuthError) {
@@ -178,21 +225,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (error instanceof AuthOAuthCompletionError) {
-      const status =
-        error.code === "invalid_input" || error.code === "invalid_whatsapp"
-          ? 400
-          : error.code === "identity_conflict" || error.code === "email_taken"
-            ? 409
-            : 500;
-
-      return NextResponse.json(
-        { error: error.message, code: error.code, field: mapSignupErrorField(error.code) },
-        { status },
-      );
-    }
-
-    console.error("Fallo el registro con correo y contrasena.", error);
+    console.error("Fallo el envio de activacion de cuenta.", error);
     return NextResponse.json(
       { error: "No pudimos crear tu cuenta. Intenta de nuevo." },
       { status: 500 },

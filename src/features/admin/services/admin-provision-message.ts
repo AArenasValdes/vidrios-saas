@@ -1,8 +1,6 @@
 type BuildProvisionClientMessageInput = {
-  appOrigin: string;
   empresaNombre: string;
   email: string;
-  password: string;
   trialEndsAt: string | null;
 };
 
@@ -23,16 +21,13 @@ function formatTrialEnd(value: string | null) {
   });
 }
 
-export function buildProvisionCredentialsText(input: {
+export function buildProvisionActivationText(input: {
   email: string;
-  password: string;
 }) {
-  return `Correo: ${input.email}\nContrasena: ${input.password}`;
+  return `Correo: ${input.email}\nActivacion: enviada al correo. No se comparte ninguna contrasena.`;
 }
 
 export function buildProvisionWhatsAppMessage(input: BuildProvisionClientMessageInput) {
-  const loginUrl = `${input.appOrigin}/login`;
-  const configUrl = `${input.appOrigin}/configuracion/empresa`;
   const trialLabel = formatTrialEnd(input.trialEndsAt);
 
   return [
@@ -40,10 +35,9 @@ export function buildProvisionWhatsAppMessage(input: BuildProvisionClientMessage
     "",
     `Empresa: ${input.empresaNombre}`,
     `Correo: ${input.email}`,
-    `Contrasena: ${input.password}`,
     "",
-    `Entra aqui: ${loginUrl}`,
-    `Completa tu empresa aqui: ${configUrl}`,
+    "Te enviamos un correo de activacion de un solo uso para que definas tu acceso.",
+    "Por seguridad, Ventora no envia contrasenas por WhatsApp.",
     "",
     `Prueba gratis 15 dias (Founder Full) hasta ${trialLabel}.`,
   ].join("\n");

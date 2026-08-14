@@ -37,11 +37,10 @@ export async function GET() {
       );
     }
 
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Error interno al obtener historial de pagos.";
-
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[subscriptions:pagos]", error);
+    return NextResponse.json(
+      { error: "No pudimos obtener el historial de pagos." },
+      { status: 500 }
+    );
   }
 }

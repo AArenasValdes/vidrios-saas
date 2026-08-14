@@ -248,7 +248,7 @@ Historial de cambios en la documentacion del mapa tecnico.
 
 ## 2026-07-21 - Smoke + pulido post-recetas
 
-- Smoke autenticado (`admin@test.com` / `1234`): cubicación y despiece visibles en cotizar con cortes por función.
+- Smoke autenticado (credencial histórica retirada): cubicación y despiece visibles en cotizar con cortes por función.
 - Fix hydration: `sourceSolicitudId` ya no lee `sessionStorage` en el primer paint (SSR-safe).
 - Perfiles genéricos `Marco`/`Hoja` dejan de mostrarse como código; UI usa `Por asignar` hasta código real de taller.
 - Cortes se estiman sin perfil asignado; el estado de receta exige perfiles reales para `lista_para_validar`.
@@ -1951,7 +1951,7 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
 
 ### 2026-05-18 - Auth de produccion y mensaje de login
 
-- Se confirmo con reproduccion real sobre `https://ventorap.cl/login` y `https://www.ventorap.cl/login` que `admin@test.com / 1234` autentica y abre `/dashboard` en produccion.
+- Se confirmo historicamente una autenticacion productiva; la credencial fue retirada del documento y debe considerarse comprometida hasta rotarla.
 - Se confirmo que el fallo previo no era la contrasena sino una brecha temporal de permisos DB sobre `public.get_org_id()`.
 - Se endurecio el mensaje de login para no mostrar `Correo o contrasena incorrectos` cuando el problema real sea `permission denied for function get_org_id`.
 - Se corrigio un bug de autofill/Face ID en `/login`: el submit ahora toma los valores reales del formulario y no solo el estado React, evitando rechazos falsos cuando iOS/Android rellenan email/password sin disparar `onChange`.
@@ -1996,8 +1996,8 @@ Creacion completa del mapa tecnico del proyecto en `docs/agent-map/`. Documentac
   - cookies compartidas de Supabase
   - proxy con rutas privadas canonicalizadas y login permitido en apex
 - Verificacion real cerrada en esta pasada:
-  - `admin@test.com / 1234` validado via `repair` contra `https://www.ventorap.cl`
-  - `admin@test.com / 1234` validado via `repair` contra `https://ventorap.cl` con fallback correcto a `www`
+  - credencial productiva histórica retirada; validación previa vía `repair` contra `https://www.ventorap.cl`
+  - credencial productiva histórica retirada; fallback previo de `https://ventorap.cl` a `www`
   - `vidriorivera@empresa.cl / clave123` validado via `repair` contra `https://www.ventorap.cl`
 - Archivos tocados:
   - `proxy.ts`

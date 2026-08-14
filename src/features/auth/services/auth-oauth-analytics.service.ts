@@ -1,12 +1,12 @@
-import type { AuthOAuthProvider } from "@/features/auth/types/auth";
+import type { AuthCallbackProvider } from "@/features/auth/types/auth";
 
 export type OAuthAnalyticsEvent =
-  | `${AuthOAuthProvider}_oauth_returned`
-  | `${AuthOAuthProvider}_existing_login`
-  | `${AuthOAuthProvider}_signup_started`;
+  | `${AuthCallbackProvider}_oauth_returned`
+  | `${AuthCallbackProvider}_existing_login`
+  | `${AuthCallbackProvider}_signup_started`;
 
 export function buildOAuthAnalyticsEvent(
-  provider: AuthOAuthProvider,
+  provider: AuthCallbackProvider,
   kind: "returned" | "existing_login" | "signup_started"
 ): OAuthAnalyticsEvent {
   if (kind === "returned") {
@@ -22,6 +22,6 @@ export function buildOAuthAnalyticsEvent(
 
 export function resolveOAuthProvider(
   value: string | null | undefined
-): AuthOAuthProvider | null {
-  return value === "google" ? "google" : null;
+): AuthCallbackProvider | null {
+  return value === "google" || value === "email" ? value : null;
 }

@@ -4,22 +4,22 @@ jest.mock("@/lib/supabase/admin", () => ({
 
 jest.mock("@/features/auth/services/auth-register-rate-limit.service", () => ({
   assertAuthRegisterRateLimit: jest.fn(),
+  assertAuthRegisterIdentityRateLimit: jest.fn(),
 }));
 
-jest.mock("@/features/auth/services/auth-oauth-completion.service", () => ({
-  AuthOAuthCompletionError: class AuthOAuthCompletionError extends Error {},
-  provisionOrganizationFromOAuthUser: jest.fn(),
+jest.mock("@/features/auth/services/auth-account-activation-email.service", () => ({
+  sendAccountActivationEmail: jest.fn(),
 }));
 
 import { POST } from "@/app/api/auth/signup/route";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { provisionOrganizationFromOAuthUser } from "@/features/auth/services/auth-oauth-completion.service";
+import { sendAccountActivationEmail } from "@/features/auth/services/auth-account-activation-email.service";
 
 const createAdminClientMock = createAdminClient as jest.MockedFunction<
   typeof createAdminClient
 >;
-const provisionMock = provisionOrganizationFromOAuthUser as jest.MockedFunction<
-  typeof provisionOrganizationFromOAuthUser
+const sendActivationMock = sendAccountActivationEmail as jest.MockedFunction<
+  typeof sendAccountActivationEmail
 >;
 
 describe("POST /api/auth/signup", () => {
@@ -27,23 +27,22 @@ describe("POST /api/auth/signup", () => {
     jest.clearAllMocks();
   });
 
-  it("crea el acceso confirmado y provisiona la organizacion antes de responder", async () => {
-    const createUser = jest.fn().mockResolvedValue({
-      data: { user: { id: "auth-new" } },
+  it("crea acceso no confirmado y envia activacion antes de provisionar", async () => {
+    const generateLink = jest.fn().mockResolvedValue({
+      data: {
+        user: { id: "auth-new" },
+        properties: {
+          action_link:
+            "https://yrtrwgkaopfumpidjthk.supabase.co/auth/v1/verify?token=one-time",
+        },
+      },
       error: null,
     });
+    const deleteUser = jest.fn();
     createAdminClientMock.mockReturnValue({
-      auth: { admin: { createUser } },
+      auth: { admin: { generateLink, deleteUser } },
     } as never);
-    provisionMock.mockResolvedValue({
-      organizationId: 88,
-      userId: 12,
-      email: "nuevo@test.com",
-      empresaNombre: "Vidrios Test",
-      trialEndsAt: "2026-08-28T00:00:00.000Z",
-      alreadyProvisioned: false,
-      accountComplete: true,
-    });
+    sendActivationMock.mockResolvedValue({ sent: true });
 
     const response = await POST(
       new Request("http://localhost/api/auth/signup", {
@@ -62,31 +61,27 @@ describe("POST /api/auth/signup", () => {
       }),
     );
 
-    expect(response.status).toBe(201);
-    expect(createUser).toHaveBeenCalledWith({
+    expect(response.status).toBe(202);
+    expect(generateLink).toHaveBeenCalledWith(expect.objectContaining({
+      type: "signup",
       email: "nuevo@test.com",
       password: "una-clave-segura",
-      email_confirm: true,
-    });
-    expect(provisionMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authUserId: "auth-new",
-        email: "nuevo@test.com",
-        ciudadComuna: "",
+      options: expect.objectContaining({
+        redirectTo: expect.stringContaining("provider=email"),
       }),
-      expect.objectContaining({ admin: expect.any(Object) }),
-    );
+    }));
+    expect(sendActivationMock).toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
-      organizationId: 88,
-      accountComplete: true,
+      verificationRequired: true,
+      accountComplete: false,
     });
   });
 
   it("rechaza una contrasena corta sin crear un usuario Auth", async () => {
-    const createUser = jest.fn();
+    const generateLink = jest.fn();
     createAdminClientMock.mockReturnValue({
-      auth: { admin: { createUser } },
+      auth: { admin: { generateLink } },
     } as never);
 
     const response = await POST(
@@ -98,6 +93,6 @@ describe("POST /api/auth/signup", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(createUser).not.toHaveBeenCalled();
+    expect(generateLink).not.toHaveBeenCalled();
   });
 });

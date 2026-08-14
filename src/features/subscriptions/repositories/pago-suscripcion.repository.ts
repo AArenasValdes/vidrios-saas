@@ -198,6 +198,33 @@ export function createPagoSuscripcionRepository() {
         );
       }
     },
+
+    async markPendingAsFailed(input: {
+      id: number;
+      providerStatus: string;
+      providerResponse: unknown;
+    }): Promise<boolean> {
+      const { data, error } = await db()
+        .update({
+          status: "fallido",
+          provider_status: input.providerStatus,
+          provider_response: input.providerResponse,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq("id", input.id)
+        .eq("status", "pendiente")
+        .is("eliminado_en", null)
+        .select("id")
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(
+          `Error al cerrar pago pendiente ${input.id}: ${error.message}`
+        );
+      }
+
+      return Boolean(data);
+    },
   };
 }
 

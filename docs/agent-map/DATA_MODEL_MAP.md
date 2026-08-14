@@ -6,6 +6,8 @@ Responsable: ingeniería + Supabase
 
 Fuente de verdad, en orden: base remota verificada, migraciones registradas, `supabase/docs/database_map.md` y `supabase/docs/rls_policies.md`; `supabase/docs/current_schema.sql` es baseline historico hasta regenerarlo.
 
+Seguridad pendiente de verificacion remota: `20260814201536_security_hardening_payments_auth.sql` (privilegios por columna en `organization_profile`, ledger de pagos solo servidor, replay durable de webhooks y provisionamiento de identidad sin reclamo por correo).
+
 Verificación documental remota: 2026-08-13.
 Clasificación: tablas activas core, tablas activas growth, tablas legacy/dormidas y tablas propuestas separadas explícitamente abajo.
 
@@ -245,7 +247,7 @@ Incluye onboarding, captación, perfil público, notificaciones y billing. No co
 - **Relaciones**: N:1 organizations (ON DELETE CASCADE)
 - **Usada por**: Suscripciones (Webpay flow), cuenta vencida
 - **Archivos donde aparece**: `src/features/subscriptions/hooks/useWebpayPago.ts`, `supabase/migrations/20260530100000_pagos_suscripcion.sql`
-- **Riesgos**: Unique `buy_order` WHERE eliminado_en IS NULL protege idempotencia. RLS permite solo SELECT por `organization_id` para `authenticated`; inserts/updates quedan en rutas server con `service_role`. No exponer `provider_response` completo en logs de servidor.
+- **Riesgos**: Unique `buy_order` WHERE eliminado_en IS NULL protege idempotencia. Tras aplicar el hardening 2026-08-14, todo acceso queda en rutas server con `service_role`; la API usa allowlist y no expone `provider_token`, `checkout_url` ni `provider_response`.
 
 ---
 
@@ -256,12 +258,13 @@ Incluye onboarding, captación, perfil público, notificaciones y billing. No co
 - Campos agregados por `20260602062145_billing_flow_provider.sql`: `provider_order_id` (Flow `flowOrder`) y `checkout_url`.
 - `status` ahora contempla `pendiente`, `aprobado`, `fallido`, `cancelado`, `reembolsado`.
 - Idempotencia: `buy_order` interno y unique parcial `(payment_provider, provider_order_id)` para orden externa.
-- RLS/grants se mantienen: clientes autenticados solo leen pagos de su `organization_id`; writes solo server con `service_role`.
+- El hardening 2026-08-14 elimina tambien la lectura cliente directa; reads y writes quedan solo server con `service_role`.
 - No exponer `provider_response` en respuestas cliente.
 
 ### Addendum pagos_suscripcion - Mercado Pago Chile
 
 - `mercadopago` agrega pagos mensuales y anuales, `subscription_id`, monto/moneda neutrales y `provider_payment_id` unico.
+- `payment_webhook_events` es infraestructura global solo `service_role`: reclama cada request firmado por `(provider, request_id)` antes de reconciliar y bloquea replay concurrente.
 - `reconcile_mercadopago_payment` hace upsert idempotente solo con `service_role` y rechaza monto o moneda distintos del contrato local.
 - `reconcile_mercadopago_subscription` proyecta estados recurrentes y mantiene acceso hasta fin de periodo al cancelar.
 - Un evento antiguo puede registrarse en el ledger, pero no debe degradar un periodo mas reciente.

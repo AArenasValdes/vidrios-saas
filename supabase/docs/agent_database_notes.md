@@ -3,6 +3,17 @@
 Reglas y contexto para futuros agentes que trabajen sobre la base de datos.
 Fuente de verdad, en orden: base remota verificada; migraciones registradas en remoto; fuentes recuperadas con `supabase migration fetch --linked`; y, solo como baseline historico, `current_schema.sql`. El dump y `database.types.ts` estan atrasados respecto de migraciones recientes; revisar migraciones y addendums en `database_map.md` y `rls_policies.md`.
 
+## Endurecimiento pendiente de aplicar en remoto (2026-08-14)
+
+La migracion local `20260814201536_security_hardening_payments_auth.sql` aun requiere aplicacion y verificacion remota. Hasta entonces, no asumir activos estos controles en produccion:
+
+- privilegios por columna en `organization_profile`, sin escritura cliente sobre estado de billing;
+- revocacion del `SELECT` cliente sobre el ledger crudo `pagos_suscripcion`;
+- deduplicacion durable de webhooks en `payment_webhook_events`;
+- RPC `complete_verified_auth_account(...)`, que impide reclamar usuarios por coincidencia de correo.
+
+La aplicacion ya consume el contrato endurecido. No desplegar ese codigo antes de aplicar la migracion, regenerar `database.types.ts` y ejecutar el smoke completo de registro, login y webhook.
+
 ---
 
 ## Archivos obligatorios antes de tocar la base de datos

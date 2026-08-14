@@ -63,11 +63,7 @@ export async function findActiveUserProfile(
   identity: ActiveUserIdentity
 ): Promise<ActiveUserProfileRow | null> {
   if (identity.authUserId) {
-    const profile = await getByAuthUserId(supabase, identity.authUserId);
-
-    if (profile) {
-      return profile;
-    }
+    return getByAuthUserId(supabase, identity.authUserId);
   }
 
   const normalizedEmail = normalizeEmail(identity.email);

@@ -9,6 +9,7 @@ const ALLOWED_NEXT_PREFIXES = [
   "/configuracion",
   "/admin",
   "/cuenta-vencida",
+  "/auth/definir-contrasena",
 ] as const;
 
 const DEFAULT_NEXT_PATH = "/dashboard";

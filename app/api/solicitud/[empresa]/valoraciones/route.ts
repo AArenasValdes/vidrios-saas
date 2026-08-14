@@ -8,6 +8,8 @@ import { createPublicLandingTestimonialSubmission } from "@/features/public-land
 import { solicitudesContactoService } from "@/features/solicitudes/services/solicitudes-contacto.service";
 import {
   createSlidingWindowRateLimiter,
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
   parseJsonObjectBody,
   resolveRequestIp,
 } from "@/features/solicitudes/services/solicitudes-public-http.service";
@@ -46,14 +48,24 @@ export async function POST(
     );
   }
 
-  if (await testimonialRateLimiter.isRateLimited(ip)) {
-    return NextResponse.json(
-      {
-        error:
-          "Recibimos demasiadas valoraciones desde este dispositivo. Intenta nuevamente más tarde.",
-      },
-      { status: 429 }
-    );
+  try {
+    if (await testimonialRateLimiter.isRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          error:
+            "Recibimos demasiadas valoraciones desde este dispositivo. Intenta nuevamente más tarde.",
+        },
+        { status: 429 }
+      );
+    }
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "La protección antiabuso no está disponible. Intenta nuevamente." },
+        { status: 503 }
+      );
+    }
+    throw error;
   }
 
   try {
@@ -93,6 +105,13 @@ export async function POST(
 
     return NextResponse.json({ testimonial }, { status: 201 });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La valoración es demasiado grande." },
+        { status: 413 }
+      );
+    }
+
     if (error instanceof PublicLandingTestimonialValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

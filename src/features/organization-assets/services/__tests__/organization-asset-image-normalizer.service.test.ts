@@ -56,16 +56,30 @@ describe("organization-asset-image-normalizer.service", () => {
     expect(metadata.format).toBe("jpeg");
   });
 
-  it("mantiene logo sin conversion", async () => {
+  it("rasteriza logo a png seguro y no conserva bytes activos", async () => {
     const file = await createPngFile({ width: 600, height: 600 });
     const originalBuffer = Buffer.from(await file.arrayBuffer());
 
     const result = await normalizeOrganizationAssetImage("logo", file);
+    const metadata = await sharp(result.body).metadata();
 
     expect(result.contentType).toBe("image/png");
     expect(result.extension).toBe("png");
-    expect(result.normalized).toBe(false);
-    expect(result.body.equals(originalBuffer)).toBe(true);
+    expect(result.normalized).toBe(true);
+    expect(metadata.format).toBe("png");
+    expect(result.body.equals(originalBuffer)).toBe(false);
+  });
+
+  it("rechaza SVG aunque el cliente lo declare como imagen", async () => {
+    const file = new File(
+      ["<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>"],
+      "logo.svg",
+      { type: "image/svg+xml" }
+    );
+
+    await expect(
+      normalizeOrganizationAssetImage("logo", file)
+    ).rejects.toThrow(OrganizationAssetImageProcessingError);
   });
 
   it("devuelve error preciso si la imagen no se puede decodificar", async () => {

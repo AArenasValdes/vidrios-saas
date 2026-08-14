@@ -13,6 +13,8 @@ import {
 } from "@/features/solicitudes/services/solicitudes-contacto.service";
 import {
   createSlidingWindowRateLimiter,
+  isRateLimitUnavailableError,
+  isRequestBodyTooLargeError,
   parseJsonObjectBody,
   resolveRequestIp,
 } from "@/features/solicitudes/services/solicitudes-public-http.service";
@@ -139,6 +141,10 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ solicitud });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "La solicitud es demasiado grande." }, { status: 413 });
+    }
+
     if (error instanceof AuthRouteAccessError) {
       const message =
         error.message === "No tienes permisos para revisar las solicitudes."
@@ -189,6 +195,10 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ deletedCount });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json({ error: "La solicitud es demasiado grande." }, { status: 413 });
+    }
+
     if (error instanceof AuthRouteAccessError) {
       const message =
         error.message === "No tienes permisos para revisar las solicitudes."
@@ -213,11 +223,21 @@ export async function DELETE(request: Request) {
 export async function POST(request: Request) {
   const ip = resolveRequestIp(request);
 
-  if (await leadRequestRateLimiter.isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Recibimos demasiadas solicitudes. Intenta nuevamente en unos minutos." },
-      { status: 429 }
-    );
+  try {
+    if (await leadRequestRateLimiter.isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Recibimos demasiadas solicitudes. Intenta nuevamente en unos minutos." },
+        { status: 429 }
+      );
+    }
+  } catch (error) {
+    if (isRateLimitUnavailableError(error)) {
+      return NextResponse.json(
+        { error: "La proteccion antiabuso no esta disponible. Intenta nuevamente." },
+        { status: 503 }
+      );
+    }
+    throw error;
   }
 
   try {
@@ -244,6 +264,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ solicitud }, { status: 201 });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "La solicitud es demasiado grande." },
+        { status: 413 }
+      );
+    }
+
     if (error instanceof SolicitudContactoValidationError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

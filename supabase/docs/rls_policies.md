@@ -3,6 +3,8 @@
 Fuente de verdad: base remota verificada y migraciones registradas; `current_schema.sql` es un dump historico pendiente de regeneracion.
 Ultima verificacion remota relevante: 2026-08-13.
 
+**Pendiente remoto 2026-08-14:** `20260814201536_security_hardening_payments_auth.sql` revoca la escritura completa de `authenticated` sobre `organization_profile` y la reemplaza por grants de columnas comerciales; revoca lectura directa de `pagos_suscripcion`; y crea `payment_webhook_events` con RLS deny-by-default y acceso exclusivo `service_role`. La migracion existe localmente, pero no se considera efectiva hasta verificarla en remoto.
+
 ---
 
 ## Resumen
@@ -182,7 +184,14 @@ Lectura pública: Se usa admin client (`createAdminClient`) en el server reposit
 |---|---|---|---|---|
 | `pagos_suscripcion_select_own` | SELECT | `organization_id = get_org_id()` | — | `authenticated` |
 
-**Nota operativa:** los inserts y updates de pagos se hacen solo desde rutas server con `service_role` durante el flujo Webpay. `authenticated` conserva únicamente lectura por organización.
+**Nota operativa:** los inserts y updates de pagos se hacen solo desde rutas server con `service_role`. Tras aplicar `20260814201536_security_hardening_payments_auth.sql`, `authenticated` tampoco conserva lectura directa: el historial seguro sale de una API server con allowlist de campos.
+
+### Infraestructura pendiente: `payment_webhook_events`
+
+- RLS habilitado, sin policies cliente.
+- `anon` y `authenticated` sin grants.
+- `service_role` reclama eventos mediante `claim_mercadopago_webhook_event(...)` y marca el resultado en servidor.
+- La unicidad `(provider, request_id)` bloquea replay concurrente; eventos fallidos o atascados pueden reclamarse de forma controlada.
 
 ### 19. `web_push_subscriptions`
 

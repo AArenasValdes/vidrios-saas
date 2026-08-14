@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { webpaySuscripcionService } from "@/features/subscriptions/services/webpay-suscripcion.service";
+import { parseBoundedFormData } from "@/features/solicitudes/services/solicitudes-public-http.service";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,11 @@ async function extractReturnParams(request: Request): Promise<URLSearchParams> {
   }
 
   try {
-    const formData = await request.formData();
+    const formData = await parseBoundedFormData(request, 8 * 1024);
+
+    if (!formData) {
+      return params;
+    }
 
     for (const key of WEBPAY_PARAM_KEYS) {
       const value = formData.get(key);

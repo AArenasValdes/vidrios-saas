@@ -18,6 +18,7 @@ describe("Mercado Pago webhook signature", () => {
         requestId,
         signature: `ts=${timestamp},v1=${digest}`,
         secret,
+        nowMs: Number(timestamp) * 1000,
       })
     ).toBe(true);
   });
@@ -29,6 +30,7 @@ describe("Mercado Pago webhook signature", () => {
         requestId,
         signature: `ts=${timestamp},v1=${"0".repeat(64)}`,
         secret,
+        nowMs: Number(timestamp) * 1000,
       })
     ).toBe(false);
     expect(
@@ -37,6 +39,7 @@ describe("Mercado Pago webhook signature", () => {
         requestId: null,
         signature: `ts=${timestamp},v1=${digest}`,
         secret,
+        nowMs: Number(timestamp) * 1000,
       })
     ).toBe(false);
   });
@@ -53,7 +56,20 @@ describe("Mercado Pago webhook signature", () => {
         requestId,
         signature: `ts=${timestamp},v1=${mixedDigest}`,
         secret,
+        nowMs: Number(timestamp) * 1000,
       })
     ).toBe(true);
+  });
+
+  it("rechaza una firma valida fuera de la ventana temporal", () => {
+    expect(
+      verifyMercadoPagoWebhookSignature({
+        dataId,
+        requestId,
+        signature: `ts=${timestamp},v1=${digest}`,
+        secret,
+        nowMs: Number(timestamp) * 1000 + 6 * 60 * 1000,
+      })
+    ).toBe(false);
   });
 });

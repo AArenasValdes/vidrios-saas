@@ -11,11 +11,20 @@ import { createGrowthProspect } from "@/features/growth/services/growth-prospect
 import { resolveGrowthRouteContext } from "@/features/growth/services/growth-route-access.service";
 import { loadGrowthWorkspace } from "@/features/growth/services/growth-workspace.service";
 import type { GrowthImportResult } from "@/features/growth/types/growth-supabase";
+import {
+  isRequestBodyTooLargeError,
+  parseBoundedFormData,
+} from "@/features/solicitudes/services/solicitudes-public-http.service";
+
+const MAX_IMPORT_BODY_BYTES = 6 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
     const context = await resolveGrowthRouteContext();
-    const formData = await request.formData();
+    const formData = await parseBoundedFormData(request, MAX_IMPORT_BODY_BYTES);
+    if (!formData) {
+      return NextResponse.json({ error: "Archivo requerido." }, { status: 400 });
+    }
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
@@ -72,6 +81,13 @@ export async function POST(request: Request) {
     const workspace = await loadGrowthWorkspace(context);
     return NextResponse.json({ result, workspace, parsedRows: rows.length });
   } catch (error) {
+    if (isRequestBodyTooLargeError(error)) {
+      return NextResponse.json(
+        { error: "El archivo supera el limite de 6 MB." },
+        { status: 413 }
+      );
+    }
+
     return growthApiError(error, "No pudimos importar el archivo.");
   }
 }

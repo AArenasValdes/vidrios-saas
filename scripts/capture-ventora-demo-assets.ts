@@ -2,11 +2,14 @@ import { chromium, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const BASE_URL = normalizeBaseUrl(process.env.VENTORA_DEMO_BASE_URL ?? "https://www.ventorap.cl");
-const DEMO_EMAIL = process.env.VENTORA_DEMO_EMAIL ?? "admin@test.com";
-const DEMO_PASSWORD = process.env.VENTORA_DEMO_PASSWORD ?? "1234";
-const DEMO_PUBLIC_SLUG = process.env.VENTORA_DEMO_PUBLIC_SLUG;
-const DEMO_QUOTE_TOKEN = process.env.VENTORA_DEMO_QUOTE_TOKEN;
+import { resolveDemoCaptureConfig } from "./capture-ventora-demo-config.ts";
+
+const demoConfig = resolveDemoCaptureConfig();
+const BASE_URL = demoConfig.baseUrl;
+const DEMO_EMAIL = demoConfig.email;
+const DEMO_PASSWORD = demoConfig.password;
+const DEMO_PUBLIC_SLUG = demoConfig.publicSlug;
+const DEMO_QUOTE_TOKEN = demoConfig.quoteToken;
 
 const OUTPUT_DIR = path.resolve("public/video-assets/demo-master");
 const VIEWPORT = { width: 390, height: 844 };
@@ -60,11 +63,6 @@ const optionalTargets: CaptureTarget[] = [
 ];
 
 const allTargets = [...authTargets, ...optionalTargets];
-
-function normalizeBaseUrl(value: string) {
-  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-  return withProtocol.replace(/\/+$/, "");
-}
 
 function buildUrl(routePath: string) {
   return `${BASE_URL}${routePath}`;

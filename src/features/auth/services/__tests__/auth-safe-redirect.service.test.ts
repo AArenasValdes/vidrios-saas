@@ -4,6 +4,9 @@ describe("auth-safe-redirect.service", () => {
   it("acepta rutas internas permitidas", () => {
     expect(sanitizeAuthNextPath("/dashboard")).toBe("/dashboard");
     expect(sanitizeAuthNextPath("/activacion")).toBe("/activacion");
+    expect(sanitizeAuthNextPath("/auth/definir-contrasena")).toBe(
+      "/auth/definir-contrasena"
+    );
     expect(sanitizeAuthNextPath("/cotizaciones/nueva")).toBe("/cotizaciones/nueva");
   });
 

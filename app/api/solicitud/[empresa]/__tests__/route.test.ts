@@ -90,7 +90,7 @@ describe("/api/solicitud/[empresa]", () => {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "cf-connecting-ip": "198.51.100.42",
+          "x-forwarded-for": "198.51.100.42",
         },
         body: JSON.stringify({
           nombre: "Ana",

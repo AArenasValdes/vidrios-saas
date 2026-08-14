@@ -165,7 +165,7 @@ async function runProvision(runtime, options) {
 
   if (!email) {
     exitWithError(
-      'Debes indicar el correo. Ejemplo: pnpm pilot:org:provision dueno@vidrio.cl clave1234 "Vidrios del Sur"'
+      'Debes indicar el correo. Ejemplo: pnpm pilot:org:provision dueno@vidrio.cl <secreto-seguro> "Vidrios del Sur"'
     );
   }
 

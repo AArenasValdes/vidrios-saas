@@ -469,12 +469,21 @@ export function createWebpaySuscripcionService() {
       rawParams: Record<string, string>;
     }): Promise<{ success: false; redirect: string }> {
       let existing: PagoSuscripcionRow | null = null;
+      const hasValidToken = Boolean(
+        input.token && isValidWebpayToken(input.token)
+      );
 
-      if (input.token && isValidWebpayToken(input.token)) {
-        existing = await pagoRepo.getByProviderToken(input.token);
+      if (hasValidToken) {
+        existing = await pagoRepo.getByProviderToken(input.token!);
       }
 
-      if (!existing && input.buyOrder && isValidBuyOrder(input.buyOrder)) {
+      if (
+        !existing &&
+        !hasValidToken &&
+        input.buyOrder &&
+        input.sessionId &&
+        isValidBuyOrder(input.buyOrder)
+      ) {
         existing = await pagoRepo.getByBuyOrder(input.buyOrder);
       }
 
@@ -485,10 +494,28 @@ export function createWebpaySuscripcionService() {
         };
       }
 
-      await pagoRepo.update(existing.id, {
-        status: "fallido",
-        provider_status: input.reason,
-        provider_response: {
+      const orderMatches =
+        !input.buyOrder || input.buyOrder === existing.buy_order;
+      const sessionMatches =
+        !input.sessionId || input.sessionId === String(existing.organization_id);
+      const orderFallbackIsCorrelated =
+        hasValidToken ||
+        (Boolean(input.buyOrder) &&
+          Boolean(input.sessionId) &&
+          input.buyOrder === existing.buy_order &&
+          input.sessionId === String(existing.organization_id));
+
+      if (!orderMatches || !sessionMatches || !orderFallbackIsCorrelated) {
+        return {
+          success: false,
+          redirect: WEBPAY_FAILURE_REDIRECT,
+        };
+      }
+
+      await pagoRepo.markPendingAsFailed({
+        id: existing.id,
+        providerStatus: input.reason,
+        providerResponse: {
           reason: input.reason,
           token_received: Boolean(input.token),
           buy_order: input.buyOrder ?? null,

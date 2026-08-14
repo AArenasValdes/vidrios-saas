@@ -139,6 +139,24 @@ function buildSignedParams(params: FlowParams): URLSearchParams {
   return body;
 }
 
+export function redactFlowSensitiveText(
+  value: string,
+  secrets: Array<string | null | undefined> = []
+) {
+  let redacted = value
+    .replace(/([?&](?:apiKey|token|s)=)[^&\s]+/giu, "$1[REDACTED]")
+    .replace(/("(?:apiKey|token|s)"\s*:\s*")[^"]+/giu, "$1[REDACTED]");
+
+  for (const secret of secrets) {
+    const normalized = secret?.trim();
+    if (normalized) {
+      redacted = redacted.replaceAll(normalized, "[REDACTED]");
+    }
+  }
+
+  return redacted.slice(0, 500);
+}
+
 export function buildFlowCommerceOrder(
   organizationId: number,
   timestamp = Date.now(),
@@ -229,13 +247,23 @@ async function requestFlowStatus(
     token,
   };
   const query = buildSignedParams(params);
-  const response = await fetch(`${getFlowApiBaseUrl()}/payment/getStatus?${query}`, {
+  const statusUrl = new URL(`${getFlowApiBaseUrl()}/payment/getStatus`);
+  statusUrl.search = query.toString();
+  const response = await fetch(statusUrl, {
     method: "GET",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
   });
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Error Flow status (${response.status}): ${errorBody}`);
+    throw new Error(
+      `Error Flow status (${response.status}): ${redactFlowSensitiveText(
+        errorBody,
+        [token, getFlowApiKey(), query.get("s")]
+      )}`
+    );
   }
 
   return (await response.json()) as FlowStatusResponse;
