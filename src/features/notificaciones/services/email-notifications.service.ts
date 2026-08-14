@@ -1,5 +1,7 @@
 import "server-only";
 
+import { Resend } from "resend";
+
 type SendEmailInput = {
   to: string;
   subject: string;
@@ -13,9 +15,16 @@ export interface EmailService {
   isConfigured(): boolean;
 }
 
+export function isTransactionalEmailConfigured() {
+  return (
+    process.env.EMAIL_PROVIDER === "resend" &&
+    Boolean(process.env.EMAIL_API_KEY?.trim())
+  );
+}
+
 class ConsoleEmailService implements EmailService {
   isConfigured() {
-    return true;
+    return false;
   }
 
   getProvider() {
@@ -23,7 +32,16 @@ class ConsoleEmailService implements EmailService {
   }
 
   async send(input: SendEmailInput) {
-    console.log("[EMAIL]", input.subject, "->", input.to);
+    if (process.env.VERCEL === "1") {
+      console.warn(
+        "[email] Correo transaccional no configurado en produccion. Solo se registra en logs:",
+        input.subject,
+        "->",
+        input.to,
+      );
+    } else {
+      console.log("[EMAIL]", input.subject, "->", input.to);
+    }
   }
 }
 
@@ -35,20 +53,13 @@ class EmailClientManager {
       return this.provider;
     }
 
-    const emailProvider = process.env.EMAIL_PROVIDER;
-    const apiKey = process.env.EMAIL_API_KEY;
-
-    if (emailProvider === "resend" && apiKey) {
+    if (isTransactionalEmailConfigured()) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { default: Resend } = require("resend");
-        const resend = new Resend(apiKey);
+        const resend = new Resend(process.env.EMAIL_API_KEY!.trim());
         this.provider = new ResendEmailService(resend);
         return this.provider;
       } catch (error) {
         console.error("[email] No pudimos iniciar Resend. Usamos consola.", error);
-        this.provider = new ConsoleEmailService();
-        return this.provider;
       }
     }
 
@@ -58,9 +69,9 @@ class EmailClientManager {
 }
 
 class ResendEmailService implements EmailService {
-  private resend: unknown;
+  private resend: Resend;
 
-  constructor(resendClient: unknown) {
+  constructor(resendClient: Resend) {
     this.resend = resendClient;
   }
 
@@ -76,29 +87,16 @@ class ResendEmailService implements EmailService {
     const replyTo =
       process.env.EMAIL_REPLY_TO?.trim() || "ventora.cl@gmail.com";
 
-    const result = (await (
-      this.resend as {
-        emails: {
-          send: (args: {
-            from: string;
-            to: string;
-            subject: string;
-            html: string;
-            text: string;
-            replyTo?: string;
-          }) => Promise<{ data?: unknown; error?: { message?: string } | null }>;
-        };
-      }
-    ).emails.send({
+    const result = await this.resend.emails.send({
       from: process.env.EMAIL_FROM ?? "Ventora <hola@ventorap.cl>",
       to: input.to,
       subject: input.subject,
       html: input.html,
       text: input.text,
       replyTo,
-    })) as { data?: unknown; error?: { message?: string } | null };
+    });
 
-    if (result?.error) {
+    if (result.error) {
       throw new Error(result.error.message ?? "No pudimos enviar el correo.");
     }
   }

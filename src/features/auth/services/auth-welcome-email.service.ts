@@ -29,9 +29,14 @@ export async function sendWelcomeEmail(input: WelcomeEmailInput) {
       html: content.html,
       text: content.text,
     });
-    return { sent: true as const };
+    return { sent: true as const, provider: emailService.getProvider() };
   } catch (error) {
-    console.error("[welcome-email] No pudimos enviar el correo de bienvenida.", error);
+    console.error("[welcome-email] No pudimos enviar el correo de bienvenida.", {
+      to,
+      provider: emailService.getProvider(),
+      configured: emailService.isConfigured(),
+      error,
+    });
     return { sent: false as const, reason: "send_failed" as const };
   }
 }

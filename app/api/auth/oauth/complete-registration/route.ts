@@ -60,12 +60,19 @@ export async function POST(request: Request) {
     });
 
     if (!result.alreadyProvisioned) {
-      void sendWelcomeEmail({
+      const welcomeEmailResult = await sendWelcomeEmail({
         to: user.email,
         nombre: body.nombre ?? "",
         empresaNombre: body.empresaNombre ?? result.empresaNombre ?? "",
         trialEndsAt: result.trialEndsAt,
       });
+
+      if (!welcomeEmailResult.sent) {
+        console.warn("[oauth-signup] Cuenta creada sin correo de bienvenida.", {
+          email: user.email,
+          reason: welcomeEmailResult.reason ?? "unknown",
+        });
+      }
     }
 
     return NextResponse.json({

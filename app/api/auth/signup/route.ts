@@ -142,13 +142,20 @@ export async function POST(request: Request) {
       { admin },
     );
 
-    // No bloquea el alta si Resend falla.
-    void sendWelcomeEmail({
+    // Esperamos el envio: en Vercel un void se corta al responder y el correo no sale.
+    const welcomeEmailResult = await sendWelcomeEmail({
       to: email,
       nombre: body.nombre ?? "",
       empresaNombre: body.empresaNombre ?? result.empresaNombre ?? "",
       trialEndsAt: result.trialEndsAt,
     });
+
+    if (!welcomeEmailResult.sent) {
+      console.warn("[signup] Cuenta creada sin correo de bienvenida.", {
+        email,
+        reason: welcomeEmailResult.reason ?? "unknown",
+      });
+    }
 
     return NextResponse.json(
       {
