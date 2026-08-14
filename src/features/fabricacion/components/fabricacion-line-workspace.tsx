@@ -41,6 +41,7 @@ import {
   contarBloqueosCriticosReceta,
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
+import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
 import type {
   FabricacionEntradaCalculo,

@@ -32,12 +32,27 @@ describe("proxy", () => {
     expect(createServerClient).not.toHaveBeenCalled();
   });
 
-  it("permite abrir login en ventorap.cl sin redirigir de host", async () => {
-    const request = new NextRequest("https://ventorap.cl/login");
+  it("canonicaliza login en ventorap.cl antes de iniciar OAuth", async () => {
+    const request = new NextRequest(
+      "https://ventorap.cl/login?next=%2Fdashboard"
+    );
     const response = await proxy(request);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://www.ventorap.cl/login?next=%2Fdashboard"
+    );
+    expect(createServerClient).not.toHaveBeenCalled();
+  });
+
+  it("canonicaliza registro en ventorap.cl antes de iniciar OAuth", async () => {
+    const request = new NextRequest("https://ventorap.cl/registro");
+    const response = await proxy(request);
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://www.ventorap.cl/registro"
+    );
     expect(createServerClient).not.toHaveBeenCalled();
   });
 

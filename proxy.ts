@@ -33,6 +33,11 @@ const hasSupabaseSessionCookie = (request: NextRequest) => {
 
 const canonicalPrefixes = [
   ...protectedPrefixes,
+  // El verifier PKCE se guarda en una cookie host-only. Canonicalizar las
+  // entradas OAuth antes de iniciar el flujo evita crearlo en ventorap.cl y
+  // consumirlo después en www.ventorap.cl.
+  "/login",
+  "/registro",
   "/auth/callback",
   "/auth/completar-cuenta",
 ];
