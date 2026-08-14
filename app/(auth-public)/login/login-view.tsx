@@ -224,7 +224,6 @@ export default function LoginView({
     setError(null);
     setErrorCode(null);
     setErrorDiagnostic(null);
-    authDeviceRecoveryService.clearStaleAuthState();
 
     googleTagService.trackEvent(`${provider}_oauth_started`, {
       event_category: "auth",
@@ -269,15 +268,6 @@ export default function LoginView({
       window.clearInterval(intervalId);
     };
   }, []);
-
-  useEffect(() => {
-    if (!oauthError || appResetDone) {
-      return;
-    }
-
-    authDeviceRecoveryService.clearStaleAuthState();
-    window.location.replace("/login?app_reset=1");
-  }, [appResetDone, oauthError]);
 
   const handleRecoverApp = async () => {
     setIsRecoveringApp(true);

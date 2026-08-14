@@ -10,7 +10,6 @@ const mockSignIn = jest.fn();
 const mockSignInWithGoogle = jest.fn();
 const mockPrefetch = jest.fn();
 const mockResetCurrentDeviceAppState = jest.fn();
-const mockClearStaleAuthState = jest.fn();
 
 jest.mock("next/image", () => {
   return function MockImage(
@@ -61,7 +60,6 @@ jest.mock("@/features/auth/hooks/useAuth", () => ({
 jest.mock("@/features/auth/services/auth-device-recovery.service", () => ({
   authDeviceRecoveryService: {
     resetCurrentDeviceAppState: () => mockResetCurrentDeviceAppState(),
-    clearStaleAuthState: () => mockClearStaleAuthState(),
   },
 }));
 
@@ -75,7 +73,6 @@ describe("LoginView", () => {
     mockSignInWithGoogle.mockResolvedValue(undefined);
     mockPrefetch.mockClear();
     mockResetCurrentDeviceAppState.mockResolvedValue(undefined);
-    mockClearStaleAuthState.mockClear();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: jest.fn().mockImplementation(() => ({
@@ -346,30 +343,6 @@ describe("LoginView", () => {
         intent: "login",
         nextPath: "/cotizaciones",
       });
-    });
-    expect(mockClearStaleAuthState).toHaveBeenCalledTimes(1);
-  });
-
-  it("limpia la sesion local obsoleta al volver con error OAuth", async () => {
-    const replace = jest.fn();
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: { replace },
-    });
-
-    render(
-      <LoginView
-        oauthError
-        oauthNoEmailError={false}
-        identityConflictError={false}
-        nextPath={null}
-        appResetDone={false}
-      />
-    );
-
-    await waitFor(() => {
-      expect(mockClearStaleAuthState).toHaveBeenCalledTimes(1);
-      expect(replace).toHaveBeenCalledWith("/login?app_reset=1");
     });
   });
 });

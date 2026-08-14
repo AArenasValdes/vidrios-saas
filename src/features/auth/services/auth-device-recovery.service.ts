@@ -13,54 +13,6 @@ function isVentoraStorageKey(key: string) {
   );
 }
 
-function isSupabaseAuthCookie(name: string) {
-  return (
-    name.startsWith("sb-") ||
-    name.startsWith("supabase-auth-token") ||
-    name.includes("-auth-token")
-  );
-}
-
-function clearSupabaseAuthCookies() {
-  if (!isBrowser()) {
-    return;
-  }
-
-  document.cookie
-    .split(";")
-    .map((chunk) => chunk.trim().split("=", 1)[0])
-    .filter((name): name is string => Boolean(name) && isSupabaseAuthCookie(name))
-    .forEach((name) => {
-      document.cookie = `${name}=; Max-Age=0; Path=/; SameSite=Lax; Secure`;
-    });
-}
-
-function clearAuthStorage() {
-  if (!isBrowser()) {
-    return;
-  }
-
-  const isAuthStorageKey = (key: string) =>
-    key === "vidrios-saas:auth-state" ||
-    key.startsWith("vidrios-saas:auth-profile:") ||
-    key.startsWith("sb-") ||
-    key.startsWith("supabase");
-
-  [window.localStorage, window.sessionStorage].forEach((storage) => {
-    const keysToRemove: string[] = [];
-
-    for (let index = 0; index < storage.length; index += 1) {
-      const key = storage.key(index);
-
-      if (key && isAuthStorageKey(key)) {
-        keysToRemove.push(key);
-      }
-    }
-
-    keysToRemove.forEach((key) => storage.removeItem(key));
-  });
-}
-
 function clearMatchingStorage(storage: Storage) {
   const keysToRemove: string[] = [];
 
@@ -174,26 +126,11 @@ async function signOutLocally() {
 }
 
 export const authDeviceRecoveryService = {
-  clearStaleAuthState() {
-    if (!isBrowser()) {
-      return;
-    }
-
-    clearSupabaseAuthCookies();
-
-    try {
-      clearAuthStorage();
-    } catch {
-      // Algunos navegadores bloquean el storage; las cookies siguen limpiándose.
-    }
-  },
-
   async resetCurrentDeviceAppState() {
     if (!isBrowser()) {
       return;
     }
 
-    authDeviceRecoveryService.clearStaleAuthState();
     await signOutLocally();
     await unregisterAllServiceWorkers();
     await clearVentoraCaches();
