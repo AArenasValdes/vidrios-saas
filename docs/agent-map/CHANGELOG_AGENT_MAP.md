@@ -8,6 +8,7 @@ Historial de cambios en la documentacion del mapa tecnico.
 - El proxy valida acceso con `getClaims()` y conserva los `Set-Cookie` rotados por Supabase al responder con redirects, evitando reutilizar refresh tokens ya consumidos.
 - Las sesiones irrecuperables (`refresh_token_not_found`, refresh reutilizado o rate limit durante refresh) eliminan ambas variantes de cookie y vuelven al login sin bucle.
 - `AppShell` deja de mostrar un splash infinito: a los 10 segundos ofrece reintentar o volver al ingreso mediante el logout server-side.
+- Se incremento el esquema de cache del service worker para que las PWA instaladas activen la version corregida al volver a abrirse.
 
 ## 2026-08-14 - Orden documental y Growth OS
 

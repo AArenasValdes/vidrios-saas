@@ -1,5 +1,6 @@
 const VERSION = new URL(self.location.href).searchParams.get("version") || "dev";
-const CACHE_NAME = `vidrios-saas-${VERSION}`;
+const CACHE_SCHEMA_VERSION = "auth-host-only-v1";
+const CACHE_NAME = `vidrios-saas-${VERSION}-${CACHE_SCHEMA_VERSION}`;
 const APP_SHELL = [
   "/",
   "/login",
