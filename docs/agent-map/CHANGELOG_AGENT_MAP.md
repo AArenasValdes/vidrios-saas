@@ -2,6 +2,15 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-14 - Landing, registro y posicionamiento publico
+
+- La landing presenta cotizacion multidispositivo como nucleo y fabricacion configurable como capa opcional: cubicacion, despiece y pauta de corte revisable.
+- La seccion de fabricacion incorpora evidencia real anonimizada y comprimida: catalogo privado desktop, resumen interno de fabricacion y vista mobile. La secuencia distingue configurar lineas de revisar la pauta y mantiene el contenido tecnico fuera del PDF cliente.
+- `/registro` queda documentado como alta real de dos pasos con Google o correo/contrasena; no como formulario de lead asistido.
+- La promesa regional distingue configuracion operativa para seis paises de pagos directos, disponibles inicialmente solo en Chile.
+- Metadata, canonical, Open Graph, Twitter, registro, login y paginas legales quedan mapeados como parte de la superficie publica.
+- Se elimina la referencia al inexistente `VENTORA_DESKTOP_TALLER_ROADMAP.md`; `AGENTS.md` y `VENTORA_GIRO_PRODUCTO_2026-07.md` conservan la jerarquia vigente.
+
 ## 2026-08-13 - Cierre comercial regional y siguiente gate de cobro
 
 - La región dejó de ser sólo presentación: las cotizaciones nuevas usan la tasa y el redondeo comercial del snapshot regional; catálogo de líneas y activación formatean moneda/locale de la empresa.

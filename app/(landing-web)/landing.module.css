@@ -43,6 +43,14 @@
   scroll-margin-top: calc(var(--nav-h) + var(--safe-top) + 20px);
 }
 
+.page a:focus-visible,
+.page button:focus-visible,
+.page input:focus-visible,
+.page select:focus-visible {
+  outline: 3px solid #8bc5ff;
+  outline-offset: 3px;
+}
+
 .container {
   width: 100%;
   max-width: 1200px;

@@ -3,6 +3,17 @@ import { ArrowLeft } from "lucide-react";
 
 import s from "../legal.module.css";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Términos de servicio",
+  description:
+    "Términos de uso de Ventora como software comercial para talleres de vidrio y aluminio.",
+  alternates: {
+    canonical: "https://www.ventorap.cl/terms",
+  },
+};
+
 export default function TermsPage() {
   return (
     <main className={s.page}>

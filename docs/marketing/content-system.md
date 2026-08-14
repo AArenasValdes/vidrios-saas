@@ -52,7 +52,7 @@ Temas:
 - generar PDF profesional
 - enviar por WhatsApp
 - revisar clientes y cotizaciones
-- mostrar en desktop la cubicacion, el despiece, las tiras y la pauta interna de una linea con receta configurada
+- mostrar en desktop la cubicacion, el despiece, las tiras y la pauta de corte de una linea con receta configurada
 
 ### 3. Funciones complementarias
 

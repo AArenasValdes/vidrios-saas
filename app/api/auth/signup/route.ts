@@ -95,11 +95,6 @@ export async function POST(request: Request) {
   );
 
   if (!whatsapp) {
-    console.error("[signup] invalid whatsapp", {
-      countryCode,
-      bodyWhatsappLen: String(body.whatsapp ?? "").length,
-      bodyLocalLen: String(body.whatsappLocal ?? "").length,
-    });
     return NextResponse.json(
       {
         error: getWhatsappValidationHint(

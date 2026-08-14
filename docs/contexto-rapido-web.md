@@ -44,4 +44,4 @@ Ventora **no** es un cotizador técnico ni un ERP. Es **software comercial para 
 
 ## Alcance tecnico comunicable (2026-08-13)
 
-Ventora puede generar cubicacion, despiece, tiras y pauta interna cuando la empresa configura y valida una receta por linea. Es una ayuda revisable en desktop, separada del PDF comercial y del precio por m2. No es cubicacion universal, optimizacion de barras, nesting, CNC ni fabricacion automatica.
+Ventora puede generar cubicacion, despiece, tiras y pauta de corte cuando la empresa configura y valida una receta por linea. Es una ayuda revisable en desktop, separada del PDF comercial y del precio por m2. No es cubicacion universal, optimizacion de barras, nesting, CNC ni fabricacion automatica.

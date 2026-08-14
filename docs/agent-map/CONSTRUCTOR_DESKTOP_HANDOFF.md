@@ -8,7 +8,7 @@ Este documento es la fuente operativa para continuar el modo **Constructor** de 
 
 Antes de editar, leer en este orden:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 2. `Agents.md`
 3. este documento
 4. `docs/agent-map/FEATURES_MAP.md` - Cotizaciones y PDF

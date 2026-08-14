@@ -16,7 +16,7 @@ export const navLinks = [
 export const heroTrustItems = [
   "15 días gratis",
   "Cualquier dispositivo",
-  "Latinoamérica",
+  "Pensado para Latinoamérica",
   "PDF profesional",
 ] as const;
 
@@ -28,11 +28,7 @@ export const PRICING_IMPLEMENTATION_HREF = `https://wa.me/56977338906?text=${enc
 )}`;
 
 export const founderPlanBenefits = [
-  "Cotizador en celular, tablet y computador",
-  "Misma cuenta en varios dispositivos",
-  "PDF profesional y envío por WhatsApp",
-  "Clientes y cotizaciones ordenadas",
-  "Líneas para cubicación y despiece (opcional)",
+  "Todo lo de Ventora Cotización",
   "Seguimiento comercial y aprobación del cliente",
   "Página pública para solicitudes (si la activas)",
   "Bandeja, links por canal y QR",
@@ -41,10 +37,7 @@ export const founderPlanBenefits = [
 ] as const;
 
 export const monthlyPlanBenefits = [
-  "Cotizador completo en cualquier dispositivo",
-  "Líneas para cubicación y despiece (opcional)",
-  "PDF, WhatsApp y seguimiento comercial",
-  "Página pública disponible (si la activas)",
+  "Mismas funciones de Ventora Comercial",
   "Pago mensual flexible",
   "15 días gratis",
   "Puedes pasar al anual cuando quieras",
@@ -53,15 +46,14 @@ export const monthlyPlanBenefits = [
 export const quoteOnlyPlanBenefits = [
   "Cotizador en celular, tablet y computador",
   "Misma cuenta en varios dispositivos",
-  "PDF profesional",
-  "Envío por WhatsApp",
+  "PDF profesional y envío por WhatsApp",
   "Clientes y cotizaciones ordenadas",
-  "Líneas para cubicación y despiece (opcional)",
+  "Líneas propias, recetas, cubicación y pauta de corte opcional",
   "Sin página pública: solo cotizar y enviar",
 ] as const;
 
 export const accompaniedPlanBenefits = [
-  "Todo lo del Plan Fundador",
+  "Servicio complementario a tu plan",
   "Configuración asistida completa",
   "Capacitación inicial",
   "Soporte prioritario de arranque",
@@ -69,7 +61,7 @@ export const accompaniedPlanBenefits = [
 ] as const;
 
 export function formatClp(value: number) {
-  return `$${value.toLocaleString("es-CL")}`;
+  return `CLP $${value.toLocaleString("es-CL")}`;
 }
 
 export const monthlyPrice = BILLING_PLANS.founder_monthly.amountClp;
@@ -99,7 +91,7 @@ export type PricingPlan = {
 
 export const pricingPlans: readonly PricingPlan[] = [
   {
-    name: "Plan Fundador Anual",
+    name: "Ventora Comercial — anual",
     price: formatClp(yearlyPrice),
     period: "/ año",
     description: `Equivale a ${formatClp(yearlyEquivalentMonthlyPrice)} al mes`,
@@ -109,12 +101,12 @@ export const pricingPlans: readonly PricingPlan[] = [
     tone: "featured",
     trackingLocation: "precios-fundador",
     badge: "Recomendado",
-    helper: "Multi-dispositivo, cubicación opcional y captación cuando la necesites.",
+    helper: "Cotización, fabricación configurable y captación opcional en un solo plan.",
     savings: `Ahorras ${formatClp(annualSavingsVsMonthly)} al año frente al pago mensual`,
     benefits: founderPlanBenefits,
   },
   {
-    name: "Solo Cotización Anual",
+    name: "Ventora Cotización — anual",
     price: formatClp(quoteOnlyPrice),
     period: "/ año",
     description: "Entrada simple para cotizar y enviar presupuestos profesionales.",
@@ -123,14 +115,14 @@ export const pricingPlans: readonly PricingPlan[] = [
     ctaKind: "internal",
     tone: "highlight",
     trackingLocation: "precios-solo-cotizacion",
-    helper: "Ideal si aún no necesitas página pública.",
+    helper: "Incluye cubicación y pauta de corte opcional; excluye la página pública.",
     benefits: quoteOnlyPlanBenefits,
   },
   {
-    name: "Plan Mensual",
+    name: "Ventora Comercial — mensual",
     price: formatClp(monthlyPrice),
     period: "/ mes",
-    description: "Ventora completo mes a mes: cotizador, dispositivos y cubicación opcional.",
+    description: "Las mismas funciones de Ventora Comercial, con pago mes a mes.",
     ctaLabel: "Probar 15 días gratis",
     href: REGISTRO_HREF,
     ctaKind: "internal",
@@ -139,9 +131,9 @@ export const pricingPlans: readonly PricingPlan[] = [
     benefits: monthlyPlanBenefits,
   },
   {
-    name: "Plan Empresa Acompañado",
-    price: "Desde $250.000",
-    period: "/ año",
+    name: "Configuración asistida",
+    price: "Desde CLP $250.000",
+    period: "servicio complementario",
     description:
       "Para empresas que necesitan configuración asistida, capacitación y soporte de arranque.",
     ctaLabel: "Solicitar implementación",
@@ -157,7 +149,7 @@ export const faqs = [
   {
     question: "¿Ventora es un cotizador técnico?",
     answer:
-      "No. Tu cotizador técnico te ayuda a fabricar. Ventora te ayuda a cotizar, enviar un PDF profesional y, si quieres, armar una pauta interna. No reemplaza perfiles, cortes ni un sistema de fábrica.",
+      "Ventora parte como cotizador comercial y puede sumar fabricación configurable. Con recetas validadas por tu taller genera cubicación, despiece y una pauta de corte revisable; no es CAD, ERP ni optimizador industrial.",
   },
   {
     question: "¿Sirve en cualquier dispositivo?",
@@ -166,12 +158,12 @@ export const faqs = [
   },
   {
     question: "¿Está disponible en Latinoamérica?",
-    answer: `Sí. Ventora está hecho para talleres de ${LATAM_COUNTRIES_LABEL}. Al crear la cuenta eliges tu país. Los precios de esta página son de referencia en Chile.`,
+    answer: `Está pensado para talleres de ${LATAM_COUNTRIES_LABEL}. Puedes elegir tu país y trabajar con su moneda, prefijo y configuración regional. Los pagos directos y los precios publicados están disponibles inicialmente en Chile.`,
   },
   {
     question: "¿Puedo cubicar y hacer despiece?",
     answer:
-      "Si quieres, agregas tus líneas para cubicación y despiece. Si no, cotizas igual. Hay plantillas iniciales sugeridas de líneas de aluminio habituales; las revisas y validas en tu taller.",
+      "Sí. Puedes agregar líneas, perfiles, reglas y largos comerciales para obtener cubicación, despiece y pautas de corte revisables. Si una línea aún no tiene receta, puedes cotizar su precio de todas formas.",
   },
   {
     question: "¿Cuánto dura la prueba?",

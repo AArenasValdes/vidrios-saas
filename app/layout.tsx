@@ -15,12 +15,13 @@ const shouldRenderVercelInsights = process.env.VERCEL === "1";
 const gtmContainerId = googleTagService.getGtmContainerId();
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.ventorap.cl"),
   title: {
     default: "Ventora",
     template: "%s | Ventora",
   },
   description:
-    "Ventora ayuda a empresas de vidrio y aluminio a captar leads, ordenarlos y cerrarlos desde un solo lugar.",
+    "Ventora ayuda a talleres de vidrio y aluminio a cotizar, enviar PDFs por WhatsApp y preparar cubicaciones y pautas de corte revisables.",
   applicationName: "Ventora",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -44,7 +45,14 @@ export const metadata: Metadata = {
     title: "Ventora",
     statusBarStyle: "black-translucent",
   },
-  keywords: ["leads", "cotizaciones", "vidrios", "aluminio", "crm comercial", "pwa"],
+  keywords: [
+    "cotizador de vidrios",
+    "cotizaciones de aluminio",
+    "cubicación",
+    "despiece",
+    "pauta de corte",
+    "PDF por WhatsApp",
+  ],
 };
 
 /* viewport-fit=cover requerido para que env(safe-area-inset-*) sea correcto en iPhone con notch / Dynamic Island. */

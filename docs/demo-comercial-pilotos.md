@@ -387,7 +387,7 @@ Prepara 2 variantes:
 
 Version corta de 20 a 30 segundos:
 
-> Ventora ayuda a empresas de vidrios y aluminio a captar consultas, ordenarlas en un solo lugar, responder mas rapido por WhatsApp y convertirlas en cotizaciones que se pueden compartir y cerrar mejor.
+> Ventora ayuda a maestros, talleres y empresas de vidrio y aluminio a cotizar desde cualquier dispositivo, ordenar clientes y cotizaciones, enviar PDF por WhatsApp y, cuando lo necesitan, revisar cubicacion, despiece y pauta de corte. La pagina publica para captar solicitudes es complementaria.
 
 Version de 45 a 60 segundos:
 

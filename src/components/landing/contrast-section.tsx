@@ -1,32 +1,36 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CircleCheck } from "lucide-react";
 
 import s from "./contrast-section.module.css";
 
 export function ContrastSection() {
+  const benefits = [
+    "Cotización comercial rápida",
+    "PDF profesional por WhatsApp",
+    "Cubicación opcional con las reglas del taller",
+    "Pauta de corte revisable antes de fabricar",
+  ] as const;
+
   return (
     <section className={s.section} aria-labelledby="contrast-title">
       <div className={s.container}>
         <h2 id="contrast-title" className={s.title}>
-          Tu cotizador técnico te ayuda a fabricar. Ventora te ayuda a cotizar y enviar.
+          Empieza cotizando. Configura la fabricación cuando la necesites.
         </h2>
         <p className={s.lead}>
-          Cotizador comercial completo — en cualquier dispositivo — al precio de un
-          taller, no de un sistema de fábrica.
+          Crea presupuestos y PDFs desde el primer día. Cuando quieras, agrega tus
+          líneas, reglas y largos comerciales para obtener cubicación, despiece y
+          pautas de corte revisables.
         </p>
 
-        <div className={s.split}>
-          <div>
-            <p className={s.colLabel}>Cotizador técnico</p>
-            <p className={s.colText}>Perfiles, cortes y fabricación.</p>
-          </div>
-          <div>
-            <p className={s.colLabel}>Ventora</p>
-            <p className={s.colText}>
-              Presupuesto, PDF, WhatsApp y, si quieres, pauta interna.
-            </p>
-          </div>
-        </div>
+        <ul className={s.benefits}>
+          {benefits.map((benefit) => (
+            <li key={benefit}>
+              <CircleCheck size={18} aria-hidden />
+              <span>{benefit}</span>
+            </li>
+          ))}
+        </ul>
 
         <Link href="/registro" className={s.cta} prefetch={false}>
           Empezar 15 días gratis

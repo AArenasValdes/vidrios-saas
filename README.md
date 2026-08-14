@@ -87,7 +87,7 @@ Base funcional actual del repo:
 - base multi-tenant por `organization_id`
 - PWA base y offline page
 - tests en services, hooks y utils
-- cubicacion, despiece, tiras y pauta interna revisable para lineas con recetas configuradas por la empresa
+- cubicacion, despiece, tiras y pauta de corte revisable para lineas con recetas configuradas por la empresa
 
 ## Flujo principal del producto
 

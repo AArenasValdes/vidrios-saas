@@ -41,14 +41,15 @@ export function LandingHeroServer() {
         <div className={s.heroLayout}>
           <div className={s.heroContent}>
             <h1 className={s.heroTitle}>
-              Cotiza vidrios y aluminio
+              Cotiza vidrios y aluminio{" "}
               <span className={s.heroTitleAccent}>desde el celular</span>
             </h1>
 
             <p className={s.heroDescription}>
-              15 días gratis en celular, tablet y computador. Hecho para talleres
-              de Latinoamérica. Envía un PDF profesional por WhatsApp y deja de
-              llegar a casa a hacer presupuestos.
+              15 días gratis en celular, tablet y computador. Pensado para talleres
+              de Latinoamérica, con pagos disponibles inicialmente en Chile. Envía
+              un PDF profesional por WhatsApp y deja de llegar a casa a hacer
+              presupuestos.
             </p>
 
             <div className={s.heroActions}>

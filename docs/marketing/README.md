@@ -31,7 +31,7 @@ Mensaje principal:
 
 **"Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."**
 
-Ventora se comunica como cotizador movil y capa comercial para maestros e instaladores que cotizan con Excel, Word, notas, WhatsApp, precio por metro cuadrado, margen o valor final. Para talleres que lo necesitan, suma cubicacion, despiece, tiras y pauta interna a partir de recetas configuradas y validadas por la propia empresa.
+Ventora se comunica como software comercial para maestros, talleres y empresas que cotizan con Excel, Word, notas, WhatsApp, precio por metro cuadrado, margen o valor final. Cotizacion, clientes y PDF por WhatsApp son el nucleo; la pagina publica es complementaria. Para talleres que lo necesitan, suma cubicacion, despiece, tiras y pauta de corte a partir de recetas configuradas y validadas por la propia empresa.
 
 No competir como sistema industrial de optimizacion, nesting, CNC o produccion automatica. La cubicacion de Ventora es configurada por cada empresa, revisable en desktop y separada del PDF comercial. Si el usuario ya tiene cotizador tecnico, Ventora tambien puede convertir el calculo final en una propuesta profesional, movil, enviable por WhatsApp y con seguimiento.
 

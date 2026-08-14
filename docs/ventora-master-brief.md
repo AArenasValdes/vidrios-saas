@@ -5,7 +5,7 @@ Actualizado: 2026-08-13
 Este archivo es la referencia corta y ejecutiva para cualquier IA, consultor, analista, marketer o colaborador que necesite entender rapidamente que es Ventora, en que fase va, que funcionalidades tiene hoy y cual es el norte real del producto.
 
 **Giro julio 2026 (leer también):** `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`  
-**Roadmap desktop:** `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+**Documento rector de producto:** `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 
 ---
 
@@ -18,7 +18,7 @@ Este archivo es la referencia corta y ejecutiva para cualquier IA, consultor, an
 - ayuda a responder rapido por WhatsApp
 - convierte el avance comercial en cliente + cotizacion + cierre
 - en desktop: catálogo de precios propio, constructor visual cuando hace falta, y **pauta de fabricación revisable** (opcional) con recetas del taller
-- además: cubicacion, despiece, tiras y pauta interna por linea cuando la empresa configura y valida sus recetas
+- ademas: cubicacion, despiece, tiras y pauta de corte por linea cuando la empresa configura y valida sus recetas
 
 No es:
 
@@ -582,7 +582,7 @@ Estamos en:
 - consolidar el producto comercial
 - estabilizar cotizacion desktop
 - calibrar recetas con medidas reales de taller
-- mantener cubicacion, despiece, tiras y pauta interna separadas del precio comercial
+- mantener cubicacion, despiece, tiras y pauta de corte separadas del precio comercial
 - preparar salida piloto seria
 
 ### Qué sigue después de esta fase
@@ -603,7 +603,7 @@ Lo siguiente correcto es:
 
 Si necesitas una versión ultra corta, usa esto:
 
-> Ventora es un cotizador móvil y una capa comercial para maestros e instaladores de vidrios, aluminio, ventanas, PVC, shower y cierres. Calcula precios por línea y, cuando la empresa configura y valida sus recetas, genera cubicación, despiece, tiras y pauta interna revisable en desktop. No es un optimizador industrial ni promete cortes universales para máquina. El mensaje central es: "Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos." La fase actual es Fase 4: cubicación V1 vendible multi-tipología con calibración piloto. Toda propuesta debe fortalecer cotización móvil, PDF profesional, orden de clientes/cotizaciones y revisión técnica interna.
+> Ventora es software comercial para maestros, talleres y empresas de vidrios, aluminio, ventanas, PVC, shower y cierres. Cotizacion, clientes y PDF por WhatsApp son el nucleo. Cuando la empresa configura y valida sus recetas, genera cubicacion, despiece, tiras y pauta de corte revisable en desktop. La pagina publica es complementaria. No es ERP, CAD ni optimizador industrial y no promete cortes universales para maquina. Toda propuesta debe fortalecer cotizacion multidispositivo, PDF profesional, orden de clientes/cotizaciones y revision tecnica del taller.
 
 ---
 

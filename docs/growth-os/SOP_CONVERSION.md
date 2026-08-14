@@ -102,7 +102,7 @@ Respuesta:
 
 Respuesta:
 
-`Nosotros tampoco estamos vendiendo un ERP ni un sistema industrial. Ventora sirve para convertir precio, medidas o calculo en una propuesta profesional y movil; ademas, si tu empresa configura y valida sus recetas, genera cubicacion, despiece, tiras y una pauta interna revisable en computador.`
+`Nosotros tampoco estamos vendiendo un ERP ni un sistema industrial. Ventora sirve para convertir precio, medidas o calculo en una propuesta profesional y movil; ademas, si tu empresa configura y valida sus recetas, genera cubicacion, despiece, tiras y una pauta de corte revisable en computador.`
 
 ## Cierre comercial
 

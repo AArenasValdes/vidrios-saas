@@ -25,7 +25,6 @@ import {
 import { googleTagService } from "@/features/analytics/services/google-tag.service";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { AuthOAuthProvider } from "@/features/auth/types/auth";
-import { VENTORA_CONTACT } from "@/constants/ventora-brand";
 import { COUNTRY_PRESET_OPTIONS } from "@/features/organization-region/config/country-presets";
 import {
   getWhatsappValidationHint,
@@ -43,7 +42,7 @@ type RegistrationStep = "account" | "business";
 const copy = {
   accountTitle: "Crea tu cuenta gratis",
   accountSubtitle:
-    "Empieza tu prueba de 15 días y descubre cómo Ventora puede impulsar tu taller.",
+    "Crea tu cuenta y prepara tu primera cotización. Tienes 15 días de acceso completo, sin tarjeta.",
   businessTitle: "Cuéntanos sobre tu empresa",
   businessSubtitle:
     "Usaremos esta información para dejar tus datos listos en Ventora y en tu primer PDF.",
@@ -74,7 +73,7 @@ const copy = {
   and: "y",
   privacy: "Política de privacidad.",
   securityTitle: "Tu información está segura",
-  securityText: "Usamos cifrado de nivel empresarial para proteger tus datos.",
+  securityText: "Protegemos la información de tu empresa y tus clientes.",
   trialStarts: "Tu prueba de 15 días comienza ahora",
   trialTitle: "Prueba todas las funciones",
   trialItems: [
@@ -82,11 +81,15 @@ const copy = {
     "Sin tarjeta de crédito",
     "Cancela cuando quieras",
   ],
-  assistanceTitle: "Necesitas ayuda para configurar Ventora?",
+  assistanceTitle: "¿Necesitas ayuda para configurar Ventora?",
   assistanceText: "Nuestro equipo puede ayudarte a dejar todo listo.",
   assistanceAction: "Quiero ayuda para configurar",
   errorGeneric: "No pudimos crear tu cuenta. Intenta de nuevo.",
 };
+
+const REGISTRATION_SUPPORT_WHATSAPP_HREF = `https://wa.me/56977338906?text=${encodeURIComponent(
+  "Hola Ventora, necesito ayuda para configurar mi cuenta.",
+)}`;
 
 type SignupApiPayload = {
   error?: string;
@@ -114,7 +117,7 @@ function resolveSignupErrorMessage(
     case "email_taken":
     case "identity_conflict":
       return payload.error ??
-        "Este correo ya tiene una cuenta. Inicia sesion para continuar.";
+        "Este correo ya tiene una cuenta. Inicia sesión para continuar.";
     default:
       return payload.error;
   }
@@ -219,7 +222,7 @@ export default function RegistroView() {
       return;
     }
     if (!/^\S+@\S+\.\S+$/u.test(normalizedEmail)) {
-      setError("Ingresa un correo valido.");
+      setError("Ingresa un correo válido.");
       return;
     }
     if (password.length < 8) {
@@ -319,7 +322,7 @@ export default function RegistroView() {
         <aside className={rs.valuePanel} aria-label="Beneficios de Ventora">
           <div className={rs.valuePanelTop}>
             <p className={rs.eyebrow}>VENTORA · PRUEBA GRATIS</p>
-            <h2>Tu empresa lista para cotizar desde el primer dia.</h2>
+            <h2>Tu empresa lista para cotizar desde el primer día.</h2>
             <p className={rs.valueDescription}>
               Registra tu negocio una vez. Ventora deja listos tus datos para
               cotizar, enviar PDFs profesionales y atender nuevos trabajos.
@@ -361,7 +364,7 @@ export default function RegistroView() {
               <span className={rs.previewMark}>V</span>
               <span>
                 <strong>Tu primer PDF</strong>
-                <small>Quedara listo con tus datos</small>
+                <small>Quedará listo con tus datos</small>
               </span>
               <CheckCircle2 size={18} aria-hidden />
             </div>
@@ -726,7 +729,7 @@ export default function RegistroView() {
             {copy.assistanceText}
           </span>
           <a
-            href={`${VENTORA_CONTACT.demoMailto}&body=Necesito%20ayuda%20para%20configurar%20Ventora.`}
+            href={REGISTRATION_SUPPORT_WHATSAPP_HREF}
           >
             {copy.assistanceAction}
             <ArrowRight size={17} aria-hidden />

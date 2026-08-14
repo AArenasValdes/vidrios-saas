@@ -2,7 +2,7 @@
 
 **Estado:** cerrado en implementación desktop (≥1024) — 2026-07-18. Dirección visual aprobada e implementada; refinamiento editorial de densidad/gráfico también aplicado.  
 **Fecha:** 2026-07-18  
-**Fuente de producto:** `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` § Fase 5  
+**Fuente de producto:** `docs/VENTORA_GIRO_PRODUCTO_2026-07.md` + `docs/agent-map/FEATURES_MAP.md`
 **Branding:** `docs/marketing/brand-guidelines.md`
 
 ---

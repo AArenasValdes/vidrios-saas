@@ -88,7 +88,7 @@
 - checklist de cierre:
   - 1 a 3 mejoras priorizadas
   - riesgo de QA identificado
-  - foco sigue en Fase 4: cubicacion configurada, pauta interna revisable y cierre comercial
+  - foco sigue en Fase 4: cubicacion configurada, pauta de corte revisable y cierre comercial
 
 ## Domingo: planificacion
 

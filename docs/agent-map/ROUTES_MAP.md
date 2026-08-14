@@ -6,15 +6,15 @@
 - **Archivo principal**: `app/(landing-web)/page.tsx`
 - **Layout usado**: `app/layout.tsx` (root layout, sin shell)
 - **CSS**: `app/(landing-web)/landing.module.css`
-- **Proposito**: Landing comercial del producto. Secciones: hero, problema, funciones, como funciona, planes, FAQ, contacto, WhatsApp CTA.
+- **Proposito**: Landing comercial del producto. Presenta cotizacion multidispositivo, PDF por WhatsApp, fabricacion configurable opcional, planes Chile, pagina publica complementaria, FAQ y contacto.
 - **Usuario objetivo**: Visitante no autenticado, potencial cliente SaaS
-- **Funcionalidades visibles**: Navbar, hero con mockup, ProblemSection, FAQ,_planes, contacto, footer
-- **Componentes principales**: `ProblemSection`, `ProblemCard`, `TestimonialsSection`, `FooterSection`, `PremiumPageReveal`
+- **Funcionalidades visibles**: Navbar, hero con evidencia real, flujo de cotizacion, dispositivos, cubicacion/despiece/pauta de corte, planes, FAQ, contacto y footer
+- **Componentes principales**: `LandingHeroServer`, `LandingNavClient`, `ContrastSection`, `ProblemFlowSection`, `QuoteFlowSection`, `DevicesSection`, `PautaSection`, `PublicLinkSection`, `LandingContactSection`
 - **Datos que consume**: Estatico (no consulta Supabase)
 - **Tablas Supabase relacionadas**: Ninguna
 - **Acciones principales**: Navegacion, CTA a `/registro` (15 días) y `/login`
-- **Archivos a tocar para modificar**: `app/(landing-web)/page.tsx`, `app/(landing-web)/landing.module.css`, `src/components/landing/*`, `src/components/footer-section.tsx`, `src/components/testimonials-with-marquee.tsx`
-- **Riesgos**: Es la cara publica del producto. Cambios de copy afectan conversion. No romper links de navegacion.
+- **Archivos a tocar para modificar**: `app/(landing-web)/page.tsx` (metadata), `landing-hero-server.tsx`, `landing-page-client.tsx`, `landing-shared.ts`, `landing.module.css`, `src/components/landing/*`
+- **Riesgos**: Es la cara publica del producto. CTA principal va directo a `/registro`; `/login` es para cuentas existentes. No prometer pagos Latam: el alta regional soporta seis paises, pero el cobro directo esta disponible inicialmente en Chile. No inventar capturas de fabricacion.
 
 ---
 
@@ -75,13 +75,13 @@
 - **Archivo principal**: `app/(auth-public)/registro/page.tsx`
 - **Componente principal**: `app/(auth-public)/registro/registro-view.tsx`
 - **API usada**: `app/api/auth/register/route.ts`
-- **Proposito**: Crear cuenta con Google o solicitar una prueba asistida. El formulario asistido captura nombre, empresa, WhatsApp, ciudad/comuna y mensaje opcional.
-- **Usuario objetivo**: Prospecto SaaS que necesita onboarding asistido
-- **Datos que consume/escribe**: Inserta lead en `solicitudes_contacto` con `contexto = registro-saas`, `organization_id = null`
-- **Tablas Supabase relacionadas**: `solicitudes_contacto`
-- **Acciones principales**: Google inicia el alta autoservicio; el formulario asistido solo crea una solicitud y muestra confirmacion.
-- **Archivos a tocar para modificar**: `app/(auth-public)/registro/registro-view.tsx`, `app/api/auth/register/route.ts`, `src/features/solicitudes/services/solicitudes-contacto.service.ts`, `src/features/solicitudes/repositories/solicitudes-contacto.repository.ts`
-- **Riesgos**: Google es el unico OAuth visible. El formulario asistido no crea Auth/organizacion. Si se cambia `contexto`, revisar constraint/RLS de `solicitudes_contacto`.
+- **Proposito**: Crear cuenta SaaS y trial de 15 dias con Google o correo/contrasena. El flujo visual conserva dos pasos: identidad/acceso y datos de empresa.
+- **Usuario objetivo**: Prospecto SaaS que quiere iniciar la prueba sin tarjeta
+- **Datos que consume/escribe**: Crea o vincula Auth, `users`, `organizations` y `organization_profile`; persiste pais, configuracion regional y trial mediante la misma RPC server-side.
+- **Tablas Supabase relacionadas**: `auth.users`, `public.users`, `organizations`, `organization_profile`
+- **Acciones principales**: Google inicia OAuth y completa datos faltantes; correo/contrasena avanza al paso de empresa y crea la cuenta solo al confirmar el segundo paso.
+- **Archivos a tocar para modificar**: `app/(auth-public)/registro/page.tsx`, `app/(auth-public)/registro/registro-view.tsx`, `app/api/auth/signup/route.ts`, `src/features/auth/services/auth-oauth-completion.service.ts`
+- **Riesgos**: Google es el unico OAuth visible. No crear usuarios durante QA. No separar la logica de alta de la RPC transaccional ni reiniciar trials existentes.
 
 ---
 
@@ -497,6 +497,7 @@
 - **Tipo**: Publica
 - **Archivo principal**: `app/(landing-web)/privacy/page.tsx`
 - **Proposito**: Politica de privacidad
+- **Metadata**: titulo, descripcion y canonical absoluto en la misma pagina
 - **Archivos a tocar**: `app/(landing-web)/privacy/page.tsx`
 
 ---
@@ -506,6 +507,7 @@
 - **Tipo**: Publica
 - **Archivo principal**: `app/(landing-web)/terms/page.tsx`
 - **Proposito**: Terminos de uso
+- **Metadata**: titulo, descripcion y canonical absoluto en la misma pagina
 - **Archivos a tocar**: `app/(landing-web)/terms/page.tsx`
 
 ---

@@ -10,7 +10,7 @@ Esta documentacion sirve como **indice maestro** para que cualquier agente de co
 
 Si la tarea es sobre cotizaciones, leer `FEATURES_MAP.md` seccion Cotizaciones antes de explorar el proyecto. Si es sobre una ruta especifica, leer `ROUTES_MAP.md`. Si es sobre base de datos, leer `DATA_MODEL_MAP.md`.
 
-Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.
+Si la tarea toca desktop comercial, cotizaciones, dashboard, configuracion visual o catalogos, leer primero `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 
 Si la tarea toca el giro de producto jul 2026 (recetas, plantillas, posicionamiento), leer `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
 
@@ -18,22 +18,21 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 
 ## Orden recomendado de lectura
 
-1. **`../VENTORA_DESKTOP_TALLER_ROADMAP.md`** - Documento rector de desktop taller y orden de milestones
-2. **`../VENTORA_GIRO_PRODUCTO_2026-07.md`** - Giro de producto: capas, V1 vendible, go-to-market
-3. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
-4. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
-5. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
-6. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
-7. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
-8. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
-9. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
-10. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
-11. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
-12. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
-13. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta (pegar a otra IA)
-14. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF
-15. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
-16. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
+1. **`../VENTORA_GIRO_PRODUCTO_2026-07.md`** - Rector de producto: capas, alcance tecnico revisable y go-to-market
+2. **`PROJECT_OVERVIEW.md`** - Stack, arquitectura, convenciones, estructura de carpetas
+3. **`ROUTES_MAP.md`** - Todas las rutas con archivos, propositos y riesgos
+4. **`FEATURES_MAP.md`** - Organizacion por funcionalidad con archivos criticos
+5. **`DATA_MODEL_MAP.md`** - Tablas Supabase, relaciones, campos importantes
+6. **`COMPONENTS_MAP.md`** - Componentes reutilizables y donde se usan
+7. **`AGENT_TASK_GUIDE.md`** - Guia practica por tipo de tarea
+8. **`TOKEN_SAVING_RULES.md`** - Reglas para ahorrar tokens
+9. **`CHANGELOG_AGENT_MAP.md`** - Historial de cambios en esta documentacion
+10. **`ACTIVATION_ONBOARDING.md`** - Flujo `/activacion` (onboarding primera cotizacion, separado del dashboard)
+11. **`../design/FASE_5_DASHBOARD_BRIEF.md`** - Brief + prompt de diseño dashboard Fase 5
+12. **`CUBICACION_PAUTA_HANDOFF.md`** - Handoff completo cubicación / pauta (pegar a otra IA)
+13. **`CONSTRUCTOR_DESKTOP_HANDOFF.md`** - Estado operativo completo del Constructor-cuaderno, renderer y PDF
+14. **`MOBILE_COTIZACION_FLOW_HANDOFF.md`** - Flujo movil por items / Constructor de piezas
+15. **`../manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md`** - Manual corto para taller
 
 ## Foco actual
 
@@ -64,8 +63,7 @@ Si la tarea toca dashboard Fase 5 o su contrato de datos, leer tambien `docs/des
 
 ```
 docs/
-  VENTORA_DESKTOP_TALLER_ROADMAP.md <- Documento rector de desktop taller
-  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Giro de producto jul 2026
+  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Rector de producto y limites vigentes
   manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md
   agent-map/
     README.md                 <- Este archivo

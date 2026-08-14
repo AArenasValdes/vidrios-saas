@@ -8,9 +8,9 @@ Ventora se explica como cotizador comercial movil para maestros y empresas de vi
 
 Frase central:
 
-> Tu cotizador tecnico te ayuda a fabricar. Ventora te ayuda a vender.
+> Empieza cotizando. Configura la fabricacion cuando la necesites.
 
-Ventora no se explica como cotizador tecnico universal, optimizador de perfiles, ERP ni sistema de produccion. Si la empresa configura sus recetas, sí puede mostrar cubicacion, despiece, tiras y pauta interna revisable en computador.
+Ventora no se explica como cotizador tecnico universal, optimizador de perfiles, ERP ni sistema de produccion. Si la empresa configura sus recetas, si puede mostrar cubicacion, despiece, tiras y pauta de corte revisable en computador.
 
 Promesa narrativa:
 
@@ -52,10 +52,10 @@ Publico: maestros, duenos y vendedores de vidrierias, aluminio, PVC, shower door
 | 0:00-0:05 | Maestro trabajando en ventana o shower, celular vibra | "Te pidieron una cotizacion" | "Estas en terreno, trabajando, y te llega una consulta." |
 | 0:05-0:12 | Mensaje tipo WhatsApp con medidas o precio final | "No lo dejes para la noche" | "Si esperas llegar a casa, el presupuesto se atrasa." |
 | 0:12-0:22 | Pantalla Ventora en dashboard mobile | "Cotiza desde el celular" | "Ventora es un cotizador movil para crear y enviar presupuestos profesionales." |
-| 0:22-0:35 | Texto comparativo simple, dos columnas | "Tecnico = fabricar" / "Ventora = propuesta" | "Tu cotizador tecnico te ayuda a fabricar. Ventora convierte el calculo final en una propuesta profesional." |
+| 0:22-0:35 | Texto de progresion comercial | "Cotiza primero" / "Configura fabricacion cuando la necesites" | "Ventora crea la propuesta comercial desde el primer dia y suma cubicacion y pauta de corte cuando tu taller configura sus recetas." |
 | 0:35-0:50 | Listado de cotizaciones y cliente ordenado | "Clientes y cotizaciones ordenadas" | "Aqui ordenas clientes, solicitudes y cotizaciones sin depender de la memoria ni de chats sueltos." |
 | 0:50-1:05 | Detalle cotizacion con botones PDF/WhatsApp | "PDF profesional por WhatsApp" | "Creas una propuesta simple, generas PDF y la envias por WhatsApp." |
-| 1:05-1:20 | Pantalla desktop con receta y resumen interno | "Pauta interna configurada por tu taller" | "Ventora puede generar cubicacion, despiece, tiras y una pauta interna cuando tu empresa configura y valida sus recetas. No reemplaza un optimizador industrial." |
+| 1:05-1:20 | Pantalla desktop con receta y resumen de fabricacion | "Pauta de corte configurada por tu taller" | "Ventora puede generar cubicacion, despiece, tiras y una pauta de corte cuando tu empresa configura y valida sus recetas. No reemplaza un optimizador industrial." |
 | 1:20-1:30 | Logo Ventora + celular con cotizacion | "Cotiza desde el celular" | "Ventora complementa tu flujo: envia un PDF profesional sin llegar a casa a hacer presupuestos." |
 
 ### Version horizontal

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Ventora",
     short_name: "Ventora",
     description:
-      "Ventora captura leads y ayuda a empresas de vidrio y aluminio a ordenarlos y cerrarlos desde el celular.",
+      "Ventora ayuda a talleres de vidrio y aluminio a cotizar, enviar PDFs y preparar cubicaciones y pautas de corte revisables.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",

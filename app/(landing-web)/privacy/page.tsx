@@ -3,6 +3,17 @@ import { ArrowLeft } from "lucide-react";
 
 import s from "../legal.module.css";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacidad",
+  description:
+    "Política de privacidad de Ventora para cuentas, formularios y uso del servicio.",
+  alternates: {
+    canonical: "https://www.ventorap.cl/privacy",
+  },
+};
+
 export default function PrivacyPage() {
   return (
     <main className={s.page}>

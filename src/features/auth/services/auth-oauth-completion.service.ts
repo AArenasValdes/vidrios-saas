@@ -479,13 +479,6 @@ export async function provisionOrganizationFromOAuthUser(
   });
 
   if (error) {
-    console.error("[auth-oauth-completion] rpc failed", {
-      code: error.code ?? null,
-      message: error.message ?? null,
-      countryCode,
-      whatsappLen: whatsappE164.length,
-      hasPlusPrefix: whatsappE164.startsWith("+"),
-    });
     if (error.code === "23505") {
       throw new AuthOAuthCompletionError(
         "Este correo ya esta vinculado a otra cuenta de acceso.",

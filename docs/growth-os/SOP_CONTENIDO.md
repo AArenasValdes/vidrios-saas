@@ -14,7 +14,7 @@ Distribucion:
 
 - 70% dolor y transformacion
 - 20% demostraciones reales del producto en celular
-- 10% funciones complementarias, incluida la pauta interna configurada por el taller
+- 10% funciones complementarias, incluida la pauta de corte configurada por el taller
 
 ### 1. Dolor y transformacion
 
@@ -30,7 +30,7 @@ Distribucion:
 - convertir medidas, precio o calculo final en propuesta
 - generar PDF profesional
 - enviar por WhatsApp
-- mostrar cubicacion, despiece, tiras y pauta interna en desktop cuando existe receta configurada
+- mostrar cubicacion, despiece, tiras y pauta de corte en desktop cuando existe receta configurada
 
 ### 3. Funciones complementarias
 
@@ -38,7 +38,7 @@ Distribucion:
 - pagina publica
 - seguimiento
 - historial de cotizaciones
-- cubicacion y pauta interna revisable por linea/receta
+- cubicacion y pauta de corte revisable por linea/receta
 
 ## Calendario semanal
 

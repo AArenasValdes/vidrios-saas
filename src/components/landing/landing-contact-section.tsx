@@ -215,6 +215,10 @@ export function LandingContactSection() {
               {isSubmitting ? "Enviando..." : "Quiero que me contacten"}
               <ArrowRight size={17} aria-hidden />
             </button>
+            <p className={s.privacyNote}>
+              Usaremos tus datos para responder esta consulta. Revisa nuestra{" "}
+              <Link href="/privacy">política de privacidad</Link>.
+            </p>
           </form>
 
           {feedback ? (

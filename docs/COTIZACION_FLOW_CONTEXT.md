@@ -22,7 +22,7 @@ No reintroducir motor tecnico de compatibilidades, logistica, ERP, inventario ni
 
 Antes de tocar codigo del flujo, leer:
 
-- `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+- `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 - `docs/agent-map/README.md`
 - `docs/agent-map/FEATURES_MAP.md`, seccion Cotizaciones
 - `docs/agent-map/ROUTES_MAP.md`, rutas `/cotizaciones`, `/cotizaciones/nueva`, `/cotizaciones/[id]`, `/presupuesto/[token]`, `/print/cotizaciones/[id]`

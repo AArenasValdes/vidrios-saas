@@ -6,7 +6,7 @@ Guia practica para futuros agentes. Antes de explorar el proyecto, revisar la se
 
 Antes de tocar desktop comercial, cotizaciones, dashboard, visual o catalogos, leer:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 2. `docs/agent-map/README.md`
 3. el bloque especifico de este `AGENT_TASK_GUIDE.md`
 
@@ -14,8 +14,8 @@ Antes de tocar desktop comercial, cotizaciones, dashboard, visual o catalogos, l
 
 ## Si la tarea es sobre dashboard comercial desktop, revisar primero:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Fase 5
-2. `docs/design/FASE_5_DASHBOARD_BRIEF.md` - decisiones + brief de diseño
+1. `docs/design/FASE_5_DASHBOARD_BRIEF.md` - decisiones + brief de diseño
+2. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md` - limites de producto vigentes
 3. `docs/agent-map/FEATURES_MAP.md` - Seccion "Dashboard"
 4. `docs/agent-map/ROUTES_MAP.md` - Ruta `/dashboard`
 5. `src/features/dashboard/services/dashboard-summary-server.service.ts`
@@ -36,7 +36,7 @@ Reglas:
 
 ## Si la tarea es retoque final UX / diseño premium desktop, revisar primero:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — estado operativo actual
+1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md` — estado y limites de producto vigentes
 2. `docs/marketing/brand-guidelines.md` — solo acentos; no forzar dark marketing en app interna
 3. Pantalla afectada en `ROUTES_MAP.md` + `FEATURES_MAP.md`
 4. `src/components/layout/app-shell.tsx` + CSS (ancho comercial, sidebar, topbar)
@@ -47,7 +47,7 @@ Reglas:
 - desktop ≥1024; validar 1024 / 1280 / 1440 / 1920;
 - mobile 390 / 430 intacto (regresion bloqueante);
 - una composicion clara, CTA `#1E88FF`, tipografia sistema, superficie `#F3F6FA`, sin look SaaS genérico ni purple/cream AI;
-- no inventar features ni abrir CRM/Kanban/cubicacion;
+- no inventar features, formulas de cubicacion ni abrir CRM/Kanban;
 - reutilizar view-models / acciones existentes; solo layout y craft visual.
 
 Skill recomendada: `premium-ui`. Agente: modo Agent (implementacion). Opcional: Plan primero si el alcance cruza muchas pantallas.
@@ -57,7 +57,7 @@ Skill recomendada: `premium-ui`. Agente: modo Agent (implementacion). Opcional: 
 ## Si la tarea es sobre catálogo / líneas y precios, revisar primero:
 
 1. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md` — capas producto + dónde están las plantillas
-2. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 V1 vendible
+2. `docs/agent-map/FEATURES_MAP.md` — Fabricacion tecnica esencial
 3. `docs/agent-map/ROUTES_MAP.md` — `/configuracion/empresa/lineas-precios`
 4. `lineas-precios-page-client.tsx` + `line-template-form-wizard.tsx` + `fabrication-recipe-editor.tsx`
 5. `fabrication-recipe.ts` / `fabrication-recipe-commercial-templates.ts`
@@ -66,7 +66,7 @@ Reglas:
 
 - Plantillas L5000/L20/L25 se eligen en wizard Fabricación (origen), **no** como filas del listado;
 - Fase 2A/2B import **cerradas**;
-- Pack en `catalog_metadata`; no optimización/nesting/CAD/inventario; no llamar “verificadas” a sugeridas;
+- Recetas vigentes en `fabrication_recipes` + pruebas en `fabrication_recipe_tests`; `catalog_metadata` es compatibilidad. No optimizacion/nesting/CAD/inventario; no llamar “verificadas” a sugeridas;
 - no romper import ni multi-tenant; mobile sheet intacto.
 
 ---
@@ -75,11 +75,11 @@ Reglas:
 
 0. **`docs/agent-map/CUBICACION_PAUTA_HANDOFF.md`** — handoff completo (pegar a otra IA)
 0b. **`docs/VENTORA_GIRO_PRODUCTO_2026-07.md`** — giro + go-to-market
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` — Fase 4 V1 vendible
-2. `docs/agent-map/FEATURES_MAP.md` / `DATA_MODEL_MAP.md` — pack + snapshot
-3. `fabrication-recipe.ts`, `fabrication-recipe.service.ts`, `fabrication-recipe-commercial-templates.ts`
-4. `line-template-form-wizard.tsx` / `fabrication-recipe-editor.tsx`
-5. `pauta-cubicacion-panel.tsx` + `cotizacion-line-template-cubication-snapshot.ts`
+1. `docs/agent-map/FEATURES_MAP.md` / `DATA_MODEL_MAP.md` — recetas versionadas + snapshot
+2. `src/features/fabricacion/types/fabricacion-domain.ts`
+3. `src/features/fabricacion/services/fabricacion-calculo.service.ts`
+4. `src/features/fabricacion/components/fabricacion-line-workspace.tsx`
+5. `src/features/fabricacion/components/recipe-guided-editor.tsx` / `recipe-test-lab.tsx`
 6. Print: `app/print/cotizaciones/[id]/fabricacion/`
 
 ### Decisión Camino 2 (2026-07-19) — obligatoria
@@ -152,7 +152,7 @@ Reglas:
 ### Si la tarea es sobre Quote Studio desktop especificamente:
 
 > **Estado:** Fase 1 cerrada con QA. Solo tocar si hay bug reproducible o pedido explícito de demo; no inventar pulido.
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 0 y 2
+1. `docs/COTIZACION_FLOW_CONTEXT.md` - contrato del flujo vigente
 2. `app/(pwa-app)/cotizaciones/nueva/page.tsx`
 3. `app/(pwa-app)/cotizaciones/nueva/_components/resumen-desktop-lateral.tsx`
 4. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos/paso-dos-agregar-grupo-sheet.tsx`
@@ -178,7 +178,7 @@ Reglas:
 ## Si la tarea es sobre constructor visual guiado, revisar primero:
 
 0. **`docs/agent-map/CONSTRUCTOR_DESKTOP_HANDOFF.md`** — estado operativo completo y punto exacto de reanudación.
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` - Milestone 3.
+1. `docs/agent-map/FEATURES_MAP.md` - Cotizaciones y Constructor vigentes.
 2. `app/(pwa-app)/cotizaciones/nueva/page.tsx` y `page.module.css` - modo y layout desktop.
 3. `app/(pwa-app)/cotizaciones/nueva/_components/paso-dos-seccion.tsx` - integración Presupuesto/Constructor.
 4. `src/features/cotizaciones/visual-composer/components/quote-constructor-workspace.tsx` - cuaderno multipieza.

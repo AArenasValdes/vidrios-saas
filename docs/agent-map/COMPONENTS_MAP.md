@@ -125,9 +125,9 @@
 ### Componente: ContrastSection / DevicesSection / PautaSection
 
 - **Archivos**: `src/components/landing/contrast-section.tsx`, `devices-section.tsx`, `pauta-section.tsx`
-- **Proposito**: Contraste vs cotizador técnico, venta de cualquier dispositivo y pauta/cubicación opcional
+- **Proposito**: Posicionamiento comercial + fabricacion configurable, continuidad entre dispositivos y cubicacion/despiece/pauta de corte opcional
 - **Usado en**: Landing principal (`LandingBelowFold`)
-- **Cuando modificarlo**: Copy de posicionamiento, dispositivos o plantillas sugeridas
+- **Cuando modificarlo**: Copy de posicionamiento, dispositivos o evidencia real de fabricacion. `PautaSection` usa capturas reales anonimizadas del catalogo privado, el resumen interno desktop y su vista mobile; en mobile reduce copy, oculta el catalogo denso y prioriza el resumen mobile + CTA. No usar mockups ni estados inventados.
 
 ### Componente: ProblemFlowSection
 

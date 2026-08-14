@@ -2,15 +2,15 @@
 
 **Fecha:** 2026-08-13
 **Audiencia:** agentes, producto, marketing, demos a piloto  
-**Jerarquía:** subordinado al roadmap `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
+**Jerarquía:** documento rector de producto, subordinado a `AGENTS.md`
 
 ---
 
 ## 1. En una frase
 
-Ventora es **software comercial para talleres de vidrios/aluminio/PVC**: cotizar y cerrar desde el celular, preparar mejor desde desktop, catálogo de precios propio, constructor visual cuando hace falta, y —opcionalmente— **receta de fabricación** que produce **tiras** y una **pauta sugerida** revisable. **No** es ERP, CAD ni optimizador óptimo de cortes.
+Ventora es **software comercial para maestros, talleres y empresas de vidrio/aluminio/PVC**: cotizar desde celular, tablet o computador, mantener clientes y cotizaciones sincronizados, enviar PDF por WhatsApp y, de forma opcional, configurar **recetas de fabricación** que producen cubicación, despiece, tiras y una **pauta de corte revisable**. **No** es ERP, CAD ni optimizador industrial.
 
-**Alcance comercial actualizado:** Ventora puede calcular precios comerciales por m² y, de forma separada, generar cubicación, despiece, tiras y pauta interna a partir de recetas configuradas por cada empresa. La empresa define sus perfiles, reglas, largos y variantes; el taller debe validar los resultados con casos reales.
+**Alcance comercial actualizado:** Ventora puede calcular precios comerciales por m² y, de forma separada, generar cubicación, despiece, tiras y pauta de corte a partir de recetas configuradas por cada empresa. La empresa define sus perfiles, reglas, largos y variantes; el taller debe validar los resultados con casos reales.
 
 ---
 
@@ -29,17 +29,24 @@ Ventora es **software comercial para talleres de vidrios/aluminio/PVC**: cotizar
 
 ## 3. Capas del producto (no mezclar)
 
-1. **Captación** — link/QR `/solicitud/[empresa]`, centralizar leads.  
-2. **Cierre comercial** — cotización, PDF, WhatsApp, aprobación `/presupuesto/[token]`.  
+1. **Cierre comercial** — cotización, PDF, WhatsApp, aprobación `/presupuesto/[token]`; es el núcleo del producto.
+2. **Captación complementaria** — link/QR `/solicitud/[empresa]`, centralizar solicitudes cuando la empresa lo activa.
 3. **Catálogo privado** — líneas y precios (`cotizacion_line_templates`).  
 4. **Constructor** — tipologías/composiciones visuales complejas.  
-5. **Cubicación / pauta (opcional)** — recetas + snapshot; ayuda al taller, no promesa de máquina.
+5. **Cubicación / pauta de corte (opcional)** — recetas + snapshot; ayuda revisable para el taller, no promesa de máquina.
 
 Cotizar **precio** no requiere cubicación.
 
 ---
 
-## 4. Qué se implementó en Fase 4 V1 vendible (24-07-2026)
+## 4. Qué se implementó en Fase 4 V1 vendible (24-07-2026, base histórica)
+
+La fuente vigente desde el 30-07-2026 es `fabrication_recipes` +
+`fabrication_recipe_tests`, con selección de recetas `validated` y snapshot formal
+en `cotizacion_items.fabricacion_snapshot`. `fabricationRecipePack`,
+`fabricationRecipe` y `[cub:]` permanecen solo como lectura y compatibilidad
+histórica. Ver `docs/agent-map/FEATURES_MAP.md` y `DATA_MODEL_MAP.md` antes de
+modificar el contrato actual.
 
 ### Modelo
 
@@ -126,7 +133,7 @@ Fuente de apoyo: `C:\Users\aless\OneDrive\Escritorio\deep-research-report.md`. U
 
 - Principal: *“Cotiza desde el celular, envía un PDF profesional y deja de llegar a casa a hacer presupuestos.”*  
 - Captación: *“Capturo leads mientras estoy ocupado o dormido…”*  
-- Desktop taller: preparar cotización clara, catálogo propio, constructor si hace falta, y revisar cubicación, despiece, tiras y pauta interna configurada.
+- Desktop taller: preparar cotización clara, catálogo propio, constructor si hace falta, y revisar cubicación, despiece, tiras y pauta de corte configurada.
 - **No** vender Ventora como sistema de producción, inventario o CAD.
 
 Para marketing: `AGENTS_MARKETING.md` + `docs/marketing/`.
@@ -143,8 +150,7 @@ Inventario, ERP, IA de fórmulas, catálogo masivo de tipologías, optimización
 
 | Documento | Para qué |
 |---|---|
-| `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md` | Rector de desktop / fases |
-| `AGENTS.md` | Estado operativo para agentes |
+| `AGENTS.md` | Reglas y estado operativo para agentes |
 | `docs/agent-map/CUBICACION_PAUTA_HANDOFF.md` | Pegar a otra IA (cubicación) |
 | `docs/manuales/MANUAL_LINEAS_CUBICACION_PAUTA.md` | Manual corto para taller |
 | `docs/agent-map/FEATURES_MAP.md` | Archivos críticos por feature |

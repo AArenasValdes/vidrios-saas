@@ -188,6 +188,19 @@
   color: #fda29b;
 }
 
+.privacyNote {
+  margin: -2px 4px 0;
+  color: rgba(174, 182, 195, 0.9);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.privacyNote a {
+  color: #d9e8ff;
+  text-underline-offset: 3px;
+}
+
 .trial {
   margin-top: 12px;
   color: #ffffff;

@@ -16,12 +16,17 @@ La marca no debe sentirse como:
 
 La marca si debe transmitir:
 
-- captacion de leads
+- cotizacion comercial rapida y profesional
 - orden comercial
 - rapidez para responder
 - profesionalismo
 - confianza
 - cierre de trabajos
+- fabricacion configurable y revisable cuando el taller la necesita
+
+La pagina publica y la captacion de solicitudes son complementarias. No deben
+eclipsar el nucleo: clientes, cotizaciones, PDF por WhatsApp y continuidad entre
+celular, tablet y computador.
 
 ## Decision oficial del logo
 
@@ -198,6 +203,15 @@ Regla:
 - CTA principal: `#1E88FF`
 - CTA secundario: oscuro o transparente con borde sutil
 - WhatsApp: verde solo en accion directa de WhatsApp, no como color principal de marca
+
+## Como mostrar cubicacion y pauta de corte
+
+Se puede comunicar cubicacion, despiece y pauta de corte cuando quede claro que:
+
+- la empresa configura sus lineas, recetas, reglas y largos comerciales
+- el taller revisa y valida el resultado antes de fabricar
+- una linea sin receta igual puede cotizar precio
+- Ventora no es CAD, ERP, CNC, nesting ni optimizador industrial
 
 ## Espaciado, tamanos y consistencia
 

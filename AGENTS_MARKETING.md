@@ -8,7 +8,7 @@ Ultima actualizacion: 2026-08-13.
 
 Dar contexto suficiente para que cualquier agente de IA pueda trabajar crecimiento comercial de Ventora sin volver a pedir el contexto base del producto.
 
-Ventora no compite como ERP, software de produccion ni cotizador tecnico universal. Su centro de marketing es ayudar al maestro a cotizar desde el celular, enviar un PDF profesional y, cuando la empresa configura sus recetas, revisar cubicacion, despiece, tiras y pauta interna desde computador.
+Ventora no compite como ERP, software de produccion ni cotizador tecnico universal. Su centro de marketing es ayudar al maestro a cotizar desde celular, tablet o computador, enviar un PDF profesional y, cuando la empresa configura sus recetas, revisar cubicacion, despiece, tiras y pauta de corte desde computador.
 
 ## Direccion central de marketing
 
@@ -39,7 +39,7 @@ Promesas permitidas:
 - responder mas rapido
 - dar una mejor impresion frente al cliente
 - convertir precios, medidas o calculos ya realizados en una cotizacion lista para enviar
-- configurar lineas y recetas propias para obtener cubicacion, despiece, tiras y una pauta interna revisable en computador
+- configurar lineas y recetas propias para obtener cubicacion, despiece, tiras y una pauta de corte revisable en computador
 
 Promesas prohibidas:
 
@@ -53,13 +53,13 @@ Promesas prohibidas:
 
 Mensaje permitido:
 
-> Ventora calcula precios comerciales por linea y, si tu empresa configura sus recetas, genera cubicacion, despiece, tiras y una pauta interna revisable desde computador.
+> Ventora calcula precios comerciales por linea y, si tu empresa configura sus recetas, genera cubicacion, despiece, tiras y una pauta de corte revisable desde computador.
 
 Siempre aclarar:
 
 - la empresa configura perfiles, medidas, reglas, largos comerciales y variantes;
 - el taller valida la receta con casos reales antes de tratarla como confiable;
-- la pauta es interna, editable y referencial, y queda separada del PDF comercial del cliente;
+- la pauta de corte es editable, referencial y queda separada del PDF comercial del cliente;
 - no es optimizacion de barras, nesting de vidrio, CNC ni fabricacion automatica.
 
 ## Cliente objetivo
@@ -291,7 +291,7 @@ Si el agente propone cambios dentro de la app, debe respetar el proyecto Ventora
 
 - leer `AGENTS.md`
 - leer `docs/agent-map/README.md`
-- mantener foco en Fase 4: cubicacion configurada, pauta interna revisable y cierre comercial
+- mantener foco en Fase 4: cubicacion configurada, pauta de corte revisable y cierre comercial
 - no romper rutas criticas de captacion y cierre
 - respetar arquitectura, multi-tenant y `organization_id`
 

@@ -180,7 +180,7 @@ export function LandingBelowFold() {
               <div className={s.pricingHeader}>
                 <SectionHeading
                   title="Parte 15 días gratis con Ventora"
-                  description="Prueba el cotizador y elige después el plan que mejor calce con tu negocio."
+                  description="Funciones claras, precios en CLP para Chile y una sola alternativa recomendada."
                 />
               </div>
               <p className={s.pricingStrip}>
@@ -263,9 +263,9 @@ export function LandingBelowFold() {
           </div>
 
           <p className={s.pricingFootnote}>
-            Precio fundador disponible para los primeros clientes. Se mantiene mientras la
-            suscripción siga activa. Precios de referencia en Chile. Al registrarte eliges
-            tu país.
+            Precios publicados en CLP para Chile. El alta permite configurar Chile,
+            Argentina, Colombia, México, Perú y Uruguay; los pagos directos están
+            disponibles inicialmente en Chile.
           </p>
         </div>
       </section>
@@ -285,6 +285,9 @@ export function LandingBelowFold() {
                   className={s.faqQuestion}
                   onClick={() => setFaqOpen((current) => (current === index ? null : index))}
                   aria-expanded={faqOpen === index}
+                  aria-controls={`faq-answer-${index}`}
+                  id={`faq-question-${index}`}
+                  aria-label={`${faqOpen === index ? "Cerrar" : "Abrir"} respuesta: ${item.question}`}
                 >
                   <span>{item.question}</span>
                   {faqOpen === index ? (
@@ -294,9 +297,13 @@ export function LandingBelowFold() {
                   )}
                 </button>
                 <div
+                  id={`faq-answer-${index}`}
                   className={`${s.faqAnswer} ${
                     faqOpen === index ? s.faqAnswerOpen : ""
                   }`}
+                  role="region"
+                  aria-labelledby={`faq-question-${index}`}
+                  hidden={faqOpen !== index}
                 >
                   <p>{item.answer}</p>
                 </div>
@@ -314,7 +321,8 @@ export function LandingBelowFold() {
             </h2>
             <p className={s.finalCtaText}>
               Cotiza desde el celular, sigue en el computador y envía un PDF
-              profesional. Hecho para talleres de Latinoamérica.
+              profesional. Pensado para talleres de Latinoamérica; pagos disponibles
+              inicialmente en Chile.
             </p>
             <div className={s.finalCtaActions}>
               <Link href={REGISTRO_HREF} className={s.primaryButton} prefetch={false}>
@@ -344,9 +352,8 @@ export function LandingBelowFold() {
                 unoptimized
               />
               <p>
-                Cotizador comercial para talleres de vidrios y aluminio en
-                Latinoamérica. Celular, tablet y computador. PDF profesional por
-                WhatsApp.
+                Software comercial para talleres de vidrios y aluminio. Cotización,
+                PDF por WhatsApp y fabricación configurable cuando la necesites.
               </p>
             </div>
 
@@ -361,7 +368,7 @@ export function LandingBelowFold() {
           </div>
 
           <div className={s.footerBottom}>
-            <span>Hecho para terreno · Latinoamérica</span>
+            <span>Pensado para Latinoamérica · pagos en Chile</span>
             <span>Cualquier dispositivo · 15 días gratis</span>
             <span>ventora.cl@gmail.com</span>
             <Link href="/privacy">Privacidad</Link>

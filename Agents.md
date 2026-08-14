@@ -1,12 +1,12 @@
 # AGENTS.md - Ventora
 
-Lee antes de editar. Ultima consolidacion: 2026-07-24.
+Lee antes de editar. Ultima consolidacion: 2026-08-14.
 
 ## Regla principal
 
 **Antes de modificar codigo, leer `docs/agent-map/README.md`.**
 
-**Antes de proponer o modificar cualquier cambio de desktop comercial, leer tambien `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`.**
+**Antes de proponer o modificar cualquier cambio de desktop comercial, leer tambien `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.**
 
 Ahi esta el mapa tecnico completo del proyecto con rutas, features, tablas, componentes y guias por tipo de tarea. Usarlo reduce gasto de tokens y evita busquedas innecesarias.
 
@@ -14,24 +14,23 @@ Ahi esta el mapa tecnico completo del proyecto con rutas, features, tablas, comp
 
 Si dos documentos se contradicen, manda este orden:
 
-1. `docs/VENTORA_DESKTOP_TALLER_ROADMAP.md`
-2. `AGENTS.md`
+1. `AGENTS.md`
+2. `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 3. `docs/agent-map/README.md`
 4. mapas tecnicos en `docs/agent-map/`
-5. briefs de apoyo (`docs/VENTORA_GIRO_PRODUCTO_2026-07.md`, `docs/ventora-master-brief.md`, `docs/COTIZACION_FLOW_CONTEXT.md`, `docs/salida-beta-checklist.md`, `README.md`)
+5. briefs de apoyo (`docs/ventora-master-brief.md`, `docs/COTIZACION_FLOW_CONTEXT.md`, `docs/salida-beta-checklist.md`, `README.md`)
 
 ## Producto
 
-**Software comercial para empresas de vidrios, aluminio y PVC que ayuda a cotizar desde el celular, preparar mejor la cotizacion desde desktop, enviar PDF profesional, ordenar clientes/obras/cotizaciones y dar seguimiento comercial real.**
+**Software comercial para maestros, talleres y empresas de vidrio, aluminio y PVC. Permite cotizar desde celular, tablet o computador, mantener la informacion sincronizada, administrar clientes y cotizaciones, enviar PDF por WhatsApp y, de forma opcional, configurar recetas para cubicacion, despiece y pauta de corte revisable.**
 
 - Giro consolidado (jul 2026): `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`
 - Capas: captacion → cierre comercial → catalogo de precios → constructor (si hace falta) → **pauta/receta opcional**
-- La cotizacion existe como herramienta de cierre, no como identidad del producto
-- Frase clave: "Capturo leads mientras estoy ocupado o dormido, y los centralizo en un solo lugar para que nadie se pierda."
+- La cotizacion es el nucleo comercial; la pagina publica de solicitudes es complementaria
 - No reintroducir cotizador tecnico universal, ERP, logistica ni motor de compatibilidades
 - Desktop: escritorio de cotizacion + catalogo privado + constructor + cubicacion revisable; **no** CRM generico
 - Plantillas L5000/L20/L25 = **iniciales sugeridas** (no verificadas). Bases tipologicas = pendientes de taller
-- PDF cliente sin tecnico; resumen fabricacion interno en `/print/cotizaciones/[id]/fabricacion`
+- PDF cliente sin tecnico; resumen de fabricacion y pauta de corte revisable en `/print/cotizaciones/[id]/fabricacion`
 - Para marketing/growth: `AGENTS_MARKETING.md`
 - Mensaje comercial vigente: "Cotiza desde el celular, envia un PDF profesional y deja de llegar a casa a hacer presupuestos."
 
@@ -39,8 +38,7 @@ Si dos documentos se contradicen, manda este orden:
 
 ```text
 docs/
-  VENTORA_DESKTOP_TALLER_ROADMAP.md <- Rector desktop / fases
-  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Giro de producto jul 2026
+  VENTORA_GIRO_PRODUCTO_2026-07.md  <- Rector de producto y limites vigentes
   agent-map/
     README.md                   <- Indice maestro (EMPEZAR AQUI)
     CUBICACION_PAUTA_HANDOFF.md <- Handoff cubicación/pauta (pegar a otra IA)
@@ -59,17 +57,17 @@ docs/
 
 | Comando | Proposito |
 |---|---|
-| `npm run dev` | Desarrollo puerto 3000 |
-| `npm run build` | Build produccion |
-| `npm run lint` | Linter ESLint |
-| `npm test` | Tests Jest |
+| `pnpm run dev` | Desarrollo puerto 3000 |
+| `pnpm run build` | Build produccion |
+| `pnpm run lint` | Linter ESLint |
+| `pnpm test` | Tests Jest |
 
 ## Estado actual
 
 Ultima actualizacion operativa: 2026-07-27
 
 - **Paso actual**: **Fase 4 — Cubicación V1 vendible multi-tipología**. Ver `docs/VENTORA_GIRO_PRODUCTO_2026-07.md`.
-- **Modelo vigente**: `fabricationRecipePack` + espejo `fabricationRecipe`; `aperturaTipo`/`herrajeTipo`; bump solo 1er cambio post-validada; snapshot `[cub:]` v2; print `/print/cotizaciones/[id]/fabricacion`.
+- **Modelo vigente**: `fabrication_recipes` + `fabrication_recipe_tests`; seleccion de receta validada; snapshot formal en `cotizacion_items.fabricacion_snapshot`; `fabricationRecipePack`, `fabricationRecipe` y `[cub:]` quedan como compatibilidad historica.
 - **Plantillas**: L5000/L20/L25 = iniciales sugeridas (wizard Fabricación, no listado de líneas). Bases tipológicas = pendientes.
 - **Cotizar**: filtra por tipología de pieza; pide herraje solo si hay varias activas.
 - **Handoffs**: `CUBICACION_PAUTA_HANDOFF.md` + `CONSTRUCTOR_DESKTOP_HANDOFF.md`.
@@ -204,7 +202,7 @@ Ultima actualizacion operativa: 2026-07-27
 
 ## Notas de QA
 
-- Para QA automatizado confiable, preferir `npm run build` + `npm run start`.
+- Para QA automatizado confiable, preferir `pnpm run build` + `pnpm run start`.
 - El `npm run dev` actual en `:3000` puede quedar con HMR degradado (`webpack-hmr` handshake invalido) y falsear pruebas de login/client hydration.
 
 ## Convenciones criticas

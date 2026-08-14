@@ -1,5 +1,15 @@
 ﻿import LoginView from "./login-view";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Iniciar sesión",
+  description: "Inicia sesión en Ventora para continuar con tus clientes y cotizaciones.",
+  alternates: {
+    canonical: "https://www.ventorap.cl/login",
+  },
+};
+
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
