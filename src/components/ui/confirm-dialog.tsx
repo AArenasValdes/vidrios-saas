@@ -16,6 +16,8 @@ export type ConfirmDialogProps = {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  pending?: boolean;
+  pendingLabel?: string;
   tone?: "default" | "danger";
   onConfirm: () => void;
   onCancel: () => void;
@@ -31,6 +33,8 @@ export function ConfirmDialog({
   description,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
+  pending = false,
+  pendingLabel = "Procesando...",
   tone = "default",
   onConfirm,
   onCancel,
@@ -39,7 +43,7 @@ export function ConfirmDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) onCancel();
+        if (!nextOpen && !pending) onCancel();
       }}
     >
       <DialogContent showCloseButton={false} className="sm:max-w-md">
@@ -48,15 +52,16 @@ export function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
             {cancelLabel}
           </Button>
           <Button
             type="button"
             variant={tone === "danger" ? "destructive" : "default"}
             onClick={onConfirm}
+            disabled={pending}
           >
-            {confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

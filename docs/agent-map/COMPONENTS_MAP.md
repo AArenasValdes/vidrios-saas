@@ -270,8 +270,15 @@
 - **Archivo**: `src/features/cotizaciones/line-templates/components/lineas-precios-page-client.tsx`
 - **Proposito**: CRUD del catalogo privado y estado visual de recetas persistidas. Abre el administrador tecnico por linea; no escribe nuevas recetas en metadata legacy.
 - **Usado en**: `/configuracion/empresa/lineas-precios`
-- **Dependencias**: wizard, `useCotizacionLineTemplates`, `useFabricationRecipes`.
+- **Dependencias**: wizard, `LineTemplateCardActions`, `useCotizacionLineTemplates`, `useFabricationRecipes`.
 - **Riesgos**: No formulas/JSON. No mezclar pauta con precios/margen. No migraciones legacy sin aprobacion.
+
+### Componente: LineTemplateCardActions
+
+- **Archivo**: `src/features/cotizaciones/line-templates/components/line-template-card-actions.tsx`
+- **Proposito**: Menu accesible de tres puntos y confirmacion interna para administrar fabricacion, duplicar o hacer soft delete de una linea. Expone progreso y bloquea dobles acciones.
+- **Usado en**: `LineasPreciosPageClient` desktop.
+- **Riesgos**: Eliminar debe seguir siendo soft delete multi-tenant y solo informar exito despues de confirmar una fila actualizada en Supabase.
 
 ### Componente: LineTemplateFormWizard / FabricationRecipeEditor
 

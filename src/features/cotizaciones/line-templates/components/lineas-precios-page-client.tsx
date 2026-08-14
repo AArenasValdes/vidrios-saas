@@ -6,16 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LuArrowLeft,
-  LuBookOpen,
   LuChevronRight,
-  LuCopyPlus,
-  LuEllipsisVertical,
   LuPlus,
   LuSearch,
   LuSlidersHorizontal,
-  LuSettings2,
-  LuTrash2,
-  LuUpload,
 } from "react-icons/lu";
 import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { useOrganizationProfile } from "@/features/organization-profile/hooks/useOrganizationProfile";
@@ -84,6 +78,11 @@ import desktop from "./lineas-precios-page-client.desktop.module.css";
 import {
   LineasPreciosMobileView,
 } from "./lineas-precios-mobile-view";
+import {
+  LineTemplateCardActions,
+  LineTemplateDeleteDialog,
+  type LineTemplateActionKind,
+} from "./line-template-card-actions";
 
 const LineTemplateFormWizard = dynamic(
   () =>
@@ -281,6 +280,12 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   );
   const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
+  const [pendingLineAction, setPendingLineAction] = useState<{
+    templateId: string | number;
+    kind: LineTemplateActionKind;
+  } | null>(null);
+  const [templatePendingDelete, setTemplatePendingDelete] =
+    useState<CotizacionLineTemplate | null>(null);
   const [sheetMode, setSheetMode] = useState<"new" | "edit" | null>(() =>
     openNewByDefault ? "new" : null
   );
@@ -308,6 +313,28 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
     const timeoutId = window.setTimeout(() => setFeedback(null), 2600);
     return () => window.clearTimeout(timeoutId);
   }, [feedback]);
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+
+    const closeMenuOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-line-template-actions]")) {
+        return;
+      }
+      setOpenMenuId(null);
+    };
+    const closeMenuWithEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMenuId(null);
+    };
+
+    document.addEventListener("pointerdown", closeMenuOutside);
+    document.addEventListener("keydown", closeMenuWithEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenuOutside);
+      document.removeEventListener("keydown", closeMenuWithEscape);
+    };
+  }, [openMenuId]);
 
   const activeCount = useMemo(
     () => templates.filter((template) => template.isActive).length,
@@ -970,9 +997,9 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
   };
 
   const handleDuplicate = async (templateId: string | number) => {
+    setPendingLineAction({ templateId, kind: "duplicate" });
     try {
       await duplicateTemplate(templateId);
-      setOpenMenuId(null);
       setFeedback({ kind: "success", message: "Línea duplicada." });
     } catch (duplicateError) {
       setFeedback({
@@ -982,18 +1009,19 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             ? duplicateError.message
             : "No pudimos duplicar la línea.",
       });
+    } finally {
+      setOpenMenuId(null);
+      setPendingLineAction(null);
     }
   };
 
-  const handleDelete = async (templateId: string | number) => {
-    const confirmed = window.confirm(
-      "¿Eliminar esta línea? Es mejor pausarla si todavía podría servirte."
-    );
-    if (!confirmed) return;
-
+  const handleDelete = async () => {
+    if (!templatePendingDelete) return;
+    const templateId = templatePendingDelete.id;
+    setPendingLineAction({ templateId, kind: "delete" });
     try {
       await deleteTemplate(templateId);
-      setOpenMenuId(null);
+      setTemplatePendingDelete(null);
       setFeedback({ kind: "success", message: "Línea eliminada." });
     } catch (deleteError) {
       setFeedback({
@@ -1003,6 +1031,8 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
             ? deleteError.message
             : "No pudimos eliminar la línea.",
       });
+    } finally {
+      setPendingLineAction(null);
     }
   };
 
@@ -1057,22 +1087,6 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
         </div>
 
         <div className={s.headerActions}>
-          <Link
-            href="/biblioteca-lineas"
-            className={s.importButton}
-            aria-label="Abrir biblioteca de líneas y recetas"
-          >
-            <LuBookOpen aria-hidden />
-            <span className={s.headerActionLabel}>Biblioteca técnica</span>
-          </Link>
-          <Link
-            href="/configuracion/empresa/lineas-precios/importar"
-            className={s.importButton}
-            aria-label="Importar catálogo"
-          >
-            <LuUpload aria-hidden />
-            <span className={s.headerActionLabel}>Importar</span>
-          </Link>
           <button
             type="button"
             className={s.addButton}
@@ -1415,15 +1429,24 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
 
       {feedback ? (
         <div
-          className={`${s.feedback} ${
+          className={`${s.feedback} ${s.desktopFeedback} ${
             feedback.kind === "error" ? s.feedbackError : s.feedbackSuccess
           }`}
+          role={feedback.kind === "error" ? "alert" : "status"}
+          aria-live="polite"
         >
           {feedback.message}
         </div>
       ) : null}
 
-      {error ? <div className={`${s.feedback} ${s.feedbackError}`}>{error}</div> : null}
+      {error && !feedback ? (
+        <div
+          className={`${s.feedback} ${s.feedbackError} ${s.desktopFeedback}`}
+          role="alert"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <CatalogoBasesVentoraSection
         recommendations={ventoraBaseRecommendations}
@@ -1480,6 +1503,10 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
               >
               {group.templates.map((template) => {
                 const isMenuOpen = openMenuId === template.id;
+                const pendingAction =
+                  pendingLineAction?.templateId === template.id
+                    ? pendingLineAction.kind
+                    : null;
                 const glassMetadata = getLineTemplateGlassMetadata(template.catalogMetadata);
                 const glassDescription = [glassMetadata.espesor, glassMetadata.terminacion]
                   .filter(Boolean)
@@ -1547,54 +1574,24 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
                           <LuChevronRight aria-hidden />
                         </button>
 
-                        <div className={s.menuWrap}>
-                          <button
-                            type="button"
-                            className={s.menuButton}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setOpenMenuId((current) =>
-                                current === template.id ? null : template.id
-                              );
-                            }}
-                            aria-expanded={isMenuOpen}
-                            aria-label={`Acciones para ${template.nombre}`}
-                          >
-                            <LuEllipsisVertical aria-hidden />
-                          </button>
-
-                          {isMenuOpen ? (
-                            <div
-                              className={s.menuPanel}
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              <Link
-                                href={`/configuracion/empresa/lineas-precios/${template.id}/fabricacion`}
-                                className={s.menuAction}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <LuSettings2 aria-hidden />
-                                Administrar fabricación
-                              </Link>
-                              <button
-                                type="button"
-                                className={s.menuAction}
-                                onClick={() => void handleDuplicate(template.id)}
-                              >
-                                <LuCopyPlus aria-hidden />
-                                Duplicar línea
-                              </button>
-                              <button
-                                type="button"
-                                className={`${s.menuAction} ${s.menuActionDanger}`}
-                                onClick={() => void handleDelete(template.id)}
-                              >
-                                <LuTrash2 aria-hidden />
-                                Eliminar línea
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
+                        <LineTemplateCardActions
+                          templateId={template.id}
+                          templateName={template.nombre}
+                          isOpen={isMenuOpen}
+                          isBusy={isSaving}
+                          pendingAction={pendingAction}
+                          onToggle={() =>
+                            setOpenMenuId((current) =>
+                              current === template.id ? null : template.id
+                            )
+                          }
+                          onClose={() => setOpenMenuId(null)}
+                          onDuplicate={() => void handleDuplicate(template.id)}
+                          onRequestDelete={() => {
+                            setOpenMenuId(null);
+                            setTemplatePendingDelete(template);
+                          }}
+                        />
                       </div>
                     </div>
 
@@ -1688,6 +1685,15 @@ export function LineasPreciosPageClient({ openNewByDefault = false }: Props) {
       ) : null}
 
       </div>
+
+      {templatePendingDelete ? (
+        <LineTemplateDeleteDialog
+          templateName={templatePendingDelete.nombre}
+          isDeleting={pendingLineAction?.kind === "delete"}
+          onCancel={() => setTemplatePendingDelete(null)}
+          onConfirm={() => void handleDelete()}
+        />
+      ) : null}
 
       {sheetMode ? (
         <LineTemplateFormWizard

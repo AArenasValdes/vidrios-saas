@@ -472,7 +472,7 @@ export function createCotizacionLineTemplatesRepository(
     },
 
     async softDelete(id: EntityId, organizationId: EntityId) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLE_NAME)
         .update({
           eliminado_en: new Date().toISOString(),
@@ -480,10 +480,18 @@ export function createCotizacionLineTemplatesRepository(
         })
         .eq("id", id)
         .eq("organization_id", organizationId)
-        .is("eliminado_en", null);
+        .is("eliminado_en", null)
+        .select("id")
+        .maybeSingle();
 
       if (error) {
         throw error;
+      }
+
+      if (!data) {
+        throw new Error(
+          "No pudimos eliminar la línea. Recarga la página e inténtalo nuevamente."
+        );
       }
     },
   };
