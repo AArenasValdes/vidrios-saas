@@ -2,6 +2,7 @@ import "server-only";
 
 import { createMercadoPagoClient } from "./mercadopago.client";
 import { buildPendingAutoRecurringFromPlan } from "./mercadopago-plan";
+import { resolveMercadoPagoCheckoutUrl } from "./mercadopago-reference";
 import type {
   RecurringSubscriptionResult,
   SubscriptionProvider,
@@ -25,12 +26,13 @@ function result(resource: {
   id: string;
   status: string;
   init_point?: string | null;
+  sandbox_init_point?: string | null;
 }): RecurringSubscriptionResult {
   return {
     providerSubscriptionId: resource.id,
     providerStatus: resource.status,
     status: mapStatus(resource.status),
-    checkoutUrl: resource.init_point ?? null,
+    checkoutUrl: resolveMercadoPagoCheckoutUrl(resource),
     rawResponse: resource,
   };
 }

@@ -103,6 +103,11 @@ export async function POST(request: Request) {
       );
     }
 
+    if (error instanceof Error) {
+      console.error("[mercadopago:create]", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
     console.error("[mercadopago:create]", error);
     return NextResponse.json(
       { error: "No pudimos iniciar la suscripcion con Mercado Pago." },

@@ -3,6 +3,7 @@ import "server-only";
 import { getMercadoPagoChileConfig } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { createMercadoPagoClient } from "@/features/subscriptions/providers/mercadopago/mercadopago.client";
 import { normalizeMercadoPagoTransactionAmount } from "@/features/subscriptions/providers/mercadopago/mercadopago-amount";
+import { normalizeMercadoPagoExternalReference } from "@/features/subscriptions/providers/mercadopago/mercadopago-reference";
 import type {
   MercadoPagoAuthorizedPayment,
   MercadoPagoPayment,
@@ -60,7 +61,10 @@ function assertSubscriptionIdentity(input: {
   );
   const currency = input.resource.auto_recurring?.currency_id?.trim().toUpperCase();
 
-  if (input.resource.external_reference !== input.local.external_reference) {
+  if (
+    normalizeMercadoPagoExternalReference(input.resource.external_reference) !==
+    input.local.external_reference
+  ) {
     throw new Error("La suscripcion consultada no coincide con Ventora.");
   }
 
@@ -90,7 +94,15 @@ async function findLocalSubscription(
     return null;
   }
 
-  return repository.getByExternalReference(resource.external_reference);
+  const externalReference = normalizeMercadoPagoExternalReference(
+    resource.external_reference
+  );
+
+  if (!externalReference) {
+    return null;
+  }
+
+  return repository.getByExternalReference(externalReference);
 }
 
 async function reconcilePreapproval(resource: MercadoPagoPreapproval) {
@@ -269,12 +281,16 @@ export async function processMercadoPagoWebhook(input: {
 
   const resource: MercadoPagoPayment = await client.getPayment(input.resourceId);
 
-  if (!resource.external_reference) {
+  const externalReference = normalizeMercadoPagoExternalReference(
+    resource.external_reference
+  );
+
+  if (!externalReference) {
     return false;
   }
 
   const repository = createOrganizationSubscriptionRepository();
-  const local = await repository.getByExternalReference(resource.external_reference);
+  const local = await repository.getByExternalReference(externalReference);
 
   if (!local?.provider_subscription_id) {
     return false;

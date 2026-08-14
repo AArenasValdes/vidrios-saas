@@ -13,8 +13,9 @@ export type MercadoPagoPreapproval = {
   id: string;
   status: string;
   preapproval_plan_id?: string | null;
-  external_reference?: string | null;
+  external_reference?: string | number | null;
   init_point?: string | null;
+  sandbox_init_point?: string | null;
   payer_id?: number | null;
   date_created?: string | null;
   last_modified?: string | null;

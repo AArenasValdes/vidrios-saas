@@ -12,6 +12,10 @@ import {
 } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { createMercadoPagoSubscriptionProvider } from "@/features/subscriptions/providers/mercadopago/mercadopago.provider";
 import type { MercadoPagoPreapproval } from "@/features/subscriptions/providers/mercadopago/mercadopago.types";
+import {
+  normalizeMercadoPagoExternalReference,
+  resolveMercadoPagoCheckoutUrl,
+} from "@/features/subscriptions/providers/mercadopago/mercadopago-reference";
 import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
 import { resolvePublicAppUrl } from "@/utils/public-app-url";
 
@@ -26,8 +30,31 @@ export class MercadoPagoCheckoutError extends Error {
 }
 
 function checkoutUrlFromRaw(raw: unknown) {
-  const resource = raw as Partial<MercadoPagoPreapproval>;
-  return typeof resource.init_point === "string" ? resource.init_point : null;
+  return resolveMercadoPagoCheckoutUrl(raw as MercadoPagoPreapproval);
+}
+
+function assertCreatedSubscriptionIdentity(input: {
+  raw: Partial<MercadoPagoPreapproval>;
+  expectedExternalReference: string;
+  expectedProviderPlanId: string;
+}) {
+  const returnedReference = normalizeMercadoPagoExternalReference(
+    input.raw.external_reference
+  );
+
+  if (
+    returnedReference &&
+    returnedReference !== input.expectedExternalReference
+  ) {
+    throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");
+  }
+
+  if (
+    input.raw.preapproval_plan_id &&
+    input.raw.preapproval_plan_id !== input.expectedProviderPlanId
+  ) {
+    throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");
+  }
 }
 
 async function assertOrganizationIsChile(organizationId: number) {
@@ -99,32 +126,44 @@ export async function createMercadoPagoChileCheckout(input: {
     }
 
     if (!existing.provider_subscription_id) {
-      throw new MercadoPagoCheckoutError(
-        409,
-        "La suscripcion ya se esta preparando. Espera unos segundos e intenta nuevamente."
+      await repository.cancelPending(existing.id).catch(() => undefined);
+    } else {
+      const provider = createMercadoPagoSubscriptionProvider({
+        accessToken: config.accessToken,
+        expectedAmount: plan.amountClp,
+        expectedCurrency: "CLP",
+        reason: `Ventora - ${plan.label}`,
+      });
+      const current = await provider.getSubscription(
+        existing.provider_subscription_id
       );
+      const checkoutUrl =
+        current.checkoutUrl ?? checkoutUrlFromRaw(current.rawResponse);
+
+      if (!checkoutUrl) {
+        throw new MercadoPagoCheckoutError(
+          409,
+          "La suscripcion ya existe y esta esperando confirmacion de Mercado Pago."
+        );
+      }
+
+      return { checkout_url: checkoutUrl, subscription_id: existing.id };
     }
-
-    const provider = createMercadoPagoSubscriptionProvider({
-      accessToken: config.accessToken,
-      expectedAmount: plan.amountClp,
-      expectedCurrency: "CLP",
-      reason: `Ventora - ${plan.label}`,
-    });
-    const current = await provider.getSubscription(
-      existing.provider_subscription_id
-    );
-    const checkoutUrl = current.checkoutUrl ?? checkoutUrlFromRaw(current.rawResponse);
-
-    if (!checkoutUrl) {
-      throw new MercadoPagoCheckoutError(
-        409,
-        "La suscripcion ya existe y esta esperando confirmacion de Mercado Pago."
-      );
-    }
-
-    return { checkout_url: checkoutUrl, subscription_id: existing.id };
   }
+
+  const reservationSubscription =
+    reservation.created
+      ? reservation.subscription
+      : (
+          await repository.createPending({
+            organizationId: input.organizationId,
+            providerPlanId: plan.providerPlanId,
+            planCode: plan.subscriptionPlanCode,
+            billingPeriod: plan.billingPeriod,
+            amount: plan.amountClp,
+            externalReference: `ventora:cl:${input.organizationId}:${randomUUID()}`,
+          })
+        ).subscription;
 
   const provider = createMercadoPagoSubscriptionProvider({
     accessToken: config.accessToken,
@@ -137,7 +176,7 @@ export async function createMercadoPagoChileCheckout(input: {
     const publicAppUrl = resolvePublicAppUrl();
     const created = await provider.createSubscription({
       organizationId: input.organizationId,
-      externalReference: reservation.subscription.external_reference,
+      externalReference: reservationSubscription.external_reference,
       providerPlanId: plan.providerPlanId,
       payerEmail: input.payerEmail,
       returnUrl: `${publicAppUrl}/cuenta-vencida/mercadopago/retorno`,
@@ -145,19 +184,14 @@ export async function createMercadoPagoChileCheckout(input: {
     });
     const raw = created.rawResponse as Partial<MercadoPagoPreapproval>;
 
-    if (raw.external_reference !== reservation.subscription.external_reference) {
-      throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");
-    }
-
-    if (
-      raw.preapproval_plan_id &&
-      raw.preapproval_plan_id !== plan.providerPlanId
-    ) {
-      throw new Error("Mercado Pago devolvio una suscripcion con identidad invalida.");
-    }
+    assertCreatedSubscriptionIdentity({
+      raw,
+      expectedExternalReference: reservationSubscription.external_reference,
+      expectedProviderPlanId: plan.providerPlanId,
+    });
 
     const saved = await repository.attachProviderSubscription({
-      id: reservation.subscription.id,
+      id: reservationSubscription.id,
       providerSubscriptionId: created.providerSubscriptionId,
       providerStatus: created.providerStatus,
       status: created.status,
@@ -169,7 +203,9 @@ export async function createMercadoPagoChileCheckout(input: {
 
     return { checkout_url: created.checkoutUrl, subscription_id: saved.id };
   } catch (error) {
-    await repository.cancelPending(reservation.subscription.id).catch(() => undefined);
+    await repository
+      .cancelPending(reservationSubscription.id)
+      .catch(() => undefined);
     throw error;
   }
 }
