@@ -422,7 +422,9 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Eliminar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles);
 
-    fireEvent.click(screen.getByText("Vidrio"));
+    fireEvent.click(
+      screen.getByLabelText("Vidrio").closest("details")?.querySelector("summary") as HTMLElement
+    );
     const vidrioSection = screen.getByLabelText("Vidrio");
     fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Editar$/i }));
     const initialGlass = currentRecipe.vidrios.length;
@@ -441,7 +443,9 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Agregar accesorio/i }));
     expect(currentRecipe.accesorios).toHaveLength(initialAccessories + 1);
     const addedAccessoryId = currentRecipe.accesorios.at(-1)?.id;
-    fireEvent.click(screen.getByText("Accesorios"));
+    fireEvent.click(
+      screen.getByLabelText("Accesorios").closest("details")?.querySelector("summary") as HTMLElement
+    );
     const accessoryRows = within(screen.getByLabelText("Accesorios")).getAllByRole("button", {
       name: /^Editar$/i,
     });

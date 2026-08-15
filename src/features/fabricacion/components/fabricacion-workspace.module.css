@@ -8760,7 +8760,7 @@
 }
 
 .fabPrepFlow {
-  gap: 16px;
+  gap: 18px;
 }
 
 .fabPrepPageHead {
@@ -8771,7 +8771,7 @@
 .fabPrepPageHead h2 {
   margin: 0;
   color: var(--fab-ink);
-  font-size: clamp(22px, 1.8vw, 26px);
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.2;
@@ -8779,7 +8779,7 @@
 
 .fabPrepPageHead p {
   margin: 0;
-  max-width: 52ch;
+  max-width: 56ch;
   color: var(--fab-muted);
   font-size: 14px;
   line-height: 1.45;
@@ -8787,12 +8787,12 @@
 
 .fabPrepHero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px 20px;
-  align-items: start;
-  padding: 16px 18px;
+  grid-template-columns: minmax(0, 1fr) 72px auto;
+  gap: 12px 16px;
+  align-items: center;
+  padding: 14px 16px;
   background: var(--fab-accent-soft);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: inset 0 0 0 1px #c5daf8;
 }
 
@@ -8805,50 +8805,60 @@
 .fabPrepHero h3 {
   margin: 0;
   color: #0b3d7a;
-  font-size: clamp(18px, 1.5vw, 22px);
+  font-size: 16px;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
-.fabPrepHeroLead {
-  margin: 0;
-  color: #0b3d7a;
-  font-size: 15px;
-  font-weight: 700;
+.fabPrepHero .fabSheetPreview {
+  width: 72px;
 }
 
-.fabPrepHero p,
-.fabPrepHeroHint {
-  margin: 0;
-  color: #335c8a;
-  font-size: 13px;
-  line-height: 1.4;
+.fabPrepHero .fabPreparedCta {
+  justify-self: end;
+  min-height: 44px;
+  padding: 0 16px;
+  white-space: nowrap;
 }
 
-.fabPrepTiraRow {
+.fabPrepStats {
+  list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.fabPrepStats li {
+  display: flex;
+  gap: 8px;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 0 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #d7e6f7;
 }
 
-.fabPrepTiraRow > div {
-  display: grid;
-  gap: 2px;
+.fabPrepStats svg {
+  flex: none;
+  color: #1e88ff;
 }
 
-.fabPrepTiraRow strong {
+.fabPrepStats span {
+  font-size: 11px;
+  font-weight: 650;
+  color: #5b7aa0;
+  letter-spacing: 0.01em;
+}
+
+.fabPrepStats strong {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: var(--fab-ink);
-  font-size: 13px;
-  font-weight: 750;
-}
-
-.fabPrepTiraRow span {
-  color: var(--fab-muted);
-  font-size: 12px;
 }
 
 .fabPrepTiraChoices {
@@ -8859,16 +8869,30 @@
 }
 
 .fabPrepTiraChip {
-  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
   background: #fff;
-  box-shadow: inset 0 0 0 1px #c5daf8;
+  box-shadow: inset 0 0 0 1px #d5e3f3;
   color: #0b3d7a;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 160ms var(--fab-ease), color 160ms var(--fab-ease),
+    box-shadow 160ms var(--fab-ease);
+}
+
+.fabPrepTiraChip:hover {
+  box-shadow: inset 0 0 0 1px #1e88ff;
+}
+
+.fabPrepTiraChip:focus-visible {
+  outline: 2px solid #1e88ff;
+  outline-offset: 2px;
 }
 
 .fabPrepTiraChip[data-selected="true"] {
@@ -8882,13 +8906,13 @@
   gap: 10px;
   padding: 14px 16px;
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: inset 0 0 0 1px var(--fab-line);
 }
 
 .fabTiraBlock header {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .fabTiraBlock h3 {
@@ -8899,31 +8923,67 @@
   letter-spacing: -0.02em;
 }
 
-.fabTiraBlock p,
-.fabTiraFoot {
+.fabTiraBlock header p {
   margin: 0;
   color: var(--fab-muted);
   font-size: 13px;
   line-height: 1.4;
 }
 
-.fabTiraCurrent {
-  color: var(--fab-ink) !important;
-  font-size: 14px !important;
+.fabTiraWorkspace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
 }
 
-.fabTiraActionLabel {
-  margin: 4px 0 0;
-  color: var(--fab-ink);
-  font-size: 12px;
+.fabTiraApply {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+  color: #0b3d7a;
+  font-size: 13px;
   font-weight: 750;
+  cursor: pointer;
+}
+
+.fabTiraApply[data-applied="true"] {
+  background: #ecfdf3;
+  box-shadow: none;
+  color: #166534;
+}
+
+.fabTiraApply:focus-visible {
+  outline: 2px solid #1e88ff;
+  outline-offset: 2px;
+}
+
+.fabTiraFoot {
+  display: inline-flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--fab-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fabTiraFoot svg {
+  flex: none;
+  margin-top: 1px;
 }
 
 .fabTiraCustom {
   display: grid;
   gap: 4px;
   justify-items: start;
-  max-width: 180px;
+  max-width: 160px;
 }
 
 .fabTiraCustom span {
@@ -8948,20 +9008,106 @@
 .fabPrepDiscountWarn {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 8px 14px;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-radius: 12px;
   background: #fff7ed;
   color: #9a3412;
 }
 
+.fabPrepDiscountWarn svg {
+  flex: none;
+}
+
 .fabPrepDiscountWarn p {
+  flex: 1 1 220px;
   margin: 0;
   font-size: 13px;
   font-weight: 650;
   line-height: 1.4;
+}
+
+.fabWarnAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.fabWarnAction:hover {
+  text-decoration: underline;
+}
+
+.fabPiecesPanel {
+  display: grid;
+  gap: 8px;
+  padding: 6px 2px 4px;
+}
+
+.fabPiecesHead h3 {
+  margin: 0;
+  color: var(--fab-ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.fabPiecesHead p {
+  margin: 2px 0 0;
+  color: var(--fab-muted);
+  font-size: 12px;
+}
+
+.fabPrepFlow .fabSheetGroup h3 {
+  margin: 10px 0 4px;
+  color: #7b8798;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fabPrepFlow .fabSheetRow:hover,
+.fabPrepFlow .fabSheetRow[data-highlighted="true"] {
+  background: #f8fbff;
+}
+
+.fabPrepFlow .fabSheetRow .recipeBuildGrip {
+  opacity: 0;
+  width: 18px;
+  min-height: 32px;
+  padding: 0;
+  color: #94a3b8;
+}
+
+.fabPrepFlow .fabSheetRow:hover .recipeBuildGrip,
+.fabPrepFlow .fabSheetRow .recipeBuildGrip:focus-visible {
+  opacity: 1;
+}
+
+.fabPrepRowMain {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fabPrepFlow .fabSheetFunction {
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--fab-ink);
+}
+
+.fabPrepFlow .fabSheetMeasure {
+  color: var(--fab-muted);
+  font-size: 12px;
 }
 
 .fabPieceDiscount,
@@ -8972,13 +9118,39 @@
 }
 
 .fabPieceDiscount[data-pending="true"] {
-  color: #9a3412;
-  font-weight: 700;
+  color: #c2410c;
+  font-weight: 750;
+}
+
+.fabPrepBadgeSpacer {
+  min-width: 52px;
 }
 
 .fabPrepBadge[data-tone="custom"] {
   color: #1e3a5f;
   background: #e8f1fb;
+}
+
+.fabPrepFlow .fabSheetEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #146fe0;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.fabPrepFlow .fabSheetEdit[data-emphasis="true"] {
+  color: #146fe0;
+}
+
+.fabPrepFlow .fabSheetEdit:hover {
+  text-decoration: underline;
 }
 
 .fabPrepBlockWarn {
@@ -8989,69 +9161,6 @@
   color: #9a3412;
   font-size: 13px;
   line-height: 1.4;
-}
-
-.fabPrepChange {
-  display: grid;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: inset 0 0 0 1px var(--fab-line);
-}
-
-.fabPrepChange header {
-  display: grid;
-  gap: 4px;
-}
-
-.fabPrepChange h3 {
-  margin: 0;
-  color: var(--fab-ink);
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.fabPrepChange p {
-  margin: 0;
-  color: var(--fab-muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.fabPrepChangeGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.fabPrepChangeGrid article {
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  padding: 10px 12px;
-  background: #f8fafc;
-  border-radius: 12px;
-}
-
-.fabPrepChangeGrid strong {
-  color: var(--fab-ink);
-  font-size: 14px;
-  font-weight: 750;
-}
-
-.fabPrepChangeGrid span {
-  color: var(--fab-muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.fabPrepChangeGrid .fabGhostAction {
-  justify-self: start;
-  margin-top: 4px;
-  min-height: 28px;
-  padding: 0;
 }
 
 .fabReviewAccordion {
@@ -9157,52 +9266,6 @@
   color: #9a3412;
 }
 
-.fabPrepStats {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-}
-
-.fabPrepStats li {
-  display: grid;
-  gap: 1px;
-  min-width: 88px;
-  padding: 7px 10px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 1px #d7e6f7;
-}
-
-.fabPrepStats span {
-  font-size: 10px;
-  font-weight: 650;
-  color: var(--fab-muted);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.fabPrepStats strong {
-  font-size: 14px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--fab-ink);
-}
-
-.fabPrepStats .fabLengthBarChange {
-  justify-self: start;
-  min-height: 24px;
-  padding: 0;
-  font-size: 12px;
-}
-
-.fabPrepHero .fabPreparedCta {
-  justify-self: start;
-  min-height: 42px;
-}
-
 .fabPrepPending,
 .fabPrepGroups {
   display: grid;
@@ -9290,18 +9353,12 @@
   background: #f1f5f9;
 }
 
-.fabPrepRowMain {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.fabPrepFlow .fabSheetRow {
-  grid-template-columns: 22px minmax(0, 1fr) auto auto;
-  align-items: center;
-  min-height: 56px;
-  padding: 8px 4px;
-  margin: 0;
+.fabPiecesPanel .fabPrepGroups {
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .fabPrepFlow .fabAccessoryRow {
@@ -9342,9 +9399,21 @@
 
 @media (max-width: 900px) {
   .fabPrepHero,
-  .fabPrepChangeGrid,
   .fabAdvancedFields {
     grid-template-columns: 1fr;
+  }
+
+  .fabPrepHero .fabPreparedCta {
+    justify-self: start;
+  }
+
+  .fabPrepFlow .fabSheetRow {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+  }
+
+  .fabPieceTira,
+  .fabPrepBadgeSpacer {
+    display: none;
   }
 
   .fabSheetPreview {

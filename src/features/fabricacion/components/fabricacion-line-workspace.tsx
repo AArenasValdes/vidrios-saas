@@ -345,7 +345,7 @@ function RecipeSummaryPanel({
           className={s.fabCompactMetaEdit}
           onClick={() => onStep(isActivateStage ? "components" : "base")}
         >
-          Cambiar
+          Cambiar línea
         </button>
       </section>
     </aside>
