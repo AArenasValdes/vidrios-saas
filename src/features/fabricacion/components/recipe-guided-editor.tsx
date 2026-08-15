@@ -6,6 +6,7 @@ import {
   BookOpen,
   BrainCircuit,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Columns3,
@@ -1989,52 +1990,88 @@ export function RecipeGuidedEditor({
           </div>
         ) : null}
 
-        <section
+        <details
           id="fab-review-piezas"
-          className={s.fabPiecesPanel}
-          aria-label="Piezas de la ventana"
+          className={`${s.fabReviewAccordion} ${s.fabPiecesAccordion}`}
+          open={openReview === "piezas"}
+          onToggle={(event) => {
+            const isOpen = event.currentTarget.open;
+            setOpenReview((current) => {
+              if (isOpen) return "piezas";
+              return current === "piezas" ? null : current;
+            });
+          }}
         >
-          <header className={s.fabPiecesHead}>
-            <div>
-              <h3>Piezas de la ventana</h3>
-              <p>
+          <summary>
+            <span>
+              <strong>Piezas de la ventana</strong>
+              <em>
                 {recipe.perfiles.length}{" "}
                 {recipe.perfiles.length === 1
                   ? "pieza preparada"
                   : "piezas preparadas"}
-              </p>
-            </div>
-          </header>
+              </em>
+            </span>
+            <b>
+              Ver / editar
+              <Pencil size={13} aria-hidden="true" />
+              <ChevronDown size={14} aria-hidden="true" />
+            </b>
+          </summary>
           <div className={s.fabPrepGroups}>
-
-        {recipe.perfiles.length === 0 ? (
-          recipe.identidad.tipologia === "personalizada" ? (
-            <div className={s.fabEmptyPersonalizada}>
-              <strong>Configuración personalizada</strong>
-              <p>
-                Agrega las piezas que usa tu taller y Ventora las reutilizará al cotizar.
-              </p>
-              {!readOnly ? (
-                <button
-                  type="button"
-                  className={s.primaryButton}
-                  onClick={addProfile}
-                >
-                  <Plus size={15} />
-                  Agregar primera pieza
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <div className={s.emptyInline}>
-              Agrega el primer perfil para preparar esta fabricación.
-            </div>
-          )
-        ) : (
-          <div role="list" aria-label="Perfiles de fabricación" className={s.fabSheetProfileList}>
-            {profileSheetGroups.map((group) => (
-              <section key={group.id} className={s.fabSheetGroup} aria-label={group.label}>
-                <h3>{group.label}</h3>
+            {recipe.perfiles.length === 0 ? (
+              recipe.identidad.tipologia === "personalizada" ? (
+                <div className={s.fabEmptyPersonalizada}>
+                  <strong>Configuración personalizada</strong>
+                  <p>
+                    Agrega las piezas que usa tu taller y Ventora las reutilizará al cotizar.
+                  </p>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className={s.primaryButton}
+                      onClick={addProfile}
+                    >
+                      <Plus size={15} />
+                      Agregar primera pieza
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className={s.emptyInline}>
+                  Agrega el primer perfil para preparar esta fabricación.
+                </div>
+              )
+            ) : (
+              <div
+                role="list"
+                aria-label="Perfiles de fabricación"
+                className={s.fabSheetProfileList}
+              >
+                <div className={s.fabPieceCols} aria-hidden="true">
+                  <span />
+                  <span>Pieza</span>
+                  <span>Descuento</span>
+                  <span>Tira usada</span>
+                  <span />
+                  <span />
+                </div>
+                {profileSheetGroups.map((group) => (
+                  <section
+                    key={group.id}
+                    className={s.fabSheetGroup}
+                    aria-label={group.label}
+                  >
+                    <h3>
+                      {group.id === "marco" ? (
+                        <Square size={14} aria-hidden="true" />
+                      ) : group.id === "hojas" ? (
+                        <Columns3 size={14} aria-hidden="true" />
+                      ) : (
+                        <Layers3 size={14} aria-hidden="true" />
+                      )}
+                      {group.label}
+                    </h3>
                 {group.profiles.map((profile) => {
                   const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
                   const tallerResumen = describePerfilTallerResumen(profile);
@@ -2042,12 +2079,11 @@ export function RecipeGuidedEditor({
                     profile,
                     adjustedAwayFromSuggestion.has(profile.id)
                   );
-                  const tiraCorta = `Tira: ${
+                  const tiraCorta =
                     profileTieneOverrideLargoComercial(profile)
                       ? formatLargoComercialCorto(profile.largoComercialMm) ??
                         tiraEstandarLabel
-                      : tiraEstandarLabel
-                  }`;
+                      : tiraEstandarLabel;
                   const isDragging = draggingProfileIndex === index;
                   const isDropTarget =
                     dragOverProfileIndex === index &&
@@ -2059,7 +2095,7 @@ export function RecipeGuidedEditor({
                   return (
                     <article
                       key={profile.id}
-                      className={s.fabSheetRow}
+                      className={`${s.fabSheetRow} ${s.fabPieceRow}`}
                       role="listitem"
                       data-dragging={isDragging}
                       data-drop-target={isDropTarget}
@@ -2169,12 +2205,17 @@ export function RecipeGuidedEditor({
                         aria-expanded={drawerProfileId === profile.id}
                         onClick={() => openProfileDrawer(profile.id)}
                       >
-                        {tallerResumen.pendingDiscount
-                          ? "Definir descuento"
-                          : "Editar pieza"}
                         {tallerResumen.pendingDiscount ? (
-                          <ChevronRight size={14} aria-hidden="true" />
-                        ) : null}
+                          <>
+                            Definir descuento
+                            <ChevronRight size={14} aria-hidden="true" />
+                          </>
+                        ) : (
+                          <>
+                            Editar pieza
+                            <Pencil size={13} aria-hidden="true" />
+                          </>
+                        )}
                       </button>
                     </article>
                   );
@@ -2184,7 +2225,7 @@ export function RecipeGuidedEditor({
           </div>
         )}
           </div>
-        </section>
+        </details>
 
         <details
           className={s.fabReviewAccordion}
@@ -2205,7 +2246,10 @@ export function RecipeGuidedEditor({
                 {recipe.accesorios.length === 1 ? "accesorio" : "accesorios"}
               </em>
             </span>
-            <b>Ver / editar</b>
+            <b>
+              Ver / editar
+              <ChevronDown size={14} aria-hidden="true" />
+            </b>
           </summary>
         <section className={s.fabSheetGroup} aria-label="Accesorios">
           {recipe.accesorios.length === 0 ? (
@@ -2326,7 +2370,10 @@ export function RecipeGuidedEditor({
                   : "1 por hoja"}
               </em>
             </span>
-            <b>Ver / editar</b>
+            <b>
+              Ver / editar
+              <ChevronDown size={14} aria-hidden="true" />
+            </b>
           </summary>
         <section className={s.fabSheetGroup} aria-label="Vidrio">
           {recipe.vidrios.length === 0 ? (

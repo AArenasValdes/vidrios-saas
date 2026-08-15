@@ -289,7 +289,6 @@ describe("RecipeGuidedEditor", () => {
     expect(screen.getByText("Tira que compras")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "6,00 m" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "5,95 m" })).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     expect(profileList).toBeInTheDocument();
 
@@ -415,7 +414,6 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Agregar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles + 1);
 
-    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const lastRow = within(profileList).getAllByRole("listitem").at(-1)!;
     fireEvent.click(within(lastRow).getByRole("button", { name: /Editar pieza|Definir descuento/i }));
@@ -531,7 +529,6 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
-    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const l5000List = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const l5000Cards = within(l5000List).getAllByRole("listitem");
     fireEvent.click(within(l5000Cards[0]!).getByRole("button", { name: /Editar pieza/i }));
