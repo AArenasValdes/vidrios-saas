@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMercadoPagoChileBillingReady } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
+import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
 
@@ -17,7 +18,7 @@ export async function getSubscriptionSummary(
   const { data: profile } = (await admin
     .from("organization_profile")
     .select(
-      "plan_code, billing_period, payment_method, subscription_status, subscription_ends_at, founder_price_locked"
+      "plan_code, billing_period, payment_method, subscription_status, trial_started_at, trial_ends_at, subscription_started_at, subscription_ends_at, plan_type, founder_price_locked"
     )
     .eq("organization_id", organizationId)
     .single()) as {
@@ -48,8 +49,24 @@ export async function getSubscriptionSummary(
     recurringSubscription?.current_period_ends_at ??
     (profile.subscription_ends_at as string) ??
     null;
+  const resolvedSubscription = resolveOrganizationSubscriptionState({
+    subscriptionStatus: (profile.subscription_status as string) ?? null,
+    trialStartedAt: (profile.trial_started_at as string) ?? null,
+    trialEndsAt: (profile.trial_ends_at as string) ?? null,
+    subscriptionStartedAt: (profile.subscription_started_at as string) ?? null,
+    subscriptionEndsAt: (profile.subscription_ends_at as string) ?? null,
+    planType: (profile.plan_type as string) ?? null,
+    planCode: (profile.plan_code as string) ?? null,
+    billingPeriod: (profile.billing_period as string) ?? null,
+    paymentMethod: (profile.payment_method as string) ?? null,
+    lastPaymentAt: null,
+    founderPriceLocked: (profile.founder_price_locked as boolean) ?? false,
+  });
   const subscriptionStatus =
-    (profile.subscription_status as string) ?? recurringSubscription?.status ?? null;
+    resolvedSubscription.effectiveStatus ??
+    (profile.subscription_status as string) ??
+    recurringSubscription?.status ??
+    null;
 
   return {
     planCode,

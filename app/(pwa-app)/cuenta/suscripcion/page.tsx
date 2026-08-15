@@ -184,8 +184,10 @@ export default function SuscripcionPage() {
 
   const planCode = profile?.planCode ?? summary?.planCode ?? null;
   const subscription = profile?.subscription ?? null;
+  // Preferir estado efectivo (calculado por fechas) sobre el status crudo de BD/API.
+  // Si no, una prueba con fecha vencida puede seguir mostrando "Prueba activa".
   const subscriptionStatus =
-    summary?.subscriptionStatus ?? subscription?.effectiveStatus ?? null;
+    subscription?.effectiveStatus ?? summary?.subscriptionStatus ?? null;
   const subscriptionEndsAt =
     summary?.subscriptionEndsAt ??
     subscription?.subscriptionEndsAt ??
@@ -199,16 +201,24 @@ export default function SuscripcionPage() {
     ? PAYMENT_LABELS[summary.paymentMethod] ?? summary.paymentMethod
     : EMPTY_VALUE;
   const normalizedSubscriptionStatus = subscriptionStatus?.toLowerCase() ?? "";
+  const trialDaysRemaining =
+    typeof subscription?.daysRemaining === "number"
+      ? Math.max(subscription.daysRemaining, 0)
+      : null;
   const isExpiredSubscription =
+    Boolean(subscription?.isExpired) ||
     normalizedSubscriptionStatus === "trial_expired" ||
     normalizedSubscriptionStatus === "expired" ||
-    normalizedSubscriptionStatus === "past_due";
+    normalizedSubscriptionStatus === "past_due" ||
+    (planCode === "trial" && trialDaysRemaining === 0);
   const isInPaymentGracePeriod = Boolean(
     subscription?.isInPaymentGracePeriod && normalizedSubscriptionStatus === "past_due"
   );
   const isTrialSubscription =
     !isExpiredSubscription &&
-    (planCode === "trial" || normalizedSubscriptionStatus.includes("trial"));
+    (Boolean(subscription?.isTrial) ||
+      planCode === "trial" ||
+      normalizedSubscriptionStatus.includes("trial"));
   const trialDaysLabel = getDaysRemainingLabel(
     subscription?.daysRemaining,
     subscriptionEndsAt
@@ -320,21 +330,21 @@ export default function SuscripcionPage() {
           </span>
           <div className={s.activationBody}>
             <span className={s.activationEyebrow}>
-              {isExpiredSubscription ? "Cuenta vencida" : "Prueba gratis"}
+              {isExpiredSubscription ? "Prueba terminada" : "Prueba gratis"}
             </span>
             <h2 id="subscription-action-title" className={s.activationTitle}>
               {isExpiredSubscription
-                ? "Activa tu cuenta para seguir operando"
+                ? "Tu prueba gratis se acabó"
                 : "Tu prueba gratis est\u00e1 activa"}
             </h2>
             <p className={s.activationText}>
               {isExpiredSubscription
-                ? "Activa Ventora para volver a crear cotizaciones sin interrupciones."
+                ? "Ya no quedan días gratis. Activa un plan para seguir cotizando sin interrupciones."
                 : `Te quedan ${trialDaysLabel} para seguir usando Ventora sin interrupciones.`}
             </p>
           </div>
           <Link className={s.activationButton} href="/cuenta-vencida" prefetch={false}>
-            {isExpiredSubscription ? "Activar cuenta" : "Ver planes"}
+            {isExpiredSubscription ? "Elegir un plan" : "Ver planes"}
           </Link>
         </section>
       ) : null}
