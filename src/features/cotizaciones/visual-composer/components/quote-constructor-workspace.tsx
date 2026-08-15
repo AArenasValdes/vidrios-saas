@@ -896,9 +896,15 @@ export function QuoteConstructorWorkspace({
         <div className={s.headerCopy}>
           <h2>Piezas y componentes</h2>
           <p>
-            <strong>{completeCount} de {visualItems.length} completas</strong>
-            <span aria-hidden>·</span>
-            Cambios guardados en borrador
+            <strong>
+              {completeCount}/{visualItems.length} piezas listas
+            </strong>
+            {!embeddedInQuoteStudio ? (
+              <>
+                <span aria-hidden>·</span>
+                Cambios guardados en borrador
+              </>
+            ) : null}
           </p>
         </div>
         {lineTemplates.length > 0 ? (
@@ -1641,9 +1647,28 @@ export function QuoteConstructorWorkspace({
       </div>
 
       <footer className={s.workspaceFooter}>
-        <div>
-          <span>Progreso del presupuesto</span>
-          <strong>{completeCount} de {visualItems.length} piezas completas</strong>
+        <div className={s.workspaceFooterProgress}>
+          <strong>
+            {completeCount}/{visualItems.length} piezas listas
+          </strong>
+          <div
+            className={s.workspaceFooterTrack}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(visualItems.length, 1)}
+            aria-valuenow={completeCount}
+            aria-label="Progreso de piezas listas"
+          >
+            <span
+              style={{
+                width: `${
+                  visualItems.length === 0
+                    ? 0
+                    : Math.min(100, Math.round((completeCount / visualItems.length) * 100))
+                }%`,
+              }}
+            />
+          </div>
         </div>
         <button
           type="button"

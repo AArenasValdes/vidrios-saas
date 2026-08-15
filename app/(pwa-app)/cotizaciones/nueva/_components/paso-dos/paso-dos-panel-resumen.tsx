@@ -122,7 +122,7 @@ export function PasoDosPanelResumen({
                 : `${s.stepTwoTotalCell} ${s.stepTwoTotalCellWide}`
             }
           >
-            <span>{isQuoteStudioFinancialLayout ? "Total a cobrar con IVA" : "Total final"}</span>
+            <span>{isQuoteStudioFinancialLayout ? "Total a cobrar" : "Total final"}</span>
             <strong>{total}</strong>
           </div>
         </div>

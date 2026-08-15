@@ -162,7 +162,7 @@ describe("QuoteConstructorWorkspace", () => {
       activeItemId: "b",
     });
 
-    expect(screen.getAllByText("1 de 2 completas").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1/2 piezas listas").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Falta precio").length).toBeGreaterThan(0);
     expect(screen.getByText(/Falta completar 1 dato/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Precio unitario" })).toBeInTheDocument();

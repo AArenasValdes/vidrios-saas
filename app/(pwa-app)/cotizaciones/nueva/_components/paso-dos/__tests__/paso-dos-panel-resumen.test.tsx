@@ -73,7 +73,7 @@ describe("PasoDosPanelResumen desktop quote studio", () => {
 
     expect(screen.getByRole("button", { name: /Ir al resumen/i })).toBeInTheDocument();
     expect(screen.getByText("Subtotal neto")).toBeInTheDocument();
-    expect(screen.getByText("Total a cobrar con IVA")).toBeInTheDocument();
+    expect(screen.getByText("Total a cobrar")).toBeInTheDocument();
     expect(
       screen.queryByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)
     ).not.toBeInTheDocument();

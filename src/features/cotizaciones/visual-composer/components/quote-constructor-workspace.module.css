@@ -9,7 +9,263 @@
 }
 
 .workspaceEmbedded {
-  border-radius: 14px;
+  border-radius: 12px;
+  border-color: #e2e8f0;
+  box-shadow: none;
+  background: #fff;
+}
+
+.workspaceEmbedded .header {
+  border-radius: 12px 12px 0 0;
+  padding: 8px 12px;
+  min-height: 0;
+  gap: 8px 12px;
+}
+
+.workspaceEmbedded .headerCopy h2 {
+  font-size: 14px;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
+
+.workspaceEmbedded .headerCopy p {
+  margin: 2px 0 0;
+  font-size: 11px;
+}
+
+.workspaceEmbedded .body {
+  grid-template-columns: minmax(0, 1.85fr) minmax(292px, 0.78fr);
+  align-items: stretch;
+  min-height: 0;
+}
+
+.workspaceEmbedded .board {
+  max-height: none;
+  overflow: visible;
+  padding: 10px 12px 12px;
+  background-color: #f5f7fa;
+  background-image: none;
+}
+
+.workspaceEmbedded .pieceGrid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+
+.workspaceEmbedded .pieceCard {
+  border-radius: 10px;
+  box-shadow: none;
+  border-color: #e3e9f0;
+}
+
+.workspaceEmbedded .pieceCard:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: #c5d0de;
+}
+
+.workspaceEmbedded .pieceCardActive {
+  box-shadow: none;
+  border-color: #7eb6ef;
+}
+
+.workspaceEmbedded .pieceCardActive::before {
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+}
+
+.workspaceEmbedded .pieceCardConfirmed.pieceCardActive {
+  box-shadow: none;
+}
+
+.workspaceEmbedded .pieceHeader {
+  padding: 9px 10px 5px;
+  gap: 8px;
+}
+
+.workspaceEmbedded .pieceHeader strong {
+  font-size: 13px;
+}
+
+.workspaceEmbedded .drawingStage {
+  min-height: 108px;
+  padding: 0 8px 4px;
+}
+
+.workspaceEmbedded .drawing svg {
+  max-height: 104px;
+}
+
+.workspaceEmbedded .cardFields {
+  gap: 5px;
+  padding: 6px 9px 5px;
+}
+
+.workspaceEmbedded .techSummary {
+  padding: 0 9px 7px;
+}
+
+.workspaceEmbedded .addPieceTile {
+  min-height: 120px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.workspaceEmbedded .addPieceTileIcon {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+}
+
+.workspaceEmbedded .inspector {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100vh - 6.5rem);
+  padding: 0 10px 10px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-left-color: #e8edf3;
+  background: #fff;
+}
+
+.workspaceEmbedded .inspectorHead {
+  gap: 6px;
+  padding: 10px 0 8px;
+}
+
+.workspaceEmbedded .inspectorHeading {
+  font-size: 13px;
+}
+
+.workspaceEmbedded .inspectorActiveSummary strong {
+  font-size: 12px;
+}
+
+.workspaceEmbedded .inspectorActiveSummary span {
+  font-size: 11px;
+}
+
+.workspaceEmbedded .inspectorDespieceCta {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.workspaceEmbedded .checklistPanel {
+  margin-top: 6px;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.workspaceEmbedded .accordionList {
+  gap: 0;
+  padding-top: 4px;
+}
+
+.workspaceEmbedded .accordion {
+  border: 0;
+  border-bottom: 1px solid #e8edf3;
+  border-radius: 0;
+  background: transparent;
+}
+
+.workspaceEmbedded .accordionPendingState,
+.workspaceEmbedded .accordionReadyState {
+  border-color: transparent;
+  border-bottom-color: #e8edf3;
+  background: transparent;
+}
+
+.workspaceEmbedded .accordionOpen {
+  margin: 4px 0;
+  border: 1px solid #e4eaf1;
+  border-radius: 8px;
+  background: #fff;
+  overflow: visible;
+}
+
+.workspaceEmbedded .accordionOpen.accordionPendingState {
+  border-color: #efd0ad;
+  background: #fffaf4;
+}
+
+.workspaceEmbedded .accordionOpen.accordionReadyState {
+  border-color: #c5e3cf;
+  background: #f7fcf8;
+}
+
+.workspaceEmbedded .accordionTrigger {
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  font-weight: 780;
+}
+
+.workspaceEmbedded .accordionOpen .accordionTrigger {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.workspaceEmbedded .accordionInner {
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.workspaceEmbedded .accordionOpen .accordionInner {
+  padding: 0 10px 10px;
+}
+
+.workspaceEmbedded .priceSectionInner {
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.workspaceEmbedded .inspectorRail {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8edf3;
+  background: #fff;
+}
+
+.workspaceEmbedded .inspectorFooter {
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+
+.workspaceEmbedded .workspaceFooter {
+  min-height: 44px;
+  padding: 6px 12px;
+  gap: 12px;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.04);
+  backdrop-filter: none;
+  background: #fff;
+}
+
+.workspaceEmbedded .workspaceFooter button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 11px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.workspaceEmbedded .emptyState {
+  min-height: 280px;
+}
+
+.workspaceEmbedded .inspectorEmpty {
+  min-height: 180px;
+  padding: 16px 8px;
 }
 
 .header {
@@ -23,11 +279,6 @@
   border-bottom: 1px solid #e2e8f0;
   border-radius: 16px 16px 0 0;
   background: #fff;
-}
-
-.workspaceEmbedded .header {
-  border-radius: 14px 14px 0 0;
-  padding: 10px 14px;
 }
 
 .headerCopy { min-width: 0; }
@@ -91,10 +342,6 @@
   font-size: 18px;
   line-height: 1.2;
   letter-spacing: -0.02em;
-}
-
-.workspaceEmbedded .header h2 {
-  font-size: 16px;
 }
 
 .header p {
@@ -219,10 +466,6 @@
   grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.9fr);
   align-items: start;
   min-width: 0;
-}
-
-.workspaceEmbedded .body {
-  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.85fr);
 }
 
 .board {
@@ -1067,6 +1310,38 @@
   backdrop-filter: blur(10px);
 }
 
+.workspaceFooterProgress {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 280px;
+}
+
+.workspaceFooterProgress strong {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.workspaceFooterTrack {
+  width: min(100%, 220px);
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8edf3;
+}
+
+.workspaceFooterTrack > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1e88ff;
+  transition: width 180ms ease;
+}
+
 .workspaceFooter > div { display: grid; gap: 2px; }
 .workspaceFooter > div span { color: #718096; font-size: 10px; font-weight: 760; text-transform: uppercase; letter-spacing: 0.06em; }
 .workspaceFooter > div strong { color: #233249; font-size: 13px; }
@@ -1231,9 +1506,25 @@
   .workspace { display: none; }
 }
 
+@media (min-width: 1024px) {
+  .workspaceEmbedded .presetBar {
+    padding: 6px 12px;
+    gap: 8px;
+    box-shadow: none;
+  }
+
+  .workspaceEmbedded .presetIntro {
+    width: 118px;
+    min-width: 108px;
+    max-width: 128px;
+    padding-right: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pieceCard,
   .accordionPanel,
   .accordionInner,
-  .accordionChevron { transition: none; }
+  .accordionChevron,
+  .workspaceFooterTrack > span { transition: none; }
 }
