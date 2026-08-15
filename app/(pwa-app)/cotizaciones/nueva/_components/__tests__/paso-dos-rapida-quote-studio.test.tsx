@@ -76,9 +76,6 @@ describe("PasoDosSeccion en Cotización rápida", () => {
       "data-embedded",
       "true"
     );
-    expect(screen.getByTestId("components-panel")).toHaveAttribute(
-      "data-quote-studio-panel-mode",
-      "summary"
-    );
+    expect(screen.queryByTestId("components-panel")).not.toBeInTheDocument();
   });
 });

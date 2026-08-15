@@ -87,6 +87,8 @@ type Props = {
   onGoToSummary: () => void;
   onOpenDespieceReview: (itemId?: string) => void;
   embeddedInQuoteStudio?: boolean;
+  /** Resumen económico / rentabilidad embebido en el inspector (desktop Cotización rápida). */
+  inspectorRailSlot?: ReactNode;
   defaultLineTemplateId?: string;
   onDefaultLineTemplateChange?: (lineTemplateId: string) => void;
 };
@@ -489,6 +491,7 @@ export function QuoteConstructorWorkspace({
   onGoToSummary,
   onOpenDespieceReview,
   embeddedInQuoteStudio = false,
+  inspectorRailSlot = null,
   defaultLineTemplateId = "",
   onDefaultLineTemplateChange = () => undefined,
 }: Props) {
@@ -677,13 +680,10 @@ export function QuoteConstructorWorkspace({
 
   const toggleSection = (sectionId: InspectorSectionId) => {
     setOpenSections((current) => {
-      const next = new Set(current);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
-      } else {
-        next.add(sectionId);
+      if (current.has(sectionId) && current.size === 1) {
+        return new Set();
       }
-      return next;
+      return new Set<InspectorSectionId>([sectionId]);
     });
   };
 
@@ -887,11 +887,14 @@ export function QuoteConstructorWorkspace({
         : "Completa los campos pendientes";
 
   return (
-    <section className={s.workspace} aria-label="Constructor de componentes">
+    <section
+      className={`${s.workspace} ${embeddedInQuoteStudio ? s.workspaceEmbedded : ""}`}
+      data-layout={embeddedInQuoteStudio ? "rapida-two-pane" : "standalone"}
+      aria-label="Constructor de componentes"
+    >
       <header className={s.header}>
         <div className={s.headerCopy}>
-          <span className={s.headerEyebrow}>Constructor</span>
-          <h2>Cuaderno de componentes</h2>
+          <h2>Piezas y componentes</h2>
           <p>
             <strong>{completeCount} de {visualItems.length} completas</strong>
             <span aria-hidden>·</span>
@@ -1173,34 +1176,56 @@ export function QuoteConstructorWorkspace({
           ) : null}
         </div>
 
-        <aside className={s.inspector} aria-label="Propiedades de pieza">
+        <aside className={s.inspector} aria-label="Configuración de la pieza activa">
           {activeItem && activeForm && activeConfig && activeView ? (
             <>
-              <div className={s.inspectorTitle}>
-                <div>
-                  <span>Pieza activa</span>
-                  <strong>{activeItem.codigo}</strong>
+              <div className={s.inspectorHead}>
+                <h3 className={s.inspectorHeading}>Configuración de la pieza activa</h3>
+                <div className={s.inspectorActiveSummary}>
+                  <strong>
+                    {activeItem.codigo}
+                    {activeItem.nombre?.trim()
+                      ? ` · ${activeItem.nombre.trim()}`
+                      : ""}
+                  </strong>
+                  <span>
+                    {activeItem.ancho || "—"} × {activeItem.alto || "—"} mm ·{" "}
+                    {activeItem.cantidad} ud
+                  </span>
                 </div>
-                <div className={s.badgeRow}>
-                  <span
-                    className={
-                      activeIsConfirmed || activeEffectivelyComplete ? s.ready : s.pending
-                    }
+                <div className={s.inspectorHeadActions}>
+                  <button
+                    type="button"
+                    className={s.inspectorDespieceCta}
+                    onClick={() => openDespieceReview(activeItem.id)}
                   >
-                    {activeIsConfirmed || activeEffectivelyComplete ? (
-                      <LuCheck aria-hidden />
-                    ) : (
-                      <LuCircleAlert aria-hidden />
-                    )}
-                    {activeCommercialLabel}
-                  </span>
-                  <span
-                    className={
-                      activeView.technicalStatus === "configurado" ? s.techReady : s.techPending
-                    }
-                  >
-                    {activeView.technicalLabel}
-                  </span>
+                    Ver despiece
+                  </button>
+                  <div className={s.badgeRow}>
+                    <span
+                      className={
+                        activeIsConfirmed || activeEffectivelyComplete
+                          ? s.ready
+                          : s.pending
+                      }
+                    >
+                      {activeIsConfirmed || activeEffectivelyComplete ? (
+                        <LuCheck aria-hidden />
+                      ) : (
+                        <LuCircleAlert aria-hidden />
+                      )}
+                      {activeCommercialLabel}
+                    </span>
+                    <span
+                      className={
+                        activeView.technicalStatus === "configurado"
+                          ? s.techReady
+                          : s.techPending
+                      }
+                    >
+                      {activeView.technicalLabel}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1549,6 +1574,10 @@ export function QuoteConstructorWorkspace({
                 </InspectorAccordionSection>
               </div>
 
+              {inspectorRailSlot ? (
+                <div className={s.inspectorRail}>{inspectorRailSlot}</div>
+              ) : null}
+
               <div className={s.inspectorFooter}>
                 <button
                   type="button"
@@ -1603,6 +1632,9 @@ export function QuoteConstructorWorkspace({
               <button type="button" className={s.emptyFocusAdd} onClick={focusAddBar}>
                 Ir a agregar pieza
               </button>
+              {inspectorRailSlot ? (
+                <div className={s.inspectorRail}>{inspectorRailSlot}</div>
+              ) : null}
             </div>
           )}
         </aside>

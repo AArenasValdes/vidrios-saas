@@ -16332,14 +16332,12 @@
 
 @media (min-width: 1440px) {
   .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida {
-    grid-template-columns: minmax(0, 1fr) clamp(290px, 22vw, 310px);
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 
   .rootStepTwoDesktop .stepTwoDesktopShell .stepTwoLayoutQuoteStudioRapida > .stepTwoPanel {
-    grid-column: 2;
-    grid-row: 1;
-    max-width: clamp(290px, 22vw, 310px);
+    display: none;
   }
 }
 

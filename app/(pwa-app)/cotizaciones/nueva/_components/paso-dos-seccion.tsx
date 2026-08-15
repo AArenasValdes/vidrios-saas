@@ -15,6 +15,12 @@ import { PasoDosCambiarModoDialog } from "./paso-dos/paso-dos-cambiar-modo-dialo
 import { PasoDosItemLibreForm } from "./paso-dos/paso-dos-item-libre-form";
 import { PasoDosPanelComponentes } from "./paso-dos-panel-componentes";
 import { QuoteStudioBudgetWorkspace } from "./paso-dos/quote-studio-budget-workspace";
+import { QuoteStudioFinancialPanel } from "./paso-dos/quote-studio-financial-panel";
+import { PasoDosPanelResumen } from "./paso-dos/paso-dos-panel-resumen";
+import {
+  hasQuoteStudioCompletedPieces,
+  QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT,
+} from "./paso-dos/quote-studio-desktop-edition";
 import { QuoteConstructorWorkspace } from "@/features/cotizaciones/visual-composer/components/quote-constructor-workspace";
 import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
 import { PasoDosModoCotizacion } from "./paso-dos/paso-dos-modo-cotizacion";
@@ -24,6 +30,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import d from "./paso-dos-panel-desktop.module.css";
 import s from "../page.module.css";
+import type { PasoDosPanelDesktopClasses } from "./paso-dos/paso-dos-panel-resumen";
 import type { QuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import type { CotizacionLineTemplate } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import type {
@@ -432,6 +439,42 @@ export function PasoDosSeccion({
     },
   };
 
+  const rapidInspectorRail =
+    showQuoteStudioRapidaLayout ? (
+      <div className={d.rapidaInspectorRail}>
+        <details className={d.rapidaCostsAccordion}>
+          <summary>
+            <span>
+              <strong>Costos y rentabilidad</strong>
+              <em>Opcional</em>
+            </span>
+            <small>Mano de obra, traslado, otros costos y margen.</small>
+          </summary>
+          <QuoteStudioFinancialPanel
+            embedded
+            initialDetailOpen
+            summary={panel.financialSummary}
+            adjustments={panel.quoteStudioFinancial}
+            formatCurrencyInput={formatCurrencyInput}
+            onAdjustmentChange={panel.onQuoteStudioFinancialChange}
+            onApplyRecommendedPrice={panel.onApplyQuoteStudioRecommendedPrice}
+          />
+        </details>
+        <PasoDosPanelResumen
+          {...panel}
+          isPieceInEdition={false}
+          pieceInEditionHint={QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT}
+          summaryNavigateHint={
+            !hasQuoteStudioCompletedPieces(panel.completedItemsCount)
+              ? QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT
+              : undefined
+          }
+          layout="desktop"
+          desktopClasses={d as unknown as PasoDosPanelDesktopClasses}
+        />
+      </div>
+    ) : null;
+
   const rapidWorkspace = (
     <QuoteConstructorWorkspace
       items={panel.items}
@@ -442,6 +485,7 @@ export function PasoDosSeccion({
       totalClienteManual={totalClienteManual}
       formatCurrencyInput={formatCurrencyInput}
       embeddedInQuoteStudio={showQuoteStudioRapidaLayout}
+      inspectorRailSlot={rapidInspectorRail}
       defaultLineTemplateId={constructorDefaultLineTemplateId}
       onDefaultLineTemplateChange={setConstructorDefaultLineTemplateId}
       onActiveItemChange={(itemId) => {
@@ -606,13 +650,15 @@ export function PasoDosSeccion({
               leftSurface
             )}
           </div>
-          <PasoDosPanelComponentes
-            {...panel}
-            activeDraftCard={activeDraftCard}
-            quoteStudioPanelMode="summary"
-            onViewFullBudget={() => setIsFullBudgetPreviewOpen(true)}
-            onContinueActiveDraft={panelListaProps.onContinueActiveDraft}
-          />
+          {!showQuoteStudioRapidaLayout ? (
+            <PasoDosPanelComponentes
+              {...panel}
+              activeDraftCard={activeDraftCard}
+              quoteStudioPanelMode="summary"
+              onViewFullBudget={() => setIsFullBudgetPreviewOpen(true)}
+              onContinueActiveDraft={panelListaProps.onContinueActiveDraft}
+            />
+          ) : null}
         </div>
       ) : (
         <div className={stepTwoLayoutClassName}>
