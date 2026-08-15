@@ -4,11 +4,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isMercadoPagoChileBillingReady } from "@/features/subscriptions/config/mercadopago-cl.config";
 import { createOrganizationSubscriptionRepository } from "@/features/subscriptions/repositories/organization-subscription.repository";
 import { resolveOrganizationSubscriptionState } from "@/features/subscriptions/services/subscription-status.service";
+import type { OrganizationSubscriptionSnapshot } from "@/features/subscriptions/types/subscription";
 import { getPlanLabel } from "@/features/subscriptions/types/subscription-summary";
 import type { SubscriptionSummary } from "@/features/subscriptions/types/subscription-summary";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
+
+function readOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
 export async function getSubscriptionSummary(
   organizationId: number
@@ -42,29 +47,31 @@ export async function getSubscriptionSummary(
   ]);
 
   const planCode =
-    (profile.plan_code as string) ?? recurringSubscription?.plan_code ?? null;
+    readOptionalString(profile.plan_code) ?? recurringSubscription?.plan_code ?? null;
   const paymentMethod =
-    (profile.payment_method as string) ?? recurringSubscription?.provider ?? null;
+    readOptionalString(profile.payment_method) ??
+    recurringSubscription?.provider ??
+    null;
   const subscriptionEndsAt =
     recurringSubscription?.current_period_ends_at ??
-    (profile.subscription_ends_at as string) ??
+    readOptionalString(profile.subscription_ends_at) ??
     null;
   const resolvedSubscription = resolveOrganizationSubscriptionState({
-    subscriptionStatus: (profile.subscription_status as string) ?? null,
-    trialStartedAt: (profile.trial_started_at as string) ?? null,
-    trialEndsAt: (profile.trial_ends_at as string) ?? null,
-    subscriptionStartedAt: (profile.subscription_started_at as string) ?? null,
-    subscriptionEndsAt: (profile.subscription_ends_at as string) ?? null,
-    planType: (profile.plan_type as string) ?? null,
-    planCode: (profile.plan_code as string) ?? null,
-    billingPeriod: (profile.billing_period as string) ?? null,
-    paymentMethod: (profile.payment_method as string) ?? null,
+    subscriptionStatus: readOptionalString(profile.subscription_status),
+    trialStartedAt: readOptionalString(profile.trial_started_at),
+    trialEndsAt: readOptionalString(profile.trial_ends_at),
+    subscriptionStartedAt: readOptionalString(profile.subscription_started_at),
+    subscriptionEndsAt: readOptionalString(profile.subscription_ends_at),
+    planType: readOptionalString(profile.plan_type),
+    planCode: readOptionalString(profile.plan_code),
+    billingPeriod: readOptionalString(profile.billing_period),
+    paymentMethod: readOptionalString(profile.payment_method),
     lastPaymentAt: null,
-    founderPriceLocked: (profile.founder_price_locked as boolean) ?? false,
-  });
+    founderPriceLocked: Boolean(profile.founder_price_locked),
+  } as Partial<OrganizationSubscriptionSnapshot>);
   const subscriptionStatus =
     resolvedSubscription.effectiveStatus ??
-    (profile.subscription_status as string) ??
+    readOptionalString(profile.subscription_status) ??
     recurringSubscription?.status ??
     null;
 
@@ -72,9 +79,15 @@ export async function getSubscriptionSummary(
     planCode,
     planLabel: getPlanLabel(planCode),
     amountClp:
-      (lastPayment?.amount_clp as number) ?? recurringSubscription?.amount ?? null,
+      (typeof lastPayment?.amount_clp === "number"
+        ? lastPayment.amount_clp
+        : null) ??
+      recurringSubscription?.amount ??
+      null,
     billingPeriod:
-      (profile.billing_period as string) ?? recurringSubscription?.billing_period ?? null,
+      readOptionalString(profile.billing_period) ??
+      recurringSubscription?.billing_period ??
+      null,
     paymentMethod,
     subscriptionStatus,
     subscriptionEndsAt,
@@ -89,6 +102,6 @@ export async function getSubscriptionSummary(
       recurringSubscription?.provider === "mercadopago" &&
       recurringSubscription.status === "active" &&
       isMercadoPagoChileBillingReady(),
-    founderPriceLocked: (profile.founder_price_locked as boolean) ?? false,
+    founderPriceLocked: Boolean(profile.founder_price_locked),
   };
 }
