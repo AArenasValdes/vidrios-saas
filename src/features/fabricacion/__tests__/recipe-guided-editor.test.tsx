@@ -284,7 +284,7 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
-    expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
+    expect(screen.getByText("Fabricación preparada")).toBeInTheDocument();
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     expect(profileList).toBeInTheDocument();
 
@@ -474,9 +474,7 @@ describe("RecipeGuidedEditor", () => {
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const cards = within(profileList).getAllByRole("listitem");
     expect(cards.length).toBeGreaterThanOrEqual(7);
-    expect(
-      within(profileList).getAllByText(/Tira estándar/i).length
-    ).toBeGreaterThanOrEqual(7);
+    expect(screen.getByText("Tira estándar")).toBeInTheDocument();
     fireEvent.click(within(cards[0]!).getByRole("button", { name: /Configurar|Editar/i }));
     expect(screen.getByPlaceholderText("0")).toBeInTheDocument();
     expect(
