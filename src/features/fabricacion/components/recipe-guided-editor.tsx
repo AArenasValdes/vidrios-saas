@@ -2019,6 +2019,9 @@ export function RecipeGuidedEditor({
             </b>
           </summary>
           <div className={s.fabPrepGroups}>
+            <p className={s.fabReviewLead}>
+              Aquí se define cómo fabricas esta ventana.
+            </p>
             {recipe.perfiles.length === 0 ? (
               recipe.identidad.tipologia === "personalizada" ? (
                 <div className={s.fabEmptyPersonalizada}>
@@ -2038,8 +2041,20 @@ export function RecipeGuidedEditor({
                   ) : null}
                 </div>
               ) : (
-                <div className={s.emptyInline}>
-                  Agrega el primer perfil para preparar esta fabricación.
+                <div className={s.fabReviewEmpty}>
+                  <p className={s.emptyInline}>
+                    Agrega el primer perfil para preparar esta fabricación.
+                  </p>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className={s.secondaryButton}
+                      onClick={addProfile}
+                    >
+                      <Plus size={15} />
+                      Agregar perfil
+                    </button>
+                  ) : null}
                 </div>
               )
             ) : (
@@ -2052,7 +2067,7 @@ export function RecipeGuidedEditor({
                   <span />
                   <span>Pieza</span>
                   <span>Descuento</span>
-                  <span>Tira usada</span>
+                  <span>Tira</span>
                   <span />
                   <span />
                 </div>
@@ -2180,9 +2195,7 @@ export function RecipeGuidedEditor({
                           tallerResumen.pendingDiscount ? "true" : "false"
                         }
                       >
-                        {tallerResumen.pendingDiscount
-                          ? "Falta descuento"
-                          : tallerResumen.descuentoLabel}
+                        {tallerResumen.descuentoCorto}
                       </span>
                       <span className={s.fabPieceTira}>{tiraCorta}</span>
                       {pieceStatus.label === "Lista" ||
@@ -2222,6 +2235,18 @@ export function RecipeGuidedEditor({
                 })}
               </section>
             ))}
+                {!readOnly ? (
+                  <div className={s.fabReviewAddRow}>
+                    <button
+                      type="button"
+                      className={s.secondaryButton}
+                      onClick={addProfile}
+                    >
+                      <Plus size={15} />
+                      Agregar perfil
+                    </button>
+                  </div>
+                ) : null}
           </div>
         )}
           </div>
@@ -2251,102 +2276,127 @@ export function RecipeGuidedEditor({
               <ChevronDown size={14} aria-hidden="true" />
             </b>
           </summary>
-        <section className={s.fabSheetGroup} aria-label="Accesorios">
+        <section className={`${s.fabSheetGroup} ${s.fabReviewBody}`} aria-label="Accesorios">
+          <p className={s.fabReviewLead}>
+            Revisa los accesorios que normalmente usas.
+          </p>
           {recipe.accesorios.length === 0 ? (
             <p className={s.emptyInline}>Sin accesorios sugeridos.</p>
           ) : (
-            recipe.accesorios.map((accessory) => {
-              const isEditing = editingAccessoryIds.has(accessory.id);
-              return (
-                <div
-                  key={accessory.id}
-                  className={s.fabAccessoryRow}
-                >
-                  <div className={s.fabPrepRowMain}>
-                    <span className={s.fabSheetFunction}>
-                      {accessory.nombre.trim() || "Accesorio"}
-                    </span>
-                    <span className={s.fabSheetMeasure}>
-                      {accessory.reglaCantidad.cantidad}{" "}
-                      {accessory.reglaCantidad.cantidad === 1
-                        ? "unidad"
-                        : "unidades"}
-                    </span>
-                  </div>
-                  {!readOnly ? (
-                    <button
-                      type="button"
-                      className={s.fabSheetEdit}
-                      aria-expanded={isEditing}
-                      onClick={() =>
-                        setEditingAccessoryIds((current) => {
-                          const next = new Set(current);
-                          if (next.has(accessory.id)) next.delete(accessory.id);
-                          else next.add(accessory.id);
-                          return next;
-                        })
-                      }
-                    >
-                      Editar
-                    </button>
-                  ) : null}
-                  {isEditing ? (
-                    <div className={s.fabDrawerForm}>
-                      <label>
-                        <span>Nombre</span>
-                        <input
-                          value={accessory.nombre}
-                          onChange={(event) =>
-                            onRecipeChange({
-                              ...recipe,
-                              accesorios: recipe.accesorios.map((entry) =>
-                                entry.id === accessory.id
-                                  ? { ...entry, nombre: event.target.value }
-                                  : entry
-                              ),
+            <div className={s.fabAccessoryTable}>
+              <div className={s.fabAccessoryCols} aria-hidden="true">
+                <span>Accesorio</span>
+                <span>Cantidad</span>
+                <span />
+              </div>
+              {recipe.accesorios.map((accessory) => {
+                const isEditing = editingAccessoryIds.has(accessory.id);
+                return (
+                  <div
+                    key={accessory.id}
+                    className={s.fabAccessoryRow}
+                    data-editing={isEditing ? "true" : "false"}
+                  >
+                    <div className={s.fabAccessoryRowHead}>
+                      <div className={s.fabPrepRowMain}>
+                        <span className={s.fabSheetFunction}>
+                          {accessory.nombre.trim() || "Accesorio"}
+                        </span>
+                      </div>
+                      <span className={s.fabAccessoryQty}>
+                        {accessory.reglaCantidad.cantidad}{" "}
+                        {accessory.reglaCantidad.cantidad === 1
+                          ? "unidad"
+                          : "unidades"}
+                      </span>
+                      {!readOnly ? (
+                        <button
+                          type="button"
+                          className={s.fabSheetEdit}
+                          aria-expanded={isEditing}
+                          onClick={() =>
+                            setEditingAccessoryIds((current) => {
+                              const next = new Set(current);
+                              if (next.has(accessory.id)) next.delete(accessory.id);
+                              else next.add(accessory.id);
+                              return next;
                             })
                           }
-                          disabled={readOnly}
-                        />
-                      </label>
-                      <label>
-                        <span>Cantidad</span>
-                        <input
-                          type="number"
-                          min={1}
-                          value={accessory.reglaCantidad.cantidad}
-                          onChange={(event) =>
-                            onRecipeChange({
-                              ...recipe,
-                              accesorios: recipe.accesorios.map((entry) =>
-                                entry.id === accessory.id
-                                  ? {
-                                      ...entry,
-                                      reglaCantidad: {
-                                        ...entry.reglaCantidad,
-                                        cantidad: positiveNumber(event.target.value),
-                                      },
-                                    }
-                                  : entry
-                              ),
-                            })
-                          }
-                          disabled={readOnly}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className={s.dangerTextButton}
-                        onClick={() => removeAccessory(accessory.id)}
-                      >
-                        <Trash2 size={15} /> Eliminar
-                      </button>
+                        >
+                          {isEditing ? "Cerrar" : "Editar"}
+                        </button>
+                      ) : null}
                     </div>
-                  ) : null}
-                </div>
-              );
-            })
+                    {isEditing ? (
+                      <div className={s.fabAccessoryEdit}>
+                        <label>
+                          <span>Nombre</span>
+                          <input
+                            value={accessory.nombre}
+                            onChange={(event) =>
+                              onRecipeChange({
+                                ...recipe,
+                                accesorios: recipe.accesorios.map((entry) =>
+                                  entry.id === accessory.id
+                                    ? { ...entry, nombre: event.target.value }
+                                    : entry
+                                ),
+                              })
+                            }
+                            disabled={readOnly}
+                          />
+                        </label>
+                        <label>
+                          <span>Cantidad</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={accessory.reglaCantidad.cantidad}
+                            onChange={(event) =>
+                              onRecipeChange({
+                                ...recipe,
+                                accesorios: recipe.accesorios.map((entry) =>
+                                  entry.id === accessory.id
+                                    ? {
+                                        ...entry,
+                                        reglaCantidad: {
+                                          ...entry.reglaCantidad,
+                                          cantidad: positiveNumber(event.target.value),
+                                        },
+                                      }
+                                    : entry
+                                ),
+                              })
+                            }
+                            disabled={readOnly}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className={s.dangerTextButton}
+                          onClick={() => removeAccessory(accessory.id)}
+                        >
+                          <Trash2 size={15} /> Eliminar
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           )}
+          {!readOnly ? (
+            <div className={s.fabReviewAddRow}>
+              <button
+                type="button"
+                className={s.secondaryButton}
+                onClick={addAccessory}
+              >
+                <Plus size={15} />
+                Agregar accesorio
+              </button>
+            </div>
+          ) : null}
         </section>
         </details>
 
@@ -2375,30 +2425,45 @@ export function RecipeGuidedEditor({
               <ChevronDown size={14} aria-hidden="true" />
             </b>
           </summary>
-        <section className={s.fabSheetGroup} aria-label="Vidrio">
+        <section className={`${s.fabSheetGroup} ${s.fabReviewBody}`} aria-label="Vidrio">
+          <p className={s.fabReviewLead}>
+            Revisa el vidrio base para esta línea.
+          </p>
           {recipe.vidrios.length === 0 ? (
             <p className={s.emptyInline}>Esta ventana no tiene vidrio preparado.</p>
           ) : (
-            <div className={s.fabAccessoryRow}>
-              <div className={s.fabPrepRowMain}>
-                <span className={s.fabSheetFunction}>
-                  {Math.max(1, recipe.identidad.hojas)}{" "}
-                  {recipe.identidad.hojas === 1 ? "vidrio" : "vidrios"}
-                </span>
-                <span className={s.fabSheetMeasure}>
-                  Medida preliminar según ancho y alto.
-                </span>
+            <div className={s.fabAccessoryTable}>
+              <div className={s.fabAccessoryCols} aria-hidden="true">
+                <span>Vidrio</span>
+                <span>Detalle</span>
+                <span />
               </div>
-              {!readOnly ? (
-                <button
-                  type="button"
-                  className={s.fabSheetEdit}
-                  aria-expanded={showGlassEditor}
-                  onClick={() => setShowGlassEditor((current) => !current)}
-                >
-                  Editar
-                </button>
-              ) : null}
+              <div
+                className={s.fabAccessoryRow}
+                data-editing={showGlassEditor ? "true" : "false"}
+              >
+                <div className={s.fabAccessoryRowHead}>
+                  <div className={s.fabPrepRowMain}>
+                    <span className={s.fabSheetFunction}>
+                      {Math.max(1, recipe.identidad.hojas)}{" "}
+                      {recipe.identidad.hojas === 1 ? "vidrio" : "vidrios"}
+                    </span>
+                  </div>
+                  <span className={s.fabAccessoryQty}>
+                    Medida preliminar
+                  </span>
+                  {!readOnly ? (
+                    <button
+                      type="button"
+                      className={s.fabSheetEdit}
+                      aria-expanded={showGlassEditor}
+                      onClick={() => setShowGlassEditor((current) => !current)}
+                    >
+                      {showGlassEditor ? "Cerrar" : "Editar"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             </div>
           )}
           {recipe.vidrios.some(
@@ -2411,7 +2476,7 @@ export function RecipeGuidedEditor({
             </p>
           ) : null}
           {showGlassEditor ? (
-            <div className={s.fabDrawerForm}>
+            <div className={s.fabGlassEdit}>
               {!readOnly ? (
                 <button type="button" className={s.secondaryButton} onClick={addGlass}>
                   <Plus size={16} /> Agregar vidrio
@@ -2460,23 +2525,13 @@ export function RecipeGuidedEditor({
           }
         >
           <summary className={s.fabAdvancedSummary}>
-            <span>Opciones avanzadas</span>
+            <span>Ajustes de corte (opcional)</span>
             <ChevronRight size={16} aria-hidden="true" />
           </summary>
           <p className={s.fabAdvancedHint}>
-            Solo necesitas esto si tu taller trabaja distinto.
+            Solo cambia esto si quieres ajustar cómo Ventora distribuye los
+            cortes en las tiras.
           </p>
-          {!readOnly ? (
-            <button type="button" className={s.secondaryButton} onClick={addProfile}>
-              <Plus size={16} />
-              Agregar perfil
-            </button>
-          ) : null}
-          {!readOnly ? (
-            <button type="button" className={s.secondaryButton} onClick={addAccessory}>
-              <Plus size={16} /> Agregar accesorio
-            </button>
-          ) : null}
           <div className={s.fabAdvancedFields}>
             <label>
               <span>Pérdida por corte (mm)</span>

@@ -260,6 +260,7 @@ export function describePerfilTallerResumen(
   medida: string;
   cortesMedida: string;
   descuento: string | null;
+  descuentoCorto: string;
   descuentoLabel: string;
   pendingDiscount: boolean;
   line: string;
@@ -276,6 +277,9 @@ export function describePerfilTallerResumen(
     ajuste != null && ajuste !== 0
       ? `descuento ${Math.abs(ajuste).toLocaleString("es-CL")} mm`
       : null;
+  const descuentoCorto = pendingDiscount
+    ? "Falta descuento"
+    : `${ajuste?.toLocaleString("es-CL") ?? "0"} mm`;
   const descuentoLabel = pendingDiscount
     ? "Falta descuento para corte"
     : `Descuento: ${ajuste?.toLocaleString("es-CL") ?? "0"} mm`;
@@ -285,6 +289,7 @@ export function describePerfilTallerResumen(
     medida,
     cortesMedida,
     descuento,
+    descuentoCorto,
     descuentoLabel,
     pendingDiscount,
     line: [cortes, medida, descuento].filter(Boolean).join(" · "),

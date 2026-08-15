@@ -410,7 +410,6 @@ describe("RecipeGuidedEditor", () => {
     );
 
     const initialProfiles = currentRecipe.perfiles.length;
-    fireEvent.click(screen.getByText("Opciones avanzadas"));
     fireEvent.click(screen.getByRole("button", { name: /Agregar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles + 1);
 
@@ -424,7 +423,7 @@ describe("RecipeGuidedEditor", () => {
       screen.getByLabelText("Vidrio").closest("details")?.querySelector("summary") as HTMLElement
     );
     const vidrioSection = screen.getByLabelText("Vidrio");
-    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Editar$/i }));
+    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^(Editar|Cerrar)$/i }));
     const initialGlass = currentRecipe.vidrios.length;
     fireEvent.click(screen.getByRole("button", { name: /Agregar vidrio/i }));
     expect(currentRecipe.vidrios).toHaveLength(initialGlass + 1);
@@ -437,19 +436,19 @@ describe("RecipeGuidedEditor", () => {
     expect(currentRecipe.vidrios.some((glass) => glass.id === addedGlassId)).toBe(false);
     expect(currentRecipe.vidrios).toHaveLength(initialGlass);
 
+    fireEvent.click(
+      screen.getByLabelText("Accesorios").closest("details")?.querySelector("summary") as HTMLElement
+    );
     const initialAccessories = currentRecipe.accesorios.length;
     fireEvent.click(screen.getByRole("button", { name: /Agregar accesorio/i }));
     expect(currentRecipe.accesorios).toHaveLength(initialAccessories + 1);
     const addedAccessoryId = currentRecipe.accesorios.at(-1)?.id;
-    fireEvent.click(
-      screen.getByLabelText("Accesorios").closest("details")?.querySelector("summary") as HTMLElement
-    );
     const accessoryRows = within(screen.getByLabelText("Accesorios")).getAllByRole("button", {
-      name: /^Editar$/i,
+      name: /^(Editar|Cerrar)$/i,
     });
     fireEvent.click(accessoryRows.at(-1)!);
     const addedAccessoryInput = screen.getByDisplayValue("Accesorio");
-    const accessoryEditor = addedAccessoryInput.closest("div")?.parentElement;
+    const accessoryEditor = addedAccessoryInput.closest("label")?.parentElement;
     expect(accessoryEditor).toBeTruthy();
     fireEvent.click(
       within(accessoryEditor as HTMLElement).getByRole("button", { name: /Eliminar/i })
