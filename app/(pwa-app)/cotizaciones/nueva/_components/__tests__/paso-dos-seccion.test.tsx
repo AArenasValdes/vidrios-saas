@@ -64,6 +64,22 @@ jest.mock("../paso-dos/paso-dos-agregar-grupo-sheet", () => {
   };
 });
 
+jest.mock(
+  "@/features/cotizaciones/visual-composer/components/quote-constructor-workspace",
+  () => ({
+    QuoteConstructorWorkspace: () => (
+      <section data-testid="quote-constructor-workspace">Cotización rápida</section>
+    ),
+  })
+);
+
+jest.mock(
+  "@/features/cotizaciones/visual-composer/components/despiece-review-surface",
+  () => ({
+    DespieceReviewSurface: () => null,
+  })
+);
+
 type PasoDosSeccionProps = ComponentProps<typeof PasoDosSeccion>;
 
 function buildProps(
@@ -308,5 +324,27 @@ describe("PasoDosSeccion desktop", () => {
 
     expect(onSelectMode).toHaveBeenCalledWith("total_global");
     expect(onOpenFreeTotalNotebook).toHaveBeenCalledTimes(1);
+  });
+
+  it("en total global muestra el cuaderno digital aunque la preferencia sea cotización rápida", () => {
+    render(
+      <PasoDosSeccion
+        {...buildProps({
+          preferredWorkspaceMode: "rapida",
+          quoteModeChosen: true,
+          quotePricingMode: "total_global",
+          addGroupSheetProps: {
+            isOpen: true,
+            paso: 4,
+            entryMode: "free_total_single",
+            onClose: jest.fn(),
+          } as unknown as PasoDosSeccionProps["addGroupSheetProps"],
+        })}
+      />
+    );
+
+    expect(screen.getByTestId("group-wizard")).toBeInTheDocument();
+    expect(screen.queryByTestId("quote-constructor-workspace")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /Cotización rápida/i })).not.toBeInTheDocument();
   });
 });

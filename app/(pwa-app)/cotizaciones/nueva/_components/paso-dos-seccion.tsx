@@ -165,7 +165,6 @@ export function PasoDosSeccion({
   useEffect(() => {
     if (
       isMobileViewport ||
-      desktopWorkspaceMode === "rapida" ||
       !quoteModeChosen ||
       quotePricingMode !== "total_global" ||
       itemLibreForm.isOpen ||
@@ -175,10 +174,11 @@ export function PasoDosSeccion({
       return;
     }
 
+    // Cotizar por total siempre abre el cuaderno digital, aunque la
+    // preferencia desktop sea "Cotización rápida" (esa aplica solo a por ítems).
     onOpenFreeTotalNotebook();
   }, [
     isMobileViewport,
-    desktopWorkspaceMode,
     quoteModeChosen,
     quotePricingMode,
     itemLibreForm.isOpen,
@@ -199,7 +199,10 @@ export function PasoDosSeccion({
     !itemLibreForm.isOpen &&
     !showModeChoice;
   const showRapidaWorkspace =
-    !isMobileViewport && quoteModeChosen && desktopWorkspaceMode === "rapida";
+    !isMobileViewport &&
+    quoteModeChosen &&
+    quotePricingMode === "por_item" &&
+    desktopWorkspaceMode === "rapida";
   const pieceEditionHeadline = addGroupSheetProps.draft
     ? resolveQuoteStudioPieceEditionHeadline({ duplicateSourceCode })
     : "";
@@ -555,24 +558,26 @@ export function PasoDosSeccion({
                 : ""}
             </span>
           </div>
-          <div
-            className={d.desktopWorkspaceModeTabs}
-            role="tablist"
-            aria-label="Modo de trabajo de componentes"
-          >
-            {(["rapida", "guiada"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                role="tab"
-                aria-selected={desktopWorkspaceMode === mode}
-                className={desktopWorkspaceMode === mode ? d.desktopWorkspaceModeActive : ""}
-                onClick={() => setWorkspaceMode(mode)}
-              >
-                {QUOTE_DESKTOP_WORKSPACE_MODE_LABELS[mode]}
-              </button>
-            ))}
-          </div>
+          {quotePricingMode === "por_item" ? (
+            <div
+              className={d.desktopWorkspaceModeTabs}
+              role="tablist"
+              aria-label="Modo de trabajo de componentes"
+            >
+              {(["rapida", "guiada"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={desktopWorkspaceMode === mode}
+                  className={desktopWorkspaceMode === mode ? d.desktopWorkspaceModeActive : ""}
+                  onClick={() => setWorkspaceMode(mode)}
+                >
+                  {QUOTE_DESKTOP_WORKSPACE_MODE_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className={d.desktopComponentsHeaderMeta}>
             <span className={d.desktopComponentsSaveChip} aria-live="polite">
               {isSaving ? "Guardando…" : "Autoguardado activo"}
