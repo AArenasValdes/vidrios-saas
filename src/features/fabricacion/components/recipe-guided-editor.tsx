@@ -45,8 +45,7 @@ import {
   crearAccesorioFabricacionVacio,
   crearPerfilFabricacionVacio,
   crearVidrioFabricacionVacio,
-  countProfilesGeometricallyPending,
-  countProfilesReadyForPauta,
+  contarBloqueosCriticosReceta,
   patchFabricacionPerfil,
   reorderFabricacionItems,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
@@ -63,19 +62,15 @@ import {
   type TallerPerfilRef,
 } from "@/features/fabricacion/services/taller-perfiles.service";
 import {
-  describeAccesorioReglaHumana,
-  describeAccesorioSheetLabel,
-  describePerfilSheetMeasure,
+  describePerfilTallerResumen,
   describeProfileRuleLegacy,
   formatLargoComercialCorto,
   groupProfilesForSheet,
   labelBaseMedida,
   labelReglaCantidadTipo,
   profileTieneOverrideLargoComercial,
-  resolveLargoComercialLabel,
   resolveTiraEstandarRecetaLabel,
   type FabricacionSheetGroupId,
-  VENTORA_LARGO_COMERCIAL_PRESET_MM,
 } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import {
   type CotizacionLineTemplateMaterial,
@@ -132,6 +127,8 @@ function positiveDecimal(value: string, fallback = 1) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+const TIRA_QUICK_MM = [6000, 5800, 6100, 6400] as const;
+
 function exactConditionValue(
   value: FabricacionCondicion["hojas"] | FabricacionCondicion["modulos"]
 ) {
@@ -157,19 +154,6 @@ const AJUSTE_DOCUMENTADO_OBS_RE =
   /ajuste documentado|descuento documentado|documentad[oa] en ventora|sugerido por plantilla|regla documentada/i;
 
 type AdjustmentDisplayState = "pending" | "suggested" | "custom" | "set";
-
-function resolveSheetBadge(
-  pending: boolean,
-  optionalNotes?: string[]
-): { label: "Listo" | "Por revisar" | "Opcional"; tone: "ready" | "review" | "optional" } {
-  if (pending) return { label: "Por revisar", tone: "review" };
-  if ((optionalNotes?.length ?? 0) > 0) return { label: "Opcional", tone: "optional" };
-  return { label: "Listo", tone: "ready" };
-}
-
-function optionalPendingNotes(notes?: string[]) {
-  return (notes ?? []).filter((detail) => !AJUSTE_PENDIENTE_RE.test(detail));
-}
 
 function hasPendingAdjustment(
   profile: FabricacionReceta["perfiles"][number]
@@ -397,7 +381,11 @@ export function RecipeGuidedEditor({
   );
   const [showGlassEditor, setShowGlassEditor] = useState(false);
   const [showHabitualLengthPicker, setShowHabitualLengthPicker] = useState(false);
+  const [showCustomTira, setShowCustomTira] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [openReview, setOpenReview] = useState<
+    "piezas" | "accesorios" | "vidrio" | null
+  >(null);
   const [hoverPreviewZone, setHoverPreviewZone] =
     useState<FabricacionPreviewZone>(null);
   const [isPersistingDrawer, setIsPersistingDrawer] = useState(false);
@@ -484,48 +472,6 @@ export function RecipeGuidedEditor({
     () => groupProfilesForSheet(recipe.perfiles),
     [recipe.perfiles]
   );
-
-  const geometricPendingCount = useMemo(
-    () => countProfilesGeometricallyPending(recipe),
-    [recipe]
-  );
-
-  const profileProgress = useMemo(() => {
-    const total = recipe.perfiles.length;
-    const ready = countProfilesReadyForPauta(recipe);
-    return {
-      total,
-      ready,
-      pending: total - ready,
-      geometricPending: geometricPendingCount,
-    };
-  }, [recipe, geometricPendingCount]);
-
-  const accessoryPendingCount = useMemo(
-    () =>
-      recipe.accesorios.filter(
-        (accessory) => describeAccesorioSheetLabel(accessory).pending
-      ).length,
-    [recipe.accesorios]
-  );
-  const optionalPendingCount = useMemo(
-    () =>
-      recipe.perfiles.filter(
-        (profile) =>
-          !describePerfilSheetMeasure(profile).pending &&
-          optionalPendingNotes(profile.datosPendientes).length > 0
-      ).length,
-    [recipe.perfiles]
-  );
-  const reviewTotal =
-    profileProgress.geometricPending + accessoryPendingCount + optionalPendingCount;
-
-  const firstPendingProfileId = useMemo(() => {
-    for (const profile of recipe.perfiles) {
-      if (describePerfilSheetMeasure(profile).pending) return profile.id;
-    }
-    return null;
-  }, [recipe.perfiles]);
 
   const drawerProfile = drawerProfileId
     ? recipe.perfiles.find((entry) => entry.id === drawerProfileId) ?? null
@@ -751,13 +697,17 @@ export function RecipeGuidedEditor({
     setDrawerProfileId(profileId);
   };
 
-  const openNextPendingProfile = () => {
-    if (firstPendingProfileId) {
-      openProfileDrawer(firstPendingProfileId);
-      return;
-    }
-    const first = recipe.perfiles[0];
-    if (first) openProfileDrawer(first.id);
+  const applyRecipeTira = (nextValue: number) => {
+    onRecipeChange({
+      ...recipe,
+      configuracionCorte: {
+        perdidaCorteMm: recipe.configuracionCorte?.perdidaCorteMm ?? null,
+        despunteInicialMm: recipe.configuracionCorte?.despunteInicialMm ?? null,
+        sobranteMinimoAprovechableMm:
+          recipe.configuracionCorte?.sobranteMinimoAprovechableMm ?? null,
+        largoComercialDefaultMm: nextValue,
+      },
+    });
   };
 
   const persistDrawerRecipe = async (options?: {
@@ -849,10 +799,8 @@ export function RecipeGuidedEditor({
     const showSuggestedBadge = adjustmentState === "suggested";
     const showCustomBadge = adjustmentState === "custom";
     const currentAdjustment = profile.reglaMedida.ajusteMm;
-    const sheetMeasure = describePerfilSheetMeasure(profile);
     const groupBadge = resolveProfileGroupBadge(profile.funcion);
     const pieceName = profile.funcion.trim() || `Perfil ${index + 1}`;
-    const isConfigured = !sheetMeasure.pending;
     const previewZone = resolvePreviewZoneFromFuncion(profile.funcion);
     const hasPrev = index > 0;
     const hasNext = index < recipe.perfiles.length - 1;
@@ -869,15 +817,9 @@ export function RecipeGuidedEditor({
               <span className={s.fabDrawerBadge} data-group={groupBadge.id}>
                 {groupBadge.label}
               </span>
-              <span
-                className={s.fabDrawerStatus}
-                data-tone={isConfigured ? "ready" : "pending"}
-              >
-                {isConfigured ? "Configurado" : "Pendiente"}
-              </span>
             </div>
             <h2>{pieceName}</h2>
-            <p>Edita cómo lo corta tu taller</p>
+            <p>Cambia solo si tu taller lo corta distinto</p>
           </div>
           <button
             type="button"
@@ -926,7 +868,7 @@ export function RecipeGuidedEditor({
               <dd>{pieceName}</dd>
             </div>
             <div>
-              <dt>Se calcula según</dt>
+              <dt>Medida</dt>
               <dd>{labelBaseMedida(profile.reglaMedida.base, "human")}</dd>
             </div>
             <div>
@@ -939,10 +881,9 @@ export function RecipeGuidedEditor({
               </dd>
             </div>
             <div>
-              <dt>Largo comercial</dt>
+              <dt>Cantidad de cortes</dt>
               <dd>
-                {formatLargoComercialCorto(profile.largoComercialMm) ??
-                  "Pendiente"}
+                {Math.max(1, Math.round(profile.reglaCantidad.cantidad))}
               </dd>
             </div>
           </dl>
@@ -952,7 +893,7 @@ export function RecipeGuidedEditor({
           <section className={s.fabDrawerSection}>
             <h3>Medida de corte</h3>
             <label>
-              <span>Calcular según</span>
+              <span>Medida</span>
               <select
                 value={profile.reglaMedida.base}
                 onChange={(event) =>
@@ -968,14 +909,14 @@ export function RecipeGuidedEditor({
               >
                 {FABRICACION_BASES_MEDIDA.map((base) => (
                   <option key={base} value={base}>
-                    {labelBaseMedida(base, "technical")}
+                    {labelBaseMedida(base, "human")}
                   </option>
                 ))}
               </select>
             </label>
             <div className={s.fabDrawerAdjustment}>
               <label>
-                <span>Ajuste (mm)</span>
+                <span>Descuento (mm)</span>
                 <input
                   ref={drawerAdjustmentRef}
                   type="number"
@@ -988,14 +929,18 @@ export function RecipeGuidedEditor({
                 />
               </label>
               {showSuggestedBadge ? (
-                <span className={s.recipeBuildSuggestedBadge}>Sugerido</span>
+                <span className={s.recipeBuildSuggestedBadge}>
+                  Sugerido por Ventora
+                </span>
               ) : null}
               {showCustomBadge ? (
-                <span className={s.recipeBuildCustomBadge}>Personalizado</span>
+                <span className={s.recipeBuildCustomBadge}>
+                  Cambiaste este valor
+                </span>
               ) : null}
             </div>
             <p className={s.fabDrawerHint}>
-              Usa negativo si tu taller descuenta mm al corte (ej. jamba −3 mm).
+              Es lo que se resta a la medida antes de cortar.
             </p>
           </section>
 
@@ -1059,7 +1004,7 @@ export function RecipeGuidedEditor({
           </section>
 
           <section className={s.fabDrawerSection}>
-            <h3>Identidad de la pieza</h3>
+            <h3>Identificar perfil (opcional)</h3>
             <label>
               <span>Función</span>
               <input
@@ -1089,7 +1034,9 @@ export function RecipeGuidedEditor({
               />
             </label>
             <div className={s.fabDrawerFieldBlock}>
-              <span className={s.fabDrawerFieldLabel}>Código / perfil</span>
+              <span className={s.fabDrawerFieldLabel}>
+                Código de fabricante (opcional)
+              </span>
               <RecipeProfileReferencePicker
                 profile={profile}
                 recipe={recipe}
@@ -1837,72 +1784,122 @@ export function RecipeGuidedEditor({
         </section>
       ) : null}
       <section id="recipe-components" className={`${s.recipeBuildCard} ${s.fabSheet} ${s.fabPrepFlow}`}>
-        <header className={s.fabPrepHero}>
+        <header className={s.fabPrepPageHead}>
+          <h2>Así fabricas esta ventana</h2>
+          <p>
+            Ventora ya preparó las medidas y piezas habituales. Revisa solo si
+            en tu taller lo haces distinto.
+          </p>
+        </header>
+
+        <section className={s.fabPrepHero} aria-label="Fabricación preparada">
           <div className={s.fabPrepHeroMain}>
-            <h2>Fabricación preparada</h2>
-            <p>
-              Revisa pendientes y prueba con una medida real.
+            <h3>Fabricación preparada</h3>
+            <p className={s.fabPrepHeroLead}>
+              {selectedTypologyOption.label.replace(/\s*\d+H$/i, "")}
+              {recipe.identidad.hojas > 0
+                ? ` · ${recipe.identidad.hojas} ${
+                    recipe.identidad.hojas === 1 ? "hoja" : "hojas"
+                  }`
+                : ""}
             </p>
             <ul className={s.fabPrepStats} aria-label="Resumen de fabricación">
               <li>
-                <span>Tipología</span>
-                <strong>{selectedTypologyOption.label}</strong>
-              </li>
-              <li>
-                <span>Hojas</span>
-                <strong>{recipe.identidad.hojas}</strong>
-              </li>
-              <li>
-                <span>Funciones</span>
                 <strong>{recipe.perfiles.length}</strong>
+                <span>
+                  {recipe.perfiles.length === 1 ? "pieza" : "piezas"}
+                </span>
               </li>
               <li>
-                <span>Accesorios</span>
                 <strong>{recipe.accesorios.length}</strong>
+                <span>
+                  {recipe.accesorios.length === 1 ? "accesorio" : "accesorios"}
+                </span>
               </li>
               <li>
-                <span>Tira estándar</span>
+                <strong>{recipe.vidrios.length}</strong>
+                <span>{recipe.vidrios.length === 1 ? "vidrio" : "vidrios"}</span>
+              </li>
+              <li>
                 <strong>{tiraEstandarLabel}</strong>
-                {!readOnly ? (
-                  <button
-                    type="button"
-                    className={s.fabLengthBarChange}
-                    aria-expanded={showHabitualLengthPicker}
-                    onClick={() =>
-                      setShowHabitualLengthPicker((current) => !current)
-                    }
-                  >
-                    Cambiar
-                  </button>
-                ) : null}
+                <span>Tira que compras</span>
               </li>
             </ul>
-            {!readOnly && showHabitualLengthPicker ? (
-              <div className={s.fabLengthBarPicker}>
-                <RecipeCommercialLengthPicker
-                  value={tiraEstandarMm}
-                  usedByWorkshop={frequentLargos.usedByWorkshop}
-                  otherFrequent={frequentLargos.otherFrequent}
-                  readOnly={readOnly}
-                  onChange={(nextValue) => {
-                    if (nextValue != null) {
-                      onRecipeChange({
-                        ...recipe,
-                        configuracionCorte: {
-                          perdidaCorteMm:
-                            recipe.configuracionCorte?.perdidaCorteMm ?? null,
-                          despunteInicialMm:
-                            recipe.configuracionCorte?.despunteInicialMm ?? null,
-                          sobranteMinimoAprovechableMm:
-                            recipe.configuracionCorte?.sobranteMinimoAprovechableMm ??
-                            null,
-                          largoComercialDefaultMm: nextValue,
-                        },
-                      });
-                    }
-                    setShowHabitualLengthPicker(false);
-                  }}
-                />
+            <p className={s.fabPrepHeroHint}>
+              Puedes continuar así. Cambia algo solo si tu taller trabaja
+              distinto.
+            </p>
+            <div className={s.fabPrepTiraRow}>
+              <div>
+                <strong>Tira que compras</strong>
+                <span>Ventora usa tiras de 6 m por defecto.</span>
+              </div>
+              {!readOnly ? (
+                <button
+                  type="button"
+                  className={s.fabLengthBarChange}
+                  aria-expanded={showHabitualLengthPicker}
+                  onClick={() =>
+                    setShowHabitualLengthPicker((current) => {
+                      const next = !current;
+                      if (next) {
+                        setShowCustomTira(
+                          !(TIRA_QUICK_MM as readonly number[]).includes(
+                            tiraEstandarMm
+                          )
+                        );
+                      } else {
+                        setShowCustomTira(false);
+                      }
+                      return next;
+                    })
+                  }
+                >
+                  Cambiar
+                </button>
+              ) : null}
+            </div>
+            {showHabitualLengthPicker ? (
+              <div className={s.fabPrepTiraChoices}>
+                {TIRA_QUICK_MM.map((largo) => (
+                  <button
+                    key={largo}
+                    type="button"
+                    className={s.fabPrepTiraChip}
+                    data-selected={tiraEstandarMm === largo ? "true" : "false"}
+                    onClick={() => {
+                      applyRecipeTira(largo);
+                      setShowHabitualLengthPicker(false);
+                    }}
+                  >
+                    {(largo / 1000).toLocaleString("es-CL", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    m
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={s.fabPrepTiraChip}
+                  data-selected={showCustomTira ? "true" : "false"}
+                  onClick={() => setShowCustomTira(true)}
+                >
+                  Otro
+                </button>
+                {showCustomTira ? (
+                  <RecipeCommercialLengthPicker
+                    value={tiraEstandarMm}
+                    usedByWorkshop={frequentLargos.usedByWorkshop}
+                    otherFrequent={frequentLargos.otherFrequent}
+                    readOnly={readOnly}
+                    onChange={(nextValue) => {
+                      if (nextValue != null) applyRecipeTira(nextValue);
+                      setShowHabitualLengthPicker(false);
+                      setShowCustomTira(false);
+                    }}
+                  />
+                ) : null}
               </div>
             ) : null}
             {!readOnly && onContinueToTest && recipe.perfiles.length > 0 ? (
@@ -1923,79 +1920,97 @@ export function RecipeGuidedEditor({
             size="sm"
             className={s.fabSheetPreview}
           />
-        </header>
+        </section>
 
-        {reviewTotal > 0 ? (
-          <section className={s.fabPrepPending} aria-label="Pendientes por revisar">
-            <header className={s.fabPrepPendingHead}>
-              <div>
-                <h3>Pendientes por revisar</h3>
-                <p>Completa solo lo que falte antes de probar.</p>
-              </div>
-              <span className={s.fabPrepBadge} data-tone="review">
-                {reviewTotal} {reviewTotal === 1 ? "pendiente" : "pendientes"}
-              </span>
-            </header>
-            <ul className={s.fabPrepPendingCounts}>
-              {profileProgress.geometricPending > 0 ? (
-                <li>
-                  <strong>{profileProgress.geometricPending}</strong>
-                  <span>
-                    {profileProgress.geometricPending === 1
-                      ? "sin medida de corte"
-                      : "sin medida de corte"}
-                  </span>
-                </li>
-              ) : null}
-              {accessoryPendingCount > 0 ? (
-                <li>
-                  <strong>{accessoryPendingCount}</strong>
-                  <span>
-                    {accessoryPendingCount === 1
-                      ? "accesorio por revisar"
-                      : "accesorios por revisar"}
-                  </span>
-                </li>
-              ) : null}
-              {optionalPendingCount > 0 ? (
-                <li>
-                  <strong>{optionalPendingCount}</strong>
-                  <span>
-                    {optionalPendingCount === 1
-                      ? "dato opcional"
-                      : "datos opcionales"}
-                  </span>
-                </li>
-              ) : null}
-            </ul>
-            {!readOnly ? (
-              <button
-                type="button"
-                className={`${s.secondaryButton} ${s.fabSheetContinueBtn}`}
-                onClick={openNextPendingProfile}
-              >
-                Revisar pendientes
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            ) : null}
-          </section>
+        {recipe.perfiles.length === 0 ||
+        contarBloqueosCriticosReceta(recipe) > 0 ? (
+          <p className={s.fabPrepBlockWarn}>
+            Falta lo mínimo para calcular. Revisa las piezas de la ventana.
+          </p>
         ) : null}
 
-        <div className={s.fabPrepGroups}>
-        <div className={s.fabPrepGroupsHead}>
-          <h3>Componentes</h3>
-          {!readOnly ? (
-            <button type="button" className={s.fabGhostAction} onClick={addProfile}>
-              <Plus size={15} />
-              Agregar perfil
-            </button>
-          ) : (
+        <section className={s.fabPrepChange} aria-label="Hay algo que quieras cambiar">
+          <header>
+            <h3>¿Hay algo que quieras cambiar?</h3>
+            <p>Es opcional. Ventora puede calcular con la configuración preparada.</p>
+          </header>
+          <div className={s.fabPrepChangeGrid}>
+            <article>
+              <strong>Piezas</strong>
+              <span>
+                {recipe.perfiles.length}{" "}
+                {recipe.perfiles.length === 1
+                  ? "pieza preparada"
+                  : "piezas preparadas"}
+              </span>
+              <button
+                type="button"
+                className={s.fabGhostAction}
+                onClick={() => setOpenReview("piezas")}
+              >
+                Revisar piezas
+              </button>
+            </article>
+            <article>
+              <strong>Accesorios</strong>
+              <span>
+                {recipe.accesorios.length}{" "}
+                {recipe.accesorios.length === 1
+                  ? "accesorio sugerido"
+                  : "accesorios sugeridos"}
+              </span>
+              <button
+                type="button"
+                className={s.fabGhostAction}
+                onClick={() => setOpenReview("accesorios")}
+              >
+                Revisar accesorios
+              </button>
+            </article>
+            <article>
+              <strong>Vidrio</strong>
+              <span>
+                {recipe.vidrios.length === 1
+                  ? "1 vidrio por hoja"
+                  : recipe.vidrios.length === 0
+                    ? "Sin vidrio"
+                    : `${recipe.vidrios.length} vidrios`}
+              </span>
+              <button
+                type="button"
+                className={s.fabGhostAction}
+                onClick={() => setOpenReview("vidrio")}
+              >
+                Revisar vidrio
+              </button>
+            </article>
+          </div>
+        </section>
+
+        <details
+          className={s.fabReviewAccordion}
+          open={openReview === "piezas"}
+          onToggle={(event) => {
+            const isOpen = event.currentTarget.open;
+            setOpenReview((current) => {
+              if (isOpen) return "piezas";
+              return current === "piezas" ? null : current;
+            });
+          }}
+        >
+          <summary>
             <span>
-              {recipe.perfiles.length}{" "}
-              {recipe.perfiles.length === 1 ? "perfil" : "perfiles"}
+              <strong>Piezas de la ventana</strong>
+              <em>
+                {recipe.perfiles.length}{" "}
+                {recipe.perfiles.length === 1
+                  ? "pieza preparada"
+                  : "piezas preparadas"}
+              </em>
             </span>
-          )}
-        </div>
+            <b>Ver / editar</b>
+          </summary>
+          <div className={s.fabPrepGroups}>
 
         {recipe.perfiles.length === 0 ? (
           recipe.identidad.tipologia === "personalizada" ? (
@@ -2027,10 +2042,7 @@ export function RecipeGuidedEditor({
                 <h3>{group.label}</h3>
                 {group.profiles.map((profile) => {
                   const index = recipe.perfiles.findIndex((entry) => entry.id === profile.id);
-                  const sheetMeasure = describePerfilSheetMeasure(profile);
-                  const largoLabel = profileTieneOverrideLargoComercial(profile)
-                    ? resolveLargoComercialLabel(profile, recipe)
-                    : null;
+                  const tallerResumen = describePerfilTallerResumen(profile);
                   const isDragging = draggingProfileIndex === index;
                   const isDropTarget =
                     dragOverProfileIndex === index &&
@@ -2038,12 +2050,6 @@ export function RecipeGuidedEditor({
                     draggingProfileIndex !== index;
 
                   const isEditing = drawerProfileId === profile.id;
-                  const isNextPending =
-                    firstPendingProfileId === profile.id && !isEditing;
-                  const badge = resolveSheetBadge(
-                    sheetMeasure.pending,
-                    optionalPendingNotes(profile.datosPendientes)
-                  );
 
                   return (
                     <article
@@ -2052,9 +2058,7 @@ export function RecipeGuidedEditor({
                       role="listitem"
                       data-dragging={isDragging}
                       data-drop-target={isDropTarget}
-                      data-pending={sheetMeasure.pending ? "true" : "false"}
                       data-editing={isEditing ? "true" : "false"}
-                      data-next-pending={isNextPending ? "true" : "false"}
                       data-highlighted={
                         hoverPreviewZone != null &&
                         resolvePreviewZoneFromFuncion(profile.funcion) ===
@@ -2123,26 +2127,19 @@ export function RecipeGuidedEditor({
                       </button>
                       <div className={s.fabPrepRowMain}>
                         <span className={s.fabSheetFunction}>
-                          {profile.funcion.trim() || `Perfil ${index + 1}`}
+                          {profile.funcion.trim() || `Pieza ${index + 1}`}
                         </span>
-                        <span
-                          className={s.fabSheetMeasure}
-                          data-pending={sheetMeasure.pending ? "true" : "false"}
-                        >
-                          {sheetMeasure.measure}
-                          {largoLabel ? ` · ${largoLabel.label}` : ""}
+                        <span className={s.fabSheetMeasure}>
+                          {tallerResumen.line}
                         </span>
                       </div>
-                      <span className={s.fabPrepBadge} data-tone={badge.tone}>
-                        {badge.label}
-                      </span>
                       <button
                         type="button"
                         className={s.fabSheetEdit}
                         aria-expanded={drawerProfileId === profile.id}
                         onClick={() => openProfileDrawer(profile.id)}
                       >
-                        {sheetMeasure.pending ? "Configurar" : "Editar"}
+                        Cambiar
                       </button>
                     </article>
                   );
@@ -2151,39 +2148,52 @@ export function RecipeGuidedEditor({
             ))}
           </div>
         )}
+          </div>
+        </details>
 
+        <details
+          className={s.fabReviewAccordion}
+          open={openReview === "accesorios"}
+          onToggle={(event) => {
+            const isOpen = event.currentTarget.open;
+            setOpenReview((current) => {
+              if (isOpen) return "accesorios";
+              return current === "accesorios" ? null : current;
+            });
+          }}
+        >
+          <summary>
+            <span>
+              <strong>Accesorios</strong>
+              <em>
+                {recipe.accesorios.length}{" "}
+                {recipe.accesorios.length === 1 ? "sugerido" : "sugeridos"}
+              </em>
+            </span>
+            <b>Ver / editar</b>
+          </summary>
         <section className={s.fabSheetGroup} aria-label="Accesorios">
-          <h3>Accesorios</h3>
           {recipe.accesorios.length === 0 ? (
-            <p className={s.emptyInline}>Sin accesorios configurados.</p>
+            <p className={s.emptyInline}>Sin accesorios sugeridos.</p>
           ) : (
             recipe.accesorios.map((accessory) => {
               const isEditing = editingAccessoryIds.has(accessory.id);
-              const sheetLabel = describeAccesorioSheetLabel(accessory);
-              const badge = resolveSheetBadge(
-                sheetLabel.pending,
-                optionalPendingNotes(accessory.datosPendientes)
-              );
               return (
                 <div
                   key={accessory.id}
                   className={s.fabAccessoryRow}
-                  data-pending={sheetLabel.pending ? "true" : "false"}
                 >
                   <div className={s.fabPrepRowMain}>
                     <span className={s.fabSheetFunction}>
                       {accessory.nombre.trim() || "Accesorio"}
                     </span>
-                    <span
-                      className={s.fabSheetMeasure}
-                      data-pending={sheetLabel.pending ? "true" : "false"}
-                    >
-                      {sheetLabel.label}
+                    <span className={s.fabSheetMeasure}>
+                      {accessory.reglaCantidad.cantidad}{" "}
+                      {accessory.reglaCantidad.cantidad === 1
+                        ? "unidad"
+                        : "unidades"}
                     </span>
                   </div>
-                  <span className={s.fabPrepBadge} data-tone={badge.tone}>
-                    {badge.label}
-                  </span>
                   {!readOnly ? (
                     <button
                       type="button"
@@ -2198,7 +2208,7 @@ export function RecipeGuidedEditor({
                         })
                       }
                     >
-                      Editar
+                      Cambiar
                     </button>
                   ) : null}
                   {isEditing ? (
@@ -2245,36 +2255,6 @@ export function RecipeGuidedEditor({
                           disabled={readOnly}
                         />
                       </label>
-                      <label>
-                        <span>Según</span>
-                        <select
-                          value={accessory.reglaCantidad.tipo}
-                          onChange={(event) =>
-                            onRecipeChange({
-                              ...recipe,
-                              accesorios: recipe.accesorios.map((entry) =>
-                                entry.id === accessory.id
-                                  ? {
-                                      ...entry,
-                                      reglaCantidad: {
-                                        ...entry.reglaCantidad,
-                                        tipo: event.target
-                                          .value as (typeof FABRICACION_REGLAS_CANTIDAD)[number],
-                                      },
-                                    }
-                                  : entry
-                              ),
-                            })
-                          }
-                          disabled={readOnly}
-                        >
-                          {FABRICACION_REGLAS_CANTIDAD.map((rule) => (
-                            <option key={rule} value={rule}>
-                              {labelReglaCantidadTipo(rule, "technical")}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                       <button
                         type="button"
                         className={s.dangerTextButton}
@@ -2288,43 +2268,66 @@ export function RecipeGuidedEditor({
               );
             })
           )}
-          {!readOnly ? (
-            <button type="button" className={s.secondaryButton} onClick={addAccessory}>
-              <Plus size={16} /> Agregar accesorio
-            </button>
-          ) : null}
         </section>
+        </details>
 
-        <section className={s.fabSheetGroup} aria-label="Vidrio">
-          <h3>Vidrio</h3>
-          <div className={s.fabAccessoryRow}>
-            <div className={s.fabPrepRowMain}>
-              <span className={s.fabSheetFunction}>Vidrio</span>
-              <span>
+        <details
+          className={s.fabReviewAccordion}
+          open={openReview === "vidrio"}
+          onToggle={(event) => {
+            const isOpen = event.currentTarget.open;
+            setOpenReview((current) => {
+              if (isOpen) return "vidrio";
+              return current === "vidrio" ? null : current;
+            });
+          }}
+        >
+          <summary>
+            <span>
+              <strong>Vidrio</strong>
+              <em>
                 {recipe.vidrios.length === 0
-                  ? "Sin vidrio configurado"
-                  : recipe.vidrios.length === 1
-                    ? "1 vidrio por hoja"
-                    : recipe.vidrios.map((glass) => glass.nombre || "Vidrio").join(", ")}
-              </span>
-            </div>
-            <span
-              className={s.fabPrepBadge}
-              data-tone={recipe.vidrios.length === 0 ? "optional" : "ready"}
-            >
-              {recipe.vidrios.length === 0 ? "Opcional" : "Listo"}
+                  ? "Sin vidrio"
+                  : "1 por hoja"}
+              </em>
             </span>
-            {!readOnly ? (
-              <button
-                type="button"
-                className={s.fabSheetEdit}
-                aria-expanded={showGlassEditor}
-                onClick={() => setShowGlassEditor((current) => !current)}
-              >
-                Editar
-              </button>
-            ) : null}
-          </div>
+            <b>Ver / editar</b>
+          </summary>
+        <section className={s.fabSheetGroup} aria-label="Vidrio">
+          {recipe.vidrios.length === 0 ? (
+            <p className={s.emptyInline}>Esta ventana no tiene vidrio preparado.</p>
+          ) : (
+            <div className={s.fabAccessoryRow}>
+              <div className={s.fabPrepRowMain}>
+                <span className={s.fabSheetFunction}>
+                  {Math.max(1, recipe.identidad.hojas)}{" "}
+                  {recipe.identidad.hojas === 1 ? "vidrio" : "vidrios"}
+                </span>
+                <span className={s.fabSheetMeasure}>
+                  Medida preliminar según ancho y alto.
+                </span>
+              </div>
+              {!readOnly ? (
+                <button
+                  type="button"
+                  className={s.fabSheetEdit}
+                  aria-expanded={showGlassEditor}
+                  onClick={() => setShowGlassEditor((current) => !current)}
+                >
+                  Cambiar
+                </button>
+              ) : null}
+            </div>
+          )}
+          {recipe.vidrios.some(
+            (glass) =>
+              glass.reglaAncho.ajusteMm == null || glass.reglaAlto.ajusteMm == null
+          ) ? (
+            <p className={s.fabPrepHeroHint}>
+              Medida referencial. Puedes ajustar el descuento de vidrio si tu
+              taller usa otro.
+            </p>
+          ) : null}
           {showGlassEditor ? (
             <div className={s.fabDrawerForm}>
               {!readOnly ? (
@@ -2365,7 +2368,7 @@ export function RecipeGuidedEditor({
             </div>
           ) : null}
         </section>
-        </div>
+        </details>
 
         <details
           className={s.fabAdvancedSection}
@@ -2379,9 +2382,101 @@ export function RecipeGuidedEditor({
             <ChevronRight size={16} aria-hidden="true" />
           </summary>
           <p className={s.fabAdvancedHint}>
-            Solo necesitas esto si tu taller trabaja distinto a la configuración
-            estándar.
+            Solo necesitas esto si tu taller trabaja distinto.
           </p>
+          {!readOnly ? (
+            <button type="button" className={s.secondaryButton} onClick={addProfile}>
+              <Plus size={16} />
+              Agregar perfil
+            </button>
+          ) : null}
+          {!readOnly ? (
+            <button type="button" className={s.secondaryButton} onClick={addAccessory}>
+              <Plus size={16} /> Agregar accesorio
+            </button>
+          ) : null}
+          <div className={s.fabAdvancedFields}>
+            <label>
+              <span>Pérdida por corte (mm)</span>
+              <input
+                type="number"
+                min="0"
+                value={recipe.configuracionCorte?.perdidaCorteMm ?? ""}
+                placeholder="0"
+                onChange={(event) =>
+                  onRecipeChange({
+                    ...recipe,
+                    configuracionCorte: {
+                      perdidaCorteMm: nullableNonNegativeNumber(event.target.value),
+                      despunteInicialMm:
+                        recipe.configuracionCorte?.despunteInicialMm ?? null,
+                      sobranteMinimoAprovechableMm:
+                        recipe.configuracionCorte?.sobranteMinimoAprovechableMm ??
+                        null,
+                      largoComercialDefaultMm:
+                        recipe.configuracionCorte?.largoComercialDefaultMm ?? null,
+                    },
+                  })
+                }
+                disabled={readOnly}
+              />
+            </label>
+            <label>
+              <span>Despunte (mm)</span>
+              <input
+                type="number"
+                min="0"
+                value={recipe.configuracionCorte?.despunteInicialMm ?? ""}
+                placeholder="0"
+                onChange={(event) =>
+                  onRecipeChange({
+                    ...recipe,
+                    configuracionCorte: {
+                      perdidaCorteMm:
+                        recipe.configuracionCorte?.perdidaCorteMm ?? null,
+                      despunteInicialMm: nullableNonNegativeNumber(
+                        event.target.value
+                      ),
+                      sobranteMinimoAprovechableMm:
+                        recipe.configuracionCorte?.sobranteMinimoAprovechableMm ??
+                        null,
+                      largoComercialDefaultMm:
+                        recipe.configuracionCorte?.largoComercialDefaultMm ?? null,
+                    },
+                  })
+                }
+                disabled={readOnly}
+              />
+            </label>
+            <label>
+              <span>Sobrante mínimo (mm)</span>
+              <input
+                type="number"
+                min="0"
+                value={
+                  recipe.configuracionCorte?.sobranteMinimoAprovechableMm ?? ""
+                }
+                placeholder="0"
+                onChange={(event) =>
+                  onRecipeChange({
+                    ...recipe,
+                    configuracionCorte: {
+                      perdidaCorteMm:
+                        recipe.configuracionCorte?.perdidaCorteMm ?? null,
+                      despunteInicialMm:
+                        recipe.configuracionCorte?.despunteInicialMm ?? null,
+                      sobranteMinimoAprovechableMm: nullableNonNegativeNumber(
+                        event.target.value
+                      ),
+                      largoComercialDefaultMm:
+                        recipe.configuracionCorte?.largoComercialDefaultMm ?? null,
+                    },
+                  })
+                }
+                disabled={readOnly}
+              />
+            </label>
+          </div>
           {!readOnly && recipe.perfiles.length > 0 ? (
             <button
               type="button"
@@ -2390,7 +2485,7 @@ export function RecipeGuidedEditor({
                 onRecipeChange(applyLargoToAllProfiles(recipe, tiraEstandarMm))
               }
             >
-              Poner {tiraEstandarLabel} en todos los perfiles
+              Usar {tiraEstandarLabel} en todos los perfiles
             </button>
           ) : null}
         </details>

@@ -8760,7 +8760,29 @@
 }
 
 .fabPrepFlow {
-  gap: 14px;
+  gap: 16px;
+}
+
+.fabPrepPageHead {
+  display: grid;
+  gap: 6px;
+}
+
+.fabPrepPageHead h2 {
+  margin: 0;
+  color: var(--fab-ink);
+  font-size: clamp(22px, 1.8vw, 26px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.fabPrepPageHead p {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--fab-muted);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .fabPrepHero {
@@ -8780,20 +8802,255 @@
   min-width: 0;
 }
 
-.fabPrepHero h2 {
+.fabPrepHero h3 {
   margin: 0;
   color: #0b3d7a;
-  font-size: clamp(20px, 1.7vw, 24px);
+  font-size: clamp(18px, 1.5vw, 22px);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.2;
 }
 
-.fabPrepHero p {
+.fabPrepHeroLead {
+  margin: 0;
+  color: #0b3d7a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fabPrepHero p,
+.fabPrepHeroHint {
   margin: 0;
   color: #335c8a;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.fabPrepTiraRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 0;
+}
+
+.fabPrepTiraRow > div {
+  display: grid;
+  gap: 2px;
+}
+
+.fabPrepTiraRow strong {
+  color: var(--fab-ink);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.fabPrepTiraRow span {
+  color: var(--fab-muted);
+  font-size: 12px;
+}
+
+.fabPrepTiraChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.fabPrepTiraChip {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #c5daf8;
+  color: #0b3d7a;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fabPrepTiraChip[data-selected="true"] {
+  background: #0b3d7a;
+  box-shadow: none;
+  color: #fff;
+}
+
+.fabPrepBlockWarn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.fabPrepChange {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+}
+
+.fabPrepChange header {
+  display: grid;
+  gap: 4px;
+}
+
+.fabPrepChange h3 {
+  margin: 0;
+  color: var(--fab-ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.fabPrepChange p {
+  margin: 0;
+  color: var(--fab-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.fabPrepChangeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fabPrepChangeGrid article {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.fabPrepChangeGrid strong {
+  color: var(--fab-ink);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.fabPrepChangeGrid span {
+  color: var(--fab-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fabPrepChangeGrid .fabGhostAction {
+  justify-self: start;
+  margin-top: 4px;
+  min-height: 28px;
+  padding: 0;
+}
+
+.fabReviewAccordion {
+  padding: 4px 2px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+}
+
+.fabReviewAccordion > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.fabReviewAccordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fabReviewAccordion > summary span {
+  display: grid;
+  gap: 2px;
+}
+
+.fabReviewAccordion > summary strong {
+  color: var(--fab-ink);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.fabReviewAccordion > summary em {
+  color: var(--fab-muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.fabReviewAccordion > summary b {
+  color: #146fe0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fabReviewAccordion[open] > summary {
+  box-shadow: inset 0 -1px 0 var(--fab-line);
+}
+
+.fabAdvancedFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.fabAdvancedFields label {
+  display: grid;
+  gap: 4px;
+}
+
+.fabAdvancedFields span {
+  color: var(--fab-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.fabAdvancedFields input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+}
+
+.fabSidebarFacts {
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  color: var(--fab-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fabSidebarReady {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.fabSidebarReady[data-ready="false"] {
+  background: #fff7ed;
+  color: #9a3412;
 }
 
 .fabPrepStats {
@@ -8936,7 +9193,7 @@
 }
 
 .fabPrepFlow .fabSheetRow {
-  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   min-height: 40px;
   padding: 6px 4px;
   margin: 0;
@@ -8979,7 +9236,9 @@
 }
 
 @media (max-width: 900px) {
-  .fabPrepHero {
+  .fabPrepHero,
+  .fabPrepChangeGrid,
+  .fabAdvancedFields {
     grid-template-columns: 1fr;
   }
 

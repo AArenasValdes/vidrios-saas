@@ -2,6 +2,7 @@ import {
   describeAccesorioReglaHumana,
   describePerfilReglaHumana,
   describePerfilSheetMeasure,
+  describePerfilTallerResumen,
   resolveLargoComercialMm,
   resolveRecetaLargoComercialDefaultMm,
   summarizeTirasPorPerfil,
@@ -32,8 +33,23 @@ function profile(
 describe("fabricacion-regla-humana.service", () => {
   it("describe perfil en lenguaje de taller", () => {
     expect(describePerfilReglaHumana(profile())).toBe(
-      "Riel superior — 1 pieza de Ancho − 12 mm por ventana — tira 6,00 m"
+      "Riel superior — 1 pieza de Ancho de la ventana − 12 mm por ventana — tira 6,00 m"
     );
+  });
+
+  it("resume pieza de taller en cortes, medida y descuento", () => {
+    expect(describePerfilTallerResumen(profile()).line).toBe(
+      "1 corte · Ancho de la ventana · descuento 12 mm"
+    );
+    expect(
+      describePerfilTallerResumen(
+        profile({
+          funcion: "Jamba",
+          reglaMedida: { base: "alto_total", ajusteMm: -3 },
+          reglaCantidad: { tipo: "fija", cantidad: 2 },
+        })
+      ).line
+    ).toBe("2 cortes · Alto de la ventana · descuento 3 mm");
   });
 
   it("describe accesorio humano", () => {

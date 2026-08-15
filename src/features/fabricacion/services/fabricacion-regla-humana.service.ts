@@ -112,12 +112,12 @@ export function resolveTiraEstandarRecetaLabel(
 }
 
 const MEASURE_LABELS: Record<FabricacionBaseMedida, string> = {
-  ancho_total: "Ancho",
-  alto_total: "Alto",
+  ancho_total: "Ancho de la ventana",
+  alto_total: "Alto de la ventana",
   ancho_modulo: "Ancho de módulo",
   alto_modulo: "Alto de módulo",
   ancho_por_hoja: "Ancho por hoja",
-  alto_por_hoja: "Alto por hoja",
+  alto_por_hoja: "Alto de la hoja",
   fijo_mm: "Medida fija",
 };
 
@@ -179,8 +179,8 @@ function describeMedidaBaseCompacta(regla: FabricacionReglaMedida) {
     const fixed = regla.valorFijoMm ?? 0;
     return `${fixed.toLocaleString("es-CL")} mm`;
   }
-  if (regla.base === "ancho_por_hoja") return "Ancho ÷ 2";
-  if (regla.base === "alto_por_hoja") return "Alto";
+  if (regla.base === "ancho_por_hoja") return "Ancho por hoja";
+  if (regla.base === "alto_por_hoja") return "Alto de la hoja";
   return labelBaseMedida(regla.base, "human");
 }
 
@@ -249,6 +249,29 @@ export function describePerfilSheetMeasure(
   return {
     measure: `${n} × ${describeMedidaDeCorte(profile.reglaMedida)}`,
     pending: false,
+  };
+}
+
+/** Resumen corto para el maestro: cortes, origen de medida y descuento. */
+export function describePerfilTallerResumen(
+  profile: FabricacionComponentePerfil
+): { cortes: string; medida: string; descuento: string | null; line: string } {
+  const n = Math.max(1, Math.round(profile.reglaCantidad.cantidad));
+  const cortes = `${n} ${n === 1 ? "corte" : "cortes"}`;
+  const medida =
+    profile.reglaMedida.base === "fijo_mm"
+      ? `${(profile.reglaMedida.valorFijoMm ?? 0).toLocaleString("es-CL")} mm`
+      : labelBaseMedida(profile.reglaMedida.base, "human");
+  const ajuste = profile.reglaMedida.ajusteMm;
+  const descuento =
+    ajuste != null && ajuste !== 0
+      ? `descuento ${Math.abs(ajuste).toLocaleString("es-CL")} mm`
+      : null;
+  return {
+    cortes,
+    medida,
+    descuento,
+    line: [cortes, medida, descuento].filter(Boolean).join(" · "),
   };
 }
 

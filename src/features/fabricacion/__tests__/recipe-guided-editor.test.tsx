@@ -284,14 +284,16 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
+    expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
     expect(screen.getByText("Fabricación preparada")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     expect(profileList).toBeInTheDocument();
 
     for (let index = 0; index < 8; index += 1) {
       const rows = within(profileList).getAllByRole("listitem");
       const row = rows[index]!;
-      fireEvent.click(within(row).getByRole("button", { name: /Configurar|Editar/i }));
+      fireEvent.click(within(row).getByRole("button", { name: /Cambiar/i }));
       fireEvent.click(
         screen.getByRole("button", { name: /Perfil o referencia/i })
       );
@@ -406,17 +408,20 @@ describe("RecipeGuidedEditor", () => {
     );
 
     const initialProfiles = currentRecipe.perfiles.length;
+    fireEvent.click(screen.getByText("Opciones avanzadas"));
     fireEvent.click(screen.getByRole("button", { name: /Agregar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles + 1);
 
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const lastRow = within(profileList).getAllByRole("listitem").at(-1)!;
-    fireEvent.click(within(lastRow).getByRole("button", { name: /^Editar$/i }));
+    fireEvent.click(within(lastRow).getByRole("button", { name: /^Cambiar$/i }));
     fireEvent.click(screen.getByRole("button", { name: /Eliminar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles);
 
+    fireEvent.click(screen.getByRole("button", { name: "Revisar vidrio" }));
     const vidrioSection = screen.getByLabelText("Vidrio");
-    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Editar$/i }));
+    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Cambiar$/i }));
     const initialGlass = currentRecipe.vidrios.length;
     fireEvent.click(screen.getByRole("button", { name: /Agregar vidrio/i }));
     expect(currentRecipe.vidrios).toHaveLength(initialGlass + 1);
@@ -433,8 +438,9 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Agregar accesorio/i }));
     expect(currentRecipe.accesorios).toHaveLength(initialAccessories + 1);
     const addedAccessoryId = currentRecipe.accesorios.at(-1)?.id;
+    fireEvent.click(screen.getByRole("button", { name: "Revisar accesorios" }));
     const accessoryRows = within(screen.getByLabelText("Accesorios")).getAllByRole("button", {
-      name: /^Editar$/i,
+      name: /^Cambiar$/i,
     });
     fireEvent.click(accessoryRows.at(-1)!);
     const addedAccessoryInput = screen.getByDisplayValue("Accesorio");
@@ -471,17 +477,19 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const cards = within(profileList).getAllByRole("listitem");
     expect(cards.length).toBeGreaterThanOrEqual(7);
-    expect(screen.getByText("Tira estándar")).toBeInTheDocument();
-    fireEvent.click(within(cards[0]!).getByRole("button", { name: /Configurar|Editar/i }));
-    expect(screen.getByPlaceholderText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("Tira que compras").length).toBeGreaterThan(0);
+    fireEvent.click(within(cards[0]!).getByRole("button", { name: /Cambiar/i }));
+    const drawer = screen.getByRole("dialog", { name: /Editar /i });
+    expect(within(drawer).getByPlaceholderText("0")).toBeInTheDocument();
     expect(
-      screen.getByText(/Usa negativo si tu taller descuenta mm al corte/i)
+      within(drawer).getByText(/Es lo que se resta a la medida antes de cortar/i)
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Guardar cambios/i }));
-    expect(screen.queryByText("Sugerido")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sugerido por Ventora")).not.toBeInTheDocument();
 
     nextId = 0;
     const l5000 = crearRecetaReferenciaL5000Corredera2H({
@@ -515,20 +523,21 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
     const l5000List = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const l5000Cards = within(l5000List).getAllByRole("listitem");
-    fireEvent.click(within(l5000Cards[0]!).getByRole("button", { name: /Configurar|Editar/i }));
-    expect(screen.getByText("Sugerido")).toBeInTheDocument();
+    fireEvent.click(within(l5000Cards[0]!).getByRole("button", { name: /Cambiar/i }));
+    expect(screen.getByText("Sugerido por Ventora")).toBeInTheDocument();
 
     const piernaCard = within(l5000List)
       .getByText("Pierna")
       .closest("[role='listitem']");
     expect(piernaCard).toBeTruthy();
-    fireEvent.click(within(piernaCard as HTMLElement).getByRole("button", { name: /Configurar|Editar/i }));
+    fireEvent.click(within(piernaCard as HTMLElement).getByRole("button", { name: /Cambiar/i }));
     const ajusteInput = screen.getByDisplayValue("-18");
     fireEvent.change(ajusteInput, { target: { value: "-20" } });
 
-    expect(screen.getByText("Personalizado")).toBeInTheDocument();
+    expect(screen.getByText("Cambiaste este valor")).toBeInTheDocument();
     expect(
       currentRecipe.perfiles.find((profile) => profile.funcion === "Pierna")
         ?.reglaMedida.ajusteMm

@@ -41,7 +41,11 @@ import {
   contarBloqueosCriticosReceta,
   crearRecetaFabricacionVacia,
 } from "@/features/fabricacion/services/fabricacion-receta-editor.service";
-import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import {
+  formatLargoComercialCorto,
+  resolveRecetaLargoComercialDefaultMm,
+  VENTORA_LARGO_COMERCIAL_PRESET_MM,
+} from "@/features/fabricacion/services/fabricacion-regla-humana.service";
 import { applyLargoToProfilesWithoutLength } from "@/features/fabricacion/services/taller-perfiles.service";
 import type {
   FabricacionEntradaCalculo,
@@ -280,7 +284,29 @@ function RecipeSummaryPanel({
   void updatedAt;
   void isRecipeStage;
   void isActivateStage;
-  // Sidebar: preview técnica + meta compacta (no panel administrativo).
+  void providerName;
+  const tiraLabel =
+    formatLargoComercialCorto(resolveRecetaLargoComercialDefaultMm(recipe)) ??
+    "6,00 m";
+  const tipologiaCorta =
+    recipe.identidad.tipologia === "corredera"
+      ? "Corredera"
+      : recipe.identidad.tipologia === "abatible"
+        ? "Abatible"
+        : recipe.identidad.tipologia === "proyectante"
+          ? "Proyectante"
+          : recipe.identidad.tipologia === "pano_fijo"
+            ? "Fijo"
+            : recipe.identidad.tipologia === "puerta_abatible"
+              ? "Puerta"
+              : formatTypologyLabel(recipe.identidad.tipologia);
+  const tipologiaSidebar =
+    recipe.identidad.hojas > 0 && recipe.identidad.tipologia !== "pano_fijo"
+      ? `${tipologiaCorta} ${recipe.identidad.hojas}H`
+      : tipologiaCorta;
+  const canContinue =
+    recipe.perfiles.length > 0 && contarBloqueosCriticosReceta(recipe) === 0;
+
   return (
     <aside className={`${s.guidedSidebar} ${s.fabCompactSidebar}`}>
       <section className={s.fabSidebarCard} aria-label="Resumen de fabricación">
@@ -290,13 +316,29 @@ function RecipeSummaryPanel({
           size="sm"
         />
         <strong>
-          {lineName || "Línea"} · {formatTypologyLabel(recipe.identidad.tipologia)}
-          {recipe.identidad.hojas > 1 ? ` ${recipe.identidad.hojas}H` : ""}
+          {lineName || "Línea"} · {tipologiaSidebar}
         </strong>
-        <span>
-          {[providerName, `${recipe.perfiles.length} perfiles`, `${recipe.accesorios.length} accesorios`]
-            .filter(Boolean)
-            .join(" · ")}
+        <ul className={s.fabSidebarFacts}>
+          <li>
+            {recipe.identidad.hojas}{" "}
+            {recipe.identidad.hojas === 1 ? "hoja" : "hojas"}
+          </li>
+          <li>
+            {recipe.perfiles.length}{" "}
+            {recipe.perfiles.length === 1 ? "pieza" : "piezas"}
+          </li>
+          <li>
+            {recipe.accesorios.length}{" "}
+            {recipe.accesorios.length === 1 ? "accesorio" : "accesorios"}
+          </li>
+          <li>
+            {recipe.vidrios.length}{" "}
+            {recipe.vidrios.length === 1 ? "vidrio" : "vidrios"}
+          </li>
+          <li>Tira: {tiraLabel}</li>
+        </ul>
+        <span className={s.fabSidebarReady} data-ready={canContinue ? "true" : "false"}>
+          {canContinue ? "Lista para probar" : "Revisa las piezas"}
         </span>
         <button
           type="button"
