@@ -41,6 +41,9 @@ describe("fabricacion-regla-humana.service", () => {
     expect(describePerfilTallerResumen(profile()).line).toBe(
       "1 corte · Ancho de la ventana · descuento 12 mm"
     );
+    expect(describePerfilTallerResumen(profile()).descuentoLabel).toBe(
+      "Descuento: -12 mm"
+    );
     expect(
       describePerfilTallerResumen(
         profile({
@@ -50,6 +53,13 @@ describe("fabricacion-regla-humana.service", () => {
         })
       ).line
     ).toBe("2 cortes · Alto de la ventana · descuento 3 mm");
+    expect(
+      describePerfilTallerResumen(
+        profile({
+          reglaMedida: { base: "alto_total", ajusteMm: null },
+        })
+      ).descuentoLabel
+    ).toBe("Falta descuento para corte");
   });
 
   it("describe accesorio humano", () => {

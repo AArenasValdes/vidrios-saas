@@ -255,24 +255,54 @@ export function describePerfilSheetMeasure(
 /** Resumen corto para el maestro: cortes, origen de medida y descuento. */
 export function describePerfilTallerResumen(
   profile: FabricacionComponentePerfil
-): { cortes: string; medida: string; descuento: string | null; line: string } {
+): {
+  cortes: string;
+  medida: string;
+  cortesMedida: string;
+  descuento: string | null;
+  descuentoLabel: string;
+  pendingDiscount: boolean;
+  line: string;
+} {
   const n = Math.max(1, Math.round(profile.reglaCantidad.cantidad));
   const cortes = `${n} ${n === 1 ? "corte" : "cortes"}`;
   const medida =
     profile.reglaMedida.base === "fijo_mm"
       ? `${(profile.reglaMedida.valorFijoMm ?? 0).toLocaleString("es-CL")} mm`
       : labelBaseMedida(profile.reglaMedida.base, "human");
+  const pendingDiscount = describePerfilSheetMeasure(profile).pending;
   const ajuste = profile.reglaMedida.ajusteMm;
   const descuento =
     ajuste != null && ajuste !== 0
       ? `descuento ${Math.abs(ajuste).toLocaleString("es-CL")} mm`
       : null;
+  const descuentoLabel = pendingDiscount
+    ? "Falta descuento para corte"
+    : `Descuento: ${ajuste?.toLocaleString("es-CL") ?? "0"} mm`;
+  const cortesMedida = `${cortes} · ${medida}`;
   return {
     cortes,
     medida,
+    cortesMedida,
     descuento,
+    descuentoLabel,
+    pendingDiscount,
     line: [cortes, medida, descuento].filter(Boolean).join(" · "),
   };
+}
+
+export function describeTiraUsadaPieza(
+  profile: FabricacionComponentePerfil,
+  receta: FabricacionReceta
+): string {
+  const defaultMm = resolveRecetaLargoComercialDefaultMm(receta);
+  const defaultLabel = formatLargoComercialCorto(defaultMm) ?? "6,00 m";
+  if (profileTieneOverrideLargoComercial(profile)) {
+    const custom =
+      formatLargoComercialCorto(profile.largoComercialMm) ?? defaultLabel;
+    return `Tira usada: ${custom}`;
+  }
+  return `Tira usada: estándar ${defaultLabel}`;
 }
 
 /** Accesorio en hoja técnica: cantidad humana o "Cantidad por configurar". */

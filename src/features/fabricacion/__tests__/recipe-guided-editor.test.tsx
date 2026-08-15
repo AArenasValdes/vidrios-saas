@@ -286,14 +286,17 @@ describe("RecipeGuidedEditor", () => {
 
     expect(screen.getByText("Así fabricas esta ventana")).toBeInTheDocument();
     expect(screen.getByText("Fabricación preparada")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
+    expect(screen.getByText("Tira que compras")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "6,00 m" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "5,95 m" })).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     expect(profileList).toBeInTheDocument();
 
     for (let index = 0; index < 8; index += 1) {
       const rows = within(profileList).getAllByRole("listitem");
       const row = rows[index]!;
-      fireEvent.click(within(row).getByRole("button", { name: /Cambiar/i }));
+      fireEvent.click(within(row).getByRole("button", { name: /Editar pieza|Definir descuento/i }));
       fireEvent.click(
         screen.getByRole("button", { name: /Perfil o referencia/i })
       );
@@ -412,16 +415,16 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Agregar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles + 1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
+    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const lastRow = within(profileList).getAllByRole("listitem").at(-1)!;
-    fireEvent.click(within(lastRow).getByRole("button", { name: /^Cambiar$/i }));
+    fireEvent.click(within(lastRow).getByRole("button", { name: /Editar pieza|Definir descuento/i }));
     fireEvent.click(screen.getByRole("button", { name: /Eliminar perfil/i }));
     expect(currentRecipe.perfiles).toHaveLength(initialProfiles);
 
-    fireEvent.click(screen.getByRole("button", { name: "Revisar vidrio" }));
+    fireEvent.click(screen.getByText("Vidrio"));
     const vidrioSection = screen.getByLabelText("Vidrio");
-    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Cambiar$/i }));
+    fireEvent.click(within(vidrioSection).getByRole("button", { name: /^Editar$/i }));
     const initialGlass = currentRecipe.vidrios.length;
     fireEvent.click(screen.getByRole("button", { name: /Agregar vidrio/i }));
     expect(currentRecipe.vidrios).toHaveLength(initialGlass + 1);
@@ -438,9 +441,9 @@ describe("RecipeGuidedEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Agregar accesorio/i }));
     expect(currentRecipe.accesorios).toHaveLength(initialAccessories + 1);
     const addedAccessoryId = currentRecipe.accesorios.at(-1)?.id;
-    fireEvent.click(screen.getByRole("button", { name: "Revisar accesorios" }));
+    fireEvent.click(screen.getByText("Accesorios"));
     const accessoryRows = within(screen.getByLabelText("Accesorios")).getAllByRole("button", {
-      name: /^Cambiar$/i,
+      name: /^Editar$/i,
     });
     fireEvent.click(accessoryRows.at(-1)!);
     const addedAccessoryInput = screen.getByDisplayValue("Accesorio");
@@ -477,12 +480,13 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas pendientes" }));
     const profileList = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const cards = within(profileList).getAllByRole("listitem");
     expect(cards.length).toBeGreaterThanOrEqual(7);
-    expect(screen.getAllByText("Tira que compras").length).toBeGreaterThan(0);
-    fireEvent.click(within(cards[0]!).getByRole("button", { name: /Cambiar/i }));
+    expect(screen.getByText("Tira que compras")).toBeInTheDocument();
+    expect(screen.getByText(/Faltan descuentos en \d+ piezas/i)).toBeInTheDocument();
+    fireEvent.click(within(cards[0]!).getByRole("button", { name: /Definir descuento/i }));
     const drawer = screen.getByRole("dialog", { name: /Editar /i });
     expect(within(drawer).getByPlaceholderText("0")).toBeInTheDocument();
     expect(
@@ -523,17 +527,17 @@ describe("RecipeGuidedEditor", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Revisar piezas" }));
+    fireEvent.click(screen.getByText("Piezas de la ventana"));
     const l5000List = screen.getByRole("list", { name: "Perfiles de fabricación" });
     const l5000Cards = within(l5000List).getAllByRole("listitem");
-    fireEvent.click(within(l5000Cards[0]!).getByRole("button", { name: /Cambiar/i }));
+    fireEvent.click(within(l5000Cards[0]!).getByRole("button", { name: /Editar pieza/i }));
     expect(screen.getByText("Sugerido por Ventora")).toBeInTheDocument();
 
     const piernaCard = within(l5000List)
       .getByText("Pierna")
       .closest("[role='listitem']");
     expect(piernaCard).toBeTruthy();
-    fireEvent.click(within(piernaCard as HTMLElement).getByRole("button", { name: /Cambiar/i }));
+    fireEvent.click(within(piernaCard as HTMLElement).getByRole("button", { name: /Editar pieza/i }));
     const ajusteInput = screen.getByDisplayValue("-18");
     fireEvent.change(ajusteInput, { target: { value: "-20" } });
 

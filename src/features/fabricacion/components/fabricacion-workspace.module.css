@@ -8877,6 +8877,110 @@
   color: #fff;
 }
 
+.fabTiraBlock {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+}
+
+.fabTiraBlock header {
+  display: grid;
+  gap: 4px;
+}
+
+.fabTiraBlock h3 {
+  margin: 0;
+  color: var(--fab-ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.fabTiraBlock p,
+.fabTiraFoot {
+  margin: 0;
+  color: var(--fab-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.fabTiraCurrent {
+  color: var(--fab-ink) !important;
+  font-size: 14px !important;
+}
+
+.fabTiraActionLabel {
+  margin: 4px 0 0;
+  color: var(--fab-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.fabTiraCustom {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  max-width: 180px;
+}
+
+.fabTiraCustom span {
+  color: var(--fab-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.fabTiraCustom input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px var(--fab-line);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fabPrepDiscountWarn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.fabPrepDiscountWarn p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.fabPieceDiscount,
+.fabPieceTira {
+  color: var(--fab-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fabPieceDiscount[data-pending="true"] {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.fabPrepBadge[data-tone="custom"] {
+  color: #1e3a5f;
+  background: #e8f1fb;
+}
+
 .fabPrepBlockWarn {
   margin: 0;
   padding: 10px 12px;
@@ -9193,9 +9297,10 @@
 }
 
 .fabPrepFlow .fabSheetRow {
-  grid-template-columns: 22px minmax(0, 1fr) auto;
-  min-height: 40px;
-  padding: 6px 4px;
+  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 4px;
   margin: 0;
 }
 
