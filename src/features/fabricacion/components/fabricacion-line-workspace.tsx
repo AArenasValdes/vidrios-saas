@@ -1323,7 +1323,7 @@ export function FabricacionLineWorkspace({
         {feedback ? <div className={s.successBand}>{feedback}</div> : null}
         {error ? <div className={s.errorBand}>{error}</div> : null}
 
-        <div className={s.desktopGuidedLayout}>
+        <div className={`${s.desktopGuidedLayout} ${s.fabLabPageLayout}`}>
           <div className={s.guidedMainColumn}>
             <RecipeTestLab
               recipe={workingSelected}
@@ -1349,15 +1349,6 @@ export function FabricacionLineWorkspace({
               }}
             />
           </div>
-          <RecipeSummaryPanel
-            recipe={workingSelected.definition}
-            providerName={workingSelected.providerName}
-            lineName={workingSelected.lineName}
-            progress={progress}
-            activeStep={labStep}
-            readyToActivate={showActivateReady}
-            onStep={(step) => navigateToRecipeStep(workingSelected, step)}
-          />
         </div>
       </main>
     );

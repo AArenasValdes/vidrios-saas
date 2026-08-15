@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
   Check,
   CheckCircle2,
-  Pencil,
   Play,
   Plus,
   Ruler,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { FabricacionPerfilTirasVisual } from "@/features/fabricacion/components/fabricacion-barra-corte";
+import { FabricacionTipologiaPreview } from "@/features/fabricacion/components/fabricacion-tipologia-preview";
 import { calcularPautaBarrasMultiMedida } from "@/features/fabricacion/services/fabricacion-pauta-multi-medida.service";
 import {
   formatMetersFromMm,
@@ -94,6 +94,53 @@ function createMeasureRow(partial?: Partial<MeasureRow>): MeasureRow {
     cantidad: 1,
     ...partial,
   };
+}
+
+function formatTypologyLabel(tipologia: string) {
+  return tipologia
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function LabIdentityCard({
+  recipe,
+  onChange,
+}: {
+  recipe: FabricationRecipeRecord;
+  onChange?: () => void;
+}) {
+  const identity = recipe.definition.identidad;
+  return (
+    <aside className={s.fabLabIdentityCard} aria-label="Resumen de fabricación">
+      <FabricacionTipologiaPreview
+        tipologia={identity.tipologia}
+        hojas={identity.hojas}
+        size="sm"
+      />
+      <strong>
+        {recipe.lineName || "Línea"} · {formatTypologyLabel(identity.tipologia)}
+        {identity.hojas > 1 ? ` ${identity.hojas}H` : ""}
+      </strong>
+      <span>
+        {[
+          recipe.providerName,
+          `${recipe.definition.perfiles.length} perfiles`,
+          `${recipe.definition.accesorios.length} accesorios`,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>
+      {onChange ? (
+        <button
+          type="button"
+          className={s.fabCompactMetaEdit}
+          onClick={onChange}
+        >
+          Cambiar
+        </button>
+      ) : null}
+    </aside>
+  );
 }
 
 function profilesAllMatch(
@@ -197,11 +244,24 @@ export function RecipeTestLab({
   const dominantLengthMm =
     tirasSummary[0]?.largoComercialMm ?? tiraEstandar.largoMm;
 
+  const hasResults = Boolean(actualPrimary && expected && consolidado);
   const allMatch =
     actualPrimary != null &&
     expected != null &&
     actualPrimary.calculable &&
     profilesAllMatch(actualPrimary, expected);
+  const profileTotalCount = actualPrimary?.perfiles.length ?? 0;
+  const profileMatchCount =
+    actualPrimary && expected
+      ? actualPrimary.perfiles.filter((row, index) => {
+          const expectedRow = expected.perfiles[index];
+          return (
+            Boolean(expectedRow) &&
+            row.medidaMm === expectedRow.medidaMm &&
+            row.cantidadPiezas === expectedRow.cantidadPiezas
+          );
+        }).length
+      : 0;
   const readyToActivate =
     (allMatch && Boolean(actualPrimary)) ||
     (canActivateFromSaved && actualPrimary == null) ||
@@ -324,147 +384,160 @@ export function RecipeTestLab({
     );
   }
 
+  const accessoryTotal = consolidado
+    ? consolidado.accesorios.reduce((sum, item) => sum + item.cantidadUnidades, 0)
+    : 0;
+
   return (
     <div
       className={`${s.labFlow} ${s.fabLabFlow}`}
       data-guided-desktop={desktopActiveStep ? "true" : "false"}
+      data-has-results={hasResults ? "true" : "false"}
     >
       <section className={`${s.editorSection} ${s.fabLabIntro}`}>
-        <header className={s.fabSheetHeader}>
-          <h2>Prueba tu fabricación</h2>
-          <p>
-            Ingresa una o varias medidas reales. Ventora te dirá qué necesitas
-            comprar y cómo cortar.
-          </p>
-        </header>
+        <div className={s.fabLabIntroMain}>
+          <header className={s.fabSheetHeader}>
+            <h2>Prueba tu fabricación</h2>
+            <p>
+              Confirma las medidas, revisa los cortes y asegúrate de que todo
+              coincide con tu taller.
+            </p>
+          </header>
 
-        <label className={s.fabLabOptionalName}>
-          <span>Nombre del caso (opcional)</span>
-          <input
-            value={name}
-            placeholder="Ej. Ventanas living + cocina"
-            onChange={(event) => setName(event.target.value)}
-            aria-label="Nombre del caso"
-          />
-        </label>
-
-        <div className={s.fabMeasureBoard}>
-          <div className={s.fabMeasureHead}>
+          <div className={s.fabLabFormGrid}>
+            <span>Nombre del caso (opcional)</span>
             <span>Ancho</span>
             <span>Alto</span>
             <span>Cantidad</span>
             <span aria-hidden="true" />
+            {measures.map((row, rowIndex) => (
+              <Fragment key={row.id}>
+                {rowIndex === 0 ? (
+                  <label className={s.fabLabOptionalName}>
+                    <span className={s.srOnly}>Nombre del caso</span>
+                    <input
+                      value={name}
+                      placeholder="Ej. Ventanas living + cocina"
+                      onChange={(event) => setName(event.target.value)}
+                      aria-label="Nombre del caso"
+                    />
+                  </label>
+                ) : (
+                  <span className={s.fabMeasureSpacer} />
+                )}
+                <label>
+                  <span className={s.srOnly}>Ancho mm</span>
+                  <input
+                    type="number"
+                    min={1}
+                    aria-label="Ancho mm"
+                    value={row.anchoMm}
+                    onChange={(event) =>
+                      setMeasures((current) =>
+                        current.map((entry) =>
+                          entry.id === row.id
+                            ? {
+                                ...entry,
+                                anchoMm: positiveNumber(event.target.value),
+                              }
+                            : entry
+                        )
+                      )
+                    }
+                  />
+                  <em>mm</em>
+                </label>
+                <label>
+                  <span className={s.srOnly}>Alto mm</span>
+                  <input
+                    type="number"
+                    min={1}
+                    aria-label="Alto mm"
+                    value={row.altoMm}
+                    onChange={(event) =>
+                      setMeasures((current) =>
+                        current.map((entry) =>
+                          entry.id === row.id
+                            ? {
+                                ...entry,
+                                altoMm: positiveNumber(event.target.value),
+                              }
+                            : entry
+                        )
+                      )
+                    }
+                  />
+                  <em>mm</em>
+                </label>
+                <label>
+                  <span className={s.srOnly}>Cantidad</span>
+                  <input
+                    type="number"
+                    min={1}
+                    aria-label="Cantidad"
+                    value={row.cantidad}
+                    onChange={(event) =>
+                      setMeasures((current) =>
+                        current.map((entry) =>
+                          entry.id === row.id
+                            ? {
+                                ...entry,
+                                cantidad: positiveNumber(event.target.value),
+                              }
+                            : entry
+                        )
+                      )
+                    }
+                  />
+                </label>
+                {measures.length > 1 ? (
+                  <button
+                    type="button"
+                    className={s.dangerTextButton}
+                    aria-label="Quitar medida"
+                    onClick={() =>
+                      setMeasures((current) =>
+                        current.filter((entry) => entry.id !== row.id)
+                      )
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                ) : (
+                  <span />
+                )}
+              </Fragment>
+            ))}
           </div>
-          {measures.map((row) => (
-            <div key={row.id} className={s.fabMeasureRow}>
-              <label>
-                <span className={s.srOnly}>Ancho mm</span>
-                <input
-                  type="number"
-                  min={1}
-                  aria-label="Ancho mm"
-                  value={row.anchoMm}
-                  onChange={(event) =>
-                    setMeasures((current) =>
-                      current.map((entry) =>
-                        entry.id === row.id
-                          ? {
-                              ...entry,
-                              anchoMm: positiveNumber(event.target.value),
-                            }
-                          : entry
-                      )
-                    )
-                  }
-                />
-                <em>mm</em>
-              </label>
-              <label>
-                <span className={s.srOnly}>Alto mm</span>
-                <input
-                  type="number"
-                  min={1}
-                  aria-label="Alto mm"
-                  value={row.altoMm}
-                  onChange={(event) =>
-                    setMeasures((current) =>
-                      current.map((entry) =>
-                        entry.id === row.id
-                          ? {
-                              ...entry,
-                              altoMm: positiveNumber(event.target.value),
-                            }
-                          : entry
-                      )
-                    )
-                  }
-                />
-                <em>mm</em>
-              </label>
-              <label>
-                <span className={s.srOnly}>Cantidad</span>
-                <input
-                  type="number"
-                  min={1}
-                  aria-label="Cantidad"
-                  value={row.cantidad}
-                  onChange={(event) =>
-                    setMeasures((current) =>
-                      current.map((entry) =>
-                        entry.id === row.id
-                          ? {
-                              ...entry,
-                              cantidad: positiveNumber(event.target.value),
-                            }
-                          : entry
-                      )
-                    )
-                  }
-                />
-              </label>
-              {measures.length > 1 ? (
-                <button
-                  type="button"
-                  className={s.dangerTextButton}
-                  aria-label="Quitar medida"
-                  onClick={() =>
-                    setMeasures((current) =>
-                      current.filter((entry) => entry.id !== row.id)
-                    )
-                  }
-                >
-                  <Trash2 size={15} />
-                </button>
-              ) : (
-                <span />
-              )}
+
+          <div className={s.fabLabActions}>
+            <div className={s.fabLabActionMeta}>
+              <p className={s.fabLabTiraHint}>{tiraEstandarLabel}</p>
+              <button
+                type="button"
+                className={s.fabGhostAction}
+                onClick={() =>
+                  setMeasures((current) => [...current, createMeasureRow()])
+                }
+              >
+                <Plus size={16} />
+                Otra medida
+              </button>
             </div>
-          ))}
+            <button
+              type="button"
+              className={`${s.primaryButton} ${s.fabPrimaryCta}`}
+              onClick={calculate}
+            >
+              <Play size={16} />
+              Calcular materiales
+            </button>
+            {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
+          </div>
         </div>
-
-        <p className={s.fabLabTiraHint}>{tiraEstandarLabel}</p>
-
-        <div className={s.fabLabActions}>
-          <button
-            type="button"
-            className={s.fabGhostAction}
-            onClick={() =>
-              setMeasures((current) => [...current, createMeasureRow()])
-            }
-          >
-            <Plus size={16} />
-            Otra medida
-          </button>
-          <button
-            type="button"
-            className={`${s.primaryButton} ${s.fabPrimaryCta}`}
-            onClick={calculate}
-          >
-            <Play size={16} />
-            Calcular materiales
-          </button>
-          {feedback ? <span className={s.feedbackText}>{feedback}</span> : null}
-        </div>
+        {hasResults ? null : (
+          <LabIdentityCard recipe={recipe} onChange={onBackToRecipe} />
+        )}
       </section>
 
       {actualPrimary && expected && consolidado ? (
@@ -474,15 +547,18 @@ export function RecipeTestLab({
         >
           <header className={s.fabResultHero}>
             <h2>
-              {totalTiras > 0 ? (
-                <>
-                  Necesitas {totalTiras}{" "}
-                  {totalTiras === 1 ? "tira" : "tiras"} de{" "}
-                  {formatMetersFromMm(dominantLengthMm)}
-                </>
-              ) : (
-                <>Para fabricar esto necesitas</>
-              )}
+              <CheckCircle2 size={22} aria-hidden="true" />
+              <span>
+                {totalTiras > 0 ? (
+                  <>
+                    Necesitas {totalTiras}{" "}
+                    {totalTiras === 1 ? "tira" : "tiras"} de{" "}
+                    {formatMetersFromMm(dominantLengthMm)}
+                  </>
+                ) : (
+                  <>Para fabricar esto necesitas</>
+                )}
+              </span>
             </h2>
             <ul className={s.fabResultStats} aria-label="Resumen del cálculo">
               <li>
@@ -506,153 +582,167 @@ export function RecipeTestLab({
                 <span>{totalCortes === 1 ? "corte" : "cortes"}</span>
               </li>
               <li>
-                <strong>
-                  {consolidado.accesorios.reduce(
-                    (sum, item) => sum + item.cantidadUnidades,
-                    0
-                  )}
-                </strong>
+                <strong>{accessoryTotal}</strong>
                 <span>accesorios</span>
               </li>
             </ul>
           </header>
 
-          <div className={s.fabVisualCutSection}>
-            <h3>Tiras y cortes</h3>
-            {barrasPorPerfil.length > 0 ? (
-              <div className={s.fabVisualCutGroups}>
-                {barrasPorPerfil.map((group, groupIndex) => (
-                  <FabricacionPerfilTirasVisual
-                    key={group.key}
-                    label={group.label}
-                    tiras={group.barras.length}
-                    largoComercialMm={group.largoComercialMm}
-                    barras={group.barras}
-                    startIndex={groupIndex * 3}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className={s.barEmptyCard}>
-                <p>
-                  No hay tiras calculadas. Revisa los largos comerciales en la
-                  configuración de fabricación.
-                </p>
-                {onConfigureLengths || onBackToRecipe ? (
-                  <button
-                    type="button"
-                    className={s.secondaryButton}
-                    onClick={onConfigureLengths ?? onBackToRecipe}
-                  >
-                    <Ruler size={15} />
-                    Configurar largos
-                  </button>
+          <div className={s.fabLabDashboard}>
+            <div className={s.fabPautaCard}>
+              <h3>Pauta de corte</h3>
+              {barrasPorPerfil.length > 0 ? (
+                <div className={s.fabVisualCutGroups}>
+                  {barrasPorPerfil.map((group, groupIndex) => (
+                    <FabricacionPerfilTirasVisual
+                      key={group.key}
+                      label={group.label}
+                      tiras={group.barras.length}
+                      largoComercialMm={group.largoComercialMm}
+                      barras={group.barras}
+                      startIndex={groupIndex * 3}
+                      compact
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className={s.barEmptyCard}>
+                  <p>
+                    No hay tiras calculadas. Revisa los largos comerciales en la
+                    configuración de fabricación.
+                  </p>
+                  {onConfigureLengths || onBackToRecipe ? (
+                    <button
+                      type="button"
+                      className={s.secondaryButton}
+                      onClick={onConfigureLengths ?? onBackToRecipe}
+                    >
+                      <Ruler size={15} />
+                      Configurar largos
+                    </button>
+                  ) : null}
+                </div>
+              )}
+              <details
+                className={`${s.pautaSugeridaDisclosure} ${s.fabPautaDetails}`}
+                open={showPauta}
+                onToggle={(event) => setShowPauta(event.currentTarget.open)}
+              >
+                <summary>Ver pauta sugerida (detalle)</summary>
+                <div className={s.fabPautaDetailBody}>
+                  {barPlan?.barras.length ? (
+                    <ul className={s.fabPautaCutList}>
+                      {barPlan.barras.map((bar) => (
+                        <li key={`${bar.codigoPerfil}-${bar.indice}`}>
+                          <strong>
+                            {bar.nombrePerfil || bar.codigoPerfil} · Tira{" "}
+                            {bar.indice} ·{" "}
+                            {bar.largoComercialMm.toLocaleString("es-CL")} mm
+                          </strong>
+                          <span>
+                            {bar.cortes
+                              .map(
+                                (cut) =>
+                                  `${cut.largoMm.toLocaleString("es-CL")} mm`
+                              )
+                              .join(" · ")}
+                            {bar.sobranteMm > 0
+                              ? ` · Sobrante ${bar.sobranteMm.toLocaleString("es-CL")} mm`
+                              : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={s.labSoftHint}>
+                      Sin pauta sugerida hasta configurar largos y corte.
+                    </p>
+                  )}
+                </div>
+              </details>
+            </div>
+
+            <div className={s.fabLabSide}>
+              <LabIdentityCard recipe={recipe} onChange={onBackToRecipe} />
+              <div className={s.fabMaterialsCard}>
+                <h3>Materiales</h3>
+                <div className={s.fabLabProfilesBlock}>
+                  <h4>Perfiles</h4>
+                  {tirasSummary.length > 0 ? (
+                    <ul className={s.fabMaterialList}>
+                      {tirasSummary.map((group) => (
+                        <li key={group.key}>
+                          <strong>{group.label}</strong>
+                          <span>
+                            {group.tiras} {group.tiras === 1 ? "tira" : "tiras"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className={s.fabLabSecondaryMeters}>Sin tiras calculadas</p>
+                  )}
+                </div>
+
+                {consolidado.accesorios.length > 0 ? (
+                  <div className={s.fabLabAccessoriesBlock}>
+                    <h4>Accesorios</h4>
+                    <ul className={s.fabMaterialList}>
+                      {consolidado.accesorios.map((item) => (
+                        <li key={item.accesorioId}>
+                          <strong>
+                            {item.cantidadUnidades}{" "}
+                            {item.nombre.trim().toLocaleLowerCase("es")}
+                          </strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {consolidado.vidrios.length > 0 ? (
+                  <div className={s.fabLabAccessoriesBlock}>
+                    <h4>Vidrio</h4>
+                    <ul className={s.fabMaterialList}>
+                      {consolidado.vidrios.map((glass) => (
+                        <li key={glass.vidrioId}>
+                          <strong>
+                            {glass.cantidadPiezas}{" "}
+                            {glass.cantidadPiezas === 1 ? "pieza" : "piezas"}
+                          </strong>
+                          <span>
+                            {glass.anchoMm.toLocaleString("es-CL")} ×{" "}
+                            {glass.altoMm.toLocaleString("es-CL")} mm
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : null}
               </div>
-            )}
-          </div>
-
-          <div className={s.fabMaterialsGrid}>
-            <div className={s.fabLabProfilesBlock}>
-              <h3>Perfiles</h3>
-              {tirasSummary.length > 0 ? (
-                <ul className={s.fabMaterialList}>
-                  {tirasSummary.map((group) => (
-                    <li key={group.key}>
-                      <strong>{group.label}</strong>
-                      <span>
-                        {group.tiras} {group.tiras === 1 ? "tira" : "tiras"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={s.fabLabSecondaryMeters}>Sin tiras calculadas</p>
-              )}
             </div>
-
-            {consolidado.accesorios.length > 0 ? (
-              <div className={s.fabLabAccessoriesBlock}>
-                <h3>Accesorios</h3>
-                <ul className={s.fabMaterialList}>
-                  {consolidado.accesorios.map((item) => (
-                    <li key={item.accesorioId}>
-                      <strong>
-                        {item.cantidadUnidades}{" "}
-                        {item.nombre.trim().toLocaleLowerCase("es")}
-                      </strong>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {consolidado.vidrios.length > 0 ? (
-              <div className={s.fabLabAccessoriesBlock}>
-                <h3>Vidrio</h3>
-                <ul className={s.fabMaterialList}>
-                  {consolidado.vidrios.map((glass) => (
-                    <li key={glass.vidrioId}>
-                      <strong>
-                        {glass.cantidadPiezas}{" "}
-                        {glass.cantidadPiezas === 1 ? "pieza" : "piezas"}
-                      </strong>
-                      <span>
-                        {glass.anchoMm.toLocaleString("es-CL")} ×{" "}
-                        {glass.altoMm.toLocaleString("es-CL")} mm
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
           </div>
-
-          <details
-            className={`${s.pautaSugeridaDisclosure} ${s.fabPautaDetails}`}
-            open={showPauta}
-            onToggle={(event) => setShowPauta(event.currentTarget.open)}
-          >
-            <summary>Ver pauta sugerida (detalle)</summary>
-            <div className={s.fabPautaDetailBody}>
-              {barPlan?.barras.length ? (
-                <ul className={s.fabPautaCutList}>
-                  {barPlan.barras.map((bar) => (
-                    <li key={`${bar.codigoPerfil}-${bar.indice}`}>
-                      <strong>
-                        {bar.nombrePerfil || bar.codigoPerfil} · Tira{" "}
-                        {bar.indice} ·{" "}
-                        {bar.largoComercialMm.toLocaleString("es-CL")} mm
-                      </strong>
-                      <span>
-                        {bar.cortes
-                          .map((cut) => `${cut.largoMm.toLocaleString("es-CL")} mm`)
-                          .join(" · ")}
-                        {bar.sobranteMm > 0
-                          ? ` · Sobrante ${bar.sobranteMm.toLocaleString("es-CL")} mm`
-                          : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={s.labSoftHint}>
-                  Sin pauta sugerida hasta configurar largos y corte.
-                </p>
-              )}
-            </div>
-          </details>
 
           <div className={s.fabCompareBlock}>
-            <header className={s.fabSheetHeader}>
-              <h2>¿Coincide con tu taller?</h2>
-              <p>
-                Primera medida: {primaryMeasure.anchoMm.toLocaleString("es-CL")}{" "}
-                × {primaryMeasure.altoMm.toLocaleString("es-CL")} mm
-                {primaryMeasure.cantidad > 1
-                  ? ` · ${primaryMeasure.cantidad} unidades`
-                  : ""}
-              </p>
+            <header className={s.fabCompareHeader}>
+              <div>
+                <h2>¿Coincide con tu taller?</h2>
+                <p>
+                  Primera medida: {primaryMeasure.anchoMm.toLocaleString("es-CL")}{" "}
+                  × {primaryMeasure.altoMm.toLocaleString("es-CL")} mm
+                  {primaryMeasure.cantidad > 1
+                    ? ` · ${primaryMeasure.cantidad} unidades`
+                    : ""}
+                </p>
+              </div>
+              <span
+                className={s.fabCompareBadge}
+                data-match={allMatch ? "true" : "false"}
+              >
+                {allMatch ? <Check size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
+                {profileMatchCount} de {profileTotalCount}{" "}
+                {profileTotalCount === 1 ? "medida coincide" : "medidas coinciden"}
+              </span>
             </header>
 
             <ul className={s.fabCompareList}>
@@ -668,11 +758,15 @@ export function RecipeTestLab({
                 const isCorrecting = correctingIds.has(row.componenteId);
 
                 return (
-                  <li key={row.componenteId} className={s.fabCompareRow}>
+                  <li
+                    key={row.componenteId}
+                    className={s.fabCompareRow}
+                    data-correcting={isCorrecting ? "true" : "false"}
+                  >
                     <div className={s.fabCompareMain}>
                       <strong>{row.funcion}</strong>
                       <span>
-                        Ventora: {row.medidaMm.toLocaleString("es-CL")} mm ×{" "}
+                        {row.medidaMm.toLocaleString("es-CL")} mm ×{" "}
                         {row.cantidadPiezas}
                       </span>
                     </div>
@@ -703,7 +797,6 @@ export function RecipeTestLab({
                             })
                           }
                         >
-                          <Pencil size={14} aria-hidden="true" />
                           Corregir
                         </button>
                       </div>
@@ -798,26 +891,34 @@ export function RecipeTestLab({
           {allMatch ? (
             <div className={s.fabFinalSuccess}>
               <CheckCircle2 size={22} aria-hidden="true" />
-              <div>
+              <div className={s.fabFinalCopy}>
                 <strong>Todo coincide con tu fabricación</strong>
                 <p>
-                  Esta configuración ya puede usarse automáticamente cuando
-                  cotices esta línea.
+                  Puedes guardar esta configuración y dejarla lista para cotizar.
                 </p>
               </div>
-              {onActivate ? (
-                <button
-                  type="button"
-                  className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabFinalCta}`}
-                  disabled={!readyToActivate || isSaving || isActivating}
-                  onClick={() => void handleActivate()}
-                >
-                  <CheckCircle2 size={18} />
-                  {isActivating
-                    ? "Guardando…"
-                    : "Dejar lista para cotizar"}
-                </button>
-              ) : null}
+              <div className={s.fabFinalActions}>
+                {onBackToRecipe ? (
+                  <button
+                    type="button"
+                    className={s.fabFinalBack}
+                    onClick={onBackToRecipe}
+                  >
+                    Volver a fabricación
+                  </button>
+                ) : null}
+                {onActivate ? (
+                  <button
+                    type="button"
+                    className={`${s.primaryButton} ${s.fabPrimaryCta} ${s.fabFinalCta}`}
+                    disabled={!readyToActivate || isSaving || isActivating}
+                    onClick={() => void handleActivate()}
+                  >
+                    <CheckCircle2 size={18} />
+                    {isActivating ? "Guardando…" : "Dejar lista para cotizar"}
+                  </button>
+                ) : null}
+              </div>
             </div>
           ) : (
             <div className={s.labDiffCard}>

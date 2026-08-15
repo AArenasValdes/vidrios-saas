@@ -9,6 +9,7 @@ type Props = {
   tirasCount?: number;
   animate?: boolean;
   index?: number;
+  hideHeader?: boolean;
 };
 
 function formatMm(value: number) {
@@ -24,6 +25,7 @@ export function FabricacionBarraCorte({
   tirasCount,
   animate = true,
   index = 0,
+  hideHeader = false,
 }: Props) {
   const usable =
     Math.max(1, bar.largoComercialMm - Math.max(0, bar.despunteInicialMm));
@@ -54,29 +56,32 @@ export function FabricacionBarraCorte({
     <article
       className={s.fabCutBar}
       data-animate={animate ? "true" : "false"}
+      data-compact={hideHeader ? "true" : "false"}
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
-      <header className={s.fabCutBarHeader}>
-        <strong>
-          {label}
-          {" · "}
-          Tira {bar.indice}
-          {tirasCount && tirasCount > 1 ? ` de ${tirasCount}` : ""}
-          {" · "}
-          {formatMm(bar.largoComercialMm)} mm
-        </strong>
-        {(bar.despunteInicialMm > 0 || bar.perdidaCortesMm > 0) && (
-          <span>
-            {bar.despunteInicialMm > 0
-              ? `Despunte ${formatMm(bar.despunteInicialMm)} mm`
-              : ""}
-            {bar.despunteInicialMm > 0 && bar.perdidaCortesMm > 0 ? " · " : ""}
-            {bar.perdidaCortesMm > 0
-              ? `Kerf ${formatMm(bar.perdidaCortesMm)} mm`
-              : ""}
-          </span>
-        )}
-      </header>
+      {hideHeader ? null : (
+        <header className={s.fabCutBarHeader}>
+          <strong>
+            {label}
+            {" · "}
+            Tira {bar.indice}
+            {tirasCount && tirasCount > 1 ? ` de ${tirasCount}` : ""}
+            {" · "}
+            {formatMm(bar.largoComercialMm)} mm
+          </strong>
+          {(bar.despunteInicialMm > 0 || bar.perdidaCortesMm > 0) && (
+            <span>
+              {bar.despunteInicialMm > 0
+                ? `Despunte ${formatMm(bar.despunteInicialMm)} mm`
+                : ""}
+              {bar.despunteInicialMm > 0 && bar.perdidaCortesMm > 0 ? " · " : ""}
+              {bar.perdidaCortesMm > 0
+                ? `Kerf ${formatMm(bar.perdidaCortesMm)} mm`
+                : ""}
+            </span>
+          )}
+        </header>
+      )}
       <div
         className={s.fabCutTrack}
         role="img"
@@ -104,6 +109,7 @@ type GroupProps = {
   largoComercialMm: number;
   barras: FabricacionBarraPauta[];
   startIndex?: number;
+  compact?: boolean;
 };
 
 export function FabricacionPerfilTirasVisual({
@@ -112,20 +118,29 @@ export function FabricacionPerfilTirasVisual({
   largoComercialMm,
   barras,
   startIndex = 0,
+  compact = false,
 }: GroupProps) {
+  const tirasLabel = (
+    <>
+      {tiras} {tiras === 1 ? "tira" : "tiras"} de{" "}
+      {(largoComercialMm / 1000).toLocaleString("es-CL", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}{" "}
+      m
+    </>
+  );
+
   return (
-    <section className={s.fabPerfilTirasBlock}>
-      <header className={s.fabPerfilTirasHeader}>
-        <strong>{label}</strong>
-        <em>
-          {tiras} {tiras === 1 ? "tira" : "tiras"} de{" "}
-          {(largoComercialMm / 1000).toLocaleString("es-CL", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          m
-        </em>
-      </header>
+    <section className={compact ? s.fabPautaRow : s.fabPerfilTirasBlock}>
+      {compact ? (
+        <strong className={s.fabPautaRowLabel}>{label}</strong>
+      ) : (
+        <header className={s.fabPerfilTirasHeader}>
+          <strong>{label}</strong>
+          <em>{tirasLabel}</em>
+        </header>
+      )}
       <div className={s.fabPerfilTirasBars}>
         {barras.map((bar, index) => (
           <FabricacionBarraCorte
@@ -133,9 +148,11 @@ export function FabricacionPerfilTirasVisual({
             bar={bar}
             tirasCount={tiras}
             index={startIndex + index}
+            hideHeader={compact}
           />
         ))}
       </div>
+      {compact ? <em className={s.fabPautaRowMeta}>{tirasLabel}</em> : null}
     </section>
   );
 }

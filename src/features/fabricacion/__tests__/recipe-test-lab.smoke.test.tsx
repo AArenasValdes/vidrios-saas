@@ -72,7 +72,7 @@ describe("RecipeTestLab smoke — Probar fabricación", () => {
         name: /Necesitas \d+ tiras? de/i,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText(/Tiras y cortes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pauta de corte/i)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /¿Coincide con tu taller\?/i })
     ).toBeInTheDocument();
