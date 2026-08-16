@@ -9,21 +9,31 @@
 }
 
 .workspaceEmbedded {
+  display: grid;
+  grid-template-columns: minmax(0, 1.95fr) minmax(300px, 0.95fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0;
   border-radius: 12px;
   border-color: #e2e8f0;
   box-shadow: none;
   background: #fff;
+  overflow: visible;
 }
 
 .workspaceEmbedded .header {
-  border-radius: 12px 12px 0 0;
-  padding: 8px 12px;
+  grid-column: 1;
+  grid-row: 1;
+  border-radius: 12px 0 0 0;
+  border-bottom: 1px solid #e8edf3;
+  padding: 10px 12px 8px;
   min-height: 0;
-  gap: 8px 12px;
+  gap: 8px 10px;
+  background: #fff;
 }
 
 .workspaceEmbedded .headerCopy h2 {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 780;
   letter-spacing: -0.02em;
 }
@@ -33,22 +43,66 @@
   font-size: 11px;
 }
 
+.workspaceEmbedded .headerTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.workspaceEmbedded .defaultLineControl {
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 6px;
+}
+
+.workspaceEmbedded .defaultLineLabel {
+  color: #64748b;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.workspaceEmbedded .defaultLinePicker {
+  width: min(100%, 11.5rem);
+  min-width: 9.5rem;
+}
+
+.workspaceEmbedded .presetBar {
+  grid-column: 1;
+  grid-row: 2;
+  position: static;
+  padding: 6px 12px;
+  gap: 8px;
+  box-shadow: none;
+  border-bottom: 1px solid #e8edf3;
+  background: #fff;
+}
+
+.workspaceEmbedded .presetIntro {
+  width: 108px;
+  min-width: 96px;
+  max-width: 118px;
+  padding-right: 8px;
+}
+
 .workspaceEmbedded .body {
-  grid-template-columns: minmax(0, 1.85fr) minmax(292px, 0.78fr);
-  align-items: stretch;
-  min-height: 0;
+  display: contents;
 }
 
 .workspaceEmbedded .board {
+  grid-column: 1;
+  grid-row: 3;
   max-height: none;
   overflow: visible;
   padding: 10px 12px 12px;
-  background-color: #f5f7fa;
+  background-color: #f7f8fa;
   background-image: none;
 }
 
 .workspaceEmbedded .pieceGrid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: 8px;
 }
 
@@ -56,6 +110,7 @@
   border-radius: 10px;
   box-shadow: none;
   border-color: #e3e9f0;
+  background: #fff;
 }
 
 .workspaceEmbedded .pieceCard:hover {
@@ -66,13 +121,15 @@
 
 .workspaceEmbedded .pieceCardActive {
   box-shadow: none;
-  border-color: #7eb6ef;
+  border-color: #1e88ff;
+  background: #f8fbff;
 }
 
 .workspaceEmbedded .pieceCardActive::before {
   top: 8px;
   bottom: 8px;
   width: 2px;
+  background: #1e88ff;
 }
 
 .workspaceEmbedded .pieceCardConfirmed.pieceCardActive {
@@ -80,26 +137,26 @@
 }
 
 .workspaceEmbedded .pieceHeader {
-  padding: 9px 10px 5px;
+  padding: 8px 10px 4px;
   gap: 8px;
 }
 
 .workspaceEmbedded .pieceHeader strong {
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .workspaceEmbedded .drawingStage {
-  min-height: 108px;
-  padding: 0 8px 4px;
+  min-height: 96px;
+  padding: 0 8px 2px;
 }
 
 .workspaceEmbedded .drawing svg {
-  max-height: 104px;
+  max-height: 92px;
 }
 
 .workspaceEmbedded .cardFields {
   gap: 5px;
-  padding: 6px 9px 5px;
+  padding: 5px 9px 4px;
 }
 
 .workspaceEmbedded .techSummary {
@@ -107,33 +164,37 @@
 }
 
 .workspaceEmbedded .addPieceTile {
-  min-height: 120px;
-  padding: 12px 10px;
+  min-height: 112px;
+  padding: 10px 8px;
   border-radius: 10px;
   background: #fff;
 }
 
 .workspaceEmbedded .addPieceTileIcon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   margin-bottom: 2px;
   border-radius: 10px;
 }
 
 .workspaceEmbedded .inspector {
+  grid-column: 2;
+  grid-row: 1 / 5;
   position: sticky;
   top: 8px;
-  max-height: calc(100vh - 6.5rem);
-  padding: 0 10px 10px;
+  align-self: start;
+  width: auto;
+  max-height: calc(100vh - 5.5rem);
+  padding: 0 12px 12px;
   overflow: auto;
   overscroll-behavior: contain;
-  border-left-color: #e8edf3;
+  border-left: 1px solid #e8edf3;
   background: #fff;
 }
 
 .workspaceEmbedded .inspectorHead {
   gap: 6px;
-  padding: 10px 0 8px;
+  padding: 12px 0 8px;
 }
 
 .workspaceEmbedded .inspectorHeading {
@@ -235,37 +296,43 @@
   background: #fff;
 }
 
-.workspaceEmbedded .inspectorFooter {
-  gap: 6px;
-  padding: 8px 0 4px;
-}
-
 .workspaceEmbedded .workspaceFooter {
-  min-height: 44px;
+  grid-column: 1;
+  grid-row: 4;
+  min-height: 40px;
   padding: 6px 12px;
   gap: 12px;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.04);
+  border-radius: 0 0 0 12px;
+  border-top: 1px solid #e8edf3;
+  box-shadow: none;
   backdrop-filter: none;
   background: #fff;
 }
 
-.workspaceEmbedded .workspaceFooter button {
-  min-width: 0;
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: 11px;
-  border-radius: 8px;
-  box-shadow: none;
+.workspaceEmbedded .workspaceFooterProgressOnly {
+  justify-content: flex-start;
+}
+
+.workspaceEmbedded .workspaceFooterProgress {
+  max-width: 240px;
 }
 
 .workspaceEmbedded .emptyState {
-  min-height: 280px;
+  min-height: 240px;
 }
 
 .workspaceEmbedded .inspectorEmpty {
   min-height: 180px;
   padding: 16px 8px;
+}
+
+.headerTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
 }
 
 .header {
@@ -382,20 +449,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0 15px;
-  border: 1px solid rgba(30, 136, 255, 0.28);
-  border-radius: 10px;
-  background: #eef6ff;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #d7e2ef;
+  border-radius: 8px;
+  background: #fff;
   color: #0b4f9c;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 760;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .reviewDespieceButton:hover {
   border-color: #1e88ff;
-  background: #e3f1ff;
+  background: #f5f9ff;
 }
 
 .reviewButton:hover { border-color: #8dbdec; background: #f7fbff; color: #1766ad; }
@@ -1496,6 +1564,34 @@
   .inspectorHead,
   .inspectorTitle { position: static; }
   .defaultLineControl { justify-content: flex-start; width: 100%; }
+
+  .workspaceEmbedded {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto;
+  }
+
+  .workspaceEmbedded .header,
+  .workspaceEmbedded .presetBar,
+  .workspaceEmbedded .board,
+  .workspaceEmbedded .workspaceFooter {
+    grid-column: 1;
+  }
+
+  .workspaceEmbedded .header { grid-row: 1; border-radius: 12px 12px 0 0; }
+  .workspaceEmbedded .presetBar { grid-row: 2; }
+  .workspaceEmbedded .board { grid-row: 3; }
+  .workspaceEmbedded .inspector {
+    grid-column: 1;
+    grid-row: 4;
+    position: static;
+    max-height: none;
+    border-left: 0;
+    border-top: 1px solid #e8edf3;
+  }
+  .workspaceEmbedded .workspaceFooter {
+    grid-row: 5;
+    border-radius: 0 0 12px 12px;
+  }
 }
 
 @media (min-width: 1024px) and (max-width: 1140px) {

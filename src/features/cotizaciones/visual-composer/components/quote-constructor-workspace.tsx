@@ -907,34 +907,36 @@ export function QuoteConstructorWorkspace({
             ) : null}
           </p>
         </div>
-        {lineTemplates.length > 0 ? (
-          <div className={s.defaultLineControl}>
-            <span className={s.defaultLineLabel}>Línea base</span>
-            <LineTemplatePicker
-              templates={lineTemplates}
-              value={defaultLineTemplateId}
-              onChange={onDefaultLineTemplateChange}
-              ariaLabel="Línea para nuevas piezas"
-              className={s.defaultLinePicker}
-            />
-            {defaultLineTemplate && itemsWithoutDefaultLine.length > 0 ? (
-              <button
-                type="button"
-                className={s.defaultLineApply}
-                onClick={applyDefaultLineToExistingPieces}
-              >
-                Aplicar a {itemsWithoutDefaultLine.length}{" "}
-                {itemsWithoutDefaultLine.length === 1 ? "pieza" : "piezas"}
-              </button>
-            ) : defaultLineTemplate && visualItems.length > 0 ? (
-              <span className={s.defaultLineApplied}>
-                {visualItems.length} {visualItems.length === 1 ? "pieza usa" : "piezas usan"} línea base
+        <div className={s.headerTools}>
+          {lineTemplates.length > 0 ? (
+            <div className={s.defaultLineControl}>
+              <span className={s.defaultLineLabel}>
+                {embeddedInQuoteStudio ? "Elegir línea" : "Línea base"}
               </span>
-            ) : null}
-          </div>
-        ) : null}
-        {!embeddedInQuoteStudio ? (
-          <div className={s.headerActions}>
+              <LineTemplatePicker
+                templates={lineTemplates}
+                value={defaultLineTemplateId}
+                onChange={onDefaultLineTemplateChange}
+                ariaLabel="Línea para nuevas piezas"
+                className={s.defaultLinePicker}
+              />
+              {defaultLineTemplate && itemsWithoutDefaultLine.length > 0 ? (
+                <button
+                  type="button"
+                  className={s.defaultLineApply}
+                  onClick={applyDefaultLineToExistingPieces}
+                >
+                  Aplicar a {itemsWithoutDefaultLine.length}{" "}
+                  {itemsWithoutDefaultLine.length === 1 ? "pieza" : "piezas"}
+                </button>
+              ) : defaultLineTemplate && visualItems.length > 0 && !embeddedInQuoteStudio ? (
+                <span className={s.defaultLineApplied}>
+                  {visualItems.length}{" "}
+                  {visualItems.length === 1 ? "pieza usa" : "piezas usan"} línea base
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           {visualItems.length > 0 ? (
             <button
               type="button"
@@ -944,16 +946,17 @@ export function QuoteConstructorWorkspace({
               Revisar despiece
             </button>
           ) : null}
-          <button
-            type="button"
-            className={s.reviewButton}
-            onClick={incompleteCount > 0 ? reviewPending : onGoToSummary}
-            disabled={visualItems.length === 0}
-          >
-            {incompleteCount > 0 ? "Revisar pendientes" : "Revisar cotización"}
-          </button>
-          </div>
-        ) : null}
+          {!embeddedInQuoteStudio ? (
+            <button
+              type="button"
+              className={s.reviewButton}
+              onClick={incompleteCount > 0 ? reviewPending : onGoToSummary}
+              disabled={visualItems.length === 0}
+            >
+              {incompleteCount > 0 ? "Revisar pendientes" : "Revisar cotización"}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <nav
@@ -1200,13 +1203,15 @@ export function QuoteConstructorWorkspace({
                   </span>
                 </div>
                 <div className={s.inspectorHeadActions}>
-                  <button
-                    type="button"
-                    className={s.inspectorDespieceCta}
-                    onClick={() => openDespieceReview(activeItem.id)}
-                  >
-                    Ver despiece
-                  </button>
+                  {!embeddedInQuoteStudio ? (
+                    <button
+                      type="button"
+                      className={s.inspectorDespieceCta}
+                      onClick={() => openDespieceReview(activeItem.id)}
+                    >
+                      Ver despiece
+                    </button>
+                  ) : null}
                   <div className={s.badgeRow}>
                     <span
                       className={
@@ -1584,51 +1589,53 @@ export function QuoteConstructorWorkspace({
                 <div className={s.inspectorRail}>{inspectorRailSlot}</div>
               ) : null}
 
-              <div className={s.inspectorFooter}>
-                <button
-                  type="button"
-                  className={
-                    activeIsConfirmed
-                      ? s.confirmPieceDone
-                      : activeEffectivelyComplete
-                        ? s.confirmPieceReady
-                        : s.confirmPieceBlocked
-                  }
-                  onClick={
-                    activeIsConfirmed && incompleteCount === 0
-                      ? onGoToSummary
-                      : confirmActivePiece
-                  }
-                >
-                  {activeIsConfirmed ? (
-                    incompleteCount === 0 ? (
-                      <>
-                        Ir al resumen
-                        <LuArrowRight aria-hidden />
-                      </>
-                    ) : (
+              {!embeddedInQuoteStudio ? (
+                <div className={s.inspectorFooter}>
+                  <button
+                    type="button"
+                    className={
+                      activeIsConfirmed
+                        ? s.confirmPieceDone
+                        : activeEffectivelyComplete
+                          ? s.confirmPieceReady
+                          : s.confirmPieceBlocked
+                    }
+                    onClick={
+                      activeIsConfirmed && incompleteCount === 0
+                        ? onGoToSummary
+                        : confirmActivePiece
+                    }
+                  >
+                    {activeIsConfirmed ? (
+                      incompleteCount === 0 ? (
+                        <>
+                          Ir al resumen
+                          <LuArrowRight aria-hidden />
+                        </>
+                      ) : (
+                        <>
+                          <LuCheck aria-hidden />
+                          Pieza confirmada
+                        </>
+                      )
+                    ) : activeEffectivelyComplete ? (
                       <>
                         <LuCheck aria-hidden />
-                        Pieza confirmada
+                        Confirmar pieza lista
                       </>
-                    )
-                  ) : activeEffectivelyComplete ? (
-                    <>
-                      <LuCheck aria-hidden />
-                      Confirmar pieza lista
-                    </>
-                  ) : (
-                    <>Completar lo pendiente</>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className={s.advancedButton}
-                  onClick={() => onEditAdvanced(activeItem)}
-                >
-                  Abrir configuración guiada
-                </button>
-              </div>
+                    ) : (
+                      <>Completar lo pendiente</>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className={s.advancedButton}
+                    onClick={() => onEditAdvanced(activeItem)}
+                  >
+                    Abrir configuración guiada
+                  </button>
+                </div>
+              ) : null}
             </>
           ) : (
             <div className={s.inspectorEmpty}>
@@ -1646,7 +1653,11 @@ export function QuoteConstructorWorkspace({
         </aside>
       </div>
 
-      <footer className={s.workspaceFooter}>
+      <footer
+        className={`${s.workspaceFooter}${
+          embeddedInQuoteStudio && inspectorRailSlot ? ` ${s.workspaceFooterProgressOnly}` : ""
+        }`}
+      >
         <div className={s.workspaceFooterProgress}>
           <strong>
             {completeCount}/{visualItems.length} piezas listas
@@ -1670,15 +1681,17 @@ export function QuoteConstructorWorkspace({
             />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={canContinue ? onGoToSummary : reviewPending}
-          disabled={visualItems.length === 0}
-          className={canContinue ? s.continueButton : s.pendingButton}
-        >
-          {footerActionLabel}
-          <LuArrowRight aria-hidden />
-        </button>
+        {!(embeddedInQuoteStudio && inspectorRailSlot) ? (
+          <button
+            type="button"
+            onClick={canContinue ? onGoToSummary : reviewPending}
+            disabled={visualItems.length === 0}
+            className={canContinue ? s.continueButton : s.pendingButton}
+          >
+            {footerActionLabel}
+            <LuArrowRight aria-hidden />
+          </button>
+        ) : null}
       </footer>
 
       {composerItem ? (

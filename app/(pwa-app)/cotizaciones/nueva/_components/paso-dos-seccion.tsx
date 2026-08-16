@@ -541,7 +541,12 @@ export function PasoDosSeccion({
       data-constructor-workspace={showRapidaWorkspace ? "true" : undefined}
     >
       {!isMobileViewport && quoteModeChosen && !showModeChoice ? (
-        <header className={d.desktopWorkspaceModeBar} aria-label="Componentes de la cotización">
+        <header
+          className={`${d.desktopWorkspaceModeBar}${
+            showQuoteStudioRapidaLayout ? ` ${d.desktopWorkspaceModeBarRapida}` : ""
+          }`}
+          aria-label="Componentes de la cotización"
+        >
           <div className={d.desktopComponentsHeaderCopy}>
             <button
               type="button"
@@ -550,13 +555,17 @@ export function PasoDosSeccion({
             >
               ← Cambiar modalidad
             </button>
-            <strong>Componentes de la cotización</strong>
-            <span>
-              {panel.items.length} {panel.items.length === 1 ? "pieza" : "piezas"}
-              {panel.items.length > 0
-                ? ` · ${completeCount} de ${panel.items.length} completas`
-                : ""}
-            </span>
+            {!showQuoteStudioRapidaLayout ? (
+              <>
+                <strong>Componentes de la cotización</strong>
+                <span>
+                  {panel.items.length} {panel.items.length === 1 ? "pieza" : "piezas"}
+                  {panel.items.length > 0
+                    ? ` · ${completeCount} de ${panel.items.length} completas`
+                    : ""}
+                </span>
+              </>
+            ) : null}
           </div>
           {quotePricingMode === "por_item" ? (
             <div
@@ -582,7 +591,7 @@ export function PasoDosSeccion({
             <span className={d.desktopComponentsSaveChip} aria-live="polite">
               {isSaving ? "Guardando…" : "Autoguardado activo"}
             </span>
-            {panel.items.length > 0 ? (
+            {!showQuoteStudioRapidaLayout && panel.items.length > 0 ? (
               <button
                 type="button"
                 className={d.desktopReviewDespieceButton}
@@ -591,13 +600,15 @@ export function PasoDosSeccion({
                 Revisar despiece
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={reviewPendingPieces}
-              disabled={panel.items.length === 0}
-            >
-              {pendingCount > 0 ? `Revisar pendientes (${pendingCount})` : "Revisar cotización"}
-            </button>
+            {!showQuoteStudioRapidaLayout ? (
+              <button
+                type="button"
+                onClick={reviewPendingPieces}
+                disabled={panel.items.length === 0}
+              >
+                {pendingCount > 0 ? `Revisar pendientes (${pendingCount})` : "Revisar cotización"}
+              </button>
+            ) : null}
           </div>
         </header>
       ) : null}

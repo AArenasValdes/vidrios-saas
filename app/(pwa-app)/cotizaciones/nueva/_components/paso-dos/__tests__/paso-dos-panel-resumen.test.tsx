@@ -36,7 +36,7 @@ function buildProps(overrides: Record<string, unknown> = {}) {
 }
 
 describe("PasoDosPanelResumen desktop quote studio", () => {
-  it("muestra Ir al resumen habilitado mientras hay pieza en edicion y piezas terminadas", () => {
+  it("muestra Continuar al resumen habilitado mientras hay pieza en edicion y piezas terminadas", () => {
     render(
       <PasoDosPanelResumen
         {...buildProps({
@@ -46,13 +46,13 @@ describe("PasoDosPanelResumen desktop quote studio", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /Ir al resumen/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Continuar al resumen/i })).toBeEnabled();
     expect(
       screen.queryByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)
     ).not.toBeInTheDocument();
   });
 
-  it("bloquea Ir al resumen sin piezas terminadas durante la edicion", () => {
+  it("bloquea Continuar al resumen sin piezas terminadas durante la edicion", () => {
     render(
       <PasoDosPanelResumen
         {...buildProps({
@@ -64,14 +64,14 @@ describe("PasoDosPanelResumen desktop quote studio", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /Ir al resumen/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Continuar al resumen/i })).toBeDisabled();
     expect(screen.getByText(QUOTE_STUDIO_NO_COMPLETED_PIECES_HINT)).toBeInTheDocument();
   });
 
-  it("muestra Ir al resumen tambien cuando no hay pieza en edicion", () => {
+  it("muestra Continuar al resumen tambien cuando no hay pieza en edicion", () => {
     render(<PasoDosPanelResumen {...buildProps()} />);
 
-    expect(screen.getByRole("button", { name: /Ir al resumen/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continuar al resumen/i })).toBeInTheDocument();
     expect(screen.getByText("Subtotal neto")).toBeInTheDocument();
     expect(screen.getByText("Total a cobrar")).toBeInTheDocument();
     expect(

@@ -9,6 +9,29 @@ import { createQuoteConstructorPresetConfig } from "@/features/cotizaciones/visu
 import { encodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 import { QuoteConstructorWorkspace } from "../quote-constructor-workspace";
 
+jest.mock("@/features/cotizaciones/visual-composer/components/guided-visual-composer", () => ({
+  GuidedVisualComposer: ({ open }: { open?: boolean }) =>
+    open ? <div role="dialog">Composición guiada</div> : null,
+}));
+
+jest.mock("@/features/fabricacion/hooks/use-fabrication-recipes", () => ({
+  useFabricationRecipes: () => ({
+    organizationId: null,
+    recipes: [],
+    isLoading: false,
+    error: null,
+    refresh: jest.fn(),
+  }),
+}));
+
+jest.mock("@/features/auth/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: null,
+    session: null,
+    isLoading: false,
+  }),
+}));
+
 function item(id: string, code: string): CotizacionWorkflowItem {
   return {
     id,
@@ -218,12 +241,18 @@ describe("QuoteConstructorWorkspace", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("evita acciones de revision duplicadas cuando esta dentro de Quote Studio", () => {
-    renderWorkspace({ embeddedInQuoteStudio: true });
+  it("en Quote Studio mueve Revisar despiece al header de piezas y deja un solo CTA de avance", () => {
+    renderWorkspace({
+      embeddedInQuoteStudio: true,
+      inspectorRailSlot: (
+        <button type="button">Continuar al resumen</button>
+      ),
+    });
 
-    expect(screen.queryByRole("button", { name: "Revisar despiece" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revisar despiece" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Revisar cotizaci.n/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuar al resumen" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Abrir configuraci.n guiada/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Continuar al resumen" })).toHaveLength(1);
   });
 
   it("no escribe medidas inválidas y bloquea el CTA hasta corregir", () => {

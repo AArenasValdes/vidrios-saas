@@ -2463,6 +2463,25 @@
   background: #147be8;
 }
 
+.desktopWorkspaceModeBarRapida {
+  grid-template-columns: auto 1fr auto;
+  margin-bottom: 4px;
+  padding: 2px 0 6px;
+}
+
+.desktopWorkspaceModeBarRapida .desktopComponentsHeaderCopy strong,
+.desktopWorkspaceModeBarRapida .desktopComponentsHeaderCopy span {
+  display: none;
+}
+
+.desktopWorkspaceModeBarRapida .desktopComponentsHeaderMeta {
+  justify-content: flex-end;
+}
+
+.desktopWorkspaceModeBarRapida .desktopWorkspaceModeTabs {
+  justify-self: start;
+}
+
 .desktopComponentsSaveChip {
   display: inline-flex;
   align-items: center;
