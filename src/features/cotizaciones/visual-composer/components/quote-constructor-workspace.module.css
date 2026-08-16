@@ -33,14 +33,14 @@
 }
 
 .workspaceEmbedded .headerCopy h2 {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 780;
   letter-spacing: -0.02em;
 }
 
 .workspaceEmbedded .headerCopy p {
   margin: 2px 0 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .workspaceEmbedded .headerTools {
@@ -60,7 +60,7 @@
 
 .workspaceEmbedded .defaultLineLabel {
   color: #64748b;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
 }
 
@@ -73,7 +73,7 @@
   grid-column: 1;
   grid-row: 2;
   position: static;
-  padding: 6px 12px;
+  padding: 8px 14px;
   gap: 8px;
   box-shadow: none;
   border-bottom: 1px solid #e8edf3;
@@ -81,10 +81,14 @@
 }
 
 .workspaceEmbedded .presetIntro {
-  width: 108px;
-  min-width: 96px;
-  max-width: 118px;
+  width: 118px;
+  min-width: 104px;
+  max-width: 130px;
   padding-right: 8px;
+}
+
+.workspaceEmbedded .presetLabel {
+  font-size: 11px;
 }
 
 .workspaceEmbedded .body {
@@ -96,18 +100,24 @@
   grid-row: 3;
   max-height: none;
   overflow: visible;
-  padding: 10px 12px 12px;
+  padding: 14px 14px 16px;
   background-color: #f7f8fa;
   background-image: none;
 }
 
 .workspaceEmbedded .pieceGrid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-  gap: 8px;
+  --piece-gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(max(260px, calc((100% - 2 * var(--piece-gap)) / 3)), 1fr)
+  );
+  gap: var(--piece-gap);
+  align-items: start;
 }
 
 .workspaceEmbedded .pieceCard {
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: none;
   border-color: #e3e9f0;
   background: #fff;
@@ -126,9 +136,9 @@
 }
 
 .workspaceEmbedded .pieceCardActive::before {
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
   background: #1e88ff;
 }
 
@@ -137,44 +147,107 @@
 }
 
 .workspaceEmbedded .pieceHeader {
-  padding: 8px 10px 4px;
-  gap: 8px;
+  padding: 12px 14px 6px;
+  gap: 10px;
+}
+
+.workspaceEmbedded .pieceHeader div > span {
+  font-size: 11px;
 }
 
 .workspaceEmbedded .pieceHeader strong {
-  font-size: 12.5px;
+  font-size: 14.5px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.workspaceEmbedded .ready,
+.workspaceEmbedded .pending,
+.workspaceEmbedded .techReady,
+.workspaceEmbedded .techPending {
+  min-height: 22px;
+  padding: 2px 8px;
+  font-size: 11px;
 }
 
 .workspaceEmbedded .drawingStage {
-  min-height: 96px;
-  padding: 0 8px 2px;
+  min-height: 132px;
+  padding: 4px 12px 6px;
 }
 
 .workspaceEmbedded .drawing svg {
-  max-height: 92px;
+  max-height: 124px;
 }
 
 .workspaceEmbedded .cardFields {
+  gap: 8px;
+  padding: 8px 12px 8px;
+}
+
+.workspaceEmbedded .inlineField {
   gap: 5px;
-  padding: 5px 9px 4px;
+  font-size: 11.5px;
+}
+
+.workspaceEmbedded .inlineField input {
+  height: 42px;
+  padding: 0 34px 0 10px;
+  font-size: 14.5px;
+  border-radius: 9px;
 }
 
 .workspaceEmbedded .techSummary {
-  padding: 0 9px 7px;
+  padding: 0 12px 10px;
 }
 
-.workspaceEmbedded .addPieceTile {
-  min-height: 112px;
-  padding: 10px 8px;
+.workspaceEmbedded .techSummaryLines,
+.workspaceEmbedded .techSummaryMuted {
+  font-size: 12px;
+}
+
+.workspaceEmbedded .viewCutsButton {
+  min-height: 32px;
+  padding: 0 11px;
+  font-size: 11.5px;
+}
+
+.workspaceEmbedded .addPieceTileRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1.5px dashed #9bb8d8;
   border-radius: 10px;
   background: #fff;
+  text-align: left;
 }
 
-.workspaceEmbedded .addPieceTileIcon {
-  width: 34px;
-  height: 34px;
-  margin-bottom: 2px;
-  border-radius: 10px;
+.workspaceEmbedded .addPieceTileRow .addPieceTileIcon {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 9px;
+  flex: 0 0 auto;
+}
+
+.workspaceEmbedded .addPieceTileRow .addPieceTileIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.workspaceEmbedded .addPieceTileRow strong {
+  font-size: 13.5px;
+  font-weight: 760;
+}
+
+.workspaceEmbedded .addPieceTileRow > span:last-child {
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .workspaceEmbedded .inspector {
@@ -185,7 +258,7 @@
   align-self: start;
   width: auto;
   max-height: calc(100vh - 5.5rem);
-  padding: 0 12px 12px;
+  padding: 0 14px 14px;
   overflow: auto;
   overscroll-behavior: contain;
   border-left: 1px solid #e8edf3;
@@ -193,37 +266,46 @@
 }
 
 .workspaceEmbedded .inspectorHead {
-  gap: 6px;
-  padding: 12px 0 8px;
+  gap: 7px;
+  padding: 14px 0 10px;
 }
 
 .workspaceEmbedded .inspectorHeading {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .workspaceEmbedded .inspectorActiveSummary strong {
-  font-size: 12px;
+  font-size: 13.5px;
 }
 
 .workspaceEmbedded .inspectorActiveSummary span {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .workspaceEmbedded .inspectorDespieceCta {
-  min-height: 28px;
-  padding: 0 10px;
-  font-size: 11px;
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: 12px;
 }
 
 .workspaceEmbedded .checklistPanel {
-  margin-top: 6px;
-  padding: 7px 8px;
+  margin-top: 7px;
+  padding: 8px 10px;
   border-radius: 8px;
+}
+
+.workspaceEmbedded .checklistHeader strong {
+  font-size: 13px;
+}
+
+.workspaceEmbedded .checklistPanel > p {
+  font-size: 12px;
 }
 
 .workspaceEmbedded .accordionList {
   gap: 0;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
 .workspaceEmbedded .accordion {
@@ -259,29 +341,47 @@
 }
 
 .workspaceEmbedded .accordionTrigger {
-  min-height: 32px;
-  padding: 0 8px;
-  font-size: 11.5px;
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 13.5px;
   font-weight: 780;
 }
 
 .workspaceEmbedded .accordionOpen .accordionTrigger {
-  min-height: 34px;
-  padding: 0 10px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.workspaceEmbedded .accordionPending,
+.workspaceEmbedded .accordionReady,
+.workspaceEmbedded .accordionOptional {
+  min-height: 22px;
+  padding: 2px 8px;
+  font-size: 10.5px;
 }
 
 .workspaceEmbedded .accordionInner {
-  gap: 8px;
-  padding: 0 10px;
+  gap: 10px;
+  padding: 0 12px;
 }
 
 .workspaceEmbedded .accordionOpen .accordionInner {
-  padding: 0 10px 10px;
+  padding: 0 12px 12px;
+}
+
+.workspaceEmbedded .inspectorField {
+  font-size: 12px;
+}
+
+.workspaceEmbedded .inspectorField > input,
+.workspaceEmbedded .inspectorField > select {
+  min-height: 38px;
+  font-size: 14px;
 }
 
 .workspaceEmbedded .priceSectionInner {
-  gap: 8px;
-  padding: 8px;
+  gap: 10px;
+  padding: 10px;
   border-radius: 8px;
 }
 
@@ -290,8 +390,8 @@
   bottom: 0;
   z-index: 5;
   gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid #e8edf3;
   background: #fff;
 }
@@ -299,8 +399,8 @@
 .workspaceEmbedded .workspaceFooter {
   grid-column: 1;
   grid-row: 4;
-  min-height: 40px;
-  padding: 6px 12px;
+  min-height: 42px;
+  padding: 8px 14px;
   gap: 12px;
   border-radius: 0 0 0 12px;
   border-top: 1px solid #e8edf3;
@@ -314,7 +414,11 @@
 }
 
 .workspaceEmbedded .workspaceFooterProgress {
-  max-width: 240px;
+  max-width: 260px;
+}
+
+.workspaceEmbedded .workspaceFooterProgress strong {
+  font-size: 12.5px;
 }
 
 .workspaceEmbedded .emptyState {
@@ -1596,6 +1700,14 @@
 
 @media (min-width: 1024px) and (max-width: 1140px) {
   .pieceGrid { grid-template-columns: minmax(0, 1fr); }
+
+  .workspaceEmbedded .pieceGrid {
+    --piece-gap: 12px;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(max(220px, calc((100% - var(--piece-gap)) / 2)), 1fr)
+    );
+  }
 }
 
 @media (max-width: 1023px) {

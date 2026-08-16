@@ -992,6 +992,7 @@ export function QuoteConstructorWorkspace({
               </button>
             </div>
           ) : (
+            <>
             <div className={s.pieceGrid}>
               {visualItems.map((item, index) => {
                 const config = inferConfig(item);
@@ -1164,19 +1165,20 @@ export function QuoteConstructorWorkspace({
                   </article>
                 );
               })}
-              <button
-                type="button"
-                className={s.addPieceTile}
-                onClick={focusAddBar}
-                aria-label="Agregar otra pieza"
-              >
-                <span className={s.addPieceTileIcon}>
-                  <LuPlus aria-hidden />
-                </span>
-                <strong>Agregar otra pieza</strong>
-                <span>Fijo, corredera, puerta y más</span>
-              </button>
             </div>
+            <button
+              type="button"
+              className={`${s.addPieceTile} ${embeddedInQuoteStudio ? s.addPieceTileRow : ""}`}
+              onClick={focusAddBar}
+              aria-label="Agregar otra pieza"
+            >
+              <span className={s.addPieceTileIcon}>
+                <LuPlus aria-hidden />
+              </span>
+              <strong>Agregar otra pieza</strong>
+              <span>Fijo, corredera, puerta y más</span>
+            </button>
+            </>
           )}
           {nonVisualCount > 0 ? (
             <p className={s.nonVisualNote}>

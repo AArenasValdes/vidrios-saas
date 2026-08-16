@@ -2531,7 +2531,7 @@
 
 .rapidaCostsAccordion > summary strong {
   color: #334155;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 760;
 }
 
@@ -2631,7 +2631,7 @@
 
 .rapidaInspectorRail :global([class*="totalItem"] span) {
   color: #64748b;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0;
   text-transform: none;
@@ -2639,35 +2639,35 @@
 
 .rapidaInspectorRail :global([class*="totalItem"] strong) {
   color: #334155;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 740;
   font-variant-numeric: tabular-nums;
 }
 
 .rapidaInspectorRail :global([class*="totalItemWide"]) {
   margin-top: 4px;
-  padding-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid #e8edf3;
 }
 
 .rapidaInspectorRail :global([class*="totalItemWide"] span) {
   color: #0b1220;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 760;
 }
 
 .rapidaInspectorRail :global([class*="totalItemWide"] strong) {
   color: #0b1220;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 820;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 
 .rapidaInspectorRail :global([class*="summaryButton"]) {
-  min-height: 38px;
+  min-height: 42px;
   border-radius: 9px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   box-shadow: none;
 }
