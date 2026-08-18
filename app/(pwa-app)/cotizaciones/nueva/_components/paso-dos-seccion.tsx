@@ -115,7 +115,6 @@ export function PasoDosSeccion({
     () => preferredWorkspaceMode ?? readQuoteDesktopWorkspaceModePreference()
   );
   const [constructorActiveItemId, setConstructorActiveItemId] = useState<string | null>(null);
-  const [constructorDefaultLineTemplateId, setConstructorDefaultLineTemplateId] = useState("");
   const [despieceReviewOpen, setDespieceReviewOpen] = useState(false);
   const primarySurfaceRef = useRef<HTMLDivElement>(null);
 
@@ -489,8 +488,6 @@ export function PasoDosSeccion({
       formatCurrencyInput={formatCurrencyInput}
       embeddedInQuoteStudio={showQuoteStudioRapidaLayout}
       inspectorRailSlot={rapidInspectorRail}
-      defaultLineTemplateId={constructorDefaultLineTemplateId}
-      onDefaultLineTemplateChange={setConstructorDefaultLineTemplateId}
       onActiveItemChange={(itemId) => {
         setConstructorActiveItemId(itemId);
         panel.onSelectQuickEditItem(itemId);
@@ -498,6 +495,7 @@ export function PasoDosSeccion({
       onAddPreset={(preset, lineTemplateId) => {
         const itemId = onAddConstructorPreset(preset, lineTemplateId);
         if (itemId) setConstructorActiveItemId(itemId);
+        return itemId;
       }}
       onUpdateItem={onUpdateConstructorItem}
       onDuplicateItem={(item) => {

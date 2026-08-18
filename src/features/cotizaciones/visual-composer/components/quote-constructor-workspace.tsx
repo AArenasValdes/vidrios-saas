@@ -89,8 +89,6 @@ type Props = {
   embeddedInQuoteStudio?: boolean;
   /** Resumen económico / rentabilidad embebido en el inspector (desktop Cotización rápida). */
   inspectorRailSlot?: ReactNode;
-  defaultLineTemplateId?: string;
-  onDefaultLineTemplateChange?: (lineTemplateId: string) => void;
 };
 
 type InspectorSectionId =
@@ -190,6 +188,21 @@ function resolveLineTemplate(
 ) {
   if (!lineTemplateId) return null;
   return lineTemplates.find((template) => String(template.id) === lineTemplateId) ?? null;
+}
+
+function formatPieceLineCaption(
+  item: CotizacionWorkflowItem,
+  lineTemplates: CotizacionLineTemplate[]
+): { text: string; hasLine: boolean } {
+  const form = mapItemToForm(item);
+  const template = resolveLineTemplate(lineTemplates, form.lineTemplateId);
+  const lineName = (template?.nombre || item.lineaComercial || form.referencia || "").trim();
+  const material = (form.material || template?.material || "").trim();
+  if (!lineName) return { text: "Sin línea", hasLine: false };
+  return {
+    text: material ? `${lineName} · ${material}` : lineName,
+    hasLine: true,
+  };
 }
 
 function buildItemDomainView(
@@ -492,8 +505,6 @@ export function QuoteConstructorWorkspace({
   onOpenDespieceReview,
   embeddedInQuoteStudio = false,
   inspectorRailSlot = null,
-  defaultLineTemplateId = "",
-  onDefaultLineTemplateChange = () => undefined,
 }: Props) {
   const visualItems = useMemo(() => items.filter(isQuoteConstructorCompatibleItem), [items]);
   const nonVisualCount = items.length - visualItems.length;
@@ -509,12 +520,6 @@ export function QuoteConstructorWorkspace({
   const activeTemplate = activeForm
     ? resolveLineTemplate(lineTemplates, activeForm.lineTemplateId)
     : null;
-  const defaultLineTemplate = resolveLineTemplate(lineTemplates, defaultLineTemplateId);
-  const itemsWithoutDefaultLine = defaultLineTemplate
-    ? visualItems.filter(
-        (item) => mapItemToForm(item).lineTemplateId !== defaultLineTemplateId
-      )
-    : [];
   const { organizationId, recipes: fabricationRecipes } = useFabricationRecipes({
     enabled: true,
   });
@@ -862,20 +867,14 @@ export function QuoteConstructorWorkspace({
   };
 
   const addPreset = (preset: QuoteConstructorPresetId) => {
-    const itemId = defaultLineTemplateId
-      ? onAddPreset(preset, defaultLineTemplateId)
+    const suggestedLineTemplateId = activeForm?.lineTemplateId?.trim();
+    const itemId = suggestedLineTemplateId
+      ? onAddPreset(preset, suggestedLineTemplateId)
       : onAddPreset(preset);
     // Composición pide el editor profundo de inmediato; el resto abre al tocar el croquis.
     if (preset === "pano_libre" && typeof itemId === "string" && itemId) {
       setComposerItemId(itemId);
     }
-  };
-
-  const applyDefaultLineToExistingPieces = () => {
-    if (!defaultLineTemplate) return;
-    itemsWithoutDefaultLine.forEach((item) => {
-      onUpdateItem(item.id, { lineTemplateId: defaultLineTemplateId });
-    });
   };
 
   const footerActionLabel = canContinue
@@ -908,35 +907,6 @@ export function QuoteConstructorWorkspace({
           </p>
         </div>
         <div className={s.headerTools}>
-          {lineTemplates.length > 0 ? (
-            <div className={s.defaultLineControl}>
-              <span className={s.defaultLineLabel}>
-                {embeddedInQuoteStudio ? "Elegir línea" : "Línea base"}
-              </span>
-              <LineTemplatePicker
-                templates={lineTemplates}
-                value={defaultLineTemplateId}
-                onChange={onDefaultLineTemplateChange}
-                ariaLabel="Línea para nuevas piezas"
-                className={s.defaultLinePicker}
-              />
-              {defaultLineTemplate && itemsWithoutDefaultLine.length > 0 ? (
-                <button
-                  type="button"
-                  className={s.defaultLineApply}
-                  onClick={applyDefaultLineToExistingPieces}
-                >
-                  Aplicar a {itemsWithoutDefaultLine.length}{" "}
-                  {itemsWithoutDefaultLine.length === 1 ? "pieza" : "piezas"}
-                </button>
-              ) : defaultLineTemplate && visualItems.length > 0 && !embeddedInQuoteStudio ? (
-                <span className={s.defaultLineApplied}>
-                  {visualItems.length}{" "}
-                  {visualItems.length === 1 ? "pieza usa" : "piezas usan"} línea base
-                </span>
-              ) : null}
-            </div>
-          ) : null}
           {visualItems.length > 0 ? (
             <button
               type="button"
@@ -998,6 +968,7 @@ export function QuoteConstructorWorkspace({
                 const config = inferConfig(item);
                 const active = activeItem?.id === item.id;
                 const view = buildItemDomainView(item, quotePricingMode, lineTemplates);
+                const lineCaption = formatPieceLineCaption(item, lineTemplates);
                 const techLines = formatPieceTechnicalSummaryLines(view.technicalSummary);
                 const itemDrafts = fieldDraftsByItemId[item.id];
                 const hasLocalErrors = itemHasLocalFieldErrors(itemDrafts);
@@ -1040,6 +1011,13 @@ export function QuoteConstructorWorkspace({
                       <div>
                         <span>{item.codigo}</span>
                         <strong>{item.nombre || "Pieza sin nombre"}</strong>
+                        <p
+                          className={`${s.pieceLineMeta} ${
+                            lineCaption.hasLine ? "" : s.pieceLineMetaMuted
+                          }`}
+                        >
+                          {lineCaption.text}
+                        </p>
                       </div>
                       <div className={s.badgeRow}>
                         <span
@@ -1356,7 +1334,7 @@ export function QuoteConstructorWorkspace({
                   onToggle={() => toggleSection("sistema")}
                 >
                   <div className={s.inspectorField}>
-                    <span>Línea comercial</span>
+                    <span>Línea</span>
                     <LineTemplatePicker
                       templates={lineTemplates.filter(
                         (template) => template.categoria !== "vidrio"
@@ -1366,7 +1344,7 @@ export function QuoteConstructorWorkspace({
                         onUpdateItem(activeItem.id, { lineTemplateId })
                       }
                       mode="profile"
-                      ariaLabel="Elegir línea comercial"
+                      ariaLabel={`Línea de ${activeItem.codigo}`}
                     />
                   </div>
                   <label className={s.inspectorField}>

@@ -10,6 +10,7 @@ import {
   LuMessageCircle,
   LuPencil,
   LuPhone,
+  LuRuler,
   LuTrash2,
 } from "react-icons/lu";
 
@@ -92,7 +93,8 @@ export function CotizacionDetalleDesktopView({
             {isPreparingPdf ? "Preparando PDF..." : "Ver PDF"}
           </button>
           <Link className={s.secondaryBtn} href={fabricacionHref}>
-            Resumen fabricación
+            <LuRuler aria-hidden />
+            Despiece y pauta
           </Link>
           <Link className={s.secondaryBtn} href={editHref}>
             <LuPencil aria-hidden />

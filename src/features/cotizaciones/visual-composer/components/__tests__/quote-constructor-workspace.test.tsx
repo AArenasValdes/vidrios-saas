@@ -65,7 +65,9 @@ function item(id: string, code: string): CotizacionWorkflowItem {
   };
 }
 
-function lineTemplate(): CotizacionLineTemplate {
+function lineTemplate(
+  overrides: Partial<CotizacionLineTemplate> = {}
+): CotizacionLineTemplate {
   return {
     id: "linea-l5000",
     organizationId: "org-1",
@@ -89,6 +91,24 @@ function lineTemplate(): CotizacionLineTemplate {
     creadoEn: null,
     actualizadoEn: null,
     eliminadoEn: null,
+    ...overrides,
+  };
+}
+
+function itemWithLine(
+  id: string,
+  code: string,
+  template: CotizacionLineTemplate
+): CotizacionWorkflowItem {
+  return {
+    ...item(id, code),
+    lineaComercial: template.nombre,
+    observaciones: encodeCotizacionItemPresentationMeta({
+      colorHex: "#111827",
+      material: template.material,
+      lineTemplateId: String(template.id),
+      guidedVisualConfig: createQuoteConstructorPresetConfig("fijo"),
+    }),
   };
 }
 
@@ -217,20 +237,96 @@ describe("QuoteConstructorWorkspace", () => {
     expect(props.onGlobalTotalChange).toHaveBeenCalledWith("500000");
   });
 
-  it("usa la linea base en piezas nuevas y la aplica a las ya creadas solo por accion explicita", () => {
+  it("no expone selector global ni aplicar línea a varias piezas", () => {
+    const l5000 = lineTemplate();
+    const serie20 = lineTemplate({
+      id: "linea-serie20",
+      nombre: "Serie 20",
+      categoria: "pvc",
+      material: "PVC",
+    });
+    renderWorkspace({
+      items: [
+        itemWithLine("a", "VEN-01", l5000),
+        itemWithLine("b", "VEN-02", serie20),
+        item("c", "VEN-03"),
+      ],
+      lineTemplates: [l5000, serie20],
+      activeItemId: "a",
+      embeddedInQuoteStudio: true,
+    });
+
+    expect(screen.queryByLabelText("Línea para nuevas piezas")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Aplicar a \d+ piezas?/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Revisar despiece" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Línea de VEN-01")).toBeInTheDocument();
+    expect(screen.getByText("L5000 · Aluminio")).toBeInTheDocument();
+    expect(screen.getByText("Serie 20 · PVC")).toBeInTheDocument();
+    expect(screen.getByText("Sin línea")).toBeInTheDocument();
+  });
+
+  it("sugiere en la pieza nueva la línea de la pieza activa, sin tocar las anteriores", () => {
+    const l5000 = lineTemplate();
+    const serie20 = lineTemplate({
+      id: "linea-serie20",
+      nombre: "Serie 20",
+      categoria: "pvc",
+      material: "PVC",
+    });
+    const l25 = lineTemplate({
+      id: "linea-l25",
+      nombre: "L25",
+    });
     const props = renderWorkspace({
-      lineTemplates: [lineTemplate()],
-      defaultLineTemplateId: "linea-l5000",
+      items: [
+        itemWithLine("a", "VEN-01", l5000),
+        itemWithLine("b", "VEN-02", serie20),
+        itemWithLine("c", "VEN-03", l25),
+      ],
+      lineTemplates: [l5000, serie20, l25],
+      activeItemId: "b",
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Fijo" }));
-    expect(props.onAddPreset).toHaveBeenCalledWith("fijo", "linea-l5000");
+    expect(props.onAddPreset).toHaveBeenCalledWith("fijo", "linea-serie20");
+    expect(props.onUpdateItem).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar a 3 piezas" }));
-    expect(props.onUpdateItem).toHaveBeenCalledTimes(3);
-    expect(props.onUpdateItem).toHaveBeenCalledWith("a", { lineTemplateId: "linea-l5000" });
-    expect(props.onUpdateItem).toHaveBeenCalledWith("b", { lineTemplateId: "linea-l5000" });
-    expect(props.onUpdateItem).toHaveBeenCalledWith("c", { lineTemplateId: "linea-l5000" });
+  it("al cambiar la línea de la pieza activa no actualiza las demás", () => {
+    const l5000 = lineTemplate();
+    const serie20 = lineTemplate({
+      id: "linea-serie20",
+      nombre: "Serie 20",
+      categoria: "pvc",
+      material: "PVC",
+    });
+    const l25 = lineTemplate({
+      id: "linea-l25",
+      nombre: "L25",
+    });
+    const props = renderWorkspace({
+      items: [
+        itemWithLine("a", "VEN-01", l5000),
+        itemWithLine("b", "VEN-02", serie20),
+        itemWithLine("c", "VEN-03", l25),
+      ],
+      lineTemplates: [l5000, serie20, l25],
+      activeItemId: "b",
+    });
+
+    fireEvent.click(screen.getByLabelText("Línea de VEN-02"));
+    fireEvent.click(screen.getByRole("option", { name: /L25/i }));
+
+    expect(props.onUpdateItem).toHaveBeenCalledTimes(1);
+    expect(props.onUpdateItem).toHaveBeenCalledWith("b", { lineTemplateId: "linea-l25" });
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith(
+      "a",
+      expect.anything()
+    );
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith(
+      "c",
+      expect.anything()
+    );
   });
 
   it("abre el modal de composición al tocar el croquis de una pieza", () => {
