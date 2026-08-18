@@ -727,7 +727,7 @@ export function PasoTresResumen({
               <div className={s.rtActions}>
                 <button className={s.btnPrimary} onClick={onSaveQuote} type="button" disabled={isSaving}>
                   <LuSave aria-hidden size={16} />
-                  {isSavingQuote ? "Guardando..." : "Guardar presupuesto"}
+                  {isSavingQuote ? "Guardando..." : "Abrir y guardar presupuesto"}
                 </button>
                 <button className={s.rtBtnGhost} onClick={handleSaveDraft} type="button" disabled={isSaving}>
                   {isSavingDraft ? "Guardando borrador..." : "Guardar borrador"}

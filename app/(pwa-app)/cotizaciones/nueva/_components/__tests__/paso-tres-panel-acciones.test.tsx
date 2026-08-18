@@ -101,7 +101,7 @@ describe("PasoTresPanelAcciones", () => {
       isMobileViewport: false,
     });
 
-    expect(screen.getByRole("button", { name: /Guardar presupuesto/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Abrir y guardar presupuesto/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Despiece y pauta/i })).not.toBeInTheDocument();
   });
 });

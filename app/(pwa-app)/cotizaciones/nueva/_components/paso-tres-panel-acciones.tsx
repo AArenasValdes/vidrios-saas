@@ -206,7 +206,7 @@ export function PasoTresPanelAcciones({
                 ? "Guardando..."
                 : isMobileViewport
                   ? "Guardar y abrir PDF"
-                  : "Guardar presupuesto"}
+                  : "Abrir y guardar presupuesto"}
             </button>
             <button className={s.btnGhost} onClick={onSaveDraft} type="button" disabled={isSaving}>
               <LuSave aria-hidden /> {isSavingDraft ? "Guardando borrador..." : "Guardar borrador"}
