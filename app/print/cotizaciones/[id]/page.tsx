@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuShare2 } from "react-icons/lu";
+import { LuArrowLeft, LuCopy, LuDownload, LuPrinter, LuRuler, LuShare2 } from "react-icons/lu";
 
 import { useCotizacionesStore } from "@/features/cotizaciones/hooks/useCotizacionesStore";
 import { resolvePrintViewerBackNavigation } from "@/features/onboarding/services/onboarding-activation-flow.service";
@@ -1971,6 +1971,13 @@ export default function CotizacionPrintPage() {
               <LuShare2 aria-hidden />
               {whatsappActionLabel}
             </button>
+            <Link
+              className={s.actionSecondary}
+              href={`/print/cotizaciones/${visibleCotizacion.id}/fabricacion`}
+            >
+              <LuRuler aria-hidden />
+              Despiece y pauta
+            </Link>
             {showWhatsappFallbackActions ? (
               <>
                 <button

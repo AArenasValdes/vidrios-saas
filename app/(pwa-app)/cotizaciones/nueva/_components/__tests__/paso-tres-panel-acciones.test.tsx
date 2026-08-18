@@ -76,4 +76,32 @@ describe("PasoTresPanelAcciones", () => {
     expect(screen.queryByRole("button", { name: /Crear cotizaci/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Ver PDF profesional")).not.toBeInTheDocument();
   });
+
+  it("despues de guardar ofrece el PDF comercial y el despiece interno", () => {
+    renderPanel({
+      savedRecord: { ...savedDraft, estado: "creada" },
+      lastSaveMode: "creada",
+      isMobileViewport: false,
+    });
+
+    expect(screen.getByRole("link", { name: /Ver PDF profesional/i })).toHaveAttribute(
+      "href",
+      "/print/cotizaciones/quote-1"
+    );
+    expect(screen.getByRole("link", { name: /Despiece y pauta/i })).toHaveAttribute(
+      "href",
+      "/print/cotizaciones/quote-1/fabricacion"
+    );
+  });
+
+  it("no muestra despiece en el paso 3 antes de guardar la cotizacion", () => {
+    renderPanel({
+      savedRecord: null,
+      lastSaveMode: null,
+      isMobileViewport: false,
+    });
+
+    expect(screen.getByRole("button", { name: /Guardar presupuesto/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Despiece y pauta/i })).not.toBeInTheDocument();
+  });
 });

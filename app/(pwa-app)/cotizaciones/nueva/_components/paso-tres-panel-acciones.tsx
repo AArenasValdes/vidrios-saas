@@ -8,6 +8,7 @@ import {
   LuFileCheck2,
   LuPencil,
   LuPlus,
+  LuRuler,
   LuSave,
 } from "react-icons/lu";
 
@@ -146,6 +147,13 @@ export function PasoTresPanelAcciones({
               target="_blank"
             >
               <LuDownload aria-hidden /> Ver PDF profesional
+            </Link>
+            <Link
+              className={s.btnGhost}
+              href={`/print/cotizaciones/${savedRecord.id}/fabricacion`}
+              target="_blank"
+            >
+              <LuRuler aria-hidden /> Despiece y pauta
             </Link>
             <Link className={s.btnGhost} href="/configuracion/empresa?inicio=1">
               <LuBuilding2 aria-hidden /> Agregar mis datos de empresa
