@@ -375,14 +375,19 @@ export async function getAdminPaymentsWorkspace(
         client.estadoEfectivo === "cancelled")
   ).length;
 
-  const activacionesPendientes = snapshot.payments.filter((payment) => {
-    if (testOrgIds.has(Number(payment.organization_id)) || payment.status !== "aprobado") {
-      return false;
-    }
+  const activationOrganizationIds = new Set(
+    snapshot.payments
+      .filter((payment) => {
+        if (testOrgIds.has(Number(payment.organization_id)) || payment.status !== "aprobado") {
+          return false;
+        }
 
-    const client = clientByOrg.get(Number(payment.organization_id));
-    return client ? client.estadoEfectivo !== "active" : true;
-  }).length;
+        const client = clientByOrg.get(Number(payment.organization_id));
+        return client ? client.estadoEfectivo !== "active" : true;
+      })
+      .map((payment) => Number(payment.organization_id))
+  );
+  const activacionesPendientes = activationOrganizationIds.size;
 
   const kpis: AdminPaymentsKpi[] = [
     {

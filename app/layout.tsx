@@ -72,6 +72,15 @@ export default function RootLayout({
     <html lang="es" className={cn("font-sans", geistSans.variable)}>
       <body className="antialiased">
         {gtmContainerId ? (
+          <script
+            id="ventora-google-tag-bootstrap"
+            dangerouslySetInnerHTML={{
+              __html:
+                "window.dataLayer=window.dataLayer||[];window.dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});",
+            }}
+          />
+        ) : null}
+        {gtmContainerId ? (
           <Suspense fallback={null}>
             <GoogleTagProvider />
             <OAuthReturnTracker />

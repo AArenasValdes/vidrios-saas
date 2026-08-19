@@ -32,7 +32,9 @@ function buildKpis(clients: AdminClientListItem[]): ActivacionKpi[] {
   const trialsAtRisk = realClients.filter(
     (client) => isTrialExpiringSoon(client) && hasNoRecentActivity(client)
   );
-  const completed = realClients.filter((client) => client.pdfsGeneradosCount > 0);
+  const completed = realClients.filter(
+    (client) => resolveActivacionStage(client) === "activation_complete"
+  );
 
   return [
     {
@@ -111,10 +113,7 @@ function buildFunnel(clients: AdminClientListItem[]): {
   const firstQuote = realClients.filter((client) => client.cotizacionesCount > 0).length;
   const firstPdf = realClients.filter((client) => client.pdfsGeneradosCount > 0).length;
   const activationComplete = realClients.filter(
-    (client) =>
-      client.pdfsGeneradosCount > 0 &&
-      client.estadoEfectivo === "active" &&
-      Boolean(client.ultimoPagoAt)
+    (client) => resolveActivacionStage(client) === "activation_complete"
   ).length;
 
   const rawSteps: Array<{ id: ActivacionFunnelStep["id"]; label: string; count: number }> = [

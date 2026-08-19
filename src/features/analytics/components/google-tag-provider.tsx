@@ -25,10 +25,19 @@ export function GoogleTagProvider() {
       }
 
       window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        "gtm.start": new Date().getTime(),
-        event: "gtm.js",
-      });
+      if (!window.dataLayer.some((item) => {
+        return (
+          typeof item === "object" &&
+          item !== null &&
+          "event" in item &&
+          item.event === "gtm.js"
+        );
+      })) {
+        window.dataLayer.push({
+          "gtm.start": new Date().getTime(),
+          event: "gtm.js",
+        });
+      }
 
       const script = document.createElement("script");
       script.id = "ventora-google-tag-manager";
