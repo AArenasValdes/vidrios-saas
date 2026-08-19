@@ -97,12 +97,13 @@ function PieceThumbnail({ item }: { item: CotizacionWorkflowItem }) {
       aria-hidden
       dangerouslySetInnerHTML={{
         __html: renderGuidedVisualSvg(config, {
-          maxW: 58,
-          maxH: 58,
-          variant: "summary",
+          maxW: 80,
+          maxH: 80,
+          variant: "thumbnail",
           colorHex: presentation.colorHex,
           showSelection: false,
           showDimensions: false,
+          showLabels: false,
           resourceKey: `fabricacion-thumb-${item.id}`,
         }),
       }}
