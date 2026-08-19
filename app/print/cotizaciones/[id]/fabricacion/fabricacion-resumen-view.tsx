@@ -97,8 +97,8 @@ function PieceThumbnail({ item }: { item: CotizacionWorkflowItem }) {
       aria-hidden
       dangerouslySetInnerHTML={{
         __html: renderGuidedVisualSvg(config, {
-          maxW: 86,
-          maxH: 66,
+          maxW: 58,
+          maxH: 58,
           variant: "summary",
           colorHex: presentation.colorHex,
           showSelection: false,
@@ -326,7 +326,13 @@ export function FabricacionResumenView({
                 key={row.itemId}
                 className={`${s.itemCard} ${expanded ? s.itemCardOpen : ""}`}
               >
-                <div className={s.itemHead}>
+                <div
+                  className={s.itemHead}
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("button")) return;
+                    onToggleItem(row.itemId);
+                  }}
+                >
                   {sourceItem ? <PieceThumbnail item={sourceItem} /> : null}
                   <div className={s.itemIdentity}>
                     <button

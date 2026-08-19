@@ -59,11 +59,15 @@ export default function CotizacionFabricacionPrintPage() {
     [cotizacion?.items]
   );
 
+  const expandedInitializedForQuote = useRef<string | null>(null);
+
   useEffect(() => {
-    if (expandedItemId) return;
+    if (expandedInitializedForQuote.current === params.id) return;
     const firstId = summary.items[0]?.itemId;
-    if (firstId) setExpandedItemId(firstId);
-  }, [expandedItemId, summary.items]);
+    if (!firstId) return;
+    setExpandedItemId(firstId);
+    expandedInitializedForQuote.current = params.id;
+  }, [params.id, summary.items]);
 
   const fileName = `fabricacion-${sanitizeFileNamePart(cotizacion?.codigo || "cotizacion", 36)}.pdf`;
 

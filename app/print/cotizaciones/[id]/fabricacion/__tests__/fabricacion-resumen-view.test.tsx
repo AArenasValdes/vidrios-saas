@@ -206,6 +206,18 @@ describe("FabricacionResumenView", () => {
       "false"
     );
   });
+
+  it("permite cerrar el primer componente sin reabrirlo", () => {
+    render(<ViewHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar detalle de V1" }));
+
+    expect(screen.getByRole("button", { name: "Mostrar detalle de V1" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.queryByRole("button", { name: "Ocultar detalle de V2" })).not.toBeInTheDocument();
+  });
 });
 
 describe("helpers de fabricación", () => {
