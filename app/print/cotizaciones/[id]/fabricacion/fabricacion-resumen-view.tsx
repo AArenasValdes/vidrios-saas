@@ -97,8 +97,8 @@ function PieceThumbnail({ item }: { item: CotizacionWorkflowItem }) {
       aria-hidden
       dangerouslySetInnerHTML={{
         __html: renderGuidedVisualSvg(config, {
-          maxW: 72,
-          maxH: 56,
+          maxW: 86,
+          maxH: 66,
           variant: "summary",
           colorHex: presentation.colorHex,
           showSelection: false,
@@ -381,7 +381,7 @@ export function FabricacionResumenView({
 
                 <div id={`fabricacion-${row.itemId}`} className={s.itemBody}>
                   <section className={s.block} aria-label={`Cubicación de ${row.codigo}`}>
-                    <h3>
+                    <h3 className={s.cubicTitle}>
                       <span>1.</span> Cubicación
                     </h3>
                     <p className={s.blockHint}>Material necesario para fabricar esta pieza.</p>
