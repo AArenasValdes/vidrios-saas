@@ -71,6 +71,7 @@ export type GuardarCotizacionWorkflowInput = {
   existingCode?: string | null;
   existingClientId?: EntityId | null;
   existingProjectId?: EntityId | null;
+  sourceSolicitudId?: string | null;
   requestKey?: string;
 };
 
@@ -1182,6 +1183,7 @@ async function saveWorkflow(input: GuardarCotizacionWorkflowInput) {
         buildCotizacionCode();
       const cotizacionInput: CrearCotizacionInput = {
         organizationId: input.organizationId,
+        solicitudId: input.sourceSolicitudId ?? existingCotizacion?.solicitudId ?? null,
         proyectoId,
         numero: codigo,
         estado: input.estado,

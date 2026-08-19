@@ -262,7 +262,8 @@ describe("QuoteConstructorWorkspace", () => {
     expect(screen.getByLabelText("Línea de VEN-01")).toBeInTheDocument();
     expect(screen.getByText("L5000 · Aluminio")).toBeInTheDocument();
     expect(screen.getByText("Serie 20 · PVC")).toBeInTheDocument();
-    expect(screen.getByText("Sin línea")).toBeInTheDocument();
+    expect(screen.getByLabelText("Elegir línea de VEN-03")).toBeInTheDocument();
+    expect(screen.queryByText("Sin línea")).not.toBeInTheDocument();
   });
 
   it("sugiere en la pieza nueva la línea de la pieza activa, sin tocar las anteriores", () => {
@@ -327,6 +328,56 @@ describe("QuoteConstructorWorkspace", () => {
       "c",
       expect.anything()
     );
+  });
+
+  it("cambia la línea desde la card de esa pieza y no toca las demás", () => {
+    const l5000 = lineTemplate();
+    const serie20 = lineTemplate({
+      id: "linea-serie20",
+      nombre: "Serie 20",
+      categoria: "pvc",
+      material: "PVC",
+    });
+    const l25 = lineTemplate({
+      id: "linea-l25",
+      nombre: "L25",
+    });
+    const onActiveItemChange = jest.fn();
+    const props = renderWorkspace({
+      items: [
+        itemWithLine("a", "VEN-01", l5000),
+        itemWithLine("b", "VEN-02", serie20),
+        itemWithLine("c", "VEN-03", l25),
+      ],
+      lineTemplates: [l5000, serie20, l25],
+      activeItemId: "a",
+      onActiveItemChange,
+    });
+
+    fireEvent.click(screen.getByLabelText("Cambiar línea de VEN-02"));
+    expect(onActiveItemChange).toHaveBeenCalledWith("b");
+    fireEvent.click(screen.getByRole("option", { name: /L25/i }));
+
+    expect(props.onUpdateItem).toHaveBeenCalledTimes(1);
+    expect(props.onUpdateItem).toHaveBeenCalledWith("b", { lineTemplateId: "linea-l25" });
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith("a", expect.anything());
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith("c", expect.anything());
+  });
+
+  it("abre el selector existente desde + Elegir línea en una pieza sin asignar", () => {
+    const l5000 = lineTemplate();
+    const props = renderWorkspace({
+      items: [item("a", "VEN-01"), itemWithLine("b", "VEN-02", l5000)],
+      lineTemplates: [l5000],
+      activeItemId: "b",
+    });
+
+    fireEvent.click(screen.getByLabelText("Elegir línea de VEN-01"));
+    fireEvent.click(screen.getByRole("option", { name: /L5000/i }));
+
+    expect(props.onUpdateItem).toHaveBeenCalledTimes(1);
+    expect(props.onUpdateItem).toHaveBeenCalledWith("a", { lineTemplateId: "linea-l5000" });
+    expect(props.onUpdateItem).not.toHaveBeenCalledWith("b", expect.anything());
   });
 
   it("abre el modal de composición al tocar el croquis de una pieza", () => {

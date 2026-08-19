@@ -53,6 +53,7 @@ type CotizacionRow = {
   cliente_respuesta_canal: string | null;
   pdf_descargado_en: string | null;
   regional_snapshot?: unknown;
+  solicitud_id?: string | null;
   creado_en: string | null;
   total: number;
 };
@@ -108,7 +109,7 @@ type CotizacionItemBreakdownRow = {
 };
 
 const COTIZACION_DETAIL_SELECT =
-  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, creado_en, total";
+  "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, costo_materiales_total, costo_mano_obra_total, costo_traslado_total, costo_otros_total, merma_pct, merma_total, margen_objetivo_pct, precio_recomendado_neto, iva_pct, financial_snapshot_version, financial_snapshot_calculado_en, cost_basis_status, pricing_mode, estado_comercial, approval_token, approval_token_expires_at, cliente_vio_en, cliente_respondio_en, cliente_respuesta_canal, pdf_descargado_en, regional_snapshot, solicitud_id, creado_en, total";
 const COTIZACION_DETAIL_SELECT_LEGACY =
   "id, proyecto_id, organization_id, numero, estado, descuento_pct, flete, iva, notas, valido_hasta, actualizado_en, eliminado_en, subtotal_neto, costo_total, margen_pct, utilidad_total, estado_comercial, creado_en, total";
 const COTIZACION_LIST_SELECT =
@@ -265,7 +266,8 @@ function isMissingApprovalFieldsError(error: unknown) {
       haystack.includes("iva_pct") ||
       haystack.includes("financial_snapshot_version") ||
       haystack.includes("financial_snapshot_calculado_en") ||
-      haystack.includes("cost_basis_status")) &&
+      haystack.includes("cost_basis_status") ||
+      haystack.includes("solicitud_id")) &&
     (haystack.includes("column") ||
       haystack.includes("schema cache") ||
       haystack.includes("does not exist"))
@@ -426,6 +428,7 @@ function mapCotizacion(row: CotizacionRow): Cotizacion {
     clienteRespuestaCanal: row.cliente_respuesta_canal ?? null,
     pdfDescargadoEn: row.pdf_descargado_en ?? null,
     regionalSnapshot: parseQuoteRegionSnapshot(row.regional_snapshot),
+    solicitudId: row.solicitud_id ?? null,
     creadoEn: row.creado_en,
     items: [],
     total: row.total,
@@ -652,6 +655,7 @@ function buildCotizacionUpdatePayload(input: CrearCotizacionInput) {
     cliente_respondio_en: input.clienteRespondioEn ?? null,
     cliente_respuesta_canal: input.clienteRespuestaCanal ?? null,
     regional_snapshot: input.regionalSnapshot ?? null,
+    solicitud_id: input.solicitudId ?? null,
     total: input.total,
     actualizado_en: new Date().toISOString(),
   };
@@ -686,6 +690,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
     financial_snapshot_version: financialSnapshotVersion,
     financial_snapshot_calculado_en: financialSnapshotCalculadoEn,
     cost_basis_status: costBasisStatus,
+    solicitud_id: solicitudId,
     ...legacyPayload
   } = payload;
 
@@ -706,6 +711,7 @@ function stripLegacyCotizacionExtensionFields(payload: CotizacionWritePayload) {
   void financialSnapshotVersion;
   void financialSnapshotCalculadoEn;
   void costBasisStatus;
+  void solicitudId;
 
   return legacyPayload;
 }
@@ -802,6 +808,7 @@ export function createCotizacionesRepository(
 async function restoreCotizacionSnapshot(snapshot: Cotizacion) {
     const snapshotInput: CrearCotizacionInput = {
       organizationId: snapshot.organizationId,
+      solicitudId: snapshot.solicitudId,
       proyectoId: snapshot.proyectoId,
       numero: snapshot.numero,
       estado: snapshot.estado,

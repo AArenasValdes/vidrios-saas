@@ -17,6 +17,7 @@ import {
   LuCircleAlert,
   LuCopy,
   LuEllipsis,
+  LuPencil,
   LuPencilRuler,
   LuPlus,
   LuTrash2,
@@ -507,6 +508,10 @@ export function QuoteConstructorWorkspace({
   inspectorRailSlot = null,
 }: Props) {
   const visualItems = useMemo(() => items.filter(isQuoteConstructorCompatibleItem), [items]);
+  const profileLineTemplates = useMemo(
+    () => lineTemplates.filter((template) => template.categoria !== "vidrio"),
+    [lineTemplates]
+  );
   const nonVisualCount = items.length - visualItems.length;
   const activeItem = visualItems.find((item) => item.id === activeItemId) ?? visualItems[0] ?? null;
   const activeForm = activeItem ? mapItemToForm(activeItem) : null;
@@ -1005,19 +1010,64 @@ export function QuoteConstructorWorkspace({
                     }}
                     tabIndex={0}
                     aria-current={active ? "true" : undefined}
-                    aria-label={`${item.codigo}, ${item.nombre || "Pieza sin nombre"}, ${commercialLabel}, ${view.technicalLabel}`}
+                    aria-label={`${item.codigo}, ${item.nombre || "Pieza sin nombre"}, ${lineCaption.text}, ${commercialLabel}, ${view.technicalLabel}`}
                   >
                     <header className={s.pieceHeader}>
                       <div>
                         <span>{item.codigo}</span>
                         <strong>{item.nombre || "Pieza sin nombre"}</strong>
-                        <p
-                          className={`${s.pieceLineMeta} ${
-                            lineCaption.hasLine ? "" : s.pieceLineMetaMuted
-                          }`}
-                        >
-                          {lineCaption.text}
-                        </p>
+                        {profileLineTemplates.length > 0 ? (
+                          <LineTemplatePicker
+                            templates={profileLineTemplates}
+                            value={mapItemToForm(item).lineTemplateId}
+                            onChange={(lineTemplateId) =>
+                              onUpdateItem(item.id, { lineTemplateId })
+                            }
+                            mode="profile"
+                            className={s.pieceLinePicker}
+                            renderTrigger={({ open, toggle, listId }) => (
+                              <button
+                                type="button"
+                                className={`${s.pieceLineTrigger} ${
+                                  lineCaption.hasLine ? "" : s.pieceLineTriggerEmpty
+                                }`}
+                                aria-haspopup="dialog"
+                                aria-expanded={open}
+                                aria-controls={listId}
+                                aria-label={
+                                  lineCaption.hasLine
+                                    ? `Cambiar línea de ${item.codigo}`
+                                    : `Elegir línea de ${item.codigo}`
+                                }
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onActiveItemChange(item.id);
+                                  toggle();
+                                }}
+                              >
+                                {lineCaption.hasLine ? (
+                                  <>
+                                    <span>{lineCaption.text}</span>
+                                    <LuPencil aria-hidden />
+                                  </>
+                                ) : (
+                                  <>
+                                    <LuPlus aria-hidden />
+                                    Elegir línea
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          />
+                        ) : (
+                          <p
+                            className={`${s.pieceLineMeta} ${
+                              lineCaption.hasLine ? "" : s.pieceLineMetaMuted
+                            }`}
+                          >
+                            {lineCaption.hasLine ? lineCaption.text : "Sin línea"}
+                          </p>
+                        )}
                       </div>
                       <div className={s.badgeRow}>
                         <span
@@ -1336,9 +1386,7 @@ export function QuoteConstructorWorkspace({
                   <div className={s.inspectorField}>
                     <span>Línea</span>
                     <LineTemplatePicker
-                      templates={lineTemplates.filter(
-                        (template) => template.categoria !== "vidrio"
-                      )}
+                      templates={profileLineTemplates}
                       value={activeForm.lineTemplateId}
                       onChange={(lineTemplateId) =>
                         onUpdateItem(activeItem.id, { lineTemplateId })

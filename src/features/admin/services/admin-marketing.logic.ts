@@ -86,7 +86,7 @@ export const SOLICITUD_REVISION_STATES = [
 ] as const;
 
 export const SOLICITUD_REVISION_STATE_AVAILABLE = true;
-export const QUOTES_FROM_REQUESTS_AVAILABLE = false;
+export const QUOTES_FROM_REQUESTS_AVAILABLE = true;
 
 export const CONFIGURED_ACQUISITION_SOURCES = [
   "Instagram",
@@ -542,6 +542,8 @@ export function resolvePublicRecommendedStatus(input: {
   client: AdminClientListItem;
   summary: AdminPublicChannelSummary;
   solicitudesInPeriod: number;
+  linkedQuotesInPeriod?: number;
+  quotesFromRequestsAvailable?: boolean;
 }): {
   status: MarketingPublicRecommendedStatus;
   label: string;
@@ -575,7 +577,8 @@ export function resolvePublicRecommendedStatus(input: {
   }
 
   if (input.solicitudesInPeriod > 0) {
-    if (QUOTES_FROM_REQUESTS_AVAILABLE && input.client.cotizacionesCount === 0) {
+    const quotesAvailable = input.quotesFromRequestsAvailable ?? QUOTES_FROM_REQUESTS_AVAILABLE;
+    if (quotesAvailable && (input.linkedQuotesInPeriod ?? 0) === 0) {
       return {
         status: "falta_cotizar",
         label: MARKETING_PUBLIC_STATUS_LABELS.falta_cotizar,
@@ -586,7 +589,7 @@ export function resolvePublicRecommendedStatus(input: {
     return {
       status: "buen_movimiento",
       label: MARKETING_PUBLIC_STATUS_LABELS.buen_movimiento,
-      detail: QUOTES_FROM_REQUESTS_AVAILABLE
+      detail: quotesAvailable
         ? null
         : "Relación solicitud → cotización aún no disponible",
     };
@@ -709,6 +712,8 @@ export function buildPublicCompanyRows(input: {
   summaries: Map<number, AdminPublicChannelSummary>;
   solicitudesByOrg: Map<number, PublicSolicitudRow[]>;
   period: MarketingPeriodWindow;
+  linkedQuotesBySolicitud?: Map<string, number>;
+  quotesFromRequestsAvailable?: boolean;
 }): MarketingPublicCompanyRow[] {
   const start = new Date(input.period.start);
   const end = new Date(input.period.end);
@@ -719,6 +724,13 @@ export function buildPublicCompanyRows(input: {
       const summary = input.summaries.get(client.organizationId);
       const orgSolicitudes = input.solicitudesByOrg.get(client.organizationId) ?? [];
       const solicitudesInPeriod = countSolicitudesInPeriod(orgSolicitudes, start, end);
+      const linkedQuotesInPeriod = orgSolicitudes
+        .filter((solicitud) => isWithinWindow(solicitud.creado_en, start, end))
+        .reduce(
+          (total, solicitud) =>
+            total + (input.linkedQuotesBySolicitud?.get(solicitud.id) ?? 0),
+          0
+        );
       const pageStatus = summary?.pageStatus ?? "no_configurada";
       const pageStatusLabel = summary?.pageStatusLabel ?? "No configurada";
       const whatsappConfigured = summary?.whatsappConfigured ?? false;
@@ -743,6 +755,8 @@ export function buildPublicCompanyRows(input: {
           quotesFromRequestsAvailable: false,
         },
         solicitudesInPeriod,
+        linkedQuotesInPeriod,
+        quotesFromRequestsAvailable: input.quotesFromRequestsAvailable,
       });
       const primaryAction = resolveMarketingPublicPrimaryAction({
         pageStatus,
@@ -762,8 +776,8 @@ export function buildPublicCompanyRows(input: {
           ? formatRelativeActivity(summary.lastSolicitudAt)
           : "—",
         cotizacionesCount: client.cotizacionesCount,
-        cotizacionesLinkedLabel: QUOTES_FROM_REQUESTS_AVAILABLE
-          ? String(client.cotizacionesCount)
+        cotizacionesLinkedLabel: input.quotesFromRequestsAvailable
+          ? String(linkedQuotesInPeriod)
           : solicitudesInPeriod > 0
             ? "Relación solicitud → cotización aún no disponible"
             : "—",

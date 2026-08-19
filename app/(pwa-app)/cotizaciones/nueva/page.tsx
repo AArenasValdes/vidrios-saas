@@ -2288,7 +2288,7 @@ function NuevaCotizacionPageContent() {
     recordMeta,
     isNewWorkflow: !editId && !duplicateId,
     persistenciaWizard,
-    saveWorkflow,
+    saveWorkflow: (input) => saveWorkflow({ ...input, sourceSolicitudId }),
     onQuoteCreated: async (record) => {
       if (sourceSolicitudId) {
         try {

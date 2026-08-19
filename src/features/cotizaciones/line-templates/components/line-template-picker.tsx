@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { LuCheck, LuChevronDown, LuSearch, LuX } from "react-icons/lu";
 
@@ -13,6 +21,13 @@ import styles from "./line-template-picker.module.css";
 type MaterialFilter = "todos" | "Aluminio" | "PVC" | "Cristal";
 type ProviderFilter = "todos" | "sin_proveedor" | string;
 
+type LineTemplatePickerTriggerState = {
+  open: boolean;
+  selected: CotizacionLineTemplate | null;
+  listId: string;
+  toggle: () => void;
+};
+
 type LineTemplatePickerProps = {
   templates: readonly CotizacionLineTemplate[];
   value: string;
@@ -21,6 +36,7 @@ type LineTemplatePickerProps = {
   preferredMaterial?: MaterialFilter | null;
   ariaLabel?: string;
   className?: string;
+  renderTrigger?: (state: LineTemplatePickerTriggerState) => ReactNode;
 };
 
 function formatPricePerM2(value: number) {
@@ -111,6 +127,7 @@ export function LineTemplatePicker({
   preferredMaterial = null,
   ariaLabel,
   className,
+  renderTrigger,
 }: LineTemplatePickerProps) {
   const listId = useId();
   const titleId = useId();
@@ -442,6 +459,14 @@ export function LineTemplatePicker({
       ref={rootRef}
       className={[styles.root, className].filter(Boolean).join(" ")}
     >
+      {renderTrigger ? (
+        renderTrigger({
+          open,
+          selected,
+          listId,
+          toggle: togglePicker,
+        })
+      ) : (
       <button
         type="button"
         className={`${styles.trigger} ${open ? styles.triggerOpen : ""} ${
@@ -495,6 +520,7 @@ export function LineTemplatePicker({
         )}
         <LuChevronDown className={styles.triggerCaret} aria-hidden />
       </button>
+      )}
 
       {overlay}
     </div>

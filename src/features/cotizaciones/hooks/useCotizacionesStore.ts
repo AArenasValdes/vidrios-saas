@@ -203,6 +203,7 @@ type SaveWorkflowInput = {
   existingCode?: string | null;
   existingClientId?: string | number | null;
   existingProjectId?: string | number | null;
+  sourceSolicitudId?: string | null;
 };
 
 type ManualResponseStatus = "pendiente" | "aprobada" | "rechazada" | "terminada";
@@ -538,6 +539,7 @@ export function useCotizacionesStore(options: UseCotizacionesStoreOptions = {}) 
         existingCode: input.existingCode,
         existingClientId: input.existingClientId,
         existingProjectId: input.existingProjectId,
+        sourceSolicitudId: input.sourceSolicitudId,
         requestKey: `save:${input.existingId ?? "new"}:${input.estado}`,
       });
 

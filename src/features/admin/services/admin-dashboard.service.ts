@@ -292,7 +292,7 @@ function buildActionItems(input: {
       situacion: "Follow-up vencido",
       ultimaActividad: formatRelativeTime(task.vence_en),
       proximaAccion: "Retomar conversación",
-      href: "/admin/growth",
+      href: "/admin/tareas",
       actionLabel: "Ver seguimiento",
     });
   }
@@ -318,7 +318,7 @@ function buildActionItems(input: {
       ),
       proximaAccion:
         uiStatus === "demo_agendada" ? "Agendar reunión" : "Enviar propuesta",
-      href: "/admin/growth",
+      href: "/admin/prospectos",
       actionLabel: "Ver ficha",
     });
   }
@@ -638,7 +638,7 @@ export async function getAdminDashboard(
       id: "followups",
       label: "Follow-ups urgentes",
       count: overdueFollowups,
-      href: "/admin/growth",
+      href: "/admin/tareas",
       actionLabel: "Ver seguimientos",
       tone: overdueFollowups > 0 ? "danger" : "info",
     },

@@ -13,6 +13,7 @@ export type EstadoCotizacion =
 
 export type Cotizacion = {
   id: EntityId;
+  solicitudId?: string | null;
   proyectoId: EntityId | null;
   organizationId: EntityId;
   numero: string | null;
@@ -55,6 +56,7 @@ export type Cotizacion = {
 };
 
 export type CrearCotizacionInput = {
+  solicitudId?: string | null;
   proyectoId?: EntityId | null;
   organizationId: EntityId;
   numero?: string | null;

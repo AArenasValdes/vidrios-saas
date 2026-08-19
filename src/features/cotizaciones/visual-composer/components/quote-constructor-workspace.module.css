@@ -755,6 +755,71 @@
   font-weight: 550;
 }
 
+.pieceLinePicker {
+  width: auto;
+  max-width: 100%;
+  margin-top: 3px;
+}
+
+.pieceLineTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: #526176;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pieceLineTrigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pieceLineTrigger svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  opacity: 0.72;
+}
+
+.pieceLineTrigger:hover,
+.pieceLineTrigger:focus-visible {
+  color: #0b0f17;
+}
+
+.pieceLineTrigger:hover svg,
+.pieceLineTrigger:focus-visible svg {
+  opacity: 1;
+}
+
+.pieceLineTrigger:focus-visible {
+  outline: 2px solid rgba(30, 136, 255, 0.35);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pieceLineTriggerEmpty {
+  color: #1e88ff;
+  font-weight: 700;
+}
+
+.pieceLineTriggerEmpty:hover,
+.pieceLineTriggerEmpty:focus-visible {
+  color: #1565c0;
+}
+
 .badgeRow {
   display: flex;
   flex-wrap: wrap;

@@ -17,6 +17,8 @@ export type FabricationSummaryItem = {
   itemId: string;
   codigo: string;
   nombre: string;
+  lineName: string;
+  material: string;
   widthMm: number;
   heightMm: number;
   quantity: number;
@@ -32,6 +34,7 @@ export type FabricationSummaryItem = {
 
 export type FabricationQuoteSummary = {
   items: FabricationSummaryItem[];
+  totalItems: number;
   totalProfilesMl: number;
   totalGlassM2: number;
   totalAccessoryUnits: number;
@@ -42,9 +45,19 @@ type QuoteItemLike = {
   id: string | number;
   codigo?: string | null;
   nombre?: string | null;
+  lineaComercial?: string | null;
   observaciones?: string | null;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
 };
+
+export function formatFabricationItemLineCaption(lineName: string, material: string) {
+  const line = lineName.trim();
+  const mat = material.trim();
+  if (line && mat) return `${line} · ${mat}`;
+  if (line) return line;
+  if (mat) return mat;
+  return "Sin línea";
+}
 
 function formatStatusLabel(status: RecipeStatus | string) {
   if (typeof status === "string" && status in RECIPE_STATUS_LABELS) {
@@ -78,6 +91,8 @@ export function buildFabricationQuoteSummary(
       itemId: String(item.id),
       codigo: (item.codigo ?? "").trim() || "-",
       nombre: (item.nombre ?? "").trim() || "Pieza",
+      lineName: (item.lineaComercial ?? "").trim() || meta.referencia.trim(),
+      material: meta.material || "",
       widthMm: snapshot.widthMm,
       heightMm: snapshot.heightMm,
       quantity: snapshot.quantity,
@@ -96,6 +111,7 @@ export function buildFabricationQuoteSummary(
 
   return {
     items: rows,
+    totalItems: items.length,
     totalProfilesMl: rows.reduce((sum, row) => sum + row.profilesMl, 0),
     totalGlassM2: rows.reduce((sum, row) => sum + row.glassM2, 0),
     totalAccessoryUnits: rows.reduce((sum, row) => sum + row.accessoryUnits, 0),
