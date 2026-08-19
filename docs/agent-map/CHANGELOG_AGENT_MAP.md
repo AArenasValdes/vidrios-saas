@@ -2,6 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-19 - Resumen de fabricación desktop: cubicación, despiece y pauta
+
+- `/print/cotizaciones/[id]/fabricacion` dejó de parecer una hoja A4: desktop usa el ancho del sistema, métricas compactas y un bloque por pieza.
+- Cada componente muestra línea/material, cubicación, despiece y pauta propias; en web se colapsan para evitar scroll infinito y en print/PDF salen expandidos.
+- El resumen reutiliza `DespieceReviewSurface` (Por pieza / Consolidado) con el `itemId` persistente; no hay un despiece paralelo.
+
 ## 2026-08-14 - Recuperacion de sesiones PWA tras migracion de cookies
 
 - Se corrigio la migracion de cookies Supabase compartidas en `.ventorap.cl` hacia cookies host-only en `www.ventorap.cl`; el proxy expira la variante legacy una sola vez por dispositivo.

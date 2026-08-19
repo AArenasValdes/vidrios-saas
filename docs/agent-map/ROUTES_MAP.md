@@ -589,7 +589,7 @@ Inventario exhaustivo validado contra `docs/agent-map/ROUTES_MANIFEST.json`. Las
 
 | Ruta | Proposito | Archivo |
 |---|---|---|
-| `/print/cotizaciones/[id]/fabricacion` | Resumen interno de fabricación / pauta (sin precios). Separado del PDF cliente. Enlace desde detalle de cotización. | `app/print/cotizaciones/[id]/fabricacion/page.tsx`, `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts` |
+| `/print/cotizaciones/[id]/fabricacion` | Resumen interno de fabricación / pauta (sin precios). Separado del PDF cliente. Enlace desde detalle de cotización. Desktop: bloques colapsables Cubicación/Despiece/Pauta y modal de despiece existente. | `app/print/cotizaciones/[id]/fabricacion/page.tsx`, `fabricacion-resumen-view.tsx`, `src/features/cotizaciones/line-templates/types/fabrication-quote-summary.ts` |
 | `/print/cotizaciones/[id]` | Visor/descarga PDF. Registra `pdf_descargado_en` en silencio + toast. Usa el renderer compartido: croquis protagonista (`maxH: 260`, marco hasta 248 px), perfiles, cotas y aperturas. Preview/export HTML revisados; falta rasterizar un PDF descargado real. Características vía `buildCotizacionItemPrintSpecs()` (sin Material/Color en Espejo/Cubierta de mesa). | `app/print/cotizaciones/[id]/page.tsx`, `app/print/cotizaciones/[id]/_utils/item-print-specs.ts`, `src/features/cotizaciones/visual-composer/` |
 ## Inventario exhaustivo de rutas
 

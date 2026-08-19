@@ -87,7 +87,7 @@ type Props = {
   onActiveItemChange: (itemId: string) => void;
   onUpdateItem: (itemId: string, patch: QuoteConstructorItemPatch) => void;
   onClose: () => void;
-  onContinueToSummary: () => void;
+  onContinueToSummary?: () => void;
   onSaveCubicationLineAdjustment?: (input?: {
     itemId?: string;
     snapshot?: CotizacionItemCubicationSnapshot | null;
@@ -1307,19 +1307,21 @@ export function DespieceReviewSurface({
 
         <footer className={styles.footer}>
           <button type="button" className={styles.secondaryFooter} onClick={onClose}>
-            Volver a componentes
+            {onContinueToSummary ? "Volver a componentes" : "Cerrar"}
           </button>
-          <button
-            type="button"
-            className={styles.primaryFooter}
-            onClick={() => {
-              onClose();
-              onContinueToSummary();
-            }}
-          >
-            Continuar al resumen
-            <LuArrowRight aria-hidden />
-          </button>
+          {onContinueToSummary ? (
+            <button
+              type="button"
+              className={styles.primaryFooter}
+              onClick={() => {
+                onClose();
+                onContinueToSummary();
+              }}
+            >
+              Continuar al resumen
+              <LuArrowRight aria-hidden />
+            </button>
+          ) : null}
         </footer>
       </div>
     </div>
