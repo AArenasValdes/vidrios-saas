@@ -175,7 +175,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
   - Real con componentes (`por_item`, PDF igual al productivo)
 - **Hooks/servicios**: `useActivationGate`, `buildActivation*Draft`, `finalizeActivationDraftForSave`, `buildActivationQuoteSummary`
 - **Tablas Supabase**: `onboarding_checklists`, `cotizaciones`, `cotizacion_items`, `organization_profile`, `growth_onboarding_videos`, `growth_onboarding_assignments`, `growth_onboarding_events`
-- **Fase B (2026-08-20)**: el video no es un requisito de entrada ni reemplaza el wizard. Si el founder asigna una guía `listo` con URL HTTPS, `/activacion` muestra sólo la que corresponde a móvil o escritorio. La primera cotización y el primer PDF quedan registrados por triggers; no agregar llamadas cliente para esos hitos.
+- **Fase B (2026-08-20)**: el video no es un requisito de entrada ni reemplaza el wizard. El founder publica una vez un predeterminado `listo` con URL HTTPS para móvil y otro para escritorio; `/activacion` entrega el correspondiente automáticamente a cada cuenta nueva. Las asignaciones son sólo fallback de piloto. La primera cotización y el primer PDF quedan registrados por triggers; no agregar llamadas cliente para esos hitos.
 - **Consideraciones UX**: Sin bottom nav en `/activacion`. `?replay=1` para QA. PDF vuelve a guia con `?from=activacion`. Resumen explica neto vs IVA.
 - **Riesgos**: No abrir wizard completo de `/cotizaciones/nueva` aqui. No reintroducir card en dashboard. Total global debe permitir guardado sin items.
 
@@ -280,7 +280,7 @@ Cobertura de rutas validada contra `docs/agent-map/ROUTES_MANIFEST.json`. Si una
 
 ## Feature: Founder Growth Panel
 
-- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial y onboarding de `/admin/marketing` usan la misma membresía, pero no mezclan contenido con prospectos ni datos personales de clientes.
+- **Que hace**: Panel privado del fundador con tabs operativas: trabajo de hoy, prospectos, clientes/pagos y marketing/tareas. Persiste en Supabase (`growth_*`) con import idempotente desde `localStorage` v3 y separa `Real`, `Manual` y `Mock`. El control editorial vive en `/admin/marketing`; el onboarding automático vive en `/admin/marketing/onboarding`, sin mezclar contenido, activación y datos personales de clientes.
 - **Rutas involucradas**: `/admin/growth`, `/api/admin/growth/*`
 - **Archivos principales**:
   - `app/admin/growth/page.tsx`

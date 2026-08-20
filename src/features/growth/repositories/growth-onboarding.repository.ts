@@ -9,7 +9,7 @@ import type {
 } from "@/features/growth/types/growth-onboarding";
 
 const VIDEO_COLUMNS =
-  "id, workspace_id, slug, titulo, resumen, paso, dispositivo, duracion_segundos, video_url, estado, orden, creado_en, actualizado_en";
+  "id, workspace_id, slug, titulo, resumen, paso, dispositivo, duracion_segundos, video_url, estado, es_predeterminado, orden, creado_en, actualizado_en";
 const ASSIGNMENT_COLUMNS =
   "id, workspace_id, organization_id, video_id, estado, asignado_en, visto_en, completado_en, notas, actualizado_en";
 const EVENT_COLUMNS =
@@ -24,6 +24,7 @@ function mapVideo(row: Record<string, unknown>): GrowthOnboardingVideo {
     duracionSegundos: row.duracion_segundos === null ? null : Number(row.duracion_segundos),
     videoUrl: (row.video_url as string | null) ?? null,
     estado: row.estado as GrowthOnboardingVideo["estado"], orden: Number(row.orden ?? 0),
+    esPredeterminado: Boolean(row.es_predeterminado),
     creadoEn: String(row.creado_en), actualizadoEn: String(row.actualizado_en),
   };
 }

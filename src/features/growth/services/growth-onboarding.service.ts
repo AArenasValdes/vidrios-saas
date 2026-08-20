@@ -1,31 +1,23 @@
 import "server-only";
 
-import { listAdminClients } from "@/features/admin/services/admin-clients.service";
 import {
-  insertGrowthOnboardingAssignment,
   insertGrowthOnboardingVideo,
-  listGrowthOnboardingAssignments,
   listGrowthOnboardingEvents,
   listGrowthOnboardingVideos,
-  updateGrowthOnboardingAssignment,
   updateGrowthOnboardingVideo,
 } from "@/features/growth/repositories/growth-onboarding.repository";
 import type { GrowthRouteContext } from "@/features/growth/services/growth-route-access.service";
 import {
-  GROWTH_ONBOARDING_ASSIGNMENT_STATUSES,
   GROWTH_ONBOARDING_DEVICES,
   GROWTH_ONBOARDING_STEPS,
   GROWTH_ONBOARDING_VIDEO_STATUSES,
-  type CreateGrowthOnboardingAssignmentInput,
   type CreateGrowthOnboardingVideoInput,
-  type GrowthOnboardingAssignmentStatus,
   type GrowthOnboardingVideo,
   type GrowthOnboardingVideoStatus,
-  type UpdateGrowthOnboardingAssignmentInput,
   type UpdateGrowthOnboardingVideoInput,
 } from "@/features/growth/types/growth-onboarding";
 
-const TEXT_LIMITS = { slug: 80, title: 160, summary: 1000, notes: 1000 } as const;
+const TEXT_LIMITS = { slug: 80, title: 160, summary: 1000 } as const;
 
 function normalizeText(value: string | null | undefined, limit: number) {
   const normalized = value?.trim() ?? "";
@@ -79,22 +71,44 @@ function ensureVideoCanBeReady(input: { estado: GrowthOnboardingVideoStatus; vid
   }
 }
 
+function ensureVideoCanBeDefault(input: {
+  estado: GrowthOnboardingVideoStatus;
+  videoUrl: string | null;
+  dispositivo: GrowthOnboardingVideo["dispositivo"];
+}) {
+  if (input.dispositivo === "ambos") {
+    throw new Error("El onboarding automático requiere un video específico para celular o computador.");
+  }
+  ensureVideoCanBeReady(input);
+}
+
+async function setGrowthOnboardingDefault(
+  context: GrowthRouteContext,
+  video: GrowthOnboardingVideo
+) {
+  ensureVideoCanBeDefault(video);
+  const { error: clearError } = await context.supabase
+    .from("growth_onboarding_videos")
+    .update({ es_predeterminado: false })
+    .eq("workspace_id", context.workspaceId)
+    .eq("dispositivo", video.dispositivo)
+    .eq("es_predeterminado", true)
+    .is("eliminado_en", null);
+  if (clearError) throw clearError;
+  return updateGrowthOnboardingVideo(context.supabase, context.workspaceId, video.id, {
+    es_predeterminado: true,
+  });
+}
+
 export async function getGrowthOnboardingWorkspace(context: GrowthRouteContext) {
-  const [videos, assignments, events, clients] = await Promise.all([
+  const [videos, events] = await Promise.all([
     listGrowthOnboardingVideos(context.supabase, context.workspaceId),
-    listGrowthOnboardingAssignments(context.supabase, context.workspaceId),
     listGrowthOnboardingEvents(context.supabase, context.workspaceId),
-    listAdminClients(),
   ]);
 
   return {
     videos,
-    assignments,
     events,
-    organizations: clients.map((client) => ({
-      organizationId: client.organizationId,
-      empresaNombre: client.empresaNombre,
-    })),
   };
 }
 
@@ -104,19 +118,23 @@ export async function createGrowthOnboardingVideo(
 ) {
   const estado = input.estado ?? "borrador";
   const videoUrl = normalizeVideoUrl(input.videoUrl);
+  const dispositivo = assertOneOf(input.dispositivo, GROWTH_ONBOARDING_DEVICES, "Dispositivo");
   ensureVideoCanBeReady({ estado, videoUrl });
-  return insertGrowthOnboardingVideo(context.supabase, {
+  if (input.esPredeterminado) ensureVideoCanBeDefault({ estado, videoUrl, dispositivo });
+  const video = await insertGrowthOnboardingVideo(context.supabase, {
     workspace_id: context.workspaceId,
     slug: normalizeSlug(input.slug),
     titulo: requireText(input.titulo, TEXT_LIMITS.title, "Título"),
     resumen: normalizeText(input.resumen, TEXT_LIMITS.summary),
     paso: assertOneOf(input.paso, GROWTH_ONBOARDING_STEPS, "Paso"),
-    dispositivo: assertOneOf(input.dispositivo, GROWTH_ONBOARDING_DEVICES, "Dispositivo"),
+    dispositivo,
     duracion_segundos: normalizeDuration(input.duracionSegundos),
     video_url: videoUrl,
     estado: assertOneOf(estado, GROWTH_ONBOARDING_VIDEO_STATUSES, "Estado"),
+    es_predeterminado: false,
     orden: Number.isFinite(input.orden) ? Math.max(0, Math.round(input.orden ?? 0)) : 0,
   });
+  return input.esPredeterminado ? setGrowthOnboardingDefault(context, video) : video;
 }
 
 export async function updateGrowthOnboardingVideoById(
@@ -127,6 +145,9 @@ export async function updateGrowthOnboardingVideoById(
   const estado = input.estado ?? current.estado;
   const videoUrl = input.videoUrl === undefined ? current.videoUrl : normalizeVideoUrl(input.videoUrl);
   ensureVideoCanBeReady({ estado, videoUrl });
+  if (input.esPredeterminado) {
+    ensureVideoCanBeDefault({ estado, videoUrl, dispositivo: current.dispositivo });
+  }
   const patch: Record<string, unknown> = {
     estado: assertOneOf(estado, GROWTH_ONBOARDING_VIDEO_STATUSES, "Estado"),
     video_url: videoUrl,
@@ -137,49 +158,16 @@ export async function updateGrowthOnboardingVideoById(
     if (!Number.isFinite(input.orden)) throw new Error("El orden debe ser numérico.");
     patch.orden = Math.max(0, Math.round(input.orden));
   }
-  return updateGrowthOnboardingVideo(context.supabase, context.workspaceId, current.id, patch);
-}
-
-export async function createGrowthOnboardingAssignment(
-  context: GrowthRouteContext,
-  input: CreateGrowthOnboardingAssignmentInput,
-  videos: GrowthOnboardingVideo[]
-) {
-  const organizationId = Math.trunc(Number(input.organizationId));
-  if (!Number.isSafeInteger(organizationId) || organizationId <= 0) {
-    throw new Error("Selecciona una empresa válida.");
+  if (input.duracionSegundos !== undefined) {
+    patch.duracion_segundos = normalizeDuration(input.duracionSegundos);
   }
-  const video = videos.find((item) => item.id === input.videoId && item.estado === "listo");
-  if (!video) throw new Error("Selecciona un video disponible antes de asignarlo.");
-  return insertGrowthOnboardingAssignment(context.supabase, {
-    workspace_id: context.workspaceId,
-    organization_id: organizationId,
-    video_id: video.id,
-    asignado_por_auth_user_id: context.user.id,
-    notas: normalizeText(input.notas, TEXT_LIMITS.notes),
-  });
-}
-
-export async function updateGrowthOnboardingAssignmentById(
-  context: GrowthRouteContext,
-  input: UpdateGrowthOnboardingAssignmentInput
-) {
-  const estado = assertOneOf(input.estado, GROWTH_ONBOARDING_ASSIGNMENT_STATUSES, "Estado");
-  const patch: Record<string, unknown> = { estado };
-  if (estado === "completado") patch.completado_en = new Date().toISOString();
-  if (estado === "pendiente") {
-    patch.visto_en = null;
-    patch.completado_en = null;
-  }
-  return updateGrowthOnboardingAssignment(context.supabase, context.workspaceId, input.id, patch);
+  if (input.esPredeterminado === false) patch.es_predeterminado = false;
+  const video = await updateGrowthOnboardingVideo(context.supabase, context.workspaceId, current.id, patch);
+  return input.esPredeterminado ? setGrowthOnboardingDefault(context, video) : video;
 }
 
 export function findGrowthOnboardingVideo(videos: GrowthOnboardingVideo[], id: string) {
   const video = videos.find((item) => item.id === id);
   if (!video) throw new Error("El video de onboarding no existe.");
   return video;
-}
-
-export function normalizeAssignmentStatus(value: string): GrowthOnboardingAssignmentStatus {
-  return assertOneOf(value, GROWTH_ONBOARDING_ASSIGNMENT_STATUSES, "Estado");
 }

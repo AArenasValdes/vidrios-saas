@@ -34,6 +34,7 @@ export type GrowthOnboardingVideo = {
   duracionSegundos: number | null;
   videoUrl: string | null;
   estado: GrowthOnboardingVideoStatus;
+  esPredeterminado: boolean;
   orden: number;
   creadoEn: string;
   actualizadoEn: string;
@@ -70,9 +71,7 @@ export type GrowthOnboardingOrganization = {
 
 export type GrowthOnboardingWorkspace = {
   videos: GrowthOnboardingVideo[];
-  assignments: GrowthOnboardingAssignment[];
   events: GrowthOnboardingEvent[];
-  organizations: GrowthOnboardingOrganization[];
 };
 
 export type CreateGrowthOnboardingVideoInput = {
@@ -85,6 +84,7 @@ export type CreateGrowthOnboardingVideoInput = {
   videoUrl?: string | null;
   estado?: GrowthOnboardingVideoStatus;
   orden?: number;
+  esPredeterminado?: boolean;
 };
 
 export type CreateGrowthOnboardingAssignmentInput = {
@@ -100,6 +100,8 @@ export type UpdateGrowthOnboardingVideoInput = {
   titulo?: string;
   resumen?: string | null;
   orden?: number;
+  duracionSegundos?: number | null;
+  esPredeterminado?: boolean;
 };
 
 export type UpdateGrowthOnboardingAssignmentInput = {

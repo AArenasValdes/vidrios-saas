@@ -13,7 +13,6 @@ import { AdminMarketingFiltersPanel } from "@/features/admin/components/admin-ma
 import { AdminMarketingKpiRow } from "@/features/admin/components/admin-marketing-kpi-row";
 import { AdminMarketingPublicActionCell } from "@/features/admin/components/admin-marketing-public-action-cell";
 import { AdminMarketingContentControl } from "@/features/admin/components/admin-marketing-content-control";
-import { AdminMarketingOnboardingControl } from "@/features/admin/components/admin-marketing-onboarding-control";
 import { useAdminHeaderActions } from "@/features/admin/components/admin-header-context";
 import { CONFIGURED_ACQUISITION_SOURCES } from "@/features/admin/services/admin-marketing.logic";
 import {
@@ -200,6 +199,9 @@ export function AdminMarketingWorkspace() {
           <button type="button" className={s.secondaryBtn} onClick={() => setIsFiltersOpen(true)}>
             <LuFilter aria-hidden /> Filtrar
           </button>
+          <Link href="/admin/marketing/onboarding" className={s.secondaryBtn}>
+            Onboarding automático
+          </Link>
           {hasMarketingActiveFilters(filters) ? (
             <button
               type="button"
@@ -235,8 +237,6 @@ export function AdminMarketingWorkspace() {
       </div>
 
       <AdminMarketingContentControl />
-
-      <AdminMarketingOnboardingControl />
 
       <section className={s.sectionBlock} aria-label="Adquisición de Ventora">
         <div className={s.sectionHeading}>

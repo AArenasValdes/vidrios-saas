@@ -356,3 +356,5 @@ Si la respuesta a 1-4 no es sí: detenerse y reportar.
 - Los triggers de `cotizaciones` registran de forma idempotente `primera_cotizacion_creada` y `primer_pdf_descargado`. Se hizo baseline histórico: 19 organizaciones con primera cotización y 13 con primer PDF al momento de aplicar.
 - Las funciones trigger usan `SECURITY DEFINER` con `search_path` fijo, pero `anon` y `authenticated` no tienen EXECUTE; sólo `postgres` y `service_role` figuran en ACL. No llamar estas funciones como RPC.
 - Un video `listo` exige URL HTTPS; no se cargaron enlaces inventados ni se alteró el flujo de cotización/PDF existente.
+- Corrección escalable: `20260820205800_growth_onboarding_automatic_defaults` agrega `es_predeterminado`; existe un único default listo por `workspace_id + dispositivo` (`movil` o `escritorio`). No crear asignaciones por empresa para el onboarding normal.
+- `20260820210606_growth_onboarding_scale_hardening` agrega índices de FKs de pilotos/eventos y descompone la policy `FOR ALL` heredada para no duplicar el SELECT de RLS.

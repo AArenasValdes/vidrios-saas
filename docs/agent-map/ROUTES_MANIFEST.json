@@ -56,6 +56,12 @@
       "source": "app/admin/marketing/page.tsx"
     },
     {
+      "path": "/admin/marketing/onboarding",
+      "type": "page",
+      "area": "admin",
+      "source": "app/admin/marketing/onboarding/page.tsx"
+    },
+    {
       "path": "/admin/pagos-y-planes",
       "type": "page",
       "area": "admin",

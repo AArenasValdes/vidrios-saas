@@ -30,3 +30,36 @@ describe("growth onboarding measurement migration", () => {
     expect(migration).toContain("revoke all on function public.capture_growth_onboarding_quote_event()");
   });
 });
+
+describe("growth onboarding automatic defaults migration", () => {
+  const migration = fs.readFileSync(
+    path.join(process.cwd(), "supabase/migrations/20260820205800_growth_onboarding_automatic_defaults.sql"),
+    "utf8"
+  );
+
+  it("define una sola guía automática lista por dispositivo", () => {
+    expect(migration).toContain("es_predeterminado boolean not null default false");
+    expect(migration).toContain("dispositivo in ('movil', 'escritorio')");
+    expect(migration).toContain("growth_onboarding_videos_workspace_default_device_uidx");
+  });
+
+  it("mantiene el embudo limpio aunque el usuario abra el video más de una vez", () => {
+    expect(migration).toContain("growth_onboarding_events_video_opened_once_uidx");
+    expect(migration).toContain("tipo = 'video_abierto'");
+  });
+});
+
+describe("growth onboarding scale hardening migration", () => {
+  const migration = fs.readFileSync(
+    path.join(process.cwd(), "supabase/migrations/20260820210606_growth_onboarding_scale_hardening.sql"),
+    "utf8"
+  );
+
+  it("cubre FKs del override de pilotos y elimina SELECT duplicado en RLS", () => {
+    expect(migration).toContain("growth_onboarding_assignments_video_id_idx");
+    expect(migration).toContain("growth_onboarding_events_assignment_id_idx");
+    expect(migration).toContain("growth_onboarding_events_cotizacion_id_idx");
+    expect(migration).toContain("growth_onboarding_events_video_id_idx");
+    expect(migration).toContain("drop policy if exists growth_onboarding_assignments_write_admin");
+  });
+});

@@ -19,11 +19,11 @@ Frase guia: *"En pocos minutos veras como Ventora te ayuda a generar un presupue
 
 **No es** el wizard completo de `/cotizaciones/nueva`. Es un atajo guiado que guarda cotizaciones reales en Supabase.
 
-## Guía opcional por dispositivo (Fase B, 2026-08-20)
+## Guía automática por dispositivo (Fase B, 2026-08-20)
 
-- El founder administra videos en `/admin/marketing`; cada video tiene paso, dispositivo y URL HTTPS.
-- Una empresa ve en la bienvenida sólo la guía `listo` que se le asignó y coincide con `movil`, `escritorio` o `ambos`. Sin asignación, el flujo no cambia.
-- Abrir la guía registra `video_abierto`; los hitos `primera_cotizacion_creada` y `primer_pdf_descargado` los registran triggers de PostgreSQL para que sean confiables aunque el navegador se cierre.
+- El founder configura una vez los dos predeterminados en `/admin/marketing/onboarding`: uno `movil` y uno `escritorio`, ambos `listo` con URL HTTPS. No se asignan empresas en la operación diaria.
+- Una cuenta nueva ve en la bienvenida el predeterminado de su dispositivo. Una asignación antigua sólo opera como override de piloto si falta el predeterminado.
+- Abrir la guía registra una única señal `video_abierto` por organización/video; los hitos `primera_cotizacion_creada` y `primer_pdf_descargado` los registran triggers de PostgreSQL para que sean confiables aunque el navegador se cierre.
 - No usar esta capa para bloquear el CTA de primera cotización ni cargar una biblioteca completa al usuario nuevo.
 
 ---

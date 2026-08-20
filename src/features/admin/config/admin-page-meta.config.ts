@@ -45,6 +45,14 @@ const PAGE_META: Record<string, AdminPageMeta> = {
 };
 
 export function resolveAdminPageMeta(pathname: string): AdminPageMeta {
+  if (pathname.startsWith("/admin/marketing/onboarding")) {
+    return {
+      title: "Onboarding automático",
+      subtitle: "Configura una vez las guías que reciben todas las cuentas nuevas.",
+      showPrimaryActions: false,
+    };
+  }
+
   if (pathname.startsWith("/admin/clientes/")) {
     return {
       title: "Detalle de cuenta",

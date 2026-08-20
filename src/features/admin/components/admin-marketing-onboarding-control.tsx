@@ -1,62 +1,64 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LuBookOpen, LuMonitor, LuPause, LuPlay, LuPlus, LuSmartphone } from "react-icons/lu";
+import { LuArrowLeft, LuCircleCheck, LuMonitor, LuPlay, LuSmartphone, LuVideo, LuX } from "react-icons/lu";
 
 import type {
   GrowthOnboardingDevice,
-  GrowthOnboardingStep,
+  GrowthOnboardingVideo,
   GrowthOnboardingWorkspace,
 } from "@/features/growth/types/growth-onboarding";
 import s from "./admin-marketing-onboarding-control.module.css";
 
-const STEPS: Array<{ value: GrowthOnboardingStep; label: string }> = [
-  { value: "bienvenida", label: "Qué hace Ventora aquí" },
-  { value: "primera_cotizacion", label: "Primera cotización" },
-  { value: "pdf_whatsapp", label: "PDF y WhatsApp" },
-  { value: "lineas_precios", label: "Líneas y precios" },
-  { value: "solicitudes_clientes", label: "Solicitudes y clientes" },
-  { value: "items_constructor", label: "Ítems y constructor" },
-  { value: "pauta_interna", label: "Pauta interna" },
-];
+type AutomaticDevice = Exclude<GrowthOnboardingDevice, "ambos">;
+type VideoForm = { slug: string; titulo: string; resumen: string; duracionSegundos: string; videoUrl: string };
+type EditorState = { device: AutomaticDevice; video: GrowthOnboardingVideo | null };
 
-type VideoForm = {
-  slug: string;
-  titulo: string;
-  resumen: string;
-  paso: GrowthOnboardingStep;
-  dispositivo: GrowthOnboardingDevice;
-  duracionSegundos: string;
-  videoUrl: string;
+const DEVICE_COPY: Record<AutomaticDevice, {
+  label: string;
+  description: string;
+  Icon: typeof LuSmartphone;
+}> = {
+  movil: {
+    label: "Celular",
+    description: "Cotizar en terreno, generar PDF y enviarlo por WhatsApp.",
+    Icon: LuSmartphone,
+  },
+  escritorio: {
+    label: "Computador",
+    description: "Configurar líneas y precios; también puede cotizar desde el celular.",
+    Icon: LuMonitor,
+  },
 };
 
-const EMPTY_VIDEO_FORM: VideoForm = {
-  slug: "", titulo: "", resumen: "", paso: "bienvenida", dispositivo: "movil", duracionSegundos: "60", videoUrl: "",
-};
+function buildForm(device: AutomaticDevice, video: GrowthOnboardingVideo | null): VideoForm {
+  return {
+    slug: video?.slug ?? `bienvenida-${device}-v1`,
+    titulo: video?.titulo ?? (device === "movil" ? "Así cotizas desde el celular" : "Así ordenas líneas y precios en Ventora"),
+    resumen: video?.resumen ?? DEVICE_COPY[device].description,
+    duracionSegundos: String(video?.duracionSegundos ?? (device === "movil" ? 55 : 75)),
+    videoUrl: video?.videoUrl ?? "",
+  };
+}
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "Duración por definir";
-  return seconds < 60 ? `${seconds} s` : `${Math.ceil(seconds / 60)} min`;
-}
-
-function deviceLabel(device: GrowthOnboardingDevice) {
-  return device === "movil" ? "Celular" : device === "escritorio" ? "Computador" : "Ambos";
+  return seconds < 60 ? `${seconds} segundos` : `${Math.ceil(seconds / 60)} minuto${seconds >= 120 ? "s" : ""}`;
 }
 
 export function AdminMarketingOnboardingControl() {
   const [workspace, setWorkspace] = useState<GrowthOnboardingWorkspace | null>(null);
-  const [videoForm, setVideoForm] = useState<VideoForm>(EMPTY_VIDEO_FORM);
-  const [assignmentVideoId, setAssignmentVideoId] = useState("");
-  const [assignmentOrganizationId, setAssignmentOrganizationId] = useState("");
+  const [editor, setEditor] = useState<EditorState | null>(null);
+  const [form, setForm] = useState<VideoForm>(() => buildForm("movil", null));
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
-    setError(null);
     const response = await fetch("/api/admin/marketing/onboarding", { cache: "no-store" });
     const payload = (await response.json()) as { workspace?: GrowthOnboardingWorkspace; error?: string };
-    if (!response.ok) throw new Error(payload.error ?? "No pudimos cargar onboarding.");
+    if (!response.ok) throw new Error(payload.error ?? "No pudimos cargar la configuración.");
     setWorkspace(payload.workspace ?? null);
   }, []);
 
@@ -66,118 +68,145 @@ export function AdminMarketingOnboardingControl() {
       try {
         await load();
       } catch (loadError) {
-        if (active) {
-          setError(
-            loadError instanceof Error ? loadError.message : "Error al cargar onboarding."
-          );
-        }
+        if (active) setError(loadError instanceof Error ? loadError.message : "No pudimos cargar el onboarding.");
       }
     }
     void loadOnboarding();
     return () => { active = false; };
   }, [load]);
 
-  const videosReady = useMemo(() => workspace?.videos.filter((video) => video.estado === "listo") ?? [], [workspace]);
-  const videoById = useMemo(() => new Map((workspace?.videos ?? []).map((video) => [video.id, video])), [workspace]);
-  const organizationById = useMemo(() => new Map((workspace?.organizations ?? []).map((organization) => [organization.organizationId, organization])), [workspace]);
-  const firstQuotes = workspace?.events.filter((event) => event.tipo === "primera_cotizacion_creada").length ?? 0;
-  const firstPdfs = workspace?.events.filter((event) => event.tipo === "primer_pdf_descargado").length ?? 0;
+  const defaults = useMemo(() => new Map(
+    (workspace?.videos ?? [])
+      .filter((video) => video.esPredeterminado && video.estado === "listo")
+      .map((video) => [video.dispositivo, video])
+  ), [workspace]);
 
-  async function save(action: string, input: unknown, method: "POST" | "PATCH" = "POST"): Promise<boolean> {
+  const funnel = useMemo(() => {
+    const firstViewByOrganization = new Map<number, number>();
+    for (const event of workspace?.events ?? []) {
+      if (event.tipo !== "video_abierto") continue;
+      const occurredAt = Date.parse(event.ocurridoEn);
+      const current = firstViewByOrganization.get(event.organizationId);
+      if (!current || occurredAt < current) firstViewByOrganization.set(event.organizationId, occurredAt);
+    }
+    const afterView = (type: "primera_cotizacion_creada" | "primer_pdf_descargado") => new Set(
+      (workspace?.events ?? [])
+        .filter((event) => event.tipo === type && Date.parse(event.ocurridoEn) >= (firstViewByOrganization.get(event.organizationId) ?? Infinity))
+        .map((event) => event.organizationId)
+    ).size;
+    return {
+      viewed: firstViewByOrganization.size,
+      quoted: afterView("primera_cotizacion_creada"),
+      pdf: afterView("primer_pdf_descargado"),
+    };
+  }, [workspace]);
+
+  function openEditor(device: AutomaticDevice, video: GrowthOnboardingVideo | null) {
+    setError(null); setMessage(null); setEditor({ device, video }); setForm(buildForm(device, video));
+  }
+
+  async function save() {
+    if (!editor) return;
+    setIsSaving(true); setError(null); setMessage(null);
+    try {
+      const input = {
+        ...(editor.video ? { id: editor.video.id } : {}),
+        ...form,
+        duracionSegundos: Number(form.duracionSegundos),
+        videoUrl: form.videoUrl || null,
+        estado: "listo",
+        esPredeterminado: true,
+        paso: "bienvenida",
+        dispositivo: editor.device,
+      };
+      const response = await fetch("/api/admin/marketing/onboarding", {
+        method: editor.video ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: editor.video ? "actualizar_video_predeterminado" : "crear_video_predeterminado",
+          input,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "No pudimos guardar el video.");
+      await load(); setEditor(null); setMessage(`Video de ${DEVICE_COPY[editor.device].label.toLowerCase()} activo para todas las cuentas nuevas.`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "No pudimos guardar el video.");
+    } finally { setIsSaving(false); }
+  }
+
+  async function pause(video: GrowthOnboardingVideo) {
     setIsSaving(true); setError(null); setMessage(null);
     try {
       const response = await fetch("/api/admin/marketing/onboarding", {
-        method, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, input }),
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "actualizar_video_predeterminado", input: { id: video.id, estado: "borrador", esPredeterminado: false } }),
       });
       const payload = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? "No pudimos guardar onboarding.");
-      await load();
-      setMessage("Guardado.");
-      return true;
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "No pudimos guardar onboarding.");
-      return false;
+      if (!response.ok) throw new Error(payload.error ?? "No pudimos pausar el video.");
+      await load(); setMessage("Onboarding automático pausado para este dispositivo.");
+    } catch (pauseError) {
+      setError(pauseError instanceof Error ? pauseError.message : "No pudimos pausar el video.");
     } finally { setIsSaving(false); }
   }
 
   return (
-    <section className={s.section} aria-label="Onboarding medible">
-      <header className={s.header}>
+    <div className={s.page} aria-label="Onboarding automático">
+      <div className={s.backRow}><Link href="/admin/marketing"><LuArrowLeft aria-hidden /> Volver a marketing</Link></div>
+      <header className={s.hero}>
         <div>
-          <p className={s.eyebrow}>Fase B · Activación</p>
-          <h2>Videos y primeros resultados</h2>
-          <p>Asigna una guía según dispositivo y mira quién llegó a su primera cotización y PDF.</p>
+          <p className={s.eyebrow}>Activación automática</p>
+          <h2>Explica Ventora sin perseguir a cada cuenta</h2>
+          <p>Configura una vez el video para celular y el de computador. Toda cuenta nueva recibe el suyo al entrar a activación.</p>
         </div>
-        <div className={s.metrics}>
-          <span><strong>{firstQuotes}</strong> primera cotización</span>
-          <span><strong>{firstPdfs}</strong> primer PDF</span>
-        </div>
+        <div className={s.heroState}><LuCircleCheck aria-hidden /><span>{defaults.size}/2 dispositivos configurados</span></div>
       </header>
 
       {error ? <p className={s.error}>{error}</p> : null}
       {message ? <p className={s.success}>{message}</p> : null}
 
-      <div className={s.grid}>
-        <form className={s.panel} onSubmit={(event) => {
-          event.preventDefault();
-          void save("crear_video", { ...videoForm, duracionSegundos: Number(videoForm.duracionSegundos || 0) || null, videoUrl: videoForm.videoUrl || null })
-            .then((saved) => { if (saved) setVideoForm(EMPTY_VIDEO_FORM); });
-        }}>
-          <div className={s.panelTitle}><LuBookOpen aria-hidden /><h3>Registrar video</h3></div>
-          <label>Título<input required value={videoForm.titulo} onChange={(event) => setVideoForm({ ...videoForm, titulo: event.target.value })} placeholder="Bienvenida móvil" /></label>
-          <label>Identificador<input required value={videoForm.slug} onChange={(event) => setVideoForm({ ...videoForm, slug: event.target.value })} placeholder="bienvenida-movil-v1" /></label>
-          <div className={s.twoColumns}>
-            <label>Dispositivo<select value={videoForm.dispositivo} onChange={(event) => setVideoForm({ ...videoForm, dispositivo: event.target.value as GrowthOnboardingDevice })}><option value="movil">Celular</option><option value="escritorio">Computador</option><option value="ambos">Ambos</option></select></label>
-            <label>Paso<select value={videoForm.paso} onChange={(event) => setVideoForm({ ...videoForm, paso: event.target.value as GrowthOnboardingStep })}>{STEPS.map((step) => <option key={step.value} value={step.value}>{step.label}</option>)}</select></label>
-          </div>
-          <label>URL HTTPS del video<input type="url" value={videoForm.videoUrl} onChange={(event) => setVideoForm({ ...videoForm, videoUrl: event.target.value })} placeholder="https://youtube.com/..." /></label>
-          <div className={s.twoColumns}>
-            <label>Duración (seg.)<input type="number" min="15" max="900" value={videoForm.duracionSegundos} onChange={(event) => setVideoForm({ ...videoForm, duracionSegundos: event.target.value })} /></label>
-            <label>Resumen<textarea value={videoForm.resumen} onChange={(event) => setVideoForm({ ...videoForm, resumen: event.target.value })} rows={2} placeholder="Qué verá el usuario." /></label>
-          </div>
-          <button className={s.primary} type="submit" disabled={isSaving}><LuPlus aria-hidden /> Registrar como borrador</button>
-          <p className={s.help}>Un video sólo se puede dejar listo cuando tiene URL HTTPS. No se inventan enlaces ni promesas.</p>
-        </form>
-
-        <form className={s.panel} onSubmit={(event) => {
-          event.preventDefault();
-          if (!assignmentVideoId || !assignmentOrganizationId) { setError("Selecciona video y empresa antes de asignar."); return; }
-          void save("asignar_video", { videoId: assignmentVideoId, organizationId: Number(assignmentOrganizationId) })
-            .then((saved) => { if (saved) { setAssignmentVideoId(""); setAssignmentOrganizationId(""); } });
-        }}>
-          <div className={s.panelTitle}><LuPlay aria-hidden /><h3>Asignar a un piloto</h3></div>
-          <label>Video disponible<select value={assignmentVideoId} onChange={(event) => setAssignmentVideoId(event.target.value)}><option value="">Seleccionar…</option>{videosReady.map((video) => <option key={video.id} value={video.id}>{video.titulo} · {deviceLabel(video.dispositivo)}</option>)}</select></label>
-          <label>Empresa<select value={assignmentOrganizationId} onChange={(event) => setAssignmentOrganizationId(event.target.value)}><option value="">Seleccionar…</option>{workspace?.organizations.map((organization) => <option key={organization.organizationId} value={organization.organizationId}>{organization.empresaNombre}</option>)}</select></label>
-          <button className={s.primary} type="submit" disabled={isSaving || videosReady.length === 0}>Asignar guía</button>
-          <p className={s.help}>{videosReady.length === 0 ? "Primero deja listo un video con URL HTTPS." : "La guía aparece sólo al entrar a la activación desde el dispositivo correspondiente."}</p>
-        </form>
-      </div>
-
-      <div className={s.listGrid}>
-        <article className={s.panel}>
-          <div className={s.panelTitle}><LuMonitor aria-hidden /><h3>Biblioteca</h3></div>
-          {workspace === null ? <p className={s.muted}>Cargando…</p> : workspace.videos.length === 0 ? <p className={s.muted}>Aún no hay videos registrados.</p> : <div className={s.records}>{workspace.videos.map((video) => (
-            <div className={s.record} key={video.id}>
-              <div><strong>{video.titulo}</strong><span>{deviceLabel(video.dispositivo)} · {formatDuration(video.duracionSegundos)} · {STEPS.find((step) => step.value === video.paso)?.label}</span></div>
-              <div className={s.recordActions}>
-                {video.dispositivo === "movil" ? <LuSmartphone aria-label="Celular" /> : <LuMonitor aria-label="Computador" />}
-                <button type="button" disabled={isSaving || video.estado === "archivado"} onClick={() => {
-                  const videoUrl = window.prompt("URL HTTPS del video", video.videoUrl ?? "");
-                  if (videoUrl !== null) void save("actualizar_video", { id: video.id, videoUrl: videoUrl || null }, "PATCH");
-                }}>Editar URL</button>
-                <button type="button" disabled={isSaving || video.estado === "archivado"} onClick={() => void save("actualizar_video", { id: video.id, estado: video.estado === "listo" ? "borrador" : "listo" }, "PATCH")}>{video.estado === "listo" ? "Pausar" : "Dejar listo"}</button>
+      <section className={s.deviceGrid} aria-label="Videos predeterminados por dispositivo">
+        {(["movil", "escritorio"] as const).map((device) => {
+          const config = DEVICE_COPY[device]; const video = defaults.get(device) ?? null; const Icon = config.Icon;
+          return <article className={s.deviceCard} key={device}>
+            <div className={s.deviceIcon}><Icon aria-hidden /></div>
+            <div className={s.deviceHeading}><span>Ruta automática</span><h3>{config.label}</h3></div>
+            {video ? <>
+              <strong>{video.titulo}</strong>
+              <p>{video.resumen ?? config.description}</p>
+              <div className={s.videoMeta}><LuPlay aria-hidden /> {formatDuration(video.duracionSegundos)} · activo para cuentas nuevas</div>
+              <div className={s.actions}>
+                <button type="button" onClick={() => openEditor(device, video)} disabled={isSaving}>Editar video</button>
+                <button type="button" className={s.dangerAction} onClick={() => void pause(video)} disabled={isSaving}>Pausar</button>
               </div>
-            </div>))}</div>}
-        </article>
+            </> : <>
+              <strong>Aún no hay video activo</strong>
+              <p>{config.description}</p>
+              <button type="button" className={s.primary} onClick={() => openEditor(device, null)} disabled={isSaving}><LuVideo aria-hidden /> Configurar una vez</button>
+            </>}
+          </article>;
+        })}
+      </section>
 
-        <article className={s.panel}>
-          <div className={s.panelTitle}><LuPlay aria-hidden /><h3>Asignaciones activas</h3></div>
-          {workspace === null ? <p className={s.muted}>Cargando…</p> : workspace.assignments.length === 0 ? <p className={s.muted}>Aún no hay guías asignadas.</p> : <div className={s.records}>{workspace.assignments.map((assignment) => {
-            const video = videoById.get(assignment.videoId); const organization = organizationById.get(assignment.organizationId);
-            return <div className={s.record} key={assignment.id}><div><strong>{organization?.empresaNombre ?? `Empresa ${assignment.organizationId}`}</strong><span>{video?.titulo ?? "Video eliminado"} · {assignment.estado}{assignment.vistoEn ? " · visto" : ""}</span></div><button type="button" disabled={isSaving} onClick={() => void save("actualizar_asignacion", { id: assignment.id, estado: assignment.estado === "pausado" ? "pendiente" : "pausado" }, "PATCH")}>{assignment.estado === "pausado" ? "Reactivar" : <><LuPause aria-hidden /> Pausar</>}</button></div>;
-          })}</div>}
-        </article>
-      </div>
-    </section>
+      {editor ? <section className={s.editor} aria-label={`Configurar video de ${DEVICE_COPY[editor.device].label}`}>
+        <div className={s.editorHeader}><div><span>Video para {DEVICE_COPY[editor.device].label.toLowerCase()}</span><h3>{editor.video ? "Editar video base" : "Agregar video base"}</h3></div><button type="button" className={s.close} onClick={() => setEditor(null)} aria-label="Cerrar"><LuX aria-hidden /></button></div>
+        <div className={s.formGrid}>
+          <label>Título<input value={form.titulo} onChange={(event) => setForm({ ...form, titulo: event.target.value })} /></label>
+          <label>URL HTTPS del video<input type="url" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} placeholder="https://youtube.com/..." /></label>
+          <label>Duración (segundos)<input type="number" min="15" max="900" value={form.duracionSegundos} onChange={(event) => setForm({ ...form, duracionSegundos: event.target.value })} /></label>
+          <label>Texto de apoyo<textarea rows={3} value={form.resumen} onChange={(event) => setForm({ ...form, resumen: event.target.value })} /></label>
+        </div>
+        <div className={s.editorFooter}><p>Se publicará automáticamente para toda cuenta nueva en {DEVICE_COPY[editor.device].label.toLowerCase()}. No hay asignaciones por empresa.</p><button type="button" className={s.primary} onClick={() => void save()} disabled={isSaving}>{editor.video ? "Guardar y mantener activo" : "Publicar para cuentas nuevas"}</button></div>
+      </section> : null}
+
+      <section className={s.funnel} aria-label="Resultados del onboarding automático">
+        <div><p>Embudo desde que vio una guía</p><h3>¿La bienvenida está llevando al primer resultado?</h3></div>
+        <div className={s.metrics}>
+          <span><strong>{funnel.viewed}</strong> vieron la guía</span>
+          <span><strong>{funnel.quoted}</strong> hicieron su primera cotización</span>
+          <span><strong>{funnel.pdf}</strong> generaron su primer PDF</span>
+        </div>
+      </section>
+    </div>
   );
 }

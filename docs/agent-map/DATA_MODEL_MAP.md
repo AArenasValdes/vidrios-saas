@@ -433,11 +433,11 @@ Dominio separado de `solicitudes_contacto` y multi-tenant SaaS. Acceso via RLS +
 | `growth_activities` | Historial auditable por prospecto |
 | `growth_tasks` | Trabajo diario (follow-ups, trials, pagos) |
 | `growth_content_items` | Cola editorial interna: pieza, guion, CTA, estado, revisión humana de claim y UTM de cuatro parámetros |
-| `growth_onboarding_videos` | Biblioteca interna de guías por paso y dispositivo; sólo `listo` con URL HTTPS se puede asignar |
-| `growth_onboarding_assignments` | Guía asignada por empresa, estado de visualización y pausa operativa |
-| `growth_onboarding_events` | Hitos auditables de guía, primera cotización y primer PDF; no duplica datos comerciales |
+| `growth_onboarding_videos` | Biblioteca interna de guías; un `es_predeterminado=true` listo por celular y computador se entrega automáticamente a cuentas nuevas |
+| `growth_onboarding_assignments` | Override excepcional de piloto por empresa; no es parte de la operación masiva |
+| `growth_onboarding_events` | Hitos auditables de guía, primera cotización y primer PDF; una apertura por organización/video evita inflar el embudo |
 
-Migraciones: `supabase/migrations/20260627120000_growth_workspace.sql`, `supabase/migrations/20260820185724_growth_content_items.sql`, `supabase/migrations/20260820194620_growth_onboarding_measurement.sql`. La cola editorial y el onboarding medible existen y están registrados en remoto; los videos y asignaciones tienen RLS por membresía admin, mientras una empresa sólo puede leer su propia asignación/evento. Los triggers de cotizaciones registran los dos primeros hitos y sus funciones no son ejecutables por `anon` ni `authenticated`.
+Migraciones: `supabase/migrations/20260627120000_growth_workspace.sql`, `supabase/migrations/20260820185724_growth_content_items.sql`, `supabase/migrations/20260820194620_growth_onboarding_measurement.sql`, `20260820205800_growth_onboarding_automatic_defaults.sql` y `20260820210606_growth_onboarding_scale_hardening.sql`. La cola editorial y el onboarding automático existen y están registrados en remoto; los videos y asignaciones tienen RLS por membresía admin, mientras una empresa sólo puede leer su propia asignación/evento. Los triggers de cotizaciones registran los dos primeros hitos y sus funciones no son ejecutables por `anon` ni `authenticated`.
 
 ---
 

@@ -989,7 +989,7 @@ auth.users (1) ──── (N) users
 
 ## Addendum 2026-08-20 - Onboarding medible Fase B
 
-- `growth_onboarding_videos` es la biblioteca global founder: paso comercial, dispositivo, duracion, URL HTTPS y estado editorial. No guarda contenido ficticio.
-- `growth_onboarding_assignments` relaciona una guia lista con una `organization_id` y conserva su estado de consumo. La app de cada empresa solo lee sus propias asignaciones.
-- `growth_onboarding_events` almacena apertura de video y los hitos de primera cotizacion/PDF. Estos dos ultimos se capturan con triggers de `cotizaciones`, por lo que no dependen del navegador.
+- `growth_onboarding_videos` es la biblioteca global founder: paso comercial, dispositivo, duracion, URL HTTPS y estado editorial. `es_predeterminado` permite un video activo para celular y otro para computador para todas las cuentas nuevas. No guarda contenido ficticio.
+- `growth_onboarding_assignments` relaciona una guia lista con una `organization_id` sólo como override excepcional de piloto. La app de cada empresa sólo lee sus propias asignaciones.
+- `growth_onboarding_events` almacena apertura de video y los hitos de primera cotizacion/PDF. La apertura es única por organización/video; los dos hitos comerciales se capturan con triggers de `cotizaciones`, por lo que no dependen del navegador.
 - Las tres tablas tienen RLS y `FORCE ROW LEVEL SECURITY`; los triggers operan con funciones `SECURITY DEFINER` de ACL exclusiva para `postgres` y `service_role`.

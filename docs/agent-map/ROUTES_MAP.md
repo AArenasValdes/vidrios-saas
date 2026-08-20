@@ -606,6 +606,7 @@ Generado desde app/ y verificado por pnpm docs:check. El detalle funcional de ca
 | `/admin/clientes/[organizationId]` | page | admin | `app/admin/clientes/[organizationId]/page.tsx` |
 | `/admin/growth` | page | admin | `app/admin/growth/page.tsx` |
 | `/admin/marketing` | page | admin | `app/admin/marketing/page.tsx` |
+| `/admin/marketing/onboarding` | page | admin | `app/admin/marketing/onboarding/page.tsx` |
 | `/admin/pagos-y-planes` | page | admin | `app/admin/pagos-y-planes/page.tsx` |
 | `/admin/prospectos` | page | admin | `app/admin/prospectos/page.tsx` |
 | `/admin/tareas` | page | admin | `app/admin/tareas/page.tsx` |

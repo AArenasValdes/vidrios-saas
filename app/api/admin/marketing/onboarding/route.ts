@@ -2,18 +2,14 @@ import { NextResponse } from "next/server";
 
 import { growthApiError } from "@/features/growth/services/growth-api-response";
 import {
-  createGrowthOnboardingAssignment,
   createGrowthOnboardingVideo,
   findGrowthOnboardingVideo,
   getGrowthOnboardingWorkspace,
-  updateGrowthOnboardingAssignmentById,
   updateGrowthOnboardingVideoById,
 } from "@/features/growth/services/growth-onboarding.service";
 import { resolveGrowthRouteContext } from "@/features/growth/services/growth-route-access.service";
 import type {
-  CreateGrowthOnboardingAssignmentInput,
   CreateGrowthOnboardingVideoInput,
-  UpdateGrowthOnboardingAssignmentInput,
   UpdateGrowthOnboardingVideoInput,
 } from "@/features/growth/types/growth-onboarding";
 
@@ -35,12 +31,15 @@ export async function POST(request: Request) {
   try {
     const context = await resolveGrowthRouteContext();
     const body = (await request.json()) as { action?: string; input?: unknown };
-    if (body.action === "crear_video") {
-      return NextResponse.json({ video: await createGrowthOnboardingVideo(context, body.input as CreateGrowthOnboardingVideoInput) }, { status: 201 });
-    }
-    if (body.action === "asignar_video") {
-      const workspace = await getGrowthOnboardingWorkspace(context);
-      return NextResponse.json({ assignment: await createGrowthOnboardingAssignment(context, body.input as CreateGrowthOnboardingAssignmentInput, workspace.videos) }, { status: 201 });
+    if (body.action === "crear_video_predeterminado") {
+      const input = body.input as CreateGrowthOnboardingVideoInput;
+      return NextResponse.json({
+        video: await createGrowthOnboardingVideo(context, {
+          ...input,
+          estado: "listo",
+          esPredeterminado: true,
+        }),
+      }, { status: 201 });
     }
     throw new Error("La acción de onboarding no es válida.");
   } catch (error) {
@@ -53,13 +52,10 @@ export async function PATCH(request: Request) {
     const context = await resolveGrowthRouteContext();
     const body = (await request.json()) as { action?: string; input?: { id?: string } };
     if (!body.input?.id) throw new Error("Falta identificar el registro de onboarding.");
-    if (body.action === "actualizar_video") {
+    if (body.action === "actualizar_video_predeterminado") {
       const workspace = await getGrowthOnboardingWorkspace(context);
       const current = findGrowthOnboardingVideo(workspace.videos, body.input.id);
       return NextResponse.json({ video: await updateGrowthOnboardingVideoById(context, current, body.input as UpdateGrowthOnboardingVideoInput) });
-    }
-    if (body.action === "actualizar_asignacion") {
-      return NextResponse.json({ assignment: await updateGrowthOnboardingAssignmentById(context, body.input as UpdateGrowthOnboardingAssignmentInput) });
     }
     throw new Error("La acción de onboarding no es válida.");
   } catch (error) {

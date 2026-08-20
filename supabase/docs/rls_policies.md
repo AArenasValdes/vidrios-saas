@@ -11,7 +11,7 @@ Ultima verificacion remota relevante: 2026-08-13.
 
 Todas las tablas de `public` tienen RLS habilitado. El event trigger `rls_auto_enable` fuerza ese comportamiento para tablas nuevas. La función principal de aislamiento es `get_org_id()`, que resuelve la organización activa del usuario autenticado desde `public.users`.
 
-**Addendum 2026-08-20 — Fase B onboarding:** `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events` tienen RLS forzado. El founder administra por membresía `growth_workspace_members` con `rol='admin'`; una organización autenticada sólo puede leer asignaciones y eventos donde `organization_id = get_org_id()`. Los eventos de primer valor se insertan sólo desde triggers protegidos.
+**Addendum 2026-08-20 — Fase B onboarding:** `growth_onboarding_videos`, `growth_onboarding_assignments` y `growth_onboarding_events` tienen RLS forzado. El founder administra los predeterminados por membresía `growth_workspace_members` con `rol='admin'`; una organización autenticada sólo puede leer asignaciones y eventos donde `organization_id = get_org_id()`. Las asignaciones son override de piloto. Los eventos de primer valor se insertan sólo desde triggers protegidos; la policy heredada `FOR ALL` de asignaciones fue dividida en INSERT/UPDATE/DELETE para no añadir un SELECT permisivo duplicado.
 
 **Total tablas con RLS habilitado:** 26 versionadas por migraciones recientes.
 **Total tablas con policies definidas:** 24+ segun migraciones locales; verificacion remota parcial con CLI el 2026-07-29.

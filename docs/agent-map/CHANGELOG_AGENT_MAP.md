@@ -2,12 +2,12 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
-## 2026-08-20 - Fase B de onboarding medible
+## 2026-08-20 - Fase B de onboarding automático medible
 
-- `/admin/marketing` incorpora biblioteca de videos, asignación por empresa y lectura de primeras cotizaciones/PDF; no crea un panel paralelo ni un CRM.
-- `/activacion` muestra una guía opcional según celular o computador sólo cuando el founder la asigna y publica con URL HTTPS.
-- `growth_onboarding_events` recibe los hitos comerciales desde triggers en `cotizaciones`, con baseline histórico e idempotencia por organización; los videos abiertos se registran desde la ruta autenticada.
-- Migración remota aplicada: `20260820194620_growth_onboarding_measurement`.
+- `/admin/marketing` queda enfocado en adquisición. `/admin/marketing/onboarding` administra sólo dos videos base: celular y computador.
+- `/activacion` muestra automáticamente la guía predeterminada del dispositivo a toda cuenta nueva; las asignaciones por empresa se mantienen sólo como override compatible de piloto.
+- `growth_onboarding_events` recibe los hitos comerciales desde triggers en `cotizaciones`; `video_abierto` es único por organización/video para no inflar el embudo.
+- Migraciones remotas aplicadas: `20260820194620_growth_onboarding_measurement`, `20260820205800_growth_onboarding_automatic_defaults` y `20260820210606_growth_onboarding_scale_hardening`.
 
 ## 2026-08-20 - Historial Supabase reconciliado y hardening crítico
 

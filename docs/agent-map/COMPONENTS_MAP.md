@@ -80,6 +80,13 @@ Responsable: ingeniería
 - **Props importantes**: `eyebrow`, `value`, `hint`, `href?`, `linkLabel?`
 - **Cuando modificarlo**: Cambios en resumen ejecutivo del centro de operaciones
 
+### Componente: AdminMarketingOnboardingControl
+
+- **Archivo**: `src/features/admin/components/admin-marketing-onboarding-control.tsx`
+- **Proposito**: Configuración founder de dos videos base, uno para celular y otro para computador. No asigna empresas; muestra el embudo desde la visualización hasta primera cotización/PDF.
+- **Usado en**: `/admin/marketing/onboarding`
+- **Riesgos**: Mantener un único predeterminado listo por dispositivo y no volver a mezclar esta configuración con captación en `/admin/marketing`.
+
 ### Componente: MobilePageHeader
 
 - **Archivo**: `app/(pwa-app)/_components/mobile-page-header.tsx`
