@@ -1,5 +1,6 @@
 import { calcularCubicacionYPauta } from "@/features/fabricacion/services/fabricacion-calculo.service";
 import { construirPautaBarrasFabricacion } from "@/features/fabricacion/services/fabricacion-pauta-barras.service";
+import { enriquecerCodigosPerfilRecetaFabricacion } from "@/features/fabricacion/services/fabricacion-receta-codigos.service";
 import type {
   FabricacionEntradaCalculo,
   FabricacionReceta,
@@ -68,7 +69,12 @@ export function construirSnapshotFabricacionCotizacion(input: {
   entrada: FabricacionEntradaCalculo;
   calculatedAt?: string;
 }): FabricacionCotizacionSnapshot {
-  const definition = cloneReceta(input.recipe.definition);
+  const definition = enriquecerCodigosPerfilRecetaFabricacion({
+    receta: cloneReceta(input.recipe.definition),
+    sourceType: input.recipe.sourceType,
+    sourceReference: input.recipe.sourceReference,
+    lineName: input.recipe.lineName,
+  });
   const result = calcularCubicacionYPauta(definition, input.entrada);
   const pautaBarras = construirPautaBarrasFabricacion({
     receta: definition,
