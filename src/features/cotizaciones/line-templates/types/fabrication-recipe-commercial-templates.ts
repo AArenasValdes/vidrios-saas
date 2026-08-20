@@ -75,7 +75,7 @@ export type CommercialProfileOption = {
   note?: string;
 };
 
-type CommercialProfileFunction = Extract<
+export type CommercialProfileFunction = Extract<
   RecipeComponentFunction,
   | "riel_superior"
   | "riel_inferior"
