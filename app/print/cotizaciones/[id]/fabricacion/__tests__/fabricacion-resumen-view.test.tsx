@@ -263,12 +263,9 @@ describe("FabricacionResumenView", () => {
 
     render(<ViewHarness extraItems={[item]} />);
 
-    expect(screen.getByText("3 reales")).toBeInTheDocument();
-    expect(screen.getAllByText("Riel superior").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Riel inferior").length).toBeGreaterThan(0);
-    expect(screen.getByText("Tira 1 de 2")).toBeInTheDocument();
-    expect(screen.getByText("Tira 2 de 2")).toBeInTheDocument();
-    expect(screen.getByText("Tira 1 de 1")).toBeInTheDocument();
+    expect(screen.getByText("5001 · Tira 1")).toBeInTheDocument();
+    expect(screen.getByText("5001 · Tira 2")).toBeInTheDocument();
+    expect(screen.getByText("5002 · Tira 3")).toBeInTheDocument();
   });
 
   it("muestra código y nombre propios del snapshot, o Por asignar si no existe código", () => {
@@ -303,7 +300,7 @@ describe("FabricacionResumenView", () => {
     render(<ViewHarness extraItems={[item]} />);
 
     expect(screen.getByRole("columnheader", { name: "Código" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Función" })).toBeInTheDocument();
     expect(screen.getByText("RS01")).toBeInTheDocument();
     expect(screen.getByText("Riel superior propio")).toBeInTheDocument();
     expect(screen.getAllByText("Por asignar").length).toBeGreaterThan(0);

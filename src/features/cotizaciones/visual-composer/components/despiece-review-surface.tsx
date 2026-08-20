@@ -18,6 +18,11 @@ import {
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { buildConsolidatedCubicationPautaFromSnapshots } from "@/features/cotizaciones/line-templates/types/cotizacion-cubication-consolidated";
 import {
+  isUnassignedProfileLabel,
+  resolveCutProfileCode,
+  resolveCutProfileDisplayCode,
+} from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
+import {
   summarizeCubicationLineAdjustment,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-adjustment";
 import {
@@ -30,7 +35,6 @@ import {
   snapshotUsesFabricationRecipe,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
-import { RECIPE_MISSING_PROFILE_LABEL } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import { buildPieceDomainView } from "@/features/cotizaciones/new-quote/quote-piece-domain";
 import {
   isCubicationPersonalizadoAssistMode,
@@ -156,13 +160,8 @@ function despieceStatusToneClass(status: DespieceUiStatus) {
   }
 }
 
-function isMissingProfileLabel(label: string) {
-  const normalized = label.trim().toLocaleLowerCase("es");
-  return (
-    !normalized ||
-    normalized === RECIPE_MISSING_PROFILE_LABEL.toLocaleLowerCase("es") ||
-    normalized === "por asignar"
-  );
+function isMissingProfileLabel(cut: CotizacionLineTemplateCut) {
+  return !resolveCutProfileCode(cut);
 }
 
 function areBarsCalculable(
@@ -917,9 +916,7 @@ export function DespieceReviewSurface({
                         aria-label="Despiece de perfiles"
                       >
                         <div className={styles.tableHead} role="row">
-                          {isEditMode || showCalculationDetail ? (
-                            <span role="columnheader">Perfil</span>
-                          ) : null}
+                          <span role="columnheader">Perfil</span>
                           <span role="columnheader">Función</span>
                           <span role="columnheader">Medida</span>
                           <span role="columnheader">Cantidad</span>
@@ -931,7 +928,8 @@ export function DespieceReviewSurface({
                           ) : null}
                         </div>
                         {preview.cuts.map((cut: CotizacionLineTemplateCut, cutIndex: number) => {
-                          const missingProfile = isMissingProfileLabel(cut.label);
+                          const missingProfile = isMissingProfileLabel(cut);
+                          const profileCode = resolveCutProfileDisplayCode(cut);
                           return (
                             <div
                               key={`cut-${cutIndex}`}
@@ -952,16 +950,16 @@ export function DespieceReviewSurface({
                                     }
                                   />
                                 </label>
-                              ) : showCalculationDetail ? (
+                              ) : (
                                 <span
                                   role="cell"
                                   className={`${styles.readCell} ${
-                                    missingProfile ? styles.missingProfileChip : ""
+                                    missingProfile ? styles.missingProfileChip : styles.profileCodeCell
                                   }`}
                                 >
-                                  {cut.label || RECIPE_MISSING_PROFILE_LABEL}
+                                  {profileCode}
                                 </span>
-                              ) : null}
+                              )}
                               {isEditMode ? (
                                 <label className={styles.functionEditCell}>
                                   <span className={styles.srOnly}>Función</span>
@@ -1184,7 +1182,7 @@ export function DespieceReviewSurface({
                         <span role="columnheader">Piezas</span>
                       </div>
                       {group.rows.map((row) => {
-                        const missingProfile = isMissingProfileLabel(row.profile);
+                        const missingProfile = isUnassignedProfileLabel(row.profile);
                         return (
                           <div
                             key={row.key}

@@ -102,7 +102,7 @@ describe("fabrication recipe domain", () => {
       quantity: 1,
     });
     expect(preview.profileCuts.length).toBeGreaterThan(0);
-    expect(preview.profileCuts.every((cut) => cut.label === "Perfil sin código")).toBe(true);
+    expect(preview.profileCuts.every((cut) => !cut.profileCode)).toBe(true);
     expect(preview.profileCuts.some((cut) => cut.functionLabel === "Riel superior")).toBe(true);
     // Sin código de taller no hay barras confiables.
     expect(preview.barSuggestions.length).toBe(0);

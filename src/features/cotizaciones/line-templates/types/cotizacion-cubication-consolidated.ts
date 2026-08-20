@@ -8,6 +8,10 @@ import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-pr
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
 import { recipeFunctionWorkshopOrder } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
+import {
+  resolveCutProfileCode,
+  resolveCutProfileDisplayCode,
+} from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
 
 export type ConsolidatedCubicationRow = {
   key: string;
@@ -156,12 +160,12 @@ function accumulateFromSnapshot(
   }
 
   snapshot.cuts.forEach((cut) => {
-    const profile = cut.label.trim() || "Perfil sin código";
+    const profile = resolveCutProfileDisplayCode(cut);
     const functionLabel = cut.functionLabel.trim() || "Función";
     const lengthMm = Math.round(cut.lengthMm);
     const key = [
       snapshot.lineTemplateId,
-      profile.toLowerCase(),
+      resolveCutProfileCode(cut) || profile.toLowerCase(),
       functionLabel.toLowerCase(),
       String(lengthMm),
     ].join("|");

@@ -9,8 +9,12 @@ import {
   type RecipeStatus,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionItemCubicationSnapshot } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import { resolveCutProfileCode } from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
 import { fabricacionSnapshotToLegacyCubicationSnapshot } from "@/features/fabricacion/services/fabricacion-snapshot-adapter.service";
+import { resolveFabricacionDespieceForQuoteItem } from "@/features/fabricacion/services/fabricacion-despiece-cotizacion.service";
 import type { FabricacionCotizacionSnapshot } from "@/features/fabricacion/types/fabricacion-snapshot";
+import type { FabricationRecipeRecord } from "@/features/fabricacion/types/fabricacion-persistence";
+import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
 
 export type FabricationSummaryItem = {
@@ -48,7 +52,51 @@ type QuoteItemLike = {
   lineaComercial?: string | null;
   observaciones?: string | null;
   fabricacionSnapshot?: FabricacionCotizacionSnapshot | null;
+  tipo?: string | null;
+  tipoItem?: string | null;
+  ancho?: number | null;
+  alto?: number | null;
+  cantidad?: number | null;
+  descripcion?: string | null;
 };
+
+function snapshotMissingProfileCodes(snapshot: CotizacionItemCubicationSnapshot) {
+  return snapshot.cuts.some((cut) => !resolveCutProfileCode(cut));
+}
+
+function resolveDisplaySnapshot(
+  item: QuoteItemLike,
+  meta: ReturnType<typeof decodeCotizacionItemPresentationMeta>,
+  options?: {
+    recipes?: FabricationRecipeRecord[];
+    organizationId?: number | null;
+  }
+): CotizacionItemCubicationSnapshot | null {
+  const frozen = item.fabricacionSnapshot
+    ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
+    : meta.cubicationSnapshot;
+
+  if (!options?.recipes || options.organizationId == null) {
+    return frozen ?? null;
+  }
+
+  const workflowItem = item as CotizacionWorkflowItem;
+  const live = resolveFabricacionDespieceForQuoteItem({
+    item: workflowItem,
+    recipes: options.recipes,
+    organizationId: options.organizationId,
+  });
+
+  if (live.estado !== "calculado" || !live.cubication) {
+    return frozen ?? null;
+  }
+
+  if (!frozen || snapshotMissingProfileCodes(frozen)) {
+    return live.cubication;
+  }
+
+  return frozen;
+}
 
 export function formatFabricationItemLineCaption(lineName: string, material: string) {
   const line = lineName.trim();
@@ -71,15 +119,17 @@ function formatStatusLabel(status: RecipeStatus | string) {
 }
 
 export function buildFabricationQuoteSummary(
-  items: QuoteItemLike[]
+  items: QuoteItemLike[],
+  options?: {
+    recipes?: FabricationRecipeRecord[];
+    organizationId?: number | null;
+  }
 ): FabricationQuoteSummary {
   const rows: FabricationSummaryItem[] = [];
 
   for (const item of items) {
     const meta = decodeCotizacionItemPresentationMeta(item.observaciones ?? "");
-    const snapshot = item.fabricacionSnapshot
-      ? fabricacionSnapshotToLegacyCubicationSnapshot(item.fabricacionSnapshot)
-      : meta.cubicationSnapshot;
+    const snapshot = resolveDisplaySnapshot(item, meta, options);
     if (!snapshot || snapshot.cuts.length === 0) continue;
 
     const recipe = snapshot.recipe ?? null;

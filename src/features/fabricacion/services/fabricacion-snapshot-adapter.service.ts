@@ -25,18 +25,21 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
     heightMm: snapshot.input.altoTotalMm,
     quantity: snapshot.input.cantidad,
     capturedAt: snapshot.calculatedAt,
-    cuts: snapshot.pauta.map((row) => ({
-      // El label queda por compatibilidad con snapshots legacy. La identidad
-      // explícita evita que el nombre de perfil se presente como código.
-      label: row.codigoPerfil.trim() || "Por asignar",
+    cuts: snapshot.pauta.map((row) => {
+      const profileCode = row.codigoPerfil.trim();
+      const profileName = row.nombrePerfil.trim() || row.funcion;
+      return {
+      // El label queda por compatibilidad legacy; la UI debe leer profileCode/profileName.
+      label: profileCode || profileName || "Por asignar",
       functionLabel: row.funcion,
-      profileCode: row.codigoPerfil.trim(),
-      profileName: row.nombrePerfil.trim() || row.funcion,
+      profileCode,
+      profileName,
       quantity: row.cantidadPiezas,
       lengthMm: row.medidaMm,
       totalLinealMm: row.totalLinealMm,
       measureExplanation: row.trazabilidad.map((trace) => trace.formula).join(" / "),
-    })),
+    };
+    }),
     bars: barras.map((barra, index) => ({
       index: index + 1,
       usedMm: barra.usadoMm,
@@ -44,14 +47,18 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
       profileCode: barra.codigoPerfil,
       profileName: barra.nombrePerfil,
       barLengthMm: barra.largoComercialMm,
-      cuts: barra.cortes.map((corte) => ({
-        label: corte.codigoPerfil.trim() || "Por asignar",
+      cuts: barra.cortes.map((corte) => {
+        const profileCode = corte.codigoPerfil.trim();
+        return {
+        label: profileCode || barra.nombrePerfil.trim() || "Por asignar",
         functionLabel: corte.funcion,
-        profileCode: corte.codigoPerfil.trim(),
+        profileCode,
+        profileName: barra.nombrePerfil.trim() || corte.funcion,
         quantity: 1,
         lengthMm: corte.largoMm,
         totalLinealMm: corte.largoMm,
-      })),
+      };
+      }),
     })),
     totalUsedMm: snapshot.pautaBarras?.totalUsadoMm ?? 0,
     totalWasteMm: snapshot.pautaBarras?.totalSobranteMm ?? 0,

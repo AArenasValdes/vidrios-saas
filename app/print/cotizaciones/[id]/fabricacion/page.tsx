@@ -10,6 +10,7 @@ import { useCotizacionLineTemplates } from "@/features/cotizaciones/line-templat
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import { normalizeQuotePricingMode } from "@/features/cotizaciones/types/quote-pricing-mode";
 import { DespieceReviewSurface } from "@/features/cotizaciones/visual-composer/components/despiece-review-surface";
+import { useFabricationRecipes } from "@/features/fabricacion/hooks/use-fabrication-recipes";
 import { sanitizeFileNamePart } from "@/utils/sanitize-file-name";
 
 import { FabricacionResumenView } from "./fabricacion-resumen-view";
@@ -26,6 +27,12 @@ export default function CotizacionFabricacionPrintPage() {
   });
   const cotizacion = getCotizacionById(params.id);
   const { templates: lineTemplates } = useCotizacionLineTemplates({ activeOnly: true });
+  const {
+    organizationId,
+    recipes,
+    isLoading: isLoadingRecipes,
+  } = useFabricationRecipes({ enabled: Boolean(cotizacion) });
+  const recipesReady = !isLoadingRecipes && organizationId != null;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -55,8 +62,12 @@ export default function CotizacionFabricacionPrintPage() {
   }, [loadCotizacionById, params.id]);
 
   const summary = useMemo(
-    () => buildFabricationQuoteSummary(cotizacion?.items ?? []),
-    [cotizacion?.items]
+    () =>
+      buildFabricationQuoteSummary(cotizacion?.items ?? [], {
+        recipes: recipesReady ? recipes : undefined,
+        organizationId,
+      }),
+    [cotizacion?.items, recipes, recipesReady, organizationId]
   );
 
   const expandedInitializedForQuote = useRef<string | null>(null);

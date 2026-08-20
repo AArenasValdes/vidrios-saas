@@ -412,7 +412,8 @@
 .tableReading .tableHead,
 .tableReading .tableRow {
   grid-template-columns:
-    minmax(10rem, 1.6fr)
+    minmax(4.5rem, 0.8fr)
+    minmax(10rem, 1.5fr)
     7rem
     5.5rem
     7.5rem;
@@ -421,8 +422,8 @@
 .tableReadingDetail .tableHead,
 .tableReadingDetail .tableRow {
   grid-template-columns:
-    minmax(7.5rem, 1.1fr)
-    minmax(12rem, 1.7fr)
+    minmax(4.5rem, 0.75fr)
+    minmax(12rem, 1.75fr)
     7rem
     5.5rem
     7.5rem;
@@ -566,6 +567,12 @@
 
 .rowMissingProfile {
   background: #fcfcfd;
+}
+
+.profileCodeCell {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 }
 
 .missingProfileChip {
@@ -1194,17 +1201,17 @@
 
   .tableReading .tableHead,
   .tableReading .tableRow {
-    grid-template-columns: minmax(0, 1.15fr) 5.25rem 2.75rem;
+    grid-template-columns: minmax(3.25rem, 0.65fr) minmax(0, 1fr) 5.25rem 2.75rem;
   }
 
-  .tableReading .tableHead span:nth-child(4),
+  .tableReading .tableHead span:nth-child(5),
   .tableReading .tableRow .totalCell {
     display: none;
   }
 
   .tableReadingDetail .tableHead,
   .tableReadingDetail .tableRow {
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr) 5rem 2.5rem;
+    grid-template-columns: minmax(3.25rem, 0.6fr) minmax(0, 1fr) 5rem 2.5rem;
   }
 
   .tableReadingDetail .tableHead span:nth-child(5),

@@ -24,8 +24,13 @@ import {
   type FabricationSummaryItem,
 } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import {
+  resolveCutProfileCode,
+  resolveCutProfileDisplayCode,
+  resolveCutProfileName,
+  isUnassignedProfileLabel,
+} from "@/features/cotizaciones/line-templates/services/cut-profile-display.service";
+import {
   herrajeDisplayLabel,
-  RECIPE_MISSING_PROFILE_LABEL,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
@@ -57,14 +62,7 @@ export function formatBarCutsLabel(count: number) {
   return `${count} ${count === 1 ? "corte" : "cortes"}`;
 }
 
-export function isUnassignedProfileLabel(label: string) {
-  const normalized = label.trim().toLocaleLowerCase("es");
-  return (
-    !normalized ||
-    normalized === "por asignar" ||
-    normalized === RECIPE_MISSING_PROFILE_LABEL.toLocaleLowerCase("es")
-  );
-}
+export { isUnassignedProfileLabel };
 
 export function isValidatedFabricationStatus(label: string) {
   return label === "Validada" || label.startsWith("Validada");
@@ -141,10 +139,6 @@ export function groupBarsByProfile(
   return Array.from(groups.values());
 }
 
-function formatBarCount(count: number) {
-  return `${count} ${count === 1 ? "tira" : "tiras"}`;
-}
-
 type Props = {
   backHref: string;
   pdfHref: string;
@@ -198,46 +192,25 @@ function StatusBadge({ label }: { label: string }) {
 }
 
 function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
-  const profileGroups = groupBarsByProfile(row.snapshot.bars);
-
   return (
-    <>
-      <div className={s.cubicMetrics}>
-        <div>
-          <span>Perfiles</span>
-          <strong>{formatMl(row.profilesMl)}</strong>
-        </div>
-        <div>
-          <span>Vidrio</span>
-          <strong>{formatM2(row.glassM2)}</strong>
-        </div>
-        <div>
-          <span>Accesorios</span>
-          <strong>{row.accessoryUnits} unidades</strong>
-        </div>
-        <div>
-          <span>Tiras reales</span>
-          <strong>{row.barCount}</strong>
-        </div>
+    <div className={s.cubicMetrics}>
+      <div>
+        <span>Perfiles</span>
+        <strong>{formatMl(row.profilesMl)}</strong>
       </div>
-      {profileGroups.length > 0 ? (
-        <div className={s.profileStripSummary}>
-          <div className={s.profileStripSummaryHead}>
-            <span>Tiras por perfil</span>
-            <strong>{row.barCount} reales</strong>
-          </div>
-          <ul>
-            {profileGroups.map((group) => (
-              <li key={group.key}>
-                <span>{group.label}</span>
-                {group.code ? <code>{group.code}</code> : null}
-                <strong>{formatBarCount(group.bars.length)}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </>
+      <div>
+        <span>Vidrio</span>
+        <strong>{formatM2(row.glassM2)}</strong>
+      </div>
+      <div>
+        <span>Accesorios</span>
+        <strong>{row.accessoryUnits} unidades</strong>
+      </div>
+      <div>
+        <span>Tiras reales</span>
+        <strong>{row.barCount}</strong>
+      </div>
+    </div>
   );
 }
 
@@ -248,7 +221,7 @@ function DespieceTable({ row }: { row: FabricationSummaryItem }) {
         <thead>
           <tr>
             <th>Código</th>
-            <th>Perfil</th>
+            <th>Función</th>
             <th>Medida</th>
             <th>Cant.</th>
             <th>Total lineal</th>
@@ -256,13 +229,12 @@ function DespieceTable({ row }: { row: FabricationSummaryItem }) {
         </thead>
         <tbody>
           {row.snapshot.cuts.map((cut, index) => {
-            const code = cut.profileCode?.trim() || cut.label || "Por asignar";
-            const unassigned = isUnassignedProfileLabel(code);
-            const profile = cut.profileName?.trim() || cut.functionLabel || "—";
+            const code = resolveCutProfileDisplayCode(cut);
+            const unassigned = !resolveCutProfileCode(cut);
             return (
-              <tr key={`${row.itemId}-${cut.label}-${index}`}>
-                <td className={unassigned ? s.profileMuted : undefined}>{code}</td>
-                <td className={s.functionCell}>{profile}</td>
+              <tr key={`${row.itemId}-${cut.functionLabel}-${index}`}>
+                <td className={unassigned ? s.profileMuted : s.codeCell}>{code}</td>
+                <td className={s.functionCell}>{resolveCutProfileName(cut)}</td>
                 <td>{formatMm(cut.lengthMm)}</td>
                 <td>{cut.quantity}</td>
                 <td>{formatMm(cut.totalLinealMm)}</td>
@@ -281,34 +253,22 @@ function PautaRows({ row }: { row: FabricationSummaryItem }) {
   }
 
   return (
-    <div className={s.pautaGroups}>
-      {groupBarsByProfile(row.snapshot.bars).map((group) => (
-        <section key={group.key} className={s.pautaGroup}>
-          <header className={s.pautaGroupHead}>
-            <div>
-              <strong>{group.label}</strong>
-              {group.code ? <code>{group.code}</code> : null}
-            </div>
-            <span>
-              {formatBarCount(group.bars.length)}
-              {group.barLengthMm ? ` · ${formatMm(group.barLengthMm)}` : ""}
-            </span>
-          </header>
-          <ul className={s.barList}>
-            {group.bars.map((bar, index) => (
-              <li key={`${row.itemId}-bar-${bar.index}`}>
-                <strong>
-                  Tira {index + 1} de {group.bars.length}
-                </strong>
-                <span>Usado {formatMm(bar.usedMm)}</span>
-                <span>Sobra {formatMm(bar.wasteMm)}</span>
-                <em>{formatBarCutsLabel(bar.cuts.length)}</em>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <ul className={s.barList}>
+      {row.snapshot.bars.map((bar, index) => {
+        const identity = resolveBarIdentity(bar);
+        return (
+          <li key={`${row.itemId}-bar-${bar.index}`}>
+            <strong>
+              {identity.code ? `${identity.code} · ` : ""}
+              Tira {index + 1}
+            </strong>
+            <span>Usado {formatMm(bar.usedMm)}</span>
+            <span>Sobra {formatMm(bar.wasteMm)}</span>
+            <em>{formatBarCutsLabel(bar.cuts.length)}</em>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

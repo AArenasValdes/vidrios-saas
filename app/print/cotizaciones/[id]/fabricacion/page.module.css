@@ -580,6 +580,12 @@
   font-weight: 550;
 }
 
+.codeCell {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
 .barList {
   display: grid;
   gap: 6px;

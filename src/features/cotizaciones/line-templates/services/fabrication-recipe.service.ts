@@ -469,14 +469,24 @@ export function buildRecipeCuttingPreview(
 
   const profileCuts: CotizacionLineTemplateCut[] = rows
     .filter((row) => row.kind === "profile" && !row.pending && row.lengthMm != null && !row.error)
-    .map((row) => ({
-      label: row.profileCode,
-      functionLabel: row.functionLabel,
-      quantity: row.quantity,
-      lengthMm: row.lengthMm as number,
-      totalLinealMm: row.totalLinealMm,
-      measureExplanation: row.measureExplanation,
-    }));
+    .map((row) => {
+      const component = recipe.components.find((entry) => entry.id === row.componentId);
+      const profileCode = component
+        ? sanitizeWorkshopProfileCode(component.profileCode)
+        : sanitizeWorkshopProfileCode(row.profileCode);
+      const profileName =
+        component?.profileName.trim() || component?.functionLabel || row.functionLabel;
+      return {
+        label: profileCode || profileName || RECIPE_MISSING_PROFILE_LABEL,
+        functionLabel: row.functionLabel,
+        profileCode,
+        profileName,
+        quantity: row.quantity,
+        lengthMm: row.lengthMm as number,
+        totalLinealMm: row.totalLinealMm,
+        measureExplanation: row.measureExplanation,
+      };
+    });
 
   const byProfileBar = new Map<
     string,
@@ -647,9 +657,14 @@ export function recipePreviewToLegacyCuttingPreview(
       index: bar.index,
       usedMm: bar.usedMm + bar.kerfTotalMm,
       wasteMm: bar.wasteMm,
+      profileCode: bar.profileCode,
+      profileName: bar.profileName,
+      barLengthMm: bar.barLengthMm,
       cuts: bar.cuts.map((cut) => ({
         label: bar.profileCode,
         functionLabel: cut.functionLabel,
+        profileCode: bar.profileCode,
+        profileName: bar.profileName,
         quantity: 1,
         lengthMm: cut.lengthMm,
         totalLinealMm: cut.lengthMm,
