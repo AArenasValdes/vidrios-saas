@@ -37,6 +37,9 @@ export function fabricacionSnapshotToLegacyCubicationSnapshot(
       index: index + 1,
       usedMm: barra.usadoMm,
       wasteMm: barra.sobranteMm,
+      profileCode: barra.codigoPerfil,
+      profileName: barra.nombrePerfil,
+      barLengthMm: barra.largoComercialMm,
       cuts: barra.cortes.map((corte) => ({
         label: corte.codigoPerfil,
         functionLabel: corte.funcion,

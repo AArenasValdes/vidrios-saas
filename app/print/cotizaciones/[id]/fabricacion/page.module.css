@@ -468,6 +468,78 @@
   font-variant-numeric: tabular-nums;
 }
 
+.profileStripSummary {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f6;
+}
+
+.profileStripSummaryHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.profileStripSummaryHead span {
+  color: #35506f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profileStripSummaryHead strong {
+  color: #6b7b91;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.profileStripSummary ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profileStripSummary li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+  color: #35506f;
+  font-size: 12px;
+}
+
+.profileStripSummary li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileStripSummary code,
+.pautaGroupHead code {
+  padding: 2px 5px;
+  border: 1px solid #d8e5f2;
+  border-radius: 5px;
+  color: #426887;
+  background: #f4f8fc;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.profileStripSummary li strong {
+  color: #12325a;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .tableScroll {
   overflow-x: auto;
 }
@@ -514,6 +586,53 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.pautaGroups {
+  display: grid;
+  gap: 12px;
+}
+
+.pautaGroup {
+  min-width: 0;
+}
+
+.pautaGroup + .pautaGroup {
+  padding-top: 10px;
+  border-top: 1px solid #edf1f6;
+}
+
+.pautaGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.pautaGroupHead div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pautaGroupHead strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #12325a;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pautaGroupHead > span {
+  color: #6b7b91;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .barList li {
@@ -644,6 +763,19 @@
 
   .barList li {
     grid-template-columns: 52px 1fr;
+  }
+
+  .profileStripSummary li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .profileStripSummary li strong {
+    grid-column: 1 / -1;
+  }
+
+  .pautaGroupHead {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

@@ -28,6 +28,7 @@ import {
   RECIPE_MISSING_PROFILE_LABEL,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
+import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { getQuoteConstructorItemConfig } from "@/features/cotizaciones/visual-composer/services/quote-constructor-workspace.service";
 import { renderGuidedVisualSvg } from "@/features/cotizaciones/visual-composer/services/guided-visual-renderer.service";
 import { decodeCotizacionItemPresentationMeta } from "@/utils/cotizacion-item-presentation";
@@ -67,6 +68,79 @@ export function isUnassignedProfileLabel(label: string) {
 
 export function isValidatedFabricationStatus(label: string) {
   return label === "Validada" || label.startsWith("Validada");
+}
+
+type ProfileBarGroup = {
+  key: string;
+  label: string;
+  code: string;
+  barLengthMm: number | null;
+  bars: CotizacionLineTemplateCuttingBar[];
+};
+
+function normalizeProfileText(value: string | null | undefined) {
+  return value?.trim() ?? "";
+}
+
+function resolveBarIdentity(bar: CotizacionLineTemplateCuttingBar) {
+  const explicitCode = normalizeProfileText(bar.profileCode);
+  const cutLabels = Array.from(
+    new Set(
+      bar.cuts
+        .map((cut) => normalizeProfileText(cut.label))
+        .filter((label) => label && !isUnassignedProfileLabel(label))
+    )
+  );
+  const hasMixedProfiles = cutLabels.length > 1 && !explicitCode;
+  const code = explicitCode && !isUnassignedProfileLabel(explicitCode)
+    ? explicitCode
+    : hasMixedProfiles
+      ? ""
+      : cutLabels[0] ?? "";
+  const functionLabel = normalizeProfileText(
+    bar.cuts.find((cut) => normalizeProfileText(cut.functionLabel))?.functionLabel
+  );
+  const explicitName = normalizeProfileText(bar.profileName);
+  const label = hasMixedProfiles
+    ? "Varios perfiles"
+    : explicitName || functionLabel || code || "Por asignar";
+  const barLengthMm =
+    typeof bar.barLengthMm === "number" && bar.barLengthMm > 0
+      ? bar.barLengthMm
+      : bar.usedMm + bar.wasteMm > 0
+        ? bar.usedMm + bar.wasteMm
+        : null;
+
+  return { code, label, barLengthMm };
+}
+
+export function groupBarsByProfile(
+  bars: CotizacionLineTemplateCuttingBar[]
+): ProfileBarGroup[] {
+  const groups = new Map<string, ProfileBarGroup>();
+
+  bars.forEach((bar) => {
+    const identity = resolveBarIdentity(bar);
+    const key = `${identity.code || identity.label}::${identity.barLengthMm ?? ""}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.bars.push(bar);
+      return;
+    }
+    groups.set(key, {
+      key,
+      label: identity.label,
+      code: identity.code,
+      barLengthMm: identity.barLengthMm,
+      bars: [bar],
+    });
+  });
+
+  return Array.from(groups.values());
+}
+
+function formatBarCount(count: number) {
+  return `${count} ${count === 1 ? "tira" : "tiras"}`;
 }
 
 type Props = {
@@ -122,25 +196,46 @@ function StatusBadge({ label }: { label: string }) {
 }
 
 function CubicacionMetrics({ row }: { row: FabricationSummaryItem }) {
+  const profileGroups = groupBarsByProfile(row.snapshot.bars);
+
   return (
-    <div className={s.cubicMetrics}>
-      <div>
-        <span>Perfiles</span>
-        <strong>{formatMl(row.profilesMl)}</strong>
+    <>
+      <div className={s.cubicMetrics}>
+        <div>
+          <span>Perfiles</span>
+          <strong>{formatMl(row.profilesMl)}</strong>
+        </div>
+        <div>
+          <span>Vidrio</span>
+          <strong>{formatM2(row.glassM2)}</strong>
+        </div>
+        <div>
+          <span>Accesorios</span>
+          <strong>{row.accessoryUnits} unidades</strong>
+        </div>
+        <div>
+          <span>Tiras reales</span>
+          <strong>{row.barCount}</strong>
+        </div>
       </div>
-      <div>
-        <span>Vidrio</span>
-        <strong>{formatM2(row.glassM2)}</strong>
-      </div>
-      <div>
-        <span>Accesorios</span>
-        <strong>{row.accessoryUnits} unidades</strong>
-      </div>
-      <div>
-        <span>Tiras necesarias</span>
-        <strong>{row.barCount}</strong>
-      </div>
-    </div>
+      {profileGroups.length > 0 ? (
+        <div className={s.profileStripSummary}>
+          <div className={s.profileStripSummaryHead}>
+            <span>Tiras por perfil</span>
+            <strong>{row.barCount} reales</strong>
+          </div>
+          <ul>
+            {profileGroups.map((group) => (
+              <li key={group.key}>
+                <span>{group.label}</span>
+                {group.code ? <code>{group.code}</code> : null}
+                <strong>{formatBarCount(group.bars.length)}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -183,16 +278,34 @@ function PautaRows({ row }: { row: FabricationSummaryItem }) {
   }
 
   return (
-    <ul className={s.barList}>
-      {row.snapshot.bars.map((bar) => (
-        <li key={`${row.itemId}-bar-${bar.index}`}>
-          <strong>Tira {bar.index}</strong>
-          <span>Usado {formatMm(bar.usedMm)}</span>
-          <span>Sobra {formatMm(bar.wasteMm)}</span>
-          <em>{formatBarCutsLabel(bar.cuts.length)}</em>
-        </li>
+    <div className={s.pautaGroups}>
+      {groupBarsByProfile(row.snapshot.bars).map((group) => (
+        <section key={group.key} className={s.pautaGroup}>
+          <header className={s.pautaGroupHead}>
+            <div>
+              <strong>{group.label}</strong>
+              {group.code ? <code>{group.code}</code> : null}
+            </div>
+            <span>
+              {formatBarCount(group.bars.length)}
+              {group.barLengthMm ? ` · ${formatMm(group.barLengthMm)}` : ""}
+            </span>
+          </header>
+          <ul className={s.barList}>
+            {group.bars.map((bar, index) => (
+              <li key={`${row.itemId}-bar-${bar.index}`}>
+                <strong>
+                  Tira {index + 1} de {group.bars.length}
+                </strong>
+                <span>Usado {formatMm(bar.usedMm)}</span>
+                <span>Sobra {formatMm(bar.wasteMm)}</span>
+                <em>{formatBarCutsLabel(bar.cuts.length)}</em>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }
 

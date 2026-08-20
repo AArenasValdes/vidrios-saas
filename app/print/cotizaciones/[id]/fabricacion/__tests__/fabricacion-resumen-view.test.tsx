@@ -7,12 +7,14 @@ import {
   serializeCubicationSnapshot,
   type CotizacionItemCubicationSnapshot,
 } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template-cubication-snapshot";
+import type { CotizacionLineTemplateCuttingBar } from "@/features/cotizaciones/line-templates/types/cotizacion-line-template";
 import { buildFabricationQuoteSummary } from "@/features/cotizaciones/line-templates/types/fabrication-quote-summary";
 import type { CotizacionWorkflowItem } from "@/features/cotizaciones/types/cotizacion-workflow";
 
 import {
   FabricacionResumenView,
   formatBarCutsLabel,
+  groupBarsByProfile,
   isUnassignedProfileLabel,
 } from "../fabricacion-resumen-view";
 
@@ -218,6 +220,56 @@ describe("FabricacionResumenView", () => {
     );
     expect(screen.queryByRole("button", { name: "Ocultar detalle de V2" })).not.toBeInTheDocument();
   });
+
+  it("muestra en la vista las cantidades reales por perfil", () => {
+    const item = workflowItem(
+      "item-real-bars",
+      "V1",
+      "Ventana corredera",
+      "L5000",
+      "Aluminio",
+      snapshot({
+        bars: [
+          {
+            index: 1,
+            profileCode: "5001",
+            profileName: "Riel superior",
+            barLengthMm: 6000,
+            usedMm: 5982,
+            wasteMm: 18,
+            cuts: [],
+          },
+          {
+            index: 2,
+            profileCode: "5001",
+            profileName: "Riel superior",
+            barLengthMm: 6000,
+            usedMm: 3994,
+            wasteMm: 2006,
+            cuts: [],
+          },
+          {
+            index: 3,
+            profileCode: "5002",
+            profileName: "Riel inferior",
+            barLengthMm: 6000,
+            usedMm: 5982,
+            wasteMm: 18,
+            cuts: [],
+          },
+        ],
+      })
+    );
+
+    render(<ViewHarness extraItems={[item]} />);
+
+    expect(screen.getByText("3 reales")).toBeInTheDocument();
+    expect(screen.getAllByText("Riel superior").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Riel inferior").length).toBeGreaterThan(0);
+    expect(screen.getByText("Tira 1 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Tira 2 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Tira 1 de 1")).toBeInTheDocument();
+  });
 });
 
 describe("helpers de fabricación", () => {
@@ -227,5 +279,109 @@ describe("helpers de fabricación", () => {
     expect(isUnassignedProfileLabel("Riel superior")).toBe(false);
     expect(formatBarCutsLabel(1)).toBe("1 corte");
     expect(formatBarCutsLabel(2)).toBe("2 cortes");
+  });
+
+  it("agrupa las barras reales por código y largo sin convertirlas en una tira universal", () => {
+    const bars: CotizacionLineTemplateCuttingBar[] = [
+      {
+        index: 1,
+        profileCode: "5001",
+        profileName: "Riel superior",
+        barLengthMm: 6000,
+        usedMm: 5982,
+        wasteMm: 18,
+        cuts: [],
+      },
+      {
+        index: 2,
+        profileCode: "5001",
+        profileName: "Riel superior",
+        barLengthMm: 6000,
+        usedMm: 3994,
+        wasteMm: 2006,
+        cuts: [],
+      },
+      {
+        index: 3,
+        profileCode: "5002",
+        profileName: "Riel inferior",
+        barLengthMm: 6000,
+        usedMm: 5982,
+        wasteMm: 18,
+        cuts: [],
+      },
+    ];
+
+    const groups = groupBarsByProfile(bars);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toMatchObject({
+      label: "Riel superior",
+      code: "5001",
+      barLengthMm: 6000,
+    });
+    expect(groups[0]?.bars).toHaveLength(2);
+    expect(groups[1]).toMatchObject({ label: "Riel inferior", code: "5002" });
+    expect(groups[1]?.bars).toHaveLength(1);
+    expect(groups.reduce((sum, group) => sum + group.bars.length, 0)).toBe(3);
+  });
+
+  it("usa la identidad de los cortes en snapshots legacy y marca barras mixtas", () => {
+    const bars: CotizacionLineTemplateCuttingBar[] = [
+      {
+        index: 1,
+        usedMm: 1200,
+        wasteMm: 4800,
+        cuts: [
+          {
+            label: "5001",
+            functionLabel: "Riel superior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+        ],
+      },
+      {
+        index: 2,
+        usedMm: 1200,
+        wasteMm: 4800,
+        cuts: [
+          {
+            label: "5001",
+            functionLabel: "Riel superior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+        ],
+      },
+      {
+        index: 3,
+        usedMm: 2400,
+        wasteMm: 3600,
+        cuts: [
+          {
+            label: "5001",
+            functionLabel: "Riel superior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+          {
+            label: "5002",
+            functionLabel: "Riel inferior",
+            quantity: 1,
+            lengthMm: 1200,
+            totalLinealMm: 1200,
+          },
+        ],
+      },
+    ];
+
+    const groups = groupBarsByProfile(bars);
+
+    expect(groups.find((group) => group.code === "5001")?.bars).toHaveLength(2);
+    expect(groups.find((group) => group.label === "Varios perfiles")?.bars).toHaveLength(1);
   });
 });

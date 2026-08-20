@@ -227,5 +227,7 @@ describe("integracion receta fabricacion -> cotizacion", () => {
     expect(summary.items).toHaveLength(2);
     expect(summary.items[0]?.codigo).toBe("V1");
     expect(summary.totalProfilesMl).toBeGreaterThan(0);
+    expect(legacy.bars.every((bar) => bar.profileCode)).toBe(true);
+    expect(legacy.bars.some((bar) => bar.profileCode === "EJ-RS")).toBe(true);
   });
 });

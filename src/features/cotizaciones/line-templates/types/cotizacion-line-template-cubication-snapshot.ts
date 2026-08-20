@@ -122,6 +122,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function normalizeMetadataText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 function parseCut(value: unknown): CotizacionLineTemplateCut | null {
   if (!isRecord(value)) return null;
   const label = typeof value.label === "string" ? value.label.trim() : "";
@@ -149,11 +153,26 @@ function parseBar(value: unknown): CotizacionLineTemplateCuttingBar | null {
   const index = normalizePositiveInteger(value.index, 0);
   const usedMm = Math.max(0, Math.round(Number(value.usedMm) || 0));
   const wasteMm = Math.max(0, Math.round(Number(value.wasteMm) || 0));
+  const profileCode = normalizeMetadataText(value.profileCode);
+  const profileName = normalizeMetadataText(value.profileName);
+  const parsedBarLengthMm = Number(value.barLengthMm);
+  const barLengthMm =
+    Number.isFinite(parsedBarLengthMm) && parsedBarLengthMm > 0
+      ? Math.round(parsedBarLengthMm)
+      : null;
   const cuts = Array.isArray(value.cuts)
     ? value.cuts.map(parseCut).filter((cut): cut is CotizacionLineTemplateCut => Boolean(cut))
     : [];
   if (index <= 0) return null;
-  return { index, usedMm, wasteMm, cuts };
+  return {
+    index,
+    usedMm,
+    wasteMm,
+    ...(profileCode ? { profileCode } : {}),
+    ...(profileName ? { profileName } : {}),
+    ...(barLengthMm ? { barLengthMm } : {}),
+    cuts,
+  };
 }
 
 function parseGlass(value: unknown): CotizacionLineTemplateGlassPiece | null {

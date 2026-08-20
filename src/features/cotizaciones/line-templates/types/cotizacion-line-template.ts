@@ -213,6 +213,10 @@ export type CotizacionLineTemplateCuttingBar = {
   index: number;
   usedMm: number;
   wasteMm: number;
+  /** Identidad opcional de la barra. Los snapshots legacy pueden no traerla. */
+  profileCode?: string;
+  profileName?: string;
+  barLengthMm?: number;
   cuts: CotizacionLineTemplateCut[];
 };
 
