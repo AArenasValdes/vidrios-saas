@@ -74,8 +74,8 @@ function createAlarDefinition(templateId: string, lineName: string) {
       .filter((component) => component.kind === "profile")
       .map((component) => ({
         id: crypto.randomUUID(),
-        codigoPerfil: "",
-        nombrePerfil: component.profileName,
+        codigoPerfil: component.profileCode,
+        nombrePerfil: component.profileName || component.functionLabel,
         funcion: component.functionLabel,
         largoComercialMm: component.barLengthMm || legacy.defaultBarLengthMm || null,
         reglaMedida: {
@@ -95,9 +95,16 @@ function createAlarDefinition(templateId: string, lineName: string) {
         },
         reglaCantidad: quantityRule(component.quantityRule, component.quantityValue),
         requerido: component.required,
-        observaciones:
+        observaciones: [
           "Regla inicial ya documentada en Ventora. Confirmar con pauta real del taller.",
-        datosPendientes: ["Confirmar codigo del perfil", "Validar regla con trabajo real"],
+          component.notes,
+        ]
+          .filter(Boolean)
+          .join(" "),
+        datosPendientes: [
+          ...(component.profileCode ? [] : ["Confirmar codigo del perfil"]),
+          "Validar regla con trabajo real",
+        ],
       })),
     vidrios: [],
     accesorios: [],

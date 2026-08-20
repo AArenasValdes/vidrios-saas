@@ -2,6 +2,13 @@
 
 Historial de cambios en la documentacion del mapa tecnico.
 
+## 2026-08-19 - Códigos de perfiles en plantillas L5000, L20 y L25
+
+- Las plantillas sugeridas precargan códigos editables: L5000 `5001`–`5007`, L20 `2001`, `2002`, `2009`, `2004`, `2005`, `2010`, `2019` y L25 `2501`, `2502`, `2509`, `2504`, `2505`, `2510`, `2507`.
+- Se agregaron alternativas documentadas para L20 (`2014`, `2016`) y L25 (`2513`, `2514`, `2516`, `2518`), más complementos L25 (`2521`, `2531`).
+- La biblioteca formal y el inicio rápido legacy comparten la precarga; el usuario puede cambiar código, nombre o componente desde el editor.
+- No se modificó schema, migración ni fórmula. Plantillas siguen sugeridas y pendientes de validación real del taller.
+
 ## 2026-08-19 - Resumen de fabricación desktop: cubicación, despiece y pauta
 
 - `/print/cotizaciones/[id]/fabricacion` dejó de parecer una hoja A4: desktop usa el ancho del sistema, métricas compactas y un bloque por pieza.

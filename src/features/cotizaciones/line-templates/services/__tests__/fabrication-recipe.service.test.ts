@@ -21,6 +21,7 @@ import {
   type FabricationRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe";
 import {
+  COMMERCIAL_TEMPLATE_PROFILE_CATALOG,
   createCommercialPendingBaseRecipe,
   createCommercialSuggestedRecipe,
 } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
@@ -215,6 +216,27 @@ describe("fabrication recipe domain", () => {
     expect(l20?.components.find((c) => c.functionKey === "riel_superior")?.adjustMm).toBe(12);
     const l25 = createCommercialSuggestedRecipe("sugerida_l25_corredera_caracol");
     expect(l25?.components.find((c) => c.functionKey === "pierna")?.adjustMm).toBe(35);
+    expect(
+      l5000?.components
+        .filter((component) => component.kind === "profile")
+        .map((component) => component.profileCode)
+    ).toEqual(["5001", "5002", "5003", "5004", "5005", "5006", "5007"]);
+    expect(COMMERCIAL_TEMPLATE_PROFILE_CATALOG.L25.alternatives).toMatchObject({
+      riel_inferior: [
+        { code: "2513" },
+        { code: "2514" },
+      ],
+      pierna: [{ code: "2516" }],
+      traslapo: [{ code: "2518" }],
+    });
+    expect(COMMERCIAL_TEMPLATE_PROFILE_CATALOG.L25.complements).toEqual([
+      { code: "2521", label: "Adaptador de 4ta hoja" },
+      { code: "2531", label: "Encuentro central" },
+    ]);
+    expect(COMMERCIAL_TEMPLATE_PROFILE_CATALOG.L20.alternatives).toMatchObject({
+      riel_superior: [{ code: "2014" }],
+      traslapo: [{ code: "2016" }],
+    });
     const base = createCommercialPendingBaseRecipe("base_abatible_1_hoja");
     expect(base?.sourceKind).toBe("base_tipologica");
     expect(base?.components.every((c) => c.adjustMm === 0)).toBe(true);

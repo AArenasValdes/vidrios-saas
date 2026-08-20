@@ -13,10 +13,16 @@ describe("biblioteca priorizada de fabricacion", () => {
       const definition = entry.crearDefinicion?.();
       expect(definition).toBeDefined();
       expect(definition?.estado).toBe("ejemplo_no_validado");
-      // Siguen siendo borradores editables; el código comercial no es bloqueante.
-      expect(definition?.perfiles.some((profile) => !profile.codigoPerfil.trim())).toBe(
+      // Códigos vienen sugeridos; siguen siendo borradores editables.
+      expect(definition?.perfiles.every((profile) => profile.codigoPerfil.trim())).toBe(
         true
       );
+      expect(
+        definition?.perfiles.every(
+          (profile) =>
+            !(profile.datosPendientes ?? []).some((detail) => /codigo/i.test(detail))
+        )
+      ).toBe(true);
       expect(contarBloqueosCriticosReceta(definition!)).toBe(0);
     });
   });

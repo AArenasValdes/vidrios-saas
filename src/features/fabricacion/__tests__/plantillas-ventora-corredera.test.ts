@@ -42,7 +42,15 @@ describe("plantillas Ventora Corredera 2 hojas", () => {
       ...PLANTILLAS_VENTORA_CORREDERA_2H.L5000.ajustesMm,
     ]);
     expect(receta.perfiles.map((p) => p.funcion)).toEqual([...ORDEN_FUNCIONES]);
-    expect(receta.perfiles.every((profile) => !profile.codigoPerfil)).toBe(true);
+    expect(receta.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "5001",
+      "5002",
+      "5003",
+      "5005",
+      "5004",
+      "5006",
+      "5007",
+    ]);
     expect(
       receta.perfiles.every((profile) => profile.largoComercialMm == null)
     ).toBe(true);
@@ -98,6 +106,17 @@ describe("plantillas Ventora Corredera 2 hojas", () => {
     expect(receta.perfiles.map((p) => p.reglaMedida.ajusteMm)).toEqual([
       -12, -12, 0, -2, -2, -27, -27,
     ]);
+    expect(receta.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "2001",
+      "2002",
+      "2009",
+      "2005",
+      "2004",
+      "2010",
+      "2019",
+    ]);
+    expect(receta.perfiles[0]?.observaciones).toContain("2014");
+    expect(receta.perfiles[6]?.observaciones).toContain("2016");
     expect(receta.perfiles.map((p) => p.reglaMedida.base)).toEqual([
       "ancho_total",
       "ancho_total",
@@ -140,6 +159,18 @@ describe("plantillas Ventora Corredera 2 hojas", () => {
     expect(receta.perfiles.map((p) => p.reglaMedida.ajusteMm)).toEqual([
       -16, -16, 0, 0, 0, -35, -35,
     ]);
+    expect(receta.perfiles.map((profile) => profile.codigoPerfil)).toEqual([
+      "2501",
+      "2502",
+      "2509",
+      "2505",
+      "2504",
+      "2510",
+      "2507",
+    ]);
+    expect(receta.perfiles[1]?.observaciones).toMatch(/2513.*2514/);
+    expect(receta.perfiles[5]?.observaciones).toContain("2516");
+    expect(receta.perfiles[6]?.observaciones).toMatch(/2518.*2521.*2531/);
 
     const resultado = calcularCubicacionYPauta(receta, ENTRADA);
     expect(

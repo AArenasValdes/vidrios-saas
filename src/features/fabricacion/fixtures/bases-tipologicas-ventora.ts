@@ -6,6 +6,7 @@ import {
   type FabricacionTipologia,
 } from "@/features/fabricacion/types/fabricacion-domain";
 import { VENTORA_LARGO_COMERCIAL_PRESET_MM } from "@/features/fabricacion/services/fabricacion-regla-humana.service";
+import { COMMERCIAL_TEMPLATE_PROFILE_CATALOG } from "@/features/cotizaciones/line-templates/types/fabrication-recipe-commercial-templates";
 
 /**
  * Bases estructurales universales de Ventora.
@@ -592,6 +593,16 @@ export function resumirBaseEstructural(recipe: FabricacionReceta): {
  */
 export type PlantillaVentoraCorrederaId = "L5000" | "L20" | "L25";
 
+const CORREDERA_PROFILE_KEYS = [
+  "riel_superior",
+  "riel_inferior",
+  "jamba",
+  "zocalo",
+  "cabezal",
+  "pierna",
+  "traslapo",
+] as const;
+
 export const PLANTILLAS_VENTORA_CORREDERA_2H: Record<
   PlantillaVentoraCorrederaId,
   {
@@ -641,6 +652,7 @@ export function aplicarAjustesPlantillaVentora(
   plantillaId: PlantillaVentoraCorrederaId
 ): FabricacionReceta {
   const plantilla = PLANTILLAS_VENTORA_CORREDERA_2H[plantillaId];
+  const profileCatalog = COMMERCIAL_TEMPLATE_PROFILE_CATALOG[plantillaId];
   const obsDocumentado = buildAjusteDocumentadoVentoraObs(plantillaId);
   const codigoRef = `${plantillaId}-2H-REF`;
 
@@ -657,6 +669,24 @@ export function aplicarAjustesPlantillaVentora(
     },
     perfiles: recipe.perfiles.map((profile, index) => {
       const ajusteMm = plantilla.ajustesMm[index] ?? 0;
+      const profileKey = CORREDERA_PROFILE_KEYS[index];
+      const profileDefault = profileKey
+        ? profileCatalog.defaults[profileKey]
+        : undefined;
+      const alternatives = profileKey
+        ? profileCatalog.alternatives[profileKey] ?? []
+        : [];
+      const variantNote = alternatives.length
+        ? `Variantes disponibles: ${alternatives
+            .map((option) => `${option.code} · ${option.label}`)
+            .join("; ")}.`
+        : "";
+      const complementNote =
+        profileKey === "traslapo" && profileCatalog.complements?.length
+          ? `Complementos opcionales: ${profileCatalog.complements
+              .map((option) => `${option.code} · ${option.label}`)
+              .join("; ")}.`
+          : "";
       const pending = (profile.datosPendientes ?? []).filter(
         (detail) => !/ajuste|descuento/i.test(detail)
       );
@@ -666,14 +696,18 @@ export function aplicarAjustesPlantillaVentora(
         .trim();
       return {
         ...profile,
-        // Sin código inventado ni largo comercial precargado.
-        codigoPerfil: profile.codigoPerfil || "",
+        // Código sugerido editable; el taller puede reemplazarlo o quitarlo.
+        codigoPerfil: profile.codigoPerfil || profileDefault?.code || "",
+        nombrePerfil:
+          profile.nombrePerfil || profileDefault?.label || profile.funcion,
         largoComercialMm: profile.largoComercialMm ?? null,
         reglaMedida: {
           ...profile.reglaMedida,
           ajusteMm,
         },
-        observaciones: [obsBase, obsDocumentado].filter(Boolean).join(" "),
+        observaciones: [obsBase, obsDocumentado, variantNote, complementNote]
+          .filter(Boolean)
+          .join(" "),
         datosPendientes: pending.length > 0 ? pending : undefined,
       };
     }),
